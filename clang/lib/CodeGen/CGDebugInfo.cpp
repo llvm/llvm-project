@@ -4184,7 +4184,14 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     break;
   }
 
-  RegionMap[RD].reset(RealDecl);
+  if (auto *CTSD =
+          dyn_cast<ClassTemplateSpecializationDecl>(Ty->getOriginalDecl())) {
+    CXXRecordDecl *TemplateDecl =
+        CTSD->getSpecializedTemplate()->getTemplatedDecl();
+    RegionMap[TemplateDecl].reset(RealDecl);
+  } else {
+    RegionMap[RD].reset(RealDecl);
+  }
   TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
 
   if (const auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
