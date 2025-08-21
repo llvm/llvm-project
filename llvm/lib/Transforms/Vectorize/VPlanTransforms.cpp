@@ -1120,16 +1120,16 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
             CmpInst::getInversePredicate(WideCmp->getPredicate()));
         for (VPUser *U : to_vector(WideCmp->users())) {
           auto *R = cast<VPSingleDefRecipe>(U);
-          // not (icmp eq) -> icmp ne
-          if (match(R, m_Not(m_Specific(WideCmp))))
-            R->replaceAllUsesWith(WideCmp);
-          // select (icmp eq), x, y -> select (icmp ne), y, x
-          else if (match(R, m_Select(m_Specific(WideCmp), m_VPValue(X),
-                                     m_VPValue(Y)))) {
+          if (match(R, m_Select(m_Specific(WideCmp), m_VPValue(X),
+                                m_VPValue(Y)))) {
+            // select (icmp pred), x, y -> select (icmp inv_pred), y, x
             R->setOperand(1, Y);
             R->setOperand(2, X);
-          } else
-            llvm_unreachable("Unexpected user");
+          } else {
+            // not (icmp pred) -> icmp inv_pred
+            assert(match(R, m_Not(m_Specific(WideCmp))) && "Unexpected user");
+            R->replaceAllUsesWith(WideCmp);
+          }
         }
         // If WideCmp doesn't have a debug location, use the one from the
         // negation, to preserve the location.
