@@ -14,9 +14,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]]
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:areg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]]
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6291465 /* reguse:AReg_128_Align2 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
@@ -44,9 +44,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]]
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:areg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]]
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6291465 /* reguse:AReg_128_Align2 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
@@ -74,11 +74,11 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]].sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: dead %other_use:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub0_sub1
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_1:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:areg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_1]]
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:areg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]].sub0_sub1:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: dead %other_use:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub0_sub1
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_1:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_e64_]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:areg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_1]]
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3735561 /* reguse:AReg_64_Align2 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
@@ -145,12 +145,12 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_vgprcd_e64_1:%[0-9]+]].sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]], 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: dead %other_use:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_1]].sub0_sub1
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_2:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_1]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_2]]
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:areg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_e64_1:%[0-9]+]].sub0_sub1:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_e64_]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: dead %other_use:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_1]].sub0_sub1
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_2:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_e64_1]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_2]]
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6291465 /* reguse:AReg_128_Align2 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
@@ -182,13 +182,13 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: dead %other_use0:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub0
-    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_vgprcd_e64_1:%[0-9]+]].sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]], 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: dead %other_use1:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_1]].sub0_sub1
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_2:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_1]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr_32 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_2]]
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:areg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: dead %other_use0:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub0
+    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_e64_1:%[0-9]+]].sub0_sub1:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_e64_]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: dead %other_use1:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_1]].sub0_sub1
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_2:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_e64_1]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr_32 = COPY [[V_MFMA_F64_4X4X4F64_e64_2]]
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2162697 /* reguse:AGPR_32 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
@@ -263,13 +263,13 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]].sub2_sub3:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: dead %other_use0:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub0_sub1
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]].sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: %other_use1:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub2_sub3
-    ; CHECK-NEXT: dead %other_use2:vreg_64 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub1_sub2
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:areg_64 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub1_sub2
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:areg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]].sub2_sub3:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: dead %other_use0:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub0_sub1
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]].sub0_sub1:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: %other_use1:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub2_sub3
+    ; CHECK-NEXT: dead %other_use2:vreg_64 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub1_sub2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:areg_64 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub1_sub2
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3473417 /* reguse:AReg_64 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], %other_use1, 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
@@ -301,13 +301,13 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]].sub2_sub3:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: dead %other_use0:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub0_sub1
-    ; CHECK-NEXT: dead [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]].sub2_sub3:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: %other_use1:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub2_sub3
-    ; CHECK-NEXT: dead %other_use2:vreg_64 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub1_sub2
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:areg_64 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub1_sub2
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:areg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]].sub2_sub3:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: dead %other_use0:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub0_sub1
+    ; CHECK-NEXT: dead [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]].sub2_sub3:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[V_MFMA_F64_4X4X4F64_e64_]].sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: %other_use1:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub2_sub3
+    ; CHECK-NEXT: dead %other_use2:vreg_64 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub1_sub2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:areg_64 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub1_sub2
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3473417 /* reguse:AReg_64 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], %other_use1, 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
