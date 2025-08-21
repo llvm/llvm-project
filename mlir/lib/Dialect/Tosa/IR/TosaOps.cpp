@@ -512,20 +512,20 @@ void ReduceMinOp::print(OpAsmPrinter &parser) {
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
 
-std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
+static std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
   if (lhs % rhs != 0)
     return std::nullopt;
   return lhs / rhs;
 }
 
-Type getStorageElementTypeOrSelf(Type type) {
+static Type getStorageElementTypeOrSelf(Type type) {
   auto srcType = getElementTypeOrSelf(type);
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcType))
     srcType = quantType.getStorageType();
   return srcType;
 }
 
-Type getStorageElementTypeOrSelf(Value value) {
+static Type getStorageElementTypeOrSelf(Value value) {
   return getStorageElementTypeOrSelf(value.getType());
 }
 
