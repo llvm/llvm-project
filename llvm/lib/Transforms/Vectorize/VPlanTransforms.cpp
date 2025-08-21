@@ -1107,26 +1107,25 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       return Def->replaceAllUsesWith(A);
 
     // Try to fold Not into compares by adjusting the predicate in-place.
-    auto CanFold = [&A](VPUser *U) {
-      return match(
-          U, m_CombineOr(m_Not(m_Specific(A)),
-                         m_Select(m_Specific(A), m_VPValue(), m_VPValue())));
-    };
-    if (isa<VPWidenRecipe>(A) && all_of(A->users(), CanFold)) {
-      auto *WideCmp = cast<VPWidenRecipe>(A);
-      if (WideCmp->getOpcode() == Instruction::ICmp ||
-          WideCmp->getOpcode() == Instruction::FCmp) {
+    if (auto *WideCmp = dyn_cast<VPWidenRecipe>(A)) {
+      if ((WideCmp->getOpcode() == Instruction::ICmp ||
+           WideCmp->getOpcode() == Instruction::FCmp) &&
+          all_of(WideCmp->users(), [&WideCmp](VPUser *U) {
+            return match(U, m_CombineOr(m_Not(m_Specific(WideCmp)),
+                                        m_Select(m_Specific(WideCmp),
+                                                 m_VPValue(), m_VPValue())));
+          })) {
         WideCmp->setPredicate(
             CmpInst::getInversePredicate(WideCmp->getPredicate()));
         for (VPUser *U : to_vector(WideCmp->users())) {
           auto *R = cast<VPSingleDefRecipe>(U);
           if (match(R, m_Select(m_Specific(WideCmp), m_VPValue(X),
                                 m_VPValue(Y)))) {
-            // select (icmp pred), x, y -> select (icmp inv_pred), y, x
+            // select (cmp pred), x, y -> select (cmp inv_pred), y, x
             R->setOperand(1, Y);
             R->setOperand(2, X);
           } else {
-            // not (icmp pred) -> icmp inv_pred
+            // not (cmp pred) -> cmp inv_pred
             assert(match(R, m_Not(m_Specific(WideCmp))) && "Unexpected user");
             R->replaceAllUsesWith(WideCmp);
           }
