@@ -270,6 +270,8 @@ public:
     return InstCostVisitor(GetBFI, F, M.getDataLayout(), TTI, Solver);
   }
 
+  bool isDeadFunction(Function *F) { return FullySpecialized.contains(F); }
+
 private:
   Constant *getPromotableAlloca(AllocaInst *Alloca, CallInst *Call);
 

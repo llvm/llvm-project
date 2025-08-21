@@ -844,6 +844,15 @@ void FunctionSpecializer::removeDeadFunctions() {
                       << F->getName() << "\n");
     if (FAM)
       FAM->clear(*F, F->getName());
+
+    // Remove all the callsites that were proven unreachable once, and replace
+    // them with poison.
+    for (User *U : make_early_inc_range(F->users())) {
+      assert((isa<CallInst>(U) || isa<InvokeInst>(U)) && "User of dead function must be call or invoke");
+      Instruction *CS = cast<Instruction>(U);
+      CS->replaceAllUsesWith(PoisonValue::get(CS->getType()));
+      CS->eraseFromParent();
+    }
     F->eraseFromParent();
   }
   FullySpecialized.clear();
