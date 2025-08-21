@@ -408,7 +408,9 @@ public:
 };
 
 struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
-  using OpRewritePattern::OpRewritePattern;
+  GenericOpScheduler(MLIRContext *context, sparse_tensor::LoopOrderingStrategy strategy)
+      : OpRewritePattern<linalg::GenericOp>(context), strategy(strategy) {}
+  
   LogicalResult matchAndRewrite(linalg::GenericOp linalgOp,
                                 PatternRewriter &rewriter) const override {
     if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasPureTensorSemantics() ||
@@ -421,7 +423,8 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     if (linalgOp->hasAttr(sorted))
       return failure();
 
-    auto scheduler = IterationGraphSorter::fromGenericOp(linalgOp);
+    // Pass strategy to IterationGraphSorter
+    auto scheduler = IterationGraphSorter::fromGenericOp(linalgOp, strategy);
     bool isAdmissible = false;
     AffineMap order;
     // A const list of all masks that we used for iteration graph
@@ -583,6 +586,9 @@ private:
     // TODO: convert more than one?
     return failure();
   }
+
+private:
+  sparse_tensor::LoopOrderingStrategy strategy;
 };
 
 //===----------------------------------------------------------------------===//
@@ -790,12 +796,10 @@ struct ForeachOpDemapper
 void mlir::populateSparseReinterpretMap(RewritePatternSet &patterns,
                                         ReinterpretMapScope scope,
                                         sparse_tensor::LoopOrderingStrategy strategy) {
-  (void)strategy; // Suppress unused parameter warning
-  
   if (scope == ReinterpretMapScope::kAll ||
       scope == ReinterpretMapScope::kGenericOnly) {
-    patterns.add<GenericOpReinterpretMap, GenericOpScheduler>(
-        patterns.getContext());
+    patterns.add<GenericOpReinterpretMap>(patterns.getContext());
+    patterns.add<GenericOpScheduler>(patterns.getContext(), strategy);
   }
   if (scope == ReinterpretMapScope::kAll ||
       scope == ReinterpretMapScope::kExceptGeneric) {
