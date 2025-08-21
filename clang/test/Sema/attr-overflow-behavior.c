@@ -42,13 +42,20 @@ void assignment_disc(unsigned __attribute__((overflow_behavior(wrap))) a) {
 }
 
 void constant_conversion() {
-  short x1 = (int __wrap)100000; // expected-warning {{implicit conversion from '__wrap int' to 'short' changes value from 100000 to -31072}}
+  // expected-warning@+2 {{implicit conversion from '__wrap int' to 'short' changes value from 100000 to -31072}}
+  // expected-warning@+1 {{implicit conversion from '__wrap int' to 'short' discards overflow behavior}}
+  short x1 = (int __wrap)100000;
   short __wrap x2 = (int)100000; // No warning expected
-  short __no_wrap x3 = (int)100000; // expected-warning {{implicit conversion from 'int' to '__no_wrap short' changes value from 100000 to -31072}}
-  short x4 = (int __no_wrap)100000; // expected-warning {{implicit conversion from '__no_wrap int' to 'short' changes value from 100000 to -31072}}
+  // expected-warning@+1 {{implicit conversion from 'int' to '__no_wrap short' changes value from 100000 to -31072}}
+  short __no_wrap x3 = (int)100000;
+  // expected-warning@+2 {{implicit conversion from '__no_wrap int' to 'short' changes value from 100000 to -31072}}
+  // expected-warning@+1 {{implicit conversion from '__no_wrap int' to 'short' discards overflow behavior}}
+  short x4 = (int __no_wrap)100000;
 
   unsigned short __wrap ux1 = (unsigned int)100000; // No warning - wrapping expected
-  unsigned short ux2 = (unsigned int __wrap)100000; // expected-warning {{implicit conversion from '__wrap unsigned int' to 'unsigned short' changes value from 100000 to 34464}}
+  // expected-warning@+2 {{implicit conversion from '__wrap unsigned int' to 'unsigned short' changes value from 100000 to 34464}}
+  // expected-warning@+1 {{implicit conversion from '__wrap unsigned int' to 'unsigned short' discards overflow behavior}}
+  unsigned short ux2 = (unsigned int __wrap)100000;
   unsigned short __no_wrap ux3 = (unsigned int)100000; // expected-warning {{implicit conversion from 'unsigned int' to '__no_wrap unsigned short' changes value from 100000 to 34464}}
   unsigned short __no_wrap ux4 = (unsigned int __no_wrap)100000; // expected-warning {{implicit conversion from '__no_wrap unsigned int' to '__no_wrap unsigned short' changes value from 100000 to 34464}}
   unsigned short __no_wrap ux5 = (unsigned int __wrap)100000; // expected-warning {{implicit conversion from '__wrap unsigned int' to '__no_wrap unsigned short' changes value from 100000 to 34464}}
@@ -61,4 +68,8 @@ void test_nested_typedef_control_flow() {
   // We had a crash during Sema with nested typedefs and control flow, make
   // sure we don't crash and just warn.
   if (global_var) {} // expected-warning {{implicit conversion from 'nw_s64_typedef2'}}
+}
+
+int test_discard_on_return(unsigned long __no_wrap a) {
+  return a; // expected-warning {{implicit conversion from '__no_wrap unsigned long' to 'int' discards overflow behavior}}
 }

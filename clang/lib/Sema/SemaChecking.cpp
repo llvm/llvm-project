@@ -12180,8 +12180,7 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     }
   }
 
-  if (CheckOverflowBehaviorTypeConversion(E, T, CC))
-    return;
+  CheckOverflowBehaviorTypeConversion(E, T, CC);
 
   // If the we're converting a constant to an ObjC BOOL on a platform where BOOL
   // is a typedef for signed char (macOS), then that constant value has to be 1
@@ -13208,69 +13207,17 @@ bool Sema::CheckOverflowBehaviorTypeConversion(Expr *E, QualType T,
       DiscardedDuringAssignment = DRE->isOverflowBehaviorDiscarded();
 
     if (Target->isIntegerType() && !Target->isOverflowBehaviorType()) {
-      // Before issuing the general OBT warning, check if this is a constant
-      // conversion that should get the more specific constant conversion
-      // warning
-      QualType UnderlyingType = OBT->getUnderlyingType();
-      IntRange SourceRange = IntRange::forTargetOfCanonicalType(
-          Context, Context.getCanonicalType(UnderlyingType).getTypePtr());
-      IntRange TargetRange = IntRange::forTargetOfCanonicalType(
-          Context, Context.getCanonicalType(Target).getTypePtr());
-
-      if (SourceRange.Width > TargetRange.Width) {
-        // Try to evaluate as constant - look through potential OBT cast
-        Expr::EvalResult Result;
-        bool HasConstant = false;
-
-        const Expr *ExprToEval = E;
-        if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-          if (const auto *CE = dyn_cast<CStyleCastExpr>(ICE->getSubExpr())) {
-            if (CE->getType()->getAs<OverflowBehaviorType>()) {
-              ExprToEval = CE->getSubExpr();
-            }
-          }
-        }
-
-        if (ExprToEval->EvaluateAsInt(Result, Context,
-                                      Expr::SE_AllowSideEffects,
-                                      isConstantEvaluatedContext())) {
-          HasConstant = true;
-        }
-
-        if (HasConstant) {
-          llvm::APSInt Value(32);
-          Value = Result.Val.getInt();
-
-          if (!SourceMgr.isInSystemMacro(CC)) {
-            std::string PrettySourceValue = toString(Value, 10);
-            std::string PrettyTargetValue =
-                PrettyPrintInRange(Value, TargetRange);
-
-            DiagRuntimeBehavior(
-                E->getExprLoc(), E,
-                PDiag(diag::warn_impcast_integer_precision_constant)
-                    << PrettySourceValue << PrettyTargetValue << E->getType()
-                    << T << E->getSourceRange() << clang::SourceRange(CC));
-            return true;
-          }
-        }
-      }
-
-      // Implicit casts from unsigned wrap types to unsigned types are less
-      // problematic but still warrant some diagnostic.
+      // Overflow behavior type is being stripped - issue warning
       if (OBT->isUnsignedIntegerType() && OBT->isWrapKind() &&
           Target->isUnsignedIntegerType()) {
         DiagnoseImpCast(*this, E, T, CC,
                         diag::warn_impcast_overflow_behavior_pedantic);
-        return true;
-      }
-      if (DiscardedDuringAssignment) {
+      } else if (DiscardedDuringAssignment) {
         DiagnoseImpCast(*this, E, T, CC,
                         diag::warn_impcast_overflow_behavior_assignment);
-        return true;
+      } else {
+        DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_overflow_behavior);
       }
-      DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_overflow_behavior);
-      return true;
     }
   }
 
