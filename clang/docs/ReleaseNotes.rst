@@ -359,6 +359,12 @@ Non-comprehensive list of changes in this release
   ARC-managed pointers and other pointer types. The prior behavior was overly
   strict and inconsistent with the ARC specification.
 
+- Use of ``__has_feature`` to detect the ``ptrauth_qualifier`` and ``ptrauth_intrinsics``
+  features has been deprecated, and is restricted to the arm64e target only. The
+  correct method to check for these features is to test for the ``__PTRAUTH__``
+  macro.
+
+
 New Compiler Flags
 ------------------
 
