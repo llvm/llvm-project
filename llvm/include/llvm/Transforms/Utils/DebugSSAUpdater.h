@@ -13,16 +13,23 @@
 // the state of debug variables, such as measuring the change in values of a
 // variable over time, or calculating coverage stats.
 //
+// NB: This is an expensive analysis that is generally not suitable for use in
+// LLVM passes, but may be useful for standalone tools.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_UTILS_DEBUGSSAUPDATER_H
 #define LLVM_TRANSFORMS_UTILS_DEBUGSSAUPDATER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/ValueMap.h"
+#include <cstdint>
 
 namespace llvm {
 
@@ -30,7 +37,6 @@ namespace llvm {
 // SSAUpdater specialization classes
 
 class DbgSSAPhi;
-template <typename T> class SmallVectorImpl;
 template <typename T> class SSAUpdaterTraits;
 
 /// A definition of a variable; can represent either a debug value, no
@@ -208,12 +214,15 @@ public:
 /// SSA construction (via the SSAUpdaterImpl class), used for analysis purposes.
 class DebugSSAUpdater {
   friend class SSAUpdaterTraits<DebugSSAUpdater>;
+  using AvailableValsTy = DenseMap<DbgSSABlock *, DbgValueDef>;
 
 private:
   /// This keeps track of which value to use on a per-block basis. When we
   /// insert PHI nodes, we keep track of them here.
-  void *AV = nullptr;
+  AvailableValsTy AV;
 
+  /// Pointer to an optionally-passed vector into which, if it is non-null,
+  /// the PHIs that describe ambiguous variable locations will be inserted.
   SmallVectorImpl<DbgSSAPhi *> *InsertedPHIs;
 
   DenseMap<BasicBlock *, DbgSSABlock *> BlockMap;
@@ -225,7 +234,6 @@ public:
       SmallVectorImpl<DbgSSAPhi *> *InsertedPHIs = nullptr);
   DebugSSAUpdater(const DebugSSAUpdater &) = delete;
   DebugSSAUpdater &operator=(const DebugSSAUpdater &) = delete;
-  ~DebugSSAUpdater();
 
   void reset() {
     for (auto &Block : BlockMap)
@@ -298,21 +306,35 @@ struct DbgRangeEntry {
   DbgValueDef Value;
 };
 
+/// Utility class used to store the names of SSA values after their owning
+/// modules have been destroyed. Values are added via \c addValue to receive a
+/// corresponding ID, which can then be used to retrieve the name of the SSA
+/// value via \c getName at any point. Adding the same value multiple times
+/// returns the same ID, making \c addValue idempotent.
+class SSAValueNameMap {
+  struct Config : ValueMapConfig<Value *> {
+    enum { FollowRAUW = false };
+  };
+public:
+  using ValueID = uint64_t;
+  ValueID addValue(Value *V);
+  std::string getName(ValueID ID) {
+    return ValueIDToNameMap[ID];
+  }
+private:
+  DenseMap<ValueID, std::string> ValueIDToNameMap;
+  ValueMap<Value*, ValueID, Config> ValueToIDMap;
+  ValueID NextID = 0;
+};
+
+/// Utility class used to find and store the live debug ranges for variables in
+/// a module. This class uses the DebugSSAUpdater for each variable added with
+/// \c addVariable to find either a single-location value, e.g. #dbg_declare, or
+/// a set of live value ranges corresponding to the set of #dbg_value records.
 class DbgValueRangeTable {
   DenseMap<DebugVariableAggregate, SmallVector<DbgRangeEntry>>
       OrigVariableValueRangeTable;
   DenseMap<DebugVariableAggregate, DbgValueDef> OrigSingleLocVariableValueTable;
-  // For the only initial user of this class, the mappings below are useful and
-  // are used in conjunction with the variable value ranges above, thus we track
-  // them as part of the same class. If we have more uses for variable value
-  // range tracking, then the line/variable name mapping should be moved out to
-  // a separate class.
-  DenseMap<BasicBlock::iterator, uint64_t> LineMapping;
-  DenseMap<uint64_t, std::string> VariableNameMapping;
-
-  using VarMapping = DenseMap<Value *, uint64_t>;
-  VarMapping VariableMapping;
-  uint64_t KeyIndex = 0;
 
 public:
   void addVariable(Function *F, DebugVariableAggregate DVA);
@@ -328,19 +350,6 @@ public:
   }
   DbgValueDef getSingleLoc(DebugVariableAggregate DVA) {
     return OrigSingleLocVariableValueTable[DVA];
-  }
-
-  void addLine(BasicBlock::iterator I, uint64_t LineAddr) {
-    LineMapping[I] = LineAddr;
-  }
-  uint64_t getLine(BasicBlock::iterator I) {
-    return LineMapping.contains(I) ? LineMapping[I] : (uint64_t)-1;
-  }
-
-  uint64_t addVariableName(Value *V, uint64_t Size);
-  std::string getVariableName(uint64_t Key) {
-    assert(VariableNameMapping.contains(Key) && "Why not here?");
-    return VariableNameMapping[Key];
   }
 
   void printValues(DebugVariableAggregate DVA, raw_ostream &OS);
