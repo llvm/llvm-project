@@ -35,7 +35,7 @@ public:
 
   std::optional<DynMatcher> getDynMatcher() const override {
     std::vector<DynMatcher> dynMatchers;
-    for (auto variantMatcher : args) {
+    for (const auto &variantMatcher : args) {
       std::optional<DynMatcher> dynMatcher = variantMatcher.getDynMatcher();
       if (dynMatcher)
         dynMatchers.push_back(dynMatcher.value());
