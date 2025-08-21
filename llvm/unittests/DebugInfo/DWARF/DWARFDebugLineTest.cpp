@@ -2148,4 +2148,114 @@ TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
     EXPECT_EQ(Rows[1], 3u);
   }
 }
+
+/// Test that HighPC is now inclusive in Sequence containsPC checks.
+//
+/// With the old exclusive HighPC logic, lookups at the last row's address would
+/// fail. With the new inclusive HighPC logic, lookups at the HighPC address
+/// should succeed.
+TEST_F(DebugLineBasicFixture, HighPCInclusiveLookup) {
+  if (!setupGenerator())
+    GTEST_SKIP();
+
+  // Create a line table with a sequence that covers addresses [0x1000, 0x1010]
+  // We'll test lookups at various addresses including the HighPC (0x1010)
+  LineTable &LT = Gen->addLineTable();
+
+  // Set address to 0x1000 and create first row
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000U, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+
+  // Advance to 0x1008 and create second row
+  LT.addStandardOpcode(DW_LNS_advance_pc, {{0x8, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+
+  // Advance to 0x1010 and create third row (this will be the HighPC)
+  LT.addStandardOpcode(DW_LNS_advance_pc, {{0x8, LineTable::ULEB}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+
+  // End the sequence - this makes HighPC = 0x1010
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  generate();
+
+  // Parse the line table
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  const auto *Table = *ExpectedLineTable;
+
+  // Verify we have one sequence with the expected address range
+  ASSERT_EQ(Table->Sequences.size(), 1u);
+  const auto &Seq = Table->Sequences[0];
+  EXPECT_EQ(Seq.LowPC, 0x1000U);
+  EXPECT_EQ(Seq.HighPC, 0x1011U);
+
+  auto LastRow = Table->Rows.back();
+
+  // Lookup the last Row - this is the key test for inclusive HighPC
+  // With the old exclusive logic, this would return UnknownRowIndex
+  // With the new inclusive logic, this should succeed
+  {
+    uint32_t RowIndex = Table->lookupAddress(
+        {LastRow.Address.Address, object::SectionedAddress::UndefSection});
+    // EXPECT_NE(RowIndex, Table->UnknownRowIndex) << "Lookup at HighPC found no
+    // row";
+    EXPECT_EQ(RowIndex, Table->Rows.size() - 2)
+        << "Lookup at HighPC should find the second to the last row";
+  }
+}
+
+/// Test that a sequence with only one row works correctly with inclusive
+/// HighPC. This is an important edge case where LowPC == HighPC, and the
+/// inclusive HighPC logic should still allow lookups at that single address.
+TEST_F(DebugLineBasicFixture, SingleInstSequenceInclusiveHighPC) {
+  if (!setupGenerator())
+    GTEST_SKIP();
+
+  // Create a line table with a sequence that has only one row
+  // This creates a sequence where LowPC == HighPC
+  LineTable &LT = Gen->addLineTable();
+
+  // Set address to 0x3000 and create the only row
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x3000U, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+
+  // End the sequence immediately - this makes LowPC == HighPC == 0x3000
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  generate();
+
+  // Parse the line table
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  const auto *Table = *ExpectedLineTable;
+
+  // Verify we have one sequence with LowPC == HighPC
+  ASSERT_EQ(Table->Sequences.size(), 1u);
+  const auto &Seq = Table->Sequences[0];
+  EXPECT_EQ(Seq.LowPC, 0x3000U);
+  EXPECT_EQ(Seq.HighPC, 0x3001U);
+
+  // Verify we have exactly one row (plus the end_sequence row)
+  EXPECT_EQ(Table->Rows.size(), 2u);
+  EXPECT_EQ(Table->Rows[0].Address.Address, 0x3000U);
+  EXPECT_TRUE(Table->Rows[1].EndSequence);
+
+  auto LastRow = Table->Rows.back();
+
+  // Lookup the last Row - this is the key test for inclusive HighPC
+  // With the old exclusive logic, this would return UnknownRowIndex
+  // With the new inclusive logic, this should succeed
+  {
+    uint32_t RowIndex = Table->lookupAddress(
+        {LastRow.Address.Address, object::SectionedAddress::UndefSection});
+    // EXPECT_NE(RowIndex, Table->UnknownRowIndex) << "Lookup at HighPC found no
+    // row";
+    EXPECT_EQ(RowIndex, Table->Rows.size() - 2)
+        << "Lookup at HighPC should find the last row";
+  }
+}
+
 } // end anonymous namespace

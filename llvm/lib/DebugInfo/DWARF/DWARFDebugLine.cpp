@@ -581,7 +581,7 @@ void DWARFDebugLine::ParsingState::appendRowToMatrix() {
   LineTable->appendRow(Row);
   if (Row.EndSequence) {
     // Record the end of instruction sequence.
-    Sequence.HighPC = Row.Address.Address;
+    Sequence.HighPC = Row.Address.Address + LineTable->Prologue.MinInstLength;
     Sequence.LastRowIndex = RowNumber + 1;
     Sequence.SectionIndex = Row.Address.SectionIndex;
     if (Sequence.isValid())
