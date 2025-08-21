@@ -236,7 +236,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getType().getLayout());
     }
 
-    ArrayRef<int64_t> getDistributeShape() {
+    ArrayRef<int64_t> getDataShape() {
       return getTensorDescShape();
     }
 
@@ -283,7 +283,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getTensorDescType().getLayout());
     }
 
-    ArrayRef<int64_t> getDistributeShape() {
+    ArrayRef<int64_t> getDataShape() {
       return getTensorDescType().getShape();
     }
 
@@ -381,7 +381,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getTensorDescType().getLayout());
     }
 
-    ArrayRef<int64_t> getDistributeShape() {
+    ArrayRef<int64_t> getDataShape() {
       return getTensorDescType().getShape();
     }
 
@@ -473,7 +473,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getTensorDescType().getLayout());
     }
 
-    ArrayRef<int64_t> getDistributeShape() {
+    ArrayRef<int64_t> getDataShape() {
       return getTensorDescType().getShape();
     }
 
@@ -1243,7 +1243,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
       return getMixedValues(getConstOffsets(), getOffsets(), getContext());
     }
 
-    ArrayRef<int64_t> getDistributeShape() {
+    ArrayRef<int64_t> getDataShape() {
       return getRes().getType().getShape();
     }
   }];
@@ -1285,7 +1285,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
       return getMixedValues(getConstOffsets(), getOffsets(), getContext());
     }
 
-    ArrayRef<int64_t> getDistributeShape() {
+    ArrayRef<int64_t> getDataShape() {
       return getData().getType().getShape();
     }
 

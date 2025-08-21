@@ -36,15 +36,12 @@ namespace {
 
 // Retrieve the RangeAttr if it is specified.
 static xegpu::RangeAttr getRangeSpecAttr(Operation *op) {
-  Operation *parent = op->getParentOp();
+  Operation *parent = op->getParentOfType<scf::IfOp>();
   while (parent) {
-    if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
-      if (auto attr = llvm::dyn_cast_or_null<xegpu::RangeAttr>(
-              ifOp->getAttr("sg_id_range"))) {
-        return attr;
-      }
-    }
-    parent = parent->getParentOp();
+    if (auto attr = llvm::dyn_cast_if_present<xegpu::RangeAttr>(
+            parent->getAttr("sg_id_range")))
+      return attr;
+    parent = parent->getParentOfType<scf::IfOp>();
   }
   return {};
 }
@@ -115,14 +112,13 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
 
   // Compute the list of subgroup-relative offsets for sub-tensors or sub-memory
   // descriptors to be accessed, based on the layout information.
-  ArrayRef<int64_t> wgShape = op.getDistributeShape();
+  ArrayRef<int64_t> wgShape = op.getDataShape();
   auto maybeDescOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
   if (failed(maybeDescOffsets))
     return failure();
 
   // Compute the final global offsets for each accessed sub-tensor
   // or sub-memory descriptor.
-  // SmallVector<SmallVector<OpFoldResult>> offsetsList;
   for (const auto &sgOffsets : *maybeDescOffsets) {
     SmallVector<OpFoldResult> newOffsets = xegpu::addWithRightAligned(
         rewriter, loc, getAsOpFoldResult(sgOffsets), origOffsets);
@@ -777,7 +773,7 @@ struct WgToSgLoadMatrixOp : public OpConversionPattern<xegpu::LoadMatrixOp> {
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
-    ArrayRef<int64_t> wgShape = op.getDistributeShape();
+    ArrayRef<int64_t> wgShape = op.getDataShape();
     VectorType valueTy = op.getRes().getType();
     Type elemTy = valueTy.getElementType();
 
