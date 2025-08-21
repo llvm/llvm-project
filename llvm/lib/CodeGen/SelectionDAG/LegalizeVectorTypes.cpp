@@ -3842,13 +3842,45 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
   uint64_t LoEltsMin = Lo.getValueType().getVectorMinNumElements();
   uint64_t IdxVal = Idx->getAsZExtVal();
 
+  unsigned NumResultElts = SubVT.getVectorMinNumElements();
+
   if (IdxVal < LoEltsMin) {
-    assert(IdxVal + SubVT.getVectorMinNumElements() <= LoEltsMin &&
-           "Extracted subvector crosses vector split!");
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
-  } else if (SubVT.isScalableVector() ==
-             N->getOperand(0).getValueType().isScalableVector())
-    return DAG.getExtractSubvector(dl, SubVT, Hi, IdxVal - LoEltsMin);
+    // If the extracted elements are all in the low half, do a simple extract.
+    if (IdxVal + NumResultElts <= LoEltsMin)
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
+
+    // Extracted subvector crosses vector split, so we need to blend the two
+    // halves.
+    // TODO: May be able to emit partial extract_subvector.
+    SmallVector<SDValue, 8> Elts;
+    Elts.reserve(NumResultElts);
+
+    DAG.ExtractVectorElements(Lo, Elts, /*Start=*/IdxVal,
+                              /*Count=*/LoEltsMin - IdxVal);
+    DAG.ExtractVectorElements(Hi, Elts, /*Start=*/0,
+                              /*Count=*/SubVT.getVectorNumElements() -
+                                  Elts.size());
+    return DAG.getBuildVector(SubVT, dl, Elts);
+  }
+
+  EVT SrcVT = N->getOperand(0).getValueType();
+  if (SubVT.isScalableVector() == SrcVT.isScalableVector()) {
+    uint64_t ExtractIdx = IdxVal - LoEltsMin;
+    if (ExtractIdx % NumResultElts == 0)
+      return DAG.getExtractSubvector(dl, SubVT, Hi, ExtractIdx);
+
+    // We cannot create an extract_subvector that isn't a multiple of the result
+    // size, which may go out of bounds for the last elements. Shuffle the
+    // desired elements down to 0 and do a simple 0 extract.
+    EVT HiVT = Hi.getValueType();
+    SmallVector<int, 8> Mask(HiVT.getVectorNumElements(), -1);
+    for (int I = 0; I != static_cast<int>(NumResultElts); ++I)
+      Mask[I] = ExtractIdx + I;
+
+    SDValue Shuffle =
+        DAG.getVectorShuffle(HiVT, dl, Hi, DAG.getPOISON(HiVT), Mask);
+    return DAG.getExtractSubvector(dl, SubVT, Shuffle, 0);
+  }
 
   // After this point the DAG node only permits extracting fixed-width
   // subvectors from scalable vectors.

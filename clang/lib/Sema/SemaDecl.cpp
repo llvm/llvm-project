@@ -3115,6 +3115,10 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       cast<SYCLKernelEntryPointAttr>(NewAttribute)->setInvalidAttr();
       ++I;
       continue;
+    } else if (isa<SYCLExternalAttr>(NewAttribute)) {
+      // SYCLExternalAttr may be added after a definition.
+      ++I;
+      continue;
     }
 
     S.Diag(NewAttribute->getLocation(),
@@ -4138,6 +4142,18 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
            diag::err_carries_dependency_missing_on_first_decl) << 0/*Function*/;
       Diag(Old->getFirstDecl()->getLocation(),
            diag::note_carries_dependency_missing_first_decl) << 0/*Function*/;
+    }
+
+    // SYCL 2020 section 5.10.1, "SYCL functions and member functions linkage":
+    //   When a function is declared with SYCL_EXTERNAL, that macro must be
+    //   used on the first declaration of that function in the translation unit.
+    //   Redeclarations of the function in the same translation unit may
+    //   optionally use SYCL_EXTERNAL, but this is not required.
+    const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
+    if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
+      Diag(SEA->getLocation(), diag::warn_sycl_external_missing_on_first_decl)
+          << SEA;
+      Diag(Old->getLocation(), diag::note_previous_declaration);
     }
 
     // (C++98 8.3.5p3):
@@ -12325,6 +12341,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   if (NewFD->hasAttr<SYCLKernelEntryPointAttr>())
     SYCL().CheckSYCLEntryPointFunctionDecl(NewFD);
 
+  if (NewFD->hasAttr<SYCLExternalAttr>())
+    SYCL().CheckSYCLExternalFunctionDecl(NewFD);
+
   // Semantic checking for this function declaration (in isolation).
 
   if (getLangOpts().CPlusPlus) {
@@ -12509,6 +12528,13 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
   if (getLangOpts().OpenCL) {
     Diag(FD->getLocation(), diag::err_opencl_no_main)
         << FD->hasAttr<DeviceKernelAttr>();
+    FD->setInvalidDecl();
+    return;
+  }
+
+  if (FD->hasAttr<SYCLExternalAttr>()) {
+    Diag(FD->getLocation(), diag::err_sycl_external_invalid_main)
+        << FD->getAttr<SYCLExternalAttr>();
     FD->setInvalidDecl();
     return;
   }
@@ -16349,6 +16375,14 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         return nullptr;
       Body = SR.get();
     }
+  }
+
+  if (FD && !FD->isInvalidDecl() && FD->hasAttr<SYCLExternalAttr>()) {
+    SYCLExternalAttr *SEAttr = FD->getAttr<SYCLExternalAttr>();
+    if (FD->isDeletedAsWritten())
+      Diag(SEAttr->getLocation(),
+           diag::err_sycl_external_invalid_deleted_function)
+          << SEAttr;
   }
 
   {

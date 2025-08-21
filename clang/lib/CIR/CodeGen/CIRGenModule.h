@@ -150,6 +150,7 @@ public:
 
   static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
                                       llvm::StringRef name, mlir::Type t,
+                                      bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
 
   llvm::StringMap<unsigned> cgGlobalNames;
@@ -196,6 +197,12 @@ public:
   /// literal.
   cir::GlobalOp getGlobalForStringLiteral(const StringLiteral *s,
                                           llvm::StringRef name = ".str");
+
+  /// Return a global symbol reference to a constant array for the given string
+  /// literal.
+  cir::GlobalViewAttr
+  getAddrOfConstantStringFromLiteral(const StringLiteral *s,
+                                     llvm::StringRef name = ".str");
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).

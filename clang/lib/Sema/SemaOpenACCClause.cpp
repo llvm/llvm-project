@@ -1930,61 +1930,95 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
 ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
                                           OpenACCReductionOperator ReductionOp,
                                           Expr *VarExpr) {
+  // For now, we only support 'scalar' types, or composites/arrays of scalar
+  // types.
   VarExpr = VarExpr->IgnoreParenCasts();
+  SourceLocation VarLoc = VarExpr->getBeginLoc();
 
-  auto TypeIsValid = [](QualType Ty) {
+  SmallVector<PartialDiagnosticAt> Notes;
+  QualType CurType = VarExpr->getType();
+
+  // For array like things, the expression can either be an array element
+  // (subscript expr), array section, or array type. Peel those off, and add
+  // notes in case we find an illegal kind.  We'll allow scalar or composite of
+  // scalars inside of this.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(VarExpr)) {
+    QualType BaseType = ArraySectionExpr::getBaseOriginalType(ASE);
+
+    PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
+                           << diag::OACCReductionArray::Section << BaseType;
+    Notes.push_back({ASE->getBeginLoc(), PD});
+
+    CurType = getASTContext().getBaseElementType(BaseType);
+  } else if (auto *SubExpr = dyn_cast<ArraySubscriptExpr>(VarExpr)) {
+    // Array subscript already results in the type of the thing as its type, so
+    // there is no type to change here.
+    PartialDiagnostic PD =
+        PDiag(diag::note_acc_reduction_array)
+        << diag::OACCReductionArray::Subscript
+        << SubExpr->getBase()->IgnoreParenImpCasts()->getType();
+    Notes.push_back({SubExpr->getBeginLoc(), PD});
+  } else if (auto *AT = getASTContext().getAsArrayType(CurType)) {
+    // If we're already the array type, peel off the array and leave the element
+    // type.
+    CurType = getASTContext().getBaseElementType(AT);
+    PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
+                           << diag::OACCReductionArray::ArrayTy << CurType;
+    Notes.push_back({VarLoc, PD});
+  }
+
+  auto IsValidMemberOfComposite = [](QualType Ty) {
     return Ty->isDependentType() || Ty->isScalarType();
   };
 
-  if (isa<ArraySectionExpr>(VarExpr)) {
-    Expr *ASExpr = VarExpr;
-    QualType BaseTy = ArraySectionExpr::getBaseOriginalType(ASExpr);
-    QualType EltTy = getASTContext().getBaseElementType(BaseTy);
+  auto EmitDiags = [&](SourceLocation Loc, PartialDiagnostic PD) {
+    Diag(Loc, PD);
 
-    if (!TypeIsValid(EltTy)) {
-      Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_type)
-          << EltTy << /*Sub array base type*/ 1;
-      return ExprError();
-    }
-  } else if (VarExpr->getType()->isArrayType()) {
-    // Arrays are considered an 'aggregate variable' explicitly, so are OK, no
-    // additional checking required.
-    //
-    // Glossary: Aggregate variables – a variable of any non-scalar datatype,
-    // including array or composite variables.
-    //
-    // The next branch (record decl) checks for composite variables.
-  } else if (auto *RD = VarExpr->getType()->getAsRecordDecl()) {
+    for (auto [Loc, PD] : Notes)
+      Diag(Loc, PD);
+
+    Diag(VarLoc, diag::note_acc_reduction_type_summary);
+  };
+
+  // If the type is already scalar, or is dependent, just give up.
+  if (IsValidMemberOfComposite(CurType)) {
+    // Nothing to do here, is valid.
+  } else if (auto *RD = CurType->getAsRecordDecl()) {
     if (!RD->isStruct() && !RD->isClass()) {
-      Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_composite_type)
-          << /*not class or struct*/ 0 << VarExpr->getType();
+      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                            << RD << diag::OACCReductionTy::NotClassStruct);
       return ExprError();
     }
 
     if (!RD->isCompleteDefinition()) {
-      Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_composite_type)
-          << /*incomplete*/ 1 << VarExpr->getType();
+      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                            << RD << diag::OACCReductionTy::NotComplete);
       return ExprError();
     }
+
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
         CXXRD && !CXXRD->isAggregate()) {
-      Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_composite_type)
-          << /*aggregate*/ 2 << VarExpr->getType();
+      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                            << CXXRD << diag::OACCReductionTy::NotAgg);
       return ExprError();
     }
 
     for (FieldDecl *FD : RD->fields()) {
-      if (!TypeIsValid(FD->getType())) {
-        Diag(VarExpr->getExprLoc(),
-             diag::err_acc_reduction_composite_member_type);
-        Diag(FD->getLocation(), diag::note_acc_reduction_composite_member_loc);
+      if (!IsValidMemberOfComposite(FD->getType())) {
+        PartialDiagnostic PD =
+            PDiag(diag::note_acc_reduction_member_of_composite)
+            << FD->getName() << RD->getName();
+        Notes.push_back({FD->getBeginLoc(), PD});
+        // TODO: member here.note_acc_reduction_member_of_composite
+        EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                              << FD->getType()
+                              << diag::OACCReductionTy::MemberNotScalar);
         return ExprError();
       }
     }
-  } else if (!TypeIsValid(VarExpr->getType())) {
-    Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_type)
-        << VarExpr->getType() << /*Sub array base type*/ 0;
-    return ExprError();
+  } else {
+    EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                          << CurType << diag::OACCReductionTy::NotScalar);
   }
 
   // OpenACC3.3: 2.9.11: Reduction clauses on nested constructs for the same
