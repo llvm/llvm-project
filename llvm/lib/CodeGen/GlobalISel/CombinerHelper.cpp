@@ -5934,21 +5934,19 @@ bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
   unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
+  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_S, {DstTy, SrcTy}}))
+    return false;
+
   APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
   APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
-  if (LI && isLegal({TargetOpcode::G_TRUNC_SSAT_S, {DstTy, SrcTy}})) {
-    if (mi_match(
-            Src, MRI,
-            m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMin)),
-                    m_SpecificICstOrSplat(SignedMax))))
-      return true;
-    if (mi_match(
-            Src, MRI,
-            m_GSMax(m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax)),
-                    m_SpecificICstOrSplat(SignedMin))))
-      return true;
-  }
-  return false;
+  return mi_match(Src, MRI,
+                  m_GSMin(m_GSMax(m_Reg(MatchInfo),
+                                  m_SpecificICstOrSplat(SignedMin)),
+                          m_SpecificICstOrSplat(SignedMax))) ||
+         mi_match(Src, MRI,
+                  m_GSMax(m_GSMin(m_Reg(MatchInfo),
+                                  m_SpecificICstOrSplat(SignedMax)),
+                          m_SpecificICstOrSplat(SignedMin)));
 }
 
 void CombinerHelper::applyTruncSSatS(MachineInstr &MI,
@@ -5968,23 +5966,19 @@ bool CombinerHelper::matchTruncSSatU(MachineInstr &MI,
   unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
+  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
+    return false;
   APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
-  if (LI && isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}})) {
-    if (mi_match(Src, MRI,
-                 m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
-                         m_SpecificICstOrSplat(UnsignedMax))))
-      return true;
-    if (mi_match(Src, MRI,
-                 m_GSMax(m_GSMin(m_Reg(MatchInfo),
-                                 m_SpecificICstOrSplat(UnsignedMax)),
-                         m_SpecificICstOrSplat(0))))
-      return true;
-    if (mi_match(Src, MRI,
-                 m_GUMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
-                         m_SpecificICstOrSplat(UnsignedMax))))
-      return true;
-  }
-  return false;
+  return mi_match(Src, MRI,
+                  m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
+                          m_SpecificICstOrSplat(UnsignedMax))) ||
+         mi_match(Src, MRI,
+                  m_GSMax(m_GSMin(m_Reg(MatchInfo),
+                                  m_SpecificICstOrSplat(UnsignedMax)),
+                          m_SpecificICstOrSplat(0))) ||
+         mi_match(Src, MRI,
+                  m_GUMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
+                          m_SpecificICstOrSplat(UnsignedMax)));
 }
 
 void CombinerHelper::applyTruncSSatU(MachineInstr &MI,
