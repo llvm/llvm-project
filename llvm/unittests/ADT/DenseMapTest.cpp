@@ -387,6 +387,9 @@ TYPED_TEST(DenseMapTest, ConstIteratorTest) {
   EXPECT_TRUE(cit == cit2);
 }
 
+// TYPED_TEST below cycles through different types.  We define UniversalSmallSet
+// here so that we'll use SmallSet or SmallPtrSet depending on whether the
+// element type is a pointer.
 template <typename T, unsigned N>
 using UniversalSmallSet =
     std::conditional_t<std::is_pointer_v<T>, SmallPtrSet<T, N>, SmallSet<T, N>>;
