@@ -103,7 +103,8 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   policy.SuppressTagKeyword = true;
 
   if (recordDecl->getIdentifier())
-    astContext.getRecordType(recordDecl).print(outStream, policy);
+    QualType(astContext.getCanonicalTagType(recordDecl))
+        .print(outStream, policy);
   else if (auto *typedefNameDecl = recordDecl->getTypedefNameForAnonDecl())
     typedefNameDecl->printQualifiedName(outStream, policy);
   else
@@ -138,7 +139,9 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   if (!alreadyChecked.insert(rd).second)
     return true;
 
-  const Type *key = cgt.getASTContext().getTagDeclType(rd).getTypePtr();
+  assert(rd->isCompleteDefinition() &&
+         "Expect RecordDecl to be CompleteDefinition");
+  const Type *key = cgt.getASTContext().getCanonicalTagType(rd).getTypePtr();
 
   // If this type is already laid out, converting it is a noop.
   if (cgt.isRecordLayoutComplete(key))
@@ -152,13 +155,14 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   // out, don't do it.  This includes virtual base classes which get laid out
   // when a class is translated, even though they aren't embedded by-value into
   // the class.
-  if (auto *crd = dyn_cast<CXXRecordDecl>(rd)) {
-    if (crd->getNumBases() > 0) {
-      assert(!cir::MissingFeatures::cxxSupport());
-      cgt.getCGModule().errorNYI(rd->getSourceRange(),
-                                 "isSafeToConvert: CXXRecordDecl with bases");
-      return false;
-    }
+  if (const CXXRecordDecl *crd = dyn_cast<CXXRecordDecl>(rd)) {
+    for (const clang::CXXBaseSpecifier &i : crd->bases())
+      if (!isSafeToConvert(i.getType()
+                               ->castAs<RecordType>()
+                               ->getOriginalDecl()
+                               ->getDefinitionOrSelf(),
+                           cgt, alreadyChecked))
+        return false;
   }
 
   // If this type would require laying out members that are currently being laid
@@ -182,7 +186,8 @@ isSafeToConvert(QualType qt, CIRGenTypes &cgt,
 
   // If this is a record, check it.
   if (const auto *rt = qt->getAs<RecordType>())
-    return isSafeToConvert(rt->getDecl(), cgt, alreadyChecked);
+    return isSafeToConvert(rt->getOriginalDecl()->getDefinitionOrSelf(), cgt,
+                           alreadyChecked);
 
   // If this is an array, check the elements, which are embedded inline.
   if (const auto *at = cgt.getASTContext().getAsArrayType(qt))
@@ -210,7 +215,7 @@ static bool isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt) {
 mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
   // connected to the decl.
-  const Type *key = astContext.getTagDeclType(rd).getTypePtr();
+  const Type *key = astContext.getCanonicalTagType(rd).getTypePtr();
   cir::RecordType entry = recordDeclTypes[key];
 
   // If we don't have an entry for this record yet, create one.
@@ -242,7 +247,10 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
     for (const auto &base : cxxRecordDecl->bases()) {
       if (base.isVirtual())
         continue;
-      convertRecordDeclType(base.getType()->castAs<RecordType>()->getDecl());
+      convertRecordDeclType(base.getType()
+                                ->castAs<RecordType>()
+                                ->getOriginalDecl()
+                                ->getDefinitionOrSelf());
     }
   }
 
@@ -275,7 +283,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   // Process record types before the type cache lookup.
   if (const auto *recordType = dyn_cast<RecordType>(type))
-    return convertRecordDeclType(recordType->getDecl());
+    return convertRecordDeclType(
+        recordType->getOriginalDecl()->getDefinitionOrSelf());
 
   // Has the type already been processed?
   TypeCacheTy::iterator tci = typeCache.find(ty);
@@ -416,9 +425,34 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::IncompleteArray: {
+    const IncompleteArrayType *arrTy = cast<IncompleteArrayType>(ty);
+    if (arrTy->getIndexTypeCVRQualifiers() != 0)
+      cgm.errorNYI(SourceLocation(), "non trivial array types", type);
+
+    mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
+    // int X[] -> [0 x int], unless the element type is not sized.  If it is
+    // unsized (e.g. an incomplete record) just use [0 x i8].
+    if (!cir::isSized(elemTy)) {
+      elemTy = cgm.SInt8Ty;
+    }
+
+    resultType = cir::ArrayType::get(elemTy, 0);
+    break;
+  }
+
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
+
+    // TODO(CIR): In LLVM, "lower arrays of undefined struct type to arrays of
+    // i8 just to have a concrete type"
+    if (!cir::isSized(elemTy)) {
+      cgm.errorNYI(SourceLocation(), "arrays of undefined struct type", type);
+      resultType = cgm.UInt32Ty;
+      break;
+    }
+
     resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }
@@ -432,8 +466,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   case Type::Enum: {
-    const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
-    if (auto integerType = ED->getIntegerType(); !integerType.isNull())
+    const EnumDecl *ed =
+        cast<EnumType>(ty)->getOriginalDecl()->getDefinitionOrSelf();
+    if (auto integerType = ed->getIntegerType(); !integerType.isNull())
       return convertType(integerType);
     // Return a placeholder 'i32' type.  This can be changed later when the
     // type is defined (see UpdateCompletedType), but is likely to be the
@@ -456,6 +491,20 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cir::IntType::get(&getMLIRContext(), bitIntTy->getNumBits(),
                                      bitIntTy->isSigned());
     }
+    break;
+  }
+
+  case Type::Atomic: {
+    QualType valueType = cast<AtomicType>(ty)->getValueType();
+    resultType = convertTypeForMem(valueType);
+
+    // Pad out to the inflated size if necessary.
+    uint64_t valueSize = astContext.getTypeSize(valueType);
+    uint64_t atomicSize = astContext.getTypeSize(ty);
+    if (valueSize != atomicSize) {
+      cgm.errorNYI("convertType: atomic type value size != atomic size");
+    }
+
     break;
   }
 
@@ -491,7 +540,7 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
 /// Return record layout info for the given record decl.
 const CIRGenRecordLayout &
 CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *rd) {
-  const auto *key = astContext.getTagDeclType(rd).getTypePtr();
+  const auto *key = astContext.getCanonicalTagType(rd).getTypePtr();
 
   // If we have already computed the layout, return it.
   auto it = cirGenRecordLayouts.find(key);
@@ -523,7 +572,7 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   }
 
   if (const RecordType *rt = t->getAs<RecordType>()) {
-    const RecordDecl *rd = rt->getDecl();
+    const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
     return isZeroInitializable(rd);
   }
 
@@ -598,8 +647,10 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
     // declaration of enums, and C doesn't allow an incomplete forward
     // declaration with a non-default type.
     assert(
-        !typeCache.count(ed->getTypeForDecl()) ||
-        (convertType(ed->getIntegerType()) == typeCache[ed->getTypeForDecl()]));
+        !typeCache.count(
+            ed->getASTContext().getCanonicalTagType(ed)->getTypePtr()) ||
+        (convertType(ed->getIntegerType()) ==
+         typeCache[ed->getASTContext().getCanonicalTagType(ed)->getTypePtr()]));
     // If necessary, provide the full definition of a type only used with a
     // declaration so far.
     assert(!cir::MissingFeatures::generateDebugInfo());
@@ -614,7 +665,7 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
 
   // Only complete if we converted it already. If we haven't converted it yet,
   // we'll just do it lazily.
-  if (recordDeclTypes.count(astContext.getTagDeclType(rd).getTypePtr()))
+  if (recordDeclTypes.count(astContext.getCanonicalTagType(rd).getTypePtr()))
     convertRecordDeclType(rd);
 
   // If necessary, provide the full definition of a type only used with a

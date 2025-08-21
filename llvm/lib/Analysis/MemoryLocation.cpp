@@ -111,7 +111,9 @@ MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
 
 std::optional<MemoryLocation>
 MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
-  if (!CB->onlyAccessesArgMemory())
+  // Check that the only possible writes are to arguments.
+  MemoryEffects WriteME = CB->getMemoryEffects() & MemoryEffects::writeOnly();
+  if (!WriteME.onlyAccessesArgPointees())
     return std::nullopt;
 
   if (CB->hasOperandBundles())
@@ -188,7 +190,21 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       return MemoryLocation::getAfter(Arg, AATags);
 
     case Intrinsic::lifetime_start:
-    case Intrinsic::lifetime_end:
+    case Intrinsic::lifetime_end: {
+      assert(ArgIdx == 0 && "Invalid argument index");
+      auto *AI = dyn_cast<AllocaInst>(Arg);
+      if (!AI)
+        // lifetime of poison value.
+        return MemoryLocation::getBeforeOrAfter(Arg);
+
+      std::optional<TypeSize> AllocSize =
+          AI->getAllocationSize(II->getDataLayout());
+      return MemoryLocation(Arg,
+                            AllocSize ? LocationSize::precise(*AllocSize)
+                                      : LocationSize::afterPointer(),
+                            AATags);
+    }
+
     case Intrinsic::invariant_start:
       assert(ArgIdx == 1 && "Invalid argument index");
       return MemoryLocation(

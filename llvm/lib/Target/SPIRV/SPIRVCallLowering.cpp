@@ -280,6 +280,10 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
     const auto value = attribute.getValueAsString();
     if (value == "compute")
       return SPIRV::ExecutionModel::GLCompute;
+    if (value == "vertex")
+      return SPIRV::ExecutionModel::Vertex;
+    if (value == "pixel")
+      return SPIRV::ExecutionModel::Fragment;
 
     report_fatal_error(
         "This HLSL entry point is not supported by this backend.");
@@ -302,6 +306,10 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   const auto value = attribute.getValueAsString();
   if (value == "compute")
     return SPIRV::ExecutionModel::GLCompute;
+  if (value == "vertex")
+    return SPIRV::ExecutionModel::Vertex;
+  if (value == "pixel")
+    return SPIRV::ExecutionModel::Fragment;
 
   report_fatal_error("This HLSL entry point is not supported by this backend.");
 }
@@ -472,7 +480,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
   } else if (F.getLinkage() != GlobalValue::InternalLinkage &&
-             F.getLinkage() != GlobalValue::PrivateLinkage) {
+             F.getLinkage() != GlobalValue::PrivateLinkage &&
+             F.getVisibility() != GlobalValue::HiddenVisibility) {
     SPIRV::LinkageType::LinkageType LnkTy =
         F.isDeclaration()
             ? SPIRV::LinkageType::Import

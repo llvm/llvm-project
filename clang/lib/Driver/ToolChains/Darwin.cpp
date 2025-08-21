@@ -1642,14 +1642,16 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     CmdArgs.push_back("-lSystem");
 
   // Select the dynamic runtime library and the target specific static library.
-  if (isTargetIOSBased()) {
-    // If we are compiling as iOS / simulator, don't attempt to link libgcc_s.1,
-    // it never went into the SDK.
-    // Linking against libgcc_s.1 isn't needed for iOS 5.0+
-    if (isIPhoneOSVersionLT(5, 0) && !isTargetIOSSimulator() &&
-        getTriple().getArch() != llvm::Triple::aarch64)
-      CmdArgs.push_back("-lgcc_s.1");
-  }
+  // Some old Darwin versions put builtins, libunwind, and some other stuff in
+  // libgcc_s.1.dylib. MacOS X 10.6 and iOS 5 moved those functions to
+  // libSystem, and made libgcc_s.1.dylib a stub. We never link libgcc_s when
+  // building for aarch64 or iOS simulator, since libgcc_s was made obsolete
+  // before either existed.
+  if (getTriple().getArch() != llvm::Triple::aarch64 &&
+      ((isTargetIOSBased() && isIPhoneOSVersionLT(5, 0) &&
+        !isTargetIOSSimulator()) ||
+       (isTargetMacOSBased() && isMacosxVersionLT(10, 6))))
+    CmdArgs.push_back("-lgcc_s.1");
   AddLinkRuntimeLib(Args, CmdArgs, "builtins");
 }
 
@@ -1719,10 +1721,14 @@ struct DarwinPlatform {
     UnderlyingOSVersion.reset();
     return Result;
   }
+  bool isValidOSVersion() const {
+    return llvm::Triple::isValidVersionForOS(getOSFromPlatform(Platform),
+                                             getOSVersion());
+  }
 
   VersionTuple getCanonicalOSVersion() const {
-    return llvm::Triple::getCanonicalVersionForOS(getOSFromPlatform(Platform),
-                                                  getOSVersion());
+    return llvm::Triple::getCanonicalVersionForOS(
+        getOSFromPlatform(Platform), getOSVersion(), /*IsInValidRange=*/true);
   }
 
   void setOSVersion(const VersionTuple &Version) {
@@ -1787,14 +1793,21 @@ struct DarwinPlatform {
     case TargetArg:
     case MTargetOSArg:
     case OSVersionArg:
-    case InferredFromSDK:
-    case InferredFromArch:
       assert(Arg && "OS version argument not yet inferred");
       return Arg->getAsString(Args);
     case DeploymentTargetEnv:
       return (llvm::Twine(EnvVarName) + "=" + OSVersionStr).str();
+    case InferredFromSDK:
+    case InferredFromArch:
+      llvm_unreachable("Cannot print arguments for inferred OS version");
     }
     llvm_unreachable("Unsupported Darwin Source Kind");
+  }
+
+  // Returns the inferred source of how the OS version was resolved.
+  std::string getInferredSource() {
+    assert(!isExplicitlySpecified() && "OS version was not inferred");
+    return InferredSource.str();
   }
 
   void setEnvironment(llvm::Triple::EnvironmentType EnvType,
@@ -1870,7 +1883,8 @@ struct DarwinPlatform {
     Result.EnvVarName = EnvVarName;
     return Result;
   }
-  static DarwinPlatform createFromSDK(DarwinPlatformKind Platform,
+  static DarwinPlatform createFromSDK(StringRef SDKRoot,
+                                      DarwinPlatformKind Platform,
                                       StringRef Value,
                                       bool IsSimulator = false) {
     DarwinPlatform Result(InferredFromSDK, Platform,
@@ -1878,11 +1892,15 @@ struct DarwinPlatform {
     if (IsSimulator)
       Result.Environment = DarwinEnvironmentKind::Simulator;
     Result.InferSimulatorFromArch = false;
+    Result.InferredSource = SDKRoot;
     return Result;
   }
-  static DarwinPlatform createFromArch(llvm::Triple::OSType OS,
+  static DarwinPlatform createFromArch(StringRef Arch, llvm::Triple::OSType OS,
                                        VersionTuple Version) {
-    return DarwinPlatform(InferredFromArch, getPlatformFromOS(OS), Version);
+    auto Result =
+        DarwinPlatform(InferredFromArch, getPlatformFromOS(OS), Version);
+    Result.InferredSource = Arch;
+    return Result;
   }
 
   /// Constructs an inferred SDKInfo value based on the version inferred from
@@ -1969,6 +1987,9 @@ private:
   bool InferSimulatorFromArch = true;
   std::pair<Arg *, std::string> Arguments;
   StringRef EnvVarName;
+  // If the DarwinPlatform information is derived from an inferred source, this
+  // captures what that source input was for error reporting.
+  StringRef InferredSource;
   // When compiling for a zippered target, this value represents the target
   // triple encoded in the target variant.
   std::optional<llvm::Triple> TargetVariantTriple;
@@ -2137,26 +2158,27 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
       [&](StringRef SDK) -> std::optional<DarwinPlatform> {
     if (SDK.starts_with("iPhoneOS") || SDK.starts_with("iPhoneSimulator"))
       return DarwinPlatform::createFromSDK(
-          Darwin::IPhoneOS, Version,
+          isysroot, Darwin::IPhoneOS, Version,
           /*IsSimulator=*/SDK.starts_with("iPhoneSimulator"));
     else if (SDK.starts_with("MacOSX"))
-      return DarwinPlatform::createFromSDK(Darwin::MacOS,
+      return DarwinPlatform::createFromSDK(isysroot, Darwin::MacOS,
                                            getSystemOrSDKMacOSVersion(Version));
     else if (SDK.starts_with("WatchOS") || SDK.starts_with("WatchSimulator"))
       return DarwinPlatform::createFromSDK(
-          Darwin::WatchOS, Version,
+          isysroot, Darwin::WatchOS, Version,
           /*IsSimulator=*/SDK.starts_with("WatchSimulator"));
     else if (SDK.starts_with("AppleTVOS") ||
              SDK.starts_with("AppleTVSimulator"))
       return DarwinPlatform::createFromSDK(
-          Darwin::TvOS, Version,
+          isysroot, Darwin::TvOS, Version,
           /*IsSimulator=*/SDK.starts_with("AppleTVSimulator"));
     else if (SDK.starts_with("XR"))
       return DarwinPlatform::createFromSDK(
-          Darwin::XROS, Version,
+          isysroot, Darwin::XROS, Version,
           /*IsSimulator=*/SDK.contains("Simulator"));
     else if (SDK.starts_with("DriverKit"))
-      return DarwinPlatform::createFromSDK(Darwin::DriverKit, Version);
+      return DarwinPlatform::createFromSDK(isysroot, Darwin::DriverKit,
+                                           Version);
     return std::nullopt;
   };
   if (auto Result = CreatePlatformFromSDKName(SDK))
@@ -2230,7 +2252,7 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
   if (OSTy == llvm::Triple::UnknownOS)
     return std::nullopt;
   return DarwinPlatform::createFromArch(
-      OSTy, getInferredOSVersion(OSTy, Triple, TheDriver));
+      MachOArchName, OSTy, getInferredOSVersion(OSTy, Triple, TheDriver));
 }
 
 /// Returns the deployment target that's specified using the -target option.
@@ -2449,6 +2471,15 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 
   assert(PlatformAndVersion && "Unable to infer Darwin variant");
+  if (!PlatformAndVersion->isValidOSVersion()) {
+    if (PlatformAndVersion->isExplicitlySpecified())
+      getDriver().Diag(diag::err_drv_invalid_version_number)
+          << PlatformAndVersion->getAsString(Args, Opts);
+    else
+      getDriver().Diag(diag::err_drv_invalid_version_number_inferred)
+          << PlatformAndVersion->getOSVersion().getAsString()
+          << PlatformAndVersion->getInferredSource();
+  }
   // After the deployment OS version has been resolved, set it to the canonical
   // version before further error detection and converting to a proper target
   // triple.
@@ -2550,6 +2581,12 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     ZipperedOSVersion = PlatformAndVersion->getZipperedOSVersion();
   setTarget(Platform, Environment, Major, Minor, Micro, ZipperedOSVersion);
   TargetVariantTriple = PlatformAndVersion->getTargetVariantTriple();
+  if (TargetVariantTriple &&
+      !llvm::Triple::isValidVersionForOS(TargetVariantTriple->getOS(),
+                                         TargetVariantTriple->getOSVersion())) {
+    getDriver().Diag(diag::err_drv_invalid_version_number)
+        << TargetVariantTriple->str();
+  }
 
   if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
     StringRef SDK = getSDKName(A->getValue());
@@ -3150,28 +3187,46 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
 
   ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
 
-  // On arm64e, enable pointer authentication (for the return address and
-  // indirect calls), as well as usage of the intrinsics.
-  if (getArchName() == "arm64e") {
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
-                           options::OPT_fno_ptrauth_returns))
-      CC1Args.push_back("-fptrauth-returns");
-
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
-                           options::OPT_fno_ptrauth_intrinsics))
-      CC1Args.push_back("-fptrauth-intrinsics");
-
+  // On arm64e, we enable all the features required for the Darwin userspace
+  // ABI
+  if (getTriple().isArm64e()) {
+    // Core platform ABI
     if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
                            options::OPT_fno_ptrauth_calls))
       CC1Args.push_back("-fptrauth-calls");
-
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                           options::OPT_fno_ptrauth_returns))
+      CC1Args.push_back("-fptrauth-returns");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                           options::OPT_fno_ptrauth_intrinsics))
+      CC1Args.push_back("-fptrauth-intrinsics");
     if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
                            options::OPT_fno_ptrauth_indirect_gotos))
       CC1Args.push_back("-fptrauth-indirect-gotos");
-
     if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
                            options::OPT_fno_ptrauth_auth_traps))
       CC1Args.push_back("-fptrauth-auth-traps");
+
+    // C++ v-table ABI
+    if (!DriverArgs.hasArg(
+            options::OPT_fptrauth_vtable_pointer_address_discrimination,
+            options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
+      CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
+    if (!DriverArgs.hasArg(
+            options::OPT_fptrauth_vtable_pointer_type_discrimination,
+            options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
+      CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
+
+    // Objective-C ABI
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_isa,
+                           options::OPT_fno_ptrauth_objc_isa))
+      CC1Args.push_back("-fptrauth-objc-isa");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_class_ro,
+                           options::OPT_fno_ptrauth_objc_class_ro))
+      CC1Args.push_back("-fptrauth-objc-class-ro");
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_objc_interface_sel,
+                           options::OPT_fno_ptrauth_objc_interface_sel))
+      CC1Args.push_back("-fptrauth-objc-interface-sel");
   }
 }
 

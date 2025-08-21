@@ -67,6 +67,7 @@ add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in 
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
+option(LLDB_ENABLE_PROTOCOL_SERVERS "Enable protocol servers (e.g. MCP) in LLDB" ON)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)
@@ -172,11 +173,20 @@ if (LLDB_ENABLE_PYTHON)
     ${default_embed_python_home})
 
   include_directories(${Python3_INCLUDE_DIRS})
+
   if (LLDB_EMBED_PYTHON_HOME)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
+
+  if (SWIG_VERSION VERSION_GREATER_EQUAL "4.2" AND NOT LLDB_EMBED_PYTHON_HOME)
+    set(default_enable_python_limited_api ON)
+  else()
+    set(default_enable_python_limited_api OFF)
+  endif()
+  option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
+    ${default_enable_python_limited_api})
 endif()
 
 if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)
@@ -320,6 +330,32 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(LLDB_CAN_USE_DEBUGSERVER ON)
 else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
+endif()
+
+# In a cross-compile build, we need to skip building the generated
+# lldb-rpc sources in the first phase of host build so that they can
+# get built using the just-built Clang toolchain in the second phase.
+if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
+  set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
+else()
+  if ((CMAKE_CROSSCOMPILING OR LLVM_HOST_TRIPLE MATCHES "${LLVM_DEFAULT_TARGET_TRIPLE}") AND
+      CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
+    set(LLDB_CAN_USE_LLDB_RPC_SERVER ON)
+  else()
+    set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
+  endif()
+endif()
+
+
+if (NOT DEFINED LLDB_BUILD_LLDBRPC)
+  set(LLDB_BUILD_LLDBRPC OFF)
+else()
+  if (CMAKE_CROSSCOMPILING)
+    set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
+    get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
+  else()
+    set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
+  endif()
 endif()
 
 include(LLDBGenerateConfig)

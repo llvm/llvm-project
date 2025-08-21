@@ -471,6 +471,8 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Sample Count: " << RawSampleCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
+  if (ExternEntryCount)
+    OS << "\n  Extern Entry Count: " << ExternEntryCount;
 
   if (opts::PrintDynoStats && !getLayout().block_empty()) {
     OS << '\n';
@@ -1913,13 +1915,9 @@ void BinaryFunction::postProcessEntryPoints() {
       continue;
 
     // If we have grabbed a wrong code label which actually points to some
-    // constant island inside the function, ignore this label and remove it
-    // from the secondary entry point map.
-    if (isStartOfConstantIsland(Offset)) {
-      BC.SymbolToFunctionMap.erase(Label);
-      removeSymbolFromSecondaryEntryPointMap(Label);
+    // constant island inside the function, ignore this label.
+    if (isStartOfConstantIsland(Offset))
       continue;
-    }
 
     BC.errs() << "BOLT-WARNING: reference in the middle of instruction "
                  "detected in function "
@@ -3326,10 +3324,7 @@ void BinaryFunction::duplicateConstantIslands() {
 
         // Update instruction reference
         Operand = MCOperand::createExpr(BC.MIB->getTargetExprFor(
-            Inst,
-            MCSymbolRefExpr::create(ColdSymbol, MCSymbolRefExpr::VK_None,
-                                    *BC.Ctx),
-            *BC.Ctx, 0));
+            Inst, MCSymbolRefExpr::create(ColdSymbol, *BC.Ctx), *BC.Ctx, 0));
         ++OpNum;
       }
     }

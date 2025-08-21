@@ -395,13 +395,9 @@ define double @fmadd_d(double %a, double %b, double %c) nounwind {
 define double @fmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fmsub_d:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw zero, 8(sp)
-; RV32IFD-NEXT:    sw zero, 12(sp)
-; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
 ; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
 ; RV32IFD-NEXT:    fmsub.d fa0, fa0, fa1, fa5
-; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fmsub_d:
@@ -478,14 +474,10 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
 define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmadd_d:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw zero, 8(sp)
-; RV32IFD-NEXT:    sw zero, 12(sp)
-; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
 ; RV32IFD-NEXT:    fadd.d fa4, fa0, fa5
 ; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
 ; RV32IFD-NEXT:    fnmadd.d fa0, fa4, fa1, fa5
-; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmadd_d:
@@ -590,14 +582,10 @@ define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmadd_d_2:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw zero, 8(sp)
-; RV32IFD-NEXT:    sw zero, 12(sp)
-; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
 ; RV32IFD-NEXT:    fadd.d fa4, fa1, fa5
 ; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
 ; RV32IFD-NEXT:    fnmadd.d fa0, fa4, fa0, fa5
-; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmadd_d_2:
@@ -772,13 +760,9 @@ define double @fnmadd_nsz(double %a, double %b, double %c) nounwind {
 define double @fnmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmsub_d:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw zero, 8(sp)
-; RV32IFD-NEXT:    sw zero, 12(sp)
-; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
 ; RV32IFD-NEXT:    fadd.d fa5, fa0, fa5
 ; RV32IFD-NEXT:    fnmsub.d fa0, fa5, fa1, fa2
-; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmsub_d:
@@ -851,13 +835,9 @@ define double @fnmsub_d(double %a, double %b, double %c) nounwind {
 define double @fnmsub_d_2(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmsub_d_2:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw zero, 8(sp)
-; RV32IFD-NEXT:    sw zero, 12(sp)
-; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
 ; RV32IFD-NEXT:    fadd.d fa5, fa1, fa5
 ; RV32IFD-NEXT:    fnmsub.d fa0, fa5, fa0, fa2
-; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmsub_d_2:
@@ -976,14 +956,10 @@ define double @fmadd_d_contract(double %a, double %b, double %c) nounwind {
 define double @fmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fmsub_d_contract:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw zero, 8(sp)
-; RV32IFD-NEXT:    sw zero, 12(sp)
-; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
 ; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
 ; RV32IFD-NEXT:    fmul.d fa4, fa0, fa1
 ; RV32IFD-NEXT:    fsub.d fa0, fa4, fa5
-; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fmsub_d_contract:
@@ -1069,17 +1045,13 @@ define double @fmsub_d_contract(double %a, double %b, double %c) nounwind {
 define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmadd_d_contract:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw zero, 8(sp)
-; RV32IFD-NEXT:    sw zero, 12(sp)
-; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
 ; RV32IFD-NEXT:    fadd.d fa4, fa0, fa5
 ; RV32IFD-NEXT:    fadd.d fa3, fa1, fa5
 ; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
 ; RV32IFD-NEXT:    fmul.d fa4, fa4, fa3
 ; RV32IFD-NEXT:    fneg.d fa4, fa4
 ; RV32IFD-NEXT:    fsub.d fa0, fa4, fa5
-; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmadd_d_contract:
@@ -1204,14 +1176,10 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmsub_d_contract:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw zero, 8(sp)
-; RV32IFD-NEXT:    sw zero, 12(sp)
-; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
 ; RV32IFD-NEXT:    fadd.d fa4, fa0, fa5
 ; RV32IFD-NEXT:    fadd.d fa5, fa1, fa5
 ; RV32IFD-NEXT:    fnmsub.d fa0, fa4, fa5, fa2
-; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmsub_d_contract:

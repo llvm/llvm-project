@@ -203,6 +203,10 @@ static cl::list<std::string> DisableBuiltins(
     "disable-builtin",
     cl::desc("Disable specific target library builtin function"));
 
+static cl::list<std::string> EnableBuiltins(
+    "enable-builtin",
+    cl::desc("Enable specific target library builtin functions"));
+
 static cl::opt<bool> EnableDebugify(
     "enable-debugify",
     cl::desc(
@@ -212,6 +216,16 @@ static cl::opt<bool> VerifyDebugInfoPreserve(
     "verify-debuginfo-preserve",
     cl::desc("Start the pipeline with collecting and end it with checking of "
              "debug info preservation."));
+
+static cl::opt<bool> EnableProfileVerification(
+    "enable-profcheck",
+#if defined(LLVM_ENABLE_PROFCHECK)
+    cl::init(true),
+#else
+    cl::init(false),
+#endif
+    cl::desc(
+        "Start the pipeline with prof-inject and end it with prof-verify"));
 
 static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
@@ -326,7 +340,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "amdgpu-lower-kernel-attributes",
       "amdgpu-propagate-attributes-early",
       "amdgpu-propagate-attributes-late",
-      "amdgpu-unify-metadata",
       "amdgpu-printf-runtime-binding",
       "amdgpu-always-inline"};
   if (llvm::is_contained(PassNameExactToIgnore, Pass))
@@ -670,7 +683,7 @@ extern "C" int optMain(
   else {
     // Disable individual builtin functions in TargetLibraryInfo.
     LibFunc F;
-    for (auto &FuncName : DisableBuiltins)
+    for (auto &FuncName : DisableBuiltins) {
       if (TLII.getLibFunc(FuncName, F))
         TLII.setUnavailable(F);
       else {
@@ -678,6 +691,17 @@ extern "C" int optMain(
                << FuncName << '\n';
         return 1;
       }
+    }
+
+    for (auto &FuncName : EnableBuiltins) {
+      if (TLII.getLibFunc(FuncName, F))
+        TLII.setAvailable(F);
+      else {
+        errs() << argv[0] << ": cannot enable nonexistent builtin function "
+               << FuncName << '\n';
+        return 1;
+      }
+    }
   }
 
   if (UseNPM) {
@@ -731,7 +755,8 @@ extern "C" int optMain(
                RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks,
                OK, VK, PreserveAssemblyUseListOrder,
                PreserveBitcodeUseListOrder, EmitSummaryIndex, EmitModuleHash,
-               EnableDebugify, VerifyDebugInfoPreserve, UnifiedLTO)
+               EnableDebugify, VerifyDebugInfoPreserve,
+               EnableProfileVerification, UnifiedLTO)
                ? 0
                : 1;
   }

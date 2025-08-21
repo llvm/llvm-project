@@ -65,7 +65,7 @@
 //
 // void <SubTarget>Subtarget::
 // overrideSchedPolicy(MachineSchedPolicy &Policy,
-//                     unsigned NumRegionInstrs) const {
+//                     const SchedRegion &Region) const {
 //   Policy.<Flag> = true;
 // }
 //
@@ -216,6 +216,22 @@ struct MachineSchedPolicy {
   bool ComputeDFSResult = false;
 
   MachineSchedPolicy() = default;
+};
+
+/// A region of an MBB for scheduling.
+struct SchedRegion {
+  /// RegionBegin is the first instruction in the scheduling region, and
+  /// RegionEnd is either MBB->end() or the scheduling boundary after the
+  /// last instruction in the scheduling region. These iterators cannot refer
+  /// to instructions outside of the identified scheduling region because
+  /// those may be reordered before scheduling this region.
+  MachineBasicBlock::iterator RegionBegin;
+  MachineBasicBlock::iterator RegionEnd;
+  unsigned NumRegionInstrs;
+
+  SchedRegion(MachineBasicBlock::iterator B, MachineBasicBlock::iterator E,
+              unsigned N)
+      : RegionBegin(B), RegionEnd(E), NumRegionInstrs(N) {}
 };
 
 /// MachineSchedStrategy - Interface to the scheduling algorithm used by
@@ -1287,8 +1303,8 @@ protected:
   SchedBoundary Top;
   SchedBoundary Bot;
 
-  ClusterInfo *TopCluster;
-  ClusterInfo *BotCluster;
+  unsigned TopClusterID;
+  unsigned BotClusterID;
 
   /// Candidate last picked from Top boundary.
   SchedCandidate TopCand;
@@ -1330,8 +1346,8 @@ protected:
   /// Candidate last picked from Bot boundary.
   SchedCandidate BotCand;
 
-  ClusterInfo *TopCluster;
-  ClusterInfo *BotCluster;
+  unsigned TopClusterID;
+  unsigned BotClusterID;
 
 public:
   PostGenericScheduler(const MachineSchedContext *C)
@@ -1403,7 +1419,7 @@ createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
 /// default scheduler if the target does not set a default.
 /// Adds default DAG mutations.
 template <typename Strategy = GenericScheduler>
-LLVM_ABI ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
+ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG =
       new ScheduleDAGMILive(C, std::make_unique<Strategy>(C));
   // Register DAG post-processors.
@@ -1423,7 +1439,7 @@ LLVM_ABI ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
 
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
 template <typename Strategy = PostGenericScheduler>
-LLVM_ABI ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
+ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
   ScheduleDAGMI *DAG = new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
                                          /*RemoveKillFlags=*/true);
   const TargetSubtargetInfo &STI = C->MF->getSubtarget();

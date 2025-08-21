@@ -1025,13 +1025,12 @@ define <3 x i64> @duplane0_v3i64(<3 x i64> %b) {
 ;
 ; CHECK-GI-LABEL: duplane0_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov v2.d[1], v1.d[0]
-; CHECK-GI-NEXT:    dup v0.2d, v2.d[0]
-; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov d2, d0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = shufflevector <3 x i64> %b, <3 x i64> poison, <3 x i32> zeroinitializer
@@ -2354,13 +2353,12 @@ define <3 x double> @duplane0_v3double(<3 x double> %b) {
 ;
 ; CHECK-GI-LABEL: duplane0_v3double:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov v2.d[1], v1.d[0]
-; CHECK-GI-NEXT:    dup v0.2d, v2.d[0]
-; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov d2, d0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = shufflevector <3 x double> %b, <3 x double> poison, <3 x i32> zeroinitializer

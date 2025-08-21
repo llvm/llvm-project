@@ -126,6 +126,9 @@ clang-format is turned off or back on.
   // clang-format on
   void formatted_code_again;
 
+In addition, the ``OneLineFormatOffRegex`` option gives you a concise way to
+disable formatting for all of the lines that match the regular expression.
+
 
 Configuring Style in Code
 =========================
@@ -1554,9 +1557,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      #define A                                                                      \
-        int aaaa;                                                                    \
-        int b;                                                                       \
+      #define A                                                            \
+        int aaaa;                                                          \
+        int b;                                                             \
         int dddddddddd;
 
 
@@ -1702,9 +1705,9 @@ the configuration (without a prefix: ``Auto``).
 .. _AllowAllArgumentsOnNextLine:
 
 **AllowAllArgumentsOnNextLine** (``Boolean``) :versionbadge:`clang-format 9` :ref:`¶ <AllowAllArgumentsOnNextLine>`
-  If a function call or braced initializer list doesn't fit on a
-  line, allow putting all arguments onto the next line, even if
-  ``BinPackArguments`` is ``false``.
+  If a function call or braced initializer list doesn't fit on a line, allow
+  putting all arguments onto the next line, even if ``BinPackArguments`` is
+  ``false``.
 
   .. code-block:: c++
 
@@ -1912,7 +1915,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
     Only merge functions defined inside a class. Same as ``inline``,
-    except it does not implies ``empty``: i.e. top level empty functions
+    except it does not imply ``empty``: i.e. top level empty functions
     are not merged either.
 
     .. code-block:: c++
@@ -4201,8 +4204,8 @@ the configuration (without a prefix: ``Auto``).
   * ``""`` means "arbitrary suffix"
   * ``"$"`` means "no suffix"
 
-  For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
-  as the "main" include in both a.cc and a_test.cc.
+  For example, if configured to ``"(_test)?$"``, then a header a.h would be
+  seen as the "main" include in both a.cc and a_test.cc.
 
 .. _IncludeIsMainSourceRegex:
 
@@ -4975,6 +4978,12 @@ the configuration (without a prefix: ``Auto``).
      A(z); -> z;
      A(a, b); // will not be expanded.
 
+.. _MacrosSkippedByRemoveParentheses:
+
+**MacrosSkippedByRemoveParentheses** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <MacrosSkippedByRemoveParentheses>`
+  A vector of function-like macros whose invocations should be skipped by
+  ``RemoveParentheses``.
+
 .. _MainIncludeChar:
 
 **MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
@@ -5528,8 +5537,7 @@ the configuration (without a prefix: ``Auto``).
 .. _ReferenceAlignment:
 
 **ReferenceAlignment** (``ReferenceAlignmentStyle``) :versionbadge:`clang-format 13` :ref:`¶ <ReferenceAlignment>`
-  Reference alignment style (overrides ``PointerAlignment`` for
-  references).
+  Reference alignment style (overrides ``PointerAlignment`` for references).
 
   Possible values:
 
@@ -6010,6 +6018,16 @@ the configuration (without a prefix: ``Auto``).
        #include "B/A.h"           #include "B/a.h"
        #include "B/a.h"           #include "a/b.h"
 
+  * ``bool IgnoreExtension`` When sorting includes in each block, only take file extensions into
+    account if two includes compare equal otherwise.
+
+    .. code-block:: c++
+
+       true:                          false:
+       # include "A.h"         vs.    # include "A-util.h"
+       # include "A.inc"              # include "A.h"
+       # include "A-util.h"           # include "A.inc"
+
 
 .. _SortJavaStaticImport:
 
@@ -6385,6 +6403,14 @@ the configuration (without a prefix: ``Auto``).
        IF (...)                        vs.    IF(...)
          <conditional-body>                     <conditional-body>
 
+  * ``bool AfterNot`` If ``true``, put a space between alternative operator ``not`` and the
+    opening parenthesis.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       return not (a || b);            vs.    return not(a || b);
+
   * ``bool AfterOverloadedOperator`` If ``true``, put a space between operator overloading and opening
     parentheses.
 
@@ -6460,13 +6486,51 @@ the configuration (without a prefix: ``Auto``).
 .. _SpaceInEmptyBlock:
 
 **SpaceInEmptyBlock** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <SpaceInEmptyBlock>`
-  If ``true``, spaces will be inserted into ``{}``.
+  This option is **deprecated**. See ``Block`` of ``SpaceInEmptyBraces``.
 
-  .. code-block:: c++
+.. _SpaceInEmptyBraces:
 
-     true:                                false:
-     void f() { }                   vs.   void f() {}
-     while (true) { }                     while (true) {}
+**SpaceInEmptyBraces** (``SpaceInEmptyBracesStyle``) :versionbadge:`clang-format 22` :ref:`¶ <SpaceInEmptyBraces>`
+  Specifies when to insert a space in empty braces.
+
+  .. note::
+
+   This option doesn't apply to initializer braces if
+   ``Cpp11BracedListStyle`` is set to ``true``.
+
+  Possible values:
+
+  * ``SIEB_Always`` (in configuration: ``Always``)
+    Always insert a space in empty braces.
+
+    .. code-block:: c++
+
+       void f() { }
+       class Unit { };
+       auto a = [] { };
+       int x{ };
+
+  * ``SIEB_Block`` (in configuration: ``Block``)
+    Only insert a space in empty blocks.
+
+    .. code-block:: c++
+
+       void f() { }
+       class Unit { };
+       auto a = [] { };
+       int x{};
+
+  * ``SIEB_Never`` (in configuration: ``Never``)
+    Never insert a space in empty braces.
+
+    .. code-block:: c++
+
+       void f() {}
+       class Unit {};
+       auto a = [] {};
+       int x{};
+
+
 
 .. _SpaceInEmptyParentheses:
 
@@ -6885,8 +6949,8 @@ the configuration (without a prefix: ``Auto``).
 .. _TypenameMacros:
 
 **TypenameMacros** (``List of Strings``) :versionbadge:`clang-format 9` :ref:`¶ <TypenameMacros>`
-  A vector of macros that should be interpreted as type declarations
-  instead of as function calls.
+  A vector of macros that should be interpreted as type declarations instead
+  of as function calls.
 
   These are expected to be macros of the form:
 
@@ -6992,7 +7056,7 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       namespace N1 {
-      namespace N2
+      namespace N2 {
       function();
       }
       }

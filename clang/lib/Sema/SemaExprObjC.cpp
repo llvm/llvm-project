@@ -74,8 +74,7 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
     S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
-                              /*Pascal=*/false, StrTy, &StrLocs[0],
-                              StrLocs.size());
+                              /*Pascal=*/false, StrTy, StrLocs);
   }
 
   return BuildObjCStringLiteral(AtLocs[0], S);
@@ -640,14 +639,14 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
     BoxingMethod = getNSNumberFactoryMethod(*this, Loc, ValueType);
     BoxedType = NSNumberPointer;
   } else if (const EnumType *ET = ValueType->getAs<EnumType>()) {
-    if (!ET->getDecl()->isComplete()) {
+    const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+    if (!ED->isComplete()) {
       Diag(Loc, diag::err_objc_incomplete_boxed_expression_type)
         << ValueType << ValueExpr->getSourceRange();
       return ExprError();
     }
 
-    BoxingMethod = getNSNumberFactoryMethod(*this, Loc,
-                                            ET->getDecl()->getIntegerType());
+    BoxingMethod = getNSNumberFactoryMethod(*this, Loc, ED->getIntegerType());
     BoxedType = NSNumberPointer;
   } else if (ValueType->isObjCBoxableRecordType()) {
     // Support for structure types, that marked as objc_boxable
@@ -2338,10 +2337,10 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     if (ObjCInterfaceDecl *Class = dyn_cast<ObjCInterfaceDecl>(ND))
       T = Context.getObjCInterfaceType(Class);
     else if (TypeDecl *Type = dyn_cast<TypeDecl>(ND)) {
-      T = Context.getTypeDeclType(Type);
       SemaRef.DiagnoseUseOfDecl(Type, NameLoc);
-    }
-    else
+      T = Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                  /*Qualifier=*/std::nullopt, Type);
+    } else
       return ObjCInstanceMessage;
 
     //  We have a class message, and T is the type we're
@@ -3848,7 +3847,8 @@ static inline T *getObjCBridgeAttr(const TypedefType *TD) {
   if (QT->isPointerType()) {
     QT = QT->getPointeeType();
     if (const RecordType *RT = QT->getAs<RecordType>()) {
-      for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
+      for (auto *Redecl :
+           RT->getOriginalDecl()->getMostRecentDecl()->redecls()) {
         if (auto *attr = Redecl->getAttr<T>())
           return attr;
       }
@@ -4390,7 +4390,7 @@ SemaObjC::ARCConversionResult
 SemaObjC::CheckObjCConversion(SourceRange castRange, QualType castType,
                               Expr *&castExpr, CheckedConversionKind CCK,
                               bool Diagnose, bool DiagnoseCFAudited,
-                              BinaryOperatorKind Opc) {
+                              BinaryOperatorKind Opc, bool IsReinterpretCast) {
   ASTContext &Context = getASTContext();
   QualType castExprType = castExpr->getType();
 
@@ -4450,13 +4450,17 @@ SemaObjC::CheckObjCConversion(SourceRange castRange, QualType castType,
   // must be explicit.
   // Allow conversions between pointers to lifetime types and coreFoundation
   // pointers too, but only when the conversions are explicit.
+  // Allow conversions requested with a reinterpret_cast that converts an
+  // expression of type T* to type U*.
   if (exprACTC == ACTC_indirectRetainable &&
       (castACTC == ACTC_voidPtr ||
-       (castACTC == ACTC_coreFoundation && SemaRef.isCast(CCK))))
+       (castACTC == ACTC_coreFoundation && SemaRef.isCast(CCK)) ||
+       (IsReinterpretCast && effCastType->isAnyPointerType())))
     return ACR_okay;
   if (castACTC == ACTC_indirectRetainable &&
-      (exprACTC == ACTC_voidPtr || exprACTC == ACTC_coreFoundation) &&
-      SemaRef.isCast(CCK))
+      (((exprACTC == ACTC_voidPtr || exprACTC == ACTC_coreFoundation) &&
+        SemaRef.isCast(CCK)) ||
+       (IsReinterpretCast && castExprType->isAnyPointerType())))
     return ACR_okay;
 
   switch (ARCCastChecker(Context, exprACTC, castACTC, false).Visit(castExpr)) {
@@ -5151,7 +5155,8 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     SourceLocation RParen) {
   ASTContext &Context = getASTContext();
   auto FindSpecVersion =
-      [&](StringRef Platform) -> std::optional<VersionTuple> {
+      [&](StringRef Platform,
+          const llvm::Triple::OSType &OS) -> std::optional<VersionTuple> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
       return Spec.getPlatform() == Platform;
     });
@@ -5164,12 +5169,16 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     }
     if (Spec == AvailSpecs.end())
       return std::nullopt;
-    return Spec->getVersion();
+
+    return llvm::Triple::getCanonicalVersionForOS(
+        OS, Spec->getVersion(),
+        llvm::Triple::isValidVersionForOS(OS, Spec->getVersion()));
   };
 
   VersionTuple Version;
   if (auto MaybeVersion =
-          FindSpecVersion(Context.getTargetInfo().getPlatformName()))
+          FindSpecVersion(Context.getTargetInfo().getPlatformName(),
+                          Context.getTargetInfo().getTriple().getOS()))
     Version = *MaybeVersion;
 
   // The use of `@available` in the enclosing context should be analyzed to

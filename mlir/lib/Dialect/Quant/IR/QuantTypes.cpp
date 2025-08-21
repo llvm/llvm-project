@@ -12,9 +12,6 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 using namespace mlir::quant;
@@ -130,7 +127,7 @@ QuantizedType::getQuantizedElementType(Type primitiveOrContainerType) {
 
 Type QuantizedType::castFromStorageType(Type candidateType) {
   if (candidateType == getStorageType()) {
-    // i.e. i32 -> quant<"uniform[i8:f32]{1.0}">
+    // i.e. i8 -> quant<"uniform[i8:f32]{1.0}">
     return *this;
   }
   if (llvm::isa<RankedTensorType>(candidateType)) {
@@ -140,11 +137,11 @@ Type QuantizedType::castFromStorageType(Type candidateType) {
         getStorageType());
   }
   if (llvm::isa<UnrankedTensorType>(candidateType)) {
-    // i.e. tensor<i8> -> tensor<!quant<"uniform[i8:f32]{1.0}">>
+    // i.e. tensor<xi8> -> tensor<x!quant<"uniform[i8:f32]{1.0}">>
     return UnrankedTensorType::get(getStorageType());
   }
   if (llvm::isa<VectorType>(candidateType)) {
-    // i.e. tensor<4xi8> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
+    // i.e. vector<4xi8> -> vector<4x!quant<"uniform[i8:f32]{1.0}">>
     return VectorType::get(llvm::cast<VectorType>(candidateType).getShape(),
                            getStorageType());
   }

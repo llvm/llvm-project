@@ -87,7 +87,7 @@ define void @isint_branch(double %d) nounwind {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr128 = COPY [[COPY]]
   ; CHECK-NEXT:   [[CVTTPD2DQrr:%[0-9]+]]:vr128 = nofpexcept CVTTPD2DQrr killed [[COPY1]], implicit $mxcsr
   ; CHECK-NEXT:   [[CVTDQ2PDrr:%[0-9]+]]:vr128 = CVTDQ2PDrr killed [[CVTTPD2DQrr]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fr64 = COPY [[CVTDQ2PDrr]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fr64 = COPY killed [[CVTDQ2PDrr]]
   ; CHECK-NEXT:   nofpexcept UCOMISDrr [[COPY]], killed [[COPY2]], implicit-def $eflags, implicit $mxcsr
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 5, implicit $eflags
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 10, implicit $eflags
