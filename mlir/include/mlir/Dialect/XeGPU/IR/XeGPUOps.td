@@ -519,8 +519,6 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     match the dimension of offsets. It may also has a second dimension corresponding to
     the chunk_size if the chunk size is larger than 1.
 
-    This op is not available in SIMT mode.
-
     Example 1: It assumes subgroup size is 4, and accesses a[0], a[16], a[32], a[64]
     ```mlir
     %a = memref.alloc() : memref<1024xf32>
@@ -713,6 +711,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
         or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
+        scalar mask is also valid for SIMT mode.
     - `chunk_size`: (optional) represents contiguous number of elements to load from per work item.
     - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
 
@@ -767,7 +766,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
 
   let arguments = (ins XeGPU_GatherScatterSourceType:$source,
       Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
-      XeGPU_MaskType:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
@@ -846,6 +845,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
         or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
+        scalar mask is also valid for SIMT mode.
     - `chunk_size`: (optional) represents contiguous number of elements to store to per work item.
     - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
 
@@ -896,7 +896,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let arguments = (ins XeGPU_ValueType:$value,
       XeGPU_GatherScatterSourceType:$dest,
       Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
-      XeGPU_MaskType:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
@@ -956,8 +956,6 @@ def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
     elements representing the shift in each dimension. `update_offset` is to
     update the offset per work-item, so its offsets contains values representing
     shifts for each work-item.
-
-    This op is not available in SIMT mode.
 
     Example:
     ```mlir
