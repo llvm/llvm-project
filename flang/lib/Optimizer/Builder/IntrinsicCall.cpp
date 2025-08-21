@@ -7438,7 +7438,7 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
 fir::ExtendedValue
 IntrinsicLibrary::genNumImages(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 0 || args.size() == 1);
 
   if (args.size())
@@ -8519,7 +8519,7 @@ mlir::Value IntrinsicLibrary::genThisGrid(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genThisImage(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() >= 1 && args.size() <= 3);
   const bool coarrayIsAbsent = args.size() == 1;
   mlir::Value team =
