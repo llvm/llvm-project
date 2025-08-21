@@ -2105,7 +2105,7 @@ nb::object PyOpView::buildGeneric(
   // Delegate to create.
   return PyOperation::create(name,
                              /*results=*/std::move(resultTypes),
-                             /*operands=*/std::move(operands),
+                             /*operands=*/operands,
                              /*attributes=*/std::move(attributes),
                              /*successors=*/std::move(successors),
                              /*regions=*/*regions, location, maybeIp,
