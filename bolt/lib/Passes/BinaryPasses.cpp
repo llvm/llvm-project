@@ -1843,7 +1843,7 @@ Error StripRepRet::runOnFunctions(BinaryContext &BC) {
 }
 
 Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
-  if (!BC.isX86())
+  if (!BC.isX86() && !BC.isAArch64())
     return Error::success();
 
   uint64_t NumInlined = 0;
@@ -1866,8 +1866,32 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
         const bool IsMemcpy8 = (CalleeSymbol->getName() == "_memcpy8");
         const bool IsTailCall = BC.MIB->isTailCall(Inst);
 
+        // Extract the size of thecopy from preceding instructions by looking
+        // for writes to the size register
+        std::optional<uint64_t> KnownSize = std::nullopt;
+        BitVector WrittenRegs(BC.MRI->getNumRegs());
+
+        // Get the size register (3rd arg register, index 2 for AArch64)
+        MCPhysReg SizeReg = BC.MIB->getIntArgRegister(2);
+
+        // Look backwards through the basic block for size-setting instr
+        for (auto InstIt = BB.begin(); InstIt != II; ++InstIt) {
+          MCInst &Inst = *InstIt;
+          WrittenRegs.reset(); // Clear and check what the instruction writes to
+          BC.MIB->getWrittenRegs(Inst, WrittenRegs);
+
+          // Check for writes to the size register
+          if (SizeReg != BC.MIB->getNoRegister() && WrittenRegs[SizeReg]) {
+            if (std::optional<uint64_t> ExtractedSize =
+                    BC.MIB->extractMoveImmediate(Inst, SizeReg)) {
+              KnownSize = *ExtractedSize;
+              break;
+            }
+          }
+        }
+
         const InstructionListType NewCode =
-            BC.MIB->createInlineMemcpy(IsMemcpy8);
+            BC.MIB->createInlineMemcpy(IsMemcpy8, KnownSize);
         II = BB.replaceInstruction(II, NewCode);
         std::advance(II, NewCode.size() - 1);
         if (IsTailCall) {

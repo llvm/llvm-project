@@ -1895,6 +1895,22 @@ public:
     return {};
   }
 
+  /// Creates size-aware inline memcpy instruction. If \p KnownSize is provided,
+  /// generates optimized code for that specific size. Falls back to regular
+  /// createInlineMemcpy if size is unknown or not needed (e.g. with X86).
+  virtual InstructionListType
+  createInlineMemcpy(bool ReturnEnd, std::optional<uint64_t> KnownSize) const {
+    return createInlineMemcpy(ReturnEnd);
+  }
+
+  /// Extract immediate value from move instruction that sets the given
+  /// register. Returns the immediate value if the instruction is a
+  /// move-immediate to TargetReg.
+  virtual std::optional<uint64_t>
+  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const {
+    return std::nullopt;
+  }
+
   /// Create a target-specific relocation out of the \p Fixup.
   /// Note that not every fixup could be converted into a relocation.
   virtual std::optional<Relocation>

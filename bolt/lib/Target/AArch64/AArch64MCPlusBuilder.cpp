@@ -2597,6 +2597,210 @@ public:
   getInstructionSize(const MCInst &Inst) const override {
     return 4;
   }
+
+  InstructionListType createInlineMemcpy(bool ReturnEnd) const override {
+    // Fallback
+    return createInlineMemcpy(ReturnEnd, std::nullopt);
+  }
+
+  std::optional<uint64_t>
+  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const override {
+    if (Inst.getOpcode() == AArch64::MOVZXi && Inst.getNumOperands() >= 3) {
+      if (Inst.getOperand(0).isReg() &&
+          Inst.getOperand(0).getReg() == TargetReg &&
+          Inst.getOperand(1).isImm() && Inst.getOperand(2).isImm() &&
+          Inst.getOperand(2).getImm() == 0) {
+        return Inst.getOperand(1).getImm();
+      }
+    }
+    return std::nullopt;
+  }
+
+  InstructionListType
+  createInlineMemcpy(bool ReturnEnd,
+                     std::optional<uint64_t> KnownSize) const override {
+    InstructionListType Code;
+    if (ReturnEnd) {
+      if (KnownSize.has_value() && (*KnownSize >> 12) == 0) {
+        // Use immediate if size is known and fits in 12-bit immediate (0-4095)
+        Code.emplace_back(MCInstBuilder(AArch64::ADDXri)
+                              .addReg(AArch64::X0)
+                              .addReg(AArch64::X0)
+                              .addImm(*KnownSize)
+                              .addImm(0));
+      } else {
+        // Fall back to register add for unknown or large sizes
+        Code.emplace_back(MCInstBuilder(AArch64::ADDXrr)
+                              .addReg(AArch64::X0)
+                              .addReg(AArch64::X0)
+                              .addReg(AArch64::X2));
+      }
+    }
+
+    if (!KnownSize.has_value()) {
+      return Code;
+    }
+
+    uint64_t Size = *KnownSize;
+    return generateSizeSpecificMemcpy(Code, Size);
+  }
+
+  InstructionListType generateSizeSpecificMemcpy(InstructionListType &Code,
+                                                 uint64_t Size) const {
+    // Generate optimal instruction sequences based on exact size
+    switch (Size) {
+    case 1:
+      // Single byte copy
+      Code.emplace_back(MCInstBuilder(AArch64::LDRBBui)
+                            .addReg(AArch64::W3)
+                            .addReg(AArch64::X1)
+                            .addImm(0));
+      Code.emplace_back(MCInstBuilder(AArch64::STRBBui)
+                            .addReg(AArch64::W3)
+                            .addReg(AArch64::X0)
+                            .addImm(0));
+      break;
+
+    case 2:
+      // 2-byte copy using 16-bit load/store
+      Code.emplace_back(MCInstBuilder(AArch64::LDRHHui)
+                            .addReg(AArch64::W3)
+                            .addReg(AArch64::X1)
+                            .addImm(0));
+      Code.emplace_back(MCInstBuilder(AArch64::STRHHui)
+                            .addReg(AArch64::W3)
+                            .addReg(AArch64::X0)
+                            .addImm(0));
+      break;
+
+    case 4:
+      // 4-byte copy using 32-bit load/store
+      Code.emplace_back(MCInstBuilder(AArch64::LDRWui)
+                            .addReg(AArch64::W3)
+                            .addReg(AArch64::X1)
+                            .addImm(0));
+      Code.emplace_back(MCInstBuilder(AArch64::STRWui)
+                            .addReg(AArch64::W3)
+                            .addReg(AArch64::X0)
+                            .addImm(0));
+      break;
+
+    case 8:
+      // 8-byte copy using 64-bit load/store
+      Code.emplace_back(MCInstBuilder(AArch64::LDRXui)
+                            .addReg(AArch64::X3)
+                            .addReg(AArch64::X1)
+                            .addImm(0));
+      Code.emplace_back(MCInstBuilder(AArch64::STRXui)
+                            .addReg(AArch64::X3)
+                            .addReg(AArch64::X0)
+                            .addImm(0));
+      break;
+
+    case 16:
+      // 16-byte copy using 128-bit SIMD
+      Code.emplace_back(MCInstBuilder(AArch64::LDRQui)
+                            .addReg(AArch64::Q0)
+                            .addReg(AArch64::X1)
+                            .addImm(0));
+      Code.emplace_back(MCInstBuilder(AArch64::STRQui)
+                            .addReg(AArch64::Q0)
+                            .addReg(AArch64::X0)
+                            .addImm(0));
+      break;
+
+    case 32:
+      // 32-byte copy using two 128-bit SIMD operations
+      Code.emplace_back(MCInstBuilder(AArch64::LDRQui)
+                            .addReg(AArch64::Q0)
+                            .addReg(AArch64::X1)
+                            .addImm(0));
+      Code.emplace_back(MCInstBuilder(AArch64::STRQui)
+                            .addReg(AArch64::Q0)
+                            .addReg(AArch64::X0)
+                            .addImm(0));
+      Code.emplace_back(MCInstBuilder(AArch64::LDRQui)
+                            .addReg(AArch64::Q1)
+                            .addReg(AArch64::X1)
+                            .addImm(1));
+      Code.emplace_back(MCInstBuilder(AArch64::STRQui)
+                            .addReg(AArch64::Q1)
+                            .addReg(AArch64::X0)
+                            .addImm(1));
+      break;
+
+    default:
+      if (Size <= 64) {
+        // For sizes up to 64 bytes, greedily use the largest possible loads in
+        // descending order
+        uint64_t Remaining = Size;
+        uint64_t Offset = 0;
+
+        while (Remaining >= 16) {
+          Code.emplace_back(MCInstBuilder(AArch64::LDRQui)
+                                .addReg(AArch64::Q0)
+                                .addReg(AArch64::X1)
+                                .addImm(Offset / 16));
+          Code.emplace_back(MCInstBuilder(AArch64::STRQui)
+                                .addReg(AArch64::Q0)
+                                .addReg(AArch64::X0)
+                                .addImm(Offset / 16));
+          Remaining -= 16;
+          Offset += 16;
+        }
+        if (Remaining >= 8) {
+          Code.emplace_back(MCInstBuilder(AArch64::LDRXui)
+                                .addReg(AArch64::X3)
+                                .addReg(AArch64::X1)
+                                .addImm(Offset / 8));
+          Code.emplace_back(MCInstBuilder(AArch64::STRXui)
+                                .addReg(AArch64::X3)
+                                .addReg(AArch64::X0)
+                                .addImm(Offset / 8));
+          Remaining -= 8;
+          Offset += 8;
+        }
+        if (Remaining >= 4) {
+          Code.emplace_back(MCInstBuilder(AArch64::LDRWui)
+                                .addReg(AArch64::W3)
+                                .addReg(AArch64::X1)
+                                .addImm(Offset / 4));
+          Code.emplace_back(MCInstBuilder(AArch64::STRWui)
+                                .addReg(AArch64::W3)
+                                .addReg(AArch64::X0)
+                                .addImm(Offset / 4));
+          Remaining -= 4;
+          Offset += 4;
+        }
+        if (Remaining >= 2) {
+          Code.emplace_back(MCInstBuilder(AArch64::LDRHHui)
+                                .addReg(AArch64::W3)
+                                .addReg(AArch64::X1)
+                                .addImm(Offset / 2));
+          Code.emplace_back(MCInstBuilder(AArch64::STRHHui)
+                                .addReg(AArch64::W3)
+                                .addReg(AArch64::X0)
+                                .addImm(Offset / 2));
+          Remaining -= 2;
+          Offset += 2;
+        }
+        if (Remaining == 1) {
+          Code.emplace_back(MCInstBuilder(AArch64::LDRBBui)
+                                .addReg(AArch64::W3)
+                                .addReg(AArch64::X1)
+                                .addImm(Offset));
+          Code.emplace_back(MCInstBuilder(AArch64::STRBBui)
+                                .addReg(AArch64::W3)
+                                .addReg(AArch64::X0)
+                                .addImm(Offset));
+        }
+      } else {
+        Code.clear();
+      }
+      break;
+    }
+    return Code;
+  }
 };
 
 } // end anonymous namespace
