@@ -81,18 +81,16 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   auto IsPlacement = hasAnyPlacementArg(anything());
 
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          cxxBindTemporaryExpr(has(ignoringParenImpCasts(
-              cxxConstructExpr(
-                  hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
-                  hasArgument(
-                      0, cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
-                                        equalsBoundNode(PointerType))))),
-                                    CanCallCtor, unless(IsPlacement))
-                             .bind(NewExpression)),
-                  unless(isInTemplateInstantiation()))
-                  .bind(ConstructorCall))))),
+      traverse(TK_AsIs,
+               cxxConstructExpr(
+                   hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
+                   hasArgument(
+                       0, cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
+                                         equalsBoundNode(PointerType))))),
+                                     CanCallCtor, unless(IsPlacement))
+                              .bind(NewExpression)),
+                   unless(isInTemplateInstantiation()))
+                   .bind(ConstructorCall)),
       this);
 
   Finder->addMatcher(
@@ -190,9 +188,15 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM, ASTContext *Ctx,
     ConstructCallEnd = ConstructCallStart.getLocWithOffset(LAngle);
   }
 
+  std::string FinalMakeSmartPtrFunctionName = MakeSmartPtrFunctionName.str();
+  auto Parents = Ctx->getParents(*Construct);
+  if (!Parents.empty() && Parents[0].get<clang::Decl>())
+    FinalMakeSmartPtrFunctionName =
+        ExprStr.str() + " = " + MakeSmartPtrFunctionName.str();
+
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(ConstructCallStart, ConstructCallEnd),
-      MakeSmartPtrFunctionName);
+      FinalMakeSmartPtrFunctionName);
 
   // If the smart_ptr is built with brace enclosed direct initialization, use
   // parenthesis instead.
