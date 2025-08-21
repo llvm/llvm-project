@@ -495,3 +495,11 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType  = #nvvm.ld_st_matrix_elt_type<b8>} : (!llvm.ptr<3>) -> i32
   llvm.return
 }
+
+// -----
+
+llvm.func @nanosleep() {
+  // expected-error@+1 {{integer constant out of range for attribute}}
+  nvvm.nanosleep 100000000000000
+  llvm.return
+}
