@@ -10006,10 +10006,29 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   if (N0.getOpcode() == ISD::SUB && isAllOnesConstant(N1)) {
     SDValue Y = N0.getOperand(0);
     SDValue X = N0.getOperand(1);
-    if (isa<ConstantSDNode>(Y) || N0.hasOneUse()) {
-      SDValue NotY =
-          DAG.getNode(ISD::XOR, DL, VT, Y, DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::ADD, DL, VT, X, NotY);
+
+    // Avoid infinite recursion with
+    // Fold (and X, (add (not Y), Z)) -> (and X, (not (sub Y, Z)))
+    bool hasAndUsers = false;
+    for (SDUse &Use : N->uses()) {
+      SDNode *User = Use.getUser();
+      if (User->getOpcode() == ISD::AND) {
+        hasAndUsers = true;
+        break;
+      }
+    }
+    if (!hasAndUsers) {
+      if (isa<ConstantSDNode>(Y) || N0.hasOneUse()) {
+        SDValue NotY =
+            DAG.getNode(ISD::XOR, DL, VT, Y, DAG.getAllOnesConstant(DL, VT));
+        return DAG.getNode(ISD::ADD, DL, VT, X, NotY, N->getFlags());
+      }
+    } else {
+      if (isa<ConstantSDNode>(Y) && N0.hasOneUse()) {
+        SDValue NotY =
+            DAG.getNode(ISD::XOR, DL, VT, Y, DAG.getAllOnesConstant(DL, VT));
+        return DAG.getNode(ISD::ADD, DL, VT, X, NotY, N->getFlags());
+      }
     }
   }
 
