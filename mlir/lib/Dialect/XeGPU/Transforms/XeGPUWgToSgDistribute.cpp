@@ -470,7 +470,8 @@ struct WgToSgVectorBroadcastOp
     VectorType resultType = op.getResult().getType();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(op.getResult());
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -535,7 +536,8 @@ struct WgToSgElementwiseOp : public ConversionPattern {
 
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(op->getResult(0));
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op->getResult(0));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -737,7 +739,8 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     if (!vecAttr || !vecAttr.isSplat() || !vecType)
       return failure();
 
-    xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(op.getResult());
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -980,7 +983,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           }
         }
 
-        xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(op->getResult(0));
+        xegpu::DistributeLayoutAttr layout =
+            xegpu::getDistributeLayoutAttr(op->getResult(0));
         return isLegal(layout);
       });
 

@@ -67,10 +67,11 @@ std::string getLayoutName(const OpOperand &operand);
 /// Return the attribute name for the OpResult to attach DistributeLayoutAttr
 std::string getLayoutName(const OpResult result);
 
-/// Retrieves the DistributeLayoutAttr associated with a given Value. For TensorDescType
-/// values, the DistributeLayoutAttr is extracted from the TensorDescType itself. For
-/// other values, it is obtained from the attributes of the defining operation.
-/// Returns nullptr if no DistributeLayoutAttr is found.
+/// Retrieves the DistributeLayoutAttr associated with a given Value. For
+/// TensorDescType values, the DistributeLayoutAttr is extracted from the
+/// TensorDescType itself. For other values, it is obtained from the attributes
+/// of the defining operation. Returns nullptr if no DistributeLayoutAttr is
+/// found.
 DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
 
 template <typename AttrTy>
@@ -78,9 +79,9 @@ AttrTy getDistributeLayoutAttrOfType(const Value value) {
   return dyn_cast_if_present<AttrTy>(getDistributeLayoutAttr(value));
 }
 
-/// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It will
-/// first check the operand_layout_{id} of the owner operation. If not found,
-/// it will check the operand itself and its defining op.
+/// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It
+/// will first check the operand_layout_{id} of the owner operation. If not
+/// found, it will check the operand itself and its defining op.
 DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
 
 template <typename AttrTy>
@@ -94,8 +95,8 @@ template <typename T,
                                       std::is_same_v<T, OpResult>>>
 void removeLayoutAttr(const T &operandOrResult);
 
-/// Removes the DistributeLayoutAttr for each OpOperand and OpResult of the given
-/// operation if they exist. If the operation contains regions, it is also
+/// Removes the DistributeLayoutAttr for each OpOperand and OpResult of the
+/// given operation if they exist. If the operation contains regions, it is also
 /// applied recursively to the contained operations
 void removeLayoutAttrs(Operation *op);
 
@@ -107,9 +108,9 @@ template <typename T,
 void setDistributeLayoutAttr(const T &operandOrResult,
                              const DistributeLayoutAttr layout);
 
-/// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given operation.
-/// If the operation contains regions, it is also applied recursively to the
-/// contained operations
+/// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given
+/// operation. If the operation contains regions, it is also applied recursively
+/// to the contained operations
 void setDistributeLayoutAttrs(
     Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl);
 

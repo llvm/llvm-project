@@ -140,7 +140,8 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   else
     value = (Value)operandOrResult;
 
-  xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(operandOrResult);
+  xegpu::DistributeLayoutAttr layout =
+      xegpu::getDistributeLayoutAttr(operandOrResult);
   if (layout && layout.isForSubgroup()) {
     if (auto inst_data = layout.getInstDataAsInt())
       return inst_data.value();
@@ -204,12 +205,14 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   // skip the op if any of its operands or results has workgroup level layouts
   bool hasWgLayoutOperands =
       llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
-        xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(opr);
+        xegpu::DistributeLayoutAttr layout =
+            xegpu::getDistributeLayoutAttr(opr);
         return layout && layout.isForWorkgroup();
       });
   bool hasWgLayoutResults =
       llvm::any_of(op->getOpResults(), [](OpResult result) {
-        xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(result);
+        xegpu::DistributeLayoutAttr layout =
+            xegpu::getDistributeLayoutAttr(result);
         return layout && layout.isForWorkgroup();
       });
   if (hasWgLayoutOperands || hasWgLayoutResults) {
