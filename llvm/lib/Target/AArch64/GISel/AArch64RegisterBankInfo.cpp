@@ -13,6 +13,7 @@
 
 #include "AArch64RegisterBankInfo.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -492,7 +493,7 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
 
 bool AArch64RegisterBankInfo::isPHIWithFPConstraints(
     const MachineInstr &MI, const MachineRegisterInfo &MRI,
-    const TargetRegisterInfo &TRI, const unsigned Depth) const {
+    const AArch64RegisterInfo &TRI, const unsigned Depth) const {
   if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
     return false;
 
@@ -506,7 +507,7 @@ bool AArch64RegisterBankInfo::isPHIWithFPConstraints(
 
 bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                                const MachineRegisterInfo &MRI,
-                                               const TargetRegisterInfo &TRI,
+                                               const AArch64RegisterInfo &TRI,
                                                unsigned Depth) const {
   unsigned Op = MI.getOpcode();
   if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MRI, MI))
@@ -544,7 +545,7 @@ bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
 
 bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
-                                         const TargetRegisterInfo &TRI,
+                                         const AArch64RegisterInfo &TRI,
                                          unsigned Depth) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_FPTOSI:
@@ -582,7 +583,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
 
 bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
                                             const MachineRegisterInfo &MRI,
-                                            const TargetRegisterInfo &TRI,
+                                            const AArch64RegisterInfo &TRI,
                                             unsigned Depth) const {
   switch (MI.getOpcode()) {
   case AArch64::G_DUP:
@@ -620,7 +621,7 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
 
 bool AArch64RegisterBankInfo::prefersFPUse(const MachineInstr &MI,
                                            const MachineRegisterInfo &MRI,
-                                           const TargetRegisterInfo &TRI,
+                                           const AArch64RegisterInfo &TRI,
                                            unsigned Depth) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_SITOFP:
@@ -684,8 +685,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo &TRI = *STI.getRegisterInfo();
 
   switch (Opc) {
     // G_{F|S|U}REM are not listed because they are not legal.
