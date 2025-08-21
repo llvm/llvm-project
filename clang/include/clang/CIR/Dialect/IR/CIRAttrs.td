@@ -536,6 +536,72 @@ def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
+  let summary = "Represents a C++ vtable";
+  let description = [{
+    Wraps a #cir.const_record containing one or more vtable arrays.
+
+    In most cases, the anonymous record type wrapped by this attribute will
+    contain a single array corresponding to the vtable for one class. However,
+    in the case of multiple inheritence, the anonymous structure may contain
+    multiple arrays, each of which is a vtable.
+
+    Example 1 (single vtable):
+    ```mlir
+    cir.global linkonce_odr @_ZTV6Mother =
+      #cir.vtable<{
+        #cir.const_array<[
+          #cir.ptr<null> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI6Mother> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother9MotherFooEv> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 4>
+      }> : !rec_anon_struct1
+    ```
+
+    Example 2 (multiple vtables):
+    ```mlir
+    cir.global linkonce_odr @_ZTV5Child =
+      #cir.vtable<{
+        #cir.const_array<[
+          #cir.ptr<null> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN5Child9MotherFooEv> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 4>,
+        #cir.const_array<[
+          #cir.ptr<-8 : i64> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Father9FatherFooEv> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 3>
+      }> : !rec_anon_struct2
+    ```
+  }];
+
+  // `data` is a const record with one element, containing an array of
+  // vtable information.
+  let parameters = (ins
+    AttributeSelfTypeParameter<"">:$type,
+    "mlir::ArrayAttr":$data
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::ArrayAttr":$data), [{
+      return $_get(type.getContext(), type, data);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<` custom<RecordMembers>($data) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
