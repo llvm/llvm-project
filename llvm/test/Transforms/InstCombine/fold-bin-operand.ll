@@ -45,10 +45,8 @@ define i1 @inttoptr_add_ptrtoint_used_by_single_icmp(ptr %src, ptr %p2) {
 
 define i1 @inttoptr_add_ptrtoint_used_by_single_icmp_operands_swapped(ptr %src, ptr %p2) {
 ; CHECK-LABEL: @inttoptr_add_ptrtoint_used_by_single_icmp_operands_swapped(
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[I]], 10
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[A]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2:%.*]], [[P]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 10
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[P:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %i = ptrtoint ptr %src to i64
@@ -60,10 +58,8 @@ define i1 @inttoptr_add_ptrtoint_used_by_single_icmp_operands_swapped(ptr %src, 
 
 define i1 @inttoptr_add_ptrtoint_used_by_single_icmp_constant_offset(ptr %src, i64 %off, ptr %p2) {
 ; CHECK-LABEL: @inttoptr_add_ptrtoint_used_by_single_icmp_constant_offset(
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[OFF:%.*]], [[I]]
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[A]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2:%.*]], [[P]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[P:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %i = ptrtoint ptr %src to i64
@@ -75,10 +71,8 @@ define i1 @inttoptr_add_ptrtoint_used_by_single_icmp_constant_offset(ptr %src, i
 
 define i1 @inttoptr_add_ptrtoint_used_by_single_icmp_constant_offset_operands_swapped(ptr %src, i64 %off, ptr %p2) {
 ; CHECK-LABEL: @inttoptr_add_ptrtoint_used_by_single_icmp_constant_offset_operands_swapped(
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[OFF:%.*]], [[I]]
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[A]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2:%.*]], [[P]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[P:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %i = ptrtoint ptr %src to i64
