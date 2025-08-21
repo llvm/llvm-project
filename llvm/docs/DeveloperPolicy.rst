@@ -151,18 +151,18 @@ Conflicts are resolved by the area teams (defined in `LP0004
 
 The main responsibilities of a maintainer are to:
 * **Code Review**: ensure that commits receive high-quality review, either by the
-  maintainer or by someone else,
+maintainer or by someone else,
 * **RFC Engagement**: actively engage with relevant RFCs, provide feedback, and
-  help drive discussions to conclusion,
+help drive discussions to conclusion,
 * **Mediation**: mediate code review and RFC disagreements through collaboration
-  with other maintainers (and other reviewers) to come to a consensus on how best
-  to proceed with disputed changes, by finding a common ground,
+with other maintainers (and other reviewers) to come to a consensus on how best
+to proceed with disputed changes, by finding a common ground,
 * **Triage**: help to confirm and comment on issues, aid release managers with
-  backporting and other release-related activities,
+backporting and other release-related activities,
 * **Point of Contact**: be a contact for contributors who need help (answering questions
-  on Discord/Discourse or holding office hours),
+on Discord/Discourse or holding office hours),
 * **Behaviour**: ensuring that they, and the community members they interact with,
-  abide by the :ref:`LLVM Community Code of Conduct`.
+abide by the :ref:`LLVM Community Code of Conduct`.
 
 Each top-level project in the monorepo will specify one or more
 **lead maintainers** who are responsible for ensuring community needs are
