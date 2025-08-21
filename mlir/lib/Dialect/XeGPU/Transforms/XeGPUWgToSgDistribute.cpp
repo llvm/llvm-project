@@ -429,8 +429,8 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
         tmpC = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
-        xegpu::setLayoutAttr(cast<OpResult>(tmpC),
-                             originalLayout.dropSgLayoutAndData());
+        xegpu::setDistributeLayoutAttr(cast<OpResult>(tmpC),
+                                       originalLayout.dropSgLayoutAndData());
 
         newDpasOps.push_back(tmpC);
       }
@@ -508,8 +508,8 @@ struct WgToSgVectorBroadcastOp
     for (auto operand : adaptor.getOperands().front()) {
       auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
                                                       newResultType, operand);
-      xegpu::setLayoutAttr(newBroadcast->getResult(0),
-                           layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newBroadcast->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newBroadcastOps.push_back(newBroadcast.getResult());
     }
 
@@ -755,7 +755,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto cstOp =
         arith::ConstantOp::create(rewriter, op.getLoc(), newType, sgAttr);
     if (auto newLayout = layout.dropSgLayoutAndData())
-      xegpu::setLayoutAttr(cstOp->getResult(0), newLayout);
+      xegpu::setDistributeLayoutAttr(cstOp->getResult(0), newLayout);
     SmallVector<Value> newConsts(count, cstOp);
 
     rewriter.replaceOpWithMultiple(op, {newConsts});

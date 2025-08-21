@@ -160,7 +160,8 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const OpOperand &opr)
 }
 
 template <typename T, typename>
-void xegpu::setLayoutAttr(const T &operandOrResult, const DistributeLayoutAttr layout) {
+void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
+                                    const DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getLayoutName(operandOrResult);
   if (layout && !owner->hasAttrOfType<DistributeLayoutAttr>(name))
@@ -168,25 +169,25 @@ void xegpu::setLayoutAttr(const T &operandOrResult, const DistributeLayoutAttr l
 }
 
 // Explicit instantiation for OpResult
-template void
-xegpu::setLayoutAttr<mlir::OpResult>(const mlir::OpResult &result,
-                                     const mlir::xegpu::DistributeLayoutAttr layout);
+template void xegpu::setDistributeLayoutAttr<mlir::OpResult>(
+    const mlir::OpResult &result,
+    const mlir::xegpu::DistributeLayoutAttr layout);
 
 // Explicit instantiation for OpOperand
-template void
-xegpu::setLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand,
-                                      const mlir::xegpu::DistributeLayoutAttr layout);
+template void xegpu::setDistributeLayoutAttr<mlir::OpOperand>(
+    const mlir::OpOperand &operand,
+    const mlir::xegpu::DistributeLayoutAttr layout);
 
-void xegpu::setLayoutAttrs(Operation *op,
-                           function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {
+void xegpu::setDistributeLayoutAttrs(
+    Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {
   op->walk([&](Operation *nestOp) {
     for (OpOperand &opr : nestOp->getOpOperands()) {
       auto layout = getLayoutImpl(opr.get());
-      setLayoutAttr(opr, layout);
+      setDistributeLayoutAttr(opr, layout);
     }
     for (OpResult result : nestOp->getOpResults()) {
       auto layout = getLayoutImpl(result);
-      setLayoutAttr(result, layout);
+      setDistributeLayoutAttr(result, layout);
     }
   });
 }

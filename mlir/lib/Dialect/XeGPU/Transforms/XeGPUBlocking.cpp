@@ -247,7 +247,8 @@ void XeGPUBlockingPass::runOnOperation() {
   // Preserve the LayoutAttr for each operand to the owner's DictionaryAttr.
   // This ensures that the LayoutAttr remains accessible even if the defining
   // operation is replaced.
-  xegpu::setLayoutAttrs(op, [](Value v) { return xegpu::getDistributeLayoutAttr(v); });
+  xegpu::setDistributeLayoutAttrs(
+      op, [](Value v) { return xegpu::getDistributeLayoutAttr(v); });
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
                                  xegpu::LayoutAttr layout) {
@@ -377,7 +378,7 @@ void XeGPUBlockingPass::runOnOperation() {
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<LoopLikeOpInterface>(op))
-          xegpu::setLayoutAttr(result, layout.dropInstData());
+          xegpu::setDistributeLayoutAttr(result, layout.dropInstData());
       }
     }
 

@@ -841,14 +841,15 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       if (!isa<VectorType>(operand.get().getType()))
         continue;
 
-      auto layout = dyn_cast<xegpu::LayoutAttr>(xegpu::getDistributeLayoutAttr(operand));
+      auto layout =
+          xegpu::getDistributeLayoutAttrOfType<xegpu::LayoutAttr>(operand);
       if (!layout) {
         op->emitError("Could not find layout attribute for operand ")
             << operand.getOperandNumber() << " of operation " << op->getName();
         signalPassFailure();
         return;
       }
-      xegpu::setLayoutAttr(operand, layout);
+      xegpu::setDistributeLayoutAttr(operand, layout);
     }
   });
   // Step 2: Move all operations of a GPU function inside
@@ -883,7 +884,7 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       return AffineMap::get(val.getContext());
     // Get the layout of the vector type.
     // TODO: support more layout types
-    auto layout = dyn_cast<xegpu::LayoutAttr>(xegpu::getDistributeLayoutAttr(val));
+    auto layout = xegpu::getDistributeLayoutAttrOfType<xegpu::LayoutAttr>(val);
     // If no layout is specified, assume the inner most dimension is distributed
     // for now.
     if (!layout)

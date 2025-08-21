@@ -73,10 +73,20 @@ std::string getLayoutName(const OpResult result);
 /// Returns nullptr if no DistributeLayoutAttr is found.
 DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
 
+template <typename AttrTy>
+AttrTy getDistributeLayoutAttrOfType(const Value value) {
+  return dyn_cast_if_present<AttrTy>(getDistributeLayoutAttr(value));
+}
+
 /// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It will
 /// first check the operand_layout_{id} of the owner operation. If not found,
 /// it will check the operand itself and its defining op.
 DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
+
+template <typename AttrTy>
+AttrTy getDistributeLayoutAttrOfType(const OpOperand &opr) {
+  return dyn_cast_if_present<AttrTy>(getDistributeLayoutAttr(opr));
+}
 
 /// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.
 template <typename T,
@@ -94,13 +104,14 @@ void removeLayoutAttrs(Operation *op);
 template <typename T,
           typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
                                       std::is_same_v<T, OpResult>>>
-void setLayoutAttr(const T &operandOrResult, const DistributeLayoutAttr layout);
+void setDistributeLayoutAttr(const T &operandOrResult,
+                             const DistributeLayoutAttr layout);
 
 /// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given operation.
 /// If the operation contains regions, it is also applied recursively to the
 /// contained operations
-void setLayoutAttrs(Operation *op,
-                    function_ref<DistributeLayoutAttr(Value)> getLayoutImpl);
+void setDistributeLayoutAttrs(
+    Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl);
 
 /// Extract a set of small vectors from a value with a given shape using
 /// vector.extract_stride_slice
