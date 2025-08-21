@@ -3845,9 +3845,22 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
   unsigned NumResultElts = SubVT.getVectorMinNumElements();
 
   if (IdxVal < LoEltsMin) {
-    assert(IdxVal + NumResultElts <= LoEltsMin &&
-           "Extracted subvector crosses vector split!");
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
+    // If the extracted elements are all in the low half, do a simple extract.
+    if (IdxVal + NumResultElts <= LoEltsMin)
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
+
+    // Extracted subvector crosses vector split, so we need to blend the two
+    // halves.
+    // TODO: May be able to emit partial extract_subvector.
+    SmallVector<SDValue, 8> Elts;
+    Elts.reserve(NumResultElts);
+
+    DAG.ExtractVectorElements(Lo, Elts, /*Start=*/IdxVal,
+                              /*Count=*/LoEltsMin - IdxVal);
+    DAG.ExtractVectorElements(Hi, Elts, /*Start=*/0,
+                              /*Count=*/SubVT.getVectorNumElements() -
+                                  Elts.size());
+    return DAG.getBuildVector(SubVT, dl, Elts);
   }
 
   EVT SrcVT = N->getOperand(0).getValueType();
