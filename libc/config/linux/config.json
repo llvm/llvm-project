@@ -1,0 +1,7 @@
+{
+  "string": {
+    "LIBC_CONF_STRING_UNSAFE_WIDE_READ": {
+      "value": true
+    }
+  }
+}
