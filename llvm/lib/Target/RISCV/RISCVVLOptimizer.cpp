@@ -847,13 +847,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VLUXEI32_V:
   case RISCV::VLOXEI32_V:
   case RISCV::VLUXEI64_V:
-  case RISCV::VLOXEI64_V: {
-    for (const MachineMemOperand *MMO : MI.memoperands())
-      if (MMO->isVolatile())
-        return false;
-    return true;
-  }
-
+  case RISCV::VLOXEI64_V:
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
@@ -1290,6 +1284,13 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   if (MI.mayRaiseFPException()) {
     LLVM_DEBUG(dbgs() << "Not a candidate because may raise FP exception\n");
     return false;
+  }
+
+  for (const MachineMemOperand *MMO : MI.memoperands()) {
+    if (MMO->isVolatile()) {
+      LLVM_DEBUG(dbgs() << "Not a candidate because contains volatile MMO\n");
+      return false;
+    }
   }
 
   // Some instructions that produce vectors have semantics that make it more
