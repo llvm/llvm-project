@@ -3853,7 +3853,7 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
     return false;
 
   if (auto *TT = dyn_cast<TargetExtType>(Op->getType());
-      TT && TT->getName() == "dx.RawBuffer")
+      TT && TT->hasProperty(TargetExtType::Property::NoReplacement))
     return false;
 
   // Early exit.

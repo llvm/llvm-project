@@ -847,6 +847,8 @@ public:
     CanBeLocal = 1U << 2,
     // This type may be used as an element in a vector.
     CanBeVectorElement = 1U << 3,
+    // This type can not be replaced in an optimization pass.
+    NoReplacement = 1U << 4,
   };
 
   /// Returns true if the target extension type contains the given property.
