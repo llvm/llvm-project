@@ -1051,6 +1051,7 @@ class SettingsCommandTestCase(TestBase):
             substrs=["(default: empty)", '[0]: "PATH"'],
         )
         # dictionaries
+        self.runCmd("settings clear target.env-vars")
         self.expect(
             "settings show --defaults target.env-vars",
             matching=False,
@@ -1070,7 +1071,7 @@ class SettingsCommandTestCase(TestBase):
         self.runCmd("settings set target.exec-search-paths /tmp")
         self.expect(
             "settings show --defaults target.exec-search-paths",
-            substrs=["(default: empty)", "[0]: /tmp"],
+            patterns=[r"\(default: empty\)", r"\[0\]: [/\]tmp"],
         )
         # path map
         self.expect(
