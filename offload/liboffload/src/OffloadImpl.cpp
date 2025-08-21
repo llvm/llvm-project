@@ -183,6 +183,7 @@ namespace llvm {
 namespace offload {
 
 struct AllocInfo {
+  void *Base;
   ol_device_handle_t Device;
   ol_alloc_type_t Type;
 };
@@ -201,8 +202,8 @@ struct OffloadContext {
 
   bool TracingEnabled = false;
   bool ValidationEnabled = true;
-  DenseMap<void *, AllocInfo> AllocInfoMap{};
-  std::mutex AllocInfoMapMutex{};
+  SmallVector<AllocInfo> AllocInfoList{};
+  std::mutex AllocInfoListMutex{};
   SmallVector<ol_platform_impl_t, 4> Platforms{};
   size_t RefCount;
 
@@ -625,30 +626,37 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
 
   *AllocationOut = *Alloc;
   {
-    std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoMapMutex);
-    OffloadContext::get().AllocInfoMap.insert_or_assign(
-        *Alloc, AllocInfo{Device, Type});
+    std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoListMutex);
+    OffloadContext::get().AllocInfoList.emplace_back(
+        AllocInfo{*AllocationOut, Device, Type});
   }
   return Error::success();
 }
 
-Error olMemFree_impl(void *Address) {
-  ol_device_handle_t Device;
-  ol_alloc_type_t Type;
+Error olMemFree_impl(ol_device_handle_t Device, void *Address) {
+  AllocInfo Removed;
   {
-    std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoMapMutex);
-    if (!OffloadContext::get().AllocInfoMap.contains(Address))
-      return createOffloadError(ErrorCode::INVALID_ARGUMENT,
-                                "address is not a known allocation");
+    std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoListMutex);
 
-    auto AllocInfo = OffloadContext::get().AllocInfoMap.at(Address);
-    Device = AllocInfo.Device;
-    Type = AllocInfo.Type;
-    OffloadContext::get().AllocInfoMap.erase(Address);
+    auto &List = OffloadContext::get().AllocInfoList;
+    auto Entry = std::find_if(List.begin(), List.end(), [&](AllocInfo &Entry) {
+      return Address == Entry.Base && (!Device || Entry.Device == Device);
+    });
+
+    if (Entry == List.end())
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "could not find memory allocated by olMemAlloc");
+    if (!Device && Entry->Type == OL_ALLOC_TYPE_DEVICE)
+      return Plugin::error(
+          ErrorCode::NOT_FOUND,
+          "specifying the Device parameter is required to query device memory");
+
+    Removed = std::move(*Entry);
+    *Entry = List.pop_back_val();
   }
 
-  if (auto Res =
-          Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type)))
+  if (auto Res = Removed.Device->Device->dataDelete(
+          Removed.Base, convertOlToPluginAllocTy(Removed.Type)))
     return Res;
 
   return Error::success();
