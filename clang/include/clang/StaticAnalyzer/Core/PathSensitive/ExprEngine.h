@@ -422,7 +422,9 @@ public:
   const ProgramStateManager &getStateManager() const { return StateMgr; }
 
   StoreManager &getStoreManager() { return StateMgr.getStoreManager(); }
-  const StoreManager &getStoreManager() const { return StateMgr.getStoreManager(); }
+  const StoreManager &getStoreManager() const {
+    return StateMgr.getStoreManager();
+  }
 
   ConstraintManager &getConstraintManager() {
     return StateMgr.getConstraintManager();

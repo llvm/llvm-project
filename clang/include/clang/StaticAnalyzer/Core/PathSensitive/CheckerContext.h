@@ -72,9 +72,7 @@ public:
   StoreManager &getStoreManager() {
     return Eng.getStoreManager();
   }
-  const StoreManager &getStoreManager() const {
-    return Eng.getStoreManager();
-  }
+  const StoreManager &getStoreManager() const { return Eng.getStoreManager(); }
 
   /// Returns the previous node in the exploded graph, which includes
   /// the state of the program before the checker ran. Note, checkers should
@@ -119,9 +117,7 @@ public:
   BugReporter &getBugReporter() {
     return Eng.getBugReporter();
   }
-  const BugReporter &getBugReporter() const {
-    return Eng.getBugReporter();
-  }
+  const BugReporter &getBugReporter() const { return Eng.getBugReporter(); }
 
   const SourceManager &getSourceManager() {
     return getBugReporter().getSourceManager();
@@ -131,14 +127,14 @@ public:
   }
 
   Preprocessor &getPreprocessor() { return getBugReporter().getPreprocessor(); }
-  const Preprocessor &getPreprocessor() const { return getBugReporter().getPreprocessor(); }
+  const Preprocessor &getPreprocessor() const {
+    return getBugReporter().getPreprocessor();
+  }
 
   SValBuilder &getSValBuilder() {
     return Eng.getSValBuilder();
   }
-  const SValBuilder &getSValBuilder() const {
-    return Eng.getSValBuilder();
-  }
+  const SValBuilder &getSValBuilder() const { return Eng.getSValBuilder(); }
 
   SymbolManager &getSymbolManager() {
     return getSValBuilder().getSymbolManager();
