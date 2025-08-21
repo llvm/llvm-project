@@ -2460,9 +2460,10 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
   VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
   VPValue *AVL;
-  if (!match(EVLIncrement,
-             m_c_Add(m_ZExtOrSelf(m_EVL(m_VPValue(AVL))), m_Specific(EVLPhi))))
-    llvm_unreachable("Didn't find AVL?");
+  [[maybe_unused]] bool FoundAVL =
+      match(EVLIncrement,
+            m_c_Add(m_ZExtOrSelf(m_EVL(m_VPValue(AVL))), m_Specific(EVLPhi)));
+  assert(FoundAVL && "Didn't find AVL?");
 
   // The AVL may be capped to a safe distance.
   VPValue *SafeAVL;
@@ -2470,9 +2471,10 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
     AVL = SafeAVL;
 
   VPValue *AVLNext;
-  if (!match(AVL, m_VPInstruction<Instruction::PHI>(
-                      m_Specific(Plan.getTripCount()), m_VPValue(AVLNext))))
-    llvm_unreachable("Didn't find AVL backedge?");
+  [[maybe_unused]] bool FoundAVLNext =
+      match(AVL, m_VPInstruction<Instruction::PHI>(
+                     m_Specific(Plan.getTripCount()), m_VPValue(AVLNext)));
+  assert(FoundAVLNext && "Didn't find AVL backedge?");
 
   // Convert EVLPhi to concrete recipe.
   auto *ScalarR =
