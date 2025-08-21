@@ -339,7 +339,7 @@ public:
       const common::LanguageFeatureControl &control,
       common::LanguageFeature feature, A &&...args) {
     if (!isInModuleFile && control.ShouldWarn(feature)) {
-      return &addWarning(feature, std::forward<A>(args)...);
+      return &AddWarning(feature, std::forward<A>(args)...);
     }
     return nullptr;
   }
@@ -349,7 +349,7 @@ public:
       const common::LanguageFeatureControl &control,
       common::UsageWarning warning, A &&...args) {
     if (!isInModuleFile && control.ShouldWarn(warning)) {
-      return &addWarning(warning, std::forward<A>(args)...);
+      return &AddWarning(warning, std::forward<A>(args)...);
     }
     return nullptr;
   }
@@ -371,11 +371,11 @@ public:
 
 private:
   template <typename... A>
-  Message &addWarning(common::UsageWarning warning, A &&...args) {
+  Message &AddWarning(common::UsageWarning warning, A &&...args) {
     return messages_.emplace_back(warning, std::forward<A>(args)...);
   }
   template <typename... A>
-  Message &addWarning(common::LanguageFeature feature, A &&...args) {
+  Message &AddWarning(common::LanguageFeature feature, A &&...args) {
     return messages_.emplace_back(feature, std::forward<A>(args)...);
   }
   std::list<Message> messages_;

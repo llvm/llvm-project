@@ -257,13 +257,13 @@ public:
   }
   template <typename... A>
   parser::Message *Warn(common::LanguageFeature feature, A &&...args) {
-    return messages_.Warn(/*isInModuleFile=*/false, languageFeatures_, feature,
-        std::forward<A>(args)...);
+    return messages_.Warn(
+        IsInModuleFile(), languageFeatures_, feature, std::forward<A>(args)...);
   }
   template <typename... A>
   parser::Message *Warn(common::UsageWarning warning, A &&...args) {
-    return messages_.Warn(/*isInModuleFile=*/false, languageFeatures_, warning,
-        std::forward<A>(args)...);
+    return messages_.Warn(
+        IsInModuleFile(), languageFeatures_, warning, std::forward<A>(args)...);
   }
   std::optional<parser::CharBlock> moduleFileName() const {
     return moduleFileName_;
@@ -272,6 +272,7 @@ public:
     moduleFileName_ = n;
     return *this;
   }
+  bool IsInModuleFile() const { return moduleFileName_.has_value(); }
 
   ConstantSubscript &StartImpliedDo(parser::CharBlock, ConstantSubscript = 1);
   std::optional<ConstantSubscript> GetImpliedDo(parser::CharBlock) const;
