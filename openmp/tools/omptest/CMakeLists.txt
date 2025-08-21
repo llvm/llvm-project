@@ -97,6 +97,18 @@ else()
     ./src/OmptTesterStandalone.cpp)
 endif()
 
+if(TARGET cxx-headers)
+  add_dependencies(omptest cxx-headers)
+endif()
+
+if(TARGET cxx_shared)
+  add_dependencies(omptest cxx_shared)
+endif()
+
+if(TARGET cxxabi_shared)
+  add_dependencies(omptest cxxabi_shared)
+endif()
+
 # Add common include directories.
 target_include_directories(omptest PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
