@@ -1325,8 +1325,10 @@ bool AccessAnalysis::canCheckPtrAtRT(
       DepCands.eraseClass({getPointerOperand(Src), Src->mayWriteToMemory()});
       DepCands.eraseClass({getPointerOperand(Dst), Dst->mayWriteToMemory()});
     }
-  } else
+  } else {
     CheckDeps.clear();
+    DepCands = {};
+  }
 
   // We assign a consecutive id to access from different alias sets.
   // Accesses between different groups doesn't need to be checked.
