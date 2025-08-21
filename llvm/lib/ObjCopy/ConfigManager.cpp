@@ -124,7 +124,7 @@ ConfigManager::getDXContainerConfig() const {
       Common.StripUnneeded || Common.DecompressDebugSections ||
       Common.GapFill != 0 || Common.PadTo != 0 ||
       Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty() || !Common.ExtractSection.empty()) {
+      !Common.ChangeSectionAddress.empty()) {
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for DXContainer");
   }
