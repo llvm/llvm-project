@@ -118,7 +118,6 @@ struct CheckSimdNegationOperator {
   }
 };
 
-
 template <class T, std::size_t>
 struct CheckSimdBitwiseNotOperator {
   template <class SimdAbi>
