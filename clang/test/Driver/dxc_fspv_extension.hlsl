@@ -18,7 +18,7 @@
 // RUN: %clang_dxc -spirv -Tlib_6_7 -### %s -fspv-extension=KHR -fspv-extension=SPV_TEST2 2>&1 | FileCheck %s -check-prefix=TEST4
 // TEST4: "-spirv-ext=KHR,+SPV_TEST2"
 
-// Merge KHR with other extensions.
+// Convert DXC to a list of SPV extensions.
 // RUN: %clang_dxc -spirv -Tlib_6_7 -### %s -fspv-extension=DXC 2>&1 | FileCheck %s -check-prefix=TEST5
 // TEST5: "-spirv-ext={{(\+SPV_[a-zA-Z0-9_]+,?)+}}"
 
