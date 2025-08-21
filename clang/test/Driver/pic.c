@@ -26,8 +26,8 @@
 //
 // CHECK-PIE-LD: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PIE-LD: "-pie"
-// CHECK-PIE-LD: "Scrt1.o" "crti.o" "crtbeginS.o"
-// CHECK-PIE-LD: "crtendS.o" "crtn.o"
+// CHECK-PIE-LD: "Scrt1.o" "crti.o" "{{.*}}crtbeginS.o"
+// CHECK-PIE-LD: "{{.*}}crtendS.o" "crtn.o"
 //
 // CHECK-NOPIE-LD: "-nopie"
 //

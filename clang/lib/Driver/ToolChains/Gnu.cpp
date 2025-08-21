@@ -2163,10 +2163,8 @@ void Generic_GCC::GCCInstallationDetector::init(
 
     // Next, look for prefix(es) that correspond to distribution-supplied gcc
     // installations.
-    if (D.SysRoot.empty()) {
-      // Typically /usr.
-      AddDefaultGCCPrefixes(TargetTriple, Prefixes, D.SysRoot);
-    }
+    // Typically /usr.
+    AddDefaultGCCPrefixes(TargetTriple, Prefixes, "");
 
     // Try to respect gcc-config on Gentoo if --gcc-toolchain is not provided.
     // This avoids accidentally enforcing the system GCC version when using a
