@@ -30667,6 +30667,9 @@ bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
          Op.getOpcode() == AArch64ISD::MOVIedit ||
          Op.getOpcode() == AArch64ISD::MVNIshift ||
          Op.getOpcode() == AArch64ISD::MVNImsl ||
+         (Op.getOpcode() == ISD::FNEG &&
+          Op.getOperand(0).getOpcode() == AArch64ISD::MOVIedit &&
+          Op.getOperand(0).getConstantOperandVal(0) == 0) ||
          (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           Op.getOperand(0).getOpcode() == AArch64ISD::DUP) ||
          TargetLowering::isTargetCanonicalConstantNode(Op);
