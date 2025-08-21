@@ -106,6 +106,14 @@ if(MSVC)
 endif()
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
+# Win/ASan relies on the runtime having 16-byte aligned functions for
+# hotpatching. See https://github.com/llvm/llvm-project/pull/149444
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  if(CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
+    list(APPEND ASAN_CFLAGS /clang:-falign-functions=16)
+  endif()
+endif()
+
 append_list_if(MSVC /Zl ASAN_CFLAGS)
 
 set(ASAN_COMMON_DEFINITIONS "")
