@@ -71,7 +71,6 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-LINUX-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64-LINUX-NEXT:    addi sp, sp, 64
 ; RV64-LINUX-NEXT:    ret
-; RV64-LINUX:         .section        ".note.GNU-stack","x",@progbits
   %alloca = alloca [32 x i8], align 8
   call void @llvm.init.trampoline(ptr %alloca, ptr @f, ptr %p)
   %tramp = call ptr @llvm.adjust.trampoline(ptr %alloca)
@@ -79,3 +78,10 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
   ret i64 %ret
 
 }
+
+; Check for the explicitly emitted .note.GNU-stack section (ELF only) in the
+; presence of trampolines.
+; UTC_ARGS: --disable
+; RV64-LINUX:         .section        ".note.GNU-stack","x",@progbits
+; RV64:               .section        ".note.GNU-stack","x",@progbits
+; UTC_ARGS: --enable
