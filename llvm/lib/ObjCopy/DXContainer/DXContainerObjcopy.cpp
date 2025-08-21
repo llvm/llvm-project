@@ -20,7 +20,7 @@ namespace dxbc {
 using namespace object;
 
 static Error extractPartAsObject(StringRef PartName, StringRef OutFilename,
-                               StringRef InputFilename, const Object &Obj) {
+                                 StringRef InputFilename, const Object &Obj) {
   for (const Part &P : Obj.Parts)
     if (P.Name == PartName) {
       Object PartObj;
@@ -56,8 +56,8 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
     StringRef SectionName;
     StringRef FileName;
     std::tie(SectionName, FileName) = Flag.split('=');
-    if (Error E =
-            extractPartAsObject(SectionName, FileName, Config.InputFilename, Obj))
+    if (Error E = extractPartAsObject(SectionName, FileName,
+                                      Config.InputFilename, Obj))
       return E;
   }
 
