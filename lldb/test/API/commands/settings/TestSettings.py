@@ -1071,7 +1071,7 @@ class SettingsCommandTestCase(TestBase):
         self.runCmd("settings set target.exec-search-paths /tmp")
         self.expect(
             "settings show --defaults target.exec-search-paths",
-            patterns=[r"\(default: empty\)", r"\[0\]: [/\]tmp"],
+            patterns=[r"\(default: empty\)", r"\[0\]: [/\\]tmp"],
         )
         # path map
         self.expect(
@@ -1082,7 +1082,7 @@ class SettingsCommandTestCase(TestBase):
         self.runCmd("settings set target.source-map /abc /tmp")
         self.expect(
             "settings show --defaults target.source-map",
-            patterns=[r"\(default: empty\)", r'\[0\] "[/\]abc" -> "[/\]tmp"'],
+            patterns=[r"\(default: empty\)", r'\[0\] "[/\\]abc" -> "[/\\]tmp"'],
         )
 
     def get_setting_json(self, setting_path=None):
