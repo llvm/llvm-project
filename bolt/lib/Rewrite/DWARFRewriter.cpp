@@ -613,6 +613,7 @@ void DWARFRewriter::updateDebugInfo() {
   auto createRangeLocListAddressWriters = [&](DWARFUnit &CU) {
     std::lock_guard<std::mutex> Lock(AccessMutex);
     const uint16_t DwarfVersion = CU.getVersion();
+    std::optional<uint64_t> DWOId = CU.getDWOId();
     if (DwarfVersion >= 5) {
       auto AddrW = std::make_unique<DebugAddrWriterDwarf5>(
           &BC, CU.getAddressByteSize(), CU.getAddrOffsetSectionBase());
@@ -620,7 +621,7 @@ void DWARFRewriter::updateDebugInfo() {
       LocListWritersByCU[CUIndex] =
           std::make_unique<DebugLoclistWriter>(CU, DwarfVersion, false, *AddrW);
 
-      if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
+      if (DWOId && *DWOId != 0) {
         assert(RangeListsWritersByCU.count(*DWOId) == 0 &&
                "RangeLists writer for DWO unit already exists.");
         auto DWORangeListsSectionWriter =
@@ -635,7 +636,7 @@ void DWARFRewriter::updateDebugInfo() {
           std::make_unique<DebugAddrWriter>(&BC, CU.getAddressByteSize());
       AddressWritersByCU[CU.getOffset()] = std::move(AddrW);
       LocListWritersByCU[CUIndex] = std::make_unique<DebugLocWriter>();
-      if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
+      if (DWOId && *DWOId != 0) {
         assert(LegacyRangesWritersByCU.count(*DWOId) == 0 &&
                "LegacyRangeLists writer for DWO unit already exists.");
         auto LegacyRangesSectionWriterByCU =
