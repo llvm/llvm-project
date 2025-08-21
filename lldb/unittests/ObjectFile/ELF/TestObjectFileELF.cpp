@@ -332,10 +332,16 @@ TEST_F(ObjectFileELFTest, SkipsLocalMappingAndDotLSymbols) {
       Address:         0x0000000000601000
       AddressAlign:    0x0000000000000004
       Content:         2F000000
+    - Name:            .riscv.attributes
+      Type:            SHT_PROGBITS
+      Flags:           [ SHF_ALLOC ]
+      Address:         0x0000000000610000
+      AddressAlign:    0x0000000000000004
+      Content:         "00"
   Symbols:
     - Name:            $d
       Type:            STT_FUNC
-      Section:         .text
+      Section:         .riscv.attributes
       Value:           0x0000000000400180
       Size:            0x10
       Binding:         STB_LOCAL
