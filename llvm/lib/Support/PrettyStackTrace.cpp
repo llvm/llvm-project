@@ -115,7 +115,7 @@ static void PrintCurStackTrace(raw_ostream &OS) {
 //  only one crash info struct will be used.
 extern "C" {
 #ifdef CRASHREPORTER_ANNOTATIONS_INITIALIZER
-// Available in CRASHREPORTER_ANNOTATIONS_VERSION 5+
+// Should be available in CRASHREPORTER_ANNOTATIONS_VERSION > 5
 CRASHREPORTER_ANNOTATIONS_INITIALIZER()
 #else
 // Older CrashReporter annotations layouts
