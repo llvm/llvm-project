@@ -229,7 +229,6 @@ Bug Fixes in This Version
   cast chain. (#GH149967).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
-  macro expansion when performing analysis for nullability attributes. (#GH138371)
 - Fixed scope of typedefs present inside a template class. (#GH91451)
 
 Bug Fixes to Compiler Builtins
