@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LIB_TARGET_LLVMIR_DATALAYOUTIMPORTER_H_
-#define MLIR_LIB_TARGET_LLVMIR_DATALAYOUTIMPORTER_H_
+#ifndef MLIR_TARGET_LLVMIR_DATALAYOUTIMPORTER_H
+#define MLIR_TARGET_LLVMIR_DATALAYOUTIMPORTER_H
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -38,23 +38,31 @@ namespace detail {
 /// null if the bit width is not supported.
 FloatType getFloatType(MLIRContext *context, unsigned width);
 
-/// Helper class that translates an LLVM data layout to an MLIR data layout
-/// specification. Only integer, float, pointer, alloca memory space, stack
-/// alignment, and endianness entries are translated. The class also returns all
-/// entries from the default data layout specification found in the language
-/// reference (https://llvm.org/docs/LangRef.html#data-layout) if they are not
-/// overwritten by the provided data layout.
+/// Helper class that translates an LLVM data layout string to an MLIR data
+/// layout specification. Only integer, float, pointer, alloca memory space,
+/// stack alignment, and endianness entries are translated. The class also
+/// returns all entries from the default data layout specification found in the
+/// language reference (https://llvm.org/docs/LangRef.html#data-layout) if they
+/// are not overwritten by the provided data layout.
 class DataLayoutImporter {
 public:
-  DataLayoutImporter(MLIRContext *context,
-                     const llvm::DataLayout &llvmDataLayout)
-      : context(context) {
-    translateDataLayout(llvmDataLayout);
+  DataLayoutImporter(MLIRContext *context, StringRef dataLayoutStr)
+      : dataLayoutStr(dataLayoutStr), context(context) {
+    // Translate the `dataLayoutStr`. First, append the default data layout
+    // string specified in the language reference
+    // (https://llvm.org/docs/LangRef.html#data-layout) to the supplied string.
+    // The translation then parses the string and ignores the default value if a
+    // specific kind occurs in both strings. Additionally, the following default
+    // values exist:
+    // - non-default address space pointer specifications default to the default
+    //   address space pointer specification
+    // - the alloca address space defaults to the default address space.
+    dataLayoutSpec = dataLayoutSpecFromDataLayoutStr();
   }
 
   /// Returns the MLIR data layout specification translated from the LLVM
   /// data layout.
-  DataLayoutSpecInterface getDataLayout() const { return dataLayout; }
+  DataLayoutSpecInterface getDataLayoutSpec() const { return dataLayoutSpec; }
 
   /// Returns the last data layout token that has been processed before
   /// the data layout translation failed.
@@ -65,8 +73,9 @@ public:
   ArrayRef<StringRef> getUnhandledTokens() const { return unhandledTokens; }
 
 private:
-  /// Translates the LLVM `dataLayout` to an MLIR data layout specification.
-  void translateDataLayout(const llvm::DataLayout &llvmDataLayout);
+  /// Translate the LLVM data layout string to an MLIR data layout
+  /// specification.
+  DataLayoutSpecInterface dataLayoutSpecFromDataLayoutStr();
 
   /// Tries to parse the letter only prefix that identifies the specification
   /// and removes the consumed characters from the beginning of the string.
@@ -116,17 +125,18 @@ private:
   /// Adds legal int widths entry if there is none yet.
   LogicalResult tryToEmplaceLegalIntWidthsEntry(StringRef token);
 
-  std::string layoutStr = {};
+  std::string dataLayoutStr = {};
+  DataLayoutSpecInterface dataLayoutSpec;
+
   StringRef lastToken = {};
   SmallVector<StringRef> unhandledTokens;
   llvm::MapVector<StringAttr, DataLayoutEntryInterface> keyEntries;
   llvm::MapVector<TypeAttr, DataLayoutEntryInterface> typeEntries;
   MLIRContext *context;
-  DataLayoutSpecInterface dataLayout;
 };
 
 } // namespace detail
 } // namespace LLVM
 } // namespace mlir
 
-#endif // MLIR_LIB_TARGET_LLVMIR_DATALAYOUTIMPORTER_H_
+#endif // MLIR_TARGET_LLVMIR_DATALAYOUTIMPORTER_H

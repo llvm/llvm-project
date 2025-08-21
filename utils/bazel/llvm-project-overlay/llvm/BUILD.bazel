@@ -4732,6 +4732,25 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-offload-wrapper",
+    srcs = glob([
+        "tools/llvm-offload-wrapper/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":BitWriter",
+        ":Core",
+        ":FrontendOffloading",
+        ":Object",
+        ":Option",
+        ":Support",
+        ":TargetParser",
+        ":intrinsic_enums_gen",
+    ],
+)
+
+cc_binary(
     name = "llvm-pdbutil",
     srcs = glob([
         "tools/llvm-pdbutil/*.cpp",

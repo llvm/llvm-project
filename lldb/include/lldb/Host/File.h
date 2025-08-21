@@ -382,11 +382,15 @@ public:
     Unowned = false,
   };
 
-  NativeFile();
+  NativeFile() : m_descriptor(kInvalidDescriptor), m_stream(kInvalidStream) {}
 
-  NativeFile(FILE *fh, bool transfer_ownership);
+  NativeFile(FILE *fh, bool transfer_ownership)
+      : m_descriptor(kInvalidDescriptor), m_own_descriptor(false), m_stream(fh),
+        m_options(), m_own_stream(transfer_ownership) {}
 
-  NativeFile(int fd, OpenOptions options, bool transfer_ownership);
+  NativeFile(int fd, OpenOptions options, bool transfer_ownership)
+      : m_descriptor(fd), m_own_descriptor(transfer_ownership),
+        m_stream(kInvalidStream), m_options(options), m_own_stream(false) {}
 
   ~NativeFile() override { Close(); }
 
@@ -440,18 +444,16 @@ protected:
     return ValueGuard(m_stream_mutex, StreamIsValidUnlocked());
   }
 
-  int m_descriptor = kInvalidDescriptor;
+  int m_descriptor;
   bool m_own_descriptor = false;
   mutable std::mutex m_descriptor_mutex;
 
-  FILE *m_stream = kInvalidStream;
+  FILE *m_stream;
   mutable std::mutex m_stream_mutex;
 
   OpenOptions m_options{};
   bool m_own_stream = false;
   std::mutex offset_access_mutex;
-
-  bool is_windows_console = false;
 
 private:
   NativeFile(const NativeFile &) = delete;

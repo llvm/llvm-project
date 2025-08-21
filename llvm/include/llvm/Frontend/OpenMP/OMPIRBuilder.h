@@ -709,7 +709,7 @@ public:
       const LocationDescription &Loc, omp::Directive CanceledDirective);
 
   /// Creates a ScanInfo object, allocates and returns the pointer.
-  Expected<ScanInfo *> scanInfoInitialize();
+  LLVM_ABI Expected<ScanInfo *> scanInfoInitialize();
 
   /// Generator for '#omp parallel'
   ///
@@ -785,10 +785,12 @@ public:
   ///                  `ScanInfoInitialize`.
   ///
   /// \returns A vector containing Loop Info of Input Loop and Scan Loop.
-  Expected<SmallVector<llvm::CanonicalLoopInfo *>> createCanonicalScanLoops(
-      const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
-      Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
-      InsertPointTy ComputeIP, const Twine &Name, ScanInfo *ScanRedInfo);
+  LLVM_ABI Expected<SmallVector<llvm::CanonicalLoopInfo *>>
+  createCanonicalScanLoops(const LocationDescription &Loc,
+                           LoopBodyGenCallbackTy BodyGenCB, Value *Start,
+                           Value *Stop, Value *Step, bool IsSigned,
+                           bool InclusiveStop, InsertPointTy ComputeIP,
+                           const Twine &Name, ScanInfo *ScanRedInfo);
 
   /// Calculate the trip count of a canonical loop.
   ///
@@ -2745,7 +2747,7 @@ public:
   ///                       `ScanInfoInitialize`.
   ///
   /// \returns The insertion position *after* the masked.
-  InsertPointOrErrorTy emitScanReduction(
+  LLVM_ABI InsertPointOrErrorTy emitScanReduction(
       const LocationDescription &Loc,
       ArrayRef<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos,
       ScanInfo *ScanRedInfo);
@@ -2763,11 +2765,12 @@ public:
   ///                    `ScanInfoInitialize`.
   ///
   /// \returns The insertion position *after* the scan.
-  InsertPointOrErrorTy createScan(const LocationDescription &Loc,
-                                  InsertPointTy AllocaIP,
-                                  ArrayRef<llvm::Value *> ScanVars,
-                                  ArrayRef<llvm::Type *> ScanVarsType,
-                                  bool IsInclusive, ScanInfo *ScanRedInfo);
+  LLVM_ABI InsertPointOrErrorTy createScan(const LocationDescription &Loc,
+                                           InsertPointTy AllocaIP,
+                                           ArrayRef<llvm::Value *> ScanVars,
+                                           ArrayRef<llvm::Type *> ScanVarsType,
+                                           bool IsInclusive,
+                                           ScanInfo *ScanRedInfo);
 
   /// Generator for '#omp critical'
   ///

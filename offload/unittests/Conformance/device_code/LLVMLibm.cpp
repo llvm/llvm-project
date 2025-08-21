@@ -123,6 +123,11 @@ __gpu_kernel void hypotf16Kernel(const float16 *X, float16 *Y, float16 *Out,
   runKernelBody<hypotf16>(NumElements, Out, X, Y);
 }
 
+__gpu_kernel void logKernel(const double *X, double *Out,
+                            size_t NumElements) noexcept {
+  runKernelBody<log>(NumElements, Out, X);
+}
+
 __gpu_kernel void logfKernel(const float *X, float *Out,
                              size_t NumElements) noexcept {
   runKernelBody<logf>(NumElements, Out, X);

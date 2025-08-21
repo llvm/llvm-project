@@ -507,6 +507,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     OS << '\n';
   }
 
+  if (AMDGPU::isGFX1250(STI))
+    PrintField(KD.compute_pgm_rsrc3,
+               amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
+               amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+               ".amdhsa_named_barrier_count");
+
   OS << "\t\t.amdhsa_reserve_vcc ";
   EmitMCExpr(ReserveVCC);
   OS << '\n';

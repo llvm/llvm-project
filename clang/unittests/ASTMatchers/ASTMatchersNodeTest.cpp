@@ -1183,6 +1183,39 @@ TEST_P(ASTMatchersTest, AsmStatement) {
   EXPECT_TRUE(matches("void foo() { __asm(\"mov al, 2\"); }", asmStmt()));
 }
 
+TEST_P(ASTMatchersTest, HasConditionVariableStatement) {
+  if (!GetParam().isCXX()) {
+    // FIXME: Add a test for `hasConditionVariableStatement()` that does not
+    // depend on C++.
+    return;
+  }
+
+  StatementMatcher IfCondition =
+      ifStmt(hasConditionVariableStatement(declStmt()));
+
+  EXPECT_TRUE(matches("void x() { if (int* a = 0) {} }", IfCondition));
+  EXPECT_TRUE(notMatches("void x() { if (true) {} }", IfCondition));
+  EXPECT_TRUE(notMatches("void x() { int x; if ((x = 42)) {} }", IfCondition));
+
+  StatementMatcher SwitchCondition =
+      switchStmt(hasConditionVariableStatement(declStmt()));
+
+  EXPECT_TRUE(matches("void x() { switch (int a = 0) {} }", SwitchCondition));
+  if (GetParam().isCXX17OrLater()) {
+    EXPECT_TRUE(
+        notMatches("void x() { switch (int a = 0; a) {} }", SwitchCondition));
+  }
+
+  StatementMatcher ForCondition =
+      forStmt(hasConditionVariableStatement(declStmt()));
+
+  EXPECT_TRUE(matches("void x() { for (; int a = 0; ) {} }", ForCondition));
+  EXPECT_TRUE(notMatches("void x() { for (int a = 0; ; ) {} }", ForCondition));
+
+  EXPECT_TRUE(matches("void x() { while (int a = 0) {} }",
+                      whileStmt(hasConditionVariableStatement(declStmt()))));
+}
+
 TEST_P(ASTMatchersTest, HasCondition) {
   if (!GetParam().isCXX()) {
     // FIXME: Add a test for `hasCondition()` that does not depend on C++.

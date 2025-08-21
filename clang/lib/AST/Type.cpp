@@ -4558,17 +4558,45 @@ void SubstTemplateTypeParmType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddBoolean(Final);
 }
 
+SubstPackType::SubstPackType(TypeClass Derived, QualType Canon,
+                             const TemplateArgument &ArgPack)
+    : Type(Derived, Canon,
+           TypeDependence::DependentInstantiation |
+               TypeDependence::UnexpandedPack),
+      Arguments(ArgPack.pack_begin()) {
+  assert(llvm::all_of(
+             ArgPack.pack_elements(),
+             [](auto &P) { return P.getKind() == TemplateArgument::Type; }) &&
+         "non-type argument to SubstPackType?");
+  SubstPackTypeBits.NumArgs = ArgPack.pack_size();
+}
+
+TemplateArgument SubstPackType::getArgumentPack() const {
+  return TemplateArgument(llvm::ArrayRef(Arguments, getNumArgs()));
+}
+
+void SubstPackType::Profile(llvm::FoldingSetNodeID &ID) {
+  Profile(ID, getArgumentPack());
+}
+
+void SubstPackType::Profile(llvm::FoldingSetNodeID &ID,
+                            const TemplateArgument &ArgPack) {
+  ID.AddInteger(ArgPack.pack_size());
+  for (const auto &P : ArgPack.pack_elements())
+    ID.AddPointer(P.getAsType().getAsOpaquePtr());
+}
+
 SubstTemplateTypeParmPackType::SubstTemplateTypeParmPackType(
     QualType Canon, Decl *AssociatedDecl, unsigned Index, bool Final,
     const TemplateArgument &ArgPack)
-    : Type(SubstTemplateTypeParmPack, Canon,
-           TypeDependence::DependentInstantiation |
-               TypeDependence::UnexpandedPack),
-      Arguments(ArgPack.pack_begin()),
+    : SubstPackType(SubstTemplateTypeParmPack, Canon, ArgPack),
       AssociatedDeclAndFinal(AssociatedDecl, Final) {
-  SubstTemplateTypeParmPackTypeBits.Index = Index;
-  SubstTemplateTypeParmPackTypeBits.NumArgs = ArgPack.pack_size();
   assert(AssociatedDecl != nullptr);
+
+  SubstPackTypeBits.SubstTemplTypeParmPackIndex = Index;
+  assert(getNumArgs() == ArgPack.pack_size() &&
+         "Parent bitfields in SubstPackType were overwritten."
+         "Check NumSubstPackTypeBits.");
 }
 
 Decl *SubstTemplateTypeParmPackType::getAssociatedDecl() const {
@@ -4588,10 +4616,6 @@ IdentifierInfo *SubstTemplateTypeParmPackType::getIdentifier() const {
   return getReplacedParameter()->getIdentifier();
 }
 
-TemplateArgument SubstTemplateTypeParmPackType::getArgumentPack() const {
-  return TemplateArgument(llvm::ArrayRef(Arguments, getNumArgs()));
-}
-
 void SubstTemplateTypeParmPackType::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getAssociatedDecl(), getIndex(), getFinal(), getArgumentPack());
 }
@@ -4603,10 +4627,12 @@ void SubstTemplateTypeParmPackType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
   ID.AddBoolean(Final);
-  ID.AddInteger(ArgPack.pack_size());
-  for (const auto &P : ArgPack.pack_elements())
-    ID.AddPointer(P.getAsType().getAsOpaquePtr());
+  SubstPackType::Profile(ID, ArgPack);
 }
+
+SubstBuiltinTemplatePackType::SubstBuiltinTemplatePackType(
+    QualType Canon, const TemplateArgument &ArgPack)
+    : SubstPackType(SubstBuiltinTemplatePack, Canon, ArgPack) {}
 
 bool TemplateSpecializationType::anyDependentTemplateArguments(
     const TemplateArgumentListInfo &Args,
@@ -4631,18 +4657,28 @@ bool TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
   return false;
 }
 
+static TypeDependence
+getTemplateSpecializationTypeDependence(QualType Underlying, TemplateName T) {
+  TypeDependence D = Underlying.isNull()
+                         ? TypeDependence::DependentInstantiation
+                         : toSemanticDependence(Underlying->getDependence());
+  D |= toTypeDependence(T.getDependence()) & TypeDependence::UnexpandedPack;
+  if (isPackProducingBuiltinTemplateName(T)) {
+    if (Underlying.isNull()) // Dependent, will produce a pack on substitution.
+      D |= TypeDependence::UnexpandedPack;
+    else
+      D |= (Underlying->getDependence() & TypeDependence::UnexpandedPack);
+  }
+  return D;
+}
+
 TemplateSpecializationType::TemplateSpecializationType(
     ElaboratedTypeKeyword Keyword, TemplateName T, bool IsAlias,
     ArrayRef<TemplateArgument> Args, QualType Underlying)
-    : TypeWithKeyword(
-          Keyword, TemplateSpecialization,
-          Underlying.isNull() ? QualType(this, 0)
-                              : Underlying.getCanonicalType(),
-          (Underlying.isNull()
-               ? TypeDependence::DependentInstantiation
-               : toSemanticDependence(Underlying->getDependence())) |
-              (toTypeDependence(T.getDependence()) &
-               TypeDependence::UnexpandedPack)),
+    : TypeWithKeyword(Keyword, TemplateSpecialization,
+                      Underlying.isNull() ? QualType(this, 0)
+                                          : Underlying.getCanonicalType(),
+                      getTemplateSpecializationTypeDependence(Underlying, T)),
       Template(T) {
   TemplateSpecializationTypeBits.NumArgs = Args.size();
   TemplateSpecializationTypeBits.TypeAlias = IsAlias;
@@ -4686,6 +4722,12 @@ TemplateSpecializationType::TemplateSpecializationType(
 QualType TemplateSpecializationType::getAliasedType() const {
   assert(isTypeAlias() && "not a type alias template specialization");
   return *reinterpret_cast<const QualType *>(template_arguments().end());
+}
+
+bool clang::TemplateSpecializationType::isSugared() const {
+  return !isDependentType() || isCurrentInstantiation() || isTypeAlias() ||
+         (isPackProducingBuiltinTemplateName(Template) &&
+          isa<SubstBuiltinTemplatePackType>(*getCanonicalTypeInternal()));
 }
 
 void TemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
@@ -5103,6 +5145,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::UnaryTransform:
   case Type::TemplateTypeParm:
   case Type::SubstTemplateTypeParmPack:
+  case Type::SubstBuiltinTemplatePack:
   case Type::DependentName:
   case Type::DependentTemplateSpecialization:
   case Type::Auto:

@@ -39,8 +39,9 @@ void uses(unsigned Parm) {
 #pragma acc kernels loop reduction(min: CoS, Array[I], Array[0:I])
   for(int i = 0; i < 5; ++i);
 
-  // expected-error@+2{{OpenACC 'reduction' composite variable must not have non-scalar field}}
-  // expected-note@#COS_FIELD{{invalid field is here}}
+  // expected-error@+3{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel loop reduction(&: ChC)
   for(int i = 0; i < 5; ++i);
 
@@ -166,4 +167,24 @@ void uses(unsigned Parm) {
 #pragma acc parallel loop reduction(&:I)
     for(int i = 0; i < 5; ++i);
   }
+
+  CompositeHasComposite CoCArr[5];
+  // expected-error@+4{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+3{{used as element type of array type 'CompositeHasComposite'}}
+  // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel loop reduction(+:CoCArr)
+    for(int i = 0; i < 5; ++i);
+  // expected-error@+4{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+3{{used as element type of array type 'CompositeHasComposite[5]'}}
+  // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel loop reduction(+:CoCArr[3])
+    for(int i = 0; i < 5; ++i);
+  // expected-error@+4{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+3{{used as element type of sub-array type 'CompositeHasComposite'}}
+  // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel loop reduction(+:CoCArr[1:1])
+    for(int i = 0; i < 5; ++i);
 }

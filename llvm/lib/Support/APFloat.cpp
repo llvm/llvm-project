@@ -4575,35 +4575,6 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
 
 }
 
-bool IEEEFloat::getExactInverse(APFloat *inv) const {
-  // Special floats and denormals have no exact inverse.
-  if (!isFiniteNonZero())
-    return false;
-
-  // Check that the number is a power of two by making sure that only the
-  // integer bit is set in the significand.
-  if (significandLSB() != semantics->precision - 1)
-    return false;
-
-  // Get the inverse.
-  IEEEFloat reciprocal(*semantics, 1ULL);
-  if (reciprocal.divide(*this, rmNearestTiesToEven) != opOK)
-    return false;
-
-  // Avoid multiplication with a denormal, it is not safe on all platforms and
-  // may be slower than a normal division.
-  if (reciprocal.isDenormal())
-    return false;
-
-  assert(reciprocal.isFiniteNonZero() &&
-         reciprocal.significandLSB() == reciprocal.semantics->precision - 1);
-
-  if (inv)
-    *inv = APFloat(reciprocal, *semantics);
-
-  return true;
-}
-
 int IEEEFloat::getExactLog2Abs() const {
   if (!isFinite() || isZero())
     return INT_MIN;
@@ -5731,17 +5702,6 @@ void DoubleAPFloat::toString(SmallVectorImpl<char> &Str,
       .toString(Str, FormatPrecision, FormatMaxPadding, TruncateZero);
 }
 
-bool DoubleAPFloat::getExactInverse(APFloat *inv) const {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy, bitcastToAPInt());
-  if (!inv)
-    return Tmp.getExactInverse(nullptr);
-  APFloat Inv(semPPCDoubleDoubleLegacy);
-  auto Ret = Tmp.getExactInverse(&Inv);
-  *inv = APFloat(semPPCDoubleDouble, Inv.bitcastToAPInt());
-  return Ret;
-}
-
 int DoubleAPFloat::getExactLog2Abs() const {
   // In order for Hi + Lo to be a power of two, the following must be true:
   // 1. Hi must be a power of two.
@@ -5924,6 +5884,64 @@ FPClassTest APFloat::classify() const {
     return isNegative() ? fcNegInf : fcPosInf;
   assert(isNaN() && "Other class of FP constant");
   return isSignaling() ? fcSNan : fcQNan;
+}
+
+bool APFloat::getExactInverse(APFloat *Inv) const {
+  // Only finite, non-zero numbers can have a useful, representable inverse.
+  // This check filters out +/- zero, +/- infinity, and NaN.
+  if (!isFiniteNonZero())
+    return false;
+
+  // Historically, this function rejects subnormal inputs.  One reason why this
+  // might be important is that subnormals may behave differently under FTZ/DAZ
+  // runtime behavior.
+  if (isDenormal())
+    return false;
+
+  // A number has an exact, representable inverse if and only if it is a power
+  // of two.
+  //
+  // Mathematical Rationale:
+  // 1. A binary floating-point number x is a dyadic rational, meaning it can
+  //    be written as x = M / 2^k for integers M (the significand) and k.
+  // 2. The inverse is 1/x = 2^k / M.
+  // 3. For 1/x to also be a dyadic rational (and thus exactly representable
+  //    in binary), its denominator M must also be a power of two.
+  //    Let's say M = 2^m.
+  // 4. Substituting this back into the formula for x, we get
+  //    x = (2^m) / (2^k) = 2^(m-k).
+  //
+  // This proves that x must be a power of two.
+
+  // getExactLog2Abs() returns the integer exponent if the number is a power of
+  // two or INT_MIN if it is not.
+  const int Exp = getExactLog2Abs();
+  if (Exp == INT_MIN)
+    return false;
+
+  // The inverse of +/- 2^Exp is +/- 2^(-Exp). We can compute this by
+  // scaling 1.0 by the negated exponent.
+  APFloat Reciprocal =
+      scalbn(APFloat::getOne(getSemantics(), /*Negative=*/isNegative()), -Exp,
+             rmTowardZero);
+
+  // scalbn might round if the resulting exponent -Exp is outside the
+  // representable range, causing overflow (to infinity) or underflow. We
+  // must verify that the result is still the exact power of two we expect.
+  if (Reciprocal.getExactLog2Abs() != -Exp)
+    return false;
+
+  // Avoid multiplication with a subnormal, it is not safe on all platforms and
+  // may be slower than a normal division.
+  if (Reciprocal.isDenormal())
+    return false;
+
+  assert(Reciprocal.isFiniteNonZero());
+
+  if (Inv)
+    *Inv = std::move(Reciprocal);
+
+  return true;
 }
 
 APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
