@@ -2865,31 +2865,20 @@ void DarwinClang::AddGnuCPlusPlusStdlibLibArgs(
   // platforms we care about it was -lstdc++.6, so we search for that
   // explicitly if we can't see an obvious -lstdc++ candidate.
 
-  // Check in the sysroot first.
-  if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
-    SmallString<128> P(A->getValue());
-    llvm::sys::path::append(P, "usr", "lib", "libstdc++.dylib");
+  llvm::SmallString<128> UsrLibStdCxx = GetEffectiveSysroot(Args);
+  llvm::sys::path::append(UsrLibStdCxx, "usr", "lib", "libstdc++.dylib");
 
-    if (!getVFS().exists(P)) {
-      llvm::sys::path::remove_filename(P);
-      llvm::sys::path::append(P, "libstdc++.6.dylib");
-      if (getVFS().exists(P)) {
-        CmdArgs.push_back(Args.MakeArgString(P));
-        return;
-      }
+  // FIXME: This should be removed someday when we don't have to care about
+  // 10.6 and earlier, where /usr/lib/libstdc++.dylib does not exist.
+  if (!getVFS().exists(UsrLibStdCxx)) {
+    llvm::sys::path::remove_filename(UsrLibStdCxx);
+    llvm::sys::path::append(UsrLibStdCxx, "libstdc++.6.dylib");
+    if (getVFS().exists(UsrLibStdCxx)) {
+      CmdArgs.push_back(Args.MakeArgString(UsrLibStdCxx));
+      return;
     }
   }
 
-  // Otherwise, look in the root.
-  // FIXME: This should be removed someday when we don't have to care about
-  // 10.6 and earlier, where /usr/lib/libstdc++.dylib does not exist.
-  if (!getVFS().exists("/usr/lib/libstdc++.dylib") &&
-      getVFS().exists("/usr/lib/libstdc++.6.dylib")) {
-    CmdArgs.push_back("/usr/lib/libstdc++.6.dylib");
-    return;
-  }
-
-  // Otherwise, let the linker search.
   CmdArgs.push_back("-lstdc++");
 }
 
