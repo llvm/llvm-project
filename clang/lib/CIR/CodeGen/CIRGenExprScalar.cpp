@@ -1905,6 +1905,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
         cgf.getLoc(subExpr->getSourceRange()), cgf.convertType(destTy),
         Visit(subExpr));
   }
+  case CK_FunctionToPointerDecay:
+    return cgf.emitLValue(subExpr).getPointer();
 
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
