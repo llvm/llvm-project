@@ -82,7 +82,7 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       // is computed.
       for (auto sharedOp : funcOp.getOps<cuf::SharedMemoryOp>()) {
         mlir::Location loc = sharedOp.getLoc();
-        builder.setInsertionPoint(sharedOp);  
+        builder.setInsertionPoint(sharedOp);
         if (fir::hasDynamicSize(sharedOp.getInType())) {
           mlir::Type ty = sharedOp.getInType();
           if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
