@@ -1082,7 +1082,7 @@ class SettingsCommandTestCase(TestBase):
         self.runCmd("settings set target.source-map /abc /tmp")
         self.expect(
             "settings show --defaults target.source-map",
-            substrs=["(default: empty)", '[0] "/abc" -> "/tmp"'],
+            patterns=[r"\(default: empty\)", r'\[0\] "[/\]abc" -> "[/\]tmp"'],
         )
 
     def get_setting_json(self, setting_path=None):
