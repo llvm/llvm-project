@@ -23,20 +23,20 @@
 #include "clang/Basic/DiagnosticInstallAPI.h"
 #include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/DiagnosticParse.h"
+#include "clang/Basic/DiagnosticRefactoring.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/DiagnosticSerialization.h"
-#include "clang/Basic/DiagnosticRefactoring.h"
 
 namespace clang {
-template <size_t SizeOfStr, typename FieldType>
-class StringSizerHelper {
+template <size_t SizeOfStr, typename FieldType> class StringSizerHelper {
   static_assert(SizeOfStr <= FieldType(~0U), "Field too small!");
+
 public:
   enum { Size = SizeOfStr };
 };
 } // end namespace clang
 
-#define STR_SIZE(str, fieldTy) clang::StringSizerHelper<sizeof(str)-1, \
-                                                        fieldTy>::Size
+#define STR_SIZE(str, fieldTy)                                                 \
+  clang::StringSizerHelper<sizeof(str) - 1, fieldTy>::Size
 
 #endif
