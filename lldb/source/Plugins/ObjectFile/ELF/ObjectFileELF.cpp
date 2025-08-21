@@ -2041,13 +2041,12 @@ static char FindRISCVMappingSymbol(const char *symbol_name) {
   if (!symbol_name)
     return '\0';
 
-  if (symbol_name.size() == 2 && symbol_name[0] == '$'){
-    char c = symbol_name[1];
-    if (c == 'd' || c == 'x'){
-      return c;
-    }
-  return '\0';
+  if (symbol_name[0] == '$' &&
+      (symbol_name[1] == 'd' || symbol_name[1] == 'x') &&
+      symbol_name[2] == '\0') {
+    return symbol_name[1];
   }
+  return '\0';
 }
 
 #define STO_MIPS_ISA (3 << 6)
@@ -2115,11 +2114,13 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     if (!symbol_name)
       symbol_name = "";
 
+    if (symbol_name[0] == '.' && symbol_name[1] == 'L')
+      continue;
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
         (symbol_name == nullptr || symbol_name[0] == '\0'))
       continue;
-
+    
     // Skipping oatdata and oatexec sections if it is requested. See details
     // above the definition of skip_oatdata_oatexec for the reasons.
     if (skip_oatdata_oatexec && (::strcmp(symbol_name, "oatdata") == 0 ||
@@ -2203,9 +2204,9 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     int64_t symbol_value_offset = 0;
     uint32_t additional_flags = 0;
-
+    llvm::Triple::ArchType arch_machine = arch.GetMachine();
     if (arch.IsValid()) {
-      if (arch.GetMachine() == llvm::Triple::arm) {
+      if (arch_machine == llvm::Triple::arm) {
         if (symbol.getBinding() == STB_LOCAL) {
           char mapping_symbol = FindArmAarch64MappingSymbol(symbol_name);
           if (symbol_type == eSymbolTypeCode) {
@@ -2230,7 +2231,7 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
           if (mapping_symbol)
             continue;
         }
-      } else if (arch.GetMachine() == llvm::Triple::aarch64) {
+      } else if (arch_machine == llvm::Triple::aarch64) {
         if (symbol.getBinding() == STB_LOCAL) {
           char mapping_symbol = FindArmAarch64MappingSymbol(symbol_name);
           if (symbol_type == eSymbolTypeCode) {
@@ -2248,9 +2249,30 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
           if (mapping_symbol)
             continue;
         }
+      } else if (arch_machine == llvm::Triple::riscv32 ||
+                 arch_machine == llvm::Triple::riscv64 ||
+                 arch_machine == llvm::Triple::riscv32be ||
+                 arch_machine == llvm::Triple::riscv64be) {
+        if (symbol.getBinding() == STB_LOCAL) {
+          char mapping_symbol = FindRISCVMappingSymbol(symbol_name);
+          if (symbol_type == eSymbolTypeCode) {
+            switch (mapping_symbol) {
+            case 'x':
+              // $x - marks a RISCV instruction sequence
+              address_class_map[symbol.st_value] = AddressClass::eCode;
+              break;
+            case 'd':
+              // $d - marks a RISCV data item sequence
+              address_class_map[symbol.st_value] = AddressClass::eData;
+              break;
+            }
+          }
+          if (mapping_symbol)
+            continue;
+        }
       }
 
-      if (arch.GetMachine() == llvm::Triple::arm) {
+      if (arch_machine == llvm::Triple::arm) {
         if (symbol_type == eSymbolTypeCode) {
           if (symbol.st_value & 1) {
             // Subtracting 1 from the address effectively unsets the low order
