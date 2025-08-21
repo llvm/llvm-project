@@ -136,4 +136,4 @@ def SMT_VMADOT3U  : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_UU, "smt.vmadot
 def SMT_VMADOT3SU : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_SU, "smt.vmadot3su", "$vd, $vs1, $vs2">;
 def SMT_VMADOT3US : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_US, "smt.vmadot3us", "$vd, $vs1, $vs2">;
 }
-}
+} // DecoderNamespace = "XSMT"
