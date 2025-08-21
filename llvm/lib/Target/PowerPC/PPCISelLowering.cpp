@@ -1687,11 +1687,16 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::STFIWX:          return "PPCISD::STFIWX";
   case PPCISD::VPERM:           return "PPCISD::VPERM";
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
-  case PPCISD::BCDSHIFT:        return "PPCISD::BCDSHIFT";
-  case PPCISD::BCDSHIFTROUND:   return "PPCISD::BCDSHIFTROUND";
-  case PPCISD::BCDTRUNC:        return "PPCISD::BCDTRUNC";
-  case PPCISD::BCDUTRUNC:       return "PPCISD::BCDUTRUNC";
-  case PPCISD::BCDUSHIFT:       return "PPCISD::BCDUSHIFT";
+  case PPCISD::BCDSHIFT:
+    return "PPCISD::BCDSHIFT";
+  case PPCISD::BCDSHIFTROUND:
+    return "PPCISD::BCDSHIFTROUND";
+  case PPCISD::BCDTRUNC:
+    return "PPCISD::BCDTRUNC";
+  case PPCISD::BCDUTRUNC:
+    return "PPCISD::BCDUTRUNC";
+  case PPCISD::BCDUSHIFT:
+    return "PPCISD::BCDUSHIFT";
   case PPCISD::XXSPLTI_SP_TO_DP:
     return "PPCISD::XXSPLTI_SP_TO_DP";
   case PPCISD::XXSPLTI32DX:
@@ -11155,16 +11160,18 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   unsigned IntrinsicID = Op.getConstantOperandVal(0);
 
   SDLoc dl(Op);
-  
+
   // Lowers BCD intrinsics with rounding operand
   auto MapNodeWithSplatVector = [&](unsigned Opcode) -> SDValue {
-      SDValue SplatVal = DAG.getNode(ISD::SPLAT_VECTOR, dl, MVT::v4i32, Op.getOperand(2));
+      SDValue SplatVal =
+          DAG.getNode(ISD::SPLAT_VECTOR, dl, MVT::v4i32, Op.getOperand(2));
       return DAG.getNode(Opcode, dl, MVT::v16i8,
                           SplatVal, Op.getOperand(1), Op.getOperand(3));
   };
   // Lowers BCD intrinsics without rounding operand
   auto MapNodeWithSplatVectorInt = [&](unsigned Opcode) -> SDValue {
-      SDValue SplatVal = DAG.getNode(ISD::SPLAT_VECTOR, dl, MVT::v4i32, Op.getOperand(2));
+      SDValue SplatVal =
+          DAG.getNode(ISD::SPLAT_VECTOR, dl, MVT::v4i32, Op.getOperand(2));
       return DAG.getNode(Opcode, dl, MVT::v16i8,
                           SplatVal, Op.getOperand(1));
   };
@@ -11222,15 +11229,15 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                    0);
   }
 
-  case Intrinsic:: ppc_bcdshift : 
+  case Intrinsic:: ppc_bcdshift:
     return MapNodeWithSplatVector(PPCISD::BCDSHIFT);
-  case Intrinsic:: ppc_bcdshiftround :
+  case Intrinsic:: ppc_bcdshiftround:
     return MapNodeWithSplatVector(PPCISD::BCDSHIFTROUND);
-  case Intrinsic:: ppc_bcdtruncate :
+  case Intrinsic:: ppc_bcdtruncate:
     return MapNodeWithSplatVector(PPCISD::BCDTRUNC);
-  case Intrinsic:: ppc_bcdunsignedtruncate :
+  case Intrinsic:: ppc_bcdunsignedtruncate:
     return MapNodeWithSplatVectorInt(PPCISD::BCDUTRUNC);
-  case Intrinsic:: ppc_bcdunsignedshift :
+  case Intrinsic:: ppc_bcdunsignedshift:
     return MapNodeWithSplatVectorInt(PPCISD::BCDUSHIFT);
 
   case Intrinsic::ppc_rlwnm: {
