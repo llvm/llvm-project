@@ -788,7 +788,10 @@ struct ForeachOpDemapper
 } // namespace
 
 void mlir::populateSparseReinterpretMap(RewritePatternSet &patterns,
-                                        ReinterpretMapScope scope) {
+                                        ReinterpretMapScope scope,
+                                        sparse_tensor::LoopOrderingStrategy strategy) {
+  (void)strategy; // Suppress unused parameter warning
+  
   if (scope == ReinterpretMapScope::kAll ||
       scope == ReinterpretMapScope::kGenericOnly) {
     patterns.add<GenericOpReinterpretMap, GenericOpScheduler>(

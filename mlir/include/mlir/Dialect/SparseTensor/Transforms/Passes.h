@@ -55,6 +55,15 @@ enum class SparseEmitStrategy {
   kDebugInterface, // generate only place-holder for sparse iteration
 };
 
+namespace sparse_tensor {
+
+/// Selects between different loop ordering strategies for sparse tensor 
+enum class LoopOrderingStrategy : unsigned {
+  kDefault, ///< Default strategy (current behavior)
+};
+
+} // namespace sparse_tensor
+
 #define GEN_PASS_DECL
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 
@@ -72,10 +81,13 @@ std::unique_ptr<Pass> createSparseAssembler(bool directOut);
 //===----------------------------------------------------------------------===//
 
 void populateSparseReinterpretMap(RewritePatternSet &patterns,
-                                  ReinterpretMapScope scope);
+                                  ReinterpretMapScope scope,
+                                  sparse_tensor::LoopOrderingStrategy strategy = sparse_tensor::LoopOrderingStrategy::kDefault);
 
 std::unique_ptr<Pass> createSparseReinterpretMapPass();
 std::unique_ptr<Pass> createSparseReinterpretMapPass(ReinterpretMapScope scope);
+std::unique_ptr<Pass> createSparseReinterpretMapPass(ReinterpretMapScope scope, 
+                                                     sparse_tensor::LoopOrderingStrategy strategy);
 
 //===----------------------------------------------------------------------===//
 // The PreSparsificationRewriting pass.
