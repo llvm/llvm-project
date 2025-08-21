@@ -1881,27 +1881,27 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
       // load within the loop.
       // FIXME: Support gathers after first-faulting load support lands.
       SmallVector<const SCEVPredicate *, 4> Predicates;
-      if (isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT,
-                                            AC, &Predicates)) {
-        ICFLoopSafetyInfo SafetyInfo;
-        SafetyInfo.computeLoopSafetyInfo(TheLoop);
-        // We need to know that load will be executed before we can hoist a
-        // copy out to run just before the first iteration.
-        if (SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop))
-          CriticalUncountableExitConditionLoad = Load;
-        else {
-          reportVectorizationFailure(
-              "Early exit condition load not guaranteed to execute",
-              "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
-          return false;
-        }
-      } else {
+      if (!isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT,
+                                             AC, &Predicates)) {
         reportVectorizationFailure(
             "Loop may fault",
             "Cannot vectorize potentially faulting early exit loop",
             "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
         return false;
       }
+
+      ICFLoopSafetyInfo SafetyInfo;
+      SafetyInfo.computeLoopSafetyInfo(TheLoop);
+      // We need to know that load will be executed before we can hoist a
+      // copy out to run just before the first iteration.
+      if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
+        reportVectorizationFailure(
+            "Early exit condition load not guaranteed to execute",
+            "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
+        return false;
+      }
+
+      CriticalUncountableExitConditionLoad = Load;
     }
   }
 
