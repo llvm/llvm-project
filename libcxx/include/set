@@ -667,7 +667,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI set& operator=(const set& __s) = default;
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI set(set&& __s) noexcept(is_nothrow_move_constructible<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI set(set&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI explicit set(const allocator_type& __a) : __tree_(__a) {}
@@ -699,10 +699,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI set& operator=(set&& __s) noexcept(is_nothrow_move_assignable<__base>::value) {
-    __tree_ = std::move(__s.__tree_);
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI set& operator=(set&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI ~set() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
@@ -1126,7 +1123,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI multiset& operator=(const multiset& __s) = default;
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s) noexcept(is_nothrow_move_constructible<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s) = default;
 
   _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s, const allocator_type& __a);
 #  endif // _LIBCPP_CXX03_LANG
@@ -1158,10 +1155,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI multiset& operator=(multiset&& __s) _NOEXCEPT_(is_nothrow_move_assignable<__base>::value) {
-    __tree_ = std::move(__s.__tree_);
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI multiset& operator=(multiset&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI ~multiset() {
