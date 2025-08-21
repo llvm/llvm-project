@@ -1295,10 +1295,10 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_cmp_ge_i32 s2, s3
 ; GCN-NEXT:    s_cselect_b64 s[10:11], -1, 0
 ; GCN-NEXT:    s_and_b64 s[8:9], s[10:11], s[8:9]
-; GCN-NEXT:  .LBB10_4: ; %Flow5
+; GCN-NEXT:  .LBB10_4: ; %Flow7
 ; GCN-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
 ; GCN-NEXT:    s_cbranch_vccz .LBB10_5
-; GCN-NEXT:  ; %bb.10: ; %Flow5
+; GCN-NEXT:  ; %bb.10: ; %Flow7
 ; GCN-NEXT:    s_getpc_b64 s[0:1]
 ; GCN-NEXT:  .Lpost_getpc13:
 ; GCN-NEXT:    s_add_u32 s0, s0, (.LBB10_6-.Lpost_getpc13)&4294967295
@@ -1316,15 +1316,15 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:  .LBB10_6:
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:  .LBB10_7: ; %bb19
-; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xf
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    s_mov_b32 s2, 0
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[6:7], 2
-; GCN-NEXT:    v_mov_b32_e32 v1, s4
-; GCN-NEXT:    v_mov_b32_e32 v2, s5
-; GCN-NEXT:    buffer_store_dword v0, v[1:2], s[0:3], 0 addr64
+; GCN-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GCN-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    buffer_store_dword v0, v[1:2], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: long_branch_hang:
@@ -1363,7 +1363,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX11-NEXT:    s_cselect_b64 s[10:11], -1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b64 s[8:9], s[10:11], s[8:9]
-; GFX11-NEXT:  .LBB10_4: ; %Flow5
+; GFX11-NEXT:  .LBB10_4: ; %Flow7
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_not1_b64 vcc, exec, s[8:9]
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB10_6
@@ -1381,15 +1381,14 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX11-NEXT:  .LBB10_6:
 ; GFX11-NEXT:    ; implicit-def: $vgpr0
 ; GFX11-NEXT:  .LBB10_7: ; %bb19
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x3c
-; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX11-NEXT:    s_lshl_b64 s[2:3], s[2:3], 2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s0, s0, s2
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
-; GFX11-NEXT:    s_add_u32 s0, s2, s0
-; GFX11-NEXT:    s_addc_u32 s1, s3, s1
+; GFX11-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -1424,10 +1423,10 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:    s_add_co_ci_u32 s9, s9, (.LBB10_5-.Lpost_getpc13)>>32
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[8:9]
-; GFX12-NEXT:  .LBB10_2: ; %Flow5
+; GFX12-NEXT:  .LBB10_2: ; %Flow7
 ; GFX12-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_vccz .LBB10_3
-; GFX12-NEXT:  ; %bb.12: ; %Flow5
+; GFX12-NEXT:  ; %bb.12: ; %Flow7
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
 ; GFX12-NEXT:  .Lpost_getpc14:
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -1490,14 +1489,12 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:  .LBB10_6:
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:  .LBB10_7: ; %bb19
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x3c
-; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
+; GFX12-NEXT:    s_lshl_b64 s[2:3], s[2:3], 2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
 ; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-NEXT:    s_endpgm
 bb:
