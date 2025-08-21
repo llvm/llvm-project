@@ -818,8 +818,8 @@ LogicalResult Serializer::prepareBasicType(
 
       bool shaped = llvm::all_of(dims, [](const auto &dim) { return dim > 0; });
       if (rank > 0 && shaped) {
-        auto I32Type = IntegerType::get(type.getContext(), 32);
-        auto shapeType = ArrayType::get(I32Type, rank);
+        auto i32Type = IntegerType::get(type.getContext(), 32);
+        auto shapeType = ArrayType::get(i32Type, rank);
         if (rank == 1) {
           SmallVector<uint64_t, 1> index(rank);
           shapeID = prepareDenseElementsConstant(
@@ -1368,8 +1368,8 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     }
     LLVM_DEBUG({
       llvm::dbgs() << "    block arguments:\n";
-      for (Value v : predecessors.back().second)
-        llvm::dbgs() << "      " << v << "\n";
+      for (Value V : predecessors.back().second)
+        llvm::dbgs() << "      " << V << "\n";
     });
   }
 
