@@ -422,6 +422,12 @@ static llvm::Triple getLiteralTriple(const Driver &D, const llvm::Triple &T) {
 }
 
 void toolchains::MinGW::findGccLibDir(const llvm::Triple &LiteralTriple) {
+  std::string InstallBase =
+      std::string(llvm::sys::path::parent_path(getDriver().Dir));
+  llvm::SmallVector<llvm::SmallString<32>, 3> BaseNames;
+  BaseNames.emplace_back(Base);
+  BaseNames.emplace_back(InstallBase);
+  BaseNames.emplace_back("/usr");
   llvm::SmallVector<llvm::SmallString<32>, 5> SubdirNames;
   SubdirNames.emplace_back(LiteralTriple.str());
   SubdirNames.emplace_back(getTriple().str());
@@ -434,18 +440,21 @@ void toolchains::MinGW::findGccLibDir(const llvm::Triple &LiteralTriple) {
     SubdirName = getTriple().getArchName();
     SubdirName += "-w64-mingw32";
   }
-  // lib: Arch Linux, Ubuntu, Windows
-  // lib64: openSUSE Linux
-  for (StringRef CandidateLib : {"lib", "lib64"}) {
-    for (StringRef CandidateSysroot : SubdirNames) {
-      llvm::SmallString<1024> LibDir(Base);
-      llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateSysroot);
-      if (findGccVersion(LibDir, GccLibDir, Ver, GccVer)) {
-        llvm::SmallString<1024> ParentLib(LibDir);
-        llvm::sys::path::append(ParentLib, "..", "..");
-        GccParentLibPath = ParentLib.str();
-        SubdirName = std::string(CandidateSysroot);
-        return;
+  // FIXME: Should pick the newest version
+  for (StringRef CandidateBase : BaseNames) {
+    // lib: Arch Linux, Ubuntu, Windows
+    // lib64: openSUSE Linux
+    for (StringRef CandidateLib : {"lib", "lib64"}) {
+      for (StringRef CandidateSysroot : SubdirNames) {
+        llvm::SmallString<1024> LibDir(CandidateBase);
+        llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateSysroot);
+        if (findGccVersion(LibDir, GccLibDir, Ver, GccVer)) {
+          llvm::SmallString<1024> ParentLib(LibDir);
+          llvm::sys::path::append(ParentLib, "..", "..");
+          GccParentLibPath = ParentLib.str();
+          SubdirName = std::string(CandidateSysroot);
+          return;
+        }
       }
     }
   }
