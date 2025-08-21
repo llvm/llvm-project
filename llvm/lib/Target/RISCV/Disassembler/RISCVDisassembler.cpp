@@ -14,6 +14,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "riscv-disassembler"
 
@@ -552,27 +554,8 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
   return decodeZcmpRlist(Inst, Imm, Address, Decoder);
 }
 
-static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder);
-
-static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder);
-
-#include "RISCVGenDisassemblerTables.inc"
-
-static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder) {
-  uint32_t Rs1 = fieldFromInstruction(Insn, 7, 5);
-  [[maybe_unused]] DecodeStatus Result =
-      DecodeGPRX1X5RegisterClass(Inst, Rs1, Address, Decoder);
-  assert(Result == MCDisassembler::Success && "Invalid register");
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
+static DecodeStatus decodeXTHeadMemPair(MCInst &Inst,
+                                        const std::bitset<48> &Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
   DecodeStatus S = MCDisassembler::Success;
@@ -601,6 +584,19 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 
   return S;
 }
+
+static DecodeStatus decodeCSSPushPopchk(MCInst &Inst,
+                                        const std::bitset<48> &Insn,
+                                        uint64_t Address,
+                                        const MCDisassembler *Decoder) {
+  uint32_t Rs1 = fieldFromInstruction(Insn, 7, 5);
+  [[maybe_unused]] DecodeStatus Result =
+      DecodeGPRX1X5RegisterClass(Inst, Rs1, Address, Decoder);
+  assert(Result == MCDisassembler::Success && "Invalid register");
+  return MCDisassembler::Success;
+}
+
+#include "RISCVGenDisassemblerTables.inc"
 
 // Add implied SP operand for C.*SP compressed instructions. The SP operand
 // isn't explicitly encoded in the instruction.
@@ -714,7 +710,7 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
 
   // Use uint64_t to match getInstruction48. decodeInstruction is templated
   // on the Insn type.
-  uint64_t Insn = support::endian::read32le(Bytes.data());
+  uint32_t Insn = support::endian::read32le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList32) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
@@ -762,7 +758,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
 
   // Use uint64_t to match getInstruction48. decodeInstruction is templated
   // on the Insn type.
-  uint64_t Insn = support::endian::read16le(Bytes.data());
+  uint16_t Insn = support::endian::read16le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList16) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
@@ -796,10 +792,11 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
   }
   Size = 6;
 
-  uint64_t Insn = 0;
+  uint64_t InsnBits = 0;
   for (size_t i = Size; i-- != 0;)
-    Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
+    InsnBits += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
 
+  std::bitset<48> Insn(InsnBits);
   for (const DecoderListEntry &Entry : DecoderList48) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;

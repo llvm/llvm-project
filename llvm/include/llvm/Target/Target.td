@@ -1158,6 +1158,13 @@ class InstrInfo {
   //
   // This option is a temporary migration help. It will go away.
   bit guessInstructionProperties = true;
+
+  // When generating decoder/disassembler code, generate additional compile time
+  // checks to disable/cull decoders based on the instruction bitwidth. This
+  // requires use of different `InsnType` for different bitwidths and optionally
+  // providing `InsnTypeTraits` template specialization for `InsnType` unless
+  // its already provided in MCDecoder.h. 
+  bit CullDecoders = false;
 }
 
 // Standard Pseudo Instructions.

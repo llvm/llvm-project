@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -258,11 +259,17 @@ private:
   std::vector<uint8_t> Data;
 };
 
+using BitWidthSet = SmallSet<unsigned, 4>;
+
 struct DecoderTableInfo {
   DecoderTable Table;
   FixupScopeList FixupStack;
   PredicateSet Predicates;
   DecoderSet Decoders;
+
+  // Map from bitwidth to the decoders indices that are valid for that bitwidth.
+  // Indexed by the decoder index.
+  std::vector<BitWidthSet> DecoderBitWidths;
 
   bool isOutermostScope() const { return FixupStack.size() == 1; }
 
@@ -306,7 +313,9 @@ public:
   void emitPredicateFunction(formatted_raw_ostream &OS,
                              PredicateSet &Predicates) const;
   void emitDecoderFunction(formatted_raw_ostream &OS,
-                           DecoderSet &Decoders) const;
+                           const DecoderTableInfo &TableInfo,
+                           const BitWidthSet &InstrBitWidths,
+                           bool IsVarLenInsts, bool CullDecoders) const;
 
   // run - Output the code emitter
   void run(raw_ostream &o) const;
@@ -1100,7 +1109,12 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
 }
 
 void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
-                                         DecoderSet &Decoders) const {
+                                         const DecoderTableInfo &TableInfo,
+                                         const BitWidthSet &InstrBitWidths,
+                                         bool IsVarLenInsts,
+                                         bool CullDecoders) const {
+  const DecoderSet &Decoders = TableInfo.Decoders;
+  const auto &DecoderBitWidths = TableInfo.DecoderBitWidths;
   // The decoder function is just a big switch statement or a table of function
   // pointers based on the input decoder index.
 
@@ -1114,11 +1128,30 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
       "DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const "
       "MCDisassembler *Decoder, bool &DecodeComplete";
 
+  // Generate a check that evaluates to true if `InsnBitWidth` is not valid.
+  auto GenerateIsInvalidBitwidth = [&OS](const BitWidthSet &ValidBitWidths) {
+    OS << '(';
+    ListSeparator LS(" && ");
+    for (unsigned ValidBW : ValidBitWidths)
+      OS << LS << "InsnBitWidth != " << ValidBW;
+    OS << ')';
+  };
+
   if (UseFnTableInDecodeToMCInst) {
     // Emit a function for each case first.
-    for (const auto &[Index, Decoder] : enumerate(Decoders)) {
+    for (const auto &[Index, Decoder, DecoderBWs] :
+         enumerate(Decoders, DecoderBitWidths)) {
       OS << "template <typename InsnType>\n";
-      OS << "DecodeStatus decodeFn" << Index << "(" << DecodeParams << ") {\n";
+      OS << "static DecodeStatus decodeFn" << Index << "(" << DecodeParams
+         << ") {\n";
+      OS << "  using namespace llvm::MCD;\n";
+      if (CullDecoders) {
+        OS << "  constexpr size_t InsnBitWidth = "
+              "InsnTraits<InsnType>.BitWidth;\n";
+        OS << "  if constexpr";
+        GenerateIsInvalidBitwidth(DecoderBWs);
+        OS << "\n      llvm_unreachable(\"Invalid decoder index!\");\n";
+      }
       OS << "  " << TmpTypeDecl;
       OS << "  [[maybe_unused]] TmpType tmp;\n";
       OS << Decoder;
@@ -1131,26 +1164,50 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
   OS << "template <typename InsnType>\n";
   OS << "static DecodeStatus decodeToMCInst(unsigned Idx, " << DecodeParams
      << ") {\n";
+  OS << "  using namespace llvm::MCD;\n";
   OS << "  DecodeComplete = true;\n";
 
+  if (CullDecoders) {
+    // Generate a static assert to verify that InsnType is one of the types
+    // supported.
+    OS << "  static_assert(InsnTraits<InsnType>.IsValid);\n";
+    OS << "  constexpr size_t InsnBitWidth = InsnTraits<InsnType>.BitWidth;\n";
+  }
+
   if (UseFnTableInDecodeToMCInst) {
-    // Build a table of function pointers.
     OS << "  using DecodeFnTy = DecodeStatus (*)(" << DecodeParams << ");\n";
     OS << "  static constexpr DecodeFnTy decodeFnTable[] = {\n";
-    for (size_t Index : llvm::seq(Decoders.size()))
-      OS << "    decodeFn" << Index << ",\n";
+    for (const auto &[Index, DecoderBWs] : enumerate(DecoderBitWidths)) {
+      if (!CullDecoders) {
+        OS << "    decodeFn" << Index << ",\n";
+        continue;
+      }
+      OS << "    ";
+      GenerateIsInvalidBitwidth(DecoderBWs);
+      OS << " ? nullptr : decodeFn" << Index << "<InsnType>,\n";
+    }
     OS << "  };\n";
-    OS << "  if (Idx >= " << Decoders.size() << ")\n";
-    OS << "    llvm_unreachable(\"Invalid index!\");\n";
+    OS << "  if (Idx >= " << Decoders.size() << " || !decodeFnTable[Idx])\n";
+    OS << "    llvm_unreachable(\"Invalid decoder index!\");\n";
+
     OS << "  return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
           "DecodeComplete);\n";
   } else {
     OS << "  " << TmpTypeDecl;
     OS << "  TmpType tmp;\n";
     OS << "  switch (Idx) {\n";
-    OS << "  default: llvm_unreachable(\"Invalid index!\");\n";
-    for (const auto &[Index, Decoder] : enumerate(Decoders)) {
+    OS << "  default: llvm_unreachable(\"Invalid decoder index!\");\n";
+    for (const auto &[Index, Decoder, DecoderBWs] :
+         enumerate(Decoders, DecoderBitWidths)) {
       OS << "  case " << Index << ":\n";
+      // If this decoder is not valid for all supported bitwidths, add checks
+      // that will cull this case for bitwidths for which this decoder is not
+      // valid.
+      if (CullDecoders && DecoderBWs != InstrBitWidths) {
+        OS << "    if constexpr";
+        GenerateIsInvalidBitwidth(DecoderBWs);
+        OS << "\n      llvm_unreachable(\"Invalid decoder index!\");\n";
+      }
       OS << Decoder;
       OS << "    return S;\n";
     }
@@ -1525,6 +1582,13 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   auto [DIdx, HasCompleteDecoder] =
       getDecoderIndex(TableInfo.Decoders, EncodingID);
 
+  // Remember this decoder index as valid for instruction of the current bit
+  // width.
+  const InstructionEncoding &Enc = Encodings[EncodingID];
+  if (DIdx >= TableInfo.DecoderBitWidths.size())
+    TableInfo.DecoderBitWidths.resize(DIdx + 1);
+  TableInfo.DecoderBitWidths[DIdx].insert(Enc.getBitWidth());
+
   // Produce OPC_Decode or OPC_TryDecode opcode based on the information
   // whether the instruction decoder is complete or not. If it is complete
   // then it handles all possible values of remaining variable/unfiltered bits
@@ -1539,7 +1603,7 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                                       ? MCD::OPC_TryDecodeOrFail
                                                       : MCD::OPC_TryDecode);
   TableInfo.Table.push_back(DecoderOp);
-  const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
+  const Record *InstDef = Enc.getInstruction()->TheDef;
   TableInfo.Table.insertULEB128(Emitter->getTarget().getInstrIntValue(InstDef));
   TableInfo.Table.insertULEB128(DIdx);
 
@@ -2133,6 +2197,7 @@ void InstructionEncoding::populateEncoding() {
 // using the VS compiler. It has a bug which causes the function
 // to be optimized out in some circumstances. See llvm.org/pr38292
 static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
+  return;
   OS << R"(
 // Helper functions for extracting fields from encoded instructions.
 // InsnType must either be integral or an APInt-like object that must:
@@ -2219,6 +2284,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   OS << ") {\n";
   if (HasCheckPredicate)
     OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
+  OS << "   using namespace llvm::MCD;\n";
 
   OS << R"(
   const uint8_t *Ptr = DecodeTable;
@@ -2418,6 +2484,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 // is correct to propagate the values of this enum; see comment on 'enum
 // DecodeStatus'.)
 static void emitCheck(formatted_raw_ostream &OS) {
+  return;
   OS << R"(
 static bool Check(DecodeStatus &Out, DecodeStatus In) {
   Out = static_cast<DecodeStatus>(Out & In);
@@ -2607,6 +2674,7 @@ void DecoderEmitter::run(raw_ostream &o) const {
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <assert.h>
+#include <bitset>
 
 namespace {
 )";
@@ -2644,9 +2712,16 @@ namespace {
 
   DecoderTableInfo TableInfo;
   unsigned OpcodeMask = 0;
+
+  const bool CullDecoders =
+      Target.getInstructionSet()->getValueAsBit("CullDecoders");
+
+  // The set of valid instruction bitwidths for this target.
+  BitWidthSet InstrBitwidths;
   for (const auto &[Key, EncodingIDs] : EncMap) {
     auto [DecoderNamespace, HwModeID, Size] = Key;
     const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
+    InstrBitwidths.insert(BitWidth);
     // Emit the decoder for this (namespace, hwmode, width) combination.
     FilterChooser FC(Encodings, EncodingIDs, BitWidth, this);
 
@@ -2683,7 +2758,8 @@ namespace {
     emitPredicateFunction(OS, TableInfo.Predicates);
 
   // Emit the decoder function.
-  emitDecoderFunction(OS, TableInfo.Decoders);
+  emitDecoderFunction(OS, TableInfo, InstrBitwidths, IsVarLenInst,
+                      CullDecoders);
 
   // Emit the main entry point for the decoder, decodeInstruction().
   emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask);

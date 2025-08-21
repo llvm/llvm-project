@@ -2091,6 +2091,7 @@ def FeatureISAVersion12_Generic: FeatureSet<
 
 def AMDGPUInstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
+  let CullDecoders = true;
 }
 
 def AMDGPUAsmParser : AsmParser {

@@ -85,6 +85,7 @@ include "RISCVPfmCounters.td"
 
 def RISCVInstrInfo : InstrInfo {
   let guessInstructionProperties = 0;
+  let CullDecoders = true;
 }
 
 def RISCVAsmParser : AsmParser {
