@@ -64,7 +64,7 @@ static void pyListToVector(const nb::list &list,
 }
 
 template <typename PermutationTy>
-static bool isPermutation(std::vector<PermutationTy> permutation) {
+static bool isPermutation(const std::vector<PermutationTy> &permutation) {
   llvm::SmallVector<bool, 8> seen(permutation.size(), false);
   for (auto val : permutation) {
     if (val < permutation.size()) {
@@ -366,7 +366,7 @@ nb::object PyAffineExpr::getCapsule() {
   return nb::steal<nb::object>(mlirPythonAffineExprToCapsule(*this));
 }
 
-PyAffineExpr PyAffineExpr::createFromCapsule(nb::object capsule) {
+PyAffineExpr PyAffineExpr::createFromCapsule(const nb::object &capsule) {
   MlirAffineExpr rawAffineExpr = mlirPythonCapsuleToAffineExpr(capsule.ptr());
   if (mlirAffineExprIsNull(rawAffineExpr))
     throw nb::python_error();
@@ -424,7 +424,7 @@ nb::object PyAffineMap::getCapsule() {
   return nb::steal<nb::object>(mlirPythonAffineMapToCapsule(*this));
 }
 
-PyAffineMap PyAffineMap::createFromCapsule(nb::object capsule) {
+PyAffineMap PyAffineMap::createFromCapsule(const nb::object &capsule) {
   MlirAffineMap rawAffineMap = mlirPythonCapsuleToAffineMap(capsule.ptr());
   if (mlirAffineMapIsNull(rawAffineMap))
     throw nb::python_error();
@@ -500,7 +500,7 @@ nb::object PyIntegerSet::getCapsule() {
   return nb::steal<nb::object>(mlirPythonIntegerSetToCapsule(*this));
 }
 
-PyIntegerSet PyIntegerSet::createFromCapsule(nb::object capsule) {
+PyIntegerSet PyIntegerSet::createFromCapsule(const nb::object &capsule) {
   MlirIntegerSet rawIntegerSet = mlirPythonCapsuleToIntegerSet(capsule.ptr());
   if (mlirIntegerSetIsNull(rawIntegerSet))
     throw nb::python_error();
@@ -708,7 +708,8 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
              return static_cast<size_t>(llvm::hash_value(self.get().ptr));
            })
       .def_static("compress_unused_symbols",
-                  [](nb::list affineMaps, DefaultingPyMlirContext context) {
+                  [](const nb::list &affineMaps,
+                     DefaultingPyMlirContext context) {
                     SmallVector<MlirAffineMap> maps;
                     pyListToVector<PyAffineMap, MlirAffineMap>(
                         affineMaps, maps, "attempting to create an AffineMap");
@@ -734,7 +735,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
           kDumpDocstring)
       .def_static(
           "get",
-          [](intptr_t dimCount, intptr_t symbolCount, nb::list exprs,
+          [](intptr_t dimCount, intptr_t symbolCount, const nb::list &exprs,
              DefaultingPyMlirContext context) {
             SmallVector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr, MlirAffineExpr>(
@@ -869,7 +870,8 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyIntegerSet::createFromCapsule)
       .def("__eq__", [](PyIntegerSet &self,
                         PyIntegerSet &other) { return self == other; })
-      .def("__eq__", [](PyIntegerSet &self, nb::object other) { return false; })
+      .def("__eq__",
+           [](PyIntegerSet &self, const nb::object &other) { return false; })
       .def("__str__",
            [](PyIntegerSet &self) {
              PyPrintAccumulator printAccum;
@@ -898,7 +900,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
           kDumpDocstring)
       .def_static(
           "get",
-          [](intptr_t numDims, intptr_t numSymbols, nb::list exprs,
+          [](intptr_t numDims, intptr_t numSymbols, const nb::list &exprs,
              std::vector<bool> eqFlags, DefaultingPyMlirContext context) {
             if (exprs.size() != eqFlags.size())
               throw nb::value_error(
@@ -934,8 +936,9 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
           nb::arg("context").none() = nb::none())
       .def(
           "get_replaced",
-          [](PyIntegerSet &self, nb::list dimExprs, nb::list symbolExprs,
-             intptr_t numResultDims, intptr_t numResultSymbols) {
+          [](PyIntegerSet &self, const nb::list &dimExprs,
+             const nb::list &symbolExprs, intptr_t numResultDims,
+             intptr_t numResultSymbols) {
             if (static_cast<intptr_t>(dimExprs.size()) !=
                 mlirIntegerSetGetNumDims(self))
               throw nb::value_error(
