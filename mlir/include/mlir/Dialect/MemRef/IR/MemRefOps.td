@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
+include "mlir/Dialect/MemRef/IR/MemRefAttrs.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
@@ -154,7 +155,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
       The `assume_alignment` operation takes a memref and an integer alignment
       value. It returns a new SSA value of the same memref type, but associated
       with the assumption that the underlying buffer is aligned to the given
-      alignment. 
+      alignment.
 
       If the buffer isn't aligned to the given alignment, its result is poison.
       This operation doesn't affect the semantics of a program where the
@@ -169,7 +170,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
   let extraClassDeclaration = [{
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
-    
+
     Value getViewSource() { return getMemref(); }
   }];
 
@@ -446,6 +447,57 @@ def MemRef_AllocaScopeReturnOp : MemRef_Op<"alloca_scope.return",
 
   let arguments = (ins Variadic<AnyType>:$results);
   let builders = [OpBuilder<(ins), [{ /*nothing to do */ }]>];
+
+  let assemblyFormat = "attr-dict ($results^ `:` type($results))?";
+}
+
+//===----------------------------------------------------------------------===//
+// AliasDomainScopeOp
+//===----------------------------------------------------------------------===//
+
+def MemRef_AliasDomainScopeOp : MemRef_Op<"alias_domain_scope", [
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    SingleBlockImplicitTerminator<"AliasDomainScopeReturnOp">,
+    RecursiveMemoryEffects]> {
+  let summary = "TBD";
+  let description = [{
+    TBD
+  }];
+
+  let arguments = (ins MemRef_AliasScopeDomainAttr:$domain);
+  let results = (outs Variadic<AnyType>:$results);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat = "attr-dict $domain (`->` type($results)^)? $region";
+
+//  let extraClassDeclaration = [{
+//    /// Inline op body into parent region and erase the op.
+//    static void inlineIntoParent(::mlir::PatternRewriter &builder, EnvironmentRegionOp op);
+//  }];
+//
+//  let builders = [
+//    OpBuilder<(ins "::mlir::Attribute":$environment,
+//      CArg<"::mlir::ValueRange", "std::nullopt">:$args,
+//      CArg<"::mlir::TypeRange", "std::nullopt">:$results,
+//      CArg<"::llvm::function_ref<void(::mlir::OpBuilder &, ::mlir::Location)>", "nullptr">)>
+//  ];
+//
+//  let hasCanonicalizer = 1;
+}
+
+def MemRef_AliasDomainScopeReturnOp : MemRef_Op<"alias_domain_scope.return", [
+  Pure, ReturnLike, Terminator,
+  HasParent<"AliasDomainScopeOp">
+  ]> {
+
+  let summary = "TBD";
+  let description = [{
+    TBD
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$results);
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let assemblyFormat = "attr-dict ($results^ `:` type($results))?";
 }
