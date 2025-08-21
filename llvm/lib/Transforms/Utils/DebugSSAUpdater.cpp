@@ -45,9 +45,7 @@ using AvailableValsTy = DenseMap<DbgSSABlock *, DbgValueDef>;
 DebugSSAUpdater::DebugSSAUpdater(SmallVectorImpl<DbgSSAPhi *> *NewPHI)
     : InsertedPHIs(NewPHI) {}
 
-void DebugSSAUpdater::initialize() {
-  AV.clear();
-}
+void DebugSSAUpdater::initialize() { AV.clear(); }
 
 bool DebugSSAUpdater::hasValueForBlock(DbgSSABlock *BB) const {
   return AV.count(BB);
@@ -383,7 +381,8 @@ SSAValueNameMap::ValueID SSAValueNameMap::addValue(Value *V) {
   ValueID NewID = NextID++;
   ValueToIDMap.insert({V, NewID});
   // Then, get the name string for V and map NewID to it.
-  assert(!ValueIDToNameMap.contains(NewID) && "New value ID already maps to a name?");
+  assert(!ValueIDToNameMap.contains(NewID) &&
+         "New value ID already maps to a name?");
   std::string &ValueText = ValueIDToNameMap[NewID];
   raw_string_ostream Stream(ValueText);
   V->printAsOperand(Stream, true);
