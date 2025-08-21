@@ -7,10 +7,20 @@ module test
       !DIR$ IGNORE_TKR buf
       real :: buf
     end subroutine
+    subroutine pass_ignore_tkr_2(buf)
+      implicit none
+      !DIR$ IGNORE_TKR(tkrdm) buf
+      type(*) :: buf
+    end subroutine
     subroutine pass_ignore_tkr_c(buf)
       implicit none
       !DIR$ IGNORE_TKR (tkrc) buf
       real :: buf
+    end subroutine
+    subroutine pass_ignore_tkr_c_2(buf)
+      implicit none
+      !DIR$ IGNORE_TKR (tkrcdm) buf
+      type(*) :: buf
     end subroutine
   end interface
 contains
@@ -31,5 +41,23 @@ contains
     real, intent(inout) :: buf(:)
     ! Don't create temp here
     call pass_ignore_tkr_c(buf)
+  end subroutine
+  subroutine s3(buf)
+!CHECK-LABEL: func.func @_QMtestPs3
+!CHECK: hlfir.copy_in
+!CHECK: fir.call @_QPpass_ignore_tkr_2
+!CHECK: hlfir.copy_out
+    real, intent(inout) :: buf(:)
+    ! Create temp here
+    call pass_ignore_tkr_2(buf)
+  end subroutine
+  subroutine s4(buf)
+!CHECK-LABEL: func.func @_QMtestPs4
+!CHECK-NOT: hlfir.copy_in
+!CHECK: fir.call @_QPpass_ignore_tkr_c_2
+!CHECK-NOT: hlfir.copy_out
+    real, intent(inout) :: buf(:)
+    ! Don't create temp here
+    call pass_ignore_tkr_c_2(buf)
   end subroutine
 end module
