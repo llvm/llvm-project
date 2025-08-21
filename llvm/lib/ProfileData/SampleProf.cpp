@@ -144,7 +144,6 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
-
   return Result;
 }
 

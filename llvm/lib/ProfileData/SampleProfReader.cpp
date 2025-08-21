@@ -205,20 +205,25 @@ enum class LineType {
 static bool parseTypeCountMap(StringRef Input,
                               DenseMap<StringRef, uint64_t> &TypeCountMap) {
   for (size_t Index = Input.find_first_not_of(' '); Index != StringRef::npos;) {
-    size_t n1 = Input.find(':', Index);
-    if (n1 == StringRef::npos)
+    size_t ColonIndex = Input.find(':', Index);
+    if (ColonIndex == StringRef::npos)
       return false; // No colon found, invalid format.
-    StringRef TypeName = Input.substr(Index, n1 - Index);
-    // n2 is the start index of count.
-    size_t n2 = n1 + 1;
-    // n3 is the start index after the 'target:count' pair.
-    size_t n3 = Input.find_first_of(' ', n2);
+    StringRef TypeName = Input.substr(Index, ColonIndex - Index);
+    // CountIndex is the start index of count.
+    size_t CountStartIndex = ColonIndex + 1;
+    // NextIndex is the start index after the 'target:count' pair.
+    size_t NextIndex = Input.find_first_of(' ', CountStartIndex);
     uint64_t Count;
-    if (Input.substr(n2, n3 - n2).getAsInteger(10, Count))
+    if (Input.substr(CountStartIndex, NextIndex - CountStartIndex)
+            .getAsInteger(10, Count))
       return false; // Invalid count.
-    TypeCountMap[TypeName] = Count;
-    Index = (n3 == StringRef::npos) ? StringRef::npos
-                                    : Input.find_first_not_of(' ', n3);
+    // Error on duplicated type names in one line of input.
+    auto [Iter, Inserted] = TypeCountMap.insert({TypeName, Count});
+    if (!Inserted)
+      return false;
+    Index = (NextIndex == StringRef::npos)
+                ? StringRef::npos
+                : Input.find_first_not_of(' ', NextIndex);
   }
   return true;
 }
@@ -409,6 +414,8 @@ std::error_code SampleProfileReaderText::readImpl() {
       uint64_t FunctionHash = 0;
       uint32_t Attributes = 0;
       bool IsFlat = false;
+      // TODO: Update ParseLine to return an error code instead of a bool and
+      // report it.
       if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
                      Discriminator, FName, TargetCountMap, TypeCountMap,
                      FunctionHash, Attributes, IsFlat)) {
