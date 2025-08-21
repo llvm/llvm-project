@@ -268,6 +268,27 @@ void tools::gnutools::StaticLibTool::ConstructJob(
                                          Exec, CmdArgs, Inputs, Output));
 }
 
+void Generic_GCC::AddCXXStdlibLibArgs(const ArgList &Args,
+                                      ArgStringList &CmdArgs) const {
+  ToolChain::AddCXXStdlibLibArgs(Args, CmdArgs);
+  CXXStdlibType Type = GetCXXStdlibType(Args);
+
+  switch (Type) {
+  case ToolChain::CST_Libcxx:
+    // Do nothing.
+    break;
+
+  case ToolChain::CST_Libstdcxx:
+    if (GCCInstallation.isValid()) {
+      const GCCVersion V = GCCInstallation.getVersion();
+      // Add -lstdc++fs only for GCC >= 5.3.0 and < 9.2.0.
+      if (!V.isOlderThan(5, 3, 0) && V.isOlderThan(9, 2, 0))
+        CmdArgs.push_back("-lstdc++fs");
+    }
+    break;
+  }
+}
+
 void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                            const InputInfo &Output,
                                            const InputInfoList &Inputs,
