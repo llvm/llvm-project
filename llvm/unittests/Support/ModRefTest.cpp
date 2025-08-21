@@ -20,9 +20,10 @@ TEST(ModRefTest, PrintMemoryEffects) {
   std::string S;
   raw_string_ostream OS(S);
   OS << MemoryEffects::none();
-  EXPECT_EQ(S, "ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: "
-               "NoModRef, MEM_TARGET_0: NoModRef, MEM_TARGET_1: NoModRef, Other: "
-               "NoModRef");
+  EXPECT_EQ(S,
+            "ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: "
+            "NoModRef, MEM_TARGET_0: NoModRef, MEM_TARGET_1: NoModRef, Other: "
+            "NoModRef");
 }
 
 } // namespace
