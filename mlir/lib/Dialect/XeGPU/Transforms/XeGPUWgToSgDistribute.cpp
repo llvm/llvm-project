@@ -34,24 +34,19 @@ using namespace mlir;
 
 namespace {
 
-// Check if there is sg id range attached to the scf.if op.
-static bool isSgIdRangeSpecified(Operation *op, int64_t &startOfRange,
-                                 int64_t &endOfRange) {
+// Retrieve the RangeAttr if it is specified.
+static xegpu::RangeAttr getRangeSpecAttr(Operation *op) {
   Operation *parent = op->getParentOp();
-  // Find the outermost scf::IfOp with xegpu.sg_id_range.
   while (parent) {
     if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
       if (auto attr = llvm::dyn_cast_or_null<xegpu::RangeAttr>(
               ifOp->getAttr("sg_id_range"))) {
-        startOfRange = attr.getStart().getInt();
-        endOfRange = attr.getEnd().getInt();
-        break;
+        return attr;
       }
     }
     parent = parent->getParentOp();
   }
-  // Return false if startOfRange is 0
-  return (startOfRange > 0 && endOfRange > startOfRange);
+  return {};
 }
 
 static std::pair<SmallVector<int64_t>, int>
@@ -101,16 +96,21 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
 
   Value sgId = rewriter.create<gpu::SubgroupIdOp>(loc, /*upper_bound=*/nullptr);
 
-  // adjust the linearId if the range specifier is present
-  int64_t startOfRange = -1, endOfRange = -1;
-  bool sgIdRangeSpecified = isSgIdRangeSpecified(op, startOfRange, endOfRange);
-  if (sgIdRangeSpecified) {
+  // verify and adjust the sgId if the range specifier is present
+  xegpu::RangeAttr sgIdRange = getRangeSpecAttr(op);
+  if (sgIdRange) {
+    int64_t startOfRange = sgIdRange.getStart().getInt();
+    int64_t endOfRange = sgIdRange.getEnd().getInt();
+    // verify the RangeAttr against the layout attribute
     if (layout.getNumSubgroups() != endOfRange - startOfRange)
       return rewriter.notifyMatchFailure(
           op, "sg_layout size must match the sg_id_range");
-    Value startOfRangeVal =
-        rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
-    sgId = rewriter.create<index::SubOp>(loc, sgId, startOfRangeVal);
+    // adjust the sgId if necessary
+    if (startOfRange > 0) {
+      Value startOfRangeVal =
+          rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
+      sgId = rewriter.create<index::SubOp>(loc, sgId, startOfRangeVal);
+    }
   }
 
   // Compute the list of subgroup-relative offsets for sub-tensors or sub-memory
