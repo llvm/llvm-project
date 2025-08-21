@@ -81,3 +81,73 @@ struct C {
   }
 };
 
+
+struct S {
+  void foo1(int a);
+  void foo2(int a) const;
+  void foo2(this const S& self, float a);  
+  void foo3(this const S& self, int a);
+  void foo4(this S& self, int a);
+};
+
+void S::foo1(int a) {
+  this->;
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):9 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC7 %s
+// CHECK-CC7: COMPLETION: foo1 : [#void#]foo1(<#int a#>)
+// CHECK-CC7: COMPLETION: foo2 : [#void#]foo2(<#int a#>)[# const#]
+// CHECK-CC7: COMPLETION: foo2 : [#void#]foo2(<#float a#>)[# const#]
+// CHECK-CC7: COMPLETION: foo3 : [#void#]foo3(<#int a#>)[# const#]
+// CHECK-CC7: COMPLETION: foo4 : [#void#]foo4(<#int a#>)
+}
+
+void S::foo2(int a) const {
+  this->;
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):9 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC8 %s
+// CHECK-CC8: COMPLETION: foo2 : [#void#]foo2(<#int a#>)[# const#]
+// CHECK-CC8: COMPLETION: foo2 : [#void#]foo2(<#float a#>)[# const#]
+// CHECK-CC8: COMPLETION: foo3 : [#void#]foo3(<#int a#>)[# const#]
+}
+
+void S::foo3(this const S& self, int a) {
+  self.;
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):8 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC9 %s
+// CHECK-CC9: COMPLETION: foo2 : [#void#]foo2(<#int a#>)[# const#]
+// CHECK-CC9: COMPLETION: foo2 : [#void#]foo2(<#float a#>)[# const#]
+// CHECK-CC9: COMPLETION: foo3 : [#void#]foo3(<#int a#>)[# const#]
+}
+
+void S::foo4(this S& self, int a) {
+  self.;
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):8 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC10 %s
+// CHECK-CC10: COMPLETION: foo1 : [#void#]foo1(<#int a#>)
+// CHECK-CC10: COMPLETION: foo2 : [#void#]foo2(<#int a#>)[# const#]
+// CHECK-CC10: COMPLETION: foo2 : [#void#]foo2(<#float a#>)[# const#]
+// CHECK-CC10: COMPLETION: foo3 : [#void#]foo3(<#int a#>)[# const#]
+// CHECK-CC10: COMPLETION: foo4 : [#void#]foo4(<#int a#>)
+}
+
+void test1(S s) {
+  s.;
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):5 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC11 %s
+// CHECK-CC11: COMPLETION: foo1 : [#void#]foo1(<#int a#>)
+// CHECK-CC11: COMPLETION: foo2 : [#void#]foo2(<#int a#>)[# const#]
+// CHECK-CC11: COMPLETION: foo2 : [#void#]foo2(<#float a#>)[# const#]
+// CHECK-CC11: COMPLETION: foo3 : [#void#]foo3(<#int a#>)[# const#]
+// CHECK-CC11: COMPLETION: foo4 : [#void#]foo4(<#int a#>)
+}
+
+void test2(const S s) {
+  s.;
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):5 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC12 %s
+// CHECK-CC12: COMPLETION: foo2 : [#void#]foo2(<#int a#>)[# const#]
+// CHECK-CC12: COMPLETION: foo2 : [#void#]foo2(<#float a#>)[# const#]
+// CHECK-CC12: COMPLETION: foo3 : [#void#]foo3(<#int a#>)[# const#]
+}
+
+void test3(S s) {
+  s.foo2();
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):10 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC13 %s
+// CHECK-CC13: OVERLOAD: [#void#]foo2(<#int a#>)
+// CHECK-CC13: OVERLOAD: [#void#]foo2(float a)
+// TODO: foo2 should be OVERLOAD: [#void#]foo2(<#float a#>)
+}
