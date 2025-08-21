@@ -42,7 +42,6 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"

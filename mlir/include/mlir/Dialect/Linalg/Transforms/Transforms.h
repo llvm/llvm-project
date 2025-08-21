@@ -1690,7 +1690,7 @@ struct DecomposeOuterUnitDimsPackOpPattern
 /// Rewrites a linalg::UnPackOp into a sequence of rank-reduced
 ///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled outer dims of the input linalg::PackOp are 1.
 ///
 /// Before:
 /// ```
@@ -1830,6 +1830,10 @@ void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 /// There is no equivalent named op to convert to. Many such cases exist.
 void populateLinalgGenericOpsSpecializationPatterns(
     RewritePatternSet &patterns);
+
+/// Populates `patterns` that convert linalg named ops e.g. `linalg.add`
+/// to equivalent `linalg.elementwise`.
+void populateLinalgNamedToElementwisePatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold operations like
 /// `linalg.transform` into elementwise op map.

@@ -26,6 +26,8 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
+#define DEBUG_TYPE "optimize-array-repacking"
+
 namespace {
 class OptimizeArrayRepackingPass
     : public fir::impl::OptimizeArrayRepackingBase<OptimizeArrayRepackingPass> {
@@ -78,13 +80,19 @@ void OptimizeArrayRepackingPass::runOnOperation() {
   mlir::MLIRContext *context = &getContext();
   mlir::RewritePatternSet patterns(context);
   mlir::GreedyRewriteConfig config;
-  config.setRegionSimplificationLevel(
-      mlir::GreedySimplifyRegionLevel::Disabled);
+  config
+      .setRegionSimplificationLevel(mlir::GreedySimplifyRegionLevel::Disabled)
+      // Traverse the operations top-down, so that fir.pack_array
+      // operations are optimized before their using fir.pack_array
+      // operations. This way the rewrite may converge faster.
+      .setUseTopDownTraversal();
   patterns.insert<PackingOfContiguous>(context);
   patterns.insert<NoopUnpacking>(context);
   if (mlir::failed(
           mlir::applyPatternsGreedily(funcOp, std::move(patterns), config))) {
-    mlir::emitError(funcOp.getLoc(), "failure in array repacking optimization");
-    signalPassFailure();
+    // Failure may happen if the rewriter does not converge soon enough.
+    // That is not an error, so just report a diagnostic under debug.
+    LLVM_DEBUG(mlir::emitError(funcOp.getLoc(),
+                               "failure in array repacking optimization"));
   }
 }

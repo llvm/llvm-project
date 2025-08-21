@@ -9,6 +9,7 @@ foreach(entry ${entries})
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/libcxx) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/libcxxabi) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/libunwind) AND
+       (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/orc-rt) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/test-suite) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/openmp) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/cross-project-tests) AND
@@ -34,6 +35,7 @@ if(${LLVM_BUILD_RUNTIME})
     add_llvm_external_project(libc)
     add_llvm_external_project(libcxxabi)
     add_llvm_external_project(libcxx)
+    add_llvm_external_project(orc-rt)
   endif()
   if(NOT LLVM_BUILD_EXTERNAL_COMPILER_RT)
     add_llvm_external_project(compiler-rt)

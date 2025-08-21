@@ -22,6 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -2786,7 +2787,7 @@ SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
   EVT RetVT = Op.getValueType();
   RTLIB::Libcall LC = RTLIB::getUINTTOFP(OpVT, RetVT);
   MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT);
   SDValue Chain = SDValue();
   SDValue Result;
   std::tie(Result, Chain) =
@@ -2811,7 +2812,7 @@ SDValue LoongArchTargetLowering::lowerSINT_TO_FP(SDValue Op,
   EVT RetVT = Op.getValueType();
   RTLIB::Libcall LC = RTLIB::getSINTTOFP(OpVT, RetVT);
   MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT);
   SDValue Chain = SDValue();
   SDValue Result;
   std::tie(Result, Chain) =
@@ -3037,10 +3038,7 @@ SDValue LoongArchTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 
   // Prepare argument list to generate call.
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Load;
-  Entry.Ty = CallTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Load, CallTy);
 
   // Setup call to __tls_get_addr.
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -4107,7 +4105,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     LC = RTLIB::getFPTOSINT(Src.getValueType(), VT);
     MakeLibCallOptions CallOptions;
     EVT OpVT = Src.getValueType();
-    CallOptions.setTypeListBeforeSoften(OpVT, VT, true);
+    CallOptions.setTypeListBeforeSoften(OpVT, VT);
     SDValue Chain = SDValue();
     SDValue Result;
     std::tie(Result, Chain) =
@@ -4360,7 +4358,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     RTLIB::Libcall LC =
         OpVT == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
     MakeLibCallOptions CallOptions;
-    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64);
     SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
     Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
     Results.push_back(Result);
@@ -6042,17 +6040,20 @@ static MachineBasicBlock *
 emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
                      const LoongArchSubtarget &Subtarget) {
   unsigned InsOp;
+  unsigned BroadcastOp;
   unsigned HalfSize;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
   case LoongArch::PseudoXVINSGR2VR_B:
     HalfSize = 16;
-    InsOp = LoongArch::VINSGR2VR_B;
+    BroadcastOp = LoongArch::XVREPLGR2VR_B;
+    InsOp = LoongArch::XVEXTRINS_B;
     break;
   case LoongArch::PseudoXVINSGR2VR_H:
     HalfSize = 8;
-    InsOp = LoongArch::VINSGR2VR_H;
+    BroadcastOp = LoongArch::XVREPLGR2VR_H;
+    InsOp = LoongArch::XVEXTRINS_H;
     break;
   }
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -6066,37 +6067,41 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
   Register Elt = MI.getOperand(2).getReg();
   unsigned Idx = MI.getOperand(3).getImm();
 
-  Register ScratchReg1 = XSrc;
-  if (Idx >= HalfSize) {
-    ScratchReg1 = MRI.createVirtualRegister(RC);
-    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_D), ScratchReg1)
+  if (XSrc.isVirtual() && MRI.getVRegDef(XSrc)->isImplicitDef() &&
+      Idx < HalfSize) {
+    Register ScratchSubReg1 = MRI.createVirtualRegister(SubRC);
+    Register ScratchSubReg2 = MRI.createVirtualRegister(SubRC);
+
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::COPY), ScratchSubReg1)
+        .addReg(XSrc, 0, LoongArch::sub_128);
+    BuildMI(*BB, MI, DL,
+            TII->get(HalfSize == 8 ? LoongArch::VINSGR2VR_H
+                                   : LoongArch::VINSGR2VR_B),
+            ScratchSubReg2)
+        .addReg(ScratchSubReg1)
+        .addReg(Elt)
+        .addImm(Idx);
+
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::SUBREG_TO_REG), XDst)
+        .addImm(0)
+        .addReg(ScratchSubReg2)
+        .addImm(LoongArch::sub_128);
+  } else {
+    Register ScratchReg1 = MRI.createVirtualRegister(RC);
+    Register ScratchReg2 = MRI.createVirtualRegister(RC);
+
+    BuildMI(*BB, MI, DL, TII->get(BroadcastOp), ScratchReg1).addReg(Elt);
+
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), ScratchReg2)
+        .addReg(ScratchReg1)
         .addReg(XSrc)
-        .addImm(14);
-  }
+        .addImm(Idx >= HalfSize ? 48 : 18);
 
-  Register ScratchSubReg1 = MRI.createVirtualRegister(SubRC);
-  Register ScratchSubReg2 = MRI.createVirtualRegister(SubRC);
-  BuildMI(*BB, MI, DL, TII->get(LoongArch::COPY), ScratchSubReg1)
-      .addReg(ScratchReg1, 0, LoongArch::sub_128);
-  BuildMI(*BB, MI, DL, TII->get(InsOp), ScratchSubReg2)
-      .addReg(ScratchSubReg1)
-      .addReg(Elt)
-      .addImm(Idx >= HalfSize ? Idx - HalfSize : Idx);
-
-  Register ScratchReg2 = XDst;
-  if (Idx >= HalfSize)
-    ScratchReg2 = MRI.createVirtualRegister(RC);
-
-  BuildMI(*BB, MI, DL, TII->get(LoongArch::SUBREG_TO_REG), ScratchReg2)
-      .addImm(0)
-      .addReg(ScratchSubReg2)
-      .addImm(LoongArch::sub_128);
-
-  if (Idx >= HalfSize)
-    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), XDst)
+    BuildMI(*BB, MI, DL, TII->get(InsOp), XDst)
         .addReg(XSrc)
         .addReg(ScratchReg2)
-        .addImm(2);
+        .addImm((Idx >= HalfSize ? Idx - HalfSize : Idx) * 17);
+  }
 
   MI.eraseFromParent();
   return BB;
@@ -6729,8 +6734,7 @@ static bool CC_LoongArchAssign2GRLen(unsigned GRLen, CCState &State,
 static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
                          unsigned ValNo, MVT ValVT,
                          CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                         CCState &State, bool IsFixed, bool IsRet,
-                         Type *OrigTy) {
+                         CCState &State, bool IsRet, Type *OrigTy) {
   unsigned GRLen = DL.getLargestLegalIntTypeSizeInBits();
   assert((GRLen == 32 || GRLen == 64) && "Unspport GRLen");
   MVT GRLenVT = GRLen == 32 ? MVT::i32 : MVT::i64;
@@ -6752,7 +6756,7 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   case LoongArchABI::ABI_LP64F:
   case LoongArchABI::ABI_ILP32D:
   case LoongArchABI::ABI_LP64D:
-    UseGPRForFloat = !IsFixed;
+    UseGPRForFloat = ArgFlags.isVarArg();
     break;
   case LoongArchABI::ABI_ILP32S:
   case LoongArchABI::ABI_LP64S:
@@ -6766,7 +6770,8 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   // will not be passed by registers if the original type is larger than
   // 2*GRLen, so the register alignment rule does not apply.
   unsigned TwoGRLenInBytes = (2 * GRLen) / 8;
-  if (!IsFixed && ArgFlags.getNonZeroOrigAlign() == TwoGRLenInBytes &&
+  if (ArgFlags.isVarArg() &&
+      ArgFlags.getNonZeroOrigAlign() == TwoGRLenInBytes &&
       DL.getTypeAllocSize(OrigTy) == TwoGRLenInBytes) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
@@ -6916,7 +6921,7 @@ void LoongArchTargetLowering::analyzeInputArgs(
     LoongArchABI::ABI ABI =
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Ins[i].Flags,
-           CCInfo, /*IsFixed=*/true, IsRet, ArgTy)) {
+           CCInfo, IsRet, ArgTy)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type " << ArgVT
                         << '\n');
       llvm_unreachable("");
@@ -6934,7 +6939,7 @@ void LoongArchTargetLowering::analyzeOutputArgs(
     LoongArchABI::ABI ABI =
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Outs[i].Flags,
-           CCInfo, Outs[i].IsFixed, IsRet, OrigTy)) {
+           CCInfo, IsRet, OrigTy)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type " << ArgVT
                         << "\n");
       llvm_unreachable("");
@@ -7073,7 +7078,8 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
 
 static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                              CCValAssign::LocInfo LocInfo,
-                             ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                             ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                             CCState &State) {
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, SpLim
     //                        s0    s1  s2  s3  s4  s5  s6  s7  s8
@@ -7647,8 +7653,7 @@ bool LoongArchTargetLowering::CanLowerReturn(
     LoongArchABI::ABI ABI =
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (CC_LoongArch(MF.getDataLayout(), ABI, i, Outs[i].VT, CCValAssign::Full,
-                     Outs[i].Flags, CCInfo, /*IsFixed=*/true, /*IsRet=*/true,
-                     nullptr))
+                     Outs[i].Flags, CCInfo, /*IsRet=*/true, nullptr))
       return false;
   }
   return true;

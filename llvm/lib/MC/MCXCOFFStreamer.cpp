@@ -21,7 +21,6 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 

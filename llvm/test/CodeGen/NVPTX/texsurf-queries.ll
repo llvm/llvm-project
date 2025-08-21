@@ -35,7 +35,6 @@ define i32 @t1() {
 ; CHECK-LABEL: t1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    txq.width.b32 %r1, [tex0];
@@ -66,7 +65,6 @@ define i32 @t3() {
 ; CHECK-LABEL: t3(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    txq.height.b32 %r1, [tex0];
@@ -97,7 +95,6 @@ define i32 @s1() {
 ; CHECK-LABEL: s1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    suq.width.b32 %r1, [surf0];
@@ -128,7 +125,6 @@ define i32 @s3() {
 ; CHECK-LABEL: s3(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    suq.height.b32 %r1, [surf0];

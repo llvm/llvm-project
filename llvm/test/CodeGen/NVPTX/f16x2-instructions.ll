@@ -455,7 +455,7 @@ declare <2 x half> @test_callee(<2 x half> %a, <2 x half> %b) #0
 define <2 x half> @test_call(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-LABEL: test_call(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_call_param_1];
@@ -478,7 +478,7 @@ define <2 x half> @test_call(<2 x half> %a, <2 x half> %b) #0 {
 define <2 x half> @test_call_flipped(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-LABEL: test_call_flipped(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
@@ -501,7 +501,7 @@ define <2 x half> @test_call_flipped(<2 x half> %a, <2 x half> %b) #0 {
 define <2 x half> @test_tailcall_flipped(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-LABEL: test_tailcall_flipped(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];
@@ -1674,7 +1674,7 @@ define <2 x half> @test_sqrt(<2 x half> %a) #0 {
 ;  ret <2 x half> %r
 ;}
 
-define <2 x half> @test_sin(<2 x half> %a) #0 #1 {
+define <2 x half> @test_sin(<2 x half> %a) #0 {
 ; CHECK-LABEL: test_sin(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -1692,11 +1692,11 @@ define <2 x half> @test_sin(<2 x half> %a) #0 #1 {
 ; CHECK-NEXT:    mov.b32 %r6, {%rs4, %rs3};
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x half> @llvm.sin.f16(<2 x half> %a)
+  %r = call afn <2 x half> @llvm.sin.f16(<2 x half> %a)
   ret <2 x half> %r
 }
 
-define <2 x half> @test_cos(<2 x half> %a) #0 #1 {
+define <2 x half> @test_cos(<2 x half> %a) #0 {
 ; CHECK-LABEL: test_cos(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -1714,7 +1714,7 @@ define <2 x half> @test_cos(<2 x half> %a) #0 #1 {
 ; CHECK-NEXT:    mov.b32 %r6, {%rs4, %rs3};
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x half> @llvm.cos.f16(<2 x half> %a)
+  %r = call afn <2 x half> @llvm.cos.f16(<2 x half> %a)
   ret <2 x half> %r
 }
 
@@ -2330,4 +2330,3 @@ define void @test_store_2xhalf(ptr %p1, ptr %p2, <2 x half> %v) {
 
 
 attributes #0 = { nounwind }
-attributes #1 = { "unsafe-fp-math" = "true" }

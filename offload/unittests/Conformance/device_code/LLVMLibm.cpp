@@ -12,13 +12,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Conformance/device_code/Common.hpp"
+#include "Conformance/device_code/DeviceAPIs.hpp"
+#include "Conformance/device_code/KernelRunner.hpp"
 
 #include <gpuintrin.h>
 #include <math.h>
 #include <stddef.h>
 
-using namespace common;
+using namespace kernels;
 
 //===----------------------------------------------------------------------===//
 // Helpers
@@ -120,6 +121,11 @@ __gpu_kernel void expm1fKernel(const float *X, float *Out,
 __gpu_kernel void hypotf16Kernel(const float16 *X, float16 *Y, float16 *Out,
                                  size_t NumElements) noexcept {
   runKernelBody<hypotf16>(NumElements, Out, X, Y);
+}
+
+__gpu_kernel void logKernel(const double *X, double *Out,
+                            size_t NumElements) noexcept {
+  runKernelBody<log>(NumElements, Out, X);
 }
 
 __gpu_kernel void logfKernel(const float *X, float *Out,

@@ -7358,7 +7358,9 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
       Diag(SR.getBegin(), diag::err_omp_interop_type_not_found) << SR;
       return std::nullopt;
     }
-    QualType InteropType = Context.getTypeDeclType(TD);
+    QualType InteropType =
+        Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                /*Qualifier=*/std::nullopt, TD);
     if (PTy->isVariadic()) {
       Diag(FD->getLocation(), diag::err_omp_append_args_with_varargs) << SR;
       return std::nullopt;
@@ -7378,7 +7380,7 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
     auto *Method = dyn_cast<CXXMethodDecl>(FD);
     if (Method && !Method->isStatic()) {
       FnPtrType = Context.getMemberPointerType(
-          AdjustedFnType, /*Qualifier=*/nullptr, Method->getParent());
+          AdjustedFnType, /*Qualifier=*/std::nullopt, Method->getParent());
       ExprResult ER;
       {
         // Build addr_of unary op to correctly handle type checks for member
@@ -18629,10 +18631,11 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
   if (const auto *TyRec = Ty->getAs<RecordType>()) {
     // Complete the type if it can be completed.
     // If the type is neither complete nor being defined, bail out now.
-    if (SemaRef.isCompleteType(Loc, Ty) || TyRec->isBeingDefined() ||
-        TyRec->getDecl()->getDefinition()) {
+    bool IsComplete = SemaRef.isCompleteType(Loc, Ty);
+    RecordDecl *RD = TyRec->getOriginalDecl()->getDefinition();
+    if (IsComplete || RD) {
       Lookup.clear();
-      SemaRef.LookupQualifiedName(Lookup, TyRec->getDecl());
+      SemaRef.LookupQualifiedName(Lookup, RD);
       if (Lookup.empty()) {
         Lookups.emplace_back();
         Lookups.back().append(Lookup.begin(), Lookup.end());

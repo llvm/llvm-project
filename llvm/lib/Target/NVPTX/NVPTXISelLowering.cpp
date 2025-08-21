@@ -14,6 +14,7 @@
 #include "NVPTXISelLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
+#include "NVPTXISelDAGToDAG.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
@@ -28,7 +29,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -125,10 +125,6 @@ NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
   if (UsePrecDivF32.getNumOccurrences() > 0)
     return UsePrecDivF32;
 
-  // Otherwise, use div.approx if fast math is enabled
-  if (allowUnsafeFPMath(MF))
-    return NVPTX::DivPrecisionLevel::Approx;
-
   const SDNodeFlags Flags = N.getFlags();
   if (Flags.hasApproximateFuncs())
     return NVPTX::DivPrecisionLevel::Approx;
@@ -136,15 +132,10 @@ NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
   return NVPTX::DivPrecisionLevel::IEEE754;
 }
 
-bool NVPTXTargetLowering::usePrecSqrtF32(const MachineFunction &MF,
-                                         const SDNode *N) const {
+bool NVPTXTargetLowering::usePrecSqrtF32(const SDNode *N) const {
   // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
   if (UsePrecSqrtF32.getNumOccurrences() > 0)
     return UsePrecSqrtF32;
-
-  // Otherwise, use sqrt.approx if fast math is enabled
-  if (allowUnsafeFPMath(MF))
-    return false;
 
   if (N) {
     const SDNodeFlags Flags = N->getFlags();
@@ -680,6 +671,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // No support for these operations with v2f32.
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f32, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f32, Expand);
+  // Need custom lowering in case the index is dynamic.
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f32, Custom);
 
   // Custom conversions to/from v2i8.
   setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
@@ -899,6 +892,17 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
   if (STI.allowFP16Math() || STI.hasBF16Math())
     setTargetDAGCombine(ISD::SETCC);
+
+  // Vector reduction operations. These may be turned into shuffle or tree
+  // reductions depending on what instructions are available for each type.
+  for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
+    MVT EltVT = VT.getVectorElementType();
+    if (EltVT == MVT::f32 || EltVT == MVT::f64) {
+      setOperationAction({ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMIN,
+                          ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM},
+                         VT, Custom);
+    }
+  }
 
   // Promote fp16 arithmetic if fp16 hardware isn't available or the
   // user passed --nvptx-no-fp16-math. The flag is useful because,
@@ -1143,6 +1147,10 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::BFI)
     MAKE_CASE(NVPTXISD::PRMT)
     MAKE_CASE(NVPTXISD::FCOPYSIGN)
+    MAKE_CASE(NVPTXISD::FMAXNUM3)
+    MAKE_CASE(NVPTXISD::FMINNUM3)
+    MAKE_CASE(NVPTXISD::FMAXIMUM3)
+    MAKE_CASE(NVPTXISD::FMINIMUM3)
     MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
     MAKE_CASE(NVPTXISD::STACKRESTORE)
     MAKE_CASE(NVPTXISD::STACKSAVE)
@@ -1176,8 +1184,7 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
                                              bool &UseOneConst,
                                              bool Reciprocal) const {
   if (!(Enabled == ReciprocalEstimate::Enabled ||
-        (Enabled == ReciprocalEstimate::Unspecified &&
-         !usePrecSqrtF32(DAG.getMachineFunction()))))
+        (Enabled == ReciprocalEstimate::Unspecified && !usePrecSqrtF32())))
     return SDValue();
 
   if (ExtraSteps == ReciprocalEstimate::Unspecified)
@@ -1927,6 +1934,124 @@ static SDValue getPRMT(SDValue A, SDValue B, uint64_t Selector, SDLoc DL,
                        SelectionDAG &DAG,
                        unsigned Mode = NVPTX::PTXPrmtMode::NONE) {
   return getPRMT(A, B, DAG.getConstant(Selector, DL, MVT::i32), DL, DAG, Mode);
+}
+
+/// Reduces the elements using the scalar operations provided. The operations
+/// are sorted descending in number of inputs they take. The flags on the
+/// original reduction operation will be propagated to each scalar operation.
+/// Nearby elements are grouped in tree reduction, unlike the shuffle reduction
+/// used in ExpandReductions and SelectionDAG.
+static SDValue buildTreeReduction(
+    const SmallVector<SDValue> &Elements, EVT EltTy,
+    ArrayRef<std::pair<unsigned /*NodeType*/, unsigned /*NumInputs*/>> Ops,
+    const SDLoc &DL, const SDNodeFlags Flags, SelectionDAG &DAG) {
+  // Build the reduction tree at each level, starting with all the elements.
+  SmallVector<SDValue> Level = Elements;
+
+  unsigned OpIdx = 0;
+  while (Level.size() > 1) {
+    // Try to reduce this level using the current operator.
+    const auto [Op, NumInputs] = Ops[OpIdx];
+
+    // Build the next level by partially reducing all elements.
+    SmallVector<SDValue> ReducedLevel;
+    unsigned I = 0, E = Level.size();
+    for (; I + NumInputs <= E; I += NumInputs) {
+      // Reduce elements in groups of [NumInputs], as much as possible.
+      ReducedLevel.push_back(DAG.getNode(
+          Op, DL, EltTy, ArrayRef<SDValue>(Level).slice(I, NumInputs), Flags));
+    }
+
+    if (I < E) {
+      // Handle leftover elements.
+
+      if (ReducedLevel.empty()) {
+        // We didn't reduce anything at this level. We need to pick a smaller
+        // operator.
+        ++OpIdx;
+        assert(OpIdx < Ops.size() && "no smaller operators for reduction");
+        continue;
+      }
+
+      // We reduced some things but there's still more left, meaning the
+      // operator's number of inputs doesn't evenly divide this level size. Move
+      // these elements to the next level.
+      for (; I < E; ++I)
+        ReducedLevel.push_back(Level[I]);
+    }
+
+    // Process the next level.
+    Level = ReducedLevel;
+  }
+
+  return *Level.begin();
+}
+
+// Get scalar reduction opcode
+static ISD::NodeType getScalarOpcodeForReduction(unsigned ReductionOpcode) {
+  switch (ReductionOpcode) {
+  case ISD::VECREDUCE_FMAX:
+    return ISD::FMAXNUM;
+  case ISD::VECREDUCE_FMIN:
+    return ISD::FMINNUM;
+  case ISD::VECREDUCE_FMAXIMUM:
+    return ISD::FMAXIMUM;
+  case ISD::VECREDUCE_FMINIMUM:
+    return ISD::FMINIMUM;
+  default:
+    llvm_unreachable("unhandled reduction opcode");
+  }
+}
+
+/// Get 3-input scalar reduction opcode
+static std::optional<NVPTXISD::NodeType>
+getScalar3OpcodeForReduction(unsigned ReductionOpcode) {
+  switch (ReductionOpcode) {
+  case ISD::VECREDUCE_FMAX:
+    return NVPTXISD::FMAXNUM3;
+  case ISD::VECREDUCE_FMIN:
+    return NVPTXISD::FMINNUM3;
+  case ISD::VECREDUCE_FMAXIMUM:
+    return NVPTXISD::FMAXIMUM3;
+  case ISD::VECREDUCE_FMINIMUM:
+    return NVPTXISD::FMINIMUM3;
+  default:
+    return std::nullopt;
+  }
+}
+
+/// Lower reductions to either a sequence of operations or a tree if
+/// reassociations are allowed. This method will use larger operations like
+/// max3/min3 when the target supports them.
+SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  const SDNodeFlags Flags = Op->getFlags();
+  SDValue Vector = Op.getOperand(0);
+
+  const unsigned Opcode = Op->getOpcode();
+  const EVT EltTy = Vector.getValueType().getVectorElementType();
+
+  // Whether we can use 3-input min/max when expanding the reduction.
+  const bool CanUseMinMax3 =
+      EltTy == MVT::f32 && STI.getSmVersion() >= 100 &&
+      STI.getPTXVersion() >= 88 &&
+      (Opcode == ISD::VECREDUCE_FMAX || Opcode == ISD::VECREDUCE_FMIN ||
+       Opcode == ISD::VECREDUCE_FMAXIMUM || Opcode == ISD::VECREDUCE_FMINIMUM);
+
+  // A list of SDNode opcodes with equivalent semantics, sorted descending by
+  // number of inputs they take.
+  SmallVector<std::pair<unsigned /*Op*/, unsigned /*NumIn*/>, 2> ScalarOps;
+
+  if (auto Opcode3Elem = getScalar3OpcodeForReduction(Opcode);
+      CanUseMinMax3 && Opcode3Elem)
+    ScalarOps.push_back({*Opcode3Elem, 3});
+  ScalarOps.push_back({getScalarOpcodeForReduction(Opcode), 2});
+
+  SmallVector<SDValue> Elements;
+  DAG.ExtractVectorElements(Vector, Elements);
+
+  return buildTreeReduction(Elements, EltTy, ScalarOps, DL, Flags, DAG);
 }
 
 SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
@@ -2716,8 +2841,7 @@ static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
                      SDLoc(Op), Opcode, DAG);
 }
 
-static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
-                         bool AllowUnsafeFPMath) {
+static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) {
   // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
   // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
   // the semantics of LLVM's frem.
@@ -2734,7 +2858,7 @@ static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
   SDValue Sub = DAG.getNode(ISD::FSUB, DL, Ty, X, Mul,
                             Flags | SDNodeFlags::AllowContract);
 
-  if (AllowUnsafeFPMath || Flags.hasNoInfs())
+  if (Flags.hasNoInfs())
     return Sub;
 
   // If Y is infinite, return X
@@ -2808,6 +2932,11 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::CONCAT_VECTORS:
     return LowerCONCAT_VECTORS(Op, DAG);
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUM:
+    return LowerVECREDUCE(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
   case ISD::LOAD:
@@ -2874,7 +3003,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTLZ:
     return lowerCTLZCTPOP(Op, DAG);
   case ISD::FREM:
-    return lowerFREM(Op, DAG, allowUnsafeFPMath(DAG.getMachineFunction()));
+    return lowerFREM(Op, DAG);
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");
@@ -3908,6 +4037,18 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     return true;
   }
 
+  case Intrinsic::nvvm_prefetch_tensormap: {
+    auto &DL = I.getDataLayout();
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = getPointerTy(DL);
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags =
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
+    Info.align.reset();
+    return true;
+  }
+
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_f:
   case Intrinsic::nvvm_ldu_global_p: {
@@ -4716,17 +4857,7 @@ bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
   if (MF.getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast)
     return true;
 
-  return allowUnsafeFPMath(MF);
-}
-
-bool NVPTXTargetLowering::allowUnsafeFPMath(const MachineFunction &MF) const {
-  // Honor TargetOptions flags that explicitly say unsafe math is okay.
-  if (MF.getTarget().Options.UnsafeFPMath)
-    return true;
-
-  // Allow unsafe math if unsafe-fp-math attribute explicitly says so.
-  const Function &F = MF.getFunction();
-  return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
+  return false;
 }
 
 static bool isConstZero(const SDValue &Operand) {
@@ -5110,76 +5241,6 @@ static SDValue PerformFADDCombine(SDNode *N,
 
   // If that didn't work, try again with the operands commuted.
   return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
-}
-
-static SDValue PerformANDCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
-  // The type legalizer turns a vector load of i8 values into a zextload to i16
-  // registers, optionally ANY_EXTENDs it (if target type is integer),
-  // and ANDs off the high 8 bits. Since we turn this load into a
-  // target-specific DAG node, the DAG combiner fails to eliminate these AND
-  // nodes. Do that here.
-  SDValue Val = N->getOperand(0);
-  SDValue Mask = N->getOperand(1);
-
-  if (isa<ConstantSDNode>(Val)) {
-    std::swap(Val, Mask);
-  }
-
-  SDValue AExt;
-
-  // Generally, we will see zextload -> IMOV16rr -> ANY_EXTEND -> and
-  if (Val.getOpcode() == ISD::ANY_EXTEND) {
-    AExt = Val;
-    Val = Val->getOperand(0);
-  }
-
-  if (Val->getOpcode() == NVPTXISD::LoadV2 ||
-      Val->getOpcode() == NVPTXISD::LoadV4) {
-    ConstantSDNode *MaskCnst = dyn_cast<ConstantSDNode>(Mask);
-    if (!MaskCnst) {
-      // Not an AND with a constant
-      return SDValue();
-    }
-
-    uint64_t MaskVal = MaskCnst->getZExtValue();
-    if (MaskVal != 0xff) {
-      // Not an AND that chops off top 8 bits
-      return SDValue();
-    }
-
-    MemSDNode *Mem = dyn_cast<MemSDNode>(Val);
-    if (!Mem) {
-      // Not a MemSDNode?!?
-      return SDValue();
-    }
-
-    EVT MemVT = Mem->getMemoryVT();
-    if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8) {
-      // We only handle the i8 case
-      return SDValue();
-    }
-
-    unsigned ExtType = Val->getConstantOperandVal(Val->getNumOperands() - 1);
-    if (ExtType == ISD::SEXTLOAD) {
-      // If for some reason the load is a sextload, the and is needed to zero
-      // out the high 8 bits
-      return SDValue();
-    }
-
-    bool AddTo = false;
-    if (AExt.getNode() != nullptr) {
-      // Re-insert the ext as a zext.
-      Val = DCI.DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N),
-                            AExt.getValueType(), Val);
-      AddTo = true;
-    }
-
-    // If we get here, the AND is unnecessary.  Just replace it with the load
-    DCI.CombineTo(N, Val, AddTo);
-  }
-
-  return SDValue();
 }
 
 static SDValue PerformREMCombine(SDNode *N,
@@ -5853,8 +5914,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformADDCombine(N, DCI, OptLevel);
   case ISD::ADDRSPACECAST:
     return combineADDRSPACECAST(N, DCI);
-  case ISD::AND:
-    return PerformANDCombine(N, DCI);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return combineMulWide(N, DCI, OptLevel);
@@ -6479,6 +6538,24 @@ static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
   }
 }
 
+static void computeKnownBitsForLoadV(const SDValue Op, KnownBits &Known) {
+  MemSDNode *LD = cast<MemSDNode>(Op);
+
+  // We can't do anything without knowing the sign bit.
+  auto ExtType = LD->getConstantOperandVal(LD->getNumOperands() - 1);
+  if (ExtType == ISD::SEXTLOAD)
+    return;
+
+  // ExtLoading to vector types is weird and may not work well with known bits.
+  auto DestVT = LD->getValueType(0);
+  if (DestVT.isVector())
+    return;
+
+  assert(Known.getBitWidth() == DestVT.getSizeInBits());
+  auto ElementBitWidth = NVPTXDAGToDAGISel::getFromTypeWidthForLoad(LD);
+  Known.Zero.setHighBits(Known.getBitWidth() - ElementBitWidth);
+}
+
 void NVPTXTargetLowering::computeKnownBitsForTargetNode(
     const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
     const SelectionDAG &DAG, unsigned Depth) const {
@@ -6487,6 +6564,11 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
   switch (Op.getOpcode()) {
   case NVPTXISD::PRMT:
     computeKnownBitsForPRMT(Op, Known, DAG, Depth);
+    break;
+  case NVPTXISD::LoadV2:
+  case NVPTXISD::LoadV4:
+  case NVPTXISD::LoadV8:
+    computeKnownBitsForLoadV(Op, Known);
     break;
   default:
     break;

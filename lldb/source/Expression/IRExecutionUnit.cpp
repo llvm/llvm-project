@@ -799,7 +799,7 @@ ResolveFunctionCallLabel(const FunctionCallLabel &label,
   auto sc_or_err = symbol_file->ResolveFunctionCallLabel(label);
   if (!sc_or_err)
     return llvm::joinErrors(
-        llvm::createStringError("failed to resolve function by UID"),
+        llvm::createStringError("failed to resolve function by UID:"),
         sc_or_err.takeError());
 
   SymbolContextList sc_list;

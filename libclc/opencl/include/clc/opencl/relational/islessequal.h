@@ -11,11 +11,11 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION islessequal
+#define __CLC_FUNCTION islessequal
 #define __CLC_BODY <clc/relational/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_RELATIONAL_ISLESSEQUAL_H__

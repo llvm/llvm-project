@@ -698,7 +698,7 @@ template <typename Ty> class StaticLoopChunker {
   static void NormalizedLoopNestNoChunk(void (*LoopBody)(Ty, void *), void *Arg,
                                         Ty NumBlocks, Ty BId, Ty NumThreads,
                                         Ty TId, Ty NumIters,
-                                        bool OneIterationPerThread) {
+                                        uint8_t OneIterationPerThread) {
     Ty KernelIteration = NumBlocks * NumThreads;
 
     // Start index in the normalized space.
@@ -729,7 +729,7 @@ template <typename Ty> class StaticLoopChunker {
                                         Ty BlockChunk, Ty NumBlocks, Ty BId,
                                         Ty ThreadChunk, Ty NumThreads, Ty TId,
                                         Ty NumIters,
-                                        bool OneIterationPerThread) {
+                                        uint8_t OneIterationPerThread) {
     Ty KernelIteration = NumBlocks * BlockChunk;
 
     // Start index in the chunked space.
@@ -767,8 +767,18 @@ template <typename Ty> class StaticLoopChunker {
 
 public:
   /// Worksharing `for`-loop.
+  /// \param[in] Loc Description of source location
+  /// \param[in] LoopBody Function which corresponds to loop body
+  /// \param[in] Arg Pointer to struct which contains loop body args
+  /// \param[in] NumIters Number of loop iterations
+  /// \param[in] NumThreads Number of GPU threads
+  /// \param[in] ThreadChunk Size of thread chunk
+  /// \param[in] OneIterationPerThread If true/nonzero, each thread executes
+  /// only one loop iteration or one thread chunk. This avoids an outer loop
+  /// over all loop iterations/chunks.
   static void For(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
-                  Ty NumIters, Ty NumThreads, Ty ThreadChunk) {
+                  Ty NumIters, Ty NumThreads, Ty ThreadChunk,
+                  uint8_t OneIterationPerThread) {
     ASSERT(NumIters >= 0, "Bad iteration count");
     ASSERT(ThreadChunk >= 0, "Bad thread count");
 
@@ -790,11 +800,12 @@ public:
 
     // If we know we have more threads than iterations we can indicate that to
     // avoid an outer loop.
-    bool OneIterationPerThread = false;
     if (config::getAssumeThreadsOversubscription()) {
-      ASSERT(NumThreads >= NumIters, "Broken assumption");
       OneIterationPerThread = true;
     }
+
+    if (OneIterationPerThread)
+      ASSERT(NumThreads >= NumIters, "Broken assumption");
 
     if (ThreadChunk != 1)
       NormalizedLoopNestChunked(LoopBody, Arg, BlockChunk, NumBlocks, BId,
@@ -806,8 +817,17 @@ public:
   }
 
   /// Worksharing `distribute`-loop.
+  /// \param[in] Loc Description of source location
+  /// \param[in] LoopBody Function which corresponds to loop body
+  /// \param[in] Arg Pointer to struct which contains loop body args
+  /// \param[in] NumIters Number of loop iterations
+  /// \param[in] BlockChunk Size of block chunk
+  /// \param[in] OneIterationPerThread If true/nonzero, each thread executes
+  /// only one loop iteration or one thread chunk. This avoids an outer loop
+  /// over all loop iterations/chunks.
   static void Distribute(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
-                         Ty NumIters, Ty BlockChunk) {
+                         Ty NumIters, Ty BlockChunk,
+                         uint8_t OneIterationPerThread) {
     ASSERT(icv::Level == 0, "Bad distribute");
     ASSERT(icv::ActiveLevel == 0, "Bad distribute");
     ASSERT(state::ParallelRegionFn == nullptr, "Bad distribute");
@@ -831,11 +851,12 @@ public:
 
     // If we know we have more blocks than iterations we can indicate that to
     // avoid an outer loop.
-    bool OneIterationPerThread = false;
     if (config::getAssumeTeamsOversubscription()) {
-      ASSERT(NumBlocks >= NumIters, "Broken assumption");
       OneIterationPerThread = true;
     }
+
+    if (OneIterationPerThread)
+      ASSERT(NumBlocks >= NumIters, "Broken assumption");
 
     if (BlockChunk != NumThreads)
       NormalizedLoopNestChunked(LoopBody, Arg, BlockChunk, NumBlocks, BId,
@@ -852,9 +873,20 @@ public:
   }
 
   /// Worksharing `distribute parallel for`-loop.
+  /// \param[in] Loc Description of source location
+  /// \param[in] LoopBody Function which corresponds to loop body
+  /// \param[in] Arg Pointer to struct which contains loop body args
+  /// \param[in] NumIters Number of loop iterations
+  /// \param[in] NumThreads Number of GPU threads
+  /// \param[in] BlockChunk Size of block chunk
+  /// \param[in] ThreadChunk Size of thread chunk
+  /// \param[in] OneIterationPerThread If true/nonzero, each thread executes
+  /// only one loop iteration or one thread chunk. This avoids an outer loop
+  /// over all loop iterations/chunks.
   static void DistributeFor(IdentTy *Loc, void (*LoopBody)(Ty, void *),
                             void *Arg, Ty NumIters, Ty NumThreads,
-                            Ty BlockChunk, Ty ThreadChunk) {
+                            Ty BlockChunk, Ty ThreadChunk,
+                            uint8_t OneIterationPerThread) {
     ASSERT(icv::Level == 1, "Bad distribute");
     ASSERT(icv::ActiveLevel == 1, "Bad distribute");
     ASSERT(state::ParallelRegionFn == nullptr, "Bad distribute");
@@ -882,12 +914,13 @@ public:
 
     // If we know we have more threads (across all blocks) than iterations we
     // can indicate that to avoid an outer loop.
-    bool OneIterationPerThread = false;
     if (config::getAssumeTeamsOversubscription() &
         config::getAssumeThreadsOversubscription()) {
       OneIterationPerThread = true;
-      ASSERT(NumBlocks * NumThreads >= NumIters, "Broken assumption");
     }
+
+    if (OneIterationPerThread)
+      ASSERT(NumBlocks * NumThreads >= NumIters, "Broken assumption");
 
     if (BlockChunk != NumThreads || ThreadChunk != 1)
       NormalizedLoopNestChunked(LoopBody, Arg, BlockChunk, NumBlocks, BId,
@@ -907,24 +940,26 @@ public:
 
 #define OMP_LOOP_ENTRY(BW, TY)                                                 \
   [[gnu::flatten, clang::always_inline]] void                                  \
-      __kmpc_distribute_for_static_loop##BW(                                   \
-          IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,       \
-          TY num_threads, TY block_chunk, TY thread_chunk) {                   \
+  __kmpc_distribute_for_static_loop##BW(                                       \
+      IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
+      TY num_threads, TY block_chunk, TY thread_chunk,                         \
+      uint8_t one_iteration_per_thread) {                                      \
     ompx::StaticLoopChunker<TY>::DistributeFor(                                \
-        loc, fn, arg, num_iters, num_threads, block_chunk, thread_chunk);      \
+        loc, fn, arg, num_iters, num_threads, block_chunk, thread_chunk,       \
+        one_iteration_per_thread);                                             \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void                                  \
-      __kmpc_distribute_static_loop##BW(IdentTy *loc, void (*fn)(TY, void *),  \
-                                        void *arg, TY num_iters,               \
-                                        TY block_chunk) {                      \
-    ompx::StaticLoopChunker<TY>::Distribute(loc, fn, arg, num_iters,           \
-                                            block_chunk);                      \
+  __kmpc_distribute_static_loop##BW(IdentTy *loc, void (*fn)(TY, void *),      \
+                                    void *arg, TY num_iters, TY block_chunk,   \
+                                    uint8_t one_iteration_per_thread) {        \
+    ompx::StaticLoopChunker<TY>::Distribute(                                   \
+        loc, fn, arg, num_iters, block_chunk, one_iteration_per_thread);       \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void __kmpc_for_static_loop##BW(      \
       IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
-      TY num_threads, TY thread_chunk) {                                       \
+      TY num_threads, TY thread_chunk, uint8_t one_iteration_per_thread) {     \
     ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters, num_threads,     \
-                                     thread_chunk);                            \
+                                     thread_chunk, one_iteration_per_thread);  \
   }
 
 extern "C" {

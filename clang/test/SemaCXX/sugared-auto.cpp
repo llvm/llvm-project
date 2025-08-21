@@ -54,7 +54,7 @@ N t4 = x4; // expected-error {{lvalue of type 'Man' (aka 'int')}}
 N t5 = x5; // expected-error {{lvalue of type 'Dog' (aka 'int')}}
 
 auto x6 = { Man(), Dog() };
-N t6 = x6; // expected-error {{from 'std::initializer_list<Animal>' (aka 'initializer_list<int>')}}
+N t6 = x6; // expected-error {{from 'std::initializer_list<Animal>' (aka 'std::initializer_list<int>')}}
 
 } // namespace variable
 
