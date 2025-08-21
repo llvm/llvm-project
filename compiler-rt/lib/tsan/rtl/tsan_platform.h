@@ -695,7 +695,7 @@ struct MappingGoRiscv64 {
   static const uptr kShadowBeg = 0x200000000000ull;
   static const uptr kShadowEnd = 0x240000000000ull;
   static const uptr kLoAppMemBeg = 0x000000010000ull;
-  static const uptr kLoAppMemEnd = 0x000e00000000ull;
+  static const uptr kLoAppMemEnd = 0x00e000000000ull;
   static const uptr kMidAppMemBeg = 0;
   static const uptr kMidAppMemEnd = 0;
   static const uptr kHiAppMemBeg = 0;
