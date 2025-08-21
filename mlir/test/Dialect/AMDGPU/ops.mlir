@@ -526,15 +526,15 @@ func.func @swizzle_bitmode(%arg0 : f32) -> f32 {
 
 // CHECK-LABEL: func @permlane16_swap
 func.func @permlane16_swap(%arg0 : f32) -> f32 {
-  // CHECK: amdgpu.permlane
-  %0 = amdgpu.permlane %arg0 swap_16 : f32
+  // CHECK: amdgpu.permlane_swap
+  %0 = amdgpu.permlane_swap %arg0 16 : f32
   func.return %0 : f32
 }
 
 // CHECK-LABEL: func @permlane32_swap
 func.func @permlane32_swap(%arg0 : f32) -> f32 {
-  // CHECK: amdgpu.permlane
-  %0 = amdgpu.permlane %arg0 swap_32 : f32
+  // CHECK: amdgpu.permlane_swap
+  %0 = amdgpu.permlane_swap %arg0 32 : f32
   func.return %0 : f32
 }
 

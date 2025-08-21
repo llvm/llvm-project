@@ -656,40 +656,27 @@ def AMDGPU_SwizzleBitModeOp : AMDGPU_Op<"swizzle_bitmode",
   }];
 }
 
-def AMDGPU_PermlanePerm : I32EnumAttr<"PermlanePerm",
-    "The possible permutations for a permlane operation",
-    [
-      I32EnumAttrCase<"swap_16",  0>,
-      I32EnumAttrCase<"swap_32",  1>,
-    ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::amdgpu";
-}
-
-def AMDGPU_PermlanePermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_PermlanePerm,
-  "permlane_perm">;
-
-def AMDGPU_PermlaneOp : AMDGPU_Op<"permlane", [Pure, AllTypesMatch<["result", "src"]>]> {
-  let summary = "AMDGPU permlane op";
+def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["result", "src"]>]> {
+  let summary = "AMDGPU permlane swap op";
   let description = [{
-    High-level wrapper on `rocdl.permlane.*` variants for permutations
-     on rows of lanes in a subgroup.
+    High-level wrapper on `rocdl.permlane{16,32}.swap` variants for permutations
+    on rows of lanes in a subgroup.
 
     Supports arbitrary int/float/vector types, which will be repacked to i32 and
-    one or more `rocdl.permlane.*` ops during lowering.
+    one or more `rocdl.permlane_swap` ops during lowering.
     Supported lane permutations:
-    - Swap the data between odd and even rows of 16 lanes (`swap_16`)
-    - Swap the data between the first 32 lanes and the last 32 lanes (`swap_32`)
+    - Swap the data between odd and even rows of 16 lanes
+    - Swap the data between the first 32 lanes and the last 32 lanes
 
     Example:
     ```mlir
-    %0 = amdgpu.permlane %src swap_16 : f16
-    %1 = amdgpu.permlane %src swap_32 { fetch_inactive = true, bound_ctrl = true } : f16
+    %0 = amdgpu.permlane %src 16 : f16
+    %1 = amdgpu.permlane %src 32 { fetch_inactive = true, bound_ctrl = true } : f16
     ```
 
     Operands:
     * `$src`: Vector register to permute across lanes of the subgroup.
-    * `$kind`: The kind of permutation operation.
+    * `$row_length`: The length of a row to permute in number of lanes (valid values are 16 and 32).
     * `$fetch_inactive`: Optional. Used to dertermine behavior of a fetch from a disabled lane.
       `fetch_inactive = false`: If the source lane is disabled, use `bound_ctrl` to determine the source value.
       `fetch_inactive = true`: If the source lane is disabled, fetch the source value anyway (ignoring `bound_ctrl`).
@@ -701,13 +688,14 @@ def AMDGPU_PermlaneOp : AMDGPU_Op<"permlane", [Pure, AllTypesMatch<["result", "s
     Note: Lowering is only supported on gfx950 and up.
   }];
   let arguments = (ins AnyIntegerOrFloatOr1DVector:$src,
-                       AMDGPU_PermlanePermAttr:$kind,
+                       I32Attr:$row_length,
                        DefaultValuedAttr<BoolAttr, "false">:$fetch_inactive,
                        DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl);
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
   let assemblyFormat = [{
-    $src $kind attr-dict `:` type($result)
+    $src $row_length attr-dict `:` type($result)
   }];
+  let hasVerifier = 1;
 }
 
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {

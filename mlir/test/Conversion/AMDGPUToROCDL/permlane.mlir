@@ -6,7 +6,7 @@ func.func @test_permlane16_i32(%arg0 : i32) -> i32 {
 // CHECK:  %[[PERM:.*]] = rocdl.permlane16.swap %[[ARG0]], %[[ARG0]], false, false : (i32, i32) -> <(i32, i32)>
 // CHECK:  %[[RES:.*]] = llvm.extractvalue %[[PERM]][0] : !llvm.struct<(i32, i32)>
 // CHECK:  return %[[RES]] : i32
-  %0 = amdgpu.permlane %arg0 swap_16 : i32
+  %0 = amdgpu.permlane_swap %arg0 16 : i32
   return %0 : i32
 }
 
@@ -16,7 +16,7 @@ func.func @test_permlane16_i32_optional_attr(%arg0 : i32) -> i32 {
 // CHECK:  %[[PERM:.*]] = rocdl.permlane16.swap %[[ARG0]], %[[ARG0]], true, true : (i32, i32) -> <(i32, i32)>
 // CHECK:  %[[RES:.*]] = llvm.extractvalue %[[PERM]][0] : !llvm.struct<(i32, i32)>
 // CHECK:  return %[[RES]] : i32
-  %0 = amdgpu.permlane %arg0 swap_16 { fetch_inactive = true, bound_ctrl = true }  : i32
+  %0 = amdgpu.permlane_swap %arg0 16 { fetch_inactive = true, bound_ctrl = true }  : i32
   return %0 : i32
 }
 
@@ -26,7 +26,7 @@ func.func @test_permlane32_i32(%arg0 : i32) -> i32 {
 // CHECK:  %[[PERM:.*]] = rocdl.permlane32.swap %[[ARG0]], %[[ARG0]], false, false : (i32, i32) -> <(i32, i32)>
 // CHECK:  %[[RES:.*]] = llvm.extractvalue %[[PERM]][0] : !llvm.struct<(i32, i32)>
 // CHECK:  return %[[RES]] : i32
-  %0 = amdgpu.permlane %arg0 swap_32 : i32
+  %0 = amdgpu.permlane_swap %arg0 32 : i32
   return %0 : i32
 }
 
@@ -38,7 +38,7 @@ func.func @test_permlane16_f32(%arg0 : f32) -> f32 {
 // CHECK:  %[[RES:.*]] = llvm.extractvalue %[[PERM]][0] : !llvm.struct<(i32, i32)>
 // CHECK:  %[[RES_CAST:.*]] = llvm.bitcast %[[RES]] : i32 to f32
 // CHECK:  return %[[RES_CAST]] : f32
-  %0 = amdgpu.permlane %arg0 swap_16 : f32
+  %0 = amdgpu.permlane_swap %arg0 16 : f32
   return %0 : f32
 }
 
@@ -50,7 +50,7 @@ func.func @test_permlane32_f32(%arg0 : f32) -> f32 {
 // CHECK:  %[[RES:.*]] = llvm.extractvalue %[[PERM]][0] : !llvm.struct<(i32, i32)>
 // CHECK:  %[[RES_CAST:.*]] = llvm.bitcast %[[RES]] : i32 to f32
 // CHECK:  return %[[RES_CAST]] : f32
-  %0 = amdgpu.permlane %arg0 swap_32 : f32
+  %0 = amdgpu.permlane_swap %arg0 32 : f32
   return %0 : f32
 }
 
@@ -64,7 +64,7 @@ func.func @test_permlane16_f16(%arg0 : f16) -> f16 {
 // CHECK:  %[[TRUNC:.*]] = llvm.trunc %[[RES]] : i32 to i16
 // CHECK:  %[[RES_CAST:.*]] = llvm.bitcast %[[TRUNC]] : i16 to f16
 // CHECK:  return %[[RES_CAST]] : f16
-  %0 = amdgpu.permlane %arg0 swap_16 : f16
+  %0 = amdgpu.permlane_swap %arg0 16 : f16
   return %0 : f16
 }
 
@@ -78,7 +78,7 @@ func.func @test_permlane32_f16(%arg0 : f16) -> f16 {
 // CHECK:  %[[TRUNC:.*]] = llvm.trunc %[[RES]] : i32 to i16
 // CHECK:  %[[RES_CAST:.*]] = llvm.bitcast %[[TRUNC]] : i16 to f16
 // CHECK:  return %[[RES_CAST]] : f16
-  %0 = amdgpu.permlane %arg0 swap_32 : f16
+  %0 = amdgpu.permlane_swap %arg0 32 : f16
   return %0 : f16
 }
 
@@ -97,7 +97,7 @@ func.func @test_permlane16_2xi32(%arg0 : vector<2xi32>) -> vector<2xi32> {
 // CHECK:      %[[VEC_INSERT0:.*]] = llvm.insertelement %[[PERM0]], %[[POISON]][%[[C0]] : i32] : vector<2xi32>
 // CHECK:      %[[VEC_INSERT1:.*]] = llvm.insertelement %[[PERM1]], %[[VEC_INSERT0]][%[[C1]] : i32] : vector<2xi32>
 // CHECK:      return %[[VEC_INSERT1]] : vector<2xi32>
-  %0 = amdgpu.permlane %arg0 swap_16 : vector<2xi32>
+  %0 = amdgpu.permlane_swap %arg0 16 : vector<2xi32>
   return %0 : vector<2xi32>
 }
 
@@ -116,7 +116,7 @@ func.func @test_permlane32_2xi32(%arg0 : vector<2xi32>) -> vector<2xi32> {
 // CHECK:      %[[VEC_INSERT0:.*]] = llvm.insertelement %[[PERM0]], %[[POISON]][%[[C0]] : i32] : vector<2xi32>
 // CHECK:      %[[VEC_INSERT1:.*]] = llvm.insertelement %[[PERM1]], %[[VEC_INSERT0]][%[[C1]] : i32] : vector<2xi32>
 // CHECK:      return %[[VEC_INSERT1]] : vector<2xi32>
-  %0 = amdgpu.permlane %arg0 swap_32 : vector<2xi32>
+  %0 = amdgpu.permlane_swap %arg0 32 : vector<2xi32>
   return %0 : vector<2xi32>
 }
 
@@ -137,7 +137,7 @@ func.func @test_permlane16_4xf16(%arg0 : vector<4xf16>) -> vector<4xf16> {
 // CHECK:      %[[VEC_INSERT1:.*]] = llvm.insertelement %[[PERM1]], %[[VEC_INSERT0]][%[[C1]] : i32] : vector<2xi32>
 // CHECK:      %[[CAST2:.*]] = llvm.bitcast %[[VEC_INSERT1]] : vector<2xi32> to vector<4xf16>
 // CHECK:      return %[[CAST2]] : vector<4xf16>
-  %0 = amdgpu.permlane %arg0 swap_16 : vector<4xf16>
+  %0 = amdgpu.permlane_swap %arg0 16 : vector<4xf16>
   return %0 : vector<4xf16>
 }
 
@@ -158,6 +158,6 @@ func.func @test_permlane32_4xf16(%arg0 : vector<4xf16>) -> vector<4xf16> {
 // CHECK:      %[[VEC_INSERT1:.*]] = llvm.insertelement %[[PERM1]], %[[VEC_INSERT0]][%[[C1]] : i32] : vector<2xi32>
 // CHECK:      %[[CAST2:.*]] = llvm.bitcast %[[VEC_INSERT1]] : vector<2xi32> to vector<4xf16>
 // CHECK:      return %[[CAST2]] : vector<4xf16>
-  %0 = amdgpu.permlane %arg0 swap_32 : vector<4xf16>
+  %0 = amdgpu.permlane_swap %arg0 32 : vector<4xf16>
   return %0 : vector<4xf16>
 }

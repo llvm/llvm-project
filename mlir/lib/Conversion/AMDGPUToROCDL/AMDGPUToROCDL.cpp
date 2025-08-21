@@ -1877,15 +1877,15 @@ struct AMDGPUSwizzleBitModeLowering
   }
 };
 
-struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneOp> {
+struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   AMDGPUPermlaneLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<PermlaneOp>(converter), chipset(chipset) {}
+      : ConvertOpToLLVMPattern<PermlaneSwapOp>(converter), chipset(chipset) {}
   Chipset chipset;
 
   LogicalResult
-  matchAndRewrite(PermlaneOp op, OpAdaptor adaptor,
+  matchAndRewrite(PermlaneSwapOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (chipset < kGfx950)
       return op->emitOpError("permlane_swap is only supported on gfx950+");
@@ -1893,7 +1893,7 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneOp> {
     Location loc = op.getLoc();
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
-    auto kind = op.getKind();
+    unsigned row_length = op.getRowLength();
     bool fi = op.getFetchInactive();
     bool boundctrl = op.getBoundCtrl();
 
@@ -1905,16 +1905,15 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneOp> {
       Value res;
       Type i32pair = LLVM::LLVMStructType::getLiteral(
           rewriter.getContext(), {v.getType(), v.getType()});
-      switch (kind) {
-      case PermlanePerm::swap_16:
+
+      if (row_length == 16)
         res = ROCDL::Permlane16SwapOp::create(rewriter, loc, i32pair, v, v, fi,
                                               boundctrl);
-        break;
-      case PermlanePerm::swap_32:
+      else if (row_length == 32)
         res = ROCDL::Permlane32SwapOp::create(rewriter, loc, i32pair, v, v, fi,
                                               boundctrl);
-        break;
-      }
+      else
+        llvm_unreachable("unsupported row length");
 
       Value vdstNew = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
       permuted.emplace_back(vdstNew);
