@@ -680,62 +680,70 @@ void VPlanTransforms::addMinimumIterationCheck(
   // vector trip count is zero. This check also covers the case where adding one
   // to the backedge-taken count overflowed leading to an incorrect trip count
   // of zero. In this case we will also jump to the scalar loop.
-  auto P = RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+  CmpInst::Predicate CmpPred =
+      RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
   // If tail is to be folded, vector loop takes care of all iterations.
-  const SCEV *Count = vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
-  Type *CountTy = Count->getType();
-  auto CreateStep = [&]() -> const SCEV * {
-    const SCEV *VFxUF = SE.getElementCount(CountTy, (VF * UF), SCEV::FlagNUW);
-    // Create step with max(MinProTripCount, UF * VF).
-    if (UF * VF.getKnownMinValue() >= MinProfitableTripCount.getKnownMinValue())
-      return VFxUF;
-
-    const SCEV *MinProfTC =
-        SE.getElementCount(CountTy, MinProfitableTripCount, SCEV::FlagNUW);
+  VPValue *TripCountVPV = Plan.getTripCount();
+  const SCEV *TripCount = vputils::getSCEVExprForVPValue(TripCountVPV, SE);
+  Type *TripCountTy = TripCount->getType();
+  auto CreateMinTripCount = [&]() -> const SCEV * {
+    // Create or get max(MinProfitableTripCount, UF * VF) and return it.
+    const SCEV *VFxUF =
+        SE.getElementCount(TripCountTy, (VF * UF), SCEV::FlagNUW);
+    const SCEV *MinProfitableTripCountSCEV =
+        SE.getElementCount(TripCountTy, MinProfitableTripCount, SCEV::FlagNUW);
+    const SCEV *Max = SE.getUMaxExpr(MinProfitableTripCountSCEV, VFxUF);
     if (!VF.isScalable())
-      return MinProfTC;
-    return SE.getUMaxExpr(MinProfTC, VFxUF);
+      return Max;
+
+    if (UF * VF.getKnownMinValue() >=
+        MinProfitableTripCount.getKnownMinValue()) {
+      // TODO: SCEV should be able to simplify test.
+      return VFxUF;
+    }
+
+    return Max;
   };
 
   VPBasicBlock *EntryVPBB = Plan.getEntry();
   VPBuilder Builder(EntryVPBB);
-  VPValue *CheckMinIters = Plan.getFalse();
-  const SCEV *Step = CreateStep();
+  VPValue *TripCountCheck = Plan.getFalse();
+  const SCEV *Step = CreateMinTripCount();
   if (!TailFolded) {
     // TODO: Emit unconditional branch to vector preheader instead of
     // conditional branch with known condition.
-    const SCEV *TripCountSCEV = SE.applyLoopGuards(Count, OrigLoop);
+    TripCount = SE.applyLoopGuards(TripCount, OrigLoop);
     // Check if the trip count is < the step.
-    if (SE.isKnownPredicate(P, TripCountSCEV, Step)) {
+    if (SE.isKnownPredicate(CmpPred, TripCount, Step)) {
       // TODO: Ensure step is at most the trip count when determining max VF and
       // UF, w/o tail folding.
-      CheckMinIters = Plan.getTrue();
-    } else if (!SE.isKnownPredicate(CmpInst::getInversePredicate(P),
-                                    TripCountSCEV, Step)) {
+      TripCountCheck = Plan.getTrue();
+    } else if (!SE.isKnownPredicate(CmpInst::getInversePredicate(CmpPred),
+                                    TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
-      CheckMinIters = Builder.createICmp(P, Plan.getTripCount(),
-                                         Builder.expandSCEV(Step, SE), DL,
-                                         "min.iters.check");
-    } // else step known to be < trip count, use CheckMinIters preset to false.
+      VPValue *MinTripCountVPV = Builder.createExpandSCEV(Step, SE);
+      TripCountCheck = Builder.createICmp(
+          CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
+    } // else step known to be < trip count, use TripCountCheck preset to false.
   } else if (CheckNeededWithTailFolding) {
     // vscale is not necessarily a power-of-2, which means we cannot guarantee
     // an overflow to zero when updating induction variables and so an
     // additional overflow check is required before entering the vector loop.
 
     // Get the maximum unsigned value for the type.
-    VPValue *MaxUIntTripCount = Plan.getOrAddLiveIn(
-        ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask()));
-    VPValue *LHS = Builder.createNaryOp(Instruction::Sub,
-                                        {MaxUIntTripCount, Plan.getTripCount()},
-                                        DebugLoc::getUnknown());
+    VPValue *MaxUIntTripCount = Plan.getOrAddLiveIn(ConstantInt::get(
+        TripCountTy, cast<IntegerType>(TripCountTy)->getMask()));
+    VPValue *DistanceToMax =
+        Builder.createNaryOp(Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
+                             DebugLoc::getUnknown());
 
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
-    CheckMinIters = Builder.createICmp(ICmpInst::ICMP_ULT, LHS,
-                                       Builder.expandSCEV(Step, SE), DL);
+    TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
+                                        Builder.createExpandSCEV(Step, SE), DL);
   }
   VPInstruction *Term =
-      Builder.createNaryOp(VPInstruction::BranchOnCond, {CheckMinIters}, DL);
+      Builder.createNaryOp(VPInstruction::BranchOnCond, {TripCountCheck}, DL);
   if (MinItersBypassWeights) {
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights = MDB.createBranchWeights(

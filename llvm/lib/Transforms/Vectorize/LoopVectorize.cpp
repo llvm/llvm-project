@@ -544,7 +544,8 @@ public:
 protected:
   friend class LoopVectorizationPlanner;
 
-  /// Create a new IR basic block for the scalar preheader.
+  /// Create a new IR basic block for the scalar preheader whose name is
+  /// prefixed with \p Prefix.
   void createScalarPreheader(StringRef Prefix);
 
   /// Allow subclasses to override and print debug traces before/after vplan
@@ -669,17 +670,6 @@ public:
                             UnrollFactor, CM, BFI, PSI, Checks, Plan),
         EPI(EPI), MinProfitableTripCount(MinProfitableTripCount) {}
 
-  // Override this function to handle the more complex control flow around the
-  // three loops.
-  BasicBlock *createVectorizedLoopSkeleton() final {
-    return createEpilogueVectorizedLoopSkeleton();
-  }
-
-  /// The interface for creating a vectorized skeleton using one of two
-  /// different strategies, each corresponding to one execution of the vplan
-  /// as described above.
-  virtual BasicBlock *createEpilogueVectorizedLoopSkeleton() = 0;
-
   /// Holds and updates state information required to vectorize the main loop
   /// and its epilogue in two separate passes. This setup helps us avoid
   /// regenerating and recomputing runtime safety checks. It also helps us to
@@ -710,10 +700,10 @@ public:
                                        EPI.MainLoopVF, EPI.MainLoopUF) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *main loop* strategy (ie the first pass of vplan execution).
-  BasicBlock *createEpilogueVectorizedLoopSkeleton() final;
+  BasicBlock *createVectorizedLoopSkeleton() final;
 
 protected:
-  // Create a check to see if the vector loop should be executed
+  // Create a check to see if the main vector loop should be executed
   Value *createIterationCountCheck(ElementCount VF, unsigned UF) const;
 
   /// Emits an iteration count bypass check once for the main loop (when \p
@@ -742,7 +732,7 @@ public:
   }
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (ie the second pass of vplan execution).
-  BasicBlock *createEpilogueVectorizedLoopSkeleton() final;
+  BasicBlock *createVectorizedLoopSkeleton() final;
 
 protected:
   /// Emits an iteration count bypass check after the main vector loop has
@@ -7268,7 +7258,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // at the wrong place.
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
     if (!isa<VPIRInstruction, VPIRPhi>(&R))
-      continue;
+      break;
     R.eraseFromParent();
   }
   for (Instruction &I : drop_begin(reverse(*Entry->getIRBasicBlock())))
@@ -7415,7 +7405,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
 /// This function is partially responsible for generating the control flow
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
-BasicBlock *EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
+BasicBlock *EpilogueVectorizerMainLoop::createVectorizedLoopSkeleton() {
   createScalarPreheader("");
 
   // Generate the code to check the minimum iteration count of the vector
@@ -7501,8 +7491,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 
 /// This function is partially responsible for generating the control flow
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
-BasicBlock *
-EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
+BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
   createScalarPreheader("vec.epilog.");
 
   // Now, compare the remaining count and if there aren't enough iterations to
@@ -9315,18 +9304,19 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
   // vscale is not necessarily a power-of-2, which means we cannot guarantee
   // an overflow to zero when updating induction variables and so an
   // additional overflow check is required before entering the vector loop.
-  bool CheckNeededWithTailFolding =
+  bool IsIndvarOverflowCheckNeededForVF =
       VF.isScalable() && !TTI.isVScaleKnownToBeAPowerOfTwo() &&
-      !isIndvarOverflowCheckKnownFalse(&CM, VF, 1) &&
+      !isIndvarOverflowCheckKnownFalse(&CM, VF, UF) &&
       CM.getTailFoldingStyle() !=
           TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+  const uint32_t *BranchWeigths =
+      hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
+          ? &MinItersBypassWeights[0]
+          : nullptr;
   VPlanTransforms::addMinimumIterationCheck(
       Plan, VF, UF, MinProfitableTripCount,
       CM.requiresScalarEpilogue(VF.isVector()), CM.foldTailByMasking(),
-      CheckNeededWithTailFolding, OrigLoop,
-      hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
-          ? &MinItersBypassWeights[0]
-          : nullptr,
+      IsIndvarOverflowCheckNeededForVF, OrigLoop, BranchWeigths,
       OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
       *PSE.getSE());
 }
