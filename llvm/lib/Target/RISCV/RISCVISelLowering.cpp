@@ -1809,6 +1809,15 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_masked_atomicrmw_umax_i32:
   case Intrinsic::riscv_masked_atomicrmw_umin_i32:
   case Intrinsic::riscv_masked_cmpxchg_i32:
+  case Intrinsic::riscv_masked_atomicrmw_xchg_i64:
+  case Intrinsic::riscv_masked_atomicrmw_add_i64:
+  case Intrinsic::riscv_masked_atomicrmw_sub_i64:
+  case Intrinsic::riscv_masked_atomicrmw_nand_i64:
+  case Intrinsic::riscv_masked_atomicrmw_max_i64:
+  case Intrinsic::riscv_masked_atomicrmw_min_i64:
+  case Intrinsic::riscv_masked_atomicrmw_umax_i64:
+  case Intrinsic::riscv_masked_atomicrmw_umin_i64:
+  case Intrinsic::riscv_masked_cmpxchg_i64:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
