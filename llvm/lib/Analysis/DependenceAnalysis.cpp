@@ -2256,6 +2256,34 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     assert(CurLoop == DstAddRec->getLoop() &&
            "both loops in SIV should be same");
     Level = mapSrcLoop(CurLoop);
+
+    // Check if either AddRec may wrap, which would invalidate SIV analysis
+    auto addWrapPredicate = [&](const SCEVAddRecExpr *AR, const char *Name) {
+      std::optional<bool> MayWrap = SE->mayAddRecWrap(AR);
+      if (MayWrap == true) {
+        LLVM_DEBUG(dbgs() << "\tSIV test skipped due to wrapping " << Name
+                          << " AddRec\n");
+        return false;
+      }
+      if (!MayWrap.has_value()) {
+        // Unknown wrapping - add runtime predicate.
+        auto WrapFlags = static_cast<SCEVWrapPredicate::IncrementWrapFlags>(
+            SCEVWrapPredicate::IncrementNUSW |
+            SCEVWrapPredicate::IncrementNSSW);
+        const SCEVPredicate *WrapPred = SE->getWrapPredicate(AR, WrapFlags);
+        const_cast<DependenceInfo *>(this)->Assumptions.push_back(WrapPred);
+        LLVM_DEBUG(dbgs() << "\t    Added runtime wrap assumption for " << Name
+                          << ": " << *AR << "\n");
+      }
+      return true;
+    };
+
+    if (!addWrapPredicate(SrcAddRec, "Src") ||
+        !addWrapPredicate(DstAddRec, "Dst")) {
+      // Conservative - cannot prove independence.
+      return false;
+    }
+
     bool disproven;
     if (SrcCoeff == DstCoeff)
       disproven = strongSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop, Level,

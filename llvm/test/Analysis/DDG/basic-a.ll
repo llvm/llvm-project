@@ -98,7 +98,7 @@ for.end:                                          ; preds = %test1.for.body, %en
 
 ; CHECK: Node Address:[[N2]]:single-instruction
 ; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %inc = add i64 %i.02, 1
+; CHECK-NEXT:    %inc = add nsw i64 %i.02, 1
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N1]]
 ; CHECK-NEXT: --- end of nodes in pi-block ---
@@ -168,7 +168,7 @@ test2.for.body:                                         ; preds = %entry, %test2
   %add = fadd float %0, %1
   %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %i.02
   store float %add, ptr %arrayidx2, align 4
-  %inc = add i64 %i.02, 1
+  %inc = add nsw i64 %i.02, 1
   %exitcond = icmp ne i64 %inc, %n
   br i1 %exitcond, label %test2.for.body, label %for.end
 

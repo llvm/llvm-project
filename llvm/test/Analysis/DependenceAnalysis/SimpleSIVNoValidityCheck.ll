@@ -81,8 +81,14 @@ define void @t2(i32 signext %n, i32 signext %m, ptr %a) {
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %21 = load i32, ptr %arrayidx28, align 4 --> Dst: store i32 %21, ptr %arrayidx38, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [1 -2 0 -3 2]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    {0,+,1}<%for.body12> Added Flags: <nusw><nssw>
+; CHECK-NEXT:    {3,+,1}<%for.body12> Added Flags: <nusw><nssw>
 ; CHECK-NEXT:  Src: store i32 %21, ptr %arrayidx38, align 4 --> Dst: store i32 %21, ptr %arrayidx38, align 4
 ; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Runtime Assumptions:
+; CHECK-NEXT:  {0,+,1}<%for.body12> Added Flags: <nusw><nssw>
+; CHECK-NEXT:  {3,+,1}<%for.body12> Added Flags: <nusw><nssw>
 ;
 ; LIN-LABEL: 't2'
 ; LIN-NEXT:  Src: %21 = load i32, ptr %arrayidx28, align 4 --> Dst: %21 = load i32, ptr %arrayidx28, align 4
@@ -211,8 +217,14 @@ define void @t3(i64 %n, i64 %m, i64 %lb, ptr %a) {
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %2, ptr %arrayidx8, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [1 -2]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    {(-2 + %lb),+,1}<%for.body4> Added Flags: <nusw><nssw>
+; CHECK-NEXT:    {%lb,+,1}<%for.body4> Added Flags: <nusw><nssw>
 ; CHECK-NEXT:  Src: store i32 %2, ptr %arrayidx8, align 4 --> Dst: store i32 %2, ptr %arrayidx8, align 4
 ; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Runtime Assumptions:
+; CHECK-NEXT:  {(-2 + %lb),+,1}<%for.body4> Added Flags: <nusw><nssw>
+; CHECK-NEXT:  {%lb,+,1}<%for.body4> Added Flags: <nusw><nssw>
 ;
 ; LIN-LABEL: 't3'
 ; LIN-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: %2 = load i32, ptr %arrayidx6, align 4

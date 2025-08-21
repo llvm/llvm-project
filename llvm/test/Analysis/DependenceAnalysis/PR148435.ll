@@ -6,9 +6,6 @@
 ; expressions contain AddRec after propagation, which can happen when
 ; constraints simplify the expressions to non-AddRec forms.
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
-target triple = "aarch64-unknown-linux-gnu"
-
 define void @_Z1cb(ptr %a) {
 ; CHECK-LABEL: '_Z1cb'
 ; CHECK-NEXT:  Src: store i8 0, ptr %arrayidx9, align 1 --> Dst: store i8 0, ptr %arrayidx9, align 1
@@ -75,8 +72,7 @@ for.end10:                                        ; preds = %for.cond
 define void @f1(ptr %a) {
 ; CHECK-LABEL: 'f1'
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - none!
-; Note: the second patch for PR148435 modifies the above CHECK to correct "output [*]".
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   br label %loop

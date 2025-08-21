@@ -6502,8 +6502,37 @@ void ScalarEvolution::setNoWrapFlags(SCEVAddRecExpr *AddRec,
   }
 }
 
-ConstantRange ScalarEvolution::
-getRangeForUnknownRecurrence(const SCEVUnknown *U) {
+std::optional<bool>
+ScalarEvolution::mayAddRecWrap(const SCEVAddRecExpr *AddRec) {
+  if (AddRec->hasNoSelfWrap())
+    return false;
+
+  // For simple constant step cases, do explicit wrapping check.
+  const SCEV *Step = AddRec->getStepRecurrence(*this);
+  const SCEVConstant *ConstStep = dyn_cast<SCEVConstant>(Step);
+  if (ConstStep) {
+    const Loop *Loop = AddRec->getLoop();
+    if (hasLoopInvariantBackedgeTakenCount(Loop)) {
+      const SCEV *BTC = getBackedgeTakenCount(Loop);
+      const SCEVConstant *ConstBTC = dyn_cast<SCEVConstant>(BTC);
+      if (ConstBTC) {
+        // Check if step * iterations would exceed type range.
+        APInt StepVal = ConstStep->getAPInt();
+        APInt BTCVal = ConstBTC->getAPInt();
+        unsigned BitWidth = AddRec->getType()->getScalarSizeInBits();
+
+        bool Overflow = false;
+        APInt Product = StepVal.zext(64).umul_ov(BTCVal.zext(64), Overflow);
+
+        return Overflow || Product.getZExtValue() >= (1ULL << BitWidth);
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+ConstantRange
+ScalarEvolution::getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   const DataLayout &DL = getDataLayout();
 
   unsigned BitWidth = getTypeSizeInBits(U->getType());
