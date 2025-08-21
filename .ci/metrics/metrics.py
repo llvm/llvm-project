@@ -96,13 +96,21 @@ class AggregateMetric:
     aggregate_queue_time: int
     aggregate_run_time: int
     aggregate_status: int
+    completed_at_ns: int
     workflow_id: int
 
 
 def create_and_append_libcxx_aggregates(
     workflow_metrics: list[JobMetrics]) -> list[JobMetrics,AggregateMetric]:
-    """
-    Find libc++ JobMetric entries and create aggregate metrics for them.
+    """Find libc++ JobMetric entries and create aggregate metrics for them.
+
+    Args:
+      workflow_metrics: A list of JobMetrics entries collected so far.
+
+    Returns:
+      Returns a list of JobMetrics and AggregateMetric entries. It should
+        be the input list with the newly create AggregateMetric entries
+        appended to it.
 
     Sort the libc++ JobMetric entries by workflow id, and for each workflow
     id group them by stages.  Create an aggreate metric for each stage for each
@@ -194,19 +202,25 @@ def create_and_append_libcxx_aggregates(
             workflow_metrics.append(
                 AggregateMetric(
                     ag_name, ag_queue_time, ag_run_time, ag_status,
-                    ag_workflow_id
+                    last_complete, ag_workflow_id
                 )
             )
     return
 
 def clean_up_libcxx_job_name(old_name: str) -> str:
-    """
-    Convert libcxx job names to generically legal strings.
+    """Convert libcxx job names to generically legal strings.
+
+    Args:
+      old_name: A string with the full name of the libc++ test that was run.
+
+    Returns:
+      Returns the input string with characters that might not be acceptable
+        in some indentifier strings replaced with safer characters.
 
     Take a name like 'stage1 (generic-cxx03, clang-22, clang++-22)'
     and convert it to 'stage1_generic_cxx03__clang_22__clangxx_22'.
     (Remove parentheses; replace commas, hyphens and spaces with
-    underscores; replace '+' with 'x'.
+    underscores; replace '+' with 'x'.)
     """
     # Names should have exactly one set of parentheses, so break on that. If
     # they don't have any parentheses, then don't update them at all.
@@ -285,8 +299,7 @@ def github_get_metrics(
             break
 
         # This workflow is not interesting to us.
-        if (task.name not in GITHUB_WORKFLOW_TO_TRACK
-            and task.name != "Build and Test libc++"):
+        if (task.name not in GITHUB_WORKFLOW_TO_TRACK):
             continue
 
         libcxx_testing = False
@@ -441,6 +454,11 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
             name = workflow_metric.job_name.lower().replace(" ", "_")
             metrics_batch.append(
                 f"{name} queue_time={workflow_metric.queue_time},run_time={workflow_metric.run_time},status={workflow_metric.status} {workflow_metric.completed_at_ns}"
+            )
+        elif isinstance(workflow_metric, AggregateMetric):
+            name = workflow_metric.aggregate_name.lower().replace(" ", "_")
+            metrics_batch.append(
+                f"{name} queue_time={workflow_metric.aggregate_queue_time},run_time={workflow_metric.aggregate_run_time},status={workflow_metric.aggregate_status} {workflow_metric.completed_at_ns}"
             )
         else:
             raise ValueError(
