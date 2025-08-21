@@ -156,13 +156,14 @@ minSMLoc(AsmParser &parser, llvm::SMLoc sm1, llvm::SMLoc sm2) {
   return pair1 <= pair2 ? sm1 : sm2;
 }
 
-bool isInternalConsistent(VarEnv const &env, VarInfo::ID id, StringRef name) {
+static bool isInternalConsistent(VarEnv const &env, VarInfo::ID id,
+                                 StringRef name) {
   const auto &var = env.access(id);
   return (var.getName() == name && var.getID() == id);
 }
 
-bool isUsageConsistent(VarEnv const &env, VarInfo::ID id, llvm::SMLoc loc,
-                       VarKind vk) {
+static bool isUsageConsistent(VarEnv const &env, VarInfo::ID id,
+                              llvm::SMLoc loc, VarKind vk) {
   const auto &var = env.access(id);
   return var.getKind() == vk;
 }
