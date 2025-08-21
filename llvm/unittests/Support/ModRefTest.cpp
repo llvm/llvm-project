@@ -21,7 +21,7 @@ TEST(ModRefTest, PrintMemoryEffects) {
   raw_string_ostream OS(S);
   OS << MemoryEffects::none();
   EXPECT_EQ(S, "ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: "
-               "NoModRef, AARCH64_FPMR: NoModRef, AARCH64_ZA: NoModRef, Other: "
+               "NoModRef, MEM_TARGET_0: NoModRef, MEM_TARGET_1: NoModRef, Other: "
                "NoModRef");
 }
 
