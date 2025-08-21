@@ -8485,7 +8485,7 @@ resolve to an object defined in one of the indicated address spaces.
 ^^^^^^^^^^^^^^^^^^^^^
 
 The ``nofree`` metadata indicates the memory pointed by the pointer will not be
-freed during the execution of the function . This is analogous to the ``nofree``
+freed after the attached instruction. This is analogous to the ``nofree``
 function argument attribute.
 
 
@@ -12628,8 +12628,7 @@ See ``dereferenceable_or_null`` metadata.
 The optional ``!nofree`` metadata must reference a single metadata name
 ``<empty_node>`` corresponding to a metadata node with no entries.
 The existence of the ``!nofree`` metadata on the instruction tells the optimizer
-that the memory pointed by the pointer will not be freed during the execution of
-the function.
+that the memory pointed by the pointer will not be freed after this point.
 
 Semantics:
 """"""""""
