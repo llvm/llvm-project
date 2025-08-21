@@ -1119,6 +1119,14 @@ public:
     return currentFunctionUnit;
   }
 
+  void checkCoarrayEnabled() override final {
+    if (!getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::Coarray))
+      fir::emitFatalError(getCurrentLocation(),
+                          "Coarrays disabled, use '-fcoarray' to enable.",
+                          false);
+  }
+
   void registerTypeInfo(mlir::Location loc,
                         Fortran::lower::SymbolRef typeInfoSym,
                         const Fortran::semantics::DerivedTypeSpec &typeSpec,

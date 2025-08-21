@@ -49,15 +49,6 @@ static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
   builder.setInsertionPointToStart(newBlock);
 }
 
-// Check support of Multi-image features if -fcoarray is provided
-void checkCoarrayEnabled(Fortran::lower::AbstractConverter &converter,
-                         mlir::Location loc) {
-  if (!converter.getFoldingContext().languageFeatures().IsEnabled(
-          Fortran::common::LanguageFeature::Coarray))
-    fir::emitFatalError(loc, "Coarrays disabled, use '-fcoarray' to enable.",
-                        false);
-}
-
 /// Initializes values for STAT and ERRMSG
 static std::pair<mlir::Value, mlir::Value> getStatAndErrmsg(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
@@ -217,7 +208,7 @@ void Fortran::lower::genSyncAllStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncAllStmt &stmt) {
   mlir::Location loc = converter.getCurrentLocation();
-  checkCoarrayEnabled(converter, loc);
+  converter.checkCoarrayEnabled();
 
   // Handle STAT and ERRMSG values
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList = stmt.v;
@@ -231,7 +222,7 @@ void Fortran::lower::genSyncImagesStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncImagesStmt &stmt) {
   mlir::Location loc = converter.getCurrentLocation();
-  checkCoarrayEnabled(converter, loc);
+  converter.checkCoarrayEnabled();
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   // Handle STAT and ERRMSG values
@@ -268,7 +259,7 @@ void Fortran::lower::genSyncMemoryStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::SyncMemoryStmt &stmt) {
   mlir::Location loc = converter.getCurrentLocation();
-  checkCoarrayEnabled(converter, loc);
+  converter.checkCoarrayEnabled();
 
   // Handle STAT and ERRMSG values
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList = stmt.v;
