@@ -35,6 +35,11 @@ Type *classifyPointerType(const Value *V, PointerTypeMap &Map) {
   if (const Function *F = dyn_cast<Function>(V))
     return classifyFunctionType(*F, Map);
 
+  // There can potentially be dead constants hanging off of the globals we do
+  // not want to deal with. So we remove them here.
+  if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+    GV->removeDeadConstantUsers();
+
   auto It = Map.find(V);
   if (It != Map.end())
     return It->second;
