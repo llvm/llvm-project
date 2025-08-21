@@ -137,18 +137,32 @@ define void @generic_4xi64(ptr %a, ptr %b) {
 }
 
 define void @generic_8xfloat(ptr %a, ptr %b) {
-; CHECK-LABEL: generic_8xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<7>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_8xfloat_param_0];
-; CHECK-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [generic_8xfloat_param_1];
-; CHECK-NEXT:    st.v2.b64 [%rd6+16], {%rd4, %rd5};
-; CHECK-NEXT:    st.v2.b64 [%rd6], {%rd2, %rd3};
-; CHECK-NEXT:    ret;
+; SM90-LABEL: generic_8xfloat(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [generic_8xfloat_param_0];
+; SM90-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM90-NEXT:    ld.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd2, [generic_8xfloat_param_1];
+; SM90-NEXT:    st.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    st.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    ret;
+;
+; SM100-LABEL: generic_8xfloat(
+; SM100:       {
+; SM100-NEXT:    .reg .b64 %rd<7>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param.b64 %rd1, [generic_8xfloat_param_0];
+; SM100-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
+; SM100-NEXT:    ld.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; SM100-NEXT:    ld.param.b64 %rd6, [generic_8xfloat_param_1];
+; SM100-NEXT:    st.v2.b64 [%rd6+16], {%rd4, %rd5};
+; SM100-NEXT:    st.v2.b64 [%rd6], {%rd2, %rd3};
+; SM100-NEXT:    ret;
   %a.load = load <8 x float>, ptr %a
   store <8 x float> %a.load, ptr %b
   ret void
@@ -288,18 +302,32 @@ define void @generic_volatile_4xi64(ptr %a, ptr %b) {
 }
 
 define void @generic_volatile_8xfloat(ptr %a, ptr %b) {
-; CHECK-LABEL: generic_volatile_8xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<7>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_8xfloat_param_0];
-; CHECK-NEXT:    ld.volatile.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.volatile.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [generic_volatile_8xfloat_param_1];
-; CHECK-NEXT:    st.volatile.v2.b64 [%rd6+16], {%rd4, %rd5};
-; CHECK-NEXT:    st.volatile.v2.b64 [%rd6], {%rd2, %rd3};
-; CHECK-NEXT:    ret;
+; SM90-LABEL: generic_volatile_8xfloat(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [generic_volatile_8xfloat_param_0];
+; SM90-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM90-NEXT:    ld.volatile.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd2, [generic_volatile_8xfloat_param_1];
+; SM90-NEXT:    st.volatile.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    st.volatile.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    ret;
+;
+; SM100-LABEL: generic_volatile_8xfloat(
+; SM100:       {
+; SM100-NEXT:    .reg .b64 %rd<7>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param.b64 %rd1, [generic_volatile_8xfloat_param_0];
+; SM100-NEXT:    ld.volatile.v2.b64 {%rd2, %rd3}, [%rd1];
+; SM100-NEXT:    ld.volatile.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; SM100-NEXT:    ld.param.b64 %rd6, [generic_volatile_8xfloat_param_1];
+; SM100-NEXT:    st.volatile.v2.b64 [%rd6+16], {%rd4, %rd5};
+; SM100-NEXT:    st.volatile.v2.b64 [%rd6], {%rd2, %rd3};
+; SM100-NEXT:    ret;
   %a.load = load volatile <8 x float>, ptr %a
   store volatile <8 x float> %a.load, ptr %b
   ret void
@@ -514,15 +542,16 @@ define void @global_4xi64(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 define void @global_8xfloat(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-LABEL: global_8xfloat(
 ; SM90:       {
-; SM90-NEXT:    .reg .b64 %rd<7>;
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param.b64 %rd1, [global_8xfloat_param_0];
-; SM90-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
-; SM90-NEXT:    ld.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd6, [global_8xfloat_param_1];
-; SM90-NEXT:    st.global.v2.b64 [%rd6+16], {%rd4, %rd5};
-; SM90-NEXT:    st.global.v2.b64 [%rd6], {%rd2, %rd3};
+; SM90-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM90-NEXT:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd2, [global_8xfloat_param_1];
+; SM90-NEXT:    st.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    st.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: global_8xfloat(
@@ -758,15 +787,16 @@ define void @global_volatile_4xi64(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 define void @global_volatile_8xfloat(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-LABEL: global_volatile_8xfloat(
 ; SM90:       {
-; SM90-NEXT:    .reg .b64 %rd<7>;
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param.b64 %rd1, [global_volatile_8xfloat_param_0];
-; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd2, %rd3}, [%rd1];
-; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd6, [global_volatile_8xfloat_param_1];
-; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6+16], {%rd4, %rd5};
-; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6], {%rd2, %rd3};
+; SM90-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM90-NEXT:    ld.volatile.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd2, [global_volatile_8xfloat_param_1];
+; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: global_volatile_8xfloat(
@@ -931,18 +961,32 @@ define void @shared_4xi64(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 }
 
 define void @shared_8xfloat(ptr addrspace(3) %a, ptr addrspace(3) %b) {
-; CHECK-LABEL: shared_8xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<7>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_8xfloat_param_0];
-; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [shared_8xfloat_param_1];
-; CHECK-NEXT:    st.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
-; CHECK-NEXT:    st.shared.v2.b64 [%rd6], {%rd2, %rd3};
-; CHECK-NEXT:    ret;
+; SM90-LABEL: shared_8xfloat(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [shared_8xfloat_param_0];
+; SM90-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM90-NEXT:    ld.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd2, [shared_8xfloat_param_1];
+; SM90-NEXT:    st.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    st.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    ret;
+;
+; SM100-LABEL: shared_8xfloat(
+; SM100:       {
+; SM100-NEXT:    .reg .b64 %rd<7>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param.b64 %rd1, [shared_8xfloat_param_0];
+; SM100-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
+; SM100-NEXT:    ld.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; SM100-NEXT:    ld.param.b64 %rd6, [shared_8xfloat_param_1];
+; SM100-NEXT:    st.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
+; SM100-NEXT:    st.shared.v2.b64 [%rd6], {%rd2, %rd3};
+; SM100-NEXT:    ret;
   %a.load = load <8 x float>, ptr addrspace(3) %a
   store <8 x float> %a.load, ptr addrspace(3) %b
   ret void
@@ -1082,18 +1126,32 @@ define void @shared_volatile_4xi64(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 }
 
 define void @shared_volatile_8xfloat(ptr addrspace(3) %a, ptr addrspace(3) %b) {
-; CHECK-LABEL: shared_volatile_8xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<7>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_8xfloat_param_0];
-; CHECK-NEXT:    ld.volatile.shared.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.volatile.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [shared_volatile_8xfloat_param_1];
-; CHECK-NEXT:    st.volatile.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
-; CHECK-NEXT:    st.volatile.shared.v2.b64 [%rd6], {%rd2, %rd3};
-; CHECK-NEXT:    ret;
+; SM90-LABEL: shared_volatile_8xfloat(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [shared_volatile_8xfloat_param_0];
+; SM90-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM90-NEXT:    ld.volatile.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd2, [shared_volatile_8xfloat_param_1];
+; SM90-NEXT:    st.volatile.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    st.volatile.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    ret;
+;
+; SM100-LABEL: shared_volatile_8xfloat(
+; SM100:       {
+; SM100-NEXT:    .reg .b64 %rd<7>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param.b64 %rd1, [shared_volatile_8xfloat_param_0];
+; SM100-NEXT:    ld.volatile.shared.v2.b64 {%rd2, %rd3}, [%rd1];
+; SM100-NEXT:    ld.volatile.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; SM100-NEXT:    ld.param.b64 %rd6, [shared_volatile_8xfloat_param_1];
+; SM100-NEXT:    st.volatile.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
+; SM100-NEXT:    st.volatile.shared.v2.b64 [%rd6], {%rd2, %rd3};
+; SM100-NEXT:    ret;
   %a.load = load volatile <8 x float>, ptr addrspace(3) %a
   store volatile <8 x float> %a.load, ptr addrspace(3) %b
   ret void
@@ -1235,18 +1293,32 @@ define void @local_4xi64(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 }
 
 define void @local_8xfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) {
-; CHECK-LABEL: local_8xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<7>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_8xfloat_param_0];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [local_8xfloat_param_1];
-; CHECK-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
-; CHECK-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
-; CHECK-NEXT:    ret;
+; SM90-LABEL: local_8xfloat(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [local_8xfloat_param_0];
+; SM90-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM90-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd2, [local_8xfloat_param_1];
+; SM90-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    ret;
+;
+; SM100-LABEL: local_8xfloat(
+; SM100:       {
+; SM100-NEXT:    .reg .b64 %rd<7>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param.b64 %rd1, [local_8xfloat_param_0];
+; SM100-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
+; SM100-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; SM100-NEXT:    ld.param.b64 %rd6, [local_8xfloat_param_1];
+; SM100-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
+; SM100-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
+; SM100-NEXT:    ret;
   %a.load = load <8 x float>, ptr addrspace(5) %a
   store <8 x float> %a.load, ptr addrspace(5) %b
   ret void
@@ -1386,18 +1458,32 @@ define void @local_volatile_4xi64(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 }
 
 define void @local_volatile_8xfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) {
-; CHECK-LABEL: local_volatile_8xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<7>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_8xfloat_param_0];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [local_volatile_8xfloat_param_1];
-; CHECK-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
-; CHECK-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
-; CHECK-NEXT:    ret;
+; SM90-LABEL: local_volatile_8xfloat(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [local_volatile_8xfloat_param_0];
+; SM90-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; SM90-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd2, [local_volatile_8xfloat_param_1];
+; SM90-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    ret;
+;
+; SM100-LABEL: local_volatile_8xfloat(
+; SM100:       {
+; SM100-NEXT:    .reg .b64 %rd<7>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param.b64 %rd1, [local_volatile_8xfloat_param_0];
+; SM100-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
+; SM100-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; SM100-NEXT:    ld.param.b64 %rd6, [local_volatile_8xfloat_param_1];
+; SM100-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
+; SM100-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
+; SM100-NEXT:    ret;
   %a.load = load volatile <8 x float>, ptr addrspace(5) %a
   store volatile <8 x float> %a.load, ptr addrspace(5) %b
   ret void
