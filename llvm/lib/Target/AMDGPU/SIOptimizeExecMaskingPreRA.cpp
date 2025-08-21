@@ -14,6 +14,7 @@
 
 #include "SIOptimizeExecMaskingPreRA.h"
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -32,11 +33,8 @@ private:
   const SIInstrInfo *TII;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
+  const AMDGPU::LaneMaskConstants *LMC;
 
-  unsigned AndOpc;
-  unsigned Andn2Opc;
-  unsigned OrSaveExecOpc;
-  unsigned XorTermrOpc;
   MCRegister CondReg;
   MCRegister ExecReg;
 
@@ -138,8 +136,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 
   auto *And =
       TRI->findReachingDef(CondReg, AMDGPU::NoSubRegister, *I, *MRI, LIS);
-  if (!And || And->getOpcode() != AndOpc ||
-      !And->getOperand(1).isReg() || !And->getOperand(2).isReg())
+  if (!And || And->getOpcode() != LMC->AndOpc || !And->getOperand(1).isReg() ||
+      !And->getOperand(2).isReg())
     return false;
 
   MachineOperand *AndCC = &And->getOperand(1);
@@ -207,7 +205,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
                     << *And);
 
   MachineInstr *Andn2 =
-      BuildMI(MBB, *And, And->getDebugLoc(), TII->get(Andn2Opc),
+      BuildMI(MBB, *And, And->getDebugLoc(), TII->get(LMC->AndN2Opc),
               And->getOperand(0).getReg())
           .addReg(ExecReg)
           .addReg(CCReg, getUndefRegState(CC->isUndef()), CC->getSubReg());
@@ -294,11 +292,11 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
   // Check this is an else block.
   auto First = MBB.begin();
   MachineInstr &SaveExecMI = *First;
-  if (SaveExecMI.getOpcode() != OrSaveExecOpc)
+  if (SaveExecMI.getOpcode() != LMC->OrSaveExecOpc)
     return false;
 
   auto I = llvm::find_if(MBB.terminators(), [this](const MachineInstr &MI) {
-    return MI.getOpcode() == XorTermrOpc;
+    return MI.getOpcode() == LMC->XorTermOpc;
   });
   if (I == MBB.terminators().end())
     return false;
@@ -314,7 +312,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
   MachineInstr *AndExecMI = nullptr;
   I--;
   while (I != First && !AndExecMI) {
-    if (I->getOpcode() == AndOpc && I->getOperand(0).getReg() == DstReg &&
+    if (I->getOpcode() == LMC->AndOpc && I->getOperand(0).getReg() == DstReg &&
         I->getOperand(1).getReg() == Register(ExecReg))
       AndExecMI = &*I;
     I--;
@@ -371,14 +369,9 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
 
-  const bool Wave32 = ST.isWave32();
-  AndOpc = Wave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
-  Andn2Opc = Wave32 ? AMDGPU::S_ANDN2_B32 : AMDGPU::S_ANDN2_B64;
-  OrSaveExecOpc =
-      Wave32 ? AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
-  XorTermrOpc = Wave32 ? AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
-  CondReg = MCRegister::from(Wave32 ? AMDGPU::VCC_LO : AMDGPU::VCC);
-  ExecReg = MCRegister::from(Wave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC);
+  LMC = &AMDGPU::getLaneMaskConstants(&ST);
+  CondReg = MCRegister::from(LMC->VccReg);
+  ExecReg = MCRegister::from(LMC->ExecReg);
 
   DenseSet<Register> RecalcRegs({AMDGPU::EXEC_LO, AMDGPU::EXEC_HI});
   bool Changed = false;
