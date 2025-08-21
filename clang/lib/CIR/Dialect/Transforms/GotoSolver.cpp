@@ -1,3 +1,10 @@
+//====- GotoSolver.cpp -----------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "PassDetail.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
@@ -10,13 +17,11 @@ using namespace cir;
 namespace {
 
 struct GotoSolverPass : public GotoSolverBase<GotoSolverPass> {
-
   GotoSolverPass() = default;
   void runOnOperation() override;
 };
 
 static void process(cir::FuncOp func) {
-
   mlir::OpBuilder rewriter(func.getContext());
   llvm::StringMap<Block *> labels;
   llvm::SmallVector<cir::GotoOp, 4> gotos;
@@ -35,14 +40,14 @@ static void process(cir::FuncOp func) {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(goTo);
     Block *dest = labels[goTo.getLabel()];
-    rewriter.create<cir::BrOp>(goTo.getLoc(), dest);
+    cir::BrOp::create(rewriter, goTo.getLoc(), dest);
     goTo.erase();
   }
 }
 
 void GotoSolverPass::runOnOperation() {
   llvm::TimeTraceScope scope("Goto Solver");
-  getOperation()->walk([&](cir::FuncOp op) { process(op); });
+  getOperation()->walk(&process);
 }
 
 } // namespace
