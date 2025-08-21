@@ -85,12 +85,6 @@ static DecodeStatus DecodeXR32RegisterClass(MCInst &Inst, uint64_t RegNo,
   return DecodeRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static DecodeStatus DecodeXR32RegisterClass(MCInst &Inst, APInt RegNo,
-                                            uint64_t Address,
-                                            const void *Decoder) {
-  return DecodeRegisterClass(Inst, RegNo.getZExtValue(), Address, Decoder);
-}
-
 static DecodeStatus DecodeXR16RegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
@@ -112,18 +106,6 @@ static DecodeStatus DecodeFPCSCRegisterClass(MCInst &Inst, uint64_t RegNo,
   return DecodeRegisterClass(Inst, (RegNo >> 1) + 24, Address, Decoder);
 }
 #define DecodeFPICRegisterClass DecodeFPCSCRegisterClass
-
-static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, APInt &Insn,
-                                            uint64_t Address,
-                                            const void *Decoder) {
-  llvm_unreachable("unimplemented");
-}
-
-static DecodeStatus DecodeSRCRegisterClass(MCInst &Inst, APInt &Insn,
-                                           uint64_t Address,
-                                           const void *Decoder) {
-  llvm_unreachable("unimplemented");
-}
 
 static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                 const void *Decoder) {
