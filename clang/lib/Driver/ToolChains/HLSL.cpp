@@ -315,6 +315,8 @@ void tools::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Frs);
   }
 
+  assert(CmdArgs.size() > 2 && "Unnecessary invocation of objcopy.");
+
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Input));
 }
