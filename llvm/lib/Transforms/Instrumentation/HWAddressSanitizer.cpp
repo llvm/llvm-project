@@ -1574,7 +1574,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   if (F.empty())
     return;
 
-  if(F.isPresplitCoroutine())
+  if (F.isPresplitCoroutine())
     return;
 
   NumTotalFuncs++;
