@@ -4783,25 +4783,15 @@ struct OmpEndDirective : public OmpDirectiveSpecification {
 // Common base class for block-associated constructs.
 struct OmpBlockConstruct {
   TUPLE_CLASS_BOILERPLATE(OmpBlockConstruct);
-  ENUM_CLASS(Flags, None, MissingMandatoryEndDirective);
-
-  /// Constructor with defualt value for Flags.
-  OmpBlockConstruct(OmpBeginDirective &&begin, Block &&block,
-      std::optional<OmpEndDirective> &&end)
-      : t(std::move(begin), std::move(block), std::move(end), Flags::None) {}
-
   const OmpBeginDirective &BeginDir() const {
     return std::get<OmpBeginDirective>(t);
   }
   const std::optional<OmpEndDirective> &EndDir() const {
     return std::get<std::optional<OmpEndDirective>>(t);
   }
-  bool isMissingMandatoryEndDirecitive() const {
-    return std::get<Flags>(t) == Flags::MissingMandatoryEndDirective;
-  }
 
   CharBlock source;
-  std::tuple<OmpBeginDirective, Block, std::optional<OmpEndDirective>, Flags> t;
+  std::tuple<OmpBeginDirective, Block, std::optional<OmpEndDirective>> t;
 };
 
 struct OmpMetadirectiveDirective {

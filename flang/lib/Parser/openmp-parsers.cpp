@@ -1474,7 +1474,6 @@ struct OmpBlockConstructParser {
   constexpr OmpBlockConstructParser(llvm::omp::Directive dir) : dir_(dir) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
-    using Flags = OmpBlockConstruct::Flags;
     if (auto &&begin{OmpBeginDirectiveParser(dir_).Parse(state)}) {
       if (auto &&body{attempt(StrictlyStructuredBlockParser{}).Parse(state)}) {
         // Try strictly-structured block with an optional end-directive
@@ -1503,8 +1502,7 @@ struct OmpBlockConstructParser {
         return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
             std::move(*body),
             llvm::transformOptional(std::move(*end),
-                [](auto &&s) { return OmpEndDirective(std::move(s)); }),
-            endPresent ? Flags::None : Flags::MissingMandatoryEndDirective};
+                [](auto &&s) { return OmpEndDirective(std::move(s)); })};
       }
     }
     return std::nullopt;
