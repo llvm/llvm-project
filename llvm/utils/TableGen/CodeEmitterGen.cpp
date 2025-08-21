@@ -153,11 +153,10 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   if (!EncoderMethodName.empty()) {
     raw_string_ostream CaseOS(Case);
     CaseOS << indent(6);
-    if (UseAPInt) {
+    if (UseAPInt)
       CaseOS << EncoderMethodName << "(MI, " << OpIdx << ", op";
-    } else {
+    else
       CaseOS << "op = " << EncoderMethodName << "(MI, " << OpIdx;
-    }
     CaseOS << ", Fixups, STI);\n";
   } else {
     if (UseAPInt) {
