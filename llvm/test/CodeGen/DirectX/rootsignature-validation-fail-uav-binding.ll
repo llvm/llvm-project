@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: register UAV (space=0, register=4294967294) does not have a binding in the Root Signature
+; CHECK: error: UAV register 4294967294 in space 0 does not have a binding in the Root Signature
 
 @RWB.str = private unnamed_addr constant [4 x i8] c"RWB\00", align 1
 

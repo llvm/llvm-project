@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: register CBV (space=666, register=2) does not have a binding in the Root Signature
+; CHECK: error: CBV register 2 in space 666 does not have a binding in the Root Signature
 
 %__cblayout_CB = type <{ float }>
 

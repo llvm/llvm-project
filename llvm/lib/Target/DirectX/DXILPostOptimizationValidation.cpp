@@ -138,9 +138,8 @@ reportRegNotBound(Module &M, ResourceClass Class,
                   const llvm::dxil::ResourceInfo::ResourceBinding &Unbound) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
-  OS << "register " << getResourceClassName(Class)
-     << " (space=" << Unbound.Space << ", register=" << Unbound.LowerBound
-     << ")"
+  OS << getResourceClassName(Class) << " register " << Unbound.LowerBound
+     << " in space " << Unbound.Space
      << " does not have a binding in the Root Signature";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
