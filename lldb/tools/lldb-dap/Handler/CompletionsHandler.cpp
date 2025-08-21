@@ -55,7 +55,7 @@ CompletionsRequestHandler::Run(const CompletionsArguments &args) const {
   if (had_escape_prefix) {
     if (offset <
         static_cast<int64_t>(dap.configuration.commandEscapePrefix.size())) {
-      return CompletionsResponseBody{targets};
+      return CompletionsResponseBody{std::move(targets)};
     }
     offset -= dap.configuration.commandEscapePrefix.size();
   }
