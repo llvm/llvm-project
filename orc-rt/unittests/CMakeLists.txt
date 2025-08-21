@@ -12,6 +12,9 @@ function(add_orc_rt_unittest test_dirname)
 endfunction()
 
 add_orc_rt_unittest(CoreTests
+  bitmask-enum-test.cpp
+  math-test.cpp
+  rtti-test.cpp
   span-test.cpp
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )

@@ -959,3 +959,12 @@ llvm.func @nvvm_pmevent() {
   nvvm.pmevent mask = 4
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @nanosleep
+llvm.func @nanosleep() {
+  // CHECK: call void @llvm.nvvm.nanosleep(i32 4000)
+  nvvm.nanosleep 4000
+  llvm.return
+}

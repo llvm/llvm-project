@@ -1264,6 +1264,10 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
     return Result;
   }
 
+  // Advance IT state to prevent next instruction inheriting
+  // the wrong IT state.
+  if (ITBlock.instrInITBlock())
+    ITBlock.advanceITState();
   Size = 0;
   return MCDisassembler::Fail;
 }

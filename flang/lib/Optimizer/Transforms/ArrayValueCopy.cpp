@@ -1264,7 +1264,6 @@ public:
     auto lhsEltRefType = toRefType(update.getMerge().getType());
     auto [_, lhsLoadResult] = materializeAssignment(
         loc, rewriter, update, assignElement, lhsEltRefType);
-    update.replaceAllUsesWith(lhsLoadResult);
     rewriter.replaceOp(update, lhsLoadResult);
     return mlir::success();
   }
@@ -1287,7 +1286,6 @@ public:
     auto lhsEltRefType = modify.getResult(0).getType();
     auto [lhsEltCoor, lhsLoadResult] = materializeAssignment(
         loc, rewriter, modify, assignElement, lhsEltRefType);
-    modify.replaceAllUsesWith(mlir::ValueRange{lhsEltCoor, lhsLoadResult});
     rewriter.replaceOp(modify, mlir::ValueRange{lhsEltCoor, lhsLoadResult});
     return mlir::success();
   }
@@ -1339,7 +1337,6 @@ public:
       // This array_access is associated with an array_amend and there is a
       // conflict. Make a copy to store into.
       auto result = referenceToClone(loc, rewriter, access);
-      access.replaceAllUsesWith(result);
       rewriter.replaceOp(access, result);
       return mlir::success();
     }

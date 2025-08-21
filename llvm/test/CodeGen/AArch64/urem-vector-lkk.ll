@@ -88,7 +88,6 @@ define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) {
 ; CHECK-LABEL: dont_fold_urem_one:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    movi d4, #0x0000000000ffff
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
 ; CHECK-NEXT:    adrp x8, .LCPI4_1
 ; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI4_1]
@@ -97,16 +96,14 @@ define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) {
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    sub v2.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    umull v2.4s, v2.4h, v3.4h
-; CHECK-NEXT:    movi d3, #0xffffffffffff0000
+; CHECK-NEXT:    movi d3, #0x0000000000ffff
 ; CHECK-NEXT:    shrn v2.4h, v2.4s, #16
 ; CHECK-NEXT:    add v1.4h, v2.4h, v1.4h
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_2]
 ; CHECK-NEXT:    adrp x8, .LCPI4_3
 ; CHECK-NEXT:    ushl v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    and v2.8b, v0.8b, v4.8b
-; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
-; CHECK-NEXT:    orr v1.8b, v2.8b, v1.8b
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_3]
+; CHECK-NEXT:    bit v1.8b, v0.8b, v3.8b
 ; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
   %1 = urem <4 x i16> %x, <i16 1, i16 654, i16 23, i16 5423>

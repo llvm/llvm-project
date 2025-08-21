@@ -209,17 +209,10 @@ define double @add_D(<2 x double> %bin.rdx)  {
 }
 
 define double @add_D_pos0(<2 x double> %bin.rdx)  {
-; CHECK-SD-LABEL: add_D_pos0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    faddp d0, v0.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: add_D_pos0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
-; CHECK-GI-NEXT:    faddp d0, v0.2d
-; CHECK-GI-NEXT:    fadd d0, d0, d1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: add_D_pos0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp d0, v0.2d
+; CHECK-NEXT:    ret
   %r = call fast double @llvm.vector.reduce.fadd.f64.v2f64(double 0.0, <2 x double> %bin.rdx)
   ret double %r
 }

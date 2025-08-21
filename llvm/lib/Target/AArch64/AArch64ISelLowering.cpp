@@ -1121,7 +1121,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
   setOperationAction(ISD::UBSANTRAP, MVT::Other, Legal);
 
-  // We combine OR nodes for bitfield operations.
+  // We combine OR nodes for ccmp operations.
   setTargetDAGCombine(ISD::OR);
   // Try to create BICs for vector ANDs.
   setTargetDAGCombine(ISD::AND);
@@ -14799,21 +14799,13 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   return ResultSLI;
 }
 
-static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                               const AArch64TargetLowering &TLI) {
+static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  SelectionDAG &DAG = DCI.DAG;
+  assert(VT.isVector() && "Expected vector type in tryLowerToBSL\n");
   SDLoc DL(N);
   const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
 
-  if (!VT.isVector())
-    return SDValue();
-
   if (VT.isScalableVector() && !Subtarget.hasSVE2())
-    return SDValue();
-
-  if (VT.isFixedLengthVector() &&
-      (!Subtarget.isNeonAvailable() || TLI.useSVEForFixedLengthVectorVT(VT)))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -14865,14 +14857,13 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // We only have to look for constant vectors here since the general, variable
   // case can be handled in TableGen.
   unsigned Bits = VT.getScalarSizeInBits();
-  uint64_t BitMask = Bits == 64 ? -1ULL : ((1ULL << Bits) - 1);
   for (int i = 1; i >= 0; --i)
     for (int j = 1; j >= 0; --j) {
       APInt Val1, Val2;
 
       if (ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) &&
           ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2) &&
-          (BitMask & ~Val1.getZExtValue()) == Val2.getZExtValue()) {
+          ~Val1.trunc(Bits) == Val2.trunc(Bits)) {
         return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
                            N0->getOperand(1 - i), N1->getOperand(1 - j));
       }
@@ -14886,7 +14877,8 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
         ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
         ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
         if (!CN0 || !CN1 ||
-            CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
+            CN0->getAPIntValue().trunc(Bits) !=
+                ~CN1->getAsAPIntVal().trunc(Bits)) {
           FoundMatch = false;
           break;
         }
@@ -14904,6 +14896,9 @@ SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
                                    !Subtarget->isNeonAvailable()))
     return LowerToScalableOp(Op, DAG);
+
+  if (SDValue Res = tryLowerToBSL(Op, DAG))
+    return Res;
 
   // Attempt to form a vector S[LR]I from (or (and X, C1), (lsl Y, C2))
   if (SDValue Res = tryLowerToSLI(Op.getNode(), DAG))
@@ -19658,16 +19653,9 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget,
                                 const AArch64TargetLowering &TLI) {
   SelectionDAG &DAG = DCI.DAG;
-  EVT VT = N->getValueType(0);
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
-
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
-
-  if (SDValue Res = tryCombineToBSL(N, DCI, TLI))
-    return Res;
 
   return SDValue();
 }
