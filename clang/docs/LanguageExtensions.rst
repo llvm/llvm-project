@@ -1763,6 +1763,7 @@ Hexadecimal floating constants (N308)                                          C
 Compound literals (N716)                                                       C99           C89, C++
 ``//`` comments (N644)                                                         C99           C89
 Mixed declarations and code (N740)                                             C99           C89
+init-statement in for (N740)                                                   C99           C89
 Variadic macros (N707)                                                         C99           C89
 Empty macro arguments (N570)                                                   C99           C89
 Trailing comma in enum declaration                                             C99           C89

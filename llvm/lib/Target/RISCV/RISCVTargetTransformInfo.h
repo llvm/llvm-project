@@ -372,6 +372,8 @@ public:
 
     switch (RdxDesc.getRecurrenceKind()) {
     case RecurKind::Add:
+    case RecurKind::Sub:
+    case RecurKind::AddChainWithSubs:
     case RecurKind::And:
     case RecurKind::Or:
     case RecurKind::Xor:

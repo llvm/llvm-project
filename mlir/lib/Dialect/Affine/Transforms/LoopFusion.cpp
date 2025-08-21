@@ -190,7 +190,8 @@ static bool isEscapingMemref(Value memref, Block *block) {
 
   // Check if this is defined to be an alias of another memref.
   if (auto viewOp = dyn_cast<mlir::ViewLikeOpInterface>(defOp))
-    if (isEscapingMemref(viewOp.getViewSource(), block))
+    if (memref == viewOp.getViewDest() &&
+        isEscapingMemref(viewOp.getViewSource(), block))
       return true;
 
   // Any op besides allocating ops wouldn't guarantee alias freedom

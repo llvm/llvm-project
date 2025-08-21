@@ -800,3 +800,23 @@ namespace ZeroSizeArrayRead {
   static_assert(s[0] == '0', ""); // both-error {{not an integral constant expression}} \
                                   // both-note {{read of dereferenced one-past-the-end pointer}}
 }
+
+namespace FAM {
+  char *strchr(const char *, int);
+
+  struct A {
+    char n, a[2];
+  };
+  struct B {
+    int n;
+    struct A a[]; // both-note {{here}}
+  };
+
+  const struct B b = {0, {{1, {2, 3}}, {4, {5, 6}}}};
+  void foo(void) { int sch = 0 != strchr(b.a[1].a, '\0'); }
+
+  int foo2() {
+    struct B b = {0, {{1, {2, 3}}, {4, {5, 6}}}}; // both-error {{initialization of flexible array member is not allowed}}
+    return 1;
+  }
+}

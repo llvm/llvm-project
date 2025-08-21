@@ -874,6 +874,9 @@ public:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_SITOFP:
     case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_TRUNC_SSAT_S:
+    case TargetOpcode::G_TRUNC_SSAT_U:
+    case TargetOpcode::G_TRUNC_USAT_U:
     case TargetOpcode::G_UITOFP:
     case TargetOpcode::G_ZEXT:
     case TargetOpcode::G_ANYEXT:

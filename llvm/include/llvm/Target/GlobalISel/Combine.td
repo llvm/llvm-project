@@ -1250,6 +1250,35 @@ def mulh_to_lshr : GICombineRule<
 
 def mulh_combines : GICombineGroup<[mulh_to_lshr]>;
 
+def trunc_ssats : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_TRUNC $dst, $src):$root,
+         [{ return Helper.matchTruncSSatS(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyTruncSSatS(*${root}, ${matchinfo}); }])>;
+
+def trunc_ssatu : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_TRUNC $dst, $src):$root,
+    [{ return Helper.matchTruncSSatU(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyTruncSSatU(*${root}, ${matchinfo}); }])>;
+
+def trunc_usatu : GICombineRule<
+  (defs root:$root),
+  (match (G_UMIN $min, $x, $y):$Min, 
+         (G_TRUNC $dst, $min):$root,
+    [{ return Helper.matchTruncUSatU(*${root}, *${Min}); }]),
+  (apply (G_TRUNC_USAT_U $dst, $x))>;
+
+def truncusatu_to_fptouisat : GICombineRule<
+  (defs root:$root),
+  (match (G_FPTOUI $src, $x):$Src,
+         (G_TRUNC_USAT_U $dst, $src):$root,
+    [{ return Helper.matchTruncUSatUToFPTOUISat(*${root}, *${Src}); }]),
+  (apply (G_FPTOUI_SAT $dst, $x))
+>;
+
+def truncsat_combines : GICombineGroup<[trunc_ssats, trunc_ssatu, trunc_usatu, truncusatu_to_fptouisat]>;
+
 def redundant_neg_operands: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMAD, G_FMA):$root,
@@ -2074,7 +2103,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines]>;
+    combine_use_vector_truncate, merge_combines, overflow_combines, truncsat_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
