@@ -3024,10 +3024,10 @@ ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   }
   if (dynamicPointParseResult.has_value()) {
-    Type ChunkSizesType;
+    Type chunkSizesType;
     if (failed(*dynamicPointParseResult) || parser.parseComma() ||
-        parser.parseType(ChunkSizesType) ||
-        parser.resolveOperand(dynamicChunkSizes, ChunkSizesType,
+        parser.parseType(chunkSizesType) ||
+        parser.resolveOperand(dynamicChunkSizes, chunkSizesType,
                               result.operands)) {
       return failure();
     }
@@ -3399,9 +3399,9 @@ void transform::ContinuousTileSizesOp::getEffects(
 }
 
 static void printContinuousTileSizeTypes(OpAsmPrinter &printer, Operation *op,
-                                         Type targetType, Type tile_sizes,
+                                         Type targetType, Type tileSizes,
                                          Type) {
-  printer.printFunctionalType(TypeRange{targetType}, TypeRange{tile_sizes});
+  printer.printFunctionalType(TypeRange{targetType}, TypeRange{tileSizes});
 }
 
 static ParseResult parseContinuousTileSizeTypes(OpAsmParser &parser,
