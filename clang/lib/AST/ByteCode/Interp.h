@@ -1788,6 +1788,8 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
 
   if (!Ptr.isBlockPointer()) {
+    if (!Ptr.isIntegralPointer())
+      return false;
     S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
     return true;
   }
@@ -1809,6 +1811,8 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
     return false;
 
   if (!Ptr.isBlockPointer()) {
+    if (!Ptr.isIntegralPointer())
+      return false;
     S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
     return true;
   }
