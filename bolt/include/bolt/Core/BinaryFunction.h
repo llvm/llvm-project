@@ -1196,11 +1196,6 @@ public:
     return getSecondaryEntryPointSymbol(BB.getLabel());
   }
 
-  /// Remove a label from the secondary entry point map.
-  void removeSymbolFromSecondaryEntryPointMap(const MCSymbol *Label) {
-    SecondaryEntryPoints.erase(Label);
-  }
-
   /// Return true if the basic block is an entry point into the function
   /// (either primary or secondary).
   bool isEntryPoint(const BinaryBasicBlock &BB) const {

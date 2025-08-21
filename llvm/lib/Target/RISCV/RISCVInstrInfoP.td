@@ -597,6 +597,273 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PACKT_RV64  : RVPBinary_rr<0b0110, 0b11, 0b100, "packt">;
 } // Predicates = [HasStdExtP, IsRV64]
 
+let Predicates = [HasStdExtP] in {
+  def PM2ADD_H    : RVPBinary_rr<0b0000, 0b00, 0b101, "pm2add.h">;
+  def PM4ADD_B    : RVPBinary_rr<0b0000, 0b10, 0b101, "pm4add.b">;
+
+  def PM2ADDA_H   : RVPTernary_rrr<0b0001, 0b00, 0b101, "pm2adda.h">;
+  def PM4ADDA_B   : RVPTernary_rrr<0b0001, 0b10, 0b101, "pm4adda.b">;
+
+  def PM2ADD_HX   : RVPBinary_rr<0b0010, 0b00, 0b101, "pm2add.hx">;
+
+  def PM2ADDA_HX  : RVPTernary_rrr<0b0011, 0b00, 0b101, "pm2adda.hx">;
+
+  def PM2ADDU_H   : RVPBinary_rr<0b0100, 0b00, 0b101, "pm2addu.h">;
+  def PM4ADDU_B   : RVPBinary_rr<0b0100, 0b10, 0b101, "pm4addu.b">;
+
+  def PM2ADDAU_H  : RVPTernary_rrr<0b0101, 0b00, 0b101, "pm2addau.h">;
+  def PM4ADDAU_B  : RVPTernary_rrr<0b0101, 0b10, 0b101, "pm4addau.b">;
+
+  def PMQ2ADD_H   : RVPBinary_rr<0b0110, 0b00, 0b101, "pmq2add.h">;
+  def PMQR2ADD_H  : RVPBinary_rr<0b0110, 0b10, 0b101, "pmqr2add.h">;
+
+  def PMQ2ADDA_H  : RVPTernary_rrr<0b0111, 0b00, 0b101, "pmq2adda.h">;
+  def PMQR2ADDA_H : RVPTernary_rrr<0b0111, 0b10, 0b101, "pmqr2adda.h">;
+
+  def PM2SUB_H    : RVPBinary_rr<0b1000, 0b00, 0b101, "pm2sub.h">;
+  def PM2SADD_H   : RVPBinary_rr<0b1000, 0b10, 0b101, "pm2sadd.h">;
+
+  def PM2SUBA_H   : RVPTernary_rrr<0b1001, 0b00, 0b101, "pm2suba.h">;
+
+  def PM2SUB_HX   : RVPBinary_rr<0b1010, 0b00, 0b101, "pm2sub.hx">;
+  def PM2SADD_HX  : RVPBinary_rr<0b1010, 0b10, 0b101, "pm2sadd.hx">;
+
+  def PM2SUBA_HX  : RVPTernary_rrr<0b1011, 0b00, 0b101, "pm2suba.hx">;
+
+  def PM2ADDSU_H  : RVPBinary_rr<0b1100, 0b00, 0b101, "pm2addsu.h">;
+  def PM4ADDSU_B  : RVPBinary_rr<0b1100, 0b10, 0b101, "pm4addsu.b">;
+
+  def PM2ADDASU_H : RVPBinary_rr<0b1101, 0b00, 0b101, "pm2addasu.h">;
+  def PM4ADDASU_B : RVPBinary_rr<0b1101, 0b10, 0b101, "pm4addasu.b">;
+} // Predicates = [HasStdExtP]
+
+let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  def MQACC_H01  : RVPBinary_rr<0b1111, 0b00, 0b101, "mqacc.h01">;
+  def MQRACC_H01 : RVPBinary_rr<0b1111, 0b10, 0b101, "mqracc.h01">;
+} // // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+let Predicates = [HasStdExtP, IsRV64] in {
+  def PM2ADD_W      : RVPBinary_rr<0b0000, 0b01, 0b101, "pm2add.w">;
+  def PM4ADD_H      : RVPBinary_rr<0b0000, 0b11, 0b101, "pm4add.h">;
+
+  def PM2ADDA_W     : RVPTernary_rrr<0b0001, 0b01, 0b101, "pm2adda.w">;
+  def PM4ADDA_H     : RVPTernary_rrr<0b0001, 0b11, 0b101, "pm4adda.h">;
+
+  def PM2ADD_WX     : RVPBinary_rr<0b0010, 0b01, 0b101, "pm2add.wx">;
+
+  def PM2ADDA_WX    : RVPTernary_rrr<0b0011, 0b01, 0b101, "pm2adda.wx">;
+
+  def PM2ADDU_W     : RVPBinary_rr<0b0100, 0b01, 0b101, "pm2addu.w">;
+  def PM4ADDU_H     : RVPBinary_rr<0b0100, 0b11, 0b101, "pm4addu.h">;
+
+  def PM2ADDAU_W    : RVPTernary_rrr<0b0101, 0b01, 0b101, "pm2addau.w">;
+  def PM4ADDAU_H    : RVPTernary_rrr<0b0101, 0b11, 0b101, "pm4addau.h">;
+
+  def PMQ2ADD_W     : RVPBinary_rr<0b0110, 0b01, 0b101, "pmq2add.w">;
+  def PMQR2ADD_W    : RVPBinary_rr<0b0110, 0b11, 0b101, "pmqr2add.w">;
+
+  def PMQ2ADDA_W    : RVPTernary_rrr<0b0111, 0b01, 0b101, "pmq2adda.w">;
+  def PMQR2ADDA_W   : RVPTernary_rrr<0b0111, 0b11, 0b101, "pmqr2adda.w">;
+
+  def PM2SUB_W      : RVPBinary_rr<0b1000, 0b01, 0b101, "pm2sub.w">;
+
+  def PM2SUBA_W     : RVPTernary_rrr<0b1001, 0b01, 0b101, "pm2suba.w">;
+
+  def PM2SUB_WX     : RVPBinary_rr<0b1010, 0b01, 0b101, "pm2sub.wx">;
+
+  def PM2SUBA_WX    : RVPBinary_rr<0b1011, 0b01, 0b101, "pm2suba.wx">;
+
+  def PM2ADDSU_W    : RVPBinary_rr<0b1100, 0b01, 0b101, "pm2addsu.w">;
+  def PM4ADDSU_H    : RVPBinary_rr<0b1100, 0b11, 0b101, "pm4addsu.h">;
+
+  def PM2ADDASU_W   : RVPTernary_rrr<0b1101, 0b01, 0b101, "pm2addasu.w">;
+  def PM4ADDASU_H   : RVPTernary_rrr<0b1101, 0b11, 0b101, "pm4addasu.h">;
+
+  def PMQACC_W_H01  : RVPTernary_rrr<0b1111, 0b00, 0b101, "pmqacc.w.h01">;
+  def MQACC_W01     : RVPTernary_rrr<0b1111, 0b01, 0b101, "mqacc.w01">;
+
+  def PMQRACC_W_H01 : RVPTernary_rrr<0b1111, 0b10, 0b101, "pmqracc.w.h01">;
+  def MQRACC_W01    : RVPTernary_rrr<0b1111, 0b11, 0b101, "mqracc.w01">;
+} // Predicates = [HasStdExtP, IsRV64]
+
+let Predicates = [HasStdExtP] in {
+  def PAS_HX   : RVPBinary_rr<0b0000, 0b00, 0b110, "pas.hx">;
+  def PSA_HX   : RVPBinary_rr<0b0000, 0b10, 0b110, "psa.hx">;
+
+  def PSAS_HX  : RVPBinary_rr<0b0010, 0b00, 0b110, "psas.hx">;
+  def PSSA_HX  : RVPBinary_rr<0b0010, 0b10, 0b110, "pssa.hx">;
+
+  def PAAS_HX  : RVPBinary_rr<0b0011, 0b00, 0b110, "paas.hx">;
+  def PASA_HX  : RVPBinary_rr<0b0011, 0b10, 0b110, "pasa.hx">;
+
+  def PMSEQ_H  : RVPBinary_rr<0b1000, 0b00, 0b110, "pmseq.h">;
+  def PMSEQ_B  : RVPBinary_rr<0b1000, 0b10, 0b110, "pmseq.b">;
+
+  def PMSLT_H  : RVPBinary_rr<0b1010, 0b00, 0b110, "pmslt.h">;
+  def PMSLT_B  : RVPBinary_rr<0b1010, 0b10, 0b110, "pmslt.b">;
+
+  def PMSLTU_H : RVPBinary_rr<0b1011, 0b00, 0b110, "pmsltu.h">;
+  def PMSLTU_B : RVPBinary_rr<0b1011, 0b10, 0b110, "pmsltu.b">;
+
+  def PMIN_H   : RVPBinary_rr<0b1100, 0b00, 0b110, "pmin.h">;
+  def PMIN_B   : RVPBinary_rr<0b1100, 0b10, 0b110, "pmin.b">;
+
+  def PMINU_H  : RVPBinary_rr<0b1101, 0b00, 0b110, "pminu.h">;
+  def PMINU_B  : RVPBinary_rr<0b1101, 0b10, 0b110, "pminu.b">;
+
+  def PMAX_H   : RVPBinary_rr<0b1110, 0b00, 0b110, "pmax.h">;
+  def PMAX_B   : RVPBinary_rr<0b1110, 0b10, 0b110, "pmax.b">;
+
+  def PMAXU_H  : RVPBinary_rr<0b1111, 0b00, 0b110, "pmaxu.h">;
+  def PMAXU_B  : RVPBinary_rr<0b1111, 0b10, 0b110, "pmaxu.b">;
+} // Predicates = [HasStdExtP]
+let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  def MSEQ  : RVPBinary_rr<0b1000, 0b01, 0b110, "mseq">;
+
+  def MSLT  : RVPBinary_rr<0b1010, 0b01, 0b110, "mslt">;
+
+  def MSLTU : RVPBinary_rr<0b1011, 0b01, 0b110, "msltu">;
+} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+let Predicates = [HasStdExtP, IsRV64] in {
+  def PAS_WX   : RVPBinary_rr<0b0000, 0b01, 0b110, "pas.wx">;
+  def PSA_WX   : RVPBinary_rr<0b0000, 0b11, 0b110, "psa.wx">;
+
+  def PSAS_WX  : RVPBinary_rr<0b0010, 0b01, 0b110, "psas.wx">;
+  def PSSA_WX  : RVPBinary_rr<0b0010, 0b11, 0b110, "pssa.wx">;
+
+  def PAAS_WX  : RVPBinary_rr<0b0011, 0b01, 0b110, "paas.wx">;
+  def PASA_WX  : RVPBinary_rr<0b0011, 0b11, 0b110, "pasa.wx">;
+
+  def PMSEQ_W  : RVPBinary_rr<0b1000, 0b01, 0b110, "pmseq.w">;
+
+  def PMSLT_W  : RVPBinary_rr<0b1010, 0b01, 0b110, "pmslt.w">;
+
+  def PMSLTU_W : RVPBinary_rr<0b1011, 0b01, 0b110, "pmsltu.w">;
+
+  def PMIN_W   : RVPBinary_rr<0b1100, 0b01, 0b110, "pmin.w">;
+
+  def PMINU_W  : RVPBinary_rr<0b1101, 0b01, 0b110, "pminu.w">;
+
+  def PMAX_W   : RVPBinary_rr<0b1110, 0b01, 0b110, "pmax.w">;
+
+  def PMAXU_W  : RVPBinary_rr<0b1111, 0b01, 0b110, "pmaxu.w">;
+} // Predicates = [HasStdExtP, IsRV64]
+
+let Predicates = [HasStdExtP] in {
+  def PMULH_H      : RVPBinary_rr<0b0000, 0b00, 0b111, "pmulh.h">;
+  def PMULHR_H     : RVPBinary_rr<0b0000, 0b10, 0b111, "pmulhr.h">;
+
+  def PMHACC_H     : RVPTernary_rrr<0b0001, 0b00, 0b111, "pmhacc.h">;
+  def PMHRACC_H    : RVPTernary_rrr<0b0001, 0b10, 0b111, "pmhracc.h">;
+
+  def PMULHU_H     : RVPBinary_rr<0b0010, 0b00, 0b111, "pmulhu.h">;
+  def PMULHRU_H    : RVPBinary_rr<0b0010, 0b10, 0b111, "pmulhru.h">;
+
+  def PMHACCU_H    : RVPTernary_rrr<0b0011, 0b00, 0b111, "pmhaccu.h">;
+  def PMHRACCU_H   : RVPTernary_rrr<0b0011, 0b10, 0b111, "pmhraccu.h">;
+
+  def PMULH_H_B0    : RVPBinary_rr<0b0100, 0b00, 0b111, "pmulh.h.b0">;
+  def PMULHSU_H_B0  : RVPBinary_rr<0b0100, 0b10, 0b111, "pmulhsu.h.b0">;
+
+  def PMHACC_H_B0   : RVPTernary_rrr<0b0101, 0b00, 0b111, "pmhacc.h.b0">;
+  def PMHACCSU_H_B0 : RVPTernary_rrr<0b0101, 0b10, 0b111, "pmhaccsu.h.b0">;
+
+  def PMULH_H_B1    : RVPBinary_rr<0b0110, 0b00, 0b111, "pmulh.h.b1">;
+  def PMULHSU_H_B1  : RVPBinary_rr<0b0110, 0b10, 0b111, "pmulhsu.h.b1">;
+
+  def PMHACC_H_B1   : RVPTernary_rrr<0b0111, 0b00, 0b111, "pmhacc.h.b1">;
+  def PMHACCSU_H_B1 : RVPTernary_rrr<0b0111, 0b10, 0b111, "pmhaccsu.h.b1">;
+
+  def PMULHSU_H     : RVPBinary_rr<0b1000, 0b00, 0b111, "pmulhsu.h">;
+  def PMULHRSU_H    : RVPBinary_rr<0b1000, 0b10, 0b111, "pmulhrsu.h">;
+
+  def PMHACCSU_H    : RVPBinary_rr<0b1001, 0b00, 0b111, "pmhaccsu.h">;
+  def PMHRACCSU_H   : RVPBinary_rr<0b1001, 0b10, 0b111, "pmhraccsu.h">;
+
+  def PMULQ_H       : RVPBinary_rr<0b1010, 0b00, 0b111, "pmulq.h">;
+  def PMULQR_H      : RVPBinary_rr<0b1010, 0b10, 0b111, "pmulqr.h">;
+} // Predicates = [HasStdExtP]
+let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  def MULHR      : RVPBinary_rr<0b0000, 0b11, 0b111, "mulhr">;
+
+  def MHACC      : RVPTernary_rrr<0b0001, 0b01, 0b111, "mhacc">;
+  def MHRACC     : RVPTernary_rrr<0b0001, 0b11, 0b111, "mhracc">;
+
+  def MULHRU     : RVPBinary_rr<0b0010, 0b11, 0b111, "mulhru">;
+
+  def MHACCU     : RVPTernary_rrr<0b0011, 0b01, 0b111, "mhaccu">;
+  def MHRACCU    : RVPTernary_rrr<0b0011, 0b11, 0b111, "mhraccu">;
+
+  def MULH_H0    : RVPBinary_rr<0b0100, 0b01, 0b111, "mulh.h0">;
+  def MULHSU_H0  : RVPBinary_rr<0b0100, 0b11, 0b111, "mulhsu.h0">;
+
+  def MHACC_H0   : RVPTernary_rrr<0b0101, 0b01, 0b111, "mhacc.h0">;
+  def MHACCSU_H0 : RVPTernary_rrr<0b0101, 0b11, 0b111, "mhaccsu.h0">;
+
+  def MULH_H1    : RVPBinary_rr<0b0110, 0b01, 0b111, "mulh.h1">;
+  def MULHSU_H1  : RVPBinary_rr<0b0110, 0b11, 0b111, "mulhsu.h1">;
+
+  def MHACC_H1   : RVPTernary_rrr<0b0111, 0b01, 0b111, "mhacc.h1">;
+  def MHACCSU_H1 : RVPTernary_rrr<0b0111, 0b11, 0b111, "mhaccsu.h1">;
+
+  def MULHRSU  : RVPBinary_rr<0b1000, 0b11, 0b111, "mulhrsu">;
+
+  def MHACCSU    : RVPTernary_rrr<0b1001, 0b01, 0b111, "mhaccsu">;
+  def MHRACCSU   : RVPTernary_rrr<0b1001, 0b11, 0b111, "mhraccsu">;
+
+  def MULQ       : RVPBinary_rr<0b1010, 0b01, 0b111, "mulq">;
+  def MULQR      : RVPBinary_rr<0b1010, 0b11, 0b111, "mulqr">;
+
+  def MQACC_H00  : RVPTernary_rrr<0b1101, 0b00, 0b111, "mqacc.h00">;
+  def MQRACC_H00 : RVPTernary_rrr<0b1101, 0b10, 0b111, "mqracc.h00">;
+
+  def MQACC_H11  : RVPTernary_rrr<0b1111, 0b00, 0b111, "mqacc.h11">;
+  def MQRACC_H11 : RVPTernary_rrr<0b1111, 0b10, 0b111, "mqracc.h11">;
+} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in
+let Predicates = [HasStdExtP, IsRV64] in {
+  def PMULH_W       : RVPBinary_rr<0b0000, 0b01, 0b111, "pmulh.w">;
+  def PMULHR_W      : RVPBinary_rr<0b0000, 0b11, 0b111, "pmulhr.w">;
+
+  def PMHACC_W      : RVPTernary_rrr<0b0001, 0b01, 0b111, "pmhacc.w">;
+  def PMHRACC_W     : RVPTernary_rrr<0b0001, 0b11, 0b111, "pmhracc.w">;
+
+  def PMULHU_W      : RVPBinary_rr<0b0010, 0b01, 0b111, "pmulhu.w">;
+  def PMULHRU_W     : RVPBinary_rr<0b0010, 0b11, 0b111, "pmulhru.w">;
+
+  def PMHACCU_W     : RVPTernary_rrr<0b0011, 0b01, 0b111, "pmhaccu.w">;
+  def PMHRACCU_W    : RVPTernary_rrr<0b0011, 0b11, 0b111, "pmhraccu.w">;
+
+  def PMULH_W_H0    : RVPBinary_rr<0b0100, 0b01, 0b111, "pmulh.w.h0">;
+  def PMULHSU_W_H0  : RVPBinary_rr<0b0100, 0b11, 0b111, "pmulhsu.w.h0">;
+
+  def PMHACC_W_H0   : RVPBinary_rr<0b0101, 0b01, 0b111, "pmhacc.w.h0">;
+  def PMHACCSU_W_H0 : RVPBinary_rr<0b0101, 0b11, 0b111, "pmhaccsu.w.h0">;
+
+  def PMULH_W_H1    : RVPBinary_rr<0b0110, 0b01, 0b111, "pmulh.w.h1">;
+  def PMULHSU_W_H1  : RVPBinary_rr<0b0110, 0b11, 0b111, "pmulhsu.w.h1">;
+
+  def PMHACC_W_H1   : RVPTernary_rrr<0b0111, 0b01, 0b111, "pmhacc.w.h1">;
+  def PMHACCSU_W_H1 : RVPTernary_rrr<0b0111, 0b11, 0b111, "pmhaccsu.w.h1">;
+
+  def PMULHSU_W    : RVPBinary_rr<0b1000, 0b01, 0b111, "pmulhsu.w">;
+  def PMULHRSU_W   : RVPBinary_rr<0b1000, 0b11, 0b111, "pmulhrsu.w">;
+
+  def PMHACCSU_W   : RVPTernary_rrr<0b1001, 0b01, 0b111, "pmhaccsu.w">;
+  def PMHRACCSU_W  : RVPTernary_rrr<0b1001, 0b11, 0b111, "pmhraccsu.w">;
+
+  def PMULQ_W      : RVPBinary_rr<0b1010, 0b01, 0b111, "pmulq.w">;
+  def PMULQR_W     : RVPBinary_rr<0b1010, 0b11, 0b111, "pmulqr.w">;
+
+  def PMQACC_W_H00  : RVPTernary_rrr<0b1101, 0b00, 0b111, "pmqacc.w.h00">;
+  def MQACC_W00     : RVPTernary_rrr<0b1101, 0b01, 0b111, "mqacc.w00">;
+  def PMQRACC_W_H00 : RVPTernary_rrr<0b1101, 0b10, 0b111, "pmqracc.w.h00">;
+  def MQRACC_W00    : RVPTernary_rrr<0b1101, 0b11, 0b111, "mqracc.w00">;
+
+  def PMQACC_W_H11  : RVPTernary_rrr<0b1111, 0b00, 0b111, "pmqacc.w.h11">;
+  def MQACC_W11     : RVPTernary_rrr<0b1111, 0b01, 0b111, "mqacc.w11">;
+  def PMQRACC_W_H11 : RVPTernary_rrr<0b1111, 0b10, 0b111, "pmqracc.w.h11">;
+  def MQRACC_W11    : RVPTernary_rrr<0b1111, 0b11, 0b111, "mqracc.w11">;
+} // Predicates = [HasStdExtP, IsRV64]
+
 let Predicates = [HasStdExtP, IsRV32] in {
   def PLI_DH : RVPPairLoadImm_i<0b0011000, (ins simm10:$imm10), "pli.dh",
                                 "$rd, $imm10"> {
