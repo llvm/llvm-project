@@ -1667,9 +1667,8 @@ _mm256_cvtepu32_epi64(__m128i __V) {
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [4 x i64] containing the products.
-static __inline__  __m256i __DEFAULT_FN_ATTRS256
-_mm256_mul_epi32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mul_epi32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_pmuldq256((__v8si)__a, (__v8si)__b);
 }
 
@@ -1796,9 +1795,8 @@ _mm256_mullo_epi32 (__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [4 x i64] containing the products.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_mul_epu32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mul_epu32(__m256i __a, __m256i __b) {
   return __builtin_ia32_pmuludq256((__v8si)__a, (__v8si)__b);
 }
 

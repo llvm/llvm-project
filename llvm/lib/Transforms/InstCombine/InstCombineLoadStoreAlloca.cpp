@@ -737,6 +737,8 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       LoadInst *NewLoad = IC.combineLoadToNewType(LI, ST->getTypeAtIndex(0U),
                                                   ".unpack");
       NewLoad->setAAMetadata(LI.getAAMetadata());
+      // Copy invariant metadata from parent load.
+      NewLoad->copyMetadata(LI, LLVMContext::MD_invariant_load);
       return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
         PoisonValue::get(T), NewLoad, 0, Name));
     }
@@ -764,6 +766,8 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
           Name + ".unpack");
       // Propagate AA metadata. It'll still be valid on the narrowed load.
       L->setAAMetadata(LI.getAAMetadata());
+      // Copy invariant metadata from parent load.
+      L->copyMetadata(LI, LLVMContext::MD_invariant_load);
       V = IC.Builder.CreateInsertValue(V, L, i);
     }
 

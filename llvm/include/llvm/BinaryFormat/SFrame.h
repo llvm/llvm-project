@@ -104,14 +104,8 @@ template <endianness E> struct Header {
   detail::packed<uint32_t, E> FREOff;
 };
 
-template <endianness E> struct FuncDescEntry {
-  detail::packed<int32_t, E> StartAddress;
-  detail::packed<uint32_t, E> Size;
-  detail::packed<uint32_t, E> StartFREOff;
-  detail::packed<uint32_t, E> NumFREs;
+template <endianness E> struct FDEInfo {
   detail::packed<uint8_t, E> Info;
-  detail::packed<uint8_t, E> RepSize;
-  detail::packed<uint16_t, E> Padding2;
 
   uint8_t getPAuthKey() const { return (Info >> 5) & 1; }
   FDEType getFDEType() const { return static_cast<FDEType>((Info >> 4) & 1); }
@@ -123,6 +117,16 @@ template <endianness E> struct FuncDescEntry {
     Info = ((PAuthKey & 1) << 5) | ((static_cast<uint8_t>(FDE) & 1) << 4) |
            (static_cast<uint8_t>(FRE) & 0xf);
   }
+};
+
+template <endianness E> struct FuncDescEntry {
+  detail::packed<int32_t, E> StartAddress;
+  detail::packed<uint32_t, E> Size;
+  detail::packed<uint32_t, E> StartFREOff;
+  detail::packed<uint32_t, E> NumFREs;
+  FDEInfo<E> Info;
+  detail::packed<uint8_t, E> RepSize;
+  detail::packed<uint16_t, E> Padding2;
 };
 
 template <endianness E> struct FREInfo {
