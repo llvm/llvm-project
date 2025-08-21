@@ -341,8 +341,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
-                cir::ConstComplexAttr, cir::GlobalViewAttr, cir::PoisonAttr>(
-          attrType))
+                cir::ConstComplexAttr, cir::ConstRecordAttr,
+                cir::GlobalViewAttr, cir::PoisonAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -1358,11 +1358,14 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 
 void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                           llvm::StringRef sym_name, mlir::Type sym_type,
-                          cir::GlobalLinkageKind linkage) {
+                          bool isConstant, cir::GlobalLinkageKind linkage) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
+  if (isConstant)
+    odsState.addAttribute(getConstantAttrName(odsState.name),
+                          odsBuilder.getUnitAttr());
 
   cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
