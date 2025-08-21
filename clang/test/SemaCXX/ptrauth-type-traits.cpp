@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple arm64               -std=c++26 -Wno-deprecated-builtins \
-// RUN:                                        -fsyntax-only -verify %s 
+// RUN:                                        -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple arm64-apple-darwin -fptrauth-calls -fptrauth-intrinsics \
 // RUN:                                       -fptrauth-vtable-pointer-address-discrimination \
 // RUN:                                       -std=c++26 -Wno-deprecated-builtins \
