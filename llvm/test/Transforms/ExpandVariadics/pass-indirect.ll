@@ -19,13 +19,13 @@ define void @i32_libcS(i32 %x, %struct.libcS %y) {
 ; ABI-NEXT:    [[INDIRECTALLOCA:%.*]] = alloca [[STRUCT_LIBCS:%.*]], align 8
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[I32_LIBCS_VARARG:%.*]], align 16
 ; ABI-NEXT:    store [[STRUCT_LIBCS]] [[Y:%.*]], ptr [[INDIRECTALLOCA]], align 8
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[I32_LIBCS_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[X:%.*]], ptr [[TMP0]], align 4
 ; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[I32_LIBCS_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store ptr [[INDIRECTALLOCA]], ptr [[TMP1]], align 4
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:
@@ -44,13 +44,13 @@ define void @libcS_i32(%struct.libcS %x, i32 %y) {
 ; ABI-NEXT:    [[INDIRECTALLOCA:%.*]] = alloca [[STRUCT_LIBCS:%.*]], align 8
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[LIBCS_I32_VARARG:%.*]], align 16
 ; ABI-NEXT:    store [[STRUCT_LIBCS]] [[X:%.*]], ptr [[INDIRECTALLOCA]], align 8
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[LIBCS_I32_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store ptr [[INDIRECTALLOCA]], ptr [[TMP0]], align 4
 ; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[LIBCS_I32_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store i32 [[Y:%.*]], ptr [[TMP1]], align 4
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:

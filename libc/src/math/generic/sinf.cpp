@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/sinf.h"
-#include "sincosf_utils.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -18,11 +17,12 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/__support/math/sincosf_utils.h"
 
 #if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
-#include "range_reduction_fma.h"
+#include "src/__support/math/range_reduction_fma.h"
 #else
-#include "range_reduction.h"
+#include "src/__support/math/range_reduction.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {

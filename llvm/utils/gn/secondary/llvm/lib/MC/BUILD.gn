@@ -54,6 +54,7 @@ static_library("MC") {
     "MCObjectWriter.cpp",
     "MCPseudoProbe.cpp",
     "MCRegisterInfo.cpp",
+    "MCSFrame.cpp",
     "MCSPIRVStreamer.cpp",
     "MCSchedule.cpp",
     "MCSection.cpp",

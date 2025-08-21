@@ -366,19 +366,11 @@ public:
       Visitor(TargetFinder &Outer, RelSet Flags) : Outer(Outer), Flags(Flags) {}
 
       void VisitTagType(const TagType *TT) {
-        Outer.add(TT->getAsTagDecl(), Flags);
-      }
-
-      void VisitElaboratedType(const ElaboratedType *ET) {
-        Outer.add(ET->desugar(), Flags);
+        Outer.add(cast<TagType>(TT)->getOriginalDecl(), Flags);
       }
 
       void VisitUsingType(const UsingType *ET) {
-        Outer.add(ET->getFoundDecl(), Flags);
-      }
-
-      void VisitInjectedClassNameType(const InjectedClassNameType *ICNT) {
-        Outer.add(ICNT->getDecl(), Flags);
+        Outer.add(ET->getDecl(), Flags);
       }
 
       void VisitDecltypeType(const DecltypeType *DTT) {
@@ -483,30 +475,27 @@ public:
     Visitor(*this, Flags).Visit(T.getTypePtr());
   }
 
-  void add(const NestedNameSpecifier *NNS, RelSet Flags) {
+  void add(NestedNameSpecifier NNS, RelSet Flags) {
     if (!NNS)
       return;
-    debug(*NNS, Flags);
-    switch (NNS->getKind()) {
-    case NestedNameSpecifier::Namespace:
-      add(NNS->getAsNamespace(), Flags);
+    debug(NNS, Flags);
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Kind::Namespace:
+      add(NNS.getAsNamespaceAndPrefix().Namespace, Flags);
       return;
-    case NestedNameSpecifier::Identifier:
-      if (Resolver) {
-        add(Resolver->resolveNestedNameSpecifierToType(NNS), Flags);
-      }
+    case NestedNameSpecifier::Kind::Type:
+      add(QualType(NNS.getAsType(), 0), Flags);
       return;
-    case NestedNameSpecifier::TypeSpec:
-      add(QualType(NNS->getAsType(), 0), Flags);
-      return;
-    case NestedNameSpecifier::Global:
+    case NestedNameSpecifier::Kind::Global:
       // This should be TUDecl, but we can't get a pointer to it!
       return;
-    case NestedNameSpecifier::Super:
-      add(NNS->getAsRecordDecl(), Flags);
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      add(NNS.getAsMicrosoftSuper(), Flags);
       return;
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
     }
-    llvm_unreachable("unhandled NestedNameSpecifier::SpecifierKind");
+    llvm_unreachable("unhandled NestedNameSpecifier::Kind");
   }
 
   void add(const CXXCtorInitializer *CCI, RelSet Flags) {
@@ -555,7 +544,7 @@ allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
   else if (const NestedNameSpecifierLoc *NNSL = N.get<NestedNameSpecifierLoc>())
     Finder.add(NNSL->getNestedNameSpecifier(), Flags);
   else if (const NestedNameSpecifier *NNS = N.get<NestedNameSpecifier>())
-    Finder.add(NNS, Flags);
+    Finder.add(*NNS, Flags);
   else if (const TypeLoc *TL = N.get<TypeLoc>())
     Finder.add(TL->getType(), Flags);
   else if (const QualType *QT = N.get<QualType>())
@@ -861,32 +850,25 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
     const HeuristicResolver *Resolver;
     llvm::SmallVector<ReferenceLoc> Refs;
 
-    void VisitElaboratedTypeLoc(ElaboratedTypeLoc L) {
-      // We only know about qualifier, rest if filled by inner locations.
-      size_t InitialSize = Refs.size();
-      Visit(L.getNamedTypeLoc().getUnqualifiedLoc());
-      size_t NewSize = Refs.size();
-      // Add qualifier for the newly-added refs.
-      for (unsigned I = InitialSize; I < NewSize; ++I) {
-        ReferenceLoc *Ref = &Refs[I];
-        // Fill in the qualifier.
-        assert(!Ref->Qualifier.hasQualifier() && "qualifier already set");
-        Ref->Qualifier = L.getQualifierLoc();
-      }
+    void VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc L) {
+      Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
+                                  L.getLocalSourceRange().getBegin(),
+                                  /*IsDecl=*/false,
+                                  {L.getDecl()}});
     }
 
     void VisitUsingTypeLoc(UsingTypeLoc L) {
-      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+      Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
                                   L.getLocalSourceRange().getBegin(),
                                   /*IsDecl=*/false,
-                                  {L.getFoundDecl()}});
+                                  {L.getDecl()}});
     }
 
     void VisitTagTypeLoc(TagTypeLoc L) {
-      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+      Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
                                   L.getNameLoc(),
                                   /*IsDecl=*/false,
-                                  {L.getDecl()}});
+                                  {L.getOriginalDecl()}});
     }
 
     void VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc L) {
@@ -906,23 +888,16 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
       //    2. 'vector<int>' with mask 'Underlying'.
       //  we want to return only #1 in this case.
       Refs.push_back(ReferenceLoc{
-          NestedNameSpecifierLoc(), L.getTemplateNameLoc(), /*IsDecl=*/false,
+          L.getQualifierLoc(), L.getTemplateNameLoc(), /*IsDecl=*/false,
           explicitReferenceTargets(DynTypedNode::create(L.getType()),
                                    DeclRelation::Alias, Resolver)});
     }
     void VisitDeducedTemplateSpecializationTypeLoc(
         DeducedTemplateSpecializationTypeLoc L) {
       Refs.push_back(ReferenceLoc{
-          NestedNameSpecifierLoc(), L.getNameLoc(), /*IsDecl=*/false,
+          L.getQualifierLoc(), L.getNameLoc(), /*IsDecl=*/false,
           explicitReferenceTargets(DynTypedNode::create(L.getType()),
                                    DeclRelation::Alias, Resolver)});
-    }
-
-    void VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
-                                  TL.getNameLoc(),
-                                  /*IsDecl=*/false,
-                                  {TL.getDecl()}});
     }
 
     void VisitDependentTemplateSpecializationTypeLoc(
@@ -943,12 +918,12 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
     }
 
     void VisitTypedefTypeLoc(TypedefTypeLoc L) {
-      if (shouldSkipTypedef(L.getTypedefNameDecl()))
+      if (shouldSkipTypedef(L.getDecl()))
         return;
-      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+      Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
                                   L.getNameLoc(),
                                   /*IsDecl=*/false,
-                                  {L.getTypedefNameDecl()}});
+                                  {L.getDecl()}});
     }
 
     void VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc L) {
@@ -978,17 +953,6 @@ public:
       return true;
     visitNode(DynTypedNode::create(TTL));
     return true;
-  }
-
-  bool TraverseElaboratedTypeLoc(ElaboratedTypeLoc L) {
-    // ElaboratedTypeLoc will reports information for its inner type loc.
-    // Otherwise we loose information about inner types loc's qualifier.
-    TypeLoc Inner = L.getNamedTypeLoc().getUnqualifiedLoc();
-    if (L.getBeginLoc() == Inner.getBeginLoc())
-      return RecursiveASTVisitor::TraverseTypeLoc(Inner);
-    else
-      TypeLocsToSkip.insert(Inner.getBeginLoc());
-    return RecursiveASTVisitor::TraverseElaboratedTypeLoc(L);
   }
 
   bool VisitStmt(Stmt *S) {
@@ -1051,7 +1015,7 @@ public:
       return true;
     visitNode(DynTypedNode::create(L));
     // Inner type is missing information about its qualifier, skip it.
-    if (auto TL = L.getTypeLoc())
+    if (auto TL = L.getAsTypeLoc())
       TypeLocsToSkip.insert(TL.getBeginLoc());
     return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(L);
   }
@@ -1092,12 +1056,21 @@ private:
     if (auto *S = N.get<Stmt>())
       return refInStmt(S, Resolver);
     if (auto *NNSL = N.get<NestedNameSpecifierLoc>()) {
-      // (!) 'DeclRelation::Alias' ensures we do not loose namespace aliases.
-      return {ReferenceLoc{
-          NNSL->getPrefix(), NNSL->getLocalBeginLoc(), false,
-          explicitReferenceTargets(
-              DynTypedNode::create(*NNSL->getNestedNameSpecifier()),
-              DeclRelation::Alias, Resolver)}};
+      // (!) 'DeclRelation::Alias' ensures we do not lose namespace aliases.
+      NestedNameSpecifierLoc Qualifier;
+      SourceLocation NameLoc;
+      if (auto TL = NNSL->getAsTypeLoc()) {
+        Qualifier = TL.getPrefix();
+        NameLoc = TL.getNonPrefixBeginLoc();
+      } else {
+        Qualifier = NNSL->getAsNamespaceAndPrefix().Prefix;
+        NameLoc = NNSL->getLocalBeginLoc();
+      }
+      return {
+          ReferenceLoc{Qualifier, NameLoc, false,
+                       explicitReferenceTargets(
+                           DynTypedNode::create(NNSL->getNestedNameSpecifier()),
+                           DeclRelation::Alias, Resolver)}};
     }
     if (const TypeLoc *TL = N.get<TypeLoc>())
       return refInTypeLoc(*TL, Resolver);
@@ -1210,8 +1183,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ReferenceLoc R) {
   OS << "}";
   if (R.Qualifier) {
     OS << ", qualifier = '";
-    R.Qualifier.getNestedNameSpecifier()->print(OS,
-                                                PrintingPolicy(LangOptions()));
+    R.Qualifier.getNestedNameSpecifier().print(OS,
+                                               PrintingPolicy(LangOptions()));
     OS << "'";
   }
   if (R.IsDecl)

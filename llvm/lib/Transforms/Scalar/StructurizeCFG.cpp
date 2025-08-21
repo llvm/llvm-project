@@ -328,7 +328,7 @@ class StructurizeCFG {
   void addPhiValues(BasicBlock *From, BasicBlock *To);
 
   void findUndefBlocks(BasicBlock *PHIBlock,
-                       const SmallSet<BasicBlock *, 8> &Incomings,
+                       const SmallPtrSet<BasicBlock *, 8> &Incomings,
                        SmallVector<BasicBlock *> &UndefBlks) const;
 
   void mergeIfCompatible(EquivalenceClasses<PHINode *> &PhiClasses, PHINode *A,
@@ -762,7 +762,7 @@ void StructurizeCFG::addPhiValues(BasicBlock *From, BasicBlock *To) {
 /// from some blocks as undefined. The function will find out all such blocks
 /// and return in \p UndefBlks.
 void StructurizeCFG::findUndefBlocks(
-    BasicBlock *PHIBlock, const SmallSet<BasicBlock *, 8> &Incomings,
+    BasicBlock *PHIBlock, const SmallPtrSet<BasicBlock *, 8> &Incomings,
     SmallVector<BasicBlock *> &UndefBlks) const {
   //  We may get a post-structured CFG like below:
   //
@@ -788,7 +788,7 @@ void StructurizeCFG::findUndefBlocks(
   // path N->F2->F3->B. For example, the threads take the branch F1->N may
   // always take the branch F2->P2. So, when we are reconstructing a PHI
   // originally in B, we can safely say the incoming value from N is undefined.
-  SmallSet<BasicBlock *, 8> VisitedBlock;
+  SmallPtrSet<BasicBlock *, 8> VisitedBlock;
   SmallVector<BasicBlock *, 8> Stack;
   if (PHIBlock == ParentRegion->getExit()) {
     for (auto P : predecessors(PHIBlock)) {
@@ -884,7 +884,7 @@ void StructurizeCFG::setPhiValues() {
 
     PhiMap &BlkPhis = OldPhiIt->second;
     SmallVector<BasicBlock *> &UndefBlks = UndefBlksMap[To];
-    SmallSet<BasicBlock *, 8> Incomings;
+    SmallPtrSet<BasicBlock *, 8> Incomings;
 
     // Get the undefined blocks shared by all the phi nodes.
     if (!BlkPhis.empty()) {

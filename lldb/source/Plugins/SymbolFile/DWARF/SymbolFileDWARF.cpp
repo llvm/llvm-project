@@ -8,6 +8,7 @@
 
 #include "SymbolFileDWARF.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
@@ -998,12 +999,12 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   const char *sdk = cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr);
   if (!sdk)
     return {};
-  std::string sysroot =
+  llvm::StringRef sysroot =
       cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
 
   // RegisterXcodeSDK calls into xcrun which is not aware of CLT, which is
   // expensive.
-  if (sysroot.find("/Library/Developer/CommandLineTools/SDKs") != 0) {
+  if (!sysroot.starts_with("/Library/Developer/CommandLineTools/SDKs")) {
     // Register the sysroot path remapping with the module belonging to
     // the CU as well as the one belonging to the symbol file. The two
     // would be different if this is an OSO object and module is the
@@ -1017,7 +1018,7 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
       local_module_sp->RegisterXcodeSDK(sdk, sysroot);
   }
 
-  return {sdk, FileSpec{std::move(sysroot)}};
+  return {sdk, FileSpec(sysroot)};
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
@@ -2483,6 +2484,30 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   return false;
 }
 
+DWARFDIE
+SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label) {
+  DWARFDIE definition;
+  Module::LookupInfo info(ConstString(label.lookup_name),
+                          lldb::eFunctionNameTypeFull,
+                          lldb::eLanguageTypeUnknown);
+
+  m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
+    if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+      return IterationAction::Continue;
+
+    // We don't check whether the specification DIE for this function
+    // corresponds to the declaration DIE because the declaration might be in
+    // a type-unit but the definition in the compile-unit (and it's
+    // specifcation would point to the declaration in the compile-unit). We
+    // rely on the mangled name within the module to be enough to find us the
+    // unique definition.
+    definition = entry;
+    return IterationAction::Stop;
+  });
+
+  return definition;
+}
+
 llvm::Expected<SymbolContext>
 SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -2495,37 +2520,19 @@ SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
   // Label was created using a declaration DIE. Need to fetch the definition
   // to resolve the function call.
   if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0)) {
-    Module::LookupInfo info(ConstString(label.lookup_name),
-                            lldb::eFunctionNameTypeFull,
-                            lldb::eLanguageTypeUnknown);
+    auto definition = FindFunctionDefinition(label);
+    if (!definition)
+      return llvm::createStringError("failed to find definition DIE");
 
-    m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
-      if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
-        return IterationAction::Continue;
-
-      // We don't check whether the specification DIE for this function
-      // corresponds to the declaration DIE because the declaration might be in
-      // a type-unit but the definition in the compile-unit (and it's
-      // specifcation would point to the declaration in the compile-unit). We
-      // rely on the mangled name within the module to be enough to find us the
-      // unique definition.
-      die = entry;
-      return IterationAction::Stop;
-    });
-
-    if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
-      return llvm::createStringError(
-          llvm::formatv("failed to find definition DIE for {0}", label));
+    die = std::move(definition);
   }
 
   SymbolContextList sc_list;
   if (!ResolveFunction(die, /*include_inlines=*/false, sc_list))
-    return llvm::createStringError(
-        llvm::formatv("failed to resolve function for {0}", label));
+    return llvm::createStringError("failed to resolve function");
 
   if (sc_list.IsEmpty())
-    return llvm::createStringError(
-        llvm::formatv("failed to find function for {0}", label));
+    return llvm::createStringError("failed to find function");
 
   assert(sc_list.GetSize() == 1);
 

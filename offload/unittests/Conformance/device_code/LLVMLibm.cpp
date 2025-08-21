@@ -12,17 +12,22 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Conformance/device_code/Common.hpp"
+#include "Conformance/device_code/DeviceAPIs.hpp"
+#include "Conformance/device_code/KernelRunner.hpp"
 
 #include <gpuintrin.h>
 #include <math.h>
 #include <stddef.h>
 
-using namespace common;
+using namespace kernels;
 
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
+
+static inline float powfRoundedExponent(float Base, float Exponent) {
+  return powf(Base, roundf(Exponent));
+}
 
 static inline float sincosfSin(float X) {
   float SinX, CosX;
@@ -65,6 +70,11 @@ __gpu_kernel void asinhfKernel(const float *X, float *Out,
 __gpu_kernel void atanfKernel(const float *X, float *Out,
                               size_t NumElements) noexcept {
   runKernelBody<atanf>(NumElements, Out, X);
+}
+
+__gpu_kernel void atan2fKernel(const float *X, const float *Y, float *Out,
+                               size_t NumElements) noexcept {
+  runKernelBody<atan2f>(NumElements, Out, X, Y);
 }
 
 __gpu_kernel void atanhfKernel(const float *X, float *Out,
@@ -117,9 +127,19 @@ __gpu_kernel void expm1fKernel(const float *X, float *Out,
   runKernelBody<expm1f>(NumElements, Out, X);
 }
 
+__gpu_kernel void hypotfKernel(const float *X, float *Y, float *Out,
+                               size_t NumElements) noexcept {
+  runKernelBody<hypotf>(NumElements, Out, X, Y);
+}
+
 __gpu_kernel void hypotf16Kernel(const float16 *X, float16 *Y, float16 *Out,
                                  size_t NumElements) noexcept {
   runKernelBody<hypotf16>(NumElements, Out, X, Y);
+}
+
+__gpu_kernel void logKernel(const double *X, double *Out,
+                            size_t NumElements) noexcept {
+  runKernelBody<log>(NumElements, Out, X);
 }
 
 __gpu_kernel void logfKernel(const float *X, float *Out,
@@ -140,6 +160,17 @@ __gpu_kernel void log1pfKernel(const float *X, float *Out,
 __gpu_kernel void log2fKernel(const float *X, float *Out,
                               size_t NumElements) noexcept {
   runKernelBody<log2f>(NumElements, Out, X);
+}
+
+__gpu_kernel void powfKernel(const float *X, float *Y, float *Out,
+                             size_t NumElements) noexcept {
+  runKernelBody<powf>(NumElements, Out, X, Y);
+}
+
+__gpu_kernel void powfRoundedExponentKernel(const float *X, float *Y,
+                                            float *Out,
+                                            size_t NumElements) noexcept {
+  runKernelBody<powfRoundedExponent>(NumElements, Out, X, Y);
 }
 
 __gpu_kernel void sinfKernel(const float *X, float *Out,

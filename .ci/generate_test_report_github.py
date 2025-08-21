@@ -16,11 +16,13 @@ PLATFORM_TITLES = {
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("return_code", help="The build's return code.", type=int)
-    parser.add_argument("junit_files", help="Paths to JUnit report files.", nargs="*")
+    parser.add_argument(
+        "build_test_logs", help="Paths to JUnit report files and ninja logs.", nargs="*"
+    )
     args = parser.parse_args()
 
     report = generate_test_report_lib.generate_report_from_files(
-        PLATFORM_TITLES[platform.system()], args.return_code, args.junit_files
+        PLATFORM_TITLES[platform.system()], args.return_code, args.build_test_logs
     )
 
     print(report)

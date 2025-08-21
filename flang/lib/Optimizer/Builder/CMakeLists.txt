@@ -16,6 +16,7 @@ add_flang_library(FIRBuilder
   Runtime/Allocatable.cpp
   Runtime/ArrayConstructor.cpp
   Runtime/Assign.cpp
+  Runtime/Coarray.cpp
   Runtime/Character.cpp
   Runtime/Command.cpp
   Runtime/CUDA/Descriptor.cpp
