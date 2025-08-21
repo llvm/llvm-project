@@ -1322,16 +1322,16 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
 ;
-; GFX1250-CU-LABEL: flat_nontemporal_volatile_load:
-; GFX1250-CU:       ; %bb.0: ; %entry
-; GFX1250-CU-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-CU-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
-; GFX1250-CU-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GFX1250-CU-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-CU-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_NT scope:SCOPE_SYS
-; GFX1250-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-CU-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
-; GFX1250-CU-NEXT:    s_endpgm
+; GFX1250-LABEL: flat_nontemporal_volatile_load:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_NT scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load volatile i32, ptr %in, align 4, !nontemporal !0
