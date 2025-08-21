@@ -50,6 +50,26 @@ def SDT_PPCVecSplat : SDTypeProfile<1, 2, [ SDTCisVec<0>,
   SDTCisVec<1>, SDTCisInt<2>
 ]>;
 
+def SDT_PPCBcdShift : SDTypeProfile<1, 3, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>, SDTCisInt<3>
+]>;
+
+def SDT_PPCBcdShiftRound : SDTypeProfile<1, 3, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>, SDTCisInt<3>
+]>;
+
+def SDT_PPCBcdTrunc : SDTypeProfile<1, 3, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>, SDTCisInt<3>
+]>;
+
+def SDT_PPCBcdUTrunc : SDTypeProfile<1, 2, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>
+]>;
+
+def SDT_PPCBcdUShift : SDTypeProfile<1, 2, [ SDTCisVT<0, v16i8>,
+  SDTCisVT<1, v4i32>, SDTCisVT<2, v16i8>
+]>;
+
 def SDT_PPCSpToDp : SDTypeProfile<1, 1, [ SDTCisVT<0, v2f64>,
   SDTCisInt<1>
 ]>;
@@ -249,6 +269,11 @@ def PPCpaddiDtprel   : SDNode<"PPCISD::PADDI_DTPREL", SDTIntBinOp>;
 
 def PPCvperm     : SDNode<"PPCISD::VPERM", SDT_PPCvperm, []>;
 def PPCxxsplt    : SDNode<"PPCISD::XXSPLT", SDT_PPCVecSplat, []>;
+def PPCbcds      : SDNode<"PPCISD::BCDSHIFT", SDT_PPCBcdShift, []>;
+def PPCbcdsr     : SDNode<"PPCISD::BCDSHIFTROUND", SDT_PPCBcdShiftRound, []>;
+def PPCbcdtrunc  : SDNode<"PPCISD::BCDTRUNC", SDT_PPCBcdTrunc, []>;
+def PPCbcdutrunc : SDNode<"PPCISD::BCDUTRUNC", SDT_PPCBcdUTrunc, []>;
+def PPCbcdus     : SDNode<"PPCISD::BCDUSHIFT", SDT_PPCBcdUShift, []>;
 def PPCxxspltidp : SDNode<"PPCISD::XXSPLTI_SP_TO_DP", SDT_PPCSpToDp, []>;
 def PPCvecinsert : SDNode<"PPCISD::VECINSERT", SDT_PPCVecInsert, []>;
 def PPCxxpermdi  : SDNode<"PPCISD::XXPERMDI", SDT_PPCxxpermdi, []>;
@@ -3454,6 +3479,21 @@ include "PPCInstrSPE.td"
 include "PPCInstr64Bit.td"
 include "PPCInstrVSX.td"
 include "PPCInstrHTM.td"
+
+def : Pat<(PPCbcds v4i32:$Shift, v16i8:$Src, i32:$PS),
+          (BCDS_rec $Shift, $Src, $PS)>;
+
+def : Pat<(PPCbcdsr v4i32:$ShiftRound, v16i8:$Src, i32:$PS),
+          (BCDSR_rec $ShiftRound, $Src, $PS)>;
+
+def : Pat<(PPCbcdtrunc v4i32:$Trunc, v16i8:$Src, i32:$PS),
+          (BCDTRUNC_rec $Trunc, $Src, $PS)>;
+
+def : Pat<(PPCbcdutrunc v4i32:$Trunc, v16i8:$Src),
+          (BCDUTRUNC_rec $Trunc, $Src)>;
+
+def : Pat<(PPCbcdus v4i32:$Shift, v16i8:$Src),
+          (BCDUS_rec $Shift, $Src)>;
 
 def crnot : OutPatFrag<(ops node:$in),
                        (CRNOT $in)>;
