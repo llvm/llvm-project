@@ -170,9 +170,13 @@ const MCExpr *SIProgramInfo::getComputePGMRSrc1(const GCNSubtarget &ST,
                                                 MCContext &Ctx) const {
   uint64_t Reg = getComputePGMRSrc1Reg(*this, ST);
   const MCExpr *RegExpr = MCConstantExpr::create(Reg, Ctx);
-  const MCExpr *Res = MCBinaryExpr::createOr(
-      MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
-      MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
+  const MCExpr *Res = nullptr;
+  if (ST.getGeneration() >= AMDGPUSubtarget::GFX10)
+    Res = MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx);
+  else
+    Res = MCBinaryExpr::createOr(
+        MaskShift(VGPRBlocks, /*Mask=*/0x3F, /*Shift=*/0, Ctx),
+        MaskShift(SGPRBlocks, /*Mask=*/0xF, /*Shift=*/6, Ctx), Ctx);
   return MCBinaryExpr::createOr(RegExpr, Res, Ctx);
 }
 
