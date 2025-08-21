@@ -135,7 +135,7 @@ reportOverlappingRegisters(Module &M,
 
 static void
 reportRegNotBound(Module &M, ResourceClass Class,
-                  llvm::dxil::ResourceInfo::ResourceBinding Unbound) {
+                  const llvm::dxil::ResourceInfo::ResourceBinding &Unbound) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
   OS << "register " << getResourceClassName(Class)
