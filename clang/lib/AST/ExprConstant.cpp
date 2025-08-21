@@ -15354,7 +15354,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     assert(VAT);
     if (VAT->getElementType()->isArrayType()) {
       // Variable array size expression could be missing (e.g. int a[*][10]) In
-      // that case, it can't be a constant expression
+      // that case, it can't be a constant expression.
       if (!VAT->getSizeExpr()) {
         Info.FFDiag(E->getBeginLoc());
         return false;
@@ -17898,7 +17898,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
         const auto *VAT = Ctx.getAsVariableArrayType(ArgTy);
         if (VAT->getElementType()->isArrayType())
           // Variable array size expression could be missing (e.g. int a[*][10])
-          // In that case, it can't be a constant expression
+          // In that case, it can't be a constant expression.
           return VAT->getSizeExpr() ? CheckICE(VAT->getSizeExpr(), Ctx)
                                     : ICEDiag(IK_NotICE, E->getBeginLoc());
 
