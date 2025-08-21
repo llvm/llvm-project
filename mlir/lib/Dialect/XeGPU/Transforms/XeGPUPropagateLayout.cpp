@@ -107,7 +107,6 @@ struct LayoutInfo {
 private:
   LaneLayout laneLayout;
   LaneData laneData;
-  xegpu::LayoutAttr layoutAttr;
 
 public:
   LayoutInfo() = default;
@@ -464,7 +463,7 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   LayoutInfo resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
     return;
-  // Only consider 1D -> 2D broadcasts or 2D -> 2D broadcasts.
+  // Only consider vector to vector broadcasts for now.
   VectorType resultTy = broadcast.getResultVectorType();
   VectorType sourceTy = dyn_cast<VectorType>(broadcast.getSourceType());
   if (!sourceTy) {
@@ -472,7 +471,7 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
     return;
   }
 
-  // Only conside 2D -> 2D broadcast.
+  // Only consider 2D -> 2D broadcast.
   if (sourceTy.getRank() != 2 || resultTy.getRank() != 2) {
     broadcast.emitWarning("Expecting source type to be 2D vector and "
                           "result type to be 2D vector.");
