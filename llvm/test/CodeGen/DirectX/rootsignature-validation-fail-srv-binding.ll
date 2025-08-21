@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: register SRV (space=0, register=0) does not have a binding in the Root Signature
+; CHECK: error: SRV register 0 in space 0 does not have a binding in the Root Signature
 
 @SB.str = private unnamed_addr constant [3 x i8] c"SB\00", align 1
 

@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: resource TB at register (space=0, register=0) is bound to a texture or typed buffer.
+; CHECK: error: UAV at register 0 and space 0 is bound to a texture or typed buffer.
 
 @TB.str = private unnamed_addr constant [3 x i8] c"TB\00", align 1
 

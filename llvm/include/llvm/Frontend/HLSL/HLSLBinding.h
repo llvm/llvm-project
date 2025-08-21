@@ -58,7 +58,7 @@ public:
     }
     // Size == -1 means unbounded array
     LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);
-    LLVM_ABI bool isBound(BindingRange B);
+    LLVM_ABI bool isBound(const BindingRange &Range) const;
   };
 
   struct BindingSpaces {
@@ -66,6 +66,8 @@ public:
     llvm::SmallVector<RegisterSpace> Spaces;
     BindingSpaces(dxil::ResourceClass RC) : RC(RC) {}
     LLVM_ABI RegisterSpace &getOrInsertSpace(uint32_t Space);
+    LLVM_ABI std::optional<const BindingInfo::RegisterSpace *>
+    contains(uint32_t Space) const;
   };
 
 private:
@@ -97,7 +99,8 @@ public:
   LLVM_ABI std::optional<uint32_t>
   findAvailableBinding(dxil::ResourceClass RC, uint32_t Space, int32_t Size);
 
-  LLVM_ABI bool isBound(dxil::ResourceClass RC, uint32_t Space, BindingRange B);
+  LLVM_ABI bool isBound(dxil::ResourceClass RC, uint32_t Space,
+                        const BindingRange &Range) const;
 
   friend class BindingInfoBuilder;
 };

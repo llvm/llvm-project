@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: register Sampler (space=2, register=3) does not have a binding in the Root Signature 
+; CHECK: error: Sampler register 3 in space 2 does not have a binding in the Root Signature 
 
 @Smp.str = private unnamed_addr constant [4 x i8] c"Smp\00", align 1
 
