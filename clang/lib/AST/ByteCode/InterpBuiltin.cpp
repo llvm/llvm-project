@@ -205,6 +205,8 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
   if (A.isDummy() || B.isDummy())
     return false;
+  if (!A.isBlockPointer() || !B.isBlockPointer())
+    return false;
 
   bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
                 ID == Builtin::BI__builtin_wcscmp ||
@@ -212,7 +214,10 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
-  assert(getElemType(A).getTypePtr() == getElemType(B).getTypePtr());
+  // Different element types shouldn't happen, but with casts they can.
+  if (!S.getASTContext().hasSameUnqualifiedType(getElemType(A), getElemType(B)))
+    return false;
+
   PrimType ElemT = *S.getContext().classify(getElemType(A));
 
   auto returnResult = [&](int V) -> bool {
