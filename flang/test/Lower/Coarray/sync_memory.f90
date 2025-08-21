@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -emit-hlfir -fcoarray %s -o - | FileCheck %s --check-prefixes=COARRAY
-! RUN2: not %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=NOCOARRAY
+! RUN: not %flang_fc1 -emit-hlfir %s 2>&1 | FileCheck %s --check-prefixes=NOCOARRAY
 
 program test_sync_memory
   implicit none
