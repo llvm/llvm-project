@@ -64,15 +64,14 @@ static char getRegisterType(Value v) {
 
 /// Extract every element of a struct value.
 static SmallVector<Value> extractStructElements(PatternRewriter &rewriter,
-                                                Location loc, Value agg) {
-  auto structTy = cast<LLVM::LLVMStructType>(agg.getType());
+                                                Location loc, Value structVal) {
+  auto structTy = dyn_cast<LLVM::LLVMStructType>(structVal.getType());
+  assert(structTy && "expected LLVM struct");
+
   SmallVector<Value> elems;
-  elems.reserve(structTy.getBody().size());
-  for (auto [i, t] : llvm::enumerate(structTy.getBody())) {
-    (void)t;
-    Value e = LLVM::ExtractValueOp::create(rewriter, loc, agg, i);
-    elems.push_back(e);
-  }
+  for (unsigned i : llvm::seq<unsigned>(0, structTy.getBody().size()))
+    elems.push_back(rewriter.create<LLVM::ExtractValueOp>(loc, structVal, i));
+
   return elems;
 }
 
@@ -81,15 +80,17 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
   registerModifiers.push_back(itype);
 
   auto getModifier = [&]() -> const char * {
-    if (itype == PTXRegisterMod::ReadWrite) {
-      // "Read-Write modifier is not supported
-      // Interface canonicalize it later
+    switch (itype) {
+    case PTXRegisterMod::Read:
+      return "";
+    case PTXRegisterMod::Write:
+      return "=";
+    case PTXRegisterMod::ReadWrite:
+      // "Read-Write modifier is not actually supported
+      // Interface will change it to "=" later and add integer mapping
       return "+";
     }
-    if (itype == PTXRegisterMod::Write) {
-      return "=";
-    }
-    return "";
+    llvm_unreachable("Unknown PTX register modifier");
   };
 
   auto addValue = [&](Value v) {
@@ -134,12 +135,12 @@ needsPackUnpack(BasicPtxBuilderInterface interfaceOp,
                 SmallVectorImpl<PTXRegisterMod> &registerModifiers) {
   if (needsManualRegisterMapping)
     return false;
-  const unsigned writeOnly = interfaceOp->getNumResults();
-  const unsigned readWrite =
+  const unsigned writeOnlyVals = interfaceOp->getNumResults();
+  const unsigned readWriteVals =
       llvm::count_if(registerModifiers, [](PTXRegisterMod m) {
         return m == PTXRegisterMod::ReadWrite;
       });
-  return (writeOnly + readWrite) > 1;
+  return (writeOnlyVals + readWriteVals) > 1;
 }
 
 /// Pack the result types of the interface operation.
@@ -219,14 +220,58 @@ static std::string canonicalizeRegisterConstraints(llvm::StringRef csv) {
   return os.str();
 }
 
-constexpr llvm::StringLiteral kReadWrite{"rw"};
-constexpr llvm::StringLiteral kWriteOnly{"w"};
-constexpr llvm::StringLiteral kReadOnly{"r"};
+constexpr llvm::StringLiteral kReadWritePrefix{"rw"};
+constexpr llvm::StringLiteral kWriteOnlyPrefix{"w"};
+constexpr llvm::StringLiteral kReadOnlyPrefix{"r"};
 
-/// Rewrites placeholders of the form `{$rN}`, `{$wN}`, `{$rwN}` in `asmText`
-/// to compact `$K` indices where all `rw*` come first (ascending N), then `w*`,
-/// then `r*`. Duplicates are de-duplicated when assigning numbers.
-/// Unknown text is preserved verbatim.
+/// Returns a regex that matches {$rwN}, {$wN}, {$rN}
+static llvm::Regex getPredicateMappingRegex() {
+  llvm::Regex rx(llvm::formatv(R"(\{\$({0}|{1}|{2})([0-9]+)\})",
+                               kReadWritePrefix, kWriteOnlyPrefix,
+                               kReadOnlyPrefix)
+                     .str());
+  return rx;
+}
+
+void mlir::NVVM::countPlaceholderNumbers(
+    StringRef ptxCode, llvm::SmallDenseSet<unsigned int> &seenRW,
+    llvm::SmallDenseSet<unsigned int> &seenW,
+    llvm::SmallDenseSet<unsigned int> &seenR,
+    llvm::SmallVectorImpl<unsigned int> &rwNums,
+    llvm::SmallVectorImpl<unsigned int> &wNums,
+    llvm::SmallVectorImpl<unsigned int> &rNums) {
+
+  llvm::Regex rx = getPredicateMappingRegex();
+  StringRef rest = ptxCode;
+
+  SmallVector<StringRef, 3> m; // 0: full, 1: kind, 2: number
+  while (!rest.empty() && rx.match(rest, &m)) {
+    unsigned num = 0;
+    (void)m[2].getAsInteger(10, num);
+
+    if (m[1].equals_insensitive(kReadWritePrefix)) {
+      if (seenRW.insert(num).second)
+        rwNums.push_back(num);
+    } else if (m[1].equals_insensitive(kWriteOnlyPrefix)) {
+      if (seenW.insert(num).second)
+        wNums.push_back(num);
+    } else {
+      if (seenR.insert(num).second)
+        rNums.push_back(num);
+    }
+
+    const size_t advance = (size_t)(m[0].data() - rest.data()) + m[0].size();
+    rest = rest.drop_front(advance);
+  }
+}
+
+/// Rewrites `{$rwN}`, `{$wN}`, and `{$rN}` placeholders in `ptxCode` into
+/// compact `$K` indices:
+///   - All `rw*` first (sorted by N),
+///   - Then `w*`,
+///   - Then `r*`.
+/// If there a predicate, it comes always in the end.
+/// Each number is assigned once; duplicates are ignored.
 ///
 /// Example Input:
 /// "{
@@ -246,42 +291,19 @@ constexpr llvm::StringLiteral kReadOnly{"r"};
 ///       selp.s32 $2,   $4, $5, p;
 ///       selp.s32 $3,   $4, $5, p;
 /// }\n"
-static std::string rewriteAsmPlaceholders(llvm::StringRef asmText) {
-  // Match {$rwN}, {$wN}, {$rN}
-  llvm::Regex rx(llvm::formatv(R"(\{\$({0}|{1}|{2})([0-9]+)\})", kReadWrite,
-                               kWriteOnly, kReadOnly)
-                     .str());
-
+static std::string rewriteAsmPlaceholders(llvm::StringRef ptxCode) {
   llvm::SmallDenseSet<unsigned> seenRW, seenW, seenR;
   llvm::SmallVector<unsigned> rwNums, wNums, rNums;
 
-  {
-    StringRef rest = asmText;
-    SmallVector<StringRef, 3> m; // 0: full, 1: kind, 2: number
-    while (!rest.empty() && rx.match(rest, &m)) {
-      unsigned num = 0;
-      (void)m[2].getAsInteger(10, num);
+  // Step 1. Count Register Placeholder numbers
+  countPlaceholderNumbers(ptxCode, seenRW, seenW, seenR, rwNums, wNums, rNums);
 
-      if (m[1].equals_insensitive(kReadWrite)) {
-        if (seenRW.insert(num).second)
-          rwNums.push_back(num);
-      } else if (m[1].equals_insensitive(kWriteOnly)) {
-        if (seenW.insert(num).second)
-          wNums.push_back(num);
-      } else {
-        if (seenR.insert(num).second)
-          rNums.push_back(num);
-      }
-
-      const size_t advance = (size_t)(m[0].data() - rest.data()) + m[0].size();
-      rest = rest.drop_front(advance);
-    }
-  }
-
+  // Step 2. Sort the Register Placeholder numbers
   llvm::sort(rwNums);
   llvm::sort(wNums);
   llvm::sort(rNums);
 
+  // Step 3. Create mapping from original to new IDs
   llvm::DenseMap<unsigned, unsigned> rwMap, wMap, rMap;
   unsigned nextId = 0;
   for (unsigned n : rwNums)
@@ -291,27 +313,28 @@ static std::string rewriteAsmPlaceholders(llvm::StringRef asmText) {
   for (unsigned n : rNums)
     rMap[n] = nextId++;
 
+  // Step 4. Rewrite the PTX code with new IDs
   std::string out;
-  out.reserve(asmText.size());
-
+  out.reserve(ptxCode.size());
   size_t prev = 0;
-  StringRef rest = asmText;
+  StringRef rest = ptxCode;
   SmallVector<StringRef, 3> m;
+  llvm::Regex rx = getPredicateMappingRegex();
   while (!rest.empty() && rx.match(rest, &m)) {
     // Compute absolute match bounds in the original buffer.
-    size_t absStart = (size_t)(m[0].data() - asmText.data());
+    size_t absStart = (size_t)(m[0].data() - ptxCode.data());
     size_t absEnd = absStart + m[0].size();
 
     // Emit text before the match.
-    out.append(asmText.data() + prev, asmText.data() + absStart);
+    out.append(ptxCode.data() + prev, ptxCode.data() + absStart);
 
     // Emit compact $K
     unsigned num = 0;
     (void)m[2].getAsInteger(10, num);
     unsigned id = 0;
-    if (m[1].equals_insensitive(kReadWrite))
+    if (m[1].equals_insensitive(kReadWritePrefix))
       id = rwMap.lookup(num);
-    else if (m[1].equals_insensitive(kWriteOnly))
+    else if (m[1].equals_insensitive(kWriteOnlyPrefix))
       id = wMap.lookup(num);
     else
       id = rMap.lookup(num);
@@ -321,13 +344,12 @@ static std::string rewriteAsmPlaceholders(llvm::StringRef asmText) {
 
     prev = absEnd;
 
-    // Advance search window.
     const size_t advance = (size_t)(m[0].data() - rest.data()) + m[0].size();
     rest = rest.drop_front(advance);
   }
 
-  // Tail.
-  out.append(asmText.data() + prev, asmText.data() + asmText.size());
+  // Step 5. Tail.
+  out.append(ptxCode.data() + prev, ptxCode.data() + ptxCode.size());
   return out;
 }
 

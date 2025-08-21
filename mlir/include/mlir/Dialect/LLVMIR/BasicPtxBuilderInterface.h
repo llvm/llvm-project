@@ -93,6 +93,16 @@ public:
   void buildAndReplaceOp();
 };
 
+/// Count the number of placeholder variables such as {$r}, {$w}, {$rw} in the
+/// PTX code.
+void countPlaceholderNumbers(StringRef ptxCode,
+                             llvm::SmallDenseSet<unsigned> &seenRW,
+                             llvm::SmallDenseSet<unsigned> &seenW,
+                             llvm::SmallDenseSet<unsigned> &seenR,
+                             llvm::SmallVectorImpl<unsigned> &rwNums,
+                             llvm::SmallVectorImpl<unsigned> &wNums,
+                             llvm::SmallVectorImpl<unsigned> &rNums);
+
 } // namespace NVVM
 } // namespace mlir
 
