@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "GCNHazardRecognizer.h"
+#include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
