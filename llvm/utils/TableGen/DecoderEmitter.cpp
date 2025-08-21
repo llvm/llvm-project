@@ -143,28 +143,20 @@ class InstructionEncoding {
   /// The size of this encoding, in bits.
   unsigned BitWidth;
 
+  /// The name of the function to use for decoding. May be an empty string,
+  /// meaning the decoder is generated.
+  StringRef DecoderMethod;
+
+  /// Whether the custom decoding function always succeeds. Should not be used
+  /// if the decoder is generated.
+  bool HasCompleteDecoder = true;
+
   /// Information about the operands' contribution to this encoding.
   SmallVector<OperandInfo, 16> Operands;
 
 public:
-  InstructionEncoding(const Record *EncodingDef, const CodeGenInstruction *Inst)
-      : EncodingDef(EncodingDef), Inst(Inst) {
-    const Record *InstDef = Inst->TheDef;
-
-    // Give this encoding a name.
-    if (EncodingDef != InstDef)
-      Name = (EncodingDef->getName() + Twine(':')).str();
-    Name.append(InstDef->getName());
-
-    StringRef DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
-    if (!DecoderMethod.empty()) {
-      bool HasCompleteDecoder =
-          EncodingDef->getValueAsBit("hasCompleteDecoder");
-      Operands.push_back(OperandInfo(DecoderMethod.str(), HasCompleteDecoder));
-    }
-
-    populateEncoding();
-  }
+  InstructionEncoding(const Record *EncodingDef,
+                      const CodeGenInstruction *Inst);
 
   /// Returns the Record this encoding originates from.
   const Record *getRecord() const { return EncodingDef; }
@@ -178,13 +170,22 @@ public:
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return BitWidth; }
 
+  /// Returns the name of the function to use for decoding, or an empty string
+  /// if the decoder is generated.
+  StringRef getDecoderMethod() const { return DecoderMethod; }
+
+  /// Returns whether the custom decoding function always succeeds.
+  bool hasCompleteDecoder() const {
+    assert(!DecoderMethod.empty());
+    return HasCompleteDecoder;
+  }
+
   /// Returns information about the operands' contribution to this encoding.
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
 
 private:
-  void populateVarLenEncoding(const VarLenInst &VLI);
-  void populateFixedLenEncoding(const BitsInit &Bits);
-  void populateEncoding();
+  void parseVarLenOperands(const VarLenInst &VLI);
+  void parseFixedLenOperands(const BitsInit &Bits);
 };
 
 typedef std::vector<uint32_t> FixupList;
@@ -1253,10 +1254,25 @@ bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
 
 bool FilterChooser::emitDecoder(raw_ostream &OS, indent Indent,
                                 unsigned EncodingID) const {
-  bool HasCompleteDecoder = true;
+  const InstructionEncoding &Encoding = Encodings[EncodingID];
 
-  for (const OperandInfo &Op : Encodings[EncodingID].getOperands()) {
-    // If a custom instruction decoder was specified, use that.
+  // If a custom instruction decoder was specified, use that.
+  StringRef DecoderMethod = Encoding.getDecoderMethod();
+  if (!DecoderMethod.empty()) {
+    bool HasCompleteDecoder = Encoding.hasCompleteDecoder();
+    OS << Indent << "if (!Check(S, " << DecoderMethod
+       << "(MI, insn, Address, Decoder))) { "
+       << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+       << "return MCDisassembler::Fail; }\n";
+    return HasCompleteDecoder;
+  }
+
+  bool HasCompleteDecoder = true;
+  for (const OperandInfo &Op : Encoding.getOperands()) {
+    // FIXME: This is broken. If there is an operand that doesn't contribute
+    //   to the encoding, we generate the same code as if the decoder method
+    //   was specified on the encoding. And then we stop, ignoring the rest
+    //   of the operands. M68k disassembler experiences this.
     if (Op.numFields() == 0 && !Op.Decoder.empty()) {
       HasCompleteDecoder = Op.HasCompleteDecoder;
       OS << Indent << "if (!Check(S, " << Op.Decoder
@@ -1869,7 +1885,7 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
   return OperandInfo(findOperandDecoderMethod(TypeRecord), HasCompleteDecoder);
 }
 
-void InstructionEncoding::populateVarLenEncoding(const VarLenInst &VLI) {
+void InstructionEncoding::parseVarLenOperands(const VarLenInst &VLI) {
   SmallVector<int> TiedTo;
 
   for (const auto &[Idx, Op] : enumerate(Inst->Operands)) {
@@ -1966,7 +1982,7 @@ static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
   }
 }
 
-void InstructionEncoding::populateFixedLenEncoding(const BitsInit &Bits) {
+void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   const Record &Def = *Inst->TheDef;
 
   // Gather the outputs/inputs of the instruction, so we can find their
@@ -2080,20 +2096,33 @@ void InstructionEncoding::populateFixedLenEncoding(const BitsInit &Bits) {
   }
 }
 
-void InstructionEncoding::populateEncoding() {
+InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
+                                         const CodeGenInstruction *Inst)
+    : EncodingDef(EncodingDef), Inst(Inst) {
+  const Record *InstDef = Inst->TheDef;
+
+  // Give this encoding a name.
+  if (EncodingDef != InstDef)
+    Name = (EncodingDef->getName() + Twine(':')).str();
+  Name.append(InstDef->getName());
+
+  DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
+  if (!DecoderMethod.empty())
+    HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
+
   const RecordVal *InstField = EncodingDef->getValue("Inst");
   if (const auto *DI = dyn_cast<DagInit>(InstField->getValue())) {
     VarLenInst VLI(DI, InstField);
     BitWidth = VLI.size();
     // If the encoding has a custom decoder, don't bother parsing the operands.
-    if (Operands.empty())
-      populateVarLenEncoding(VLI);
+    if (DecoderMethod.empty())
+      parseVarLenOperands(VLI);
   } else {
     const auto *BI = cast<BitsInit>(InstField->getValue());
     BitWidth = BI->getNumBits();
     // If the encoding has a custom decoder, don't bother parsing the operands.
-    if (Operands.empty())
-      populateFixedLenEncoding(*BI);
+    if (DecoderMethod.empty())
+      parseFixedLenOperands(*BI);
   }
 }
 
