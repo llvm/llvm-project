@@ -46,6 +46,8 @@ $source_comdat_variable = comdat largest
 $source_comdat_variable_1 = comdat nodeduplicate
 @source_comdat_variable_1 = global i32 64, comdat($source_comdat_variable_1)
 
+declare void @"?source_bad.$regex_function"()
+
 ; CHECK: $target_comdat_function = comdat any
 ; CHECK: $target_comdat_function_1 = comdat exactmatch
 ; CHECK: $target_comdat_variable = comdat largest
@@ -90,3 +92,5 @@ $source_comdat_variable_1 = comdat nodeduplicate
 ; CHECK: define dllexport void @target_comdat_function_1() comdat
 ; CHECK-NOT: define dllexport void @source_comdat_function_1() comdat
 
+; CHECK: declare void @target_bad_regex_function()
+; CHECK-NOT: declare void @"?source_bad.$regex_function"()
