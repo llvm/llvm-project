@@ -2120,6 +2120,7 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     if (symbol.getType() != STT_SECTION &&
         (symbol_name == nullptr || symbol_name[0] == '\0'))
       continue;
+
     // Skipping oatdata and oatexec sections if it is requested. See details
     // above the definition of skip_oatdata_oatexec for the reasons.
     if (skip_oatdata_oatexec && (::strcmp(symbol_name, "oatdata") == 0 ||
