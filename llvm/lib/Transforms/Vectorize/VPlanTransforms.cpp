@@ -741,8 +741,7 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
     VPValue *IVStep = WideIV->getStepValue();
     switch (ID.getInductionOpcode()) {
     case Instruction::Add:
-      return match(VPV, m_c_Binary<Instruction::Add>(m_Specific(WideIV),
-                                                     m_Specific(IVStep)));
+      return match(VPV, m_c_Add(m_Specific(WideIV), m_Specific(IVStep)));
     case Instruction::FAdd:
       return match(VPV, m_c_Binary<Instruction::FAdd>(m_Specific(WideIV),
                                                       m_Specific(IVStep)));
@@ -753,8 +752,7 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
       // IVStep will be the negated step of the subtraction. Check if Step == -1
       // * IVStep.
       VPValue *Step;
-      if (!match(VPV,
-                 m_Binary<Instruction::Sub>(m_VPValue(), m_VPValue(Step))) ||
+      if (!match(VPV, m_Sub(m_VPValue(), m_VPValue(Step))) ||
           !Step->isLiveIn() || !IVStep->isLiveIn())
         return false;
       auto *StepCI = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
@@ -1492,11 +1490,25 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // The vector loop region only executes once. If possible, completely remove
   // the region, otherwise replace the terminator controlling the latch with
   // (BranchOnCond true).
+  // TODO: VPWidenIntOrFpInductionRecipe is only partially supported; add
+  // support for other non-canonical widen induction recipes (e.g.,
+  // VPWidenPointerInductionRecipe).
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
-  if (all_of(Header->phis(),
-             IsaPred<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
-                     VPFirstOrderRecurrencePHIRecipe, VPPhi>)) {
+  if (all_of(Header->phis(), [](VPRecipeBase &Phi) {
+        if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi))
+          return R->isCanonical();
+        return isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
+                   VPFirstOrderRecurrencePHIRecipe, VPPhi>(&Phi);
+      })) {
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
+      if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&HeaderR)) {
+        VPBuilder Builder(Plan.getVectorPreheader());
+        VPValue *StepV = Builder.createNaryOp(VPInstruction::StepVector, {},
+                                              R->getScalarType());
+        HeaderR.getVPSingleValue()->replaceAllUsesWith(StepV);
+        HeaderR.eraseFromParent();
+        continue;
+      }
       auto *Phi = cast<VPPhiAccessors>(&HeaderR);
       HeaderR.getVPSingleValue()->replaceAllUsesWith(Phi->getIncomingValue(0));
       HeaderR.eraseFromParent();
@@ -2218,9 +2230,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   assert(all_of(Plan.getVFxUF().users(),
                 [&Plan](VPUser *U) {
-                  return match(U, m_c_Binary<Instruction::Add>(
-                                      m_Specific(Plan.getCanonicalIV()),
-                                      m_Specific(&Plan.getVFxUF()))) ||
+                  return match(U, m_c_Add(m_Specific(Plan.getCanonicalIV()),
+                                          m_Specific(&Plan.getVFxUF()))) ||
                          isa<VPWidenPointerInductionRecipe>(U);
                 }) &&
          "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
@@ -2459,9 +2470,8 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   // Replace CanonicalIVInc with EVL-PHI increment.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
   VPValue *Backedge = CanonicalIV->getIncomingValue(1);
-  assert(match(Backedge,
-               m_c_Binary<Instruction::Add>(m_Specific(CanonicalIV),
-                                            m_Specific(&Plan.getVFxUF()))) &&
+  assert(match(Backedge, m_c_Add(m_Specific(CanonicalIV),
+                                 m_Specific(&Plan.getVFxUF()))) &&
          "Unexpected canonical iv");
   Backedge->replaceAllUsesWith(EVLIncrement);
 

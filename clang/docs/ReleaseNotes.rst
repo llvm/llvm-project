@@ -137,10 +137,31 @@ Non-comprehensive list of changes in this release
 - ``__builtin_elementwise_max`` and ``__builtin_elementwise_min`` functions for integer types can
   now be used in constant expressions.
 
+- A vector of booleans is now a valid condition for the ternary ``?:`` operator.
+  This binds to a simple vector select operation.
+
+- Added ``__builtin_masked_load`` and ``__builtin_masked_store`` for conditional
+  memory loads from vectors. Binds to the LLVM intrinsic of the same name.
+
 - Use of ``__has_feature`` to detect the ``ptrauth_qualifier`` and ``ptrauth_intrinsics``
   features has been deprecated, and is restricted to the arm64e target only. The
   correct method to check for these features is to test for the ``__PTRAUTH__``
   macro.
+
+- Added a new builtin, ``__builtin_dedup_pack``, to remove duplicate types from a parameter pack.
+  This feature is particularly useful in template metaprogramming for normalizing type lists.
+  The builtin produces a new, unexpanded parameter pack that can be used in contexts like template
+  argument lists or base specifiers.
+
+  .. code-block:: c++
+
+    template <typename...> struct TypeList;
+
+    // The resulting type is TypeList<int, double, char>
+    using MyTypeList = TypeList<__builtin_dedup_pack<int, double, int, char, double>...>;
+
+  Currently, the use of ``__builtin_dedup_pack`` is limited to template arguments and base
+  specifiers, it also must be used within a template context.
 
 
 New Compiler Flags
@@ -188,6 +209,9 @@ Improvements to Clang's diagnostics
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
 
+- Fixed false positive in ``-Wmissing-noreturn`` diagnostic when it was requiring the usage of
+  ``[[noreturn]]`` on lambdas before C++23 (#GH154493).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -214,8 +238,8 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
-  (#GH141504)
+- ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods
+  (#GH141504) and on types returned from indirect calls (#GH142453).
 - Fixes some late parsed attributes, when applied to function definitions, not being parsed
   in function try blocks, and some situations where parsing of the function body
   is skipped, such as error recovery and code completion. (#GH153551)
@@ -326,6 +350,9 @@ AST Matchers
 
 - Add a boolean member ``IgnoreSystemHeaders`` to ``MatchFinderOptions``. This
   allows it to ignore nodes in system headers when traversing the AST.
+
+- ``hasConditionVariableStatement`` now supports ``for`` loop, ``while`` loop
+  and ``switch`` statements.
 
 clang-format
 ------------

@@ -143,21 +143,20 @@ class InstructionEncoding {
   /// The size of this encoding, in bits.
   unsigned BitWidth;
 
+  /// The name of the function to use for decoding. May be an empty string,
+  /// meaning the decoder is generated.
+  StringRef DecoderMethod;
+
+  /// Whether the custom decoding function always succeeds. Should not be used
+  /// if the decoder is generated.
+  bool HasCompleteDecoder = true;
+
   /// Information about the operands' contribution to this encoding.
   SmallVector<OperandInfo, 16> Operands;
 
 public:
-  InstructionEncoding(const Record *EncodingDef, const CodeGenInstruction *Inst)
-      : EncodingDef(EncodingDef), Inst(Inst) {
-    const Record *InstDef = Inst->TheDef;
-
-    // Give this encoding a name.
-    if (EncodingDef != InstDef)
-      Name = (EncodingDef->getName() + Twine(':')).str();
-    Name.append(InstDef->getName());
-
-    BitWidth = populateEncoding();
-  }
+  InstructionEncoding(const Record *EncodingDef,
+                      const CodeGenInstruction *Inst);
 
   /// Returns the Record this encoding originates from.
   const Record *getRecord() const { return EncodingDef; }
@@ -171,13 +170,22 @@ public:
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return BitWidth; }
 
+  /// Returns the name of the function to use for decoding, or an empty string
+  /// if the decoder is generated.
+  StringRef getDecoderMethod() const { return DecoderMethod; }
+
+  /// Returns whether the custom decoding function always succeeds.
+  bool hasCompleteDecoder() const {
+    assert(!DecoderMethod.empty());
+    return HasCompleteDecoder;
+  }
+
   /// Returns information about the operands' contribution to this encoding.
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
 
 private:
-  void populateVarLenEncoding();
-
-  unsigned populateEncoding();
+  void parseVarLenOperands(const VarLenInst &VLI);
+  void parseFixedLenOperands(const BitsInit &Bits);
 };
 
 typedef std::vector<uint32_t> FixupList;
@@ -1246,10 +1254,25 @@ bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
 
 bool FilterChooser::emitDecoder(raw_ostream &OS, indent Indent,
                                 unsigned EncodingID) const {
-  bool HasCompleteDecoder = true;
+  const InstructionEncoding &Encoding = Encodings[EncodingID];
 
-  for (const OperandInfo &Op : Encodings[EncodingID].getOperands()) {
-    // If a custom instruction decoder was specified, use that.
+  // If a custom instruction decoder was specified, use that.
+  StringRef DecoderMethod = Encoding.getDecoderMethod();
+  if (!DecoderMethod.empty()) {
+    bool HasCompleteDecoder = Encoding.hasCompleteDecoder();
+    OS << Indent << "if (!Check(S, " << DecoderMethod
+       << "(MI, insn, Address, Decoder))) { "
+       << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+       << "return MCDisassembler::Fail; }\n";
+    return HasCompleteDecoder;
+  }
+
+  bool HasCompleteDecoder = true;
+  for (const OperandInfo &Op : Encoding.getOperands()) {
+    // FIXME: This is broken. If there is an operand that doesn't contribute
+    //   to the encoding, we generate the same code as if the decoder method
+    //   was specified on the encoding. And then we stop, ignoring the rest
+    //   of the operands. M68k disassembler experiences this.
     if (Op.numFields() == 0 && !Op.Decoder.empty()) {
       HasCompleteDecoder = Op.HasCompleteDecoder;
       OS << Indent << "if (!Check(S, " << Op.Decoder
@@ -1862,9 +1885,7 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
   return OperandInfo(findOperandDecoderMethod(TypeRecord), HasCompleteDecoder);
 }
 
-void InstructionEncoding::populateVarLenEncoding() {
-  const RecordVal *RV = EncodingDef->getValue("Inst");
-  VarLenInst VLI(cast<DagInit>(RV->getValue()), RV);
+void InstructionEncoding::parseVarLenOperands(const VarLenInst &VLI) {
   SmallVector<int> TiedTo;
 
   for (const auto &[Idx, Op] : enumerate(Inst->Operands)) {
@@ -1961,27 +1982,8 @@ static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
   }
 }
 
-unsigned InstructionEncoding::populateEncoding() {
-  bool IsVarLenInst = isa<DagInit>(EncodingDef->getValueInit("Inst"));
+void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   const Record &Def = *Inst->TheDef;
-
-  const BitsInit &Bits = getBitsField(*EncodingDef, "Inst");
-  assert(!Bits.allInComplete() &&
-         "Invalid encodings should have been filtered out");
-
-  // If the instruction has specified a custom decoding hook, use that instead
-  // of trying to auto-generate the decoder.
-  StringRef InstDecoder = EncodingDef->getValueAsString("DecoderMethod");
-  if (!InstDecoder.empty()) {
-    bool HasCompleteInstDecoder =
-        EncodingDef->getValueAsBit("hasCompleteDecoder");
-    Operands.push_back(OperandInfo(InstDecoder.str(), HasCompleteInstDecoder));
-    return Bits.getNumBits();
-  }
-
-  // Generate a description of the operand of the instruction that we know
-  // how to decode automatically.
-  // FIXME: We'll need to have a way to manually override this as needed.
 
   // Gather the outputs/inputs of the instruction, so we can find their
   // positions in the encoding.  This assumes for now that they appear in the
@@ -2015,108 +2017,113 @@ unsigned InstructionEncoding::populateEncoding() {
     }
   }
 
-  if (IsVarLenInst) {
-    populateVarLenEncoding();
-  } else {
-    // For each operand, see if we can figure out where it is encoded.
-    for (const auto &Op : InOutOperands) {
-      const Init *OpInit = Op.first;
-      StringRef OpName = Op.second;
+  // For each operand, see if we can figure out where it is encoded.
+  for (const auto &Op : InOutOperands) {
+    const Init *OpInit = Op.first;
+    StringRef OpName = Op.second;
 
-      // We're ready to find the instruction encoding locations for this
-      // operand.
+    // We're ready to find the instruction encoding locations for this
+    // operand.
 
-      // First, find the operand type ("OpInit"), and sub-op names
-      // ("SubArgDag") if present.
-      const DagInit *SubArgDag = dyn_cast<DagInit>(OpInit);
-      if (SubArgDag)
-        OpInit = SubArgDag->getOperator();
-      const Record *OpTypeRec = cast<DefInit>(OpInit)->getDef();
-      // Lookup the sub-operands from the operand type record (note that only
-      // Operand subclasses have MIOperandInfo, see CodeGenInstruction.cpp).
-      const DagInit *SubOps = OpTypeRec->isSubClassOf("Operand")
-                                  ? OpTypeRec->getValueAsDag("MIOperandInfo")
-                                  : nullptr;
+    // First, find the operand type ("OpInit"), and sub-op names
+    // ("SubArgDag") if present.
+    const DagInit *SubArgDag = dyn_cast<DagInit>(OpInit);
+    if (SubArgDag)
+      OpInit = SubArgDag->getOperator();
+    const Record *OpTypeRec = cast<DefInit>(OpInit)->getDef();
+    // Lookup the sub-operands from the operand type record (note that only
+    // Operand subclasses have MIOperandInfo, see CodeGenInstruction.cpp).
+    const DagInit *SubOps = OpTypeRec->isSubClassOf("Operand")
+                                ? OpTypeRec->getValueAsDag("MIOperandInfo")
+                                : nullptr;
 
-      // Lookup the decoder method and construct a new OperandInfo to hold our
-      // result.
-      OperandInfo OpInfo = getOpInfo(OpTypeRec);
+    // Lookup the decoder method and construct a new OperandInfo to hold our
+    // result.
+    OperandInfo OpInfo = getOpInfo(OpTypeRec);
 
-      // If we have named sub-operands...
-      if (SubArgDag) {
-        // Then there should not be a custom decoder specified on the top-level
-        // type.
-        if (!OpInfo.Decoder.empty()) {
-          PrintError(EncodingDef,
-                     "DecoderEmitter: operand \"" + OpName + "\" has type \"" +
-                         OpInit->getAsString() +
-                         "\" with a custom DecoderMethod, but also named "
-                         "sub-operands.");
-          continue;
-        }
-
-        // Decode each of the sub-ops separately.
-        assert(SubOps && SubArgDag->getNumArgs() == SubOps->getNumArgs());
-        for (const auto &[I, Arg] : enumerate(SubOps->getArgs())) {
-          StringRef SubOpName = SubArgDag->getArgNameStr(I);
-          OperandInfo SubOpInfo = getOpInfo(cast<DefInit>(Arg)->getDef());
-
-          addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName,
-                              SubOpInfo);
-          Operands.push_back(std::move(SubOpInfo));
-        }
+    // If we have named sub-operands...
+    if (SubArgDag) {
+      // Then there should not be a custom decoder specified on the top-level
+      // type.
+      if (!OpInfo.Decoder.empty()) {
+        PrintError(EncodingDef,
+                   "DecoderEmitter: operand \"" + OpName + "\" has type \"" +
+                       OpInit->getAsString() +
+                       "\" with a custom DecoderMethod, but also named "
+                       "sub-operands.");
         continue;
       }
 
-      // Otherwise, if we have an operand with sub-operands, but they aren't
-      // named...
-      if (SubOps && OpInfo.Decoder.empty()) {
-        // If it's a single sub-operand, and no custom decoder, use the decoder
-        // from the one sub-operand.
-        if (SubOps->getNumArgs() == 1)
-          OpInfo = getOpInfo(cast<DefInit>(SubOps->getArg(0))->getDef());
+      // Decode each of the sub-ops separately.
+      assert(SubOps && SubArgDag->getNumArgs() == SubOps->getNumArgs());
+      for (const auto &[I, Arg] : enumerate(SubOps->getArgs())) {
+        StringRef SubOpName = SubArgDag->getArgNameStr(I);
+        OperandInfo SubOpInfo = getOpInfo(cast<DefInit>(Arg)->getDef());
 
-        // If we have multiple sub-ops, there'd better have a custom
-        // decoder. (Otherwise we don't know how to populate them properly...)
-        if (SubOps->getNumArgs() > 1) {
-          PrintError(EncodingDef,
-                     "DecoderEmitter: operand \"" + OpName +
-                         "\" uses MIOperandInfo with multiple ops, but doesn't "
-                         "have a custom decoder!");
-          debugDumpRecord(*EncodingDef);
-          continue;
-        }
+        addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName, SubOpInfo);
+        Operands.push_back(std::move(SubOpInfo));
       }
-
-      addOneOperandFields(EncodingDef, Bits, TiedNames, OpName, OpInfo);
-      // FIXME: it should be an error not to find a definition for a given
-      // operand, rather than just failing to add it to the resulting
-      // instruction! (This is a longstanding bug, which will be addressed in an
-      // upcoming change.)
-      if (OpInfo.numFields() > 0)
-        Operands.push_back(std::move(OpInfo));
+      continue;
     }
-  }
 
-#if 0
-  LLVM_DEBUG({
-      // Dumps the instruction encoding bits.
-      dumpBits(errs(), Bits);
+    // Otherwise, if we have an operand with sub-operands, but they aren't
+    // named...
+    if (SubOps && OpInfo.Decoder.empty()) {
+      // If it's a single sub-operand, and no custom decoder, use the decoder
+      // from the one sub-operand.
+      if (SubOps->getNumArgs() == 1)
+        OpInfo = getOpInfo(cast<DefInit>(SubOps->getArg(0))->getDef());
 
-      errs() << '\n';
-
-      // Dumps the list of operand info.
-      for (unsigned i = 0, e = Inst->Operands.size(); i != e; ++i) {
-        const CGIOperandList::OperandInfo &Info = Inst->Operands[i];
-        const std::string &OperandName = Info.Name;
-        const Record &OperandDef = *Info.Rec;
-
-        errs() << "\t" << OperandName << " (" << OperandDef.getName() << ")\n";
+      // If we have multiple sub-ops, there'd better have a custom
+      // decoder. (Otherwise we don't know how to populate them properly...)
+      if (SubOps->getNumArgs() > 1) {
+        PrintError(EncodingDef,
+                   "DecoderEmitter: operand \"" + OpName +
+                       "\" uses MIOperandInfo with multiple ops, but doesn't "
+                       "have a custom decoder!");
+        debugDumpRecord(*EncodingDef);
+        continue;
       }
-    });
-#endif
+    }
 
-  return Bits.getNumBits();
+    addOneOperandFields(EncodingDef, Bits, TiedNames, OpName, OpInfo);
+    // FIXME: it should be an error not to find a definition for a given
+    // operand, rather than just failing to add it to the resulting
+    // instruction! (This is a longstanding bug, which will be addressed in an
+    // upcoming change.)
+    if (OpInfo.numFields() > 0)
+      Operands.push_back(std::move(OpInfo));
+  }
+}
+
+InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
+                                         const CodeGenInstruction *Inst)
+    : EncodingDef(EncodingDef), Inst(Inst) {
+  const Record *InstDef = Inst->TheDef;
+
+  // Give this encoding a name.
+  if (EncodingDef != InstDef)
+    Name = (EncodingDef->getName() + Twine(':')).str();
+  Name.append(InstDef->getName());
+
+  DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
+  if (!DecoderMethod.empty())
+    HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
+
+  const RecordVal *InstField = EncodingDef->getValue("Inst");
+  if (const auto *DI = dyn_cast<DagInit>(InstField->getValue())) {
+    VarLenInst VLI(DI, InstField);
+    BitWidth = VLI.size();
+    // If the encoding has a custom decoder, don't bother parsing the operands.
+    if (DecoderMethod.empty())
+      parseVarLenOperands(VLI);
+  } else {
+    const auto *BI = cast<BitsInit>(InstField->getValue());
+    BitWidth = BI->getNumBits();
+    // If the encoding has a custom decoder, don't bother parsing the operands.
+    if (DecoderMethod.empty())
+      parseFixedLenOperands(*BI);
+  }
 }
 
 // emitFieldFromInstruction - Emit the templated helper function
