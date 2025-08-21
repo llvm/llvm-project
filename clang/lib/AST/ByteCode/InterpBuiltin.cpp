@@ -2683,9 +2683,10 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   PrimType ElemT = *S.getContext().classify(VT->getElementType());
   unsigned SourceLen = VT->getNumElements();
-  SmallVector<APValue, 4> ResultElements;
-  ResultElements.reserve(SourceLen / 2);
 
+  PrimType DstElemT = *S.getContext().classify(
+      Call->getType()->castAs<VectorType>()->getElementType());
+  unsigned DstElem = 0;
   for (unsigned I = 0; I != SourceLen; I += 2) {
     APSInt Elem1;
     APSInt Elem2;
@@ -2699,16 +2700,19 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
     case clang::X86::BI__builtin_ia32_pmuludq128:
     case clang::X86::BI__builtin_ia32_pmuludq256:
     case clang::X86::BI__builtin_ia32_pmuludq512:
-      Result = APSInt(llvm::APIntOps::muluExtended(Elem1, Elem2), true);
+      Result = APSInt(llvm::APIntOps::muluExtended(Elem1, Elem2),
+                      /*IsUnsigned=*/true);
       break;
     case clang::X86::BI__builtin_ia32_pmuldq128:
     case clang::X86::BI__builtin_ia32_pmuldq256:
     case clang::X86::BI__builtin_ia32_pmuldq512:
-      Result = APSInt(llvm::APIntOps::mulsExtended(Elem1, Elem2), false);
+      Result = APSInt(llvm::APIntOps::mulsExtended(Elem1, Elem2),
+                      /*IsUnsigned=*/false);
       break;
     }
-    INT_TYPE_SWITCH_NO_BOOL(ElemT,
-                            { Dst.elem<T>(I) = static_cast<T>(Result); });
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                            { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
+    ++DstElem;
   }
 
   Dst.initializeAllElements();
@@ -3204,6 +3208,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pmuldq512:
   case clang::X86::BI__builtin_ia32_pmuludq128:
   case clang::X86::BI__builtin_ia32_pmuludq256:
+  case clang::X86::BI__builtin_ia32_pmuludq512:
     return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_fma(S, OpPC, Call);
