@@ -15,6 +15,7 @@ static_library("ObjCopy") {
     "CommonConfig.cpp",
     "ConfigManager.cpp",
     "DXContainer/DXContainerObjcopy.cpp",
+    "DXContainer/DXContainerObject.cpp",
     "DXContainer/DXContainerReader.cpp",
     "DXContainer/DXContainerWriter.cpp",
     "ELF/ELFObjcopy.cpp",
