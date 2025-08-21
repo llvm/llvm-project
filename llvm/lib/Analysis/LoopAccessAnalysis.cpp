@@ -841,6 +841,12 @@ public:
   /// dependency checking (i.e. ShouldRetryWithRuntimeChecks).
   bool isDependencyCheckNeeded() const { return !CheckDeps.empty(); }
 
+  /// We decided that no dependence analysis would be used.  Reset the state.
+  void resetDepChecks(MemoryDepChecker &DepChecker) {
+    CheckDeps.clear();
+    DepChecker.clearDependences();
+  }
+
   const MemAccessInfoList &getDependenciesToCheck() const { return CheckDeps; }
 
 private:
@@ -2769,6 +2775,10 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         LLVM_DEBUG(dbgs() << "LAA: Can't vectorize with memory checks\n");
         return false;
       }
+
+      // Clear the dependency checks. They are no longer needed.
+      Accesses.resetDepChecks(*DepChecker);
+
       DepsAreSafe = true;
     }
   }

@@ -7,14 +7,6 @@ define void @dependency_check_and_runtime_checks_needed_select_of_invariant_ptrs
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l2 = load float, ptr %gep.a.iv.off, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -88,14 +80,6 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs(p
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l2 = load float, ptr %gep.a.iv.off, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:

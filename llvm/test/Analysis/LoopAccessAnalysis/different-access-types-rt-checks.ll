@@ -104,10 +104,6 @@ define void @loads_of_same_pointer_with_different_sizes_retry_with_runtime_check
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i32 %sub.0, ptr %gep.B.iv, align 4 ->
-; CHECK-NEXT:            store i32 %sub.1, ptr %gep.B.inc, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:

@@ -6,14 +6,6 @@ define void @dependency_check_and_runtime_checks_needed_gepb_is_inbounds_iv2_ste
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l2 = load float, ptr %gep.a.iv.off, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -75,14 +67,6 @@ define void @dependency_check_and_runtime_checks_needed_gepb_not_inbounds_iv2_st
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l2 = load float, ptr %gep.a.iv.off, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -145,14 +129,6 @@ define void @dependency_check_and_runtime_checks_needed_gepb_is_inbounds_iv2_ste
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l2 = load float, ptr %gep.a.iv.off, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -219,14 +195,6 @@ define void @dependency_check_and_runtime_checks_needed_gepb_not_inbounds_iv2_st
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l2 = load float, ptr %gep.a.iv.off, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -292,14 +260,6 @@ define void @dependency_check_and_runtime_checks_needed_gepb_may_wrap(ptr %a, pt
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l2 = load float, ptr %gep.a.iv.off, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
-; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -362,14 +322,6 @@ define void @retry_after_dep_check_with_unknown_offset(ptr %A, i32 %offset) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l.A = load float, ptr %A, align 4 ->
-; CHECK-NEXT:            store float 0.000000e+00, ptr %A.100.iv.offset.3, align 4
-; CHECK-EMPTY:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l.A = load float, ptr %A, align 4 ->
-; CHECK-NEXT:            store float %l.A, ptr %A.100.iv, align 8
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
