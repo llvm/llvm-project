@@ -255,13 +255,18 @@ static void phiNodeRemapHelper(PHINode *Phi, BasicBlock *BB,
   ValueToValueMapTy VMap;
   Value *Val = Phi->getIncomingValueForBlock(BB);
   VMap[Phi] = Val;
-  Builder.SetInsertPoint(llvm::dyn_cast<Instruction>(Val)->getNextNode());
+  Builder.SetInsertPoint(&BB->back());
   for (Instruction *I : UsesInBlock) {
-    Instruction *ThenClone = I->clone();
-    RemapInstruction(ThenClone, VMap,
+    // don't clone over the Phi just remap them
+    if (auto *PhiNested = dyn_cast<PHINode>(I)) {
+      VMap[PhiNested] = PhiNested->getIncomingValueForBlock(BB);
+      continue;
+    }
+    Instruction *Clone = I->clone();
+    RemapInstruction(Clone, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    Builder.Insert(ThenClone);
-    VMap[I] = ThenClone;
+    Builder.Insert(Clone);
+    VMap[I] = Clone;
   }
 }
 
@@ -270,15 +275,14 @@ static void phiNodeReplacement(IntrinsicInst *II) {
   for (User *U : II->users()) {
     if (auto *Phi = dyn_cast<PHINode>(U)) {
 
-      auto *ThenBB = Phi->getIncomingBlock(0);
-      auto *ElseBB = Phi->getIncomingBlock(1);
       IRBuilder<> Builder(Phi);
-
       SmallVector<Instruction *> UsesInBlock;
       collectBlockUseDef(Phi, UsesInBlock);
 
-      phiNodeRemapHelper(Phi, ThenBB, Builder, UsesInBlock);
-      phiNodeRemapHelper(Phi, ElseBB, Builder, UsesInBlock);
+      for (uint I = 0; I < Phi->getNumIncomingValues(); I++) {
+        auto *CurrIncomingBB = Phi->getIncomingBlock(I);
+        phiNodeRemapHelper(Phi, CurrIncomingBB, Builder, UsesInBlock);
+      }
 
       DeadInsts.push_back(Phi);
 
