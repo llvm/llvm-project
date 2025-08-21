@@ -113,36 +113,17 @@ bool Status::exists() const {
 
 File::~File() = default;
 
-llvm::ErrorOr<std::optional<cas::ObjectRef>> File::getObjectRefForContent() {
-  return std::nullopt;
-}
-
 FileSystem::~FileSystem() = default;
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
                              bool RequiresNullTerminator, bool IsVolatile,
-                             bool IsText,
-                             std::optional<cas::ObjectRef> *CASContents) {
+                             bool IsText) {
   auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
   if (!F)
     return F.getError();
-  if (CASContents) {
-    auto CASRef = (*F)->getObjectRefForContent();
-    if (!CASRef)
-      return CASRef.getError();
-    *CASContents = *CASRef;
-  }
 
   return (*F)->getBuffer(Name, FileSize, RequiresNullTerminator, IsVolatile);
-}
-
-llvm::ErrorOr<std::optional<cas::ObjectRef>>
-FileSystem::getObjectRefForFileContent(const Twine &Name) {
-  auto F = openFileForRead(Name);
-  if (!F)
-    return F.getError();
-  return (*F)->getObjectRefForContent();
 }
 
 std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
@@ -3004,6 +2985,7 @@ void TracingFileSystem::printImpl(raw_ostream &OS, PrintType Type,
   getUnderlyingFS().print(OS, Type, IndentLevel + 1);
 }
 
+const char File::ID = 0;
 const char FileSystem::ID = 0;
 const char OverlayFileSystem::ID = 0;
 const char ProxyFileSystem::ID = 0;

@@ -111,7 +111,6 @@ module LLVM_CAS {
   requires cplusplus
   umbrella "llvm/CAS"
   module * { export * }
-  textual header "llvm/CAS/CASReference.h"
 }
 
 module LLVM_Config {

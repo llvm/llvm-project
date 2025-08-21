@@ -14,9 +14,9 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASReference.h"
-#include "llvm/CAS/ThreadSafeFileSystem.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -32,8 +32,12 @@ namespace clang {
 namespace tooling {
 namespace dependencies {
 
-class DependencyScanningCASFilesystem : public llvm::cas::ThreadSafeFileSystem {
+class DependencyScanningCASFilesystem
+    : public llvm::RTTIExtends<DependencyScanningCASFilesystem,
+                               llvm::cas::CASBackedFileSystem> {
 public:
+  static const char ID;
+
   DependencyScanningCASFilesystem(
       IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS,
       llvm::cas::ActionCache &Cache);
@@ -59,13 +63,13 @@ public:
     return FS->isLocal(Path, Result);
   }
 
-  IntrusiveRefCntPtr<llvm::cas::ThreadSafeFileSystem>
+  IntrusiveRefCntPtr<llvm::cas::CASBackedFileSystem>
   createThreadSafeProxyFS() override;
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
   bool exists(const Twine &Path) override;
-  llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const Twine &Path) override;
+  llvm::Expected<std::unique_ptr<llvm::cas::CASBackedFile>>
+  openCASBackedFileForRead(const Twine &Path) override;
 
   /// \returns The scanned preprocessor directive tokens of the file that are
   /// used to speed up preprocessing, if available.

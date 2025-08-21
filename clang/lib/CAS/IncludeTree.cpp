@@ -9,6 +9,7 @@
 #include "clang/CAS/IncludeTree.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
@@ -899,11 +900,11 @@ namespace {
 /// of the preprocessor, for creating \p FileEntries using a file path, while
 /// "replaying" an \p IncludeTreeRoot. It is not intended to be a complete
 /// implementation of a file system.
-class IncludeTreeFileSystem : public llvm::vfs::FileSystem {
+class IncludeTreeFileSystem final : public llvm::cas::CASBackedFileSystem {
   llvm::cas::ObjectStore &CAS;
 
 public:
-  class IncludeTreeFile : public llvm::vfs::File {
+  class IncludeTreeFile final : public llvm::cas::CASBackedFile {
     llvm::vfs::Status Stat;
     StringRef Contents;
     cas::ObjectRef ContentsRef;
@@ -924,10 +925,7 @@ public:
                                               Name.toStringRef(NameBuf));
     }
 
-    llvm::ErrorOr<std::optional<cas::ObjectRef>>
-    getObjectRefForContent() override {
-      return ContentsRef;
-    }
+    cas::ObjectRef getObjectRefForContent() override { return ContentsRef; }
 
     std::error_code close() override { return std::error_code(); }
   };
@@ -972,13 +970,13 @@ public:
     return llvm::errorToErrorCode(fileError(Filename));
   }
 
-  llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const Twine &Path) override {
+  llvm::Expected<std::unique_ptr<llvm::cas::CASBackedFile>>
+  openCASBackedFileForRead(const Twine &Path) override {
     SmallString<128> Filename;
     getPath(Path, Filename);
     auto MaterializedFile = materialize(Filename);
     if (!MaterializedFile)
-      return llvm::errorToErrorCode(MaterializedFile.takeError());
+      return MaterializedFile.takeError();
     llvm::vfs::Status Stat = makeStatus(
         Filename, MaterializedFile->Contents.size(), MaterializedFile->UniqueID,
         llvm::sys::fs::file_type::regular_file);
@@ -1036,6 +1034,10 @@ public:
   }
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
     return llvm::errc::operation_not_permitted;
+  }
+  IntrusiveRefCntPtr<llvm::cas::CASBackedFileSystem>
+  createThreadSafeProxyFS() override {
+    llvm::report_fatal_error("not implemented");
   }
 };
 } // namespace

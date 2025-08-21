@@ -9,6 +9,7 @@
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/CAS/FileSystemCache.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Config/config.h"
@@ -18,8 +19,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-const char ThreadSafeFileSystem::ID = 0;
-void ThreadSafeFileSystem::anchor() {}
+const char CachingOnDiskFileSystem::ID = 0;
 void CachingOnDiskFileSystem::anchor() {}
 
 namespace {
@@ -86,7 +86,8 @@ public:
                                        std::optional<CASID> &FileID) final;
   ErrorOr<vfs::Status> status(const Twine &Path) final;
   bool exists(const Twine &Path) final;
-  ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &Path) final;
+  Expected<std::unique_ptr<CASBackedFile>>
+  openCASBackedFileForReadImpl(const Twine &Path) final;
   vfs::directory_iterator dir_begin(const Twine &Dir,
                                     std::error_code &EC) final {
     auto IterOr = getDirectoryIterator(Dir);
@@ -209,7 +210,7 @@ CachingOnDiskFileSystem::CachingOnDiskFileSystem(
 
 CachingOnDiskFileSystem::CachingOnDiskFileSystem(ObjectStore &DB) : DB(DB) {}
 
-class CachingOnDiskFileSystemImpl::VFSFile : public vfs::File {
+class CachingOnDiskFileSystemImpl::VFSFile final : public CASBackedFile {
 public:
   ErrorOr<vfs::Status> status() final { return Entry->getStatus(Name); }
 
@@ -226,9 +227,7 @@ public:
     return Object->getMemoryBuffer(RequestedName.toStringRef(Storage));
   }
 
-  llvm::ErrorOr<std::optional<cas::ObjectRef>> getObjectRefForContent() final {
-    return Entry->getRef();
-  }
+  cas::ObjectRef getObjectRefForContent() final { return *Entry->getRef(); }
 
   /// Closes the file.
   std::error_code close() final { return std::error_code(); }
@@ -453,18 +452,19 @@ bool CachingOnDiskFileSystemImpl::exists(const Twine &Path) {
   return true;
 }
 
-ErrorOr<std::unique_ptr<vfs::File>>
-CachingOnDiskFileSystemImpl::openFileForRead(const Twine &Path) {
+Expected<std::unique_ptr<CASBackedFile>>
+CachingOnDiskFileSystemImpl::openCASBackedFileForReadImpl(const Twine &Path) {
   PathStorage PathStorage(Path);
   StringRef PathRef = PathStorage.Path;
 
   Expected<DirectoryEntry *> ExpectedEntry = lookupPath(PathRef);
   if (!ExpectedEntry)
-    return errorToErrorCode(ExpectedEntry.takeError());
+    return ExpectedEntry.takeError();
 
   DirectoryEntry *Entry = *ExpectedEntry;
   if (!Entry->isFile())
-    return std::errc::invalid_argument;
+    return createFileError(Path,
+                           std::make_error_code(std::errc::invalid_argument));
 
   return std::make_unique<VFSFile>(DB, *Entry, PathRef);
 }

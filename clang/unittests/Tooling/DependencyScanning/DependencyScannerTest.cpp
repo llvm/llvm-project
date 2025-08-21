@@ -263,17 +263,21 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
   {
     DependencyScanningWorkerFilesystem DepFS(Service.getSharedCache(),
                                              std::move(CASFS));
-    std::optional<ObjectRef> CASContents;
-    auto Buf = DepFS.getBufferForFile(Path, /*FileSize*/ -1,
-                                      /*RequiresNullTerminator*/ false,
-                                      /*IsVolatile*/ false, /*IsText*/ true,
-                                      &CASContents);
+    llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> File =
+        DepFS.openFileForRead(Path);
+    ASSERT_TRUE(File);
+    llvm::cas::CASBackedFile *CASFile =
+        dyn_cast<llvm::cas::CASBackedFile>(File->get());
+    ASSERT_TRUE(CASFile);
+    auto Buf = CASFile->getBuffer(Path, /*FileSize*/ -1,
+                                  /*RequiresNullTerminator*/ false,
+                                  /*IsVolatile*/ false);
     ASSERT_TRUE(Buf);
     EXPECT_EQ(Contents, (*Buf)->getBuffer());
-    ASSERT_TRUE(CASContents);
     std::optional<ObjectProxy> BlobContents;
-    ASSERT_THAT_ERROR(DB->getProxy(*CASContents).moveInto(BlobContents),
-                      llvm::Succeeded());
+    ASSERT_THAT_ERROR(
+        DB->getProxy(CASFile->getObjectRefForContent()).moveInto(BlobContents),
+        llvm::Succeeded());
     EXPECT_EQ(BlobContents->getData(), Contents);
   }
   {
@@ -286,13 +290,12 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> File =
         DepFS.openFileForRead(Path);
     ASSERT_TRUE(File);
-    ASSERT_TRUE(*File);
-    llvm::ErrorOr<std::optional<ObjectRef>> Ref =
-        (*File)->getObjectRefForContent();
-    ASSERT_TRUE(Ref);
-    ASSERT_TRUE(*Ref);
+    llvm::cas::CASBackedFile *CASFile =
+        dyn_cast<llvm::cas::CASBackedFile>(File->get());
+    ASSERT_TRUE(CASFile);
+    ObjectRef Ref = CASFile->getObjectRefForContent();
     std::optional<ObjectProxy> BlobContents;
-    ASSERT_THAT_ERROR(DB->getProxy(**Ref).moveInto(BlobContents),
+    ASSERT_THAT_ERROR(DB->getProxy(Ref).moveInto(BlobContents),
                       llvm::Succeeded());
     EXPECT_EQ(BlobContents->getData(), Contents);
   }

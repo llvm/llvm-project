@@ -622,12 +622,13 @@ int getCASIDForFile(ObjectStore &CAS, const CASID &ID,
   if (!FS)
     ExitOnErr(FS.takeError());
 
-  auto FileRef = (*FS)->getObjectRefForFileContent(Path.front());
+  auto *CASFS = cast<CASBackedFileSystem>(FS->get());
+  auto FileRef = CASFS->getObjectRefForFileContent(Path.front());
   if (!FileRef)
     ExitOnErr(errorCodeToError(
         std::make_error_code(std::errc::no_such_file_or_directory)));
 
-  CASID FileID = CAS.getID(**FileRef);
+  CASID FileID = CAS.getID(*FileRef);
   outs() << FileID << "\n";
   return 0;
 }
