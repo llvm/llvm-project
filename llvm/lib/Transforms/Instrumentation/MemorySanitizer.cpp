@@ -3440,16 +3440,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(isa<FixedVectorType>(I.getType()));
 
     Value *FullShadow = getCleanShadow(&I);
-    assert(cast<FixedVectorType>(Shadow->getType())->getNumElements() <=
-           cast<FixedVectorType>(FullShadow->getType())->getNumElements());
+    unsigned ShadowNumElems =
+        cast<FixedVectorType>(Shadow->getType())->getNumElements();
+    unsigned FullShadowNumElems =
+        cast<FixedVectorType>(FullShadow->getType())->getNumElements();
 
-    if (cast<FixedVectorType>(Shadow->getType())->getNumElements() ==
-        cast<FixedVectorType>(FullShadow->getType())->getNumElements()) {
+    assert((ShadowNumElems == FullShadowNumElems) ||
+           (ShadowNumElems * 2 == FullShadowNumElems));
+
+    if (ShadowNumElems == FullShadowNumElems) {
       FullShadow = Shadow;
     } else {
       // TODO: generalize beyond 2x?
-      SmallVector<int, 32> ShadowMask(
-          cast<FixedVectorType>(FullShadow->getType())->getNumElements());
+      SmallVector<int, 32> ShadowMask(FullShadowNumElems);
       std::iota(ShadowMask.begin(), ShadowMask.end(), 0);
 
       // Append zeros
@@ -5405,16 +5408,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
-    // Convert Packed Single Precision Floating-Point Values
-    //   to Packed Signed Doubleword Integer Values
-    //
-    // <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
-    //                (<16 x float>, <16 x i32>, i16, i32)
-    case Intrinsic::x86_avx512_mask_cvtps2dq_512: {
-      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/false);
-      break;
-    }
-
     // Convert Single-Precision FP Value to 16-bit FP Value
     // <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512
     //                (<16 x float>, i32, <16 x i16>, i16)
@@ -5993,6 +5986,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_pshuf_b_512:
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
                                         /*trailingVerbatimArgs=*/1);
+      break;
+
+    // Convert Packed Single Precision Floating-Point Values
+    //   to Packed Signed Doubleword Integer Values
+    //
+    // <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
+    //                (<16 x float>, <16 x i32>, i16, i32)
+    case Intrinsic::x86_avx512_mask_cvtps2dq_512:
+      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/false);
       break;
 
     // AVX512 PMOV: Packed MOV, with truncation
