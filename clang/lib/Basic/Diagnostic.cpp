@@ -813,7 +813,7 @@ StringRef RuntimeTrapDiagnosticBuilder::getMessage() {
     Diagnostic Info(DiagObj, *this);
     Info.FormatDiagnostic(MessageStorage);
   }
-  return StringRef(MessageStorage.data(), MessageStorage.size());
+  return MessageStorage;
 }
 
 StringRef RuntimeTrapDiagnosticBuilder::getCategory() {

@@ -24,6 +24,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -1598,7 +1599,7 @@ public:
   StringRef getCategory();
 
 private:
-  llvm::SmallVector<char, 64> MessageStorage;
+  llvm::SmallString<64> MessageStorage;
 };
 
 //===----------------------------------------------------------------------===//
