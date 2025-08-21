@@ -387,9 +387,13 @@ TYPED_TEST(DenseMapTest, ConstIteratorTest) {
   EXPECT_TRUE(cit == cit2);
 }
 
+template <typename T, unsigned N>
+using UniversalSmallSet =
+    std::conditional_t<std::is_pointer_v<T>, SmallPtrSet<T, N>, SmallSet<T, N>>;
+
 TYPED_TEST(DenseMapTest, KeysValuesIterator) {
-  SmallSet<typename TypeParam::key_type, 10> Keys;
-  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  UniversalSmallSet<typename TypeParam::key_type, 10> Keys;
+  UniversalSmallSet<typename TypeParam::mapped_type, 10> Values;
   for (int I = 0; I < 10; ++I) {
     auto K = this->getKey(I);
     auto V = this->getValue(I);
@@ -398,8 +402,8 @@ TYPED_TEST(DenseMapTest, KeysValuesIterator) {
     this->Map[K] = V;
   }
 
-  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
-  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  UniversalSmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  UniversalSmallSet<typename TypeParam::mapped_type, 10> ActualValues;
   for (auto K : this->Map.keys())
     ActualKeys.insert(K);
   for (auto V : this->Map.values())
@@ -410,8 +414,8 @@ TYPED_TEST(DenseMapTest, KeysValuesIterator) {
 }
 
 TYPED_TEST(DenseMapTest, ConstKeysValuesIterator) {
-  SmallSet<typename TypeParam::key_type, 10> Keys;
-  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  UniversalSmallSet<typename TypeParam::key_type, 10> Keys;
+  UniversalSmallSet<typename TypeParam::mapped_type, 10> Values;
   for (int I = 0; I < 10; ++I) {
     auto K = this->getKey(I);
     auto V = this->getValue(I);
@@ -421,8 +425,8 @@ TYPED_TEST(DenseMapTest, ConstKeysValuesIterator) {
   }
 
   const TypeParam &ConstMap = this->Map;
-  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
-  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  UniversalSmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  UniversalSmallSet<typename TypeParam::mapped_type, 10> ActualValues;
   for (auto K : ConstMap.keys())
     ActualKeys.insert(K);
   for (auto V : ConstMap.values())
