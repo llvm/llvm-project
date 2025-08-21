@@ -37,7 +37,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 
 using namespace llvm;
@@ -3803,18 +3802,7 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
     getOperand(4)->printAsOperand(O, SlotTracker);
   }
 }
-#endif
 
-void VPExpandSCEVRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "cannot be used in per-lane");
-  const DataLayout &DL = SE.getDataLayout();
-  SCEVExpander Exp(SE, DL, "induction", /*PreserveLCSSA=*/true);
-  Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
-                                 &*State.Builder.GetInsertPoint());
-  State.set(this, Res, VPLane(0));
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
