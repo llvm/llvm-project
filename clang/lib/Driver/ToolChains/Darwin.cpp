@@ -2848,39 +2848,49 @@ void AppleMachO::AddCXXStdlibLibArgs(const ArgList &Args,
     break;
 
   case ToolChain::CST_Libstdcxx:
-    // Unfortunately, -lstdc++ doesn't always exist in the standard search path;
-    // it was previously found in the gcc lib dir. However, for all the Darwin
-    // platforms we care about it was -lstdc++.6, so we search for that
-    // explicitly if we can't see an obvious -lstdc++ candidate.
-
-    // Check in the sysroot first.
-    if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
-      SmallString<128> P(A->getValue());
-      llvm::sys::path::append(P, "usr", "lib", "libstdc++.dylib");
-
-      if (!getVFS().exists(P)) {
-        llvm::sys::path::remove_filename(P);
-        llvm::sys::path::append(P, "libstdc++.6.dylib");
-        if (getVFS().exists(P)) {
-          CmdArgs.push_back(Args.MakeArgString(P));
-          return;
-        }
-      }
-    }
-
-    // Otherwise, look in the root.
-    // FIXME: This should be removed someday when we don't have to care about
-    // 10.6 and earlier, where /usr/lib/libstdc++.dylib does not exist.
-    if (!getVFS().exists("/usr/lib/libstdc++.dylib") &&
-        getVFS().exists("/usr/lib/libstdc++.6.dylib")) {
-      CmdArgs.push_back("/usr/lib/libstdc++.6.dylib");
-      return;
-    }
-
-    // Otherwise, let the linker search.
-    CmdArgs.push_back("-lstdc++");
+    AddGnuCPlusPlusStdlibLibArgs(Args, CmdArgs);
     break;
   }
+}
+
+void AppleMachO::AddGnuCPlusPlusStdlibLibArgs(
+    const ArgList &Args, ArgStringList &CmdArgs) const {
+  CmdArgs.push_back("-lstdc++");
+}
+
+void DarwinClang::AddGnuCPlusPlusStdlibLibArgs(
+    const ArgList &Args, ArgStringList &CmdArgs) const {
+  // Unfortunately, -lstdc++ doesn't always exist in the standard search path;
+  // it was previously found in the gcc lib dir. However, for all the Darwin
+  // platforms we care about it was -lstdc++.6, so we search for that
+  // explicitly if we can't see an obvious -lstdc++ candidate.
+
+  // Check in the sysroot first.
+  if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+    SmallString<128> P(A->getValue());
+    llvm::sys::path::append(P, "usr", "lib", "libstdc++.dylib");
+
+    if (!getVFS().exists(P)) {
+      llvm::sys::path::remove_filename(P);
+      llvm::sys::path::append(P, "libstdc++.6.dylib");
+      if (getVFS().exists(P)) {
+        CmdArgs.push_back(Args.MakeArgString(P));
+        return;
+      }
+    }
+  }
+
+  // Otherwise, look in the root.
+  // FIXME: This should be removed someday when we don't have to care about
+  // 10.6 and earlier, where /usr/lib/libstdc++.dylib does not exist.
+  if (!getVFS().exists("/usr/lib/libstdc++.dylib") &&
+      getVFS().exists("/usr/lib/libstdc++.6.dylib")) {
+    CmdArgs.push_back("/usr/lib/libstdc++.6.dylib");
+    return;
+  }
+
+  // Otherwise, let the linker search.
+  CmdArgs.push_back("-lstdc++");
 }
 
 void DarwinClang::AddCCKextLibArgs(const ArgList &Args,

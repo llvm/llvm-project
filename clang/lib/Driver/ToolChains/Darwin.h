@@ -338,6 +338,9 @@ private:
   virtual void
   AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
                               llvm::opt::ArgStringList &CC1Args) const;
+  virtual void
+  AddGnuCPlusPlusStdlibLibArgs(const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs) const;
 };
 
 /// Darwin - The base Darwin tool chain.
@@ -689,6 +692,9 @@ private:
   void
   AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
                               llvm::opt::ArgStringList &CC1Args) const override;
+  void
+  AddGnuCPlusPlusStdlibLibArgs(const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs) const override;
 
   bool AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args,
