@@ -691,7 +691,7 @@ Arguments<(ins AnyIntegerOrFloatOr1DVector:$src,
     ```
 
     Operands:
-    * `$src`: Vector register to permute across lanes
+    * `$src`: Vector register to permute across lanes of the subgroup.
     * `$kind`: The kind of permutation operation.
     * `$fetch_inactive`: Optional. Used to dertermine behavior of invalid lanes (disabled thread or out-of-range).
       `fetch_inactive = false`: If source lane is invalid, use `bound_ctrl` to determine the source value.
