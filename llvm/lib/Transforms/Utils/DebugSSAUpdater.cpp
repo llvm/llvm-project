@@ -42,34 +42,23 @@ void DbgSSAPhi::print(raw_ostream &OS) const {
 
 using AvailableValsTy = DenseMap<DbgSSABlock *, DbgValueDef>;
 
-static AvailableValsTy &getAvailableVals(void *AV) {
-  return *static_cast<AvailableValsTy *>(AV);
-}
-
 DebugSSAUpdater::DebugSSAUpdater(SmallVectorImpl<DbgSSAPhi *> *NewPHI)
     : InsertedPHIs(NewPHI) {}
 
-DebugSSAUpdater::~DebugSSAUpdater() {
-  delete static_cast<AvailableValsTy *>(AV);
-}
-
 void DebugSSAUpdater::initialize() {
-  if (!AV)
-    AV = new AvailableValsTy();
-  else
-    getAvailableVals(AV).clear();
+  AV.clear();
 }
 
 bool DebugSSAUpdater::hasValueForBlock(DbgSSABlock *BB) const {
-  return getAvailableVals(AV).count(BB);
+  return AV.count(BB);
 }
 
 DbgValueDef DebugSSAUpdater::findValueForBlock(DbgSSABlock *BB) const {
-  return getAvailableVals(AV).lookup(BB);
+  return AV.lookup(BB);
 }
 
 void DebugSSAUpdater::addAvailableValue(DbgSSABlock *BB, DbgValueDef DV) {
-  getAvailableVals(AV)[BB] = DV;
+  AV[BB] = DV;
 }
 
 DbgValueDef DebugSSAUpdater::getValueAtEndOfBlock(DbgSSABlock *BB) {
@@ -171,8 +160,8 @@ public:
   static PHI_iterator PHI_begin(PhiT *PHI) { return PHI_iterator(PHI); }
   static PHI_iterator PHI_end(PhiT *PHI) { return PHI_iterator(PHI, true); }
 
-  /// FindPredecessorBlocks - Put the predecessors of Info->BB into the Preds
-  /// vector, set Info->NumPreds, and allocate space in Info->Preds.
+  /// FindPredecessorBlocks - Put the predecessors of BB into the Preds
+  /// vector.
   static void FindPredecessorBlocks(DbgSSABlock *BB,
                                     SmallVectorImpl<DbgSSABlock *> *Preds) {
     for (auto PredIt = BB->pred_begin(); PredIt != BB->pred_end(); ++PredIt)
@@ -185,8 +174,7 @@ public:
     return DbgValueDef();
   }
 
-  /// CreateEmptyPHI - Create a new PHI instruction in the specified block.
-  /// Reserve space for the operands (?) but do not fill them in yet.
+  /// CreateEmptyPHI - Create a new debug PHI entry for the specified block.
   static DbgSSAPhi *CreateEmptyPHI(DbgSSABlock *BB, unsigned NumPreds,
                                    DebugSSAUpdater *Updater) {
     DbgSSAPhi *PHI = BB->newPHI();
@@ -225,11 +213,10 @@ public:
 /// return it. If not, construct SSA form by first calculating the required
 /// placement of PHIs and then inserting new PHIs where needed.
 DbgValueDef DebugSSAUpdater::getValueAtEndOfBlockInternal(DbgSSABlock *BB) {
-  AvailableValsTy &AvailableVals = getAvailableVals(AV);
-  if (AvailableVals.contains(BB))
-    return AvailableVals[BB];
+  if (AV.contains(BB))
+    return AV[BB];
 
-  SSAUpdaterImpl<DebugSSAUpdater> Impl(this, &AvailableVals, InsertedPHIs);
+  SSAUpdaterImpl<DebugSSAUpdater> Impl(this, &AV, InsertedPHIs);
   return Impl.GetValue(BB);
 }
 
@@ -263,20 +250,12 @@ void DbgValueRangeTable::addVariable(Function *F, DebugVariableAggregate DVA) {
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
         if (DVR.getVariable() == Var &&
             DVR.getDebugLoc().getInlinedAt() == InlinedAt) {
-          assert(!DVR.isDbgAssign() && "No support for #dbg_declare yet.");
+          assert(!DVR.isDbgAssign() && "No support for #dbg_assign yet.");
           if (DVR.isDbgDeclare())
             DeclareRecordFound = true;
           ++NumRecordsFound;
           LastRecordFound = &DVR;
           DbgRecordValues.push_back(&DVR);
-        }
-        if (!FoundInstructionInScope && I.getDebugLoc()) {
-          if (I.getDebugLoc().getInlinedAt() == InlinedAt &&
-              isContained(cast<DILocalScope>(I.getDebugLoc().getScope()),
-                          Var->getScope())) {
-            FoundInstructionInScope = true;
-            HasAnyInstructionsInScope.insert(&BB);
-          }
         }
       }
       if (!FoundInstructionInScope && I.getDebugLoc()) {
@@ -312,7 +291,8 @@ void DbgValueRangeTable::addVariable(Function *F, DebugVariableAggregate DVA) {
     return;
   }
 
-  // We don't have a single location, so let's have fun with liveness.
+  // We don't have a single location for the variable's entire scope, so instead
+  // we must now perform a liveness analysis to create a location list.
   DenseMap<BasicBlock *, DbgValueDef> LiveInMap;
   SmallVector<DbgSSAPhi *> HypotheticalPHIs;
   DebugSSAUpdater SSAUpdater(&HypotheticalPHIs);
@@ -395,21 +375,17 @@ void DbgValueRangeTable::printValues(DebugVariableAggregate DVA,
   }
 }
 
-uint64_t DbgValueRangeTable::addVariableName(Value *V, uint64_t Size) {
-  uint64_t Key = 0;
-  auto I = VariableMapping.find(V);
-  if (I == VariableMapping.end()) {
-    Key = KeyIndex;
-    VariableMapping.try_emplace(V, Key);
-    std::string &ValueText = VariableNameMapping[Key];
-    raw_string_ostream Stream(ValueText);
-    Stream << " ";
-    V->printAsOperand(Stream, true);
-    KeyIndex += Size;
-  } else {
-    Key = I->second;
-  }
-  LLVM_DEBUG(dbgs() << "Stashing Value: " << Key << " - " << *V << "\n");
-
-  return Key;
+SSAValueNameMap::ValueID SSAValueNameMap::addValue(Value *V) {
+  auto ExistingID = ValueToIDMap.find(V);
+  if (ExistingID != ValueToIDMap.end())
+    return ExistingID->second;
+  // First, get a new ID and Map V to it.
+  ValueID NewID = NextID++;
+  ValueToIDMap.insert({V, NewID});
+  // Then, get the name string for V and map NewID to it.
+  assert(!ValueIDToNameMap.contains(NewID) && "New value ID already maps to a name?");
+  std::string &ValueText = ValueIDToNameMap[NewID];
+  raw_string_ostream Stream(ValueText);
+  V->printAsOperand(Stream, true);
+  return NewID;
 }
