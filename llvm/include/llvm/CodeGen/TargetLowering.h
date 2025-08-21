@@ -262,7 +262,9 @@ public:
     LLOnly,  // Expand the (load) instruction into just a load-linked, which has
              // greater atomic guarantees than a normal load.
     CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
-    MaskedIntrinsic,   // Use a target-specific intrinsic for the LL/SC loop.
+    MaskedIntrinsic, // Use a target-specific intrinsic for the LL/SC loop.
+    XChg, // Expand a store too large to be atomic into a xchg, then re-process
+          // it.
     BitTestIntrinsic,  // Use a target-specific intrinsic for special bit
                        // operations; used by X86.
     CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
@@ -2271,6 +2273,18 @@ public:
   virtual void emitExpandAtomicRMW(AtomicRMWInst *AI) const {
     llvm_unreachable(
         "Generic atomicrmw expansion unimplemented on this target");
+  }
+
+  /// Perform a atomic store using a target-specific way.
+  virtual void emitExpandAtomicStore(StoreInst *SI) const {
+    llvm_unreachable(
+        "Generic atomic store expansion unimplemented on this target");
+  }
+
+  /// Perform a atomic load using a target-specific way.
+  virtual void emitExpandAtomicLoad(LoadInst *LI) const {
+    llvm_unreachable(
+        "Generic atomic load expansion unimplemented on this target");
   }
 
   /// Perform a cmpxchg expansion using a target-specific method.

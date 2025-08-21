@@ -21236,7 +21236,7 @@ ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
     has64BitAtomicStore = Subtarget->hasV6Ops();
 
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
-  return Size == 64 && has64BitAtomicStore ? AtomicExpansionKind::Expand
+  return Size == 64 && has64BitAtomicStore ? AtomicExpansionKind::XChg
                                            : AtomicExpansionKind::None;
 }
 

@@ -3938,7 +3938,7 @@ TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   // Do not expand loads and stores that don't exceed 64 bits.
   return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() > 64
-             ? AtomicExpansionKind::Expand
+             ? AtomicExpansionKind::XChg
              : AtomicExpansionKind::None;
 }
 
