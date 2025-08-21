@@ -52,9 +52,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     default: {
       InaccessibleTargetMemLocation TargetLoc =
           static_cast<InaccessibleTargetMemLocation>(Loc);
-      if (TargetLoc == InaccessibleTargetMemLocation::AARCH64_FPMR)
+      if (TargetLoc == InaccessibleTargetMemLocation::MEM_TARGET_0)
         OS << "AARCH64_FPMR: ";
-      if (TargetLoc == InaccessibleTargetMemLocation::AARCH64_ZA)
+      if (TargetLoc == InaccessibleTargetMemLocation::MEM_TARGET_1)
         OS << "AARCH64_ZA: ";
       break;
     }
