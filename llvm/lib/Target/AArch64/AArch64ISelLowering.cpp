@@ -6266,27 +6266,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_clz:
     return DAG.getNode(AArch64ISD::CTLZ_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
-  case Intrinsic::aarch64_sme_cntsb: {
-    SDValue Cntd = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(),
-        DAG.getConstant(Intrinsic::aarch64_sme_cntsd, DL, MVT::i64));
-    return DAG.getNode(ISD::MUL, DL, MVT::i64, Cntd,
-                       DAG.getConstant(8, DL, MVT::i64));
-  }
-  case Intrinsic::aarch64_sme_cntsh: {
-    SDValue Cntd = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(),
-        DAG.getConstant(Intrinsic::aarch64_sme_cntsd, DL, MVT::i64));
-    return DAG.getNode(ISD::MUL, DL, MVT::i64, Cntd,
-                       DAG.getConstant(4, DL, MVT::i64));
-  }
-  case Intrinsic::aarch64_sme_cntsw: {
-    SDValue Cntd = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(),
-        DAG.getConstant(Intrinsic::aarch64_sme_cntsd, DL, MVT::i64));
-    return DAG.getNode(ISD::MUL, DL, MVT::i64, Cntd,
-                       DAG.getConstant(2, DL, MVT::i64));
-  }
   case Intrinsic::aarch64_sve_cnt: {
     SDValue Data = Op.getOperand(3);
     // CTPOP only supports integer operands.
