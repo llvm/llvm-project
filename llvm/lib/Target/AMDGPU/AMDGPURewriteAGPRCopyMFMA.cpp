@@ -14,8 +14,6 @@
 /// MFMA opcode.
 ///
 /// TODO:
-///  - Handle SplitKit partial copy bundles, and not just full copy instructions
-///
 ///  - Update LiveIntervals incrementally instead of recomputing from scratch
 ///
 //===----------------------------------------------------------------------===//
@@ -37,6 +35,7 @@ using namespace llvm;
 namespace {
 
 class AMDGPURewriteAGPRCopyMFMAImpl {
+  MachineFunction &MF;
   const GCNSubtarget &ST;
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
@@ -53,7 +52,7 @@ public:
   AMDGPURewriteAGPRCopyMFMAImpl(MachineFunction &MF, VirtRegMap &VRM,
                                 LiveRegMatrix &LRM, LiveIntervals &LIS,
                                 const RegisterClassInfo &RegClassInfo)
-      : ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
+      : MF(MF), ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
         TRI(*ST.getRegisterInfo()), MRI(MF.getRegInfo()), VRM(VRM), LRM(LRM),
         LIS(LIS), RegClassInfo(RegClassInfo) {}
 
@@ -71,26 +70,28 @@ public:
   ///
   /// \p RewriteRegs will accumulate the set of register used by those MFMAs
   /// that need to have the register classes adjusted.
-  const TargetRegisterClass *recomputeRegClassExceptRewritable(
-      Register Reg, const TargetRegisterClass *OldRC,
-      const TargetRegisterClass *NewRC,
-      SmallVectorImpl<MachineInstr *> &RewriteCandidates,
+  bool recomputeRegClassExceptRewritable(
+      Register Reg, SmallVectorImpl<MachineInstr *> &RewriteCandidates,
       SmallSetVector<Register, 4> &RewriteRegs) const;
 
   bool run(MachineFunction &MF) const;
 };
 
-const TargetRegisterClass *
-AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
-    Register StartReg, const TargetRegisterClass *OldRC,
-    const TargetRegisterClass *NewRC,
-    SmallVectorImpl<MachineInstr *> &RewriteCandidates,
+bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
+    Register StartReg, SmallVectorImpl<MachineInstr *> &RewriteCandidates,
     SmallSetVector<Register, 4> &RewriteRegs) const {
   SmallVector<Register, 8> Worklist = {StartReg};
 
   // Recursively visit all transitive MFMA users
   while (!Worklist.empty()) {
     Register Reg = Worklist.pop_back_val();
+    const TargetRegisterClass *OldRC = MRI.getRegClass(Reg);
+
+    // Inflate to the equivalent AV_* class.
+    const TargetRegisterClass *NewRC = TRI.getLargestLegalSuperClass(OldRC, MF);
+    if (OldRC == NewRC)
+      return false;
+
     // Accumulate constraints from all uses.
     for (MachineOperand &MO : MRI.reg_nodbg_operands(Reg)) {
       // Apply the effect of the given operand to NewRC.
@@ -101,23 +102,40 @@ AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
       // either AGPR or VGPR in src0/src1, so don't bother checking the
       // constraint effects of the individual operands.
       if (isRewriteCandidate(*MI)) {
-        for (AMDGPU::OpName OpName :
-             {AMDGPU::OpName::vdst, AMDGPU::OpName::src2}) {
-          const MachineOperand *Op = TII.getNamedOperand(*MI, OpName);
+        const MachineOperand *VDst =
+            TII.getNamedOperand(*MI, AMDGPU::OpName::vdst);
+        const MachineOperand *Src2 =
+            TII.getNamedOperand(*MI, AMDGPU::OpName::src2);
+        for (const MachineOperand *Op : {VDst, Src2}) {
           if (!Op->isReg())
             continue;
 
           Register OtherReg = Op->getReg();
-          if (OtherReg != Reg) {
-            if (RewriteRegs.insert(OtherReg))
-              Worklist.push_back(OtherReg);
-          }
+          if (OtherReg.isPhysical())
+            return false;
+
+          if (OtherReg != Reg && RewriteRegs.insert(OtherReg))
+            Worklist.push_back(OtherReg);
         }
 
-        LLVM_DEBUG(dbgs() << "Ignoring effects of " << *MI);
+        if (!is_contained(RewriteCandidates, MI)) {
+          LLVM_DEBUG({
+            Register VDstPhysReg = VRM.getPhys(VDst->getReg());
+            dbgs() << "Attempting to replace VGPR MFMA with AGPR version:"
+                   << " Dst=[" << printReg(VDst->getReg()) << " => "
+                   << printReg(VDstPhysReg, &TRI);
 
-        if (!is_contained(RewriteCandidates, MI))
+            if (Src2->isReg()) {
+              Register Src2PhysReg = VRM.getPhys(Src2->getReg());
+              dbgs() << "], Src2=[" << printReg(Src2->getReg(), &TRI) << " => "
+                     << printReg(Src2PhysReg, &TRI);
+            }
+
+            dbgs() << "]: " << MI;
+          });
+
           RewriteCandidates.push_back(MI);
+        }
 
         continue;
       }
@@ -126,13 +144,14 @@ AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
       NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, &TII, &TRI);
       if (!NewRC || NewRC == OldRC) {
         LLVM_DEBUG(dbgs() << "User of " << printReg(Reg, &TRI)
-                          << " cannot be reassigned to AGPR: " << *MI);
-        return nullptr;
+                          << " cannot be reassigned to "
+                          << TRI.getRegClassName(NewRC) << ": " << *MI);
+        return false;
       }
     }
   }
 
-  return NewRC;
+  return true;
 }
 
 /// Attempt to reassign the registers in \p InterferingRegs to be AGPRs, with a
@@ -228,10 +247,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
         continue;
 
       MachineInstr *DefMI = LIS.getInstructionFromIndex(VNI->def);
-
-      // TODO: Handle SplitKit produced copy bundles for partially defined
-      // registers.
-      if (!DefMI || !DefMI->isFullCopy())
+      if (!DefMI || !DefMI->isCopy())
         continue;
 
       Register MFMADstReg = DefMI->getOperand(1).getReg();
@@ -243,34 +259,6 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
       MachineInstr *MFMA = LIS.getInstructionFromIndex(LRQ.valueIn()->def);
       if (!MFMA || !isRewriteCandidate(*MFMA))
         continue;
-
-      MachineOperand *Src2 = TII.getNamedOperand(*MFMA, AMDGPU::OpName::src2);
-      Register Src2Reg;
-      if (Src2->isReg()) {
-        Src2Reg = Src2->getReg();
-        if (!Src2Reg.isVirtual())
-          continue;
-      }
-
-      // FIXME: getMinimalPhysRegClass returns a nonsense AV_* subclass instead
-      // of an AGPR or VGPR subclass, so we can't simply use the result on the
-      // assignment.
-
-      LLVM_DEBUG({
-        dbgs() << "Attempting to replace VGPR MFMA with AGPR version:"
-               << " Dst=[" << printReg(VReg) << " => "
-               << printReg(PhysReg, &TRI);
-
-        if (Src2Reg) {
-          Register Src2PhysReg = VRM.getPhys(Src2Reg);
-          dbgs() << "], Src2=[" << printReg(Src2Reg, &TRI) << " => "
-                 << printReg(Src2PhysReg, &TRI);
-        }
-
-        dbgs() << "]: " << *MFMA;
-      });
-
-      const TargetRegisterClass *DstVirtRegRC = MRI.getRegClass(MFMADstReg);
 
       // src2 and dst have the same physical class constraint; try to preserve
       // the original src2 subclass if one were to exist.
@@ -290,11 +278,9 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
       //
       // Note recomputeRegClassExceptRewritable will consider the constraints of
       // this MFMA's src2 as well as the src2/dst of any transitive MFMA users.
-      const TargetRegisterClass *DstExceptRC =
-          recomputeRegClassExceptRewritable(MFMADstReg, DstVirtRegRC, VirtRegRC,
-                                            RewriteCandidates, RewriteRegs);
-      if (!DstExceptRC) {
-        LLVM_DEBUG(dbgs() << "Could not recompute the regclass of "
+      if (!recomputeRegClassExceptRewritable(MFMADstReg, RewriteCandidates,
+                                             RewriteRegs)) {
+        LLVM_DEBUG(dbgs() << "Could not recompute the regclass of dst reg "
                           << printReg(MFMADstReg, &TRI) << '\n');
         continue;
       }
