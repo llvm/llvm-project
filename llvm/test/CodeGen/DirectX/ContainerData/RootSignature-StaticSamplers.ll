@@ -27,16 +27,16 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; DXC-NEXT:       StaticSamplersOffset: 24
 ; DXC-NEXT:       Parameters:      []
 ; DXC-NEXT:       Samplers:
-; DXC-NEXT:         - Filter:          4
-; DXC-NEXT:           AddressU:        2
-; DXC-NEXT:           AddressV:        3
-; DXC-NEXT:           AddressW:        5
+; DXC-NEXT:         - Filter:          MinPointMagLinearMipPoint
+; DXC-NEXT:           AddressU:        Mirror
+; DXC-NEXT:           AddressV:        Clamp
+; DXC-NEXT:           AddressW:        MirrorOnce
 ; DXC-NEXT:           MipLODBias:      1.425
 ; DXC-NEXT:           MaxAnisotropy:   9
-; DXC-NEXT:           ComparisonFunc:  3
-; DXC-NEXT:           BorderColor:     2
+; DXC-NEXT:           ComparisonFunc:  Equal
+; DXC-NEXT:           BorderColor:     OpaqueWhite
 ; DXC-NEXT:           MinLOD:          -128
 ; DXC-NEXT:           MaxLOD:          128
 ; DXC-NEXT:           ShaderRegister:  42
 ; DXC-NEXT:           RegisterSpace:   0
-; DXC-NEXT:           ShaderVisibility: 0
+; DXC-NEXT:           ShaderVisibility: All

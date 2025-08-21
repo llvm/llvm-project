@@ -189,6 +189,11 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for static sampler BorderColor");
 
+    if (!dxbc::isValidShaderVisibility(S.ShaderVisibility))
+      return createStringError(
+          std::errc::invalid_argument,
+          "Invalid value for static sampler ShaderVisibility");
+
     StaticSamplerYamlDesc NewS;
     NewS.Filter = dxbc::SamplerFilter(S.Filter);
     NewS.AddressU = dxbc::TextureAddressMode(S.AddressU);
@@ -202,7 +207,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     NewS.MaxLOD = S.MaxLOD;
     NewS.ShaderRegister = S.ShaderRegister;
     NewS.RegisterSpace = S.RegisterSpace;
-    NewS.ShaderVisibility = S.ShaderVisibility;
+    NewS.ShaderVisibility = dxbc::ShaderVisibility(S.ShaderVisibility);
 
     RootSigDesc.StaticSamplers.push_back(NewS);
   }
@@ -609,6 +614,48 @@ void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
 void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
     IO &IO, dxbc::SigComponentType &Value) {
   for (const auto &E : dxbc::getSigComponentTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
+    IO &IO, dxbc::RootParameterType &Value) {
+  for (const auto &E : dxbc::getRootParameterTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::DescriptorRangeType>::enumeration(
+    IO &IO, dxbc::DescriptorRangeType &Value) {
+  for (const auto &E : dxbc::getDescriptorRangeTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::SamplerFilter>::enumeration(
+    IO &IO, dxbc::SamplerFilter &Value) {
+  for (const auto &E : dxbc::getSamplerFilters())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::StaticBorderColor>::enumeration(
+    IO &IO, dxbc::StaticBorderColor &Value) {
+  for (const auto &E : dxbc::getStaticBorderColors())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::TextureAddressMode>::enumeration(
+    IO &IO, dxbc::TextureAddressMode &Value) {
+  for (const auto &E : dxbc::getTextureAddressModes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ShaderVisibility>::enumeration(
+    IO &IO, dxbc::ShaderVisibility &Value) {
+  for (const auto &E : dxbc::getShaderVisibility())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ComparisonFunc>::enumeration(
+    IO &IO, dxbc::ComparisonFunc &Value) {
+  for (const auto &E : dxbc::getComparisonFuncs())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 

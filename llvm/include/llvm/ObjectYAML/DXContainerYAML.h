@@ -177,7 +177,7 @@ struct StaticSamplerYamlDesc {
   float MaxLOD = std::numeric_limits<float>::max();
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
-  uint32_t ShaderVisibility;
+  dxbc::ShaderVisibility ShaderVisibility;
 };
 
 struct RootSignatureYamlDesc {
@@ -319,6 +319,13 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ResourceKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::RootParameterType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::DescriptorRangeType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SamplerFilter)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::StaticBorderColor)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::TextureAddressMode)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibility)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ComparisonFunc)
 
 namespace llvm {
 

@@ -276,10 +276,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       for (DXContainerYAML::RootParameterLocationYaml &L :
            P.RootSignature->Parameters.Locations) {
 
-        assert(dxbc::isValidParameterType(L.Header.Type) &&
-               "invalid DXContainer YAML");
-        assert(dxbc::isValidShaderVisibility(L.Header.Visibility) &&
-               "invalid DXContainer YAML");
         dxbc::RootParameterType Type = dxbc::RootParameterType(L.Header.Type);
         dxbc::ShaderVisibility Visibility =
             dxbc::ShaderVisibility(L.Header.Visibility);
@@ -315,8 +311,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
               P.RootSignature->Parameters.getOrInsertTable(L);
           mcdxbc::DescriptorTable Table;
           for (const auto &R : TableYaml.Ranges) {
-            assert(dxbc::isValidRangeType(R.RangeType) &&
-                   "Invalid Descriptor Range Type");
             mcdxbc::DescriptorRange Range;
             Range.RangeType = dxbc::DescriptorRangeType(R.RangeType);
             Range.NumDescriptors = R.NumDescriptors;
@@ -335,15 +329,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       }
 
       for (const auto &Param : P.RootSignature->samplers()) {
-        assert(dxbc::isValidSamplerFilter(Param.Filter) &&
-               dxbc::isValidAddress(Param.AddressU) &&
-               dxbc::isValidAddress(Param.AddressV) &&
-               dxbc::isValidAddress(Param.AddressW) &&
-               dxbc::isValidComparisonFunc(Param.ComparisonFunc) &&
-               dxbc::isValidBorderColor(Param.BorderColor) &&
-               dxbc::isValidShaderVisibility(Param.ShaderVisibility) &&
-               "Invalid enum value in static sampler");
-
         mcdxbc::StaticSampler NewSampler;
         NewSampler.Filter = dxbc::SamplerFilter(Param.Filter);
         NewSampler.AddressU = dxbc::TextureAddressMode(Param.AddressU);
