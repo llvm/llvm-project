@@ -210,8 +210,10 @@ MemrefValue skipFullyAliasingOperations(MemrefValue source) {
 MemrefValue skipViewLikeOps(MemrefValue source) {
   while (auto op = source.getDefiningOp()) {
     if (auto viewLike = dyn_cast<ViewLikeOpInterface>(op)) {
-      source = cast<MemrefValue>(viewLike.getViewSource());
-      continue;
+      if (source == viewLike.getViewDest()) {
+        source = cast<MemrefValue>(viewLike.getViewSource());
+        continue;
+      }
     }
     return source;
   }
