@@ -1402,6 +1402,12 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
         llvm::formatv("No symbol file available for module '{0}'",
                       module.GetFileSpec().GetFilename().AsCString("")));
 
+  if (sym_file->GetNumCompileUnits() == 0)
+    return llvm::createStringError(
+        llvm::formatv("Could not resolve SDK for module '{0}'. Symbol file has "
+                      "no compile units.",
+                      module.GetFileSpec()));
+
   bool found_public_sdk = false;
   bool found_internal_sdk = false;
   XcodeSDK merged_sdk;
