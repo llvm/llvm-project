@@ -30,7 +30,7 @@ static inline float powfRoundedExponent(float Base, float Exponent) {
 namespace mathtest {
 
 template <> struct FunctionConfig<powf> {
-  static constexpr llvm::StringRef Name = "powf (real exponent)";
+  static constexpr llvm::StringRef Name = "powf (real exponents)";
   static constexpr llvm::StringRef KernelName = "powfKernel";
 
   // Source: The Khronos Group, The OpenCL C Specification v3.0.19, Sec. 7.4,
@@ -39,7 +39,7 @@ template <> struct FunctionConfig<powf> {
 };
 
 template <> struct FunctionConfig<powfRoundedExponent> {
-  static constexpr llvm::StringRef Name = "powf (integer exponent)";
+  static constexpr llvm::StringRef Name = "powf (integer exponents)";
   static constexpr llvm::StringRef KernelName = "powfRoundedExponentKernel";
 
   // Source: The Khronos Group, The OpenCL C Specification v3.0.19, Sec. 7.4,
@@ -64,11 +64,11 @@ int main(int argc, const char **argv) {
   const llvm::StringRef DeviceBinaryDir = DEVICE_BINARY_DIR;
   const bool IsVerbose = cl::IsVerbose;
 
-  bool RealExponentPassed =
+  bool RealExponentsPassed =
       runTests<powf>(Generator0, Configs, DeviceBinaryDir, IsVerbose);
-  bool IntegerExponentPassed = runTests<powfRoundedExponent>(
+  bool IntegerExponentsPassed = runTests<powfRoundedExponent>(
       Generator1, Configs, DeviceBinaryDir, IsVerbose);
 
-  return (RealExponentPassed && IntegerExponentPassed) ? EXIT_SUCCESS
-                                                       : EXIT_FAILURE;
+  return (RealExponentsPassed && IntegerExponentsPassed) ? EXIT_SUCCESS
+                                                         : EXIT_FAILURE;
 }
