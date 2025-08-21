@@ -936,3 +936,24 @@ constexpr vector4char ctz1 = __builtin_elementwise_cttz((vector4char){1, 0, 3, 4
 // expected-note@-1 {{evaluation of __builtin_elementwise_cttz with a zero value is undefined}}
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_cttz((vector4char){8, 0, 127, 0}, (vector4char){9, -1, 9, -2})) == (LITTLE_END ? 0xFE00FF03 : 0x03FF00FE));
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_cttz((vector4char){0, 0, 0, 0}, (vector4char){0, 0, 0, 0})) == 0);
+
+// Non-vector floating point types.
+static_assert(__builtin_elementwise_fma(2.0, 3.0, 4.0) == 10.0);
+static_assert(__builtin_elementwise_fma(200.0, 300.0, 400.0) == 60400.0);
+// Vector type.
+constexpr vector4float fmaFloat1 =
+  __builtin_elementwise_fma((vector4float){1.0, 2.0, 3.0, 4.0},
+                            (vector4float){2.0, 3.0, 4.0, 5.0},
+                            (vector4float){3.0, 4.0, 5.0, 6.0});
+static_assert(fmaFloat1[0] == 5.0);
+static_assert(fmaFloat1[1] == 10.0);
+static_assert(fmaFloat1[2] == 17.0);
+static_assert(fmaFloat1[3] == 26.0);
+constexpr vector4double fmaDouble1 =
+  __builtin_elementwise_fma((vector4double){1.0, 2.0, 3.0, 4.0},
+                            (vector4double){2.0, 3.0, 4.0, 5.0},
+                            (vector4double){3.0, 4.0, 5.0, 6.0});
+static_assert(fmaDouble1[0] == 5.0);
+static_assert(fmaDouble1[1] == 10.0);
+static_assert(fmaDouble1[2] == 17.0);
+static_assert(fmaDouble1[3] == 26.0);
