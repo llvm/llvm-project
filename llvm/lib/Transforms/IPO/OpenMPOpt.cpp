@@ -1086,7 +1086,8 @@ private:
     SmallDenseMap<BasicBlock *, SmallPtrSet<Instruction *, 4>> BB2PRMap;
 
     BasicBlock *StartBB = nullptr, *EndBB = nullptr;
-    auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                         ArrayRef<InsertPointTy> DeallocIPs) {
       BasicBlock *CGStartBB = CodeGenIP.getBlock();
       BasicBlock *CGEndBB =
           SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1126,7 +1127,8 @@ private:
       const DebugLoc DL = ParentBB->getTerminator()->getDebugLoc();
       ParentBB->getTerminator()->eraseFromParent();
 
-      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+      auto BodyGenCB = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
+                           ArrayRef<InsertPointTy> DeallocIPs) {
         BasicBlock *CGStartBB = CodeGenIP.getBlock();
         BasicBlock *CGEndBB =
             SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1256,8 +1258,9 @@ private:
       // avoid overriding binding settings, and without explicit cancellation.
       OpenMPIRBuilder::InsertPointTy AfterIP =
           cantFail(OMPInfoCache.OMPBuilder.createParallel(
-              Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-              OMP_PROC_BIND_default, /* IsCancellable */ false));
+              Loc, AllocaIP, /* DeallocIPs */ {}, BodyGenCB, PrivCB, FiniCB,
+              nullptr, nullptr, OMP_PROC_BIND_default,
+              /* IsCancellable */ false));
       BranchInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.

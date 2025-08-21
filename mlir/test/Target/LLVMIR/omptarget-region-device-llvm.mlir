@@ -56,7 +56,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:        %[[B:.*]] = load i32, ptr %[[PTR_B]], align 4
 // CHECK:        %[[C:.*]] = add i32 %[[A]], %[[B]]
 // CHECK:        store i32 %[[C]], ptr %[[PTR_C]], align 4
-// CHECK:        br label %[[LABEL_DEINIT:.*]]
+// CHECK:        br label %[[LABEL_TARGET_EXIT:.*]]
+// CHECK:        [[LABEL_TARGET_EXIT]]:
+// CHECK-NEXT:   br label %[[LABEL_DEINIT:.*]]
 // CHECK:        [[LABEL_DEINIT]]:
 // CHECK-NEXT:   call void @__kmpc_target_deinit()
 // CHECK-NEXT:   ret void

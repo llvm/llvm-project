@@ -712,7 +712,7 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
                    /* AllowVarArgs */ true,
                    /* AllowAlloca */ true,
                    /* AllocationBlock*/ &Func->getEntryBlock(),
-                   /* DeallocationBlock */ nullptr,
+                   /* DeallocationBlocks */ {},
                    /* Suffix */ ".outlined",
                    /* ArgsInZeroAddressSpace */ true);
 
