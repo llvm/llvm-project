@@ -116,14 +116,14 @@ ConfigManager::getDXContainerConfig() const {
       !Common.AllocSectionsPrefix.empty() ||
       Common.DiscardMode != DiscardType::None || !Common.AddSection.empty() ||
       !Common.DumpSection.empty() || !Common.KeepSection.empty() ||
-      !Common.OnlySection.empty() || !Common.ToRemove.empty() ||
-      !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
-      !Common.SetSectionFlags.empty() || !Common.SetSectionType.empty() ||
-      Common.ExtractDWO || Common.OnlyKeepDebug || Common.StripAllGNU ||
-      Common.StripDWO || Common.StripDebug || Common.StripNonAlloc ||
-      Common.StripSections || Common.StripUnneeded ||
-      Common.DecompressDebugSections || Common.GapFill != 0 ||
-      Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
+      !Common.OnlySection.empty() || !Common.SectionsToRename.empty() ||
+      !Common.SetSectionAlignment.empty() || !Common.SetSectionFlags.empty() ||
+      !Common.SetSectionType.empty() || Common.ExtractDWO ||
+      Common.OnlyKeepDebug || Common.StripAllGNU || Common.StripDWO ||
+      Common.StripDebug || Common.StripNonAlloc || Common.StripSections ||
+      Common.StripUnneeded || Common.DecompressDebugSections ||
+      Common.GapFill != 0 || Common.PadTo != 0 ||
+      Common.ChangeSectionLMAValAll != 0 ||
       !Common.ChangeSectionAddress.empty()) {
     return createStringError(
         llvm::errc::invalid_argument,

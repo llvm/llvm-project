@@ -440,7 +440,7 @@ void CodeEmitterGen::emitInstructionBaseValues(
     emitInstBits(O, Value);
     O << "," << '\t' << "// " << R->getName() << "\n";
   }
-  O << "    UINT64_C(0)\n  };\n";
+  O << "  };\n";
 }
 
 void CodeEmitterGen::emitCaseMap(

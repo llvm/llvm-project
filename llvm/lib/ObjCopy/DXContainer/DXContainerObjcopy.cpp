@@ -19,6 +19,19 @@ namespace dxbc {
 using namespace object;
 
 static Error handleArgs(const CommonConfig &Config, Object &Obj) {
+  std::function<bool(const Part &)> RemovePred = [](const Part &) {
+    return false;
+  };
+
+  if (!Config.ToRemove.empty())
+    RemovePred = [&Config](const Part &P) {
+      return Config.ToRemove.matches(P.Name);
+    };
+
+  if (auto E = Obj.removeParts(RemovePred))
+    return E;
+
+  Obj.recomputeHeader();
   return Error::success();
 }
 

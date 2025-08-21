@@ -4,11 +4,6 @@
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16,CHECK-NOFP16-GI
 ; RUN: llc -mtriple=aarch64 -mattr=+fullfp16 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-GI
 
-; CHECK-FP16-GI:       warning: Instruction selection used fallback path for stofp_load_i64_f16
-; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_load_i64_f16
-; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_load_i32_f16
-; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_load_i32_f16
-
 define double @stofp_i64_f64(i64 %a) {
 ; CHECK-LABEL: stofp_i64_f64:
 ; CHECK:       // %bb.0: // %entry
@@ -844,31 +839,11 @@ entry:
 }
 
 define double @stofp_load_i32_f64(ptr %p) {
-; CHECK-NOFP16-SD-LABEL: stofp_load_i32_f64:
-; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    ldr w8, [x0]
-; CHECK-NOFP16-SD-NEXT:    scvtf d0, w8
-; CHECK-NOFP16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: stofp_load_i32_f64:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    ldr w8, [x0]
-; CHECK-FP16-SD-NEXT:    scvtf d0, w8
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: stofp_load_i32_f64:
-; CHECK-NOFP16-GI:       // %bb.0: // %entry
-; CHECK-NOFP16-GI-NEXT:    ldr s0, [x0]
-; CHECK-NOFP16-GI-NEXT:    fmov w8, s0
-; CHECK-NOFP16-GI-NEXT:    scvtf d0, w8
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: stofp_load_i32_f64:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    ldr s0, [x0]
-; CHECK-FP16-GI-NEXT:    fmov w8, s0
-; CHECK-FP16-GI-NEXT:    scvtf d0, w8
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: stofp_load_i32_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    scvtf d0, w8
+; CHECK-NEXT:    ret
 entry:
   %a = load i32, ptr %p
   %c = sitofp i32 %a to double
@@ -936,31 +911,11 @@ entry:
 }
 
 define float @stofp_load_i64_f32(ptr %p) {
-; CHECK-NOFP16-SD-LABEL: stofp_load_i64_f32:
-; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    ldr x8, [x0]
-; CHECK-NOFP16-SD-NEXT:    scvtf s0, x8
-; CHECK-NOFP16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: stofp_load_i64_f32:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    ldr x8, [x0]
-; CHECK-FP16-SD-NEXT:    scvtf s0, x8
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: stofp_load_i64_f32:
-; CHECK-NOFP16-GI:       // %bb.0: // %entry
-; CHECK-NOFP16-GI-NEXT:    ldr d0, [x0]
-; CHECK-NOFP16-GI-NEXT:    fmov x8, d0
-; CHECK-NOFP16-GI-NEXT:    scvtf s0, x8
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: stofp_load_i64_f32:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    ldr d0, [x0]
-; CHECK-FP16-GI-NEXT:    fmov x8, d0
-; CHECK-FP16-GI-NEXT:    scvtf s0, x8
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: stofp_load_i64_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    ret
 entry:
   %a = load i64, ptr %p
   %c = sitofp i64 %a to float
@@ -968,31 +923,11 @@ entry:
 }
 
 define float @utofp_load_i64_f32(ptr %p) {
-; CHECK-NOFP16-SD-LABEL: utofp_load_i64_f32:
-; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    ldr x8, [x0]
-; CHECK-NOFP16-SD-NEXT:    ucvtf s0, x8
-; CHECK-NOFP16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: utofp_load_i64_f32:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    ldr x8, [x0]
-; CHECK-FP16-SD-NEXT:    ucvtf s0, x8
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: utofp_load_i64_f32:
-; CHECK-NOFP16-GI:       // %bb.0: // %entry
-; CHECK-NOFP16-GI-NEXT:    ldr d0, [x0]
-; CHECK-NOFP16-GI-NEXT:    fmov x8, d0
-; CHECK-NOFP16-GI-NEXT:    ucvtf s0, x8
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: utofp_load_i64_f32:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    ldr d0, [x0]
-; CHECK-FP16-GI-NEXT:    fmov x8, d0
-; CHECK-FP16-GI-NEXT:    ucvtf s0, x8
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: utofp_load_i64_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ucvtf s0, x8
+; CHECK-NEXT:    ret
 entry:
   %a = load i64, ptr %p
   %c = uitofp i64 %a to float
@@ -1072,26 +1007,18 @@ entry:
 }
 
 define half @stofp_load_i64_f16(ptr %p) {
-; CHECK-NOFP16-SD-LABEL: stofp_load_i64_f16:
-; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    ldr x8, [x0]
-; CHECK-NOFP16-SD-NEXT:    scvtf s0, x8
-; CHECK-NOFP16-SD-NEXT:    fcvt h0, s0
-; CHECK-NOFP16-SD-NEXT:    ret
+; CHECK-NOFP16-LABEL: stofp_load_i64_f16:
+; CHECK-NOFP16:       // %bb.0: // %entry
+; CHECK-NOFP16-NEXT:    ldr x8, [x0]
+; CHECK-NOFP16-NEXT:    scvtf s0, x8
+; CHECK-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stofp_load_i64_f16:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ldr x8, [x0]
 ; CHECK-FP16-NEXT:    scvtf h0, x8
 ; CHECK-FP16-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: stofp_load_i64_f16:
-; CHECK-NOFP16-GI:       // %bb.0: // %entry
-; CHECK-NOFP16-GI-NEXT:    ldr d0, [x0]
-; CHECK-NOFP16-GI-NEXT:    fmov x8, d0
-; CHECK-NOFP16-GI-NEXT:    scvtf s0, x8
-; CHECK-NOFP16-GI-NEXT:    fcvt h0, s0
-; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   %a = load i64, ptr %p
   %c = sitofp i64 %a to half
@@ -1099,26 +1026,18 @@ entry:
 }
 
 define half @utofp_load_i64_f16(ptr %p) {
-; CHECK-NOFP16-SD-LABEL: utofp_load_i64_f16:
-; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    ldr x8, [x0]
-; CHECK-NOFP16-SD-NEXT:    ucvtf s0, x8
-; CHECK-NOFP16-SD-NEXT:    fcvt h0, s0
-; CHECK-NOFP16-SD-NEXT:    ret
+; CHECK-NOFP16-LABEL: utofp_load_i64_f16:
+; CHECK-NOFP16:       // %bb.0: // %entry
+; CHECK-NOFP16-NEXT:    ldr x8, [x0]
+; CHECK-NOFP16-NEXT:    ucvtf s0, x8
+; CHECK-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: utofp_load_i64_f16:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ldr x8, [x0]
 ; CHECK-FP16-NEXT:    ucvtf h0, x8
 ; CHECK-FP16-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: utofp_load_i64_f16:
-; CHECK-NOFP16-GI:       // %bb.0: // %entry
-; CHECK-NOFP16-GI-NEXT:    ldr d0, [x0]
-; CHECK-NOFP16-GI-NEXT:    fmov x8, d0
-; CHECK-NOFP16-GI-NEXT:    ucvtf s0, x8
-; CHECK-NOFP16-GI-NEXT:    fcvt h0, s0
-; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   %a = load i64, ptr %p
   %c = uitofp i64 %a to half

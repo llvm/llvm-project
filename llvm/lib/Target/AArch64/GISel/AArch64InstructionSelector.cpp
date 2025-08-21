@@ -1102,67 +1102,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   return true;
 }
 
-static unsigned selectIntToFPConvOpc(unsigned GenericOpc, LLT DstTy,
-                                     LLT SrcTy) {
-  if (!DstTy.isScalar() || !SrcTy.isScalar())
-    return GenericOpc;
-
-  const unsigned DstSize = DstTy.getSizeInBits();
-  const unsigned SrcSize = SrcTy.getSizeInBits();
-
-  switch (DstSize) {
-  case 32:
-    switch (SrcSize) {
-    case 32:
-      switch (GenericOpc) {
-      case TargetOpcode::G_SITOFP:
-        return AArch64::SCVTFUWSri;
-      case TargetOpcode::G_UITOFP:
-        return AArch64::UCVTFUWSri;
-      default:
-        return GenericOpc;
-      }
-    case 64:
-      switch (GenericOpc) {
-      case TargetOpcode::G_SITOFP:
-        return AArch64::SCVTFUXSri;
-      case TargetOpcode::G_UITOFP:
-        return AArch64::UCVTFUXSri;
-      default:
-        return GenericOpc;
-      }
-    default:
-      return GenericOpc;
-    }
-  case 64:
-    switch (SrcSize) {
-    case 32:
-      switch (GenericOpc) {
-      case TargetOpcode::G_SITOFP:
-        return AArch64::SCVTFUWDri;
-      case TargetOpcode::G_UITOFP:
-        return AArch64::UCVTFUWDri;
-      default:
-        return GenericOpc;
-      }
-    case 64:
-      switch (GenericOpc) {
-      case TargetOpcode::G_SITOFP:
-        return AArch64::SCVTFUXDri;
-      case TargetOpcode::G_UITOFP:
-        return AArch64::UCVTFUXDri;
-      default:
-        return GenericOpc;
-      }
-    default:
-      return GenericOpc;
-    }
-  default:
-    return GenericOpc;
-  };
-  return GenericOpc;
-}
-
 MachineInstr *
 AArch64InstructionSelector::emitSelect(Register Dst, Register True,
                                        Register False, AArch64CC::CondCode CC,
@@ -3506,21 +3445,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
     I.eraseFromParent();
-    return true;
-  }
-
-  case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP: {
-    const LLT DstTy = MRI.getType(I.getOperand(0).getReg()),
-              SrcTy = MRI.getType(I.getOperand(1).getReg());
-    const unsigned NewOpc = selectIntToFPConvOpc(Opcode, DstTy, SrcTy);
-    if (NewOpc == Opcode)
-      return false;
-
-    I.setDesc(TII.get(NewOpc));
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-    I.setFlags(MachineInstr::NoFPExcept);
-
     return true;
   }
 
