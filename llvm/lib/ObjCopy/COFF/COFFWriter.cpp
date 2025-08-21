@@ -109,9 +109,7 @@ Error COFFWriter::finalizeSymIdxContents() {
 
   DenseMap<size_t, size_t> SymIdMap;
   SmallDenseMap<ssize_t, coff_aux_section_definition *, 4> SecIdMap;
-  bool NeedUpdate = false;
   for (Symbol &Sym : Obj.getMutableSymbols()) {
-    NeedUpdate |= Sym.OriginalRawIndex != Sym.RawIndex;
     SymIdMap[Sym.OriginalRawIndex] = Sym.RawIndex;
 
     // We collect only definition symbols of the sections to update checksum.
@@ -122,9 +120,6 @@ Error COFFWriter::finalizeSymIdxContents() {
           reinterpret_cast<coff_aux_section_definition *>(
               Sym.AuxData[0].Opaque);
   }
-
-  if (!NeedUpdate)
-    return Error::success();
 
   for (Section &Sec : Obj.getMutableSections()) {
     if (!IsSymIdxSection(Sec.Name))
