@@ -140,10 +140,10 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   else
     value = (Value)operandOrResult;
 
-  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operandOrResult);
+  xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(operandOrResult);
   if (layout && layout.isForSubgroup()) {
-    if (auto inst_data = layout.getInstData())
-      return llvm::to_vector_of<int64_t>(inst_data.asArrayRef());
+    if (auto inst_data = layout.getInstDataAsInt())
+      return inst_data.value();
 
     if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
@@ -204,12 +204,12 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   // skip the op if any of its operands or results has workgroup level layouts
   bool hasWgLayoutOperands =
       llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
-        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(opr);
+        xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(opr);
         return layout && layout.isForWorkgroup();
       });
   bool hasWgLayoutResults =
       llvm::any_of(op->getOpResults(), [](OpResult result) {
-        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
+        xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(result);
         return layout && layout.isForWorkgroup();
       });
   if (hasWgLayoutOperands || hasWgLayoutResults) {
@@ -220,8 +220,8 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   auto isUnrollable = [](Value value, ArrayRef<int64_t> tileShape) {
     Type valTy = value.getType();
     if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(valTy)) {
-      xegpu::LayoutAttr layout = tdescTy.getLayoutAttr();
-      return layout && layout.getInstData();
+      xegpu::DistributeLayoutAttr layout = tdescTy.getLayoutAttr();
+      return layout && layout.getInstDataAsInt();
     }
     auto shapedType = dyn_cast<ShapedType>(valTy);
     return shapedType && !llvm::equal(tileShape, shapedType.getShape());
@@ -247,7 +247,7 @@ void XeGPUBlockingPass::runOnOperation() {
   // Preserve the LayoutAttr for each operand to the owner's DictionaryAttr.
   // This ensures that the LayoutAttr remains accessible even if the defining
   // operation is replaced.
-  xegpu::setLayoutAttrs(op, [](Value v) { return xegpu::getLayoutAttr(v); });
+  xegpu::setLayoutAttrs(op, [](Value v) { return xegpu::getDistributeLayoutAttr(v); });
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
                                  xegpu::LayoutAttr layout) {

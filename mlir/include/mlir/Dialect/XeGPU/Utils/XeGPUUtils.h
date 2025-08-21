@@ -21,6 +21,7 @@ class ValueRange;
 class TypeConverter;
 
 namespace xegpu {
+class DistributeLayoutAttr;
 class LayoutAttr;
 class TensorDescType;
 } // namespace xegpu
@@ -60,22 +61,22 @@ FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy);
 FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
                                                LayoutAttr layout);
 
-/// Return the attribute name for the OpOperand to attach LayoutAttr
+/// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
 std::string getLayoutName(const OpOperand &operand);
 
-/// Return the attribute name for the OpResult to attach LayoutAttr
+/// Return the attribute name for the OpResult to attach DistributeLayoutAttr
 std::string getLayoutName(const OpResult result);
 
-/// Retrieves the LayoutAttr associated with a given Value. For TensorDescType
-/// values, the LayoutAttr is extracted from the TensorDescType itself. For
+/// Retrieves the DistributeLayoutAttr associated with a given Value. For TensorDescType
+/// values, the DistributeLayoutAttr is extracted from the TensorDescType itself. For
 /// other values, it is obtained from the attributes of the defining operation.
-/// Returns nullptr if no LayoutAttr is found.
-LayoutAttr getLayoutAttr(const Value value);
+/// Returns nullptr if no DistributeLayoutAttr is found.
+DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
 
-/// Retrieves the LayoutAttr associated with a given OpOperand. It will
+/// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It will
 /// first check the operand_layout_{id} of the owner operation. If not found,
 /// it will check the operand itself and its defining op.
-LayoutAttr getLayoutAttr(const OpOperand &opr);
+DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
 
 /// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.
 template <typename T,
@@ -83,23 +84,23 @@ template <typename T,
                                       std::is_same_v<T, OpResult>>>
 void removeLayoutAttr(const T &operandOrResult);
 
-/// Removes the LayoutAttr for each OpOperand and OpResult of the given
+/// Removes the DistributeLayoutAttr for each OpOperand and OpResult of the given
 /// operation if they exist. If the operation contains regions, it is also
 /// applied recursively to the contained operations
 void removeLayoutAttrs(Operation *op);
 
-/// Sets the LayoutAttr for a given OpOperand or OpResult by attaching
+/// Sets the DistributeLayoutAttr for a given OpOperand or OpResult by attaching
 /// it to the owner's dictionary attributes
 template <typename T,
           typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
                                       std::is_same_v<T, OpResult>>>
-void setLayoutAttr(const T &operandOrResult, const LayoutAttr layout);
+void setLayoutAttr(const T &operandOrResult, const DistributeLayoutAttr layout);
 
-/// Set the LayoutAttr for each OpOperand and OpResult of the given operation.
+/// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given operation.
 /// If the operation contains regions, it is also applied recursively to the
 /// contained operations
 void setLayoutAttrs(Operation *op,
-                    function_ref<LayoutAttr(Value)> getLayoutImpl);
+                    function_ref<DistributeLayoutAttr(Value)> getLayoutImpl);
 
 /// Extract a set of small vectors from a value with a given shape using
 /// vector.extract_stride_slice
