@@ -263,8 +263,7 @@ public:
                                StringRef SysRoot);
 
     bool ScanGCCForMultilibs(const llvm::Triple &TargetTriple,
-                             const llvm::opt::ArgList &Args,
-                             StringRef Path,
+                             const llvm::opt::ArgList &Args, StringRef Path,
                              bool NeedsBiarchSuffix = false);
 
     void ScanLibDirForGCCTriple(const llvm::Triple &TargetArch,
