@@ -148,6 +148,7 @@ public:
   Instruction *foldItoFPtoI(CastInst &FI);
   Instruction *visitSelectInst(SelectInst &SI);
   Instruction *foldShuffledIntrinsicOperands(IntrinsicInst *II);
+  Value *foldReversedIntrinsicOperands(IntrinsicInst *II);
   Instruction *visitCallInst(CallInst &CI);
   Instruction *visitInvokeInst(InvokeInst &II);
   Instruction *visitCallBrInst(CallBrInst &CBI);
@@ -281,6 +282,19 @@ private:
   bool transformConstExprCastCall(CallBase &Call);
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
+
+  /// Try to optimize a call to the result of a ptrauth intrinsic, potentially
+  /// into the ptrauth call bundle:
+  /// - call(ptrauth.resign(p)), ["ptrauth"()] ->  call p, ["ptrauth"()]
+  /// - call(ptrauth.sign(p)),   ["ptrauth"()] ->  call p
+  /// as long as the key/discriminator are the same in sign and auth-bundle,
+  /// and we don't change the key in the bundle (to a potentially-invalid key.)
+  Instruction *foldPtrAuthIntrinsicCallee(CallBase &Call);
+
+  /// Try to optimize a call to a ptrauth constant, into its ptrauth bundle:
+  ///   call(ptrauth(f)), ["ptrauth"()] ->  call f
+  /// as long as the key/discriminator are the same in constant and bundle.
+  Instruction *foldPtrAuthConstantCallee(CallBase &Call);
 
   // Return (a, b) if (LHS, RHS) is known to be (a, b) or (b, a).
   // Otherwise, return std::nullopt
@@ -437,6 +451,10 @@ private:
 
   Value *reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y, Instruction &I,
                                  bool IsAnd, bool RHSIsLogical);
+
+  Value *foldDisjointOr(Value *LHS, Value *RHS);
+
+  Value *reassociateDisjointOr(Value *LHS, Value *RHS);
 
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
@@ -620,6 +638,20 @@ public:
   Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN,
                              bool AllowMultipleUses = false);
 
+  /// Try to fold binary operators whose operands are simple interleaved
+  /// recurrences to a single recurrence. This is a common pattern in reduction
+  /// operations.
+  /// Example:
+  ///   %phi1 = phi [init1, %BB1], [%op1, %BB2]
+  ///   %phi2 = phi [init2, %BB1], [%op2, %BB2]
+  ///   %op1 = binop %phi1, constant1
+  ///   %op2 = binop %phi2, constant2
+  ///   %rdx = binop %op1, %op2
+  /// -->
+  ///   %phi_combined = phi [init_combined, %BB1], [%op_combined, %BB2]
+  ///   %rdx_combined = binop %phi_combined, constant_combined
+  Instruction *foldBinopWithRecurrence(BinaryOperator &BO);
+
   /// For a binary operator with 2 phi operands, try to hoist the binary
   /// operation before the phi. This can result in fewer instructions in
   /// patterns where at least one set of phi operands simplifies.
@@ -689,6 +721,7 @@ public:
   Instruction *foldICmpUsingKnownBits(ICmpInst &Cmp);
   Instruction *foldICmpWithDominatingICmp(ICmpInst &Cmp);
   Instruction *foldICmpWithConstant(ICmpInst &Cmp);
+  Instruction *foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp);
   Instruction *foldICmpUsingBoolRange(ICmpInst &I);
   Instruction *foldICmpInstWithConstant(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);
@@ -793,9 +826,6 @@ public:
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
 
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
-  void tryToSinkInstructionDbgValues(
-      Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
-      BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers);
   void tryToSinkInstructionDbgVariableRecords(
       Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
       BasicBlock *DestBlock, SmallVectorImpl<DbgVariableRecord *> &DPUsers);
@@ -881,6 +911,9 @@ struct CommonPointerBase {
   GEPNoWrapFlags RHSNW = GEPNoWrapFlags::all();
 
   static CommonPointerBase compute(Value *LHS, Value *RHS);
+
+  /// Whether expanding the GEP chains is expensive.
+  bool isExpensive() const;
 };
 
 } // end namespace llvm

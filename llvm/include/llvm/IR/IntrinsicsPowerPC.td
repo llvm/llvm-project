@@ -655,6 +655,14 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
       DefaultAttrsIntrinsic<[llvm_v1i128_ty],[llvm_v1i128_ty],[IntrNoMem]>;
 
   // BCD intrinsics.
+  def int_ppc_national2packed: ClangBuiltin<"__builtin_ppc_national2packed">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_packed2national: ClangBuiltin<"__builtin_ppc_packed2national">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_packed2zoned: ClangBuiltin<"__builtin_ppc_packed2zoned">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_zoned2packed: ClangBuiltin<"__builtin_ppc_zoned2packed">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
   def int_ppc_cdtbcdd : ClangBuiltin<"__builtin_ppc_cdtbcd">,
     DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty], [IntrNoMem]>;
   def int_ppc_cbcdtdd: ClangBuiltin<"__builtin_ppc_cbcdtd">,
@@ -667,6 +675,13 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
     DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
   def int_ppc_addg6s: ClangBuiltin<"__builtin_addg6s">,
     DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+  // BCD Format conversion intrinsics 
+  def int_ppc_bcdcopysign : ClangBuiltin<"__builtin_ppc_bcdcopysign">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>; 
+  def int_ppc_bcdsetsign : ClangBuiltin<"__builtin_ppc_bcdsetsign">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty], 
+    [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
   def int_ppc_bcdadd : ClangBuiltin<"__builtin_ppc_bcdadd">,
     DefaultAttrsIntrinsic<

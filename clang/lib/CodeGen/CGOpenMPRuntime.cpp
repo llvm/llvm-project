@@ -1092,7 +1092,7 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
-  if (CGM.getLangOpts().Optimize) {
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     Fn->removeFnAttr(llvm::Attribute::NoInline);
     Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
     Fn->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -2915,7 +2915,7 @@ createKmpTaskTRecordDecl(CodeGenModule &CGM, OpenMPDirectiveKind Kind,
   addFieldToRecordDecl(C, UD, KmpInt32Ty);
   addFieldToRecordDecl(C, UD, KmpRoutineEntryPointerQTy);
   UD->completeDefinition();
-  QualType KmpCmplrdataTy = C.getRecordType(UD);
+  CanQualType KmpCmplrdataTy = C.getCanonicalTagType(UD);
   RecordDecl *RD = C.buildImplicitRecord("kmp_task_t");
   RD->startDefinition();
   addFieldToRecordDecl(C, RD, C.VoidPtrTy);
@@ -2950,7 +2950,7 @@ createKmpTaskTWithPrivatesRecordDecl(CodeGenModule &CGM, QualType KmpTaskTQTy,
   RD->startDefinition();
   addFieldToRecordDecl(C, RD, KmpTaskTQTy);
   if (const RecordDecl *PrivateRD = createPrivatesRecordDecl(CGM, Privates))
-    addFieldToRecordDecl(C, RD, C.getRecordType(PrivateRD));
+    addFieldToRecordDecl(C, RD, C.getCanonicalTagType(PrivateRD));
   RD->completeDefinition();
   return RD;
 }
@@ -3199,7 +3199,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskPrivatesMap,
                                     TaskPrivatesMapFnInfo);
-  if (CGM.getLangOpts().Optimize) {
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::OptimizeNone);
     TaskPrivatesMap->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -3582,7 +3582,7 @@ static void getKmpAffinityType(ASTContext &C, QualType &KmpTaskAffinityInfoTy) {
     addFieldToRecordDecl(C, KmpAffinityInfoRD, C.getSizeType());
     addFieldToRecordDecl(C, KmpAffinityInfoRD, FlagsTy);
     KmpAffinityInfoRD->completeDefinition();
-    KmpTaskAffinityInfoTy = C.getRecordType(KmpAffinityInfoRD);
+    KmpTaskAffinityInfoTy = C.getCanonicalTagType(KmpAffinityInfoRD);
   }
 }
 
@@ -3640,7 +3640,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Build type kmp_task_t (if not built yet).
   if (isOpenMPTaskLoopDirective(D.getDirectiveKind())) {
     if (SavedKmpTaskloopTQTy.isNull()) {
-      SavedKmpTaskloopTQTy = C.getRecordType(createKmpTaskTRecordDecl(
+      SavedKmpTaskloopTQTy = C.getCanonicalTagType(createKmpTaskTRecordDecl(
           CGM, D.getDirectiveKind(), KmpInt32Ty, KmpRoutineEntryPtrQTy));
     }
     KmpTaskTQTy = SavedKmpTaskloopTQTy;
@@ -3650,7 +3650,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
             isOpenMPTargetDataManagementDirective(D.getDirectiveKind())) &&
            "Expected taskloop, task or target directive");
     if (SavedKmpTaskTQTy.isNull()) {
-      SavedKmpTaskTQTy = C.getRecordType(createKmpTaskTRecordDecl(
+      SavedKmpTaskTQTy = C.getCanonicalTagType(createKmpTaskTRecordDecl(
           CGM, D.getDirectiveKind(), KmpInt32Ty, KmpRoutineEntryPtrQTy));
     }
     KmpTaskTQTy = SavedKmpTaskTQTy;
@@ -3659,7 +3659,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Build particular struct kmp_task_t for the given task.
   const RecordDecl *KmpTaskTWithPrivatesQTyRD =
       createKmpTaskTWithPrivatesRecordDecl(CGM, KmpTaskTQTy, Privates);
-  QualType KmpTaskTWithPrivatesQTy = C.getRecordType(KmpTaskTWithPrivatesQTyRD);
+  CanQualType KmpTaskTWithPrivatesQTy =
+      C.getCanonicalTagType(KmpTaskTWithPrivatesQTyRD);
   QualType KmpTaskTWithPrivatesPtrQTy =
       C.getPointerType(KmpTaskTWithPrivatesQTy);
   llvm::Type *KmpTaskTWithPrivatesPtrTy = CGF.Builder.getPtrTy(0);
@@ -3914,7 +3915,10 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Fill the data in the resulting kmp_task_t record.
   // Copy shareds if there are any.
   Address KmpTaskSharedsPtr = Address::invalid();
-  if (!SharedsTy->getAsStructureType()->getDecl()->field_empty()) {
+  if (!SharedsTy->getAsStructureType()
+           ->getOriginalDecl()
+           ->getDefinitionOrSelf()
+           ->field_empty()) {
     KmpTaskSharedsPtr = Address(
         CGF.EmitLoadOfScalar(
             CGF.EmitLValueForField(
@@ -3944,8 +3948,11 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   enum { Priority = 0, Destructors = 1 };
   // Provide pointer to function with destructors for privates.
   auto FI = std::next(KmpTaskTQTyRD->field_begin(), Data1);
-  const RecordDecl *KmpCmplrdataUD =
-      (*FI)->getType()->getAsUnionType()->getDecl();
+  const RecordDecl *KmpCmplrdataUD = (*FI)
+                                         ->getType()
+                                         ->getAsUnionType()
+                                         ->getOriginalDecl()
+                                         ->getDefinitionOrSelf();
   if (NeedsCleanup) {
     llvm::Value *DestructorFn = emitDestructorsFunction(
         CGM, Loc, KmpInt32Ty, KmpTaskTWithPrivatesPtrQTy,
@@ -4015,7 +4022,7 @@ static void getDependTypes(ASTContext &C, QualType &KmpDependInfoTy,
     addFieldToRecordDecl(C, KmpDependInfoRD, C.getSizeType());
     addFieldToRecordDecl(C, KmpDependInfoRD, FlagsTy);
     KmpDependInfoRD->completeDefinition();
-    KmpDependInfoTy = C.getRecordType(KmpDependInfoRD);
+    KmpDependInfoTy = C.getCanonicalTagType(KmpDependInfoRD);
   }
 }
 
@@ -5714,7 +5721,7 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
   const FieldDecl *FlagsFD = addFieldToRecordDecl(
       C, RD, C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/false));
   RD->completeDefinition();
-  QualType RDType = C.getRecordType(RD);
+  CanQualType RDType = C.getCanonicalTagType(RD);
   unsigned Size = Data.ReductionVars.size();
   llvm::APInt ArraySize(/*numBits=*/64, Size);
   QualType ArrayRDType =
@@ -6801,6 +6808,11 @@ public:
       llvm::OpenMPIRBuilder::MapNonContiguousArrayTy;
   using MapExprsArrayTy = SmallVector<MappingExprInfo, 4>;
   using MapValueDeclsArrayTy = SmallVector<const ValueDecl *, 4>;
+  using MapData =
+      std::tuple<OMPClauseMappableExprCommon::MappableExprComponentListRef,
+                 OpenMPMapClauseKind, ArrayRef<OpenMPMapModifierKind>,
+                 bool /*IsImplicit*/, const ValueDecl *, const Expr *>;
+  using MapDataArrayTy = SmallVector<MapData, 4>;
 
   /// This structure contains combined information generated for mappable
   /// clauses, including base pointers, pointers, sizes, map types, user-defined
@@ -7074,6 +7086,110 @@ private:
     llvm::APSInt ConstLength = Result.Val.getInt();
     return ConstLength.getSExtValue() != 1;
   }
+
+  /// A helper class to copy structures with overlapped elements, i.e. those
+  /// which have mappings of both "s" and "s.mem".  Consecutive elements that
+  /// are not explicitly copied have mapping nodes synthesized for them,
+  /// taking care to avoid generating zero-sized copies.
+  class CopyOverlappedEntryGaps {
+    CodeGenFunction &CGF;
+    MapCombinedInfoTy &CombinedInfo;
+    OpenMPOffloadMappingFlags Flags = OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+    const ValueDecl *MapDecl = nullptr;
+    const Expr *MapExpr = nullptr;
+    Address BP = Address::invalid();
+    bool IsNonContiguous = false;
+    uint64_t DimSize = 0;
+    // These elements track the position as the struct is iterated over
+    // (in order of increasing element address).
+    const RecordDecl *LastParent = nullptr;
+    uint64_t Cursor = 0;
+    unsigned LastIndex = -1u;
+    Address LB = Address::invalid();
+
+  public:
+    CopyOverlappedEntryGaps(CodeGenFunction &CGF,
+                            MapCombinedInfoTy &CombinedInfo,
+                            OpenMPOffloadMappingFlags Flags,
+                            const ValueDecl *MapDecl, const Expr *MapExpr,
+                            Address BP, Address LB, bool IsNonContiguous,
+                            uint64_t DimSize)
+        : CGF(CGF), CombinedInfo(CombinedInfo), Flags(Flags), MapDecl(MapDecl),
+          MapExpr(MapExpr), BP(BP), IsNonContiguous(IsNonContiguous),
+          DimSize(DimSize), LB(LB) {}
+
+    void processField(
+        const OMPClauseMappableExprCommon::MappableComponent &MC,
+        const FieldDecl *FD,
+        llvm::function_ref<LValue(CodeGenFunction &, const MemberExpr *)>
+            EmitMemberExprBase) {
+      const RecordDecl *RD = FD->getParent();
+      const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
+      uint64_t FieldOffset = RL.getFieldOffset(FD->getFieldIndex());
+      uint64_t FieldSize =
+          CGF.getContext().getTypeSize(FD->getType().getCanonicalType());
+      Address ComponentLB = Address::invalid();
+
+      if (FD->getType()->isLValueReferenceType()) {
+        const auto *ME = cast<MemberExpr>(MC.getAssociatedExpression());
+        LValue BaseLVal = EmitMemberExprBase(CGF, ME);
+        ComponentLB =
+            CGF.EmitLValueForFieldInitialization(BaseLVal, FD).getAddress();
+      } else {
+        ComponentLB =
+            CGF.EmitOMPSharedLValue(MC.getAssociatedExpression()).getAddress();
+      }
+
+      if (!LastParent)
+        LastParent = RD;
+      if (FD->getParent() == LastParent) {
+        if (FD->getFieldIndex() != LastIndex + 1)
+          copyUntilField(FD, ComponentLB);
+      } else {
+        LastParent = FD->getParent();
+        if (((int64_t)FieldOffset - (int64_t)Cursor) > 0)
+          copyUntilField(FD, ComponentLB);
+      }
+      Cursor = FieldOffset + FieldSize;
+      LastIndex = FD->getFieldIndex();
+      LB = CGF.Builder.CreateConstGEP(ComponentLB, 1);
+    }
+
+    void copyUntilField(const FieldDecl *FD, Address ComponentLB) {
+      llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
+      llvm::Value *LBPtr = LB.emitRawPointer(CGF);
+      llvm::Value *Size =
+          CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr, LBPtr);
+      copySizedChunk(LBPtr, Size);
+    }
+
+    void copyUntilEnd(Address HB) {
+      if (LastParent) {
+        const ASTRecordLayout &RL =
+            CGF.getContext().getASTRecordLayout(LastParent);
+        if ((uint64_t)CGF.getContext().toBits(RL.getSize()) <= Cursor)
+          return;
+      }
+      llvm::Value *LBPtr = LB.emitRawPointer(CGF);
+      llvm::Value *Size = CGF.Builder.CreatePtrDiff(
+          CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
+          LBPtr);
+      copySizedChunk(LBPtr, Size);
+    }
+
+    void copySizedChunk(llvm::Value *Base, llvm::Value *Size) {
+      CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
+      CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
+      CombinedInfo.DevicePtrDecls.push_back(nullptr);
+      CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+      CombinedInfo.Pointers.push_back(Base);
+      CombinedInfo.Sizes.push_back(
+          CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
+      CombinedInfo.Types.push_back(Flags);
+      CombinedInfo.Mappers.push_back(nullptr);
+      CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize : 1);
+    }
+  };
 
   /// Generate the base pointers, section pointers, sizes, map type bits, and
   /// user-defined mappers (all included in \a CombinedInfo) for the provided
@@ -7378,7 +7494,32 @@ private:
     // dimension.
     uint64_t DimSize = 1;
 
-    bool IsNonContiguous = CombinedInfo.NonContigInfo.IsNonContiguous;
+    // Detects non-contiguous updates due to strided accesses.
+    // Sets the 'IsNonContiguous' flag so that the 'MapType' bits are set
+    // correctly when generating information to be passed to the runtime. The
+    // flag is set to true if any array section has a stride not equal to 1, or
+    // if the stride is not a constant expression (conservatively assumed
+    // non-contiguous).
+    bool IsNonContiguous =
+        CombinedInfo.NonContigInfo.IsNonContiguous ||
+        any_of(Components, [&](const auto &Component) {
+          const auto *OASE =
+              dyn_cast<ArraySectionExpr>(Component.getAssociatedExpression());
+          if (!OASE)
+            return false;
+
+          const Expr *StrideExpr = OASE->getStride();
+          if (!StrideExpr)
+            return false;
+
+          const auto Constant =
+              StrideExpr->getIntegerConstantExpr(CGF.getContext());
+          if (!Constant)
+            return false;
+
+          return !Constant->isOne();
+        });
+
     bool IsPrevMemberReference = false;
 
     bool IsPartialMapped =
@@ -7565,63 +7706,22 @@ private:
               getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
                              /*AddPtrFlag=*/false,
                              /*AddIsTargetParamFlag=*/false, IsNonContiguous);
-          llvm::Value *Size = nullptr;
+          CopyOverlappedEntryGaps CopyGaps(CGF, CombinedInfo, Flags, MapDecl,
+                                           MapExpr, BP, LB, IsNonContiguous,
+                                           DimSize);
           // Do bitcopy of all non-overlapped structure elements.
           for (OMPClauseMappableExprCommon::MappableExprComponentListRef
                    Component : OverlappedElements) {
-            Address ComponentLB = Address::invalid();
             for (const OMPClauseMappableExprCommon::MappableComponent &MC :
                  Component) {
               if (const ValueDecl *VD = MC.getAssociatedDeclaration()) {
-                const auto *FD = dyn_cast<FieldDecl>(VD);
-                if (FD && FD->getType()->isLValueReferenceType()) {
-                  const auto *ME =
-                      cast<MemberExpr>(MC.getAssociatedExpression());
-                  LValue BaseLVal = EmitMemberExprBase(CGF, ME);
-                  ComponentLB =
-                      CGF.EmitLValueForFieldInitialization(BaseLVal, FD)
-                          .getAddress();
-                } else {
-                  ComponentLB =
-                      CGF.EmitOMPSharedLValue(MC.getAssociatedExpression())
-                          .getAddress();
+                if (const auto *FD = dyn_cast<FieldDecl>(VD)) {
+                  CopyGaps.processField(MC, FD, EmitMemberExprBase);
                 }
-                llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
-                llvm::Value *LBPtr = LB.emitRawPointer(CGF);
-                Size = CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr,
-                                                 LBPtr);
-                break;
               }
             }
-            assert(Size && "Failed to determine structure size");
-            CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
-            CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
-            CombinedInfo.DevicePtrDecls.push_back(nullptr);
-            CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-            CombinedInfo.Pointers.push_back(LB.emitRawPointer(CGF));
-            CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
-                Size, CGF.Int64Ty, /*isSigned=*/true));
-            CombinedInfo.Types.push_back(Flags);
-            CombinedInfo.Mappers.push_back(nullptr);
-            CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
-                                                                      : 1);
-            LB = CGF.Builder.CreateConstGEP(ComponentLB, 1);
           }
-          CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
-          CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
-          CombinedInfo.DevicePtrDecls.push_back(nullptr);
-          CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-          CombinedInfo.Pointers.push_back(LB.emitRawPointer(CGF));
-          llvm::Value *LBPtr = LB.emitRawPointer(CGF);
-          Size = CGF.Builder.CreatePtrDiff(
-              CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
-              LBPtr);
-          CombinedInfo.Sizes.push_back(
-              CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
-          CombinedInfo.Types.push_back(Flags);
-          CombinedInfo.Mappers.push_back(nullptr);
-          CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
-                                                                    : 1);
+          CopyGaps.copyUntilEnd(HB);
           break;
         }
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());
@@ -8496,6 +8596,7 @@ public:
                          const StructRangeInfoTy &PartialStruct, bool IsMapThis,
                          llvm::OpenMPIRBuilder &OMPBuilder,
                          const ValueDecl *VD = nullptr,
+                         unsigned OffsetForMemberOfFlag = 0,
                          bool NotTargetParams = true) const {
     if (CurTypes.size() == 1 &&
         ((CurTypes.back() & OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
@@ -8583,8 +8684,8 @@ public:
     // All other current entries will be MEMBER_OF the combined entry
     // (except for PTR_AND_OBJ entries which do not have a placeholder value
     // 0xFFFF in the MEMBER_OF field).
-    OpenMPOffloadMappingFlags MemberOfFlag =
-        OMPBuilder.getMemberOfFlag(CombinedInfo.BasePointers.size() - 1);
+    OpenMPOffloadMappingFlags MemberOfFlag = OMPBuilder.getMemberOfFlag(
+        OffsetForMemberOfFlag + CombinedInfo.BasePointers.size() - 1);
     for (auto &M : CurTypes)
       OMPBuilder.setCorrectMemberOfFlag(M, MemberOfFlag);
   }
@@ -8727,11 +8828,13 @@ public:
     }
   }
 
-  /// Generate the base pointers, section pointers, sizes, map types, and
-  /// mappers associated to a given capture (all included in \a CombinedInfo).
-  void generateInfoForCapture(const CapturedStmt::Capture *Cap,
-                              llvm::Value *Arg, MapCombinedInfoTy &CombinedInfo,
-                              StructRangeInfoTy &PartialStruct) const {
+  /// For a capture that has an associated clause, generate the base pointers,
+  /// section pointers, sizes, map types, and mappers (all included in
+  /// \a CurCaptureVarInfo).
+  void generateInfoForCaptureFromClauseInfo(
+      const CapturedStmt::Capture *Cap, llvm::Value *Arg,
+      MapCombinedInfoTy &CurCaptureVarInfo, llvm::OpenMPIRBuilder &OMPBuilder,
+      unsigned OffsetForMemberOfFlag) const {
     assert(!Cap->capturesVariableArrayType() &&
            "Not expecting to generate map info for a variable array type!");
 
@@ -8749,26 +8852,22 @@ public:
     // pass the pointer by value. If it is a reference to a declaration, we just
     // pass its value.
     if (VD && (DevPointersMap.count(VD) || HasDevAddrsMap.count(VD))) {
-      CombinedInfo.Exprs.push_back(VD);
-      CombinedInfo.BasePointers.emplace_back(Arg);
-      CombinedInfo.DevicePtrDecls.emplace_back(VD);
-      CombinedInfo.DevicePointers.emplace_back(DeviceInfoTy::Pointer);
-      CombinedInfo.Pointers.push_back(Arg);
-      CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
+      CurCaptureVarInfo.Exprs.push_back(VD);
+      CurCaptureVarInfo.BasePointers.emplace_back(Arg);
+      CurCaptureVarInfo.DevicePtrDecls.emplace_back(VD);
+      CurCaptureVarInfo.DevicePointers.emplace_back(DeviceInfoTy::Pointer);
+      CurCaptureVarInfo.Pointers.push_back(Arg);
+      CurCaptureVarInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
           CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
           /*isSigned=*/true));
-      CombinedInfo.Types.push_back(
+      CurCaptureVarInfo.Types.push_back(
           OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
           OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
-      CombinedInfo.Mappers.push_back(nullptr);
+      CurCaptureVarInfo.Mappers.push_back(nullptr);
       return;
     }
 
-    using MapData =
-        std::tuple<OMPClauseMappableExprCommon::MappableExprComponentListRef,
-                   OpenMPMapClauseKind, ArrayRef<OpenMPMapModifierKind>, bool,
-                   const ValueDecl *, const Expr *>;
-    SmallVector<MapData, 4> DeclComponentLists;
+    MapDataArrayTy DeclComponentLists;
     // For member fields list in is_device_ptr, store it in
     // DeclComponentLists for generating components info.
     static const OpenMPMapModifierKind Unknown = OMPC_MAP_MODIFIER_unknown;
@@ -8826,6 +8925,51 @@ public:
       return (HasPresent && !HasPresentR) || (HasAllocs && !HasAllocsR);
     });
 
+    auto GenerateInfoForComponentLists =
+        [&](ArrayRef<MapData> DeclComponentLists,
+            bool IsEligibleForTargetParamFlag) {
+          MapCombinedInfoTy CurInfoForComponentLists;
+          StructRangeInfoTy PartialStruct;
+
+          if (DeclComponentLists.empty())
+            return;
+
+          generateInfoForCaptureFromComponentLists(
+              VD, DeclComponentLists, CurInfoForComponentLists, PartialStruct,
+              IsEligibleForTargetParamFlag,
+              /*AreBothBasePtrAndPteeMapped=*/HasMapBasePtr && HasMapArraySec);
+
+          // If there is an entry in PartialStruct it means we have a
+          // struct with individual members mapped. Emit an extra combined
+          // entry.
+          if (PartialStruct.Base.isValid()) {
+            CurCaptureVarInfo.append(PartialStruct.PreliminaryMapData);
+            emitCombinedEntry(
+                CurCaptureVarInfo, CurInfoForComponentLists.Types,
+                PartialStruct, Cap->capturesThis(), OMPBuilder, nullptr,
+                OffsetForMemberOfFlag,
+                /*NotTargetParams*/ !IsEligibleForTargetParamFlag);
+          }
+
+          // Return if we didn't add any entries.
+          if (CurInfoForComponentLists.BasePointers.empty())
+            return;
+
+          CurCaptureVarInfo.append(CurInfoForComponentLists);
+        };
+
+    GenerateInfoForComponentLists(DeclComponentLists,
+                                  /*IsEligibleForTargetParamFlag=*/true);
+  }
+
+  /// Generate the base pointers, section pointers, sizes, map types, and
+  /// mappers associated to \a DeclComponentLists for a given capture
+  /// \a VD (all included in \a CurComponentListInfo).
+  void generateInfoForCaptureFromComponentLists(
+      const ValueDecl *VD, ArrayRef<MapData> DeclComponentLists,
+      MapCombinedInfoTy &CurComponentListInfo, StructRangeInfoTy &PartialStruct,
+      bool IsListEligibleForTargetParamFlag,
+      bool AreBothBasePtrAndPteeMapped = false) const {
     // Find overlapping elements (including the offset from the base element).
     llvm::SmallDenseMap<
         const MapData *,
@@ -8949,7 +9093,7 @@ public:
 
     // Associated with a capture, because the mapping flags depend on it.
     // Go through all of the elements with the overlapped elements.
-    bool IsFirstComponentList = true;
+    bool AddTargetParamFlag = IsListEligibleForTargetParamFlag;
     MapCombinedInfoTy StructBaseCombinedInfo;
     for (const auto &Pair : OverlappedData) {
       const MapData &L = *Pair.getFirst();
@@ -8964,11 +9108,11 @@ public:
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
           OverlappedComponents = Pair.getSecond();
       generateInfoForComponentList(
-          MapType, MapModifiers, {}, Components, CombinedInfo,
-          StructBaseCombinedInfo, PartialStruct, IsFirstComponentList,
-          IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
+          MapType, MapModifiers, {}, Components, CurComponentListInfo,
+          StructBaseCombinedInfo, PartialStruct, AddTargetParamFlag, IsImplicit,
+          /*GenerateAllInfoForClauses*/ false, Mapper,
           /*ForDeviceAddr=*/false, VD, VarRef, OverlappedComponents);
-      IsFirstComponentList = false;
+      AddTargetParamFlag = false;
     }
     // Go through other elements without overlapped elements.
     for (const MapData &L : DeclComponentLists) {
@@ -8983,12 +9127,12 @@ public:
       auto It = OverlappedData.find(&L);
       if (It == OverlappedData.end())
         generateInfoForComponentList(
-            MapType, MapModifiers, {}, Components, CombinedInfo,
-            StructBaseCombinedInfo, PartialStruct, IsFirstComponentList,
+            MapType, MapModifiers, {}, Components, CurComponentListInfo,
+            StructBaseCombinedInfo, PartialStruct, AddTargetParamFlag,
             IsImplicit, /*GenerateAllInfoForClauses*/ false, Mapper,
             /*ForDeviceAddr=*/false, VD, VarRef,
-            /*OverlappedElements*/ {}, HasMapBasePtr && HasMapArraySec);
-      IsFirstComponentList = false;
+            /*OverlappedElements*/ {}, AreBothBasePtrAndPteeMapped);
+      AddTargetParamFlag = false;
     }
   }
 
@@ -9467,7 +9611,6 @@ static void genMapInfoForCaptures(
                                             CE = CS.capture_end();
        CI != CE; ++CI, ++RI, ++CV) {
     MappableExprsHandler::MapCombinedInfoTy CurInfo;
-    MappableExprsHandler::StructRangeInfoTy PartialStruct;
 
     // VLA sizes are passed to the outlined region by copy and do not have map
     // information associated.
@@ -9488,13 +9631,18 @@ static void genMapInfoForCaptures(
     } else {
       // If we have any information in the map clause, we use it, otherwise we
       // just do a default mapping.
-      MEHandler.generateInfoForCapture(CI, *CV, CurInfo, PartialStruct);
+      MEHandler.generateInfoForCaptureFromClauseInfo(
+          CI, *CV, CurInfo, OMPBuilder,
+          /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size());
+
       if (!CI->capturesThis())
         MappedVarSet.insert(CI->getCapturedVar());
       else
         MappedVarSet.insert(nullptr);
-      if (CurInfo.BasePointers.empty() && !PartialStruct.Base.isValid())
+
+      if (CurInfo.BasePointers.empty())
         MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo);
+
       // Generate correct mapping for variables captured by reference in
       // lambdas.
       if (CI->capturesVariable())
@@ -9502,22 +9650,13 @@ static void genMapInfoForCaptures(
                                                 CurInfo, LambdaPointers);
     }
     // We expect to have at least an element of information for this capture.
-    assert((!CurInfo.BasePointers.empty() || PartialStruct.Base.isValid()) &&
+    assert(!CurInfo.BasePointers.empty() &&
            "Non-existing map pointer for capture!");
     assert(CurInfo.BasePointers.size() == CurInfo.Pointers.size() &&
            CurInfo.BasePointers.size() == CurInfo.Sizes.size() &&
            CurInfo.BasePointers.size() == CurInfo.Types.size() &&
            CurInfo.BasePointers.size() == CurInfo.Mappers.size() &&
            "Inconsistent map information sizes!");
-
-    // If there is an entry in PartialStruct it means we have a struct with
-    // individual members mapped. Emit an extra combined entry.
-    if (PartialStruct.Base.isValid()) {
-      CombinedInfo.append(PartialStruct.PreliminaryMapData);
-      MEHandler.emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
-                                  CI->capturesThis(), OMPBuilder, nullptr,
-                                  /*NotTargetParams*/ false);
-    }
 
     // We need to append the results of this capture to what we already have.
     CombinedInfo.append(CurInfo);
@@ -10596,7 +10735,7 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
     unsigned Offset = 0;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
       if (ParamAttrs[Offset].Kind == Vector)
-        CDT = C.getPointerType(C.getRecordType(MD->getParent()));
+        CDT = C.getPointerType(C.getCanonicalTagType(MD->getParent()));
       ++Offset;
     }
     if (CDT.isNull()) {
@@ -11178,7 +11317,7 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
     addFieldToRecordDecl(C, RD, Int64Ty);
     addFieldToRecordDecl(C, RD, Int64Ty);
     RD->completeDefinition();
-    KmpDimTy = C.getRecordType(RD);
+    KmpDimTy = C.getCanonicalTagType(RD);
   } else {
     RD = cast<RecordDecl>(KmpDimTy->getAsTagDecl());
   }
@@ -11674,7 +11813,7 @@ Address CGOpenMPRuntime::emitLastprivateConditionalInit(CodeGenFunction &CGF,
     VDField = addFieldToRecordDecl(C, RD, VD->getType().getNonReferenceType());
     FiredField = addFieldToRecordDecl(C, RD, C.CharTy);
     RD->completeDefinition();
-    NewType = C.getRecordType(RD);
+    NewType = C.getCanonicalTagType(RD);
     Address Addr = CGF.CreateMemTemp(NewType, C.getDeclAlign(VD), VD->getName());
     BaseLVal = CGF.MakeAddrLValue(Addr, NewType, AlignmentSource::Decl);
     I->getSecond().try_emplace(VD, NewType, VDField, FiredField, BaseLVal);

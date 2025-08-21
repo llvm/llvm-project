@@ -131,8 +131,8 @@ public:
     if (NumBits == 0)
       NumBits = sizeof(T) * 8;
     assert(NumBits > 0);
+    assert(APInt::getNumWords(NumBits) == 1);
     APInt Copy = APInt(NumBits, static_cast<uint64_t>(Value), Signed);
-    assert(false);
     return IntegralAP<Signed>(Copy);
   }
 
@@ -163,8 +163,16 @@ public:
       return !getValue().isNonNegative();
     return false;
   }
-  bool isMin() const { return getValue().isMinValue(); }
-  bool isMax() const { return getValue().isMaxValue(); }
+  bool isMin() const {
+    if constexpr (Signed)
+      return getValue().isMinSignedValue();
+    return getValue().isMinValue();
+  }
+  bool isMax() const {
+    if constexpr (Signed)
+      return getValue().isMaxSignedValue();
+    return getValue().isMaxValue();
+  }
   static constexpr bool isSigned() { return Signed; }
   bool isMinusOne() const { return Signed && getValue().isAllOnes(); }
 

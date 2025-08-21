@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/wchar/mbrtowc.h"
-#include "hdr/types/mbstate_t.h"
+#include "hdr/errno_macros.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
@@ -22,6 +22,8 @@ namespace internal {
 ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
                         size_t n, mbstate *__restrict ps) {
   CharacterConverter char_conv(ps);
+  if (!char_conv.isValidState())
+    return Error(EINVAL);
   if (s == nullptr)
     return 0;
   size_t i = 0;
@@ -29,12 +31,13 @@ ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
   for (; i < n && !char_conv.isFull(); ++i) {
     int err = char_conv.push(static_cast<char8_t>(s[i]));
     // Encoding error
-    if (err == -1)
-      return Error(-1);
+    if (err == EILSEQ)
+      return Error(err);
   }
   auto wc = char_conv.pop_utf32();
   if (wc.has_value()) {
-    *pwc = wc.value();
+    if (pwc != nullptr)
+      *pwc = wc.value();
     // null terminator -> return 0
     if (wc.value() == L'\0')
       return 0;

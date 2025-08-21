@@ -31,6 +31,7 @@ DLWRAP(cuDeviceGet, 2)
 DLWRAP(cuDeviceGetAttribute, 3)
 DLWRAP(cuDeviceGetCount, 1)
 DLWRAP(cuFuncGetAttribute, 3)
+DLWRAP(cuFuncSetAttribute, 3)
 
 // Device info
 DLWRAP(cuDeviceGetName, 3)
@@ -71,6 +72,7 @@ DLWRAP(cuDevicePrimaryCtxGetState, 3)
 DLWRAP(cuDevicePrimaryCtxSetFlags, 2)
 DLWRAP(cuDevicePrimaryCtxRetain, 2)
 DLWRAP(cuModuleLoadDataEx, 5)
+DLWRAP(cuOccupancyMaxPotentialBlockSize, 6)
 
 DLWRAP(cuDeviceCanAccessPeer, 3)
 DLWRAP(cuCtxEnablePeerAccess, 2)

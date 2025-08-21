@@ -330,19 +330,13 @@ public:
 };
 
 class TypeLocWriter : public TypeLocVisitor<TypeLocWriter> {
-  using LocSeq = SourceLocationSequence;
-
   ASTRecordWriter &Record;
-  LocSeq *Seq;
 
-  void addSourceLocation(SourceLocation Loc) {
-    Record.AddSourceLocation(Loc, Seq);
-  }
-  void addSourceRange(SourceRange Range) { Record.AddSourceRange(Range, Seq); }
+  void addSourceLocation(SourceLocation Loc) { Record.AddSourceLocation(Loc); }
+  void addSourceRange(SourceRange Range) { Record.AddSourceRange(Range); }
 
 public:
-  TypeLocWriter(ASTRecordWriter &Record, LocSeq *Seq)
-      : Record(Record), Seq(Seq) {}
+  TypeLocWriter(ASTRecordWriter &Record) : Record(Record) {}
 
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
 #define TYPELOC(CLASS, PARENT) \
@@ -351,6 +345,7 @@ public:
 
   void VisitArrayTypeLoc(ArrayTypeLoc TyLoc);
   void VisitFunctionTypeLoc(FunctionTypeLoc TyLoc);
+  void VisitTagTypeLoc(TagTypeLoc TL);
 };
 
 } // namespace
@@ -496,14 +491,20 @@ void TypeLocWriter::VisitFunctionNoProtoTypeLoc(FunctionNoProtoTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
 void TypeLocWriter::VisitUsingTypeLoc(UsingTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
 void TypeLocWriter::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
@@ -570,16 +571,26 @@ void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
 void TypeLocWriter::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getTemplateNameLoc());
 }
 
-void TypeLocWriter::VisitRecordTypeLoc(RecordTypeLoc TL) {
+void TypeLocWriter::VisitTagTypeLoc(TagTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
-void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
-  addSourceLocation(TL.getNameLoc());
+void TypeLocWriter::VisitRecordTypeLoc(RecordTypeLoc TL) {
+  VisitTagTypeLoc(TL);
 }
+
+void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
+  VisitTagTypeLoc(TL);
+}
+
+void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) { VisitTagTypeLoc(TL); }
 
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
@@ -616,15 +627,21 @@ void TypeLocWriter::VisitSubstTemplateTypeParmPackTypeLoc(
   addSourceLocation(TL.getNameLoc());
 }
 
+void TypeLocWriter::VisitSubstBuiltinTemplatePackTypeLoc(
+    SubstBuiltinTemplatePackTypeLoc TL) {
+  addSourceLocation(TL.getNameLoc());
+}
+
 void TypeLocWriter::VisitTemplateSpecializationTypeLoc(
                                            TemplateSpecializationTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getTemplateKeywordLoc());
   addSourceLocation(TL.getTemplateNameLoc());
   addSourceLocation(TL.getLAngleLoc());
   addSourceLocation(TL.getRAngleLoc());
   for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
-    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(i).getArgument().getKind(),
-                                      TL.getArgLoc(i).getLocInfo());
+    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(i));
 }
 
 void TypeLocWriter::VisitParenTypeLoc(ParenTypeLoc TL) {
@@ -634,15 +651,6 @@ void TypeLocWriter::VisitParenTypeLoc(ParenTypeLoc TL) {
 
 void TypeLocWriter::VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
   addSourceLocation(TL.getExpansionLoc());
-}
-
-void TypeLocWriter::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-  addSourceLocation(TL.getElaboratedKeywordLoc());
-  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
-}
-
-void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  addSourceLocation(TL.getNameLoc());
 }
 
 void TypeLocWriter::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
@@ -660,8 +668,7 @@ void TypeLocWriter::VisitDependentTemplateSpecializationTypeLoc(
   addSourceLocation(TL.getLAngleLoc());
   addSourceLocation(TL.getRAngleLoc());
   for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
-    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I).getArgument().getKind(),
-                                      TL.getArgLoc(I).getLocInfo());
+    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I));
 }
 
 void TypeLocWriter::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
@@ -698,13 +705,17 @@ void TypeLocWriter::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
 void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
   addSourceLocation(TL.getKWLoc());
 }
-
 void TypeLocWriter::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitDependentBitIntTypeLoc(
     clang::DependentBitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+}
+
+void TypeLocWriter::VisitPredefinedSugarTypeLoc(
+    clang::PredefinedSugarTypeLoc TL) {
+  // Nothing to do.
 }
 
 void ASTWriter::WriteTypeAbbrevs() {
@@ -904,6 +915,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   BLOCK(OPTIONS_BLOCK);
   RECORD(LANGUAGE_OPTIONS);
+  RECORD(CODEGEN_OPTIONS);
   RECORD(TARGET_OPTIONS);
   RECORD(FILE_SYSTEM_OPTIONS);
   RECORD(HEADER_SEARCH_OPTIONS);
@@ -1039,7 +1051,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_OBJC_INTERFACE);
   RECORD(TYPE_OBJC_OBJECT_POINTER);
   RECORD(TYPE_DECLTYPE);
-  RECORD(TYPE_ELABORATED);
   RECORD(TYPE_SUBST_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_UNRESOLVED_USING);
   RECORD(TYPE_INJECTED_CLASS_NAME);
@@ -1054,6 +1065,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_PACK_EXPANSION);
   RECORD(TYPE_ATTRIBUTED);
   RECORD(TYPE_SUBST_TEMPLATE_TYPE_PARM_PACK);
+  RECORD(TYPE_SUBST_BUILTIN_TEMPLATE_PACK);
   RECORD(TYPE_AUTO);
   RECORD(TYPE_UNARY_TRANSFORM);
   RECORD(TYPE_ATOMIC);
@@ -1618,9 +1630,9 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // Language options.
   Record.clear();
   const LangOptions &LangOpts = PP.getLangOpts();
-#define LANGOPT(Name, Bits, Default, Description) \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
   Record.push_back(LangOpts.Name);
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
   Record.push_back(static_cast<unsigned>(LangOpts.get##Name()));
 #include "clang/Basic/LangOptions.def"
 #define SANITIZER(NAME, ID)                                                    \
@@ -1651,6 +1663,23 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   AddString(LangOpts.OMPHostIRFile, Record);
 
   Stream.EmitRecord(LANGUAGE_OPTIONS, Record);
+
+  // Codegen options.
+  // FIXME: Replace with C++20 `using enum CodeGenOptions::CompatibilityKind`.
+  using CK = CodeGenOptions::CompatibilityKind;
+  Record.clear();
+  const CodeGenOptions &CGOpts = getCodeGenOpts();
+#define CODEGENOPT(Name, Bits, Default, Compatibility)                         \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    Record.push_back(static_cast<unsigned>(CGOpts.Name));
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    Record.push_back(static_cast<unsigned>(CGOpts.get##Name()));
+#define DEBUGOPT(Name, Bits, Default, Compatibility)
+#define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)
+#include "clang/Basic/CodeGenOptions.def"
+  Stream.EmitRecord(CODEGEN_OPTIONS, Record);
 
   // Target options.
   Record.clear();
@@ -2449,13 +2478,12 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       SLocEntryOffsets.push_back(Offset);
       // Starting offset of this entry within this module, so skip the dummy.
       Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
-      LocSeq::State Seq;
-      AddSourceLocation(Expansion.getSpellingLoc(), Record, Seq);
-      AddSourceLocation(Expansion.getExpansionLocStart(), Record, Seq);
+      AddSourceLocation(Expansion.getSpellingLoc(), Record);
+      AddSourceLocation(Expansion.getExpansionLocStart(), Record);
       AddSourceLocation(Expansion.isMacroArgExpansion()
                             ? SourceLocation()
                             : Expansion.getExpansionLocEnd(),
-                        Record, Seq);
+                        Record);
       Record.push_back(Expansion.isExpansionTokenRange());
 
       // Compute the token length for this macro expansion.
@@ -4069,6 +4097,10 @@ void ASTWriter::handleVTable(CXXRecordDecl *RD) {
   PendingEmittingVTables.push_back(RD);
 }
 
+void ASTWriter::addTouchedModuleFile(serialization::ModuleFile *MF) {
+  TouchedModuleFiles.insert(MF);
+}
+
 //===----------------------------------------------------------------------===//
 // DeclContext's Name Lookup Table Serialization
 //===----------------------------------------------------------------------===//
@@ -4113,7 +4145,7 @@ public:
            "have reference to loaded module file but no chain?");
 
     using namespace llvm::support;
-
+    Writer.addTouchedModuleFile(F);
     endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
                             llvm::endianness::little);
   }
@@ -4331,15 +4363,45 @@ private:
       return LookupVisibility::ModuleLocalVisible;
     if (isTULocalInNamedModules(D))
       return LookupVisibility::TULocal;
+
+    // A trick to handle enum constants. The enum constants is special since
+    // they can be found directly without their parent context. This makes it
+    // tricky to decide if an EnumConstantDecl is visible or not by their own
+    // visibilities. E.g., for a class member, we can assume it is visible if
+    // the user get its parent somehow. But for an enum constant, the users may
+    // access if without its parent context. Although we can fix the problem in
+    // Sema lookup process, it might be too complex, we just make a trick here.
+    // Note that we only removes enum constant from the lookup table from its
+    // parent of parent. We DON'T remove the enum constant from its parent. So
+    // we don't need to care about merging problems here.
+    if (auto *ECD = dyn_cast<EnumConstantDecl>(D);
+        ECD && DC.isFileContext() && ECD->getOwningModule() &&
+        ECD->getTopLevelOwningNamedModule()->isNamedModule()) {
+      if (llvm::all_of(
+              DC.noload_lookup(
+                  cast<EnumDecl>(ECD->getDeclContext())->getDeclName()),
+              [](auto *Found) {
+                return Found->isInvisibleOutsideTheOwningModule();
+              }))
+        return ECD->isFromExplicitGlobalModule() ||
+                       ECD->isInAnonymousNamespace()
+                   ? LookupVisibility::TULocal
+                   : LookupVisibility::ModuleLocalVisible;
+    }
+
     return LookupVisibility::GenerallyVisibile;
   }
 
+  DeclContext &DC;
   ModuleLevelDeclsMapTy ModuleLocalDeclsMap;
   TULocalDeclsMapTy TULocalDeclsMap;
 
 public:
   using ASTDeclContextNameTrivialLookupTrait::
       ASTDeclContextNameTrivialLookupTrait;
+
+  ASTDeclContextNameLookupTrait(ASTWriter &Writer, DeclContext &DC)
+      : ASTDeclContextNameTrivialLookupTrait(Writer), DC(DC) {}
 
   template <typename Coll> data_type getData(const Coll &Decls) {
     unsigned Start = DeclIDs.size();
@@ -4450,6 +4512,7 @@ public:
            "have reference to loaded module file but no chain?");
 
     using namespace llvm::support;
+    Writer.addTouchedModuleFile(F);
     endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
                             llvm::endianness::little);
   }
@@ -4612,7 +4675,7 @@ void ASTWriter::GenerateNameLookupTable(
   MultiOnDiskHashTableGenerator<reader::ASTDeclContextNameLookupTrait,
                                 ASTDeclContextNameLookupTrait>
       Generator;
-  ASTDeclContextNameLookupTrait Trait(*this);
+  ASTDeclContextNameLookupTrait Trait(*this, *DC);
 
   // The first step is to collect the declaration names which we need to
   // serialize into the name lookup table, and to collect them in a stable
@@ -5356,11 +5419,12 @@ void ASTWriter::SetSelectorOffset(Selector Sel, uint32_t Offset) {
 
 ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
                      SmallVectorImpl<char> &Buffer, ModuleCache &ModCache,
+                     const CodeGenOptions &CodeGenOpts,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                      bool IncludeTimestamps, bool BuildingImplicitModule,
                      bool GeneratingReducedBMI)
     : Stream(Stream), Buffer(Buffer), ModCache(ModCache),
-      IncludeTimestamps(IncludeTimestamps),
+      CodeGenOpts(CodeGenOpts), IncludeTimestamps(IncludeTimestamps),
       BuildingImplicitModule(BuildingImplicitModule),
       GeneratingReducedBMI(GeneratingReducedBMI) {
   for (const auto &Ext : Extensions) {
@@ -5409,11 +5473,6 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
   this->BaseDirectory.clear();
 
   WritingAST = false;
-
-  if (WritingModule && PPRef.getHeaderSearchInfo()
-                           .getHeaderSearchOpts()
-                           .ModulesValidateOncePerBuildSession)
-    ModCache.updateModuleTimestamp(OutputFile);
 
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
@@ -5567,6 +5626,8 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
                      PREDEF_DECL_BUILTIN_MS_VA_LIST_ID);
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
+  RegisterPredefDecl(Context.MSTypeInfoTagDecl,
+                     PREDEF_DECL_BUILTIN_MS_TYPE_INFO_TAG_ID);
   RegisterPredefDecl(Context.ExternCContext, PREDEF_DECL_EXTERN_C_CONTEXT_ID);
   RegisterPredefDecl(Context.CFConstantStringTypeDecl,
                      PREDEF_DECL_CF_CONSTANT_STRING_ID);
@@ -6623,8 +6684,8 @@ void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
 }
 
 SourceLocationEncoding::RawLocEncoding
-ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq) {
-  unsigned BaseOffset = 0;
+ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
+  SourceLocation::UIntTy BaseOffset = 0;
   unsigned ModuleFileIndex = 0;
 
   // See SourceLocationEncoding.h for the encoding details.
@@ -6642,19 +6703,17 @@ ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq) {
     assert(&getChain()->getModuleManager()[F->Index] == F);
   }
 
-  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex, Seq);
+  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex);
 }
 
-void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
-                                  SourceLocationSequence *Seq) {
+void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
   Loc = getAdjustedLocation(Loc);
-  Record.push_back(getRawSourceLocationEncoding(Loc, Seq));
+  Record.push_back(getRawSourceLocationEncoding(Loc));
 }
 
-void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record,
-                               SourceLocationSequence *Seq) {
-  AddSourceLocation(Range.getBegin(), Record, Seq);
-  AddSourceLocation(Range.getEnd(), Record, Seq);
+void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record) {
+  AddSourceLocation(Range.getBegin(), Record);
+  AddSourceLocation(Range.getEnd(), Record);
 }
 
 void ASTRecordWriter::AddAPFloat(const llvm::APFloat &Value) {
@@ -6723,22 +6782,22 @@ void ASTRecordWriter::AddCXXTemporary(const CXXTemporary *Temp) {
 }
 
 void ASTRecordWriter::AddTemplateArgumentLocInfo(
-    TemplateArgument::ArgKind Kind, const TemplateArgumentLocInfo &Arg) {
-  switch (Kind) {
+    const TemplateArgumentLoc &Arg) {
+  const TemplateArgumentLocInfo &Info = Arg.getLocInfo();
+  switch (auto K = Arg.getArgument().getKind()) {
   case TemplateArgument::Expression:
-    AddStmt(Arg.getAsExpr());
+    AddStmt(Info.getAsExpr());
     break;
   case TemplateArgument::Type:
-    AddTypeSourceInfo(Arg.getAsTypeSourceInfo());
+    AddTypeSourceInfo(Info.getAsTypeSourceInfo());
     break;
   case TemplateArgument::Template:
-    AddNestedNameSpecifierLoc(Arg.getTemplateQualifierLoc());
-    AddSourceLocation(Arg.getTemplateNameLoc());
-    break;
   case TemplateArgument::TemplateExpansion:
+    AddSourceLocation(Arg.getTemplateKWLoc());
     AddNestedNameSpecifierLoc(Arg.getTemplateQualifierLoc());
     AddSourceLocation(Arg.getTemplateNameLoc());
-    AddSourceLocation(Arg.getTemplateEllipsisLoc());
+    if (K == TemplateArgument::TemplateExpansion)
+      AddSourceLocation(Arg.getTemplateEllipsisLoc());
     break;
   case TemplateArgument::Null:
   case TemplateArgument::Integral:
@@ -6761,7 +6820,7 @@ void ASTRecordWriter::AddTemplateArgumentLoc(const TemplateArgumentLoc &Arg) {
     if (InfoHasSameExpr)
       return; // Avoid storing the same expr twice.
   }
-  AddTemplateArgumentLocInfo(Arg.getArgument().getKind(), Arg.getLocInfo());
+  AddTemplateArgumentLocInfo(Arg);
 }
 
 void ASTRecordWriter::AddTypeSourceInfo(TypeSourceInfo *TInfo) {
@@ -6774,9 +6833,8 @@ void ASTRecordWriter::AddTypeSourceInfo(TypeSourceInfo *TInfo) {
   AddTypeLoc(TInfo->getTypeLoc());
 }
 
-void ASTRecordWriter::AddTypeLoc(TypeLoc TL, LocSeq *OuterSeq) {
-  LocSeq::State Seq(OuterSeq);
-  TypeLocWriter TLW(*this, Seq);
+void ASTRecordWriter::AddTypeLoc(TypeLoc TL) {
+  TypeLocWriter TLW(*this);
   for (; !TL.isNull(); TL = TL.getNextTypeLoc())
     TLW.Visit(TL);
 }
@@ -6943,9 +7001,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
   SourceManager &SM = PP->getSourceManager();
   SourceLocation FileLoc = SM.getFileLoc(Loc);
   assert(SM.isLocalSourceLocation(FileLoc));
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = SM.getDecomposedLoc(FileLoc);
+  auto [FID, Offset] = SM.getDecomposedLoc(FileLoc);
   if (FID.isInvalid())
     return;
   assert(SM.getSLocEntry(FID).isFile());
@@ -7022,54 +7078,50 @@ void ASTRecordWriter::AddQualifierInfo(const QualifierInfo &Info) {
     AddTemplateParameterList(Info.TemplParamLists[i]);
 }
 
-void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+void ASTRecordWriter::AddNestedNameSpecifierLoc(
+    NestedNameSpecifierLoc QualifierLoc) {
   // Nested name specifiers usually aren't too long. I think that 8 would
   // typically accommodate the vast majority.
   SmallVector<NestedNameSpecifierLoc , 8> NestedNames;
 
   // Push each of the nested-name-specifiers's onto a stack for
   // serialization in reverse order.
-  while (NNS) {
-    NestedNames.push_back(NNS);
-    NNS = NNS.getPrefix();
+  while (QualifierLoc) {
+    NestedNames.push_back(QualifierLoc);
+    QualifierLoc = QualifierLoc.getAsNamespaceAndPrefix().Prefix;
   }
 
   Record->push_back(NestedNames.size());
   while(!NestedNames.empty()) {
-    NNS = NestedNames.pop_back_val();
-    NestedNameSpecifier::SpecifierKind Kind
-      = NNS.getNestedNameSpecifier()->getKind();
-    Record->push_back(Kind);
+    QualifierLoc = NestedNames.pop_back_val();
+    NestedNameSpecifier Qualifier = QualifierLoc.getNestedNameSpecifier();
+    NestedNameSpecifier::Kind Kind = Qualifier.getKind();
+    Record->push_back(llvm::to_underlying(Kind));
     switch (Kind) {
-    case NestedNameSpecifier::Identifier:
-      AddIdentifierRef(NNS.getNestedNameSpecifier()->getAsIdentifier());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::Namespace:
+      AddDeclRef(Qualifier.getAsNamespaceAndPrefix().Namespace);
+      AddSourceRange(QualifierLoc.getLocalSourceRange());
       break;
 
-    case NestedNameSpecifier::Namespace:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsNamespace());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::Type: {
+      TypeLoc TL = QualifierLoc.castAsTypeLoc();
+      AddTypeRef(TL.getType());
+      AddTypeLoc(TL);
+      AddSourceLocation(QualifierLoc.getLocalSourceRange().getEnd());
+      break;
+    }
+
+    case NestedNameSpecifier::Kind::Global:
+      AddSourceLocation(QualifierLoc.getLocalSourceRange().getEnd());
       break;
 
-    case NestedNameSpecifier::NamespaceAlias:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsNamespaceAlias());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      AddDeclRef(Qualifier.getAsMicrosoftSuper());
+      AddSourceRange(QualifierLoc.getLocalSourceRange());
       break;
 
-    case NestedNameSpecifier::TypeSpec:
-      AddTypeRef(NNS.getTypeLoc().getType());
-      AddTypeLoc(NNS.getTypeLoc());
-      AddSourceLocation(NNS.getLocalSourceRange().getEnd());
-      break;
-
-    case NestedNameSpecifier::Global:
-      AddSourceLocation(NNS.getLocalSourceRange().getEnd());
-      break;
-
-    case NestedNameSpecifier::Super:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsRecordDecl());
-      AddSourceRange(NNS.getLocalSourceRange());
-      break;
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
     }
   }
 }
@@ -7295,6 +7347,10 @@ void ASTRecordWriter::AddVarDeclInit(const VarDecl *VD) {
 
   uint64_t Val = 1;
   if (EvaluatedStmt *ES = VD->getEvaluatedStmt()) {
+    // This may trigger evaluation, so run it first
+    if (VD->hasInitWithSideEffects())
+      Val |= 16;
+    assert(ES->CheckedForSideEffects);
     Val |= (ES->HasConstantInitialization ? 2 : 0);
     Val |= (ES->HasConstantDestruction ? 4 : 0);
     APValue *Evaluated = VD->getEvaluatedValue();
@@ -7772,7 +7828,9 @@ void OMPClauseWriter::VisitOMPFinalClause(OMPFinalClause *C) {
 
 void OMPClauseWriter::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
   VisitOMPClauseWithPreInit(C);
+  Record.writeEnum(C->getModifier());
   Record.AddStmt(C->getNumThreads());
+  Record.AddSourceLocation(C->getModifierLoc());
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
@@ -8691,6 +8749,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *PC = cast<OpenACCPrivateClause>(C);
     writeSourceLocation(PC->getLParenLoc());
     writeOpenACCVarList(PC);
+
+    for (VarDecl *VD : PC->getInitRecipes())
+      AddDeclRef(VD);
     return;
   }
   case OpenACCClauseKind::Host: {
@@ -8709,6 +8770,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *FPC = cast<OpenACCFirstPrivateClause>(C);
     writeSourceLocation(FPC->getLParenLoc());
     writeOpenACCVarList(FPC);
+
+    for (const OpenACCFirstPrivateRecipe &R : FPC->getInitRecipes()) {
+      AddDeclRef(R.RecipeDecl);
+      AddDeclRef(R.InitFromTemporary);
+    }
     return;
   }
   case OpenACCClauseKind::Attach: {
@@ -8826,6 +8892,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(RC->getLParenLoc());
     writeEnum(RC->getReductionOp());
     writeOpenACCVarList(RC);
+
+    for (const OpenACCReductionRecipe &R : RC->getRecipes()) {
+      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+      AddDeclRef(R.RecipeDecl);
+    }
     return;
   }
   case OpenACCClauseKind::Seq:

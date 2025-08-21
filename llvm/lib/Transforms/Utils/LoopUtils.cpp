@@ -914,6 +914,8 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   switch (RK) {
   default:
     llvm_unreachable("Unexpected recurrence kind");
+  case RecurKind::AddChainWithSubs:
+  case RecurKind::Sub:
   case RecurKind::Add:
     return Intrinsic::vector_reduce_add;
   case RecurKind::Mul:
@@ -938,8 +940,10 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   case RecurKind::UMin:
     return Intrinsic::vector_reduce_umin;
   case RecurKind::FMax:
+  case RecurKind::FMaxNum:
     return Intrinsic::vector_reduce_fmax;
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
     return Intrinsic::vector_reduce_fmin;
   case RecurKind::FMaximum:
     return Intrinsic::vector_reduce_fmaximum;
@@ -1037,8 +1041,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
   case RecurKind::SMax:
     return Intrinsic::smax;
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
     return Intrinsic::minnum;
   case RecurKind::FMax:
+  case RecurKind::FMaxNum:
     return Intrinsic::maxnum;
   case RecurKind::FMinimum:
     return Intrinsic::minimum;
@@ -1096,9 +1102,9 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
   if (Ty->isIntOrIntVectorTy() ||
-      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
+      (RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum ||
+       RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
        RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum)) {
-    // TODO: Add float minnum/maxnum support when FMF nnan is set.
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
     return Builder.CreateIntrinsic(Ty, Id, {Left, Right}, nullptr,
                                    "rdx.minmax");
@@ -1171,7 +1177,7 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
     SmallVector<int, 32> ShuffleMask(VF);
     for (unsigned stride = 1; stride < VF; stride <<= 1) {
       // Initialise the mask with undef.
-      std::fill(ShuffleMask.begin(), ShuffleMask.end(), -1);
+      llvm::fill(ShuffleMask, -1);
       for (unsigned j = 0; j < VF; j += stride << 1) {
         ShuffleMask[j] = j + stride;
       }
@@ -1224,9 +1230,13 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       Value *Start, Value *Sentinel) {
+                                       RecurKind RdxKind, Value *Start,
+                                       Value *Sentinel) {
+  bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RdxKind);
+  bool IsMaxRdx = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RdxKind);
   Value *MaxRdx = Src->getType()->isVectorTy()
-                      ? Builder.CreateIntMaxReduce(Src, true)
+                      ? (IsMaxRdx ? Builder.CreateIntMaxReduce(Src, IsSigned)
+                                  : Builder.CreateIntMinReduce(Src, IsSigned))
                       : Src;
   // Correct the final reduction result back to the start value if the maximum
   // reduction is sentinel value.
@@ -1293,6 +1303,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                  Builder.getFastMathFlags());
   };
   switch (RdxKind) {
+  case RecurKind::AddChainWithSubs:
+  case RecurKind::Sub:
   case RecurKind::Add:
   case RecurKind::Mul:
   case RecurKind::And:
@@ -1304,6 +1316,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::UMin:
   case RecurKind::FMax:
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
+  case RecurKind::FMaxNum:
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
   case RecurKind::FMinimumNum:
@@ -1322,8 +1336,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
-         "AnyOf or FindLastIV reductions are not supported.");
+         !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+         "AnyOf and FindIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto VPID = VPIntrinsic::getForIntrinsic(Id);
   assert(VPReductionIntrinsic::isVPReduction(VPID) &&

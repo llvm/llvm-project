@@ -25,6 +25,9 @@ bool onlyFirstLaneUsed(const VPValue *Def);
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(const VPValue *Def);
 
+/// Returns true if only scalar values of \p Def are used by all users.
+bool onlyScalarValuesUsed(const VPValue *Def);
+
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
 /// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
@@ -69,7 +72,8 @@ inline bool isSingleScalar(const VPValue *VPV) {
     return Rep->isSingleScalar() || (PreservesUniformity(Rep->getOpcode()) &&
                                      all_of(Rep->operands(), isSingleScalar));
   }
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
+  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe,
+          VPWidenSelectRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return PreservesUniformity(WidenR->getOpcode()) &&

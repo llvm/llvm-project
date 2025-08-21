@@ -58,12 +58,12 @@ inline void applyBranchToBranchOptImpl(
       return getBranchInfoAtTarget(*cast<InputSection>(target->section),
                                    target->value + addend);
     };
-    for (InputSectionBase *s : f->getSections()) {
+    for (InputSectionBase *sb : f->getSections()) {
+      auto *s = dyn_cast_or_null<InputSection>(sb);
       if (!s)
         continue;
       for (Relocation &r : s->relocations) {
-        std::optional<uint64_t> addend =
-            getControlTransferAddend(*cast<InputSection>(s), r);
+        std::optional<uint64_t> addend = getControlTransferAddend(*s, r);
         if (!addend)
           continue;
         std::pair<Relocation *, uint64_t> targetAndAddend =

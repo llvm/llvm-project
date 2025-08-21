@@ -127,10 +127,9 @@ public:
     /// getTiedOperand - If this operand is tied to another one, return the
     /// other operand number.  Otherwise, return -1.
     int getTiedRegister() const {
-      for (const CGIOperandList::ConstraintInfo &CI : Constraints) {
+      for (const CGIOperandList::ConstraintInfo &CI : Constraints)
         if (CI.isTied())
           return CI.getTiedOperand();
-      }
       return -1;
     }
   };
@@ -176,20 +175,20 @@ public:
   /// specified name, abort.
   unsigned getOperandNamed(StringRef Name) const;
 
-  /// hasOperandNamed - Query whether the instruction has an operand of the
-  /// given name. If so, return true and set OpIdx to the index of the
-  /// operand. Otherwise, return false.
-  bool hasOperandNamed(StringRef Name, unsigned &OpIdx) const;
+  /// findOperandNamed - Query whether the instruction has an operand of the
+  /// given name. If so, the index of the operand. Otherwise, return
+  /// std::nullopt.
+  std::optional<unsigned> findOperandNamed(StringRef Name) const;
 
-  bool hasSubOperandAlias(StringRef Name,
-                          std::pair<unsigned, unsigned> &SubOp) const;
+  std::optional<std::pair<unsigned, unsigned>>
+  findSubOperandAlias(StringRef Name) const;
 
-  /// ParseOperandName - Parse an operand name like "$foo" or "$foo.bar",
+  /// Parses an operand name like "$foo" or "$foo.bar",
   /// where $foo is a whole operand and $foo.bar refers to a suboperand.
   /// This aborts if the name is invalid.  If AllowWholeOp is true, references
   /// to operands with suboperands are allowed, otherwise not.
-  std::pair<unsigned, unsigned> ParseOperandName(StringRef Op,
-                                                 bool AllowWholeOp = true);
+  std::pair<unsigned, unsigned>
+  parseOperandName(StringRef Op, bool AllowWholeOp = true) const;
 
   /// getFlattenedOperandNumber - Flatten a operand/suboperand pair into a
   /// flat machineinstr operand #.

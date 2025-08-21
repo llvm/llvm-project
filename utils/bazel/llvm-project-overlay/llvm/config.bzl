@@ -32,6 +32,7 @@ posix_defines = [
     "BACKTRACE_HEADER=<execinfo.h>",
     r'LTDL_SHLIB_EXT=\".so\"',
     r'LLVM_PLUGIN_EXT=\".so\"',
+    "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=1",
     "LLVM_ENABLE_PLUGINS=1",
     "LLVM_ENABLE_THREADS=1",
     "HAVE_DEREGISTER_FRAME=1",
@@ -111,6 +112,7 @@ llvm_config_defines = os_defines + builtin_thread_pointer + select({
     "LLVM_VERSION_MINOR={}".format(LLVM_VERSION_MINOR),
     "LLVM_VERSION_PATCH={}".format(LLVM_VERSION_PATCH),
     r'LLVM_VERSION_STRING=\"{}\"'.format(PACKAGE_VERSION),
+    # Set globally in HandleLLVMOptions.cmake
     # These shouldn't be needed by the C++11 standard, but are for some
     # platforms (e.g. glibc < 2.18. See
     # https://sourceware.org/bugzilla/show_bug.cgi?id=15366). These are also

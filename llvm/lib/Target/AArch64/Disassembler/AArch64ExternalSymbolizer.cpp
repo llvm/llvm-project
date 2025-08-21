@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExternalSymbolizer.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -19,23 +19,23 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-disassembler"
 
-static AArch64MCExpr::Specifier
+static AArch64::Specifier
 getMachOSpecifier(uint64_t LLVMDisassembler_VariantKind) {
   switch (LLVMDisassembler_VariantKind) {
   case LLVMDisassembler_VariantKind_None:
-    return AArch64MCExpr::None;
+    return AArch64::S_None;
   case LLVMDisassembler_VariantKind_ARM64_PAGE:
-    return AArch64MCExpr::M_PAGE;
+    return AArch64::S_MACHO_PAGE;
   case LLVMDisassembler_VariantKind_ARM64_PAGEOFF:
-    return AArch64MCExpr::M_PAGEOFF;
+    return AArch64::S_MACHO_PAGEOFF;
   case LLVMDisassembler_VariantKind_ARM64_GOTPAGE:
-    return AArch64MCExpr::M_GOTPAGE;
+    return AArch64::S_MACHO_GOTPAGE;
   case LLVMDisassembler_VariantKind_ARM64_GOTPAGEOFF:
-    return AArch64MCExpr::M_GOTPAGEOFF;
+    return AArch64::S_MACHO_GOTPAGEOFF;
   case LLVMDisassembler_VariantKind_ARM64_TLVP:
-    return AArch64MCExpr::M_TLVPPAGE;
+    return AArch64::S_MACHO_TLVPPAGE;
   case LLVMDisassembler_VariantKind_ARM64_TLVOFF:
-    return AArch64MCExpr::M_TLVPPAGEOFF;
+    return AArch64::S_MACHO_TLVPPAGEOFF;
   default:
     llvm_unreachable("bad LLVMDisassembler_VariantKind");
   }
@@ -171,7 +171,7 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
       StringRef Name(SymbolicOp.AddSymbol.Name);
       MCSymbol *Sym = Ctx.getOrCreateSymbol(Name);
       auto Spec = getMachOSpecifier(SymbolicOp.VariantKind);
-      if (Spec != AArch64MCExpr::None)
+      if (Spec != AArch64::S_None)
         Add = MCSymbolRefExpr::create(Sym, Spec, Ctx);
       else
         Add = MCSymbolRefExpr::create(Sym, Ctx);

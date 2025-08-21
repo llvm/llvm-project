@@ -22,7 +22,7 @@ void example1() {
   // CHECK: VarDecl{{.*}}rca 'const A &'
   // CHECK: ImplicitCastExpr{{.*}}'const A' lvalue <DerivedToBase (A)>
   // CHECK-NOT: MaterializeTemporaryExpr
-  // CHECK: ImplicitCastExpr{{.*}}'const B' lvalue <NoOp>
+  // CHECK: ImplicitCastExpr{{.*}}'const struct B' lvalue <NoOp>
   const A& rca = b;
 }
 

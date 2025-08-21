@@ -10,23 +10,23 @@ define i32 @test(i32 %x) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK: RenamedOp: [[CMP]]
-; CHECK:         [[CMP_0:%.*]] = call i1 @llvm.ssa.copy.{{.*}}(i1 [[CMP]])
+; CHECK:         [[CMP_0:%.*]] = bitcast i1 [[CMP]] to i1
 ; CHECK: RenamedOp: [[X]]
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.{{.*}}(i32 [[X]])
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB2:%.*]], label [[EXIT1:%.*]]
 ; CHECK:       bb2:
 ; CHECK: RenamedOp: [[CMP_0]]
-; CHECK:         [[CMP_0_1:%.*]] = call i1 @llvm.ssa.copy.{{.*}}(i1 [[CMP_0]])
+; CHECK:         [[CMP_0_1:%.*]] = bitcast i1 [[CMP_0]] to i1
 ; CHECK: RenamedOp: [[X]]
-; CHECK:         [[X_0_1:%.*]] = call i32 @llvm.ssa.copy.{{.*}}(i32 [[X_0]])
+; CHECK:         [[X_0_1:%.*]] = bitcast i32 [[X_0]] to i32
 ; CHECK: RenamedOp: [[X_0]]
-; CHECK:         [[X_0_4:%.*]] = call i32 @llvm.ssa.copy.{{.*}}(i32 [[X_0]])
+; CHECK:         [[X_0_4:%.*]] = bitcast i32 [[X_0]] to i32
 ; CHECK-NEXT:    br i1 [[CMP_0]], label [[BB3:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       bb3:
 ; CHECK: RenamedOp: [[X]]
-; CHECK:         [[X_0_1_2:%.*]] = call i32 @llvm.ssa.copy.{{.*}}(i32 [[X_0_1]])
+; CHECK:         [[X_0_1_2:%.*]] = bitcast i32 [[X_0_1]] to i32
 ; CHECK: RenamedOp: [[X_0_1]]
-; CHECK:         [[X_0_1_3:%.*]] = call i32 @llvm.ssa.copy.{{.*}}(i32 [[X_0_1]])
+; CHECK:         [[X_0_1_3:%.*]] = bitcast i32 [[X_0_1]] to i32
 ; CHECK-NEXT:    br i1 [[CMP_0_1]], label [[EXIT3:%.*]], label [[EXIT4:%.*]]
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i32 0

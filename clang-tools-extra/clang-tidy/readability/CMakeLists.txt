@@ -58,7 +58,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   UniqueptrDeleteReleaseCheck.cpp
   UppercaseLiteralSuffixCheck.cpp
   UseAnyOfAllOfCheck.cpp
-  UseNumericLimitsCheck.cpp
+  UseConcisePreprocessorDirectivesCheck.cpp
   UseStdMinMaxCheck.cpp
 
   LINK_LIBS

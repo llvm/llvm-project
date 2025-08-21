@@ -109,7 +109,7 @@ namespace {
 
     /// NewWaterList - The subset of WaterList that was created since the
     /// previous iteration by inserting unconditional branches.
-    SmallSet<MachineBasicBlock*, 4> NewWaterList;
+    SmallPtrSet<MachineBasicBlock *, 4> NewWaterList;
 
     using water_iterator = std::vector<MachineBasicBlock *>::iterator;
 
@@ -476,8 +476,10 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
     LLVM_DEBUG(dbgs() << "Beginning BR iteration #" << NoBRIters << '\n');
     bool BRChange = false;
-    for (unsigned i = 0, e = ImmBranches.size(); i != e; ++i)
+    for (unsigned i = 0, e = ImmBranches.size(); i != e; ++i) {
+      // Note: fixupImmediateBr can append to ImmBranches.
       BRChange |= fixupImmediateBr(ImmBranches[i]);
+    }
     if (BRChange && ++NoBRIters > 30)
       report_fatal_error("Branch Fix Up pass failed to converge!");
     LLVM_DEBUG(dumpBBs());
