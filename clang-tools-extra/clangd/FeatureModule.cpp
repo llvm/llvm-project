@@ -22,6 +22,10 @@ FeatureModule::Facilities &FeatureModule::facilities() {
   return *Fac;
 }
 
+void FeatureModuleSet::add(std::unique_ptr<FeatureModule> M) {
+  Modules.push_back(std::move(M));
+}
+
 bool FeatureModuleSet::addImpl(void *Key, std::unique_ptr<FeatureModule> M,
                                const char *Source) {
   if (!Map.try_emplace(Key, M.get()).second) {
@@ -35,3 +39,5 @@ bool FeatureModuleSet::addImpl(void *Key, std::unique_ptr<FeatureModule> M,
 
 } // namespace clangd
 } // namespace clang
+
+LLVM_INSTANTIATE_REGISTRY(clang::clangd::FeatureModuleRegistry)
