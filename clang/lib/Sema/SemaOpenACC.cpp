@@ -690,9 +690,9 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
       }
     }
   } else if (CK == OpenACCClauseKind::Reduction) {
-    // TODO: OpenACC:
-    // Reduction must have copyctor + dtor + operation in InnerTy I think?
-    // Need to confirm when implementing this part.
+    // TODO: Reduction needs to be an aggregate, which gets checked later, so
+    // construction here isn't a problem.  However, we need to make sure that we
+    // can compare it correctly still.
   }
 
   // All 3 things need to make sure they have a dtor.
@@ -1921,8 +1921,13 @@ void SemaOpenACC::ActOnVariableDeclarator(VarDecl *VD) {
     return;
 
   // This cast should be safe, since a static-local can only happen in a
-  // function declaration.
-  auto *ContextDecl = cast<FunctionDecl>(getCurContext());
+  // function declaration. However, in error cases (or perhaps ObjC/C++?), this
+  // could possibly be something like a 'block' decl, so if this is NOT a
+  // function decl, just give up.
+  auto *ContextDecl = dyn_cast<FunctionDecl>(getCurContext());
+
+  if (!ContextDecl)
+      return;
 
   // OpenACC 3.3 2.15:
   // In C and C++, function static variables are not supported in functions to
@@ -2674,7 +2679,10 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
           // DeclRefExpr).
 
           auto *Idx = IntegerLiteral::Create(
-              getASTContext(), llvm::APInt(sizeof(std::size_t) * 8, I),
+              getASTContext(),
+              llvm::APInt(
+                  getASTContext().getTypeSize(getASTContext().getSizeType()),
+                  I),
               getASTContext().getSizeType(), VarExpr->getBeginLoc());
 
           Expr *Subscript = new (getASTContext()) ArraySubscriptExpr(

@@ -385,6 +385,21 @@ void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
                l1_hint, l2_hint, l3_hint);
 }
 
+void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
+                         Value tensorDesc, ArrayRef<OpFoldResult> offsets,
+                         xegpu::CachePolicyAttr l1_hint,
+                         xegpu::CachePolicyAttr l2_hint,
+                         xegpu::CachePolicyAttr l3_hint) {
+  SmallVector<Value> dynamicOffsets;
+  SmallVector<int64_t> staticOffsets;
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+
+  build(builder, state, tensorDesc, dynamicOffsets, staticOffsetsAttr, l1_hint,
+        l2_hint, l3_hint);
+}
+
 LogicalResult PrefetchNdOp::verify() {
   auto tdescTy = getTensorDescType();
   if (tdescTy.isScattered())
@@ -425,6 +440,22 @@ void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
   return build(builder, state, retType, tensorDesc, ValueRange(),
                DenseI64ArrayAttr(), packed, transpose, l1_hint, l2_hint,
                l3_hint);
+}
+
+void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
+                     Value tensorDesc, ArrayRef<OpFoldResult> offsets,
+                     UnitAttr packed, DenseI64ArrayAttr transpose,
+                     xegpu::CachePolicyAttr l1_hint,
+                     xegpu::CachePolicyAttr l2_hint,
+                     xegpu::CachePolicyAttr l3_hint) {
+  SmallVector<Value> dynamicOffsets;
+  SmallVector<int64_t> staticOffsets;
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+
+  build(builder, state, retType, tensorDesc, dynamicOffsets, staticOffsetsAttr,
+        packed, transpose, l1_hint, l2_hint, l3_hint);
 }
 
 LogicalResult LoadNdOp::verify() {
@@ -531,6 +562,21 @@ void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
 
   return build(builder, state, value, tensorDesc, ValueRange(),
                DenseI64ArrayAttr(), l1_hint, l2_hint, l3_hint);
+}
+
+void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
+                      Value tensorDesc, ArrayRef<OpFoldResult> offsets,
+                      xegpu::CachePolicyAttr l1_hint,
+                      xegpu::CachePolicyAttr l2_hint,
+                      xegpu::CachePolicyAttr l3_hint) {
+  SmallVector<Value> dynamicOffsets;
+  SmallVector<int64_t> staticOffsets;
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+
+  build(builder, state, value, tensorDesc, dynamicOffsets, staticOffsetsAttr,
+        l1_hint, l2_hint, l3_hint);
 }
 
 LogicalResult StoreNdOp::verify() {
@@ -892,8 +938,8 @@ LogicalResult ConvertLayoutOp::verify() {
 
   // both input and target layouts should be WgLayout or SgLayout at the same
   // time.
-  if ((!srcLayout.isWgLayout() || !resLayout.isWgLayout()) &&
-      (!srcLayout.isSgLayout() || !resLayout.isSgLayout()))
+  if ((!srcLayout.isForWorkgroup() || !resLayout.isForWorkgroup()) &&
+      (!srcLayout.isForSubgroup() || !resLayout.isForSubgroup()))
     return emitOpError("expected input layout and target layout be WgLayout or "
                        "SgLayout at the same time.");
 
@@ -938,7 +984,7 @@ void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
                          TypedValue<MemDescType> memDesc,
                          llvm::ArrayRef<OpFoldResult> offsets,
-                         LayoutTrait layout) {
+                         DistributeLayoutAttr layout) {
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
@@ -968,7 +1014,7 @@ LogicalResult LoadMatrixOp::verify() {
 void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
                           TypedValue<MemDescType> memDesc,
                           llvm::ArrayRef<OpFoldResult> offsets,
-                          LayoutTrait layout) {
+                          DistributeLayoutAttr layout) {
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);

@@ -11540,8 +11540,21 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
     return FastLowered;
 
   SDLoc SL(Op);
+  EVT VT = Op.getValueType();
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
+
+  SDValue LHSExt = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, LHS);
+  SDValue RHSExt = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, RHS);
+
+  if (VT == MVT::bf16) {
+    SDValue ExtDiv =
+        DAG.getNode(ISD::FDIV, SL, MVT::f32, LHSExt, RHSExt, Op->getFlags());
+    return DAG.getNode(ISD::FP_ROUND, SL, MVT::bf16, ExtDiv,
+                       DAG.getTargetConstant(0, SL, MVT::i32));
+  }
+
+  assert(VT == MVT::f16);
 
   // a32.u = opx(V_CVT_F32_F16, a.u); // CVT to F32
   // b32.u = opx(V_CVT_F32_F16, b.u); // CVT to F32
@@ -11559,9 +11572,6 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
   // We will use ISD::FMA on targets that don't support ISD::FMAD.
   unsigned FMADOpCode =
       isOperationLegal(ISD::FMAD, MVT::f32) ? ISD::FMAD : ISD::FMA;
-
-  SDValue LHSExt = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, LHS);
-  SDValue RHSExt = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, RHS);
   SDValue NegRHSExt = DAG.getNode(ISD::FNEG, SL, MVT::f32, RHSExt);
   SDValue Rcp =
       DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, RHSExt, Op->getFlags());
@@ -15729,7 +15739,7 @@ SDValue SITargetLowering::performFDivCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
-  if (VT != MVT::f16 || !Subtarget->has16BitInsts())
+  if ((VT != MVT::f16 && VT != MVT::bf16) || !Subtarget->has16BitInsts())
     return SDValue();
 
   SDValue LHS = N->getOperand(0);
@@ -17793,23 +17803,9 @@ atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW) {
 
 /// Return if a flat address space atomicrmw can access private memory.
 static bool flatInstrMayAccessPrivate(const Instruction *I) {
-  const MDNode *NoaliasAddrSpaceMD =
-      I->getMetadata(LLVMContext::MD_noalias_addrspace);
-  if (!NoaliasAddrSpaceMD)
-    return true;
-
-  for (unsigned I = 0, E = NoaliasAddrSpaceMD->getNumOperands() / 2; I != E;
-       ++I) {
-    auto *Low = mdconst::extract<ConstantInt>(
-        NoaliasAddrSpaceMD->getOperand(2 * I + 0));
-    if (Low->getValue().uge(AMDGPUAS::PRIVATE_ADDRESS)) {
-      auto *High = mdconst::extract<ConstantInt>(
-          NoaliasAddrSpaceMD->getOperand(2 * I + 1));
-      return High->getValue().ule(AMDGPUAS::PRIVATE_ADDRESS);
-    }
-  }
-
-  return true;
+  const MDNode *MD = I->getMetadata(LLVMContext::MD_noalias_addrspace);
+  return !MD ||
+         !AMDGPU::hasValueInRangeLikeMetadata(*MD, AMDGPUAS::PRIVATE_ADDRESS);
 }
 
 TargetLowering::AtomicExpansionKind

@@ -164,10 +164,8 @@ body:             |
     ; RV32-LABEL: name: double_positive_zero
     ; RV32: liveins: $x10
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
-    ; RV32-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x0
-    ; RV32-NEXT: [[BuildPairF64Pseudo:%[0-9]+]]:fpr64 = BuildPairF64Pseudo [[COPY1]], [[COPY]]
-    ; RV32-NEXT: $f10_d = COPY [[BuildPairF64Pseudo]]
+    ; RV32-NEXT: [[FCVT_D_W:%[0-9]+]]:fpr64 = FCVT_D_W $x0, 0
+    ; RV32-NEXT: $f10_d = COPY [[FCVT_D_W]]
     ; RV32-NEXT: PseudoRET implicit $f10_d
     ;
     ; RV64-LABEL: name: double_positive_zero

@@ -14,7 +14,6 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
-#include "PPCCCState.h"
 #include "PPCCallingConv.h"
 #include "PPCFrameLowering.h"
 #include "PPCInstrInfo.h"
@@ -1787,11 +1786,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADDI_DTPREL_L:   return "PPCISD::ADDI_DTPREL_L";
   case PPCISD::PADDI_DTPREL:
     return "PPCISD::PADDI_DTPREL";
-  case PPCISD::VADD_SPLAT:      return "PPCISD::VADD_SPLAT";
-  case PPCISD::SC:              return "PPCISD::SC";
-  case PPCISD::CLRBHRB:         return "PPCISD::CLRBHRB";
-  case PPCISD::MFBHRBE:         return "PPCISD::MFBHRBE";
-  case PPCISD::RFEBB:           return "PPCISD::RFEBB";
+  case PPCISD::VADD_SPLAT:
+    return "PPCISD::VADD_SPLAT";
   case PPCISD::XXSWAPD:         return "PPCISD::XXSWAPD";
   case PPCISD::SWAP_NO_CHAIN:   return "PPCISD::SWAP_NO_CHAIN";
   case PPCISD::BUILD_FP128:     return "PPCISD::BUILD_FP128";
@@ -4333,17 +4329,13 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  PPCCCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
+  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
 
   // Reserve space for the linkage area on the stack.
   unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
   CCInfo.AllocateStack(LinkageSize, PtrAlign);
-  if (useSoftFloat())
-    CCInfo.PreAnalyzeFormalArguments(Ins);
-
   CCInfo.AnalyzeFormalArguments(Ins, CC_PPC32_SVR4);
-  CCInfo.clearWasPPCF128();
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
@@ -6065,13 +6057,11 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
 
   // Assign locations to all of the outgoing arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  PPCCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
   // Reserve space for the linkage area on the stack.
   CCInfo.AllocateStack(Subtarget.getFrameLowering()->getLinkageSize(),
                        PtrAlign);
-  if (useSoftFloat())
-    CCInfo.PreAnalyzeCallOperands(Outs);
 
   if (IsVarArg) {
     // Handle fixed and variable vector arguments differently.
@@ -6104,7 +6094,6 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
     // All arguments are treated the same.
     CCInfo.AnalyzeCallOperands(Outs, CC_PPC32_SVR4);
   }
-  CCInfo.clearWasPPCF128();
 
   // Assign locations to all of the outgoing aggregate by value arguments.
   SmallVector<CCValAssign, 16> ByValArgLocs;
@@ -8516,10 +8505,11 @@ void PPCTargetLowering::LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
 
   // Result is a load from the stack slot.  If loading 4 bytes, make sure to
   // add in a bias on big endian.
-  if (Op.getValueType() == MVT::i32 && !i32Stack) {
+  if (Op.getValueType() == MVT::i32 && !i32Stack &&
+      !Subtarget.isLittleEndian()) {
     FIPtr = DAG.getNode(ISD::ADD, dl, FIPtr.getValueType(), FIPtr,
                         DAG.getConstant(4, dl, FIPtr.getValueType()));
-    MPI = MPI.getWithOffset(Subtarget.isLittleEndian() ? 0 : 4);
+    MPI = MPI.getWithOffset(4);
   }
 
   RLI.Chain = Chain;
@@ -14817,9 +14807,9 @@ static bool findConsecutiveLoad(LoadSDNode *LD, SelectionDAG &DAG) {
   SDValue Chain = LD->getChain();
   EVT VT = LD->getMemoryVT();
 
-  SmallSet<SDNode *, 16> LoadRoots;
+  SmallPtrSet<SDNode *, 16> LoadRoots;
   SmallVector<SDNode *, 8> Queue(1, Chain.getNode());
-  SmallSet<SDNode *, 16> Visited;
+  SmallPtrSet<SDNode *, 16> Visited;
 
   // First, search up the chain, branching to follow all token-factor operands.
   // If we find a consecutive load, then we're done, otherwise, record all

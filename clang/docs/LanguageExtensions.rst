@@ -635,11 +635,12 @@ C and C++.  For example:
     return v;
   }
 
+
 Boolean vectors are a Clang extension of the ext vector type.  Boolean vectors
 are intended, though not guaranteed, to map to vector mask registers.  The size
 parameter of a boolean vector type is the number of bits in the vector.  The
 boolean vector is dense and each bit in the boolean vector is one vector
-element.
+element. Query for this feature with ``__has_feature(ext_vector_type_boolean)``.
 
 The semantics of boolean vectors borrows from C bit-fields with the following
 differences:
@@ -656,6 +657,16 @@ differences:
 The size and alignment are both the number of bits rounded up to the next power
 of two, but the alignment is at most the maximum vector alignment of the
 target.
+
+A boolean vector can be used in a ternary `?:` operator to select vector
+elements of a different type.
+
+.. code-block:: c++
+
+  typedef int int4 __attribute__((ext_vector_type(4)));
+  typedef bool bool4 __attribute__((ext_vector_type(4)));
+
+  int4 blend(bool4 cond, int4 a, int4 b) { return cond ? a : b; }
 
 
 Vector Literals
@@ -757,11 +768,12 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
-The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
+The elementwise intrinsics ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
 ``__builtin_elementwise_sub_sat``, ``__builtin_elementwise_max``,
-``__builtin_elementwise_min``, and ``__builtin_elementwise_abs`` 
-can be called in a ``constexpr`` context.
+``__builtin_elementwise_min``, ``__builtin_elementwise_abs``,
+``__builtin_elementwise_ctlz``, ``__builtin_elementwise_cttz``, and
+``__builtin_elementwise_fma`` can be called in a ``constexpr`` context.
 
 No implicit promotion of integer types takes place. The mixing of integer types
 of different sizes and signs is forbidden in binary and ternary builtins.
@@ -870,6 +882,14 @@ T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Co
                                                 significant bits of the wide value), the combined value is shifted
                                                 right by z, and the least significant bits are extracted to produce
                                                 a result that is the same size as the original arguments.
+ T __builtin_elementwise_ctlz(T x[, T y])       return the number of leading 0 bits in the first argument. If          integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. It is undefined behaviour if the
+                                                first argument is 0 and no second argument is provided.
+ T __builtin_elementwise_cttz(T x[, T y])       return the number of trailing 0 bits in the first argument. If         integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. It is undefined behaviour if the
+                                                first argument is 0 and no second argument is provided.
 ============================================== ====================================================================== =========================================
 
 
@@ -921,6 +941,24 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
                                          <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                          for the comparison.
 ======================================= ====================================================================== ==================================
+
+*Masked Builtins*
+
+Each builtin accesses memory according to a provided boolean mask. These are
+provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
+argument is always boolean mask vector.
+
+Example:
+
+.. code-block:: c++
+
+    using v8b = bool [[clang::ext_vector_type(8)]];
+    using v8i = int [[clang::ext_vector_type(8)]];
+
+    v8i load(v8b m, v8i *p) { return __builtin_masked_load(m, p); }
+
+    void store(v8b m, v8i v, v8i *p) { __builtin_masked_store(m, v, p); }
+
 
 Matrix Types
 ============
@@ -1725,6 +1763,7 @@ Hexadecimal floating constants (N308)                                          C
 Compound literals (N716)                                                       C99           C89, C++
 ``//`` comments (N644)                                                         C99           C89
 Mixed declarations and code (N740)                                             C99           C89
+init-statement in for (N740)                                                   C99           C89
 Variadic macros (N707)                                                         C99           C89
 Empty macro arguments (N570)                                                   C99           C89
 Trailing comma in enum declaration                                             C99           C89
@@ -1790,6 +1829,37 @@ __make_integer_seq
   using __make_integer_seq = ...;
 
 This alias returns ``IntSeq`` instantiated with ``IntSeqT = T``and ``Ints`` being the pack ``0, ..., N - 1``.
+
+__builtin_dedup_pack
+--------------------
+
+.. code-block:: c++
+
+  template <class... Ts>
+  using __builtin_dedup_pack = ...;
+
+This alias takes a template parameter pack ``Ts`` and produces a new unexpanded pack containing the unique types
+from ``Ts``, with the order of the first occurrence of each type preserved.
+It is useful in template metaprogramming to normalize type lists.
+
+The resulting pack can be expanded in contexts like template argument lists or base specifiers.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  template <typename...> struct TypeList;
+
+  // The resulting type is TypeList<int, double, char>
+  template <typename ...ExtraTypes>
+  using MyTypeList = TypeList<__builtin_dedup_pack<int, double, int, char, double, ExtraTypes...>...>;
+
+**Limitations**:
+
+* This builtin can only be used inside a template.
+* The resulting pack is currently only supported for expansion in template argument lists and base specifiers.
+* This builtin cannot be assigned to a template template parameter.
+
 
 Type Trait Primitives
 =====================
@@ -4370,7 +4440,7 @@ fall into one of the specified floating-point classes.
 
   if (__builtin_isfpclass(x, 448)) {
      // `x` is positive finite value
-	 ...
+         ...
   }
 
 **Description**:
