@@ -14,6 +14,7 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -1876,6 +1877,54 @@ struct AMDGPUSwizzleBitModeLowering
   }
 };
 
+struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  AMDGPUPermlaneLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<PermlaneSwapOp>(converter), chipset(chipset) {}
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(PermlaneSwapOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx950)
+      return op->emitOpError("permlane_swap is only supported on gfx950+");
+
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+    Value src = adaptor.getSrc();
+    unsigned row_length = op.getRowLength();
+    bool fi = op.getFetchInactive();
+    bool boundctrl = op.getBoundCtrl();
+
+    SmallVector<Value> decomposed =
+        LLVM::decomposeValue(rewriter, loc, src, i32);
+
+    SmallVector<Value> permuted;
+    for (Value v : decomposed) {
+      Value res;
+      Type i32pair = LLVM::LLVMStructType::getLiteral(
+          rewriter.getContext(), {v.getType(), v.getType()});
+
+      if (row_length == 16)
+        res = ROCDL::Permlane16SwapOp::create(rewriter, loc, i32pair, v, v, fi,
+                                              boundctrl);
+      else if (row_length == 32)
+        res = ROCDL::Permlane32SwapOp::create(rewriter, loc, i32pair, v, v, fi,
+                                              boundctrl);
+      else
+        llvm_unreachable("unsupported row length");
+
+      Value vdstNew = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
+      permuted.emplace_back(vdstNew);
+    }
+
+    Value result = LLVM::composeValue(rewriter, loc, permuted, src.getType());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -1944,6 +1993,6 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            WMMAOpLowering, ExtPackedFp8OpLowering, ScaledExtPackedOpLowering,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
-           TransposeLoadOpLowering>(converter, chipset);
+           TransposeLoadOpLowering, AMDGPUPermlaneLowering>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }
