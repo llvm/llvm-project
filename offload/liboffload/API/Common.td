@@ -127,7 +127,7 @@ def : Struct {
 def : Typedef {
   let name = "ol_result_t";
   let desc = "Result type returned by all entry points.";
-  let value = "const ol_error_struct_t*";
+  let value = "const struct ol_error_struct_t*";
 }
 
 def : Macro {
