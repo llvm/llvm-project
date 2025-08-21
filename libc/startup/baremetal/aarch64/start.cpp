@@ -74,6 +74,8 @@ namespace LIBC_NAMESPACE_DECL {
 [[noreturn]] void do_start() {
   // TODO: This startup code is not extensive, but rather the MVP for QEMU
   // testing.
+  // TODO: Setup memory (MMU, page table, caches)
+  // TODO: Consider v8-R variants
 
   // Set up exception handling
   __arm_wsr64("VBAR_EL1", reinterpret_cast<uint64_t>(&vector_table));
