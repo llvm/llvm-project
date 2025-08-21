@@ -15,6 +15,7 @@
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
+#include "sanitizer_common/sanitizer_glibc_version.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
@@ -45,17 +46,6 @@
 #include <unistd.h>
 
 using namespace __sanitizer;
-
-#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 ||           \
-    defined(__s390x__)
-#define PTHREAD_ABI_BASE "GLIBC_2.3.2"
-#elif defined(__aarch64__) || SANITIZER_PPC64V2
-#define PTHREAD_ABI_BASE "GLIBC_2.17"
-#elif SANITIZER_LOONGARCH64
-#define PTHREAD_ABI_BASE "GLIBC_2.36"
-#elif SANITIZER_RISCV64
-#define PTHREAD_ABI_BASE "GLIBC_2.27"
-#endif
 
 DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, usize size)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
@@ -1701,12 +1691,24 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_mutex_unlock);
   INTERCEPT_FUNCTION(pthread_join);
 
-  INTERCEPT_FUNCTION_VER(pthread_cond_init, PTHREAD_ABI_BASE);
-  INTERCEPT_FUNCTION_VER(pthread_cond_signal, PTHREAD_ABI_BASE);
-  INTERCEPT_FUNCTION_VER(pthread_cond_broadcast, PTHREAD_ABI_BASE);
-  INTERCEPT_FUNCTION_VER(pthread_cond_wait, PTHREAD_ABI_BASE);
-  INTERCEPT_FUNCTION_VER(pthread_cond_timedwait, PTHREAD_ABI_BASE);
-  INTERCEPT_FUNCTION_VER(pthread_cond_destroy, PTHREAD_ABI_BASE);
+  // See the comment in tsan_interceptors_posix.cpp.
+#if SANITIZER_GLIBC && !__GLIBC_PREREQ(2, 36) &&                               \
+    (defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 ||          \
+     defined(__s390x__))
+  INTERCEPT_FUNCTION_VER(pthread_cond_init, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_signal, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_broadcast, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_wait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_timedwait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_destroy, "GLIBC_2.3.2");
+#else
+  INTERCEPT_FUNCTION(pthread_cond_init);
+  INTERCEPT_FUNCTION(pthread_cond_signal);
+  INTERCEPT_FUNCTION(pthread_cond_broadcast);
+  INTERCEPT_FUNCTION(pthread_cond_wait);
+  INTERCEPT_FUNCTION(pthread_cond_timedwait);
+  INTERCEPT_FUNCTION(pthread_cond_destroy);
+#endif
 
   INTERCEPT_FUNCTION(pthread_rwlock_rdlock);
   INTERCEPT_FUNCTION(pthread_rwlock_unlock);
