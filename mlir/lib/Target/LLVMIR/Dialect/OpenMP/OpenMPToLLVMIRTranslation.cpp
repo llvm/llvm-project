@@ -2559,7 +2559,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Initialize linear variables and linear step
   LinearClauseProcessor linearClauseProcessor;
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
     for (mlir::Value linearVar : wsloopOp.getLinearVars())
       linearClauseProcessor.createLinearVar(builder, moduleTranslation,
                                             linearVar);
@@ -2576,7 +2576,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
 
   // Emit Initialization and Update IR for linear variables
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
         linearClauseProcessor.initLinearVar(builder, moduleTranslation,
                                             loopInfo->getPreheader());
@@ -2602,7 +2602,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   // Emit finalization and in-place rewrites for linear vars.
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
     llvm::OpenMPIRBuilder::InsertPointTy oldIP = builder.saveIP();
     assert(loopInfo->getLastIter() &&
            "`lastiter` in CanonicalLoopInfo is nullptr");
