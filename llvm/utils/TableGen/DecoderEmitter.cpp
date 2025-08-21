@@ -1102,7 +1102,9 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
     // Emit a function for each case first.
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
       OS << "template <typename InsnType>\n";
-      OS << "DecodeStatus decodeFn" << Index << "(" << DecodeParams << ") {\n";
+      OS << "static DecodeStatus decodeFn" << Index << "(" << DecodeParams
+         << ") {\n";
+      OS << "  using namespace llvm::MCD;\n";
       OS << "  " << TmpTypeDecl;
       OS << "  [[maybe_unused]] TmpType tmp;\n";
       OS << Decoder;
@@ -1115,24 +1117,26 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
   OS << "template <typename InsnType>\n";
   OS << "static DecodeStatus decodeToMCInst(unsigned Idx, " << DecodeParams
      << ") {\n";
+  OS << "  using namespace llvm::MCD;\n";
   OS << "  DecodeComplete = true;\n";
 
   if (UseFnTableInDecodeToMCInst) {
-    // Build a table of function pointers.
+    // Build a table of function pointers
     OS << "  using DecodeFnTy = DecodeStatus (*)(" << DecodeParams << ");\n";
     OS << "  static constexpr DecodeFnTy decodeFnTable[] = {\n";
     for (size_t Index : llvm::seq(Decoders.size()))
       OS << "    decodeFn" << Index << ",\n";
     OS << "  };\n";
     OS << "  if (Idx >= " << Decoders.size() << ")\n";
-    OS << "    llvm_unreachable(\"Invalid index!\");\n";
+    OS << "    llvm_unreachable(\"Invalid decoder index!\");\n";
+
     OS << "  return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
           "DecodeComplete);\n";
   } else {
     OS << "  " << TmpTypeDecl;
     OS << "  TmpType tmp;\n";
     OS << "  switch (Idx) {\n";
-    OS << "  default: llvm_unreachable(\"Invalid index!\");\n";
+    OS << "  default: llvm_unreachable(\"Invalid decoder index!\");\n";
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
       OS << "  case " << Index << ":\n";
       OS << Decoder;
@@ -2126,65 +2130,6 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
   }
 }
 
-// emitFieldFromInstruction - Emit the templated helper function
-// fieldFromInstruction().
-// On Windows we make sure that this function is not inlined when
-// using the VS compiler. It has a bug which causes the function
-// to be optimized out in some circumstances. See llvm.org/pr38292
-static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
-  OS << R"(
-// Helper functions for extracting fields from encoded instructions.
-// InsnType must either be integral or an APInt-like object that must:
-// * be default-constructible and copy-constructible
-// * Support extractBitsAsZExtValue(numBits, startBit)
-// * Support the ~, &, ==, and != operators with other objects of the same type
-// * Support the != and bitwise & with uint64_t
-template <typename InsnType>
-#if defined(_MSC_VER) && !defined(__clang__)
-__declspec(noinline)
-#endif
-static std::enable_if_t<std::is_integral<InsnType>::value, InsnType>
-fieldFromInstruction(const InsnType &insn, unsigned startBit,
-                     unsigned numBits) {
-  assert(startBit + numBits <= 64 && "Cannot support >64-bit extractions!");
-  assert(startBit + numBits <= (sizeof(InsnType) * 8) &&
-         "Instruction field out of bounds!");
-  InsnType fieldMask;
-  if (numBits == sizeof(InsnType) * 8)
-    fieldMask = (InsnType)(-1LL);
-  else
-    fieldMask = (((InsnType)1 << numBits) - 1) << startBit;
-  return (insn & fieldMask) >> startBit;
-}
-
-template <typename InsnType>
-static std::enable_if_t<!std::is_integral<InsnType>::value, uint64_t>
-fieldFromInstruction(const InsnType &insn, unsigned startBit,
-                     unsigned numBits) {
-  return insn.extractBitsAsZExtValue(numBits, startBit);
-}
-)";
-}
-
-// emitInsertBits - Emit the templated helper function insertBits().
-static void emitInsertBits(formatted_raw_ostream &OS) {
-  OS << R"(
-// Helper function for inserting bits extracted from an encoded instruction into
-// an integer-typed field.
-template <typename IntType>
-static std::enable_if_t<std::is_integral_v<IntType>, void>
-insertBits(IntType &field, IntType bits, unsigned startBit, unsigned numBits) {
-  // Check that no bit beyond numBits is set, so that a simple bitwise |
-  // is sufficient.
-  assert((~(((IntType)1 << numBits) - 1) & bits) == 0 &&
-           "bits has more than numBits bits set");
-  assert(startBit + numBits <= sizeof(IntType) * 8);
-  (void)numBits;
-  field |= bits << startBit;
-}
-)";
-}
-
 // emitDecodeInstruction - Emit the templated helper function
 // decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
@@ -2218,6 +2163,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   OS << ") {\n";
   if (HasCheckPredicate)
     OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
+  OS << "   using namespace llvm::MCD;\n";
 
   OS << R"(
   const uint8_t *Ptr = DecodeTable;
@@ -2412,20 +2358,6 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 )";
 }
 
-// Helper to propagate SoftFail status. Returns false if the status is Fail;
-// callers are expected to early-exit in that condition. (Note, the '&' operator
-// is correct to propagate the values of this enum; see comment on 'enum
-// DecodeStatus'.)
-static void emitCheck(formatted_raw_ostream &OS) {
-  OS << R"(
-static bool Check(DecodeStatus &Out, DecodeStatus In) {
-  Out = static_cast<DecodeStatus>(Out & In);
-  return Out != MCDisassembler::Fail;
-}
-
-)";
-}
-
 /// Collects all HwModes referenced by the target for encoding purposes.
 void DecoderEmitter::collectHwModesReferencedForEncodings(
     std::vector<unsigned> &HwModeIDs,
@@ -2610,10 +2542,6 @@ void DecoderEmitter::run(raw_ostream &o) const {
 namespace {
 )";
 
-  emitFieldFromInstruction(OS);
-  emitInsertBits(OS);
-  emitCheck(OS);
-
   // Do extra bookkeeping for variable-length encodings.
   std::vector<unsigned> InstrLen;
   bool IsVarLenInst = Target.hasVariableLengthEncodings();
@@ -2643,6 +2571,7 @@ namespace {
 
   DecoderTableInfo TableInfo;
   unsigned OpcodeMask = 0;
+
   for (const auto &[Key, EncodingIDs] : EncMap) {
     auto [DecoderNamespace, HwModeID, Size] = Key;
     const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
