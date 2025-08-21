@@ -632,11 +632,12 @@ C and C++.  For example:
     return v;
   }
 
+
 Boolean vectors are a Clang extension of the ext vector type.  Boolean vectors
 are intended, though not guaranteed, to map to vector mask registers.  The size
 parameter of a boolean vector type is the number of bits in the vector.  The
 boolean vector is dense and each bit in the boolean vector is one vector
-element.
+element. Query for this feature with ``__has_feature(ext_vector_type_boolean)``.
 
 The semantics of boolean vectors borrows from C bit-fields with the following
 differences:
@@ -937,6 +938,24 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
                                          <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                          for the comparison.
 ======================================= ====================================================================== ==================================
+
+*Masked Builtins*
+
+Each builtin accesses memory according to a provided boolean mask. These are
+provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
+argument is always boolean mask vector.
+
+Example:
+
+.. code-block:: c++
+
+    using v8b = bool [[clang::ext_vector_type(8)]];
+    using v8i = int [[clang::ext_vector_type(8)]];
+
+    v8i load(v8b m, v8i *p) { return __builtin_masked_load(m, p); }
+
+    void store(v8b m, v8i v, v8i *p) { __builtin_masked_store(m, v, p); }
+
 
 Matrix Types
 ============

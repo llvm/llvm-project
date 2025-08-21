@@ -3256,10 +3256,6 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   return ULE;
 }
 
-static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
-                                                        SourceLocation loc,
-                                                        ValueDecl *var);
-
 ExprResult Sema::BuildDeclarationNameExpr(
     const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
     NamedDecl *FoundD, const TemplateArgumentListInfo *TemplateArgs,
@@ -18729,8 +18725,9 @@ void Sema::MarkCaptureUsedInEnclosingContext(ValueDecl *Capture,
   MarkVarDeclODRUsed(Capture, Loc, *this, &CapturingScopeIndex);
 }
 
-void diagnoseUncapturableValueReferenceOrBinding(Sema &S, SourceLocation loc,
-                                                 ValueDecl *var) {
+static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
+                                                        SourceLocation loc,
+                                                        ValueDecl *var) {
   DeclContext *VarDC = var->getDeclContext();
 
   //  If the parameter still belongs to the translation unit, then
