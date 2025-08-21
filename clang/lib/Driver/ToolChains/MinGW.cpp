@@ -436,52 +436,75 @@ void toolchains::MinGW::findGccLibDir(const llvm::Triple &LiteralTriple) {
   SubdirNames.emplace_back(getTriple().getArchName());
   SubdirNames.back() += "-w64-mingw32ucrt";
   SubdirNames.emplace_back("mingw32");
-  if (SubdirName.empty()) {
-    SubdirName = getTriple().getArchName();
-    SubdirName += "-w64-mingw32";
-  }
+  TripleDirName = getTriple().getArchName();
+  TripleDirName += "-w64-mingw32";
   // FIXME: Should pick the newest version
   for (StringRef CandidateBase : BaseNames) {
     // lib: Arch Linux, Ubuntu, Windows
     // lib64: openSUSE Linux
     for (StringRef CandidateLib : {"lib", "lib64"}) {
-      for (StringRef CandidateSysroot : SubdirNames) {
+      for (StringRef CandidateTriple : SubdirNames) {
         llvm::SmallString<1024> LibDir(CandidateBase);
-        llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateSysroot);
+        llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateTriple);
         if (findGccVersion(LibDir, GccLibDir, Ver, GccVer)) {
           llvm::SmallString<1024> ParentLib(LibDir);
           llvm::sys::path::append(ParentLib, "..", "..");
           GccParentLibPath = ParentLib.str();
-          SubdirName = std::string(CandidateSysroot);
+          TripleDirName = std::string(CandidateTriple);
           return;
         }
       }
     }
   }
+  // Let's try to find it relative a decorated gcc binary
+  for (StringRef CandidateLib : {"lib", "lib64"}) {
+    for (StringRef CandidateTriple : SubdirNames) {
+      llvm::ErrorOr<std::string> GPPName =
+        llvm::sys::findProgramByName(CandidateTriple.str() + "-gcc");
+      if (!GPPName)
+        continue;
+      llvm::SmallString<1024> LibDir;
+      llvm::sys::path::append(LibDir, llvm::sys::path::parent_path(llvm::sys::path::parent_path(GPPName.get())));
+      llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateTriple);
+      if (findGccVersion(LibDir, GccLibDir, Ver, GccVer)) {
+        llvm::SmallString<1024> ParentLib(LibDir);
+        llvm::sys::path::append(ParentLib, "..", "..");
+        GccParentLibPath = ParentLib.str();
+        TripleDirName = std::string(CandidateTriple);
+        return;
+      }
+    }
+  }
 }
 
-static llvm::ErrorOr<std::string> findGcc(const llvm::Triple &LiteralTriple,
-                                          const llvm::Triple &T) {
+static llvm::ErrorOr<std::string> findGccRelativeSysroot(
+    const llvm::Triple &LiteralTriple, const llvm::Triple &T) {
   llvm::SmallVector<llvm::SmallString<32>, 5> Gccs;
   Gccs.emplace_back(LiteralTriple.str());
-  Gccs.back() += "-gcc";
   Gccs.emplace_back(T.str());
-  Gccs.back() += "-gcc";
   Gccs.emplace_back(T.getArchName());
-  Gccs.back() += "-w64-mingw32-gcc";
+  Gccs.back() += "-w64-mingw32";
   Gccs.emplace_back(T.getArchName());
-  Gccs.back() += "-w64-mingw32ucrt-gcc";
-  Gccs.emplace_back("mingw32-gcc");
+  Gccs.back() += "-w64-mingw32ucrt";
+  Gccs.emplace_back("mingw32");
   // Please do not add "gcc" here
-  for (StringRef CandidateGcc : Gccs)
-    if (llvm::ErrorOr<std::string> GPPName = llvm::sys::findProgramByName(CandidateGcc))
-      return GPPName;
+  for (StringRef CandidateGcc : Gccs) {
+    llvm::ErrorOr<std::string> GPPName =
+      llvm::sys::findProgramByName(CandidateGcc.str() + "-gcc");
+    llvm::SmallString<1024> SysrootDir;
+    if (!GPPName)
+      continue;
+    llvm::sys::path::append(SysrootDir, llvm::sys::path::parent_path(llvm::sys::path::parent_path(GPPName.get())));
+    llvm::sys::path::append(SysrootDir, CandidateGcc);
+    if (llvm::sys::fs::is_directory(SysrootDir))
+      return SysrootDir.str().str();
+  }
   return make_error_code(std::errc::no_such_file_or_directory);
 }
 
 static llvm::ErrorOr<std::string>
 findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
-                         const llvm::Triple &T, std::string &SubdirName) {
+                         const llvm::Triple &T) {
   llvm::SmallVector<llvm::SmallString<32>, 4> Subdirs;
   Subdirs.emplace_back(LiteralTriple.str());
   Subdirs.emplace_back(T.str());
@@ -493,7 +516,8 @@ findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
     if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
-      SubdirName = std::string(CandidateSubdir);
+      if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir + Sep + "sys-root"))
+        return (ClangRoot + Sep + CandidateSubdir + Sep + "sys-root").str();
       return (ClangRoot + Sep + CandidateSubdir).str();
     }
   }
@@ -522,41 +546,35 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   llvm::Triple LiteralTriple = getLiteralTriple(D, getTriple());
   if (getDriver().SysRoot.size())
     Base = getDriver().SysRoot;
-  // Look for <clang-bin>/../<triplet>; if found, use <clang-bin>/.. as the
-  // base as it could still be a base for a gcc setup with libgcc.
+  // Look for <clang-bin>/../<triplet>
   else if (llvm::ErrorOr<std::string> TargetSubdir = findClangRelativeSysroot(
-               getDriver(), LiteralTriple, getTriple(), SubdirName))
-    Base = std::string(llvm::sys::path::parent_path(TargetSubdir.get()));
+               getDriver(), LiteralTriple, getTriple()))
+    Base = TargetSubdir.get();
   // If the install base of Clang seems to have mingw sysroot files directly
   // in the toplevel include and lib directories, use this as base instead of
   // looking for a triple prefixed GCC in the path.
   else if (looksLikeMinGWSysroot(InstallBase))
     Base = InstallBase;
-  else if (llvm::ErrorOr<std::string> GPPName =
-               findGcc(LiteralTriple, getTriple()))
-    Base = std::string(llvm::sys::path::parent_path(
-        llvm::sys::path::parent_path(GPPName.get())));
+  else if (llvm::ErrorOr<std::string> TargetSubdir =
+               findGccRelativeSysroot(LiteralTriple, getTriple()))
+    Base = TargetSubdir.get();
   else
     Base = InstallBase;
 
   Base += llvm::sys::path::get_separator();
   findGccLibDir(LiteralTriple);
-  TripleDirName = SubdirName;
   // GccLibDir must precede Base/lib so that the
   // correct crtbegin.o ,cetend.o would be found.
   getFilePaths().push_back(GccLibDir);
 
-  // openSUSE/Fedora
-  std::string CandidateSubdir = SubdirName + "/sys-root/mingw";
-  if (getDriver().getVFS().exists(Base + CandidateSubdir))
+  // openSUSE/Fedora/Gentoo
+  std::string CandidateSubdir = "mingw";
+  if (getDriver().getVFS().exists(Base + CandidateSubdir)) {
     SubdirName = CandidateSubdir;
+    SubdirName += llvm::sys::path::get_separator();
+  }
 
-  getFilePaths().push_back(
-      (Base + SubdirName + llvm::sys::path::get_separator() + "lib").str());
-
-  // Gentoo
-  getFilePaths().push_back(
-      (Base + SubdirName + llvm::sys::path::get_separator() + "mingw/lib").str());
+  getFilePaths().push_back(Base + SubdirName + "lib");
 
   // Only include <base>/lib if we're not cross compiling (not even for
   // windows->windows to a different arch), or if the sysroot has been set
@@ -716,13 +734,10 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  addSystemInclude(DriverArgs, CC1Args,
-                   Base + SubdirName + llvm::sys::path::get_separator() +
-                       "include");
+  addSystemInclude(DriverArgs, CC1Args, Base + SubdirName + "include");
 
   // Gentoo
-  addSystemInclude(DriverArgs, CC1Args,
-                   Base + SubdirName + llvm::sys::path::get_separator() + "usr/include");
+  addSystemInclude(DriverArgs, CC1Args, Base + SubdirName + "usr/include");
 
   // Only include <base>/include if we're not cross compiling (but do allow it
   // if we're on Windows and building for Windows on another architecture),
@@ -801,7 +816,7 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     if (getDriver().getVFS().exists(TargetDir))
       addSystemInclude(DriverArgs, CC1Args, TargetDir);
     addSystemInclude(DriverArgs, CC1Args,
-                     Base + SubdirName + Slash + "include" + Slash + "c++" +
+                     Base + SubdirName + "include" + Slash + "c++" +
                          Slash + "v1");
     addSystemInclude(DriverArgs, CC1Args,
                      Base + "include" + Slash + "c++" + Slash + "v1");
@@ -850,19 +865,19 @@ static bool testTriple(const Driver &D, const llvm::Triple &Triple,
                        const ArgList &Args) {
   // If an explicit sysroot is set, that will be used and we shouldn't try to
   // detect anything else.
-  std::string SubdirName;
   if (D.SysRoot.size())
     return true;
   llvm::Triple LiteralTriple = getLiteralTriple(D, Triple);
   std::string InstallBase = std::string(llvm::sys::path::parent_path(D.Dir));
   if (llvm::ErrorOr<std::string> TargetSubdir =
-          findClangRelativeSysroot(D, LiteralTriple, Triple, SubdirName))
+          findClangRelativeSysroot(D, LiteralTriple, Triple))
     return true;
   // If the install base itself looks like a mingw sysroot, we'll use that
   // - don't use any potentially unrelated gcc to influence what triple to use.
   if (looksLikeMinGWSysroot(InstallBase))
     return false;
-  if (llvm::ErrorOr<std::string> GPPName = findGcc(LiteralTriple, Triple))
+  if (llvm::ErrorOr<std::string> TargetSubdir =
+          findGccRelativeSysroot(LiteralTriple, Triple))
     return true;
   // If we neither found a colocated sysroot or a matching gcc executable,
   // conclude that we can't know if this is the correct spelling of the triple.
