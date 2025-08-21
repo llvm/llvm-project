@@ -4524,9 +4524,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   // General case: splat the first operand and slide other operands down one
   // by one to form a vector. Alternatively, if the last operand is an
-  // extraction from element 0 of a vector, we can use the original vector
-  // reduction result as the start value and slide up instead of slide down.
-  // Such that we can avoid the splat.
+  // extraction from element 0 of a vector, we can use that vector as the start
+  // value and slide up instead of slide down. Such that we can avoid the splat.
   SmallVector<SDValue> Operands(Op->op_begin(), Op->op_end());
   SDValue EVec;
   bool SlideUp = false;
@@ -4567,7 +4566,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       continue;
     }
 
-    // Start our sequence with either a TA splat or a reduction result in the
+    // Start our sequence with either a TA splat or extract source in the
     // hopes that hardware is able to recognize there's no dependency on the
     // prior value of our temporary register.
     if (!Vec) {

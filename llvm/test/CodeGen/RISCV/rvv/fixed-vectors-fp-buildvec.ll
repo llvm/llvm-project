@@ -1853,6 +1853,28 @@ define <8 x double> @buildvec_slideup(<4 x double> %v, double %e0, double %e1, d
   ret <8 x double> %v7
 }
 
+define <8 x double> @buildvec_slideup_trailing_undef(<4 x double> %v, double %e0, double %e1, double %e2, double %e3, double %e4) vscale_range(4, 128) {
+; CHECK-LABEL: buildvec_slideup_trailing_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
+; CHECK-NEXT:    vfslide1up.vf v10, v8, fa4
+; CHECK-NEXT:    vfslide1up.vf v8, v10, fa3
+; CHECK-NEXT:    vfslide1up.vf v10, v8, fa2
+; CHECK-NEXT:    vfslide1up.vf v12, v10, fa1
+; CHECK-NEXT:    vfslide1up.vf v8, v12, fa0
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x double> poison, double %e0, i64 0
+  %v1 = insertelement <8 x double> %v0, double %e1, i64 1
+  %v2 = insertelement <8 x double> %v1, double %e2, i64 2
+  %v3 = insertelement <8 x double> %v2, double %e3, i64 3
+  %v4 = insertelement <8 x double> %v3, double %e4, i64 4
+  %e5 = extractelement <4 x double> %v, i64 0
+  %v5 = insertelement <8 x double> %v4, double %e5, i64 5
+  %v6 = insertelement <8 x double> %v5, double poison, i64 6
+  %v7 = insertelement <8 x double> %v6, double poison, i64 7
+  ret <8 x double> %v7
+}
+
 ; Negative test for slideup lowering where the extract_element was not build_vector's last operand.
 define <8 x double> @buildvec_slideup_not_last_element(<4 x double> %v, double %e0, double %e1, double %e2, double %e3, double %e4, double %e5, double %e7) vscale_range(4, 128) {
 ; CHECK-LABEL: buildvec_slideup_not_last_element:
