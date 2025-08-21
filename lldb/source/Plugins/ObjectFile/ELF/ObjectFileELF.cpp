@@ -2041,10 +2041,11 @@ static char FindRISCVMappingSymbol(const char *symbol_name) {
   if (!symbol_name)
     return '\0';
 
-  if (symbol_name[0] == '$' &&
-      (symbol_name[1] == 'd' || symbol_name[1] == 'x') &&
-      symbol_name[2] == '\0') {
-    return symbol_name[1];
+  if (strcmp(symbol_name, "$d") == 0) {
+    return 'd';
+  }
+  if (strcmp(symbol_name, "$x") == 0) {
+    return 'x';
   }
   return '\0';
 }
@@ -2117,8 +2118,8 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     // Skip local symbols starting with ".L" because these are compiler
     // generated local labels used for internal purposes (e.g. debugging,
     // optimization) and are not relevant for symbol resolution or external
-    // linkage in RISC-V binaries.
-    if (symbol_name[0] == '.' && symbol_name[1] == 'L')
+    // linkage.
+    if (llvm::StringRef(symbol_name).starts_with(".L"))
       continue;
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
@@ -2208,9 +2209,8 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     int64_t symbol_value_offset = 0;
     uint32_t additional_flags = 0;
-    llvm::Triple::ArchType arch_machine = arch.GetMachine();
     if (arch.IsValid()) {
-      if (arch_machine == llvm::Triple::arm) {
+      if (arch.GetMachine() == llvm::Triple::arm) {
         if (symbol.getBinding() == STB_LOCAL) {
           char mapping_symbol = FindArmAarch64MappingSymbol(symbol_name);
           if (symbol_type == eSymbolTypeCode) {
@@ -2235,7 +2235,7 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
           if (mapping_symbol)
             continue;
         }
-      } else if (arch_machine == llvm::Triple::aarch64) {
+      } else if (arch.GetMachine() == llvm::Triple::aarch64) {
         if (symbol.getBinding() == STB_LOCAL) {
           char mapping_symbol = FindArmAarch64MappingSymbol(symbol_name);
           if (symbol_type == eSymbolTypeCode) {
@@ -2253,13 +2253,13 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
           if (mapping_symbol)
             continue;
         }
-      } else if (arch_machine == llvm::Triple::riscv32 ||
-                 arch_machine == llvm::Triple::riscv64 ||
-                 arch_machine == llvm::Triple::riscv32be ||
-                 arch_machine == llvm::Triple::riscv64be) {
+      } else if (arch.GetTriple().isRISCV()) {
         if (symbol.getBinding() == STB_LOCAL) {
           char mapping_symbol = FindRISCVMappingSymbol(symbol_name);
           if (symbol_type == eSymbolTypeCode) {
+            // Only handle $d and $x mapping symbols.
+            // Other mapping symbols are ignored as they don't affect address
+            // classification.
             switch (mapping_symbol) {
             case 'x':
               // $x - marks a RISCV instruction sequence
@@ -2276,7 +2276,7 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
         }
       }
 
-      if (arch_machine == llvm::Triple::arm) {
+      if (arch.GetMachine() == llvm::Triple::arm) {
         if (symbol_type == eSymbolTypeCode) {
           if (symbol.st_value & 1) {
             // Subtracting 1 from the address effectively unsets the low order
