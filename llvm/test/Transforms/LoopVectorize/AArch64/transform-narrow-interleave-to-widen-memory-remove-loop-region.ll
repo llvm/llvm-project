@@ -47,14 +47,9 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
-; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
-; VF4-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 1)
-; VF4-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
-; VF4-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF4-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF4:       [[PRED_STORE_IF]]:
-; VF4-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; VF4-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP2]], 1
+; VF4-NEXT:    [[TMP3:%.*]] = shl nsw i64 0, 1
 ; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP3]]
 ; VF4-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
 ; VF4-NEXT:    store i64 [[TMP5]], ptr [[TMP4]], align 8
@@ -64,11 +59,9 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4-NEXT:    store i64 [[TMP8]], ptr [[TMP7]], align 8
 ; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VF4:       [[PRED_STORE_CONTINUE]]:
-; VF4-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1
-; VF4-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; VF4-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
 ; VF4:       [[PRED_STORE_IF1]]:
-; VF4-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 1
-; VF4-NEXT:    [[TMP11:%.*]] = shl nsw i64 [[TMP10]], 1
+; VF4-NEXT:    [[TMP11:%.*]] = shl nsw i64 1, 1
 ; VF4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP11]]
 ; VF4-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP12]], align 8
 ; VF4-NEXT:    store i64 [[TMP13]], ptr [[TMP12]], align 8
@@ -78,11 +71,9 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4-NEXT:    store i64 [[TMP16]], ptr [[TMP15]], align 8
 ; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; VF4:       [[PRED_STORE_CONTINUE2]]:
-; VF4-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2
-; VF4-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; VF4-NEXT:    br i1 false, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; VF4:       [[PRED_STORE_IF3]]:
-; VF4-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 2
-; VF4-NEXT:    [[TMP19:%.*]] = shl nsw i64 [[TMP18]], 1
+; VF4-NEXT:    [[TMP19:%.*]] = shl nsw i64 2, 1
 ; VF4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP19]]
 ; VF4-NEXT:    [[TMP21:%.*]] = load i64, ptr [[TMP20]], align 8
 ; VF4-NEXT:    store i64 [[TMP21]], ptr [[TMP20]], align 8
@@ -92,11 +83,9 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4-NEXT:    store i64 [[TMP24]], ptr [[TMP23]], align 8
 ; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; VF4:       [[PRED_STORE_CONTINUE4]]:
-; VF4-NEXT:    [[TMP25:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3
-; VF4-NEXT:    br i1 [[TMP25]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; VF4-NEXT:    br i1 false, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; VF4:       [[PRED_STORE_IF5]]:
-; VF4-NEXT:    [[TMP26:%.*]] = add i64 [[INDEX]], 3
-; VF4-NEXT:    [[TMP27:%.*]] = shl nsw i64 [[TMP26]], 1
+; VF4-NEXT:    [[TMP27:%.*]] = shl nsw i64 3, 1
 ; VF4-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP27]]
 ; VF4-NEXT:    [[TMP29:%.*]] = load i64, ptr [[TMP28]], align 8
 ; VF4-NEXT:    store i64 [[TMP29]], ptr [[TMP28]], align 8
@@ -106,9 +95,7 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4-NEXT:    store i64 [[TMP32]], ptr [[TMP31]], align 8
 ; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; VF4:       [[PRED_STORE_CONTINUE6]]:
-; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
-; VF4-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF4-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[SCALAR_PH]]:
@@ -125,7 +112,7 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4-NEXT:    store i64 [[L_1]], ptr [[DATA_1]], align 8
 ; VF4-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VF4-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 2
-; VF4-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF4-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4:       [[EXIT]]:
 ; VF4-NEXT:    ret void
 ;
@@ -315,7 +302,7 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF4-NEXT:    store float [[ADD_1]], ptr [[GEP_RES_1]], align 4
 ; VF4-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VF4-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 4
-; VF4-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF4-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF4:       [[EXIT]]:
 ; VF4-NEXT:    ret void
 ;
