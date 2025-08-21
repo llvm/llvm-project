@@ -530,6 +530,14 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   return SDValue();
 }
 
+// Lower vecreduce_add using vhaddw instructions.
+// For Example:
+//  call i64 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)
+// can be lowered to:
+//  VHADDW_D_W    vr0, vr0, vr0
+//  VHADDW_Q_D    vr0, vr0, vr0
+//  VPICKVE2GR_D  a0,  vr0, 0
+//  ADDI_W        a0,  a0,  0
 SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
                                                     SelectionDAG &DAG) const {
 
@@ -541,13 +549,17 @@ SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
   unsigned EleBits = Val.getSimpleValueType().getScalarSizeInBits();
 
   unsigned LegalVecSize = 128;
-  bool is256Vector = Subtarget.hasExtLASX() && Val.getValueSizeInBits() == 256;
+  bool isLASX256Vector =
+      Subtarget.hasExtLASX() && Val.getValueSizeInBits() == 256;
 
+  // Ensure operand type legal or enable it legal.
   while (!isTypeLegal(Val.getSimpleValueType())) {
     Val = DAG.WidenVector(Val, DL);
   }
 
-  if (is256Vector) {
+  // NumEles is designed for iterations count, v4i32 for LSX
+  // and v8i32 for LASX should have the same count.
+  if (isLASX256Vector) {
     NumEles /= 2;
     LegalVecSize = 256;
   }
@@ -558,7 +570,7 @@ SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
     Val = DAG.getNode(LoongArchISD::VHADDW, DL, VecTy, Val, Val);
   }
 
-  if (is256Vector) {
+  if (isLASX256Vector) {
     SDValue Tmp = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, Val,
                               DAG.getConstant(2, DL, MVT::i64));
     Val = DAG.getNode(ISD::ADD, DL, MVT::v4i64, Tmp, Val);
