@@ -213,10 +213,8 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     if (!Ptr.isZero() && !Ptr.isDereferencable())
       return false;
 
-    if (S.getLangOpts().CPlusPlus11 && Ptr.isBlockPointer() &&
-        !CheckFinalLoad(S, OpPC, Ptr)) {
+    if (!Ptr.isZero() && !CheckFinalLoad(S, OpPC, Ptr))
       return false;
-    }
 
     // Never allow reading from a non-const pointer, unless the memory
     // has been created in this evaluation.
