@@ -19,7 +19,7 @@
 #define LLVM_CLANG_AST_TYPEORDERING_H
 
 #include "clang/AST/CanonicalType.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include <functional>
 
 namespace clang {

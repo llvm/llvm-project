@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_DYNAMICTYPEINFO_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_DYNAMICTYPEINFO_H
 
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 namespace ento {
