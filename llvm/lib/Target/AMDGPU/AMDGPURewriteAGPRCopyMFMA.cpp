@@ -245,12 +245,12 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
         continue;
 
       MachineOperand *Src2 = TII.getNamedOperand(*MFMA, AMDGPU::OpName::src2);
-      if (!Src2->isReg())
-        continue;
-
-      Register Src2Reg = Src2->getReg();
-      if (!Src2Reg.isVirtual())
-        continue;
+      Register Src2Reg;
+      if (Src2->isReg()) {
+        Src2Reg = Src2->getReg();
+        if (!Src2Reg.isVirtual())
+          continue;
+      }
 
       // FIXME: getMinimalPhysRegClass returns a nonsense AV_* subclass instead
       // of an AGPR or VGPR subclass, so we can't simply use the result on the
@@ -259,13 +259,15 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
       LLVM_DEBUG({
         dbgs() << "Attempting to replace VGPR MFMA with AGPR version:"
                << " Dst=[" << printReg(VReg) << " => "
-               << printReg(PhysReg, &TRI) << ']';
+               << printReg(PhysReg, &TRI);
 
         if (Src2Reg) {
           Register Src2PhysReg = VRM.getPhys(Src2Reg);
-          dbgs() << ", Src2=[" << printReg(Src2Reg, &TRI) << " => "
-                 << printReg(Src2PhysReg, &TRI) << "]: " << *MFMA;
+          dbgs() << "], Src2=[" << printReg(Src2Reg, &TRI) << " => "
+                 << printReg(Src2PhysReg, &TRI);
         }
+
+        dbgs() << "]: " << *MFMA;
       });
 
       const TargetRegisterClass *DstVirtRegRC = MRI.getRegClass(MFMADstReg);
