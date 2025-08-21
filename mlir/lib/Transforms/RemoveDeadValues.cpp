@@ -142,9 +142,8 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
     if (liveness->isLive) {
       LDBG() << "Value " << value << " is live according to liveness analysis";
       return true;
-    } else {
-      LDBG() << "Value " << value << " is dead according to liveness analysis";
     }
+    LDBG() << "Value " << value << " is dead according to liveness analysis";
   }
   return false;
 }
