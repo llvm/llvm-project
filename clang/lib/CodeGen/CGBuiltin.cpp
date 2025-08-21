@@ -1704,10 +1704,7 @@ static llvm::Value *EmitBitCountExpr(CodeGenFunction &CGF, const Expr *E) {
       VT && VT->getElementType()->isIntegerTy(1)) {
     llvm::Type *StorageType =
         llvm::Type::getIntNTy(CGF.getLLVMContext(), VT->getNumElements());
-    ArgValue = CGF.emitBoolVecConversion(
-        ArgValue, StorageType->getPrimitiveSizeInBits(), "insertvec");
     ArgValue = CGF.Builder.CreateBitCast(ArgValue, StorageType);
-    ArgType = ArgValue->getType();
   }
 
   return ArgValue;
