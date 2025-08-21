@@ -2249,31 +2249,31 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
 
     switch (kind) {
 
-    case DPPPerm::quad_perm:
-      if (auto quadPermAttr = cast<ArrayAttr>(*permArgument)) {
-        int32_t i = 0;
-        for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
-          uint32_t num = elem.getInt();
-          DppCtrl |= num << (i * 2);
-          i++;
-        }
+    case DPPPerm::quad_perm: {
+      auto quadPermAttr = cast<ArrayAttr>(*permArgument);
+      int32_t i = 0;
+      for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
+        uint32_t num = elem.getInt();
+        DppCtrl |= num << (i * 2);
+        i++;
       }
       break;
-    case DPPPerm::row_shl:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHL0;
-      }
+    }
+    case DPPPerm::row_shl: {
+      auto intAttr = cast<IntegerAttr>(*permArgument);
+      DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHL0;
       break;
-    case DPPPerm::row_shr:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHR0;
-      }
+    }
+    case DPPPerm::row_shr: {
+      auto intAttr = cast<IntegerAttr>(*permArgument);
+      DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHR0;
       break;
-    case DPPPerm::row_ror:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_ROR0;
-      }
+    }
+    case DPPPerm::row_ror: {
+      auto intAttr = cast<IntegerAttr>(*permArgument);
+      DppCtrl = intAttr.getInt() + DppCtrl::ROW_ROR0;
       break;
+    }
     case DPPPerm::wave_shl:
       DppCtrl = DppCtrl::WAVE_SHL1;
       break;
