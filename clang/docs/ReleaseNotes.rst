@@ -209,6 +209,9 @@ Improvements to Clang's diagnostics
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
 
+- Fixed false positive in ``-Wmissing-noreturn`` diagnostic when it was requiring the usage of
+  ``[[noreturn]]`` on lambdas before C++23 (#GH154493).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
