@@ -34,7 +34,7 @@ NB_MODULE(_mlirDialectsGPU, m) {
 
   mlirGPUAsyncTokenType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](const nb::object &cls, MlirContext ctx) {
         return cls(mlirGPUAsyncTokenTypeGet(ctx));
       },
       "Gets an instance of AsyncTokenType in the same context", nb::arg("cls"),
@@ -47,8 +47,9 @@ NB_MODULE(_mlirDialectsGPU, m) {
   mlir_attribute_subclass(m, "ObjectAttr", mlirAttributeIsAGPUObjectAttr)
       .def_classmethod(
           "get",
-          [](nb::object cls, MlirAttribute target, uint32_t format,
-             nb::bytes object, std::optional<MlirAttribute> mlirObjectProps,
+          [](const nb::object &cls, MlirAttribute target, uint32_t format,
+             const nb::bytes &object,
+             std::optional<MlirAttribute> mlirObjectProps,
              std::optional<MlirAttribute> mlirKernelsAttr) {
             MlirStringRef objectStrRef = mlirStringRefCreate(
                 static_cast<char *>(const_cast<void *>(object.data())),
