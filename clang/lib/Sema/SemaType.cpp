@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AttributeLangSupport.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -6619,13 +6620,21 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       Attr.setInvalid();
   } else {
     // The keyword-based type attributes imply which address space to use.
-    ASIdx = S.getLangOpts().SYCLIsDevice ? Attr.asSYCLLangAS()
-                                         : Attr.asOpenCLLangAS();
+    ASIdx =
+        S.getLangOpts().isSYCL() ? Attr.asSYCLLangAS() : Attr.asOpenCLLangAS();
     if (S.getLangOpts().HLSL)
       ASIdx = Attr.asHLSLLangAS();
 
-    if (ASIdx == LangAS::Default)
-      llvm_unreachable("Invalid address space");
+    if (ASIdx == LangAS::Default) {
+      assert((S.getLangOpts().isSYCL() || S.getLangOpts().HLSL) &&
+             "Unexpected language mode");
+      S.Diag(Attr.getLoc(), diag::err_attribute_not_supported_in_lang)
+          << Attr
+          << (S.getLangOpts().isSYCL() ? AttributeLangSupport::SYCL
+                                       : AttributeLangSupport::HLSL);
+      Attr.setInvalid();
+      return;
+    }
 
     if (DiagnoseMultipleAddrSpaceAttributes(S, Type.getAddressSpace(), ASIdx,
                                             Attr.getLoc())) {
