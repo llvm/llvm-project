@@ -4,7 +4,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.20)
 project(omptest LANGUAGES CXX)
 
 option(LIBOMPTEST_BUILD_STANDALONE
@@ -52,7 +52,7 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
   # Check if standalone build was requested together with unittests
   if (LIBOMPTEST_BUILD_STANDALONE)
     # Emit warning: this build actually depends on LLVM's GoogleTest
-    message(Warning "LIBOMPTEST_BUILD_STANDALONE and LIBOMPTEST_BUILD_UNITTESTS"
+    message(WARNING "LIBOMPTEST_BUILD_STANDALONE and LIBOMPTEST_BUILD_UNITTESTS"
                     " requested simultaneously.\n"
                     "Linking against LLVM's GoogleTest library archives.\n"
                     "Disable LIBOMPTEST_BUILD_UNITTESTS to perform an actual"
@@ -61,11 +61,16 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
     set(LIBOMPTEST_BUILD_STANDALONE OFF)
   endif()
 
-  # Use LLVM's gtest library archive
-  set(GTEST_LIB "${LLVM_BINARY_DIR}/lib/libllvm_gtest.a")
+  # Make sure target llvm_gtest is available
+  if (NOT TARGET llvm_gtest)
+    message(FATAL_ERROR "Required target not found: llvm_gtest")
+  endif()
 
-  # Link gtest as whole-archive to expose required symbols
-  set(GTEST_LINK_CMD "-Wl,--whole-archive" ${GTEST_LIB}
+  # Add llvm_gtest as dependency
+  add_dependencies(omptest llvm_gtest)
+
+  # Link llvm_gtest as whole-archive to expose required symbols
+  set(GTEST_LINK_CMD "-Wl,--whole-archive" llvm_gtest
                      "-Wl,--no-whole-archive" LLVMSupport)
 
   # Add GoogleTest-based header
