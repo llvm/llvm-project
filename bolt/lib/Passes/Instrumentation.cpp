@@ -579,6 +579,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (!opts::ConservativeInstrumentation) {
     for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
       BinaryBasicBlock &BB = *BBI;
+      if (BBToSkip.find(&BB) != BBToSkip.end())
+        continue;
       if (STOutSet[&BB].size() == 0)
         instrumentLeafNode(BB, BB.begin(), IsLeafFunction, *FuncDesc,
                            BBToID[&BB]);
