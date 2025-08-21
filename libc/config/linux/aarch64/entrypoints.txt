@@ -660,6 +660,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
     # libc.src.math.acoshf16
+    libc.src.math.asinpif16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
@@ -872,9 +873,13 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fminimum_magbf16
   libc.src.math.fminimum_mag_numbf16
   libc.src.math.fminimum_numbf16
+  libc.src.math.fromfpbf16
+  libc.src.math.fromfpxbf16
   libc.src.math.roundbf16
   libc.src.math.roundevenbf16
   libc.src.math.truncbf16
+  libc.src.math.ufromfpbf16
+  libc.src.math.ufromfpxbf16
 )
 
 if(LIBC_TYPES_HAS_FLOAT128)

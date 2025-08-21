@@ -313,9 +313,8 @@ public:
   bool set_union(const STy &S) {
     bool Changed = false;
 
-    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
-         ++SI)
-      if (insert(*SI))
+    for (const auto &Elem : S)
+      if (insert(Elem))
         Changed = true;
 
     return Changed;
@@ -326,9 +325,8 @@ public:
   ///       SetVector interface is inconsistent with DenseSet.
   template <class STy>
   void set_subtract(const STy &S) {
-    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
-         ++SI)
-      remove(*SI);
+    for (const auto &Elem : S)
+      remove(Elem);
   }
 
   void swap(SetVector<T, Vector, Set, N> &RHS) {

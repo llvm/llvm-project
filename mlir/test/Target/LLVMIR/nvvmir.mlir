@@ -796,7 +796,7 @@ llvm.func @nvvm_wgmma_wait_group_aligned() {
 // CHECK-LABEL: @nvvm_griddepcontrol_wait
 llvm.func @nvvm_griddepcontrol_wait() {
   // CHECK: call void @llvm.nvvm.griddepcontrol.wait()
-  nvvm.griddepcontrol.wait
+  nvvm.griddepcontrol wait
   llvm.return
 }
 
@@ -804,7 +804,7 @@ llvm.func @nvvm_griddepcontrol_wait() {
 // CHECK-LABEL: @nvvm_griddepcontrol_launch_dependents
 llvm.func @nvvm_griddepcontrol_launch_dependents() {
   // CHECK: call void @llvm.nvvm.griddepcontrol.launch.dependents()
-  nvvm.griddepcontrol.launch.dependents
+  nvvm.griddepcontrol launch_dependents
   llvm.return
 }
 
@@ -957,5 +957,14 @@ llvm.func @nvvm_pmevent() {
   nvvm.pmevent mask = 15000
   // CHECK: call void @llvm.nvvm.pm.event.mask(i16 4)
   nvvm.pmevent mask = 4
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @nanosleep
+llvm.func @nanosleep() {
+  // CHECK: call void @llvm.nvvm.nanosleep(i32 4000)
+  nvvm.nanosleep 4000
   llvm.return
 }

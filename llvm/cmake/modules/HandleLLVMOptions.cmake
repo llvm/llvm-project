@@ -228,7 +228,7 @@ if(WIN32 OR CYGWIN)
 elseif(FUCHSIA OR UNIX)
   set(LLVM_ON_WIN32 0)
   set(LLVM_ON_UNIX 1)
-  if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  if(APPLE OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
@@ -249,7 +249,7 @@ set(EXEEXT ${CMAKE_EXECUTABLE_SUFFIX})
 set(LTDL_SHLIB_EXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
 
 # We use *.dylib rather than *.so on darwin, but we stick with *.so on AIX.
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LLVM_PLUGIN_EXT ${CMAKE_SHARED_MODULE_SUFFIX})
 else()
   set(LLVM_PLUGIN_EXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
@@ -260,7 +260,7 @@ if(APPLE)
   set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-flat_namespace -Wl,-undefined -Wl,dynamic_lookup")
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   # RHEL7 has ar and ranlib being non-deterministic by default. The D flag forces determinism,
   # however only GNU version of ar and ranlib (2.27) have this option.
   # RHEL DTS7 is also affected by this, which uses GNU binutils 2.28
@@ -292,7 +292,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   endif()
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   # -fPIC does not enable the large code model for GCC on AIX but does for XL.
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     append("-mcmodel=large" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
@@ -328,7 +328,7 @@ endif()
 # by dlclose(). We need that since the CLI API relies on cross-references
 # between global objects which became horribly broken when one of the libraries
 # is unloaded.
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,nodelete")
   set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,nodelete")
 endif()
@@ -454,13 +454,13 @@ if( LLVM_ENABLE_PIC )
   # to SEGV (GCC PR target/96607).
   # clang with -O3 -fPIC generates code that SEGVs.
   # Both can be worked around by compiling with -O instead.
-  if(${CMAKE_SYSTEM_NAME} STREQUAL "SunOS" AND LLVM_NATIVE_ARCH STREQUAL "Sparc")
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS" AND LLVM_NATIVE_ARCH STREQUAL "Sparc")
     llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELEASE "-O[23]" "-O")
     llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O[23]" "-O")
   endif()
 endif()
 
-if((NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX")) AND
+if((NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")) AND
    (NOT (WIN32 OR CYGWIN) OR ((MINGW OR CYGWIN) AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
   # GCC for MinGW does nothing about -fvisibility-inlines-hidden, but warns
   # about use of the attributes. As long as we don't use the attributes (to
@@ -708,7 +708,7 @@ endif ()
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
   set(module_flags "-fmodules -fmodules-cache-path=${PROJECT_BINARY_DIR}/module.cache")
-  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     # On Darwin -fmodules does not imply -fcxx-modules.
     set(module_flags "${module_flags} -fcxx-modules")
   endif()
@@ -1123,7 +1123,7 @@ endif()
 # But MinSizeRel seems to add that automatically, so maybe disable these
 # flags instead if LLVM_NO_DEAD_STRIP is set.
 if(NOT CYGWIN AND NOT MSVC)
-  if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND
+  if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin" AND
      NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     if (CMAKE_CXX_COMPILER_ID MATCHES "XL")
       append("-qfuncsect" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -1315,9 +1315,14 @@ endif()
 # linking (due to incompatibility). With MSVC, note that the plugin has to
 # explicitly link against (exactly one) tool so we can't unilaterally turn on
 # LLVM_ENABLE_PLUGINS when it's enabled.
+if("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
+  set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION OFF)
+else()
+  set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION ON)
+endif()
 CMAKE_DEPENDENT_OPTION(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS
        "Export symbols from LLVM tools so that plugins can import them" OFF
-       "NOT ${CMAKE_SYSTEM_NAME} MATCHES AIX" ${LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default})
+       "LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION" ${LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default})
 if(BUILD_SHARED_LIBS AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
   message(FATAL_ERROR "BUILD_SHARED_LIBS not compatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS")
 endif()

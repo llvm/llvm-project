@@ -445,8 +445,8 @@ void HexagonSubtarget::adjustSchedDependency(
   const HexagonInstrInfo *QII = getInstrInfo();
 
   // Instructions with .new operands have zero latency.
-  SmallSet<SUnit *, 4> ExclSrc;
-  SmallSet<SUnit *, 4> ExclDst;
+  SmallPtrSet<SUnit *, 4> ExclSrc;
+  SmallPtrSet<SUnit *, 4> ExclDst;
   if (QII->canExecuteInBundle(*SrcInst, *DstInst) &&
       isBestZeroLatency(Src, Dst, QII, ExclSrc, ExclDst)) {
     Dep.setLatency(0);
@@ -630,9 +630,9 @@ static SUnit *getZeroLatency(SUnit *N, SmallVector<SDep, 4> &Deps) {
 // together with a zero latency. Only one dependence should have a zero
 // latency. If there are multiple choices, choose the best, and change
 // the others, if needed.
-bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
-      const HexagonInstrInfo *TII, SmallSet<SUnit*, 4> &ExclSrc,
-      SmallSet<SUnit*, 4> &ExclDst) const {
+bool HexagonSubtarget::isBestZeroLatency(
+    SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII,
+    SmallPtrSet<SUnit *, 4> &ExclSrc, SmallPtrSet<SUnit *, 4> &ExclDst) const {
   MachineInstr &SrcInst = *Src->getInstr();
   MachineInstr &DstInst = *Dst->getInstr();
 
