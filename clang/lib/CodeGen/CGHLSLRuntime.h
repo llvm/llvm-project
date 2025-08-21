@@ -68,6 +68,7 @@ class Type;
 class RecordType;
 class DeclContext;
 class HLSLPackOffsetAttr;
+class ArraySubscriptExpr;
 
 class FunctionDecl;
 
@@ -75,6 +76,7 @@ namespace CodeGen {
 
 class CodeGenModule;
 class CodeGenFunction;
+class LValue;
 
 class CGHLSLRuntime {
 public:
@@ -163,6 +165,10 @@ public:
   void addHLSLBufferLayoutType(const RecordType *LayoutStructTy,
                                llvm::TargetExtType *LayoutTy);
   void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
+
+  std::optional<LValue>
+  emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
+                                 CodeGenFunction &CGF);
 
 private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,

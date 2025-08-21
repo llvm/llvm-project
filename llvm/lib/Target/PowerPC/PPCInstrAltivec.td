@@ -1630,9 +1630,11 @@ def BCDCTSQ_rec : VX_VT5_EO5_VB5_XO9_o    <0, 385, "bcdctsq.", []>;
 
 // Decimal Copy-Sign/Set-Sign
 let Defs = [CR6] in
-def BCDCPSGN_rec : VX1_VT5_VA5_VB5<833, "bcdcpsgn.", []>;
+def BCDCPSGN_rec : VX1_VT5_VA5_VB5<833, "bcdcpsgn.",
+    [(set v16i8:$VD, (int_ppc_bcdcopysign v16i8:$VA, v16i8:$VB))]>;
 
-def BCDSETSGN_rec : VX_VT5_EO5_VB5_PS1_XO9_o<31, 385, "bcdsetsgn.", []>;
+def BCDSETSGN_rec : VX_VT5_EO5_VB5_PS1_XO9_o<31, 385, "bcdsetsgn.",
+    [(set v16i8:$VD, (int_ppc_bcdsetsign v16i8:$VB, i32:$PS))]>;
 
 // Decimal Shift/Unsigned-Shift/Shift-and-Round
 def BCDS_rec :  VX_VT5_VA5_VB5_PS1_XO9_o<193, "bcds." , []>;

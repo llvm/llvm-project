@@ -1771,6 +1771,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       using dedicated instructions, but may not send the DEALLOC_VGPRS
                                                       message. If a shader has this attribute, then all its callees must
                                                       match its value.
+                                                      An amd_cs_chain CC function with this enabled has an extra symbol
+                                                      prefixed with "_dvgpr$" with the value of the function symbol,
+                                                      offset by one less than the number of dynamic VGPR blocks required
+                                                      by the function encoded in bits 5..3.
 
      ================================================ ==========================================================
 
@@ -18203,6 +18207,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               (wavefrontsize64)
      ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX12   Controls USES_DYNAMIC_STACK in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_named_barrier_count``                          0                   GFX1250+     Controls NAMED_BAR_CNT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
                                                                                   (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
                                                                                   GFX942)
