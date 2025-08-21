@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=60
 ! OpenMP Version 6.0
 ! workdistribute Construct
 ! The !omp workdistribute construct must not contain any user defined

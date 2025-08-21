@@ -145,7 +145,7 @@ private:
 
 // 'OmpWorkdistributeBlockChecker' is used to check the validity of the
 // assignment statements and the expressions enclosed in an OpenMP
-// workdistribute construct
+// WORKDISTRIBUTE construct
 class OmpWorkdistributeBlockChecker {
 public:
   OmpWorkdistributeBlockChecker(
@@ -165,8 +165,7 @@ public:
           lhs->GetType(), lhs->Rank(), rhs->GetType(), rhs->Rank())};
       if (isDefined == Tristate::Yes) {
         context_.Say(expr.source,
-            "Defined assignment statement is not "
-            "allowed in a WORKDISTRIBUTE construct"_err_en_US);
+            "Defined assignment statement is not allowed in a WORKDISTRIBUTE construct"_err_en_US);
       }
     }
     return true;
@@ -174,25 +173,23 @@ public:
 
   bool Pre(const parser::Expr &expr) {
     if (const auto *e{GetExpr(context_, expr)}) {
+      if (!e)
+        return false;
       for (const Symbol &symbol : evaluate::CollectSymbols(*e)) {
         const Symbol &root{GetAssociationRoot(symbol)};
         if (IsFunction(root)) {
-          std::string attrs{""};
+          std::vector<std::string> attrs;
           if (!IsElementalProcedure(root)) {
-            attrs = " non-ELEMENTAL";
+            attrs.push_back("non-ELEMENTAL");
           }
           if (root.attrs().test(Attr::IMPURE)) {
-            if (attrs != "") {
-              attrs = "," + attrs;
-            }
-            attrs = " IMPURE" + attrs;
+            attrs.push_back("IMPURE");
           }
-          if (attrs != "") {
-            context_.Say(expr.source,
-                "User defined%s function '%s' is not allowed in a "
-                "WORKDISTRIBUTE construct"_err_en_US,
-                attrs, root.name());
-          }
+          std::string attrsStr =
+              attrs.empty() ? "" : " " + llvm::join(attrs, ", ");
+          context_.Say(expr.source,
+              "User defined%s function '%s' is not allowed in a WORKDISTRIBUTE construct"_err_en_US,
+              attrsStr, root.name());
         }
       }
     }
@@ -879,8 +876,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     if (GetContext().directive == llvm::omp::Directive::OMPD_workdistribute &&
         GetContextParent().directive != llvm::omp::Directive::OMPD_teams) {
       context_.Say(x.BeginDir().DirName().source,
-          "%s region can only be strictly nested within the "
-          "teams region"_err_en_US,
+          "%s region can only be strictly nested within TEAMS region"_err_en_US,
           ContextDirectiveAsFortran());
     }
   }
@@ -969,7 +965,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::OMPD_workdistribute:
     if (!CurrentDirectiveIsNested()) {
       context_.Say(beginSpec.source,
-          "A workdistribute region must be nested inside teams region only."_err_en_US);
+          "A WORKDISTRIBUTE region must be nested inside TEAMS region only."_err_en_US);
     }
     CheckWorkdistributeBlockStmts(block, beginSpec.source);
     break;
@@ -4627,6 +4623,11 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
 
 void OmpStructureChecker::CheckWorkdistributeBlockStmts(
     const parser::Block &block, parser::CharBlock source) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  if (version < 60)
+    context_.Say(source,
+        "WORKDISTRIBUTE construct is only supported from openMP 6.0"_err_en_US);
+
   OmpWorkdistributeBlockChecker ompWorkdistributeBlockChecker{context_, source};
 
   for (auto it{block.begin()}; it != block.end(); ++it) {
@@ -4634,9 +4635,7 @@ void OmpStructureChecker::CheckWorkdistributeBlockStmts(
       parser::Walk(*it, ompWorkdistributeBlockChecker);
     } else {
       context_.Say(source,
-          "The structured block in a WORKDISTRIBUTE construct may consist of "
-          "only "
-          "SCALAR or ARRAY assignments"_err_en_US);
+          "The structured block in a WORKDISTRIBUTE construct may consist of only SCALAR or ARRAY assignments"_err_en_US);
     }
   }
 }
