@@ -139,7 +139,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         process.wait()
 
         # Get the console output
-        console_output = self.collect_console(pattern="exited with status")
+        console_output = self.collect_console(
+            timeout_secs=10.0, pattern="exited with status"
+        )
 
         # Verify the exit status message is printed.
         self.assertRegex(
@@ -154,7 +156,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
         # Get the console output
-        console_output = self.collect_console(pattern="exited with status")
+        console_output = self.collect_console(
+            timeout_secs=10.0, pattern="exited with status"
+        )
 
         # Verify the exit status message is printed.
         self.assertIn(
@@ -173,7 +177,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             f"target create --core  {core}", context="repl"
         )
 
-        diagnostics = self.collect_important(pattern="minidump file")
+        diagnostics = self.collect_important(
+            timeout_secs=self.DEFAULT_TIMEOUT, pattern="minidump file"
+        )
 
         self.assertIn(
             "warning: unable to retrieve process ID from minidump file",
