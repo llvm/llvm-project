@@ -24414,6 +24414,10 @@ bool RISCVTargetLowering::isLegalSpeculativeLoad(EVT DataType,
   if (!isLegalElementTypeForRVV(ScalarType))
     return false;
 
+  if (!Subtarget.enableUnalignedVectorMem() &&
+      Alignment < ScalarType.getStoreSize())
+    return false;
+
   return true;
 }
 
