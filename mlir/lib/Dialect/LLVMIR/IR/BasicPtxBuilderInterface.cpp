@@ -76,7 +76,7 @@ static SmallVector<Value> extractStructElements(PatternRewriter &rewriter,
 }
 
 void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
-  LLVM_DEBUG(DBGS() << v << "\t Modifier : " << itype << "\n");
+  LDBG() << v << "\t Modifier : " << itype << "\n";
   registerModifiers.push_back(itype);
 
   auto getModifier = [&]() -> const char * {
