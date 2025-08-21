@@ -174,7 +174,7 @@ TEST_F(TransportInputTest, OutgoingRequest) {
 
 TEST_F(TransportInputTest, OutgoingRequestJSONParseFailure) {
   // Make an outgoing request that expects a failure response.
-  bool responseCallbackInvoked = 0;
+  bool responseCallbackInvoked = false;
   auto callFn = getMessageHandler().outgoingRequest<CompletionList, Position>(
       "outgoing-request-json-parse-failure",
       [&responseCallbackInvoked](llvm::json::Value id,
