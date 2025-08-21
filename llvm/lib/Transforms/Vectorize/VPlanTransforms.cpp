@@ -3493,6 +3493,7 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   BasicBlock *EntryBB = Entry->getIRBasicBlock();
   DenseMap<const SCEV *, Value *> ExpandedSCEVs;
+  VPBasicBlock::iterator InsertPt;
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
     if (isa<VPIRInstruction, VPIRPhi>(&R))
       continue;
@@ -3507,8 +3508,16 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
     ExpSCEV->replaceAllUsesWith(Exp);
     if (Plan.getTripCount() == ExpSCEV)
       Plan.resetTripCount(Exp);
+
+    InsertPt = std::next(ExpSCEV->getIterator());
     ExpSCEV->eraseFromParent();
   }
+  for (Instruction &I : *EntryBB) {
+    if (!Expander.isInsertedInstruction(&I) || isa<PHINode>(I))
+      continue;
+    VPIRInstruction::create(I)->insertBefore(*Entry, InsertPt);
+  }
+
   return ExpandedSCEVs;
 }
 
