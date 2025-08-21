@@ -907,47 +907,14 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
       break;
     }
 
-    // Check if the offset points to a valid sequence offset
-    bool ValidSequenceOffset = false;
     // Check if the offset matches any of the sequence offset offsets using
-    // binary search
-    auto It = std::lower_bound(LineTable->Sequences.begin(),
-                               LineTable->Sequences.end(), *SectionOffset,
-                               [](const auto &Sequence, const uint64_t Offset) {
-                                 return Sequence.StmtSeqOffset < Offset;
-                               });
+    auto It =
+        std::find_if(LineTable->Sequences.begin(), LineTable->Sequences.end(),
+                     [SectionOffset](const auto &Sequence) {
+                       return Sequence.StmtSeqOffset == *SectionOffset;
+                     });
 
-    if (It == LineTable->Sequences.end()) {
-      ReportError("DW_AT_LLVM_stmt_sequence offset sequence not found",
-                  "There is no line table sequences that contains the offset" +
-                      llvm::formatv("{0:x8}", *SectionOffset));
-      break;
-    }
-
-    ValidSequenceOffset = It->StmtSeqOffset == *SectionOffset;
-    if (!ValidSequenceOffset) {
-      // Go over all Rows in this Section (It) and make sure that the
-      // previous Row of the SectionOffset is EndSequence
-      for (unsigned RowIdx = It->FirstRowIndex; RowIdx < It->LastRowIndex;
-           ++RowIdx) {
-        const auto &CurrentRow = LineTable->Rows[RowIdx];
-
-        auto IsPrevRowEndSequence = [&](unsigned RowIdx) {
-          // There is no previous row in the first place.
-          return RowIdx != 0 && LineTable->Rows[RowIdx - 1].EndSequence;
-        };
-
-        // Check if current row's address matches our section offset
-        // and if the previous row has EndSequence set
-        if (CurrentRow.Address.Address == *SectionOffset &&
-            IsPrevRowEndSequence(RowIdx)) {
-          ValidSequenceOffset = true;
-          break;
-        }
-      }
-    }
-
-    if (!ValidSequenceOffset)
+    if (It == LineTable->Sequences.end())
       ReportError(
           "Invalid DW_AT_LLVM_stmt_sequence offset",
           "DW_AT_LLVM_stmt_sequence offset " +

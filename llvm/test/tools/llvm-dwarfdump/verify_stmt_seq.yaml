@@ -1125,7 +1125,7 @@ DWARF:
             - Value:           0x18
             - Value:           0x8
             - Value:           0x1
-            - Value:           0x78
+            - Value:           0xD3
             - Value:           0x1
               BlockData:       [ 0x6F ]
             - Value:           0x1
@@ -1155,7 +1155,7 @@ DWARF:
             - Value:           0x20
             - Value:           0x8
             - Value:           0x1
-            - Value:           0x90
+            - Value:           0xE7
             - Value:           0x1
               BlockData:       [ 0x6F ]
             - Value:           0x1
