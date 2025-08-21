@@ -3253,22 +3253,20 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
 /// Recipe to expand a SCEV expression.
 class VPExpandSCEVRecipe : public VPSingleDefRecipe {
   const SCEV *Expr;
-  ScalarEvolution &SE;
 
 public:
-  VPExpandSCEVRecipe(const SCEV *Expr, ScalarEvolution &SE)
-      : VPSingleDefRecipe(VPDef::VPExpandSCEVSC, {}), Expr(Expr), SE(SE) {}
+  VPExpandSCEVRecipe(const SCEV *Expr)
+      : VPSingleDefRecipe(VPDef::VPExpandSCEVSC, {}), Expr(Expr) {}
 
   ~VPExpandSCEVRecipe() override = default;
 
-  VPExpandSCEVRecipe *clone() override {
-    return new VPExpandSCEVRecipe(Expr, SE);
-  }
+  VPExpandSCEVRecipe *clone() override { return new VPExpandSCEVRecipe(Expr); }
 
   VP_CLASSOF_IMPL(VPDef::VPExpandSCEVSC)
 
-  /// Generate a canonical vector induction variable of the vector loop, with
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("SCEV expressions must be expanded before final execute");
+  }
 
   /// Return the cost of this VPExpandSCEVRecipe.
   InstructionCost computeCost(ElementCount VF,
