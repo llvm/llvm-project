@@ -33,6 +33,12 @@
   (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
                                     1, -1, -1)
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
 /// Computes the absolute value of each of the packed 8-bit signed
 ///    integers in the source operand and stores the 8-bit unsigned integer
 ///    results in the destination.
@@ -45,9 +51,7 @@
 ///    A 64-bit vector of [8 x i8].
 /// \returns A 64-bit integer vector containing the absolute values of the
 ///    elements in the operand.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_abs_pi8(__m64 __a)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_abs_pi8(__m64 __a) {
   return (__m64)__builtin_elementwise_abs((__v8qs)__a);
 }
 
@@ -63,10 +67,9 @@ _mm_abs_pi8(__m64 __a)
 ///    A 128-bit vector of [16 x i8].
 /// \returns A 128-bit integer vector containing the absolute values of the
 ///    elements in the operand.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_abs_epi8(__m128i __a)
-{
-    return (__m128i)__builtin_elementwise_abs((__v16qs)__a);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_abs_epi8(__m128i __a) {
+  return (__m128i)__builtin_elementwise_abs((__v16qs)__a);
 }
 
 /// Computes the absolute value of each of the packed 16-bit signed
@@ -81,10 +84,8 @@ _mm_abs_epi8(__m128i __a)
 ///    A 64-bit vector of [4 x i16].
 /// \returns A 64-bit integer vector containing the absolute values of the
 ///    elements in the operand.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_abs_pi16(__m64 __a)
-{
-    return (__m64)__builtin_elementwise_abs((__v4hi)__a);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_abs_pi16(__m64 __a) {
+  return (__m64)__builtin_elementwise_abs((__v4hi)__a);
 }
 
 /// Computes the absolute value of each of the packed 16-bit signed
@@ -99,10 +100,9 @@ _mm_abs_pi16(__m64 __a)
 ///    A 128-bit vector of [8 x i16].
 /// \returns A 128-bit integer vector containing the absolute values of the
 ///    elements in the operand.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_abs_epi16(__m128i __a)
-{
-    return (__m128i)__builtin_elementwise_abs((__v8hi)__a);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_abs_epi16(__m128i __a) {
+  return (__m128i)__builtin_elementwise_abs((__v8hi)__a);
 }
 
 /// Computes the absolute value of each of the packed 32-bit signed
@@ -117,10 +117,8 @@ _mm_abs_epi16(__m128i __a)
 ///    A 64-bit vector of [2 x i32].
 /// \returns A 64-bit integer vector containing the absolute values of the
 ///    elements in the operand.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_abs_pi32(__m64 __a)
-{
-    return (__m64)__builtin_elementwise_abs((__v2si)__a);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_abs_pi32(__m64 __a) {
+  return (__m64)__builtin_elementwise_abs((__v2si)__a);
 }
 
 /// Computes the absolute value of each of the packed 32-bit signed
@@ -135,10 +133,9 @@ _mm_abs_pi32(__m64 __a)
 ///    A 128-bit vector of [4 x i32].
 /// \returns A 128-bit integer vector containing the absolute values of the
 ///    elements in the operand.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_abs_epi32(__m128i __a)
-{
-    return (__m128i)__builtin_elementwise_abs((__v4si)__a);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_abs_epi32(__m128i __a) {
+  return (__m128i)__builtin_elementwise_abs((__v4si)__a);
 }
 
 /// Concatenates the two 128-bit integer vector operands, and
@@ -806,5 +803,6 @@ _mm_sign_pi32(__m64 __a, __m64 __b)
 #undef __anyext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif /* __TMMINTRIN_H */
