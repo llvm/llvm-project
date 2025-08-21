@@ -2635,14 +2635,14 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known = KnownBits::makeConstant(
         APInt(Known.getBitWidth(),
               (~Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
-              false, true));
+              /*isSigned*/ false, /*implicitTrunc*/ true));
     break;
   }
   case AArch64ISD::MVNImsl: {
     Known = KnownBits::makeConstant(
         APInt(Known.getBitWidth(),
               ~(Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
-              false, true));
+              /*isSigned*/ false, /*implicitTrunc*/ true));
     break;
   }
   case AArch64ISD::LOADgot:
@@ -30667,6 +30667,9 @@ bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
          Op.getOpcode() == AArch64ISD::MOVIedit ||
          Op.getOpcode() == AArch64ISD::MVNIshift ||
          Op.getOpcode() == AArch64ISD::MVNImsl ||
+         // Ignoring fneg(movi(0)), because if it is folded to FPConstant(-0.0),
+         // ISel will select fmov(mov i64 0x8000000000000000), resulting in a
+         // fmov from fpr to gpr, which is more expensive than fneg(movi(0))
          (Op.getOpcode() == ISD::FNEG &&
           Op.getOperand(0).getOpcode() == AArch64ISD::MOVIedit &&
           Op.getOperand(0).getConstantOperandVal(0) == 0) ||
