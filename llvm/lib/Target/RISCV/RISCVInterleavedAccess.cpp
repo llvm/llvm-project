@@ -32,7 +32,7 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
   if (!isTypeLegal(VT))
     return false;
 
-  if (!isLegalLoadStoreElementTypeForRVV(VT.getScalarType()) ||
+  if (!isLegalElementTypeForRVV(VT.getScalarType()) ||
       !allowsMemoryAccessForAlignment(VTy->getContext(), DL, VT, AddrSpace,
                                       Alignment))
     return false;
@@ -62,6 +62,12 @@ static const Intrinsic::ID FixedVlsegIntrIds[] = {
     Intrinsic::riscv_seg4_load_mask, Intrinsic::riscv_seg5_load_mask,
     Intrinsic::riscv_seg6_load_mask, Intrinsic::riscv_seg7_load_mask,
     Intrinsic::riscv_seg8_load_mask};
+
+static const Intrinsic::ID FixedVlssegIntrIds[] = {
+    Intrinsic::riscv_sseg2_load_mask, Intrinsic::riscv_sseg3_load_mask,
+    Intrinsic::riscv_sseg4_load_mask, Intrinsic::riscv_sseg5_load_mask,
+    Intrinsic::riscv_sseg6_load_mask, Intrinsic::riscv_sseg7_load_mask,
+    Intrinsic::riscv_sseg8_load_mask};
 
 static const Intrinsic::ID ScalableVlsegIntrIds[] = {
     Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
@@ -197,9 +203,15 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
 /// %vec1 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 1
 bool RISCVTargetLowering::lowerInterleavedLoad(
     Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
-    ArrayRef<unsigned> Indices, unsigned Factor) const {
+    ArrayRef<unsigned> Indices, unsigned Factor, const APInt &GapMask) const {
   assert(Indices.size() == Shuffles.size());
+  assert(GapMask.getBitWidth() == Factor);
 
+  // We only support cases where the skipped fields are the trailing ones.
+  // TODO: Lower to strided load if there is only a single active field.
+  unsigned MaskFactor = GapMask.popcount();
+  if (MaskFactor < 2 || !GapMask.isMask())
+    return false;
   IRBuilder<> Builder(Load);
 
   const DataLayout &DL = Load->getDataLayout();
@@ -208,20 +220,37 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (!getMemOperands(Factor, VTy, XLenTy, Load, Ptr, Mask, VL, Alignment))
+  if (!getMemOperands(MaskFactor, VTy, XLenTy, Load, Ptr, Mask, VL, Alignment))
     return false;
 
   Type *PtrTy = Ptr->getType();
   unsigned AS = PtrTy->getPointerAddressSpace();
-  if (!isLegalInterleavedAccessType(VTy, Factor, Alignment, AS, DL))
+  if (!isLegalInterleavedAccessType(VTy, MaskFactor, Alignment, AS, DL))
     return false;
 
-  CallInst *VlsegN = Builder.CreateIntrinsic(
-      FixedVlsegIntrIds[Factor - 2], {VTy, PtrTy, XLenTy}, {Ptr, Mask, VL});
+  CallInst *SegLoad = nullptr;
+  if (MaskFactor < Factor) {
+    // Lower to strided segmented load.
+    unsigned ScalarSizeInBytes = DL.getTypeStoreSize(VTy->getElementType());
+    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
+    SegLoad = Builder.CreateIntrinsic(FixedVlssegIntrIds[MaskFactor - 2],
+                                      {VTy, PtrTy, XLenTy, XLenTy},
+                                      {Ptr, Stride, Mask, VL});
+  } else {
+    // Lower to normal segmented load.
+    SegLoad = Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2],
+                                      {VTy, PtrTy, XLenTy}, {Ptr, Mask, VL});
+  }
 
   for (unsigned i = 0; i < Shuffles.size(); i++) {
-    Value *SubVec = Builder.CreateExtractValue(VlsegN, Indices[i]);
-    Shuffles[i]->replaceAllUsesWith(SubVec);
+    unsigned FactorIdx = Indices[i];
+    if (FactorIdx >= MaskFactor) {
+      // Replace masked-off factors (that are still extracted) with poison.
+      Shuffles[i]->replaceAllUsesWith(PoisonValue::get(VTy));
+    } else {
+      Value *SubVec = Builder.CreateExtractValue(SegLoad, FactorIdx);
+      Shuffles[i]->replaceAllUsesWith(SubVec);
+    }
   }
 
   return true;
@@ -265,33 +294,6 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
   unsigned AS = PtrTy->getPointerAddressSpace();
   if (!isLegalInterleavedAccessType(VTy, Factor, Alignment, AS, DL))
     return false;
-
-  unsigned Index;
-  // If the segment store only has one active lane (i.e. the interleave is
-  // just a spread shuffle), we can use a strided store instead.  This will
-  // be equally fast, and create less vector register pressure.
-  if (!Subtarget.hasOptimizedSegmentLoadStore(Factor) &&
-      isSpreadMask(Mask, Factor, Index)) {
-    unsigned ScalarSizeInBytes =
-        DL.getTypeStoreSize(ShuffleVTy->getElementType());
-    Value *Data = SVI->getOperand(0);
-    Data = Builder.CreateExtractVector(VTy, Data, uint64_t(0));
-    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
-    Value *Offset = ConstantInt::get(XLenTy, Index * ScalarSizeInBytes);
-    Value *BasePtr = Builder.CreatePtrAdd(Ptr, Offset);
-    // For rv64, need to truncate i64 to i32 to match signature.  As VL is at
-    // most the number of active lanes (which is bounded by i32) this is safe.
-    VL = Builder.CreateTrunc(VL, Builder.getInt32Ty());
-
-    CallInst *CI =
-        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_store,
-                                {VTy, BasePtr->getType(), Stride->getType()},
-                                {Data, BasePtr, Stride, LaneMask, VL});
-    Alignment = commonAlignment(Alignment, Index * ScalarSizeInBytes);
-    CI->addParamAttr(1,
-                     Attribute::getWithAlignment(CI->getContext(), Alignment));
-    return true;
-  }
 
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
       Store->getModule(), FixedVssegIntrIds[Factor - 2], {VTy, PtrTy, XLenTy});

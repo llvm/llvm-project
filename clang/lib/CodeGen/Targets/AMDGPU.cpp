@@ -96,7 +96,7 @@ unsigned AMDGPUABIInfo::numRegsForType(QualType Ty) const {
   }
 
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     assert(!RD->hasFlexibleArrayMember());
 
     for (const FieldDecl *Field : RD->fields()) {
@@ -153,7 +153,7 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
       if (const RecordType *RT = RetTy->getAs<RecordType>()) {
-        const RecordDecl *RD = RT->getDecl();
+        const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
         if (RD->hasFlexibleArrayMember())
           return DefaultABIInfo::classifyReturnType(RetTy);
       }
@@ -246,7 +246,7 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
     if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->hasFlexibleArrayMember())
         return DefaultABIInfo::classifyArgumentType(Ty);
     }

@@ -87,14 +87,6 @@ static inline mlir::Type getI8Type(mlir::MLIRContext *context) {
   return mlir::IntegerType::get(context, 8);
 }
 
-static mlir::LLVM::ConstantOp
-genConstantIndex(mlir::Location loc, mlir::Type ity,
-                 mlir::ConversionPatternRewriter &rewriter,
-                 std::int64_t offset) {
-  auto cattr = rewriter.getI64IntegerAttr(offset);
-  return mlir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
-}
-
 static mlir::Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
                                 mlir::Block *insertBefore) {
   assert(insertBefore && "expected valid insertion block");
@@ -208,39 +200,6 @@ getDependentTypeMemSizeFn(fir::RecordType recTy, fir::AllocaOp op,
   TODO(op.getLoc(), "did not find allocation function");
 }
 
-// Compute the alloc scale size (constant factors encoded in the array type).
-// We do this for arrays without a constant interior or arrays of character with
-// dynamic length arrays, since those are the only ones that get decayed to a
-// pointer to the element type.
-template <typename OP>
-static mlir::Value
-genAllocationScaleSize(OP op, mlir::Type ity,
-                       mlir::ConversionPatternRewriter &rewriter) {
-  mlir::Location loc = op.getLoc();
-  mlir::Type dataTy = op.getInType();
-  auto seqTy = mlir::dyn_cast<fir::SequenceType>(dataTy);
-  fir::SequenceType::Extent constSize = 1;
-  if (seqTy) {
-    int constRows = seqTy.getConstantRows();
-    const fir::SequenceType::ShapeRef &shape = seqTy.getShape();
-    if (constRows != static_cast<int>(shape.size())) {
-      for (auto extent : shape) {
-        if (constRows-- > 0)
-          continue;
-        if (extent != fir::SequenceType::getUnknownExtent())
-          constSize *= extent;
-      }
-    }
-  }
-
-  if (constSize != 1) {
-    mlir::Value constVal{
-        genConstantIndex(loc, ity, rewriter, constSize).getResult()};
-    return constVal;
-  }
-  return nullptr;
-}
-
 namespace {
 struct DeclareOpConversion : public fir::FIROpConversion<fir::cg::XDeclareOp> {
 public:
@@ -275,7 +234,7 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
     auto loc = alloc.getLoc();
     mlir::Type ity = lowerTy().indexType();
     unsigned i = 0;
-    mlir::Value size = genConstantIndex(loc, ity, rewriter, 1).getResult();
+    mlir::Value size = fir::genConstantIndex(loc, ity, rewriter, 1).getResult();
     mlir::Type firObjType = fir::unwrapRefType(alloc.getType());
     mlir::Type llvmObjectType = convertObjectType(firObjType);
     if (alloc.hasLenParams()) {
@@ -307,7 +266,8 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
                << scalarType << " with type parameters";
       }
     }
-    if (auto scaleSize = genAllocationScaleSize(alloc, ity, rewriter))
+    if (auto scaleSize = fir::genAllocationScaleSize(
+            alloc.getLoc(), alloc.getInType(), ity, rewriter))
       size =
           rewriter.createOrFold<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
     if (alloc.hasShapeOperands()) {
@@ -484,7 +444,7 @@ struct BoxIsArrayOpConversion : public fir::FIROpConversion<fir::BoxIsArrayOp> {
     auto loc = boxisarray.getLoc();
     TypePair boxTyPair = getBoxTypePair(boxisarray.getVal().getType());
     mlir::Value rank = getRankFromBox(loc, boxTyPair, a, rewriter);
-    mlir::Value c0 = genConstantIndex(loc, rank.getType(), rewriter, 0);
+    mlir::Value c0 = fir::genConstantIndex(loc, rank.getType(), rewriter, 0);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         boxisarray, mlir::LLVM::ICmpPredicate::ne, rank, c0);
     return mlir::success();
@@ -820,7 +780,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       // Do folding for constant inputs.
       if (auto constVal = fir::getIntIfConstant(op0)) {
         mlir::Value normVal =
-            genConstantIndex(loc, toTy, rewriter, *constVal ? 1 : 0);
+            fir::genConstantIndex(loc, toTy, rewriter, *constVal ? 1 : 0);
         rewriter.replaceOp(convert, normVal);
         return mlir::success();
       }
@@ -833,7 +793,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       }
 
       // Compare the input with zero.
-      mlir::Value zero = genConstantIndex(loc, fromTy, rewriter, 0);
+      mlir::Value zero = fir::genConstantIndex(loc, fromTy, rewriter, 0);
       auto isTrue = mlir::LLVM::ICmpOp::create(
           rewriter, loc, mlir::LLVM::ICmpPredicate::ne, op0, zero);
 
@@ -1082,21 +1042,6 @@ static mlir::SymbolRefAttr getMalloc(fir::AllocMemOp op,
   return getMallocInModule(mod, op, rewriter, indexType);
 }
 
-/// Helper function for generating the LLVM IR that computes the distance
-/// in bytes between adjacent elements pointed to by a pointer
-/// of type \p ptrTy. The result is returned as a value of \p idxTy integer
-/// type.
-static mlir::Value
-computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
-                       mlir::Type idxTy,
-                       mlir::ConversionPatternRewriter &rewriter,
-                       const mlir::DataLayout &dataLayout) {
-  llvm::TypeSize size = dataLayout.getTypeSize(llvmObjectType);
-  unsigned short alignment = dataLayout.getTypeABIAlignment(llvmObjectType);
-  std::int64_t distance = llvm::alignTo(size, alignment);
-  return genConstantIndex(loc, idxTy, rewriter, distance);
-}
-
 /// Return value of the stride in bytes between adjacent elements
 /// of LLVM type \p llTy. The result is returned as a value of
 /// \p idxTy integer type.
@@ -1105,7 +1050,7 @@ genTypeStrideInBytes(mlir::Location loc, mlir::Type idxTy,
                      mlir::ConversionPatternRewriter &rewriter, mlir::Type llTy,
                      const mlir::DataLayout &dataLayout) {
   // Create a pointer type and use computeElementDistance().
-  return computeElementDistance(loc, llTy, idxTy, rewriter, dataLayout);
+  return fir::computeElementDistance(loc, llTy, idxTy, rewriter, dataLayout);
 }
 
 namespace {
@@ -1124,8 +1069,9 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     if (fir::isRecordWithTypeParameters(fir::unwrapSequenceType(dataTy)))
       TODO(loc, "fir.allocmem codegen of derived type with length parameters");
     mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, llvmObjectTy);
-    if (auto scaleSize = genAllocationScaleSize(heap, ity, rewriter))
-      size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
+    if (auto scaleSize =
+            fir::genAllocationScaleSize(loc, heap.getInType(), ity, rewriter))
+      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands())
       size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size,
                                        integerCast(loc, rewriter, ity, opnd));
@@ -1133,8 +1079,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     // As the return value of malloc(0) is implementation defined, allocate one
     // byte to ensure the allocation status being true. This behavior aligns to
     // what the runtime has.
-    mlir::Value zero = genConstantIndex(loc, ity, rewriter, 0);
-    mlir::Value one = genConstantIndex(loc, ity, rewriter, 1);
+    mlir::Value zero = fir::genConstantIndex(loc, ity, rewriter, 0);
+    mlir::Value one = fir::genConstantIndex(loc, ity, rewriter, 1);
     mlir::Value cmp = mlir::LLVM::ICmpOp::create(
         rewriter, loc, mlir::LLVM::ICmpPredicate::sgt, size, zero);
     size = mlir::LLVM::SelectOp::create(rewriter, loc, cmp, size, one);
@@ -1157,7 +1103,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
   mlir::Value genTypeSizeInBytes(mlir::Location loc, mlir::Type idxTy,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  mlir::Type llTy) const {
-    return computeElementDistance(loc, llTy, idxTy, rewriter, getDataLayout());
+    return fir::computeElementDistance(loc, llTy, idxTy, rewriter,
+                                       getDataLayout());
   }
 };
 } // namespace
@@ -1335,19 +1282,19 @@ genCUFAllocDescriptor(mlir::Location loc,
       RTNAME_STRING(CUFAllocDescriptor));
   auto funcFunc =
       mod.lookupSymbol<mlir::func::FuncOp>(RTNAME_STRING(CUFAllocDescriptor));
-  if (!llvmFunc && !funcFunc)
-    mlir::OpBuilder::atBlockEnd(mod.getBody())
-        .create<mlir::LLVM::LLVMFuncOp>(loc, RTNAME_STRING(CUFAllocDescriptor),
-                                        fctTy);
+  if (!llvmFunc && !funcFunc) {
+    auto builder = mlir::OpBuilder::atBlockEnd(mod.getBody());
+    mlir::LLVM::LLVMFuncOp::create(builder, loc,
+                                   RTNAME_STRING(CUFAllocDescriptor), fctTy);
+  }
 
   mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
   std::size_t boxSize = dl->getTypeSizeInBits(structTy) / 8;
   mlir::Value sizeInBytes =
-      genConstantIndex(loc, llvmIntPtrType, rewriter, boxSize);
+      fir::genConstantIndex(loc, llvmIntPtrType, rewriter, boxSize);
   llvm::SmallVector args = {sizeInBytes, sourceFile, sourceLine};
-  return rewriter
-      .create<mlir::LLVM::CallOp>(loc, fctTy, RTNAME_STRING(CUFAllocDescriptor),
-                                  args)
+  return mlir::LLVM::CallOp::create(rewriter, loc, fctTy,
+                                    RTNAME_STRING(CUFAllocDescriptor), args)
       .getResult();
 }
 
@@ -1599,7 +1546,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       // representation of derived types with pointer/allocatable components.
       // This has been seen in hashing algorithms using TRANSFER.
       mlir::Value zero =
-          genConstantIndex(loc, rewriter.getI64Type(), rewriter, 0);
+          fir::genConstantIndex(loc, rewriter.getI64Type(), rewriter, 0);
       descriptor = insertField(rewriter, loc, descriptor,
                                {getLenParamFieldId(boxTy), 0}, zero);
     }
@@ -1944,8 +1891,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     bool hasSlice = !xbox.getSlice().empty();
     unsigned sliceOffset = xbox.getSliceOperandIndex();
     mlir::Location loc = xbox.getLoc();
-    mlir::Value zero = genConstantIndex(loc, i64Ty, rewriter, 0);
-    mlir::Value one = genConstantIndex(loc, i64Ty, rewriter, 1);
+    mlir::Value zero = fir::genConstantIndex(loc, i64Ty, rewriter, 0);
+    mlir::Value one = fir::genConstantIndex(loc, i64Ty, rewriter, 1);
     mlir::Value prevPtrOff = one;
     mlir::Type eleTy = boxTy.getEleTy();
     const unsigned rank = xbox.getRank();
@@ -1994,7 +1941,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
         prevDimByteStride =
             getCharacterByteSize(loc, rewriter, charTy, adaptor.getLenParams());
       } else {
-        prevDimByteStride = genConstantIndex(
+        prevDimByteStride = fir::genConstantIndex(
             loc, i64Ty, rewriter,
             charTy.getLen() * lowerTy().characterBitsize(charTy) / 8);
       }
@@ -2152,7 +2099,7 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
     if (auto charTy = mlir::dyn_cast<fir::CharacterType>(inputEleTy)) {
       if (charTy.hasConstantLen()) {
         mlir::Value len =
-            genConstantIndex(loc, idxTy, rewriter, charTy.getLen());
+            fir::genConstantIndex(loc, idxTy, rewriter, charTy.getLen());
         lenParams.emplace_back(len);
       } else {
         mlir::Value len = getElementSizeFromBox(loc, idxTy, inputBoxTyPair,
@@ -2161,7 +2108,7 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
           assert(!isInGlobalOp(rewriter) &&
                  "character target in global op must have constant length");
           mlir::Value width =
-              genConstantIndex(loc, idxTy, rewriter, charTy.getFKind());
+              fir::genConstantIndex(loc, idxTy, rewriter, charTy.getFKind());
           len = mlir::LLVM::SDivOp::create(rewriter, loc, idxTy, len, width);
         }
         lenParams.emplace_back(len);
@@ -2215,8 +2162,9 @@ private:
                 mlir::ConversionPatternRewriter &rewriter) const {
     mlir::Location loc = rebox.getLoc();
     mlir::Value zero =
-        genConstantIndex(loc, lowerTy().indexType(), rewriter, 0);
-    mlir::Value one = genConstantIndex(loc, lowerTy().indexType(), rewriter, 1);
+        fir::genConstantIndex(loc, lowerTy().indexType(), rewriter, 0);
+    mlir::Value one =
+        fir::genConstantIndex(loc, lowerTy().indexType(), rewriter, 1);
     for (auto iter : llvm::enumerate(llvm::zip(extents, strides))) {
       mlir::Value extent = std::get<0>(iter.value());
       unsigned dim = iter.index();
@@ -2249,7 +2197,7 @@ private:
     mlir::Location loc = rebox.getLoc();
     mlir::Type byteTy = ::getI8Type(rebox.getContext());
     mlir::Type idxTy = lowerTy().indexType();
-    mlir::Value zero = genConstantIndex(loc, idxTy, rewriter, 0);
+    mlir::Value zero = fir::genConstantIndex(loc, idxTy, rewriter, 0);
     // Apply subcomponent and substring shift on base address.
     if (!rebox.getSubcomponent().empty() || !rebox.getSubstr().empty()) {
       // Cast to inputEleTy* so that a GEP can be used.
@@ -2277,7 +2225,7 @@ private:
     // and strides.
     llvm::SmallVector<mlir::Value> slicedExtents;
     llvm::SmallVector<mlir::Value> slicedStrides;
-    mlir::Value one = genConstantIndex(loc, idxTy, rewriter, 1);
+    mlir::Value one = fir::genConstantIndex(loc, idxTy, rewriter, 1);
     const bool sliceHasOrigins = !rebox.getShift().empty();
     unsigned sliceOps = rebox.getSliceOperandIndex();
     unsigned shiftOps = rebox.getShiftOperandIndex();
@@ -2350,7 +2298,7 @@ private:
     // which may be OK if all new extents are ones, the stride does not
     // matter, use one.
     mlir::Value stride = inputStrides.empty()
-                             ? genConstantIndex(loc, idxTy, rewriter, 1)
+                             ? fir::genConstantIndex(loc, idxTy, rewriter, 1)
                              : inputStrides[0];
     for (unsigned i = 0; i < rebox.getShape().size(); ++i) {
       mlir::Value rawExtent = operands[rebox.getShapeOperandIndex() + i];
@@ -2585,9 +2533,9 @@ struct XArrayCoorOpConversion
     unsigned shiftOffset = coor.getShiftOperandIndex();
     unsigned sliceOffset = coor.getSliceOperandIndex();
     auto sliceOps = coor.getSlice().begin();
-    mlir::Value one = genConstantIndex(loc, idxTy, rewriter, 1);
+    mlir::Value one = fir::genConstantIndex(loc, idxTy, rewriter, 1);
     mlir::Value prevExt = one;
-    mlir::Value offset = genConstantIndex(loc, idxTy, rewriter, 0);
+    mlir::Value offset = fir::genConstantIndex(loc, idxTy, rewriter, 0);
     const bool isShifted = !coor.getShift().empty();
     const bool isSliced = !coor.getSlice().empty();
     const bool baseIsBoxed =
@@ -2918,7 +2866,7 @@ private:
         // of lower bound aspects. This both accounts for dynamically sized
         // types and non contiguous arrays.
         auto idxTy = lowerTy().indexType();
-        mlir::Value off = genConstantIndex(loc, idxTy, rewriter, 0);
+        mlir::Value off = fir::genConstantIndex(loc, idxTy, rewriter, 0);
         unsigned arrayDim = arrTy.getDimension();
         for (unsigned dim = 0; dim < arrayDim && it != end; ++dim, ++it) {
           mlir::Value stride =
@@ -3525,114 +3473,123 @@ struct SelectCaseOpConversion : public fir::FIROpConversion<fir::SelectCaseOp> {
   }
 };
 
-/// Helper function for converting select ops. This function converts the
-/// signature of the given block. If the new block signature is different from
-/// `expectedTypes`, returns "failure".
-static llvm::FailureOr<mlir::Block *>
-getConvertedBlock(mlir::ConversionPatternRewriter &rewriter,
-                  const mlir::TypeConverter *converter,
-                  mlir::Operation *branchOp, mlir::Block *block,
-                  mlir::TypeRange expectedTypes) {
-  assert(converter && "expected non-null type converter");
-  assert(!block->isEntryBlock() && "entry blocks have no predecessors");
-
-  // There is nothing to do if the types already match.
-  if (block->getArgumentTypes() == expectedTypes)
-    return block;
-
-  // Compute the new block argument types and convert the block.
-  std::optional<mlir::TypeConverter::SignatureConversion> conversion =
-      converter->convertBlockSignature(block);
-  if (!conversion)
-    return rewriter.notifyMatchFailure(branchOp,
-                                       "could not compute block signature");
-  if (expectedTypes != conversion->getConvertedTypes())
-    return rewriter.notifyMatchFailure(
-        branchOp,
-        "mismatch between adaptor operand types and computed block signature");
-  return rewriter.applySignatureConversion(block, *conversion, converter);
-}
-
+/// Base class for SelectOpConversion and SelectRankOpConversion.
 template <typename OP>
-static llvm::LogicalResult
-selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering, OP select,
-                      typename OP::Adaptor adaptor,
-                      mlir::ConversionPatternRewriter &rewriter,
-                      const mlir::TypeConverter *converter) {
-  unsigned conds = select.getNumConditions();
-  auto cases = select.getCases().getValue();
-  mlir::Value selector = adaptor.getSelector();
-  auto loc = select.getLoc();
-  assert(conds > 0 && "select must have cases");
+struct SelectOpConversionBase : public fir::FIROpConversion<OP> {
+  using fir::FIROpConversion<OP>::FIROpConversion;
 
-  llvm::SmallVector<mlir::Block *> destinations;
-  llvm::SmallVector<mlir::ValueRange> destinationsOperands;
-  mlir::Block *defaultDestination;
-  mlir::ValueRange defaultOperands;
-  llvm::SmallVector<int32_t> caseValues;
+private:
+  /// Helper function for converting select ops. This function converts the
+  /// signature of the given block. If the new block signature is different from
+  /// `expectedTypes`, returns "failure".
+  llvm::FailureOr<mlir::Block *>
+  getConvertedBlock(mlir::ConversionPatternRewriter &rewriter,
+                    mlir::Operation *branchOp, mlir::Block *block,
+                    mlir::TypeRange expectedTypes) const {
+    const mlir::TypeConverter *converter = this->getTypeConverter();
+    assert(converter && "expected non-null type converter");
+    assert(!block->isEntryBlock() && "entry blocks have no predecessors");
 
-  for (unsigned t = 0; t != conds; ++t) {
-    mlir::Block *dest = select.getSuccessor(t);
-    auto destOps = select.getSuccessorOperands(adaptor.getOperands(), t);
-    const mlir::Attribute &attr = cases[t];
-    if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr)) {
-      destinationsOperands.push_back(destOps ? *destOps : mlir::ValueRange{});
-      auto convertedBlock =
-          getConvertedBlock(rewriter, converter, select, dest,
-                            mlir::TypeRange(destinationsOperands.back()));
-      if (mlir::failed(convertedBlock))
-        return mlir::failure();
-      destinations.push_back(*convertedBlock);
-      caseValues.push_back(intAttr.getInt());
-      continue;
-    }
-    assert(mlir::dyn_cast_or_null<mlir::UnitAttr>(attr));
-    assert((t + 1 == conds) && "unit must be last");
-    defaultOperands = destOps ? *destOps : mlir::ValueRange{};
-    auto convertedBlock = getConvertedBlock(rewriter, converter, select, dest,
-                                            mlir::TypeRange(defaultOperands));
-    if (mlir::failed(convertedBlock))
-      return mlir::failure();
-    defaultDestination = *convertedBlock;
+    // There is nothing to do if the types already match.
+    if (block->getArgumentTypes() == expectedTypes)
+      return block;
+
+    // Compute the new block argument types and convert the block.
+    std::optional<mlir::TypeConverter::SignatureConversion> conversion =
+        converter->convertBlockSignature(block);
+    if (!conversion)
+      return rewriter.notifyMatchFailure(branchOp,
+                                         "could not compute block signature");
+    if (expectedTypes != conversion->getConvertedTypes())
+      return rewriter.notifyMatchFailure(branchOp,
+                                         "mismatch between adaptor operand "
+                                         "types and computed block signature");
+    return rewriter.applySignatureConversion(block, *conversion, converter);
   }
 
-  // LLVM::SwitchOp takes a i32 type for the selector.
-  if (select.getSelector().getType() != rewriter.getI32Type())
-    selector = mlir::LLVM::TruncOp::create(rewriter, loc, rewriter.getI32Type(),
-                                           selector);
+protected:
+  llvm::LogicalResult
+  selectMatchAndRewrite(OP select, typename OP::Adaptor adaptor,
+                        mlir::ConversionPatternRewriter &rewriter) const {
+    unsigned conds = select.getNumConditions();
+    auto cases = select.getCases().getValue();
+    mlir::Value selector = adaptor.getSelector();
+    auto loc = select.getLoc();
+    assert(conds > 0 && "select must have cases");
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
-      select, selector,
-      /*defaultDestination=*/defaultDestination,
-      /*defaultOperands=*/defaultOperands,
-      /*caseValues=*/caseValues,
-      /*caseDestinations=*/destinations,
-      /*caseOperands=*/destinationsOperands,
-      /*branchWeights=*/llvm::ArrayRef<std::int32_t>());
-  return mlir::success();
-}
+    llvm::SmallVector<mlir::Block *> destinations;
+    llvm::SmallVector<mlir::ValueRange> destinationsOperands;
+    mlir::Block *defaultDestination;
+    mlir::ValueRange defaultOperands;
+    // LLVM::SwitchOp selector type and the case values types
+    // must have the same bit width, so cast the selector to i64,
+    // and use i64 for the case values. It is hard to imagine
+    // a computed GO TO with the number of labels in the label-list
+    // bigger than INT_MAX, but let's use i64 to be on the safe side.
+    // Moreover, fir.select operation is more relaxed than
+    // a Fortran computed GO TO, so it may specify such a case value
+    // even if there is just a single label/case.
+    llvm::SmallVector<int64_t> caseValues;
 
+    for (unsigned t = 0; t != conds; ++t) {
+      mlir::Block *dest = select.getSuccessor(t);
+      auto destOps = select.getSuccessorOperands(adaptor.getOperands(), t);
+      const mlir::Attribute &attr = cases[t];
+      if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr)) {
+        destinationsOperands.push_back(destOps ? *destOps : mlir::ValueRange{});
+        auto convertedBlock =
+            getConvertedBlock(rewriter, select, dest,
+                              mlir::TypeRange(destinationsOperands.back()));
+        if (mlir::failed(convertedBlock))
+          return mlir::failure();
+        destinations.push_back(*convertedBlock);
+        caseValues.push_back(intAttr.getInt());
+        continue;
+      }
+      assert(mlir::dyn_cast_or_null<mlir::UnitAttr>(attr));
+      assert((t + 1 == conds) && "unit must be last");
+      defaultOperands = destOps ? *destOps : mlir::ValueRange{};
+      auto convertedBlock = getConvertedBlock(rewriter, select, dest,
+                                              mlir::TypeRange(defaultOperands));
+      if (mlir::failed(convertedBlock))
+        return mlir::failure();
+      defaultDestination = *convertedBlock;
+    }
+
+    selector =
+        this->integerCast(loc, rewriter, rewriter.getI64Type(), selector);
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
+        select, selector,
+        /*defaultDestination=*/defaultDestination,
+        /*defaultOperands=*/defaultOperands,
+        /*caseValues=*/rewriter.getI64VectorAttr(caseValues),
+        /*caseDestinations=*/destinations,
+        /*caseOperands=*/destinationsOperands,
+        /*branchWeights=*/llvm::ArrayRef<std::int32_t>());
+    return mlir::success();
+  }
+};
 /// conversion of fir::SelectOp to an if-then-else ladder
-struct SelectOpConversion : public fir::FIROpConversion<fir::SelectOp> {
-  using FIROpConversion::FIROpConversion;
+struct SelectOpConversion : public SelectOpConversionBase<fir::SelectOp> {
+  using SelectOpConversionBase::SelectOpConversionBase;
 
   llvm::LogicalResult
   matchAndRewrite(fir::SelectOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return selectMatchAndRewrite<fir::SelectOp>(lowerTy(), op, adaptor,
-                                                rewriter, getTypeConverter());
+    return this->selectMatchAndRewrite(op, adaptor, rewriter);
   }
 };
 
 /// conversion of fir::SelectRankOp to an if-then-else ladder
-struct SelectRankOpConversion : public fir::FIROpConversion<fir::SelectRankOp> {
-  using FIROpConversion::FIROpConversion;
+struct SelectRankOpConversion
+    : public SelectOpConversionBase<fir::SelectRankOp> {
+  using SelectOpConversionBase::SelectOpConversionBase;
 
   llvm::LogicalResult
   matchAndRewrite(fir::SelectRankOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return selectMatchAndRewrite<fir::SelectRankOp>(
-        lowerTy(), op, adaptor, rewriter, getTypeConverter());
+    return this->selectMatchAndRewrite(op, adaptor, rewriter);
   }
 };
 
@@ -3837,7 +3794,7 @@ struct IsPresentOpConversion : public fir::FIROpConversion<fir::IsPresentOp> {
       ptr = mlir::LLVM::ExtractValueOp::create(rewriter, loc, ptr, 0);
     }
     mlir::LLVM::ConstantOp c0 =
-        genConstantIndex(isPresent.getLoc(), idxTy, rewriter, 0);
+        fir::genConstantIndex(isPresent.getLoc(), idxTy, rewriter, 0);
     auto addr = mlir::LLVM::PtrToIntOp::create(rewriter, loc, idxTy, ptr);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         isPresent, mlir::LLVM::ICmpPredicate::ne, addr, c0);

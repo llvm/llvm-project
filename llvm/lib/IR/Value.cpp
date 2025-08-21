@@ -747,34 +747,28 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       // means when we construct GEPOffset, we need to use the size
       // of GEP's pointer type rather than the size of the original
       // pointer type.
-      unsigned CurBitWidth = DL.getIndexTypeSizeInBits(V->getType());
-      if (CurBitWidth == BitWidth) {
-        if (!GEP->accumulateConstantOffset(DL, Offset, ExternalAnalysis))
-          return V;
+      APInt GEPOffset(DL.getIndexTypeSizeInBits(V->getType()), 0);
+      if (!GEP->accumulateConstantOffset(DL, GEPOffset, ExternalAnalysis))
+        return V;
+
+      // Stop traversal if the pointer offset wouldn't fit in the bit-width
+      // provided by the Offset argument. This can happen due to AddrSpaceCast
+      // stripping.
+      if (GEPOffset.getSignificantBits() > BitWidth)
+        return V;
+
+      // External Analysis can return a result higher/lower than the value
+      // represents. We need to detect overflow/underflow.
+      APInt GEPOffsetST = GEPOffset.sextOrTrunc(BitWidth);
+      if (!ExternalAnalysis) {
+        Offset += GEPOffsetST;
       } else {
-        APInt GEPOffset(CurBitWidth, 0);
-        if (!GEP->accumulateConstantOffset(DL, GEPOffset, ExternalAnalysis))
+        bool Overflow = false;
+        APInt OldOffset = Offset;
+        Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
+        if (Overflow) {
+          Offset = OldOffset;
           return V;
-
-        // Stop traversal if the pointer offset wouldn't fit in the bit-width
-        // provided by the Offset argument. This can happen due to AddrSpaceCast
-        // stripping.
-        if (GEPOffset.getSignificantBits() > BitWidth)
-          return V;
-
-        // External Analysis can return a result higher/lower than the value
-        // represents. We need to detect overflow/underflow.
-        APInt GEPOffsetST = GEPOffset.sextOrTrunc(BitWidth);
-        if (!ExternalAnalysis) {
-          Offset += GEPOffsetST;
-        } else {
-          bool Overflow = false;
-          APInt OldOffset = Offset;
-          Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
-          if (Overflow) {
-            Offset = OldOffset;
-            return V;
-          }
         }
       }
       V = GEP->getPointerOperand();

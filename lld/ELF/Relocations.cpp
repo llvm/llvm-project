@@ -176,7 +176,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
-static bool isAbsolute(const Symbol &sym) {
+bool elf::isAbsolute(const Symbol &sym) {
   if (sym.isUndefined())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym))
@@ -273,12 +273,12 @@ template <class ELFT> static bool isReadOnly(SharedSymbol &ss) {
 // them are copied by a copy relocation, all of them need to be copied.
 // Otherwise, they would refer to different places at runtime.
 template <class ELFT>
-static SmallSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
+static SmallPtrSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
   using Elf_Sym = typename ELFT::Sym;
 
   const auto &file = cast<SharedFile>(*ss.file);
 
-  SmallSet<SharedSymbol *, 4> ret;
+  SmallPtrSet<SharedSymbol *, 4> ret;
   for (const Elf_Sym &s : file.template getGlobalELFSyms<ELFT>()) {
     if (s.st_shndx == SHN_UNDEF || s.st_shndx == SHN_ABS ||
         s.getType() == STT_TLS || s.st_value != ss.value)
@@ -885,10 +885,12 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
   gotPlt.addEntry(sym);
-  rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx),
-                sym.isPreemptible ? DynamicReloc::AgainstSymbol
-                                  : DynamicReloc::AddendOnlyWithTargetVA,
-                sym, 0, R_ABS});
+  if (sym.isPreemptible)
+    rel.addReloc(
+        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, R_ADDEND});
+  else
+    rel.addReloc(
+        {type, &gotPlt, sym.getGotPltOffset(ctx), false, sym, 0, R_ABS});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
@@ -897,9 +899,8 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
-    ctx.mainPart->relaDyn->addReloc({ctx.target->gotRel, ctx.in.got.get(), off,
-                                     DynamicReloc::AgainstSymbol, sym, 0,
-                                     R_ABS});
+    ctx.mainPart->relaDyn->addReloc(
+        {ctx.target->gotRel, ctx.in.got.get(), off, true, sym, 0, R_ADDEND});
     return;
   }
 
@@ -920,15 +921,13 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
     ctx.mainPart->relaDyn->addReloc({R_AARCH64_AUTH_GLOB_DAT, ctx.in.got.get(),
-                                     off, DynamicReloc::AgainstSymbol, sym, 0,
-                                     R_ABS});
+                                     off, true, sym, 0, R_ADDEND});
     return;
   }
 
   // Signed GOT requires dynamic relocation.
   ctx.in.got->getPartition(ctx).relaDyn->addReloc(
-      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off,
-       DynamicReloc::AddendOnlyWithTargetVA, sym, 0, R_ABS});
+      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
 }
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
@@ -1159,9 +1158,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
           sec->addReloc({expr, type, offset, addend, &sym});
           part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {
-          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
-                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
-                                  addend, R_ABS});
+          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset, false,
+                                  sym, addend, R_ABS});
         }
         return;
       }
@@ -1948,13 +1946,12 @@ void elf::postScanRelocations(Ctx &ctx) {
 
   GotSection *got = ctx.in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
-    static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
     if (ctx.arg.shared)
       ctx.mainPart->relaDyn->addReloc(
           {ctx.target->tlsModuleIndexRel, got, got->getTlsIndexOff()});
     else
       got->addConstant({R_ADDEND, ctx.target->symbolicRel,
-                        got->getTlsIndexOff(), 1, &dummy});
+                        got->getTlsIndexOff(), 1, ctx.dummySym});
   }
 
   assert(ctx.symAux.size() == 1);
@@ -2154,15 +2151,14 @@ static int getHexagonPacketOffset(const InputSection &isec,
   for (unsigned i = 0;; i++) {
     if (i == 3 || rel.offset < (i + 1) * 4)
       return i * 4;
-    uint32_t instWord = 0;
-    const ArrayRef<uint8_t> instWordContents =
-        data.drop_front(rel.offset - (i + 1) * 4);
-    memcpy(&instWord, instWordContents.data(), sizeof(instWord));
+    uint32_t instWord =
+        read32(isec.getCtx(), data.data() + (rel.offset - (i + 1) * 4));
     if (((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_PACKET) ||
         ((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_DUPLEX))
       return i * 4;
   }
 }
+
 static int64_t getPCBias(Ctx &ctx, const InputSection &isec,
                          const Relocation &rel) {
   if (ctx.arg.emachine == EM_ARM) {

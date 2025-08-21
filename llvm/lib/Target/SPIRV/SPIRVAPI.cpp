@@ -156,7 +156,7 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
     }
   }
   return SPIRVTranslate(M, SpirvObj, ErrMsg, AllowExtNames, OLevel,
-                        TargetTriple);
+                        std::move(TargetTriple));
 }
 
 } // namespace llvm

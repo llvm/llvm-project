@@ -226,8 +226,8 @@ one-phase compilation model is simpler for build systems to implement while the
 two-phase compilation has the potential to compile faster due to higher
 parallelism. As an example, if there are two module units ``A`` and ``B``, and
 ``B`` depends on ``A``, the one-phase compilation model needs to compile them
-serially, whereas the two-phase compilation model is able to be compiled as
-soon as ``A.pcm`` is available, and thus can be compiled simultaneously as the
+serially, whereas the two-phase compilation model can be compiled as
+soon as ``A.pcm`` is available, and thus can be compiled simultaneously with the
 ``A.pcm`` to ``A.o`` compilation step.
 
 File name requirements
@@ -391,7 +391,7 @@ And the compilation processes for module units are like:
 As the diagrams show, we need to compile the BMI from module units to object
 files and then link the object files. (However, this cannot be done for the BMI
 from header units. See the section on :ref:`header units <header-units>` for
-more details.
+more details.)
 
 BMIs cannot be shipped in an archive to create a module library. Instead, the
 BMIs(``*.pcm``) are compiled into object files(``*.o``) and those object files
@@ -403,7 +403,7 @@ clang-cl
 ``clang-cl`` supports the same options as ``clang++`` for modules as detailed above;
 there is no need to prefix these options with ``/clang:``. Note that ``cl.exe``
 `options to emit/consume IFC files <https://devblogs.microsoft.com/cppblog/using-cpp-modules-in-msvc-from-the-command-line-part-1/>` are *not* supported.
-The resultant precompiled modules are also not compatible for use with ``cl.exe``.
+The resulting precompiled modules are also not compatible for use with ``cl.exe``.
 
 We recommend that build system authors use the above-mentioned ``clang++`` options  with ``clang-cl`` to build modules.
 
@@ -411,7 +411,7 @@ Consistency Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Modules can be viewed as a kind of cache to speed up compilation. Thus, like
-other caching techniques, it is important to maintain cache consistency which
+other caching techniques, it is important to maintain cache consistency, which
 is why Clang does very strict checking for consistency.
 
 Options consistency
@@ -472,8 +472,8 @@ To overcome these requirements and simplify cases like distributed builds and sa
 builds, users can use the ``-fmodules-embed-all-files`` flag to embed all input files
 into the BMI so that Clang does not need to open the corresponding file on disk.
 
-When the ``-fmodules-embed-all-files`` flag are enabled, Clang explicitly emits the source
-code into the BMI file, the contents of the BMI file contain a sufficiently verbose
+When the ``-fmodules-embed-all-files`` flag is enabled, Clang explicitly emits the source
+code into the BMI file; the BMI file contains a sufficiently verbose
 representation to reproduce the original source file.
 
 .. [1] Input files: The source files which took part in the compilation of the BMI.
@@ -578,7 +578,7 @@ handle the dynamic initialization of non-inline variables in the module unit.
 The importable module unit has to emit the initializer even if there is no
 dynamic initialization; otherwise, the importer may call a nonexistent
 function. The initializer function emits calls to imported modules first
-followed by calls to all to of the dynamic initializers in the current module
+followed by calls to all of the dynamic initializers in the current module
 unit.
 
 Translation units that explicitly or implicitly import a named module must call
@@ -689,9 +689,9 @@ ensure it is reachable, e.g. ``using N::g;``.
 
 As of Clang 22.x, the Reduced BMI is enabled by default. You may still want to
 use Full BMI with ``-fno-modules-reduced-bmi`` in the following case:
-1. Your build system uses two-phase compilation but it haven't adjusted the
+1. Your build system uses two-phase compilation, but it hasn't adjusted the
 implementation for reduced BMI.
-2. You meet a regression with Reduced BMI that you cannot work around. Please
+2. You encounter a regression with Reduced BMI that you cannot work around. Please
 report an issue for this case.
 
 Experimental Non-Cascading Changes
@@ -699,7 +699,7 @@ Experimental Non-Cascading Changes
 
 This section is primarily for build system vendors. For end compiler users,
 if you don't want to read it all, this is helpful to reduce recompilations.
-We encourage build system vendors and end users try this out and bring feedback.
+We encourage build system vendors and end users to try this out and bring feedback.
 
 Before Clang 19, a change in BMI of any (transitive) dependency would cause the
 outputs of the BMI to change. Starting with Clang 19, changes to non-direct
@@ -786,7 +786,7 @@ We encourage build systems to add an experimental mode that
 reuses the cached BMI when **direct** dependencies did not change,
 even if **transitive** dependencies did change.
 
-Given there are potential compiler bugs, we recommend that build systems
+Given that there are potential compiler bugs, we recommend that build systems
 support this feature as a configurable option so that users
 can go back to the transitive change mode safely at any time.
 
@@ -813,7 +813,7 @@ With reduced BMI, non-cascading changes can be more powerful. For example,
   $ md5sum B.pcm
   6c2bd452ca32ab418bf35cd141b060b9  B.pcm
 
-And let's change the implementation for ``A.cppm`` into:
+And let's change the implementation for ``A.cppm`` to:
 
 .. code-block:: c++
 
@@ -830,7 +830,7 @@ and recompile the example:
   $ md5sum B.pcm
   6c2bd452ca32ab418bf35cd141b060b9  B.pcm
 
-We should find the contents of ``B.pcm`` remains the same. In this case, the build system is
+We should find the contents of ``B.pcm`` remain the same. In this case, the build system is
 allowed to skip recompilations of TUs which solely and directly depend on module ``B``.
 
 This only happens with a reduced BMI. With reduced BMIs, we won't record the function body
@@ -845,7 +845,7 @@ Reduce duplications
 
 While it is valid to have duplicated declarations in the global module fragments
 of different module units, it is not free for Clang to deal with the duplicated
-declarations. A translation unit will compile more slowly if there is a lot of
+declarations. A translation unit will compile more slowly if there are a lot of
 duplicated declarations between the translation unit and modules it imports.
 For example:
 
@@ -937,7 +937,7 @@ possible. However, it may be a breaking change for existing code or libraries
 to switch to modules. As a result, many existing libraries need to provide
 both headers and module interfaces for a while to not break existing users.
 
-This section suggests some suggestions on how to ease the transition process
+This section provides some suggestions on how to ease the transition process
 for existing libraries. **Note that this information is only intended as
 guidance, rather than as requirements to use modules in Clang.** It presumes
 the project is starting with no module-based dependencies.
@@ -1140,7 +1140,7 @@ module unit which is internal to the module itself.
 Providing a header to skip parsing redundant headers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Many redeclarations shared between translation units causes Clang to have
+Many redeclarations shared between translation units cause Clang to have
 slower compile-time performance. Further, there are known issues with
 `include after import <https://github.com/llvm/llvm-project/issues/61465>`_.
 Even when that issue is resolved, users may still get slower compilation speed
@@ -1408,8 +1408,8 @@ P1857R3 is implemented. This is tracked by
 Until then, it is recommended not to mix macros with module declarations.
 
 
-In consistent filename suffix requirement for importable module units
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Inconsistent filename suffix requirement for importable module units
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Currently, Clang requires the file name of an ``importable module unit`` to
 have ``.cppm`` (or ``.ccm``, ``.cxxm``, ``.c++m``) as the file extension.
@@ -1484,7 +1484,7 @@ How to build projects using header units
 .. warning::
 
    The support for header units, including related command line options, is
-   experimental. There are still many unanswered question about how tools
+   experimental. There are still many unanswered questions about how tools
    should interact with header units. The details described here may change in
    the future.
 
@@ -1881,7 +1881,7 @@ Individual command line options can be specified after ``--``.
 options. Note that the path to the compiler executable needs to be specified
 explicitly instead of using ``clang++`` directly.
 
-Users may want the scanner to get the transitional dependency information for
+Users may want the scanner to get the transitive dependency information for
 headers. Otherwise, the project has to be scanned twice, once for headers and
 once for modules. To address this, ``clang-scan-deps`` will recognize the
 specified preprocessor options in the given command line and generate the
@@ -1912,7 +1912,7 @@ Possible Issues: Failed to find system headers
 
 If encountering an error like ``fatal error: 'stddef.h' file not found``,
 the specified ``<path-to-compiler-executable>/clang++`` probably refers to a
-symlink instead a real binary. There are four potential solutions to the
+symlink instead of a real binary. There are four potential solutions to the
 problem:
 
 1. Point the specified compiler executable to the real binary instead of the

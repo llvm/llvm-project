@@ -160,6 +160,16 @@ static cl::opt<bool> ClGenerateTagsWithCalls(
 static cl::opt<bool> ClGlobals("hwasan-globals", cl::desc("Instrument globals"),
                                cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClAllGlobals(
+    "hwasan-all-globals",
+    cl::desc(
+        "Instrument globals, even those within user-defined sections. Warning: "
+        "This may break existing code which walks globals via linker-generated "
+        "symbols, expects certain globals to be contiguous with each other, or "
+        "makes other assumptions which are invalidated by HWASan "
+        "instrumentation."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<int> ClMatchAllTag(
     "hwasan-match-all-tag",
     cl::desc("don't report bad accesses via pointers with this tag"),
@@ -681,10 +691,10 @@ void HWAddressSanitizer::initializeModule() {
       !CompileKernel && !UsePageAliases && optOr(ClGlobals, NewRuntime);
 
   if (!CompileKernel) {
-    createHwasanCtorComdat();
-
     if (InstrumentGlobals)
       instrumentGlobals();
+
+    createHwasanCtorComdat();
 
     bool InstrumentPersonalityFunctions =
         optOr(ClInstrumentPersonalityFunctions, NewRuntime);
@@ -1459,22 +1469,6 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
 
-    auto HandleLifetime = [&](IntrinsicInst *II) {
-      // Set the lifetime intrinsic to cover the whole alloca. This reduces the
-      // set of assumptions we need to make about the lifetime. Without this we
-      // would need to ensure that we can track the lifetime pointer to a
-      // constant offset from the alloca, and would still need to change the
-      // size to include the extra alignment we use for the untagging to make
-      // the size consistent.
-      //
-      // The check for standard lifetime below makes sure that we have exactly
-      // one set of start / end in any execution (i.e. the ends are not
-      // reachable from each other), so this will not cause any problems.
-      II->setArgOperand(0, ConstantInt::get(Int64Ty, AlignedSize));
-    };
-    llvm::for_each(Info.LifetimeStart, HandleLifetime);
-    llvm::for_each(Info.LifetimeEnd, HandleLifetime);
-
     AI->replaceUsesWithIf(Replacement, [AILong](const Use &U) {
       auto *User = U.getUser();
       return User != AILong && !isa<LifetimeIntrinsic>(User);
@@ -1772,11 +1766,17 @@ void HWAddressSanitizer::instrumentGlobals() {
     if (GV.hasCommonLinkage())
       continue;
 
-    // Globals with custom sections may be used in __start_/__stop_ enumeration,
-    // which would be broken both by adding tags and potentially by the extra
-    // padding/alignment that we insert.
-    if (GV.hasSection())
-      continue;
+    if (ClAllGlobals) {
+      // Avoid instrumenting intrinsic global variables.
+      if (GV.getSection() == "llvm.metadata")
+        continue;
+    } else {
+      // Globals with custom sections may be used in __start_/__stop_
+      // enumeration, which would be broken both by adding tags and potentially
+      // by the extra padding/alignment that we insert.
+      if (GV.hasSection())
+        continue;
+    }
 
     Globals.push_back(&GV);
   }

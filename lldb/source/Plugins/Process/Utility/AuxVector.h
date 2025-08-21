@@ -70,6 +70,10 @@ public:
     // Platform specific values which may overlap the Linux values.
 
     AUXV_FREEBSD_AT_HWCAP = 25, ///< FreeBSD specific AT_HWCAP value.
+    // FreeBSD and Linux use the same AT_HWCAP2 value.
+    AUXV_FREEBSD_AT_HWCAP3 = 38, ///< FreeBSD specific AT_HWCAP3 value.
+    AUXV_FREEBSD_AT_HWCAP4 = 39, ///< FreeBSD specific AT_HWCAP4 value.
+
   };
 
   std::optional<uint64_t> GetAuxValue(enum EntryType entry_type) const;
