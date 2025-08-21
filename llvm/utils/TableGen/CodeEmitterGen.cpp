@@ -154,9 +154,9 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
     raw_string_ostream CaseOS(Case);
     CaseOS << indent(6);
     if (UseAPInt) {
-      CaseOS << EncoderMethodName << "(MI, " + utostr(OpIdx) << ", op";
+      CaseOS << EncoderMethodName << "(MI, " << OpIdx << ", op";
     } else {
-      CaseOS << "op = " << EncoderMethodName << "(MI, " << utostr(OpIdx);
+      CaseOS << "op = " << EncoderMethodName << "(MI, " << OpIdx;
     }
     CaseOS << ", Fixups, STI);\n";
   } else {
@@ -388,8 +388,7 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
 
 static void emitInstBits(raw_ostream &OS, const APInt &Bits) {
   for (unsigned I = 0; I < Bits.getNumWords(); ++I)
-    OS << ((I > 0) ? ", " : "") << "UINT64_C(" << utostr(Bits.getRawData()[I])
-       << ")";
+    OS << ((I > 0) ? ", " : "") << "UINT64_C(" << Bits.getRawData()[I] << ")";
 }
 
 void CodeEmitterGen::emitInstructionBaseValues(
