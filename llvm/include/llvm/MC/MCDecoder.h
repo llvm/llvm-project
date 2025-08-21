@@ -26,8 +26,8 @@ inline bool Check(MCDisassembler::DecodeStatus &Out,
   return Out != MCDisassembler::Fail;
 }
 
-// fieldFromInstruction - Extracts a given span of bits from the instruction
-// bits and return it as an integer.
+// Extracts a given span of bits from the instruction bits and return it as an
+// integer.
 template <typename IntType>
 #if defined(_MSC_VER) && !defined(__clang__)
 __declspec(noinline)
