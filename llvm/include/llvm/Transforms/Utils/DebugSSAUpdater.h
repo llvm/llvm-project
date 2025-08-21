@@ -315,15 +315,15 @@ class SSAValueNameMap {
   struct Config : ValueMapConfig<Value *> {
     enum { FollowRAUW = false };
   };
+
 public:
   using ValueID = uint64_t;
   ValueID addValue(Value *V);
-  std::string getName(ValueID ID) {
-    return ValueIDToNameMap[ID];
-  }
+  std::string getName(ValueID ID) { return ValueIDToNameMap[ID]; }
+
 private:
   DenseMap<ValueID, std::string> ValueIDToNameMap;
-  ValueMap<Value*, ValueID, Config> ValueToIDMap;
+  ValueMap<Value *, ValueID, Config> ValueToIDMap;
   ValueID NextID = 0;
 };
 
