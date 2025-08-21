@@ -402,10 +402,10 @@ void Matrix<T>::print(raw_ostream &os) const {
   for (unsigned row = 0; row < nRows; ++row)
     for (unsigned column = 0; column < nColumns; ++column)
       updatePrintMetrics<T>(at(row, column), ptm);
-  unsigned MIN_SPACING = 1;
+  unsigned minSpacing = 1;
   for (unsigned row = 0; row < nRows; ++row) {
     for (unsigned column = 0; column < nColumns; ++column) {
-      printWithPrintMetrics<T>(os, at(row, column), MIN_SPACING, ptm);
+      printWithPrintMetrics<T>(os, at(row, column), minSpacing, ptm);
     }
     os << "\n";
   }
