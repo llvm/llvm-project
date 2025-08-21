@@ -250,7 +250,7 @@ SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
 }
 
 bool isValidSPIRVExtensionName(const std::string &str) {
-  std::regex pattern("dxc|DXC|KHR|SPV_[a-zA-Z0-9_]+");
+  std::regex pattern("dxc|DXC|khr|KHR|SPV_[a-zA-Z0-9_]+");
   return std::regex_match(str, pattern);
 }
 
