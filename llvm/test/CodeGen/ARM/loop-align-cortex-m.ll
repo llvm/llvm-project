@@ -4,7 +4,7 @@
 
 define void @test_loop_alignment(ptr %in, ptr  %out) optsize {
 ; CHECK-LABEL: test_loop_alignment:
-; CHECK: mov{{.*}}, #0
+; CHECK: mov{{.*}}, #1024
 ; CHECK: .p2align 2
 
 entry:
@@ -27,7 +27,7 @@ end:
 
 define void @test_loop_alignment_minsize(ptr %in, ptr  %out) minsize {
 ; CHECK-LABEL: test_loop_alignment_minsize:
-; CHECK: movs {{r[0-9]+}}, #0
+; CHECK: mov.w {{r[0-9]+}}, #1024
 ; CHECK-NOT: .p2align
 
 entry:

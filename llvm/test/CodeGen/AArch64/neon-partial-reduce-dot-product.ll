@@ -34,16 +34,15 @@ define <4 x i32> @udot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NODOT-LABEL: udot_in_loop:
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NODOT-NEXT:    mov x8, xzr
+; CHECK-NODOT-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NODOT-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-NODOT-NEXT:    ldr q3, [x1, x8]
+; CHECK-NODOT-NEXT:    ldr q2, [x0], #16
 ; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-NODOT-NEXT:    add x8, x8, #16
+; CHECK-NODOT-NEXT:    ldr q3, [x1], #16
+; CHECK-NODOT-NEXT:    subs x8, x8, #16
 ; CHECK-NODOT-NEXT:    umull v4.8h, v2.8b, v3.8b
 ; CHECK-NODOT-NEXT:    umull2 v2.8h, v2.16b, v3.16b
-; CHECK-NODOT-NEXT:    cmp x8, #16
 ; CHECK-NODOT-NEXT:    uaddw v1.4s, v1.4s, v4.4h
 ; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v4.8h
 ; CHECK-NODOT-NEXT:    uaddw v1.4s, v1.4s, v2.4h
@@ -55,15 +54,14 @@ define <4 x i32> @udot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-DOT-LABEL: udot_in_loop:
 ; CHECK-DOT:       // %bb.0: // %entry
 ; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-DOT-NEXT:    mov x8, xzr
+; CHECK-DOT-NEXT:    mov w8, #16 // =0x10
 ; CHECK-DOT-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-NEXT:    ldr q3, [x1, x8]
+; CHECK-DOT-NEXT:    ldr q2, [x0], #16
 ; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-DOT-NEXT:    add x8, x8, #16
+; CHECK-DOT-NEXT:    ldr q3, [x1], #16
+; CHECK-DOT-NEXT:    subs x8, x8, #16
 ; CHECK-DOT-NEXT:    udot v1.4s, v2.16b, v3.16b
-; CHECK-DOT-NEXT:    cmp x8, #16
 ; CHECK-DOT-NEXT:    b.ne .LBB1_1
 ; CHECK-DOT-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-NEXT:    ret
@@ -71,15 +69,14 @@ define <4 x i32> @udot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-DOT-I8MM-LABEL: udot_in_loop:
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
+; CHECK-DOT-I8MM-NEXT:    mov w8, #16 // =0x10
 ; CHECK-DOT-I8MM-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0], #16
 ; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
-; CHECK-DOT-I8MM-NEXT:    add x8, x8, #16
+; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1], #16
+; CHECK-DOT-I8MM-NEXT:    subs x8, x8, #16
 ; CHECK-DOT-I8MM-NEXT:    udot v1.4s, v2.16b, v3.16b
-; CHECK-DOT-I8MM-NEXT:    cmp x8, #16
 ; CHECK-DOT-I8MM-NEXT:    b.ne .LBB1_1
 ; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-I8MM-NEXT:    ret
@@ -236,18 +233,17 @@ define <4 x i32> @usdot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NODOT-LABEL: usdot_in_loop:
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NODOT-NEXT:    mov x8, xzr
+; CHECK-NODOT-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NODOT-NEXT:  .LBB6_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-NODOT-NEXT:    ldr q3, [x1, x8]
+; CHECK-NODOT-NEXT:    ldr q2, [x0], #16
 ; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-NODOT-NEXT:    add x8, x8, #16
+; CHECK-NODOT-NEXT:    ldr q3, [x1], #16
+; CHECK-NODOT-NEXT:    subs x8, x8, #16
 ; CHECK-NODOT-NEXT:    sshll v4.8h, v2.8b, #0
-; CHECK-NODOT-NEXT:    ushll v5.8h, v3.8b, #0
 ; CHECK-NODOT-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    ushll v5.8h, v3.8b, #0
 ; CHECK-NODOT-NEXT:    ushll2 v3.8h, v3.16b, #0
-; CHECK-NODOT-NEXT:    cmp x8, #16
 ; CHECK-NODOT-NEXT:    smlal v1.4s, v4.4h, v5.4h
 ; CHECK-NODOT-NEXT:    smlal2 v1.4s, v4.8h, v5.8h
 ; CHECK-NODOT-NEXT:    smlal v1.4s, v2.4h, v3.4h
@@ -259,18 +255,17 @@ define <4 x i32> @usdot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-DOT-LABEL: usdot_in_loop:
 ; CHECK-DOT:       // %bb.0: // %entry
 ; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-DOT-NEXT:    mov x8, xzr
+; CHECK-DOT-NEXT:    mov w8, #16 // =0x10
 ; CHECK-DOT-NEXT:  .LBB6_1: // %vector.body
 ; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-NEXT:    ldr q3, [x1, x8]
+; CHECK-DOT-NEXT:    ldr q2, [x0], #16
 ; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-DOT-NEXT:    add x8, x8, #16
+; CHECK-DOT-NEXT:    ldr q3, [x1], #16
+; CHECK-DOT-NEXT:    subs x8, x8, #16
 ; CHECK-DOT-NEXT:    sshll v4.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    ushll v5.8h, v3.8b, #0
 ; CHECK-DOT-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-DOT-NEXT:    ushll v5.8h, v3.8b, #0
 ; CHECK-DOT-NEXT:    ushll2 v3.8h, v3.16b, #0
-; CHECK-DOT-NEXT:    cmp x8, #16
 ; CHECK-DOT-NEXT:    smlal v1.4s, v4.4h, v5.4h
 ; CHECK-DOT-NEXT:    smlal2 v1.4s, v4.8h, v5.8h
 ; CHECK-DOT-NEXT:    smlal v1.4s, v2.4h, v3.4h
@@ -282,15 +277,14 @@ define <4 x i32> @usdot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-DOT-I8MM-LABEL: usdot_in_loop:
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
+; CHECK-DOT-I8MM-NEXT:    mov w8, #16 // =0x10
 ; CHECK-DOT-I8MM-NEXT:  .LBB6_1: // %vector.body
 ; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0], #16
 ; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
-; CHECK-DOT-I8MM-NEXT:    add x8, x8, #16
+; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1], #16
+; CHECK-DOT-I8MM-NEXT:    subs x8, x8, #16
 ; CHECK-DOT-I8MM-NEXT:    usdot v1.4s, v3.16b, v2.16b
-; CHECK-DOT-I8MM-NEXT:    cmp x8, #16
 ; CHECK-DOT-I8MM-NEXT:    b.ne .LBB6_1
 ; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-I8MM-NEXT:    ret
@@ -402,18 +396,17 @@ define <4 x i32> @sudot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NODOT-LABEL: sudot_in_loop:
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NODOT-NEXT:    mov x8, xzr
+; CHECK-NODOT-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NODOT-NEXT:  .LBB9_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-NODOT-NEXT:    ldr q3, [x1, x8]
+; CHECK-NODOT-NEXT:    ldr q2, [x0], #16
 ; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-NODOT-NEXT:    add x8, x8, #16
+; CHECK-NODOT-NEXT:    ldr q3, [x1], #16
+; CHECK-NODOT-NEXT:    subs x8, x8, #16
 ; CHECK-NODOT-NEXT:    ushll v4.8h, v2.8b, #0
-; CHECK-NODOT-NEXT:    sshll v5.8h, v3.8b, #0
 ; CHECK-NODOT-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    sshll v5.8h, v3.8b, #0
 ; CHECK-NODOT-NEXT:    sshll2 v3.8h, v3.16b, #0
-; CHECK-NODOT-NEXT:    cmp x8, #16
 ; CHECK-NODOT-NEXT:    smlal v1.4s, v4.4h, v5.4h
 ; CHECK-NODOT-NEXT:    smlal2 v1.4s, v4.8h, v5.8h
 ; CHECK-NODOT-NEXT:    smlal v1.4s, v2.4h, v3.4h
@@ -425,18 +418,17 @@ define <4 x i32> @sudot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-DOT-LABEL: sudot_in_loop:
 ; CHECK-DOT:       // %bb.0: // %entry
 ; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-DOT-NEXT:    mov x8, xzr
+; CHECK-DOT-NEXT:    mov w8, #16 // =0x10
 ; CHECK-DOT-NEXT:  .LBB9_1: // %vector.body
 ; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-NEXT:    ldr q3, [x1, x8]
+; CHECK-DOT-NEXT:    ldr q2, [x0], #16
 ; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-DOT-NEXT:    add x8, x8, #16
+; CHECK-DOT-NEXT:    ldr q3, [x1], #16
+; CHECK-DOT-NEXT:    subs x8, x8, #16
 ; CHECK-DOT-NEXT:    ushll v4.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    sshll v5.8h, v3.8b, #0
 ; CHECK-DOT-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-DOT-NEXT:    sshll v5.8h, v3.8b, #0
 ; CHECK-DOT-NEXT:    sshll2 v3.8h, v3.16b, #0
-; CHECK-DOT-NEXT:    cmp x8, #16
 ; CHECK-DOT-NEXT:    smlal v1.4s, v4.4h, v5.4h
 ; CHECK-DOT-NEXT:    smlal2 v1.4s, v4.8h, v5.8h
 ; CHECK-DOT-NEXT:    smlal v1.4s, v2.4h, v3.4h
@@ -448,15 +440,14 @@ define <4 x i32> @sudot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-DOT-I8MM-LABEL: sudot_in_loop:
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
+; CHECK-DOT-I8MM-NEXT:    mov w8, #16 // =0x10
 ; CHECK-DOT-I8MM-NEXT:  .LBB9_1: // %vector.body
 ; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0], #16
 ; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
-; CHECK-DOT-I8MM-NEXT:    add x8, x8, #16
+; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1], #16
+; CHECK-DOT-I8MM-NEXT:    subs x8, x8, #16
 ; CHECK-DOT-I8MM-NEXT:    usdot v1.4s, v2.16b, v3.16b
-; CHECK-DOT-I8MM-NEXT:    cmp x8, #16
 ; CHECK-DOT-I8MM-NEXT:    b.ne .LBB9_1
 ; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-I8MM-NEXT:    ret
@@ -775,13 +766,12 @@ define <4 x i32> @udot_no_bin_op_in_loop(ptr %p){
 ; CHECK-NODOT-LABEL: udot_no_bin_op_in_loop:
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NODOT-NEXT:    mov x8, xzr
+; CHECK-NODOT-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NODOT-NEXT:  .LBB16_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
+; CHECK-NODOT-NEXT:    ldr q2, [x0], #16
 ; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-NODOT-NEXT:    add x8, x8, #16
-; CHECK-NODOT-NEXT:    cmp x8, #16
+; CHECK-NODOT-NEXT:    subs x8, x8, #16
 ; CHECK-NODOT-NEXT:    ushll v3.8h, v2.8b, #0
 ; CHECK-NODOT-NEXT:    ushll2 v2.8h, v2.16b, #0
 ; CHECK-NODOT-NEXT:    uaddw v1.4s, v1.4s, v3.4h
@@ -796,13 +786,12 @@ define <4 x i32> @udot_no_bin_op_in_loop(ptr %p){
 ; CHECK-DOT:       // %bb.0: // %entry
 ; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-DOT-NEXT:    movi v2.16b, #1
-; CHECK-DOT-NEXT:    mov x8, xzr
+; CHECK-DOT-NEXT:    mov w8, #16 // =0x10
 ; CHECK-DOT-NEXT:  .LBB16_1: // %vector.body
 ; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-NEXT:    ldr q3, [x0, x8]
+; CHECK-DOT-NEXT:    ldr q3, [x0], #16
 ; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-DOT-NEXT:    add x8, x8, #16
-; CHECK-DOT-NEXT:    cmp x8, #16
+; CHECK-DOT-NEXT:    subs x8, x8, #16
 ; CHECK-DOT-NEXT:    udot v1.4s, v3.16b, v2.16b
 ; CHECK-DOT-NEXT:    b.ne .LBB16_1
 ; CHECK-DOT-NEXT:  // %bb.2: // %end
@@ -812,13 +801,12 @@ define <4 x i32> @udot_no_bin_op_in_loop(ptr %p){
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    movi v2.16b, #1
-; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
+; CHECK-DOT-I8MM-NEXT:    mov w8, #16 // =0x10
 ; CHECK-DOT-I8MM-NEXT:  .LBB16_1: // %vector.body
 ; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-I8MM-NEXT:    ldr q3, [x0, x8]
+; CHECK-DOT-I8MM-NEXT:    ldr q3, [x0], #16
 ; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
-; CHECK-DOT-I8MM-NEXT:    add x8, x8, #16
-; CHECK-DOT-I8MM-NEXT:    cmp x8, #16
+; CHECK-DOT-I8MM-NEXT:    subs x8, x8, #16
 ; CHECK-DOT-I8MM-NEXT:    udot v1.4s, v3.16b, v2.16b
 ; CHECK-DOT-I8MM-NEXT:    b.ne .LBB16_1
 ; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
@@ -1135,20 +1123,19 @@ define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-NODOT:       // %bb.0: // %entry
 ; CHECK-NODOT-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NODOT-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NODOT-NEXT:    mov x8, xzr
+; CHECK-NODOT-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-NODOT-NEXT:  .LBB28_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-NODOT-NEXT:    ldr q3, [x1, x8]
-; CHECK-NODOT-NEXT:    ldr q4, [x2, x8]
-; CHECK-NODOT-NEXT:    add x8, x8, #16
+; CHECK-NODOT-NEXT:    ldr q2, [x0], #16
+; CHECK-NODOT-NEXT:    subs x8, x8, #16
+; CHECK-NODOT-NEXT:    ldr q3, [x1], #16
+; CHECK-NODOT-NEXT:    ldr q4, [x2], #16
 ; CHECK-NODOT-NEXT:    sshll v5.8h, v2.8b, #0
-; CHECK-NODOT-NEXT:    ushll v6.8h, v4.8b, #0
 ; CHECK-NODOT-NEXT:    sshll v7.8h, v3.8b, #0
 ; CHECK-NODOT-NEXT:    sshll2 v2.8h, v2.16b, #0
-; CHECK-NODOT-NEXT:    ushll2 v4.8h, v4.16b, #0
 ; CHECK-NODOT-NEXT:    sshll2 v3.8h, v3.16b, #0
-; CHECK-NODOT-NEXT:    cmp x8, #1024
+; CHECK-NODOT-NEXT:    ushll v6.8h, v4.8b, #0
+; CHECK-NODOT-NEXT:    ushll2 v4.8h, v4.16b, #0
 ; CHECK-NODOT-NEXT:    smlal v0.4s, v5.4h, v6.4h
 ; CHECK-NODOT-NEXT:    smlal v1.4s, v7.4h, v6.4h
 ; CHECK-NODOT-NEXT:    smlal2 v0.4s, v5.8h, v6.8h
@@ -1166,20 +1153,19 @@ define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-DOT:       // %bb.0: // %entry
 ; CHECK-DOT-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-DOT-NEXT:    mov x8, xzr
+; CHECK-DOT-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-DOT-NEXT:  .LBB28_1: // %vector.body
 ; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-NEXT:    ldr q3, [x1, x8]
-; CHECK-DOT-NEXT:    ldr q4, [x2, x8]
-; CHECK-DOT-NEXT:    add x8, x8, #16
+; CHECK-DOT-NEXT:    ldr q2, [x0], #16
+; CHECK-DOT-NEXT:    subs x8, x8, #16
+; CHECK-DOT-NEXT:    ldr q3, [x1], #16
+; CHECK-DOT-NEXT:    ldr q4, [x2], #16
 ; CHECK-DOT-NEXT:    sshll v5.8h, v2.8b, #0
-; CHECK-DOT-NEXT:    ushll v6.8h, v4.8b, #0
 ; CHECK-DOT-NEXT:    sshll v7.8h, v3.8b, #0
 ; CHECK-DOT-NEXT:    sshll2 v2.8h, v2.16b, #0
-; CHECK-DOT-NEXT:    ushll2 v4.8h, v4.16b, #0
 ; CHECK-DOT-NEXT:    sshll2 v3.8h, v3.16b, #0
-; CHECK-DOT-NEXT:    cmp x8, #1024
+; CHECK-DOT-NEXT:    ushll v6.8h, v4.8b, #0
+; CHECK-DOT-NEXT:    ushll2 v4.8h, v4.16b, #0
 ; CHECK-DOT-NEXT:    smlal v0.4s, v5.4h, v6.4h
 ; CHECK-DOT-NEXT:    smlal v1.4s, v7.4h, v6.4h
 ; CHECK-DOT-NEXT:    smlal2 v0.4s, v5.8h, v6.8h
@@ -1197,16 +1183,15 @@ define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
+; CHECK-DOT-I8MM-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-DOT-I8MM-NEXT:  .LBB28_1: // %vector.body
 ; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0, x8]
-; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1, x8]
-; CHECK-DOT-I8MM-NEXT:    ldr q4, [x2, x8]
-; CHECK-DOT-I8MM-NEXT:    add x8, x8, #16
+; CHECK-DOT-I8MM-NEXT:    ldr q2, [x0], #16
+; CHECK-DOT-I8MM-NEXT:    subs x8, x8, #16
+; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1], #16
+; CHECK-DOT-I8MM-NEXT:    ldr q4, [x2], #16
 ; CHECK-DOT-I8MM-NEXT:    usdot v0.4s, v4.16b, v2.16b
 ; CHECK-DOT-I8MM-NEXT:    usdot v1.4s, v4.16b, v3.16b
-; CHECK-DOT-I8MM-NEXT:    cmp x8, #1024
 ; CHECK-DOT-I8MM-NEXT:    b.ne .LBB28_1
 ; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
 ; CHECK-DOT-I8MM-NEXT:    add v0.4s, v1.4s, v0.4s

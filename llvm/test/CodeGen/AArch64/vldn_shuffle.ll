@@ -6,15 +6,14 @@ define void @vld2(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #4
 ; CHECK-NEXT:    fmul v2.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v2.4s, v1.4s, v1.4s
-; CHECK-NEXT:    str q2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
+; CHECK-NEXT:    str q2, [x1], #16
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
@@ -46,16 +45,15 @@ define void @vld3(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK:       .Lfunc_begin1:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x0], #48
+; CHECK-NEXT:    subs x8, x8, #4
 ; CHECK-NEXT:    fmul v3.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v3.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    fmla v3.4s, v2.4s, v2.4s
-; CHECK-NEXT:    str q3, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
+; CHECK-NEXT:    str q3, [x1], #16
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
@@ -90,18 +88,16 @@ define void @vld4(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK:       .Lfunc_begin2:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
-; CHECK-NEXT:    add x9, x1, x8
-; CHECK-NEXT:    add x8, x8, #32
-; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
+; CHECK-NEXT:    subs x8, x8, #4
 ; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v4.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    fmul v5.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x9]
+; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x1], #32
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
@@ -140,15 +136,12 @@ define void @twosrc(ptr nocapture readonly %pSrc, ptr nocapture readonly %pSrc2,
 ; CHECK:       .Lfunc_begin3:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-NEXT:  .LBB3_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8
-; CHECK-NEXT:    add x10, x1, x8
-; CHECK-NEXT:    add x8, x8, #32
-; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x9]
-; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-NEXT:    ld2 { v2.4s, v3.4s }, [x10]
+; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #4
+; CHECK-NEXT:    ld2 { v2.4s, v3.4s }, [x1], #32
 ; CHECK-NEXT:    fmul v4.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    fmla v4.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    str q4, [x2], #16
@@ -186,15 +179,14 @@ define void @vld2_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK:       .Lfunc_begin4:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-NEXT:  .LBB4_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #4
 ; CHECK-NEXT:    fmul v2.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v2.4s, v1.4s, v1.4s
-; CHECK-NEXT:    str q2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
+; CHECK-NEXT:    str q2, [x1], #16
 ; CHECK-NEXT:    b.ne .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
@@ -225,16 +217,15 @@ define void @vld3_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK:       .Lfunc_begin5:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-NEXT:  .LBB5_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x0], #48
+; CHECK-NEXT:    subs x8, x8, #4
 ; CHECK-NEXT:    fmul v3.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v3.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    fmla v3.4s, v2.4s, v2.4s
-; CHECK-NEXT:    str q3, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
+; CHECK-NEXT:    str q3, [x1], #16
 ; CHECK-NEXT:    b.ne .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
@@ -267,18 +258,16 @@ define void @vld4_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK:       .Lfunc_begin6:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1024 // =0x400
 ; CHECK-NEXT:  .LBB6_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
-; CHECK-NEXT:    add x9, x1, x8
-; CHECK-NEXT:    add x8, x8, #32
-; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
+; CHECK-NEXT:    subs x8, x8, #4
 ; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    fmla v4.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    fmul v5.4s, v2.4s, v2.4s
 ; CHECK-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x9]
+; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x1], #32
 ; CHECK-NEXT:    b.ne .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret

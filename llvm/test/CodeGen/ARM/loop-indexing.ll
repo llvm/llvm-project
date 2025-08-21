@@ -27,15 +27,15 @@
 ; CHECK-LABEL: test_fma
 ; CHECK: @ %loop
 
-; CHECK-DEFAULT: vldr s{{.*}}, #8]
-; CHECK-DEFAULT: vldr s{{.*}}, #8]
-; CHECK-DEFAULT: vldr s{{.*}}, #12]
-; CHECK-DEFAULT: vldr s{{.*}}, #12]
+; CHECK-DEFAULT: vldr s{{.*}}, #-4]
+; CHECK-DEFAULT: vldr s{{.*}}, #-4]
+; CHECK-DEFAULT: vldr s{{.*}}, [r{{[0-9]+}}]
+; CHECK-DEFAULT: vldr s{{.*}}, [r{{[0-9]+}}]
 
-; CHECK-COMPLEX: vldr s{{.*}}, #8]
-; CHECK-COMPLEX: vldr s{{.*}}, #8]
-; CHECK-COMPLEX: vldr s{{.*}}, #12]
-; CHECK-COMPLEX: vldr s{{.*}}, #12]
+; CHECK-COMPLEX: vldr s{{.*}}, #-4]
+; CHECK-COMPLEX: vldr s{{.*}}, #-4]
+; CHECK-COMPLEX: vldr s{{.*}}, [r{{[0-9]+}}]
+; CHECK-COMPLEX: vldr s{{.*}}, [r{{[0-9]+}}]
 
 define float @test_fma(ptr %a, ptr %b, i32 %N) {
 entry:
@@ -69,10 +69,10 @@ exit:
 
 ; CHECK-LABEL: convolve_16bit
 ; TODO: Both arrays should use indexing
-; CHECK-DEFAULT: ldr{{.*}}, #8]!
+; CHECK-DEFAULT: ldr{{.*}}, #-6]
 ; CHECK-DEFAULT-NOT: ldr{{.*}}]!
 
-; CHECK-COMPLEX: ldr{{.*}}, #8]!
+; CHECK-COMPLEX: ldr{{.*}}, #-6]
 ; CHECK-COMPLEX-NOT: ldr{{.*}}]!
 
 ; DISABLED-NOT: ldr{{.*}}]!
@@ -182,21 +182,21 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ; CHECK-LABEL: mul_8x8
 ; CHECK: @ %for.body
 
-; CHECK-DEFAULT: str{{.*}}, #16]!
-; CHECK-DEFAULT: ldrb{{.*}}, #4]!
-; CHECK-DEFAULT: ldrb{{.*}}, #4]!
+; CHECK-DEFAULT: str{{.*}}, #-12]
+; CHECK-DEFAULT: ldrb{{.*}}, #4
+; CHECK-DEFAULT: ldrb{{.*}}, #4
 
-; CHECK-COMPLEX: str{{.*}}, #16]!
-; CHECK-COMPLEX: ldrb{{.*}}, #4]!
-; CHECK-COMPLEX: ldrb{{.*}}, #4]!
+; CHECK-COMPLEX: str{{.*}}, #-12]
+; CHECK-COMPLEX: ldrb{{.*}}, #4
+; CHECK-COMPLEX: ldrb{{.*}}, #4
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
 ; CHECK-T2: @ %for.body.epil
-; CHECK-T2: ldrb{{.*}}, #1]!
-; CHECK-T2: ldrb{{.*}}, #1]!
-; CHECK-T2: str{{.*}}, #4]!
+; CHECK-T2: ldrb{{.*}}, #1
+; CHECK-T2: ldrb{{.*}}, #1
+; CHECK-T2: str{{.*}}, #4
 
 define void @mul_8x8(ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture %C, i32 %N) {
 entry:
@@ -289,20 +289,20 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK-LABEL: mul_16x8
 ; CHECK: @ %for.body 
 
-; CHECK-DEFAULT: str{{.*}}, #16]!
-; CHECK-DEFAULT: ldrsh{{.*}}, #8]!
+; CHECK-DEFAULT: str{{.*}}, #-12]
+; CHECK-DEFAULT: ldrsh{{.*}}, #8
 
-; CHECK-COMPLEX: ldrsh{{.*}}, #8]!
-; CHECK-COMPLEX: str{{.*}}, #16]!
-; CHECK-COMPLEX: ldrb{{.*}}, #4]!
+; CHECK-COMPLEX: ldrsh{{.*}}, #-6]
+; CHECK-COMPLEX: str{{.*}}, #-12]
+; CHECK-COMPLEX: ldrb{{.*}}, #4
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
 ; CHECK-T2: @ %for.body.epil
-; CHECK-T2: ldrsh{{.*}}, #2]!
-; CHECK-T2: ldrb{{.*}}, #1]!
-; CHECK-T2: str{{.*}}, #4]!
+; CHECK-T2: ldrsh{{.*}}, #2
+; CHECK-T2: ldrb{{.*}}, #1
+; CHECK-T2: str{{.*}}, #4
 
 define void @mul_16x8(ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture %C, i32 %N) {
 entry:
@@ -397,20 +397,20 @@ for.body:                                         ; preds = %for.body, %for.body
 
 ; TODO: pre-indexed loads
 ; CHECK-DEFAULT-NOT: ldrsh{{.*}}]!
-; CHECK-DEFAULT: str{{.*}}, #16]!
+; CHECK-DEFAULT: str{{.*}}, #-12]
 ; CHECK-DEFAULT-NOT: ldrsh{{.*}}]!
 
-; CHECK-COMPLEX: ldrsh{{.*}}]!
-; CHECK-COMPLEX: ldrsh{{.*}}]!
-; CHECK-COMPLEX: str{{.*}}]!
+; CHECK-COMPLEX: ldrsh{{.*}}]
+; CHECK-COMPLEX: ldrsh{{.*}}]
+; CHECK-COMPLEX: str{{.*}}]
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
 ; CHECK-T2: @ %for.body.epil
-; CHECK-T2: ldrsh{{.*}}, #2]!
-; CHECK-T2: ldrsh{{.*}}, #2]!
-; CHECK-T2: str{{.*}}, #4]!
+; CHECK-T2: ldrsh{{.*}}, #2
+; CHECK-T2: ldrsh{{.*}}, #2
+; CHECK-T2: str{{.*}}, #4
 
 define void @mul_16x16(ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture %C, i32 %N) {
 entry:
@@ -503,15 +503,15 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK-LABEL: mul_8x8_2d
 ; CHECK: @ %for.body4.us
 
-; CHECK-DEFAULT: ldr{{.*}}, #16]!
-; CHECK-DEFAULT: ldrb{{.*}}, #4]!
+; CHECK-DEFAULT: ldr{{.*}}, #-12]
+; CHECK-DEFAULT: ldrb{{.*}}, #4
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
 ; CHECK-T2: @ %for.body4.us.epil
-; CHECK-T2: ldrb{{.*}}, #1]!
-; CHECK-T2: ldr{{.*}}, #4]!
+; CHECK-T2: ldrb{{.*}}, #1
+; CHECK-T2: ldr{{.*}}, [r{{[0-9]+}}]
 
 define void @mul_8x8_2d(ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture readonly %C, i32 %N, i32 %M) {
 entry:
@@ -622,15 +622,15 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
 ; CHECK-LABEL: mul_16x16_2d
 ; CHECK: @ %for.body4.us
 
-; CHECK-DEFAULT: ldr{{.*}}, #16]!
-; CHECK-DEFAULT: ldrsh{{.*}}, #8]!
+; CHECK-DEFAULT: ldr{{.*}}, [r{{[0-9]+}}]
+; CHECK-DEFAULT: ldrsh{{.*}}, #8
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
 
 ; CHECK-T2: @ %for.body4.us.epil
-; CHECK-T2: ldrsh{{.*}}, #2]!
-; CHECK-T2: ldr{{.*}}, #4]!
+; CHECK-T2: ldrsh{{.*}}, #2
+; CHECK-T2: ldr{{.*}}, [r{{[0-9]+}}]
 
 define void @mul_16x16_2d(ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture readonly %C, i32 %N, i32 %M) {
 entry:
@@ -735,7 +735,7 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
 
 ; TODO: Both input arrays could use pre-indexed loads.
 ; TODO: pre-indexed stores.
-; CHECK-DEFAULT: ldrb{{.*}}, #4]!
+; CHECK-DEFAULT: ldrb{{.*}}, #4
 ; CHECK-DEFAULT-NOT: ldr{{.*}}]!
 ; CHECK-DEFAULT-NOT: str{{.*}}]!
 
@@ -747,7 +747,7 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
 ; DISABLED-NOT: str{{.*}}]!
 
 ; CHECK-T2: @ %for.body4.us.epil
-; CHECK-T2: ldrb{{.*}}, #1]!
+; CHECK-T2: ldrb{{.*}}, #1
 
 define void @mac_8x8_2d(ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture %C, i32 %N, i32 %M) {
 entry:
@@ -852,7 +852,7 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
 ; CHECK: @ %for.body4.us
 
 ; TODO: pre-indexed loads for both input arrays.
-; CHECK-DEFAULT: ldrsh{{.*}}, #8]!
+; CHECK-DEFAULT: ldrsh{{.*}}, #-6]
 ; CHECK-DEFAULT-NOT: ldr{{.*}}]!
 
 ; TODO: increased complexity should lead to better codegen.
@@ -861,7 +861,7 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
 ; DISABLED-NOT: ldr{{.*}}]!
 
 ; CHECK-T2: @ %for.body4.us.epil
-; CHECK-T2: ldrsh{{.*}}, #2]!
+; CHECK-T2: ldrsh{{.*}}, #2
 
 define void @mac_16x16_2d(ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture %C, i32 %N, i32 %M) {
 entry:
@@ -1043,14 +1043,14 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK-DEFAULT-NOT: ldr{{.*}}]!
 ; CHECK-DEFAULT-NOT: str{{.*}}]!
 
-; CHECK-COMPLEX: ldr{{.*}}, #16]!
-; CHECK-COMPLEX: ldr{{.*}}, #16]!
-; CHECK-COMPLEX: str{{.*}}, #16]!
+; CHECK-COMPLEX: ldr{{.*}}, #-12]
+; CHECK-COMPLEX: ldr{{.*}}, #-12]
+; CHECK-COMPLEX: str{{.*}}, #-12]
 
 ; CHECK-T2: @ %for.body.epil
-; CHECK-T2: ldr{{.*}}, #4]!
-; CHECK-T2: ldr{{.*}}, #4]!
-; CHECK-T2: str{{.*}}, #4]!
+; CHECK-T2: ldr{{.*}}, #4
+; CHECK-T2: ldr{{.*}}, #4
+; CHECK-T2: str{{.*}}, #4
 
 define void @mul32x32_forwards(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 entry:

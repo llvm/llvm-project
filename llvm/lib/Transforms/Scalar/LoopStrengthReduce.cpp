@@ -523,6 +523,8 @@ struct Formula {
 
   bool countsDownToZero() const;
 
+  bool isBaseRegOnly() const;
+
   size_t getNumRegs() const;
   Type *getType() const;
 
@@ -715,6 +717,11 @@ bool Formula::countsDownToZero() const {
   if (!match(BaseRegs[0], m_scev_AffineAddRec(m_SCEV(), m_scev_APInt(StepInt))))
     return false;
   return StepInt->isNegative();
+}
+
+bool Formula::isBaseRegOnly() const {
+  return BaseGV == nullptr && Scale == 0 && ScaledReg == nullptr &&
+         BaseOffset.isZero() && UnfoldedOffset.isZero() && BaseRegs.size() == 1;
 }
 
 /// Return the total number of register operands used by this formula. This does
@@ -1425,12 +1432,17 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
       const SCEV *Start;
       const SCEVConstant *Step;
       if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step))))
-        // If the step size matches the base offset, we could use pre-indexed
-        // addressing.
-        if ((AMK == TTI::AMK_PreIndexed && F.BaseOffset.isFixed() &&
+        if ( // If the step size matches the base offset, we could use
+             // pre-indexed addressing.
+            (AMK == TTI::AMK_PreIndexed && F.BaseOffset.isFixed() &&
              Step->getAPInt() == F.BaseOffset.getFixedValue()) ||
             (AMK == TTI::AMK_PostIndexed && !isa<SCEVConstant>(Start) &&
-             SE->isLoopInvariant(Start, L)))
+             SE->isLoopInvariant(Start, L)) ||
+            // general check for post-indexed addressing with specific step
+            (LU.Kind == LSRUse::Address && F.isBaseRegOnly() &&
+             TTI->isLegalAddressingMode(LU.AccessTy.MemTy, nullptr,
+                                        Step->getAPInt().getSExtValue(), true,
+                                        0, LU.AccessTy.AddrSpace)))
           LoopCost = 0;
     }
     // If the loop counts down to zero and we'll be using a hardware loop then

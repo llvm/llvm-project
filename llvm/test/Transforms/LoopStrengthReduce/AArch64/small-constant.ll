@@ -19,19 +19,20 @@ define float @test1(ptr nocapture readonly %arr, i64 %start, float %threshold) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cbz x1, .LBB0_4
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    add x8, x0, #28
+; CHECK-NEXT:    add x9, x0, x1, lsl #2
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    add x9, x9, #28
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr s1, [x8, x1, lsl #2]
+; CHECK-NEXT:    ldr s1, [x9], #4
 ; CHECK-NEXT:    fcmp s1, s0
 ; CHECK-NEXT:    b.gt .LBB0_5
 ; CHECK-NEXT:  // %bb.3: // %for.cond
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    add x1, x1, #1
-; CHECK-NEXT:    cbnz x1, .LBB0_2
+; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    fmov s0, #-7.00000000
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    fmov s1, #-7.00000000
 ; CHECK-NEXT:  .LBB0_5: // %cleanup2
 ; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret

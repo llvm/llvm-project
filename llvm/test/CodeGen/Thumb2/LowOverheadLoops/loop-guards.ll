@@ -182,10 +182,9 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK: ne_trip_count
 ; CHECK: body:
 ; CHECK: bb.0.entry:
-; CHECK:   $lr = t2WLS killed renamable $r3, %bb.3
-; CHECK: bb.1.do.body.preheader:
-; CHECK: bb.2.do.body:
-; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
+; CHECK:   $lr = t2WLS killed renamable $r3, %bb.2
+; CHECK: bb.1.do.body:
+; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.1
 define void @ne_trip_count(i1 zeroext %t1, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   br label %do.body.preheader

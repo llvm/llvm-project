@@ -23,18 +23,15 @@ define i32 @test_lshr(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-V7M-LABEL: test_lshr:
 ; CHECK-V7M:       @ %bb.0: @ %entry
 ; CHECK-V7M-NEXT:    lsrs r2, r2, #2
-; CHECK-V7M-NEXT:    beq .LBB0_3
-; CHECK-V7M-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-V7M-NEXT:    subs r1, #4
-; CHECK-V7M-NEXT:    subs r0, #4
-; CHECK-V7M-NEXT:  .LBB0_2: @ %while.body
+; CHECK-V7M-NEXT:    beq .LBB0_2
+; CHECK-V7M-NEXT:  .LBB0_1: @ %while.body
 ; CHECK-V7M-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-V7M-NEXT:    ldr r3, [r1, #4]!
+; CHECK-V7M-NEXT:    ldr r3, [r1], #4
 ; CHECK-V7M-NEXT:    subs r2, #1
 ; CHECK-V7M-NEXT:    lsl.w r3, r3, #1
-; CHECK-V7M-NEXT:    str r3, [r0, #4]!
-; CHECK-V7M-NEXT:    bne .LBB0_2
-; CHECK-V7M-NEXT:  .LBB0_3: @ %while.end
+; CHECK-V7M-NEXT:    str r3, [r0], #4
+; CHECK-V7M-NEXT:    bne .LBB0_1
+; CHECK-V7M-NEXT:  .LBB0_2: @ %while.end
 ; CHECK-V7M-NEXT:    movs r0, #0
 ; CHECK-V7M-NEXT:    bx lr
 ;
@@ -109,18 +106,15 @@ define i32 @test_lshr2(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-V7M-LABEL: test_lshr2:
 ; CHECK-V7M:       @ %bb.0: @ %entry
 ; CHECK-V7M-NEXT:    lsrs r2, r2, #2
-; CHECK-V7M-NEXT:    beq .LBB1_3
-; CHECK-V7M-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-V7M-NEXT:    subs r1, #4
-; CHECK-V7M-NEXT:    subs r0, #4
-; CHECK-V7M-NEXT:  .LBB1_2: @ %while.body
+; CHECK-V7M-NEXT:    beq .LBB1_2
+; CHECK-V7M-NEXT:  .LBB1_1: @ %while.body
 ; CHECK-V7M-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-V7M-NEXT:    ldr r3, [r1, #4]!
+; CHECK-V7M-NEXT:    ldr r3, [r1], #4
 ; CHECK-V7M-NEXT:    subs r2, #1
 ; CHECK-V7M-NEXT:    lsl.w r3, r3, #1
-; CHECK-V7M-NEXT:    str r3, [r0, #4]!
-; CHECK-V7M-NEXT:    bne .LBB1_2
-; CHECK-V7M-NEXT:  .LBB1_3: @ %while.end
+; CHECK-V7M-NEXT:    str r3, [r0], #4
+; CHECK-V7M-NEXT:    bne .LBB1_1
+; CHECK-V7M-NEXT:  .LBB1_2: @ %while.end
 ; CHECK-V7M-NEXT:    movs r0, #0
 ; CHECK-V7M-NEXT:    bx lr
 ;

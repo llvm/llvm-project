@@ -20,28 +20,31 @@ define hidden i32 @f(i32 %n) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, ra_auth_code, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r12, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r12, lr}
+; CHECK-NEXT:    .cfi_def_cfa_offset 36
 ; CHECK-NEXT:    .cfi_offset lr, -4
 ; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
-; CHECK-NEXT:    .cfi_offset r9, -12
-; CHECK-NEXT:    .cfi_offset r8, -16
-; CHECK-NEXT:    .cfi_offset r7, -20
-; CHECK-NEXT:    .cfi_offset r6, -24
-; CHECK-NEXT:    .cfi_offset r5, -28
-; CHECK-NEXT:    .cfi_offset r4, -32
+; CHECK-NEXT:    .cfi_offset r10, -12
+; CHECK-NEXT:    .cfi_offset r9, -16
+; CHECK-NEXT:    .cfi_offset r8, -20
+; CHECK-NEXT:    .cfi_offset r7, -24
+; CHECK-NEXT:    .cfi_offset r6, -28
+; CHECK-NEXT:    .cfi_offset r5, -32
+; CHECK-NEXT:    .cfi_offset r4, -36
 ; CHECK-NEXT:    .setfp r7, sp, #12
 ; CHECK-NEXT:    add r7, sp, #12
-; CHECK-NEXT:    .cfi_def_cfa r7, 20
+; CHECK-NEXT:    .cfi_def_cfa r7, 24
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    movs r0, #7
 ; CHECK-NEXT:    add.w r0, r0, r5, lsl #2
 ; CHECK-NEXT:    bic r0, r0, #7
-; CHECK-NEXT:    sub.w r4, sp, r0
-; CHECK-NEXT:    mov sp, r4
+; CHECK-NEXT:    sub.w r8, sp, r0
+; CHECK-NEXT:    mov sp, r8
 ; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    mov r1, r8
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    cmp r5, #1
 ; CHECK-NEXT:    blt .LBB0_3
@@ -61,31 +64,31 @@ define hidden i32 @f(i32 %n) local_unnamed_addr #0 {
 ; CHECK-NEXT:    bic r0, r5, #3
 ; CHECK-NEXT:    movs r2, #1
 ; CHECK-NEXT:    subs r0, #4
-; CHECK-NEXT:    sub.w r3, r4, #16
+; CHECK-NEXT:    add.w r3, r8, #12
 ; CHECK-NEXT:    add.w lr, r2, r0, lsr #2
 ; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:  .LBB0_5: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r5, [r3, #16]!
+; CHECK-NEXT:    ldrd r5, r1, [r3, #-12]
 ; CHECK-NEXT:    adds r2, #4
+; CHECK-NEXT:    ldr r6, [r3, #-4]
 ; CHECK-NEXT:    add r0, r5
-; CHECK-NEXT:    ldrd r5, r1, [r3, #4]
-; CHECK-NEXT:    ldr r6, [r3, #12]
-; CHECK-NEXT:    add r0, r5
+; CHECK-NEXT:    ldr r4, [r3], #16
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    add r0, r6
+; CHECK-NEXT:    add r0, r4
 ; CHECK-NEXT:    le lr, .LBB0_5
 ; CHECK-NEXT:  .LBB0_6: @ %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq .LBB0_9
 ; CHECK-NEXT:  @ %bb.7: @ %for.body.epil
-; CHECK-NEXT:    ldr.w r3, [r4, r2, lsl #2]
+; CHECK-NEXT:    ldr.w r3, [r8, r2, lsl #2]
 ; CHECK-NEXT:    cmp.w r12, #1
 ; CHECK-NEXT:    add r0, r3
 ; CHECK-NEXT:    beq .LBB0_9
 ; CHECK-NEXT:  @ %bb.8: @ %for.body.epil.1
-; CHECK-NEXT:    add.w r2, r4, r2, lsl #2
+; CHECK-NEXT:    add.w r2, r8, r2, lsl #2
 ; CHECK-NEXT:    cmp.w r12, #2
 ; CHECK-NEXT:    ldr r1, [r2, #4]
 ; CHECK-NEXT:    add r0, r1
@@ -95,7 +98,7 @@ define hidden i32 @f(i32 %n) local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB0_9: @ %for.cond.cleanup
 ; CHECK-NEXT:    sub.w r4, r7, #12
 ; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r12, lr}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
