@@ -2,7 +2,12 @@ import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("AMDGPUGenDisassemblerTables") {
   visibility = [ ":Disassembler" ]
-  args = [ "-gen-disassembler" ]
+  args = [
+    "-gen-disassembler",
+    "-specialize-decoders-per-bitwidth",
+  ]
+
+  args = [   ]
   td_file = "../AMDGPU.td"
 }
 
