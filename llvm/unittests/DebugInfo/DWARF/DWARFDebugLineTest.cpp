@@ -2154,7 +2154,7 @@ TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
 /// With the old exclusive HighPC logic, lookups at the last row's address would
 /// fail. With the new inclusive HighPC logic, lookups at the HighPC address
 /// should succeed.
-TEST_F(DebugLineBasicFixture, HighPCInclusiveLookup) {
+TEST_F(DebugLineBasicFixture, LookupLastRow) {
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -2189,7 +2189,7 @@ TEST_F(DebugLineBasicFixture, HighPCInclusiveLookup) {
   ASSERT_EQ(Table->Sequences.size(), 1u);
   const auto &Seq = Table->Sequences[0];
   EXPECT_EQ(Seq.LowPC, 0x1000U);
-  EXPECT_EQ(Seq.HighPC, 0x1011U);
+  EXPECT_EQ(Seq.HighPC, 0x1010U);
 
   auto LastRow = Table->Rows.back();
 
@@ -2199,8 +2199,7 @@ TEST_F(DebugLineBasicFixture, HighPCInclusiveLookup) {
   {
     uint32_t RowIndex = Table->lookupAddress(
         {LastRow.Address.Address, object::SectionedAddress::UndefSection});
-    // EXPECT_NE(RowIndex, Table->UnknownRowIndex) << "Lookup at HighPC found no
-    // row";
+    // Both last and the second to the last row have the same PC, so the second to the last should pop up first.
     EXPECT_EQ(RowIndex, Table->Rows.size() - 2)
         << "Lookup at HighPC should find the second to the last row";
   }
@@ -2209,7 +2208,7 @@ TEST_F(DebugLineBasicFixture, HighPCInclusiveLookup) {
 /// Test that a sequence with only one row works correctly with inclusive
 /// HighPC. This is an important edge case where LowPC == HighPC, and the
 /// inclusive HighPC logic should still allow lookups at that single address.
-TEST_F(DebugLineBasicFixture, SingleInstSequenceInclusiveHighPC) {
+TEST_F(DebugLineBasicFixture, SingleInstSeq) {
   if (!setupGenerator())
     GTEST_SKIP();
 
@@ -2236,7 +2235,7 @@ TEST_F(DebugLineBasicFixture, SingleInstSequenceInclusiveHighPC) {
   ASSERT_EQ(Table->Sequences.size(), 1u);
   const auto &Seq = Table->Sequences[0];
   EXPECT_EQ(Seq.LowPC, 0x3000U);
-  EXPECT_EQ(Seq.HighPC, 0x3001U);
+  EXPECT_EQ(Seq.HighPC, 0x3000U);
 
   // Verify we have exactly one row (plus the end_sequence row)
   EXPECT_EQ(Table->Rows.size(), 2u);
@@ -2251,8 +2250,6 @@ TEST_F(DebugLineBasicFixture, SingleInstSequenceInclusiveHighPC) {
   {
     uint32_t RowIndex = Table->lookupAddress(
         {LastRow.Address.Address, object::SectionedAddress::UndefSection});
-    // EXPECT_NE(RowIndex, Table->UnknownRowIndex) << "Lookup at HighPC found no
-    // row";
     EXPECT_EQ(RowIndex, Table->Rows.size() - 2)
         << "Lookup at HighPC should find the last row";
   }
