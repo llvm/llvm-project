@@ -14,7 +14,7 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[DST_21:%.*]] = ptrtoint ptr [[DST_2:%.*]] to i64
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 20, i64 [[TMP1]])
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
@@ -52,12 +52,12 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i64, ptr [[SRC_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i64, ptr [[SRC_2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP29:%.*]] = mul nuw i64 [[TMP28]], 2
+; CHECK-NEXT:    [[TMP29:%.*]] = shl nuw i64 [[TMP28]], 1
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[TMP27]], i64 [[TMP29]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP27]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <vscale x 2 x i64>, ptr [[TMP30]], align 8
 ; CHECK-NEXT:    [[TMP32:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP33:%.*]] = mul nuw i64 [[TMP32]], 2
+; CHECK-NEXT:    [[TMP33:%.*]] = shl nuw i64 [[TMP32]], 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i64, ptr [[TMP31]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <vscale x 2 x i64>, ptr [[TMP31]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <vscale x 2 x i64>, ptr [[TMP34]], align 8
@@ -66,12 +66,12 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr i64, ptr [[DST_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr i64, ptr [[DST_2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP43:%.*]] = mul nuw i64 [[TMP42]], 2
+; CHECK-NEXT:    [[TMP43:%.*]] = shl nuw i64 [[TMP42]], 1
 ; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i64, ptr [[TMP41]], i64 [[TMP43]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP35]], ptr [[TMP41]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP36]], ptr [[TMP44]], align 8
 ; CHECK-NEXT:    [[TMP46:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP47:%.*]] = mul nuw i64 [[TMP46]], 2
+; CHECK-NEXT:    [[TMP47:%.*]] = shl nuw i64 [[TMP46]], 1
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr i64, ptr [[TMP45]], i64 [[TMP47]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP35]], ptr [[TMP45]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP36]], ptr [[TMP48]], align 8

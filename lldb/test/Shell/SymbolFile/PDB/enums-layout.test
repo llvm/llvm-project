@@ -7,6 +7,12 @@ RUN: lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-
 RUN: lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=UCHAR-ENUM %s
 RUN: lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=CLASS-ENUM %s
 RUN: lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=STRUCT-ENUM %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=ENUM %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=CONST-ENUM %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=EMPTY-ENUM %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=UCHAR-ENUM %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=CLASS-ENUM %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=STRUCT-ENUM %s
 
 ; FIXME: PDB does not have information about scoped enumeration (Enum class) so the  
 ; compiler type used is the same as the one for unscoped enumeration.

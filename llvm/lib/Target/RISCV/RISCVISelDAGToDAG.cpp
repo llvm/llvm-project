@@ -18,6 +18,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -681,40 +682,86 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   if (!Subtarget->hasVendorXqcibm())
     return false;
 
-  auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
-  if (!N1C)
+  using namespace SDPatternMatch;
+
+  SDValue X;
+  APInt MaskImm;
+  if (!sd_match(Node, m_Or(m_OneUse(m_Value(X)), m_ConstInt(MaskImm))))
     return false;
 
-  int32_t C1 = N1C->getSExtValue();
-  if (!isShiftedMask_32(C1) || isInt<12>(C1))
+  unsigned ShAmt, Width;
+  if (!MaskImm.isShiftedMask(ShAmt, Width) || MaskImm.isSignedIntN(12))
     return false;
-
-  // INSBI will clobber the input register in N0. Bail out if we need a copy to
-  // preserve this value.
-  SDValue N0 = Node->getOperand(0);
-  if (!N0.hasOneUse())
-    return false;
-
-  // If C1 is a shifted mask (but can't be formed as an ORI),
-  // use a bitfield insert of -1.
-  // Transform (or x, C1)
-  //        -> (qc.insbi x, -1, width, shift)
-  const unsigned Leading = llvm::countl_zero((uint32_t)C1);
-  const unsigned Trailing = llvm::countr_zero((uint32_t)C1);
-  const unsigned Width = 32 - Leading - Trailing;
 
   // If Zbs is enabled and it is a single bit set we can use BSETI which
   // can be compressed to C_BSETI when Xqcibm in enabled.
   if (Width == 1 && Subtarget->hasStdExtZbs())
     return false;
 
+  // If C1 is a shifted mask (but can't be formed as an ORI),
+  // use a bitfield insert of -1.
+  // Transform (or x, C1)
+  //        -> (qc.insbi x, -1, width, shift)
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  SDValue Ops[] = {N0, CurDAG->getSignedTargetConstant(-1, DL, VT),
+  SDValue Ops[] = {X, CurDAG->getSignedTargetConstant(-1, DL, VT),
                    CurDAG->getTargetConstant(Width, DL, VT),
-                   CurDAG->getTargetConstant(Trailing, DL, VT)};
+                   CurDAG->getTargetConstant(ShAmt, DL, VT)};
   SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
+  ReplaceNode(Node, BitIns);
+  return true;
+}
+
+// Generate a QC_INSB/QC_INSBI from 'or (and X, MaskImm), OrImm' iff the value
+// being inserted only sets known zero bits.
+bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromOrAndImm(SDNode *Node) {
+  // Supported only in Xqcibm for now.
+  if (!Subtarget->hasVendorXqcibm())
+    return false;
+
+  using namespace SDPatternMatch;
+
+  SDValue And;
+  APInt MaskImm, OrImm;
+  if (!sd_match(Node, m_Or(m_OneUse(m_And(m_Value(And), m_ConstInt(MaskImm))),
+                           m_ConstInt(OrImm))))
+    return false;
+
+  // Compute the Known Zero for the AND as this allows us to catch more general
+  // cases than just looking for AND with imm.
+  KnownBits Known = CurDAG->computeKnownBits(Node->getOperand(0));
+
+  // The bits being inserted must only set those bits that are known to be zero.
+  if (!OrImm.isSubsetOf(Known.Zero)) {
+    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
+    // currently handle this case.
+    return false;
+  }
+
+  unsigned ShAmt, Width;
+  // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
+  if (!Known.Zero.isShiftedMask(ShAmt, Width))
+    return false;
+
+  // QC_INSB(I) dst, src, #width, #shamt.
+  SDLoc DL(Node);
+  MVT VT = Node->getSimpleValueType(0);
+  SDValue ImmNode;
+  auto Opc = RISCV::QC_INSB;
+
+  int32_t LIImm = OrImm.getSExtValue() >> ShAmt;
+
+  if (isInt<5>(LIImm)) {
+    Opc = RISCV::QC_INSBI;
+    ImmNode = CurDAG->getSignedTargetConstant(LIImm, DL, MVT::i32);
+  } else {
+    ImmNode = selectImm(CurDAG, DL, MVT::i32, LIImm, *Subtarget);
+  }
+
+  SDValue Ops[] = {And, ImmNode, CurDAG->getTargetConstant(Width, DL, VT),
+                   CurDAG->getTargetConstant(ShAmt, DL, VT)};
+  SDNode *BitIns = CurDAG->getMachineNode(Opc, DL, VT, Ops);
   ReplaceNode(Node, BitIns);
   return true;
 }
@@ -770,6 +817,49 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   }
 
   return false;
+}
+
+// (xor X, (and (xor X, C1), C2))
+// -> (qc.insbi X, (C1 >> ShAmt), Width, ShAmt)
+// where C2 is a shifted mask with width=Width and shift=ShAmt
+bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromXor(SDNode *Node) {
+
+  if (!Subtarget->hasVendorXqcibm())
+    return false;
+
+  using namespace SDPatternMatch;
+
+  SDValue X;
+  APInt CImm, CMask;
+  if (!sd_match(
+          Node,
+          m_Xor(m_Value(X),
+                m_OneUse(m_And(m_OneUse(m_Xor(m_Deferred(X), m_ConstInt(CImm))),
+                               m_ConstInt(CMask))))))
+    return false;
+
+  unsigned Width, ShAmt;
+  if (!CMask.isShiftedMask(ShAmt, Width))
+    return false;
+
+  int64_t Imm = CImm.getSExtValue();
+  Imm >>= ShAmt;
+
+  SDLoc DL(Node);
+  SDValue ImmNode;
+  auto Opc = RISCV::QC_INSB;
+
+  if (isInt<5>(Imm)) {
+    Opc = RISCV::QC_INSBI;
+    ImmNode = CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
+  } else {
+    ImmNode = selectImm(CurDAG, DL, MVT::i32, Imm, *Subtarget);
+  }
+  SDValue Ops[] = {X, ImmNode, CurDAG->getTargetConstant(Width, DL, MVT::i32),
+                   CurDAG->getTargetConstant(ShAmt, DL, MVT::i32)};
+  ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, MVT::i32, Ops));
+
+  return true;
 }
 
 bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node,
@@ -1340,6 +1430,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (trySignedBitfieldInsertInMask(Node))
       return;
 
+    if (tryBitfieldInsertOpFromOrAndImm(Node))
+      return;
+
     if (tryShrinkShlLogicImm(Node))
       return;
 
@@ -1347,6 +1440,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
+      return;
+
+    if (tryBitfieldInsertOpFromXor(Node))
       return;
 
     break;
@@ -1644,7 +1740,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // available.
     // Transform (and x, C1)
     //        -> (<bfextract> x, msb, lsb)
-    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue())) {
+    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue()) &&
+        !(C1 == 0xffff && Subtarget->hasStdExtZbb()) &&
+        !(C1 == 0xffffffff && Subtarget->hasStdExtZba())) {
       const unsigned Msb = llvm::bit_width(C1) - 1;
       if (tryUnsignedBitfieldExtract(Node, DL, VT, N0, Msb, 0))
         return;

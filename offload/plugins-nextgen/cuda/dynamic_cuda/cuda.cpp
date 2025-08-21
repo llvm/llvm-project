@@ -72,6 +72,7 @@ DLWRAP(cuDevicePrimaryCtxGetState, 3)
 DLWRAP(cuDevicePrimaryCtxSetFlags, 2)
 DLWRAP(cuDevicePrimaryCtxRetain, 2)
 DLWRAP(cuModuleLoadDataEx, 5)
+DLWRAP(cuOccupancyMaxPotentialBlockSize, 6)
 
 DLWRAP(cuDeviceCanAccessPeer, 3)
 DLWRAP(cuCtxEnablePeerAccess, 2)

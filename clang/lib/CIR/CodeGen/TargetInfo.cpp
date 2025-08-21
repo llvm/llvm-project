@@ -17,13 +17,13 @@ bool clang::CIRGen::isEmptyRecordForLayout(const ASTContext &context,
     if (cxxrd->isDynamicClass())
       return false;
 
-    for (const auto &I : cxxrd->bases())
-      if (!isEmptyRecordForLayout(context, I.getType()))
+    for (const auto &i : cxxrd->bases())
+      if (!isEmptyRecordForLayout(context, i.getType()))
         return false;
   }
 
-  for (const auto *I : rd->fields())
-    if (!isEmptyFieldForLayout(context, I))
+  for (const auto *i : rd->fields())
+    if (!isEmptyFieldForLayout(context, i))
       return false;
 
   return true;

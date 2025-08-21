@@ -9,6 +9,6 @@
 #include <clc/math/clc_sin.h>
 #include <clc/opencl/math/sin.h>
 
-#define FUNCTION sin
+#define __CLC_FUNCTION sin
 #define __CLC_BODY <clc/shared/unary_def.inc>
 #include <clc/math/gentype.inc>

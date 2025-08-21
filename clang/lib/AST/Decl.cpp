@@ -1604,17 +1604,20 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
   // We have just computed the linkage for this decl. By induction we know
   // that all other computed linkages match, check that the one we just
   // computed also does.
-  NamedDecl *Old = nullptr;
-  for (auto *I : D->redecls()) {
-    auto *T = cast<NamedDecl>(I);
-    if (T == D)
+  // We can't assume the redecl chain is well formed at this point,
+  // so keep track of already visited declarations.
+  for (llvm::SmallPtrSet<const Decl *, 4> AlreadyVisited{D}; /**/; /**/) {
+    D = cast<NamedDecl>(const_cast<NamedDecl *>(D)->getNextRedeclarationImpl());
+    if (!AlreadyVisited.insert(D).second)
+      break;
+    if (D->isInvalidDecl())
       continue;
-    if (!T->isInvalidDecl() && T->hasCachedLinkage()) {
-      Old = T;
+    if (auto OldLinkage = D->getCachedLinkage();
+        OldLinkage != Linkage::Invalid) {
+      assert(LV.getLinkage() == OldLinkage);
       break;
     }
   }
-  assert(!Old || Old->getCachedLinkage() == D->getCachedLinkage());
 #endif
 
   return LV;

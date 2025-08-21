@@ -42,21 +42,26 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   return fi;
 }
 
-cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &fi) {
-  mlir::Type resultType = convertType(fi.getReturnType());
+cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
+  mlir::Type resultType = convertType(info.getReturnType());
   SmallVector<mlir::Type, 8> argTypes;
-  argTypes.reserve(fi.getNumRequiredArgs());
+  argTypes.reserve(info.getNumRequiredArgs());
 
-  for (const CanQualType &argType : fi.requiredArguments())
+  for (const CanQualType &argType : info.requiredArguments())
     argTypes.push_back(convertType(argType));
 
   return cir::FuncType::get(argTypes,
                             (resultType ? resultType : builder.getVoidTy()),
-                            fi.isVariadic());
+                            info.isVariadic());
 }
 
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
-  assert(!cir::MissingFeatures::opCallVirtual());
+  if (isVirtual()) {
+    const CallExpr *ce = getVirtualCallExpr();
+    return cgf.cgm.getCXXABI().getVirtualFunctionPointer(
+        cgf, getVirtualMethodDecl(), getThisAddress(), getVirtualFunctionType(),
+        ce ? ce->getBeginLoc() : SourceLocation());
+  }
   return *this;
 }
 

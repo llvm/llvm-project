@@ -1442,8 +1442,12 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
         OpSt.asConstantRange(I.getSrcTy(), /*UndefAllowed=*/false);
 
     Type *DestTy = I.getDestTy();
-    ConstantRange Res =
-        OpRange.castOp(I.getOpcode(), DestTy->getScalarSizeInBits());
+    ConstantRange Res = ConstantRange::getEmpty(DestTy->getScalarSizeInBits());
+    if (auto *Trunc = dyn_cast<TruncInst>(&I))
+      Res = OpRange.truncate(DestTy->getScalarSizeInBits(),
+                             Trunc->getNoWrapKind());
+    else
+      Res = OpRange.castOp(I.getOpcode(), DestTy->getScalarSizeInBits());
     mergeInValue(LV, &I, ValueLatticeElement::getRange(Res));
   } else
     markOverdefined(&I);

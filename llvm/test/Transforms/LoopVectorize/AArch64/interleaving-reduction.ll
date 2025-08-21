@@ -137,7 +137,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-VLA-LABEL: @interleave_integer_reduction(
 ; INTERLEAVE-4-VLA-NEXT:  entry:
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-4-VLA-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; INTERLEAVE-4-VLA-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; INTERLEAVE-4-VLA-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP1]]
 ; INTERLEAVE-4-VLA-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE-4-VLA:       vector.ph:
@@ -154,10 +154,10 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[INDEX]]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-4-VLA-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
+; INTERLEAVE-4-VLA-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 2
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP8]]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-4-VLA-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 8
+; INTERLEAVE-4-VLA-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 3
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP11]]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 12
