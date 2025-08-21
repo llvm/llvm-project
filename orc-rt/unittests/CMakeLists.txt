@@ -12,6 +12,7 @@ function(add_orc_rt_unittest test_dirname)
 endfunction()
 
 add_orc_rt_unittest(CoreTests
+  math-test.cpp
   span-test.cpp
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )
