@@ -1138,8 +1138,8 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   SmallPtrSet<Operation *, 1> pendingRootUpdates;
 
   /// A raw output stream used to prefix the debug log.
-  llvm::impl::raw_ldbg_ostream os{(Twine("[") + DEBUG_TYPE + "] ").str(),
-                                  llvm::dbgs(), /*HasPendingNewline=*/false};
+  llvm::impl::raw_ldbg_ostream os{(Twine("[") + DEBUG_TYPE + ":1] ").str(),
+                                  llvm::dbgs()};
 
   /// A logger used to emit diagnostics during the conversion process.
   llvm::ScopedPrinter logger{os};
@@ -1637,6 +1637,11 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
   builder.setInsertionPoint(ip.getBlock(), ip.getPoint());
   UnrealizedConversionCastOp convertOp =
       UnrealizedConversionCastOp::create(builder, loc, outputTypes, inputs);
+  if (config.attachDebugMaterializationKind) {
+    StringRef kindStr =
+        kind == MaterializationKind::Source ? "source" : "target";
+    convertOp->setAttr("__kind__", builder.getStringAttr(kindStr));
+  }
   if (isPureTypeConversion)
     convertOp->setAttr(kPureTypeConversionMarker, builder.getUnitAttr());
 
@@ -2244,17 +2249,17 @@ detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {
 // ConversionPattern
 //===----------------------------------------------------------------------===//
 
-SmallVector<Value> ConversionPattern::getOneToOneAdaptorOperands(
+FailureOr<SmallVector<Value>> ConversionPattern::getOneToOneAdaptorOperands(
     ArrayRef<ValueRange> operands) const {
   SmallVector<Value> oneToOneOperands;
   oneToOneOperands.reserve(operands.size());
   for (ValueRange operand : operands) {
     if (operand.size() != 1)
-      llvm::report_fatal_error("pattern '" + getDebugName() +
-                               "' does not support 1:N conversion");
+      return failure();
+
     oneToOneOperands.push_back(operand.front());
   }
-  return oneToOneOperands;
+  return std::move(oneToOneOperands);
 }
 
 LogicalResult

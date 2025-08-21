@@ -635,8 +635,7 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF1-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; CHECK-VF4UF1-NEXT:    [[TMP7:%.*]] = mul <vscale x 4 x i32> [[TMP6]], splat (i32 1)
 ; CHECK-VF4UF1-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP7]]
-; CHECK-VF4UF1-NEXT:    [[TMP8:%.*]] = mul i32 1, [[TMP3]]
-; CHECK-VF4UF1-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP8]], i64 0
+; CHECK-VF4UF1-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-VF4UF1-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-VF4UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_BODY]]:

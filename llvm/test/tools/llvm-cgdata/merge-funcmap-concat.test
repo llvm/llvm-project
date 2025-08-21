@@ -17,6 +17,8 @@ RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-concat-template-
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-concat.ll -o %t/merge-concat.o
 RUN: llvm-cgdata --merge --skip-trim %t/merge-concat.o -o %t/merge-concat.cgdata
 RUN: llvm-cgdata --show %t/merge-concat.cgdata | FileCheck %s
+RUN: llvm-cgdata --merge --skip-trim %t/merge-concat.o -o %t/merge-concat-lazy.cgdata -indexed-codegen-data-lazy-loading
+RUN: llvm-cgdata --show %t/merge-concat-lazy.cgdata -indexed-codegen-data-lazy-loading | FileCheck %s
 
 CHECK: Stable function map:
 CHECK-NEXT:  Unique hash Count: 1
@@ -74,5 +76,5 @@ MAP-NEXT: ...
 ; In an linked executable (as opposed to an object file), cgdata in __llvm_merge might be concatenated.
 ; Although this is not a typical workflow, we simply support this case to parse cgdata that is concatenated.
 ; In other words, the following two trees are encoded back-to-back in a binary format.
-@.data1 = private unnamed_addr constant [68 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"
-@.data2 = private unnamed_addr constant [68 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_merge"
+@.data1 = private unnamed_addr constant [84 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"
+@.data2 = private unnamed_addr constant [84 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_merge"
