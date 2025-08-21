@@ -413,37 +413,6 @@ public:
   bool IsImpossibleToSatisfy(const NamedDecl *ND) const;
   //@}
 };
-
-void AddFunctionTypeQuals(CodeCompletionBuilder &Result,
-                          const Qualifiers Quals) {
-  // FIXME: Add ref-qualifier!
-
-  // Handle single qualifiers without copying
-  if (Quals.hasOnlyConst()) {
-    Result.AddInformativeChunk(" const");
-    return;
-  }
-
-  if (Quals.hasOnlyVolatile()) {
-    Result.AddInformativeChunk(" volatile");
-    return;
-  }
-
-  if (Quals.hasOnlyRestrict()) {
-    Result.AddInformativeChunk(" restrict");
-    return;
-  }
-
-  // Handle multiple qualifiers.
-  std::string QualsStr;
-  if (Quals.hasConst())
-    QualsStr += " const";
-  if (Quals.hasVolatile())
-    QualsStr += " volatile";
-  if (Quals.hasRestrict())
-    QualsStr += " restrict";
-  Result.AddInformativeChunk(Result.getAllocator().CopyString(QualsStr));
-}
 } // namespace
 
 void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
@@ -3465,19 +3434,35 @@ static void AddQualifierToCompletionString(CodeCompletionBuilder &Result,
     Result.AddTextChunk(Result.getAllocator().CopyString(PrintedNNS));
 }
 
-// Sets the function qualifiers completion string by inspecting the explicit
-// object
-static void AddCXXExplicitObjectFunctionTypeQualsToCompletionString(
-    CodeCompletionBuilder &Result, const CXXMethodDecl *Function) {
-  assert(isa<CXXMethodDecl>(Function) &&
-         Function->hasCXXExplicitFunctionObjectParameter() &&
-         "Valid only on CXX explicit object methods");
+static void AddFunctionTypeQuals(CodeCompletionBuilder &Result,
+                                 const Qualifiers Quals) {
+  // FIXME: Add ref-qualifier!
 
-  const auto Quals = Function->getFunctionObjectParameterType();
-  if (!Quals.hasQualifiers())
+  // Handle single qualifiers without copying
+  if (Quals.hasOnlyConst()) {
+    Result.AddInformativeChunk(" const");
     return;
+  }
 
-  AddFunctionTypeQuals(Result, Quals.getQualifiers());
+  if (Quals.hasOnlyVolatile()) {
+    Result.AddInformativeChunk(" volatile");
+    return;
+  }
+
+  if (Quals.hasOnlyRestrict()) {
+    Result.AddInformativeChunk(" restrict");
+    return;
+  }
+
+  // Handle multiple qualifiers.
+  std::string QualsStr;
+  if (Quals.hasConst())
+    QualsStr += " const";
+  if (Quals.hasVolatile())
+    QualsStr += " volatile";
+  if (Quals.hasRestrict())
+    QualsStr += " restrict";
+  Result.AddInformativeChunk(Result.getAllocator().CopyString(QualsStr));
 }
 
 static void
@@ -3486,8 +3471,11 @@ AddFunctionTypeQualsToCompletionString(CodeCompletionBuilder &Result,
   if (auto *CxxMethodDecl = llvm::dyn_cast_if_present<CXXMethodDecl>(Function);
       CxxMethodDecl && CxxMethodDecl->hasCXXExplicitFunctionObjectParameter()) {
     // if explicit object method, infer quals from the object parameter
-    AddCXXExplicitObjectFunctionTypeQualsToCompletionString(Result,
-                                                            CxxMethodDecl);
+    const auto Quals = CxxMethodDecl->getFunctionObjectParameterType();
+    if (!Quals.hasQualifiers())
+      return;
+
+    AddFunctionTypeQuals(Result, Quals.getQualifiers());
   } else {
     const auto *Proto = Function->getType()->getAs<FunctionProtoType>();
     if (!Proto || !Proto->getMethodQuals())
