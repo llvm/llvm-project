@@ -141,7 +141,7 @@ products.
 Maintainers are those volunteers; they are regular contributors who volunteer
 to take on additional community responsibilities beyond code contributions.
 Community members can find active and inactive maintainers for a project in the
-``Maintainers.md`` file at the root directory of the individual project.
+``Maintainers.rst`` file at the root directory of the individual project.
 
 Maintainers are volunteering to take on shared responsibilities
 within an area of a project, not to exert power through that status.
@@ -195,7 +195,7 @@ In the interest of having a wider coverage of maintainers, we encourage any acti
 collaborator to volunteer to a maintainer role, especially in areas currently without
 a maintainer.
 New projects are encouraged to seek out maintainers early in their development.
-As long as the proponents are committed to the responsibilities of a maintainer
+As long as new project proponents are committed to the responsibilities of a maintainer
 and have the support of the community, the time-frame restriction above can be waived.
 
 We recognize that priorities shift, job changes happen, burnout is real,
@@ -213,7 +213,7 @@ example, too many maintainers in the target area already), the volunteer can
 be accepted as a maintainer.
 
 **To step down as a maintainer**, you can move your name to the "inactive
-maintainers" section of the ``Maintainers.md`` file for the project, or remove
+maintainers" section of the ``Maintainers.rst`` file for the project, or remove
 your name entirely; no PR review is necessary. Additionally, any maintainer who
 has not been actively performing their responsibilities over an extended period
 of time can be moved to the "inactive maintainers" section by another active
@@ -228,7 +228,7 @@ and does not prevent someone from resuming their activities as a maintainer in
 the future.
 
 **To resume activities as a maintainer**, you can post a PR moving your name from
-the "inactive maintainers" section of the ``Maintainers.md`` file to the
+the "inactive maintainers" section of the ``Maintainers.rst`` file to the
 active maintainers list. Because the volunteer was already previously accepted,
 they will be re-accepted so long as at least one maintainer in the same project
 approves the PR and there are no explicit objections raised by the community.
