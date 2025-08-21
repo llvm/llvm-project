@@ -292,10 +292,8 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
 static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                LLVMContext &Ctx, CallingConv::ID CallConv,
                                Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                               SmallVectorImpl<uint64_t> *Offsets,
+                               SmallVectorImpl<uint64_t> &Offsets,
                                uint64_t StartingOffset = 0) {
-  assert(Offsets && "Offsets must be non-null");
-
   SmallVector<EVT, 16> TempVTs;
   SmallVector<uint64_t, 16> TempOffsets;
   ComputeValueVTs(TLI, DL, Ty, TempVTs, &TempOffsets, StartingOffset);
@@ -322,7 +320,7 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     // leave it for now.
     for (unsigned I : seq(NumRegs)) {
       ValueVTs.push_back(RegisterVT);
-      Offsets->push_back(Off + I * RegisterVT.getStoreSize());
+      Offsets.push_back(Off + I * RegisterVT.getStoreSize());
     }
   }
 }
@@ -1563,7 +1561,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     } else {
       SmallVector<EVT, 16> VTs;
       SmallVector<uint64_t, 16> Offsets;
-      ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, Arg.Ty, VTs, &Offsets,
+      ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, Arg.Ty, VTs, Offsets,
                          VAOffset);
       assert(VTs.size() == Offsets.size() && "Size mismatch");
       assert(VTs.size() == ArgOuts.size() && "Size mismatch");
@@ -1714,7 +1712,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (!Ins.empty()) {
     SmallVector<EVT, 16> VTs;
     SmallVector<uint64_t, 16> Offsets;
-    ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, &Offsets);
+    ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, Offsets);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
     const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
@@ -3416,7 +3414,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     } else {
       SmallVector<EVT, 16> VTs;
       SmallVector<uint64_t, 16> Offsets;
-      ComputePTXValueVTs(*this, DL, Ctx, CallConv, Ty, VTs, &Offsets, 0);
+      ComputePTXValueVTs(*this, DL, Ctx, CallConv, Ty, VTs, Offsets);
       assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
@@ -3486,7 +3484,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   SmallVector<EVT, 16> VTs;
   SmallVector<uint64_t, 16> Offsets;
-  ComputePTXValueVTs(*this, DL, Ctx, CallConv, RetTy, VTs, &Offsets);
+  ComputePTXValueVTs(*this, DL, Ctx, CallConv, RetTy, VTs, Offsets);
   assert(VTs.size() == OutVals.size() && "Bad return value decomposition");
 
   const auto GetRetVal = [&](unsigned I) -> SDValue {
