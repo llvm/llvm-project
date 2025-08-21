@@ -409,7 +409,7 @@ def NVVM_NanosleepOp : NVVM_Op<"nanosleep">,
   Arguments<(ins 
   ConfinedAttr<I32Attr, [IntMinValue<1>, IntMaxValue<1000000>]>:$duration)> 
 {
-  let summary = "Suspends the thread for a sleep.";
+  let summary = "Suspends the thread for a specified duration.";
 
   let description = [{
     The Op suspends the thread for a sleep duration approximately close to the 
