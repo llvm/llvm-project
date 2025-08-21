@@ -17,7 +17,7 @@
 
 // CHECK: attributes #[[ATTR1]] = { cold {{.*}}}
 
-// CHECK: ![[FILESCOPE:.*]] = !DIFile(filename: "{{.*}}debug-info-verbose-trap.cpp"
+// CHECK: ![[FILESCOPE:.*]] = !DIFile(filename: "{{.*}}verbose-trap.cpp"
 
 char const constCat[] = "category2";
 char const constMsg[] = "hello";

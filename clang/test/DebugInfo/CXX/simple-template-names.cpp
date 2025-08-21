@@ -70,18 +70,18 @@ void f() {
   // anything other than another unnamed class/struct.
   auto Lambda = [] {};
   f1<decltype(Lambda)>();
-  // CHECK: !DISubprogram(name: "f1<(lambda at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 2]]:17)>",
+  // CHECK: !DISubprogram(name: "f1<(lambda at {{.*}}simple-template-names.cpp:[[# @LINE - 2]]:17)>",
   f1<t1<t1<decltype(Lambda)>>>();
   // CHECK: !DISubprogram(name: "f1<t1<t1<(lambda at {{.*}}> > >",
   struct {
   } unnamed_struct;
   f1<decltype(unnamed_struct)>();
-  // CHECK: !DISubprogram(name: "f1<(unnamed struct at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 3]]:3)>",
+  // CHECK: !DISubprogram(name: "f1<(unnamed struct at {{.*}}simple-template-names.cpp:[[# @LINE - 3]]:3)>",
   f1<void (decltype(unnamed_struct))>();
-  // CHECK: !DISubprogram(name: "f1<void ((unnamed struct at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 5]]:3))>",
+  // CHECK: !DISubprogram(name: "f1<void ((unnamed struct at {{.*}}simple-template-names.cpp:[[# @LINE - 5]]:3))>",
   enum {} unnamed_enum;
   f1<decltype(unnamed_enum)>();
-  // CHECK: !DISubprogram(name: "f1<(unnamed enum at {{.*}}debug-info-simple-template-names.cpp:[[# @LINE - 2]]:3)>",
+  // CHECK: !DISubprogram(name: "f1<(unnamed enum at {{.*}}simple-template-names.cpp:[[# @LINE - 2]]:3)>",
 
   // Declarations can't readily be reversed as the value in the DWARF only
   // contains the address of the value - we'd have to do symbol lookup to find
