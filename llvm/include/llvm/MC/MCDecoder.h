@@ -14,10 +14,6 @@
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 
-namespace llvm {
-class APInt;
-}
-
 namespace llvm::MCD {
 
 // Helper to propagate SoftFail status. Returns false if the status is Fail;
