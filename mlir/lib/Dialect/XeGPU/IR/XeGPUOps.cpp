@@ -82,13 +82,18 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   if (!tdescTy.isScattered())
     return emitError() << "Expects a scattered TensorDesc.";
 
-  if (!valueTy)
-    return emitError() << "Expecting a vector type result.";
+  auto chunkSize = tdescTy.getChunkSizeAsInt();
+  if (!valueTy) {
+    if (chunkSize > 1)
+      return emitError() << "Expecting chunk size == 1 for scalar result";
+    if (dyn_cast<VectorType>(maskTy))
+      return emitError() << "Expecting a vector type result.";
+    return success();
+  }
 
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
   auto tdescShape = getShapeOf(tdescTy);
-  auto chunkSize = tdescTy.getChunkSizeAsInt();
 
   if (valueTy.getElementType() != tdescTy.getElementType())
     return emitError()
@@ -117,13 +122,21 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
 }
 
 static LogicalResult
-isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
-                                 int64_t chunkSize,
+isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
+                                 VectorType valueTy, int64_t chunkSize,
                                  function_ref<InFlightDiagnostic()> emitError) {
 
-  if (!valueTy)
-    return emitError() << "Expecting a vector type result.";
-
+  if (!valueTy) {
+    if (chunkSize > 1)
+      return emitError() << "Expecting chunk size == 1 for scalar result";
+    auto maskVecTy = dyn_cast<VectorType>(maskTy);
+    auto offsetsVecTy = dyn_cast<VectorType>(offsetsTy);
+    if (maskVecTy || offsetsVecTy)
+      return emitError() << "Expecting scalar mask and offsets.";
+    else if (maskVecTy && offsetsVecTy)
+      return emitError() << "Expecting a vector type result.";
+    return success();
+  }
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
 
@@ -142,9 +155,8 @@ isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
       return emitError()
              << "Mask should match value except the chunk size dim.";
   }
-
   llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
-  if (chunkSize > 1)
+  if (maskSize > 1 && chunkSize > 1)
     expectedMaskShape.pop_back();
   if (expectedMaskShape != maskShape)
     return emitError() << "Mask should match value except the chunk size dim.";
@@ -776,7 +788,8 @@ LogicalResult LoadGatherOp::verify() {
   if (memTy && (valueTy.getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
-  return isValidGatherScatterBufferParams(maskTy, valueTy, chunkSize,
+  auto offsetsTy = getOffsets().getType();
+  return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
 }
 
@@ -826,7 +839,8 @@ LogicalResult StoreScatterOp::verify() {
   if (memTy && (valueTy.getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
-  return isValidGatherScatterBufferParams(maskTy, valueTy, chunkSize,
+  auto offsetsTy = getOffsets().getType();
+  return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
 }
 
