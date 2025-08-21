@@ -23,13 +23,13 @@ static Error extractPartAsObject(StringRef PartName, StringRef OutFilename,
                                StringRef InputFilename, const Object &Obj) {
   for (const Part &P : Obj.Parts)
     if (P.Name == PartName) {
-      auto PartObj = std::make_unique<Object>();
-      PartObj->Header = Obj.Header;
-      PartObj->Parts.push_back({P.Name, P.Data});
-      PartObj->recomputeHeader();
+      Object PartObj;
+      PartObj.Header = Obj.Header;
+      PartObj.Parts.push_back({P.Name, P.Data});
+      PartObj.recomputeHeader();
 
       auto Write = [&OutFilename, &PartObj](raw_ostream &Out) -> Error {
-        DXContainerWriter Writer(*PartObj, Out);
+        DXContainerWriter Writer(PartObj, Out);
         if (Error E = Writer.write())
           return createFileError(OutFilename, std::move(E));
         return Error::success();
