@@ -202,33 +202,36 @@ LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
 template <bool SkipDelim = true>
 LIBC_INLINE char *string_token(char *__restrict src,
                                const char *__restrict delimiter_string,
-                               char **__restrict saveptr) {
-  // Return nullptr immediately if both src AND saveptr are nullptr
-  if (LIBC_UNLIKELY(src == nullptr && ((src = *saveptr) == nullptr)))
+                               char **__restrict context) {
+  // Return nullptr immediately if both src AND context are nullptr
+  if (LIBC_UNLIKELY(src == nullptr && ((src = *context) == nullptr)))
     return nullptr;
 
   static_assert(CHAR_BIT == 8, "bitset of 256 assumes char is 8 bits");
-  cpp::bitset<256> delimiter_set;
+  cpp::bitset<256> delims;
   for (; *delimiter_string != '\0'; ++delimiter_string)
-    delimiter_set.set(static_cast<size_t>(*delimiter_string));
+    delims.set(static_cast<size_t>(*delimiter_string));
 
+  char *tok_start = src;
   if constexpr (SkipDelim)
-    for (; *src != '\0' && delimiter_set.test(static_cast<size_t>(*src)); ++src)
-      ;
-  if (*src == '\0') {
-    *saveptr = src;
+    while (*tok_start != '\0' && delims.test(static_cast<size_t>(*tok_start)))
+      ++tok_start;
+  if (*tok_start == '\0' && SkipDelim) {
+    *context = nullptr;
     return nullptr;
   }
-  char *token = src;
-  for (; *src != '\0'; ++src) {
-    if (delimiter_set.test(static_cast<size_t>(*src))) {
-      *src = '\0';
-      ++src;
-      break;
-    }
+
+  char *tok_end = tok_start;
+  while (*tok_end != '\0' && !delims.test(static_cast<size_t>(*tok_end)))
+    ++tok_end;
+
+  if (*tok_end == '\0') {
+    *context = nullptr;
+  } else {
+    *tok_end = '\0';
+    *context = tok_end + 1;
   }
-  *saveptr = src;
-  return token;
+  return tok_start;
 }
 
 LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
