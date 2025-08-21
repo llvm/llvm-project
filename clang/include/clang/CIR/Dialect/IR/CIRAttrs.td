@@ -542,23 +542,23 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
     ```
   }];
 
-  // `vtable_data` is a const record with one element, containing an array of
+  // `data` is a const record with one element, containing an array of
   // vtable information.
   let parameters = (ins
     AttributeSelfTypeParameter<"">:$type,
-    "mlir::ArrayAttr":$vtable_data
+    "mlir::ArrayAttr":$data
   );
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
-                                        "mlir::ArrayAttr":$vtable_data), [{
-      return $_get(type.getContext(), type, vtable_data);
+                                        "mlir::ArrayAttr":$data), [{
+      return $_get(type.getContext(), type, data);
     }]>
   ];
 
   let genVerifyDecl = 1;
   let assemblyFormat = [{
-    `<` custom<RecordMembers>($vtable_data) `>`
+    `<` custom<RecordMembers>($data) `>`
   }];
 }
 

@@ -430,18 +430,18 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult cir::VTableAttr::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError, mlir::Type type,
-    mlir::ArrayAttr vtableData) {
+    mlir::ArrayAttr data) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
     return emitError() << "expected !cir.record type result";
-  if (sTy.getMembers().empty() || vtableData.empty())
+  if (sTy.getMembers().empty() || data.empty())
     return emitError() << "expected record type with one or more subtype";
 
-  if (cir::ConstRecordAttr::verify(emitError, type, vtableData).failed())
+  if (cir::ConstRecordAttr::verify(emitError, type, data).failed())
     return failure();
 
-  for (const auto &data : vtableData.getAsRange<mlir::Attribute>()) {
-    const auto &constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(data);
+  for (const auto &element : data.getAsRange<mlir::Attribute>()) {
+    const auto &constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(element);
     if (!constArrayAttr)
       return emitError() << "expected constant array subtype";
 
