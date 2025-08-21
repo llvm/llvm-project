@@ -26,4 +26,6 @@
 
 // Test error cases
 // RUN: not llvm-symbolizer --obj="%t.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-// CHECK-ERROR: error: {{.*}}No matching member{{.*}}
+// CHECK-ERROR: error: {{.*}}no matching member{{.*}}
+// RUN: not llvm-symbolizer --obj="%t.o(%{t:stem}.tmp.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
+// CHECK-NOTARCHIVE: error: '{{.*}}' is not a valid archive

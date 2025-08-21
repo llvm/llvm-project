@@ -246,7 +246,7 @@ private:
   /// Helper function to load binary.
   Expected<object::Binary *> loadOrGetBinary(const std::string &Path);
 
-  /// Helper function to find and get object
+  /// Helper function to find and get object.
   Expected<ObjectFile *> findOrCacheObject(
       const ArchiveCacheKey &Key,
       llvm::function_ref<Expected<std::unique_ptr<ObjectFile>>()> Loader,

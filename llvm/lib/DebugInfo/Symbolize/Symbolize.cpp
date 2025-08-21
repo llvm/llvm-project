@@ -667,7 +667,7 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
   if (Err)
     return std::move(Err);
   return createStringError(std::errc::invalid_argument,
-                           "No matching member '%s' with arch '%s' in '%s'",
+                           "no matching member '%s' with arch '%s' in '%s'",
                            MemberName.str().c_str(), ArchName.str().c_str(),
                            ArchivePath.str().c_str());
 }
