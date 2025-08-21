@@ -334,6 +334,8 @@ struct Config {
   bool armJ1J2BranchEncoding = false;
   bool armCMSESupport = false;
   bool asNeeded = false;
+  bool asNeededDiagnostics = false;
+  llvm::SmallVector<llvm::GlobPattern, 0> asNeededDiagnosticsExclude;
   bool armBe8 = false;
   BsymbolicKind bsymbolic = BsymbolicKind::None;
   CGProfileSortKind callGraphProfileSort;

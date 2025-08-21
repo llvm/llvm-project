@@ -32,6 +32,16 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 * Added `--pass-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the pass plugin named `<plugin>`.
 * `--mmap-output-file` and `--no-mmap-output-file` were swapped in LLVM 21 and 22.
   They now mean what they say again; the default behavior is unchanged.
+* `--as-needed-diagnostics` has been added. When used with `--as-needed`, it
+  warns about each shared library that was linked against but whose `DT_NEEDED`
+  entry was dropped because no symbol from it was used. If the library is a
+  `DT_NEEDED` dependency of another library that is needed, the report also
+  lists those libraries, since the link is likely a transitive one introduced by
+  the build system.
+* `--as-needed-diagnostics-exclude=<glob>` has been added to suppress
+  `--as-needed-diagnostics` reports for libraries whose soname or whose resolved
+  input path matches `<glob>`. Note that `*` also matches `/`. It may be
+  specified multiple times.
 
 ### Breaking changes
 
