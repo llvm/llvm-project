@@ -340,13 +340,13 @@ TEST_F(ObjectFileELFTest, SkipsLocalMappingAndDotLSymbols) {
       Content:         "00"
   Symbols:
     - Name:            $d
-      Type:            STT_FUNC
+      Type:            STT_NOTYPE
       Section:         .riscv.attributes
       Value:           0x0000000000400180
       Size:            0x10
       Binding:         STB_LOCAL
     - Name:            $x
-      Type:            STT_FUNC
+      Type:            STT_NOTYPE
       Section:         .text
       Value:           0xC0A1B010
       Size:            0x10

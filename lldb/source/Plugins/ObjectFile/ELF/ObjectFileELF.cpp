@@ -2114,6 +2114,10 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     if (!symbol_name)
       symbol_name = "";
 
+    // Skip local symbols starting with ".L" because these are compiler
+    // generated local labels used for internal purposes (e.g. debugging,
+    // optimization) and are not relevant for symbol resolution or external
+    // linkage in RISC-V binaries.
     if (symbol_name[0] == '.' && symbol_name[1] == 'L')
       continue;
     // No need to add non-section symbols that have no names
