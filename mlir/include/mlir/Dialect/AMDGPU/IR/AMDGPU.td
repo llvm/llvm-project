@@ -684,8 +684,8 @@ Arguments<(ins AnyIntegerOrFloatOr1DVector:$src,
     - Swap the data between odd and even rows of 16 lanes (`swap_16`)
     - Swap the data between the first 32 lanes and the last 32 lanes (`swap_32`)
 
-    Format example:
-    ```
+    Example:
+    ```mlir
     %0 = amdgpu.permlane %src swap_16 : f16
     %1 = amdgpu.permlane %src swap_32 { fetch_inactive = true, bound_ctrl = true } : f16
     ```
