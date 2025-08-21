@@ -510,10 +510,11 @@ public:
                                       MachineMemOperand::Flags Flags,
                                       unsigned *Fast) const override;
   bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const override;
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
@@ -522,7 +523,7 @@ public:
                             bool MathUsed) const override {
     // Form add and sub with overflow intrinsics regardless of any extra
     // users of the math result.
-    return VT == MVT::i32 || VT == MVT::i64;
+    return VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128;
   }
 
   bool shouldConsiderGEPOffsetSplit() const override { return true; }

@@ -548,3 +548,47 @@ func.func @test_atomic_yield(%I: memref<10xf32>, %idx : index) {
   func.return
 }
 
+// -----
+
+// CHECK-LABEL: module @return_void_with_unused_argument
+module @return_void_with_unused_argument {
+  // CHECK-LABEL: func.func private @fn_return_void_with_unused_argument
+  // CHECK-SAME: (%[[ARG0_FN:.*]]: i32)
+  func.func private @fn_return_void_with_unused_argument(%arg0: i32, %arg1: memref<4xi32>) -> () {
+    %sum = arith.addi %arg0, %arg0 : i32
+    %c0 = arith.constant 0 : index
+    %buf = memref.alloc() : memref<1xi32>
+    memref.store %sum, %buf[%c0] : memref<1xi32>
+    return
+  }
+  // CHECK-LABEL: func.func @main
+  // CHECK-SAME: (%[[ARG0_MAIN:.*]]: i32)
+  // CHECK: call @fn_return_void_with_unused_argument(%[[ARG0_MAIN]]) : (i32) -> ()
+  func.func @main(%arg0: i32) -> memref<4xi32> {
+    %unused = memref.alloc() : memref<4xi32>
+    call @fn_return_void_with_unused_argument(%arg0, %unused) : (i32, memref<4xi32>) -> ()
+    return %unused : memref<4xi32>
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @dynamically_unreachable
+module @dynamically_unreachable {
+  func.func @dynamically_unreachable() {
+    // This value is used by an operation in a dynamically unreachable block.
+    %zero = arith.constant 0 : i64
+
+    // Dataflow analysis knows from the constant condition that
+    // ^bb1 is unreachable
+    %false = arith.constant false
+    cf.cond_br %false, ^bb1, ^bb4
+  ^bb1:
+    // This unreachable operation should be removed.
+    // CHECK-NOT: arith.cmpi
+    %3 = arith.cmpi eq, %zero, %zero : i64
+    cf.br ^bb1
+  ^bb4:
+    return
+  }
+}

@@ -41,6 +41,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -173,8 +174,6 @@ void Lexer::InitLexer(const char *BufStart, const char *BufPtr,
   ExtendedTokenMode = 0;
 
   NewLinePtr = nullptr;
-
-  IsFirstPPToken = true;
 }
 
 /// Lexer constructor - Create a new lexer object for the specified buffer
@@ -3224,7 +3223,6 @@ std::optional<Token> Lexer::peekNextPPToken() {
   bool atStartOfLine = IsAtStartOfLine;
   bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
   bool leadingSpace = HasLeadingSpace;
-  bool isFirstPPToken = IsFirstPPToken;
 
   Token Tok;
   Lex(Tok);
@@ -3235,7 +3233,6 @@ std::optional<Token> Lexer::peekNextPPToken() {
   HasLeadingSpace = leadingSpace;
   IsAtStartOfLine = atStartOfLine;
   IsAtPhysicalStartOfLine = atPhysicalStartOfLine;
-  IsFirstPPToken = isFirstPPToken;
   // Restore the lexer back to non-skipping mode.
   LexingRawMode = false;
 
@@ -3456,7 +3453,7 @@ std::optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
     }
 
     unsigned Value = llvm::hexDigitValue(C);
-    if (Value == -1U) {
+    if (Value == std::numeric_limits<unsigned>::max()) {
       if (!Delimited)
         break;
       if (Diagnose)
@@ -3723,11 +3720,6 @@ bool Lexer::Lex(Token &Result) {
   if (HasLeadingEmptyMacro) {
     Result.setFlag(Token::LeadingEmptyMacro);
     HasLeadingEmptyMacro = false;
-  }
-
-  if (IsFirstPPToken) {
-    Result.setFlag(Token::FirstPPToken);
-    IsFirstPPToken = false;
   }
 
   bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
@@ -4587,6 +4579,9 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
 
   if (Result.is(tok::hash) && Result.isAtStartOfLine()) {
     PP->HandleDirective(Result);
+    if (PP->hadModuleLoaderFatalFailure())
+      // With a fatal failure in the module loader, we abort parsing.
+      return true;
     return false;
   }
   if (Result.is(tok::raw_identifier)) {

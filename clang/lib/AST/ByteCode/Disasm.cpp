@@ -338,7 +338,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
 
     OS << "\n";
-    if (GP.isInitialized() && Desc->isPrimitive() && !Desc->isDummy()) {
+    if (GP.isInitialized() && Desc->isPrimitive() && !G->block()->isDummy()) {
       OS << "   ";
       {
         ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
@@ -394,8 +394,6 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   else if (isUnknownSizeArray())
     OS << " unknown-size-array";
 
-  if (isDummy())
-    OS << " dummy";
   if (IsConstexprUnknown)
     OS << " constexpr-unknown";
 }
@@ -445,6 +443,7 @@ LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
   OS << "InUnion: " << InUnion << "\n";
   OS << "IsFieldMutable: " << IsFieldMutable << "\n";
   OS << "IsArrayElement: " << IsArrayElement << "\n";
+  OS << "IsConstInMutable: " << IsConstInMutable << '\n';
   OS << "Desc: ";
   if (Desc)
     Desc->dump(OS);
@@ -530,7 +529,7 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   Desc->dump(OS);
   OS << ")\n";
   unsigned NPointers = 0;
-  for (const Pointer *P = Pointers; P; P = P->Next) {
+  for (const Pointer *P = Pointers; P; P = P->asBlockPointer().Next) {
     ++NPointers;
   }
   OS << "  EvalID: " << EvalID << '\n';
@@ -540,12 +539,13 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   else
     OS << "-\n";
   OS << "  Pointers: " << NPointers << "\n";
-  OS << "  Dead: " << IsDead << "\n";
+  OS << "  Dead: " << isDead() << "\n";
   OS << "  Static: " << IsStatic << "\n";
-  OS << "  Extern: " << IsExtern << "\n";
+  OS << "  Extern: " << isExtern() << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
-  OS << "  Weak: " << IsWeak << "\n";
-  OS << "  Dynamic: " << IsDynamic << "\n";
+  OS << "  Weak: " << isWeak() << "\n";
+  OS << "  Dummy: " << isDummy() << '\n';
+  OS << "  Dynamic: " << isDynamic() << "\n";
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {

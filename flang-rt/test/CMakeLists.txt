@@ -23,28 +23,24 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
 )
 
-if (TARGET FlangRTUnitTests)
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
-    MAIN_CONFIG
-    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
-  )
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+)
 
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/NonGtestUnit/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/NonGtestUnit/lit.site.cfg.py
-    MAIN_CONFIG
-    ${CMAKE_CURRENT_SOURCE_DIR}/NonGtestUnit/lit.cfg.py
-  )
-endif ()
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/NonGtestUnit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/NonGtestUnit/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/NonGtestUnit/lit.cfg.py
+)
 
 
 add_custom_target(flang-rt-test-depends)
 set_target_properties(flang-rt-test-depends PROPERTIES FOLDER "Flang-RT/Meta")
 add_dependencies(flang-rt-test-depends
-    FlangRTUnitTests
-    flang_rt.runtime.unittest
     flang_rt.runtime
   )
 

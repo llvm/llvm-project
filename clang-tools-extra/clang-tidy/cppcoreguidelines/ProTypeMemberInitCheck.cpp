@@ -190,7 +190,7 @@ struct InitializerInsertion {
 // Convenience utility to get a RecordDecl from a QualType.
 const RecordDecl *getCanonicalRecordDecl(const QualType &Type) {
   if (const auto *RT = Type.getCanonicalType()->getAs<RecordType>())
-    return RT->getDecl();
+    return RT->getOriginalDecl();
   return nullptr;
 }
 
@@ -373,8 +373,8 @@ static bool isEmpty(ASTContext &Context, const QualType &Type) {
   return isIncompleteOrZeroLengthArrayType(Context, Type);
 }
 
-static const char *getInitializer(QualType QT, bool UseAssignment) {
-  const char *DefaultInitializer = "{}";
+static llvm::StringLiteral getInitializer(QualType QT, bool UseAssignment) {
+  static constexpr llvm::StringLiteral DefaultInitializer = "{}";
   if (!UseAssignment)
     return DefaultInitializer;
 

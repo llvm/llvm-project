@@ -880,26 +880,28 @@ define half @test_sqrt(half %a) #0 {
 ; CHECK-LABEL: test_sin(
 ; CHECK:      ld.param.b16    [[A:%rs[0-9]+]], [test_sin_param_0];
 ; CHECK-NOFTZ:      cvt.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK-F16-FTZ:      cvt.ftz.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK:      sin.approx.f32  [[RF:%r[0-9]+]], [[AF]];
+; CHECK-F16-FTZ:    cvt.ftz.f32.f16     [[AF:%r[0-9]+]], [[A]];
+; CHECK-NOF16:      sin.approx.f32  [[RF:%r[0-9]+]], [[AF]];
+; CHECK-F16-FTZ:    sin.approx.ftz.f32  [[RF:%r[0-9]+]], [[AF]];
 ; CHECK:      cvt.rn.f16.f32  [[R:%rs[0-9]+]], [[RF]];
 ; CHECK:      st.param.b16    [func_retval0], [[R]];
 ; CHECK:      ret;
-define half @test_sin(half %a) #0 #1 {
-  %r = call half @llvm.sin.f16(half %a)
+define half @test_sin(half %a) #0 {
+  %r = call afn half @llvm.sin.f16(half %a)
   ret half %r
 }
 
 ; CHECK-LABEL: test_cos(
 ; CHECK:      ld.param.b16    [[A:%rs[0-9]+]], [test_cos_param_0];
 ; CHECK-NOFTZ:      cvt.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK-F16-FTZ:      cvt.ftz.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK:      cos.approx.f32  [[RF:%r[0-9]+]], [[AF]];
+; CHECK-F16-FTZ:    cvt.ftz.f32.f16     [[AF:%r[0-9]+]], [[A]];
+; CHECK-NOF16:      cos.approx.f32  [[RF:%r[0-9]+]], [[AF]];
+; CHECK-F16-FTZ:    cos.approx.ftz.f32  [[RF:%r[0-9]+]], [[AF]];
 ; CHECK:      cvt.rn.f16.f32  [[R:%rs[0-9]+]], [[RF]];
 ; CHECK:      st.param.b16    [func_retval0], [[R]];
 ; CHECK:      ret;
-define half @test_cos(half %a) #0 #1 {
-  %r = call half @llvm.cos.f16(half %a)
+define half @test_cos(half %a) #0 {
+  %r = call afn half @llvm.cos.f16(half %a)
   ret half %r
 }
 
@@ -1181,4 +1183,3 @@ define <2 x half> @test_neg_f16x2(<2 x half> noundef %arg) #0 {
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { "unsafe-fp-math" = "true" }

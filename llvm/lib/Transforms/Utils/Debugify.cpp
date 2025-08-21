@@ -22,7 +22,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Pass.h"
@@ -707,6 +706,15 @@ bool llvm::checkDebugInfoMetadata(Module &M,
       DILocsBefore, DILocsAfter, InstToDelete, NameOfWrappedPass,
       FileNameFromCU, ShouldWriteIntoJSON, Bugs);
 
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+  // If we are tracking DebugLoc coverage, replace each empty DebugLoc with an
+  // annotated location now so that it does not show up in future passes even if
+  // it is propagated to other instructions.
+  for (auto &L : DILocsAfter)
+    if (!L.second)
+      const_cast<Instruction *>(L.first)->setDebugLoc(DebugLoc::getUnknown());
+#endif
+
   bool ResultForVars = checkVars(DIVarsBefore, DIVarsAfter, NameOfWrappedPass,
                                  FileNameFromCU, ShouldWriteIntoJSON, Bugs);
 
@@ -808,9 +816,6 @@ bool checkDebugifyMetadata(Module &M,
 
     // Find missing lines.
     for (Instruction &I : instructions(F)) {
-      if (isa<DbgValueInst>(&I))
-        continue;
-
       auto DL = I.getDebugLoc();
       if (DL && DL.getLine() != 0) {
         MissingLines.reset(DL.getLine() - 1);
@@ -839,10 +844,6 @@ bool checkDebugifyMetadata(Module &M,
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
         if (DVR.isDbgValue() || DVR.isDbgAssign())
           CheckForMisSized(&DVR);
-      auto *DVI = dyn_cast<DbgValueInst>(&I);
-      if (!DVI)
-        continue;
-      CheckForMisSized(DVI);
     }
   }
 

@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define FUNCTION length
+#ifndef __CLC_OPENCL_GEOMETRIC_LENGTH_H__
+#define __CLC_OPENCL_GEOMETRIC_LENGTH_H__
+
+#define __CLC_FUNCTION length
 #define __CLC_BODY <clc/geometric/unary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
+
+#endif // __CLC_OPENCL_GEOMETRIC_LENGTH_H__

@@ -9,6 +9,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -92,6 +93,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
     state->bytes_stored++;
     return 0;
   }
+
   // Invalid byte -> reset the state
   clear();
   return EILSEQ;
@@ -156,8 +158,19 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   }
 
   state->bytes_stored--;
+  if (state->bytes_stored == 0)
+    clear();
+
   return static_cast<char8_t>(output);
 }
+
+template <> ErrorOr<char8_t> CharacterConverter::pop() { return pop_utf8(); }
+template <> ErrorOr<char32_t> CharacterConverter::pop() { return pop_utf32(); }
+
+template <> size_t CharacterConverter::sizeAs<char8_t>() {
+  return state->total_bytes;
+}
+template <> size_t CharacterConverter::sizeAs<char32_t>() { return 1; }
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

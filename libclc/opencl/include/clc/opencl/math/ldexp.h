@@ -6,10 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define FUNCTION ldexp
+#ifndef __CLC_OPENCL_MATH_LDEXP_H__
+#define __CLC_OPENCL_MATH_LDEXP_H__
+
+#define __CLC_FUNCTION ldexp
 #define __CLC_BODY <clc/shared/binary_decl_with_int_second_arg.inc>
 #include <clc/math/gentype.inc>
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #define __CLC_BODY <clc/opencl/math/ldexp.inc>
 #include <clc/math/gentype.inc>
+
+#endif // __CLC_OPENCL_MATH_LDEXP_H__

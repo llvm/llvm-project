@@ -6,7 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define FUNCTION remainder
+#ifndef __CLC_OPENCL_MATH_REMAINDER_H__
+#define __CLC_OPENCL_MATH_REMAINDER_H__
+
+#define __CLC_FUNCTION remainder
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 #include <clc/math/gentype.inc>
-#undef FUNCTION
+#undef __CLC_FUNCTION
+
+#endif // __CLC_OPENCL_MATH_REMAINDER_H__

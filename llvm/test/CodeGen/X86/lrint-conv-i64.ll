@@ -3,7 +3,23 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx | FileCheck %s --check-prefixes=CHECK,AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx512f | FileCheck %s --check-prefixes=CHECK,AVX
 
-define i64 @testmsxs(float %x) {
+define i64 @testmsxh(half %x) nounwind {
+; SSE-LABEL: testmsxh:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    callq rintf@PLT
+; SSE-NEXT:    callq __truncsfhf2@PLT
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    cvttss2si %xmm0, %rax
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.lrint.i64.f16(half %x)
+  ret i64 %0
+}
+
+define i64 @testmsxs(float %x) nounwind {
 ; SSE-LABEL: testmsxs:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtss2si %xmm0, %rax
@@ -18,7 +34,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @testmsxd(double %x) {
+define i64 @testmsxd(double %x) nounwind {
 ; SSE-LABEL: testmsxd:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtsd2si %xmm0, %rax
@@ -33,7 +49,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @testmsll(x86_fp80 %x) {
+define i64 @testmsll(x86_fp80 %x) nounwind {
 ; CHECK-LABEL: testmsll:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -45,7 +61,17 @@ entry:
   ret i64 %0
 }
 
-define i32 @PR125324(float %x) {
+; FIXME(#44744): incorrect libcall
+define i64 @testmsxq(fp128 %x) nounwind {
+; CHECK-LABEL: testmsxq:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    jmp lrintl@PLT # TAILCALL
+entry:
+  %0 = tail call i64 @llvm.lrint.i64.f128(fp128 %x)
+  ret i64 %0
+}
+
+define i32 @PR125324(float %x) nounwind {
 ; SSE-LABEL: PR125324:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtss2si %xmm0, %rax

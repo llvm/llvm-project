@@ -273,9 +273,12 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // Clang does not yet support MULTILIB_REUSE, so we use `rv{XLEN}imafdc`
   // instead of `rv{XLEN}gc` though they are (currently) equivalent.
 
-  // 1. If `-march=` is specified, use it.
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    return A->getValue();
+  // 1. If `-march=` is specified, use it unless the value is "unset".
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+    StringRef MArch = A->getValue();
+    if (MArch != "unset")
+      return MArch.str();
+  }
 
   // 2. Get march (isa string) based on `-mcpu=`
   if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
@@ -300,7 +303,7 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
 
     StringRef MArch = llvm::RISCV::getMArchFromMcpu(CPU);
     // Bypass if target cpu's default march is empty.
-    if (MArch != "")
+    if (!MArch.empty())
       return MArch.str();
   }
 
