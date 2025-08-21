@@ -883,16 +883,17 @@ define amdgpu_kernel void @local_volatile_workgroup_release_store(
 ; GFX12-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX12-CU-NEXT:    s_endpgm
 ;
-; GFX1250-LABEL: local_volatile_workgroup_release_store:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
-; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    ds_store_b32 v0, v1
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-CU-LABEL: local_volatile_workgroup_release_store:
+; GFX1250-CU:       ; %bb.0: ; %entry
+; GFX1250-CU-NEXT:    s_load_b32 s0, s[4:5], 0x0
+; GFX1250-CU-NEXT:    s_load_b32 s1, s[4:5], 0x4
+; GFX1250-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-CU-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1250-CU-NEXT:    v_mov_b32_e32 v1, s0
+; GFX1250-CU-NEXT:    s_wait_storecnt 0x0
+; GFX1250-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-CU-NEXT:    ds_store_b32 v0, v1
+; GFX1250-CU-NEXT:    s_endpgm
    i32 %in, ptr addrspace(3) %out) {
 entry:
   store atomic volatile i32 %in, ptr addrspace(3) %out syncscope("workgroup") release, align 4
