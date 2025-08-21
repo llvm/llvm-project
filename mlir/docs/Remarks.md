@@ -14,7 +14,7 @@ them to a pluggable **streamer**. By default, MLIR integrates with LLVM’s
 - Stream remarks as passes run
 - Serialize them to **YAML** or **LLVM bitstream** for tooling
 
-______________________________________________________________________
+***
 
 ## Key Points
 
@@ -24,7 +24,7 @@ ______________________________________________________________________
 - **Kinds** – `Passed`, `Missed`, `Failure`, `Analysis`.
 - **API** – Lightweight streaming interface using `<<` (like MLIR diagnostics).
 
-______________________________________________________________________
+***
 
 ## How It Works
 
@@ -45,7 +45,7 @@ remark format and writes YAML/bitstream via `llvm::remarks::RemarkStreamer`.
 
 **Ownership flow:** `MLIRContext` → `RemarkEngine` → `MLIRRemarkStreamerBase`
 
-______________________________________________________________________
+***
 
 ## Categories
 
@@ -55,7 +55,7 @@ MLIR provides four built-in remark categories (extendable if needed):
 
 Optimization/transformation succeeded.
 
-```c++
+```
 [Passed] RemarkName | Category:Vectorizer:myPass1 | Function=foo | Remark="vectorized loop", tripCount=128
 ```
 
@@ -63,7 +63,7 @@ Optimization/transformation succeeded.
 
 Optimization/transformation didn’t apply — ideally with actionable feedback.
 
-```c++
+```
 [Missed]  | Category:Unroll | Function=foo | Reason="tripCount=4 < threshold=256", Suggestion="increase unroll to 128"
 ```
 
@@ -79,7 +79,7 @@ compiler, but the attempt fails for some reason:
 $ your-compiler -use-max-register=100 mycode.xyz
 ```
 
-```c++
+```
 [Failed] Category:RegisterAllocator | Reason="Limiting to use-max-register=100 failed; it now uses 104 registers for better performance"
 ```
 
@@ -87,12 +87,12 @@ $ your-compiler -use-max-register=100 mycode.xyz
 
 Neutral analysis results.
 
-```c++
+```
 [Analysis] Category:Register | Remark="Kernel uses 168 registers"
 [Analysis] Category:Register | Remark="Kernel uses 10kB local memory"
 ```
 
-______________________________________________________________________
+***
 
 ## Emitting Remarks
 
@@ -101,12 +101,12 @@ You append strings or key–value metrics using `<<`.
 
 ### Remark Options
 
-When constructing a remark, you typically provide four fields:
+When constructing a remark, you typically provide four fields that are `StringRef`:
 
-* **Remark name** – identifiable name
-* **Category** – high-level classification
-* **Sub-category** – more fine-grained classification
-* **Function name** – the function where the remark originates
+1. **Remark name** – identifiable name
+2. **Category** – high-level classification
+3. **Sub-category** – more fine-grained classification
+4. **Function name** – the function where the remark originates
 
 
 ### Example
@@ -145,7 +145,7 @@ LogicalResult MyPass::runOnOperation() {
 }
 ```
 
-______________________________________________________________________
+***
 
 ### Metrics and Shortcuts
 
@@ -187,7 +187,7 @@ Passing a plain string (e.g. `<< "vectorized loop"`) is equivalent to:
 metric("Remark", "vectorized loop")
 ```
 
-______________________________________________________________________
+***
 
 ## Enabling Remarks
 
@@ -220,7 +220,7 @@ args:
 
 **Bitstream format** – compact binary for large runs.
 
-______________________________________________________________________
+***
 
 ### 2. **With `mlir::emitRemarks` (No Streamer)**
 
@@ -237,7 +237,7 @@ remark::enableOptimizationRemarks(
     /*printAsEmitRemarks=*/true);
 ```
 
-______________________________________________________________________
+***
 
 ### 3. **With a Custom Streamer**
 
