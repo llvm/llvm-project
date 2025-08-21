@@ -403,6 +403,20 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                      << key << "'";
 }
 
+FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
+  if (auto stringKey = dyn_cast<StringAttr>(key)) {
+    if (contains(stringKey))
+      return UnitAttr::get(getContext());
+
+    if (contains((std::string("+") + stringKey.strref()).str()))
+      return BoolAttr::get(getContext(), true);
+
+    if (contains((std::string("-") + stringKey.strref()).str()))
+      return BoolAttr::get(getContext(), false);
+  }
+  return failure();
+}
+
 //===----------------------------------------------------------------------===//
 // LLVM_TargetAttr
 //===----------------------------------------------------------------------===//

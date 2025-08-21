@@ -27,4 +27,18 @@ def LLVMTargetToDataLayout : Pass<"llvm-target-to-data-layout"> {
   ];
 }
 
+def LLVMFeaturesFromTarget : Pass<"llvm-features-from-target"> {
+  let summary = "TODO";
+  let dependentDialects = ["mlir::DLTIDialect"];
+  let description = [{
+    TODO
+  }];
+  let options = [
+    Option<"initializeLLVMTargets", "initialize-llvm-targets", "bool",
+           /*default=*/"true",
+           "Whether to pre-load all available target machines, that LLVM is "
+           "configured to support, into the TargetRegistry.">
+  ];
+}
+
 #endif // MLIR_TARGET_LLVMIR_TRANSFORMS_PASSES

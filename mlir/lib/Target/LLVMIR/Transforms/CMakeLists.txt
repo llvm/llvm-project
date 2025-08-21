@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRTargetLLVMIRTransforms
   TargetToDataLayout.cpp
+  FeaturesFromTarget.cpp
 
   DEPENDS
   MLIRTargetLLVMIRTransformsIncGen

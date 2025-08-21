@@ -561,7 +561,7 @@ def LLVM_TargetAttrInterface
     >,
     InterfaceMethod<
       /*description=*/"Returns the target features as a string.",
-      /*retTy=*/"StringAttr",
+      /*retTy=*/"LLVM::TargetFeaturesAttr",
       /*methodName=*/"getFeatures",
       /*args=*/(ins)
     >

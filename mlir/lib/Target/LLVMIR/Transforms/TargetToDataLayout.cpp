@@ -33,7 +33,8 @@ static FailureOr<std::unique_ptr<llvm::TargetMachine>>
 getTargetMachine(LLVM::TargetAttrInterface attr) {
   StringRef triple = attr.getTriple();
   StringRef chipAKAcpu = attr.getChip();
-  StringRef features = attr.getFeatures() ? attr.getFeatures().getValue() : "";
+  std::string features =
+      attr.getFeatures() ? attr.getFeatures().getFeaturesString() : "";
 
   std::string error;
   const llvm::Target *target =
