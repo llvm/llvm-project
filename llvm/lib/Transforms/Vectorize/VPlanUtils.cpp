@@ -24,6 +24,11 @@ bool vputils::onlyFirstPartUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->onlyFirstPartUsed(Def); });
 }
 
+bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
+  return all_of(Def->users(),
+                [Def](const VPUser *U) { return U->usesScalars(Def); });
+}
+
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
                                                 ScalarEvolution &SE) {
   if (auto *Expanded = Plan.getSCEVExpansion(Expr))
@@ -73,8 +78,11 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
-  if (V->isLiveIn())
-    return SE.getSCEV(V->getLiveInIRValue());
+  if (V->isLiveIn()) {
+    if (Value *LiveIn = V->getLiveInIRValue())
+      return SE.getSCEV(LiveIn);
+    return SE.getCouldNotCompute();
+  }
 
   // TODO: Support constructing SCEVs for more recipes as needed.
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())

@@ -83,8 +83,7 @@ StructuredData::ObjectSP Breakpoint::SerializeToStructuredData() {
   if (!m_name_list.empty()) {
     StructuredData::ArraySP names_array_sp(new StructuredData::Array());
     for (auto name : m_name_list) {
-      names_array_sp->AddItem(
-          StructuredData::StringSP(new StructuredData::String(name)));
+      names_array_sp->AddItem(std::make_shared<StructuredData::String>(name));
     }
     breakpoint_contents_sp->AddItem(Breakpoint::GetKey(OptionNames::Names),
                                     names_array_sp);
@@ -440,13 +439,13 @@ const char *Breakpoint::GetQueueName() const {
   return m_options.GetThreadSpecNoCreate()->GetQueueName();
 }
 
-void Breakpoint::SetCondition(const char *condition) {
-  m_options.SetCondition(condition);
+void Breakpoint::SetCondition(StopCondition condition) {
+  m_options.SetCondition(std::move(condition));
   SendBreakpointChangedEvent(eBreakpointEventTypeConditionChanged);
 }
 
-const char *Breakpoint::GetConditionText() const {
-  return m_options.GetConditionText();
+const StopCondition &Breakpoint::GetCondition() const {
+  return m_options.GetCondition();
 }
 
 // This function is used when "baton" doesn't need to be freed

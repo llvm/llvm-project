@@ -60,16 +60,18 @@ template <class Emitter> class OptionScope final {
 public:
   /// Root constructor, compiling or discarding primitives.
   OptionScope(Compiler<Emitter> *Ctx, bool NewDiscardResult,
-              bool NewInitializing)
+              bool NewInitializing, bool NewToLValue)
       : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
-        OldInitializing(Ctx->Initializing) {
+        OldInitializing(Ctx->Initializing), OldToLValue(NewToLValue) {
     Ctx->DiscardResult = NewDiscardResult;
     Ctx->Initializing = NewInitializing;
+    Ctx->ToLValue = NewToLValue;
   }
 
   ~OptionScope() {
     Ctx->DiscardResult = OldDiscardResult;
     Ctx->Initializing = OldInitializing;
+    Ctx->ToLValue = OldToLValue;
   }
 
 private:
@@ -78,6 +80,7 @@ private:
   /// Old discard flag to restore.
   bool OldDiscardResult;
   bool OldInitializing;
+  bool OldToLValue;
 };
 
 template <class Emitter>
@@ -106,25 +109,14 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
   return true;
 }
 
-/// Scope managing label targets.
-template <class Emitter> class LabelScope {
-public:
-  virtual ~LabelScope() {}
-
-protected:
-  LabelScope(Compiler<Emitter> *Ctx) : Ctx(Ctx) {}
-  /// Compiler instance.
-  Compiler<Emitter> *Ctx;
-};
-
 /// Sets the context for break/continue statements.
-template <class Emitter> class LoopScope final : public LabelScope<Emitter> {
+template <class Emitter> class LoopScope final {
 public:
   using LabelTy = typename Compiler<Emitter>::LabelTy;
   using OptLabelTy = typename Compiler<Emitter>::OptLabelTy;
 
   LoopScope(Compiler<Emitter> *Ctx, LabelTy BreakLabel, LabelTy ContinueLabel)
-      : LabelScope<Emitter>(Ctx), OldBreakLabel(Ctx->BreakLabel),
+      : Ctx(Ctx), OldBreakLabel(Ctx->BreakLabel),
         OldContinueLabel(Ctx->ContinueLabel),
         OldBreakVarScope(Ctx->BreakVarScope),
         OldContinueVarScope(Ctx->ContinueVarScope) {
@@ -142,6 +134,7 @@ public:
   }
 
 private:
+  Compiler<Emitter> *Ctx;
   OptLabelTy OldBreakLabel;
   OptLabelTy OldContinueLabel;
   VariableScope<Emitter> *OldBreakVarScope;
@@ -149,7 +142,7 @@ private:
 };
 
 // Sets the context for a switch scope, mapping labels.
-template <class Emitter> class SwitchScope final : public LabelScope<Emitter> {
+template <class Emitter> class SwitchScope final {
 public:
   using LabelTy = typename Compiler<Emitter>::LabelTy;
   using OptLabelTy = typename Compiler<Emitter>::OptLabelTy;
@@ -157,7 +150,7 @@ public:
 
   SwitchScope(Compiler<Emitter> *Ctx, CaseMap &&CaseLabels, LabelTy BreakLabel,
               OptLabelTy DefaultLabel)
-      : LabelScope<Emitter>(Ctx), OldBreakLabel(Ctx->BreakLabel),
+      : Ctx(Ctx), OldBreakLabel(Ctx->BreakLabel),
         OldDefaultLabel(this->Ctx->DefaultLabel),
         OldCaseLabels(std::move(this->Ctx->CaseLabels)),
         OldLabelVarScope(Ctx->BreakVarScope) {
@@ -175,6 +168,7 @@ public:
   }
 
 private:
+  Compiler<Emitter> *Ctx;
   OptLabelTy OldBreakLabel;
   OptLabelTy OldDefaultLabel;
   CaseMap OldCaseLabels;
@@ -194,6 +188,31 @@ private:
   bool OldFlag;
 };
 
+/// When generating code for e.g. implicit field initializers in constructors,
+/// we don't have anything to point to in case the initializer causes an error.
+/// In that case, we need to disable location tracking for the initializer so
+/// we later point to the call range instead.
+template <class Emitter> class LocOverrideScope final {
+public:
+  LocOverrideScope(Compiler<Emitter> *Ctx, SourceInfo NewValue,
+                   bool Enabled = true)
+      : Ctx(Ctx), OldFlag(Ctx->LocOverride), Enabled(Enabled) {
+
+    if (Enabled)
+      Ctx->LocOverride = NewValue;
+  }
+
+  ~LocOverrideScope() {
+    if (Enabled)
+      Ctx->LocOverride = OldFlag;
+  }
+
+private:
+  Compiler<Emitter> *Ctx;
+  std::optional<SourceInfo> OldFlag;
+  bool Enabled;
+};
+
 } // namespace interp
 } // namespace clang
 
@@ -206,13 +225,38 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   switch (CE->getCastKind()) {
   case CK_LValueToRValue: {
+    if (ToLValue && CE->getType()->isPointerType())
+      return this->delegate(SubExpr);
+
     if (SubExpr->getType().isVolatileQualified())
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, CE);
 
-    std::optional<PrimType> SubExprT = classify(SubExpr->getType());
+    OptPrimType SubExprT = classify(SubExpr->getType());
+    // Try to load the value directly. This is purely a performance
+    // optimization.
+    if (SubExprT) {
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
+        const ValueDecl *D = DRE->getDecl();
+        bool IsReference = D->getType()->isReferenceType();
+
+        if (!IsReference) {
+          if (Context::shouldBeGloballyIndexed(D)) {
+            if (auto GlobalIndex = P.getGlobal(D))
+              return this->emitGetGlobal(*SubExprT, *GlobalIndex, CE);
+          } else if (auto It = Locals.find(D); It != Locals.end()) {
+            return this->emitGetLocal(*SubExprT, It->second.Offset, CE);
+          } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+            if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+              return this->emitGetParam(*SubExprT, It->second.Offset, CE);
+            }
+          }
+        }
+      }
+    }
+
     // Prepare storage for the result.
     if (!Initializing && !SubExprT) {
-      std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+      UnsignedOrNone LocalIndex = allocateLocal(SubExpr);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -340,6 +384,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_FloatingToIntegral: {
+    if (!CE->getType()->isIntegralOrEnumerationType())
+      return false;
     if (!this->visit(SubExpr))
       return false;
     PrimType ToT = classifyPrim(CE);
@@ -360,7 +406,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const Descriptor *Desc = nullptr;
     const QualType PointeeType = CE->getType()->getPointeeType();
     if (!PointeeType.isNull()) {
-      if (std::optional<PrimType> T = classify(PointeeType))
+      if (OptPrimType T = classify(PointeeType))
         Desc = P.createDescriptor(SubExpr, *T);
       else
         Desc = P.createDescriptor(SubExpr, PointeeType.getTypePtr(),
@@ -408,7 +454,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     PrimType T = classifyPrim(IntType);
     QualType PtrType = CE->getType();
     const Descriptor *Desc;
-    if (std::optional<PrimType> T = classify(PtrType->getPointeeType()))
+    if (OptPrimType T = classify(PtrType->getPointeeType()))
       Desc = P.createDescriptor(SubExpr, *T);
     else if (PtrType->getPointeeType()->isVoidType())
       Desc = nullptr;
@@ -445,25 +491,29 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, CE);
     }
     QualType SubExprTy = SubExpr->getType();
-    std::optional<PrimType> FromT = classify(SubExprTy);
+    OptPrimType FromT = classify(SubExprTy);
     // Casts from integer/vector to vector.
     if (CE->getType()->isVectorType())
       return this->emitBuiltinBitCast(CE);
 
-    std::optional<PrimType> ToT = classify(CE->getType());
+    OptPrimType ToT = classify(CE->getType());
     if (!FromT || !ToT)
       return false;
 
     assert(isPtrType(*FromT));
     assert(isPtrType(*ToT));
     if (FromT == ToT) {
-      if (CE->getType()->isVoidPointerType())
+      if (CE->getType()->isVoidPointerType() &&
+          !SubExprTy->isFunctionPointerType()) {
         return this->delegate(SubExpr);
+      }
 
       if (!this->visit(SubExpr))
         return false;
-      if (CE->getType()->isFunctionPointerType())
-        return true;
+      if (CE->getType()->isFunctionPointerType() ||
+          SubExprTy->isFunctionPointerType()) {
+        return this->emitFnPtrCast(CE);
+      }
       if (FromT == PT_Ptr)
         return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), CE);
       return true;
@@ -476,7 +526,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_IntegralToBoolean:
   case CK_FixedPointToBoolean: {
     // HLSL uses this to cast to one-element vectors.
-    std::optional<PrimType> FromT = classify(SubExpr->getType());
+    OptPrimType FromT = classify(SubExpr->getType());
     if (!FromT)
       return false;
 
@@ -489,8 +539,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_BooleanToSignedIntegral:
   case CK_IntegralCast: {
-    std::optional<PrimType> FromT = classify(SubExpr->getType());
-    std::optional<PrimType> ToT = classify(CE->getType());
+    OptPrimType FromT = classify(SubExpr->getType());
+    OptPrimType ToT = classify(CE->getType());
     if (!FromT || !ToT)
       return false;
 
@@ -509,9 +559,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // Possibly diagnose casts to enum types if the target type does not
     // have a fixed size.
     if (Ctx.getLangOpts().CPlusPlus && CE->getType()->isEnumeralType()) {
-      if (const auto *ET = CE->getType().getCanonicalType()->castAs<EnumType>();
-          !ET->getDecl()->isFixed()) {
-        if (!this->emitCheckEnumValue(*FromT, ET->getDecl(), CE))
+      const auto *ET = CE->getType().getCanonicalType()->castAs<EnumType>();
+      const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+      if (!ED->isFixed()) {
+        if (!this->emitCheckEnumValue(*FromT, ED, CE))
           return false;
       }
     }
@@ -558,7 +609,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // We're creating a complex value here, so we need to
     // allocate storage for it.
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateTemporary(CE);
+      UnsignedOrNone LocalIndex = allocateTemporary(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -582,7 +633,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(CE->getType()->isAnyComplexType());
     assert(SubExpr->getType()->isAnyComplexType());
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(CE);
+      UnsignedOrNone LocalIndex = allocateLocal(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -622,12 +673,12 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_VectorSplat: {
-    assert(!classify(CE->getType()));
-    assert(classify(SubExpr->getType()));
+    assert(!canClassify(CE->getType()));
+    assert(canClassify(SubExpr->getType()));
     assert(CE->getType()->isVectorType());
 
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(CE);
+      UnsignedOrNone LocalIndex = allocateLocal(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -660,7 +711,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_HLSLVectorTruncation: {
     assert(SubExpr->getType()->isVectorType());
-    if (std::optional<PrimType> ResultT = classify(CE)) {
+    if (OptPrimType ResultT = classify(CE)) {
       assert(!DiscardResult);
       // Result must be either a float or integer. Take the first element.
       if (!this->visit(SubExpr))
@@ -671,7 +722,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(CE->getType()->isVectorType());
 
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateTemporary(CE);
+      UnsignedOrNone LocalIndex = allocateTemporary(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -759,7 +810,7 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
     return true;
 
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    UnsignedOrNone LocalIndex = allocateTemporary(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -844,9 +895,9 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   }
 
   // Typecheck the args.
-  std::optional<PrimType> LT = classify(LHS);
-  std::optional<PrimType> RT = classify(RHS);
-  std::optional<PrimType> T = classify(BO->getType());
+  OptPrimType LT = classify(LHS);
+  OptPrimType RT = classify(RHS);
+  OptPrimType T = classify(BO->getType());
 
   // Special case for C++'s three-way/spaceship operator <=>, which
   // returns a std::{strong,weak,partial}_ordering (which is a class, so doesn't
@@ -860,7 +911,7 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 
     // We need a temporary variable holding our return value.
     if (!Initializing) {
-      std::optional<unsigned> ResultIndex = this->allocateLocal(BO);
+      UnsignedOrNone ResultIndex = this->allocateLocal(BO);
       if (!this->emitGetPtrLocal(*ResultIndex, BO))
         return false;
     }
@@ -880,22 +931,11 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return this->VisitPointerArithBinOp(BO);
   }
 
-  // Assignments require us to evalute the RHS first.
-  if (BO->getOpcode() == BO_Assign) {
+  if (BO->getOpcode() == BO_Assign)
+    return this->visitAssignment(LHS, RHS, BO);
 
-    if (!visit(RHS) || !visit(LHS))
-      return false;
-
-    // We don't support assignments in C.
-    if (!Ctx.getLangOpts().CPlusPlus && !this->emitInvalid(BO))
-      return false;
-
-    if (!this->emitFlip(*LT, *RT, BO))
-      return false;
-  } else {
-    if (!visit(LHS) || !visit(RHS))
-      return false;
-  }
+  if (!visit(LHS) || !visit(RHS))
+    return false;
 
   // For languages such as C, cast the result of one
   // of our comparision opcodes to T (which is usually int).
@@ -946,22 +986,6 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     if (BO->getType()->isFloatingType())
       return Discard(this->emitDivf(getFPOptions(BO), BO));
     return Discard(this->emitDiv(*T, BO));
-  case BO_Assign:
-    if (DiscardResult)
-      return LHS->refersToBitField() ? this->emitStoreBitFieldPop(*T, BO)
-                                     : this->emitStorePop(*T, BO);
-    if (LHS->refersToBitField()) {
-      if (!this->emitStoreBitField(*T, BO))
-        return false;
-    } else {
-      if (!this->emitStore(*T, BO))
-        return false;
-    }
-    // Assignments aren't necessarily lvalues in C.
-    // Load from them in that case.
-    if (!BO->isLValue())
-      return this->emitLoadPop(*T, BO);
-    return true;
   case BO_And:
     return Discard(this->emitBitAnd(*T, BO));
   case BO_Or:
@@ -994,8 +1018,8 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
       (!LHS->getType()->isPointerType() && !RHS->getType()->isPointerType()))
     return false;
 
-  std::optional<PrimType> LT = classify(LHS);
-  std::optional<PrimType> RT = classify(RHS);
+  OptPrimType LT = classify(LHS);
+  OptPrimType RT = classify(RHS);
 
   if (!LT || !RT)
     return false;
@@ -1049,7 +1073,8 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
     if (classifyPrim(E) != PT_Ptr)
       return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
     return true;
-  } else if (Op == BO_Sub) {
+  }
+  if (Op == BO_Sub) {
     if (!this->emitSubOffset(OffsetType, E))
       return false;
 
@@ -1067,7 +1092,7 @@ bool Compiler<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
   BinaryOperatorKind Op = E->getOpcode();
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  std::optional<PrimType> T = classify(E->getType());
+  OptPrimType T = classify(E->getType());
 
   if (Op == BO_LOr) {
     // Logical OR. Visit LHS and only evaluate RHS if LHS was FALSE.
@@ -1126,7 +1151,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   // Prepare storage for result.
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    UnsignedOrNone LocalIndex = allocateTemporary(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -1185,7 +1210,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
     if (!LHSIsComplex) {
       // This is using the RHS type for the fake-complex LHS.
-      std::optional<unsigned> LocalIndex = allocateTemporary(RHS);
+      UnsignedOrNone LocalIndex = allocateTemporary(RHS);
       if (!LocalIndex)
         return false;
       LHSOffset = *LocalIndex;
@@ -1360,7 +1385,7 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
 
   // Prepare storage for result.
   if (!Initializing && !E->isCompoundAssignmentOp()) {
-    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    UnsignedOrNone LocalIndex = allocateTemporary(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -1400,10 +1425,15 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   // BitAdd/BitOr/BitXor/Shl/Shr doesn't support bool type, we need perform the
   // integer promotion.
   bool NeedIntPromot = ElemT == PT_Bool && (E->isBitwiseOp() || E->isShiftOp());
-  QualType PromotTy =
-      Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
-  PrimType PromotT = classifyPrim(PromotTy);
-  PrimType OpT = NeedIntPromot ? PromotT : ElemT;
+  QualType PromotTy;
+  PrimType PromotT = PT_Bool;
+  PrimType OpT = ElemT;
+  if (NeedIntPromot) {
+    PromotTy =
+        Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
+    PromotT = classifyPrim(PromotTy);
+    OpT = PromotT;
+  }
 
   auto getElem = [=](unsigned Offset, PrimType ElemT, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
@@ -1647,7 +1677,7 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
     const ImplicitValueInitExpr *E) {
   QualType QT = E->getType();
 
-  if (std::optional<PrimType> T = classify(QT))
+  if (OptPrimType T = classify(QT))
     return this->visitZeroInitializer(*T, QT, E);
 
   if (QT->isRecordType()) {
@@ -1733,7 +1763,7 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
   if (!Success)
     return false;
 
-  std::optional<PrimType> IndexT = classify(Index->getType());
+  OptPrimType IndexT = classify(Index->getType());
   // In error-recovery cases, the index expression has a dependent type.
   if (!IndexT)
     return this->emitError(E);
@@ -1775,7 +1805,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   // Primitive values.
-  if (std::optional<PrimType> T = classify(QT)) {
+  if (OptPrimType T = classify(QT)) {
     assert(!DiscardResult);
     if (Inits.size() == 0)
       return this->visitZeroInitializer(*T, QT, E);
@@ -1789,20 +1819,30 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->delegate(Inits[0]);
 
+    if (!R)
+      return false;
+
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
-                                  const Expr *Init, PrimType T) -> bool {
+                                  const Expr *Init, PrimType T,
+                                  bool Activate = false) -> bool {
       InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
       if (!this->visit(Init))
         return false;
 
-      if (FieldToInit->isBitField())
+      bool BitField = FieldToInit->isBitField();
+      if (BitField && Activate)
+        return this->emitInitBitFieldActivate(T, FieldToInit, E);
+      if (BitField)
         return this->emitInitBitField(T, FieldToInit, E);
+      if (Activate)
+        return this->emitInitFieldActivate(T, FieldToInit->Offset, E);
       return this->emitInitField(T, FieldToInit->Offset, E);
     };
 
     auto initCompositeField = [=](const Record::Field *FieldToInit,
-                                  const Expr *Init) -> bool {
+                                  const Expr *Init,
+                                  bool Activate = false) -> bool {
       InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
 
@@ -1810,6 +1850,10 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       // on the stack and recurse into visitInitializer().
       if (!this->emitGetPtrField(FieldToInit->Offset, Init))
         return false;
+
+      if (Activate && !this->emitActivate(E))
+        return false;
+
       if (!this->visitInitializer(Init))
         return false;
       return this->emitPopPtr(E);
@@ -1828,11 +1872,11 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
           FToInit = cast<CXXParenListInitExpr>(E)->getInitializedFieldInUnion();
 
         const Record::Field *FieldToInit = R->getField(FToInit);
-        if (std::optional<PrimType> T = classify(Init)) {
-          if (!initPrimitiveField(FieldToInit, Init, *T))
+        if (OptPrimType T = classify(Init)) {
+          if (!initPrimitiveField(FieldToInit, Init, *T, /*Activate=*/true))
             return false;
         } else {
-          if (!initCompositeField(FieldToInit, Init))
+          if (!initCompositeField(FieldToInit, Init, /*Activate=*/true))
             return false;
         }
       }
@@ -1847,7 +1891,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
              R->getField(InitIndex)->isUnnamedBitField())
         ++InitIndex;
 
-      if (std::optional<PrimType> T = classify(Init)) {
+      if (OptPrimType T = classify(Init)) {
         const Record::Field *FieldToInit = R->getField(InitIndex);
         if (!initPrimitiveField(FieldToInit, Init, *T))
           return false;
@@ -1887,22 +1931,26 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (!this->emitCheckArraySize(NumElems, E))
       return false;
 
-    std::optional<PrimType> InitT = classify(CAT->getElementType());
+    OptPrimType InitT = classify(CAT->getElementType());
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
       if (const auto *EmbedS =
               dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
         PrimType TargetT = classifyPrim(Init->getType());
 
-        auto Eval = [&](const Expr *Init, unsigned ElemIndex) {
-          PrimType InitT = classifyPrim(Init->getType());
-          if (!this->visit(Init))
-            return false;
-          if (InitT != TargetT) {
-            if (!this->emitCast(InitT, TargetT, E))
+        auto Eval = [&](const IntegerLiteral *IL, unsigned ElemIndex) {
+          if (TargetT == PT_Float) {
+            if (!this->emitConst(IL->getValue(), classifyPrim(IL), Init))
+              return false;
+            const auto *Sem = &Ctx.getFloatSemantics(CAT->getElementType());
+            if (!this->emitCastIntegralFloating(classifyPrim(IL), Sem,
+                                                getFPOptions(E), E))
+              return false;
+          } else {
+            if (!this->emitConst(IL->getValue(), TargetT, Init))
               return false;
           }
-          return this->emitInitElem(TargetT, ElemIndex, Init);
+          return this->emitInitElem(TargetT, ElemIndex, IL);
         };
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
           return false;
@@ -2001,7 +2049,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 /// this.
 template <class Emitter>
 bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
-                                           std::optional<PrimType> InitT) {
+                                           OptPrimType InitT) {
   if (InitT) {
     // Visit the primitive element like normal.
     if (!this->visit(Init))
@@ -2023,19 +2071,37 @@ bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
 
 template <class Emitter>
 bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
-                                      const FunctionDecl *FuncDecl) {
+                                      const FunctionDecl *FuncDecl,
+                                      bool Activate, bool IsOperatorCall) {
   assert(VarScope->getKind() == ScopeKind::Call);
-  llvm::BitVector NonNullArgs = collectNonNullArgs(FuncDecl, Args);
+  llvm::BitVector NonNullArgs;
+  if (FuncDecl && FuncDecl->hasAttr<NonNullAttr>())
+    NonNullArgs = collectNonNullArgs(FuncDecl, Args);
+
+  bool ExplicitMemberFn = false;
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FuncDecl))
+    ExplicitMemberFn = MD->isExplicitObjectMemberFunction();
 
   unsigned ArgIndex = 0;
   for (const Expr *Arg : Args) {
-    if (std::optional<PrimType> T = classify(Arg)) {
+    if (canClassify(Arg)) {
       if (!this->visit(Arg))
         return false;
     } else {
 
-      std::optional<unsigned> LocalIndex = allocateLocal(
-          Arg, Arg->getType(), /*ExtendingDecl=*/nullptr, ScopeKind::Call);
+      DeclTy Source = Arg;
+      if (FuncDecl) {
+        // Try to use the parameter declaration instead of the argument
+        // expression as a source.
+        unsigned DeclIndex = ArgIndex - IsOperatorCall + ExplicitMemberFn;
+        if (DeclIndex < FuncDecl->getNumParams())
+          Source = FuncDecl->getParamDecl(ArgIndex - IsOperatorCall +
+                                          ExplicitMemberFn);
+      }
+
+      UnsignedOrNone LocalIndex =
+          allocateLocal(std::move(Source), Arg->getType(),
+                        /*ExtendingDecl=*/nullptr, ScopeKind::Call);
       if (!LocalIndex)
         return false;
 
@@ -2046,7 +2112,12 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
         return false;
     }
 
-    if (FuncDecl && NonNullArgs[ArgIndex]) {
+    if (ArgIndex == 1 && Activate) {
+      if (!this->emitActivate(Arg))
+        return false;
+    }
+
+    if (!NonNullArgs.empty() && NonNullArgs[ArgIndex]) {
       PrimType ArgT = classify(Arg).value_or(PT_Ptr);
       if (ArgT == PT_Ptr) {
         if (!this->emitCheckNonNullArg(ArgT, Arg))
@@ -2079,7 +2150,7 @@ bool Compiler<Emitter>::VisitSubstNonTypeTemplateParmExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
-  std::optional<PrimType> T = classify(E->getType());
+  OptPrimType T = classify(E->getType());
   if (T && E->hasAPValueResult()) {
     // Try to emit the APValue directly, without visiting the subexpr.
     // This will only fail if we can't emit the APValue, so won't emit any
@@ -2274,7 +2345,7 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   const auto maybeLoadValue = [&]() -> bool {
     if (E->isGLValue())
       return true;
-    if (std::optional<PrimType> T = classify(E))
+    if (OptPrimType T = classify(E))
       return this->emitLoadPop(*T, E);
     return false;
   };
@@ -2339,7 +2410,7 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   //   Investigate compiling this to a loop.
   const Expr *SubExpr = E->getSubExpr();
   size_t Size = E->getArraySize().getZExtValue();
-  std::optional<PrimType> SubExprT = classify(SubExpr);
+  OptPrimType SubExprT = classify(SubExpr);
 
   // So, every iteration, we execute an assignment here
   // where the LHS is on the stack (the target array)
@@ -2571,8 +2642,8 @@ bool Compiler<Emitter>::VisitFloatCompoundAssignOperator(
   QualType LHSType = LHS->getType();
   QualType LHSComputationType = E->getComputationLHSType();
   QualType ResultType = E->getComputationResultType();
-  std::optional<PrimType> LT = classify(LHSComputationType);
-  std::optional<PrimType> RT = classify(ResultType);
+  OptPrimType LT = classify(LHSComputationType);
+  OptPrimType RT = classify(ResultType);
 
   assert(ResultType->isFloatingType());
 
@@ -2641,8 +2712,8 @@ bool Compiler<Emitter>::VisitPointerCompoundAssignOperator(
   BinaryOperatorKind Op = E->getOpcode();
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  std::optional<PrimType> LT = classify(LHS->getType());
-  std::optional<PrimType> RT = classify(RHS->getType());
+  OptPrimType LT = classify(LHS->getType());
+  OptPrimType RT = classify(RHS->getType());
 
   if (Op != BO_AddAssign && Op != BO_SubAssign)
     return false;
@@ -2680,11 +2751,10 @@ bool Compiler<Emitter>::VisitCompoundAssignOperator(
 
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  std::optional<PrimType> LHSComputationT =
-      classify(E->getComputationLHSType());
-  std::optional<PrimType> LT = classify(LHS->getType());
-  std::optional<PrimType> RT = classify(RHS->getType());
-  std::optional<PrimType> ResultT = classify(E->getType());
+  OptPrimType LHSComputationT = classify(E->getComputationLHSType());
+  OptPrimType LT = classify(LHS->getType());
+  OptPrimType RT = classify(RHS->getType());
+  OptPrimType ResultT = classify(E->getType());
 
   if (!Ctx.getLangOpts().CPlusPlus14)
     return this->visit(RHS) && this->visit(LHS) && this->emitError(E);
@@ -2819,7 +2889,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // When we're initializing a global variable *or* the storage duration of
   // the temporary is explicitly static, create a global variable.
-  std::optional<PrimType> SubExprT = classify(SubExpr);
+  OptPrimType SubExprT = classify(SubExpr);
   bool IsStatic = E->getStorageDuration() == SD_Static;
   if (IsStatic) {
     std::optional<unsigned> GlobalIndex = P.createGlobal(E);
@@ -2872,7 +2942,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return false;
 
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
-    if (std::optional<unsigned> LocalIndex =
+    if (UnsignedOrNone LocalIndex =
             allocateLocal(E, Inner->getType(), E->getExtendingDecl())) {
       InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -2913,26 +2983,31 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     return this->visitInitializer(Init) && this->emitFinishInit(E);
   }
 
-  std::optional<PrimType> T = classify(E->getType());
+  OptPrimType T = classify(E->getType());
   if (E->isFileScope()) {
     // Avoid creating a variable if this is a primitive RValue anyway.
     if (T && !E->isLValue())
       return this->delegate(Init);
 
-    if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
-      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+    std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+    if (!GlobalIndex)
+      return false;
+
+    if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+      return false;
+
+    // Since this is a global variable, we might've already seen,
+    // don't do it again.
+    if (P.isGlobalInitialized(*GlobalIndex))
+      return true;
+
+    if (T) {
+      if (!this->visit(Init))
         return false;
-
-      if (T) {
-        if (!this->visit(Init))
-          return false;
-        return this->emitInitGlobal(*T, *GlobalIndex, E);
-      }
-
-      return this->visitInitializer(Init) && this->emitFinishInit(E);
+      return this->emitInitGlobal(*T, *GlobalIndex, E);
     }
 
-    return false;
+    return this->visitInitializer(Init) && this->emitFinishInit(E);
   }
 
   // Otherwise, use a local variable.
@@ -2944,7 +3019,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   unsigned LocalIndex;
   if (T)
     LocalIndex = this->allocateLocalPrimitive(Init, *T, /*IsConst=*/false);
-  else if (std::optional<unsigned> MaybeIndex = this->allocateLocal(Init))
+  else if (UnsignedOrNone MaybeIndex = this->allocateLocal(Init))
     LocalIndex = *MaybeIndex;
   else
     return false;
@@ -2996,7 +3071,7 @@ bool Compiler<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
       continue;
     ++CaptureInitIt;
 
-    if (std::optional<PrimType> T = classify(Init)) {
+    if (OptPrimType T = classify(Init)) {
       if (!this->visit(Init))
         return false;
 
@@ -3043,21 +3118,21 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     const CXXReinterpretCastExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
 
-  std::optional<PrimType> FromT = classify(SubExpr);
-  std::optional<PrimType> ToT = classify(E);
+  OptPrimType FromT = classify(SubExpr);
+  OptPrimType ToT = classify(E);
 
   if (!FromT || !ToT)
     return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, E);
 
   if (FromT == PT_Ptr || ToT == PT_Ptr) {
     // Both types could be PT_Ptr because their expressions are glvalues.
-    std::optional<PrimType> PointeeFromT;
+    OptPrimType PointeeFromT;
     if (SubExpr->getType()->isPointerOrReferenceType())
       PointeeFromT = classify(SubExpr->getType()->getPointeeType());
     else
       PointeeFromT = classify(SubExpr->getType());
 
-    std::optional<PrimType> PointeeToT;
+    OptPrimType PointeeToT;
     if (E->getType()->isPointerOrReferenceType())
       PointeeToT = classify(E->getType()->getPointeeType());
     else
@@ -3110,17 +3185,10 @@ bool Compiler<Emitter>::VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   QualType T = E->getType();
-  assert(!classify(T));
+  assert(!canClassify(T));
 
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
-
-    // Trivial copy/move constructor. Avoid copy.
-    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
-        Ctor->isTrivial() &&
-        E->getArg(0)->isTemporaryObject(Ctx.getASTContext(),
-                                        T->getAsCXXRecordDecl()))
-      return this->visitInitializer(E->getArg(0));
 
     // If we're discarding a construct expression, we still need
     // to allocate a variable and call the constructor and destructor.
@@ -3128,7 +3196,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (Ctor->isTrivial())
         return true;
       assert(!Initializing);
-      std::optional<unsigned> LocalIndex = allocateLocal(E);
+      UnsignedOrNone LocalIndex = allocateLocal(E);
 
       if (!LocalIndex)
         return false;
@@ -3136,6 +3204,13 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
     }
+
+    // Trivial copy/move constructor. Avoid copy.
+    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
+        Ctor->isTrivial() &&
+        E->getArg(0)->isTemporaryObject(Ctx.getASTContext(),
+                                        T->getAsCXXRecordDecl()))
+      return this->visitInitializer(E->getArg(0));
 
     // Zero initialization.
     if (E->requiresZeroInitialization()) {
@@ -3326,12 +3401,12 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
   if (DiscardResult || Ty->isVoidType())
     return true;
 
-  if (std::optional<PrimType> T = classify(Ty))
+  if (OptPrimType T = classify(Ty))
     return this->visitZeroInitializer(*T, Ty, E);
 
   if (const auto *CT = Ty->getAs<ComplexType>()) {
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(E);
+      UnsignedOrNone LocalIndex = allocateLocal(E);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -3354,7 +3429,7 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
   if (const auto *VT = Ty->getAs<VectorType>()) {
     // FIXME: Code duplication with the _Complex case above.
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(E);
+      UnsignedOrNone LocalIndex = allocateLocal(E);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -3439,7 +3514,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
   assert(classifyPrim(E->getType()) == PT_Ptr);
   const Expr *Init = E->getInitializer();
   QualType ElementType = E->getAllocatedType();
-  std::optional<PrimType> ElemT = classify(ElementType);
+  OptPrimType ElemT = classify(ElementType);
   unsigned PlacementArgs = E->getNumPlacementArgs();
   const FunctionDecl *OperatorNew = E->getOperatorNew();
   const Expr *PlacementDest = nullptr;
@@ -3627,7 +3702,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
           if (!this->emitStorePop(InitT, E))
             return false;
         } else if (DynamicInit) {
-          if (std::optional<PrimType> InitT = classify(DynamicInit)) {
+          if (OptPrimType InitT = classify(DynamicInit)) {
             if (!this->visit(DynamicInit))
               return false;
             if (!this->emitStorePop(*InitT, E))
@@ -3714,7 +3789,7 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
     return true;
 
   const Function *Func = nullptr;
-  if (auto F = Ctx.getOrCreateObjCBlock(E))
+  if (const Function *F = Ctx.getOrCreateObjCBlock(E))
     Func = F;
 
   if (!Func)
@@ -3862,10 +3937,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   assert(E->getType()->isVoidPointerType());
 
-  unsigned Offset =
-      allocateLocalPrimitive(E->getLabel(), PT_Ptr, /*IsConst=*/true);
-
-  return this->emitGetLocal(PT_Ptr, Offset, E);
+  return this->emitDummyPtr(E, E);
 }
 
 template <class Emitter>
@@ -3983,8 +4055,7 @@ bool Compiler<Emitter>::VisitExtVectorElementExpr(
 
   // Now the vector variable for the return value.
   if (!Initializing) {
-    std::optional<unsigned> ResultIndex;
-    ResultIndex = allocateLocal(E);
+    UnsignedOrNone ResultIndex = allocateLocal(E);
     if (!ResultIndex)
       return false;
     if (!this->emitGetPtrLocal(*ResultIndex, E))
@@ -4045,8 +4116,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 
   PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
   if (isIntegralType(SecondFieldT)) {
-    if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()),
-                         SecondFieldT, E))
+    if (!this->emitConst(ArrayType->getSize(), SecondFieldT, E))
       return false;
     return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
   }
@@ -4056,7 +4126,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
     return false;
   if (!this->emitExpandPtr(E))
     return false;
-  if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()), PT_Uint64, E))
+  if (!this->emitConst(ArrayType->getSize(), PT_Uint64, E))
     return false;
   if (!this->emitArrayElemPtrPop(PT_Uint64, E))
     return false;
@@ -4088,13 +4158,13 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
 
 template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
-                             /*NewInitializing=*/false);
+                             /*NewInitializing=*/false, /*ToLValue=*/false);
   return this->Visit(E);
 }
 
 template <class Emitter> bool Compiler<Emitter>::delegate(const Expr *E) {
   // We're basically doing:
-  // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
+  // OptionScope<Emitter> Scope(this, DicardResult, Initializing, ToLValue);
   // but that's unnecessary of course.
   return this->Visit(E);
 }
@@ -4108,8 +4178,8 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
   // Create local variable to hold the return value.
   if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
-      !classify(E->getType())) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E);
+      !canClassify(E->getType())) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
 
@@ -4122,21 +4192,27 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   //  Otherwise,we have a primitive return value, produce the value directly
   //  and push it on the stack.
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
-                             /*NewInitializing=*/false);
+                             /*NewInitializing=*/false, /*ToLValue=*/ToLValue);
   return this->Visit(E);
 }
 
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
-  assert(!classify(E->getType()));
+  assert(!canClassify(E->getType()));
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
-                             /*NewInitializing=*/true);
+                             /*NewInitializing=*/true, /*ToLValue=*/false);
+  return this->Visit(E);
+}
+
+template <class Emitter> bool Compiler<Emitter>::visitAsLValue(const Expr *E) {
+  OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
+                             /*NewInitializing=*/false, /*ToLValue=*/true);
   return this->Visit(E);
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
-  std::optional<PrimType> T = classify(E->getType());
+  OptPrimType T = classify(E->getType());
   if (!T) {
     // Convert complex values to bool.
     if (E->getType()->isAnyComplexType()) {
@@ -4227,10 +4303,13 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
       PrimType T = classifyPrim(D->getType());
       if (!this->visitZeroInitializer(T, QT, E))
         return false;
+      if (R->isUnion()) {
+        if (!this->emitInitFieldActivate(T, Field.Offset, E))
+          return false;
+        break;
+      }
       if (!this->emitInitField(T, Field.Offset, E))
         return false;
-      if (R->isUnion())
-        break;
       continue;
     }
 
@@ -4256,13 +4335,15 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     } else
       return false;
 
-    if (!this->emitFinishInitPop(E))
-      return false;
-
     // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
     // object's first non-static named data member is zero-initialized
-    if (R->isUnion())
+    if (R->isUnion()) {
+      if (!this->emitFinishInitActivatePop(E))
+        return false;
       break;
+    }
+    if (!this->emitFinishInitPop(E))
+      return false;
   }
 
   for (const Record::Base &B : R->bases()) {
@@ -4286,7 +4367,7 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
   QualType ElemType = AT->getElementType();
   size_t NumElems = cast<ConstantArrayType>(AT)->getZExtSize();
 
-  if (std::optional<PrimType> ElemT = classify(ElemType)) {
+  if (OptPrimType ElemT = classify(ElemType)) {
     for (size_t I = 0; I != NumElems; ++I) {
       if (!this->visitZeroInitializer(*ElemT, ElemType, E))
         return false;
@@ -4294,7 +4375,8 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
         return false;
     }
     return true;
-  } else if (ElemType->isRecordType()) {
+  }
+  if (ElemType->isRecordType()) {
     const Record *R = getRecord(ElemType);
 
     for (size_t I = 0; I != NumElems; ++I) {
@@ -4308,7 +4390,8 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
         return false;
     }
     return true;
-  } else if (ElemType->isArrayType()) {
+  }
+  if (ElemType->isArrayType()) {
     for (size_t I = 0; I != NumElems; ++I) {
       if (!this->emitConstUint32(I, E))
         return false;
@@ -4323,6 +4406,59 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
   }
 
   return false;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitAssignment(const Expr *LHS, const Expr *RHS,
+                                        const Expr *E) {
+  if (!canClassify(E->getType()))
+    return false;
+
+  if (!this->visit(RHS))
+    return false;
+  if (!this->visit(LHS))
+    return false;
+
+  // We don't support assignments in C.
+  if (!Ctx.getLangOpts().CPlusPlus && !this->emitInvalid(E))
+    return false;
+
+  PrimType RHT = classifyPrim(RHS);
+  bool Activates = refersToUnion(LHS);
+  bool BitField = LHS->refersToBitField();
+
+  if (!this->emitFlip(PT_Ptr, RHT, E))
+    return false;
+
+  if (DiscardResult) {
+    if (BitField && Activates)
+      return this->emitStoreBitFieldActivatePop(RHT, E);
+    if (BitField)
+      return this->emitStoreBitFieldPop(RHT, E);
+    if (Activates)
+      return this->emitStoreActivatePop(RHT, E);
+    // Otherwise, regular non-activating store.
+    return this->emitStorePop(RHT, E);
+  }
+
+  auto maybeLoad = [&](bool Result) -> bool {
+    if (!Result)
+      return false;
+    // Assignments aren't necessarily lvalues in C.
+    // Load from them in that case.
+    if (!E->isLValue())
+      return this->emitLoadPop(RHT, E);
+    return true;
+  };
+
+  if (BitField && Activates)
+    return maybeLoad(this->emitStoreBitFieldActivate(RHT, E));
+  if (BitField)
+    return maybeLoad(this->emitStoreBitField(RHT, E));
+  if (Activates)
+    return maybeLoad(this->emitStoreActivate(RHT, E));
+  // Otherwise, regular non-activating store.
+  return maybeLoad(this->emitStore(RHT, E));
 }
 
 template <class Emitter>
@@ -4368,12 +4504,18 @@ bool Compiler<Emitter>::emitConst(T Value, const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::emitConst(const APSInt &Value, PrimType Ty,
                                   const Expr *E) {
+  return this->emitConst(static_cast<const APInt &>(Value), Ty, E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::emitConst(const APInt &Value, PrimType Ty,
+                                  const Expr *E) {
   if (Ty == PT_IntAPS)
     return this->emitConstIntAPS(Value, E);
   if (Ty == PT_IntAP)
     return this->emitConstIntAP(Value, E);
 
-  if (Value.isSigned())
+  if (isSignedType(Ty))
     return this->emitConst(Value.getSExtValue(), Ty, E);
   return this->emitConst(Value.getZExtValue(), Ty, E);
 }
@@ -4387,14 +4529,6 @@ template <class Emitter>
 unsigned Compiler<Emitter>::allocateLocalPrimitive(
     DeclTy &&Src, PrimType Ty, bool IsConst, const ValueDecl *ExtendingDecl,
     ScopeKind SC, bool IsConstexprUnknown) {
-  // Make sure we don't accidentally register the same decl twice.
-  if (const auto *VD =
-          dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
-    assert(!P.getGlobal(VD));
-    assert(!Locals.contains(VD));
-    (void)VD;
-  }
-
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
@@ -4412,23 +4546,15 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(
 }
 
 template <class Emitter>
-std::optional<unsigned>
-Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
-                                 const ValueDecl *ExtendingDecl, ScopeKind SC,
-                                 bool IsConstexprUnknown) {
-  // Make sure we don't accidentally register the same decl twice.
-  if ([[maybe_unused]] const auto *VD =
-          dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
-    assert(!P.getGlobal(VD));
-    assert(!Locals.contains(VD));
-  }
-
+UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
+                                                const ValueDecl *ExtendingDecl,
+                                                ScopeKind SC,
+                                                bool IsConstexprUnknown) {
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
   bool IsTemporary = false;
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     Key = VD;
-    Ty = VD->getType();
 
     if (const auto *VarD = dyn_cast<VarDecl>(VD))
       Init = VarD->getInit();
@@ -4457,7 +4583,7 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
 }
 
 template <class Emitter>
-std::optional<unsigned> Compiler<Emitter>::allocateTemporary(const Expr *E) {
+UnsignedOrNone Compiler<Emitter>::allocateTemporary(const Expr *E) {
   QualType Ty = E->getType();
   assert(!Ty->isRecordType());
 
@@ -4488,7 +4614,7 @@ const RecordType *Compiler<Emitter>::getRecordTy(QualType Ty) {
 
 template <class Emitter> Record *Compiler<Emitter>::getRecord(QualType Ty) {
   if (const auto *RecordTy = getRecordTy(Ty))
-    return getRecord(RecordTy->getDecl());
+    return getRecord(RecordTy->getOriginalDecl()->getDefinitionOrSelf());
   return nullptr;
 }
 
@@ -4526,7 +4652,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   }
 
   // Expressions with a primitive return type.
-  if (std::optional<PrimType> T = classify(E)) {
+  if (OptPrimType T = classify(E)) {
     if (!visit(E))
       return false;
 
@@ -4536,7 +4662,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   // Expressions with a composite return type.
   // For us, that means everything we don't
   // have a PrimType for.
-  if (std::optional<unsigned> LocalOffset = this->allocateLocal(E)) {
+  if (UnsignedOrNone LocalOffset = this->allocateLocal(E)) {
     InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalOffset));
     if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
@@ -4603,7 +4729,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
   if (!this->visitVarDecl(VD, /*Toplevel=*/true))
     return false;
 
-  std::optional<PrimType> VarT = classify(VD->getType());
+  OptPrimType VarT = classify(VD->getType());
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
@@ -4660,7 +4786,7 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     return VarCreationState::NotCreated();
 
   const Expr *Init = VD->getInit();
-  std::optional<PrimType> VarT = classify(VD->getType());
+  OptPrimType VarT = classify(VD->getType());
 
   if (Init && Init->isValueDependent())
     return false;
@@ -4727,14 +4853,13 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
         if (!this->visit(Init))
           return false;
         return this->emitSetLocal(*VarT, Offset, VD) && Scope.destroyLocals();
-      } else {
+      }
         if (!this->visit(Init))
           return false;
         return this->emitSetLocal(*VarT, Offset, VD);
-      }
     }
   } else {
-    if (std::optional<unsigned> Offset = this->allocateLocal(
+    if (UnsignedOrNone Offset = this->allocateLocal(
             VD, VD->getType(), nullptr, ScopeKind::Block, IsConstexprUnknown)) {
       if (!Init)
         return true;
@@ -4758,7 +4883,7 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
   assert(!DiscardResult);
   if (Val.isInt())
     return this->emitConst(Val.getInt(), ValType, E);
-  else if (Val.isFloat()) {
+  if (Val.isFloat()) {
     APFloat F = Val.getFloat();
     return this->emitFloat(F, E);
   }
@@ -4769,9 +4894,8 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
     APValue::LValueBase Base = Val.getLValueBase();
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
       return this->visit(BaseExpr);
-    else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+    if (const auto *VD = Base.dyn_cast<const ValueDecl *>())
       return this->visitDeclRef(VD, E);
-    }
   } else if (Val.isMemberPointer()) {
     if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl())
       return this->emitGetMemberPtr(MemberDecl, E);
@@ -4792,7 +4916,7 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       const Record::Field *RF = R->getField(I);
       QualType FieldType = RF->Decl->getType();
 
-      if (std::optional<PrimType> PT = classify(FieldType)) {
+      if (OptPrimType PT = classify(FieldType)) {
         if (!this->visitAPValue(F, *PT, E))
           return false;
         if (!this->emitInitField(*PT, RF->Offset, E))
@@ -4807,7 +4931,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       }
     }
     return true;
-  } else if (Val.isUnion()) {
+  }
+  if (Val.isUnion()) {
     const FieldDecl *UnionField = Val.getUnionField();
     const Record *R = this->getRecord(UnionField->getParent());
     assert(R);
@@ -4817,12 +4942,13 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     if (!this->visitAPValue(F, T, E))
       return false;
     return this->emitInitField(T, RF->Offset, E);
-  } else if (Val.isArray()) {
+  }
+  if (Val.isArray()) {
     const auto *ArrType = T->getAsArrayTypeUnsafe();
     QualType ElemType = ArrType->getElementType();
     for (unsigned A = 0, AN = Val.getArraySize(); A != AN; ++A) {
       const APValue &Elem = Val.getArrayInitializedElt(A);
-      if (std::optional<PrimType> ElemT = classify(ElemType)) {
+      if (OptPrimType ElemT = classify(ElemType)) {
         if (!this->visitAPValue(Elem, *ElemT, E))
           return false;
         if (!this->emitInitElem(*ElemT, A, E))
@@ -4848,7 +4974,6 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
 template <class Emitter>
 bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
                                              unsigned BuiltinID) {
-
   if (BuiltinID == Builtin::BI__builtin_constant_p) {
     // Void argument is always invalid and harder to handle later.
     if (E->getArg(0)->getType()->isVoidType()) {
@@ -4882,22 +5007,42 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   QualType ReturnType = E->getType();
-  std::optional<PrimType> ReturnT = classify(E);
+  OptPrimType ReturnT = classify(E);
 
   // Non-primitive return type. Prepare storage.
   if (!Initializing && !ReturnT && !ReturnType->isVoidType()) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E);
+    UnsignedOrNone LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
   }
 
-  if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
-    // Put arguments on the stack.
-    for (const auto *Arg : E->arguments()) {
-      if (!this->visit(Arg))
+  // Prepare function arguments including special cases.
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_object_size:
+  case Builtin::BI__builtin_dynamic_object_size: {
+    assert(E->getNumArgs() == 2);
+    const Expr *Arg0 = E->getArg(0);
+    if (Arg0->isGLValue()) {
+      if (!this->visit(Arg0))
         return false;
+
+    } else {
+      if (!this->visitAsLValue(Arg0))
+        return false;
+    }
+    if (!this->visit(E->getArg(1)))
+      return false;
+
+  } break;
+  default:
+    if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
+      // Put arguments on the stack.
+      for (const auto *Arg : E->arguments()) {
+        if (!this->visit(Arg))
+          return false;
+      }
     }
   }
 
@@ -4934,12 +5079,10 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
 
     // Calls to replaceable operator new/operator delete.
     if (FuncDecl->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
-      if (FuncDecl->getDeclName().isAnyOperatorNew()) {
+      if (FuncDecl->getDeclName().isAnyOperatorNew())
         return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);
-      } else {
-        assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);
-        return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
-      }
+      assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);
+      return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
     }
 
     // Explicit calls to trivial destructors
@@ -4956,7 +5099,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   BlockScope<Emitter> CallScope(this, ScopeKind::Call);
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
-  std::optional<PrimType> T = classify(ReturnType);
+  OptPrimType T = classify(ReturnType);
   bool HasRVO = !ReturnType->isVoidType() && !T;
 
   if (HasRVO) {
@@ -4964,7 +5107,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       // If we need to discard the return value but the function returns its
       // value via an RVO pointer, we need to create one such pointer just
       // for this call.
-      if (std::optional<unsigned> LocalIndex = allocateLocal(E)) {
+      if (UnsignedOrNone LocalIndex = allocateLocal(E)) {
         if (!this->emitGetPtrLocal(*LocalIndex, E))
           return false;
       }
@@ -4972,7 +5115,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       // We need the result. Prepare a pointer to return or
       // dup the current one.
       if (!Initializing) {
-        if (std::optional<unsigned> LocalIndex = allocateLocal(E)) {
+        if (UnsignedOrNone LocalIndex = allocateLocal(E)) {
           if (!this->emitGetPtrLocal(*LocalIndex, E))
             return false;
         }
@@ -5008,7 +5151,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
 
   bool Devirtualized = false;
-  std::optional<unsigned> CalleeOffset;
+  UnsignedOrNone CalleeOffset = std::nullopt;
   // Add the (optional, implicit) This pointer.
   if (const auto *MC = dyn_cast<CXXMemberCallExpr>(E)) {
     if (!FuncDecl && classifyPrim(E->getCallee()) == PT_MemberPtr) {
@@ -5052,7 +5195,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (!this->emitCheckPseudoDtor(E))
       return false;
     const Expr *Base = PD->getBase();
-    if (!Base->isGLValue())
+    // E.g. `using T = int; 0.~T();`.
+    if (OptPrimType BaseT = classify(Base); !BaseT || BaseT != PT_Ptr)
       return this->discard(Base);
     if (!this->visit(Base))
       return false;
@@ -5067,7 +5211,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return false;
   }
 
-  if (!this->visitCallArgs(Args, FuncDecl))
+  if (!this->visitCallArgs(Args, FuncDecl, IsAssignmentOperatorCall,
+                           isa<CXXOperatorCallExpr>(E)))
     return false;
 
   // Undo the argument reversal we did earlier.
@@ -5326,6 +5471,53 @@ bool Compiler<Emitter>::maybeEmitDeferredVarInit(const VarDecl *VD) {
   return true;
 }
 
+static bool hasTrivialDefaultCtorParent(const FieldDecl *FD) {
+  assert(FD);
+  assert(FD->getParent()->isUnion());
+  const auto *CXXRD = dyn_cast<CXXRecordDecl>(FD->getParent());
+  return !CXXRD || CXXRD->hasTrivialDefaultConstructor();
+}
+
+template <class Emitter> bool Compiler<Emitter>::refersToUnion(const Expr *E) {
+  for (;;) {
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+          FD && FD->getParent()->isUnion() && hasTrivialDefaultCtorParent(FD))
+        return true;
+      E = ME->getBase();
+      continue;
+    }
+
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      E = ASE->getBase()->IgnoreImplicit();
+      continue;
+    }
+
+    if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+        ICE && (ICE->getCastKind() == CK_NoOp ||
+                ICE->getCastKind() == CK_DerivedToBase ||
+                ICE->getCastKind() == CK_UncheckedDerivedToBase)) {
+      E = ICE->getSubExpr();
+      continue;
+    }
+
+    if (const auto *This = dyn_cast<CXXThisExpr>(E)) {
+      const auto *ThisRecord =
+          This->getType()->getPointeeType()->getAsRecordDecl();
+      if (!ThisRecord->isUnion())
+        return false;
+      // Otherwise, always activate if we're in the ctor.
+      if (const auto *Ctor =
+              dyn_cast_if_present<CXXConstructorDecl>(CompilingFunction))
+        return Ctor->getParent() == ThisRecord;
+      return false;
+    }
+
+    break;
+  }
+  return false;
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS,
                                       bool EvaluateConditionDecl) {
@@ -5361,7 +5553,9 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
         return false;
       this->emitCleanup();
       return this->emitRet(*ReturnType, RS);
-    } else if (RE->getType()->isVoidType()) {
+    }
+
+    if (RE->getType()->isVoidType()) {
       if (!this->visit(RE))
         return false;
     } else {
@@ -5406,7 +5600,7 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
   if (std::optional<bool> BoolValue = getBoolValue(IS->getCond())) {
     if (*BoolValue)
       return visitChildStmt(IS->getThen());
-    else if (const Stmt *Else = IS->getElse())
+    if (const Stmt *Else = IS->getElse())
       return visitChildStmt(Else);
     return true;
   }
@@ -5793,7 +5987,7 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
 
   const CXXRecordDecl *ClosureClass = MD->getParent();
   const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
-  assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+  assert(ClosureClass->captures().empty());
   const Function *Func = this->getFunction(LambdaCallOp);
   if (!Func)
     return false;
@@ -5846,21 +6040,43 @@ bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
   return this->emitCheckLiteralType(E->getType().getTypePtr(), E);
 }
 
+static bool initNeedsOverridenLoc(const CXXCtorInitializer *Init) {
+  const Expr *InitExpr = Init->getInit();
+
+  if (!Init->isWritten() && !Init->isInClassMemberInitializer() &&
+      !isa<CXXConstructExpr>(InitExpr))
+    return true;
+
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(InitExpr)) {
+    const CXXConstructorDecl *Ctor = CE->getConstructor();
+    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
+        Ctor->isTrivial())
+      return true;
+  }
+
+  return false;
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   assert(!ReturnType);
 
   auto emitFieldInitializer = [&](const Record::Field *F, unsigned FieldOffset,
-                                  const Expr *InitExpr) -> bool {
+                                  const Expr *InitExpr,
+                                  bool Activate = false) -> bool {
     // We don't know what to do with these, so just return false.
     if (InitExpr->getType().isNull())
       return false;
 
-    if (std::optional<PrimType> T = this->classify(InitExpr)) {
+    if (OptPrimType T = this->classify(InitExpr)) {
+      if (Activate && !this->emitActivateThisField(FieldOffset, InitExpr))
+        return false;
+
       if (!this->visit(InitExpr))
         return false;
 
-      if (F->isBitField())
+      bool BitField = F->isBitField();
+      if (BitField)
         return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
       return this->emitInitThisField(*T, FieldOffset, InitExpr);
     }
@@ -5868,6 +6084,9 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     // on the stack and call visitInitialzer() for it.
     InitLinkScope<Emitter> FieldScope(this, InitLink::Field(F->Offset));
     if (!this->emitGetPtrThisField(FieldOffset, InitExpr))
+      return false;
+
+    if (Activate && !this->emitActivate(InitExpr))
       return false;
 
     if (!this->visitInitializer(InitExpr))
@@ -5880,8 +6099,11 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   const Record *R = this->getRecord(RD);
   if (!R)
     return false;
+  bool IsUnion = R->isUnion();
 
-  if (R->isUnion() && Ctor->isCopyOrMoveConstructor()) {
+  if (IsUnion && Ctor->isCopyOrMoveConstructor()) {
+    LocOverrideScope<Emitter> LOS(this, SourceInfo{});
+
     if (R->getNumFields() == 0)
       return this->emitRetVoid(Ctor);
     // union copy and move ctors are special.
@@ -5889,7 +6111,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (!this->emitThis(Ctor))
       return false;
 
-    auto PVD = Ctor->getParamDecl(0);
+    const ParmVarDecl *PVD = Ctor->getParamDecl(0);
     ParamOffset PO = this->Params[PVD]; // Must exist.
 
     if (!this->emitGetParam(PT_Ptr, PO.Offset, Ctor))
@@ -5908,7 +6130,9 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (const FieldDecl *Member = Init->getMember()) {
       const Record::Field *F = R->getField(Member);
 
-      if (!emitFieldInitializer(F, F->Offset, InitExpr))
+      LocOverrideScope<Emitter> LOS(this, SourceInfo{},
+                                    initNeedsOverridenLoc(Init));
+      if (!emitFieldInitializer(F, F->Offset, InitExpr, IsUnion))
         return false;
     } else if (const Type *Base = Init->getBaseClass()) {
       const auto *BaseDecl = Base->getAsCXXRecordDecl();
@@ -5928,11 +6152,16 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
           return false;
       }
 
+      if (IsUnion && !this->emitActivate(InitExpr))
+        return false;
+
       if (!this->visitInitializer(InitExpr))
         return false;
       if (!this->emitFinishInitPop(InitExpr))
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
+      LocOverrideScope<Emitter> LOS(this, SourceInfo{},
+                                    initNeedsOverridenLoc(Init));
       assert(IFD->getChainingSize() >= 2);
 
       unsigned NestedFieldOffset = 0;
@@ -5944,12 +6173,14 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
 
         NestedField = FieldRecord->getField(FD);
         assert(NestedField);
+        IsUnion = IsUnion || FieldRecord->isUnion();
 
         NestedFieldOffset += NestedField->Offset;
       }
       assert(NestedField);
 
-      if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
+      if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr,
+                                IsUnion))
         return false;
 
       // Mark all chain links as initialized.
@@ -6008,6 +6239,8 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 
   assert(R);
   if (!R->isUnion()) {
+
+    LocOverrideScope<Emitter> LOS(this, SourceInfo{});
     // First, destroy all fields.
     for (const Record::Field &Field : llvm::reverse(R->fields())) {
       const Descriptor *D = Field.Desc;
@@ -6044,7 +6277,7 @@ bool Compiler<Emitter>::compileUnionAssignmentOperator(
   if (!this->emitThis(MD))
     return false;
 
-  auto PVD = MD->getParamDecl(0);
+  const ParmVarDecl *PVD = MD->getParamDecl(0);
   ParamOffset PO = this->Params[PVD]; // Must exist.
 
   if (!this->emitGetParam(PT_Ptr, PO.Offset, MD))
@@ -6097,7 +6330,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return this->VisitVectorUnaryOperator(E);
   if (SubExpr->getType()->isFixedPointType())
     return this->VisitFixedPointUnaryOperator(E);
-  std::optional<PrimType> T = classify(SubExpr->getType());
+  OptPrimType T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
   case UO_PostInc: { // x++
@@ -6283,6 +6516,9 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
+    if (!this->emitCheckNull(E))
+      return false;
+
     if (classifyPrim(SubExpr) == PT_Ptr)
       return this->emitNarrowPtr(E);
     return true;
@@ -6320,10 +6556,10 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
   if (DiscardResult)
     return this->discard(SubExpr);
 
-  std::optional<PrimType> ResT = classify(E);
+  OptPrimType ResT = classify(E);
   auto prepareResult = [=]() -> bool {
     if (!ResT && !Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+      UnsignedOrNone LocalIndex = allocateLocal(SubExpr);
       if (!LocalIndex)
         return false;
       return this->emitGetPtrLocal(*LocalIndex, E);
@@ -6441,7 +6677,7 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
     return this->delegate(SubExpr);
 
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+    UnsignedOrNone LocalIndex = allocateLocal(SubExpr);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -6532,18 +6768,17 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (DiscardResult)
     return true;
 
-  if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
+  if (const auto *ECD = dyn_cast<EnumConstantDecl>(D))
     return this->emitConst(ECD->getInitVal(), E);
-  } else if (const auto *BD = dyn_cast<BindingDecl>(D)) {
-    return this->visit(BD->getBinding());
-  } else if (const auto *FuncDecl = dyn_cast<FunctionDecl>(D)) {
+  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(D)) {
     const Function *F = getFunction(FuncDecl);
     return F && this->emitGetFnPtr(F, E);
-  } else if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(D)) {
+  }
+  if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(D)) {
     if (std::optional<unsigned> Index = P.getOrCreateGlobal(D)) {
       if (!this->emitGetPtrGlobal(*Index, E))
         return false;
-      if (std::optional<PrimType> T = classify(E->getType())) {
+      if (OptPrimType T = classify(E->getType())) {
         if (!this->visitAPValue(TPOD->getValue(), *T, E))
           return false;
         return this->emitInitGlobal(*T, *Index, E);
@@ -6560,13 +6795,31 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // value.
   bool IsReference = D->getType()->isReferenceType();
 
-  // Check for local/global variables and parameters.
+  // Function parameters.
+  // Note that it's important to check them first since we might have a local
+  // variable created for a ParmVarDecl as well.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
+        !D->getType()->isIntegralOrEnumerationType()) {
+      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                      /*InitializerFailed=*/false, E);
+    }
+    if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+      if (IsReference || !It->second.IsPtr)
+        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
+
+      return this->emitGetPtrParam(It->second.Offset, E);
+    }
+  }
+  // Local variables.
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
     if (IsReference)
       return this->emitGetLocal(classifyPrim(E), Offset, E);
     return this->emitGetPtrLocal(Offset, E);
-  } else if (auto GlobalIndex = P.getGlobal(D)) {
+  }
+  // Global variables.
+  if (auto GlobalIndex = P.getGlobal(D)) {
     if (IsReference) {
       if (!Ctx.getLangOpts().CPlusPlus11)
         return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
@@ -6574,13 +6827,6 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
-  } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
-    if (auto It = this->Params.find(PVD); It != this->Params.end()) {
-      if (IsReference || !It->second.IsPtr)
-        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
-
-      return this->emitGetPtrParam(It->second.Offset, E);
-    }
   }
 
   // In case we need to re-visit a declaration.
@@ -6600,7 +6846,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     return this->visitDeclRef(D, E);
   };
 
-  // Handle lambda captures.
+  // Lambda captures.
   if (auto It = this->LambdaCaptures.find(D);
       It != this->LambdaCaptures.end()) {
     auto [Offset, IsPtr] = It->second;
@@ -6608,11 +6854,16 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (IsPtr)
       return this->emitGetThisFieldPtr(Offset, E);
     return this->emitGetPtrThisField(Offset, E);
-  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(E);
-             DRE && DRE->refersToEnclosingVariableOrCapture()) {
+  }
+
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E);
+      DRE && DRE->refersToEnclosingVariableOrCapture()) {
     if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->isInitCapture())
       return revisit(VD);
   }
+
+  if (const auto *BD = dyn_cast<BindingDecl>(D))
+    return this->visit(BD->getBinding());
 
   // Avoid infinite recursion.
   if (D == InitializingDecl)
@@ -6666,7 +6917,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (VD->evaluateValue())
       return revisit(VD);
 
-    if (!D->getType()->isReferenceType())
+    if (!IsReference)
       return this->emitDummyPtr(D, E);
 
     return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
@@ -6936,10 +7187,6 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
   assert(!Desc->isPrimitive());
   assert(!Desc->isPrimitiveArray());
 
-  // Can happen if the decl is invalid.
-  if (Desc->isDummy())
-    return true;
-
   // Arrays.
   if (Desc->isArray()) {
     const Descriptor *ElemDesc = Desc->ElemDesc;
@@ -7028,13 +7275,13 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
   QualType FromType = SubExpr->getType();
   QualType ToType = E->getType();
-  std::optional<PrimType> ToT = classify(ToType);
+  OptPrimType ToT = classify(ToType);
 
   assert(!ToType->isReferenceType());
 
   // Prepare storage for the result in case we discard.
   if (DiscardResult && !Initializing && !ToT) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E);
+    UnsignedOrNone LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -7049,7 +7296,7 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   if (SubExpr->isGLValue() || FromType->isVectorType()) {
     if (!this->visit(SubExpr))
       return false;
-  } else if (std::optional<PrimType> FromT = classify(SubExpr)) {
+  } else if (OptPrimType FromT = classify(SubExpr)) {
     unsigned TempOffset =
         allocateLocalPrimitive(SubExpr, *FromT, /*IsConst=*/true);
     if (!this->visit(SubExpr))

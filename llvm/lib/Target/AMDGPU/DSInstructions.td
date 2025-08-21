@@ -886,7 +886,6 @@ defm : DSReadPat_mc <DS_READ_I8, i32, "sextloadi8_local">;
 defm : DSReadPat_mc <DS_READ_U8,  i32, "extloadi8_local">;
 defm : DSReadPat_mc <DS_READ_U8,  i32, "zextloadi8_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "sextloadi16_local">;
-defm : DSReadPat_mc <DS_READ_I16, i32, "sextloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "extloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "zextloadi16_local">;
 defm : DSReadPat_t16 <DS_READ_I8,  i16, "sextloadi8_local">;
@@ -1397,6 +1396,9 @@ defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
   "ds_bvh_stack_push4_pop1_rtn_b32">;
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
 defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
+
+defm DS_ADD_F64     : DS_Real_gfx12<0x054>;
+defm DS_ADD_RTN_F64 : DS_Real_gfx12<0x074>;
 
 let AssemblerPredicate = HasLdsBarrierArriveAtomic in {
 defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12<0x056>;

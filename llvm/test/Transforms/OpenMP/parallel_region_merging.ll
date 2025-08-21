@@ -433,11 +433,11 @@ entry:
   %b = alloca i32, align 4
   store i32 %a, ptr %a.addr, align 4
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @1, i32 1, ptr @.omp_outlined..14, ptr nonnull %a.addr)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %b)
+  call void @llvm.lifetime.start.p0(ptr nonnull %b)
   %0 = ptrtoint ptr %b to i64
   %1 = trunc i64 %0 to i32
   store i32 %1, ptr %b, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %b)
+  call void @llvm.lifetime.end.p0(ptr nonnull %b)
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @1, i32 1, ptr @.omp_outlined..15, ptr nonnull %a.addr)
   ret void
 }
@@ -449,9 +449,9 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define internal void @.omp_outlined..15(ptr noalias nocapture readnone %.global_tid., ptr noalias nocapture readnone %.bound_tid., ptr nocapture nonnull readonly align 4 dereferenceable(4) %a)  {
 entry:
@@ -466,12 +466,12 @@ entry:
   %b = alloca i32, align 4
   store i32 %a, ptr %a.addr, align 4
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @1, i32 1, ptr @.omp_outlined..16, ptr nonnull %a.addr)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %b)
+  call void @llvm.lifetime.start.p0(ptr nonnull %b)
   %0 = load i32, ptr %a.addr, align 4
   %add = add nsw i32 %0, 1
   store i32 %add, ptr %b, align 4
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @1, i32 2, ptr @.omp_outlined..17, ptr nonnull %a.addr, ptr nonnull %b)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %b)
+  call void @llvm.lifetime.end.p0(ptr nonnull %b)
   ret void
 }
 
@@ -1184,11 +1184,11 @@ entry:
 ; CHECK:       omp_region.body:
 ; CHECK-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK:       seq.par.merged:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK:       omp.par.merged.split:
 ; CHECK-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
@@ -1216,7 +1216,7 @@ entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 2, ptr @merge_seq_par_use..omp_par, ptr [[A_ADDR]], ptr [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
@@ -1224,7 +1224,7 @@ entry:
 ; CHECK:       omp.par.exit.split:
 ; CHECK-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ; CHECK-LABEL: define {{[^@]+}}@merge_seq_par_use..omp_par
 ; CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[A_ADDR:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
@@ -2155,11 +2155,11 @@ entry:
 ; CHECK:       omp_region.body:
 ; CHECK-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK:       seq.par.merged:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK:       omp.par.merged.split:
 ; CHECK-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
@@ -2187,7 +2187,7 @@ entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 2, ptr @merge_seq_par_use..omp_par, ptr [[A_ADDR]], ptr [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
@@ -2195,7 +2195,7 @@ entry:
 ; CHECK:       omp.par.exit.split:
 ; CHECK-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ; CHECK-LABEL: define {{[^@]+}}@merge_seq_par_use..omp_par
 ; CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[A_ADDR:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
@@ -3126,11 +3126,11 @@ entry:
 ; CHECK:       omp_region.body:
 ; CHECK-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK:       seq.par.merged:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK:       omp.par.merged.split:
 ; CHECK-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
@@ -3158,7 +3158,7 @@ entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 2, ptr @merge_seq_par_use..omp_par, ptr [[A_ADDR]], ptr [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
@@ -3166,7 +3166,7 @@ entry:
 ; CHECK:       omp.par.exit.split:
 ; CHECK-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ; CHECK-LABEL: define {{[^@]+}}@merge_seq_par_use..omp_par
 ; CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[A_ADDR:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
@@ -4097,11 +4097,11 @@ entry:
 ; CHECK:       omp_region.body:
 ; CHECK-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK:       seq.par.merged:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK:       omp.par.merged.split:
 ; CHECK-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
@@ -4129,7 +4129,7 @@ entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 ; CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 ; CHECK:       omp_parallel:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 2, ptr @merge_seq_par_use..omp_par, ptr [[A_ADDR]], ptr [[B]])
 ; CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK:       omp.par.outlined.exit:
@@ -4137,7 +4137,7 @@ entry:
 ; CHECK:       omp.par.exit.split:
 ; CHECK-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ; CHECK-LABEL: define {{[^@]+}}@merge_seq_par_use..omp_par
 ; CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[A_ADDR:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
@@ -5148,11 +5148,11 @@ entry:
 ; CHECK2:       omp_region.body:
 ; CHECK2-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK2:       seq.par.merged:
-; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull [[B]])
 ; CHECK2-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK2-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
-; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split:
 ; CHECK2-NEXT:    br label [[OMP_REGION_BODY_SPLIT:%.*]]
@@ -5197,13 +5197,13 @@ entry:
 ; CHECK2-NEXT:    store ptr [[A_ADDR]], ptr [[GEP_A_ADDR]], align 8
 ; CHECK2-NEXT:    [[GEP_B:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG]], i32 0, i32 2
 ; CHECK2-NEXT:    store ptr [[B]], ptr [[GEP_B]], align 8
-; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @merge_seq_par_use..omp_par, ptr [[STRUCTARG]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 ; CHECK2:       omp.par.exit:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
-; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[B]])
+; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[B]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
