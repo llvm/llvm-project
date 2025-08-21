@@ -130,7 +130,7 @@ __gpu_kernel void expm1fKernel(const float *X, float *Out,
 
 __gpu_kernel void hypotfKernel(const float *X, float *Y, float *Out,
                                size_t NumElements) noexcept {
-  runKernelBody__ocml_hypot_f32 > (NumElements, Out, X, Y);
+  runKernelBody<__ocml_hypot_f32>(NumElements, Out, X, Y);
 }
 
 __gpu_kernel void logKernel(const double *X, double *Out,
