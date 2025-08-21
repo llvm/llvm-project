@@ -507,7 +507,8 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
 
 bool NVPTXTargetMachine::isCompatibleDataLayout(
     const DataLayout &Candidate) const {
-  //XXX: Should we enforce that the Candidate DataLayout has the same address space for allocas?
+  // XXX: Should we enforce that the Candidate DataLayout has the same address
+  // space for allocas?
   if (DL == Candidate)
     return true;
 
@@ -520,7 +521,8 @@ bool NVPTXTargetMachine::isCompatibleDataLayout(
   return NewDL == Candidate;
 }
 
-unsigned NVPTXTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
+unsigned
+NVPTXTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
   if (Kind == PseudoSourceValue::FixedStack) {
     return ADDRESS_SPACE_LOCAL;
   }

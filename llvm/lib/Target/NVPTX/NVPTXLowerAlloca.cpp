@@ -24,7 +24,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/NVPTXAddrSpace.h"
 #include "NVPTX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
@@ -34,6 +33,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 
 using namespace llvm;
 using namespace NVPTXAS;

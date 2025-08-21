@@ -119,7 +119,8 @@ bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                      MI.getOperand(FIOperandNum + 1).getImm();
 
   // Using I0 as the frame pointer
-  MI.getOperand(FIOperandNum).ChangeToRegister(getFrameLocalRegister(MF), false);
+  MI.getOperand(FIOperandNum)
+      .ChangeToRegister(getFrameLocalRegister(MF), false);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
   return false;
 }

@@ -529,7 +529,8 @@ void copyByValParam(Function &F, Argument &Arg) {
   // the use of the byval parameter with this alloca instruction.
   AllocA->setAlignment(
       Arg.getParamAlign().value_or(DL.getPrefTypeAlign(StructType)));
-  auto *AddressSpaceCast = IRB.CreateAddrSpaceCast(AllocA, Arg.getType(), Arg.getName());
+  auto *AddressSpaceCast =
+      IRB.CreateAddrSpaceCast(AllocA, Arg.getType(), Arg.getName());
   Arg.replaceAllUsesWith(AddressSpaceCast);
 
   CallInst *ArgInParam = createNVVMInternalAddrspaceWrap(IRB, Arg);
