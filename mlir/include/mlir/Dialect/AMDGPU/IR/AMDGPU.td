@@ -672,7 +672,8 @@ def AMDGPU_PermlanePermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_PermlanePerm,
 def AMDGPU_PermlaneOp : AMDGPU_Op<"permlane", [Pure, AllTypesMatch<["result", "src"]>]> {
   let summary = "AMDGPU permlane op";
   let description = [{
-    High-level wrapper on `rocdl.permlane.*` variants.
+    High-level wrapper on `rocdl.permlane.*` variants for permutations
+     on rows of lanes in a subgroup.
 
     Supports arbitrary int/float/vector types, which will be repacked to i32 and
     one or more `rocdl.permlane.*` ops during lowering.
@@ -689,14 +690,13 @@ def AMDGPU_PermlaneOp : AMDGPU_Op<"permlane", [Pure, AllTypesMatch<["result", "s
     Operands:
     * `$src`: Vector register to permute across lanes of the subgroup.
     * `$kind`: The kind of permutation operation.
-    * `$fetch_inactive`: Optional. Used to dertermine behavior of invalid lanes (disabled thread or out-of-range).
-      `fetch_inactive = false`: If source lane is invalid, use `bound_ctrl` to determine the source value.
-      `fetch_inactive = true`: If the source lane is disabled, fetch the source value anyway
-      (ignoring `bound_ctrl`). If the source lane is out-of-range, behavior is decided by `bound_ctrl`.
+    * `$fetch_inactive`: Optional. Used to dertermine behavior of a fetch from a disabled lane.
+      `fetch_inactive = false`: If the source lane is disabled, use `bound_ctrl` to determine the source value.
+      `fetch_inactive = true`: If the source lane is disabled, fetch the source value anyway (ignoring `bound_ctrl`).
     * `$bound_ctrl`: Optional. Used to determine what a thread should do if its source operand is from 
-      a disabled thread or invalid input: use the value zero, or disable the write.
-      `bound_ctrl = false`: Do not write when source is invalid or out-of-range.
-      `bound_ctrl = true`: Use zero as input if source is invalid or out-of-range
+      a disabled lane: use the value zero, or disable the write. 
+      `bound_ctrl = false`: Do not write when source is from a disabled lane
+      `bound_ctrl = true`: Use zero as input if source is from a disabled lane
 
     Note: Lowering is only supported on gfx950 and up.
   }];
