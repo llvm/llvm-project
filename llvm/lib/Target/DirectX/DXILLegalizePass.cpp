@@ -143,10 +143,6 @@ static bool fixI8UseChain(Instruction &I,
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewGEP);
     ReplacedValues[Load] = NewLoad;
     Load->replaceAllUsesWith(NewLoad);
-    Load->setOperand(Load->getPointerOperandIndex(),
-                     PoisonValue::get(CE->getType()));
-    if (CE->use_empty())
-      CE->destroyConstant();
     ToRemove.push_back(Load);
     return true;
   }

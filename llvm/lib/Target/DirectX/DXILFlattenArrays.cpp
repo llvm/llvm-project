@@ -166,8 +166,6 @@ bool DXILFlattenArraysVisitor::visitLoadInst(LoadInst &LI) {
       NewLoad->setAlignment(LI.getAlign());
       LI.replaceAllUsesWith(NewLoad);
       LI.eraseFromParent();
-      if (CE->use_empty())
-        CE->destroyConstant();
       visitGetElementPtrInst(*OldGEP);
       return true;
     }
@@ -190,8 +188,6 @@ bool DXILFlattenArraysVisitor::visitStoreInst(StoreInst &SI) {
       NewStore->setAlignment(SI.getAlign());
       SI.replaceAllUsesWith(NewStore);
       SI.eraseFromParent();
-      if (CE->use_empty())
-        CE->destroyConstant();
       visitGetElementPtrInst(*OldGEP);
       return true;
     }
@@ -247,8 +243,6 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
     GEP.replaceAllUsesWith(NewGEPI);
     GEP.eraseFromParent();
-    if (PtrOpGEPCE->use_empty())
-      PtrOpGEPCE->destroyConstant();
     visitGetElementPtrInst(*OldGEPI);
     visitGetElementPtrInst(*NewGEPI);
     return true;
