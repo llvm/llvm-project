@@ -17,12 +17,11 @@ declare i64 @llvm.cttz.i64(i64, i1)
 define i8 @test_i8(i8 %a) {
 ; CHECK-5-LABEL: test_i8:
 ; CHECK-5:       @ %bb.0:
-; CHECK-5-NEXT:    tst r0, #255
-; CHECK-5-NEXT:    moveq r0, #8
-; CHECK-5-NEXT:    subne r1, r0, #1
-; CHECK-5-NEXT:    bicne r0, r1, r0
-; CHECK-5-NEXT:    clzne r0, r0
-; CHECK-5-NEXT:    rsbne r0, r0, #32
+; CHECK-5-NEXT:    orr r0, r0, #256
+; CHECK-5-NEXT:    sub r1, r0, #1
+; CHECK-5-NEXT:    bic r0, r1, r0
+; CHECK-5-NEXT:    clz r0, r0
+; CHECK-5-NEXT:    rsb r0, r0, #32
 ; CHECK-5-NEXT:    bx lr
 ;
 ; CHECK-LABEL: test_i8:
@@ -94,14 +93,11 @@ define i8 @test_i8(i8 %a) {
 define i16 @test_i16(i16 %a) {
 ; CHECK-5-LABEL: test_i16:
 ; CHECK-5:       @ %bb.0:
-; CHECK-5-NEXT:    mov r1, #255
-; CHECK-5-NEXT:    orr r1, r1, #65280
-; CHECK-5-NEXT:    tst r0, r1
-; CHECK-5-NEXT:    moveq r0, #16
-; CHECK-5-NEXT:    subne r1, r0, #1
-; CHECK-5-NEXT:    bicne r0, r1, r0
-; CHECK-5-NEXT:    clzne r0, r0
-; CHECK-5-NEXT:    rsbne r0, r0, #32
+; CHECK-5-NEXT:    orr r0, r0, #65536
+; CHECK-5-NEXT:    sub r1, r0, #1
+; CHECK-5-NEXT:    bic r0, r1, r0
+; CHECK-5-NEXT:    clz r0, r0
+; CHECK-5-NEXT:    rsb r0, r0, #32
 ; CHECK-5-NEXT:    bx lr
 ;
 ; CHECK-LABEL: test_i16:
@@ -173,12 +169,10 @@ define i16 @test_i16(i16 %a) {
 define i32 @test_i32(i32 %a) {
 ; CHECK-5-LABEL: test_i32:
 ; CHECK-5:       @ %bb.0:
-; CHECK-5-NEXT:    cmp r0, #0
-; CHECK-5-NEXT:    moveq r0, #32
-; CHECK-5-NEXT:    subne r1, r0, #1
-; CHECK-5-NEXT:    bicne r0, r1, r0
-; CHECK-5-NEXT:    clzne r0, r0
-; CHECK-5-NEXT:    rsbne r0, r0, #32
+; CHECK-5-NEXT:    sub r1, r0, #1
+; CHECK-5-NEXT:    bic r0, r1, r0
+; CHECK-5-NEXT:    clz r0, r0
+; CHECK-5-NEXT:    rsb r0, r0, #32
 ; CHECK-5-NEXT:    bx lr
 ;
 ; CHECK-LABEL: test_i32:
@@ -242,22 +236,17 @@ define i32 @test_i32(i32 %a) {
 define i64 @test_i64(i64 %a) {
 ; CHECK-5-LABEL: test_i64:
 ; CHECK-5:       @ %bb.0:
-; CHECK-5-NEXT:    mov r2, r1
-; CHECK-5-NEXT:    orrs r1, r0, r1
-; CHECK-5-NEXT:    mov r1, #0
-; CHECK-5-NEXT:    moveq r0, #64
-; CHECK-5-NEXT:    bxeq lr
-; CHECK-5-NEXT:  .LBB3_1: @ %cond.false
-; CHECK-5-NEXT:    sub r3, r0, #1
-; CHECK-5-NEXT:    bic r3, r3, r0
-; CHECK-5-NEXT:    clz r12, r3
-; CHECK-5-NEXT:    sub r3, r2, #1
-; CHECK-5-NEXT:    bic r2, r3, r2
-; CHECK-5-NEXT:    mov r3, r0
+; CHECK-5-NEXT:    sub r3, r1, #1
+; CHECK-5-NEXT:    sub r2, r0, #1
+; CHECK-5-NEXT:    bic r1, r3, r1
+; CHECK-5-NEXT:    bic r2, r2, r0
+; CHECK-5-NEXT:    clz r1, r1
 ; CHECK-5-NEXT:    clz r2, r2
-; CHECK-5-NEXT:    cmp r3, #0
-; CHECK-5-NEXT:    rsb r0, r2, #64
-; CHECK-5-NEXT:    rsbne r0, r12, #32
+; CHECK-5-NEXT:    rsb r1, r1, #64
+; CHECK-5-NEXT:    cmp r0, #0
+; CHECK-5-NEXT:    rsbne r1, r2, #32
+; CHECK-5-NEXT:    mov r0, r1
+; CHECK-5-NEXT:    mov r1, #0
 ; CHECK-5-NEXT:    bx lr
 ;
 ; CHECK-LABEL: test_i64:
