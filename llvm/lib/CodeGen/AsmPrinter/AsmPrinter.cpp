@@ -2866,11 +2866,9 @@ bool AsmPrinter::doFinalization(Module &M) {
   // If we don't have any trampolines, then we don't require stack memory
   // to be executable. Some targets have a directive to declare this.
   Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
-  MCSection *S = nullptr;
-  if (!InitTrampolineIntrinsic || InitTrampolineIntrinsic->use_empty())
-    S = MAI->getNonexecutableStackSection(OutContext);
-  else
-    S = MAI->getExecutableStackSection(OutContext);
+  bool HasTrampolineUses =
+      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
+  MCSection *S = MAI->getStackSection(OutContext, /* Exec */ HasTrampolineUses);
   if (S)
     OutStreamer->switchSection(S);
 
