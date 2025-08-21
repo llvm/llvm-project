@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +sse4.1 -S -verify -o -
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +sse4.1 -emit-llvm -verify -o /dev/null
 
 typedef double __v2df __attribute__((__vector_size__(16)));
 
