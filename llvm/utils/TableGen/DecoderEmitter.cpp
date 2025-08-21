@@ -147,29 +147,17 @@ class InstructionEncoding {
   /// meaning the decoder is generated.
   StringRef DecoderMethod;
 
-  /// Whether the custom decoding function always succeeds. Should not be used
-  /// if the decoder is generated.
-  bool HasCompleteDecoder = true;
+  /// Whether the custom decoding function always succeeds. If a custom decoder
+  /// function is specified, the value is taken from the target description,
+  /// otherwise it is inferred.
+  bool HasCompleteDecoder;
 
   /// Information about the operands' contribution to this encoding.
   SmallVector<OperandInfo, 16> Operands;
 
 public:
-  InstructionEncoding(const Record *EncodingDef, const CodeGenInstruction *Inst)
-      : EncodingDef(EncodingDef), Inst(Inst) {
-    const Record *InstDef = Inst->TheDef;
-
-    // Give this encoding a name.
-    if (EncodingDef != InstDef)
-      Name = (EncodingDef->getName() + Twine(':')).str();
-    Name.append(InstDef->getName());
-
-    DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
-    if (!DecoderMethod.empty())
-      HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
-
-    populateEncoding();
-  }
+  InstructionEncoding(const Record *EncodingDef,
+                      const CodeGenInstruction *Inst);
 
   /// Returns the Record this encoding originates from.
   const Record *getRecord() const { return EncodingDef; }
@@ -187,19 +175,16 @@ public:
   /// if the decoder is generated.
   StringRef getDecoderMethod() const { return DecoderMethod; }
 
-  /// Returns whether the custom decoding function always succeeds.
-  bool hasCompleteDecoder() const {
-    assert(!DecoderMethod.empty());
-    return HasCompleteDecoder;
-  }
+  /// Returns whether the decoder (either generated or specified by the user)
+  /// always succeeds.
+  bool hasCompleteDecoder() const { return HasCompleteDecoder; }
 
   /// Returns information about the operands' contribution to this encoding.
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
 
 private:
-  void populateVarLenEncoding(const VarLenInst &VLI);
-  void populateFixedLenEncoding(const BitsInit &Bits);
-  void populateEncoding();
+  void parseVarLenOperands(const VarLenInst &VLI);
+  void parseFixedLenOperands(const BitsInit &Bits);
 };
 
 typedef std::vector<uint32_t> FixupList;
@@ -672,12 +657,11 @@ protected:
   void emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                const Filter &Best) const;
 
-  bool emitBinaryParser(raw_ostream &OS, indent Indent,
+  void emitBinaryParser(raw_ostream &OS, indent Indent,
                         const OperandInfo &OpInfo) const;
 
-  bool emitDecoder(raw_ostream &OS, indent Indent, unsigned EncodingID) const;
-  std::pair<unsigned, bool> getDecoderIndex(DecoderSet &Decoders,
-                                            unsigned EncodingID) const;
+  void emitDecoder(raw_ostream &OS, indent Indent, unsigned EncodingID) const;
+  unsigned getDecoderIndex(DecoderSet &Decoders, unsigned EncodingID) const;
 
   // Assign a single filter and run with it.
   void runSingleFilter(unsigned startBit, unsigned numBit);
@@ -1226,7 +1210,7 @@ FilterChooser::getIslands(const insn_t &Insn) const {
   return Islands;
 }
 
-bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
+void FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
                                      const OperandInfo &OpInfo) const {
   const std::string &Decoder = OpInfo.Decoder;
 
@@ -1252,52 +1236,44 @@ bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
     OS << ";\n";
   }
 
-  bool OpHasCompleteDecoder;
   if (!Decoder.empty()) {
-    OpHasCompleteDecoder = OpInfo.HasCompleteDecoder;
     OS << Indent << "if (!Check(S, " << Decoder
        << "(MI, tmp, Address, Decoder))) { "
-       << (OpHasCompleteDecoder ? "" : "DecodeComplete = false; ")
+       << (OpInfo.HasCompleteDecoder ? "" : "DecodeComplete = false; ")
        << "return MCDisassembler::Fail; }\n";
   } else {
-    OpHasCompleteDecoder = true;
     OS << Indent << "MI.addOperand(MCOperand::createImm(tmp));\n";
   }
-  return OpHasCompleteDecoder;
 }
 
-bool FilterChooser::emitDecoder(raw_ostream &OS, indent Indent,
+void FilterChooser::emitDecoder(raw_ostream &OS, indent Indent,
                                 unsigned EncodingID) const {
   const InstructionEncoding &Encoding = Encodings[EncodingID];
 
   // If a custom instruction decoder was specified, use that.
   StringRef DecoderMethod = Encoding.getDecoderMethod();
   if (!DecoderMethod.empty()) {
-    bool HasCompleteDecoder = Encoding.hasCompleteDecoder();
     OS << Indent << "if (!Check(S, " << DecoderMethod
        << "(MI, insn, Address, Decoder))) { "
-       << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+       << (Encoding.hasCompleteDecoder() ? "" : "DecodeComplete = false; ")
        << "return MCDisassembler::Fail; }\n";
-    return HasCompleteDecoder;
+    return;
   }
 
-  bool HasCompleteDecoder = true;
   for (const OperandInfo &Op : Encoding.getOperands())
     if (Op.numFields())
-      HasCompleteDecoder &= emitBinaryParser(OS, Indent, Op);
-  return HasCompleteDecoder;
+      emitBinaryParser(OS, Indent, Op);
 }
 
-std::pair<unsigned, bool>
-FilterChooser::getDecoderIndex(DecoderSet &Decoders,
-                               unsigned EncodingID) const {
+unsigned FilterChooser::getDecoderIndex(DecoderSet &Decoders,
+                                        unsigned EncodingID) const {
   // Build up the predicate string.
   SmallString<256> Decoder;
   // FIXME: emitDecoder() function can take a buffer directly rather than
   // a stream.
   raw_svector_ostream S(Decoder);
   indent Indent(UseFnTableInDecodeToMCInst ? 2 : 4);
-  bool HasCompleteDecoder = emitDecoder(S, Indent, EncodingID);
+  emitDecoder(S, Indent, EncodingID);
 
   // Using the full decoder string as the key value here is a bit
   // heavyweight, but is effective. If the string comparisons become a
@@ -1309,7 +1285,7 @@ FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   Decoders.insert(CachedHashString(Decoder));
   // Now figure out the index for when we write out the table.
   DecoderSet::const_iterator P = find(Decoders, Decoder.str());
-  return {(unsigned)(P - Decoders.begin()), HasCompleteDecoder};
+  return std::distance(Decoders.begin(), P);
 }
 
 // If ParenIfBinOp is true, print a surrounding () if Val uses && or ||.
@@ -1509,8 +1485,7 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   // Check for soft failure of the match.
   emitSoftFailTableEntry(TableInfo, EncodingID);
 
-  auto [DIdx, HasCompleteDecoder] =
-      getDecoderIndex(TableInfo.Decoders, EncodingID);
+  unsigned DIdx = getDecoderIndex(TableInfo.Decoders, EncodingID);
 
   // Produce OPC_Decode or OPC_TryDecode opcode based on the information
   // whether the instruction decoder is complete or not. If it is complete
@@ -1521,10 +1496,12 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   // decoder method indicates that additional processing should be done to see
   // if there is any other instruction that also matches the bitpattern and
   // can decode it.
-  const uint8_t DecoderOp = HasCompleteDecoder ? MCD::OPC_Decode
-                                               : (TableInfo.isOutermostScope()
-                                                      ? MCD::OPC_TryDecodeOrFail
-                                                      : MCD::OPC_TryDecode);
+  const InstructionEncoding &Encoding = Encodings[EncodingID];
+  const uint8_t DecoderOp =
+      Encoding.hasCompleteDecoder()
+          ? MCD::OPC_Decode
+          : (TableInfo.isOutermostScope() ? MCD::OPC_TryDecodeOrFail
+                                          : MCD::OPC_TryDecode);
   TableInfo.Table.push_back(DecoderOp);
   const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
   TableInfo.Table.insertULEB128(Emitter->getTarget().getInstrIntValue(InstDef));
@@ -1886,7 +1863,7 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
   return OperandInfo(findOperandDecoderMethod(TypeRecord), HasCompleteDecoder);
 }
 
-void InstructionEncoding::populateVarLenEncoding(const VarLenInst &VLI) {
+void InstructionEncoding::parseVarLenOperands(const VarLenInst &VLI) {
   SmallVector<int> TiedTo;
 
   for (const auto &[Idx, Op] : enumerate(Inst->Operands)) {
@@ -1983,7 +1960,7 @@ static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
   }
 }
 
-void InstructionEncoding::populateFixedLenEncoding(const BitsInit &Bits) {
+void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   const Record &Def = *Inst->TheDef;
 
   // Gather the outputs/inputs of the instruction, so we can find their
@@ -2097,20 +2074,43 @@ void InstructionEncoding::populateFixedLenEncoding(const BitsInit &Bits) {
   }
 }
 
-void InstructionEncoding::populateEncoding() {
+InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
+                                         const CodeGenInstruction *Inst)
+    : EncodingDef(EncodingDef), Inst(Inst) {
+  const Record *InstDef = Inst->TheDef;
+
+  // Give this encoding a name.
+  if (EncodingDef != InstDef)
+    Name = (EncodingDef->getName() + Twine(':')).str();
+  Name.append(InstDef->getName());
+
+  DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
+  if (!DecoderMethod.empty())
+    HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
+
   const RecordVal *InstField = EncodingDef->getValue("Inst");
   if (const auto *DI = dyn_cast<DagInit>(InstField->getValue())) {
     VarLenInst VLI(DI, InstField);
     BitWidth = VLI.size();
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())
-      populateVarLenEncoding(VLI);
+      parseVarLenOperands(VLI);
   } else {
     const auto *BI = cast<BitsInit>(InstField->getValue());
     BitWidth = BI->getNumBits();
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())
-      populateFixedLenEncoding(*BI);
+      parseFixedLenOperands(*BI);
+  }
+
+  if (DecoderMethod.empty()) {
+    // A generated decoder is always successful if none of the operand
+    // decoders can fail (all are always successful).
+    HasCompleteDecoder = all_of(Operands, [](const OperandInfo &Op) {
+      // By default, a generated operand decoder is assumed to always succeed.
+      // This can be overridden by the user.
+      return Op.Decoder.empty() || Op.HasCompleteDecoder;
+    });
   }
 }
 
