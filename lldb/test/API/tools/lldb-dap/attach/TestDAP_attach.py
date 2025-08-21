@@ -239,18 +239,17 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         )
 
         postRunCommands = [
-            "script print('Actual_Session_ID: ' + str(os.getenv('VSCODE_DEBUG_SESSION_ID')))"
+            "script print('Actual_Session_ID: ' + str(os.getenv('VSCODE_DEBUG_SESSION_ID', 'None')))"
         ]
         self.attach(
             pid=self.process.pid,
-            vscode_session_id="test_session_id",
             postRunCommands=postRunCommands,
         )
         output = self.get_console()
         lines = filter(lambda x: "Actual_Session_ID" in x, output.splitlines())
         self.assertTrue(
-            any("test_session_id" in l for l in lines),
-            "expect session id in console output",
+            any("Actual_Session_ID: None" in l for l in lines),
+            "expect session id to be None when not set",
         )
 
     def test_session_id_update_empty(self):
