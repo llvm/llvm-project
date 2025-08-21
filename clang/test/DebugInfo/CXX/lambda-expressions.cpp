@@ -21,7 +21,7 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // CHECK-SAME:              line: [[VAR_LINE:[0-9]+]]
 // CHECK-SAME:              type: ![[VAR_T:[0-9]+]]
 
-// CHECK: [[FILE:.*]] = !DIFile(filename: "{{.*}}debug-lambda-expressions.cpp",
+// CHECK: [[FILE:.*]] = !DIFile(filename: "{{.*}}lambda-expressions.cpp",
 
 // CVAR:
 // CHECK: !DIGlobalVariable(name: "cvar"

@@ -340,8 +340,15 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   // None of the existing plugins specify a limit on a single allocation,
   // so return the global memory size instead
   case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
-    PropName = OL_DEVICE_INFO_GLOBAL_MEM_SIZE;
-    break;
+    [[fallthrough]];
+  // AMD doesn't provide the global memory size (trivially) with the device info
+  // struct, so use the plugin interface
+  case OL_DEVICE_INFO_GLOBAL_MEM_SIZE: {
+    uint64_t Mem;
+    if (auto Err = Device->Device->getDeviceMemorySize(Mem))
+      return Err;
+    return Info.write<uint64_t>(Mem);
+  } break;
 
   default:
     break;
@@ -367,14 +374,6 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       return makeError(ErrorCode::BACKEND_FAILURE,
                        "plugin returned incorrect type");
     return Info.writeString(std::get<std::string>(Entry->Value).c_str());
-  }
-
-  case OL_DEVICE_INFO_GLOBAL_MEM_SIZE: {
-    // Uint64 values
-    if (!std::holds_alternative<uint64_t>(Entry->Value))
-      return makeError(ErrorCode::BACKEND_FAILURE,
-                       "plugin returned incorrect type");
-    return Info.write(std::get<uint64_t>(Entry->Value));
   }
 
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
