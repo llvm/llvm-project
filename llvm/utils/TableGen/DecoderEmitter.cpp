@@ -34,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -100,6 +101,22 @@ STATISTIC(NumEncodingsSupported, "Number of encodings supported");
 STATISTIC(NumEncodingsOmitted, "Number of encodings omitted");
 
 static unsigned getNumToSkipInBytes() { return LargeTable ? 3 : 2; }
+
+/// Similar to KnownBits::print(), but allows you to specify a character to use
+/// to print unknown bits.
+static void printKnownBits(raw_ostream &OS, const KnownBits &Bits,
+                           char Unknown) {
+  for (unsigned I = Bits.getBitWidth(); I--;) {
+    if (Bits.Zero[I] && Bits.One[I])
+      OS << '!';
+    else if (Bits.Zero[I])
+      OS << '0';
+    else if (Bits.One[I])
+      OS << '1';
+    else
+      OS << Unknown;
+  }
+}
 
 namespace {
 
@@ -314,15 +331,11 @@ public:
 
 // The set (BIT_TRUE, BIT_FALSE, BIT_UNSET) represents a ternary logic system
 // for a bit value.
-//
-// BIT_UNFILTERED is used as the init value for a filter position.  It is used
-// only for filter processings.
 struct BitValue {
   enum bit_value_t : uint8_t {
-    BIT_FALSE,     // '0'
-    BIT_TRUE,      // '1'
-    BIT_UNSET,     // '?', printed as '_'
-    BIT_UNFILTERED // unfiltered, printed as '.'
+    BIT_FALSE, // '0'
+    BIT_TRUE,  // '1'
+    BIT_UNSET, // '?', printed as '_'
   };
 
   BitValue(bit_value_t V) : V(V) {}
@@ -351,8 +364,6 @@ struct BitValue {
       return "1";
     case BIT_UNSET:
       return "_";
-    case BIT_UNFILTERED:
-      return ".";
     }
     llvm_unreachable("Unknow bit value");
   }
@@ -552,8 +563,8 @@ protected:
   std::unique_ptr<Filter> BestFilter;
 
   // Array of bit values passed down from our parent.
-  // Set to all BIT_UNFILTERED's for Parent == NULL.
-  std::vector<BitValue> FilterBitValues;
+  // Set to all unknown for Parent == nullptr.
+  KnownBits FilterBits;
 
   // Links to the FilterChooser above us in the decoding tree.
   const FilterChooser *Parent;
@@ -574,19 +585,18 @@ public:
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs, unsigned BW,
                 const DecoderEmitter *E)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs),
-        FilterBitValues(BW, BitValue::BIT_UNFILTERED), Parent(nullptr),
-        BitWidth(BW), Emitter(E) {
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), FilterBits(BW),
+        Parent(nullptr), BitWidth(BW), Emitter(E) {
     doFilter();
   }
 
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs,
-                const std::vector<BitValue> &ParentFilterBitValues,
-                const FilterChooser &parent)
+                const KnownBits &ParentFilterBits, const FilterChooser &parent)
       : Encodings(Encodings), EncodingIDs(EncodingIDs),
-        FilterBitValues(ParentFilterBitValues), Parent(&parent),
+        FilterBits(ParentFilterBits), Parent(&parent),
         BitWidth(parent.BitWidth), Emitter(parent.Emitter) {
+    assert(!FilterBits.hasConflict() && "Broken filter");
     doFilter();
   }
 
@@ -617,16 +627,12 @@ protected:
     return Insn;
   }
 
-  /// dumpFilterArray - dumpFilterArray prints out debugging info for the given
-  /// filter array as a series of chars.
-  void dumpFilterArray(raw_ostream &OS, ArrayRef<BitValue> Filter) const;
-
   /// dumpStack - dumpStack traverses the filter chooser chain and calls
   /// dumpFilterArray on each filter chooser up to the top level one.
   void dumpStack(raw_ostream &OS, indent Indent) const;
 
-  bool PositionFiltered(unsigned Idx) const {
-    return FilterBitValues[Idx].isSet();
+  bool isPositionFiltered(unsigned Idx) const {
+    return FilterBits.Zero[Idx] || FilterBits.One[Idx];
   }
 
   // Calculates the island(s) needed to decode the instruction.
@@ -740,16 +746,14 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
 // match the remaining undecoded encoding bits against the singleton.
 void Filter::recurse() {
   // Starts by inheriting our parent filter chooser's filter bit values.
-  std::vector<BitValue> BitValueArray(Owner.FilterBitValues);
+  KnownBits FilterBits = Owner.FilterBits;
+  assert(FilterBits.extractBits(NumBits, StartBit).isUnknown());
 
   if (!VariableIDs.empty()) {
-    for (unsigned bitIndex = 0; bitIndex < NumBits; ++bitIndex)
-      BitValueArray[StartBit + bitIndex] = BitValue::BIT_UNFILTERED;
-
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
     VariableFC = std::make_unique<FilterChooser>(Owner.Encodings, VariableIDs,
-                                                 BitValueArray, Owner);
+                                                 FilterBits, Owner);
   }
 
   // No need to recurse for a singleton filtered instruction.
@@ -761,17 +765,15 @@ void Filter::recurse() {
 
   // Otherwise, create sub choosers.
   for (const auto &[FilterVal, EncodingIDs] : FilteredIDs) {
-    // Marks all the segment positions with either BIT_TRUE or BIT_FALSE.
-    for (unsigned bitIndex = 0; bitIndex < NumBits; ++bitIndex)
-      BitValueArray[StartBit + bitIndex] = FilterVal & (1ULL << bitIndex)
-                                               ? BitValue::BIT_TRUE
-                                               : BitValue::BIT_FALSE;
+    // Create a new filter by inserting the field bits into the parent filter.
+    APInt FieldBits(NumBits, FilterVal);
+    FilterBits.insertBits(KnownBits::makeConstant(FieldBits), StartBit);
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
     FilterChooserMap.try_emplace(
         FilterVal, std::make_unique<FilterChooser>(Owner.Encodings, EncodingIDs,
-                                                   BitValueArray, Owner));
+                                                   FilterBits, Owner));
   }
 }
 
@@ -1143,21 +1145,13 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
   OS << "}\n";
 }
 
-/// dumpFilterArray - dumpFilterArray prints out debugging info for the given
-/// filter array as a series of chars.
-void FilterChooser::dumpFilterArray(raw_ostream &OS,
-                                    ArrayRef<BitValue> Filter) const {
-  for (unsigned bitIndex = BitWidth; bitIndex > 0; bitIndex--)
-    OS << Filter[bitIndex - 1];
-}
-
 /// dumpStack - dumpStack traverses the filter chooser chain and calls
 /// dumpFilterArray on each filter chooser up to the top level one.
 void FilterChooser::dumpStack(raw_ostream &OS, indent Indent) const {
   if (Parent)
     Parent->dumpStack(OS, Indent);
   OS << Indent;
-  dumpFilterArray(OS, FilterBitValues);
+  printKnownBits(OS, FilterBits, '.');
   OS << '\n';
 }
 
@@ -1178,7 +1172,7 @@ FilterChooser::getIslands(const insn_t &Insn) const {
 
   for (unsigned i = 0; i < BitWidth; ++i) {
     std::optional<uint64_t> Val = Insn[i].getValue();
-    bool Filtered = PositionFiltered(i);
+    bool Filtered = isPositionFiltered(i);
     switch (State) {
     default:
       llvm_unreachable("Unreachable code!");
@@ -1750,9 +1744,9 @@ void FilterChooser::doFilter() {
   SmallVector<bitAttr_t, 128> BitAttrs(BitWidth, ATTR_NONE);
 
   // FILTERED bit positions provide no entropy and are not worthy of pursuing.
-  // Filter::recurse() set either BIT_TRUE or BIT_FALSE for each position.
+  // Filter::recurse() set either 1 or 0 for each position.
   for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
-    if (FilterBitValues[BitIndex].isSet())
+    if (isPositionFiltered(BitIndex))
       BitAttrs[BitIndex] = ATTR_FILTERED;
 
   for (unsigned EncodingID : EncodingIDs) {
