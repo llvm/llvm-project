@@ -369,7 +369,6 @@ There are following check-* make targets for tests.
 
 - ``check-ompt`` (ompt tests under runtime/test/ompt)
 - ``check-ompt-multiplex`` (ompt multiplex tests under tools/multiplex/tests)
-- ``check-ompt-omptest`` (ompt omptest tests under tools/omptest/tests)
 - ``check-libarcher`` (libarcher tests under tools/archer/tests)
 - ``check-libomp`` (libomp tests under runtime/test. This includes check-ompt tests too)
 - ``check-libomptarget-*`` (libomptarget tests for specific target under libomptarget/test)
