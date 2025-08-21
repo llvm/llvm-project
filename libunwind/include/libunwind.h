@@ -532,6 +532,7 @@ enum {
   UNW_AARCH64_X31 = 31,
   UNW_AARCH64_SP = 31,
   UNW_AARCH64_PC = 32,
+  UNW_AARCH64_VG = 46,
 
   // reserved block
   UNW_AARCH64_RA_SIGN_STATE = 34,
