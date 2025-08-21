@@ -47,7 +47,7 @@ enum {
   DIAG_SIZE_ANALYSIS = 100,
   DIAG_SIZE_REFACTORING = 1000,
   DIAG_SIZE_INSTALLAPI = 100,
-  DIAG_SIZE_TRAP          =  100,
+  DIAG_SIZE_TRAP = 100,
 };
 // Start position for diagnostics.
 // clang-format off
