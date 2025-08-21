@@ -34,9 +34,9 @@ BindingInfo::BindingSpaces::getOrInsertSpace(uint32_t Space) {
   return Spaces.emplace_back(Space);
 }
 
-std::optional<BindingInfo::RegisterSpace *>
-BindingInfo::BindingSpaces::contains(uint32_t Space) {
-  BindingInfo::RegisterSpace *It =
+std::optional<const BindingInfo::RegisterSpace *>
+BindingInfo::BindingSpaces::contains(uint32_t Space) const {
+  const BindingInfo::RegisterSpace *It =
       std::find(Spaces.begin(), Spaces.end(), Space);
   if (It == Spaces.end())
     return std::nullopt;
@@ -92,12 +92,12 @@ bool BindingInfo::RegisterSpace::isBound(const BindingRange &Range) const {
 }
 
 bool BindingInfo::isBound(dxil::ResourceClass RC, uint32_t Space,
-                          BindingRange B) {
-  BindingSpaces &BS = getBindingSpaces(RC);
-  std::optional<BindingInfo::RegisterSpace *> RS = BS.contains(Space);
+                          const BindingRange &Range) const {
+  const BindingSpaces &BS = getBindingSpaces(RC);
+  std::optional<const BindingInfo::RegisterSpace *> RS = BS.contains(Space);
   if (!RS)
     return false;
-  return RS.value()->isBound(B);
+  return RS.value()->isBound(Range);
 }
 
 BindingInfo BindingInfoBuilder::calculateBindingInfo(
