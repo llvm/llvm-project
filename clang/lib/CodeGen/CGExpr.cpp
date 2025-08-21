@@ -108,8 +108,9 @@ CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits Align,
   return RawAddress(Alloca, Ty, Align, KnownNonNull);
 }
 
-RawAddress CodeGenFunction::MaybeCastAllocaAddressSpace(
-    RawAddress Alloca, LangAS DestLangAS, llvm::Value *ArraySize) {
+RawAddress CodeGenFunction::MaybeCastStackAddressSpace(RawAddress Alloca,
+                                                       LangAS DestLangAS,
+                                                       llvm::Value *ArraySize) {
 
   llvm::Value *V = Alloca.getPointer();
   // Alloca always returns a pointer in alloca address space, which may
@@ -141,7 +142,7 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
   RawAddress Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
   if (AllocaAddr)
     *AllocaAddr = Alloca;
-  return MaybeCastAllocaAddressSpace(Alloca, DestLangAS, ArraySize);
+  return MaybeCastStackAddressSpace(Alloca, DestLangAS, ArraySize);
 }
 
 /// CreateTempAlloca - This creates an alloca and inserts it into the entry

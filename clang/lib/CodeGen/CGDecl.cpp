@@ -1566,7 +1566,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       AllocaAddr =
           RawAddress(ReturnValue.emitRawPointer(*this),
                      ReturnValue.getElementType(), ReturnValue.getAlignment());
-      address = MaybeCastAllocaAddressSpace(AllocaAddr, Ty.getAddressSpace());
+      address = MaybeCastStackAddressSpace(AllocaAddr, Ty.getAddressSpace());
 
       if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
         const auto *RD = RecordTy->getOriginalDecl()->getDefinitionOrSelf();

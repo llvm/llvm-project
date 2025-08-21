@@ -2807,8 +2807,8 @@ public:
 private:
   /// If \p Alloca is not in the same address space as \p DestLangAS, insert an
   /// address space cast and return a new RawAddress based on this value.
-  RawAddress MaybeCastAllocaAddressSpace(RawAddress Alloca, LangAS DestLangAS,
-                                         llvm::Value *ArraySize = nullptr);
+  RawAddress MaybeCastStackAddressSpace(RawAddress Alloca, LangAS DestLangAS,
+                                        llvm::Value *ArraySize = nullptr);
 
 public:
   /// CreateTempAlloca - This creates an alloca and inserts it into the entry
