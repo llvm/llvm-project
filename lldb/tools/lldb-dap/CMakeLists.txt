@@ -54,6 +54,7 @@ add_lldb_library(lldbDAP
   Handler/LaunchRequestHandler.cpp
   Handler/LocationsRequestHandler.cpp
   Handler/ModulesRequestHandler.cpp
+  Handler/ModuleSymbolsRequestHandler.cpp
   Handler/NextRequestHandler.cpp
   Handler/PauseRequestHandler.cpp
   Handler/ReadMemoryRequestHandler.cpp

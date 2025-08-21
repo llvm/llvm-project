@@ -903,30 +903,23 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-SAME: ptr noalias [[P2:%.*]], ptr noalias [[P:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TFNONE-NEXT:  [[ENTRY:.*]]:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; TFNONE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
+; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
-; TFNONE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFNONE:       [[VECTOR_BODY]]:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; TFNONE-NEXT:    [[TMP7:%.*]] = load double, ptr [[P2]], align 8
-; TFNONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[TMP7]], i64 0
-; TFNONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
-; TFNONE-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x double> @exp_masked_scalable(<vscale x 2 x double> [[BROADCAST_SPLAT]], <vscale x 2 x i1> splat (i1 true))
-; TFNONE-NEXT:    [[TMP9:%.*]] = fcmp ogt <vscale x 2 x double> [[TMP8]], zeroinitializer
-; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x double> zeroinitializer, <vscale x 2 x double> splat (double 1.000000e+00)
-; TFNONE-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vscale.i32()
-; TFNONE-NEXT:    [[TMP12:%.*]] = mul nuw i32 [[TMP11]], 2
-; TFNONE-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP12]], 1
-; TFNONE-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 2 x double> [[PREDPHI]], i32 [[TMP13]]
+; TFNONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i64 0
+; TFNONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
+; TFNONE-NEXT:    [[TMP2:%.*]] = call <2 x double> @exp_fixed(<2 x double> [[BROADCAST_SPLAT]])
+; TFNONE-NEXT:    [[TMP3:%.*]] = fcmp ogt <2 x double> [[TMP2]], zeroinitializer
+; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
+; TFNONE-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[PREDPHI]], i32 1
 ; TFNONE-NEXT:    store double [[TMP14]], ptr [[P]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; TFNONE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
