@@ -3176,7 +3176,7 @@ APInt llvm::APIntOps::fshl(const APInt &Hi, const APInt &Lo,
   unsigned ShiftAmt = rotateModulo(Hi.getBitWidth(), Shift);
   if (ShiftAmt == 0)
     return Hi;
-  return APInt(Hi.shl(ShiftAmt) | Lo.lshr(Hi.getBitWidth() - ShiftAmt));
+  return Hi.shl(ShiftAmt) | Lo.lshr(Hi.getBitWidth() - ShiftAmt);
 }
 
 APInt llvm::APIntOps::fshr(const APInt &Hi, const APInt &Lo,
@@ -3185,5 +3185,5 @@ APInt llvm::APIntOps::fshr(const APInt &Hi, const APInt &Lo,
   unsigned ShiftAmt = rotateModulo(Hi.getBitWidth(), Shift);
   if (ShiftAmt == 0)
     return Lo;
-  return APInt(Hi.shl(Hi.getBitWidth() - ShiftAmt) | Lo.lshr(ShiftAmt));
+  return Hi.shl(Hi.getBitWidth() - ShiftAmt) | Lo.lshr(ShiftAmt);
 }
