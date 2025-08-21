@@ -1792,6 +1792,7 @@ def int_nvvm_read_ptx_sreg_clock : PTXReadNCSRegIntrinsic_r32;
 def int_nvvm_read_ptx_sreg_clock64 : PTXReadNCSRegIntrinsic_r64;
 
 def int_nvvm_read_ptx_sreg_globaltimer : PTXReadNCSRegIntrinsic_r64;
+def int_nvvm_read_ptx_sreg_globaltimer_lo : PTXReadNCSRegIntrinsic_r32;
 
 def int_nvvm_read_ptx_sreg_pm0 : PTXReadNCSRegIntrinsic_r32;
 def int_nvvm_read_ptx_sreg_pm1 : PTXReadNCSRegIntrinsic_r32;
