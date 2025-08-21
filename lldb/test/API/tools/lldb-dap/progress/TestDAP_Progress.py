@@ -21,7 +21,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         expected_not_in_message=None,
         only_verify_first_update=False,
     ):
-        self.dap_server.wait_for_event(["progressEnd"])
+        self.dap_server.wait_for_event("progressEnd")
         self.assertTrue(len(self.dap_server.progress_events) > 0)
         start_found = False
         update_found = False

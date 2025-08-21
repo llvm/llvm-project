@@ -2,9 +2,12 @@
 Test lldb-dap setBreakpoints request
 """
 
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 import lldbdap_testcase
+import time
 import os
 import re
 
@@ -205,7 +208,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
         # Now get the STDOUT and verify our program argument is correct
         output = self.get_stdout()
-        self.assertEqual(output, "", "expect no program output")
+        self.assertEqual(output, None, "expect no program output")
 
     @skipIfWindows
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
@@ -406,14 +409,14 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console()
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue again and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the second breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console()
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
@@ -421,7 +424,10 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
         # and the "terminateCommands" due to the debugging session ending
-        output = self.collect_console(pattern=terminateCommands[0])
+        output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=terminateCommands[0],
+        )
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
@@ -474,21 +480,21 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("launchCommands", output, launchCommands)
         # Verify the "stopCommands" here
         self.continue_to_next_stop()
-        output = self.get_console()
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_next_stop()
-        output = self.get_console()
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
         self.continue_to_exit()
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
-        output = self.get_console()
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("exitCommands", output, exitCommands)
 
     def test_failing_launch_commands(self):
@@ -552,7 +558,10 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Once it's disconnected the console should contain the
         # "terminateCommands"
         self.dap_server.request_disconnect(terminateDebuggee=True)
-        output = self.collect_console(pattern=terminateCommands[0])
+        output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=terminateCommands[0],
+        )
         self.verify_commands("terminateCommands", output, terminateCommands)
 
     @skipIfWindows
