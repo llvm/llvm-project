@@ -1563,11 +1563,10 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // The named return value optimization: allocate this variable in the
       // return slot, so that we can elide the copy when returning this
       // variable (C++0x [class.copy]p34).
-      address = ReturnValue;
       AllocaAddr =
           RawAddress(ReturnValue.emitRawPointer(*this),
                      ReturnValue.getElementType(), ReturnValue.getAlignment());
-      ;
+      address = MaybeCastStackAddressSpace(AllocaAddr, Ty.getAddressSpace());
 
       if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
         const auto *RD = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
