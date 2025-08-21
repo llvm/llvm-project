@@ -129,6 +129,23 @@ define i1 @inttoptr_add_ptrtoint_used_by_single_icmp_int_type_does_not_match_ptr
   ret i1 %c
 }
 
+define i1 @inttoptr_add_multiple_users_ptrtoint_used_by_single_icmp(ptr %src, ptr %p2) {
+; CHECK-LABEL: @inttoptr_add_multiple_users_ptrtoint_used_by_single_icmp(
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
+; CHECK-NEXT:    [[A:%.*]] = add i64 [[I]], 10
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[A]] to ptr
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2:%.*]], [[P]]
+; CHECK-NEXT:    call void @bar(i64 [[A]])
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = ptrtoint ptr %src to i64
+  %a = add i64 %i, 10
+  %p = inttoptr i64 %a to ptr
+  %c = icmp eq ptr %p, %p2
+  call void @bar(i64 %a)
+  ret i1 %c
+}
+
 define i1 @multiple_inttoptr_add_ptrtoint_used_by_single_icmp(ptr %src) {
 ; CHECK-LABEL: @multiple_inttoptr_add_ptrtoint_used_by_single_icmp(
 ; CHECK-NEXT:    ret i1 false
@@ -210,6 +227,7 @@ define i1 @inttoptr_add_ptrtoint_used_by_multiple_icmps(ptr %src, ptr %p2, ptr %
 }
 
 declare void @foo(ptr)
+declare void @bar(i64)
 
 define i1 @inttoptr_add_ptrtoint_used_by_multiple_icmps_and_other_user(ptr %src, ptr %p2, ptr %p3) {
 ; CHECK-LABEL: @inttoptr_add_ptrtoint_used_by_multiple_icmps_and_other_user(

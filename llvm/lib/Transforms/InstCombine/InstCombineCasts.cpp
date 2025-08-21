@@ -2077,7 +2077,8 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   Value *Base;
   Value *Offset;
   if (match(CI.getOperand(0),
-            m_c_Add(m_PtrToIntSameSize(DL, m_Value(Base)), m_Value(Offset))) &&
+            m_OneUse(m_c_Add(m_PtrToIntSameSize(DL, m_Value(Base)),
+                             m_Value(Offset)))) &&
       CI.getType()->getPointerAddressSpace() ==
           Base->getType()->getPointerAddressSpace() &&
       all_of(CI.users(), IsaPred<ICmpInst>)) {
