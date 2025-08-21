@@ -288,8 +288,8 @@ static Expected<uint8_t> parseVisibilityType(StringRef VisType) {
 
 Expected<StringRef> llvm::objcopy::parseDumpOffloadBundle(StringRef URI) {
   if (Error Err = object::extractOffloadBundleByURI(URI))
-    return createStringError(errc::invalid_argument,
-                             "failed to extract from URI");
+    return std::move(Err);
+
   return URI;
 }
 
@@ -1445,7 +1445,6 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
     return createStringError(
         errc::invalid_argument,
         "llvm-install-name-tool expects a single input file");
-
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[0];
 
@@ -1499,9 +1498,8 @@ objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr,
   for (auto *Arg : InputArgs.filtered(BITCODE_STRIP_INPUT))
     Positional.push_back(Arg->getValue());
   if (Positional.size() > 1)
-    return createStringError(
-        errc::invalid_argument,
-        "llvm-bitcode-strip expects a single input file");
+    return createStringError(errc::invalid_argument,
+                             "llvm-bitcode-strip expects a single input file");
   assert(!Positional.empty());
   Config.InputFilename = Positional[0];
 
@@ -1579,8 +1577,7 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
   std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
   if (Positional.empty())
-    return createStringError(errc::invalid_argument,
-                             "no input file specified");
+    return createStringError(errc::invalid_argument, "no input file specified");
 
   if (Positional.size() > 1 && InputArgs.hasArg(STRIP_output))
     return createStringError(

@@ -52,8 +52,8 @@ Expected<DriverConfig>
 parseStripOptions(ArrayRef<const char *> ArgsArr,
                   llvm::function_ref<Error(Error)> ErrorCallback);
 
-// parseDumpOffloadBundle reads a URI as a string and extracts the raw memory into a
-// code object file named from the URI string given.
+// parseDumpOffloadBundle reads a URI as a string and extracts the raw memory
+// into a code object file named from the URI string given.
 Expected<StringRef> parseDumpOffloadBundle(StringRef URI);
 
 } // namespace objcopy
