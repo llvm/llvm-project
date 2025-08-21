@@ -613,8 +613,9 @@ struct WgToSgConvertLayoutOp
   LogicalResult
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    xegpu::LayoutAttr input = op.getInputLayout();
-    xegpu::LayoutAttr target = op.getTargetLayout();
+    // TODO: currently, we only support LayoutAttr
+    auto input = dyn_cast<xegpu::LayoutAttr>(op.getInputLayout());
+    auto target = dyn_cast<xegpu::LayoutAttr>(op.getTargetLayout());
 
     if (!input || !target || !input.isForWorkgroup() ||
         !target.isForWorkgroup())

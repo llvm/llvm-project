@@ -84,9 +84,9 @@ struct ConvertLayoutOpPattern
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
                                 PatternRewriter &rewriter) const override {
-    xegpu::LayoutAttr input_layout = op.getInputLayoutAttr();
-    xegpu::LayoutAttr target_layout = op.getTargetLayoutAttr();
-    if (!input_layout.getInstData() || !target_layout.getInstData())
+    xegpu::DistributeLayoutAttr input_layout = op.getInputLayoutAttr();
+    xegpu::DistributeLayoutAttr target_layout = op.getTargetLayoutAttr();
+    if (!input_layout.getInstDataAsInt() || !target_layout.getInstDataAsInt())
       return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
 
     input_layout = input_layout.dropInstData();
