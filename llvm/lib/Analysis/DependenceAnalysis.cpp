@@ -873,6 +873,9 @@ void DependenceInfo::collectCommonLoops(const SCEV *Expression,
                                         SmallBitVector &Loops) const {
   while (LoopNest) {
     unsigned Level = LoopNest->getLoopDepth();
+    LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+    LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+    assert(Level <= MaxLevels && "Level larger than MaxLevels.");
     if (Level <= CommonLevels && !SE->isLoopInvariant(Expression, LoopNest))
       Loops.set(Level);
     LoopNest = LoopNest->getParentLoop();
@@ -959,6 +962,10 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
   if (!AddRec)
     return isLoopInvariant(Expr, LoopNest);
 
+  const SCEV *Step = AddRec->getStepRecurrence(*SE);
+  if (!isLoopInvariant(Step, LoopNest))
+    return false;
+
   // The AddRec must depend on one of the containing loops. Otherwise,
   // mapSrcLoop and mapDstLoop return indices outside the intended range. This
   // can happen when a subscript in one loop references an IV from a sibling
@@ -970,14 +977,16 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
   if (!L)
     return false;
 
+  unsigned Level = IsSrc ? mapSrcLoop(L) : mapDstLoop(L);
+  // Check that the mapped loop index is within bounds for the SmallBitVector.
+  // This can happen when loop depths exceed MaxLevels due to the mapping
+  // algorithm.
+
+  LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+  LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+  assert(Level <= MaxLevels && "Level larger than MaxLevels.");
+  Loops.set(Level);
   const SCEV *Start = AddRec->getStart();
-  const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  if (!isLoopInvariant(Step, LoopNest))
-    return false;
-  if (IsSrc)
-    Loops.set(mapSrcLoop(AddRec->getLoop()));
-  else
-    Loops.set(mapDstLoop(AddRec->getLoop()));
   return checkSubscript(Start, LoopNest, Loops, IsSrc);
 }
 
@@ -2281,8 +2290,14 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                               Result, NewConstraint) ||
            gcdMIVtest(Src, Dst, Result);
   }
-  llvm_unreachable("SIV test expected at least one AddRec");
-  return false;
+  // If neither expression is an AddRec, this means propagation has simplified
+  // them to non-AddRec forms. In this case, fall back to ZIV analysis since
+  // the expressions are effectively loop-invariant.
+  LLVM_DEBUG(dbgs() << "    falling back to ZIV test due to no AddRec\n");
+  // Set to first valid level to avoid Level=0 causing DV[-1] access.
+  // See comment in establishNestingLevels.
+  Level = 1;
+  return testZIV(Src, Dst, Result);
 }
 
 // testRDIV -
@@ -2343,8 +2358,14 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
       SrcLoop = DstAddRec->getLoop();
     } else
       llvm_unreachable("RDIV reached by surprising SCEVs");
-  } else
-    llvm_unreachable("RDIV expected at least one AddRec");
+  } else {
+    // If neither expression is an AddRec, this means propagation has simplified
+    // them to non-AddRec forms. Fall back to ZIV analysis since the expressions
+    // are effectively loop-invariant.
+    LLVM_DEBUG(
+        dbgs() << "    RDIV falling back to ZIV test due to no AddRec\n");
+    return testZIV(Src, Dst, Result);
+  }
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
                        Result) ||
          gcdMIVtest(Src, Dst, Result) ||
@@ -3821,7 +3842,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       break;
     case Subscript::SIV: {
       LLVM_DEBUG(dbgs() << ", SIV\n");
-      unsigned Level;
+      unsigned Level = 0;
       const SCEV *SplitIter = nullptr;
       if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
                   SplitIter))
@@ -3872,12 +3893,17 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         for (unsigned SJ : Sivs.set_bits()) {
           LLVM_DEBUG(dbgs() << "testing subscript " << SJ << ", SIV\n");
           // SJ is an SIV subscript that's part of the current coupled group
-          unsigned Level;
+          unsigned Level = 0;
           const SCEV *SplitIter = nullptr;
           LLVM_DEBUG(dbgs() << "SIV\n");
           if (testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
                       SplitIter))
             return nullptr;
+
+          LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+          LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+          assert(Level <= MaxLevels && "Level larger than MaxLevels.");
+
           ConstrainedLevels.set(Level);
           if (intersectConstraints(&Constraints[Level], &NewConstraint)) {
             if (Constraints[Level].isEmpty()) {
@@ -4155,7 +4181,7 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   for (unsigned SI : Separable.set_bits()) {
     switch (Pair[SI].Classification) {
     case Subscript::SIV: {
-      unsigned Level;
+      unsigned Level = 0;
       const SCEV *SplitIter = nullptr;
       (void)testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
                     SplitIter);
@@ -4195,12 +4221,17 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
       bool Changed = false;
       for (unsigned SJ : Sivs.set_bits()) {
         // SJ is an SIV subscript that's part of the current coupled group
-        unsigned Level;
+        unsigned Level = 0;
         const SCEV *SplitIter = nullptr;
         (void)testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
                       SplitIter);
         if (Level == SplitLevel && SplitIter)
           return SplitIter;
+
+        LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+        LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+        assert(Level <= MaxLevels && "Level larger than MaxLevels.");
+
         ConstrainedLevels.set(Level);
         if (intersectConstraints(&Constraints[Level], &NewConstraint))
           Changed = true;
