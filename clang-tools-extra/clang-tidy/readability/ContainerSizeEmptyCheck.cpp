@@ -190,7 +190,7 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   const auto WrongComparend =
       anyOf(stringLiteral(hasSize(0)),
             userDefinedLiteral(hasLiteral(stringLiteral(hasSize(0)))),
-            cxxConstructExpr(isDefaultConstruction()),
+            cxxConstructExpr(isDefaultConstruction(), argumentCountIs(0)),
             cxxUnresolvedConstructExpr(argumentCountIs(0)));
   // Match the object being compared.
   const auto STLArg =

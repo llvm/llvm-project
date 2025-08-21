@@ -908,3 +908,27 @@ class foo : public std::string{
 };
 
 }
+
+namespace GH154762 {
+class TypeRange {
+  std::vector<int> b;
+
+public:
+  TypeRange(std::vector<int> b = {});
+  TypeRange(int);
+  bool operator==(const TypeRange& other) const;
+
+  size_t size() const {
+    return b.size();
+  }
+
+  bool empty() const {
+    return size() == 0;
+  }
+};
+
+void foo(std::vector<int> v) {
+  if (TypeRange(1) == TypeRange(v)) { // no warning
+  }
+}
+}
