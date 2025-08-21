@@ -2827,6 +2827,9 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
   if (!FD)
     return;
 
+  bool IsAlwaysInline = TargetDecl->hasAttr<AlwaysInlineAttr>();
+  bool IsFlatten = FD && FD->hasAttr<FlattenAttr>();
+
   // Grab the required features for the call. For a builtin this is listed in
   // the td file with the default cpu, for an always_inline function this is any
   // listed cpu and any listed features.
@@ -2869,25 +2872,39 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
       if (F.getValue())
         ReqFeatures.push_back(F.getKey());
     }
-    if (!llvm::all_of(ReqFeatures, [&](StringRef Feature) {
-      if (!CallerFeatureMap.lookup(Feature)) {
-        MissingFeature = Feature.str();
-        return false;
-      }
-      return true;
-    }) && !IsHipStdPar)
-      CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
-          << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
+    if (!llvm::all_of(ReqFeatures,
+                      [&](StringRef Feature) {
+                        if (!CallerFeatureMap.lookup(Feature)) {
+                          MissingFeature = Feature.str();
+                          return false;
+                        }
+                        return true;
+                      }) &&
+        !IsHipStdPar) {
+      if (IsAlwaysInline)
+        CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
+            << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
+      else if (IsFlatten)
+        CGM.getDiags().Report(Loc, diag::err_flatten_function_needs_feature)
+            << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
+    }
+
   } else if (!FD->isMultiVersion() && FD->hasAttr<TargetAttr>()) {
     llvm::StringMap<bool> CalleeFeatureMap;
     CGM.getContext().getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
 
     for (const auto &F : CalleeFeatureMap) {
-      if (F.getValue() && (!CallerFeatureMap.lookup(F.getKey()) ||
-                           !CallerFeatureMap.find(F.getKey())->getValue()) &&
-          !IsHipStdPar)
-        CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
-            << FD->getDeclName() << TargetDecl->getDeclName() << F.getKey();
+      if (F.getValue() &&
+          (!CallerFeatureMap.lookup(F.getKey()) ||
+           !CallerFeatureMap.find(F.getKey())->getValue()) &&
+          !IsHipStdPar) {
+        if (IsAlwaysInline)
+          CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
+              << FD->getDeclName() << TargetDecl->getDeclName() << F.getKey();
+        else if (IsFlatten)
+          CGM.getDiags().Report(Loc, diag::err_flatten_function_needs_feature)
+              << FD->getDeclName() << TargetDecl->getDeclName() << F.getKey();
+      }
     }
   }
 }
