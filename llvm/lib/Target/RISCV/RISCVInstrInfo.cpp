@@ -382,7 +382,7 @@ void RISCVInstrInfo::copyPhysRegVector(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
     const TargetRegisterClass *RegClass) const {
-  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
   RISCVVType::VLMUL LMul = RISCVRI::getLMul(RegClass->TSFlags);
   unsigned NF = RISCVRI::getNF(RegClass->TSFlags);
 
@@ -444,13 +444,7 @@ void RISCVInstrInfo::copyPhysRegVector(
     return {RISCVVType::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
             RISCV::PseudoVMV_V_V_M1, RISCV::PseudoVMV_V_I_M1};
   };
-  auto FindRegWithEncoding = [TRI](const TargetRegisterClass &RegClass,
-                                   uint16_t Encoding) {
-    MCRegister Reg = RISCV::V0 + Encoding;
-    if (RISCVRI::getLMul(RegClass.TSFlags) == RISCVVType::LMUL_1)
-      return Reg;
-    return TRI->getMatchingSuperReg(Reg, RISCV::sub_vrm1_0, &RegClass);
-  };
+
   while (I != NumRegs) {
     // For non-segment copying, we only do this once as the registers are always
     // aligned.
@@ -470,9 +464,9 @@ void RISCVInstrInfo::copyPhysRegVector(
 
     // Emit actual copying.
     // For reversed copying, the encoding should be decreased.
-    MCRegister ActualSrcReg = FindRegWithEncoding(
+    MCRegister ActualSrcReg = TRI->findVRegWithEncoding(
         RegClass, ReversedCopy ? (SrcEncoding - NumCopied + 1) : SrcEncoding);
-    MCRegister ActualDstReg = FindRegWithEncoding(
+    MCRegister ActualDstReg = TRI->findVRegWithEncoding(
         RegClass, ReversedCopy ? (DstEncoding - NumCopied + 1) : DstEncoding);
 
     auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), ActualDstReg);
