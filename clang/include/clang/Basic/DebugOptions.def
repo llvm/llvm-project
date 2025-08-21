@@ -126,10 +126,13 @@ DEBUGOPT(DebugNameTable, 2, 0, Compatible)
 DEBUGOPT(DebugRangesBaseAddress, 1, 0, Compatible)
 
 /// Whether to add linkage names to constructor/destructor declarations.
+/// This is an escape hatch for cases where attaching the additional linkage
+/// names would increase debug-info size (particularly the .debug_str section)
+/// too much.
 DEBUGOPT(DebugStructorDeclLinkageNames, 1, 0, Benign)
 
 /// Whether to embed source in DWARF debug line section.
-DEBUGOPT(EmbedSource, 1, 1, Compatible)
+DEBUGOPT(EmbedSource, 1, 0, Compatible)
 
 #undef DEBUGOPT
 #undef ENUM_DEBUGOPT
