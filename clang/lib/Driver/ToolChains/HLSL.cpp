@@ -295,11 +295,11 @@ void tools::hlsl::MetalConverter::ConstructJob(
                                          Exec, CmdArgs, Inputs, Input));
 }
 
-void tools::hlsl::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
-                                            const InputInfo &Output,
-                                            const InputInfoList &Inputs,
-                                            const ArgList &Args,
-                                            const char *LinkingOutput) const {
+void tools::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
+                                      const InputInfo &Output,
+                                      const InputInfoList &Inputs,
+                                      const ArgList &Args,
+                                      const char *LinkingOutput) const {
 
   std::string ObjcopyPath = getToolChain().GetProgramPath("llvm-objcopy");
   const char *Exec = Args.MakeArgString(ObjcopyPath);
@@ -339,9 +339,9 @@ Tool *clang::driver::toolchains::HLSLToolChain::getTool(
     if (!MetalConverter)
       MetalConverter.reset(new tools::hlsl::MetalConverter(*this));
     return MetalConverter.get();
-  case Action::BinaryModifyJobClass:
+  case Action::ObjcopyJobClass:
     if (!LLVMObjcopy)
-      LLVMObjcopy.reset(new tools::hlsl::LLVMObjcopy(*this));
+      LLVMObjcopy.reset(new tools::LLVMObjcopy(*this));
     return LLVMObjcopy.get();
   default:
     return ToolChain::getTool(AC);
@@ -498,7 +498,7 @@ bool HLSLToolChain::isLastJob(DerivedArgList &Args,
       (!HasTranslation && HasValidation &&
        AC == Action::BinaryAnalyzeJobClass) ||
       (!HasTranslation && !HasValidation && HasObjcopy &&
-       AC == Action::BinaryModifyJobClass))
+       AC == Action::ObjcopyJobClass))
     return true;
   return false;
 }

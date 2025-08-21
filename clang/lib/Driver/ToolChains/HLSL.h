@@ -43,10 +43,11 @@ public:
                     const char *LinkingOutput) const override;
 };
 
+} // namespace hlsl
+
 class LLVM_LIBRARY_VISIBILITY LLVMObjcopy : public Tool {
 public:
-  LLVMObjcopy(const ToolChain &TC)
-      : Tool("hlsl::LLVMObjcopy", "llvm-objcopy", TC) {}
+  LLVMObjcopy(const ToolChain &TC) : Tool("LLVMObjcopy", "llvm-objcopy", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -55,7 +56,7 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
-} // namespace hlsl
+
 } // namespace tools
 
 namespace toolchains {
@@ -87,7 +88,7 @@ public:
 private:
   mutable std::unique_ptr<tools::hlsl::Validator> Validator;
   mutable std::unique_ptr<tools::hlsl::MetalConverter> MetalConverter;
-  mutable std::unique_ptr<tools::hlsl::LLVMObjcopy> LLVMObjcopy;
+  mutable std::unique_ptr<tools::LLVMObjcopy> LLVMObjcopy;
 };
 
 } // end namespace toolchains

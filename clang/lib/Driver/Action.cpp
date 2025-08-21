@@ -52,8 +52,8 @@ const char *Action::getClassName(ActionClass AC) {
     return "binary-analyzer";
   case BinaryTranslatorJobClass:
     return "binary-translator";
-  case BinaryModifyJobClass:
-    return "binary-modifier";
+  case ObjcopyJobClass:
+    return "objcopy";
   }
 
   llvm_unreachable("invalid class");
@@ -470,7 +470,7 @@ BinaryTranslatorJobAction::BinaryTranslatorJobAction(Action *Input,
                                                      types::ID Type)
     : JobAction(BinaryTranslatorJobClass, Input, Type) {}
 
-void BinaryModifyJobAction::anchor() {}
+void ObjcopyJobAction::anchor() {}
 
-BinaryModifyJobAction::BinaryModifyJobAction(Action *Input, types::ID Type)
-    : JobAction(BinaryModifyJobClass, Input, Type) {}
+ObjcopyJobAction::ObjcopyJobAction(Action *Input, types::ID Type)
+    : JobAction(ObjcopyJobClass, Input, Type) {}

@@ -4669,8 +4669,8 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
       // (TY_OBJECT).
       if (LastAction->getType() == types::TY_DX_CONTAINER ||
           LastAction->getType() == types::TY_Object)
-        Actions.push_back(C.MakeAction<BinaryModifyJobAction>(
-            LastAction, types::TY_DX_CONTAINER));
+        Actions.push_back(
+            C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_DX_CONTAINER));
     }
   }
 
