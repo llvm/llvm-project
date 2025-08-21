@@ -4214,7 +4214,9 @@ such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 ``__builtin_clzg`` (respectively ``__builtin_ctzg``) returns the number of
 leading (respectively trailing) 0 bits in the first argument. The first argument
-can be of any unsigned integer type or fixed boolean vector.
+can be of any unsigned integer type or fixed boolean vector. Boolean vectors
+behave like a bit field where the least significant bits are trailing and the
+most significant bits are leading.
 
 If the first argument is 0 and an optional second argument of ``int`` type is
 provided, then the second argument is returned. If the first argument is 0, but
