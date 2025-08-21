@@ -19,7 +19,7 @@ using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-void populateDialectTransformSubmodule(const nb::module_ &m) {
+static void populateDialectTransformSubmodule(const nb::module_ &m) {
   //===-------------------------------------------------------------------===//
   // AnyOpType
   //===-------------------------------------------------------------------===//
