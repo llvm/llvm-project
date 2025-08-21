@@ -582,7 +582,7 @@ void DWARFDebugLine::ParsingState::appendRowToMatrix() {
   if (Row.EndSequence) {
     // Record the end of instruction sequence.
     Sequence.HighPC = Row.Address.Address;
-#if 0
+#if 1
     // Proposed change, without this the added test will fail. With this
     // GSYMTest/TestDWARFNoLines will fail
     Sequence.HighPC = Row.Address.Address + LineTable->Prologue.MinInstLength;
