@@ -56,18 +56,20 @@ TEST_P(olMemFreeTest, InvalidFreeDeviceNull) {
 TEST_P(olMemFreeTest, InvalidFreeManagedWrongDevice) {
   void *Alloc = nullptr;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 1024, &Alloc));
-  ASSERT_ERROR(OL_ERRC_NOT_FOUND, olMemFree(TestEnvironment::getHostDevice(), Alloc));
+  ASSERT_ERROR(OL_ERRC_NOT_FOUND,
+               olMemFree(TestEnvironment::getHostDevice(), Alloc));
 }
 
 TEST_P(olMemFreeTest, InvalidFreeHostWrongDevice) {
   void *Alloc = nullptr;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, 1024, &Alloc));
-  ASSERT_ERROR(OL_ERRC_NOT_FOUND, olMemFree(TestEnvironment::getHostDevice(), Alloc));
+  ASSERT_ERROR(OL_ERRC_NOT_FOUND,
+               olMemFree(TestEnvironment::getHostDevice(), Alloc));
 }
-
 
 TEST_P(olMemFreeTest, InvalidFreeDeviceWrongDevice) {
   void *Alloc = nullptr;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
-  ASSERT_ERROR(OL_ERRC_NOT_FOUND, olMemFree(TestEnvironment::getHostDevice(), Alloc));
+  ASSERT_ERROR(OL_ERRC_NOT_FOUND,
+               olMemFree(TestEnvironment::getHostDevice(), Alloc));
 }
