@@ -600,10 +600,7 @@ AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
   // replace references to heap allocation with references to stack allocation
   mlir::Value newValue = convertAllocationType(
       rewriter, allocmem.getLoc(), allocmem.getResult(), alloca->getResult());
-  rewriter.replaceAllUsesWith(allocmem.getResult(), newValue);
-
-  // remove allocmem operation
-  rewriter.eraseOp(allocmem.getOperation());
+  rewriter.replaceOp(allocmem, newValue);
 
   return mlir::success();
 }

@@ -1900,8 +1900,7 @@ hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
     // shape information is not available at compile time
     return llvm::LogicalResult::failure();
 
-  rewriter.replaceAllUsesWith(shapeOf.getResult(), shape);
-  rewriter.eraseOp(shapeOf);
+  rewriter.replaceOp(shapeOf, shape);
   return llvm::LogicalResult::success();
 }
 
