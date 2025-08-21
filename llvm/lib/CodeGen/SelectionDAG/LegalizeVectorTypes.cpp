@@ -789,6 +789,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::SETCC:
     Res = ScalarizeVecOp_VSETCC(N);
     break;
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+    Res = ScalarizeVecOp_VSTRICT_FSETCC(N, OpNo);
+    break;
   case ISD::STORE:
     Res = ScalarizeVecOp_STORE(cast<StoreSDNode>(N), OpNo);
     break;
@@ -983,6 +987,43 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VSETCC(SDNode *N) {
   Res = DAG.getNode(ExtendCode, DL, NVT, Res);
 
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Res);
+}
+
+// Similiar to ScalarizeVecOp_VSETCC, with added logic to update chains.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VSTRICT_FSETCC(SDNode *N,
+                                                        unsigned OpNo) {
+  assert(OpNo == 1 && "Wrong operand for scalarization!");
+  assert(N->getValueType(0).isVector() &&
+         N->getOperand(1).getValueType().isVector() &&
+         "Operand types must be vectors");
+  assert(N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type");
+
+  EVT VT = N->getValueType(0);
+  SDValue Ch = N->getOperand(0);
+  SDValue LHS = GetScalarizedVector(N->getOperand(1));
+  SDValue RHS = GetScalarizedVector(N->getOperand(2));
+  SDValue CC = N->getOperand(3);
+
+  EVT OpVT = N->getOperand(1).getValueType();
+  EVT NVT = VT.getVectorElementType();
+  SDLoc DL(N);
+  SDValue Res = DAG.getNode(N->getOpcode(), DL, {MVT::i1, MVT::Other},
+                            {Ch, LHS, RHS, CC});
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+
+  ISD::NodeType ExtendCode =
+      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
+
+  Res = DAG.getNode(ExtendCode, DL, NVT, Res);
+  Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Res);
+
+  // Do our own replacement and return SDValue() to tell the caller that we
+  // handled all replacements since caller can only handle a single result.
+  ReplaceValueWith(SDValue(N, 0), Res);
+  return SDValue();
 }
 
 /// If the value to store is a vector that needs to be scalarized, it must be
@@ -3845,9 +3886,22 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
   unsigned NumResultElts = SubVT.getVectorMinNumElements();
 
   if (IdxVal < LoEltsMin) {
-    assert(IdxVal + NumResultElts <= LoEltsMin &&
-           "Extracted subvector crosses vector split!");
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
+    // If the extracted elements are all in the low half, do a simple extract.
+    if (IdxVal + NumResultElts <= LoEltsMin)
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
+
+    // Extracted subvector crosses vector split, so we need to blend the two
+    // halves.
+    // TODO: May be able to emit partial extract_subvector.
+    SmallVector<SDValue, 8> Elts;
+    Elts.reserve(NumResultElts);
+
+    DAG.ExtractVectorElements(Lo, Elts, /*Start=*/IdxVal,
+                              /*Count=*/LoEltsMin - IdxVal);
+    DAG.ExtractVectorElements(Hi, Elts, /*Start=*/0,
+                              /*Count=*/SubVT.getVectorNumElements() -
+                                  Elts.size());
+    return DAG.getBuildVector(SubVT, dl, Elts);
   }
 
   EVT SrcVT = N->getOperand(0).getValueType();

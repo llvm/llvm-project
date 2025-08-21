@@ -839,19 +839,10 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// This is not used by any of the opcodes directly. It's used by
 /// EvalEmitter to do the final lvalue-to-rvalue conversion.
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer()) {
-    if (Ptr.isZero()) {
-      const auto &Src = S.Current->getSource(OpPC);
-
-      if (Ptr.isField())
-        S.FFDiag(Src, diag::note_constexpr_null_subobject) << CSK_Field;
-      else
-        S.FFDiag(Src, diag::note_constexpr_access_null) << AK_Read;
-    }
+  assert(!Ptr.isZero());
+  if (!Ptr.isBlockPointer())
     return false;
-  }
 
-  assert(Ptr.isBlockPointer());
   if (!Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK_Read))
       return false;

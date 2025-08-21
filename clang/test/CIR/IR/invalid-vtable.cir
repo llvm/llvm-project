@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -verify-diagnostics
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 !s8i = !cir.int<s, 8>
 !u32i = !cir.int<u, 32>
@@ -6,4 +6,68 @@ cir.func @reference_unknown_vtable() {
   // expected-error @below {{'cir.vtable.address_point' op 'some_vtable' does not reference a valid cir.global}}
   %0 = cir.vtable.address_point(@some_vtable, address_point = <index = 0, offset = 2>) : !cir.vptr
   cir.return
+}
+
+// -----
+
+!rec_S = !cir.record<struct "S" {!cir.vptr}>
+!u8i = !cir.int<u, 8>
+!rec_anon_struct = !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 4>}>
+module {
+  // expected-error @below {{expected !cir.record type result}}
+  cir.global external @_ZTV1S = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S3keyEv> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S6nonKeyEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 4>}> : !cir.ptr<!rec_anon_struct>
+  cir.func private dso_local @_ZN1S3keyEv(%arg0: !cir.ptr<!rec_S>)
+  cir.func private dso_local @_ZN1S6nonKeyEv(%arg0: !cir.ptr<!rec_S>)
+}
+
+// -----
+
+!rec_S = !cir.record<struct "S" {!cir.vptr}>
+!u8i = !cir.int<u, 8>
+!rec_anon_struct = !cir.record<struct  {}>
+module {
+  // expected-error @below {{expected record type with one or more subtype}}
+  cir.global external @_ZTV1S = #cir.vtable<{}> : !rec_anon_struct {alignment = 8 : i64}
+  cir.func private dso_local @_ZN1S3keyEv(%arg0: !cir.ptr<!rec_S>)
+  cir.func private dso_local @_ZN1S6nonKeyEv(%arg0: !cir.ptr<!rec_S>)
+}
+
+// -----
+
+!rec_S = !cir.record<struct "S" {!cir.vptr}>
+!u8i = !cir.int<u, 8>
+!rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>}>
+module {
+  // expected-error @below {{expected constant array subtype}}
+  cir.global external @_ZTV1S = #cir.vtable<{#cir.ptr<null> : !cir.ptr<!u8i>}> : !rec_anon_struct {alignment = 8 : i64}
+  cir.func private dso_local @_ZN1S3keyEv(%arg0: !cir.ptr<!rec_S>)
+  cir.func private dso_local @_ZN1S6nonKeyEv(%arg0: !cir.ptr<!rec_S>)
+}
+
+// -----
+
+!rec_S = !cir.record<struct "S" {!cir.vptr}>
+!u64i = !cir.int<u, 64>
+!rec_anon_struct = !cir.record<struct  {!cir.array<!u64i x 4>}>
+module {
+  // expected-error @below {{expected GlobalViewAttr or ConstPtrAttr}}
+  cir.global external @_ZTV1S = #cir.vtable<{#cir.const_array<[#cir.int<1> : !u64i, #cir.int<1> : !u64i, #cir.int<3> : !u64i, #cir.int<4> : !u64i]> : !cir.array<!u64i x 4>}> : !rec_anon_struct {alignment = 8 : i64}
+  cir.func private dso_local @_ZN1S3keyEv(%arg0: !cir.ptr<!rec_S>)
+  cir.func private dso_local @_ZN1S6nonKeyEv(%arg0: !cir.ptr<!rec_S>)
+}
+
+// -----
+
+!rec_Q = !cir.record<struct "Q" {!cir.vptr}>
+!rec_S = !cir.record<struct "S" {!cir.vptr}>
+!rec_S2 = !cir.record<struct "S2" {!rec_Q, !rec_S}>
+!u8i = !cir.int<u, 8>
+!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>, !cir.ptr<!u8i>}>
+module {
+  // expected-error @below {{expected constant array subtype}}
+  cir.global external @_ZTV2S2 = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S3keyEv> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S6nonKeyEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 4>, #cir.ptr<null> : !cir.ptr<!u8i>}> : !rec_anon_struct {alignment = 8 : i64}
+
+  cir.func private dso_local @_ZN1S3keyEv(%arg0: !cir.ptr<!rec_S>)
+  cir.func private dso_local @_ZN1S6nonKeyEv(%arg0: !cir.ptr<!rec_S>)
+  cir.func private dso_local @_ZN2S23keyEv(%arg0: !cir.ptr<!rec_S2>)
 }
