@@ -1447,7 +1447,7 @@ std::optional<parser::Message> CheckStatementFunction(
 }
 
 // Copy-in determination for implicit interface
-static bool MayNeedCopyIn(const ActualArgument &actual, FoldingContext &fc) {
+static bool MayNeedCopyIn(FoldingContext &fc, const ActualArgument &actual) {
   if (!evaluate::IsVariable(actual)) {
     // Actual argument expressions that aren’t variables are copy-in, but
     // not copy-out.
@@ -1461,24 +1461,9 @@ static bool MayNeedCopyIn(const ActualArgument &actual, FoldingContext &fc) {
   return false;
 }
 
-// Copy-out determination for implicit interface
-static bool MayNeedCopyOut(const ActualArgument &actual, FoldingContext &fc) {
-  if (!evaluate::IsVariable(actual)) {
-    // Expressions are never copy-out
-    return false;
-  }
-  if (HasVectorSubscript(actual)) {
-    // Vector subscripts could refer to duplicate elements, can't copy out
-    return false;
-  }
-  // For all other cases may need to copy-out. The final determination of
-  // whether to copy-out should be made together witih copy-in.
-  return true;
-}
-
 // Copy-in determination for explicit interface
-static bool MayNeedCopyIn(const ActualArgument &actual,
-    const characteristics::DummyDataObject &dummyObj, FoldingContext &fc) {
+static bool MayNeedCopyIn(FoldingContext &fc, const ActualArgument &actual,
+    const characteristics::DummyDataObject &dummyObj) {
   if (dummyObj.intent == common::Intent::Out) {
     // INTENT(OUT) dummy args never need copy-in
     return false;
@@ -1543,26 +1528,29 @@ static bool MayNeedCopyIn(const ActualArgument &actual,
   return false;
 }
 
-// Copy-out determination for explicit interface
-static bool MayNeedCopyOut(const ActualArgument &actual,
-    const characteristics::DummyDataObject &dummyObj, FoldingContext &fc) {
-  if (dummyObj.intent == common::Intent::In) {
-    // INTENT(IN) dummy args never need copy-out
-    return false;
+// Copy-out determination for both implicit and explicit interfaces
+static bool MayNeedCopyOut(FoldingContext &fc, const ActualArgument &actual,
+    const characteristics::DummyDataObject *dummyObj = nullptr) {
+  if (dummyObj) { // Explict interface
+    if (dummyObj->intent == common::Intent::In) {
+      // INTENT(IN) dummy args never need copy-out
+      return false;
+    }
+    if (dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Value)) {
+      // Pass by value, never copy-out
+      return false;
+    }
+    if (ExtractCoarrayRef(actual) && dummyObj->type.corank() > 0) {
+      return false;
+    }
   }
-  if (dummyObj.attrs.test(characteristics::DummyDataObject::Attr::Value)) {
-    // Pass by value, never copy-out
-    return false;
-  }
+  // Both implict and explict interface
   if (!evaluate::IsVariable(actual)) {
     // Expressions are never copy-out
     return false;
   }
   if (HasVectorSubscript(actual)) {
     // Vector subscripts could refer to duplicate elements, can't copy out
-    return false;
-  }
-  if (ExtractCoarrayRef(actual) && dummyObj.type.corank() > 0) {
     return false;
   }
   // For all other cases may need to copy-out. The final determination of
@@ -1594,9 +1582,9 @@ bool MayNeedCopy(const ActualArgument *actual,
       return true;
     }
     if (forCopyOut) {
-      return MayNeedCopyOut(*actual, fc);
+      return MayNeedCopyOut(fc, *actual);
     } else {
-      return MayNeedCopyIn(*actual, fc);
+      return MayNeedCopyIn(fc, *actual);
     }
   } else { // Explicit interface
     const auto *dummyObj{
@@ -1606,9 +1594,9 @@ bool MayNeedCopy(const ActualArgument *actual,
       return false;
     }
     if (forCopyOut) {
-      return MayNeedCopyOut(*actual, *dummyObj, fc);
+      return MayNeedCopyOut(fc, *actual, dummyObj);
     } else {
-      return MayNeedCopyIn(*actual, *dummyObj, fc);
+      return MayNeedCopyIn(fc, *actual, *dummyObj);
     }
   }
 }
