@@ -35,8 +35,8 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
 
   llvmStructType.def_classmethod(
       "get_literal",
-      [](nb::object cls, const std::vector<MlirType> &elements, bool packed,
-         MlirLocation loc) {
+      [](const nb::object &cls, const std::vector<MlirType> &elements,
+         bool packed, MlirLocation loc) {
         CollectDiagnosticsToStringScope scope(mlirLocationGetContext(loc));
 
         MlirType type = mlirLLVMStructTypeLiteralGetChecked(
@@ -51,7 +51,7 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
 
   llvmStructType.def_classmethod(
       "get_identified",
-      [](nb::object cls, const std::string &name, MlirContext context) {
+      [](const nb::object &cls, const std::string &name, MlirContext context) {
         return cls(mlirLLVMStructTypeIdentifiedGet(
             context, mlirStringRefCreate(name.data(), name.size())));
       },
@@ -59,7 +59,7 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
 
   llvmStructType.def_classmethod(
       "get_opaque",
-      [](nb::object cls, const std::string &name, MlirContext context) {
+      [](const nb::object &cls, const std::string &name, MlirContext context) {
         return cls(mlirLLVMStructTypeOpaqueGet(
             context, mlirStringRefCreate(name.data(), name.size())));
       },
@@ -79,7 +79,7 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
 
   llvmStructType.def_classmethod(
       "new_identified",
-      [](nb::object cls, const std::string &name,
+      [](const nb::object &cls, const std::string &name,
          const std::vector<MlirType> &elements, bool packed, MlirContext ctx) {
         return cls(mlirLLVMStructTypeIdentifiedNewGet(
             ctx, mlirStringRefCreate(name.data(), name.length()),
@@ -123,7 +123,7 @@ static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
   mlir_type_subclass(m, "PointerType", mlirTypeIsALLVMPointerType)
       .def_classmethod(
           "get",
-          [](nb::object cls, std::optional<unsigned> addressSpace,
+          [](const nb::object &cls, std::optional<unsigned> addressSpace,
              MlirContext context) {
             CollectDiagnosticsToStringScope scope(context);
             MlirType type = mlirLLVMPointerTypeGet(
