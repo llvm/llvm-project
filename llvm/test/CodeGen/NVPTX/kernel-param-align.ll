@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_60 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 | %ptxas -arch=sm_60 - %}
+; RUN: %if ptxas-sm_60 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 | %ptxas -arch=sm_60 - %}
 
 %struct.Large = type { [16 x double] }
 
