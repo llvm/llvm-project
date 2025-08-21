@@ -5158,22 +5158,6 @@ def STLTXRX : StoreExclusiveLSUI<0b11, 0, 1, GPR64, "stltxr">;
 }
 
 //===----------------------------------------------------------------------===//
-// Advanced SIMD two scalar instructions (floating point to integer conversion)
-//===----------------------------------------------------------------------===//
-
-defm FCVTAS : SIMDFPTwoScalar<   0, 0, 0b11100, "fcvtas">;
-defm FCVTAU : SIMDFPTwoScalar<   1, 0, 0b11100, "fcvtau">;
-defm FCVTMS : SIMDFPTwoScalar<   0, 0, 0b11011, "fcvtms">;
-defm FCVTMU : SIMDFPTwoScalar<   1, 0, 0b11011, "fcvtmu">;
-defm FCVTNS : SIMDFPTwoScalar<   0, 0, 0b11010, "fcvtns">;
-defm FCVTNU : SIMDFPTwoScalar<   1, 0, 0b11010, "fcvtnu">;
-defm FCVTPS : SIMDFPTwoScalar<   0, 1, 0b11010, "fcvtps">;
-defm FCVTPU : SIMDFPTwoScalar<   1, 1, 0b11010, "fcvtpu">;
-def  FCVTXNv1i64 : SIMDInexactCvtTwoScalar<0b10110, "fcvtxn">;
-defm FCVTZS : SIMDFPTwoScalar<   0, 1, 0b11011, "fcvtzs">;
-defm FCVTZU : SIMDFPTwoScalar<   1, 1, 0b11011, "fcvtzu">;
-
-//===----------------------------------------------------------------------===//
 // Scaled floating point to integer conversion instructions.
 //===----------------------------------------------------------------------===//
 
@@ -5221,8 +5205,6 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string IN
             (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
 
   let Predicates = [HasFullFP16] in {
-  def : Pat<(i16 (to_int_sat_gi f16:$Rn)),
-            (!cast<Instruction>(INST # v1f16) f16:$Rn)>;
   def : Pat<(i32 (to_int_sat_gi f16:$Rn)),
             (!cast<Instruction>(INST # UWHr) f16:$Rn)>;
   def : Pat<(i64 (to_int_sat_gi f16:$Rn)),
@@ -6529,6 +6511,17 @@ defm FCMGE  : SIMDFPCmpTwoScalar<1, 1, 0b01100, "fcmge", AArch64fcmgez>;
 defm FCMGT  : SIMDFPCmpTwoScalar<0, 1, 0b01100, "fcmgt", AArch64fcmgtz>;
 defm FCMLE  : SIMDFPCmpTwoScalar<1, 1, 0b01101, "fcmle", AArch64fcmlez>;
 defm FCMLT  : SIMDFPCmpTwoScalar<0, 1, 0b01110, "fcmlt", AArch64fcmltz>;
+defm FCVTAS : SIMDFPTwoScalar<   0, 0, 0b11100, "fcvtas">;
+defm FCVTAU : SIMDFPTwoScalar<   1, 0, 0b11100, "fcvtau">;
+defm FCVTMS : SIMDFPTwoScalar<   0, 0, 0b11011, "fcvtms">;
+defm FCVTMU : SIMDFPTwoScalar<   1, 0, 0b11011, "fcvtmu">;
+defm FCVTNS : SIMDFPTwoScalar<   0, 0, 0b11010, "fcvtns">;
+defm FCVTNU : SIMDFPTwoScalar<   1, 0, 0b11010, "fcvtnu">;
+defm FCVTPS : SIMDFPTwoScalar<   0, 1, 0b11010, "fcvtps">;
+defm FCVTPU : SIMDFPTwoScalar<   1, 1, 0b11010, "fcvtpu">;
+def  FCVTXNv1i64 : SIMDInexactCvtTwoScalar<0b10110, "fcvtxn">;
+defm FCVTZS : SIMDFPTwoScalar<   0, 1, 0b11011, "fcvtzs">;
+defm FCVTZU : SIMDFPTwoScalar<   1, 1, 0b11011, "fcvtzu">;
 defm FRECPE : SIMDFPTwoScalar<   0, 1, 0b11101, "frecpe">;
 defm FRECPX : SIMDFPTwoScalar<   0, 1, 0b11111, "frecpx">;
 defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte">;
@@ -6545,6 +6538,12 @@ defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
                                     int_aarch64_neon_usqadd>;
+
+// f16 -> s16 conversions
+let Predicates = [HasFullFP16] in {
+  def : Pat<(i16(fp_to_sint_sat_gi f16:$Rn)), (FCVTZSv1f16 f16:$Rn)>;
+  def : Pat<(i16(fp_to_uint_sat_gi f16:$Rn)), (FCVTZUv1f16 f16:$Rn)>;
+}
 
 def : Pat<(v1i64 (AArch64vashr (v1i64 V64:$Rn), (i32 63))),
           (CMLTv1i64rz V64:$Rn)>;
