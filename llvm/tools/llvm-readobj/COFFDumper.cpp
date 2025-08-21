@@ -2172,7 +2172,8 @@ void COFFDumper::printCOFFPseudoReloc() {
 
     Expected<StringRef> find(COFFDumper *Self, uint32_t EntryRVA) {
       static constexpr char Msg[] =
-          "the address referenced by pseudo-relocation is not a valid import entry: 0x%x";
+          "the address referenced by pseudo-relocation is not a valid import "
+          "entry: 0x%x";
       if (auto Ite = ImportedSymbols.find(EntryRVA);
           Ite != ImportedSymbols.end())
         return Ite->second;
