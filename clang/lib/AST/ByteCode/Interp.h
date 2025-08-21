@@ -2459,9 +2459,17 @@ inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
     const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
 
     if (Ptr.getLifetime() == Lifetime::Ended) {
-      auto *D = cast<NamedDecl>(Ptr.getFieldDesc()->asDecl());
-      S.FFDiag(D->getLocation(), diag::note_constexpr_destroy_out_of_lifetime)
-          << D->getNameAsString();
+      // Try to use the declaration for better diagnostics
+      if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
+        auto *ND = cast<NamedDecl>(D);
+        S.FFDiag(ND->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << ND->getNameAsString();
+      } else {
+        S.FFDiag(Ptr.getDeclDesc()->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << Ptr.toDiagnosticString(S.getASTContext());
+      }
       return false;
     }
   }
