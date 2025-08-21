@@ -1,5 +1,6 @@
 set(ORC_RT_HEADERS
     orc-rt-c/orc-rt.h
+    orc-rt/bitmask-enum.h
     orc-rt/math.h
     orc-rt/span.h
 )
