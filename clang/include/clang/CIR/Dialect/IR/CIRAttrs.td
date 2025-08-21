@@ -51,6 +51,45 @@ class CIR_UnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
+// SourceLanguageAttr
+//===----------------------------------------------------------------------===//
+
+// TODO: Add cases for other languages that Clang supports.
+
+def CIR_SourceLanguage : CIR_I32EnumAttr<"SourceLanguage", "source language", [
+  I32EnumAttrCase<"C", 1, "c">,
+  I32EnumAttrCase<"CXX", 2, "cxx">
+]> {
+  // The enum attr class is defined in `CIR_SourceLanguageAttr` below,
+  // so that it can define extra class methods.
+  let genSpecializedAttr = 0;
+}
+
+def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
+
+  let summary = "Module source language";
+  let description = [{
+    Represents the source language used to generate the module.
+
+    Example:
+    ```
+    // Module compiled from C.
+    module attributes {cir.lang = cir.lang<c>} {}
+    // Module compiled from C++.
+    module attributes {cir.lang = cir.lang<cxx>} {}
+    ```
+
+    Module source language attribute name is `cir.lang` is defined by
+    `getSourceLanguageAttrName` method in CIRDialect class.
+  }];
+
+  let extraClassDeclaration = [{
+    bool isC() const { return getValue() == SourceLanguage::C; }
+    bool isCXX() const { return getValue() == SourceLanguage::CXX; }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // OptInfoAttr
 //===----------------------------------------------------------------------===//
 
