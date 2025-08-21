@@ -1182,10 +1182,8 @@ void UnwrappedLineParser::parsePPDefine() {
   if (MaybeIncludeGuard && !eof())
     IncludeGuard = IG_Rejected;
 
-  if (FormatTok->Tok.getKind() == tok::l_paren &&
-      !FormatTok->hasWhitespaceBefore()) {
+  if (FormatTok->is(tok::l_paren) && !FormatTok->hasWhitespaceBefore())
     parseParens();
-  }
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
@@ -1196,6 +1194,11 @@ void UnwrappedLineParser::parsePPDefine() {
   Line->InMacroBody = true;
 
   if (Style.SkipMacroDefinitionBody) {
+    if (auto *Prev = Tokens->getPreviousToken(); Prev->is(tok::comment) &&
+                                                 Prev->NewlinesBefore > 0 &&
+                                                 !Prev->HasUnescapedNewline) {
+      Prev->Finalized = true;
+    }
     while (!eof()) {
       FormatTok->Finalized = true;
       FormatTok = Tokens->getNextToken();
