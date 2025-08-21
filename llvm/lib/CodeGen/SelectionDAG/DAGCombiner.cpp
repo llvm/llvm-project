@@ -6070,6 +6070,16 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (N0 == N1)
     return N0;
 
+  // Fold operation with vscale operands.
+  if (N0.getOpcode() == ISD::VSCALE && N1.getOpcode() == ISD::VSCALE) {
+    uint64_t C0 = N0->getConstantOperandVal(0);
+    uint64_t C1 = N1->getConstantOperandVal(0);
+    if (Opcode == ISD::UMAX)
+      return C0 > C1 ? N0 : N1;
+    else if (Opcode == ISD::UMIN)
+      return C0 > C1 ? N1 : N0;
+  }
+
   // canonicalize constant to RHS
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
@@ -15122,7 +15132,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       return foldedExt;
   } else if (ISD::isNON_EXTLoad(N0.getNode()) &&
              ISD::isUNINDEXEDLoad(N0.getNode()) &&
-             TLI.isLoadExtLegal(ISD::EXTLOAD, VT, N0.getValueType())) {
+             TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, VT, N0.getValueType())) {
     bool DoXform = true;
     SmallVector<SDNode *, 4> SetCCs;
     if (!N0.hasOneUse())
@@ -16279,40 +16289,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // because targets may prefer a wider type during later combines and invert
   // this transform.
   switch (N0.getOpcode()) {
-  case ISD::AVGCEILU:
-  case ISD::AVGFLOORU:
-    if (!LegalOperations && N0.hasOneUse() &&
-        TLI.isOperationLegal(N0.getOpcode(), VT)) {
-      SDValue X = N0.getOperand(0);
-      SDValue Y = N0.getOperand(1);
-      unsigned SrcBits = X.getScalarValueSizeInBits();
-      unsigned DstBits = VT.getScalarSizeInBits();
-      APInt UpperBits = APInt::getBitsSetFrom(SrcBits, DstBits);
-      if (DAG.MaskedValueIsZero(X, UpperBits) &&
-          DAG.MaskedValueIsZero(Y, UpperBits)) {
-        SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
-        SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
-        return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
-      }
-    }
-    break;
-  case ISD::AVGCEILS:
-  case ISD::AVGFLOORS:
-    if (!LegalOperations && N0.hasOneUse() &&
-        TLI.isOperationLegal(N0.getOpcode(), VT)) {
-      SDValue X = N0.getOperand(0);
-      SDValue Y = N0.getOperand(1);
-      unsigned SrcBits = X.getScalarValueSizeInBits();
-      unsigned DstBits = VT.getScalarSizeInBits();
-      unsigned NeededSignBits = SrcBits - DstBits + 1;
-      if (DAG.ComputeNumSignBits(X) >= NeededSignBits &&
-          DAG.ComputeNumSignBits(Y) >= NeededSignBits) {
-        SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
-        SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
-        return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
-      }
-    }
-    break;
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
@@ -16361,10 +16337,15 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                  DAG, DL);
     }
     break;
-  case ISD::ABDU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
   case ISD::ABDS:
+  case ISD::ABDU:
+    // (trunc (avg a, b)) -> (avg (trunc a), (trunc b))
     // (trunc (abdu/abds a, b)) -> (abdu/abds (trunc a), (trunc b))
-    if ((!LegalOperations || N0.hasOneUse()) &&
+    if (!LegalOperations && N0.hasOneUse() &&
         TLI.isOperationLegal(N0.getOpcode(), VT)) {
       EVT TruncVT = VT;
       unsigned SrcBits = SrcVT.getScalarSizeInBits();
@@ -16374,7 +16355,8 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       SDValue B = N0.getOperand(1);
       bool CanFold = false;
 
-      if (N0.getOpcode() == ISD::ABDU) {
+      if (N0.getOpcode() == ISD::AVGFLOORU || N0.getOpcode() == ISD::AVGCEILU ||
+          N0.getOpcode() == ISD::ABDU) {
         APInt UpperBits = APInt::getBitsSetFrom(SrcBits, TruncBits);
         CanFold = DAG.MaskedValueIsZero(B, UpperBits) &&
                   DAG.MaskedValueIsZero(A, UpperBits);
@@ -26125,8 +26107,6 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     EVT ConcatSrcVT = V.getOperand(0).getValueType();
     assert(ConcatSrcVT.getVectorElementType() == NVT.getVectorElementType() &&
            "Concat and extract subvector do not change element type");
-    assert((ExtIdx % ExtNumElts) == 0 &&
-           "Extract index is not a multiple of the input vector length.");
 
     unsigned ConcatSrcNumElts = ConcatSrcVT.getVectorMinNumElements();
     unsigned ConcatOpIdx = ExtIdx / ConcatSrcNumElts;

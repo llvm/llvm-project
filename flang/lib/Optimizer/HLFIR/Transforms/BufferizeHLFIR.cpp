@@ -455,12 +455,8 @@ struct AssociateOpConversion
 
       mlir::Type associateHlfirVarType = associate.getResultTypes()[0];
       hlfirVar = adjustVar(hlfirVar, associateHlfirVarType);
-      associate.getResult(0).replaceAllUsesWith(hlfirVar);
-
       mlir::Type associateFirVarType = associate.getResultTypes()[1];
       firVar = adjustVar(firVar, associateFirVarType);
-      associate.getResult(1).replaceAllUsesWith(firVar);
-      associate.getResult(2).replaceAllUsesWith(flag);
       // FIXME: note that the AssociateOp that is being erased
       // here will continue to be a user of the original Source
       // operand (e.g. a result of hlfir.elemental), because
@@ -472,7 +468,7 @@ struct AssociateOpConversion
       // the conversions, so that we can analyze HLFIR in its
       // original form and decide which of the AssociateOp
       // users of hlfir.expr can reuse the buffer (if it can).
-      rewriter.eraseOp(associate);
+      rewriter.replaceOp(associate, {hlfirVar, firVar, flag});
     };
 
     // If this is the last use of the expression value and this is an hlfir.expr

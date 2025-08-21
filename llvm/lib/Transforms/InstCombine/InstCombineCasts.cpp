@@ -2072,6 +2072,19 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
     return new IntToPtrInst(P, CI.getType());
   }
 
+  // Replace (inttoptr (add (ptrtoint %Base), %Offset)) with
+  // (getelementptr i8, %Base, %Offset) if all users are ICmps.
+  Value *Base;
+  Value *Offset;
+  if (match(CI.getOperand(0),
+            m_OneUse(m_c_Add(m_PtrToIntSameSize(DL, m_Value(Base)),
+                             m_Value(Offset)))) &&
+      CI.getType()->getPointerAddressSpace() ==
+          Base->getType()->getPointerAddressSpace() &&
+      all_of(CI.users(), IsaPred<ICmpInst>)) {
+    return GetElementPtrInst::Create(Builder.getInt8Ty(), Base, Offset);
+  }
+
   if (Instruction *I = commonCastTransforms(CI))
     return I;
 

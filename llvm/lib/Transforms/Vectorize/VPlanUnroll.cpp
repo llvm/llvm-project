@@ -473,8 +473,11 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   // Collect the operands at Lane, creating extracts as needed.
   SmallVector<VPValue *> NewOps;
   for (VPValue *Op : RepR->operands()) {
-    if (vputils::isSingleScalar(Op)) {
-      NewOps.push_back(Op);
+    // If Op is a definition that has been unrolled, directly use the clone for
+    // the corresponding lane.
+    auto LaneDefs = Def2LaneDefs.find(Op);
+    if (LaneDefs != Def2LaneDefs.end()) {
+      NewOps.push_back(LaneDefs->second[Lane.getKnownLane()]);
       continue;
     }
     if (Lane.getKind() == VPLane::Kind::ScalableLast) {
@@ -482,11 +485,8 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
           Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
       continue;
     }
-    // If Op is a definition that has been unrolled, directly use the clone for
-    // the corresponding lane.
-    auto LaneDefs = Def2LaneDefs.find(Op);
-    if (LaneDefs != Def2LaneDefs.end()) {
-      NewOps.push_back(LaneDefs->second[Lane.getKnownLane()]);
+    if (vputils::isSingleScalar(Op)) {
+      NewOps.push_back(Op);
       continue;
     }
 
