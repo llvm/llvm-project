@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/XeGPUToXeVM/XeGPUToXeVM.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -426,18 +427,6 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
   }
 };
 
-template <
-    typename OpType,
-    typename = std::enable_if_t<llvm::is_one_of<
-        OpType, xegpu::LoadGatherOp, xegpu::StoreScatterOp, xegpu::CreateDescOp,
-        xegpu::UpdateOffsetOp, xegpu::PrefetchOp>::value>>
-int64_t getElemByteSize(OpType op) {
-  // Get the element byte size from the tensor descriptor.
-  auto elemBitWidth =
-      op.getTensorDesc().getType().getElementType().getIntOrFloatBitWidth();
-  return elemBitWidth / 8;
-}
-
 // Add a builder that creates
 // offset * elemByteSize + baseAddr
 auto addOffset = [](ConversionPatternRewriter &rewriter, Location loc,
@@ -456,23 +445,23 @@ class CreateDescToXeVMPattern
   LogicalResult
   matchAndRewrite(xegpu::CreateDescOp op, xegpu::CreateDescOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = op.getLoc();
-    auto offsets = adaptor.getOffsets();
-    // Source type can be a 1D memref or ui64
-    // Using "op" instead of "adaptor" since we want to access memref type
-    // instead of LLVM struct type.
-    auto memrefTy = dyn_cast<MemRefType>(op.getSource().getType());
-    Value subGroupAddr;
-    if (memrefTy) {
-      subGroupAddr = memref::ExtractAlignedPointerAsIndexOp::create(
-          rewriter, loc, op.getSource());
-      subGroupAddr = arith::IndexCastUIOp::create(
-          rewriter, loc, rewriter.getI64Type(), subGroupAddr);
-    } else {
-      subGroupAddr = adaptor.getSource();
+    auto eTy = op.getTensorDescType().getElementType();
+    if (eTy.getIntOrFloatBitWidth() % 8 != 0) {
+      return rewriter.notifyMatchFailure(op,
+                                         "Expected element type bit width to be multiple of 8.");
     }
+    auto loc = op.getLoc();
+    // offsets are provided as scalar i64 by type converter.
+    auto offsets = adaptor.getOffsets();
+    // Source type can be a 1D memref or pointer type (ui64, ui32, i64 or i32).
+    // But type converter will convert them to integer types.
+    Value addr = adaptor.getSource();
+    // ui32 or i32 are passed as i32 so they need to be casted to i64.
+    if (addr.getType() != rewriter.getI64Type())
+      addr = arith::IndexCastUIOp::create(
+          rewriter, loc, rewriter.getI64Type(), addr);
     auto laneAddr =
-        addOffset(rewriter, loc, subGroupAddr, offsets, getElemByteSize(op));
+        addOffset(rewriter, loc, addr, offsets, getElemByteSize(op));
     rewriter.replaceOp(op, laneAddr);
     return success();
   }
@@ -485,11 +474,18 @@ class UpdateOffsetToXeVMPattern
   matchAndRewrite(xegpu::UpdateOffsetOp op,
                   xegpu::UpdateOffsetOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    auto eTy = op.getTensorDescType().getElementType();
+    if (eTy.getIntOrFloatBitWidth() % 8 != 0) {
+      return rewriter.notifyMatchFailure(op,
+                                         "Expected element type bit width to be multiple of 8.");
+    }
     auto loc = op.getLoc();
-    Value newOffsetForLane =
+    // scatter descriptor is provided as scalar i64 by type converter.
+    // offsets are provided as scalar i64 by type converter.
+    Value newOffset =
         addOffset(rewriter, loc, adaptor.getTensorDesc(), adaptor.getOffsets(),
                   getElemByteSize(op));
-    rewriter.replaceOp(op, newOffsetForLane);
+    rewriter.replaceOp(op, newOffset);
     return success();
   }
 };
@@ -505,19 +501,38 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
     auto tdescTy = op.getTensorDescType();
-    auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
-        ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
+    LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
+            ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
+    if (tdescTy)
+        ptrTypeLLVM = LLVM::LLVMPointerType::get(
+            ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     Value basePtrI64;
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
       basePtrI64 = adaptor.getSource();
+      if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
+        auto addrSpace = memRefTy.getMemorySpaceAsInt();
+        if (addrSpace != 0)
+          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+      }
     } else {
       basePtrI64 = adaptor.getDest();
+      if (auto memRefTy = dyn_cast<MemRefType>(op.getDest().getType())) {
+        auto addrSpace = memRefTy.getMemorySpaceAsInt();
+        if (addrSpace != 0)
+          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+      }
     }
+    if (basePtrI64.getType() != rewriter.getI64Type()) {
+      basePtrI64 = arith::IndexCastUIOp::create(rewriter, loc, rewriter.getI64Type(),
+                                                basePtrI64);
+    }
+    basePtrI64.dump();
     Value offsets = adaptor.getOffsets();
+    offsets.dump();
     Value mask = adaptor.getMask();
+    mask.dump();
     if (offsets) {
-      VectorType offsetsVecTy = dyn_cast<VectorType>(offsets.getType());
-      if (offsetsVecTy) {
+      if (dyn_cast<VectorType>(offsets.getType())){
         // Offset needs be scalar.
         return rewriter.notifyMatchFailure(op,
                                            "Expected offsets to be a scalar.");
@@ -526,8 +541,10 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
             addOffset(rewriter, loc, basePtrI64, offsets, getElemByteSize(op));
       }
     }
+    basePtrI64.dump();
     Value basePtrLLVM =
         LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtrI64);
+    basePtrLLVM.dump();
     VectorType srcOrDstVecTy = op.getValueType();
     VectorType srcOrDstFlatVecTy = VectorType::get(
         srcOrDstVecTy.getNumElements(), srcOrDstVecTy.getElementType());
@@ -597,6 +614,10 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
         ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     Value basePtrI64 = adaptor.getSource();
     Value offsets = adaptor.getOffsets();
+    if (basePtrI64.getType() != rewriter.getI64Type()) {
+      basePtrI64 = arith::IndexCastUIOp::create(rewriter, loc, rewriter.getI64Type(),
+                                                basePtrI64);
+    }
     if (offsets) {
       VectorType offsetsVecTy = dyn_cast<VectorType>(offsets.getType());
       if (offsetsVecTy) {
@@ -836,6 +857,26 @@ struct ConvertXeGPUToXeVMPass
       auto i32Type = IntegerType::get(&getContext(), 32);
       return VectorType::get(8, i32Type);
     });
+    typeConverter.addConversion([&](MemRefType type) -> Type {
+      // Convert MemRefType to i64 type.
+      return IntegerType::get(&getContext(), 64);
+    });
+
+    auto memrefMaterializationCast = [](OpBuilder &builder, Type type,
+                                      ValueRange inputs,
+                                      Location loc) -> Value {
+      if (inputs.size() != 1)
+        return {};
+      auto input = inputs.front();
+      if (auto memrefTy = dyn_cast<MemRefType>(input.getType())) {
+
+        Value addr = memref::ExtractAlignedPointerAsIndexOp::create(
+          builder, loc, input);
+        return arith::IndexCastUIOp::create(builder, loc, type,
+                                            addr).getResult();
+      }
+      return {};
+    };
 
     auto ui64MaterializationCast = [](OpBuilder &builder, Type type,
                                       ValueRange inputs,
@@ -847,7 +888,22 @@ struct ConvertXeGPUToXeVMPass
         Value cast =
             index::CastUOp::create(builder, loc, builder.getIndexType(), input)
                 .getResult();
-        return arith::IndexCastOp::create(builder, loc, type, cast).getResult();
+        return arith::IndexCastUIOp::create(builder, loc, type, cast).getResult();
+      }
+      return {};
+    };
+
+    auto ui32MaterializationCast = [](OpBuilder &builder, Type type,
+                                      ValueRange inputs,
+                                      Location loc) -> Value {
+      if (inputs.size() != 1)
+        return {};
+      auto input = inputs.front();
+      if (input.getType() == builder.getIntegerType(32, false)) {
+        Value cast =
+            index::CastUOp::create(builder, loc, builder.getIndexType(), input)
+                .getResult();
+        return arith::IndexCastUIOp::create(builder, loc, type, cast).getResult();
       }
       return {};
     };
@@ -864,15 +920,19 @@ struct ConvertXeGPUToXeVMPass
           Value cast =
               vector::ExtractOp::create(builder, loc, input, 0).getResult();
           if (vecTy.getElementType() == builder.getIndexType())
-            cast = arith::IndexCastOp::create(builder, loc, type, cast)
+            cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
                        .getResult();
           return cast;
         }
       }
       return {};
     };
+    typeConverter.addSourceMaterialization(memrefMaterializationCast);
     typeConverter.addSourceMaterialization(ui64MaterializationCast);
+    typeConverter.addSourceMaterialization(ui32MaterializationCast);
     typeConverter.addSourceMaterialization(vector1DMaterializationCast);
+    typeConverter.addTargetMaterialization(memrefMaterializationCast);
+    typeConverter.addTargetMaterialization(ui32MaterializationCast);
     typeConverter.addTargetMaterialization(ui64MaterializationCast);
     typeConverter.addTargetMaterialization(vector1DMaterializationCast);
     ConversionTarget target(getContext());

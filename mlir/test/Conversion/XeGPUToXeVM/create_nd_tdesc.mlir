@@ -6,8 +6,8 @@ gpu.module @create_nd_tdesc {
   // CHECK-SAME: %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index, %[[ARG5:.*]]: index
   gpu.func @create_nd_tdesc(%src: memref<8x16xf32, 1>, %ptr: ui64, %shape1: index, %shape2: index,
        %stride1: index, %stride2: index) kernel {
-         // CHECK: %[[VAR0:.*]] = index.castu %[[ARG1]] : ui64 to index
-         // CHECK: %[[VAR1:.*]] = arith.index_cast %[[VAR0]] : index to i64
+        // CHECK: %[[VAR0:.*]] = index.castu %[[ARG1]] : ui64 to index
+        // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] : index to i64
         // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<8xi32>
         // CHECK: %[[C0_I32:.*]] = arith.constant 0 : i32
         // CHECK: %[[C0_I32_0:.*]] = arith.constant 0 : i32

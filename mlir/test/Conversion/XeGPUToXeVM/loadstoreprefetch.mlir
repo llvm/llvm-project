@@ -5,10 +5,10 @@ gpu.module @test {
 // CHECK-SAME: %[[ARG0:.*]]: ui64
 gpu.func @load_gather_ui64_src_constant_offset(%src: ui64) {
   // CHECK: %[[VAR0:.*]] = index.castu %[[ARG0]] : ui64 to index
-  // CHECK: %[[VAR1:.*]] = arith.index_cast %[[VAR0]] : index to i64
+  // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] : index to i64
   // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<1xindex>
   // CHECK: %[[VAR2:.*]] = vector.extract %[[CST]][0] : index from vector<1xindex>
-  // CHECK: %[[VAR3:.*]] = arith.index_cast %[[VAR2]] : index to i64
+  // CHECK: %[[VAR3:.*]] = arith.index_castui %[[VAR2]] : index to i64
   %0 = arith.constant dense<0> : vector<1xindex>
   // CHECK: %[[CST_0:.*]] = arith.constant dense<true> : vector<1xi1>
   // CHECK: %[[VAR4:.*]] = vector.extract %[[CST_0]][0] : i1 from vector<1xi1>

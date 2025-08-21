@@ -4,12 +4,12 @@ gpu.module @update_offset {
   // CHECK-LABEL: gpu.func @update_offset
   // CHECK-SAME: %[[ARG0:.*]]: memref<128xf32>
   gpu.func @update_offset(%src: memref<128xf32>) kernel {
+    // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<128xf32> -> index
+    // CHECK: %[[VAR2:.*]] = arith.index_castui %[[INTPTR]] : index to i64
     // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<1xindex>
     %offset = arith.constant dense<0> : vector<1xindex>
     // CHECK: %[[VAR0:.*]] = vector.extract %[[CST]][0] : index from vector<1xindex>
-    // CHECK: %[[VAR1:.*]] = arith.index_cast %[[VAR0]] : index to i64
-    // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<128xf32> -> index
-    // CHECK: %[[VAR2:.*]] = arith.index_castui %[[INTPTR]] : index to i64
+    // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] : index to i64
     // CHECK: %[[C4_I64:.*]] = arith.constant 4 : i64
     // CHECK: %[[VAR3:.*]] = arith.muli %[[VAR1]], %[[C4_I64]] : i64
     // CHECK: %[[VAR4:.*]] = arith.addi %[[VAR2]], %[[VAR3]] : i64
