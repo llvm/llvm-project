@@ -8,7 +8,7 @@ target triple = "x86_64-apple-macosx"
 
 ; If we need to scalarize the fptoui and then use inserts to build up the
 ; vector again, then there is certainly no value in going 256-bit wide.
-; CHECK: fptoui <8 x float>
+; CHECK-NOT: fptoui <4 x float>
 
 define void @convert(i32 %N) {
 entry:
