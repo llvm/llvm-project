@@ -753,8 +753,7 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
       // IVStep will be the negated step of the subtraction. Check if Step == -1
       // * IVStep.
       VPValue *Step;
-      if (!match(VPV,
-                 m_Binary<Instruction::Sub>(m_VPValue(), m_VPValue(Step))) ||
+      if (!match(VPV, m_Sub(m_VPValue(), m_VPValue(Step))) ||
           !Step->isLiveIn() || !IVStep->isLiveIn())
         return false;
       auto *StepCI = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
