@@ -103,7 +103,7 @@ CompletionsRequestHandler::Run(const CompletionsArguments &args) const {
     }
   }
 
-  return CompletionsResponseBody{targets};
+  return CompletionsResponseBody{std::move(targets)};
 }
 
 } // namespace lldb_dap
