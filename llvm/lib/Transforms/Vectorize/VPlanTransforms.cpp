@@ -3455,9 +3455,7 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   VF.replaceAllUsesWith(RuntimeVF);
 
   VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
-  VPValue *MulByUF = Plan.getUF() == 1 ? RuntimeVF
-                                       : Builder.createNaryOp(Instruction::Mul,
-                                                              {RuntimeVF, UF});
+  VPValue *MulByUF = Builder.createNaryOp(Instruction::Mul, {RuntimeVF, UF});
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
