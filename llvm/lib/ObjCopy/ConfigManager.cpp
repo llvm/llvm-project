@@ -126,7 +126,7 @@ ConfigManager::getDXContainerConfig() const {
       Common.ChangeSectionLMAValAll != 0 ||
       !Common.ChangeSectionAddress.empty() || !Common.ExtractSection.empty()) {
     return createStringError(llvm::errc::invalid_argument,
-                             "option is not supported for directx");
+                             "option is not supported for DXContainer");
   }
   return DXContainer;
 }
