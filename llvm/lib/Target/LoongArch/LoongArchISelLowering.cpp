@@ -2757,17 +2757,41 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
       if (UndefElements.count() == 0) {
         unsigned SeqLen = Sequence.size();
 
-        SDValue Op0 = Sequence[0];
         SDValue Vector = DAG.getUNDEF(ResTy);
+        SDValue FillVec = Vector;
+        EVT FillTy = ResTy;
+
+        // Using LSX instructions to fill the sub-sequence of 256-bits vector,
+        // because the high part can be simply treated as undef.
+        if (ResTy.is256BitVector()) {
+          MVT HalfEltTy;
+          if (ResTy.isFloatingPoint())
+            HalfEltTy = MVT::getFloatingPointVT(VT.getScalarSizeInBits());
+          else
+            HalfEltTy = MVT::getIntegerVT(VT.getScalarSizeInBits());
+          EVT HalfTy = MVT::getVectorVT(HalfEltTy, NumElts / 2);
+          SDValue HalfVec = DAG.getExtractSubvector(DL, HalfTy, Vector, 0);
+
+          FillVec = HalfVec;
+          FillTy = HalfTy;
+        }
+
+        SDValue Op0 = Sequence[0];
         if (!Op0.isUndef())
-          Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
+          FillVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, FillTy, Op0);
         for (unsigned i = 1; i < SeqLen; ++i) {
           SDValue Opi = Sequence[i];
           if (Opi.isUndef())
             continue;
-          Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
-                               DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+          FillVec =
+              DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, FillTy, FillVec, Opi,
+                          DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
         }
+
+        if (ResTy.is256BitVector())
+          Vector = DAG.getInsertSubvector(DL, Vector, FillVec, 0);
+        else
+          Vector = FillVec;
 
         unsigned SplatLen = NumElts / SeqLen;
         MVT SplatEltTy = MVT::getIntegerVT(VT.getScalarSizeInBits() * SeqLen);
