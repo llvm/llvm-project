@@ -7,18 +7,46 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/CASFileSystem.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/FileSystemCache.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
-#include "llvm/Support/AlignOf.h"
-#include "llvm/Support/Allocator.h"
 
 using namespace llvm;
 using namespace llvm::cas;
 
+const char CASBackedFile::ID = 0;
+const char CASBackedFileSystem::ID = 0;
+
+llvm::Expected<std::pair<std::unique_ptr<llvm::MemoryBuffer>, cas::ObjectRef>>
+CASBackedFileSystem::getBufferAndObjectRefForFile(const Twine &Name,
+                                                  int64_t FileSize,
+                                                  bool RequiresNullTerminator,
+                                                  bool IsVolatile,
+                                                  bool IsText) {
+  auto F = openCASBackedFileForRead(Name);
+  if (!F)
+    return F.takeError();
+
+  auto Buf =
+      (*F)->getBuffer(Name, FileSize, RequiresNullTerminator, IsVolatile);
+  if (!Buf)
+    return errorCodeToError(Buf.getError());
+
+  auto CASRef = (*F)->getObjectRefForContent();
+  return std::pair{std::move(*Buf), CASRef};
+}
+
+llvm::Expected<cas::ObjectRef>
+CASBackedFileSystem::getObjectRefForFileContent(const Twine &Name) {
+  auto F = openCASBackedFileForRead(Name);
+  if (!F)
+    return F.takeError();
+  return (*F)->getObjectRefForContent();
+}
+
 namespace {
-class CASFileSystem : public ThreadSafeFileSystem {
+class CASFileSystem final
+    : public RTTIExtends<CASFileSystem, CASBackedFileSystem> {
   struct WorkingDirectoryType {
     FileSystemCache::DirectoryEntry *Entry;
 
@@ -46,7 +74,8 @@ public:
                                         bool FollowSymlinks = true);
 
   ErrorOr<vfs::Status> status(const Twine &Path) final;
-  ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &Path) final;
+  Expected<std::unique_ptr<CASBackedFile>>
+  openCASBackedFileForRead(const Twine &Path) final;
 
   Expected<const vfs::CachedDirectoryEntry *>
   getDirectoryEntry(const Twine &Path, bool FollowSymlinks) const final;
@@ -75,7 +104,7 @@ public:
   CASFileSystem(ObjectStore &DB, sys::path::Style PathStyle)
       : DB(DB), PathStyle(PathStyle) {}
 
-  IntrusiveRefCntPtr<ThreadSafeFileSystem> createThreadSafeProxyFS() final {
+  IntrusiveRefCntPtr<CASBackedFileSystem> createThreadSafeProxyFS() final {
     return makeIntrusiveRefCnt<CASFileSystem>(*this);
   }
   CASFileSystem(const CASFileSystem &FS) = default;
@@ -92,7 +121,7 @@ private:
 };
 } // namespace
 
-class CASFileSystem::VFSFile : public vfs::File {
+class CASFileSystem::VFSFile final : public CASBackedFile {
 public:
   ErrorOr<vfs::Status> status() final { return Entry->getStatus(Name); }
 
@@ -109,9 +138,7 @@ public:
     return Object->getMemoryBuffer(Name.toStringRef(Storage));
   }
 
-  llvm::ErrorOr<std::optional<cas::ObjectRef>> getObjectRefForContent() final {
-    return Entry->getRef();
-  }
+  cas::ObjectRef getObjectRefForContent() final { return *Entry->getRef(); }
 
   /// Closes the file.
   std::error_code close() final { return std::error_code(); }
@@ -121,6 +148,7 @@ public:
       : DB(DB), Name(Name.str()), Entry(&Entry) {
     assert(Entry.isFile());
     assert(Entry.hasNode());
+    assert(Entry.getRef());
   }
 
 private:
@@ -264,22 +292,23 @@ CASFileSystem::getDirectoryEntry(const Twine &Path, bool FollowSymlinks) const {
   return const_cast<CASFileSystem *>(this)->lookupPath(PathRef, FollowSymlinks);
 }
 
-ErrorOr<std::unique_ptr<vfs::File>>
-CASFileSystem::openFileForRead(const Twine &Path) {
+Expected<std::unique_ptr<CASBackedFile>>
+CASFileSystem::openCASBackedFileForRead(const Twine &Path) {
   PathStorage PathStorage(Path, PathStyle);
   StringRef PathRef = PathStorage.Path;
 
   Expected<DirectoryEntry *> ExpectedEntry = lookupPath(PathRef);
   if (!ExpectedEntry)
-    return errorToErrorCode(ExpectedEntry.takeError());
+    return ExpectedEntry.takeError();
 
   DirectoryEntry *Entry = *ExpectedEntry;
   if (!Entry->isFile())
-    return std::errc::invalid_argument;
+    return createFileError(Path,
+                           std::make_error_code(std::errc::invalid_argument));
 
   if (!Entry->hasNode())
     if (Error E = loadFile(*Entry))
-      return errorToErrorCode(std::move(E));
+      return std::move(E);
 
   return std::make_unique<VFSFile>(DB, *Entry, PathRef);
 }

@@ -9,11 +9,9 @@
 #ifndef LLVM_CAS_CACHINGONDISKFILESYSTEM_H
 #define LLVM_CAS_CACHINGONDISKFILESYSTEM_H
 
-#include "llvm/CAS/FileSystemCache.h"
-#include "llvm/CAS/ThreadSafeFileSystem.h"
+#include "llvm/CAS/CASFileSystem.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include <map>
 #include <optional>
 
 namespace llvm {
@@ -29,10 +27,13 @@ class ObjectProxy;
 /// working directory. This allows a single caching on-disk filesystem to be
 /// used across the filesystem, with each thread using a different proxy to set
 /// the working directory.
-class CachingOnDiskFileSystem : public ThreadSafeFileSystem {
+class CachingOnDiskFileSystem
+    : public RTTIExtends<CachingOnDiskFileSystem, CASBackedFileSystem> {
   void anchor() override;
 
 public:
+  static const char ID;
+
   /// An extra API to pull out the \a CASID if \p Path refers to a file.
   virtual ErrorOr<vfs::Status> statusAndFileID(const Twine &Path,
                                                std::optional<CASID> &FileID) = 0;
@@ -123,8 +124,16 @@ public:
   /// same thread-safe cache.
   virtual IntrusiveRefCntPtr<CachingOnDiskFileSystem> createProxyFS() = 0;
 
-  IntrusiveRefCntPtr<ThreadSafeFileSystem> createThreadSafeProxyFS() final {
+  IntrusiveRefCntPtr<CASBackedFileSystem> createThreadSafeProxyFS() final {
     return createProxyFS();
+  }
+
+  virtual llvm::Expected<std::unique_ptr<CASBackedFile>>
+  openCASBackedFileForReadImpl(const Twine &Path) = 0;
+
+  llvm::Expected<std::unique_ptr<CASBackedFile>>
+  openCASBackedFileForRead(const Twine &Path) final {
+    return openCASBackedFileForReadImpl(Path);
   }
 
 protected:

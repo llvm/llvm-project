@@ -40,6 +40,7 @@ DependencyScanningCASFilesystem::DependencyScanningCASFilesystem(
     : FS(WorkerFS), Entries(EntryAlloc), CAS(WorkerFS->getCAS()), Cache(Cache) {
 }
 
+const char DependencyScanningCASFilesystem::ID = 0;
 DependencyScanningCASFilesystem::~DependencyScanningCASFilesystem() = default;
 
 static Expected<cas::ObjectRef>
@@ -276,19 +277,18 @@ bool DependencyScanningCASFilesystem::exists(const Twine &Path) {
   return getCachingFS().exists(Path);
 }
 
-IntrusiveRefCntPtr<llvm::cas::ThreadSafeFileSystem>
+IntrusiveRefCntPtr<llvm::cas::CASBackedFileSystem>
 DependencyScanningCASFilesystem::createThreadSafeProxyFS() {
   llvm::report_fatal_error("not implemented");
 }
 
 namespace {
 
-class DepScanFile final : public llvm::vfs::File {
+class DepScanFile final : public llvm::cas::CASBackedFile {
 public:
-  DepScanFile(StringRef Buffer, std::optional<cas::ObjectRef> CASContents,
+  DepScanFile(StringRef Buffer, cas::ObjectRef CASContents,
               llvm::vfs::Status Stat)
-      : Buffer(Buffer), CASContents(std::move(CASContents)),
-        Stat(std::move(Stat)) {}
+      : Buffer(Buffer), CASContents(CASContents), Stat(std::move(Stat)) {}
 
   llvm::ErrorOr<llvm::vfs::Status> status() override { return Stat; }
 
@@ -299,36 +299,35 @@ public:
     return llvm::MemoryBuffer::getMemBuffer(Buffer, Name.toStringRef(Storage));
   }
 
-  llvm::ErrorOr<std::optional<cas::ObjectRef>>
-  getObjectRefForContent() override {
-    return CASContents;
-  }
+  cas::ObjectRef getObjectRefForContent() override { return CASContents; }
 
   std::error_code close() override { return {}; }
 
 private:
   StringRef Buffer;
-  std::optional<cas::ObjectRef> CASContents;
+  cas::ObjectRef CASContents;
   llvm::vfs::Status Stat;
 };
 
 } // end anonymous namespace
 
-llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-DependencyScanningCASFilesystem::openFileForRead(const Twine &Path) {
+Expected<std::unique_ptr<llvm::cas::CASBackedFile>>
+DependencyScanningCASFilesystem::openCASBackedFileForRead(const Twine &Path) {
   LookupPathResult Result = lookupPath(Path);
   if (!Result.Entry) {
     if (std::error_code EC = Result.Status.getError())
-      return EC;
+      return llvm::errorCodeToError(EC);
     assert(Result.Status->getType() ==
            llvm::sys::fs::file_type::directory_file);
-    return std::make_error_code(std::errc::is_a_directory);
+    return llvm::createFileError(
+        Path, std::make_error_code(std::errc::is_a_directory));
   }
   if (Result.Entry->EC)
-    return Result.Entry->EC;
+    return llvm::errorCodeToError(Result.Entry->EC);
 
+  assert(Result.Entry->CASContents);
   return std::make_unique<DepScanFile>(
-      *Result.Entry->Buffer, Result.Entry->CASContents, Result.Entry->Status);
+      *Result.Entry->Buffer, *Result.Entry->CASContents, Result.Entry->Status);
 }
 
 std::optional<ArrayRef<dependency_directives_scan::Directive>>

@@ -35,9 +35,6 @@ public:
     return Underlying->getBuffer(Name, FileSize, RequiresNullTerminator,
                                  IsVolatile);
   }
-  llvm::ErrorOr<std::optional<cas::ObjectRef>> getObjectRefForContent() final {
-    return Underlying->getObjectRefForContent();
-  }
   std::error_code close() final { return Underlying->close(); }
 };
 
