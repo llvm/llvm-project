@@ -248,7 +248,7 @@ void mlir::NVVM::countPlaceholderNumbers(
   while (!rest.empty() && rx.match(rest, &m)) {
     unsigned num = 0;
     (void)m[2].getAsInteger(10, num);
-
+    // Insert it into the vector only the first time we see this number
     if (m[1].equals_insensitive(kReadWritePrefix)) {
       if (seenRW.insert(num).second)
         rwNums.push_back(num);
@@ -318,23 +318,23 @@ static std::string rewriteAsmPlaceholders(llvm::StringRef ptxCode) {
   out.reserve(ptxCode.size());
   size_t prev = 0;
   StringRef rest = ptxCode;
-  SmallVector<StringRef, 3> m;
+  SmallVector<StringRef, 3> matches;
   llvm::Regex rx = getPredicateMappingRegex();
-  while (!rest.empty() && rx.match(rest, &m)) {
+  while (!rest.empty() && rx.match(rest, &matches)) {
     // Compute absolute match bounds in the original buffer.
-    size_t absStart = (size_t)(m[0].data() - ptxCode.data());
-    size_t absEnd = absStart + m[0].size();
+    size_t absStart = (size_t)(matches[0].data() - ptxCode.data());
+    size_t absEnd = absStart + matches[0].size();
 
     // Emit text before the match.
     out.append(ptxCode.data() + prev, ptxCode.data() + absStart);
 
     // Emit compact $K
     unsigned num = 0;
-    (void)m[2].getAsInteger(10, num);
+    (void)matches[2].getAsInteger(10, num);
     unsigned id = 0;
-    if (m[1].equals_insensitive(kReadWritePrefix))
+    if (matches[1].equals_insensitive(kReadWritePrefix))
       id = rwMap.lookup(num);
-    else if (m[1].equals_insensitive(kWriteOnlyPrefix))
+    else if (matches[1].equals_insensitive(kWriteOnlyPrefix))
       id = wMap.lookup(num);
     else
       id = rMap.lookup(num);
@@ -344,7 +344,8 @@ static std::string rewriteAsmPlaceholders(llvm::StringRef ptxCode) {
 
     prev = absEnd;
 
-    const size_t advance = (size_t)(m[0].data() - rest.data()) + m[0].size();
+    const size_t advance =
+        (size_t)(matches[0].data() - rest.data()) + matches[0].size();
     rest = rest.drop_front(advance);
   }
 
