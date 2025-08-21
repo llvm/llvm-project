@@ -412,7 +412,7 @@ def NVVM_NanosleepOp : NVVM_Op<"nanosleep">,
   let summary = "Suspends the thread for a specified duration.";
 
   let description = [{
-    The Op suspends the thread for a sleep duration approximately close to the 
+    The op suspends the thread for a sleep duration approximately close to the 
     delay `$duration`, specified in nanoseconds. 
 
     The sleep duration is approximated, but guaranteed to be in the 
