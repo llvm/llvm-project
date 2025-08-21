@@ -1316,33 +1316,21 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, op1, round_mode, vl)
     // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
-    unsigned Offset = IsMasked ?
-        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (IsMasked)
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
 
     if (!HasMaskedOff)
-      Operands.push_back(llvm::PoisonValue::get(ResultType));
-    else
-      Operands.push_back(Ops[IsMasked ? 1 : 0]);
-
-    Operands.push_back(Ops[Offset]); // op0
-    Operands.push_back(Ops[Offset + 1]); // op1
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
     if (IsMasked)
-      Operands.push_back(Ops[0]); // mask
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
 
-    Operands.push_back(Ops[Offset + 2]); // vxrm
-    Operands.push_back(Ops[Offset + 3]); // vl
-
-    if (IsMasked)
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-
-    IntrinsicTypes = {ResultType, Ops[Offset + 1]->getType(), Ops.back()->getType()};
-    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-    return Builder.CreateCall(F, Operands, "");
+    IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
+    break;
   }
 }] in {
   // 12.2. Vector Single-Width Averaging Add and Subtract
@@ -1365,34 +1353,22 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, op1, round_mode, vl)
     // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
-    unsigned Offset = IsMasked ?
-        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (IsMasked)
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
 
     if (!HasMaskedOff)
-      Operands.push_back(llvm::PoisonValue::get(ResultType));
-    else
-      Operands.push_back(Ops[IsMasked ? 1 : 0]);
-
-    Operands.push_back(Ops[Offset]); // op0
-    Operands.push_back(Ops[Offset + 1]); // op1
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
     if (IsMasked)
-      Operands.push_back(Ops[0]); // mask
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
 
-    Operands.push_back(Ops[Offset + 2]); // vxrm
-    Operands.push_back(Ops[Offset + 3]); // vl
-
-    if (IsMasked)
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-
-    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType(),
                       Ops.back()->getType()};
-    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-    return Builder.CreateCall(F, Operands, "");
+    break;
   }
 }] in {
   // 12.5. Vector Narrowing Fixed-Point Clip Instructions
@@ -1420,7 +1396,6 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, op1, round_mode, vl)
     // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
@@ -1428,35 +1403,20 @@ let ManualCodegen = [{
       (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
       (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
 
-    unsigned Offset = IsMasked ?
-        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+    if (!HasRoundModeOp)
+      Ops.insert(Ops.end() - 1, ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+    if (IsMasked)
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
 
     if (!HasMaskedOff)
-      Operands.push_back(llvm::PoisonValue::get(ResultType));
-    else
-      Operands.push_back(Ops[IsMasked ? 1 : 0]);
-
-    Operands.push_back(Ops[Offset]); // op0
-    Operands.push_back(Ops[Offset + 1]); // op1
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
     if (IsMasked)
-      Operands.push_back(Ops[0]); // mask
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
 
-    if (HasRoundModeOp) {
-      Operands.push_back(Ops[Offset + 2]); // frm
-      Operands.push_back(Ops[Offset + 3]); // vl
-    } else {
-      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
-      Operands.push_back(Ops[Offset + 2]); // vl
-    }
-
-    if (IsMasked)
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-
-    IntrinsicTypes = {ResultType, Ops[Offset + 1]->getType(),
-                      Operands.back()->getType()};
-    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-    return Builder.CreateCall(F, Operands, "");
+    IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
+    break;
   }
 }] in {
   let HasFRMRoundModeOp = true in {
@@ -1497,7 +1457,6 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, op1, round_mode, vl)
     // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
@@ -1505,35 +1464,21 @@ let ManualCodegen = [{
       (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
       (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
 
-    unsigned Offset = IsMasked ?
-        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+    if (!HasRoundModeOp)
+      Ops.insert(Ops.end() - 1, ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+    if (IsMasked)
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
 
     if (!HasMaskedOff)
-      Operands.push_back(llvm::PoisonValue::get(ResultType));
-    else
-      Operands.push_back(Ops[IsMasked ? 1 : 0]);
-
-    Operands.push_back(Ops[Offset]); // op0
-    Operands.push_back(Ops[Offset + 1]); // op1
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
     if (IsMasked)
-      Operands.push_back(Ops[0]); // mask
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
 
-    if (HasRoundModeOp) {
-      Operands.push_back(Ops[Offset + 2]); // frm
-      Operands.push_back(Ops[Offset + 3]); // vl
-    } else {
-      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
-      Operands.push_back(Ops[Offset + 2]); // vl
-    }
-
-    if (IsMasked)
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-
-    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType(),
                       Ops.back()->getType()};
-    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-    return Builder.CreateCall(F, Operands, "");
+    break;
   }
 }] in {
   let HasFRMRoundModeOp = true in {
@@ -1576,38 +1521,23 @@ let UnMaskedPolicyScheme = HasPolicyOperand in {
 let ManualCodegen = [{
   {
     // LLVM intrinsic
-    // Unmasked: (passthru, op0, op1, round_mode, vl)
-    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+    // Unmasked: (vector_in, vector_in/scalar_in, vector_in, round_mode, vl, policy)
+    // Masked:   (vector_in, vector_in/scalar_in, vector_in, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
     bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
 
-    unsigned Offset = IsMasked ? 2 : 1;
-
-    Operands.push_back(Ops[IsMasked ? 1 : 0]); // passthrough
-
-    Operands.push_back(Ops[Offset]); // op0
-    Operands.push_back(Ops[Offset + 1]); // op1
+    if (!HasRoundModeOp)
+      Ops.insert(Ops.end() - 1, ConstantInt::get(Ops.back()->getType(), 7)); // frm
 
     if (IsMasked)
-      Operands.push_back(Ops[0]); // mask
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
 
-    if (HasRoundModeOp) {
-      Operands.push_back(Ops[Offset + 2]); // frm
-      Operands.push_back(Ops[Offset + 3]); // vl
-    } else {
-      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
-      Operands.push_back(Ops[Offset + 2]); // vl
-    }
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
 
-    Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+    IntrinsicTypes = {ResultType, Ops[1]->getType(),
+                      Ops.back()->getType()};
 
-    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
-                      Operands.back()->getType()};
-
-    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-
-    return Builder.CreateCall(F, Operands, "");
+    break;
   }
 }] in {
   let HasFRMRoundModeOp = 1 in {
@@ -1635,38 +1565,23 @@ let ManualCodegen = [{
 let ManualCodegen = [{
   {
     // LLVM intrinsic
-    // Unmasked: (passthru, op0, op1, round_mode, vl)
-    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+    // Unmasked: (vector_in, vector_in/scalar_in, vector_in, round_mode, vl, policy)
+    // Masked:   (vector_in, vector_in/scalar_in, vector_in, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 7> Operands;
     bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
 
-    unsigned Offset = IsMasked ? 2 : 1;
-
-    Operands.push_back(Ops[IsMasked ? 1 : 0]); // passthrough
-
-    Operands.push_back(Ops[Offset]); // op0
-    Operands.push_back(Ops[Offset + 1]); // op1
+    if (!HasRoundModeOp)
+      Ops.insert(Ops.end() - 1, ConstantInt::get(Ops.back()->getType(), 7)); // frm
 
     if (IsMasked)
-      Operands.push_back(Ops[0]); // mask
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 4);
 
-    if (HasRoundModeOp) {
-      Operands.push_back(Ops[Offset + 2]); // frm
-      Operands.push_back(Ops[Offset + 3]); // vl
-    } else {
-      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
-      Operands.push_back(Ops[Offset + 2]); // vl
-    }
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
 
-    Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType(),
+                      Ops.back()->getType()};
 
-    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
-                      Operands.back()->getType()};
-
-    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-
-    return Builder.CreateCall(F, Operands, "");
+    break;
   }
 }] in {
   let HasFRMRoundModeOp = 1 in {
@@ -1708,7 +1623,6 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, round_mode, vl)
     // Masked:   (passthru, op0, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 6> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
@@ -1716,33 +1630,20 @@ let ManualCodegen = [{
       (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4) :
       (HasMaskedOff ? Ops.size() == 4 : Ops.size() == 3);
 
-    unsigned Offset = IsMasked ?
-        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+    if (!HasRoundModeOp)
+      Ops.insert(Ops.end() - 1, ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+    if (IsMasked)
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
 
     if (!HasMaskedOff)
-      Operands.push_back(llvm::PoisonValue::get(ResultType));
-    else
-      Operands.push_back(Ops[IsMasked ? 1 : 0]);
-
-    Operands.push_back(Ops[Offset]); // op0
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
     if (IsMasked)
-      Operands.push_back(Ops[0]); // mask
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
 
-    if (HasRoundModeOp) {
-      Operands.push_back(Ops[Offset + 1]); // frm
-      Operands.push_back(Ops[Offset + 2]); // vl
-    } else {
-      Operands.push_back(ConstantInt::get(Ops[Offset + 1]->getType(), 7)); // frm
-      Operands.push_back(Ops[Offset + 1]); // vl
-    }
-
-    if (IsMasked)
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-
-    IntrinsicTypes = {ResultType, Operands.back()->getType()};
-    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-    return Builder.CreateCall(F, Operands, "");
+    IntrinsicTypes = {ResultType, Ops.back()->getType()};
+    break;
   }
 }] in {
   let HasFRMRoundModeOp = 1 in {
@@ -1907,7 +1808,6 @@ let ManualCodegen = [{
     // LLVM intrinsic
     // Unmasked: (passthru, op0, frm, vl)
     // Masked:   (passthru, op0, mask, frm, vl, policy)
-    SmallVector<llvm::Value*, 6> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
@@ -1915,34 +1815,20 @@ let ManualCodegen = [{
       (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4) :
       (HasMaskedOff ? Ops.size() == 4 : Ops.size() == 3);
 
-    unsigned Offset = IsMasked ?
-        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+    if (!HasRoundModeOp)
+      Ops.insert(Ops.end() - 1, ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+    if (IsMasked)
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
 
     if (!HasMaskedOff)
-      Operands.push_back(llvm::PoisonValue::get(ResultType));
-    else
-      Operands.push_back(Ops[IsMasked ? 1 : 0]);
-
-    Operands.push_back(Ops[Offset]); // op0
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
     if (IsMasked)
-      Operands.push_back(Ops[0]); // mask
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
 
-    if (HasRoundModeOp) {
-      Operands.push_back(Ops[Offset + 1]); // frm
-      Operands.push_back(Ops[Offset + 2]); // vl
-    } else {
-      Operands.push_back(ConstantInt::get(Ops[Offset + 1]->getType(), 7)); // frm
-      Operands.push_back(Ops[Offset + 1]); // vl
-    }
-
-    if (IsMasked)
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-
-    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
-                      Operands.back()->getType()};
-    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-    return Builder.CreateCall(F, Operands, "");
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops.back()->getType()};
+    break;
   }
 }] in {
   let HasFRMRoundModeOp = 1 in {
@@ -2112,7 +1998,6 @@ let ManualCodegen = [{
     // Unmasked: (passthru, op0, op1, round_mode, vl)
     // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
 
-    SmallVector<llvm::Value*, 6> Operands;
     bool HasMaskedOff = !(
         (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
         (!IsMasked && PolicyAttrs & RVV_VTA));
@@ -2120,32 +2005,17 @@ let ManualCodegen = [{
       (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
       (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
 
-    unsigned Offset = IsMasked ?
-        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
-
-    if (!HasMaskedOff)
-      Operands.push_back(llvm::PoisonValue::get(ResultType));
-    else
-      Operands.push_back(Ops[IsMasked ? 1 : 0]);
-
-    Operands.push_back(Ops[Offset]); // op0
-    Operands.push_back(Ops[Offset + 1]); // op1
+    if (!HasRoundModeOp)
+      Ops.insert(Ops.end() - 1, ConstantInt::get(Ops.back()->getType(), 7)); // frm
 
     if (IsMasked)
-      Operands.push_back(Ops[0]); // mask
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
 
-    if (HasRoundModeOp) {
-      Operands.push_back(Ops[Offset + 2]); // frm
-      Operands.push_back(Ops[Offset + 3]); // vl
-    } else {
-      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
-      Operands.push_back(Ops[Offset + 2]); // vl
-    }
+    if (!HasMaskedOff)
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
 
-    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
-                      Ops.back()->getType()};
-    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-    return Builder.CreateCall(F, Operands, "");
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops.back()->getType()};
+    break;
   }
 }] in {
   let HasFRMRoundModeOp = 1 in {
