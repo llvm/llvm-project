@@ -92,9 +92,8 @@ public:
   };
   // clang-format on
 
-  enum class ZicfilpLabelSchemeKind {
+  enum class ZicfilpLabelSchemeEnum {
     Disabled,
-    EnabledUnknown,
     Unlabeled,
     FuncSig,
   };
@@ -115,7 +114,6 @@ private:
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
-  const ZicfilpLabelSchemeKind ZicfilpLabelScheme;
   std::bitset<RISCV::NUM_TARGET_REGS> UserReservedRegister;
   const RISCVTuneInfoTable::RISCVTuneInfo *TuneInfo;
 
@@ -136,9 +134,7 @@ public:
   // Initializes the data members to match that of the specified triple.
   RISCVSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                  StringRef FS, StringRef ABIName, unsigned RVVVectorBitsMin,
-                 unsigned RVVVectorLMULMax,
-                 ZicfilpLabelSchemeKind ZicfilpLabelScheme,
-                 const TargetMachine &TM);
+                 unsigned RVVVectorLMULMax, const TargetMachine &TM);
 
   ~RISCVSubtarget() override;
 
@@ -197,11 +193,15 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
-  ZicfilpLabelSchemeKind getZicfilpLabelScheme() const {
-    return ZicfilpLabelScheme;
+  ZicfilpLabelSchemeEnum getZicfilpLabelScheme() const {
+    if (hasZicfilpFuncSig())
+      return ZicfilpLabelSchemeEnum::FuncSig;
+    if (hasZicfilpUnlabeled())
+      return ZicfilpLabelSchemeEnum::Unlabeled;
+    return ZicfilpLabelSchemeEnum::Disabled;
   }
   bool hasZicfilpCFI() const {
-    return getZicfilpLabelScheme() != ZicfilpLabelSchemeKind::Disabled;
+    return getZicfilpLabelScheme() != ZicfilpLabelSchemeEnum::Disabled;
   }
 
   bool hasConditionalMoveFusion() const {

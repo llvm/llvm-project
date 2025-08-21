@@ -1,5 +1,5 @@
-; RUN: llc -mtriple riscv32 < %s | FileCheck %s
-; RUN: llc -mtriple riscv64 < %s | FileCheck %s
+; RUN: llc -mtriple riscv32 -mattr=+zicfilp-unlabeled < %s | FileCheck %s
+; RUN: llc -mtriple riscv64 -mattr=+zicfilp-unlabeled < %s | FileCheck %s
 
 ; Test using t2 to jump table branch.
 define void @above_threshold(i32 signext %in, ptr %out) nounwind {
