@@ -962,7 +962,6 @@ public:
 
   TypeIndex UnderlyingType;
   StringRef Name;
-
 };
 
 } // end namespace codeview
