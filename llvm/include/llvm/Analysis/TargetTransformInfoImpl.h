@@ -459,8 +459,7 @@ public:
   }
 
   virtual InstructionCost
-  getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   ArrayRef<Type *> Tys,
+  getOperandsScalarizationOverhead(ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind) const {
     return 0;
   }

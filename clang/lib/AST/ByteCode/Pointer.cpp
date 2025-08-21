@@ -231,7 +231,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     UsePath = false;
 
   // Build the path into the object.
-  bool OnePastEnd = isOnePastEnd();
+  bool OnePastEnd = isOnePastEnd() && !isZeroSizeArray();
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
 

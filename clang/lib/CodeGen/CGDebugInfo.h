@@ -977,6 +977,8 @@ public:
   ApplyInlineDebugLocation(CodeGenFunction &CGF, GlobalDecl InlinedFn);
   /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
+  ApplyInlineDebugLocation(const ApplyInlineDebugLocation &) = delete;
+  ApplyInlineDebugLocation &operator=(ApplyInlineDebugLocation &) = delete;
 };
 
 class SanitizerDebugLocation {
@@ -988,6 +990,8 @@ public:
                          ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
                          SanitizerHandler Handler);
   ~SanitizerDebugLocation();
+  SanitizerDebugLocation(const SanitizerDebugLocation &) = delete;
+  SanitizerDebugLocation &operator=(SanitizerDebugLocation &) = delete;
 };
 
 } // namespace CodeGen
