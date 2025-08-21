@@ -4647,6 +4647,16 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
     // Only add action when needValidation.
     const auto &TC =
         static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
+    if (TC.requiresObjcopy(Args)) {
+      Action *LastAction = Actions.back();
+      // llvm-objcopy expects a DXIL container, which can either be
+      // validated (in which case they are TY_DX_CONTAINER), or unvalidated
+      // (TY_OBJECT).
+      if (LastAction->getType() == types::TY_DX_CONTAINER ||
+          LastAction->getType() == types::TY_Object)
+        Actions.push_back(
+            C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_DX_CONTAINER));
+    }
     if (TC.requiresValidation(Args)) {
       Action *LastAction = Actions.back();
       Actions.push_back(C.MakeAction<BinaryAnalyzeJobAction>(
@@ -4661,16 +4671,6 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
           LastAction->getType() == types::TY_Object)
         Actions.push_back(C.MakeAction<BinaryTranslatorJobAction>(
             LastAction, types::TY_DX_CONTAINER));
-    }
-    if (TC.requiresObjcopy(Args)) {
-      Action *LastAction = Actions.back();
-      // llvm-objcopy expects a DXIL container, which can either be
-      // validated (in which case they are TY_DX_CONTAINER), or unvalidated
-      // (TY_OBJECT).
-      if (LastAction->getType() == types::TY_DX_CONTAINER ||
-          LastAction->getType() == types::TY_Object)
-        Actions.push_back(
-            C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_DX_CONTAINER));
     }
   }
 
