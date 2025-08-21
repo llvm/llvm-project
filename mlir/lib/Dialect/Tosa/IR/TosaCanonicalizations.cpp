@@ -122,8 +122,9 @@ struct PoolPadFoldAdaptor<tosa::MaxPool2dOp> {
       const APFloat lowestVal =
           APFloat::getLargest(padConstVal.getSemantics(), true);
       return padConstVal == lowestVal;
-    } else if (auto padConstIntAttr =
-                   mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
+    }
+    if (auto padConstIntAttr =
+            mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
       const APInt padConstVal = *padConstIntAttr.begin();
       const unsigned int bitWidth = padConstVal.getBitWidth();
       const APInt lowestVal =
