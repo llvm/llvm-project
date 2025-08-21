@@ -497,29 +497,17 @@ declare void @use(double)
 
 
 define float @faddvf32_zero_nsz(float %a) {
-; CHECK-SD-LABEL: faddvf32_zero_nsz:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: faddvf32_zero_nsz:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
-; CHECK-GI-NEXT:    fadd s0, s0, s1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: faddvf32_zero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
   %b = fadd nsz float %a, 0.0
   ret float %b
 }
 
 define <2 x double> @faddv2f64_zero_nsz(<2 x double> %a) {
-; CHECK-SD-LABEL: faddv2f64_zero_nsz:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: faddv2f64_zero_nsz:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    fadd v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: faddv2f64_zero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
   %b = fadd nsz  <2 x double> %a, zeroinitializer
   ret <2 x double> %b
 }
