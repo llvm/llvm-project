@@ -38,6 +38,15 @@ using namespace Fortran::runtime::cuda;
 
 namespace {
 
+static bool isAssumedSize(mlir::ValueRange shape) {
+  if (shape.size() != 1)
+    return false;
+  std::optional<std::int64_t> val = fir::getIntIfConstant(shape[0]);
+  if (val && *val == -1)
+    return true;
+  return false;
+}
+
 struct CUFComputeSharedMemoryOffsetsAndSize
     : public fir::impl::CUFComputeSharedMemoryOffsetsAndSizeBase<
           CUFComputeSharedMemoryOffsetsAndSize> {
@@ -73,7 +82,7 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       // is computed.
       for (auto sharedOp : funcOp.getOps<cuf::SharedMemoryOp>()) {
         mlir::Location loc = sharedOp.getLoc();
-        builder.setInsertionPoint(sharedOp);
+        builder.setInsertionPoint(sharedOp);  
         if (fir::hasDynamicSize(sharedOp.getInType())) {
           mlir::Type ty = sharedOp.getInType();
           if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
@@ -82,12 +91,12 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           alignment = std::max(alignment, align);
           uint64_t tySize = dl->getTypeSize(ty);
           ++nbDynamicSharedVariables;
-          if (crtDynOffset) {
-            sharedOp.getOffsetMutable().assign(
-                builder.createConvert(loc, i32Ty, crtDynOffset));
-          } else {
+          if (isAssumedSize(sharedOp.getShape()) || !crtDynOffset) {
             mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
             sharedOp.getOffsetMutable().assign(zero);
+          } else {
+            sharedOp.getOffsetMutable().assign(
+                builder.createConvert(loc, i32Ty, crtDynOffset));
           }
 
           mlir::Value dynSize =
