@@ -164,9 +164,14 @@ func.func @store_scatter_1d(%arg0: vector<16xf32>, %arg1: memref<256xf32>) {
 
 // -----
 // CHECK-LABEL: func.func @vector_bitcast_i16_to_f16(
-// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xi16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x16xi16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
-// CHECK: %{{.*}} = vector.bitcast %{{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xi16> to vector<8x16xf16>
-// CHECK: %{{.*}} = vector.bitcast %{{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : vector<16x16xi16> to vector<16x16xf16>
+// CHECK:       %[[LOAD0:.*]] = xegpu.load_nd %{{.*}}  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK-SAME:     !xegpu.tensor_desc<8x16xi16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x16xi16>
+// CHECK:       %[[LOAD1:.*]] = xegpu.load_nd %{{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+// CHECK-SAME:     !xegpu.tensor_desc<16x16xi16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xi16>
+// CHECK:       %{{.*}} = vector.bitcast %[[LOAD0]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK-SAME:      vector<8x16xi16> to vector<8x16xf16>
+// CHECK:       %{{.*}} = vector.bitcast %[[LOAD1]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+// CHECK-SAME:      vector<16x16xi16> to vector<16x16xf16>
 func.func @vector_bitcast_i16_to_f16(%arg0: memref<8x16xi16>, %arg1: memref<16x16xi16>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xi16> -> !xegpu.tensor_desc<8x16xi16>
@@ -183,7 +188,10 @@ func.func @vector_bitcast_i16_to_f16(%arg0: memref<8x16xi16>, %arg1: memref<16x1
 
 // -----
 // CHECK-LABEL: func.func @vector_bitcast_i32_to_f16(
-// CHECK: %{{.*}} = vector.bitcast %{{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>} : vector<16x8xi32> to vector<16x16xf16>
+// CHECK:      %[[LOAD:.*]] = xegpu.load_nd %{{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
+// CHECK-SAME:     !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>> -> vector<16x8xi32>
+// CHECK-NEXT: %{{.*}} = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>}
+// CHECK-SAME:     vector<16x8xi32> to vector<16x16xf16>
 func.func @vector_bitcast_i32_to_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x8xi32>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
@@ -197,6 +205,38 @@ func.func @vector_bitcast_i32_to_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x8
   xegpu.store_nd %6, %7  : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
   return
 }
+
+// -----
+// CHECK-LABEL: func.func @vector_bitcast_i16_to_i32(
+// CHECK:      %[[LOAD:.*]] = xegpu.load_nd %{{.*}}  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}
+// CHECK-SAME:     !xegpu.tensor_desc<8x32xi16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>> -> vector<8x32xi16>
+// CHECK-NEXT: %{{.*}} = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK-SAME:     vector<8x32xi16> to vector<8x16xi32>
+func.func @vector_bitcast_i16_to_i32(%arg0: memref<8x32xi16>, %arg1: memref<8x16xi32>) {
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x32xi16> -> !xegpu.tensor_desc<8x32xi16>
+  %1 = xegpu.create_nd_tdesc %arg1[%c0, %c0] : memref<8x16xi32> -> !xegpu.tensor_desc<8x16xi32>
+  %2 = xegpu.load_nd %0  : !xegpu.tensor_desc<8x32xi16> -> vector<8x32xi16>
+  %3 = vector.bitcast %2 : vector<8x32xi16> to vector<8x16xi32>
+  xegpu.store_nd %3, %1  : vector<8x16xi32>, !xegpu.tensor_desc<8x16xi32>
+  return
+}
+
+// -----
+// CHECK-LABEL: func.func @vector_bitcast_require_cross_lane_shuffle(
+// CHECK-NOT: %[[LOAD:.*]] = xegpu.load_nd %{{.*}} {layout_result_0 = {{.*}}} : !xegpu.tensor_desc<8x16xi32> -> vector<8x16xi32>
+// CHECK:     %{{.*}} = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK-SAME:     vector<8x16xi32> to vector<8x32xi16>
+func.func @vector_bitcast_require_cross_lane_shuffle(%arg0: memref<8x16xi32>, %arg1: memref<8x32xi16>) {
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xi32> -> !xegpu.tensor_desc<8x16xi32>
+  %1 = xegpu.create_nd_tdesc %arg1[%c0, %c0] : memref<8x32xi16> -> !xegpu.tensor_desc<8x32xi16>
+  %2 = xegpu.load_nd %0  : !xegpu.tensor_desc<8x16xi32> -> vector<8x16xi32>
+  %3 = vector.bitcast %2 : vector<8x16xi32> to vector<8x32xi16>
+  xegpu.store_nd %3, %1  : vector<8x32xi16>, !xegpu.tensor_desc<8x32xi16>
+  return
+}
+
 
 // -----
 // CHECK-LABEL: func.func @binary_op_one_use(

@@ -639,46 +639,32 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
                                  : outElemTyBitWidth / inElemTyBitWidth;
   const LaneLayout &sourceLaneLayout =
       resultLayout.getLayout(); // source lane layout is unchanged.
-  ArrayRef<int64_t> currData = resultLayout.getDataAsArrayRef();
+  ArrayRef<int64_t> outData = resultLayout.getDataAsArrayRef();
 
   // TODO: Currently we assume that bitcasts does not require cross lane
   // communication. So each lane must own the required number of elements to
   // perform the bitcast locally without cross-lane communication.
-  // For 1D vectors, decide how many elements each lane owns based on whether
-  // the bitcast is narrowing or widening.
-  if (rank == 1) {
-    if ((currData[0] * outElemTyBitWidth) % inElemTyBitWidth != 0) {
-      bitcast.emitWarning(
-          "Narrowing bitcast with cross lane communication is not supported.");
-      return;
-    }
-    LaneData sourceLaneData = isNarrowing
-                                  ? LaneData({currData[0] / bitCastRatio})
-                                  : LaneData({currData[0] * bitCastRatio});
-
-    propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(
-                                        sourceLaneLayout, sourceLaneData)));
+  int outInnerBitsPerLane = outData[rank - 1] * outElemTyBitWidth;
+  if (outInnerBitsPerLane < inElemTyBitWidth) {
+    bitcast.emitWarning(
+        "Narrowing bitcast with cross lane communication is not supported.");
+    return;
   }
-  // For nD vectors, Each lane is not allowed to own multiple elements in any
-  // dimension other than the innermost dimension.
-  // TODO: Add support for other case depending on the use case.
-  SmallVector<int64_t, 3> sourceLaneDataStorage(currData.begin(),
-                                                currData.end() - 1);
+  // Check if each lane owns a single element in all dimensions except the
+  // innermost dimension. For example, if the result layout is [1, 16][2, 1], we
+  // are not allowed to bitcast such vectors.
+  // TODO: Relax this based on use cases.
+  SmallVector<int64_t, 3> sourceLaneDataStorage(outData.begin(),
+                                                outData.end() - 1);
   if (llvm::any_of(sourceLaneDataStorage, [](int64_t d) { return d != 1; })) {
     bitcast.emitWarning(
         "Each lane must not own multiple elements in any dimension other than "
         "the innermost dimension.");
     return;
   }
-  // Check if the bitcast requires cross lane communication.
-  if ((currData[rank - 1] * outElemTyBitWidth) % inElemTyBitWidth != 0) {
-    bitcast.emitWarning(
-        "Narrowing bitcast with cross lane communication is not supported.");
-    return;
-  }
   // Decide lane data based on whether the bitcast is narrowing or widening.
-  int64_t innerMostLaneData = isNarrowing ? currData[rank - 1] / bitCastRatio
-                                          : currData[rank - 1] * bitCastRatio;
+  int64_t innerMostLaneData = isNarrowing ? outData[rank - 1] / bitCastRatio
+                                          : outData[rank - 1] * bitCastRatio;
   sourceLaneDataStorage.push_back(innerMostLaneData);
   LaneData sourceLaneData(sourceLaneDataStorage);
 
