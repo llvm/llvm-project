@@ -4278,14 +4278,13 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           if (!VPI)
             continue;
           switch (VPI->getOpcode()) {
-          // Selects are not modelled in the legacy cost model if they are
-          // inserted for reductions.
+          // Selects are only modelled in the legacy cost model for safe
+          // divisors.
           case Instruction::Select: {
-            VPValue *V =
-                R.getNumDefinedValues() == 1 ? R.getVPSingleValue() : nullptr;
-            if (V && V->getNumUsers() == 1) {
-              if (auto *UR = dyn_cast<VPWidenRecipe>(*V->user_begin())) {
-                switch (UR->getOpcode()) {
+            VPValue *VPV = VPI->getVPSingleValue();
+            if (VPV->getNumUsers() == 1) {
+              if (auto *WR = dyn_cast<VPWidenRecipe>(*VPV->user_begin())) {
+                switch (WR->getOpcode()) {
                 case Instruction::UDiv:
                 case Instruction::SDiv:
                 case Instruction::URem:
