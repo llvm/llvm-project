@@ -25,6 +25,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/Remarks.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
@@ -132,6 +133,11 @@ public:
   // Diagnostics
   //===--------------------------------------------------------------------===//
   DiagnosticEngine diagEngine;
+
+  //===--------------------------------------------------------------------===//
+  // Remark
+  //===--------------------------------------------------------------------===//
+  std::unique_ptr<remark::detail::RemarkEngine> remarkEngine;
 
   //===--------------------------------------------------------------------===//
   // Options
@@ -386,6 +392,19 @@ bool MLIRContext::hasActionHandler() { return (bool)getImpl().actionHandler; }
 
 /// Returns the diagnostic engine for this context.
 DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
+
+//===----------------------------------------------------------------------===//
+// Remark Handlers
+//===----------------------------------------------------------------------===//
+
+void MLIRContext::setRemarkEngine(
+    std::unique_ptr<remark::detail::RemarkEngine> engine) {
+  getImpl().remarkEngine = std::move(engine);
+}
+
+remark::detail::RemarkEngine *MLIRContext::getRemarkEngine() {
+  return getImpl().remarkEngine.get();
+}
 
 //===----------------------------------------------------------------------===//
 // Dialect and Operation Registration
