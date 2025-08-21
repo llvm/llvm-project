@@ -643,7 +643,7 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
     Instruction *Ext = I->clone();
     Ext->setOperand(0, Current);
     // In ConstantOffsetExtractor::find we do not analyze nuw/nsw for trunc, so
-    // we assume that it is ok to redistibute trunc over add/sub/or. But for
+    // we assume that it is ok to redistribute trunc over add/sub/or. But for
     // example (add (trunc nuw A), (trunc nuw B)) is more poisonous than (trunc
     // nuw (add A, B))). To make such redistributions legal we drop all the
     // poison generating flags from cloned trunc instructions here.
