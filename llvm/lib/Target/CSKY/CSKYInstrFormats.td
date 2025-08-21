@@ -24,7 +24,6 @@ class CSKYInst<AddrMode am, int sz, dag outs, dag ins, string asmstr,
   let Namespace = "CSKY";
   int Size = sz;
   AddrMode AM = am;
-  field bits<32> SoftFail = 0;
   let OutOperandList = outs;
   let InOperandList = ins;
   let AsmString = asmstr;

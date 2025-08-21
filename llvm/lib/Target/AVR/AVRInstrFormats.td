@@ -19,8 +19,6 @@ class AVRInst<dag outs, dag ins, string asmstr, list<dag> pattern>
   dag InOperandList = ins;
   let AsmString = asmstr;
   let Pattern = pattern;
-
-  field bits<32> SoftFail = 0;
 }
 
 /// A 16-bit AVR instruction.
