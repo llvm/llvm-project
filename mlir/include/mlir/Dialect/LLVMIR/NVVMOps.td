@@ -315,16 +315,19 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
   }];
 
   let arguments = (ins Variadic<AnyType>:$readOnlyArgs, 
+                       Variadic<AnyType>:$readWriteArgs, 
                        StrAttr:$ptxCode,
                        PtxPredicate:$predicate);
                       
   let results = (outs Variadic<AnyType>:$writeOnlyArgs);
-
-  let assemblyFormat = [{ 
-    $ptxCode `(` $readOnlyArgs `)` 
-    (`,` `predicate` `=` $predicate^)? attr-dict 
-    `:` type(operands) 
-    (`->` type($writeOnlyArgs)^)?
+  
+  let assemblyFormat = [{
+    $ptxCode
+    ( `ro` `(` $readOnlyArgs^ `:` type($readOnlyArgs) `)` )?
+    ( `rw` `(` $readWriteArgs^ `:` type($readWriteArgs) `)` )?
+    (`,` `predicate` `=` $predicate^)? 
+    attr-dict
+    ( `->` type($writeOnlyArgs)^ )?
   }];
   
   let extraClassDefinition = [{
@@ -332,6 +335,10 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
       StringRef ptxInstStr = getPtxCode();
       return std::string(ptxInstStr.data());
     }
+  }];
+
+  let extraClassDeclaration = [{
+    bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
   }];
 }
 
@@ -3057,8 +3064,7 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    void getAsmValues(RewriterBase &rewriter, 
-        llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
+    bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
   }];
 }
 

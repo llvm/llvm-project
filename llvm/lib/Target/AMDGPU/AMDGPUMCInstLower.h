@@ -24,8 +24,6 @@ class AsmPrinter;
 class MCContext;
 } // namespace llvm
 
-using namespace llvm;
-
 class AMDGPUMCInstLower {
   MCContext &Ctx;
   const TargetSubtargetInfo &ST;

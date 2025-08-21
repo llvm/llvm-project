@@ -16,8 +16,7 @@
 #define _NULLPTR_T
 
 #ifdef __cplusplus
-#if __cplusplus >= 201103L ||                                                  \
-    (defined(_MSC_EXTENSIONS) && defined(_NATIVE_NULLPTR_SUPPORTED))
+#if defined(_MSC_EXTENSIONS) && defined(_NATIVE_NULLPTR_SUPPORTED)
 namespace std {
 typedef decltype(nullptr) nullptr_t;
 }
