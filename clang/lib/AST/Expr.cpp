@@ -1632,8 +1632,8 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
 
 std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
 Expr::getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType) {
-  // If the callee is marked nodiscard, return that attribute for the diagnostic.
-  // If the callee is marked candiscard, do not diagnose.
+  // If the callee is marked nodiscard, return that attribute for the
+  // diagnostic. If the callee is marked candiscard, do not diagnose.
   // If seen on the same level, candiscard beats nodiscard.
   if (Callee != nullptr) {
     if (const auto *A = Callee->getAttr<CanDiscardAttr>())
