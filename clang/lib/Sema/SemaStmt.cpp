@@ -3287,20 +3287,23 @@ static Scope *FindLabeledBreakContinueScope(Sema &S, Scope *CurScope,
                                             LabelDecl *Target,
                                             SourceLocation LabelLoc,
                                             bool IsContinue) {
+  assert(Target && "not a labeled break/continue?");
   Scope *Found = nullptr;
   for (Scope *Scope = CurScope; Scope; Scope = Scope->getParent()) {
     if (Scope->isFunctionScope())
       break;
+
     if (Scope->isOpenACCComputeConstructScope()) {
       S.Diag(KWLoc, diag::err_acc_branch_in_out_compute_construct)
           << /*branch*/ 0 << /*out of*/ 0;
       return nullptr;
     }
-    if (!llvm::is_contained(Scope->getLoopOrSwitchNames(), Target))
-      continue;
-    if (Scope->isBreakOrContinueScope())
+
+    if (Scope->isBreakOrContinueScope() &&
+        Scope->getPrecedingLabel() == Target) {
       Found = Scope;
-    break;
+      break;
+    }
   }
 
   if (Found) {

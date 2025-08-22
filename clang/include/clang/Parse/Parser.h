@@ -7214,7 +7214,7 @@ public:
   StmtResult
   ParseStatement(SourceLocation *TrailingElseLoc = nullptr,
                  ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt,
-                 SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames = nullptr);
+                 LabelDecl *PrecedingLabel = nullptr);
 
   /// ParseStatementOrDeclaration - Read 'statement' or 'declaration'.
   /// \verbatim
@@ -7270,13 +7270,13 @@ public:
   StmtResult ParseStatementOrDeclaration(
       StmtVector &Stmts, ParsedStmtContext StmtCtx,
       SourceLocation *TrailingElseLoc = nullptr,
-      SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames = nullptr);
+      LabelDecl *PrecedingLabel = nullptr);
 
   StmtResult ParseStatementOrDeclarationAfterAttributes(
       StmtVector &Stmts, ParsedStmtContext StmtCtx,
       SourceLocation *TrailingElseLoc, ParsedAttributes &DeclAttrs,
       ParsedAttributes &DeclSpecAttrs,
-      SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames);
+      LabelDecl *PrecedingLabel);
 
   /// Parse an expression statement.
   StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
@@ -7293,8 +7293,7 @@ public:
   /// \endverbatim
   ///
   StmtResult
-  ParseLabeledStatement(ParsedAttributes &Attrs, ParsedStmtContext StmtCtx,
-                        SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames);
+  ParseLabeledStatement(ParsedAttributes &Attrs, ParsedStmtContext StmtCtx);
 
   /// ParseCaseStatement
   /// \verbatim
@@ -7404,7 +7403,7 @@ public:
   /// \endverbatim
   StmtResult
   ParseSwitchStatement(SourceLocation *TrailingElseLoc,
-                       SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames);
+                       LabelDecl *PrecedingLabel);
 
   /// ParseWhileStatement
   /// \verbatim
@@ -7414,7 +7413,7 @@ public:
   /// \endverbatim
   StmtResult
   ParseWhileStatement(SourceLocation *TrailingElseLoc,
-                      SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames);
+                      LabelDecl *PrecedingLabel);
 
   /// ParseDoStatement
   /// \verbatim
@@ -7422,7 +7421,7 @@ public:
   ///         'do' statement 'while' '(' expression ')' ';'
   /// \endverbatim
   /// Note: this lets the caller parse the end ';'.
-  StmtResult ParseDoStatement(SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames);
+  StmtResult ParseDoStatement(LabelDecl *PrecedingLabel);
 
   /// ParseForStatement
   /// \verbatim
@@ -7450,7 +7449,7 @@ public:
   /// [C++0x]   braced-init-list            [TODO]
   /// \endverbatim
   StmtResult ParseForStatement(SourceLocation *TrailingElseLoc,
-                               SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames);
+                               LabelDecl *PrecedingLabel);
 
   /// ParseGotoStatement
   /// \verbatim
@@ -7500,7 +7499,7 @@ public:
   StmtResult
   ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                       SourceLocation *TrailingElseLoc, ParsedAttributes &Attrs,
-                      SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames);
+                      LabelDecl *PrecedingLabel);
 
   void ParseMicrosoftIfExistsStatement(StmtVector &Stmts);
 

@@ -255,9 +255,9 @@ private:
   /// available for this variable in the current scope.
   llvm::SmallPtrSet<VarDecl *, 8> ReturnSlots;
 
-  /// If this scope belongs to a loop or switch statement, the label that names
-  /// it, if any.
-  ArrayRef<LabelDecl *> LoopOrSwitchNames;
+  /// If this scope belongs to a loop or switch statement, the label that
+  /// directly precedes it, if any.
+  LabelDecl *PrecedingLabel;
 
   void setFlags(Scope *Parent, unsigned F);
 
@@ -272,15 +272,12 @@ public:
 
   void setFlags(unsigned F) { setFlags(getParent(), F); }
 
-  /// Get the loop name of this scope.
-  ArrayRef<LabelDecl *> getLoopOrSwitchNames() const {
-    return LoopOrSwitchNames;
-  }
-
-  void setLoopOrSwitchNames(ArrayRef<LabelDecl *> Names) {
+  /// Get the label that precedes this scope.
+  LabelDecl *getPrecedingLabel() const { return PrecedingLabel; }
+  void setPrecedingLabel(LabelDecl *LD) {
     assert((Flags & BreakScope || Flags & ContinueScope) &&
            "not a loop or switch");
-    LoopOrSwitchNames = Names;
+    PrecedingLabel = LD;
   }
 
   /// isBlockScope - Return true if this scope correspond to a closure.

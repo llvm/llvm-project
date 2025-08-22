@@ -42,10 +42,10 @@ void f2() {
 }
 
 void f3() {
-  a: b: while (true) {
+  a: while (true) {
     (void) []{
       break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
-      continue b; // expected-error {{'continue' label does not name an enclosing loop}}
+      continue a; // expected-error {{'continue' label does not name an enclosing loop}}
     };
   }
 }

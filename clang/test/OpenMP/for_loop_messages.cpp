@@ -852,12 +852,12 @@ void test_labeled_break() {
     continue a;
   }
 
-  b: c: while (1) {
+  b: while (1) {
 #pragma omp parallel
 #pragma omp for
     for (int i = 0; i < 16; ++i) {
       break b; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
-      continue c; // expected-error {{'continue' label does not name an enclosing loop}}
+      continue b; // expected-error {{'continue' label does not name an enclosing loop}}
     }
   }
 }

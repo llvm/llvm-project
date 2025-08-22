@@ -46,26 +46,26 @@ void f2() {
 
 void f3() {
   a: b: c: d: while (true) {
-    break a;
-    break b;
-    break c;
+    break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+    break b; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+    break c; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
     break d;
 
-    continue a;
-    continue b;
-    continue c;
+    continue a; // expected-error {{'continue' label does not name an enclosing loop}}
+    continue b; // expected-error {{'continue' label does not name an enclosing loop}}
+    continue c; // expected-error {{'continue' label does not name an enclosing loop}}
     continue d;
 
     e: while (true) {
-      break a;
-      break b;
-      break c;
+      break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+      break b; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+      break c; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
       break d;
       break e;
 
-      continue a;
-      continue b;
-      continue c;
+      continue a; // expected-error {{'continue' label does not name an enclosing loop}}
+      continue b; // expected-error {{'continue' label does not name an enclosing loop}}
+      continue c; // expected-error {{'continue' label does not name an enclosing loop}}
       continue d;
       continue e;
     }
@@ -141,16 +141,16 @@ void f6() {
   })) {
     case 1: {
       ({ break d; });
-      ({ continue d; });
+      ({ continue d; }); // expected-error {{label of 'continue' refers to a switch statement}}
     }
   }
 }
 
 void f7() {
-  a: b: while (true) {
+  a: while (true) {
     (void) ^{
       break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
-      continue b; // expected-error {{'continue' label does not name an enclosing loop}}
+      continue a; // expected-error {{'continue' label does not name an enclosing loop}}
     };
   }
 
