@@ -171,172 +171,248 @@ class StrJoin<string sep, list<string> str_list> {
 // Geom: m<M>n<N>k<K>. E.g. m8n32k16
 // Frag: [a|b|c|d] ([x1|x2|x4] for ldmatrix)
 // PtxEltType: PTX type for the element.
-class WMMA_REGS<string Geom, string Frag, string PtxEltType> {
+class WMMA_REGS<string Geom, string Frag, string PtxEltType, bit IsSparse = false> {
   string geom = Geom;
   string frag = Frag;
   string ptx_elt_type = PtxEltType;
   string gft = Geom#":"#Frag#":"#ptx_elt_type;
   string gf = Geom#":"#Frag;
   string ft = frag#":"#ptx_elt_type;
-  list<LLVMType> regs = !cond(
-    // mma fp ops use smaller fragments than wmma fp ops
-    !eq(gft,"m8n8k4:a:f16") : !listsplat(llvm_v2f16_ty, 2),
-    !eq(gft,"m8n8k4:b:f16") : !listsplat(llvm_v2f16_ty, 2),
-    !eq(gft,"m16n8k8:a:f16") : !listsplat(llvm_v2f16_ty, 2),
-    !eq(gft,"m16n8k8:b:f16") : [llvm_v2f16_ty],
-    !eq(gft,"m16n8k8:c:f16") : !listsplat(llvm_v2f16_ty, 2),
-    !eq(gft,"m16n8k8:d:f16") : !listsplat(llvm_v2f16_ty, 2),
-    !eq(gft,"m16n8k8:c:f32") : !listsplat(llvm_float_ty, 4),
-    !eq(gft,"m16n8k8:d:f32") : !listsplat(llvm_float_ty, 4),
-    !eq(gft,"m16n8k16:a:f16") : !listsplat(llvm_v2f16_ty, 4),
-    !eq(gft,"m16n8k16:b:f16") : !listsplat(llvm_v2f16_ty, 2),
-    !eq(gft,"m16n8k16:c:f16") : !listsplat(llvm_v2f16_ty, 2),
-    !eq(gft,"m16n8k16:d:f16") : !listsplat(llvm_v2f16_ty, 2),
-    !eq(gft,"m16n8k16:c:f32") : !listsplat(llvm_float_ty, 4),
-    !eq(gft,"m16n8k16:d:f32") : !listsplat(llvm_float_ty, 4),
-    !eq(gft,"m16n8k4:c:f32") : !listsplat(llvm_float_ty, 4),
-    !eq(gft,"m16n8k4:d:f32") : !listsplat(llvm_float_ty, 4),
+  list<LLVMType> regs = !if(!eq(IsSparse, true),
+    !cond(
+      // mma sparse ops use other fragments for some arguments
+      !eq(gft,"m16n8k16:a:bf16") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k16:a:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k16:b:bf16") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k16:b:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k16:c:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k16:c:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k16:d:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k16:d:f32") : !listsplat(llvm_float_ty, 4),
 
-    // wmma fp16 -> fp16/fp32 @  m16n16k16/m8n32k16/m32n8k16
-    // All other supported geometries use the same fragment format for f32 and
-    // f16, so we only need to consider {fragment, type}.
-    !eq(ft,"a:f16") : !listsplat(llvm_v2f16_ty, 8),
-    !eq(ft,"b:f16") : !listsplat(llvm_v2f16_ty, 8),
-    !eq(ft,"c:f16") : !listsplat(llvm_v2f16_ty, 4),
-    !eq(ft,"d:f16") : !listsplat(llvm_v2f16_ty, 4),
-    !eq(ft,"c:f32") : !listsplat(llvm_float_ty, 8),
-    !eq(ft,"d:f32") : !listsplat(llvm_float_ty, 8),
+      !eq(gft,"m16n8k32:a:bf16") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k32:a:f16") : !listsplat(llvm_v2f16_ty, 4),
+      !eq(gft,"m16n8k32:b:bf16") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k32:b:f16") : !listsplat(llvm_v2f16_ty, 4),
+      !eq(gft,"m16n8k32:c:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k32:c:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k32:d:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k32:d:f32") : !listsplat(llvm_float_ty, 4),
 
-    // wmma tf32 -> s32 @ m16n16k8
-    !eq(gft,"m16n16k8:a:tf32") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n16k8:b:tf32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k16:a:tf32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k16:b:tf32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k16:c:tf32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k16:d:tf32") : !listsplat(llvm_float_ty, 4),
 
-    // mma tf32 -> s32 @ m16n16k8/m16n8k8
-    !eq(gft,"m16n8k4:a:tf32") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k4:b:tf32") : [llvm_i32_ty],
-    !eq(gft,"m16n8k8:a:tf32") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k8:b:tf32") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k8:a:tf32") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k8:b:tf32") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k8:c:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k8:d:f32") : !listsplat(llvm_float_ty, 4),
 
-    !eq(gft,"m8n8k4:a:f64") : [llvm_double_ty],
-    !eq(gft,"m8n8k4:b:f64") : [llvm_double_ty],
-    !eq(gft,"m8n8k4:c:f64") : !listsplat(llvm_double_ty, 2),
-    !eq(gft,"m8n8k4:d:f64") : !listsplat(llvm_double_ty, 2),
+      !eq(gft,"m16n8k32:a:u8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k32:a:s8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k32:b:u8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k32:b:s8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k32:c:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k32:d:s32") : !listsplat(llvm_i32_ty, 4),
 
-    // wmma bf16 -> s32 @ m16n16k16/m8n32k16/m32n8k16
-    !eq(gft,"m16n16k16:a:bf16") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n16k16:b:bf16") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m8n32k16:a:bf16") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m8n32k16:b:bf16") : !listsplat(llvm_i32_ty, 8),
-    !eq(gft,"m32n8k16:a:bf16") : !listsplat(llvm_i32_ty, 8),
-    !eq(gft,"m32n8k16:b:bf16") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k64:a:u8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:a:s8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:a:e4m3") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:a:e5m2") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:a:e3m2") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:a:e2m3") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:a:e2m1") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:b:u8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:b:s8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:b:e4m3") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:b:e5m2") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:b:e3m2") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:b:e2m3") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:b:e2m1") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:c:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k64:c:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k64:d:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k64:d:f32") : !listsplat(llvm_float_ty, 4),
 
-    // mma bf16 -> s32 @ m16n8k16/m16n8k8
-    !eq(gft,"m16n8k16:a:bf16") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k16:b:bf16") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k8:a:bf16") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k8:b:bf16") : [llvm_i32_ty],
+      !eq(gft,"m16n8k64:a:u4") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k64:a:s4") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k64:b:u4") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k64:b:s4") : !listsplat(llvm_i32_ty, 2),
 
-    // wmma u8/s8 -> s32 @ m16n16k16/m8n32k16/m32n8k16
-    !eq(gft,"m16n16k16:a:u8") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n16k16:a:s8") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n16k16:b:u8") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n16k16:b:s8") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n16k16:c:s32") : !listsplat(llvm_i32_ty, 8),
-    !eq(gft,"m16n16k16:d:s32") : !listsplat(llvm_i32_ty, 8),
+      !eq(gft,"m16n8k64:c:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:d:s32") : !listsplat(llvm_i32_ty, 4),
 
-    !eq(gft,"m8n32k16:a:u8") : [llvm_i32_ty],
-    !eq(gft,"m8n32k16:a:s8") : [llvm_i32_ty],
-    !eq(gft,"m8n32k16:b:u8") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m8n32k16:b:s8") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m8n32k16:c:s32") : !listsplat(llvm_i32_ty, 8),
-    !eq(gft,"m8n32k16:d:s32") : !listsplat(llvm_i32_ty, 8),
+      !eq(gft,"m16n8k128:a:u4") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k128:a:s4") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k128:a:e2m1") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k128:b:u4") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k128:b:s4") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k128:b:e2m1") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k128:c:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k128:c:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k128:d:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k128:d:f32") : !listsplat(llvm_float_ty, 4),
+    ),
+    !cond(
+      // mma fp ops use smaller fragments than wmma fp ops
+      !eq(gft,"m8n8k4:a:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m8n8k4:b:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k8:a:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k8:b:f16") : [llvm_v2f16_ty],
+      !eq(gft,"m16n8k8:c:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k8:d:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k8:c:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k8:d:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k16:a:f16") : !listsplat(llvm_v2f16_ty, 4),
+      !eq(gft,"m16n8k16:b:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k16:c:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k16:d:f16") : !listsplat(llvm_v2f16_ty, 2),
+      !eq(gft,"m16n8k16:c:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k16:d:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k4:c:f32") : !listsplat(llvm_float_ty, 4),
+      !eq(gft,"m16n8k4:d:f32") : !listsplat(llvm_float_ty, 4),
 
-    !eq(gft,"m32n8k16:a:u8") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m32n8k16:a:s8") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m32n8k16:b:u8") : [llvm_i32_ty],
-    !eq(gft,"m32n8k16:b:s8") : [llvm_i32_ty],
-    !eq(gft,"m32n8k16:c:s32") : !listsplat(llvm_i32_ty, 8),
-    !eq(gft,"m32n8k16:d:s32") : !listsplat(llvm_i32_ty, 8),
+      // wmma fp16 -> fp16/fp32 @  m16n16k16/m8n32k16/m32n8k16
+      // All other supported geometries use the same fragment format for f32 and
+      // f16, so we only need to consider {fragment, type}.
+      !eq(ft,"a:f16") : !listsplat(llvm_v2f16_ty, 8),
+      !eq(ft,"b:f16") : !listsplat(llvm_v2f16_ty, 8),
+      !eq(ft,"c:f16") : !listsplat(llvm_v2f16_ty, 4),
+      !eq(ft,"d:f16") : !listsplat(llvm_v2f16_ty, 4),
+      !eq(ft,"c:f32") : !listsplat(llvm_float_ty, 8),
+      !eq(ft,"d:f32") : !listsplat(llvm_float_ty, 8),
 
-    // mma u8/s8 -> s32 @ m8n8k16/m16n8k16/m16n8k32
-    !eq(gft,"m8n8k16:a:u8") : [llvm_i32_ty],
-    !eq(gft,"m8n8k16:a:s8") : [llvm_i32_ty],
-    !eq(gft,"m8n8k16:b:u8") : [llvm_i32_ty],
-    !eq(gft,"m8n8k16:b:s8") : [llvm_i32_ty],
-    !eq(gft,"m8n8k16:c:s32") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m8n8k16:d:s32") : !listsplat(llvm_i32_ty, 2),
+      // wmma tf32 -> s32 @ m16n16k8
+      !eq(gft,"m16n16k8:a:tf32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n16k8:b:tf32") : !listsplat(llvm_i32_ty, 4),
 
-    !eq(gft,"m16n8k16:a:u8") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k16:a:s8") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k16:b:u8") : [llvm_i32_ty],
-    !eq(gft,"m16n8k16:b:s8") : [llvm_i32_ty],
-    !eq(gft,"m16n8k16:c:s32") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k16:d:s32") : !listsplat(llvm_i32_ty, 4),
+      // mma tf32 -> s32 @ m16n16k8/m16n8k8
+      !eq(gft,"m16n8k4:a:tf32") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k4:b:tf32") : [llvm_i32_ty],
+      !eq(gft,"m16n8k8:a:tf32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k8:b:tf32") : !listsplat(llvm_i32_ty, 2),
 
-    !eq(gft,"m16n8k32:a:u8") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k32:a:s8") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k32:b:u8") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k32:b:s8") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k32:c:s32") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k32:d:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m8n8k4:a:f64") : [llvm_double_ty],
+      !eq(gft,"m8n8k4:b:f64") : [llvm_double_ty],
+      !eq(gft,"m8n8k4:c:f64") : !listsplat(llvm_double_ty, 2),
+      !eq(gft,"m8n8k4:d:f64") : !listsplat(llvm_double_ty, 2),
 
-    // wmma/mma u4/s4 -> s32 @ m8n8k32 (u4/s4)
-    !eq(gft,"m8n8k32:a:u4") : [llvm_i32_ty],
-    !eq(gft,"m8n8k32:a:s4") : [llvm_i32_ty],
-    !eq(gft,"m8n8k32:b:u4") : [llvm_i32_ty],
-    !eq(gft,"m8n8k32:b:s4") : [llvm_i32_ty],
-    !eq(gft,"m8n8k32:c:s32") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m8n8k32:d:s32") : !listsplat(llvm_i32_ty, 2),
+      // wmma bf16 -> s32 @ m16n16k16/m8n32k16/m32n8k16
+      !eq(gft,"m16n16k16:a:bf16") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n16k16:b:bf16") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m8n32k16:a:bf16") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m8n32k16:b:bf16") : !listsplat(llvm_i32_ty, 8),
+      !eq(gft,"m32n8k16:a:bf16") : !listsplat(llvm_i32_ty, 8),
+      !eq(gft,"m32n8k16:b:bf16") : !listsplat(llvm_i32_ty, 2),
 
-    !eq(gft,"m16n8k32:a:u4") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k32:a:s4") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k32:b:u4") : [llvm_i32_ty],
-    !eq(gft,"m16n8k32:b:s4") : [llvm_i32_ty],
-    !eq(gft,"m16n8k32:c:s32") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k32:d:s32") : !listsplat(llvm_i32_ty, 4),
+      // mma bf16 -> s32 @ m16n8k16/m16n8k8
+      !eq(gft,"m16n8k16:a:bf16") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k16:b:bf16") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k8:a:bf16") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k8:b:bf16") : [llvm_i32_ty],
 
-    !eq(gft,"m16n8k64:a:u4") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k64:a:s4") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k64:b:u4") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k64:b:s4") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k64:c:s32") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k64:d:s32") : !listsplat(llvm_i32_ty, 4),
+      // wmma u8/s8 -> s32 @ m16n16k16/m8n32k16/m32n8k16
+      !eq(gft,"m16n16k16:a:u8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n16k16:a:s8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n16k16:b:u8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n16k16:b:s8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n16k16:c:s32") : !listsplat(llvm_i32_ty, 8),
+      !eq(gft,"m16n16k16:d:s32") : !listsplat(llvm_i32_ty, 8),
 
-    // wmma/mma b1 -> s32 @ m8n8k128(b1)
-    !eq(gft,"m8n8k128:a:b1") : [llvm_i32_ty],
-    !eq(gft,"m8n8k128:b:b1") : [llvm_i32_ty],
-    !eq(gft,"m8n8k128:c:s32") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m8n8k128:d:s32") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m8n32k16:a:u8") : [llvm_i32_ty],
+      !eq(gft,"m8n32k16:a:s8") : [llvm_i32_ty],
+      !eq(gft,"m8n32k16:b:u8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m8n32k16:b:s8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m8n32k16:c:s32") : !listsplat(llvm_i32_ty, 8),
+      !eq(gft,"m8n32k16:d:s32") : !listsplat(llvm_i32_ty, 8),
 
-    !eq(gft,"m16n8k128:a:b1") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k128:b:b1") : [llvm_i32_ty],
-    !eq(gft,"m16n8k128:c:s32") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k128:d:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m32n8k16:a:u8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m32n8k16:a:s8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m32n8k16:b:u8") : [llvm_i32_ty],
+      !eq(gft,"m32n8k16:b:s8") : [llvm_i32_ty],
+      !eq(gft,"m32n8k16:c:s32") : !listsplat(llvm_i32_ty, 8),
+      !eq(gft,"m32n8k16:d:s32") : !listsplat(llvm_i32_ty, 8),
 
-    !eq(gft,"m16n8k256:a:b1") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k256:b:b1") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m16n8k256:c:s32") : !listsplat(llvm_i32_ty, 4),
-    !eq(gft,"m16n8k256:d:s32") : !listsplat(llvm_i32_ty, 4),
+      // mma u8/s8 -> s32 @ m8n8k16/m16n8k16/m16n8k32
+      !eq(gft,"m8n8k16:a:u8") : [llvm_i32_ty],
+      !eq(gft,"m8n8k16:a:s8") : [llvm_i32_ty],
+      !eq(gft,"m8n8k16:b:u8") : [llvm_i32_ty],
+      !eq(gft,"m8n8k16:b:s8") : [llvm_i32_ty],
+      !eq(gft,"m8n8k16:c:s32") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m8n8k16:d:s32") : !listsplat(llvm_i32_ty, 2),
 
-    // ldmatrix b16 -> s32 @ m8n8
-    !eq(gf,"m8n8:x1") : !listsplat(llvm_i32_ty, 1),
-    !eq(gf,"m8n8:x2") : !listsplat(llvm_i32_ty, 2),
-    !eq(gf,"m8n8:x4") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k16:a:u8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k16:a:s8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k16:b:u8") : [llvm_i32_ty],
+      !eq(gft,"m16n8k16:b:s8") : [llvm_i32_ty],
+      !eq(gft,"m16n8k16:c:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k16:d:s32") : !listsplat(llvm_i32_ty, 4),
 
-    // ldmatrix b8, b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m16n16
-    !eq(gf,"m16n16:x1") : !listsplat(llvm_i32_ty, 2),
-    !eq(gf,"m16n16:x2") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k32:a:u8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k32:a:s8") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k32:b:u8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k32:b:s8") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k32:c:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k32:d:s32") : !listsplat(llvm_i32_ty, 4),
 
-    // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m8n16
-    !eq(gf,"m8n16:x1") : !listsplat(llvm_i32_ty, 1),
-    !eq(gf,"m8n16:x2") : !listsplat(llvm_i32_ty, 2),
-    !eq(gf,"m8n16:x4") : !listsplat(llvm_i32_ty, 4),
+      // wmma/mma u4/s4 -> s32 @ m8n8k32 (u4/s4)
+      !eq(gft,"m8n8k32:a:u4") : [llvm_i32_ty],
+      !eq(gft,"m8n8k32:a:s4") : [llvm_i32_ty],
+      !eq(gft,"m8n8k32:b:u4") : [llvm_i32_ty],
+      !eq(gft,"m8n8k32:b:s4") : [llvm_i32_ty],
+      !eq(gft,"m8n8k32:c:s32") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m8n8k32:d:s32") : !listsplat(llvm_i32_ty, 2),
 
-    // stmatrix b8 -> s32 @ m16n8
-    !eq(gf,"m16n8:x1") : !listsplat(llvm_i32_ty, 1),
-    !eq(gf,"m16n8:x2") : !listsplat(llvm_i32_ty, 2),
-    !eq(gf,"m16n8:x4") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k32:a:u4") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k32:a:s4") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k32:b:u4") : [llvm_i32_ty],
+      !eq(gft,"m16n8k32:b:s4") : [llvm_i32_ty],
+      !eq(gft,"m16n8k32:c:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k32:d:s32") : !listsplat(llvm_i32_ty, 4),
 
+      !eq(gft,"m16n8k64:a:u4") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:a:s4") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:b:u4") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k64:b:s4") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k64:c:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k64:d:s32") : !listsplat(llvm_i32_ty, 4),
+
+      // wmma/mma b1 -> s32 @ m8n8k128(b1)
+      !eq(gft,"m8n8k128:a:b1") : [llvm_i32_ty],
+      !eq(gft,"m8n8k128:b:b1") : [llvm_i32_ty],
+      !eq(gft,"m8n8k128:c:s32") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m8n8k128:d:s32") : !listsplat(llvm_i32_ty, 2),
+
+      !eq(gft,"m16n8k128:a:b1") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k128:b:b1") : [llvm_i32_ty],
+      !eq(gft,"m16n8k128:c:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k128:d:s32") : !listsplat(llvm_i32_ty, 4),
+
+      !eq(gft,"m16n8k256:a:b1") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k256:b:b1") : !listsplat(llvm_i32_ty, 2),
+      !eq(gft,"m16n8k256:c:s32") : !listsplat(llvm_i32_ty, 4),
+      !eq(gft,"m16n8k256:d:s32") : !listsplat(llvm_i32_ty, 4),
+
+      // ldmatrix b16 -> s32 @ m8n8
+      !eq(gf,"m8n8:x1") : !listsplat(llvm_i32_ty, 1),
+      !eq(gf,"m8n8:x2") : !listsplat(llvm_i32_ty, 2),
+      !eq(gf,"m8n8:x4") : !listsplat(llvm_i32_ty, 4),
+
+      // ldmatrix b8, b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m16n16
+      !eq(gf,"m16n16:x1") : !listsplat(llvm_i32_ty, 2),
+      !eq(gf,"m16n16:x2") : !listsplat(llvm_i32_ty, 4),
+
+      // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m8n16
+      !eq(gf,"m8n16:x1") : !listsplat(llvm_i32_ty, 1),
+      !eq(gf,"m8n16:x2") : !listsplat(llvm_i32_ty, 2),
+      !eq(gf,"m8n16:x4") : !listsplat(llvm_i32_ty, 4),
+
+      // stmatrix b8 -> s32 @ m16n8
+      !eq(gf,"m16n8:x1") : !listsplat(llvm_i32_ty, 1),
+      !eq(gf,"m16n8:x2") : !listsplat(llvm_i32_ty, 2),
+      !eq(gf,"m16n8:x4") : !listsplat(llvm_i32_ty, 4),
+    )
   );
 }
 
@@ -363,6 +439,12 @@ class WMMA_NAME_LDST<string Op, WMMA_REGS Frag, string Layout, int WithStride> {
 
 class MMA_SIGNATURE<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   list<WMMA_REGS> id_frags = !cond(
+     // FP8/F8F6F4 ops are identified by A,B inputs & accomulator & result type.
+     !or(!eq(A.ptx_elt_type, "e4m3"),
+         !eq(A.ptx_elt_type, "e5m2"),
+         !eq(A.ptx_elt_type, "e3m2"),
+         !eq(A.ptx_elt_type, "e2m3"),
+         !eq(A.ptx_elt_type, "e2m1")): [D, A, B, C],
      // FP16 ops are identified by accumulator & result type.
      !eq(A.ptx_elt_type, "f16") : [D, C],
      // other ops are identified by input types.
@@ -398,6 +480,19 @@ class MMA_NAME<string ALayout, string BLayout, int Satfinite, string b1op,
                   # signature;
 }
 
+class MMA_SP_NAME<string Metadata, string Kind, int Satfinite,
+                  WMMA_REGS A, WMMA_REGS B,
+                  WMMA_REGS C, WMMA_REGS D> {
+  string signature = MMA_SIGNATURE<A, B, C, D>.ret;
+  string record = "int_nvvm_mma"
+                  # "_" # !subst("::", "_", Metadata)
+                  # "_" # A.geom
+                  # "_row_col"
+                  # !if(!ne(Kind, ""), !strconcat("_", !subst("::", "_", Kind)), "")
+                  # !if(Satfinite, "_satfinite", "")
+                  # signature;
+}
+
 class LDMATRIX_NAME<WMMA_REGS Frag, int Trans> {
   string intr = "llvm.nvvm.ldmatrix.sync.aligned"
                 # "." # Frag.geom
@@ -425,20 +520,21 @@ class STMATRIX_NAME<WMMA_REGS Frag, int Trans> {
 //   TypeN: PTX type of the corresponding fragment's element.
 //   TypeB and TypeD may be empty if it must match that of TypeA or TypeC.
 class MMA_OPS<list<string> Geom, list<string> TypeA, list<string> TypeB,
-            list<string> TypeC, list<string> TypeD> {
+            list<string> TypeC, list<string> TypeD, bit IsSparse = false> {
   list<list<WMMA_REGS>> ret =
      !foldl([]<list<WMMA_REGS>>, Geom, t1, geom, !listconcat(t1,
      !foldl([]<list<WMMA_REGS>>, TypeA, t2, type_a, !listconcat(t2,
      !foldl([]<list<WMMA_REGS>>, !if(!size(TypeB), TypeB, [type_a]), t3, type_b, !listconcat(t3,
      !foldl([]<list<WMMA_REGS>>, TypeC, t4, type_c, !listconcat(t4,
      !foldl([]<list<WMMA_REGS>>, !if(!size(TypeD), TypeD, [type_c]), t5, type_d, !listconcat(t5,
-            [[WMMA_REGS<geom, "a", type_a>,
-              WMMA_REGS<geom, "b", type_b>,
-              WMMA_REGS<geom, "c", type_c>,
-              WMMA_REGS<geom, "d", type_d>]]))))))))));
+            [[WMMA_REGS<geom, "a", type_a, IsSparse>,
+              WMMA_REGS<geom, "b", type_b, IsSparse>,
+              WMMA_REGS<geom, "c", type_c, IsSparse>,
+              WMMA_REGS<geom, "d", type_d, IsSparse>]]))))))))));
    // Debugging aid for readable representation of the list above.
    list<list<string>> ops = !foreach(x, ret, [x[0].gft, x[1].gft, x[2].gft, x[3].gft]);
 }
+
 
 class MMA_LDST_OPS<list<string> Geom, list<string> Frags, list<string> Types> {
   list<WMMA_REGS> ret =
@@ -522,6 +618,30 @@ class NVVM_MMA_OPS {
   list<list<WMMA_REGS>> all_mma_ops = !listconcat(
             tf32_mma_ops, bf16_mma_ops, f64_mma_ops,
             fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops);
+
+  list<list<WMMA_REGS>> bf16_mma_sp_ops = MMA_OPS<
+            ["m16n8k16", "m16n8k32"],
+            ["bf16"], [], ["f32"], [], true>.ret;
+  list<list<WMMA_REGS>> tf32_mma_sp_ops = MMA_OPS<
+            ["m16n8k8", "m16n8k16"],
+            ["tf32"], [], ["f32"], [], true>.ret;
+  list<list<WMMA_REGS>> fp_mma_sp_ops = MMA_OPS<
+            ["m16n8k16", "m16n8k32"],
+            ["f16"], [], ["f16", "f32"], ["f16", "f32"], true>.ret;
+  list<list<WMMA_REGS>> fp8_mma_sp_ops = MMA_OPS<
+            ["m16n8k64"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["f16", "f32"], ["f16", "f32"], true>.ret;
+  list<list<WMMA_REGS>> subint_mma_sp_ops = MMA_OPS<
+            ["m16n8k64", "m16n8k128"],
+            ["s4", "u4"], ["s4", "u4"], ["s32"], [], true>.ret;
+  list<list<WMMA_REGS>> int_mma_sp_ops = MMA_OPS<
+            ["m16n8k32", "m16n8k64"],
+            ["s8", "u8"], ["s8", "u8"], ["s32"], [], true>.ret;
+  list<list<WMMA_REGS>> all_mma_sp_ops = !listconcat(
+            bf16_mma_sp_ops, tf32_mma_sp_ops, fp_mma_sp_ops, fp8_mma_sp_ops,
+            subint_mma_sp_ops, int_mma_sp_ops);
 
   list<WMMA_REGS> ldst_ab_ops = MMA_LDST_OPS<
             ["m16n16k16", "m32n8k16", "m8n32k16"],
@@ -728,6 +848,68 @@ class NVVM_STMATRIX_SUPPORTED<WMMA_REGS frag, bit trans> {
     true: false
   );
 }
+
+
+// Returns true if this combination of layout/kind/satf for MMA.SP ops is supported;
+// false otherwise.
+// E.g.
+// if NVVM_MMA_SP_SUPPORTED<...>.ret then
+//   def : FOO<>; // The record will only be defined for supported ops.
+//
+class NVVM_MMA_SP_SUPPORTED<list<WMMA_REGS> frags, string metadata,
+                            string kind, int satf> {
+  // MMA.SP ops check both layouts.
+  string a_type = frags[0].ptx_elt_type;
+  string b_type = frags[1].ptx_elt_type;
+  string c_type = frags[2].ptx_elt_type;
+  string d_type = frags[3].ptx_elt_type;
+  string geom = frags[0].geom;
+
+  bit is_int = !or(!eq(a_type, "s8"),
+                   !eq(a_type, "u8"),
+                   !eq(a_type, "s4"),
+                   !eq(a_type, "u4"));
+
+  bit ret = !cond(
+
+    // Limit satf to valid types
+    !and(!eq(satf, 1),
+         !eq(is_int, 0)): false,
+
+    // f16/bf16/tf32 requires A and B to be the same type.
+    !and(!or(!eq(a_type, "f16"),
+             !eq(a_type, "bf16"),
+             !eq(a_type, "tf32")),
+         !ne(a_type, b_type)): false,
+
+    // m16n8k16 and m16n8k32 requires C and D to be the same type.
+    !and(!or(!eq(geom, "m16n8k16"),
+             !eq(geom, "m16n8k32")),
+         !ne(c_type, d_type)): false,
+
+    !and(!eq(kind, ""),
+         !or(!eq(a_type, "e3m2"),
+             !eq(a_type, "e2m3"),
+             !eq(a_type, "e2m1"),
+             !eq(b_type, "e3m2"),
+             !eq(b_type, "e2m3"),
+             !eq(b_type, "e2m1"))): false,
+
+    !and(!eq(kind, ""),
+         !eq(geom, "m16n8k64"),
+         !or(!eq(c_type, "f16"),
+             !eq(d_type, "f16"))): false,
+
+    !and(!ne(kind, ""),
+         !or(!eq(metadata, "sp"),
+             !ne(geom, "m16n8k64"),
+             !eq(is_int, 1))): false,
+
+    // All other are OK.
+    true: true
+  );
+}
+
 
 class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
   string Suffix = !if(sync, "sync_", "")
@@ -1969,6 +2151,48 @@ foreach layout_a = ["row", "col"] in {
     } // satf
   } // layout_b
 } // layout_a
+
+// MMA.SP
+class NVVM_MMA_SP<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D>
+  : Intrinsic<D.regs,
+              !listconcat(A.regs, B.regs, C.regs, [llvm_i32_ty], [llvm_i32_ty])> {
+    int pos = !size(!listconcat(A.regs, B.regs, C.regs, [llvm_i32_ty]));
+
+    // The range [0;num_threads) is for the sparsity selector that indicates the threads
+    // which contribute metadata.
+    int num_threads = !if(!or(!and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "bf16")),
+                              !and(!eq(A.geom, "m16n8k16"), !eq(A.ptx_elt_type, "tf32")),
+                              !and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "u8")),
+                              !and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "s8")),
+                              !and(!eq(A.geom, "m16n8k64"), !eq(A.ptx_elt_type, "u4")),
+                              !and(!eq(A.geom, "m16n8k64"), !eq(A.ptx_elt_type, "s4"))),
+                          2,
+                          !if(!and(!eq(A.geom, "m16n8k64"),
+                                  !or(!eq(A.ptx_elt_type, "u8"),
+                                      !eq(A.ptx_elt_type, "s8"),
+                                      !eq(A.ptx_elt_type, "e4m3"),
+                                      !eq(A.ptx_elt_type, "e5m2"),
+                                      !eq(A.ptx_elt_type, "e3m2"),
+                                      !eq(A.ptx_elt_type, "e2m3"),
+                                      !eq(A.ptx_elt_type, "e2m1"))),
+                              1, 4));
+    let IntrProperties = [IntrNoMem, IntrNoCallback, ImmArg<ArgIndex<pos>>,
+                          Range<ArgIndex<pos>, 0, num_threads>];
+}
+
+foreach metadata = ["sp", "sp::ordered_metadata"] in {
+  foreach kind = ["", "kind::f8f6f4"] in {
+    foreach satf = [0, 1] in {
+      foreach op = NVVM_MMA_OPS.all_mma_sp_ops in {
+        if NVVM_MMA_SP_SUPPORTED<op, metadata, kind, satf>.ret then {
+          def MMA_SP_NAME<metadata, kind, satf,
+                          op[0], op[1], op[2], op[3]>.record
+            : NVVM_MMA_SP<op[0], op[1], op[2], op[3]>;
+        }
+      } // op
+    } // satf
+  } // kind
+} // metadata
 
 // LDMATRIX
 class NVVM_LDMATRIX<WMMA_REGS Frag, int Transposed>

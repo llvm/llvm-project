@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cstdint>
 #include <list>
 
@@ -38,7 +40,33 @@ public:
   friend bool operator!=(small_iter_allocator, small_iter_allocator) { return false; }
 };
 
+struct allocator_base {};
+
+// Make sure that types with a common base type don't get broken. See https://llvm.org/PR154146
+template <class T>
+struct common_base_allocator : allocator_base {
+  using value_type = T;
+
+  common_base_allocator() TEST_NOEXCEPT {}
+
+  template <class U>
+  common_base_allocator(common_base_allocator<U>) TEST_NOEXCEPT {}
+
+  T* allocate(std::size_t n);
+  void deallocate(T* p, std::size_t);
+
+  friend bool operator==(common_base_allocator, common_base_allocator) { return true; }
+  friend bool operator!=(common_base_allocator, common_base_allocator) { return false; }
+};
+
+struct user_struct {
+  std::list<int, common_base_allocator<int> > v;
+  [[no_unique_address]] common_base_allocator<int> a;
+};
+
 #if __SIZE_WIDTH__ == 64
+static_assert(sizeof(user_struct) == 32, "");
+static_assert(TEST_ALIGNOF(user_struct) == 8, "");
 
 static_assert(sizeof(std::list<int>) == 24, "");
 static_assert(sizeof(std::list<int, min_allocator<int> >) == 24, "");
@@ -61,6 +89,8 @@ static_assert(TEST_ALIGNOF(std::list<char, test_allocator<char> >) == 8, "");
 static_assert(TEST_ALIGNOF(std::list<char, small_iter_allocator<char> >) == 2, "");
 
 #elif __SIZE_WIDTH__ == 32
+static_assert(sizeof(user_struct) == 16, "");
+static_assert(TEST_ALIGNOF(user_struct) == 4, "");
 
 static_assert(sizeof(std::list<int>) == 12, "");
 static_assert(sizeof(std::list<int, min_allocator<int> >) == 12, "");

@@ -6135,6 +6135,19 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
   }
 }
 
+bool AMDGPUTargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case AMDGPUISD::BFE_I32:
+  case AMDGPUISD::BFE_U32:
+    return false;
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
+}
+
 bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG, bool SNaN,
     unsigned Depth) const {
