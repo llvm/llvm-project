@@ -104,12 +104,6 @@ namespace Intrinsic {
   LLVM_ABI Function *getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys = {});
 
-  LLVM_DEPRECATED("Use getOrInsertDeclaration instead",
-                  "getOrInsertDeclaration")
-  inline Function *getDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {}) {
-    return getOrInsertDeclaration(M, id, Tys);
-  }
-
   /// Look up the Function declaration of the intrinsic \p id in the Module
   /// \p M and return it if it exists. Otherwise, return nullptr. This version
   /// supports non-overloaded intrinsics.

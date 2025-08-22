@@ -9,7 +9,7 @@
 #include <clc/math/clc_acosh.h>
 #include <clc/opencl/math/acosh.h>
 
-#define FUNCTION acosh
+#define __CLC_FUNCTION acosh
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

@@ -115,11 +115,31 @@ function(_get_compile_options_from_config output_var)
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 
+function(_get_compile_options_from_arch output_var)
+  # Set options that are not found in src/__support/macros/properties/architectures.h
+  # and src/__support/macros/properties/os.h
+  # TODO: we probably want to unify these at some point for consistency
+  set(config_options "")
+
+  if (LIBC_TARGET_OS_IS_BAREMETAL)
+    list(APPEND config_options "-DLIBC_TARGET_OS_IS_BAREMETAL")  
+  endif()
+  if (LIBC_TARGET_OS_IS_GPU)
+    list(APPEND config_options "-DLIBC_TARGET_OS_IS_GPU")  
+  endif()
+  if (LIBC_TARGET_OS_IS_UEFI)
+    list(APPEND config_options "-DLIBC_TARGET_OS_IS_UEFI")  
+  endif()
+
+  set(${output_var} ${config_options} PARENT_SCOPE)
+endfunction(_get_compile_options_from_arch)
+
 function(_get_common_compile_options output_var flags)
   _get_compile_options_from_flags(compile_flags ${flags})
   _get_compile_options_from_config(config_flags)
+  _get_compile_options_from_arch(arch_flags)
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags} ${arch_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")

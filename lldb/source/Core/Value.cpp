@@ -488,9 +488,11 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     address = m_value.ULongLong(LLDB_INVALID_ADDRESS);
     address_type = eAddressTypeHost;
     if (exe_ctx) {
-      Target *target = exe_ctx->GetTargetPtr();
-      if (target) {
-        data.SetByteOrder(target->GetArchitecture().GetByteOrder());
+      if (Target *target = exe_ctx->GetTargetPtr()) {
+        // Registers are always stored in host endian.
+        data.SetByteOrder(m_context_type == ContextType::RegisterInfo
+                              ? endian::InlHostByteOrder()
+                              : target->GetArchitecture().GetByteOrder());
         data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
         break;
       }
