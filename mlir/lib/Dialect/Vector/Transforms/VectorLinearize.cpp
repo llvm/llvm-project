@@ -789,7 +789,7 @@ struct LinearizeVectorFromElements final
         getTypeConverter()->convertType<VectorType>(fromElementsOp.getType());
     assert(dstTy && "vector type destination expected.");
 
-    auto elements = fromElementsOp.getElements();
+    OperandRange elements = fromElementsOp.getElements();
     assert(elements.size() == static_cast<size_t>(dstTy.getNumElements()) &&
            "expected same number of elements");
     rewriter.replaceOpWithNewOp<vector::FromElementsOp>(fromElementsOp, dstTy,
