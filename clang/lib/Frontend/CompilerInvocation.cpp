@@ -1739,6 +1739,9 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
     Opts.BlockByrefHelperFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+    Opts.BlockDescriptorPointers =
+        PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                          BlockDescriptorConstantDiscriminator);
 
     Opts.ObjCMethodListFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
