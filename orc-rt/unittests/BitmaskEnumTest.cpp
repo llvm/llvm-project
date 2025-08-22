@@ -1,4 +1,4 @@
-//===-- bitmask-enum-test.cpp ---------------------------------------------===//
+//===- BitmaskEnumTest.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is a part of the ORC runtime.
+// Test bitmask-enum support APIs.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bitmask-enum.h"
+#include "orc-rt/BitmaskEnum.h"
 #include "gtest/gtest.h"
 
 #include <sstream>

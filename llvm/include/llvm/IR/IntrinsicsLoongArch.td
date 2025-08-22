@@ -19,6 +19,10 @@ let TargetPrefix = "loongarch" in {
 class MaskedAtomicRMW<LLVMType itype>
     : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype],
                 [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
+// T @llvm.<name>.T.<p>(any*, T, T, T, T imm);
+class LoongArchMaskedAtomicRMWFiveArg<LLVMType itype>
+    : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype, itype],
+                [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<4>>]>;
 
 // We define 32-bit and 64-bit variants of the above, where T stands for i32
 // or i64 respectively:
@@ -31,9 +35,9 @@ multiclass MaskedAtomicRMWIntrinsics {
 
 multiclass MaskedAtomicRMWFiveOpIntrinsics {
   // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32, i32 imm);
-  def _i32 : MaskedAtomicRMWFiveArg<llvm_i32_ty>;
+  def _i32 : LoongArchMaskedAtomicRMWFiveArg<llvm_i32_ty>;
   // i64 @llvm.<name>.i64.<p>(any*, i64, i64, i64, i64 imm);
-  def _i64 : MaskedAtomicRMWFiveArg<llvm_i64_ty>;
+  def _i64 : LoongArchMaskedAtomicRMWFiveArg<llvm_i64_ty>;
 }
 
 defm int_loongarch_masked_atomicrmw_xchg : MaskedAtomicRMWIntrinsics;

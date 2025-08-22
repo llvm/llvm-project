@@ -5739,6 +5739,7 @@ cc_library(
         ":NVGPUDialect",
         ":NVVMDialect",
         ":TransformUtils",
+        ":VectorTransforms",
     ],
 )
 

@@ -315,12 +315,7 @@ add_entrypoint_object(
   HDRS
     ../cospif.h
   DEPENDS
-    libc.src.__support.math.sincosf_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.cospif
 )
 
 add_entrypoint_object(
@@ -330,14 +325,7 @@ add_entrypoint_object(
   HDRS
     ../cospif16.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.sincosf16_utils
+    libc.src.__support.math.cospif16
 )
 
 add_entrypoint_object(

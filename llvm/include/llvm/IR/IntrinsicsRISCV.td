@@ -26,28 +26,28 @@
 let TargetPrefix = "riscv" in {
 
   // T @llvm.<name>.T.<p>(any*, T, T, T imm);
-  class MaskedAtomicRMWFourArg<LLVMType itype>
+  class RISCVMaskedAtomicRMWFourArg<LLVMType itype>
       : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype],
                   [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
   // T @llvm.<name>.T.<p>(any*, T, T, T, T imm);
-  class MaskedAtomicRMWFiveArg<LLVMType itype>
+  class RISCVMaskedAtomicRMWFiveArg<LLVMType itype>
       : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype, itype],
                   [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<4>>]>;
 
   // We define 32-bit and 64-bit variants of the above, where T stands for i32
   // or i64 respectively:
-  multiclass MaskedAtomicRMWFourArgIntrinsics {
+  multiclass RISCVMaskedAtomicRMWFourArgIntrinsics {
     // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32 imm);
-    def _i32 : MaskedAtomicRMWFourArg<llvm_i32_ty>;
+    def _i32 : RISCVMaskedAtomicRMWFourArg<llvm_i32_ty>;
     // i64 @llvm.<name>.i32.<p>(any*, i64, i64, i64 imm);
-    def _i64 : MaskedAtomicRMWFourArg<llvm_i64_ty>;
+    def _i64 : RISCVMaskedAtomicRMWFourArg<llvm_i64_ty>;
   }
 
-  multiclass MaskedAtomicRMWFiveArgIntrinsics {
+  multiclass RISCVMaskedAtomicRMWFiveArgIntrinsics {
     // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32, i32 imm);
-    def _i32 : MaskedAtomicRMWFiveArg<llvm_i32_ty>;
+    def _i32 : RISCVMaskedAtomicRMWFiveArg<llvm_i32_ty>;
     // i64 @llvm.<name>.i64.<p>(any*, i64, i64, i64, i64 imm);
-    def _i64 : MaskedAtomicRMWFiveArg<llvm_i64_ty>;
+    def _i64 : RISCVMaskedAtomicRMWFiveArg<llvm_i64_ty>;
   }
 
   // These intrinsics are intended only for internal compiler use (i.e. as
@@ -56,21 +56,21 @@ let TargetPrefix = "riscv" in {
 
   // @llvm.riscv.masked.atomicrmw.*.{i32,i64}.<p>(
   //   ptr addr, ixlen oparg, ixlen mask, ixlenimm ordering)
-  defm int_riscv_masked_atomicrmw_xchg : MaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_add : MaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_sub : MaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_nand : MaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_umax : MaskedAtomicRMWFourArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_umin : MaskedAtomicRMWFourArgIntrinsics;
+  defm int_riscv_masked_atomicrmw_xchg : RISCVMaskedAtomicRMWFourArgIntrinsics;
+  defm int_riscv_masked_atomicrmw_add : RISCVMaskedAtomicRMWFourArgIntrinsics;
+  defm int_riscv_masked_atomicrmw_sub : RISCVMaskedAtomicRMWFourArgIntrinsics;
+  defm int_riscv_masked_atomicrmw_nand : RISCVMaskedAtomicRMWFourArgIntrinsics;
+  defm int_riscv_masked_atomicrmw_umax : RISCVMaskedAtomicRMWFourArgIntrinsics;
+  defm int_riscv_masked_atomicrmw_umin : RISCVMaskedAtomicRMWFourArgIntrinsics;
   // Signed min and max need an extra operand to do sign extension with.
   // @llvm.riscv.masked.atomicrmw.{max,min}.{i32,i64}.<p>(
   //   ptr addr, ixlen oparg, ixlen mask, ixlen shamt, ixlenimm ordering)
-  defm int_riscv_masked_atomicrmw_max : MaskedAtomicRMWFiveArgIntrinsics;
-  defm int_riscv_masked_atomicrmw_min : MaskedAtomicRMWFiveArgIntrinsics;
+  defm int_riscv_masked_atomicrmw_max : RISCVMaskedAtomicRMWFiveArgIntrinsics;
+  defm int_riscv_masked_atomicrmw_min : RISCVMaskedAtomicRMWFiveArgIntrinsics;
 
   // @llvm.riscv.masked.cmpxchg.{i32,i64}.<p>(
   //   ptr addr, ixlen cmpval, ixlen newval, ixlen mask, ixlenimm ordering)
-  defm int_riscv_masked_cmpxchg : MaskedAtomicRMWFiveArgIntrinsics;
+  defm int_riscv_masked_cmpxchg : RISCVMaskedAtomicRMWFiveArgIntrinsics;
 
 } // TargetPrefix = "riscv"
 
@@ -79,33 +79,33 @@ let TargetPrefix = "riscv" in {
 
 let TargetPrefix = "riscv" in {
 
-  class BitManipGPRIntrinsics
+  class RISCVBitManipGPRIntrinsics
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [LLVMMatchType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
-  class BitManipGPRGPRIntrinsics
+  class RISCVBitManipGPRGPRIntrinsics
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
 
   // Zbb
-  def int_riscv_orc_b : BitManipGPRIntrinsics;
+  def int_riscv_orc_b : RISCVBitManipGPRIntrinsics;
 
   // Zbc or Zbkc
-  def int_riscv_clmul  : BitManipGPRGPRIntrinsics;
-  def int_riscv_clmulh : BitManipGPRGPRIntrinsics;
+  def int_riscv_clmul  : RISCVBitManipGPRGPRIntrinsics;
+  def int_riscv_clmulh : RISCVBitManipGPRGPRIntrinsics;
 
   // Zbc
-  def int_riscv_clmulr : BitManipGPRGPRIntrinsics;
+  def int_riscv_clmulr : RISCVBitManipGPRGPRIntrinsics;
 
   // Zbkb
-  def int_riscv_brev8 : BitManipGPRIntrinsics;
-  def int_riscv_zip   : BitManipGPRIntrinsics;
-  def int_riscv_unzip : BitManipGPRIntrinsics;
+  def int_riscv_brev8 : RISCVBitManipGPRIntrinsics;
+  def int_riscv_zip   : RISCVBitManipGPRIntrinsics;
+  def int_riscv_unzip : RISCVBitManipGPRIntrinsics;
 
   // Zbkx
-  def int_riscv_xperm4  : BitManipGPRGPRIntrinsics;
-  def int_riscv_xperm8  : BitManipGPRGPRIntrinsics;
+  def int_riscv_xperm4  : RISCVBitManipGPRGPRIntrinsics;
+  def int_riscv_xperm8  : RISCVBitManipGPRGPRIntrinsics;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
