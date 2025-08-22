@@ -159,6 +159,18 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
+* Add spill and restore for DMR and DMRp registers.
+* Prototype various Dense Math Facility instructions, and intrinsics for basic enablement, insert/extract, integer and FP calculations.
+* Add prototype for Dense Math Facility cryptography instructions.
+* Implement load/stores prototype for v1024i1, v2048i1.
+* Support conversion between f16 and f128.
+* Change default for auto gen stxvp for cpu=future.
+* Setup initial JITLink build support for XCOFF.
+* Add an API to derive the default feature set from a CPU name within the TargetParser
+  (e.g. `pwr10` -> `+vsx`,`+isa3_1`,`+mma`). Clang now uses this to populate the `target-feature`
+  list when `-mcpu` is provided for PowerPC.
+* Various bug fixes and codegen improvements.
+
 Changes to the RISC-V Backend
 -----------------------------
 
@@ -220,6 +232,7 @@ Changes to the RISC-V Backend
 * Removed -mattr=+no-rvc-hints that could be used to disable parsing and generation of RVC hints.
 * Adds assembler support for the Andes `XAndesvsintload` (Andes Vector INT4 Load extension).
 * Adds assembler support for the Andes `XAndesbfhcvt` (Andes Scalar BFLOAT16 Conversion extension).
+* Add combine for shadd family of instructions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -351,6 +364,11 @@ Other Changes
   through a system such as Incredibuild. A JSON interface is used for
   communication with the distributor.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468)).
+
+Changes to the Profile Runtime
+---------------------
+
+* On AIX, avoid using mmap when reading profile files from a non-local filesystem.
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
