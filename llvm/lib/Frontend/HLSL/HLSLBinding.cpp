@@ -85,13 +85,10 @@ bool BindingInfo::RegisterSpace::isBound(const BindingRange &Range) const {
       FreeRanges, Range.LowerBound,
       [](const BindingRange &R, uint32_t Val) { return R.UpperBound <= Val; });
 
-  if (It != FreeRanges.end()) {
-    // Check if B is fully contained in the found range
-    if (Range.LowerBound >= It->LowerBound &&
-        Range.UpperBound <= It->UpperBound)
-      return false;
-  }
-  return true;
+  if (It == FreeRanges.end())
+    return true;
+  return !(Range.LowerBound >= It->LowerBound &&
+           Range.UpperBound <= It->UpperBound);
 }
 
 bool BindingInfo::isBound(dxil::ResourceClass RC, uint32_t Space,
