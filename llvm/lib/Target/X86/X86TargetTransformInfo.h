@@ -132,6 +132,7 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getRegisterClassForType(bool Vector, Type *Ty) const override;
   bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const override;
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;

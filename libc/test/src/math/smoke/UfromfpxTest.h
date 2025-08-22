@@ -201,10 +201,10 @@ public:
                                 FE_INEXACT);
     EXPECT_FP_EQ_WITH_EXCEPTION(T(10.0), func(T(10.65), FP_INT_TOWARDZERO, 4U),
                                 FE_INEXACT);
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        T(63.0), func(T(63.25), FP_INT_TOWARDZERO, 7U), FE_INEXACT);
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        T(63.0), func(T(63.75), FP_INT_TOWARDZERO, 7U), FE_INEXACT);
+    EXPECT_FP_EQ_WITH_EXCEPTION(T(63.0), func(T(63.25), FP_INT_TOWARDZERO, 7U),
+                                FE_INEXACT);
+    EXPECT_FP_EQ_WITH_EXCEPTION(T(63.0), func(T(63.75), FP_INT_TOWARDZERO, 7U),
+                                FE_INEXACT);
   }
 
   void testFractionsTowardZeroOutsideRange(UfromfpxFunc func) {

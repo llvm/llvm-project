@@ -6,33 +6,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define CLC_VLOAD_NAME(x) __CLC_XCONCAT(__CLC_XCONCAT(x, vload), __CLC_VECSIZE)
-#define CLC_VLOAD_HALF_NAME(x)                                                 \
+#define __CLC_VLOAD_NAME(x)                                                    \
+  __CLC_XCONCAT(__CLC_XCONCAT(x, vload), __CLC_VECSIZE)
+#define __CLC_VLOAD_HALF_NAME(x)                                               \
   __CLC_XCONCAT(__CLC_XCONCAT(x, vload_half), __CLC_VECSIZE)
-#define CLC_VLOADA_HALF_NAME(x)                                                \
+#define __CLC_VLOADA_HALF_NAME(x)                                              \
   __CLC_XCONCAT(__CLC_XCONCAT(x, vloada_half), __CLC_VECSIZE)
 
 #ifndef __CLC_SCALAR
 
-#define CLC_VLOAD_TY __CLC_XCONCAT(less_aligned_, __CLC_GENTYPE)
+#define __CLC_VLOAD_TY __CLC_XCONCAT(less_aligned_, __CLC_GENTYPE)
 
-#define VLOAD_DEF(ADDRSPACE)                                                   \
-  _CLC_OVERLOAD _CLC_DEF CLC_VLOAD_TY CLC_VLOAD_NAME()(                        \
+#define __CLC_VLOAD_DEF(ADDRSPACE)                                             \
+  _CLC_OVERLOAD _CLC_DEF __CLC_VLOAD_TY __CLC_VLOAD_NAME()(                    \
       size_t offset, const ADDRSPACE __CLC_SCALAR_GENTYPE *x) {                \
-    return CLC_VLOAD_NAME(__clc_)(offset, x);                                  \
+    return __CLC_VLOAD_NAME(__clc_)(offset, x);                                \
   }
 
-VLOAD_DEF(__private)
-VLOAD_DEF(__local)
-VLOAD_DEF(__constant)
-VLOAD_DEF(__global)
+__CLC_VLOAD_DEF(__private)
+__CLC_VLOAD_DEF(__local)
+__CLC_VLOAD_DEF(__constant)
+__CLC_VLOAD_DEF(__global)
 
 #if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
-VLOAD_DEF(__generic)
+__CLC_VLOAD_DEF(__generic)
 #endif
 
-#undef VLOAD_DEF
-#undef CLC_VLOAD_TY
+#undef __CLC_VLOAD_DEF
+#undef __CLC_VLOAD_TY
 
 #endif
 
@@ -42,30 +43,30 @@ VLOAD_DEF(__generic)
 #ifdef __CLC_FPSIZE
 #if __CLC_FPSIZE == 32
 
-#define VLOAD_HALF_DEF(ADDRSPACE)                                              \
-  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE CLC_VLOAD_HALF_NAME()(                  \
+#define __CLC_VLOAD_HALF_DEF(ADDRSPACE)                                        \
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_VLOAD_HALF_NAME()(                \
       size_t offset, const ADDRSPACE half *mem) {                              \
-    return CLC_VLOAD_HALF_NAME(__clc_)(offset, mem);                           \
+    return __CLC_VLOAD_HALF_NAME(__clc_)(offset, mem);                         \
   }                                                                            \
                                                                                \
-  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE CLC_VLOADA_HALF_NAME()(                 \
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_VLOADA_HALF_NAME()(               \
       size_t offset, const ADDRSPACE half *mem) {                              \
-    return CLC_VLOADA_HALF_NAME(__clc_)(offset, mem);                          \
+    return __CLC_VLOADA_HALF_NAME(__clc_)(offset, mem);                        \
   }
 
-VLOAD_HALF_DEF(__private)
-VLOAD_HALF_DEF(__local)
-VLOAD_HALF_DEF(__constant)
-VLOAD_HALF_DEF(__global)
+__CLC_VLOAD_HALF_DEF(__private)
+__CLC_VLOAD_HALF_DEF(__local)
+__CLC_VLOAD_HALF_DEF(__constant)
+__CLC_VLOAD_HALF_DEF(__global)
 
 #if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
-VLOAD_HALF_DEF(__generic)
+__CLC_VLOAD_HALF_DEF(__generic)
 #endif
 
-#undef VLOAD_HALF_DEF
+#undef __CLC_VLOAD_HALF_DEF
 #endif
 #endif
 
-#undef CLC_VLOAD_NAME
-#undef CLC_VLOAD_HALF_NAME
-#undef CLC_VLOADA_HALF_NAME
+#undef __CLC_VLOAD_NAME
+#undef __CLC_VLOAD_HALF_NAME
+#undef __CLC_VLOADA_HALF_NAME
