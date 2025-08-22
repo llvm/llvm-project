@@ -1722,7 +1722,7 @@ def : Pat<(bswap (v4i32 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b00011011)>;
 def : Pat<(bswap (v2i64 LSX128:$vj)),
           (VSHUF4I_W (VSHUF4I_B LSX128:$vj, 0b00011011), 0b10110001)>;
 
-// VHADDW.{H.B/W.H/D.W/Q.D}
+// VHADDW_{H_B/W_H/D_W/Q_D}
 defm : PatVrVrW<loongarch_vhaddw, "VHADDW">;
 
 // VFADD_{S/D}

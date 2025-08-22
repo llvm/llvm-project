@@ -1524,7 +1524,7 @@ def : Pat<(bswap (v8i32 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b00011011)>;
 def : Pat<(bswap (v4i64 LASX256:$xj)),
           (XVSHUF4I_W (XVSHUF4I_B LASX256:$xj, 0b00011011), 0b10110001)>;
 
-// XVHADDW.{H.B/W.H/D.W/Q.D}
+// XVHADDW_{H_B/W_H/D_W/Q_D}
 defm : PatXrXrW<loongarch_vhaddw, "XVHADDW">;
 
 // XVFADD_{S/D}

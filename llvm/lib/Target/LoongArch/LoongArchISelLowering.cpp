@@ -532,7 +532,7 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
 
 // Lower vecreduce_add using vhaddw instructions.
 // For Example:
-//  call i64 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)
+//  call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)
 // can be lowered to:
 //  VHADDW_D_W    vr0, vr0, vr0
 //  VHADDW_Q_D    vr0, vr0, vr0
