@@ -45,7 +45,7 @@ void AnalysisState::addDependency(ProgramPoint *dependent,
   DATAFLOW_DEBUG({
     if (inserted) {
       LDBG() << "Creating dependency between " << debugName << " of " << anchor
-             << "\nand " << debugName << " on " << dependent;
+             << "\nand " << debugName << " on " << *dependent;
     }
   });
 }
@@ -78,8 +78,8 @@ void LatticeAnchor::print(raw_ostream &os) const {
     os << "<NULL POINT>";
     return;
   }
-  if (auto *LatticeAnchor = llvm::dyn_cast<GenericLatticeAnchor *>(*this))
-    return LatticeAnchor->print(os);
+  if (auto *latticeAnchor = llvm::dyn_cast<GenericLatticeAnchor *>(*this))
+    return latticeAnchor->print(os);
   if (auto value = llvm::dyn_cast<Value>(*this)) {
     return value.print(os, OpPrintingFlags().skipRegions());
   }
@@ -88,8 +88,8 @@ void LatticeAnchor::print(raw_ostream &os) const {
 }
 
 Location LatticeAnchor::getLoc() const {
-  if (auto *LatticeAnchor = llvm::dyn_cast<GenericLatticeAnchor *>(*this))
-    return LatticeAnchor->getLoc();
+  if (auto *latticeAnchor = llvm::dyn_cast<GenericLatticeAnchor *>(*this))
+    return latticeAnchor->getLoc();
   if (auto value = llvm::dyn_cast<Value>(*this))
     return value.getLoc();
 
@@ -128,7 +128,7 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
     worklist.pop();
 
     DATAFLOW_DEBUG(LDBG() << "Invoking '" << analysis->debugName
-                          << "' on: " << point);
+                          << "' on: " << *point);
     if (failed(analysis->visit(point)))
       return failure();
   }

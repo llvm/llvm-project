@@ -46,11 +46,11 @@ Languages, Libraries, and Standards
 Most source code in LLVM and other LLVM projects using these coding standards
 is C++ code. There are some places where C code is used either due to
 environment restrictions, historical restrictions, or due to third-party source
-code imported into the tree. Generally, our preference is for standards
-conforming, modern, and portable C++ code as the implementation language of
+code imported into the tree. Generally, our preference is for
+standards-conforming, modern, and portable C++ code as the implementation language of
 choice.
 
-For automation, build-systems, and utility scripts, Python is preferred and
+For automation, build systems, and utility scripts, Python is preferred and
 is widely used in the LLVM repository already.
 
 C++ Standard Versions
@@ -236,7 +236,7 @@ Comment Formatting
 
 In general, prefer C++-style comments (``//`` for normal comments, ``///`` for
 ``doxygen`` documentation comments).  There are a few cases when it is
-useful to use C-style (``/* */``) comments however:
+useful to use C-style (``/* */``) comments, however:
 
 #. When writing C code to be compatible with C89.
 
@@ -263,7 +263,7 @@ useful to use C-style (``/* */``) comments however:
 Commenting out large blocks of code is discouraged, but if you really have to do
 this (for documentation purposes or as a suggestion for debug printing), use
 ``#if 0`` and ``#endif``. These nest properly and are better behaved in general
-than C style comments.
+than C-style comments.
 
 Doxygen Use in Documentation Comments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -365,7 +365,7 @@ Clear diagnostic messages are important to help users identify and fix issues in
 their inputs. Use succinct but correct English prose that gives the user the
 context needed to understand what went wrong. Also, to match error message
 styles commonly produced by other tools, start the first sentence with a
-lower-case letter, and finish the last sentence without a period, if it would
+lowercase letter, and finish the last sentence without a period, if it would
 end in one otherwise. Sentences which end with different punctuation, such as
 "did you forget ';'?", should still do so.
 
@@ -703,7 +703,7 @@ uses a more moderate stance. Use ``auto`` if and only if it makes the code more
 readable or easier to maintain. Don't "almost always" use ``auto``, but do use
 ``auto`` with initializers like ``cast<Foo>(...)`` or other places where the
 type is already obvious from the context. Another time when ``auto`` works well
-for these purposes is when the type would have been abstracted away anyways,
+for these purposes is when the type would have been abstracted away anyway,
 often behind a container's typedef such as ``std::vector<T>::iterator``.
 
 Similarly, C++14 adds generic lambda expressions where parameter types can be
@@ -754,7 +754,7 @@ Beware of non-deterministic sorting order of equal elements
 elements is not guaranteed to be preserved. Thus using ``std::sort`` for a
 container having equal elements may result in non-deterministic behavior.
 To uncover such instances of non-determinism, LLVM has introduced a new
-llvm::sort wrapper function. For an EXPENSIVE_CHECKS build this will randomly
+``llvm::sort`` wrapper function. For an ``EXPENSIVE_CHECKS`` build this will randomly
 shuffle the container before sorting. Default to using ``llvm::sort`` instead
 of ``std::sort``.
 
@@ -829,7 +829,7 @@ prototyped function or method, you don't need it.  In fact, for most cases, you
 simply don't need the definition of a class. And not ``#include``\ing speeds up
 compilation.
 
-It is easy to try to go too overboard on this recommendation, however.  You
+It is easy to try to go overboard on this recommendation, however.  You
 **must** include all of the header files that you are using --- you can include
 them either directly or indirectly through another header file.  To make sure
 that you don't accidentally forget to include a header file in your module
@@ -857,7 +857,7 @@ your private interface remains private and undisturbed by outsiders.
 Use Namespace Qualifiers to Implement Previously Declared Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When providing an out of line implementation of a function in a source file, do
+When providing an out-of-line implementation of a function in a source file, do
 not open namespace blocks in the source file. Instead, use namespace qualifiers
 to help ensure that your definition matches an existing declaration. Do this:
 
@@ -1154,7 +1154,7 @@ In general, names should be in camel case (e.g. ``TextFileReader`` and
 
 * **Function names** should be verb phrases (as they represent actions), and
   command-like function should be imperative.  The name should be camel case,
-  and start with a lower-case letter (e.g. ``openFile()`` or ``isFoo()``).
+  and start with a lowercase letter (e.g. ``openFile()`` or ``isFoo()``).
 
 * **Enum declarations** (e.g. ``enum Foo {...}``) are types, so they should
   follow the naming conventions for types.  A common use for enums is as a
@@ -1179,7 +1179,7 @@ In general, names should be in camel case (e.g. ``TextFileReader`` and
       };
 
 As an exception, classes that mimic STL classes can have member names in STL's
-style of lower-case words separated by underscores (e.g. ``begin()``,
+style of lowercase words separated by underscores (e.g. ``begin()``,
 ``push_back()``, and ``empty()``). Classes that provide multiple
 iterators should add a singular prefix to ``begin()`` and ``end()``
 (e.g. ``global_begin()`` and ``use_begin()``).
@@ -1417,7 +1417,7 @@ please write the loop in the first form and add a comment indicating that you
 did it intentionally.
 
 Why do we prefer the second form (when correct)?  Writing the loop in the first
-form has two problems. First it may be less efficient than evaluating it at the
+form has two problems. First, it may be less efficient than evaluating it at the
 start of the loop.  In this case, the cost is probably minor --- a few extra
 loads every time through the loop.  However, if the base expression is more
 complex, then the cost can rise quickly.  I've seen loops where the end
