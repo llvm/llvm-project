@@ -1,10 +1,17 @@
-add_lldb_unittest(ProtocolTests
+set(PROTOCOL_TEST_SOURCES
   ProtocolMCPTest.cpp
-  ProtocolMCPServerTest.cpp
+)
+
+if(NOT WIN32)
+  list(APPEND PROTOCOL_TEST_SOURCES ProtocolMCPServerTest.cpp)
+endif()
+
+add_lldb_unittest(ProtocolTests
+  ${PROTOCOL_TEST_SOURCES}
 
   LINK_LIBS
     lldbHost
     lldbProtocolMCP
     lldbUtility
     LLVMTestingSupport
-  )
+)
