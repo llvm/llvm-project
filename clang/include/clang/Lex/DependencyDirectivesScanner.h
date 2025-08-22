@@ -135,6 +135,13 @@ void printDependencyDirectivesAsSource(
     ArrayRef<dependency_directives_scan::Directive> Directives,
     llvm::raw_ostream &OS);
 
+/// Scan an input source buffer for C++20 named module usage.
+///
+/// \param Source The input source buffer.
+///
+/// \returns true if any C++20 named modules related directive was found.
+bool scanInputForCXX20ModulesUsage(StringRef Source);
+
 /// Functor that returns the dependency directives for a given file.
 class DependencyDirectivesGetter {
 public:

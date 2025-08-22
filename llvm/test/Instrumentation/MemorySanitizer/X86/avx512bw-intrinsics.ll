@@ -9,7 +9,6 @@
 ; - llvm.x86.avx512.mask.pmov.wb.mem.512
 ; - llvm.x86.avx512.packssdw.512, llvm.x86.avx512.packsswb.512
 ; - llvm.x86.avx512.packusdw.512, llvm.x86.avx512.packuswb.512
-; - llvm.x86.avx512.pmaddubs.w.512, llvm.x86.avx512.pmaddw.d.512
 ; - llvm.x86.avx512.psad.bw.512
 ;
 ; Heuristically handled:
@@ -2206,18 +2205,21 @@ define <32 x i16> @test_int_x86_avx512_pmaddubs_w_512(<64 x i8> %x0, <64 x i8> %
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <64 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <64 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <64 x i8> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <64 x i8> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
-; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
-; CHECK-NEXT:    unreachable
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> [[X0:%.*]], <64 x i8> [[X1:%.*]])
-; CHECK-NEXT:    store <32 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <64 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <64 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <64 x i8> [[X0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <64 x i8> [[X1:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = and <64 x i1> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = and <64 x i1> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = and <64 x i1> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or <64 x i1> [[TMP17]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <64 x i1> [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sext <64 x i1> [[TMP11]] to <64 x i8>
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <64 x i8> [[TMP12]] to <32 x i16>
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP16:%.*]] = sext <32 x i1> [[TMP14]] to <32 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> [[X0]], <64 x i8> [[X1]])
+; CHECK-NEXT:    store <32 x i16> [[TMP16]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x i16> [[TMP7]]
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> %x0, <64 x i8> %x1)
@@ -2231,22 +2233,25 @@ define <32 x i16> @test_int_x86_avx512_mask_pmaddubs_w_512(<64 x i8> %x0, <64 x 
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 192) to ptr), align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 128) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <64 x i8> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP5]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <64 x i8> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
-; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
-; CHECK-NEXT:    [[TMP9:%.*]] = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> [[X0:%.*]], <64 x i8> [[X1:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <64 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <64 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <64 x i8> [[X0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <64 x i8> [[X1:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP19:%.*]] = and <64 x i1> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP20:%.*]] = and <64 x i1> [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP21:%.*]] = and <64 x i1> [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP22:%.*]] = or <64 x i1> [[TMP19]], [[TMP20]]
+; CHECK-NEXT:    [[TMP23:%.*]] = or <64 x i1> [[TMP22]], [[TMP21]]
+; CHECK-NEXT:    [[TMP24:%.*]] = sext <64 x i1> [[TMP23]] to <64 x i8>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <64 x i8> [[TMP24]] to <32 x i16>
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <32 x i16> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = sext <32 x i1> [[TMP25]] to <32 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = call <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8> [[X0]], <64 x i8> [[X1]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32 [[TMP3]] to <32 x i1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32 [[X3:%.*]] to <32 x i1>
-; CHECK-NEXT:    [[TMP12:%.*]] = select <32 x i1> [[TMP11]], <32 x i16> zeroinitializer, <32 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = select <32 x i1> [[TMP11]], <32 x i16> [[TMP18]], <32 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <32 x i16> [[TMP9]], [[X2:%.*]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i16> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP10]], <32 x i16> [[TMP15]], <32 x i16> [[TMP12]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <32 x i1> [[TMP11]], <32 x i16> [[TMP9]], <32 x i16> [[X2]]
@@ -2266,18 +2271,21 @@ define <16 x i32> @test_int_x86_avx512_pmaddw_d_512(<32 x i16> %x0, <32 x i16> %
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <32 x i16> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
-; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
-; CHECK-NEXT:    unreachable
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
-; CHECK-NEXT:    store <16 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <32 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <32 x i16> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <32 x i16> [[X0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <32 x i16> [[X1:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = and <32 x i1> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = and <32 x i1> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = and <32 x i1> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or <32 x i1> [[TMP17]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <32 x i1> [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sext <32 x i1> [[TMP11]] to <32 x i16>
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <32 x i16> [[TMP12]] to <16 x i32>
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <16 x i32> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP16:%.*]] = sext <16 x i1> [[TMP14]] to <16 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> [[X0]], <32 x i16> [[X1]])
+; CHECK-NEXT:    store <16 x i32> [[TMP16]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i32> [[TMP7]]
 ;
   %1 = call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> %x0, <32 x i16> %x1)
@@ -2291,22 +2299,25 @@ define <16 x i32> @test_int_x86_avx512_mask_pmaddw_d_512(<32 x i16> %x0, <32 x i
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 192) to ptr), align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 128) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <32 x i16> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP5]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
-; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
-; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> [[X0:%.*]], <32 x i16> [[X1:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <32 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <32 x i16> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <32 x i16> [[X0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <32 x i16> [[X1:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP19:%.*]] = and <32 x i1> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP20:%.*]] = and <32 x i1> [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP21:%.*]] = and <32 x i1> [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP22:%.*]] = or <32 x i1> [[TMP19]], [[TMP20]]
+; CHECK-NEXT:    [[TMP23:%.*]] = or <32 x i1> [[TMP22]], [[TMP21]]
+; CHECK-NEXT:    [[TMP24:%.*]] = sext <32 x i1> [[TMP23]] to <32 x i16>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <32 x i16> [[TMP24]] to <16 x i32>
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <16 x i32> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = sext <16 x i1> [[TMP25]] to <16 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> [[X0]], <32 x i16> [[X1]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i16 [[TMP3]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i16 [[X3:%.*]] to <16 x i1>
-; CHECK-NEXT:    [[TMP12:%.*]] = select <16 x i1> [[TMP11]], <16 x i32> zeroinitializer, <16 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = select <16 x i1> [[TMP11]], <16 x i32> [[TMP18]], <16 x i32> [[TMP4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <16 x i32> [[TMP9]], [[X2:%.*]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <16 x i32> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <16 x i32> [[TMP13]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <16 x i32> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <16 x i1> [[TMP10]], <16 x i32> [[TMP15]], <16 x i32> [[TMP12]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <16 x i1> [[TMP11]], <16 x i32> [[TMP9]], <16 x i32> [[X2]]
