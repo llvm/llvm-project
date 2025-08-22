@@ -1,4 +1,4 @@
-//===-- error_test.cpp ----------------------------------------------------===//
+//===- ErrorTest.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/error.h"
+#include "orc-rt/Error.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
