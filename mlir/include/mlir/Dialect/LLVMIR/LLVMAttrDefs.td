@@ -15,14 +15,6 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 
-// All of the attributes will extend this class.
-class LLVM_Attr<string name, string attrMnemonic,
-                list<Trait> traits = [],
-                string baseCppClass = "::mlir::Attribute">
-    : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
-  let mnemonic = attrMnemonic;
-}
-
 //===----------------------------------------------------------------------===//
 // CConvAttr
 //===----------------------------------------------------------------------===//

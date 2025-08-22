@@ -27,7 +27,7 @@ def LLVMTargetToDataLayout : Pass<"llvm-target-to-data-layout"> {
   ];
 }
 
-def LLVMFeaturesFromTarget : Pass<"llvm-features-from-target"> {
+def LLVMTargetToTargetFeatures : Pass<"llvm-target-to-target-features"> {
   let summary = "TODO";
   let dependentDialects = ["mlir::DLTIDialect"];
   let description = [{
