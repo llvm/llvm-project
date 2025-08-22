@@ -727,6 +727,7 @@ bool collectLoopRelatedInfo(
   } while (collapseValue > 0);
 
   convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);
+
   return found;
 }
 
