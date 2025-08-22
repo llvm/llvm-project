@@ -721,7 +721,7 @@ FracMatrix FracMatrix::gramSchmidt() const {
 // Otherwise, we swap b_k and b_{k-1} and decrement k.
 //
 // We repeat this until k = n and return.
-void FracMatrix::LLL(Fraction delta) {
+void FracMatrix::LLL(const Fraction &delta) {
   DynamicAPInt nearest;
   Fraction mu;
 
