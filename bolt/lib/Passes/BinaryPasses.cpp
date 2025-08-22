@@ -1866,26 +1866,25 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
         const bool IsMemcpy8 = (CalleeSymbol->getName() == "_memcpy8");
         const bool IsTailCall = BC.MIB->isTailCall(Inst);
 
-        // Extract the size of thecopy from preceding instructions by looking
-        // for writes to the size register
+        // Extract size from preceding instructions (AArch64 only)
+        // Pattern: MOV X2, #nb-bytes; BL memcpy src, dest, X2
         std::optional<uint64_t> KnownSize = std::nullopt;
-        BitVector WrittenRegs(BC.MRI->getNumRegs());
+        if (BC.isAArch64()) {
+          BitVector WrittenRegs(BC.MRI->getNumRegs());
+          MCPhysReg SizeReg = BC.MIB->getIntArgRegister(2);
 
-        // Get the size register (3rd arg register, index 2 for AArch64)
-        MCPhysReg SizeReg = BC.MIB->getIntArgRegister(2);
+          // Look backwards for size-setting instruction
+          for (auto InstIt = BB.begin(); InstIt != II; ++InstIt) {
+            MCInst &Inst = *InstIt;
+            WrittenRegs.reset();
+            BC.MIB->getWrittenRegs(Inst, WrittenRegs);
 
-        // Look backwards through the basic block for size-setting instr
-        for (auto InstIt = BB.begin(); InstIt != II; ++InstIt) {
-          MCInst &Inst = *InstIt;
-          WrittenRegs.reset(); // Clear and check what the instruction writes to
-          BC.MIB->getWrittenRegs(Inst, WrittenRegs);
-
-          // Check for writes to the size register
-          if (SizeReg != BC.MIB->getNoRegister() && WrittenRegs[SizeReg]) {
-            if (std::optional<uint64_t> ExtractedSize =
-                    BC.MIB->extractMoveImmediate(Inst, SizeReg)) {
-              KnownSize = *ExtractedSize;
-              break;
+            if (SizeReg != BC.MIB->getNoRegister() && WrittenRegs[SizeReg]) {
+              if (std::optional<uint64_t> ExtractedSize =
+                      BC.MIB->extractMoveImmediate(Inst, SizeReg)) {
+                KnownSize = *ExtractedSize;
+                break;
+              }
             }
           }
         }

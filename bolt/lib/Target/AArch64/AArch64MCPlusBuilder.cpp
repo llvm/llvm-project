@@ -2647,152 +2647,74 @@ public:
 
   InstructionListType generateSizeSpecificMemcpy(InstructionListType &Code,
                                                  uint64_t Size) const {
+    // Helper to add load/store pair
+    auto addLoadStorePair = [&](unsigned LoadOpc, unsigned StoreOpc,
+                                unsigned Reg, unsigned Offset = 0) {
+      Code.emplace_back(MCInstBuilder(LoadOpc)
+                            .addReg(Reg)
+                            .addReg(AArch64::X1)
+                            .addImm(Offset));
+      Code.emplace_back(MCInstBuilder(StoreOpc)
+                            .addReg(Reg)
+                            .addReg(AArch64::X0)
+                            .addImm(Offset));
+    };
+
     // Generate optimal instruction sequences based on exact size
     switch (Size) {
     case 1:
-      // Single byte copy
-      Code.emplace_back(MCInstBuilder(AArch64::LDRBBui)
-                            .addReg(AArch64::W3)
-                            .addReg(AArch64::X1)
-                            .addImm(0));
-      Code.emplace_back(MCInstBuilder(AArch64::STRBBui)
-                            .addReg(AArch64::W3)
-                            .addReg(AArch64::X0)
-                            .addImm(0));
+      addLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3);
       break;
-
     case 2:
-      // 2-byte copy using 16-bit load/store
-      Code.emplace_back(MCInstBuilder(AArch64::LDRHHui)
-                            .addReg(AArch64::W3)
-                            .addReg(AArch64::X1)
-                            .addImm(0));
-      Code.emplace_back(MCInstBuilder(AArch64::STRHHui)
-                            .addReg(AArch64::W3)
-                            .addReg(AArch64::X0)
-                            .addImm(0));
+      addLoadStorePair(AArch64::LDRHHui, AArch64::STRHHui, AArch64::W3);
       break;
-
     case 4:
-      // 4-byte copy using 32-bit load/store
-      Code.emplace_back(MCInstBuilder(AArch64::LDRWui)
-                            .addReg(AArch64::W3)
-                            .addReg(AArch64::X1)
-                            .addImm(0));
-      Code.emplace_back(MCInstBuilder(AArch64::STRWui)
-                            .addReg(AArch64::W3)
-                            .addReg(AArch64::X0)
-                            .addImm(0));
+      addLoadStorePair(AArch64::LDRWui, AArch64::STRWui, AArch64::W3);
       break;
-
     case 8:
-      // 8-byte copy using 64-bit load/store
-      Code.emplace_back(MCInstBuilder(AArch64::LDRXui)
-                            .addReg(AArch64::X3)
-                            .addReg(AArch64::X1)
-                            .addImm(0));
-      Code.emplace_back(MCInstBuilder(AArch64::STRXui)
-                            .addReg(AArch64::X3)
-                            .addReg(AArch64::X0)
-                            .addImm(0));
+      addLoadStorePair(AArch64::LDRXui, AArch64::STRXui, AArch64::X3);
       break;
-
     case 16:
-      // 16-byte copy using 128-bit SIMD
-      Code.emplace_back(MCInstBuilder(AArch64::LDRQui)
-                            .addReg(AArch64::Q0)
-                            .addReg(AArch64::X1)
-                            .addImm(0));
-      Code.emplace_back(MCInstBuilder(AArch64::STRQui)
-                            .addReg(AArch64::Q0)
-                            .addReg(AArch64::X0)
-                            .addImm(0));
+      addLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0);
       break;
-
     case 32:
-      // 32-byte copy using two 128-bit SIMD operations
-      Code.emplace_back(MCInstBuilder(AArch64::LDRQui)
-                            .addReg(AArch64::Q0)
-                            .addReg(AArch64::X1)
-                            .addImm(0));
-      Code.emplace_back(MCInstBuilder(AArch64::STRQui)
-                            .addReg(AArch64::Q0)
-                            .addReg(AArch64::X0)
-                            .addImm(0));
-      Code.emplace_back(MCInstBuilder(AArch64::LDRQui)
-                            .addReg(AArch64::Q1)
-                            .addReg(AArch64::X1)
-                            .addImm(1));
-      Code.emplace_back(MCInstBuilder(AArch64::STRQui)
-                            .addReg(AArch64::Q1)
-                            .addReg(AArch64::X0)
-                            .addImm(1));
+      addLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0, 0);
+      addLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q1, 1);
       break;
 
     default:
       if (Size <= 64) {
-        // For sizes up to 64 bytes, greedily use the largest possible loads in
-        // descending order
+        // For sizes up to 64 bytes, greedily use the largest possible loads
         uint64_t Remaining = Size;
         uint64_t Offset = 0;
 
         while (Remaining >= 16) {
-          Code.emplace_back(MCInstBuilder(AArch64::LDRQui)
-                                .addReg(AArch64::Q0)
-                                .addReg(AArch64::X1)
-                                .addImm(Offset / 16));
-          Code.emplace_back(MCInstBuilder(AArch64::STRQui)
-                                .addReg(AArch64::Q0)
-                                .addReg(AArch64::X0)
-                                .addImm(Offset / 16));
+          addLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0,
+                           Offset / 16);
           Remaining -= 16;
           Offset += 16;
         }
         if (Remaining >= 8) {
-          Code.emplace_back(MCInstBuilder(AArch64::LDRXui)
-                                .addReg(AArch64::X3)
-                                .addReg(AArch64::X1)
-                                .addImm(Offset / 8));
-          Code.emplace_back(MCInstBuilder(AArch64::STRXui)
-                                .addReg(AArch64::X3)
-                                .addReg(AArch64::X0)
-                                .addImm(Offset / 8));
+          addLoadStorePair(AArch64::LDRXui, AArch64::STRXui, AArch64::X3,
+                           Offset / 8);
           Remaining -= 8;
           Offset += 8;
         }
         if (Remaining >= 4) {
-          Code.emplace_back(MCInstBuilder(AArch64::LDRWui)
-                                .addReg(AArch64::W3)
-                                .addReg(AArch64::X1)
-                                .addImm(Offset / 4));
-          Code.emplace_back(MCInstBuilder(AArch64::STRWui)
-                                .addReg(AArch64::W3)
-                                .addReg(AArch64::X0)
-                                .addImm(Offset / 4));
+          addLoadStorePair(AArch64::LDRWui, AArch64::STRWui, AArch64::W3,
+                           Offset / 4);
           Remaining -= 4;
           Offset += 4;
         }
         if (Remaining >= 2) {
-          Code.emplace_back(MCInstBuilder(AArch64::LDRHHui)
-                                .addReg(AArch64::W3)
-                                .addReg(AArch64::X1)
-                                .addImm(Offset / 2));
-          Code.emplace_back(MCInstBuilder(AArch64::STRHHui)
-                                .addReg(AArch64::W3)
-                                .addReg(AArch64::X0)
-                                .addImm(Offset / 2));
+          addLoadStorePair(AArch64::LDRHHui, AArch64::STRHHui, AArch64::W3,
+                           Offset / 2);
           Remaining -= 2;
           Offset += 2;
         }
         if (Remaining == 1) {
-          Code.emplace_back(MCInstBuilder(AArch64::LDRBBui)
-                                .addReg(AArch64::W3)
-                                .addReg(AArch64::X1)
-                                .addImm(Offset));
-          Code.emplace_back(MCInstBuilder(AArch64::STRBBui)
-                                .addReg(AArch64::W3)
-                                .addReg(AArch64::X0)
-                                .addImm(Offset));
+          addLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3,
+                           Offset);
         }
       } else {
         Code.clear();
