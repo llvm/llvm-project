@@ -645,8 +645,8 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
 }
 
 Error olSyncEvent_impl(ol_event_handle_t Event) {
+  // No event info means that this event was complete on creation
   if (!Event->EventInfo)
-    // Event always complete
     return Plugin::success();
 
   if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
@@ -667,10 +667,22 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
                                ol_event_info_t PropName, size_t PropSize,
                                void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
+  auto Queue = Event->Queue;
 
   switch (PropName) {
   case OL_EVENT_INFO_QUEUE:
-    return Info.write<ol_queue_handle_t>(Event->Queue);
+    return Info.write<ol_queue_handle_t>(Queue);
+  case OL_EVENT_INFO_IS_COMPLETE: {
+    // No event info means that this event was complete on creation
+    if (!Event->EventInfo)
+      return Info.write<bool>(true);
+
+    auto Res = Queue->Device->Device->isEventComplete(Event->EventInfo,
+                                                      Queue->AsyncInfo);
+    if (auto Err = Res.takeError())
+      return Err;
+    return Info.write<bool>(*Res);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetEventInfo enum '%i' is invalid", PropName);
