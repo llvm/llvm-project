@@ -199,6 +199,17 @@ public:
   /// Returns a mask of bits that should be considered unknown during decoding.
   const APInt &getSoftFailBits() const { return SoftFailBits; }
 
+  /// Returns the known bits of this encoding that must match for
+  /// successful decoding.
+  KnownBits getMandatoryBits() const {
+    KnownBits EncodingBits = InstBits;
+    // Mark all bits that are allowed to change according to SoftFail mask
+    // as unknown.
+    EncodingBits.Zero &= ~SoftFailBits;
+    EncodingBits.One &= ~SoftFailBits;
+    return EncodingBits;
+  }
+
   /// Returns the name of the function to use for decoding, or an empty string
   /// if the decoder is generated.
   StringRef getDecoderMethod() const { return DecoderMethod; }
@@ -559,15 +570,6 @@ public:
   }
 
 protected:
-  KnownBits getMandatoryEncodingBits(unsigned EncodingID) const {
-    const InstructionEncoding &Encoding = Encodings[EncodingID];
-    KnownBits EncodingBits = Encoding.getInstBits();
-    // Clear all bits that are allowed to change according to SoftFail mask.
-    EncodingBits.Zero &= ~Encoding.getSoftFailBits();
-    EncodingBits.One &= ~Encoding.getSoftFailBits();
-    return EncodingBits;
-  }
-
   /// dumpStack - dumpStack traverses the filter chooser chain and calls
   /// dumpFilterArray on each filter chooser up to the top level one.
   void dumpStack(raw_ostream &OS, indent Indent, unsigned PadToWidth) const;
@@ -655,8 +657,8 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
   assert(StartBit + NumBits - 1 < Owner.FilterBits.getBitWidth());
 
   for (unsigned EncodingID : Owner.EncodingIDs) {
-    // Populates the insn given the uid.
-    KnownBits EncodingBits = Owner.getMandatoryEncodingBits(EncodingID);
+    const InstructionEncoding &Encoding = Owner.Encodings[EncodingID];
+    KnownBits EncodingBits = Encoding.getMandatoryBits();
 
     // Scans the segment for possibly well-specified encoding bits.
     KnownBits FieldBits = EncodingBits.extractBits(NumBits, StartBit);
@@ -1381,7 +1383,8 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
 // Emits table entries to decode the singleton.
 void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                             unsigned EncodingID) const {
-  KnownBits EncodingBits = getMandatoryEncodingBits(EncodingID);
+  const InstructionEncoding &Encoding = Encodings[EncodingID];
+  KnownBits EncodingBits = Encoding.getMandatoryBits();
 
   // Look for islands of undecoded bits of the singleton.
   std::vector<Island> Islands = getIslands(EncodingBits);
@@ -1425,7 +1428,6 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   // decoder method indicates that additional processing should be done to see
   // if there is any other instruction that also matches the bitpattern and
   // can decode it.
-  const InstructionEncoding &Encoding = Encodings[EncodingID];
   const uint8_t DecoderOp =
       Encoding.hasCompleteDecoder()
           ? MCD::OPC_Decode
@@ -1484,7 +1486,8 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
     assert(EncodingIDs.size() == 3);
 
     for (unsigned EncodingID : EncodingIDs) {
-      KnownBits EncodingBits = getMandatoryEncodingBits(EncodingID);
+      const InstructionEncoding &Encoding = Encodings[EncodingID];
+      KnownBits EncodingBits = Encoding.getMandatoryBits();
 
       // Look for islands of undecoded bits of any instruction.
       std::vector<Island> Islands = getIslands(EncodingBits);
@@ -1675,7 +1678,8 @@ void FilterChooser::doFilter() {
       BitAttrs[BitIndex] = ATTR_FILTERED;
 
   for (unsigned EncodingID : EncodingIDs) {
-    KnownBits EncodingBits = getMandatoryEncodingBits(EncodingID);
+    const InstructionEncoding &Encoding = Encodings[EncodingID];
+    KnownBits EncodingBits = Encoding.getMandatoryBits();
 
     for (unsigned BitIndex = 0; BitIndex != FilterWidth; ++BitIndex) {
       bool IsKnown = EncodingBits.Zero[BitIndex] || EncodingBits.One[BitIndex];
@@ -1732,10 +1736,10 @@ void FilterChooser::doFilter() {
 
   // Dump encodings.
   for (unsigned EncodingID : EncodingIDs) {
-    const InstructionEncoding &Enc = Encodings[EncodingID];
-    errs() << Indent << indent(PadToWidth - Enc.getBitWidth());
-    printKnownBits(errs(), getMandatoryEncodingBits(EncodingID), '_');
-    errs() << "  " << Enc.getName() << '\n';
+    const InstructionEncoding &Encoding = Encodings[EncodingID];
+    errs() << Indent << indent(PadToWidth - Encoding.getBitWidth());
+    printKnownBits(errs(), Encoding.getMandatoryBits(), '_');
+    errs() << "  " << Encoding.getName() << '\n';
   }
   PrintFatalError("Decoding conflict encountered");
 }
