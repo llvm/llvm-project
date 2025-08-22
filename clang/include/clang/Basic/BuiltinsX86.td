@@ -627,11 +627,23 @@ let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] i
 let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def pmuldq256 : X86Builtin<"_Vector<4, long long int>(_Vector<8, int>, _Vector<8, int>)">;
   def pmuludq256 : X86Builtin<"_Vector<4, long long int>(_Vector<8, int>, _Vector<8, int>)">;
-}
 
-let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def pmulhuw256 : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, unsigned short>, _Vector<16, unsigned short>)">;
   def pmulhw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
+
+  def psllv8si : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
+  def psrav8si : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
+  def psrlv8si : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
+  def psllv4di : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>)">;
+  def psrlv4di : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>)">;
+}
+
+let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+  def psllv4si : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
+  def psrav4si : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
+  def psrlv4si : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
+  def psllv2di : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>)">;
+  def psrlv2di : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>)">;
 }
 
 let Features = "avx2", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
@@ -652,46 +664,6 @@ let Features = "avx2", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
 let Features = "avx2", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
   def maskstored : X86Builtin<"void(_Vector<4, int *>, _Vector<4, int>, _Vector<4, int>)">;
   def maskstoreq : X86Builtin<"void(_Vector<2, long long int *>, _Vector<2, long long int>, _Vector<2, long long int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def psllv8si : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def psllv4si : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def psllv4di : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def psllv2di : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def psrav8si : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def psrav4si : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def psrlv8si : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def psrlv4si : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def psrlv4di : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>)">;
-}
-
-let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def psrlv2di : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>)">;
 }
 
 let Features = "avx2", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
