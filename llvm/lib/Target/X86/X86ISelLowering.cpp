@@ -31723,7 +31723,7 @@ X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
       return AtomicExpansionKind::None;
   }
 
-  return needsCmpXchgNb(MemType) ? AtomicExpansionKind::XChg
+  return needsCmpXchgNb(MemType) ? AtomicExpansionKind::Expand
                                  : AtomicExpansionKind::None;
 }
 

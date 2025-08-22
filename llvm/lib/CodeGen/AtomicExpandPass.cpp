@@ -537,7 +537,7 @@ bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     LI->setAtomic(AtomicOrdering::NotAtomic);
     return true;
-  case TargetLoweringBase::AtomicExpansionKind::Expand:
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
     TLI->emitExpandAtomicLoad(LI);
     return true;
   default:
@@ -549,10 +549,10 @@ bool AtomicExpandImpl::tryExpandAtomicStore(StoreInst *SI) {
   switch (TLI->shouldExpandAtomicStoreInIR(SI)) {
   case TargetLoweringBase::AtomicExpansionKind::None:
     return false;
-  case TargetLoweringBase::AtomicExpansionKind::Expand:
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
     TLI->emitExpandAtomicStore(SI);
     return true;
-  case TargetLoweringBase::AtomicExpansionKind::XChg:
+  case TargetLoweringBase::AtomicExpansionKind::Expand:
     expandAtomicStoreToXChg(SI);
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
@@ -747,7 +747,7 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
   }
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
-  case TargetLoweringBase::AtomicExpansionKind::Expand:
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
     TLI->emitExpandAtomicRMW(AI);
     return true;
   default:
@@ -1701,7 +1701,7 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicCmpXchgInst(CI);
-  case TargetLoweringBase::AtomicExpansionKind::Expand: {
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand: {
     TLI->emitExpandAtomicCmpXchg(CI);
     return true;
   }
