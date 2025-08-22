@@ -3359,8 +3359,7 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
   }
 
   // Handle smart pointer related processing only if no post-handler was called
-  ProgramStateRef State = handleSmartPointerRelatedCalls(Call, C, C.getState());
-  C.addTransition(State);
+  C.addTransition(handleSmartPointerRelatedCalls(Call, C, C.getState()));
 }
 
 void MallocChecker::checkPreCall(const CallEvent &Call,
