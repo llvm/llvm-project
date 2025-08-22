@@ -128,14 +128,14 @@ void MCXCOFFStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {
-  auto *Sym = static_cast<MCSymbolXCOFF *>(Symbol);
+  auto &Sym = static_cast<MCSymbolXCOFF &>(*Symbol);
   getAssembler().registerSymbol(*Symbol);
-  Symbol->setExternal(Sym->getStorageClass() != XCOFF::C_HIDEXT);
+  Sym.setExternal(Sym.getStorageClass() != XCOFF::C_HIDEXT);
   Symbol->setCommon(Size, ByteAlignment);
 
   // Default csect align is 4, but common symbols have explicit alignment values
   // and we should honor it.
-  Sym->getRepresentedCsect()->setAlignment(ByteAlignment);
+  Sym.getRepresentedCsect()->setAlignment(ByteAlignment);
 
   // Emit the alignment and storage for the variable to the section.
   emitValueToAlignment(ByteAlignment);

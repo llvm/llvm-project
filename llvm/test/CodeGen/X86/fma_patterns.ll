@@ -1567,7 +1567,7 @@ define <4 x double> @test_v4f64_interp(<4 x double> %x, <4 x double> %y, <4 x do
 ; Pattern: (fneg (fma x, y, z)) -> (fma x, -y, -z)
 ;
 
-define <4 x float> @test_v4f32_fneg_fmadd(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) #0 {
+define <4 x float> @test_v4f32_fneg_fmadd(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) {
 ; FMA-LABEL: test_v4f32_fneg_fmadd:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
@@ -1582,13 +1582,13 @@ define <4 x float> @test_v4f32_fneg_fmadd(<4 x float> %a0, <4 x float> %a1, <4 x
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %mul = fmul nsz <4 x float> %a0, %a1
-  %add = fadd nsz <4 x float> %mul, %a2
-  %neg = fsub nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
+  %mul = fmul contract nsz <4 x float> %a0, %a1
+  %add = fadd contract nsz <4 x float> %mul, %a2
+  %neg = fsub contract nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
   ret <4 x float> %neg
 }
 
-define <4 x double> @test_v4f64_fneg_fmsub(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2) #0 {
+define <4 x double> @test_v4f64_fneg_fmsub(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2) {
 ; FMA-LABEL: test_v4f64_fneg_fmsub:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
@@ -1609,7 +1609,7 @@ define <4 x double> @test_v4f64_fneg_fmsub(<4 x double> %a0, <4 x double> %a1, <
   ret <4 x double> %neg
 }
 
-define <4 x float> @test_v4f32_fneg_fnmadd(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) #0 {
+define <4 x float> @test_v4f32_fneg_fnmadd(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) {
 ; FMA-LABEL: test_v4f32_fneg_fnmadd:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
@@ -1624,14 +1624,14 @@ define <4 x float> @test_v4f32_fneg_fnmadd(<4 x float> %a0, <4 x float> %a1, <4 
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %mul = fmul nsz <4 x float> %a0, %a1
-  %neg0 = fsub nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %mul
-  %add = fadd nsz <4 x float> %neg0, %a2
-  %neg1 = fsub nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
+  %mul = fmul contract nsz <4 x float> %a0, %a1
+  %neg0 = fsub contract nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %mul
+  %add = fadd contract nsz <4 x float> %neg0, %a2
+  %neg1 = fsub contract nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
   ret <4 x float> %neg1
 }
 
-define <4 x double> @test_v4f64_fneg_fnmsub(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2) #0 {
+define <4 x double> @test_v4f64_fneg_fnmsub(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2) {
 ; FMA-LABEL: test_v4f64_fneg_fnmsub:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
@@ -1646,10 +1646,10 @@ define <4 x double> @test_v4f64_fneg_fnmsub(<4 x double> %a0, <4 x double> %a1, 
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; AVX512-NEXT:    retq
-  %mul = fmul nsz  <4 x double> %a0, %a1
-  %neg0 = fsub nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %mul
-  %sub = fsub nsz <4 x double> %neg0, %a2
-  %neg1 = fsub nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %sub
+  %mul = fmul contract nsz  <4 x double> %a0, %a1
+  %neg0 = fsub contract nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %mul
+  %sub = fsub contract nsz <4 x double> %neg0, %a2
+  %neg1 = fsub contract nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %sub
   ret <4 x double> %neg1
 }
 
@@ -1657,7 +1657,7 @@ define <4 x double> @test_v4f64_fneg_fnmsub(<4 x double> %a0, <4 x double> %a1, 
 ; Pattern: (fma x, c1, (fmul x, c2)) -> (fmul x, c1+c2)
 ;
 
-define <4 x float> @test_v4f32_fma_x_c1_fmul_x_c2(<4 x float> %x) #0 {
+define <4 x float> @test_v4f32_fma_x_c1_fmul_x_c2(<4 x float> %x) {
 ; FMA-LABEL: test_v4f32_fma_x_c1_fmul_x_c2:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -1672,9 +1672,9 @@ define <4 x float> @test_v4f32_fma_x_c1_fmul_x_c2(<4 x float> %x) #0 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %m0 = fmul <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>
-  %m1 = fmul <4 x float> %x, <float 4.0, float 3.0, float 2.0, float 1.0>
-  %a  = fadd <4 x float> %m0, %m1
+  %m0 = fmul contract reassoc <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>
+  %m1 = fmul contract reassoc <4 x float> %x, <float 4.0, float 3.0, float 2.0, float 1.0>
+  %a  = fadd contract reassoc <4 x float> %m0, %m1
   ret <4 x float> %a
 }
 
@@ -1682,7 +1682,7 @@ define <4 x float> @test_v4f32_fma_x_c1_fmul_x_c2(<4 x float> %x) #0 {
 ; Pattern: (fma (fmul x, c1), c2, y) -> (fma x, c1*c2, y)
 ;
 
-define <4 x float> @test_v4f32_fma_fmul_x_c1_c2_y(<4 x float> %x, <4 x float> %y) #0 {
+define <4 x float> @test_v4f32_fma_fmul_x_c1_c2_y(<4 x float> %x, <4 x float> %y) {
 ; FMA-LABEL: test_v4f32_fma_fmul_x_c1_c2_y:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
@@ -1697,15 +1697,15 @@ define <4 x float> @test_v4f32_fma_fmul_x_c1_c2_y(<4 x float> %x, <4 x float> %y
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
 ; AVX512-NEXT:    retq
-  %m0 = fmul <4 x float> %x,  <float 1.0, float 2.0, float 3.0, float 4.0>
-  %m1 = fmul <4 x float> %m0, <float 4.0, float 3.0, float 2.0, float 1.0>
-  %a  = fadd <4 x float> %m1, %y
+  %m0 = fmul contract reassoc <4 x float> %x,  <float 1.0, float 2.0, float 3.0, float 4.0>
+  %m1 = fmul contract reassoc <4 x float> %m0, <float 4.0, float 3.0, float 2.0, float 1.0>
+  %a  = fadd contract reassoc <4 x float> %m1, %y
   ret <4 x float> %a
 }
 
 ; Pattern: (fneg (fmul x, y)) -> (fnmsub x, y, 0)
 
-define double @test_f64_fneg_fmul(double %x, double %y) #0 {
+define double @test_f64_fneg_fmul(double %x, double %y) {
 ; FMA-LABEL: test_f64_fneg_fmul:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
@@ -1723,12 +1723,12 @@ define double @test_f64_fneg_fmul(double %x, double %y) #0 {
 ; AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %m = fmul nsz double %x, %y
-  %n = fsub double -0.0, %m
+  %m = fmul contract nsz double %x, %y
+  %n = fsub contract double -0.0, %m
   ret double %n
 }
 
-define <4 x float> @test_v4f32_fneg_fmul(<4 x float> %x, <4 x float> %y) #0 {
+define <4 x float> @test_v4f32_fneg_fmul(<4 x float> %x, <4 x float> %y) {
 ; FMA-LABEL: test_v4f32_fneg_fmul:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -1746,12 +1746,12 @@ define <4 x float> @test_v4f32_fneg_fmul(<4 x float> %x, <4 x float> %y) #0 {
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %m = fmul nsz <4 x float> %x, %y
-  %n = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %m
+  %m = fmul contract nsz <4 x float> %x, %y
+  %n = fsub contract <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %m
   ret <4 x float> %n
 }
 
-define <4 x double> @test_v4f64_fneg_fmul(<4 x double> %x, <4 x double> %y) #0 {
+define <4 x double> @test_v4f64_fneg_fmul(<4 x double> %x, <4 x double> %y) {
 ; FMA-LABEL: test_v4f64_fneg_fmul:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
@@ -1769,12 +1769,12 @@ define <4 x double> @test_v4f64_fneg_fmul(<4 x double> %x, <4 x double> %y) #0 {
 ; AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2
 ; AVX512-NEXT:    retq
-  %m = fmul nsz <4 x double> %x, %y
-  %n = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
+  %m = fmul contract nsz <4 x double> %x, %y
+  %n = fsub contract <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
   ret <4 x double> %n
 }
 
-define <4 x double> @test_v4f64_fneg_fmul_no_nsz(<4 x double> %x, <4 x double> %y) #0 {
+define <4 x double> @test_v4f64_fneg_fmul_no_nsz(<4 x double> %x, <4 x double> %y) {
 ; FMA-LABEL: test_v4f64_fneg_fmul_no_nsz:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
@@ -1792,8 +1792,8 @@ define <4 x double> @test_v4f64_fneg_fmul_no_nsz(<4 x double> %x, <4 x double> %
 ; AVX512-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %m = fmul <4 x double> %x, %y
-  %n = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
+  %m = fmul contract <4 x double> %x, %y
+  %n = fsub contract <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
   ret <4 x double> %n
 }
 
@@ -2022,5 +2022,3 @@ define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, 
   %a2 = fadd fast float %n0, %a1
   ret float %a2
 }
-
-attributes #0 = { "unsafe-fp-math"="true" }

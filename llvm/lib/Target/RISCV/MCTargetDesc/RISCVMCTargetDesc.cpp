@@ -376,7 +376,8 @@ static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVTargetMC() {
-  for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {
+  for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target(),
+                    &getTheRISCV32beTarget(), &getTheRISCV64beTarget()}) {
     TargetRegistry::RegisterMCAsmInfo(*T, createRISCVMCAsmInfo);
     TargetRegistry::RegisterMCObjectFileInfo(*T, createRISCVMCObjectFileInfo);
     TargetRegistry::RegisterMCInstrInfo(*T, createRISCVMCInstrInfo);

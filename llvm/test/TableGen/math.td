@@ -3,6 +3,9 @@
 // RUN: not llvm-tblgen -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
 // RUN: not llvm-tblgen -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
 // RUN: not llvm-tblgen -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
+// RUN: not llvm-tblgen -DERROR5 %s 2>&1 | FileCheck --check-prefix=ERROR5 %s
+// RUN: not llvm-tblgen -DERROR6 %s 2>&1 | FileCheck --check-prefix=ERROR6 %s
+// RUN: not llvm-tblgen -DERROR7 %s 2>&1 | FileCheck --check-prefix=ERROR7 %s
 // XFAIL: vg_leak
 
 // CHECK: def shifts
@@ -143,3 +146,18 @@ def v954 : Int<!logtwo(-1)>;
 // CHECK: def vneg
 // CHECK: Value = -2
 def vneg : Int<!sub(v925.Value, 927)>;
+
+#ifdef ERROR5
+// ERROR5: error: Illegal operation: out of bounds shift
+def vshl_neg : Int<!shl(1, -1)>;
+#endif
+
+#ifdef ERROR6
+// ERROR6: error: Illegal operation: out of bounds shift
+def vsra_large : Int<!sra(1, 64)>;
+#endif
+
+#ifdef ERROR7
+// ERROR7: error: Illegal operation: out of bounds shift
+def vsrl_large : Int<!srl(1, 100)>;
+#endif

@@ -47,7 +47,7 @@ define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1
 
 atomic:
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 100
-  %ret = atomicrmw max ptr addrspace(1) %gep, i32 %y syncscope("workgroup") seq_cst
+  %ret = atomicrmw max ptr addrspace(1) %gep, i32 %y syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %ret, ptr addrspace(1) %out
   br label %exit
 
@@ -87,7 +87,7 @@ define amdgpu_kernel void @atomic_max_i32_noret(ptr addrspace(1) %out, ptr addrs
 
 atomic:
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 100
-  %ret = atomicrmw max ptr addrspace(1) %gep, i32 %y syncscope("workgroup") seq_cst
+  %ret = atomicrmw max ptr addrspace(1) %gep, i32 %y syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   br label %exit
 
 exit:
@@ -96,3 +96,5 @@ exit:
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+
+!0 = !{}

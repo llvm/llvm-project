@@ -35,7 +35,7 @@ class RISCVAsmBackend : public MCAsmBackend {
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
-                  const MCTargetOptions &Options);
+                  bool IsLittleEndian, const MCTargetOptions &Options);
   ~RISCVAsmBackend() override = default;
 
   std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,

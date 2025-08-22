@@ -899,6 +899,8 @@ std::array<uint8_t, 4> OutputSection::getFiller(Ctx &ctx) {
       return {1, 0, 1, 0};
     return {0x13, 0, 0, 0};
   }
+  if (ctx.arg.relocatable && ctx.arg.emachine == EM_LOONGARCH)
+    return {0, 0, 0x40, 0x03};
   return ctx.target->trapInstr;
 }
 

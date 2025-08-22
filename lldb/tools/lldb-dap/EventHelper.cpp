@@ -38,37 +38,25 @@ static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
-/// Get capabilities based on the configured target.
-static llvm::DenseSet<AdapterFeature> GetTargetBasedCapabilities(DAP &dap) {
-  llvm::DenseSet<AdapterFeature> capabilities;
+void SendTargetBasedCapabilities(DAP &dap) {
   if (!dap.target.IsValid())
-    return capabilities;
+    return;
+
+  protocol::CapabilitiesEventBody body;
 
   const llvm::StringRef target_triple = dap.target.GetTriple();
   if (target_triple.starts_with("x86"))
-    capabilities.insert(protocol::eAdapterFeatureStepInTargetsRequest);
+    body.capabilities.supportedFeatures.insert(
+        protocol::eAdapterFeatureStepInTargetsRequest);
 
   // We only support restarting launch requests not attach requests.
   if (dap.last_launch_request)
-    capabilities.insert(protocol::eAdapterFeatureRestartRequest);
-
-  return capabilities;
-}
-
-void SendExtraCapabilities(DAP &dap) {
-  protocol::Capabilities capabilities = dap.GetCustomCapabilities();
-  llvm::DenseSet<AdapterFeature> target_capabilities =
-      GetTargetBasedCapabilities(dap);
-
-  capabilities.supportedFeatures.insert(target_capabilities.begin(),
-                                        target_capabilities.end());
-
-  protocol::CapabilitiesEventBody body;
-  body.capabilities = std::move(capabilities);
+    body.capabilities.supportedFeatures.insert(
+        protocol::eAdapterFeatureRestartRequest);
 
   // Only notify the client if supportedFeatures changed.
   if (!body.capabilities.supportedFeatures.empty())
-    dap.Send(protocol::Event{"capabilities", std::move(body)});
+    dap.Send(protocol::Event{"capabilities", body});
 }
 
 // "ProcessEvent": {
