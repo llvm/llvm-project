@@ -432,6 +432,7 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp) {
     AddAlias("p", cmd_obj_sp, "--")->SetHelpLong("");
     AddAlias("print", cmd_obj_sp, "--")->SetHelpLong("");
+    AddAlias("inspect", cmd_obj_sp, "--")->SetHelpLong("");
     if (auto *po = AddAlias("po", cmd_obj_sp, "-O --")) {
       po->SetHelp("Evaluate an expression on the current thread.  Displays any "
                   "returned value with formatting "

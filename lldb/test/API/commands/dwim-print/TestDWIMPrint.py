@@ -185,3 +185,16 @@ class TestCase(TestBase):
             self, "break inside", lldb.SBFileSpec("main.cpp")
         )
         self._expect_cmd("dwim-print number", "frame variable")
+
+    def test_aliases(self):
+        interp = self.dbg.GetCommandInterpreter()
+        for alias in ["p", "print", "inspect"]:
+            result = lldb.SBCommandReturnObject()
+            interp.ResolveCommand(alias, result)
+            self.assertTrue(result.Succeeded(), result.GetError())
+            self.assertEqual(result.GetOutput(), "dwim-print --")
+
+        result = lldb.SBCommandReturnObject()
+        interp.ResolveCommand("po", result)
+        self.assertTrue(result.Succeeded(), result.GetError())
+        self.assertEqual(result.GetOutput(), "dwim-print -O  --")
