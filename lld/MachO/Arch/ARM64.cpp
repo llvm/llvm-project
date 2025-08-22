@@ -173,7 +173,13 @@ void ARM64::populateThunk(InputSection *thunk, Symbol *funcSym) {
                              /*offset=*/0, /*addend=*/0,
                              /*referent=*/funcSym);
 }
-// Just a single direct branch to the target function.
+// Just a single direct branch to the target function and a nop.
+// The nop will improve the debuggability.
+//
+// Debug lines in DWARF does not recognize one-instruction sequence, and this
+// thunk will be merged into other sequences if it only had one instruction.
+// Adding a nop after the branch has no runtime cost, and little size impact,
+// but it would make DWARF linker and debuggers happier.
 static constexpr uint32_t icfSafeThunkCode[] = {
     0x14000000, // 08: b    target
     0xD503201F, // 0c: nop

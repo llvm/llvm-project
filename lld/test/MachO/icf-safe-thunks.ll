@@ -39,12 +39,15 @@
 ;
 ; CHECK-ARM64:        _func_2identical_v2:
 ; CHECK-ARM64-NEXT:        b  _func_2identical_v1
+; CHECK-ARM64-NEXT:        nop
 ; CHECK-ARM64-NEXT:   _func_3identical_v2:
 ; CHECK-ARM64-NEXT:        b  _func_3identical_v1
+; CHECK-ARM64-NEXT:        nop
 ; CHECK-ARM64-NEXT:   _func_3identical_v3:
 ; CHECK-ARM64-NEXT:        b  _func_3identical_v1
+; CHECK-ARM64-NEXT:        nop
 
-
+; Check the size of each functions. Thunks' size will change from 4-> 8 because of added nop.
 ; CHECK-ARM64-MAP:      0x00000010 [  2] _func_unique_1
 ; CHECK-ARM64-MAP-NEXT: 0x00000010 [  2] _func_2identical_v1
 ; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_unique_2_canmerge
@@ -57,9 +60,9 @@
 ; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_call_thunked_2_merge
 ; CHECK-ARM64-MAP-NEXT: 0x00000034 [  2] _call_all_funcs
 ; CHECK-ARM64-MAP-NEXT: 0x00000050 [  2] _take_func_addr
-; CHECK-ARM64-MAP-NEXT: 0x00000004 [  2] _func_2identical_v2
-; CHECK-ARM64-MAP-NEXT: 0x00000004 [  2] _func_3identical_v2
-; CHECK-ARM64-MAP-NEXT: 0x00000004 [  2] _func_3identical_v3
+; CHECK-ARM64-MAP-NEXT: 0x00000008 [  2] _func_2identical_v2
+; CHECK-ARM64-MAP-NEXT: 0x00000008 [  2] _func_3identical_v2
+; CHECK-ARM64-MAP-NEXT: 0x00000008 [  2] _func_3identical_v3
 
 ;--- a.cpp
 #define ATTR __attribute__((noinline)) extern "C"
