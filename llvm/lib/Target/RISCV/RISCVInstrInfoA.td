@@ -190,7 +190,7 @@ let Predicates = [HasAtomicLdSt, IsRV64] in {
 
 multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                   list<Predicate> ExtraPreds = []> {
-let Predicates = !listconcat([HasStdExtA, NotHasStdExtZtso], ExtraPreds) in {
+let Predicates = !listconcat([HasStdExtA, NoStdExtZtso], ExtraPreds) in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_monotonic"),
                   !cast<RVInst>(BaseInst), vt>;
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acquire"),
