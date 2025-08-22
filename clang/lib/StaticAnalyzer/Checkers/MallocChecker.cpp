@@ -3241,9 +3241,9 @@ static bool isSmartPtrCall(const CallEvent &Call) {
   return false;
 }
 
-static void collectDirectSmartOwningPtrFieldRegions(
+static void collectSmartOwningPtrFieldRegions(
     const MemRegion *Base, QualType RecQT, CheckerContext &C,
-    SmallVectorImpl<const MemRegion *> &Out) {
+    llvm::SmallPtrSetImpl<const MemRegion *> &Out) {
   if (!Base)
     return;
   const auto *CRD = RecQT->getAsCXXRecordDecl();
@@ -3256,7 +3256,7 @@ static void collectDirectSmartOwningPtrFieldRegions(
       continue;
     SVal L = C.getState()->getLValue(FD, loc::MemRegionVal(Base));
     if (const MemRegion *FR = L.getAsRegion())
-      Out.push_back(FR);
+      Out.insert(FR);
   }
 
   // Collect fields from base classes
@@ -3268,8 +3268,8 @@ static void collectDirectSmartOwningPtrFieldRegions(
                                            BaseSpec.isVirtual());
       if (const MemRegion *BaseRegion = BaseL.getAsRegion()) {
         // Recursively collect fields from this base class
-        collectDirectSmartOwningPtrFieldRegions(BaseRegion, BaseSpec.getType(),
-                                                C, Out);
+        collectSmartOwningPtrFieldRegions(BaseRegion, BaseSpec.getType(), C,
+                                          Out);
       }
     }
   }
@@ -3314,7 +3314,7 @@ ProgramStateRef MallocChecker::handleSmartPointerRelatedCalls(
   }
 
   // Handle smart pointer fields in by-value record arguments
-  SmallVector<const MemRegion *, 8> SmartPtrFieldRoots;
+  llvm::SmallPtrSet<const MemRegion *, 8> SmartPtrFieldRoots;
   for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
     const Expr *AE = Call.getArgExpr(I);
     if (!AE)
@@ -3334,14 +3334,16 @@ ProgramStateRef MallocChecker::handleSmartPointerRelatedCalls(
     }
 
     // Collect direct smart owning pointer field regions
-    collectDirectSmartOwningPtrFieldRegions(ArgRegion, AE->getType(), C,
-                                            SmartPtrFieldRoots);
+    collectSmartOwningPtrFieldRegions(ArgRegion, AE->getType(), C,
+                                      SmartPtrFieldRoots);
   }
 
   // Escape symbols reachable from smart pointer fields
   if (!SmartPtrFieldRoots.empty()) {
+    SmallVector<const MemRegion *, 8> SmartPtrFieldRootsVec(
+        SmartPtrFieldRoots.begin(), SmartPtrFieldRoots.end());
     State = EscapeTrackedCallback::EscapeTrackedRegionsReachableFrom(
-        SmartPtrFieldRoots, State);
+        SmartPtrFieldRootsVec, State);
   }
 
   return State;
