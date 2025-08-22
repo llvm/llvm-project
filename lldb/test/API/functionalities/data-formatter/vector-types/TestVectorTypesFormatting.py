@@ -15,10 +15,7 @@ class VectorTypesFormattingTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// break here")
 
-    # rdar://problem/14035604
-    @skipIf(compiler="gcc")  # gcc don't have ext_vector_type extension
-    def test_with_run_command(self):
-        """Check that vector types format properly"""
+    def setup_and_run_to_breakpoint(self):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
@@ -43,8 +40,7 @@ class VectorTypesFormattingTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        pass  # my code never fails
-
+    def vector_formatting_test(self, allow_jit=True):
         v = self.frame().FindVariable("v")
         v.SetPreferSyntheticValue(True)
         v.SetFormat(lldb.eFormatVectorOfFloat32)
@@ -66,15 +62,30 @@ class VectorTypesFormattingTestCase(TestBase):
             v.GetChildAtIndex(3).GetData().float[0], 2.50, "child 3 == 2.50"
         )
 
+        jit_flag = "" if allow_jit else " --allow-jit false"
         self.expect(
-            "expr -f int16_t[] -- v",
+            f"expr{jit_flag} -f int16_t[] -- v",
             substrs=["(0, 16288, 0, 16288, 0, 16416, 0, 16416)"],
         )
         self.expect(
-            "expr -f uint128_t[] -- v",
+            f"expr{jit_flag} -f uint128_t[] -- v",
             substrs=["(85236745249553456609335044694184296448)"],
         )
-        self.expect("expr -f float32[] -- v", substrs=["(1.25, 1.25, 2.5, 2.5)"])
+        self.expect(
+            f"expr{jit_flag} -f float32[] -- v", substrs=["(1.25, 1.25, 2.5, 2.5)"]
+        )
+
+        self.expect(f"expr{jit_flag} -- f4", substrs=["(1.25, 1.25, 2.5, 2.5)"])
+
+        self.expect(f"expr{jit_flag} -- float4(0)", substrs=["(0, 0, 0, 0)"])
+        self.expect(f"expr{jit_flag} -- float4(1)", substrs=["(1, 1, 1, 1)"])
+        self.expect(
+            f"expr{jit_flag} -- float4{{1.25, 2.5, 3.25, 4.5}}",
+            substrs=["(1.25, 2.5, 3.25, 4.5)"],
+        )
+        self.expect(
+            f"expr{jit_flag} -- float4{{0.1, 0.2, 0.3, 0.4}}[0]", substrs=["0.1"]
+        )
 
         oldValue = v.GetChildAtIndex(0).GetValue()
         v.SetFormat(lldb.eFormatHex)
@@ -93,3 +104,15 @@ class VectorTypesFormattingTestCase(TestBase):
         self.assertEqual(f3.GetChildAtIndex(0).GetData().float[0], 1.25)
         self.assertEqual(f3.GetChildAtIndex(1).GetData().float[0], 2.50)
         self.assertEqual(f3.GetChildAtIndex(2).GetData().float[0], 2.50)
+
+    # rdar://problem/14035604
+    @skipIf(compiler="gcc")  # gcc don't have ext_vector_type extension
+    def test_with_run_command(self):
+        self.setup_and_run_to_breakpoint()
+        self.runCmd("settings set plugin.jit-loader.gdb.enable on")
+        self.vector_formatting_test()
+
+    @skipIf(compiler="gcc")  # gcc don't have ext_vector_type extension
+    def test_with_run_command_no_jit(self):
+        self.setup_and_run_to_breakpoint()
+        self.vector_formatting_test(allow_jit=False)

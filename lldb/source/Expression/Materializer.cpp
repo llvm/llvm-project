@@ -1369,6 +1369,24 @@ public:
       return;
     }
 
+    // Check for unsupported vector element ordering
+    if (m_register_info.encoding == lldb::eEncodingVector) {
+      ExecutionContext exe_ctx;
+      frame_sp->CalculateExecutionContext(exe_ctx);
+      if (exe_ctx.GetTargetPtr()) {
+        const auto *arch_plugin =
+            exe_ctx.GetTargetRef().GetArchitecturePlugin();
+        if (arch_plugin &&
+            arch_plugin->GetVectorElementOrder() == lldb::eByteOrderBig) {
+          err = Status::FromErrorStringWithFormat(
+              "unable to materialize register %s: vector registers with "
+              "big-endian element ordering are not yet supported",
+              m_register_info.name);
+          return;
+        }
+      }
+    }
+
     lldb::RegisterContextSP reg_context_sp = frame_sp->GetRegisterContext();
 
     if (!reg_context_sp->ReadRegister(&m_register_info, reg_value)) {
@@ -1429,6 +1447,24 @@ public:
           "couldn't dematerialize register %s without a stack frame",
           m_register_info.name);
       return;
+    }
+
+    // Check for unsupported vector element ordering
+    if (m_register_info.encoding == lldb::eEncodingVector) {
+      ExecutionContext exe_ctx;
+      frame_sp->CalculateExecutionContext(exe_ctx);
+      if (exe_ctx.GetTargetPtr()) {
+        const auto *arch_plugin =
+            exe_ctx.GetTargetRef().GetArchitecturePlugin();
+        if (arch_plugin &&
+            arch_plugin->GetVectorElementOrder() == lldb::eByteOrderBig) {
+          err = Status::FromErrorStringWithFormat(
+              "unable to dematerialize register %s: vector registers with "
+              "big-endian element ordering are not yet supported",
+              m_register_info.name);
+          return;
+        }
+      }
     }
 
     lldb::RegisterContextSP reg_context_sp = frame_sp->GetRegisterContext();

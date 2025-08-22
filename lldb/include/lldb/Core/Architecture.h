@@ -141,11 +141,11 @@ public:
 
   /// Get the vector element order for this architecture. This determines how
   /// vector elements are indexed. This matters in a few places such as reading/
-  /// writing LLVM-IR values to/from target memory. Some architectures use
-  /// little-endian element ordering where element 0 is at the lowest address
+  /// writing LLVM-IR values to/from target registers. Some architectures use
+  /// little-endian element ordering where element 0 is at the lowest bits
   /// even when the architecture is otherwise big-endian (e.g. MIPS MSA, ARM
   /// NEON), but some architectures like PowerPC may use big-endian element
-  /// ordering where element 0 is at the highest address.
+  /// ordering where element 0 is at the highest bits.
   virtual lldb::ByteOrder GetVectorElementOrder() const {
     return lldb::eByteOrderLittle;
   }
