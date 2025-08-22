@@ -1296,8 +1296,14 @@ def LoadOp : MemRef_Op<"load",
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
     A value of 0 indicates no specific alignment requirement.
-    Example:
 
+    An optional `alias` attribute allows to specify the aliasing metadata for
+    the op and works in conjunction with `alias_domain_scope` op. If attribute
+    is missing op is assumed to potentially alias with any other load or store
+    op. Dropping this attribute during the transformations is safe and can only
+    result in missing optimizations.
+
+    Example:
     ```mlir
     %0 = memref.load %A[%a, %b] : memref<8x?xi32, #layout, memspace0>
     ```
@@ -2034,8 +2040,14 @@ def MemRef_StoreOp : MemRef_Op<"store",
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
     A value of 0 indicates no specific alignment requirement.
-    Example:
 
+    An optional `alias` attribute allows to specify the aliasing metadata for
+    the op and works in conjunction with `alias_domain_scope` op. If attribute
+    is missing op is assumed to potentially alias with any other load or store
+    op. Dropping this attribute during the transformations is safe and can only
+    result in missing optimizations.
+
+    Example:
     ```mlir
     memref.store %val, %A[%a, %b] : memref<8x?xi32, #layout, memspace0>
     ```
