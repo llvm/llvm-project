@@ -937,17 +937,6 @@ bool ARMAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
                                           const MCValue &Target) {
   const MCSymbol *Sym = Target.getAddSym();
   const unsigned FixupKind = Fixup.getKind();
-  if (FixupKind == ARM::fixup_arm_thumb_bl) {
-    assert(Sym && "How did we resolve this?");
-
-    // If the symbol is external the linker will handle it.
-    // FIXME: Should we handle it as an optimization?
-
-    // If the symbol is out of range, produce a relocation and hope the
-    // linker can handle it. GNU AS produces an error in this case.
-    if (Sym->isExternal())
-      return true;
-  }
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
   if (needsInterworking(*Asm, Sym, Fixup.getKind()))
