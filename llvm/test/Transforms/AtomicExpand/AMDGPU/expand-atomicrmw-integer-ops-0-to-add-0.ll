@@ -69,10 +69,40 @@ define i32 @test_atomicrmw_or_0_as999_system(ptr addrspace(999) %ptr) {
 
 ; Leave as-is, only system scope should be changed.
 define i32 @test_atomicrmw_or_0_global_agent(ptr addrspace(1) %ptr) {
-; CHECK-LABEL: define i32 @test_atomicrmw_or_0_global_agent(
-; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 0 syncscope("agent") seq_cst, align 4
-; CHECK-NEXT:    ret i32 [[RES]]
+; GFX803-LABEL: define i32 @test_atomicrmw_or_0_global_agent(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 syncscope("agent") seq_cst, align 4
+; GFX803-NEXT:    ret i32 [[RES]]
+;
+; GFX900-LABEL: define i32 @test_atomicrmw_or_0_global_agent(
+; GFX900-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
+; GFX900-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 syncscope("agent") seq_cst, align 4
+; GFX900-NEXT:    ret i32 [[RES]]
+;
+; GFX90A-LABEL: define i32 @test_atomicrmw_or_0_global_agent(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 syncscope("agent") seq_cst, align 4
+; GFX90A-NEXT:    ret i32 [[RES]]
+;
+; GFX10-LABEL: define i32 @test_atomicrmw_or_0_global_agent(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 syncscope("agent") seq_cst, align 4
+; GFX10-NEXT:    ret i32 [[RES]]
+;
+; GFX11-LABEL: define i32 @test_atomicrmw_or_0_global_agent(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 syncscope("agent") seq_cst, align 4
+; GFX11-NEXT:    ret i32 [[RES]]
+;
+; GFX942-LABEL: define i32 @test_atomicrmw_or_0_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 0 syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
+;
+; GFX12-LABEL: define i32 @test_atomicrmw_or_0_global_agent(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 0 syncscope("agent") seq_cst, align 4
+; GFX12-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i32 0 syncscope("agent") seq_cst
   ret i32 %res
@@ -164,7 +194,7 @@ define i32 @test_atomicrmw_xor_0_global_system(ptr addrspace(1) %ptr) {
 define i32 @test_atomicrmw_or_0_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_or_0_global_system__amdgpu_no_fine_grained_memory(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -174,7 +204,7 @@ define i32 @test_atomicrmw_or_0_global_system__amdgpu_no_fine_grained_memory(ptr
 define i32 @test_atomicrmw_or_0_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_or_0_global_system__amdgpu_no_remote_memory(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.remote.memory !0
@@ -184,7 +214,7 @@ define i32 @test_atomicrmw_or_0_global_system__amdgpu_no_remote_memory(ptr addrs
 define i32 @test_atomicrmw_or_0_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_or_0_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -194,7 +224,7 @@ define i32 @test_atomicrmw_or_0_global_system__amdgpu_no_fine_grained_memory__am
 define i32 @test_atomicrmw_xor_0_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_xor_0_global_system__amdgpu_no_fine_grained_memory(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw xor ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -204,7 +234,7 @@ define i32 @test_atomicrmw_xor_0_global_system__amdgpu_no_fine_grained_memory(pt
 define i32 @test_atomicrmw_xor_0_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_xor_0_global_system__amdgpu_no_remote_memory(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw xor ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.remote.memory !0
@@ -214,7 +244,7 @@ define i32 @test_atomicrmw_xor_0_global_system__amdgpu_no_remote_memory(ptr addr
 define i32 @test_atomicrmw_xor_0_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_xor_0_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw xor ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -224,7 +254,7 @@ define i32 @test_atomicrmw_xor_0_global_system__amdgpu_no_fine_grained_memory__a
 define i32 @test_atomicrmw_sub_0_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_sub_0_global_system__amdgpu_no_fine_grained_memory(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw sub ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.fine.grained.memory !0
@@ -234,7 +264,7 @@ define i32 @test_atomicrmw_sub_0_global_system__amdgpu_no_fine_grained_memory(pt
 define i32 @test_atomicrmw_sub_0_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_sub_0_global_system__amdgpu_no_remote_memory(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw sub ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.remote.memory !0
@@ -244,7 +274,7 @@ define i32 @test_atomicrmw_sub_0_global_system__amdgpu_no_remote_memory(ptr addr
 define i32 @test_atomicrmw_sub_0_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_sub_0_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw sub ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
@@ -342,12 +372,3 @@ define i32 @test_atomicrmw_sub_0_global_agent__amdgpu_no_fine_grained_memory__am
 }
 
 !0 = !{}
-
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX10: {{.*}}
-; GFX11: {{.*}}
-; GFX12: {{.*}}
-; GFX803: {{.*}}
-; GFX900: {{.*}}
-; GFX90A: {{.*}}
-; GFX942: {{.*}}
