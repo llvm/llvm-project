@@ -17029,8 +17029,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   // fadd (G, (fma A, B, (fma (C, D, (fmul (E, F)))))) -->
   // fma A, B, (fma C, D, fma (E, F, G)).
   // This requires reassociation because it changes the order of operations.
-  bool CanReassociate =
-      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
+  bool CanReassociate = N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
     SDValue FMA, E;
     if (isFusedOp(N0) && N0.hasOneUse()) {
@@ -17696,7 +17695,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // If 'unsafe math' or reassoc and nsz, fold lots of things.
   // TODO: break out portions of the transformations below for which Unsafe is
   //       considered and which do not require both nsz and reassoc
-  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
+  if ((Options.NoSignedZerosFPMath ||
        (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
       AllowNewConst) {
     // fadd (fadd x, c1), c2 -> fadd x, c1 + c2
@@ -17783,7 +17782,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     }
   } // enable-unsafe-fp-math && AllowNewConst
 
-  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
+  if ((Options.NoSignedZerosFPMath ||
        (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))) {
     // Fold fadd(vecreduce(x), vecreduce(y)) -> vecreduce(fadd(x, y))
     if (SDValue SD = reassociateReduction(ISD::VECREDUCE_FADD, ISD::FADD, DL,
@@ -17886,7 +17885,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
     }
   }
 
-  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
+  if ((Options.NoSignedZerosFPMath ||
        (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
       N1.getOpcode() == ISD::FADD) {
     // X - (X + Y) -> -Y
@@ -18026,7 +18025,6 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, true);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  const TargetOptions &Options = DAG.getTarget().Options;
   const SDNodeFlags Flags = N->getFlags();
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
@@ -18050,7 +18048,7 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
-  if (Options.UnsafeFPMath || Flags.hasAllowReassociation()) {
+  if (Flags.hasAllowReassociation()) {
     // fmul (fmul X, C1), C2 -> fmul X, C1 * C2
     if (DAG.isConstantFPBuildVectorOrConstantFP(N1) &&
         N0.getOpcode() == ISD::FMUL) {
@@ -18227,8 +18225,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
      !DAG.isConstantFPBuildVectorOrConstantFP(N1))
     return matcher.getNode(ISD::FMA, DL, VT, N1, N0, N2);
 
-  bool CanReassociate =
-      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
+  bool CanReassociate = N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
     // (fma x, c1, (fmul x, c2)) -> (fmul x, c1+c2)
     if (matcher.match(N2, ISD::FMUL) && N0 == N2.getOperand(0) &&
@@ -18323,9 +18320,8 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   // TODO: Limit this transform based on optsize/minsize - it always creates at
   //       least 1 extra instruction. But the perf win may be substantial enough
   //       that only minsize should restrict this.
-  bool UnsafeMath = DAG.getTarget().Options.UnsafeFPMath;
   const SDNodeFlags Flags = N->getFlags();
-  if (LegalDAG || (!UnsafeMath && !Flags.hasAllowReciprocal()))
+  if (LegalDAG || !Flags.hasAllowReciprocal())
     return SDValue();
 
   // Skip if current node is a reciprocal/fneg-reciprocal.
@@ -18362,7 +18358,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
 
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
-      if (UnsafeMath || U->getFlags().hasAllowReciprocal())
+      if (U->getFlags().hasAllowReciprocal())
         Users.insert(U);
     }
   }
