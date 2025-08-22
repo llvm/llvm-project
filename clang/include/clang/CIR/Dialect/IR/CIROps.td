@@ -2985,12 +2985,13 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
 
-    The `range` attribute is used to select the algorithm used when the
-    operation is lowered to the LLVM dialect. For multiplication, 'improved',
-    'promoted', and 'basic' are all handled equivalently, producing the
-    algebraic formula with no special handling for NaN value. If 'full' is
-    used, a runtime-library function is called if one of the intermediate
-    calculations produced a NaN value.
+    For complex types with floating-point components, the `range` attribute
+    specifies the algorithm to be used when the operation is lowered to
+    the LLVM dialect. For multiplication, 'improved', 'promoted', and 'basic'
+    are all handled equivalently, producing the algebraic formula with no
+    special handling for NaN value. If 'full' is used, a runtime-library
+    function is called if one of the intermediate calculations produced
+    a NaN value.
 
     Example:
 
@@ -3021,14 +3022,14 @@ def CIR_ComplexDivOp : CIR_Op<"complex.div", [
     The `cir.complex.div` operation takes two complex numbers and returns
     their quotient.
 
-    The `range` attribute is used to select the algorithm used when
-    the operation is lowered to the LLVM dialect. For division, 'improved'
-    producing the Smith's algorithms for Complex division with no special
-    handling for NaN values. If 'promoted' is used, the values are promoted
-    to a higher precision type, if possible,  and the calculation is performed
-    using the algebraic formula. We only fall back on Smith's algorithm when
-    the target does not support a higher precision type. Also, this only
-    applies to floating-point types with no special handling for NaN values.
+    For complex types with floating-point components, the `range` attribute
+    specifies the algorithm to be used when the operation is lowered to
+    the LLVM dialect. For division, 'improved' produces Smith's algorithms for
+    Complex division with no additional handling for NaN values. If 'promoted'
+    is used, the values are promoted to a higher precision type, if possible,
+    and the calculation is performed using the algebraic formula, with
+    no additional handling for NaN values. We fall back on Smith's algorithm
+    when the target does not support a higher precision type.
     If 'full' is used, a runtime-library function is called if one of the
     intermediate calculations produced a NaN value. and for 'basic' algebraic
     formula with no special handling for the NaN value will be used.
