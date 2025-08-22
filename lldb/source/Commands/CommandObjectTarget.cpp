@@ -4515,6 +4515,10 @@ protected:
 
     ModuleSP frame_module_sp(
         frame->GetSymbolContext(eSymbolContextModule).module_sp);
+    if (!frame_module_sp)
+      process->GetLoadedDynamicLibrariesInfos();
+    frame_module_sp = frame->GetSymbolContext(eSymbolContextModule).module_sp;
+    
     if (!frame_module_sp) {
       result.AppendError("frame has no module");
       return false;

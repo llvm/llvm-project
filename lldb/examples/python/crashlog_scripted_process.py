@@ -1,4 +1,4 @@
-import os, json, struct, signal, uuid, tempfile
+import copy, os, json, struct, signal, uuid, tempfile
 
 from typing import Any, Dict
 
@@ -106,6 +106,12 @@ class CrashLogScriptedProcess(ScriptedProcess):
     def get_loaded_images(self):
         # TODO: Iterate over corefile_target modules and build a data structure
         # from it.
+        selected_thread = self.target.GetProcess().GetSelectedThread()
+        selected_thread_id = selected_thread.GetIndexID()
+        options = copy.deepcopy(self.options)
+        options.crashed_only = False
+        self.crashlog.load_images(options, self.loaded_images,
+                                  self.threads[selected_thread_id].backing_thread)
         return self.loaded_images
 
     def should_stop(self) -> bool:
@@ -157,9 +163,6 @@ class CrashLogScriptedThread(ScriptedThread):
         return frames
 
     def create_stackframes(self):
-        if not (self.originating_process.options.load_all_images or self.has_crashed):
-            return None
-
         if not self.backing_thread or not len(self.backing_thread.frames):
             return None
 
