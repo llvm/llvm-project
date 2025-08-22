@@ -872,7 +872,9 @@ def ConvertMemRefAliasAttributesToLLVMPass :
     Pass<"convert-memref-alias-attributes-to-llvm"> {
   let summary = "Convert MemRef aliasing attributes to LLVM";
   let description = [{
-    TBD
+    Convert MemRef dialect alising attibutes to LLVM dialect ones and erase
+    alias domain ops. This pass must be called before
+    `--finalize-memref-to-llvm`.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
