@@ -1573,14 +1573,6 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     return;
   }
 
-  // Reject -static-libgcc for now, we can deal with this when and if someone
-  // cares. This is useful in situations where someone wants to statically link
-  // something like libstdc++, and needs its runtime support routines.
-  if (const Arg *A = Args.getLastArg(options::OPT_static_libgcc)) {
-    getDriver().Diag(diag::err_drv_unsupported_opt) << A->getAsString(Args);
-    return;
-  }
-
   const SanitizerArgs &Sanitize = getSanitizerArgs(Args);
 
   if (!Sanitize.needsSharedRt()) {
@@ -2929,7 +2921,24 @@ void AppleMachO::AddGnuCPlusPlusStdlibLibArgs(
 
 void DarwinClang::AddGnuCPlusPlusStdlibLibArgs(
     const ArgList &Args, ArgStringList &CmdArgs) const {
-  if (!GCCInstallation.isValid()) {
+  if (GCCInstallation.isValid()) {
+    if (Args.hasArg(options::OPT_static_libstdcxx)) {
+      // ld64 doesn't support -Bstatic, so we need to find the actual library
+      for (const auto &Path : getFilePaths()) {
+        llvm::SmallString<128> UsrLibStdCxx(Path);
+        llvm::sys::path::append(UsrLibStdCxx, "libstdc++.a");
+        if (getVFS().exists(UsrLibStdCxx)) {
+          CmdArgs.push_back(Args.MakeArgString(UsrLibStdCxx));
+          // libstdcxx++ needs symbols from here
+          if (Args.hasArg(options::OPT_static_libgcc))
+            CmdArgs.push_back("-lgcc_eh");
+          else
+            CmdArgs.push_back("-lgcc_s.1");
+          return;
+        }
+      }
+    }
+  } else {
     // Unfortunately, -lstdc++ doesn't always exist in the standard search path;
     // it was previously found in the gcc lib dir. However, for all the Darwin
     // platforms we care about it was -lstdc++.6, so we search for that
