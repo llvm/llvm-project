@@ -11669,13 +11669,24 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_pmulhuw512:
   case clang::X86::BI__builtin_ia32_pmulhw128:
   case clang::X86::BI__builtin_ia32_pmulhw256:
-  case clang::X86::BI__builtin_ia32_pmulhw512: {
+  case clang::X86::BI__builtin_ia32_pmulhw512:
+  case clang::X86::BI__builtin_ia32_psllv2di:
+  case clang::X86::BI__builtin_ia32_psllv4di:
+  case clang::X86::BI__builtin_ia32_psllv4si:
+  case clang::X86::BI__builtin_ia32_psllv8si:
+  case clang::X86::BI__builtin_ia32_psrav4si:
+  case clang::X86::BI__builtin_ia32_psrav8si:
+  case clang::X86::BI__builtin_ia32_psrlv2di:
+  case clang::X86::BI__builtin_ia32_psrlv4di:
+  case clang::X86::BI__builtin_ia32_psrlv4si:
+  case clang::X86::BI__builtin_ia32_psrlv8si:{
     APValue SourceLHS, SourceRHS;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
       return false;
 
     QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
     unsigned SourceLen = SourceLHS.getVectorLength();
     SmallVector<APValue, 4> ResultElements;
     ResultElements.reserve(SourceLen);
@@ -11687,12 +11698,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       case Builtin::BI__builtin_elementwise_add_sat:
         ResultElements.push_back(APValue(
             APSInt(LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS),
-                   DestEltTy->isUnsignedIntegerOrEnumerationType())));
+                   DestUnsigned)));
         break;
       case Builtin::BI__builtin_elementwise_sub_sat:
         ResultElements.push_back(APValue(
             APSInt(LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS),
-                   DestEltTy->isUnsignedIntegerOrEnumerationType())));
+                   DestUnsigned)));
         break;
       case clang::X86::BI__builtin_ia32_pmulhuw128:
       case clang::X86::BI__builtin_ia32_pmulhuw256:
@@ -11705,6 +11716,40 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       case clang::X86::BI__builtin_ia32_pmulhw512:
         ResultElements.push_back(APValue(APSInt(llvm::APIntOps::mulhs(LHS, RHS),
                                                 /*isUnsigned=*/false)));
+        break;
+      case clang::X86::BI__builtin_ia32_psllv2di:
+      case clang::X86::BI__builtin_ia32_psllv4di:
+      case clang::X86::BI__builtin_ia32_psllv4si:
+      case clang::X86::BI__builtin_ia32_psllv8si:
+        if (RHS.uge(RHS.getBitWidth())) {
+          ResultElements.push_back(
+              APValue(APSInt(APInt::getZero(RHS.getBitWidth()), DestUnsigned)));
+          break;
+        }
+        ResultElements.push_back(
+            APValue(APSInt(LHS.shl(RHS.getZExtValue()), DestUnsigned)));
+        break;
+      case clang::X86::BI__builtin_ia32_psrav4si:
+      case clang::X86::BI__builtin_ia32_psrav8si:
+        if (RHS.uge(RHS.getBitWidth())) {
+          ResultElements.push_back(
+              APValue(APSInt(LHS.ashr(RHS.getBitWidth() - 1), DestUnsigned)));
+          break;
+        }
+        ResultElements.push_back(
+            APValue(APSInt(LHS.ashr(RHS.getZExtValue()), DestUnsigned)));
+        break;
+      case clang::X86::BI__builtin_ia32_psrlv2di:
+      case clang::X86::BI__builtin_ia32_psrlv4di:
+      case clang::X86::BI__builtin_ia32_psrlv4si:
+      case clang::X86::BI__builtin_ia32_psrlv8si:
+        if (RHS.uge(RHS.getBitWidth())) {
+          ResultElements.push_back(
+              APValue(APSInt(APInt::getZero(RHS.getBitWidth()), DestUnsigned)));
+          break;
+        }
+        ResultElements.push_back(
+            APValue(APSInt(LHS.lshr(RHS.getZExtValue()), DestUnsigned)));
         break;
       }
     }
