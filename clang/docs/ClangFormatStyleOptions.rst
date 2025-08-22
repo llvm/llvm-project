@@ -2730,7 +2730,7 @@ the configuration (without a prefix: ``Auto``).
 
 **BreakAfterOpenBracketBracedList** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketBracedList>`
   Force break after the left bracket of a braced initializer list (when
-   ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
   limit.
 
   .. code-block:: c++
