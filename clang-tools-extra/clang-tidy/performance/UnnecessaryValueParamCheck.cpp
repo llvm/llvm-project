@@ -21,16 +21,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-namespace {
-
-std::string paramNameOrIndex(StringRef Name, size_t Index) {
+static std::string paramNameOrIndex(StringRef Name, size_t Index) {
   return (Name.empty() ? llvm::Twine('#') + llvm::Twine(Index + 1)
                        : llvm::Twine('\'') + Name + llvm::Twine('\''))
       .str();
 }
 
-bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
-                         ASTContext &Context) {
+static bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
+                                ASTContext &Context) {
   auto Matches = match(
       traverse(TK_AsIs,
                decl(forEachDescendant(declRefExpr(
@@ -40,8 +38,6 @@ bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
       Decl, Context);
   return Matches.empty();
 }
-
-} // namespace
 
 UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
     StringRef Name, ClangTidyContext *Context)

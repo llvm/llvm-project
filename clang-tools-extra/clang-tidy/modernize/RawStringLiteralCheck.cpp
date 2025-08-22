@@ -19,9 +19,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-namespace {
-
-bool containsEscapes(StringRef HayStack, StringRef Escapes) {
+static bool containsEscapes(StringRef HayStack, StringRef Escapes) {
   size_t BackSlash = HayStack.find('\\');
   if (BackSlash == StringRef::npos)
     return false;
@@ -35,16 +33,16 @@ bool containsEscapes(StringRef HayStack, StringRef Escapes) {
   return true;
 }
 
-bool isRawStringLiteral(StringRef Text) {
+static bool isRawStringLiteral(StringRef Text) {
   // Already a raw string literal if R comes before ".
   const size_t QuotePos = Text.find('"');
   assert(QuotePos != StringRef::npos);
   return (QuotePos > 0) && (Text[QuotePos - 1] == 'R');
 }
 
-bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
-                               const StringLiteral *Literal,
-                               const CharsBitSet &DisallowedChars) {
+static bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
+                                      const StringLiteral *Literal,
+                                      const CharsBitSet &DisallowedChars) {
   // FIXME: Handle L"", u8"", u"" and U"" literals.
   if (!Literal->isOrdinary())
     return false;
@@ -64,13 +62,11 @@ bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
   return containsEscapes(Text, R"('\"?x01)");
 }
 
-bool containsDelimiter(StringRef Bytes, const std::string &Delimiter) {
+static bool containsDelimiter(StringRef Bytes, const std::string &Delimiter) {
   return Bytes.find(Delimiter.empty()
                         ? std::string(R"lit()")lit")
                         : (")" + Delimiter + R"(")")) != StringRef::npos;
 }
-
-} // namespace
 
 RawStringLiteralCheck::RawStringLiteralCheck(StringRef Name,
                                              ClangTidyContext *Context)

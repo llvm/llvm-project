@@ -308,8 +308,7 @@ XRayPatchingStatus controlPatchingObjectUnchecked(bool Enable, int32_t ObjId) {
     return XRayPatchingStatus::NOT_INITIALIZED;
 
   if (Verbosity())
-    Report("Patching object %d with %d functions.\n", ObjId,
-           (int)InstrMap.Entries);
+    Report("Patching object %d with %d functions.\n", ObjId, InstrMap.Entries);
 
   // Check if the corresponding DSO has been unloaded.
   if (!InstrMap.Loaded) {

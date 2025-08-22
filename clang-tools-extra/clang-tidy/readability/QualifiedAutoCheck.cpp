@@ -28,8 +28,11 @@ AST_MATCHER_P(QualType, hasUnqualifiedType,
 
 enum class Qualifier { Const, Volatile, Restrict };
 
-std::optional<Token> findQualToken(const VarDecl *Decl, Qualifier Qual,
-                                   const MatchFinder::MatchResult &Result) {
+} // namespace
+
+static std::optional<Token>
+findQualToken(const VarDecl *Decl, Qualifier Qual,
+              const MatchFinder::MatchResult &Result) {
   // Since either of the locs can be in a macro, use `makeFileCharRange` to be
   // sure that we have a consistent `CharSourceRange`, located entirely in the
   // source file.
@@ -58,7 +61,7 @@ std::optional<Token> findQualToken(const VarDecl *Decl, Qualifier Qual,
                                           *Result.SourceManager);
 }
 
-std::optional<SourceRange>
+static std::optional<SourceRange>
 getTypeSpecifierLocation(const VarDecl *Var,
                          const MatchFinder::MatchResult &Result) {
   SourceRange TypeSpecifier(
@@ -73,8 +76,8 @@ getTypeSpecifierLocation(const VarDecl *Var,
   return TypeSpecifier;
 }
 
-std::optional<SourceRange> mergeReplacementRange(SourceRange &TypeSpecifier,
-                                                 const Token &ConstToken) {
+static std::optional<SourceRange>
+mergeReplacementRange(SourceRange &TypeSpecifier, const Token &ConstToken) {
   if (TypeSpecifier.getBegin().getLocWithOffset(-1) == ConstToken.getEndLoc()) {
     TypeSpecifier.setBegin(ConstToken.getLocation());
     return std::nullopt;
@@ -86,20 +89,18 @@ std::optional<SourceRange> mergeReplacementRange(SourceRange &TypeSpecifier,
   return SourceRange(ConstToken.getLocation(), ConstToken.getEndLoc());
 }
 
-bool isPointerConst(QualType QType) {
+static bool isPointerConst(QualType QType) {
   QualType Pointee = QType->getPointeeType();
   assert(!Pointee.isNull() && "can't have a null Pointee");
   return Pointee.isConstQualified();
 }
 
-bool isAutoPointerConst(QualType QType) {
+static bool isAutoPointerConst(QualType QType) {
   QualType Pointee =
       cast<AutoType>(QType->getPointeeType().getTypePtr())->desugar();
   assert(!Pointee.isNull() && "can't have a null Pointee");
   return Pointee.isConstQualified();
 }
-
-} // namespace
 
 QualifiedAutoCheck::QualifiedAutoCheck(StringRef Name,
                                        ClangTidyContext *Context)
