@@ -2214,14 +2214,6 @@ static void relocationViaAlloca(
 #endif
 }
 
-/// Implement a unique function which doesn't require we sort the input
-/// vector.  Doing so has the effect of changing the output of a couple of
-/// tests in ways which make them less useful in testing fused safepoints.
-template <typename T> static void unique_unsorted(SmallVectorImpl<T> &Vec) {
-  SmallPtrSet<T, 8> Seen;
-  erase_if(Vec, [&](const T &V) { return !Seen.insert(V).second; });
-}
-
 /// Insert holders so that each Value is obviously live through the entire
 /// lifetime of the call.
 static void insertUseHolderAfter(CallBase *Call, const ArrayRef<Value *> Values,
@@ -2839,15 +2831,17 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   }
   PointerToBase.clear();
 
-  // Do all the fixups of the original live variables to their relocated selves
-  SmallVector<Value *, 128> Live;
+  // Do all the fixups of the original live variables to their relocated selves.
+  // A SmallSetVector is used to collect live variables while retaining the
+  // order in which we add them, which is important for reproducible tests.
+  SmallSetVector<Value *, 16> Live;
   for (const PartiallyConstructedSafepointRecord &Info : Records) {
     // We can't simply save the live set from the original insertion.  One of
     // the live values might be the result of a call which needs a safepoint.
     // That Value* no longer exists and we need to use the new gc_result.
     // Thankfully, the live set is embedded in the statepoint (and updated), so
     // we just grab that.
-    llvm::append_range(Live, Info.StatepointToken->gc_live());
+    Live.insert_range(Info.StatepointToken->gc_live());
 #ifndef NDEBUG
     // Do some basic validation checking on our liveness results before
     // performing relocation.  Relocation can and will turn mistakes in liveness
@@ -2867,7 +2861,6 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     }
 #endif
   }
-  unique_unsorted(Live);
 
 #ifndef NDEBUG
   // Validation check
@@ -2876,7 +2869,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
            "must be a gc pointer type");
 #endif
 
-  relocationViaAlloca(F, DT, Live, Records);
+  relocationViaAlloca(F, DT, Live.getArrayRef(), Records);
   return !Records.empty();
 }
 
