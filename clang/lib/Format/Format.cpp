@@ -1625,6 +1625,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakAfterOpenBracketBracedList = false;
+  LLVMStyle.BreakAfterOpenBracketFunction = false;
   LLVMStyle.BreakAfterOpenBracketIf = false;
   LLVMStyle.BreakAfterOpenBracketLoop = false;
   LLVMStyle.BreakAfterOpenBracketSwitch = false;
@@ -1633,6 +1634,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
   LLVMStyle.BreakBeforeCloseBracketBracedList = false;
+  LLVMStyle.BreakBeforeCloseBracketFunction = false;
   LLVMStyle.BreakBeforeCloseBracketIf = false;
   LLVMStyle.BreakBeforeCloseBracketLoop = false;
   LLVMStyle.BreakBeforeCloseBracketSwitch = false;
@@ -1900,8 +1902,8 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.SpaceAfterCStyleCast = true;
     GoogleStyle.SpacesBeforeTrailingComments = 1;
   } else if (Language == FormatStyle::LK_JavaScript) {
-    GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
     GoogleStyle.BreakAfterOpenBracketBracedList = true;
+    GoogleStyle.BreakAfterOpenBracketFunction = true;
     GoogleStyle.BreakAfterOpenBracketIf = true;
     GoogleStyle.BreakAfterOpenBracketLoop = false;
     GoogleStyle.BreakAfterOpenBracketSwitch = false;

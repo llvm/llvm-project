@@ -358,10 +358,10 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
 
   // Allow breaking before the right parens with block indentation if there was
   // a break after the left parens, which is tracked by BreakBeforeClosingParen.
-  bool might_break_before =
-      Style.BreakBeforeCloseBracketIf || Style.BreakBeforeCloseBracketLoop ||
-      Style.BreakBeforeCloseBracketSwitch ||
-      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
+  bool might_break_before = Style.BreakBeforeCloseBracketFunction ||
+                            Style.BreakBeforeCloseBracketIf ||
+                            Style.BreakBeforeCloseBracketLoop ||
+                            Style.BreakBeforeCloseBracketSwitch;
 
   if (might_break_before && Current.is(tok::r_paren))
     return CurrentState.BreakBeforeClosingParen;
@@ -855,8 +855,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return Style.BreakAfterOpenBracketLoop;
     if (Tok.Previous->is(tok::kw_switch))
       return Style.BreakAfterOpenBracketSwitch;
-    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
-        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+    if (Style.BreakAfterOpenBracketFunction) {
       return !Tok.Previous->is(TT_CastRParen) &&
              !(Style.isJavaScript() && Tok.is(Keywords.kw_await));
     }
@@ -1301,7 +1300,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
             Style.BreakBeforeCloseBracketSwitch;
       } else {
         CurrentState.BreakBeforeClosingParen =
-            Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
+            Style.BreakBeforeCloseBracketFunction;
       }
     }
   }
@@ -1446,16 +1445,13 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
-  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
-      Current.is(tok::r_paren) && State.Stack.size() > 1) {
-    return State.Stack[State.Stack.size() - 2].LastSpace;
-  }
   if (Style.BreakBeforeCloseBracketBracedList && Current.is(tok::r_brace) &&
       Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit) &&
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
-  if ((Style.BreakBeforeCloseBracketIf || Style.BreakBeforeCloseBracketLoop ||
+  if ((Style.BreakBeforeCloseBracketFunction ||
+       Style.BreakBeforeCloseBracketIf || Style.BreakBeforeCloseBracketLoop ||
        Style.BreakBeforeCloseBracketSwitch) &&
       Current.is(tok::r_paren) && State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
