@@ -29,7 +29,7 @@ static void ProtectGap(uptr addr, uptr size) {
       Printf("protect_shadow_gap=0:"
              " not protecting shadow gap, allocating gap's shadow\n"
              "|| `[%p, %p]` || ShadowGap's shadow ||\n",
-             (void *)GapShadowBeg, (void *)GapShadowEnd);
+             GapShadowBeg, GapShadowEnd);
     ReserveShadowMemoryRange(GapShadowBeg, GapShadowEnd,
                              "unprotected gap shadow");
     return;
