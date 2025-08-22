@@ -100,29 +100,72 @@ class AggregateMetric:
     workflow_id: int
 
 
-def create_and_append_libcxx_aggregates(
-    workflow_metrics: list[JobMetrics]) -> list[JobMetrics,AggregateMetric]:
-    """Find libc++ JobMetric entries and create aggregate metrics for them.
+def _construct_aggregate(ag_name: str, job_list: list[JobMetrics]) -> AggregateMetric:
+    """Create a libc++ AggregateMetric from a list of libc++ JobMetrics
 
-    Args:
-      workflow_metrics: A list of JobMetrics entries collected so far.
-
-    Returns:
-      Returns a list of JobMetrics and AggregateMetric entries. It should
-        be the input list with the newly create AggregateMetric entries
-        appended to it.
-
-    Sort the libc++ JobMetric entries by workflow id, and for each workflow
-    id group them by stages.  Create an aggreate metric for each stage for each
-    unique workflow id.  Append each aggregate metric to the workflow_metrics
-    list.
-
-    How aggreates are computed:
+    How aggregates are computed:
     queue time: Time from when first job in group is created until last job in
                 group has started.
     run time: Time from when first job in group starts running until last job
               in group finishes running.
-    status: logical 'or' of all the job statuses in the group.
+    status: logical 'and' of all the job statuses in the group.
+
+    Args:
+      ag_name: The name for this particular AggregateMetric
+
+      job_list: This list of JobMetrics to be combined into the AggregateMetric.
+        The input list should contain all (and only!) the libc++ JobMetrics
+        for a particular stage and a particular workflow_id.
+
+    Returns:
+      Returns the AggregateMetric constructed from the inputs.
+    """
+
+    # Initialize the aggregate values
+    earliest_create = job_list[0].created_at_ns
+    earliest_start = job_list[0].started_at_ns
+    earliest_complete = job_list[0].completed_at_ns
+    latest_start = job_list[0].started_at_ns
+    latest_complete = job_list[0].completed_at_ns
+    ag_status = job_list[0].status
+    ag_workflow_id = job_list[0].workflow_id
+
+    # Go through rest of jobs for this workflow id, if any, updating stats
+    if len(job_list) > 1:
+        for job in job_list[1:]:
+            # Update the status
+            ag_status = ag_status and job.status
+            # Get the earliest & latest times
+            if job.created_at_ns < earliest_create:
+                earliest_create = job.created_at_ns
+            if job.completed_at_ns < earliest_complete:
+                earliest_complete = job.completed_at_ns
+            if job.started_at_ns > latest_start:
+                latest_start = job.started_at_ns
+            if job.started_at_ns < earliest_start:
+                earliest_start = job.started_at_ns
+            if job.completed_at_ns > latest_complete:
+                latest_complete = job.completed_at_ns
+
+    # Compute aggregate run time (in seconds, not ns)
+    ag_run_time = (latest_complete - earliest_start) / 1000000000
+    # Compute aggregate queue time (in seconds, not ns)
+    ag_queue_time = (latest_start - earliest_create) / 1000000000
+    # Append the aggregate metrics to the workflow metrics list.
+    aggregate = AggregateMetric(ag_name, ag_queue_time, ag_run_time, ag_status,
+                                latest_complete, ag_workflow_id)
+    return aggregate
+
+def create_and_append_libcxx_aggregates(workflow_metrics: list[JobMetrics]):
+    """Find libc++ JobMetric entries and create aggregate metrics for them.
+
+    Sort the libc++ JobMetric entries by workflow id, and for each workflow
+    id group them by stages. Call _construct_aggregate to reate an aggregate
+    metric for each stage for each unique workflow id. Append each aggregate
+    metric to the input workflow_metrics list.
+
+     Args:
+      workflow_metrics: A list of JobMetrics entries collected so far.
     """
     # Separate the jobs by workflow_id. Only look at JobMetrics entries.
     aggregate_data = dict()
@@ -154,58 +197,18 @@ def create_and_append_libcxx_aggregates(
             elif job.job_name.find('stage3') > 0:
                 stage3_jobs.append(job)
 
-        for job_list in [ stage1_jobs, stage2_jobs, stage3_jobs]:
-            if len(job_list) < 1:
-                  # No jobs in that stage this time around.
-                  continue
-
-            # Get the aggregate name.
-            ag_name = "github_libcxx_premerge_checks_"
-            if job_list[0].job_name.find('stage1') > 0:
-                ag_name = ag_name + "stage1_aggregate"
-            elif job_list[0].job_name.find('stage2') > 0:
-                ag_name = ag_name + "stage2_aggregate"
-            elif job_list[0].job_name.find('stage3') > 0:
-                ag_name = ag_name + "stage3_aggregate"
-            else:
-                ag_name = ag_name + "unknown_aggregate"
-
-            # Initialize the rest of the aggregate values
-            earliest_create = job_list[0].created_at_ns
-            earliest_start = job_list[0].started_at_ns
-            earliest_complete = job_list[0].completed_at_ns
-            latest_start = job_list[0].started_at_ns
-            latest_complete = job_list[0].completed_at_ns
-            ag_status = job_list[0].status
-
-            # Go through rest of jobs for this workflow id, updating stats
-            for job in job_list[1:]:
-                # Update the status
-                ag_status = ag_status and job.status
-                # Get the earliest & latest times
-                if job.created_at_ns < earliest_create:
-                    earliest_create = job.created_at_ns
-                if job.completed_at_ns < earliest_complete:
-                    earliest_complete = job.completed_at_ns
-                if job.started_at_ns > latest_start:
-                    latest_start = job.started_at_ns
-                if job.started_at_ns < earliest_start:
-                    earliest_start = job.started_at_ns
-                if job.completed_at_ns > latest_complete:
-                    latest_complete = job.completed_at_ns
-
-            # Compute aggregate run time (in seconds, not ns)
-            ag_run_time = (latest_complete - earliest_start) / 1000000000
-            # Compute aggregate queue time (in seconds, not ns)
-            ag_queue_time = (latest_start - earliest_create) / 1000000000
-            # Append the aggregate metrics to the workflow metrics list.
-            workflow_metrics.append(
-                AggregateMetric(
-                    ag_name, ag_queue_time, ag_run_time, ag_status,
-                    latest_complete, ag_workflow_id
-                )
-            )
-    return
+        if len(stage1_jobs) > 0:
+            aggregate = _construct_aggregate(
+                "github_libcxx_premerge_checks_stage1_aggregate", stage1_jobs)
+            workflow_metrics.append(aggregate)
+        if len(stage2_jobs) > 0:
+            aggregate = _construct_aggregate(
+                "github_libcxx_premerge_checks_stage2_aggregate", stage2_jobs)
+            workflow_metrics.append(aggregate)
+        if len(stage3_jobs) > 0:
+            aggregate = _construct_aggregate(
+                "github_libcxx_premerge_checks_stage3_aggregate", stage3_jobs)
+            workflow_metrics.append(aggregate)
 
 def clean_up_libcxx_job_name(old_name: str) -> str:
     """Convert libcxx job names to generically legal strings.
