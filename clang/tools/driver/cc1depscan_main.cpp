@@ -833,7 +833,12 @@ void ScanServer::start(bool Exclusive, ArrayRef<const char *> CASArgs) {
       return;
     SmallString<64> LLVMCasStorage;
     SmallString<64> CASPath;
-    CASOpts.getResolvedCASPath(CASPath);
+    if (auto Err = CASOpts.getResolvedCASPath(CASPath)) {
+      // Failure to resolve a cas path for validation is ignored, because any
+      // error will be reported when attempting to open the cas.
+      llvm::consumeError(std::move(Err));
+      return;
+    }
     ExitOnErr(llvm::cas::validateOnDiskUnifiedCASDatabasesIfNeeded(
         CASPath, /*CheckHash=*/true,
         /*AllowRecovery=*/true,

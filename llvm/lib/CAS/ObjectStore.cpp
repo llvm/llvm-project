@@ -336,8 +336,12 @@ createPluginCASImpl(const Twine &URL) {
     }
   }
 
-  if (OnDiskPath.empty())
-    OnDiskPath = getDefaultOnDiskCASPath();
+  if (OnDiskPath.empty()) {
+    auto Path = getDefaultOnDiskCASPath();
+    if (!Path)
+      return Path.takeError();
+    OnDiskPath = *Path;
+  }
 
   std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>> CASDBs;
   if (Error E = createPluginCASDatabases(PluginPath, OnDiskPath, PluginArgs)
@@ -372,7 +376,8 @@ cas::createCASFromIdentifier(StringRef Path) {
   // FIXME: some current default behavior.
   SmallString<256> PathBuf;
   if (Path == "auto") {
-    getDefaultOnDiskCASPath(PathBuf);
+    if (auto E = getDefaultOnDiskCASPath(PathBuf))
+      return std::move(E);
     Path = PathBuf;
   }
 

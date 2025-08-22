@@ -15,13 +15,13 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-void CASConfiguration::getResolvedCASPath(
+Error CASConfiguration::getResolvedCASPath(
     llvm::SmallVectorImpl<char> &Result) const {
-  if (CASPath == "auto") {
-    getDefaultOnDiskCASPath(Result);
-  } else {
-    Result.assign(CASPath.begin(), CASPath.end());
-  }
+  if (CASPath == "auto")
+    return getDefaultOnDiskCASPath(Result);
+
+  Result.assign(CASPath.begin(), CASPath.end());
+  return Error::success();
 }
 
 Expected<std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
@@ -34,7 +34,8 @@ CASConfiguration::createDatabases() const {
   }
 
   SmallString<128> PathBuf;
-  getResolvedCASPath(PathBuf);
+  if (auto E = getResolvedCASPath(PathBuf))
+    return std::move(E);
 
   std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>> DBs;
   return createOnDiskUnifiedCASDatabases(PathBuf);

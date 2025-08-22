@@ -49,9 +49,6 @@ public:
     return !(LHS == RHS);
   }
 
-  // Get resolved CASPath.
-  void getResolvedCASPath(llvm::SmallVectorImpl<char> &Result) const;
-
   // Create CASDatabase from the CASConfiguration.
   llvm::Expected<std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
                            std::shared_ptr<llvm::cas::ActionCache>>>
@@ -72,6 +69,9 @@ public:
   createFromSearchConfigFile(
       StringRef Path,
       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+
+  /// Get resolved CASPath.
+  Error getResolvedCASPath(llvm::SmallVectorImpl<char> &Result) const;
 };
 
 } // namespace llvm::cas
