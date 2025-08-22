@@ -32,30 +32,47 @@ static std::optional<LLT::FPVariant> deriveFPInfo(MVT VT) {
   }
 }
 
-LLT::LLT(MVT VT) {
+LLT::LLT(MVT VT, bool AllowExtendedLLT) {
+  if (!AllowExtendedLLT) {
+    if (VT.isVector()) {
+      bool AsVector = VT.getVectorMinNumElements() > 1 || VT.isScalableVector();
+      Kind Info = AsVector ? Kind::VECTOR_ANY : Kind::ANY_SCALAR;
+      init(Info, VT.getVectorElementCount(),
+           VT.getVectorElementType().getSizeInBits(), 0, FPVariant::IEEE_FLOAT);
+    } else if (VT.isValid() && !VT.isScalableTargetExtVT()) {
+      init(Kind::ANY_SCALAR, ElementCount::getFixed(0), VT.getSizeInBits(), 0,
+           FPVariant::IEEE_FLOAT);
+    } else {
+      this->Info = Kind::INVALID;
+      this->RawData = 0;
+    }
+    return;
+  }
+
   auto FP = deriveFPInfo(VT);
   bool AsVector = VT.isVector() &&
                   (VT.getVectorMinNumElements() > 1 || VT.isScalableVector());
 
-  Kind Info;
+  LLT::Kind Info;
   if (FP.has_value())
-    Info = AsVector ? Kind::VECTOR_FLOAT : Kind::FLOAT;
+    Info = AsVector ? LLT::Kind::VECTOR_FLOAT : LLT::Kind::FLOAT;
   else
-    Info = AsVector ? Kind::VECTOR_INTEGER : Kind::INTEGER;
+    Info = AsVector ? LLT::Kind::VECTOR_INTEGER : LLT::Kind::INTEGER;
 
   if (VT.isVector()) {
     init(Info, VT.getVectorElementCount(),
-         VT.getVectorElementType().getSizeInBits(),
-         /*AddressSpace=*/0, FP.value_or(FPVariant::IEEE_FLOAT));
+         VT.getVectorElementType().getSizeInBits(), 0,
+         FP.value_or(LLT::FPVariant::IEEE_FLOAT));
   } else if (VT.isValid() && !VT.isScalableTargetExtVT()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
-    init(Info, ElementCount::getFixed(0), VT.getSizeInBits(),
-         /*AddressSpace=*/0, FP.value_or(FPVariant::IEEE_FLOAT));
+    init(Info, ElementCount::getFixed(0), VT.getSizeInBits(), 0,
+         FP.value_or(LLT::FPVariant::IEEE_FLOAT));
   } else {
-    this->Info = static_cast<Kind>(0);
+    this->Info = Kind::INVALID;
     this->RawData = 0;
   }
+  return;
 }
 
 void LLT::print(raw_ostream &OS) const {

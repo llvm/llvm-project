@@ -569,7 +569,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
     case Intrinsic::aarch64_neon_fcvtpu:
       // Force FPR register bank for half types, as those types otherwise
       // don't get legalized correctly resulting in fp16 <-> gpr32 COPY's.
-      return MRI.getType(MI.getOperand(2).getReg()) == LLT::float16();
+      return MRI.getType(MI.getOperand(2).getReg()) == LLT::scalar(16); // TODO: Expected LLT::float16()
     default:
       break;
     }

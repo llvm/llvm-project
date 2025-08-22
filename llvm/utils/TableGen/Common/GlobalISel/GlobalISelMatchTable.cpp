@@ -10,6 +10,7 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -19,6 +20,11 @@
 #define DEBUG_TYPE "gi-match-table"
 
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
+
+static llvm::cl::opt<bool> AllowExtendedLLT(
+    "gisel-extended-llt",
+    llvm::cl::desc("Generate an extended llt names in match tables"),
+    llvm::cl::init(false));
 
 namespace llvm {
 namespace gi {
@@ -417,6 +423,8 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
     else if (Ty.isFloat())
       OS << "LLT::floatingPoint(" << Ty.getScalarSizeInBits()
          << ", LLT::FPVariant::IEEE_FLOAT)";
+    else
+      OS << "LLT::scalar(" << Ty.getScalarSizeInBits() << ")";
     return;
   }
 
@@ -438,7 +446,8 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
     else if (ElemTy.isFloat())
       OS << "LLT::floatingPoint(" << ElemTy.getScalarSizeInBits()
          << ", LLT::FPVariant::IEEE_FLOAT)";
-
+    else
+      OS << "LLT::scalar(" << Ty.getScalarSizeInBits() << ")";
     OS << ")";
     return;
   }
@@ -456,7 +465,36 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
 /// particular logic behind the order but either A < B or B < A must be
 /// true if A != B.
 bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
-  return Ty.getUniqueRAWLLTData() < Other.Ty.getUniqueRAWLLTData();
+  if (Ty.isValid() != Other.Ty.isValid())
+    return Ty.isValid() < Other.Ty.isValid();
+  if (!Ty.isValid())
+    return false;
+
+  if (Ty.isVector() != Other.Ty.isVector())
+    return Ty.isVector() < Other.Ty.isVector();
+  if (Ty.isScalar() != Other.Ty.isScalar())
+    return Ty.isScalar() < Other.Ty.isScalar();
+  if (Ty.isPointer() != Other.Ty.isPointer())
+    return Ty.isPointer() < Other.Ty.isPointer();
+
+  if (Ty.isPointer() && Ty.getAddressSpace() != Other.Ty.getAddressSpace())
+    return Ty.getAddressSpace() < Other.Ty.getAddressSpace();
+
+  if (Ty.isVector() && Ty.getElementCount() != Other.Ty.getElementCount())
+    return std::tuple(Ty.isScalable(),
+                      Ty.getElementCount().getKnownMinValue()) <
+           std::tuple(Other.Ty.isScalable(),
+                      Other.Ty.getElementCount().getKnownMinValue());
+
+  assert((!Ty.isVector() || Ty.isScalable() == Other.Ty.isScalable()) &&
+         "Unexpected mismatch of scalable property");
+  return Ty.isVector()
+             ? std::tuple(Ty.isScalable(),
+                          Ty.getSizeInBits().getKnownMinValue()) <
+                   std::tuple(Other.Ty.isScalable(),
+                              Other.Ty.getSizeInBits().getKnownMinValue())
+             : Ty.getSizeInBits().getFixedValue() <
+                   Other.Ty.getSizeInBits().getFixedValue();
 }
 
 //===- LLTCodeGen Helpers -------------------------------------------------===//
@@ -465,10 +503,10 @@ std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
   MVT VT(SVT);
 
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
-    return LLTCodeGen(LLT(VT));
+    return LLTCodeGen(LLT(VT, AllowExtendedLLT));
 
   if (VT.isInteger() || VT.isFloatingPoint())
-    return LLTCodeGen(LLT(VT));
+    return LLTCodeGen(LLT(VT, AllowExtendedLLT));
 
   return std::nullopt;
 }

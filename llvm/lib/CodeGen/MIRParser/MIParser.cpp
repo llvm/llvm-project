@@ -1934,10 +1934,11 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
       TypeDigits.consume_front("f") || TypeDigits.consume_front("p") ||
       TypeDigits.consume_front("bf")) {
     if (TypeDigits.empty() || !llvm::all_of(TypeDigits, isdigit))
-      return error("expected integers after 's'/'i'/'f'/'bf'/'p' type prefix");
+      return error("expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
   }
 
   if (Token.range().starts_with("s") || Token.range().starts_with("i")) {
+    bool ScalarOrInt = Token.range().starts_with("s");
     auto ScalarSize = APSInt(TypeDigits).getZExtValue();
     if (!ScalarSize) {
       Ty = LLT::token();
@@ -1948,7 +1949,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     if (!verifyScalarSize(ScalarSize))
       return error("invalid size for scalar type");
 
-    Ty = LLT::integer(ScalarSize);
+    Ty = ScalarOrInt ? LLT::scalar(ScalarSize) : LLT::integer(ScalarSize);
     lex();
     return false;
   }
@@ -1983,8 +1984,9 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
   // Now we're looking for a vector.
   if (Token.isNot(MIToken::less))
-    return error(Loc, "expected sN, pA, <M x sN>, <M x pA>, <vscale x M x sN>, "
-                      "or <vscale x M x pA> for GlobalISel type");
+    return error(Loc, "expected tN, pA, <M x tN>, <M x pA>, <vscale x M x tN>, "
+                      "or <vscale x M x pA> for GlobalISel type, "
+                      "where t = {'s', 'i', 'f', 'bf'}");
   lex();
 
   bool HasVScale =
@@ -1992,15 +1994,15 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (HasVScale) {
     lex();
     if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
-      return error("expected <vscale x M x sN> or <vscale x M x pA>");
+      return error("expected <vscale x M x tN>, where t = {'s', 'i', 'f', 'bf', 'p'}");
     lex();
   }
 
   auto GetError = [this, &HasVScale, Loc]() {
     if (HasVScale)
       return error(
-          Loc, "expected <vscale x M x sN> or <vscale M x pA> for vector type");
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+          Loc, "expected <vscale x M x tN> for vector type, where t = {'s', 'i', 'f', 'bf', 'p'}");
+    return error(Loc, "expected <M x tN> for vector type, where t = {'s', 'i', 'f', 'bf', 'p'}");
   };
 
   if (Token.isNot(MIToken::IntegerLiteral))
@@ -2027,10 +2029,11 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
         "expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
 
   if (Token.range().starts_with("s") || Token.range().starts_with("i")) {
+    bool ScalarOrInt = Token.range().starts_with("s");
     auto ScalarSize = APSInt(VectorTyDigits).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
       return error("invalid size for scalar element in vector");
-    Ty = LLT::integer(ScalarSize);
+    Ty = ScalarOrInt ? LLT::scalar(ScalarSize) : LLT::integer(ScalarSize);
   } else if (Token.range().starts_with("p")) {
     const DataLayout &DL = MF.getDataLayout();
     uint64_t AS = APSInt(VectorTyDigits).getZExtValue();
@@ -2068,9 +2071,9 @@ bool MIParser::parseTypedImmediateOperand(MachineOperand &Dest) {
       !TypeDigits.consume_front("p") && !TypeDigits.consume_front("f") &&
       !TypeDigits.consume_front("bf"))
     return error("a typed immediate operand should start with one of 'i', "
-                 "'s','f','bf', or 'p'");
+                 "'s', 'f', 'bf', or 'p'");
   if (TypeDigits.empty() || !llvm::all_of(TypeDigits, isdigit))
-    return error("expected integers after 'i'/'s'/'f'/'bf'/'p' type character");
+    return error("expected integers after 'i'/'s'/'f'/'bf'/'p' type identifier");
 
   auto Loc = Token.location();
   lex();

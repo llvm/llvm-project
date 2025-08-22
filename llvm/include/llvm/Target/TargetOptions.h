@@ -123,7 +123,8 @@ public:
         ApproxFuncFPMath(false), EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
-        EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
+        EnableFastISel(false), EnableGlobalISel(false),
+        EnableGlobalISelExtendedLLT(false), UseInitArray(false),
         DisableIntegratedAS(false), FunctionSections(false),
         DataSections(false), IgnoreXCOFFVisibility(false),
         XCOFFTracebackTable(true), UniqueSectionNames(true),
@@ -234,6 +235,10 @@ public:
 
   /// EnableGlobalISel - This flag enables global instruction selection.
   unsigned EnableGlobalISel : 1;
+
+  /// EnableGlobalISelExtendedLLT - This flag enables LLTs with extenden type info
+  /// so target may distinguish different formats of equal sized scalars.
+  unsigned EnableGlobalISelExtendedLLT : 1;
 
   /// EnableGlobalISelAbort - Control abort behaviour when global instruction
   /// selection fails to lower/select an instruction.

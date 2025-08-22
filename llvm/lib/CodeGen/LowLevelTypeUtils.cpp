@@ -17,16 +17,16 @@
 #include "llvm/IR/DerivedTypes.h"
 using namespace llvm;
 
-LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
-  if (auto VTy = dyn_cast<VectorType>(&Ty)) {
+LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL, bool AllowExtendedLLT) {
+  if (auto *VTy = dyn_cast<VectorType>(&Ty)) {
     auto EC = VTy->getElementCount();
-    LLT ScalarTy = getLLTForType(*VTy->getElementType(), DL);
+    LLT ScalarTy = getLLTForType(*VTy->getElementType(), DL, AllowExtendedLLT);
     if (EC.isScalar())
       return ScalarTy;
     return LLT::vector(EC, ScalarTy);
   }
 
-  if (auto PTy = dyn_cast<PointerType>(&Ty)) {
+  if (auto *PTy = dyn_cast<PointerType>(&Ty)) {
     unsigned AddrSpace = PTy->getAddressSpace();
     return LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
   }
@@ -37,6 +37,11 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
     auto SizeInBits = DL.getTypeSizeInBits(&Ty);
     assert(SizeInBits != 0 && "invalid zero-sized type");
 
+    // Return simple scalar
+    if (!AllowExtendedLLT)
+      return LLT::scalar(SizeInBits);
+
+    // Choose more precise LLT variant
     if (Ty.isFloatingPointTy()) {
       if (Ty.isHalfTy())
         return LLT::float16();
@@ -66,7 +71,7 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
       return LLT::integer(SizeInBits);
     }
 
-    return LLT::integer(SizeInBits);
+    return LLT::scalar(SizeInBits);
   }
 
   if (Ty.isTokenTy())
@@ -106,10 +111,13 @@ EVT llvm::getApproximateEVTForLLT(LLT Ty, LLVMContext &Ctx) {
   return EVT::getIntegerVT(Ctx, Ty.getSizeInBits());
 }
 
-LLT llvm::getLLTForMVT(MVT Ty) { return LLT(Ty); }
+LLT llvm::getLLTForMVT(MVT VT, bool AllowExtendedLLT) {
+  return LLT(VT, AllowExtendedLLT);
+}
 
 const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
-  assert(Ty.isFloat() && "Expected a scalar type.");
+  assert((Ty.isAnyScalar() || Ty.isFloat()) &&
+         "Expected a any scalar or float type.");
 
   if (Ty.isBFloat(16))
     return APFloat::BFloat();
