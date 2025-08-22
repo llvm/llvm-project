@@ -1166,11 +1166,6 @@ private:
 
         // Compute desired number of groups in the absence of user input
         // based on a factor controlled by an integer env-var.
-        // 0: disabled (default)
-        // 1: If the number of waves is lower than the default, increase
-        // the number of teams proportionally. Ideally, this would be the
-        // default behavior.
-        // > 1: Use as the scaling factor for the number of teams.
         // Note that the upper bound is MaxNumGroups.
         uint32_t AdjustFactor =
             GenericDevice.getOMPXAdjustNumTeamsForXteamRedSmallBlockSize();
@@ -3103,7 +3098,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_AdjustNumTeamsForSmallBlockSize("LIBOMPTARGET_AMDGPU_ADJUST_TEAMS",
                                              0),
         OMPX_AdjustNumTeamsForXteamRedSmallBlockSize(
-            "LIBOMPTARGET_AMDGPU_ADJUST_XTEAM_RED_TEAMS", 0),
+            "LIBOMPTARGET_AMDGPU_ADJUST_XTEAM_RED_TEAMS", 1),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
                                64 * 1024),
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
@@ -4749,9 +4744,12 @@ private:
   /// done.
   UInt32Envar OMPX_AdjustNumTeamsForSmallBlockSize;
 
-  /// Envar to allow scaling up the number of teams for Xteam-Reduction
-  /// whenever the blocksize has been reduced from the default. The env-var
-  /// default of 0 means that the scaling is not done by default.
+  /// Envar to allow scaling up the number of teams for Xteam-Reduction,
+  /// whenever the blocksize has been reduced from the max. The value 0
+  /// indicates that this functionality is disabled. The default value is 1,
+  /// indicating that if the number of waves is lower than the max, increase the
+  /// number of teams proportionally. A value greater than 1 indicates that the
+  /// value should be used as the scaling factor for the number of teams.
   UInt32Envar OMPX_AdjustNumTeamsForXteamRedSmallBlockSize;
 
   /// Envar specifying the maximum size in bytes where the memory copies are

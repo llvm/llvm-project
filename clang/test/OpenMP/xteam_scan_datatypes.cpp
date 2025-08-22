@@ -108,9 +108,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29:![0-9]+]], !align [[META30:![0-9]+]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP7]], align 4
@@ -201,13 +201,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP49:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP31:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load i32, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_i_16x64(i32 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_i, ptr @__kmpc_rfun_sum_lds_i, i32 0, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_i_8x64(i32 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_i, ptr @__kmpc_rfun_sum_lds_i, i32 0, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -256,9 +256,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP7]], align 4
@@ -300,7 +300,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_i_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 1)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_i_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 1)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -361,7 +361,7 @@ int main() {
 // CHECK-NEXT:    [[TMP58:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP59:%.*]] = add i32 1, [[TMP58]]
 // CHECK-NEXT:    store i32 [[TMP59]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP51:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP33:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -411,9 +411,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP7]], align 4
@@ -504,13 +504,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP52:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP34:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load i32, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_i_16x64(i32 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_i, ptr @__kmpc_rfun_sum_lds_i, i32 0, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_i_8x64(i32 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_i, ptr @__kmpc_rfun_sum_lds_i, i32 0, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -559,9 +559,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP7]], align 4
@@ -603,7 +603,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_i_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 0)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_i_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 0)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -670,7 +670,7 @@ int main() {
 // CHECK-NEXT:    [[TMP60:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP61:%.*]] = add i32 1, [[TMP60]]
 // CHECK-NEXT:    store i32 [[TMP61]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP53:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP35:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -720,9 +720,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP7]], align 4
@@ -813,13 +813,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP54:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP36:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load i32, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_i_16x64(i32 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_i, ptr @__kmpc_rfun_sum_lds_i, i32 0, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_i_8x64(i32 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_i, ptr @__kmpc_rfun_sum_lds_i, i32 0, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -868,9 +868,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP7]], align 4
@@ -912,7 +912,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_i_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 1)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_i_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 1)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -973,7 +973,7 @@ int main() {
 // CHECK-NEXT:    [[TMP58:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP59:%.*]] = add i32 1, [[TMP58]]
 // CHECK-NEXT:    store i32 [[TMP59]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP55:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP37:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -1023,9 +1023,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP7]], align 4
@@ -1116,13 +1116,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP56:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP38:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load i32, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_i_16x64(i32 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_i, ptr @__kmpc_rfun_sum_lds_i, i32 0, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_i_8x64(i32 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_i, ptr @__kmpc_rfun_sum_lds_i, i32 0, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -1171,9 +1171,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store i32 0, ptr addrspace(5) [[TMP7]], align 4
@@ -1215,7 +1215,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_i_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 0)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_i_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 0)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -1282,7 +1282,7 @@ int main() {
 // CHECK-NEXT:    [[TMP60:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP61:%.*]] = add i32 1, [[TMP60]]
 // CHECK-NEXT:    store i32 [[TMP61]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP57:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP39:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -1332,9 +1332,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META40:![0-9]+]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    store i64 0, ptr addrspace(5) [[TMP7]], align 8
@@ -1425,13 +1425,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP58:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP41:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load i64, ptr addrspace(5) [[TMP7]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteams_l_16x64(i64 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_l, ptr @__kmpc_rfun_sum_lds_l, i64 0, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_l_8x64(i64 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_l, ptr @__kmpc_rfun_sum_lds_l, i64 0, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -1480,9 +1480,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    store i64 0, ptr addrspace(5) [[TMP7]], align 8
@@ -1524,7 +1524,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load i64, ptr addrspace(5) [[TMP7]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_l_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_l, i64 0, i64 [[TMP16]], i32 1)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_l_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_l, i64 0, i64 [[TMP16]], i32 1)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -1585,7 +1585,7 @@ int main() {
 // CHECK-NEXT:    [[TMP58:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP59:%.*]] = add i32 1, [[TMP58]]
 // CHECK-NEXT:    store i32 [[TMP59]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP59:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP42:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -1635,9 +1635,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    store i64 0, ptr addrspace(5) [[TMP7]], align 8
@@ -1728,13 +1728,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP60:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP43:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load i64, ptr addrspace(5) [[TMP7]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteams_l_16x64(i64 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_l, ptr @__kmpc_rfun_sum_lds_l, i64 0, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_l_8x64(i64 [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_l, ptr @__kmpc_rfun_sum_lds_l, i64 0, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -1783,9 +1783,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    store i64 0, ptr addrspace(5) [[TMP7]], align 8
@@ -1827,7 +1827,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load i64, ptr addrspace(5) [[TMP7]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_l_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_l, i64 0, i64 [[TMP16]], i32 0)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_l_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_l, i64 0, i64 [[TMP16]], i32 0)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -1894,7 +1894,7 @@ int main() {
 // CHECK-NEXT:    [[TMP60:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP61:%.*]] = add i32 1, [[TMP60]]
 // CHECK-NEXT:    store i32 [[TMP61]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP61:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP44:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -1944,9 +1944,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca double, align 8, addrspace(5)
 // CHECK-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP7]], align 8
@@ -2037,13 +2037,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP62:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP45:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load double, ptr addrspace(5) [[TMP7]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteams_d_16x64(double [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_d_8x64(double [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -2092,9 +2092,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca double, align 8, addrspace(5)
 // CHECK-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP7]], align 8
@@ -2136,7 +2136,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP7]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_d_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, double 0.000000e+00, i64 [[TMP16]], i32 1)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_d_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, double 0.000000e+00, i64 [[TMP16]], i32 1)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -2197,7 +2197,7 @@ int main() {
 // CHECK-NEXT:    [[TMP58:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP59:%.*]] = add i32 1, [[TMP58]]
 // CHECK-NEXT:    store i32 [[TMP59]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP63:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP46:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -2247,9 +2247,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca double, align 8, addrspace(5)
 // CHECK-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP7]], align 8
@@ -2340,13 +2340,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP64:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP47:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load double, ptr addrspace(5) [[TMP7]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteams_d_16x64(double [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_d_8x64(double [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -2395,9 +2395,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META40]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca double, align 8, addrspace(5)
 // CHECK-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP7]], align 8
@@ -2439,7 +2439,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP7]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_d_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, double 0.000000e+00, i64 [[TMP16]], i32 0)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_d_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, double 0.000000e+00, i64 [[TMP16]], i32 0)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -2506,7 +2506,7 @@ int main() {
 // CHECK-NEXT:    [[TMP60:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP61:%.*]] = add i32 1, [[TMP60]]
 // CHECK-NEXT:    store i32 [[TMP61]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP65:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP48:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -2556,9 +2556,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP7]], align 4
@@ -2649,13 +2649,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP66:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP49:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load float, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_f_16x64(float [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_f, ptr @__kmpc_rfun_sum_lds_f, float 0.000000e+00, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_f_8x64(float [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_f, ptr @__kmpc_rfun_sum_lds_f, float 0.000000e+00, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -2704,9 +2704,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP7]], align 4
@@ -2748,7 +2748,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load float, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_f_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_f, float 0.000000e+00, i64 [[TMP16]], i32 1)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_f_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_f, float 0.000000e+00, i64 [[TMP16]], i32 1)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -2809,7 +2809,7 @@ int main() {
 // CHECK-NEXT:    [[TMP58:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP59:%.*]] = add i32 1, [[TMP58]]
 // CHECK-NEXT:    store i32 [[TMP59]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP67:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP50:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -2859,9 +2859,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP7]], align 4
@@ -2952,13 +2952,13 @@ int main() {
 // CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP51:%.*]] = add i32 1, [[TMP50]]
 // CHECK-NEXT:    store i32 [[TMP51]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP68:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP51:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP52:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP53:%.*]] = load ptr, ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP54:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP55:%.*]] = load float, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_f_16x64(float [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_f, ptr @__kmpc_rfun_sum_lds_f, float 0.000000e+00, i64 [[TMP16]], i32 [[TMP15]])
+// CHECK-NEXT:    call void @__kmpc_xteams_f_8x64(float [[TMP55]], ptr [[TMP54]], ptr [[TMP4]], ptr [[TMP52]], ptr [[TMP53]], ptr @__kmpc_rfun_sum_f, ptr @__kmpc_rfun_sum_lds_f, float 0.000000e+00, i64 [[TMP16]], i32 [[TMP15]])
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
 // CHECK-NEXT:    ret void
@@ -3007,9 +3007,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR5_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    [[TMP7:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP7]], align 4
@@ -3051,7 +3051,7 @@ int main() {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR5_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load float, ptr addrspace(5) [[TMP7]], align 4
-// CHECK-NEXT:    call void @__kmpc_xteams_phase2_f_16x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_f, float 0.000000e+00, i64 [[TMP16]], i32 0)
+// CHECK-NEXT:    call void @__kmpc_xteams_phase2_f_8x64(ptr [[TMP29]], i32 [[PADDED_SEGMENT_SIZE]], ptr [[TMP28]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_f, float 0.000000e+00, i64 [[TMP16]], i32 0)
 // CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[PADDED_SEGMENT_SIZE]], [[TMP22]]
 // CHECK-NEXT:    store i32 [[TMP32]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP22]], 1
@@ -3118,7 +3118,7 @@ int main() {
 // CHECK-NEXT:    [[TMP60:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP61:%.*]] = add i32 1, [[TMP60]]
 // CHECK-NEXT:    store i32 [[TMP61]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP69:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP52:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    br label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.kernel.done:
@@ -3165,9 +3165,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29:![0-9]+]], !align [[META30:![0-9]+]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i32, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store i32 0, ptr addrspace(5) [[TMP6]], align 4
@@ -3274,9 +3274,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i32, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store i32 0, ptr addrspace(5) [[TMP6]], align 4
@@ -3384,9 +3384,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i32, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store i32 0, ptr addrspace(5) [[TMP6]], align 4
@@ -3493,9 +3493,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i32, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store i32 0, ptr addrspace(5) [[TMP6]], align 4
@@ -3609,9 +3609,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i32, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store i32 0, ptr addrspace(5) [[TMP6]], align 4
@@ -3718,9 +3718,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i32, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store i32 0, ptr addrspace(5) [[TMP6]], align 4
@@ -3828,9 +3828,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i32, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store i32 0, ptr addrspace(5) [[TMP6]], align 4
@@ -3937,9 +3937,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i32, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store i32 0, ptr addrspace(5) [[TMP6]], align 4
@@ -4053,9 +4053,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META31:![0-9]+]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i64, align 8, addrspace(5)
 // NO-LOOP-NEXT:    store i64 0, ptr addrspace(5) [[TMP6]], align 8
@@ -4162,9 +4162,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i64, align 8, addrspace(5)
 // NO-LOOP-NEXT:    store i64 0, ptr addrspace(5) [[TMP6]], align 8
@@ -4272,9 +4272,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i64, align 8, addrspace(5)
 // NO-LOOP-NEXT:    store i64 0, ptr addrspace(5) [[TMP6]], align 8
@@ -4381,9 +4381,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca i64, align 8, addrspace(5)
 // NO-LOOP-NEXT:    store i64 0, ptr addrspace(5) [[TMP6]], align 8
@@ -4497,9 +4497,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca double, align 8, addrspace(5)
 // NO-LOOP-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP6]], align 8
@@ -4606,9 +4606,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca double, align 8, addrspace(5)
 // NO-LOOP-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP6]], align 8
@@ -4716,9 +4716,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca double, align 8, addrspace(5)
 // NO-LOOP-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP6]], align 8
@@ -4825,9 +4825,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META31]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca double, align 8, addrspace(5)
 // NO-LOOP-NEXT:    store double 0.000000e+00, ptr addrspace(5) [[TMP6]], align 8
@@ -4941,9 +4941,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca float, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP6]], align 4
@@ -5050,9 +5050,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca float, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP6]], align 4
@@ -5160,9 +5160,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca float, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP6]], align 4
@@ -5269,9 +5269,9 @@ int main() {
 // NO-LOOP-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR3_ASCAST]], align 8
 // NO-LOOP-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR4_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8
+// NO-LOOP-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SUM_ADDR2_ASCAST]], align 8, !nonnull [[META29]], !align [[META30]]
 // NO-LOOP-NEXT:    call void @__kmpc_specialized_kernel_init()
 // NO-LOOP-NEXT:    [[TMP6:%.*]] = alloca float, align 4, addrspace(5)
 // NO-LOOP-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP6]], align 4
