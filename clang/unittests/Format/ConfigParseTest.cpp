@@ -171,9 +171,11 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BinPackLongBracedList);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketBracedList);
   CHECK_PARSE_BOOL(BreakAfterOpenBracketIf);
   CHECK_PARSE_BOOL(BreakAfterOpenBracketLoop);
   CHECK_PARSE_BOOL(BreakAfterOpenBracketSwitch);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketBracedList);
   CHECK_PARSE_BOOL(BreakBeforeCloseBracketIf);
   CHECK_PARSE_BOOL(BreakBeforeCloseBracketLoop);
   CHECK_PARSE_BOOL(BreakBeforeCloseBracketSwitch);

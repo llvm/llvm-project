@@ -843,10 +843,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
              Style.Cpp11BracedListStyle;
     };
-    if (!Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
-        !IsStartOfBracedList()) {
+    if (IsStartOfBracedList())
+      return Style.BreakAfterOpenBracketBracedList;
+    if (!Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square))
       return false;
-    }
     if (!Tok.Previous)
       return true;
     if (Tok.Previous->isIf())
@@ -1447,9 +1447,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
-      (Current.is(tok::r_paren) ||
-       (Current.is(tok::r_brace) && Current.MatchingParen &&
-        Current.MatchingParen->is(BK_BracedInit))) &&
+      Current.is(tok::r_paren) && State.Stack.size() > 1) {
+    return State.Stack[State.Stack.size() - 2].LastSpace;
+  }
+  if (Style.BreakBeforeCloseBracketBracedList && Current.is(tok::r_brace) &&
+      Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit) &&
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
