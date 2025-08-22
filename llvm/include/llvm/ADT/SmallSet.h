@@ -272,7 +272,7 @@ template <typename PointeeType, unsigned N>
 class SmallSet<PointeeType *, N> : public SmallPtrSet<PointeeType *, N> {
   using Base = SmallPtrSet<PointeeType *, N>;
 
-  public:
+public:
   // LLVM_DEPRECATED placed between "template" and "class" above won't work for
   // some reason.  Put a deprecation message on constructors instead.
   LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
