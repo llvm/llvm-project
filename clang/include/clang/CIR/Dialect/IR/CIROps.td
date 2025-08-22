@@ -3029,10 +3029,11 @@ def CIR_ComplexDivOp : CIR_Op<"complex.div", [
     is used, the values are promoted to a higher precision type, if possible,
     and the calculation is performed using the algebraic formula, with
     no additional handling for NaN values. We fall back on Smith's algorithm
-    when the target does not support a higher precision type.
-    If 'full' is used, a runtime-library function is called if one of the
-    intermediate calculations produced a NaN value. and for 'basic' algebraic
-    formula with no special handling for the NaN value will be used.
+    when the target doesn't support a higher precision type. If 'full' is used,
+    a runtime-library function is called if one of the intermediate
+    calculations produced a NaN value. and for 'basic' algebraic formula with
+    no additional handling for the NaN value will be used. For integers types
+    `range` attribute will be ignored.
 
     Example:
 
