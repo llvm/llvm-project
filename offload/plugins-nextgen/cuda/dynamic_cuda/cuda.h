@@ -322,6 +322,16 @@ CUresult cuMemcpyDtoHAsync(void *, CUdeviceptr, size_t, CUstream);
 CUresult cuMemcpyHtoD(CUdeviceptr, const void *, size_t);
 CUresult cuMemcpyHtoDAsync(CUdeviceptr, const void *, size_t, CUstream);
 
+CUresult cuMemsetD8Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD16Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD32Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD2D8Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                           CUstream);
+CUresult cuMemsetD2D16Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                            CUstream);
+CUresult cuMemsetD2D32Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                            CUstream);
+
 CUresult cuMemFree(CUdeviceptr);
 CUresult cuMemFreeHost(void *);
 CUresult cuMemFreeAsync(CUdeviceptr, CUstream);

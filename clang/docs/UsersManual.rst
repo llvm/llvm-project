@@ -2635,7 +2635,7 @@ violates the strict aliasing rules. For example:
 
 Strict aliasing can be explicitly enabled with ``-fstrict-aliasing`` and
 disabled with ``-fno-strict-aliasing``. ``clang-cl`` defaults to
-``-fno-strict-aliasing``; see . Otherwise, Clang defaults to ``-fstrict-aliasing``.
+``-fno-strict-aliasing``. Otherwise, Clang defaults to ``-fstrict-aliasing``.
 
 C and C++ specify slightly different rules for strict aliasing. To improve
 language interoperability, Clang allows two types to alias if either language
