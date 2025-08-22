@@ -3209,6 +3209,9 @@ def GPU_WarpExecuteOnLane0Op : GPU_Op<"warp_execute_on_lane_0",
     bool isDefinedOutsideOfRegion(Value value) {
       return !getRegion().isAncestor(value.getParentRegion());
     }
+
+    /// Get the terminator of the warp region.
+    gpu::YieldOp getTerminator();
   }];
 }
 

@@ -1800,15 +1800,20 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   switch (Intrinsic) {
   default:
     return false;
-  case Intrinsic::riscv_masked_atomicrmw_xchg_i32:
-  case Intrinsic::riscv_masked_atomicrmw_add_i32:
-  case Intrinsic::riscv_masked_atomicrmw_sub_i32:
-  case Intrinsic::riscv_masked_atomicrmw_nand_i32:
-  case Intrinsic::riscv_masked_atomicrmw_max_i32:
-  case Intrinsic::riscv_masked_atomicrmw_min_i32:
-  case Intrinsic::riscv_masked_atomicrmw_umax_i32:
-  case Intrinsic::riscv_masked_atomicrmw_umin_i32:
-  case Intrinsic::riscv_masked_cmpxchg_i32:
+  case Intrinsic::riscv_masked_atomicrmw_xchg:
+  case Intrinsic::riscv_masked_atomicrmw_add:
+  case Intrinsic::riscv_masked_atomicrmw_sub:
+  case Intrinsic::riscv_masked_atomicrmw_nand:
+  case Intrinsic::riscv_masked_atomicrmw_max:
+  case Intrinsic::riscv_masked_atomicrmw_min:
+  case Intrinsic::riscv_masked_atomicrmw_umax:
+  case Intrinsic::riscv_masked_atomicrmw_umin:
+  case Intrinsic::riscv_masked_cmpxchg:
+    // riscv_masked_{atomicrmw_*,cmpxchg} intrinsics represent an emulated
+    // narrow atomic operation. These will be expanded to an LR/SC loop that
+    // reads/writes to/from an aligned 4 byte location. And, or, shift, etc.
+    // will be used to modify the appropriate part of the 4 byte data and
+    // preserve the rest.
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -21478,24 +21483,23 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
     switch (IntNo) {
     default:
       break;
-    case Intrinsic::riscv_masked_atomicrmw_xchg_i64:
-    case Intrinsic::riscv_masked_atomicrmw_add_i64:
-    case Intrinsic::riscv_masked_atomicrmw_sub_i64:
-    case Intrinsic::riscv_masked_atomicrmw_nand_i64:
-    case Intrinsic::riscv_masked_atomicrmw_max_i64:
-    case Intrinsic::riscv_masked_atomicrmw_min_i64:
-    case Intrinsic::riscv_masked_atomicrmw_umax_i64:
-    case Intrinsic::riscv_masked_atomicrmw_umin_i64:
-    case Intrinsic::riscv_masked_cmpxchg_i64:
+    case Intrinsic::riscv_masked_atomicrmw_xchg:
+    case Intrinsic::riscv_masked_atomicrmw_add:
+    case Intrinsic::riscv_masked_atomicrmw_sub:
+    case Intrinsic::riscv_masked_atomicrmw_nand:
+    case Intrinsic::riscv_masked_atomicrmw_max:
+    case Intrinsic::riscv_masked_atomicrmw_min:
+    case Intrinsic::riscv_masked_atomicrmw_umax:
+    case Intrinsic::riscv_masked_atomicrmw_umin:
+    case Intrinsic::riscv_masked_cmpxchg:
       // riscv_masked_{atomicrmw_*,cmpxchg} intrinsics represent an emulated
       // narrow atomic operation. These are implemented using atomic
       // operations at the minimum supported atomicrmw/cmpxchg width whose
       // result is then sign extended to XLEN. With +A, the minimum width is
       // 32 for both 64 and 32.
-      assert(Subtarget.getXLen() == 64);
       assert(getMinCmpXchgSizeInBits() == 32);
       assert(Subtarget.hasStdExtA());
-      return 33;
+      return Op.getValueSizeInBits() - 31;
     }
     break;
   }
@@ -23786,53 +23790,26 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
 static Intrinsic::ID
 getIntrinsicForMaskedAtomicRMWBinOp(unsigned XLen, AtomicRMWInst::BinOp BinOp) {
-  if (XLen == 32) {
-    switch (BinOp) {
-    default:
-      llvm_unreachable("Unexpected AtomicRMW BinOp");
-    case AtomicRMWInst::Xchg:
-      return Intrinsic::riscv_masked_atomicrmw_xchg_i32;
-    case AtomicRMWInst::Add:
-      return Intrinsic::riscv_masked_atomicrmw_add_i32;
-    case AtomicRMWInst::Sub:
-      return Intrinsic::riscv_masked_atomicrmw_sub_i32;
-    case AtomicRMWInst::Nand:
-      return Intrinsic::riscv_masked_atomicrmw_nand_i32;
-    case AtomicRMWInst::Max:
-      return Intrinsic::riscv_masked_atomicrmw_max_i32;
-    case AtomicRMWInst::Min:
-      return Intrinsic::riscv_masked_atomicrmw_min_i32;
-    case AtomicRMWInst::UMax:
-      return Intrinsic::riscv_masked_atomicrmw_umax_i32;
-    case AtomicRMWInst::UMin:
-      return Intrinsic::riscv_masked_atomicrmw_umin_i32;
-    }
+  switch (BinOp) {
+  default:
+    llvm_unreachable("Unexpected AtomicRMW BinOp");
+  case AtomicRMWInst::Xchg:
+    return Intrinsic::riscv_masked_atomicrmw_xchg;
+  case AtomicRMWInst::Add:
+    return Intrinsic::riscv_masked_atomicrmw_add;
+  case AtomicRMWInst::Sub:
+    return Intrinsic::riscv_masked_atomicrmw_sub;
+  case AtomicRMWInst::Nand:
+    return Intrinsic::riscv_masked_atomicrmw_nand;
+  case AtomicRMWInst::Max:
+    return Intrinsic::riscv_masked_atomicrmw_max;
+  case AtomicRMWInst::Min:
+    return Intrinsic::riscv_masked_atomicrmw_min;
+  case AtomicRMWInst::UMax:
+    return Intrinsic::riscv_masked_atomicrmw_umax;
+  case AtomicRMWInst::UMin:
+    return Intrinsic::riscv_masked_atomicrmw_umin;
   }
-
-  if (XLen == 64) {
-    switch (BinOp) {
-    default:
-      llvm_unreachable("Unexpected AtomicRMW BinOp");
-    case AtomicRMWInst::Xchg:
-      return Intrinsic::riscv_masked_atomicrmw_xchg_i64;
-    case AtomicRMWInst::Add:
-      return Intrinsic::riscv_masked_atomicrmw_add_i64;
-    case AtomicRMWInst::Sub:
-      return Intrinsic::riscv_masked_atomicrmw_sub_i64;
-    case AtomicRMWInst::Nand:
-      return Intrinsic::riscv_masked_atomicrmw_nand_i64;
-    case AtomicRMWInst::Max:
-      return Intrinsic::riscv_masked_atomicrmw_max_i64;
-    case AtomicRMWInst::Min:
-      return Intrinsic::riscv_masked_atomicrmw_min_i64;
-    case AtomicRMWInst::UMax:
-      return Intrinsic::riscv_masked_atomicrmw_umax_i64;
-    case AtomicRMWInst::UMin:
-      return Intrinsic::riscv_masked_atomicrmw_umin_i64;
-    }
-  }
-
-  llvm_unreachable("Unexpected XLen\n");
 }
 
 Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
@@ -23857,7 +23834,7 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
   unsigned XLen = Subtarget.getXLen();
   Value *Ordering =
       Builder.getIntN(XLen, static_cast<uint64_t>(AI->getOrdering()));
-  Type *Tys[] = {AlignedAddr->getType()};
+  Type *Tys[] = {Builder.getIntNTy(XLen), AlignedAddr->getType()};
   Function *LrwOpScwLoop = Intrinsic::getOrInsertDeclaration(
       AI->getModule(),
       getIntrinsicForMaskedAtomicRMWBinOp(XLen, AI->getOperation()), Tys);
@@ -23913,14 +23890,13 @@ Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
   unsigned XLen = Subtarget.getXLen();
   Value *Ordering = Builder.getIntN(XLen, static_cast<uint64_t>(Ord));
-  Intrinsic::ID CmpXchgIntrID = Intrinsic::riscv_masked_cmpxchg_i32;
+  Intrinsic::ID CmpXchgIntrID = Intrinsic::riscv_masked_cmpxchg;
   if (XLen == 64) {
     CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
     NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
     Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
-    CmpXchgIntrID = Intrinsic::riscv_masked_cmpxchg_i64;
   }
-  Type *Tys[] = {AlignedAddr->getType()};
+  Type *Tys[] = {Builder.getIntNTy(XLen), AlignedAddr->getType()};
   Value *Result = Builder.CreateIntrinsic(
       CmpXchgIntrID, Tys, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
   if (XLen == 64)

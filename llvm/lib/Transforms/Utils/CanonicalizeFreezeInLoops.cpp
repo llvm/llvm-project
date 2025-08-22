@@ -32,7 +32,6 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"

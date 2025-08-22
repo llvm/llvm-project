@@ -144,7 +144,6 @@ void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol,
   getAssembler().registerSymbol(*Symbol);
   auto ELFSymbol = static_cast<const MCSymbolELF *>(Symbol);
   ELFSymbol->setBinding(ELF::STB_LOCAL);
-  ELFSymbol->setExternal(false);
   HexagonMCEmitCommonSymbol(Symbol, Size, ByteAlignment, AccessSize);
 }
 

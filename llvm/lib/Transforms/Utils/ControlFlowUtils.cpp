@@ -12,7 +12,6 @@
 
 #include "llvm/Transforms/Utils/ControlFlowUtils.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"

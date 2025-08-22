@@ -2986,7 +2986,8 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) {
   if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
-      !Args.hasArg(options::OPT_nostdlib) &&
+      (!Args.hasArg(options::OPT_nostdlib) ||
+       TC.getTriple().isKnownWindowsMSVCEnvironment()) &&
       !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
   } else {

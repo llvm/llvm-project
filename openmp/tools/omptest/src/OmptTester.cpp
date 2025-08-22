@@ -42,7 +42,7 @@ static OmptEventReporter *EventReporter;
 #define OMPT_BUFFER_REQUEST_SIZE 256
 
 #ifdef OPENMP_LIBOMPTEST_BUILD_STANDALONE
-std::map<std::string, TestSuite> TestRegistrar::Tests;
+std::vector<std::pair<std::string, TestSuite>> TestRegistrar::Tests;
 #endif
 
 static std::atomic<ompt_id_t> NextOpId{0x8000000000000001};

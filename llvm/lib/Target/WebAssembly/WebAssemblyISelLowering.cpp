@@ -246,6 +246,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                    MVT::v2f64})
       setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
 
+    setOperationAction(ISD::AVGCEILU, {MVT::v8i16, MVT::v16i8}, Legal);
+
     // Custom lowering since wasm shifts must have a scalar shift amount
     for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})

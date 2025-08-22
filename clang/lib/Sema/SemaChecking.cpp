@@ -15955,6 +15955,7 @@ bool Sema::BuiltinElementwiseTernaryMath(
       return true;
   }
 
+  TheCall->setArg(0, Args[0]);
   for (int I = 1; I < 3; ++I) {
     if (Args[0]->getType().getCanonicalType() !=
         Args[I]->getType().getCanonicalType()) {

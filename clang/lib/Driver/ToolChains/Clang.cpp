@@ -5981,12 +5981,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fno_knr_functions);
 
-  // This is a coarse approximation of what llvm-gcc actually does, both
-  // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
-  // complicated ways.
   auto SanitizeArgs = TC.getSanitizerArgs(Args);
   Args.AddLastArg(CmdArgs,
                   options::OPT_fallow_runtime_check_skip_hot_cutoff_EQ);
+
+  // This is a coarse approximation of what llvm-gcc actually does, both
+  // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
+  // complicated ways.
   bool IsAsyncUnwindTablesDefault =
       TC.getDefaultUnwindTableLevel(Args) == ToolChain::UnwindTableLevel::Asynchronous;
   bool IsSyncUnwindTablesDefault =

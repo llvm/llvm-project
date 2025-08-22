@@ -28,7 +28,7 @@ namespace aarch32 {
 
 /// Check whether the given target flags are set for this Symbol.
 bool hasTargetFlags(Symbol &Sym, TargetFlagsType Flags) {
-  return static_cast<TargetFlagsType>(Sym.getTargetFlags()) & Flags;
+  return Sym.getTargetFlags() & Flags;
 }
 
 /// Encode 22-bit immediate value for branch instructions without J1J2 range

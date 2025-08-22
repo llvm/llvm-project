@@ -14,7 +14,6 @@
 
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"

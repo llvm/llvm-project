@@ -329,6 +329,17 @@ json::Value toJSON(const ContinueResponseBody &CRB) {
   return std::move(Body);
 }
 
+bool fromJSON(const json::Value &Params, CompletionsArguments &CA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("text", CA.text) && O.map("column", CA.column) &&
+         O.mapOptional("frameId", CA.frameId) && O.mapOptional("line", CA.line);
+}
+
+json::Value toJSON(const CompletionsResponseBody &CRB) {
+  return json::Object{{"targets", CRB.targets}};
+}
+
 bool fromJSON(const json::Value &Params, SetVariableArguments &SVA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
