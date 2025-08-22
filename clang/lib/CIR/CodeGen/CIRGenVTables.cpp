@@ -140,7 +140,7 @@ void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
                                             bool vtableHasLocalLinkage) {
   mlir::Type componentType = getVTableComponentType();
 
-  const llvm::SmallVector<unsigned> &addressPoints =
+  const llvm::SmallVectorImpl<unsigned> &addressPoints =
       layout.getAddressPointIndices();
   unsigned nextVTableThunkIndex = 0;
 
