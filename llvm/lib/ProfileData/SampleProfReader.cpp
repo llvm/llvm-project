@@ -357,7 +357,6 @@ std::error_code SampleProfileReaderText::readImpl() {
       uint64_t NumSamples, NumHeadSamples;
       StringRef FName;
       if (!ParseHead(*LineIt, FName, NumSamples, NumHeadSamples)) {
-
         reportError(LineIt.line_number(),
                     "Expected 'mangled_name:NUM:NUM', found " + *LineIt);
         return sampleprof_error::malformed;
