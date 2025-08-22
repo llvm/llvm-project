@@ -428,10 +428,7 @@ protected:
   std::unique_ptr<const FilterChooser> VariableFC;
 
 public:
-  Filter(Filter &&f);
   Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits);
-
-  ~Filter() = default;
 
   bool hasSingleFilteredID() const {
     return FilteredIDs.size() == 1 && FilteredIDs.begin()->second.size() == 1;
@@ -644,13 +641,6 @@ public:
 // Filter Implementation //
 //                       //
 ///////////////////////////
-
-Filter::Filter(Filter &&f)
-    : Owner(f.Owner), StartBit(f.StartBit), NumBits(f.NumBits),
-      FilteredIDs(std::move(f.FilteredIDs)),
-      VariableIDs(std::move(f.VariableIDs)),
-      FilterChooserMap(std::move(f.FilterChooserMap)),
-      VariableFC(std::move(f.VariableFC)) {}
 
 Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     : Owner(owner), StartBit(startBit), NumBits(numBits) {
