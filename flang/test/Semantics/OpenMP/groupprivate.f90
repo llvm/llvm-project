@@ -14,7 +14,7 @@ subroutine f00
   integer, save :: y
   associate (z => y)
   block
-    !ERROR: GROUPPRIVATE argument cannot be an an ASSOCIATE name
+    !ERROR: GROUPPRIVATE argument cannot be an ASSOCIATE name
     !$omp groupprivate(z)
   end block
   end associate
@@ -25,7 +25,7 @@ module m01
 implicit none
 integer :: x, y
 common /some_block/ x
-!ERROR: GROUPPRIVATE argument cannot be an a member of a common block
+!ERROR: GROUPPRIVATE argument cannot be a member of a common block
 !$omp groupprivate(x)
 
 contains
@@ -42,6 +42,6 @@ end module
 module m02
 implicit none
 integer :: x(10)[*]
-!ERROR: GROUPPRIVATE argument cannot be an a coarray
+!ERROR: GROUPPRIVATE argument cannot be a coarray
 !$omp groupprivate(x)
 end module
