@@ -5001,6 +5001,7 @@ static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
   RealArgs.push_back(TripCount);
   if (LoopType == WorksharingLoopType::DistributeStaticLoop) {
     RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), 0));
     Builder.restoreIP({InsertBlock, std::prev(InsertBlock->end())});
     Builder.CreateCall(RTLFn, RealArgs);
     return;
@@ -5016,6 +5017,7 @@ static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
   if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
     RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
   }
+  RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), 0));
 
   Builder.CreateCall(RTLFn, RealArgs);
 }
@@ -5476,8 +5478,7 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
     }
 
     // TODO: Enable UndefinedSanitizer to diagnose an overflow here.
-    CollapsedTripCount = Builder.CreateMul(CollapsedTripCount, OrigTripCount,
-                                           {}, /*HasNUW=*/true);
+    CollapsedTripCount = Builder.CreateNUWMul(CollapsedTripCount, OrigTripCount);
   }
 
   // Create the collapsed loop control flow.
