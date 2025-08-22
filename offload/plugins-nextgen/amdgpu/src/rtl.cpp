@@ -1225,8 +1225,7 @@ private:
     auto BasePtr = Args->Dst;
     for (size_t I = 0; I < Args->NumTimes; I++) {
       std::memcpy(BasePtr, Args->Src, Args->Size);
-      BasePtr = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(BasePtr) +
-                                         Args->Size);
+      BasePtr = reinterpret_cast<uint8_t *>(BasePtr) + Args->Size;
     }
 
     return Plugin::success();
@@ -1480,8 +1479,7 @@ public:
       auto *InterPtr = Inter;
       for (size_t I = 0; I < NumTimes; I++) {
         std::memcpy(InterPtr, Src, CopySize);
-        InterPtr = reinterpret_cast<void *>(
-            reinterpret_cast<uintptr_t>(InterPtr) + CopySize);
+        InterPtr = reinterpret_cast<uint8_t *>(InterPtr) + CopySize;
       }
 
       // Return the second signal because it will not be used.
