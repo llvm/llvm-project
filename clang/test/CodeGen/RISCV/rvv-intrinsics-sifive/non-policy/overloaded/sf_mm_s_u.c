@@ -7,12 +7,12 @@
 #include <sifive_vector.h>
 
 // CHECK-RV64-LABEL: define dso_local void @test_sf_mm_s_u_w4_i8m8_u8m8(
-// CHECK-RV64-SAME: <vscale x 64 x i8> [[V1:%.*]], <vscale x 64 x i8> [[V2:%.*]], i64 noundef [[TM:%.*]], i64 noundef [[TN:%.*]], i64 noundef [[TK:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-RV64-SAME: <vscale x 64 x i8> [[vs2:%.*]], <vscale x 64 x i8> [[vs1:%.*]], i64 noundef [[TM:%.*]], i64 noundef [[TN:%.*]], i64 noundef [[TK:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.mm.s.u.i64.nxv64i8.nxv64i8(i64 0, <vscale x 64 x i8> [[V1]], <vscale x 64 x i8> [[V2]], i64 [[TM]], i64 [[TN]], i64 [[TK]], i64 4)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.mm.s.u.i64.nxv64i8.nxv64i8(i64 0, <vscale x 64 x i8> [[vs2]], <vscale x 64 x i8> [[vs1]], i64 [[TM]], i64 [[TN]], i64 [[TK]], i64 4)
 // CHECK-RV64-NEXT:    ret void
 //
-void test_sf_mm_s_u_w4_i8m8_u8m8(vint8m8_t v1, vuint8m8_t v2, size_t tm, size_t tn, size_t tk) {
-  return __riscv_sf_mm_s_u(0, v1, v2, tm, tn, tk);
+void test_sf_mm_s_u_w4_i8m8_u8m8(vint8m8_t vs2, vuint8m8_t vs1, size_t tm, size_t tn, size_t tk) {
+  return __riscv_sf_mm_s_u(0, vs2, vs1, tm, tn, tk);
 }
 

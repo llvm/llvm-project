@@ -9,32 +9,32 @@
 #include <sifive_vector.h>
 
 // CHECK-RV64-LABEL: define dso_local void @test_sf_mm_f_f_w2_f16m8(
-// CHECK-RV64-SAME: <vscale x 32 x half> [[V1:%.*]], <vscale x 32 x half> [[V2:%.*]], i64 noundef [[TM:%.*]], i64 noundef [[TN:%.*]], i64 noundef [[TK:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-RV64-SAME: <vscale x 32 x half> [[vs2:%.*]], <vscale x 32 x half> [[vs1:%.*]], i64 noundef [[TM:%.*]], i64 noundef [[TN:%.*]], i64 noundef [[TK:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.mm.f.f.i64.nxv32f16(i64 0, <vscale x 32 x half> [[V1]], <vscale x 32 x half> [[V2]], i64 [[TM]], i64 [[TN]], i64 [[TK]], i64 2)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.mm.f.f.i64.nxv32f16(i64 0, <vscale x 32 x half> [[vs2]], <vscale x 32 x half> [[vs1]], i64 [[TM]], i64 [[TN]], i64 [[TK]], i64 2)
 // CHECK-RV64-NEXT:    ret void
 //
-void test_sf_mm_f_f_w2_f16m8(vfloat16m8_t v1, vfloat16m8_t v2, size_t tm, size_t tn, size_t tk) {
-  return __riscv_sf_mm_f_f_w2(0, v1, v2, tm, tn, tk);
+void test_sf_mm_f_f_w2_f16m8(vfloat16m8_t vs2, vfloat16m8_t vs1, size_t tm, size_t tn, size_t tk) {
+  return __riscv_sf_mm_f_f_w2(0, vs2, vs1, tm, tn, tk);
 }
 
 // CHECK-RV64-LABEL: define dso_local void @test_sf_mm_f_f_w1_f32m8(
-// CHECK-RV64-SAME: <vscale x 16 x float> [[V1:%.*]], <vscale x 16 x float> [[V2:%.*]], i64 noundef [[TM:%.*]], i64 noundef [[TN:%.*]], i64 noundef [[TK:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: <vscale x 16 x float> [[vs2:%.*]], <vscale x 16 x float> [[vs1:%.*]], i64 noundef [[TM:%.*]], i64 noundef [[TN:%.*]], i64 noundef [[TK:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.mm.f.f.i64.nxv16f32(i64 0, <vscale x 16 x float> [[V1]], <vscale x 16 x float> [[V2]], i64 [[TM]], i64 [[TN]], i64 [[TK]], i64 1)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.mm.f.f.i64.nxvs26f32(i64 0, <vscale x 16 x float> [[vs2]], <vscale x 16 x float> [[vs1]], i64 [[TM]], i64 [[TN]], i64 [[TK]], i64 1)
 // CHECK-RV64-NEXT:    ret void
 //
-void test_sf_mm_f_f_w1_f32m8(vfloat32m8_t v1, vfloat32m8_t v2, size_t tm, size_t tn, size_t tk) {
-  return __riscv_sf_mm_f_f_w1(0, v1, v2, tm, tn, tk);
+void test_sf_mm_f_f_w1_f32m8(vfloat32m8_t vs2, vfloat32m8_t vs1, size_t tm, size_t tn, size_t tk) {
+  return __riscv_sf_mm_f_f_w1(0, vs2, vs1, tm, tn, tk);
 }
 
 // CHECK-RV64-LABEL: define dso_local void @test_sf_mm_f_f_w1_f64m8(
-// CHECK-RV64-SAME: <vscale x 8 x double> [[V1:%.*]], <vscale x 8 x double> [[V2:%.*]], i64 noundef [[TM:%.*]], i64 noundef [[TN:%.*]], i64 noundef [[TK:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: <vscale x 8 x double> [[vs2:%.*]], <vscale x 8 x double> [[vs1:%.*]], i64 noundef [[TM:%.*]], i64 noundef [[TN:%.*]], i64 noundef [[TK:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.mm.f.f.i64.nxv8f64(i64 0, <vscale x 8 x double> [[V1]], <vscale x 8 x double> [[V2]], i64 [[TM]], i64 [[TN]], i64 [[TK]], i64 1)
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.mm.f.f.i64.nxv8f64(i64 0, <vscale x 8 x double> [[vs2]], <vscale x 8 x double> [[vs1]], i64 [[TM]], i64 [[TN]], i64 [[TK]], i64 1)
 // CHECK-RV64-NEXT:    ret void
 //
-void test_sf_mm_f_f_w1_f64m8(vfloat64m8_t v1, vfloat64m8_t v2, size_t tm, size_t tn, size_t tk) {
-  return __riscv_sf_mm_f_f_w1(0, v1, v2, tm, tn, tk);
+void test_sf_mm_f_f_w1_f64m8(vfloat64m8_t vs2, vfloat64m8_t vs1, size_t tm, size_t tn, size_t tk) {
+  return __riscv_sf_mm_f_f_w1(0, vs2, vs1, tm, tn, tk);
 }
 
