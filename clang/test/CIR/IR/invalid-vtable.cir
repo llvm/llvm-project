@@ -10,6 +10,17 @@ cir.func @reference_unknown_vtable() {
 
 // -----
 
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+cir.global linkonce_odr @_ZTT1D = #cir.const_array<[#cir.global_view<@_ZTV1D, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1D0_1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 2>
+cir.func @reference_unknown_vtable() {
+  // expected-error @below {{Expected #cir.vtable in initializer for global '_ZTT1D'}}
+  %0 = cir.vtable.address_point(@_ZTT1D, address_point = <index = 0, offset = 2>) : !cir.vptr
+  cir.return
+}
+
+// -----
+
 !rec_S = !cir.record<struct "S" {!cir.vptr}>
 !u8i = !cir.int<u, 8>
 !rec_anon_struct = !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 4>}>
