@@ -38,94 +38,80 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 namespace {
 
-  // Handles the condition code status of instructions in IT blocks
-  class ITStatus
-  {
-    public:
-      // Returns the condition code for instruction in IT block
-      unsigned getITCC() {
-        unsigned CC = ARMCC::AL;
-        if (instrInITBlock())
-          CC = ITStates.back();
-        return CC;
-      }
+// Handles the condition code status of instructions in IT blocks
+class ITStatus {
+public:
+  // Returns the condition code for instruction in IT block
+  unsigned getITCC() {
+    unsigned CC = ARMCC::AL;
+    if (instrInITBlock())
+      CC = ITStates.back();
+    return CC;
+  }
 
-      // Advances the IT block state to the next T or E
-      void advanceITState() {
-        ITStates.pop_back();
-      }
+  // Advances the IT block state to the next T or E
+  void advanceITState() { ITStates.pop_back(); }
 
-      // Returns true if the current instruction is in an IT block
-      bool instrInITBlock() {
-        return !ITStates.empty();
-      }
+  // Returns true if the current instruction is in an IT block
+  bool instrInITBlock() { return !ITStates.empty(); }
 
-      // Returns true if current instruction is the last instruction in an IT block
-      bool instrLastInITBlock() {
-        return ITStates.size() == 1;
-      }
+  // Returns true if current instruction is the last instruction in an IT block
+  bool instrLastInITBlock() { return ITStates.size() == 1; }
 
-      // Called when decoding an IT instruction. Sets the IT state for
-      // the following instructions that for the IT block. Firstcond
-      // corresponds to the field in the IT instruction encoding; Mask
-      // is in the MCOperand format in which 1 means 'else' and 0 'then'.
-      void setITState(char Firstcond, char Mask) {
-        // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
-        unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
-        assert(NumTZ <= 3 && "Invalid IT mask!");
-        // push condition codes onto the stack the correct order for the pops
-        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
-          unsigned Else = (Mask >> Pos) & 1;
-          ITStates.push_back(CCBits ^ Else);
-        }
-        ITStates.push_back(CCBits);
-      }
+  // Called when decoding an IT instruction. Sets the IT state for
+  // the following instructions that for the IT block. Firstcond
+  // corresponds to the field in the IT instruction encoding; Mask
+  // is in the MCOperand format in which 1 means 'else' and 0 'then'.
+  void setITState(char Firstcond, char Mask) {
+    // (3 - the number of trailing zeros) is the number of then / else.
+    unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
+    unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
+    assert(NumTZ <= 3 && "Invalid IT mask!");
+    // push condition codes onto the stack the correct order for the pops
+    for (unsigned Pos = NumTZ + 1; Pos <= 3; ++Pos) {
+      unsigned Else = (Mask >> Pos) & 1;
+      ITStates.push_back(CCBits ^ Else);
+    }
+    ITStates.push_back(CCBits);
+  }
 
-    private:
-      std::vector<unsigned char> ITStates;
-  };
+private:
+  std::vector<unsigned char> ITStates;
+};
 
-  class VPTStatus
-  {
-    public:
-      unsigned getVPTPred() {
-        unsigned Pred = ARMVCC::None;
-        if (instrInVPTBlock())
-          Pred = VPTStates.back();
-        return Pred;
-      }
+class VPTStatus {
+public:
+  unsigned getVPTPred() {
+    unsigned Pred = ARMVCC::None;
+    if (instrInVPTBlock())
+      Pred = VPTStates.back();
+    return Pred;
+  }
 
-      void advanceVPTState() {
-        VPTStates.pop_back();
-      }
+  void advanceVPTState() { VPTStates.pop_back(); }
 
-      bool instrInVPTBlock() {
-        return !VPTStates.empty();
-      }
+  bool instrInVPTBlock() { return !VPTStates.empty(); }
 
-      bool instrLastInVPTBlock() {
-        return VPTStates.size() == 1;
-      }
+  bool instrLastInVPTBlock() { return VPTStates.size() == 1; }
 
-      void setVPTState(char Mask) {
-        // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
-        assert(NumTZ <= 3 && "Invalid VPT mask!");
-        // push predicates onto the stack the correct order for the pops
-        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
-          bool T = ((Mask >> Pos) & 1) == 0;
-          if (T)
-            VPTStates.push_back(ARMVCC::Then);
-          else
-            VPTStates.push_back(ARMVCC::Else);
-        }
+  void setVPTState(char Mask) {
+    // (3 - the number of trailing zeros) is the number of then / else.
+    unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
+    assert(NumTZ <= 3 && "Invalid VPT mask!");
+    // push predicates onto the stack the correct order for the pops
+    for (unsigned Pos = NumTZ + 1; Pos <= 3; ++Pos) {
+      bool T = ((Mask >> Pos) & 1) == 0;
+      if (T)
         VPTStates.push_back(ARMVCC::Then);
-      }
+      else
+        VPTStates.push_back(ARMVCC::Else);
+    }
+    VPTStates.push_back(ARMVCC::Then);
+  }
 
-    private:
-      SmallVector<unsigned char, 4> VPTStates;
-  };
+private:
+  SmallVector<unsigned char, 4> VPTStates;
+};
 
 /// ARM disassembler for all ARM platforms.
 class ARMDisassembler : public MCDisassembler {
