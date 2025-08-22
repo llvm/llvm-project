@@ -428,8 +428,8 @@ bool mlir::affine::isValidSymbol(Value value) {
 }
 
 /// A utility function to check if a value is defined at the top level of
-/// `region` or is an argument of `region` or dominates the region.
-static bool isTopLevelValueOrDominator(Value value, Region *region) {
+/// `region` or is an argument of `region` or is defined above the region.
+static bool isTopLevelValueOrAbove(Value value, Region *region) {
   Region *parentRegion = value.getParentRegion();
   do {
     if (parentRegion == region)
@@ -460,7 +460,7 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
     return false;
 
   // A top-level value is a valid symbol.
-  if (region && isTopLevelValueOrDominator(value, region))
+  if (region && isTopLevelValueOrAbove(value, region))
     return true;
 
   auto *defOp = value.getDefiningOp();
