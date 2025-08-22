@@ -104,11 +104,15 @@ public:
   }
 
   /// Build the FRem expansion for the numerator \p X and the
-  /// denumerator \p Y using the builder \p B.  The type of X and Y
-  /// must match the type for which the class instance has been
-  /// created. The code will be generated at the insertion point of \p
-  /// B and the insertion point will be reset at exit.
+  /// denumerator \p Y.  The type of X and Y must match \p FremTy. The
+  /// code will be generated at the insertion point of \p B and the
+  /// insertion point will be reset at exit.
   Value *buildFRem(Value *X, Value *Y, std::optional<SimplifyQuery> &SQ) const;
+
+  /// Build an approximate FRem expansion for the numerator \p X and
+  /// the denumerator \p Y at the insertion point of builder \p B.
+  /// The type of X and Y must match \p FremTy.
+  Value *buildApproxFRem(Value *X, Value *Y) const;
 
 private:
   FRemExpander(IRBuilder<> &B, Type *FremTy, unsigned Bits, Type *ComputeFpTy)
@@ -273,6 +277,20 @@ private:
   }
 };
 
+Value *FRemExpander::buildApproxFRem(Value *X, Value *Y) const {
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  // Propagating the approximate functions flag to the
+  // division leads to an unacceptable drop in precision
+  // on AMDGPU.
+  B.clearFastMathFlags();
+
+  Value *Quot = B.CreateFDiv(X, Y);
+  Value *Trunc = B.CreateUnaryIntrinsic(Intrinsic::trunc, Quot, {});
+  Value *Neg = B.CreateFNeg(Trunc);
+
+  return B.CreateFMA(Neg, Y, X);
+}
+
 Value *FRemExpander::buildFRem(Value *X, Value *Y,
                                std::optional<SimplifyQuery> &SQ) const {
   assert(X->getType() == FremTy && Y->getType() == FremTy);
@@ -344,7 +362,6 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   // TODO Make use of those flags for optimization?
   FMF.setAllowReciprocal(false);
   FMF.setAllowContract(false);
-  FMF.setApproxFunc(false);
 
   IRBuilder<> B(&I);
   B.setFastMathFlags(FMF);
@@ -355,7 +372,9 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
 
   Value *Ret;
   if (ReturnTy->isFloatingPointTy())
-    Ret = Expander.buildFRem(I.getOperand(0), I.getOperand(1), SQ);
+    Ret = FMF.approxFunc()
+              ? Expander.buildApproxFRem(I.getOperand(0), I.getOperand(1))
+              : Expander.buildFRem(I.getOperand(0), I.getOperand(1), SQ);
   else {
     auto *VecTy = cast<FixedVectorType>(ReturnTy);
 
@@ -369,7 +388,8 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
     for (int I = 0, E = VecTy->getNumElements(); I != E; ++I) {
       Value *Num = B.CreateExtractElement(Nums, I);
       Value *Denum = B.CreateExtractElement(Denums, I);
-      Value *Rem = Expander.buildFRem(Num, Denum, SQ);
+      Value *Rem = FMF.approxFunc() ? Expander.buildApproxFRem(Num, Denum)
+                                    : Expander.buildFRem(Num, Denum, SQ);
       Ret = B.CreateInsertElement(Ret, Rem, I);
     }
   }
