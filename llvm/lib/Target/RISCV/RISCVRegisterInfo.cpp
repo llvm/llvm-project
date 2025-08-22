@@ -170,7 +170,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     if (Subtarget.hasStdExtE())
-      report_fatal_error("Graal reserved registers do not exist in RVE");
+      reportFatalUsageError("Graal reserved registers do not exist in RVE");
     markSuperRegs(Reserved, RISCV::X23_H);
     markSuperRegs(Reserved, RISCV::X27_H);
   }
@@ -216,7 +216,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       const int64_t NumOfVReg = Offset.getScalable() / 8;
       const int64_t FixedOffset = NumOfVReg * VLENB;
       if (!isInt<32>(FixedOffset)) {
-        report_fatal_error(
+        reportFatalUsageError(
             "Frame size outside of the signed 32-bit range not supported");
       }
       Offset = StackOffset::getFixed(FixedOffset + Offset.getFixed());
@@ -511,7 +511,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
   if (!isInt<32>(Offset.getFixed())) {
-    report_fatal_error(
+    reportFatalUsageError(
         "Frame offsets outside of the signed 32-bit range not supported");
   }
 
