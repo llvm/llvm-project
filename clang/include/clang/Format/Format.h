@@ -63,7 +63,7 @@ struct FormatStyle {
   int AccessModifierOffset;
 
   /// Force break after the left bracket of a braced initializer list (when
-  ///  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  /// ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
   /// limit.
   /// \code
   ///   true:                             false:
