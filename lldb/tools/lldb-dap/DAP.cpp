@@ -566,6 +566,9 @@ lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
 }
 
 lldb::SBFrame DAP::GetLLDBFrame(uint64_t frame_id) {
+  if (frame_id == LLDB_DAP_INVALID_FRAME_ID)
+    return lldb::SBFrame();
+
   lldb::SBProcess process = target.GetProcess();
   // Upper 32 bits is the thread index ID
   lldb::SBThread thread =
@@ -575,8 +578,8 @@ lldb::SBFrame DAP::GetLLDBFrame(uint64_t frame_id) {
 }
 
 lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
-  const auto frame_id =
-      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
+  const auto frame_id = GetInteger<uint64_t>(arguments, "frameId")
+                            .value_or(LLDB_DAP_INVALID_FRAME_ID);
   return GetLLDBFrame(frame_id);
 }
 
