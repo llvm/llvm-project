@@ -197,7 +197,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(0 + Offset).getValueType();
-  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -218,7 +218,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC) {
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { N->getOperand(0 + Offset).getValueType(),
                    N->getOperand(1 + Offset).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Ops,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -558,7 +558,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMA(SDNode *N) {
   EVT OpsVT[3] = { N->getOperand(0 + Offset).getValueType(),
                    N->getOperand(1 + Offset).getValueType(),
                    N->getOperand(2 + Offset).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG,
                                                     GetFPLibCall(N->getValueType(0),
                                                                  RTLIB::FMA_F32,
@@ -642,7 +642,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(IsStrict ? 1 : 0).getValueType();
-  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -658,7 +658,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP16_TO_FP(SDNode *N) {
   SDValue Op = N->getOperand(0);
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[1] = { N->getOperand(0).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
   SDValue Res32 = TLI.makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MidVT, Op,
                                   CallOptions, SDLoc(N)).first;
   if (N->getValueType(0) == MVT::f32)
@@ -694,7 +694,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_ROUND(SDNode *N) {
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_ROUND!");
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(IsStrict ? 1 : 0).getValueType();
-  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -742,7 +742,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { N->getOperand(0 + Offset).getValueType(),
                    N->getOperand(1 + Offset).getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Ops,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -779,7 +779,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
 
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
   // but we only really need to handle the 0th one for softening anyway.
-  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0, true)
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0)
       .setOpsTypeOverrides(CallOpsTypeOverrides);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT0, Ops, CallOptions, DL,
@@ -828,7 +828,7 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   TargetLowering::MakeLibCallOptions CallOptions;
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
   // but since both returns have the same type it should be okay.
-  CallOptions.setTypeListBeforeSoften({OpsVT}, VT, true)
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT)
       .setOpsTypeOverrides(CallOpsTypeOverrides);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
@@ -1100,7 +1100,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_XINT_TO_FP(SDNode *N) {
                            NVT, N->getOperand(IsStrict ? 1 : 0));
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setIsSigned(Signed);
-  CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
+  CallOptions.setTypeListBeforeSoften(SVT, RVT);
   std::pair<SDValue, SDValue> Tmp =
       TLI.makeLibCall(DAG, LC, TLI.getTypeToTransformTo(*DAG.getContext(), RVT),
                       Op, CallOptions, dl, Chain);
@@ -1222,7 +1222,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   Op = GetSoftenedFloat(Op);
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
+  CallOptions.setTypeListBeforeSoften(SVT, RVT);
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -1298,7 +1298,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT(SDNode *N) {
   Op = GetSoftenedFloat(Op);
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
+  CallOptions.setTypeListBeforeSoften(SVT, RVT);
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, dl, Chain);
 
@@ -1453,7 +1453,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_Unary(SDNode *N, RTLIB::Libcall LC) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(0 + Offset).getValueType();
-  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+  CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -3567,7 +3567,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
     SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
     Op = GetSoftenedFloat(Op);
     TargetLowering::MakeLibCallOptions CallOptions;
-    CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
+    CallOptions.setTypeListBeforeSoften(SVT, RVT);
     std::pair<SDValue, SDValue> Tmp =
         TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, SDLoc(N), Chain);
     if (IsStrict)

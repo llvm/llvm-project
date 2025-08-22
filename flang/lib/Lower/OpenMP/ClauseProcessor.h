@@ -208,11 +208,15 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
     if (!x)
       return;
     unsigned version = semaCtx.langOptions().OpenMPVersion;
-    TODO(currentLocation,
-         "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
-             " in " +
-             llvm::omp::getOpenMPDirectiveName(directive, version).upper() +
-             " construct");
+    bool isSimdDirective = llvm::omp::getOpenMPDirectiveName(directive, version)
+                               .upper()
+                               .find("SIMD") != llvm::StringRef::npos;
+    if (!semaCtx.langOptions().OpenMPSimd || isSimdDirective)
+      TODO(currentLocation,
+           "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
+               " in " +
+               llvm::omp::getOpenMPDirectiveName(directive, version).upper() +
+               " construct");
   };
 
   for (ClauseIterator it = clauses.begin(); it != clauses.end(); ++it)

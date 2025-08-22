@@ -14,6 +14,7 @@
 #define MLIR_TARGET_LLVM_XEVM_UTILS_H
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"

@@ -56,6 +56,22 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 3, 4
 
 // -----
 
+// expected-error @below {{'"nvvm.blocksareclusters"' attribute must be used along with 'nvvm.reqntid' and 'nvvm.cluster_dim'}}
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.blocksareclusters,
+                                     nvvm.cluster_dim = array<i32: 3, 5, 7>} {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'"nvvm.blocksareclusters"' attribute must be used along with 'nvvm.reqntid' and 'nvvm.cluster_dim'}}
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.blocksareclusters,
+                                     nvvm.reqntid = array<i32: 1, 23, 32>} {
+  llvm.return
+}
+
+// -----
+
 llvm.func @nvvm_fence_proxy_acquire(%addr : !llvm.ptr, %size : i32) {
   // expected-error @below {{'nvvm.fence.proxy.acquire' op uni-directional proxies only support generic for from_proxy attribute}}
   nvvm.fence.proxy.acquire #nvvm.mem_scope<cta> %addr, %size from_proxy=#nvvm.proxy_kind<tensormap> to_proxy=#nvvm.proxy_kind<generic>
@@ -493,5 +509,13 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
 llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 2 elements of type i32}}
   %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType  = #nvvm.ld_st_matrix_elt_type<b8>} : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @nanosleep() {
+  // expected-error@+1 {{integer constant out of range for attribute}}
+  nvvm.nanosleep 100000000000000
   llvm.return
 }

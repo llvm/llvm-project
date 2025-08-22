@@ -19,8 +19,9 @@ RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-2.ll -o %t/merge-2.o
 
 # Merge two object files into the codegen data file.
 RUN: llvm-cgdata --merge --skip-trim %t/merge-1.o %t/merge-2.o -o %t/merge.cgdata
-
 RUN: llvm-cgdata --show %t/merge.cgdata | FileCheck %s
+RUN: llvm-cgdata --merge --skip-trim %t/merge-1.o %t/merge-2.o -o %t/merge-lazy.cgdata -indexed-codegen-data-lazy-loading
+RUN: llvm-cgdata --show %t/merge-lazy.cgdata -indexed-codegen-data-lazy-loading  | FileCheck %s
 CHECK: Stable function map:
 CHECK-NEXT:  Unique hash Count: 1
 CHECK-NEXT:  Total function Count: 2
@@ -61,7 +62,7 @@ MAP-NEXT: ...
 ...
 
 ;--- merge-1-template.ll
-@.data = private unnamed_addr constant [68 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"
+@.data = private unnamed_addr constant [84 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"
 
 ;--- raw-2.cgtext
 :stable_function_map
@@ -76,4 +77,4 @@ MAP-NEXT: ...
 ...
 
 ;--- merge-2-template.ll
-@.data = private unnamed_addr constant [68 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_merge"
+@.data = private unnamed_addr constant [84 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_merge"

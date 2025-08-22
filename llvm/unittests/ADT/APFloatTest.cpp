@@ -1938,6 +1938,8 @@ TEST(APFloatTest, exactInverse) {
   EXPECT_FALSE(APFloat(0.0).getExactInverse(nullptr));
   // Denormalized float
   EXPECT_FALSE(APFloat(1.40129846e-45f).getExactInverse(nullptr));
+  // Largest subnormal
+  EXPECT_FALSE(APFloat(0x1p-127f).getExactInverse(nullptr));
 }
 
 TEST(APFloatTest, roundToIntegral) {
@@ -6202,6 +6204,102 @@ TEST(APFloatTest, PPCDoubleDoubleCompare) {
         << formatv("compare(({0:x} + {1:x}), ({2:x} + {3:x}))", Op1[0], Op1[1],
                    Op2[0], Op2[1])
                .str();
+  }
+}
+
+namespace PPCDoubleDoubleCompareAbsoluteValueTestDetails {
+struct TestCase {
+  DD LHS;
+  DD RHS;
+  APFloat::cmpResult Result;
+};
+
+auto testCases() {
+  static constexpr auto CompareAbsoluteValueTestCases = std::array{
+      TestCase{
+          {1.0, 0.0},
+          {1.0, 0.0},
+          APFloat::cmpEqual,
+      },
+      TestCase{
+          {1.0, -0.0},
+          {1.0, +0.0},
+          APFloat::cmpEqual,
+      },
+      TestCase{
+          {1.0, 0.0},
+          {0x1.0000000000001p+0, 0.0},
+          APFloat::cmpLessThan,
+      },
+      TestCase{
+          {0x1.0000000000001p+0, 0.0},
+          {1.0, 0.0},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {0x1.0000000000001p+0, +0x1p-1074},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {0x1.0000000000001p+0, -0x1p-1074},
+          {1.0, +0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {1.0, 0.0},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {1.0, 0.0},
+          {1.0, +0x1p-1074},
+          APFloat::cmpLessThan,
+      },
+      TestCase{
+          {1.0, +0x1p-1073},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+      TestCase{
+          {1.0, +0x1p-1074},
+          {1.0, -0x1p-1074},
+          APFloat::cmpGreaterThan,
+      },
+  };
+  return CompareAbsoluteValueTestCases;
+}
+} // namespace PPCDoubleDoubleCompareAbsoluteValueTestDetails
+
+class PPCDoubleDoubleCompareAbsoluteValueValueTest
+    : public testing::Test,
+      public ::testing::WithParamInterface<
+          PPCDoubleDoubleCompareAbsoluteValueTestDetails::TestCase> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PPCDoubleDoubleCompareAbsoluteValueValueParamTests,
+    PPCDoubleDoubleCompareAbsoluteValueValueTest,
+    ::testing::ValuesIn(
+        PPCDoubleDoubleCompareAbsoluteValueTestDetails::testCases()));
+
+TEST_P(PPCDoubleDoubleCompareAbsoluteValueValueTest,
+       PPCDoubleDoubleCompareAbsoluteValue) {
+  auto Param = GetParam();
+  for (bool LHSNegate : {false, true}) {
+    auto LHS = llvm::detail::DoubleAPFloat{APFloat::PPCDoubleDouble(),
+                                           APFloat{Param.LHS.Hi},
+                                           APFloat{Param.LHS.Lo}};
+    if (LHSNegate)
+      LHS.changeSign();
+    for (bool RHSNegate : {false, true}) {
+      auto RHS = llvm::detail::DoubleAPFloat{APFloat::PPCDoubleDouble(),
+                                             APFloat{Param.RHS.Hi},
+                                             APFloat{Param.RHS.Lo}};
+      if (RHSNegate)
+        RHS.changeSign();
+
+      EXPECT_EQ(LHS.compareAbsoluteValue(RHS), Param.Result);
+    }
   }
 }
 

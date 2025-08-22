@@ -665,6 +665,10 @@ public:
     return Error::success();
   }
 
+  const std::vector<std::pair<uint64_t, Function *>> &getIDToNameMap() const {
+    return MD5FuncMap;
+  }
+
   const StringSet<> &getVTableNames() const { return VTableNames; }
 
   /// Map a function address to its name's MD5 hash. This interface

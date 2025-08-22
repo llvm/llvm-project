@@ -1241,11 +1241,16 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (Behavior.doesNotAccessMemory())
       return true;
     if (Behavior.onlyReadsMemory()) {
+      // Might have stale MemoryDef for call that was later inferred to be
+      // read-only.
+      auto *MU = dyn_cast<MemoryUse>(MSSA->getMemoryAccess(CI));
+      if (!MU)
+        return false;
+
       // If we can prove there are no writes to the memory read by the call, we
       // can hoist or sink.
       return !pointerInvalidatedByLoop(
-          MSSA, cast<MemoryUse>(MSSA->getMemoryAccess(CI)), CurLoop, I, Flags,
-          /*InvariantGroup=*/false);
+          MSSA, MU, CurLoop, I, Flags, /*InvariantGroup=*/false);
     }
 
     if (Behavior.onlyWritesMemory()) {
@@ -1699,8 +1704,12 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // The check on hasMetadataOtherThanDebugLoc is to prevent us from burning
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
-      !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop))
-    I.dropUBImplyingAttrsAndMetadata();
+      !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
+    if (ProfcheckDisableMetadataFixes)
+      I.dropUBImplyingAttrsAndMetadata();
+    else
+      I.dropUBImplyingAttrsAndMetadata({LLVMContext::MD_prof});
+  }
 
   if (isa<PHINode>(I))
     // Move the new node to the end of the phi list in the destination block.
@@ -2867,7 +2876,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
   if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||
-      BO0->hasNUsesOrMore(3))
+      BO0->hasNUsesOrMore(BO0->getType()->isIntegerTy() ? 2 : 3))
     return false;
 
   Value *LV = BO0->getOperand(0);

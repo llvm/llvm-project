@@ -154,6 +154,10 @@ ForLowering::matchAndRewrite(ForOp forOp, OpAdaptor adaptor,
                              ConversionPatternRewriter &rewriter) const {
   Location loc = forOp.getLoc();
 
+  if (forOp.getUnsignedCmp())
+    return rewriter.notifyMatchFailure(forOp,
+                                       "unsigned loops are not supported");
+
   // Create an emitc::variable op for each result. These variables will be
   // assigned to by emitc::assign ops within the loop body.
   SmallVector<Value> resultVariables;
