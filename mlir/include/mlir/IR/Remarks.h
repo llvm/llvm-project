@@ -61,11 +61,6 @@ struct RemarkOpts {
   StringRef subCategoryName; // Subcategory name
   StringRef functionName;    // Function name if available
 
-  constexpr RemarkOpts(StringRef remarkName, StringRef categoryName,
-                       StringRef subCategoryName, StringRef functionName)
-      : remarkName(remarkName), categoryName(categoryName),
-        subCategoryName(subCategoryName), functionName(functionName) {}
-
   // Construct RemarkOpts from a remark name.
   static constexpr RemarkOpts name(StringRef n) {
     return RemarkOpts{n, {}, {}, {}};
