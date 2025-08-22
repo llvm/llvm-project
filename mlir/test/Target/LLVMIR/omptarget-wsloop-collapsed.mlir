@@ -25,7 +25,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK: define void @[[FUNC_COLLAPSED_WSLOOP:.*]](ptr %[[ARG0:.*]])
 // CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB2:[0-9]+]] to ptr),
 // CHECK-SAME: ptr @[[COLLAPSED_WSLOOP_BODY_FN:.*]], ptr %[[STRUCT_ARG:.*]], i32 10000,
-// CHECK-SAME: i32 %[[NUM_THREADS:.*]], i32 0)
+// CHECK-SAME: i32 %[[NUM_THREADS:.*]], i8 0)
 
 // CHECK: define internal void @[[COLLAPSED_WSLOOP_BODY_FN]](i32 %[[LOOP_CNT:.*]], ptr %[[LOOP_BODY_ARG:.*]])
 // CHECK:   %[[TMP0:.*]] = urem i32 %[[LOOP_CNT]], 100

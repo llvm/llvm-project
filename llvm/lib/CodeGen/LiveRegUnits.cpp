@@ -91,6 +91,13 @@ static void addBlockLiveIns(LiveRegUnits &LiveUnits,
     LiveUnits.addRegMasked(LI.PhysReg, LI.LaneMask);
 }
 
+/// Add live-out registers of basic block \p MBB to \p LiveUnits.
+static void addBlockLiveOuts(LiveRegUnits &LiveUnits,
+                             const MachineBasicBlock &MBB) {
+  for (const auto &LI : MBB.liveouts())
+    LiveUnits.addRegMasked(LI.PhysReg, LI.LaneMask);
+}
+
 /// Adds all callee saved registers to \p LiveUnits.
 static void addCalleeSavedRegs(LiveRegUnits &LiveUnits,
                                const MachineFunction &MF) {
@@ -137,12 +144,8 @@ void LiveRegUnits::addPristines(const MachineFunction &MF) {
 
 void LiveRegUnits::addLiveOuts(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
-
   addPristines(MF);
-
-  // To get the live-outs we simply merge the live-ins of all successors.
-  for (const MachineBasicBlock *Succ : MBB.successors())
-    addBlockLiveIns(*this, *Succ);
+  addBlockLiveOuts(*this, MBB);
 
   // For the return block: Add all callee saved registers.
   if (MBB.isReturnBlock()) {

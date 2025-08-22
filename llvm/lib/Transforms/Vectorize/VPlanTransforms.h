@@ -100,7 +100,7 @@ struct VPlanTransforms {
       VPlanPtr &Plan,
       function_ref<const InductionDescriptor *(PHINode *)>
           GetIntOrFpInductionDescriptor,
-      ScalarEvolution &SE, const TargetLibraryInfo &TLI);
+      const TargetLibraryInfo &TLI);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
@@ -281,6 +281,13 @@ struct VPlanTransforms {
   /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
   static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
                                     ElementCount VF);
+
+  /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
+  /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR
+  /// value. A mapping from SCEV expressions to their expanded IR value is
+  /// returned.
+  static DenseMap<const SCEV *, Value *> expandSCEVs(VPlan &Plan,
+                                                     ScalarEvolution &SE);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF

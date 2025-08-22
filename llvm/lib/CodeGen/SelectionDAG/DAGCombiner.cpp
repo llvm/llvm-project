@@ -6070,6 +6070,16 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (N0 == N1)
     return N0;
 
+  // Fold operation with vscale operands.
+  if (N0.getOpcode() == ISD::VSCALE && N1.getOpcode() == ISD::VSCALE) {
+    uint64_t C0 = N0->getConstantOperandVal(0);
+    uint64_t C1 = N1->getConstantOperandVal(0);
+    if (Opcode == ISD::UMAX)
+      return C0 > C1 ? N0 : N1;
+    else if (Opcode == ISD::UMIN)
+      return C0 > C1 ? N1 : N0;
+  }
+
   // canonicalize constant to RHS
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
@@ -15122,7 +15132,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       return foldedExt;
   } else if (ISD::isNON_EXTLoad(N0.getNode()) &&
              ISD::isUNINDEXEDLoad(N0.getNode()) &&
-             TLI.isLoadExtLegal(ISD::EXTLOAD, VT, N0.getValueType())) {
+             TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, VT, N0.getValueType())) {
     bool DoXform = true;
     SmallVector<SDNode *, 4> SetCCs;
     if (!N0.hasOneUse())

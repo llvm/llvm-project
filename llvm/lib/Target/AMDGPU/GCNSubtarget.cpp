@@ -137,7 +137,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.isAMDGCN() && AddressableLocalMemorySize == 0)
+  if (AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
   LocalMemorySize = AddressableLocalMemorySize;

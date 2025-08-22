@@ -1123,7 +1123,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   return ptx;
 }
 
-void NVVM::WgmmaMmaAsyncOp::getAsmValues(
+bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
     RewriterBase &rewriter,
     llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
         &asmValues) {
@@ -1154,7 +1154,9 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
         {makeConstantI32(rewriter, 1 - static_cast<int>(getLayoutB())),
          mlir::NVVM::PTXRegisterMod::Read});
   }
+  return true; // Has manual mapping
 }
+
 LogicalResult NVVM::FenceProxyOp::verify() {
   if (getKind() == NVVM::ProxyKind::TENSORMAP)
     return emitOpError() << "tensormap proxy is not a supported proxy kind";
@@ -1868,6 +1870,21 @@ llvm::Intrinsic::ID PrefetchOp::getIntrinsicID(NVVM::PrefetchOp &op) {
   default:
     llvm_unreachable("Invalid pointer address space");
   }
+}
+
+bool NVVM::InlinePtxOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  for (auto arg : getReadWriteArgs())
+    asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::ReadWrite});
+  for (auto arg : getResults())
+    asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::Write});
+  for (auto arg : getReadOnlyArgs())
+    asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::Read});
+  if (getPredicate())
+    asmValues.push_back({getPredicate(), mlir::NVVM::PTXRegisterMod::Read});
+  return false; // No manual mapping needed
 }
 
 //===----------------------------------------------------------------------===//

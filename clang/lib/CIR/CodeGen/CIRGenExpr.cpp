@@ -73,21 +73,54 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
 
   // Casts:
   if (auto const *ce = dyn_cast<CastExpr>(expr)) {
-    if (isa<ExplicitCastExpr>(ce)) {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: explicit cast");
-      return Address::invalid();
-    }
+    if (const auto *ece = dyn_cast<ExplicitCastExpr>(ce))
+      cgm.emitExplicitCastExprType(ece);
 
     switch (ce->getCastKind()) {
     // Non-converting casts (but not C's implicit conversion from void*).
     case CK_BitCast:
     case CK_NoOp:
     case CK_AddressSpaceConversion: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: noop cast");
-      return Address::invalid();
-    } break;
+      if (const auto *ptrTy =
+              ce->getSubExpr()->getType()->getAs<PointerType>()) {
+        if (ptrTy->getPointeeType()->isVoidType())
+          break;
+
+        LValueBaseInfo innerBaseInfo;
+        assert(!cir::MissingFeatures::opTBAA());
+        Address addr =
+            emitPointerWithAlignment(ce->getSubExpr(), &innerBaseInfo);
+        if (baseInfo)
+          *baseInfo = innerBaseInfo;
+
+        if (isa<ExplicitCastExpr>(ce)) {
+          LValueBaseInfo targetTypeBaseInfo;
+
+          const QualType pointeeType = expr->getType()->getPointeeType();
+          const CharUnits align =
+              cgm.getNaturalTypeAlignment(pointeeType, &targetTypeBaseInfo);
+
+          // If the source l-value is opaque, honor the alignment of the
+          // casted-to type.
+          if (innerBaseInfo.getAlignmentSource() != AlignmentSource::Decl) {
+            if (baseInfo)
+              baseInfo->mergeForCast(targetTypeBaseInfo);
+            addr = Address(addr.getPointer(), addr.getElementType(), align);
+          }
+        }
+
+        assert(!cir::MissingFeatures::sanitizers());
+
+        const mlir::Type eltTy =
+            convertTypeForMem(expr->getType()->getPointeeType());
+        addr = getBuilder().createElementBitCast(getLoc(expr->getSourceRange()),
+                                                 addr, eltTy);
+        assert(!cir::MissingFeatures::addressSpace());
+
+        return addr;
+      }
+      break;
+    }
 
     // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
     case CK_ArrayToPointerDecay:
@@ -551,6 +584,37 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   return RValue::get(nullptr);
 }
 
+static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
+  assert(!cir::MissingFeatures::weakRefReference());
+  return cgm.getAddrOfFunction(gd);
+}
+
+static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
+                                     GlobalDecl gd) {
+  const FunctionDecl *fd = cast<FunctionDecl>(gd.getDecl());
+  cir::FuncOp funcOp = emitFunctionDeclPointer(cgf.cgm, gd);
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  CharUnits align = cgf.getContext().getDeclAlign(fd);
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  mlir::Type fnTy = funcOp.getFunctionType();
+  mlir::Type ptrTy = cir::PointerType::get(fnTy);
+  mlir::Value addr = cgf.getBuilder().create<cir::GetGlobalOp>(
+      loc, ptrTy, funcOp.getSymName());
+
+  if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
+    fnTy = cgf.convertType(fd->getType());
+    ptrTy = cir::PointerType::get(fnTy);
+
+    addr = cir::CastOp::create(cgf.getBuilder(), addr.getLoc(), ptrTy,
+                               cir::CastKind::bitcast, addr);
+  }
+
+  return cgf.makeAddrLValue(Address(addr, fnTy, align), e->getType(),
+                            AlignmentSource::Decl);
+}
+
 LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   const NamedDecl *nd = e->getDecl();
   QualType ty = e->getType();
@@ -605,6 +669,16 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
       return LValue();
     }
     return emitLValue(bd->getBinding());
+  }
+
+  if (const auto *fd = dyn_cast<FunctionDecl>(nd)) {
+    LValue lv = emitFunctionDeclLValue(*this, e, fd);
+
+    // Emit debuginfo for the function declaration if the target wants to.
+    if (getContext().getTargetInfo().allowDebugInfoForExternalRef())
+      assert(!cir::MissingFeatures::generateDebugInfo());
+
+    return lv;
   }
 
   cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
@@ -1399,11 +1473,6 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot) {
   }
   }
   llvm_unreachable("bad evaluation kind");
-}
-
-static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
-  assert(!cir::MissingFeatures::weakRefReference());
-  return cgm.getAddrOfFunction(gd);
 }
 
 // Detect the unusual situation where an inline version is shadowed by a

@@ -487,8 +487,7 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
                                                        InductionTy, TheLoop);
-  Plan.setTripCount(
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
+  Plan.setTripCount(vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount));
 
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());

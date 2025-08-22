@@ -209,6 +209,9 @@ Improvements to Clang's diagnostics
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
 
+- Fixed false positive in ``-Wmissing-noreturn`` diagnostic when it was requiring the usage of
+  ``[[noreturn]]`` on lambdas before C++23 (#GH154493).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -226,6 +229,7 @@ Bug Fixes in This Version
   cast chain. (#GH149967).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
+- Fixed scope of typedefs present inside a template class. (#GH91451)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
