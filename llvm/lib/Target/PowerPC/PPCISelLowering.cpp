@@ -11307,8 +11307,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
     SDValue Value = DMFInsert1024(Pairs, SDLoc(Op), DAG);
-    SDValue RetOps[] = {Value, TF};
-    return DAG.getMergeValues(RetOps, dl);
+    return DAG.getMergeValues({Value, TF}, dl);
   }
 
   case Intrinsic::ppc_mma_dmxxextfdmr512: {
@@ -12152,9 +12151,9 @@ SDValue PPCTargetLowering::DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
              0);
   SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
   SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
-  const SDValue Ops[] = {RC, Lo, LoSub, Hi, HiSub};
 
-  return SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops),
+  return SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1,
+                                    {RC, Lo, LoSub, Hi, HiSub}),
                  0);
 }
 
