@@ -59,3 +59,23 @@ def olMemcpy : Function {
     ];
     let returns = [];
 }
+
+def : Function {
+  let name = "olMemFill";
+  let desc = "Fill memory with copies of the given pattern";
+  let details = [
+    "Filling with patterns larger than 4 bytes may be less performant",
+    "The destination pointer and queue must be associated with the same device",
+    "The fill size must be a multiple of the pattern size",
+  ];
+  let params = [
+      Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN_OPTIONAL>,
+      Param<"void*", "Ptr", "destination pointer to start filling at", PARAM_IN>,
+      Param<"size_t", "PatternSize", "the size of the pattern in bytes", PARAM_IN>,
+      Param<"const void*", "PatternPtr", "", PARAM_IN>,
+      Param<"size_t", "FillSize", "number of bytes to fill", PARAM_IN>,
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", ["`FillSize % PatternSize != 0`"]>
+  ];
+}

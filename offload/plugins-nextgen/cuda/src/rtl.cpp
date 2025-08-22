@@ -858,6 +858,64 @@ struct CUDADeviceTy : public GenericDeviceTy {
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
+  Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
+                     int64_t Size,
+                     AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (auto Err = setContext())
+      return Err;
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    CUresult Res;
+    size_t N = Size / PatternSize;
+    if (PatternSize == 1) {
+      Res = cuMemsetD8Async((CUdeviceptr)TgtPtr,
+                            *(static_cast<const uint8_t *>(PatternPtr)), N,
+                            Stream);
+    } else if (PatternSize == 2) {
+      Res = cuMemsetD16Async((CUdeviceptr)TgtPtr,
+                             *(static_cast<const uint16_t *>(PatternPtr)), N,
+                             Stream);
+    } else if (PatternSize == 4) {
+      Res = cuMemsetD32Async((CUdeviceptr)TgtPtr,
+                             *(static_cast<const uint32_t *>(PatternPtr)), N,
+                             Stream);
+    } else {
+      // For larger patterns we can do a series of strided fills to copy the
+      // pattern efficiently
+      int64_t MemsetSize = PatternSize % 4u == 0u   ? 4u
+                           : PatternSize % 2u == 0u ? 2u
+                                                    : 1u;
+
+      int64_t NumberOfSteps = PatternSize / MemsetSize;
+      int64_t Pitch = NumberOfSteps * MemsetSize;
+      int64_t Height = Size / PatternSize;
+
+      for (auto Step = 0u; Step < NumberOfSteps; ++Step) {
+        if (MemsetSize == 4) {
+          Res = cuMemsetD2D32Async(
+              (CUdeviceptr)TgtPtr + Step * MemsetSize, Pitch,
+              *(static_cast<const uint32_t *>(PatternPtr) + Step), 1u, Height,
+              Stream);
+        } else if (MemsetSize == 2) {
+          Res = cuMemsetD2D16Async(
+              (CUdeviceptr)TgtPtr + Step * MemsetSize, Pitch,
+              *(static_cast<const uint16_t *>(PatternPtr) + Step), 1u, Height,
+              Stream);
+        } else {
+          Res = cuMemsetD2D8Async(
+              (CUdeviceptr)TgtPtr + Step * MemsetSize, Pitch,
+              *(static_cast<const uint8_t *>(PatternPtr) + Step), 1u, Height,
+              Stream);
+        }
+      }
+    }
+
+    return Plugin::check(Res, "error in cuMemset: %s");
+  }
+
   /// Initialize the async info for interoperability purposes.
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     if (auto Err = setContext())
