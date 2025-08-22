@@ -3660,6 +3660,23 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  nextafterbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterbf16_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nextafterbf16
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
 # FIXME: These tests are currently spurious for the GPU.
 if(NOT LIBC_TARGET_OS_IS_GPU)
   add_fp_unittest(
@@ -3728,6 +3745,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nexttowardbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nexttowardbf16_test.cpp
+  HDRS
+    NextTowardTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nexttowardbf16
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   nextdown_test
   SUITE
     libc-math-smoke-tests
@@ -3788,6 +3822,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nextdownbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownbf16_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.src.math.nextdownbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   nextup_test
   SUITE
     libc-math-smoke-tests
@@ -3845,6 +3892,19 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextupf128
+)
+
+add_fp_unittest(
+  nextupbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupbf16_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.src.math.nextupbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 # TODO(lntue): The current implementation of fputil::general::fma<float> is only
@@ -4814,6 +4874,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  getpayloadbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    getpayloadbf16_test.cpp
+  HDRS
+    GetPayloadTest.h
+  DEPENDS
+    libc.src.math.getpayloadbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   setpayload_test
   SUITE
     libc-math-smoke-tests
@@ -4871,6 +4944,19 @@ add_fp_unittest(
     SetPayloadTest.h
   DEPENDS
     libc.src.math.setpayloadf128
+)
+
+add_fp_unittest(
+  setpayloadbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    setpayloadbf16_test.cpp
+  HDRS
+    SetPayloadTest.h
+  DEPENDS
+    libc.src.math.setpayloadbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -4933,6 +5019,18 @@ add_fp_unittest(
     libc.src.math.setpayloadsigf128
 )
 
+add_fp_unittest(
+  setpayloadsigbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    setpayloadsigbf16_test.cpp
+  HDRS
+    SetPayloadTest.h
+  DEPENDS
+    libc.src.math.setpayloadsigbf16
+    libc.src.__support.FPUtil.bfloat16
+)
 
 add_fp_unittest(
   f16add_test

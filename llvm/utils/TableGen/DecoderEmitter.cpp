@@ -157,8 +157,13 @@ class InstructionEncoding {
   /// The name of this encoding (for debugging purposes).
   std::string Name;
 
-  /// The size of this encoding, in bits.
-  unsigned BitWidth;
+  /// Known bits of this encoding. This is the value of the `Inst` field
+  /// with any variable references replaced with '?'.
+  KnownBits InstBits;
+
+  /// Mask of bits that should be considered unknown during decoding.
+  /// This is the value of the `SoftFail` field.
+  APInt SoftFailBits;
 
   /// The name of the function to use for decoding. May be an empty string,
   /// meaning the decoder is generated.
@@ -186,7 +191,13 @@ public:
   StringRef getName() const { return Name; }
 
   /// Returns the size of this encoding, in bits.
-  unsigned getBitWidth() const { return BitWidth; }
+  unsigned getBitWidth() const { return InstBits.getBitWidth(); }
+
+  /// Returns the known bits of this encoding.
+  const KnownBits &getInstBits() const { return InstBits; }
+
+  /// Returns a mask of bits that should be considered unknown during decoding.
+  const APInt &getSoftFailBits() const { return SoftFailBits; }
 
   /// Returns the name of the function to use for decoding, or an empty string
   /// if the decoder is generated.
@@ -200,6 +211,9 @@ public:
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
 
 private:
+  void parseVarLenEncoding(const VarLenInst &VLI);
+  void parseFixedLenEncoding(const BitsInit &Bits);
+
   void parseVarLenOperands(const VarLenInst &VLI);
   void parseFixedLenOperands(const BitsInit &Bits);
 };
@@ -331,27 +345,6 @@ public:
 
 } // end anonymous namespace
 
-static const BitsInit &getBitsField(const Record &Def, StringRef FieldName) {
-  const RecordVal *RV = Def.getValue(FieldName);
-  if (const BitsInit *Bits = dyn_cast<BitsInit>(RV->getValue()))
-    return *Bits;
-
-  // Handle variable length instructions.
-  VarLenInst VLI(cast<DagInit>(RV->getValue()), RV);
-  SmallVector<const Init *, 16> Bits;
-
-  for (const auto &SI : VLI) {
-    if (const BitsInit *BI = dyn_cast<BitsInit>(SI.Value))
-      llvm::append_range(Bits, BI->getBits());
-    else if (const BitInit *BI = dyn_cast<BitInit>(SI.Value))
-      Bits.push_back(BI);
-    else
-      Bits.append(SI.BitWidth, UnsetInit::get(Def.getRecords()));
-  }
-
-  return *BitsInit::get(Def.getRecords(), Bits);
-}
-
 namespace {
 
 class FilterChooser;
@@ -410,26 +403,25 @@ protected:
   // A filter chooser for encodings that contain some '?' in the filtered range.
   std::unique_ptr<const FilterChooser> VariableFC;
 
-  // Number of instructions which fall under FilteredInstructions category.
-  unsigned NumFiltered;
-
 public:
   Filter(Filter &&f);
   Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits);
 
   ~Filter() = default;
 
-  unsigned getNumFiltered() const { return NumFiltered; }
+  bool hasSingleFilteredID() const {
+    return FilteredIDs.size() == 1 && FilteredIDs.begin()->second.size() == 1;
+  }
 
   unsigned getSingletonEncodingID() const {
-    assert(NumFiltered == 1);
+    assert(hasSingleFilteredID());
     return FilteredIDs.begin()->second.front();
   }
 
   // Return the filter chooser for the group of instructions without constant
   // segment values.
   const FilterChooser &getVariableFC() const {
-    assert(NumFiltered == 1 && FilterChooserMap.empty());
+    assert(hasSingleFilteredID() && FilterChooserMap.empty());
     return *VariableFC;
   }
 
@@ -534,30 +526,14 @@ public:
 
 protected:
   KnownBits getMandatoryEncodingBits(unsigned EncodingID) const {
-    const Record *EncodingDef = Encodings[EncodingID].getRecord();
-    const BitsInit &Bits = getBitsField(*EncodingDef, "Inst");
-    KnownBits Insn(std::max(BitWidth, Bits.getNumBits()));
-    // We may have a SoftFail bitmask, which specifies a mask where an encoding
-    // may differ from the value in "Inst" and yet still be valid, but the
-    // disassembler should return SoftFail instead of Success.
-    //
-    // This is used for marking UNPREDICTABLE instructions in the ARM world.
-    const RecordVal *RV = EncodingDef->getValue("SoftFail");
-    const BitsInit *SFBits = RV ? dyn_cast<BitsInit>(RV->getValue()) : nullptr;
-    for (unsigned i = 0; i < Bits.getNumBits(); ++i) {
-      if (SFBits) {
-        const auto *B = dyn_cast<BitInit>(SFBits->getBit(i));
-        if (B && B->getValue())
-          continue;
-      }
-      if (const auto *B = dyn_cast<BitInit>(Bits.getBit(i))) {
-        if (B->getValue())
-          Insn.One.setBit(i);
-        else
-          Insn.Zero.setBit(i);
-      }
-    }
-    return Insn;
+    const InstructionEncoding &Encoding = Encodings[EncodingID];
+    KnownBits EncodingBits = Encoding.getInstBits();
+    // Clear all bits that are allowed to change according to SoftFail mask.
+    EncodingBits.Zero &= ~Encoding.getSoftFailBits();
+    EncodingBits.One &= ~Encoding.getSoftFailBits();
+    // Truncate or extend with unknown bits according to the filter bit width.
+    // FIXME: We should stop doing this.
+    return EncodingBits.anyextOrTrunc(BitWidth);
   }
 
   /// dumpStack - dumpStack traverses the filter chooser chain and calls
@@ -640,13 +616,11 @@ Filter::Filter(Filter &&f)
       FilteredIDs(std::move(f.FilteredIDs)),
       VariableIDs(std::move(f.VariableIDs)),
       FilterChooserMap(std::move(f.FilterChooserMap)),
-      VariableFC(std::move(f.VariableFC)), NumFiltered(f.NumFiltered) {}
+      VariableFC(std::move(f.VariableFC)) {}
 
 Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     : Owner(owner), StartBit(startBit), NumBits(numBits) {
   assert(StartBit + NumBits - 1 < Owner.BitWidth);
-
-  NumFiltered = 0;
 
   for (unsigned EncodingID : Owner.EncodingIDs) {
     // Populates the insn given the uid.
@@ -659,7 +633,6 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
       // The encoding bits are well-known.  Lets add the uid of the
       // instruction into the bucket keyed off the constant field value.
       FilteredIDs[FieldBits.getConstant().getZExtValue()].push_back(EncodingID);
-      ++NumFiltered;
     } else {
       // Some of the encoding bit(s) are unspecified.  This contributes to
       // one additional member of "Variable" instructions.
@@ -691,7 +664,7 @@ void Filter::recurse() {
 
   // No need to recurse for a singleton filtered instruction.
   // See also Filter::emit*().
-  if (getNumFiltered() == 1) {
+  if (hasSingleFilteredID()) {
     assert(VariableFC && "Shouldn't have created a filter for one encoding!");
     return;
   }
@@ -1336,36 +1309,23 @@ void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
 
 void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
                                            unsigned EncodingID) const {
-  const Record *EncodingDef = Encodings[EncodingID].getRecord();
-  const RecordVal *RV = EncodingDef->getValue("SoftFail");
-  const BitsInit *SFBits = RV ? dyn_cast<BitsInit>(RV->getValue()) : nullptr;
+  const InstructionEncoding &Encoding = Encodings[EncodingID];
+  const KnownBits &InstBits = Encoding.getInstBits();
+  const APInt &SFBits = Encoding.getSoftFailBits();
 
-  if (!SFBits)
+  if (SFBits.isZero())
     return;
-  const BitsInit *InstBits = EncodingDef->getValueAsBitsInit("Inst");
 
   APInt PositiveMask(BitWidth, 0ULL);
   APInt NegativeMask(BitWidth, 0ULL);
   for (unsigned i = 0; i < BitWidth; ++i) {
-    if (!isa<BitInit>(SFBits->getBit(i)) ||
-        !cast<BitInit>(SFBits->getBit(i))->getValue())
+    if (!SFBits[i])
       continue;
 
-    if (!isa<BitInit>(InstBits->getBit(i))) {
-      // The bit is not set; this must be an error!
-      errs() << "SoftFail Conflict: bit SoftFail{" << i << "} in "
-             << Encodings[EncodingID].getName() << " is set but Inst{" << i
-             << "} is unset!\n"
-             << "  - You can only mark a bit as SoftFail if it is fully defined"
-             << " (1/0 - not '?') in Inst\n";
-      return;
-    }
-
-    bool IB = cast<BitInit>(InstBits->getBit(i))->getValue();
-    if (!IB) {
+    if (InstBits.Zero[i]) {
       // The bit is meant to be false, so emit a check to see if it is true.
       PositiveMask.setBit(i);
-    } else {
+    } else if (InstBits.One[i]) {
       // The bit is meant to be true, so emit a check to see if it is false.
       NegativeMask.setBit(i);
     }
@@ -1752,7 +1712,7 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   }
 
   // Use the best filter to do the decoding!
-  if (BestFilter->getNumFiltered() == 1)
+  if (BestFilter->hasSingleFilteredID())
     emitSingletonTableEntry(TableInfo, *BestFilter);
   else
     BestFilter->emitTableEntry(TableInfo);
@@ -1795,6 +1755,75 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
       HasCompleteDecoderBit ? HasCompleteDecoderBit->getValue() : true;
 
   return OperandInfo(findOperandDecoderMethod(TypeRecord), HasCompleteDecoder);
+}
+
+void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
+  InstBits = KnownBits(VLI.size());
+  SoftFailBits = APInt(VLI.size(), 0);
+
+  // Parse Inst field.
+  unsigned I = 0;
+  for (const EncodingSegment &S : VLI) {
+    if (const auto *SegmentBits = dyn_cast<BitsInit>(S.Value)) {
+      for (const Init *V : SegmentBits->getBits()) {
+        if (const auto *B = dyn_cast<BitInit>(V)) {
+          if (B->getValue())
+            InstBits.One.setBit(I);
+          else
+            InstBits.Zero.setBit(I);
+        }
+        ++I;
+      }
+    } else if (const auto *B = dyn_cast<BitInit>(S.Value)) {
+      if (B->getValue())
+        InstBits.One.setBit(I);
+      else
+        InstBits.Zero.setBit(I);
+      ++I;
+    } else {
+      I += S.BitWidth;
+    }
+  }
+  assert(I == VLI.size());
+}
+
+void InstructionEncoding::parseFixedLenEncoding(const BitsInit &Bits) {
+  InstBits = KnownBits(Bits.getNumBits());
+  SoftFailBits = APInt(Bits.getNumBits(), 0);
+
+  // Parse Inst field.
+  for (auto [I, V] : enumerate(Bits.getBits())) {
+    if (const auto *B = dyn_cast<BitInit>(V)) {
+      if (B->getValue())
+        InstBits.One.setBit(I);
+      else
+        InstBits.Zero.setBit(I);
+    }
+  }
+
+  // Parse SoftFail field.
+  if (const RecordVal *SoftFailField = EncodingDef->getValue("SoftFail")) {
+    const auto *SFBits = dyn_cast<BitsInit>(SoftFailField->getValue());
+    if (!SFBits || SFBits->getNumBits() != Bits.getNumBits()) {
+      PrintNote(EncodingDef->getLoc(), "in record");
+      PrintFatalError(SoftFailField,
+                      formatv("SoftFail field, if defined, must be "
+                              "of the same type as Inst, which is bits<{}>",
+                              Bits.getNumBits()));
+    }
+    for (auto [I, V] : enumerate(SFBits->getBits())) {
+      if (const auto *B = dyn_cast<BitInit>(V); B && B->getValue()) {
+        if (!InstBits.Zero[I] && !InstBits.One[I]) {
+          PrintNote(EncodingDef->getLoc(), "in record");
+          PrintError(SoftFailField,
+                     formatv("SoftFail{{{0}} = 1 requires Inst{{{0}} "
+                             "to be fully defined (0 or 1, not '?')",
+                             I));
+        }
+        SoftFailBits.setBit(I);
+      }
+    }
+  }
 }
 
 void InstructionEncoding::parseVarLenOperands(const VarLenInst &VLI) {
@@ -2025,13 +2054,13 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
   const RecordVal *InstField = EncodingDef->getValue("Inst");
   if (const auto *DI = dyn_cast<DagInit>(InstField->getValue())) {
     VarLenInst VLI(DI, InstField);
-    BitWidth = VLI.size();
+    parseVarLenEncoding(VLI);
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())
       parseVarLenOperands(VLI);
   } else {
     const auto *BI = cast<BitsInit>(InstField->getValue());
-    BitWidth = BI->getNumBits();
+    parseFixedLenEncoding(*BI);
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())
       parseFixedLenOperands(*BI);
@@ -2081,7 +2110,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   OS << ") {\n";
   if (HasCheckPredicate)
     OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
-  OS << "   using namespace llvm::MCD;\n";
+  OS << "  using namespace llvm::MCD;\n";
 
   OS << R"(
   const uint8_t *Ptr = DecodeTable;
@@ -2346,6 +2375,7 @@ static bool isValidEncoding(const Record *EncodingDef) {
       return false;
 
     // At least one of the encoding bits must be complete (not '?').
+    // FIXME: This should take SoftFail field into account.
     return !InstInit->allInComplete();
   }
 
