@@ -403,26 +403,25 @@ protected:
   // A filter chooser for encodings that contain some '?' in the filtered range.
   std::unique_ptr<const FilterChooser> VariableFC;
 
-  // Number of instructions which fall under FilteredInstructions category.
-  unsigned NumFiltered;
-
 public:
   Filter(Filter &&f);
   Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits);
 
   ~Filter() = default;
 
-  unsigned getNumFiltered() const { return NumFiltered; }
+  bool hasSingleFilteredID() const {
+    return FilteredIDs.size() == 1 && FilteredIDs.begin()->second.size() == 1;
+  }
 
   unsigned getSingletonEncodingID() const {
-    assert(NumFiltered == 1);
+    assert(hasSingleFilteredID());
     return FilteredIDs.begin()->second.front();
   }
 
   // Return the filter chooser for the group of instructions without constant
   // segment values.
   const FilterChooser &getVariableFC() const {
-    assert(NumFiltered == 1 && FilterChooserMap.empty());
+    assert(hasSingleFilteredID() && FilterChooserMap.empty());
     return *VariableFC;
   }
 
@@ -617,13 +616,11 @@ Filter::Filter(Filter &&f)
       FilteredIDs(std::move(f.FilteredIDs)),
       VariableIDs(std::move(f.VariableIDs)),
       FilterChooserMap(std::move(f.FilterChooserMap)),
-      VariableFC(std::move(f.VariableFC)), NumFiltered(f.NumFiltered) {}
+      VariableFC(std::move(f.VariableFC)) {}
 
 Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     : Owner(owner), StartBit(startBit), NumBits(numBits) {
   assert(StartBit + NumBits - 1 < Owner.BitWidth);
-
-  NumFiltered = 0;
 
   for (unsigned EncodingID : Owner.EncodingIDs) {
     // Populates the insn given the uid.
@@ -636,7 +633,6 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
       // The encoding bits are well-known.  Lets add the uid of the
       // instruction into the bucket keyed off the constant field value.
       FilteredIDs[FieldBits.getConstant().getZExtValue()].push_back(EncodingID);
-      ++NumFiltered;
     } else {
       // Some of the encoding bit(s) are unspecified.  This contributes to
       // one additional member of "Variable" instructions.
@@ -668,7 +664,7 @@ void Filter::recurse() {
 
   // No need to recurse for a singleton filtered instruction.
   // See also Filter::emit*().
-  if (getNumFiltered() == 1) {
+  if (hasSingleFilteredID()) {
     assert(VariableFC && "Shouldn't have created a filter for one encoding!");
     return;
   }
@@ -1716,7 +1712,7 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   }
 
   // Use the best filter to do the decoding!
-  if (BestFilter->getNumFiltered() == 1)
+  if (BestFilter->hasSingleFilteredID())
     emitSingletonTableEntry(TableInfo, *BestFilter);
   else
     BestFilter->emitTableEntry(TableInfo);
