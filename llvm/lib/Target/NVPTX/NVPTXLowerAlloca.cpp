@@ -39,13 +39,14 @@ using namespace llvm;
 using namespace NVPTXAS;
 
 namespace {
-class NVPTXLowerAlloca : public FunctionPass {
-  bool runOnFunction(Function &F) override;
-  bool doInitialization(Module &M) override;
+class NVPTXLowerAlloca : public ModulePass {
+  bool changeDataLayout(Module &M);
+  bool lowerFunctionAllocas(Function &F);
 
 public:
-  static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerAlloca() : FunctionPass(ID) {}
+  static char ID; 
+  NVPTXLowerAlloca() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override;
   StringRef getPassName() const override {
     return "convert address space of alloca'ed memory to local";
   }
@@ -57,13 +58,14 @@ char NVPTXLowerAlloca::ID = 1;
 INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca", "Lower Alloca", false,
                 false)
 
-// =============================================================================
-// Main function for this pass.
-// =============================================================================
-bool NVPTXLowerAlloca::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
+bool NVPTXLowerAlloca::runOnModule(Module &M) {
+  bool Changed = changeDataLayout(M);
+  for (auto &F : M)
+    Changed |= lowerFunctionAllocas(F);
+  return Changed;
+}
 
+bool NVPTXLowerAlloca::lowerFunctionAllocas(Function &F) {
   SmallVector<AllocaInst *, 16> Allocas;
   for (auto &BB : F)
     for (auto &I : BB)
@@ -103,7 +105,7 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
   return true;
 }
 
-bool NVPTXLowerAlloca::doInitialization(Module &M) {
+bool NVPTXLowerAlloca::changeDataLayout(Module &M) {
   const auto &DL = M.getDataLayout();
   if (DL.getAllocaAddrSpace() == ADDRESS_SPACE_LOCAL)
     return false;
@@ -115,6 +117,6 @@ bool NVPTXLowerAlloca::doInitialization(Module &M) {
   return true;
 }
 
-FunctionPass *llvm::createNVPTXLowerAllocaPass() {
+ModulePass *llvm::createNVPTXLowerAllocaPass() {
   return new NVPTXLowerAlloca();
 }
