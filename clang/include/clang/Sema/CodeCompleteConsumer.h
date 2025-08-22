@@ -14,7 +14,7 @@
 #define LLVM_CLANG_SEMA_CODECOMPLETECONSUMER_H
 
 #include "clang-c/Index.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Sema/CodeCompleteOptions.h"

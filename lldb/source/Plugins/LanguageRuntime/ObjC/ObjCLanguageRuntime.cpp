@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 #include "ObjCLanguageRuntime.h"
 

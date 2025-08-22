@@ -45,7 +45,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"

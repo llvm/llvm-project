@@ -11,7 +11,7 @@
 
 #include "clang/AST/AbstractBasicReader.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 namespace clang {
 namespace serialization {

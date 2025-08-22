@@ -12,7 +12,7 @@
 #include "SanitizerMetadata.h"
 #include "CodeGenModule.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 using namespace clang;
 using namespace CodeGen;

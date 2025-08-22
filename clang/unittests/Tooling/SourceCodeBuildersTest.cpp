@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Transformer/SourceCodeBuilders.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"

@@ -36,7 +36,7 @@
 #include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/ExpressionTraits.h"

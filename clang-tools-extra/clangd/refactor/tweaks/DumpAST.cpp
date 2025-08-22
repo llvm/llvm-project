@@ -12,7 +12,7 @@
 #include "XRefs.h"
 #include "refactor/Tweak.h"
 #include "clang/AST/ASTTypeTraits.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"

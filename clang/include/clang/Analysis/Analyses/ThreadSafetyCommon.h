@@ -22,7 +22,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYCOMMON_H
 
 #include "clang/AST/Decl.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTraverse.h"

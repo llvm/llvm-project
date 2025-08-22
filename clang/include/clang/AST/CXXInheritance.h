@@ -16,7 +16,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/DenseMap.h"

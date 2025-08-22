@@ -18,7 +18,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ODRHash.h"
 #include "clang/AST/Stmt.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"

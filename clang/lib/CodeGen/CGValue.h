@@ -19,7 +19,7 @@
 #include "CodeGenTBAA.h"
 #include "EHScopeStack.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 

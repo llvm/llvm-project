@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_SEMA_HLSLBUILTINTYPEDECLBUILDER_H
 #define LLVM_CLANG_SEMA_HLSLBUILTINTYPEDECLBUILDER_H
 
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/StringMap.h"
 

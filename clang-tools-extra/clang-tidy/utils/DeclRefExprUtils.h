@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_DECLREFEXPRUTILS_H
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang::tidy::utils::decl_ref_expr {
