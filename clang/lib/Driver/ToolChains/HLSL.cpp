@@ -295,11 +295,11 @@ void tools::hlsl::MetalConverter::ConstructJob(
                                          Exec, CmdArgs, Inputs, Input));
 }
 
-void tools::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
-                                      const InputInfo &Output,
-                                      const InputInfoList &Inputs,
-                                      const ArgList &Args,
-                                      const char *LinkingOutput) const {
+void tools::hlsl::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
+                                            const InputInfo &Output,
+                                            const InputInfoList &Inputs,
+                                            const ArgList &Args,
+                                            const char *LinkingOutput) const {
 
   std::string ObjcopyPath = getToolChain().GetProgramPath("llvm-objcopy");
   const char *Exec = Args.MakeArgString(ObjcopyPath);
@@ -343,7 +343,7 @@ Tool *clang::driver::toolchains::HLSLToolChain::getTool(
     return MetalConverter.get();
   case Action::ObjcopyJobClass:
     if (!LLVMObjcopy)
-      LLVMObjcopy.reset(new tools::LLVMObjcopy(*this));
+      LLVMObjcopy.reset(new tools::hlsl::LLVMObjcopy(*this));
     return LLVMObjcopy.get();
   default:
     return ToolChain::getTool(AC);
