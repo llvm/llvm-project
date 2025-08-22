@@ -1049,8 +1049,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI unordered_map(const unordered_map& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_map(const unordered_map& __u, const allocator_type& __a);
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_map(unordered_map&& __u)
-      _NOEXCEPT_(is_nothrow_move_constructible<__table>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI unordered_map(unordered_map&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_map(unordered_map&& __u, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI unordered_map(initializer_list<value_type> __il);
   _LIBCPP_HIDE_FROM_ABI
@@ -1102,8 +1101,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI unordered_map& operator=(const unordered_map& __u) = default;
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_map& operator=(unordered_map&& __u)
-      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI unordered_map& operator=(unordered_map&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_map& operator=(initializer_list<value_type> __il);
 #  endif // _LIBCPP_CXX03_LANG
 
@@ -1823,8 +1821,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(const unordered_multimap& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(const unordered_multimap& __u, const allocator_type& __a);
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_multimap(unordered_multimap&& __u)
-      _NOEXCEPT_(is_nothrow_move_constructible<__table>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI unordered_multimap(unordered_multimap&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(unordered_multimap&& __u, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(initializer_list<value_type> __il);
   _LIBCPP_HIDE_FROM_ABI unordered_multimap(
@@ -1876,8 +1873,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI unordered_multimap& operator=(const unordered_multimap& __u) = default;
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_multimap& operator=(unordered_multimap&& __u)
-      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI unordered_multimap& operator=(unordered_multimap&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multimap& operator=(initializer_list<value_type> __il);
 #  endif // _LIBCPP_CXX03_LANG
 
