@@ -407,6 +407,8 @@ clang-format
 - Add ``BreakAfterOpenBracketIf``, ``BreakAfterOpenBracketLoop``,
   ``BreakAfterOpenBracketSwitch``, ``BreakBeforeCloseBracketIf``,
   ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch`` options.
+- Remove ``AlwaysBreak`` and ``BlockIndent`` suboptions from the
+  ``AlignAfterOpenBracket`` option.
 
 libclang
 --------
