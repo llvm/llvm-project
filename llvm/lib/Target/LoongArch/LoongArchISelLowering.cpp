@@ -2805,24 +2805,47 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
       return DAG.getBitcast(ResTy, SplatVec);
     }
 
-    // Use INSERT_VECTOR_ELT operations rather than expand to stores.
-    // The resulting code is the same length as the expansion, but it doesn't
-    // use memory operations.
-    assert(ResTy.isVector());
+    // Use INSERT_VECTOR_ELT operations rather than expand to stores, because
+    // using memory operations is much lower.
+    EVT VecTy = ResTy;
+    unsigned VecNumElts = NumElts;
 
+    // Split the 256-bits vector and fill them separately, concat the two parts
+    // to get the result vector.
+    if (Is256Vec) {
+      VecTy = ResTy.getHalfNumVectorElementsVT(*DAG.getContext());
+      VecNumElts = NumElts / 2;
+    }
+
+    SDValue Vector = DAG.getUNDEF(VecTy);
     SDValue Op0 = Node->getOperand(0);
-    SDValue Vector = DAG.getUNDEF(ResTy);
-
     if (!Op0.isUndef())
-      Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
-    for (unsigned i = 1; i < NumElts; ++i) {
+      Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecTy, Op0);
+    for (unsigned i = 1; i < VecNumElts; ++i) {
       SDValue Opi = Node->getOperand(i);
       if (Opi.isUndef())
         continue;
-      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
+      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecTy, Vector, Opi,
                            DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
     }
-    return Vector;
+
+    if (Is128Vec)
+      return Vector;
+
+    SDValue VectorHi = DAG.getUNDEF(VecTy);
+    SDValue OpHi0 = Node->getOperand(VecNumElts);
+    if (!OpHi0.isUndef())
+      VectorHi = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecTy, OpHi0);
+    for (unsigned i = VecNumElts + 1; i < NumElts; ++i) {
+      SDValue Opi = Node->getOperand(i);
+      if (Opi.isUndef())
+        continue;
+      VectorHi = DAG.getNode(
+          ISD::INSERT_VECTOR_ELT, DL, VecTy, VectorHi, Opi,
+          DAG.getConstant(i - VecNumElts, DL, Subtarget.getGRLenVT()));
+    }
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResTy, Vector, VectorHi);
   }
 
   return SDValue();
