@@ -306,9 +306,8 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
           "%p is located %zd bytes %s a %zd-byte local variable %s "
           "[%p,%p) "
           "in %s %s\n",
-          (void *)untagged_addr, offset, whence, local.size, local.name,
-          (void *)best_beg, (void *)(best_beg + local.size),
-          local.function_name, location.data());
+          untagged_addr, offset, whence, local.size, local.name, best_beg,
+          best_beg + local.size, local.function_name, location.data());
       location.clear();
       Printf("%s\n", d.Default());
     }
@@ -739,8 +738,8 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
     Printf("%s", d.Location());
     Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
            untagged_addr, offset, whence,
-           candidate.heap.end - candidate.heap.begin,
-           (void *)candidate.heap.begin, (void *)candidate.heap.end);
+           candidate.heap.end - candidate.heap.begin, candidate.heap.begin,
+           candidate.heap.end);
     Printf("%s", d.Allocation());
     Printf("allocated by thread T%u here:\n", candidate.heap.thread_id);
     Printf("%s", d.Default());
@@ -763,11 +762,11 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
       Printf(
           "%p is located %zd bytes %s a %zd-byte global variable "
           "%s [%p,%p) in %s\n",
-          (void *)untagged_addr,
+          untagged_addr,
           candidate.after ? untagged_addr - (info.start + info.size)
                           : info.start - untagged_addr,
           candidate.after ? "after" : "before", info.size, info.name,
-          (void *)info.start, (void *)(info.start + info.size), module_name);
+          info.start, info.start + info.size, module_name);
     } else {
       uptr size = GetGlobalSizeFromDescriptor(candidate.untagged_addr);
       if (size == 0)
@@ -775,14 +774,14 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
         Printf(
             "%p is located %s a global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            (void *)untagged_addr, candidate.after ? "after" : "before",
-            (void *)candidate.untagged_addr, module_name, (u32)module_address);
+            untagged_addr, candidate.after ? "after" : "before",
+            candidate.untagged_addr, module_name, module_address);
       else
         Printf(
             "%p is located %s a %zd-byte global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            (void *)untagged_addr, candidate.after ? "after" : "before", size,
-            (void *)candidate.untagged_addr, module_name, (u32)module_address);
+            untagged_addr, candidate.after ? "after" : "before", size,
+            candidate.untagged_addr, module_name, module_address);
     }
     Printf("%s", d.Default());
   }
@@ -793,8 +792,8 @@ void BaseReport::PrintAddressDescription() const {
   int num_descriptions_printed = 0;
 
   if (MemIsShadow(untagged_addr)) {
-    Printf("%s%p is HWAsan shadow memory.\n%s", d.Location(),
-           (void *)untagged_addr, d.Default());
+    Printf("%s%p is HWAsan shadow memory.\n%s", d.Location(), untagged_addr,
+           d.Default());
     return;
   }
 
@@ -803,7 +802,7 @@ void BaseReport::PrintAddressDescription() const {
     Printf(
         "%s[%p,%p) is a %s %s heap chunk; "
         "size: %zd offset: %zd\n%s",
-        d.Location(), (void *)heap.begin, (void *)(heap.begin + heap.size),
+        d.Location(), heap.begin, heap.begin + heap.size,
         heap.from_small_heap ? "small" : "large",
         heap.is_allocated ? "allocated" : "unallocated", heap.size,
         untagged_addr - heap.begin, d.Default());
@@ -822,8 +821,8 @@ void BaseReport::PrintAddressDescription() const {
     Printf("%s", d.Error());
     Printf("\nCause: stack tag-mismatch\n");
     Printf("%s", d.Location());
-    Printf("Address %p is located in stack of thread T%zd\n",
-           (void *)untagged_addr, (ssize)sa.thread_id());
+    Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
+           sa.thread_id());
     Printf("%s", d.Default());
     announce_by_id(sa.thread_id());
     PrintStackAllocations(sa.get(), ptr_tag, untagged_addr);
@@ -843,9 +842,9 @@ void BaseReport::PrintAddressDescription() const {
     Printf("\nCause: use-after-free\n");
     Printf("%s", d.Location());
     Printf("%p is located %zd bytes inside a %zd-byte region [%p,%p)\n",
-           (void *)untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
-           (ssize)har.requested_size, UntagAddr(har.tagged_addr),
-           (void *)(UntagAddr(har.tagged_addr) + har.requested_size));
+           untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
+           har.requested_size, UntagAddr(har.tagged_addr),
+           UntagAddr(har.tagged_addr) + har.requested_size);
     Printf("%s", d.Allocation());
     Printf("freed by thread T%u here:\n", ha.free_thread_id);
     Printf("%s", d.Default());
@@ -859,7 +858,7 @@ void BaseReport::PrintAddressDescription() const {
     // Print a developer note: the index of this heap object
     // in the thread's deallocation ring buffer.
     Printf("hwasan_dev_note_heap_rb_distance: %zd %zd\n", ha.ring_index + 1,
-           (ssize)flags()->heap_history_size);
+           flags()->heap_history_size);
     Printf("hwasan_dev_note_num_matching_addrs: %zd\n", ha.num_matching_addrs);
     Printf("hwasan_dev_note_num_matching_addrs_4b: %zd\n",
            ha.num_matching_addrs_4b);
@@ -916,11 +915,10 @@ InvalidFreeReport::~InvalidFreeReport() {
   const Thread *thread = GetCurrentThread();
   if (thread) {
     Report("ERROR: %s: %s on address %p at pc %p on thread T%zd\n",
-           SanitizerToolName, bug_type, (void *)untagged_addr, (void *)pc,
-           (ssize)thread->unique_id());
+           SanitizerToolName, bug_type, untagged_addr, pc, thread->unique_id());
   } else {
     Report("ERROR: %s: %s on address %p at pc %p on unknown thread\n",
-           SanitizerToolName, bug_type, (void *)untagged_addr, (void *)pc);
+           SanitizerToolName, bug_type, untagged_addr, pc);
   }
   Printf("%s", d.Access());
   if (shadow.addr) {
@@ -969,8 +967,7 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   Printf("%s", d.Error());
   const char *bug_type = "allocation-tail-overwritten";
   Report("ERROR: %s: %s; heap object [%p,%p) of size %zd\n", SanitizerToolName,
-         bug_type, (void *)untagged_addr, (void *)(untagged_addr + orig_size),
-         orig_size);
+         bug_type, untagged_addr, untagged_addr + orig_size, orig_size);
   Printf("\n%s", d.Default());
   Printf(
       "Stack of invalid access unknown. Issue detected at deallocation "
@@ -1040,7 +1037,7 @@ TagMismatchReport::~TagMismatchReport() {
   uptr pc = GetTopPc(stack);
   Printf("%s", d.Error());
   Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type,
-         (void *)untagged_addr, (void *)pc);
+         untagged_addr, pc);
 
   Thread *t = GetCurrentThread();
 
@@ -1052,12 +1049,12 @@ TagMismatchReport::~TagMismatchReport() {
         GetShortTagCopy(MemToShadow(untagged_addr + mismatch_offset));
     Printf(
         "%s of size %zu at %p tags: %02x/%02x(%02x) (ptr/mem) in thread T%zd\n",
-        is_store ? "WRITE" : "READ", access_size, (void *)untagged_addr,
-        ptr_tag, mem_tag, short_tag, (ssize)t->unique_id());
+        is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
+        mem_tag, short_tag, t->unique_id());
   } else {
     Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem) in thread T%zd\n",
-           is_store ? "WRITE" : "READ", access_size, (void *)untagged_addr,
-           ptr_tag, mem_tag, (ssize)t->unique_id());
+           is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
+           mem_tag, t->unique_id());
   }
   if (mismatch_offset)
     Printf("Invalid access starting at offset %zu\n", mismatch_offset);
@@ -1096,7 +1093,7 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
 // hwasan_tag_mismatch_{aarch64,riscv64}.S).
 void ReportRegisters(const uptr *frame, uptr pc) {
-  Printf("\nRegisters where the failure occurred (pc %p):\n", (void *)pc);
+  Printf("\nRegisters where the failure occurred (pc %p):\n", pc);
 
   // We explicitly print a single line (4 registers/line) each iteration to
   // reduce the amount of logcat error messages printed. Each Printf() will
