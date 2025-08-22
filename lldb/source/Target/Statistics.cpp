@@ -363,6 +363,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
           sym_file->GetDwoFileCounts();
       total_dwo_file_count += module_stat.dwo_file_count;
       total_loaded_dwo_file_count += module_stat.loaded_dwo_file_count;
+      uint32_t current_dwo_errors = sym_file->CountDwoLoadErrors();
       module_stat.dwo_load_error_count += current_dwo_errors;
       total_dwo_load_error_count += current_dwo_errors;
       module_stat.debug_info_index_loaded_from_cache =
