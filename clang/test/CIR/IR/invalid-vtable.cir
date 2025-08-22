@@ -1,6 +1,5 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
-!s8i = !cir.int<s, 8>
 !u32i = !cir.int<u, 32>
 cir.func @reference_unknown_vtable() {
   // expected-error @below {{'cir.vtable.address_point' op 'some_vtable' does not reference a valid cir.global}}
@@ -13,7 +12,7 @@ cir.func @reference_unknown_vtable() {
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
 cir.global linkonce_odr @_ZTT1D = #cir.const_array<[#cir.global_view<@_ZTV1D, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1D0_1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 2>
-cir.func @reference_unknown_vtable() {
+cir.func @reference_non_vtable() {
   // expected-error @below {{Expected #cir.vtable in initializer for global '_ZTT1D'}}
   %0 = cir.vtable.address_point(@_ZTT1D, address_point = <index = 0, offset = 2>) : !cir.vptr
   cir.return
@@ -81,4 +80,55 @@ module {
   cir.func private dso_local @_ZN1S3keyEv(%arg0: !cir.ptr<!rec_S>)
   cir.func private dso_local @_ZN1S6nonKeyEv(%arg0: !cir.ptr<!rec_S>)
   cir.func private dso_local @_ZN2S23keyEv(%arg0: !cir.ptr<!rec_S2>)
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+!void = !cir.void
+cir.func @reference_unknown_vtt() {
+  // expected-error @below {{'cir.vtt.address_point' op 'some_vtt' does not reference a valid cir.global}}
+  %0 = cir.vtt.address_point @some_vtt, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!void = !cir.void
+!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
+cir.global external @_ZTV1S = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S3keyEv> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S6nonKeyEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 4>}> : !rec_anon_struct {alignment = 8 : i64}
+cir.func @reference_non_vtt() {
+  // expected-error @below {{'cir.vtt.address_point' op Expected constant array in initializer for global VTT '_ZTV1S'}}
+  %0 = cir.vtt.address_point @_ZTV1S, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!void = !cir.void
+!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
+!rec_C = !cir.record<class "C" {!cir.vptr}>
+cir.global linkonce_odr @_ZTT1C = #cir.const_array<[#cir.global_view<@_ZTV1C, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1C0_1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 2> {alignment = 8 : i64}
+cir.func @reference_name_and_value(%arg0: !cir.ptr<!rec_C>, %arg1: !cir.ptr<!cir.ptr<!void>>) {
+  // expected-error @below {{'cir.vtt.address_point' op should use either a symbol or value, but not both}}
+  %0 = cir.vtt.address_point @_ZTT1C %arg1 : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!void = !cir.void
+!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
+!rec_C = !cir.record<class "C" {!cir.vptr}>
+cir.global linkonce_odr @_ZTT1C = #cir.const_array<[#cir.global_view<@_ZTV1C, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1C0_1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 2> {alignment = 8 : i64}
+cir.func @bad_return_type_for_vtt_addrpoint() {
+  // expected-error @below {{result type must be '!cir.ptr<!cir.ptr<!cir.void>>', but provided result type is '!cir.ptr<!cir.int<u, 8>>'}}
+  %0 = cir.vtt.address_point @_ZTT1C, offset = 1 -> !cir.ptr<!u8i>
+  cir.return
 }
