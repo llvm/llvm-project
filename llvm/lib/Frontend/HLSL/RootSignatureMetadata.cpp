@@ -539,53 +539,19 @@ Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
   return Error::success();
 }
 
-/** This validation logic was extracted from the DXC codebase
- *   https://github.com/microsoft/DirectXShaderCompiler/blob/7a1b1df9b50a8350a63756720e85196e0285e664/lib/DxilRootSignature/DxilRootSignatureValidator.cpp#L205
- *
- *   It checks if the registers in a descriptor table are overflowing, meaning,
- *   they are trying to bind a register larger than MAX_UINT.
- *   This will usually happen when the descriptor table appends a resource
- *   after an unbounded range.
- **/
 Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
                                               uint32_t Location) {
   uint64_t AppendingRegister = 0;
 
   for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
-
     dxbc::DescriptorRangeType RangeType =
         static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
-
-    uint64_t Register = AppendingRegister;
-
-    // Checks if the current register should be appended to the previous range.
-    if (Range.OffsetInDescriptorsFromTableStart != ~0U)
-      Register = Range.OffsetInDescriptorsFromTableStart;
-
-    // Check for overflow in the register value.
-    if (Register > ~0U)
+    if (verifyOffsetOverflowing(AppendingRegister,
+                                Range.OffsetInDescriptorsFromTableStart,
+                                Range.BaseShaderRegister, Range.RegisterSpace,
+                                Range.NumDescriptors))
       return make_error<TableRegisterOverflowError>(
           RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
-    // Is the current range unbounded?
-    if (Range.NumDescriptors == ~0U) {
-      // No ranges should be appended to an unbounded range.
-      AppendingRegister = (uint64_t)~0U + (uint64_t)1ULL;
-    } else {
-      // Is the defined range, overflowing?
-      uint64_t UpperBound = (uint64_t)Range.BaseShaderRegister +
-                            (uint64_t)Range.NumDescriptors - (uint64_t)1U;
-      if (UpperBound > ~0U)
-        return make_error<TableRegisterOverflowError>(
-            RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
-
-      // If we append this range, will it overflow?
-      uint64_t AppendingUpperBound =
-          (uint64_t)Register + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
-      if (AppendingUpperBound > ~0U)
-        return make_error<TableRegisterOverflowError>(
-            RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
-      AppendingRegister = Register + Range.NumDescriptors;
-    }
   }
 
   return Error::success();
