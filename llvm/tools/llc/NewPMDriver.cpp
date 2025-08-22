@@ -101,6 +101,13 @@ int llvm::compileModuleWithNewPM(
 
   raw_pwrite_stream *OS = &Out->os();
 
+  std::unique_ptr<buffer_ostream> BOS;
+  if (codegen::getFileType() != CodeGenFileType::AssemblyFile &&
+      !Out->os().supportsSeeking()) {
+    BOS = std::make_unique<buffer_ostream>(Out->os());
+    OS = BOS.get();
+  }
+
   // Fetch options from TargetPassConfig
   CGPassBuilderOption Opt = getCGPassBuilderOption();
   Opt.DisableVerify = VK != VerifierKind::InputOutput;
