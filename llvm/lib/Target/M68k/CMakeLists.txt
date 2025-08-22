@@ -14,7 +14,7 @@ tablegen(LLVM M68kGenDAGISel.inc          -gen-dag-isel)
 tablegen(LLVM M68kGenCallingConv.inc      -gen-callingconv)
 tablegen(LLVM M68kGenAsmWriter.inc        -gen-asm-writer)
 tablegen(LLVM M68kGenAsmMatcher.inc       -gen-asm-matcher)
-tablegen(LLVM M68kGenDisassemblerTable.inc -gen-disassembler)
+tablegen(LLVM M68kGenDisassemblerTables.inc -gen-disassembler)
 
 add_public_tablegen_target(M68kCommonTableGen)
 

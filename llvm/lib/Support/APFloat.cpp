@@ -5285,23 +5285,56 @@ void DoubleAPFloat::changeSign() {
 
 APFloat::cmpResult
 DoubleAPFloat::compareAbsoluteValue(const DoubleAPFloat &RHS) const {
-  auto Result = Floats[0].compareAbsoluteValue(RHS.Floats[0]);
-  if (Result != cmpEqual)
-    return Result;
-  Result = Floats[1].compareAbsoluteValue(RHS.Floats[1]);
-  if (Result == cmpLessThan || Result == cmpGreaterThan) {
-    auto Against = Floats[0].isNegative() ^ Floats[1].isNegative();
-    auto RHSAgainst = RHS.Floats[0].isNegative() ^ RHS.Floats[1].isNegative();
-    if (Against && !RHSAgainst)
-      return cmpLessThan;
-    if (!Against && RHSAgainst)
+  // Compare absolute values of the high parts.
+  const cmpResult HiPartCmp = Floats[0].compareAbsoluteValue(RHS.Floats[0]);
+  if (HiPartCmp != cmpEqual)
+    return HiPartCmp;
+
+  // Zero, regardless of sign, is equal.
+  if (Floats[1].isZero() && RHS.Floats[1].isZero())
+    return cmpEqual;
+
+  // At this point, |this->Hi| == |RHS.Hi|.
+  // The magnitude is |Hi+Lo| which is Hi+|Lo| if signs of Hi and Lo are the
+  // same, and Hi-|Lo| if signs are different.
+  const bool ThisIsSubtractive =
+      Floats[0].isNegative() != Floats[1].isNegative();
+  const bool RHSIsSubtractive =
+      RHS.Floats[0].isNegative() != RHS.Floats[1].isNegative();
+
+  // Case 1: The low part of 'this' is zero.
+  if (Floats[1].isZero())
+    // We are comparing |Hi| vs. |Hi| ± |RHS.Lo|.
+    // If RHS is subtractive, its magnitude is smaller.
+    // If RHS is additive, its magnitude is larger.
+    return RHSIsSubtractive ? cmpGreaterThan : cmpLessThan;
+
+  // Case 2: The low part of 'RHS' is zero (and we know 'this' is not).
+  if (RHS.Floats[1].isZero())
+    // We are comparing |Hi| ± |This.Lo| vs. |Hi|.
+    // If 'this' is subtractive, its magnitude is smaller.
+    // If 'this' is additive, its magnitude is larger.
+    return ThisIsSubtractive ? cmpLessThan : cmpGreaterThan;
+
+  // If their natures differ, the additive one is larger.
+  if (ThisIsSubtractive != RHSIsSubtractive)
+    return ThisIsSubtractive ? cmpLessThan : cmpGreaterThan;
+
+  // Case 3: Both are additive (Hi+|Lo|) or both are subtractive (Hi-|Lo|).
+  // The comparison now depends on the magnitude of the low parts.
+  const cmpResult LoPartCmp = Floats[1].compareAbsoluteValue(RHS.Floats[1]);
+
+  if (ThisIsSubtractive) {
+    // Both are subtractive (Hi-|Lo|), so the comparison of |Lo| is inverted.
+    if (LoPartCmp == cmpLessThan)
       return cmpGreaterThan;
-    if (!Against && !RHSAgainst)
-      return Result;
-    if (Against && RHSAgainst)
-      return (cmpResult)(cmpLessThan + cmpGreaterThan - Result);
+    if (LoPartCmp == cmpGreaterThan)
+      return cmpLessThan;
   }
-  return Result;
+
+  // If additive, the comparison of |Lo| is direct.
+  // If equal, they are equal.
+  return LoPartCmp;
 }
 
 APFloat::fltCategory DoubleAPFloat::getCategory() const {

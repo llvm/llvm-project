@@ -350,12 +350,20 @@ void splitAndWriteThinLTOBitcode(
       });
     }
 
+  auto MustEmitToMergedModule = [](const GlobalValue *GV) {
+    // The __cfi_check definition is filled in by the CrossDSOCFI pass which
+    // runs only in the merged module.
+    return GV->getName() == "__cfi_check";
+  };
+
   ValueToValueMapTy VMap;
   std::unique_ptr<Module> MergedM(
       CloneModule(M, VMap, [&](const GlobalValue *GV) -> bool {
         if (const auto *C = GV->getComdat())
           if (MergedMComdats.count(C))
             return true;
+        if (MustEmitToMergedModule(GV))
+          return true;
         if (auto *F = dyn_cast<Function>(GV))
           return EligibleVirtualFns.count(F);
         if (auto *GVar =
@@ -372,7 +380,7 @@ void splitAndWriteThinLTOBitcode(
   cloneUsedGlobalVariables(M, *MergedM, /*CompilerUsed*/ true);
 
   for (Function &F : *MergedM)
-    if (!F.isDeclaration()) {
+    if (!F.isDeclaration() && !MustEmitToMergedModule(&F)) {
       // Reset the linkage of all functions eligible for virtual constant
       // propagation. The canonical definitions live in the thin LTO module so
       // that they can be imported.
@@ -398,6 +406,8 @@ void splitAndWriteThinLTOBitcode(
     if (const auto *C = GV->getComdat())
       if (MergedMComdats.count(C))
         return false;
+    if (MustEmitToMergedModule(GV))
+      return false;
     return true;
   });
 

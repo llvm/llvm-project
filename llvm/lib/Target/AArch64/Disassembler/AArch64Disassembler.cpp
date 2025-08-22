@@ -15,6 +15,7 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -27,6 +28,7 @@
 #include <memory>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "aarch64-disassembler"
 

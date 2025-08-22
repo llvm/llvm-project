@@ -16,6 +16,7 @@
 #include "LanaiCondCode.h"
 #include "LanaiInstrInfo.h"
 #include "TargetInfo/LanaiTargetInfo.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
