@@ -106,7 +106,7 @@ mlir::Value fir::runtime::getThisImage(fir::FirOpBuilder &builder,
 /// Generate call to collective subroutines except co_reduce
 /// A must be lowered as a box
 void genCollectiveSubroutine(fir::FirOpBuilder &builder, mlir::Location loc,
-                             mlir::Value A, mlir::Value sourceImage,
+                             mlir::Value A, mlir::Value rootImage,
                              mlir::Value stat, mlir::Value errmsg,
                              std::string coName) {
   mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
@@ -117,7 +117,7 @@ void genCollectiveSubroutine(fir::FirOpBuilder &builder, mlir::Location loc,
 
   auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-      builder, loc, ftype, A, sourceImage, stat, errmsgArg, errmsgAllocArg);
+      builder, loc, ftype, A, rootImage, stat, errmsgArg, errmsgAllocArg);
   builder.create<fir::CallOp>(loc, funcOp, args);
 }
 
