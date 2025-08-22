@@ -566,6 +566,9 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   // GccLibDir must precede Base/lib so that the
   // correct crtbegin.o ,cetend.o would be found.
   getFilePaths().push_back(GccLibDir);
+  std::string CandidateGccLibDir = GccParentLibPath + "/../" + TripleDirName + "/lib";
+  if (getDriver().getVFS().exists(CandidateGccLibDir))
+    getFilePaths().push_back(CandidateGccLibDir);
 
   // openSUSE/Fedora/Gentoo
   std::string CandidateSubdir = "mingw";
