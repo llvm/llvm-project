@@ -17,7 +17,6 @@
 #include <optional>
 
 namespace clang::tidy::performance {
-namespace {
 
 using namespace ::clang::ast_matchers;
 using llvm::StringRef;
@@ -30,8 +29,8 @@ static constexpr StringRef MethodDeclId = "methodDecl";
 static constexpr StringRef FunctionDeclId = "functionDecl";
 static constexpr StringRef OldVarDeclId = "oldVarDecl";
 
-void recordFixes(const VarDecl &Var, ASTContext &Context,
-                 DiagnosticBuilder &Diagnostic) {
+static void recordFixes(const VarDecl &Var, ASTContext &Context,
+                        DiagnosticBuilder &Diagnostic) {
   Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
   if (!Var.getType().isLocalConstQualified()) {
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
@@ -40,8 +39,8 @@ void recordFixes(const VarDecl &Var, ASTContext &Context,
   }
 }
 
-std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
-                                                   SourceManager &SM) {
+static std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
+                                                          SourceManager &SM) {
   bool Invalid = false;
   const char *TextAfter = SM.getCharacterData(Loc, &Invalid);
   if (Invalid) {
@@ -51,8 +50,8 @@ std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
   return Loc.getLocWithOffset(TextAfter[Offset] == '\0' ? Offset : Offset + 1);
 }
 
-void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
-                   DiagnosticBuilder &Diagnostic) {
+static void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
+                          DiagnosticBuilder &Diagnostic) {
   auto &SM = Context.getSourceManager();
   // Attempt to remove trailing comments as well.
   auto Tok = utils::lexer::findNextTokenSkippingComments(Stmt.getEndLoc(), SM,
@@ -73,6 +72,8 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
     Diagnostic << FixItHint::CreateRemoval(Stmt.getSourceRange());
   }
 }
+
+namespace {
 
 AST_MATCHER_FUNCTION_P(StatementMatcher,
                        isRefReturningMethodCallWithConstOverloads,
@@ -130,6 +131,8 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
                                            hasUnaryOperand(OldVarDeclRef)))));
 }
 
+} // namespace
+
 // This checks that the variable itself is only used as const, and also makes
 // sure that it does not reference another variable that could be modified in
 // the BlockStmt. It does this by checking the following:
@@ -180,13 +183,13 @@ static bool isInitializingVariableImmutable(
   return false;
 }
 
-bool isVariableUnused(const VarDecl &Var, const Stmt &BlockStmt,
-                      ASTContext &Context) {
+static bool isVariableUnused(const VarDecl &Var, const Stmt &BlockStmt,
+                             ASTContext &Context) {
   return allDeclRefExprs(Var, BlockStmt, Context).empty();
 }
 
-const SubstTemplateTypeParmType *getSubstitutedType(const QualType &Type,
-                                                    ASTContext &Context) {
+static const SubstTemplateTypeParmType *
+getSubstitutedType(const QualType &Type, ASTContext &Context) {
   auto Matches = match(
       qualType(anyOf(substTemplateTypeParmType().bind("subst"),
                      hasDescendant(substTemplateTypeParmType().bind("subst")))),
@@ -194,9 +197,9 @@ const SubstTemplateTypeParmType *getSubstitutedType(const QualType &Type,
   return selectFirst<SubstTemplateTypeParmType>("subst", Matches);
 }
 
-bool differentReplacedTemplateParams(const QualType &VarType,
-                                     const QualType &InitializerType,
-                                     ASTContext &Context) {
+static bool differentReplacedTemplateParams(const QualType &VarType,
+                                            const QualType &InitializerType,
+                                            ASTContext &Context) {
   if (const SubstTemplateTypeParmType *VarTmplType =
           getSubstitutedType(VarType, Context)) {
     if (const SubstTemplateTypeParmType *InitializerTmplType =
@@ -212,8 +215,8 @@ bool differentReplacedTemplateParams(const QualType &VarType,
   return false;
 }
 
-QualType constructorArgumentType(const VarDecl *OldVar,
-                                 const BoundNodes &Nodes) {
+static QualType constructorArgumentType(const VarDecl *OldVar,
+                                        const BoundNodes &Nodes) {
   if (OldVar) {
     return OldVar->getType();
   }
@@ -223,8 +226,6 @@ QualType constructorArgumentType(const VarDecl *OldVar,
   const auto *MethodDecl = Nodes.getNodeAs<CXXMethodDecl>(MethodDeclId);
   return MethodDecl->getReturnType();
 }
-
-} // namespace
 
 UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
     StringRef Name, ClangTidyContext *Context)
