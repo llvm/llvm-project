@@ -216,10 +216,7 @@ void init_list_cbon(int count_param, int*__counted_by_or_null(count_param) ptr) 
 // SAME-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META2]]
 // SAME:       [[LAND_RHS]]:
 // SAME-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], null, !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TOBOOL_NOT]], label %[[LAND_RHS_CONT_CRIT_EDGE:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
-// SAME:       [[LAND_RHS_CONT_CRIT_EDGE]]:
-// SAME-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64
-// SAME-NEXT:    br label %[[CONT:.*]]
+// SAME-NEXT:    br i1 [[TOBOOL_NOT]], label %[[CONT:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
 // SAME:       [[LOR_RHS]]:
 // SAME-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT_PARAM]] to i64, !annotation [[META2]]
 // SAME-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META2]]
@@ -234,7 +231,7 @@ void init_list_cbon(int count_param, int*__counted_by_or_null(count_param) ptr) 
 // SAME-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
 // SAME:       [[CONT]]:
-// SAME-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[DOTPRE]], %[[LAND_RHS_CONT_CRIT_EDGE]] ], [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ]
+// SAME-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ], [ 0, %[[LAND_RHS]] ]
 // SAME-NEXT:    [[C_SROA_0_0_INSERT_EXT:%.*]] = zext i32 [[COUNT_PARAM]] to i64
 // SAME-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[C_SROA_0_0_INSERT_EXT]], 0
 // SAME-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[DOTPRE_PHI]], 1
@@ -307,10 +304,7 @@ void compound_literal_init_cbon(int count_param, int*__counted_by_or_null(count_
 // NEW-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META2]]
 // NEW:       [[LAND_RHS]]:
 // NEW-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], null, !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TOBOOL_NOT]], label %[[LAND_RHS_CONT_CRIT_EDGE:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
-// NEW:       [[LAND_RHS_CONT_CRIT_EDGE]]:
-// NEW-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64
-// NEW-NEXT:    br label %[[CONT:.*]]
+// NEW-NEXT:    br i1 [[TOBOOL_NOT]], label %[[CONT:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
 // NEW:       [[LOR_RHS]]:
 // NEW-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT_PARAM]] to i64, !annotation [[META2]]
 // NEW-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META2]]
@@ -325,7 +319,7 @@ void compound_literal_init_cbon(int count_param, int*__counted_by_or_null(count_
 // NEW-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
 // NEW:       [[CONT]]:
-// NEW-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[DOTPRE]], %[[LAND_RHS_CONT_CRIT_EDGE]] ], [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ]
+// NEW-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ], [ 0, %[[LAND_RHS]] ]
 // NEW-NEXT:    [[C_SROA_0_0_INSERT_EXT:%.*]] = zext i32 [[COUNT_PARAM]] to i64
 // NEW-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[C_SROA_0_0_INSERT_EXT]], 0
 // NEW-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[DOTPRE_PHI]], 1
@@ -544,10 +538,7 @@ void init_list_sbon(int count_param, char*__sized_by_or_null(count_param) ptr) {
 // SAME-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META2]]
 // SAME:       [[LAND_RHS]]:
 // SAME-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], null, !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TOBOOL_NOT]], label %[[LAND_RHS_CONT_CRIT_EDGE:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
-// SAME:       [[LAND_RHS_CONT_CRIT_EDGE]]:
-// SAME-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64
-// SAME-NEXT:    br label %[[CONT:.*]]
+// SAME-NEXT:    br i1 [[TOBOOL_NOT]], label %[[CONT:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
 // SAME:       [[LOR_RHS]]:
 // SAME-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT_PARAM]] to i64, !annotation [[META2]]
 // SAME-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META2]]
@@ -561,7 +552,7 @@ void init_list_sbon(int count_param, char*__sized_by_or_null(count_param) ptr) {
 // SAME-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
 // SAME:       [[CONT]]:
-// SAME-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[DOTPRE]], %[[LAND_RHS_CONT_CRIT_EDGE]] ], [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ]
+// SAME-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ], [ 0, %[[LAND_RHS]] ]
 // SAME-NEXT:    [[C_SROA_0_0_INSERT_EXT:%.*]] = zext i32 [[COUNT_PARAM]] to i64
 // SAME-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[C_SROA_0_0_INSERT_EXT]], 0
 // SAME-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[DOTPRE_PHI]], 1
@@ -634,10 +625,7 @@ void compound_literal_init_sbon(int count_param, char*__sized_by_or_null(count_p
 // NEW-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META2]]
 // NEW:       [[LAND_RHS]]:
 // NEW-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], null, !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TOBOOL_NOT]], label %[[LAND_RHS_CONT_CRIT_EDGE:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
-// NEW:       [[LAND_RHS_CONT_CRIT_EDGE]]:
-// NEW-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64
-// NEW-NEXT:    br label %[[CONT:.*]]
+// NEW-NEXT:    br i1 [[TOBOOL_NOT]], label %[[CONT:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
 // NEW:       [[LOR_RHS]]:
 // NEW-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT_PARAM]] to i64, !annotation [[META2]]
 // NEW-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META2]]
@@ -651,7 +639,7 @@ void compound_literal_init_sbon(int count_param, char*__sized_by_or_null(count_p
 // NEW-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
 // NEW:       [[CONT]]:
-// NEW-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[DOTPRE]], %[[LAND_RHS_CONT_CRIT_EDGE]] ], [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ]
+// NEW-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ], [ 0, %[[LAND_RHS]] ]
 // NEW-NEXT:    [[C_SROA_0_0_INSERT_EXT:%.*]] = zext i32 [[COUNT_PARAM]] to i64
 // NEW-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[C_SROA_0_0_INSERT_EXT]], 0
 // NEW-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[DOTPRE_PHI]], 1

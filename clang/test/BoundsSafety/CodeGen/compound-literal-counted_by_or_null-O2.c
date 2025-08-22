@@ -194,10 +194,7 @@ void local_var_init(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META2]]
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], null, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[LAND_RHS_CONT_CRIT_EDGE:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
-// CHECK:       [[LAND_RHS_CONT_CRIT_EDGE]]:
-// CHECK-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64
-// CHECK-NEXT:    br label %[[CONT:.*]]
+// CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[CONT:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
 // CHECK:       [[LOR_RHS]]:
 // CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[NEW_COUNT]] to i64, !annotation [[META2]]
 // CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META2]]
@@ -211,7 +208,7 @@ void local_var_init(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[DOTPRE]], %[[LAND_RHS_CONT_CRIT_EDGE]] ], [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ]
+// CHECK-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ], [ 0, %[[LAND_RHS]] ]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_0_0_INSERT_EXT:%.*]] = zext i32 [[NEW_COUNT]] to i64
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[DOTCOMPOUNDLITERAL_SROA_0_0_INSERT_EXT]], 0
 // CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[DOTPRE_PHI]], 1
@@ -240,10 +237,7 @@ void call_arg(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META2]]
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], null, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[LAND_RHS_CONT_CRIT_EDGE:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
-// CHECK:       [[LAND_RHS_CONT_CRIT_EDGE]]:
-// CHECK-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64
-// CHECK-NEXT:    br label %[[CONT:.*]]
+// CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[CONT:.*]], label %[[LOR_RHS:.*]], !annotation [[META2]]
 // CHECK:       [[LOR_RHS]]:
 // CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[NEW_COUNT]] to i64, !annotation [[META2]]
 // CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META2]]
@@ -257,7 +251,7 @@ void call_arg(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[DOTPRE]], %[[LAND_RHS_CONT_CRIT_EDGE]] ], [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ]
+// CHECK-NEXT:    [[DOTPRE_PHI:%.*]] = phi i64 [ [[SUB_PTR_RHS_CAST]], %[[LOR_RHS]] ], [ 0, %[[LAND_RHS]] ]
 // CHECK-NEXT:    [[RETVAL_SROA_0_0_INSERT_EXT:%.*]] = zext i32 [[NEW_COUNT]] to i64
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[RETVAL_SROA_0_0_INSERT_EXT]], 0
 // CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[DOTPRE_PHI]], 1
