@@ -9,7 +9,6 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "LLDBUtils.h"
-#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "ProtocolUtils.h"
 #include "RequestHandler.h"
@@ -45,10 +44,7 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   // Waiting until 'configurationDone' to send target based capabilities in case
   // the launch or attach scripts adjust the target. The initial dummy target
   // may have different capabilities than the final target.
-
-  /// Also send here custom capabilities to the client, which is consumed by the
-  /// lldb-dap specific editor extension.
-  SendExtraCapabilities(dap);
+  SendTargetBasedCapabilities(dap);
 
   // Clients can request a baseline of currently existing threads after
   // we acknowledge the configurationDone request.

@@ -2072,6 +2072,27 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
     return new IntToPtrInst(P, CI.getType());
   }
 
+  // Replace (inttoptr (add (ptrtoint %Base), %Offset)) with
+  // (getelementptr i8, %Base, %Offset) if the pointer is only used as integer
+  // value.
+  Value *Base;
+  Value *Offset;
+  auto UsesPointerAsInt = [](User *U) {
+    if (isa<ICmpInst, PtrToIntInst>(U))
+      return true;
+    if (auto *P = dyn_cast<PHINode>(U))
+      return P->hasOneUse() && isa<ICmpInst, PtrToIntInst>(*P->user_begin());
+    return false;
+  };
+  if (match(CI.getOperand(0),
+            m_OneUse(m_c_Add(m_PtrToIntSameSize(DL, m_Value(Base)),
+                             m_Value(Offset)))) &&
+      CI.getType()->getPointerAddressSpace() ==
+          Base->getType()->getPointerAddressSpace() &&
+      all_of(CI.users(), UsesPointerAsInt)) {
+    return GetElementPtrInst::Create(Builder.getInt8Ty(), Base, Offset);
+  }
+
   if (Instruction *I = commonCastTransforms(CI))
     return I;
 

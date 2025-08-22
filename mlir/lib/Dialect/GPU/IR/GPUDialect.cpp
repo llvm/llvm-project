@@ -2486,8 +2486,7 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
   if (getArgs().size() != getWarpRegion().getNumArguments())
     return emitOpError(
         "expected same number op arguments and block arguments.");
-  auto yield =
-      cast<YieldOp>(getWarpRegion().getBlocks().begin()->getTerminator());
+  gpu::YieldOp yield = getTerminator();
   if (yield.getNumOperands() != getNumResults())
     return emitOpError(
         "expected same number of yield operands and return values.");
@@ -2509,6 +2508,10 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
 bool WarpExecuteOnLane0Op::areTypesCompatible(Type lhs, Type rhs) {
   return succeeded(
       verifyDistributedType(lhs, rhs, getWarpSize(), getOperation()));
+}
+
+gpu::YieldOp WarpExecuteOnLane0Op::getTerminator() {
+  return cast<gpu::YieldOp>(getBody()->getTerminator());
 }
 
 //===----------------------------------------------------------------------===//

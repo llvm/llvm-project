@@ -18,7 +18,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace string_length_internal {
 // Return a bit-mask with the nth bit set if the nth-byte in block_ptr is zero.
 template <typename Vector, typename Mask>
-LIBC_INLINE static Mask compare_and_mask(const Vector *block_ptr);
+[[gnu::no_sanitize_address]] LIBC_INLINE static Mask
+compare_and_mask(const Vector *block_ptr);
 
 template <typename Vector, typename Mask,
           decltype(compare_and_mask<Vector, Mask>)>

@@ -1,6 +1,5 @@
 {
 	"compilerOptions": {
-		"moduleResolution": "node",
 		"module": "commonjs",
 		"outDir": "out",
 		"rootDir": "src-ts",
@@ -13,6 +12,5 @@
 	],
 	"exclude": [
 		"node_modules",
-		"src-ts/webview",
 	]
 }
