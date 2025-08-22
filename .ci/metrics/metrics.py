@@ -181,7 +181,7 @@ def create_and_append_libcxx_aggregates(
             # Go through rest of jobs for this workflow id, updating stats
             for job in job_list[1:]:
                 # Update the status
-                ag_status = ag_status or job.status
+                ag_status = ag_status and job.status
                 # Get the earliest & latest times
                 if job.created_at_ns < earliest_create:
                     earliest_create = job.created_at_ns
@@ -202,7 +202,7 @@ def create_and_append_libcxx_aggregates(
             workflow_metrics.append(
                 AggregateMetric(
                     ag_name, ag_queue_time, ag_run_time, ag_status,
-                    last_complete, ag_workflow_id
+                    latest_complete, ag_workflow_id
                 )
             )
     return
