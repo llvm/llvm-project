@@ -106,9 +106,6 @@ def MemRef_AliasingAttr : MemRef_Attr<"Aliasing", "aliasing"> {
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
-
-  // Generate mnemonic alias for the attribute.
-  let genMnemonicAlias = 1;
 }
 
 #endif // MEMREF_ATTRDEFS

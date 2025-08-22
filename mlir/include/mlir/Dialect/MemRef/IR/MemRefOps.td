@@ -470,20 +470,6 @@ def MemRef_AliasDomainScopeOp : MemRef_Op<"alias_domain_scope", [
   let regions = (region SizedRegion<1>:$region);
 
   let assemblyFormat = "attr-dict $domain (`->` type($results)^)? $region";
-
-//  let extraClassDeclaration = [{
-//    /// Inline op body into parent region and erase the op.
-//    static void inlineIntoParent(::mlir::PatternRewriter &builder, EnvironmentRegionOp op);
-//  }];
-//
-//  let builders = [
-//    OpBuilder<(ins "::mlir::Attribute":$environment,
-//      CArg<"::mlir::ValueRange", "std::nullopt">:$args,
-//      CArg<"::mlir::TypeRange", "std::nullopt">:$results,
-//      CArg<"::llvm::function_ref<void(::mlir::OpBuilder &, ::mlir::Location)>", "nullptr">)>
-//  ];
-//
-//  let hasCanonicalizer = 1;
 }
 
 def MemRef_AliasDomainScopeReturnOp : MemRef_Op<"alias_domain_scope.return", [
@@ -1285,34 +1271,38 @@ def LoadOp : MemRef_Op<"load",
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
                        ConfinedAttr<OptionalAttr<I64Attr>,
-                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment,
+                       OptionalAttr<MemRef_AliasingAttr>:$alias);
 
   let builders = [
     OpBuilder<(ins "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"uint64_t", "0">:$alignment,
+                   CArg<"AliasingAttr", "nullptr">:$alias), [{
       return build($_builder, $_state, memref, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                                    nullptr, alias);
     }]>,
     OpBuilder<(ins "Type":$resultType,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"uint64_t", "0">:$alignment,
+                   CArg<"AliasingAttr", "nullptr">:$alias), [{
       return build($_builder, $_state, resultType, memref, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                                    nullptr, alias);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"uint64_t", "0">:$alignment,
+                   CArg<"AliasingAttr", "nullptr">:$alias), [{
       return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                                    nullptr, alias);
     }]>
   ];
 
@@ -2019,17 +2009,19 @@ def MemRef_StoreOp : MemRef_Op<"store",
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
                        ConfinedAttr<OptionalAttr<I64Attr>,
-                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment,
+                       OptionalAttr<MemRef_AliasingAttr>:$alias);
 
   let builders = [
     OpBuilder<(ins "Value":$valueToStore,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"uint64_t", "0">:$alignment,
+                   CArg<"AliasingAttr", "nullptr">:$alias), [{
       return build($_builder, $_state, valueToStore, memref, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                                    nullptr, alias);
     }]>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref), [{
       $_state.addOperands(valueToStore);
