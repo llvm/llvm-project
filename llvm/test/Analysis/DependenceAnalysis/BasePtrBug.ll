@@ -18,7 +18,7 @@ define void @test1(ptr nocapture %A, ptr nocapture %B, i32 %N) #0 {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %gep.0, align 4 --> Dst: %0 = load i32, ptr %gep.0, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %gep.0, align 4 --> Dst: %1 = load i32, ptr %gep.1, align 4
-; CHECK-NEXT:    da analyze - input [*|<]!
+; CHECK-NEXT:    da analyze - consistent input [((-4 * (sext i32 %div to i64))<nsw> /u 4)|<]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %gep.0, align 4 --> Dst: store i32 %add, ptr %gep.B, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %gep.1, align 4 --> Dst: %1 = load i32, ptr %gep.1, align 4
