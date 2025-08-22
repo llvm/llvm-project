@@ -2961,7 +2961,7 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
   for (auto &iv : ivs)
     iv.type = loopVarType;
 
-  auto ctx = parser.getBuilder().getContext();
+  auto *ctx = parser.getBuilder().getContext();
   // Parse "inclusive" flag.
   if (succeeded(parser.parseOptionalKeyword("inclusive")))
     result.addAttribute("loop_inclusive", UnitAttr::get(ctx));
@@ -3065,8 +3065,7 @@ LogicalResult LoopNestOp::verify() {
 
   if (const auto &tiles = getTileSizes())
     if (tiles.value().size() > numIVs)
-      return emitOpError()
-             << "number of tilings is larger than the number of loops";
+      return emitOpError() << "too few canonical loops for tile dimensions";
 
   if (!llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp()))
     return emitOpError() << "expects parent op to be a loop wrapper";
