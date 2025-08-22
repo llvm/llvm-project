@@ -3280,7 +3280,8 @@ static void collectSmartOwningPtrFieldRegions(
 ProgramStateRef MallocChecker::handleSmartPointerConstructorArguments(
     const CallEvent &Call, ProgramStateRef State) const {
   const auto *CD = cast<CXXConstructorDecl>(Call.getDecl());
-  for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
+  for (unsigned I = 0, E = std::min(Call.getNumArgs(), CD->getNumParams());
+       I != E; ++I) {
     const Expr *ArgExpr = Call.getArgExpr(I);
     if (!ArgExpr)
       continue;

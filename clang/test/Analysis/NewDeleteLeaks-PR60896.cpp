@@ -164,6 +164,34 @@ void test_multiple_memory_owning_arguments() {
   );
 }
 
+// Test 8: Variadic constructor - test for potential out-of-bounds access
+// This tests a scenario where Call.getNumArgs() > CD->getNumParams()
+template <typename T>
+struct VariadicSmartPtr {
+  T* ptr;
+  
+  // Constructor with ellipsis - can receive more arguments than parameters  
+  VariadicSmartPtr(T* p, ...) : ptr(p) {}
+  
+  ~VariadicSmartPtr() { delete ptr; }
+};
+
+void process_variadic_smart_ptr(VariadicSmartPtr<int> ptr) {
+  // Function body doesn't matter for this test
+}
+
+void test_variadic_constructor_bounds() {
+  void *malloc_ptr = malloc(4); // expected-note {{Memory is allocated}}
+  
+  // This call creates a smart pointer with more arguments than formal parameters
+  // The constructor has 1 formal parameter (T* p) plus ellipsis, but we pass multiple args
+  // This should trigger the bounds checking issue in handleSmartPointerConstructorArguments
+  int* raw_ptr = new int(42);
+  process_variadic_smart_ptr(VariadicSmartPtr<int>(raw_ptr, 1, 2, 3, 4, 5));
+  
+  (void)malloc_ptr;
+} // expected-warning {{Potential leak of memory pointed to by 'malloc_ptr'}} expected-note {{Potential leak of memory pointed to by 'malloc_ptr'}}
+
 } // namespace unique_ptr_tests
 
 //===----------------------------------------------------------------------===//
