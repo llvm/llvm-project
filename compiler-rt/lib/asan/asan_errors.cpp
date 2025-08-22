@@ -803,7 +803,7 @@ void ErrorNonSelfAMDGPU::PrintMallocStack() {
           "(or free) call of size %u from%s\n",
           d.Location(), (void *)device_address[0],
           (u32)(device_address[0] - (plo + offset)), d.Allocation(),
-          ((int*)plo)[7], d.Default());
+          ((u32*)plo)[7], d.Default());
       // TODO: The code object with the malloc call may not be the same
       // code object trying the illegal access.  A mechanism is needed
       // to obtain the former.
@@ -819,7 +819,7 @@ void ErrorNonSelfAMDGPU::PrintMallocStack() {
           d.Location(), (void *)device_address[0],
           (u32)((phi + offset) - device_address[0]),
 
-          d.Allocation(), ((int*)phi)[7], d.Default());
+          d.Allocation(), ((u32*)phi)[7], d.Default());
       PrintStack();
     }
   }
@@ -830,9 +830,9 @@ void ErrorNonSelfAMDGPU::Print() {
   Printf("%s", d.Error());
   Report("ERROR: AddressSanitizer: %s on amdgpu device %d at pc %p\n",
          bug_descr, device_id, (void *)callstack[0]);
-  Printf("%s%s of size %zu in workgroup id (%zu,%zu,%zu)\n", d.Access(),
-         (is_write ? "WRITE" : "READ"), access_size, (usize)wg.idx,
-         (usize)wg.idy, (usize)wg.idz);
+  Printf("%s%s of size %zu in workgroup id (%llu,%llu,%llu)\n", d.Access(),
+         (is_write ? "WRITE" : "READ"), access_size, wg.idx,
+         wg.idy, wg.idz);
   Printf("%s", d.Default());
   PrintStack();
   Printf("%s", d.Location());
