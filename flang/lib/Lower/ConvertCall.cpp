@@ -1277,7 +1277,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     bool suggestCopyOut = Fortran::evaluate::MayNeedCopy(
         arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
-    mustDoCopyOut = mustDoCopyIn && suggestCopyOut;
+    mustDoCopyOut = actual.isArray() && suggestCopyOut;
 
     // DEBUG:
     llvm::dbgs() << "copyinout: oldMustDoCopyInOut = " << oldMustDoCopyInOut
@@ -1394,7 +1394,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.pushExprAssociateCleanUp(associate);
-    } else if (mustDoCopyIn) {
+    } else if (mustDoCopyIn || mustDoCopyOut) {
       // Copy-in non contiguous variables.
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
