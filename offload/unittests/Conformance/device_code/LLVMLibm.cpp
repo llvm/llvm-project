@@ -189,8 +189,8 @@ __gpu_kernel void hypotfKernel(const float *X, const float *Y, float *Out,
   runKernelBody<hypotf>(NumElements, Out, X, Y);
 }
 
-__gpu_kernel void hypotf16Kernel(const float16 *X, const float16 *Y, float16 *Out,
-                                 size_t NumElements) noexcept {
+__gpu_kernel void hypotf16Kernel(const float16 *X, const float16 *Y,
+                                 float16 *Out, size_t NumElements) noexcept {
   runKernelBody<hypotf16>(NumElements, Out, X, Y);
 }
 
