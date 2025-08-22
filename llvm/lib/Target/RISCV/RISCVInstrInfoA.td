@@ -293,12 +293,14 @@ multiclass PseudoAMOPat<string AtomicOp, Pseudo AMOInst, ValueType vt = XLenVT> 
 }
 
 class PseudoMaskedAMOPat<Intrinsic intrin, Pseudo AMOInst>
-    : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
+    : Pat<(XLenVT (intrin (XLenVT GPR:$addr), (XLenVT GPR:$incr),
+                          (XLenVT GPR:$mask), (XLenVT timm:$ordering))),
           (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering)>;
 
 class PseudoMaskedAMOMinMaxPat<Intrinsic intrin, Pseudo AMOInst>
-    : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
-           timm:$ordering),
+    : Pat<(XLenVT (intrin (XLenVT GPR:$addr), (XLenVT GPR:$incr),
+                          (XLenVT GPR:$mask), (XLenVT GPR:$shiftamt),
+           (XLenVT timm:$ordering))),
           (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
            timm:$ordering)>;
 
@@ -324,49 +326,30 @@ let Size = 36 in {
  def PseudoMaskedAtomicLoadUMax32 : PseudoMaskedAMOUMinUMax;
  def PseudoMaskedAtomicLoadUMin32 : PseudoMaskedAMOUMinUMax;
 }
-} // Predicates = [HasStdExtA]
 
-let Predicates = [HasStdExtA, IsRV32] in {
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i32,
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg,
                          PseudoMaskedAtomicSwap32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_add_i32,
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_add,
                          PseudoMaskedAtomicLoadAdd32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_sub_i32,
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_sub,
                          PseudoMaskedAtomicLoadSub32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_nand_i32,
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_nand,
                          PseudoMaskedAtomicLoadNand32>;
-def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_max_i32,
+def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_max,
                                PseudoMaskedAtomicLoadMax32>;
-def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_min_i32,
+def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_min,
                                PseudoMaskedAtomicLoadMin32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umax_i32,
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umax,
                          PseudoMaskedAtomicLoadUMax32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umin_i32,
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umin,
                          PseudoMaskedAtomicLoadUMin32>;
-} // Predicates = [HasStdExtA, IsRV32]
+} // Predicates = [HasStdExtA]
 
 let Predicates = [HasStdExtA, IsRV64] in {
 
 let Size = 20 in
 def PseudoAtomicLoadNand64 : PseudoAMO;
 defm : PseudoAMOPat<"atomic_load_nand_i64", PseudoAtomicLoadNand64, i64>;
-
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i64,
-                         PseudoMaskedAtomicSwap32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_add_i64,
-                         PseudoMaskedAtomicLoadAdd32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_sub_i64,
-                         PseudoMaskedAtomicLoadSub32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_nand_i64,
-                         PseudoMaskedAtomicLoadNand32>;
-def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_max_i64,
-                               PseudoMaskedAtomicLoadMax32>;
-def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_min_i64,
-                               PseudoMaskedAtomicLoadMin32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umax_i64,
-                         PseudoMaskedAtomicLoadUMax32>;
-def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umin_i64,
-                         PseudoMaskedAtomicLoadUMin32>;
 } // Predicates = [HasStdExtA, IsRV64]
 
 
@@ -420,15 +403,9 @@ def PseudoMaskedCmpXchg32
   let Size = 32;
 }
 
-def : Pat<(int_riscv_masked_cmpxchg_i32
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
+def : Pat<(XLenVT (int_riscv_masked_cmpxchg
+            (XLenVT GPR:$addr), (XLenVT GPR:$cmpval), (XLenVT GPR:$newval),
+            (XLenVT GPR:$mask), (XLenVT timm:$ordering))),
           (PseudoMaskedCmpXchg32
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
 } // Predicates = [HasStdExtA]
-
-let Predicates = [HasStdExtA, IsRV64] in {
-def : Pat<(int_riscv_masked_cmpxchg_i64
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
-          (PseudoMaskedCmpXchg32
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
-} // Predicates = [HasStdExtA, IsRV64]
