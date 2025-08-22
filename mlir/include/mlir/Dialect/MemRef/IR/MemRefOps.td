@@ -471,6 +471,11 @@ def MemRef_AliasDomainScopeOp : MemRef_Op<"alias_domain_scope", [
   let regions = (region SizedRegion<1>:$region);
 
   let assemblyFormat = "attr-dict $domain (`->` type($results)^)? $region";
+
+  let extraClassDeclaration = [{
+    /// Inline op body into parent region and erase the op.
+    static void inlineIntoParent(PatternRewriter &builder, AliasDomainScopeOp op);
+  }];
 }
 
 def MemRef_AliasDomainScopeReturnOp : MemRef_Op<"alias_domain_scope.return", [

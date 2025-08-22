@@ -539,6 +539,16 @@ void AliasDomainScopeOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(getResults()));
 }
 
+void AliasDomainScopeOp::inlineIntoParent(mlir::PatternRewriter &builder,
+                                          AliasDomainScopeOp op) {
+  mlir::Block *block = &op.getRegion().front();
+  Operation *term = block->getTerminator();
+  SmallVector<Value> args = llvm::to_vector(term->getOperands());
+  builder.eraseOp(term);
+  builder.inlineBlockBefore(block, op);
+  builder.replaceOp(op, args);
+}
+
 //===----------------------------------------------------------------------===//
 // AssumeAlignmentOp
 //===----------------------------------------------------------------------===//

@@ -881,6 +881,22 @@ struct GetGlobalMemrefOpLowering
   }
 };
 
+static FailureOr<std::pair<ArrayAttr, ArrayAttr>>
+getAliasScopes(Attribute attr) {
+  if (!attr)
+    return std::pair(ArrayAttr(), ArrayAttr());
+
+  auto aliasingAttr = cast<memref::AliasingAttr>(attr);
+  auto checkAttr = [](Attribute elem) -> bool {
+    return isa<LLVM::AliasScopeAttr>(elem);
+  };
+  if (!llvm::all_of(aliasingAttr.getAliasScopes(), checkAttr) ||
+      !llvm::all_of(aliasingAttr.getNoalias(), checkAttr))
+    return failure();
+
+  return std::pair(aliasingAttr.getAliasScopes(), aliasingAttr.getNoalias());
+}
+
 // Load operation is lowered to obtaining a pointer to the indexed element
 // and loading it.
 struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
@@ -890,6 +906,10 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
   matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto type = loadOp.getMemRefType();
+    FailureOr<std::pair<ArrayAttr, ArrayAttr>> aliasScopes =
+        getAliasScopes(loadOp.getAliasAttr());
+    if (failed(aliasScopes))
+      return rewriter.notifyMatchFailure(loadOp, "invalid alias attribute");
 
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
@@ -897,9 +917,11 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
     Value dataPtr = getStridedElementPtr(rewriter, loadOp.getLoc(), type,
                                          adaptor.getMemref(),
                                          adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+    auto op = rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
         loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+    op.setAliasScopes(aliasScopes->first);
+    op.setNoAliasScopes(aliasScopes->second);
     return success();
   }
 };
@@ -910,19 +932,25 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
   using Base::Base;
 
   LogicalResult
-  matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
+  matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto type = op.getMemRefType();
+    auto type = storeOp.getMemRefType();
+    FailureOr<std::pair<ArrayAttr, ArrayAttr>> aliasScopes =
+        getAliasScopes(storeOp.getAliasAttr());
+    if (failed(aliasScopes))
+      return rewriter.notifyMatchFailure(storeOp, "invalid alias attribute");
 
     // Per memref.store spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
-    Value dataPtr =
-        getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
-                             adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
-                                               op.getAlignment().value_or(0),
-                                               false, op.getNontemporal());
+    Value dataPtr = getStridedElementPtr(rewriter, storeOp.getLoc(), type,
+                                         adaptor.getMemref(),
+                                         adaptor.getIndices(), kNoWrapFlags);
+    auto op = rewriter.replaceOpWithNewOp<LLVM::StoreOp>(
+        storeOp, adaptor.getValue(), dataPtr,
+        storeOp.getAlignment().value_or(0), false, storeOp.getNontemporal());
+    op.setAliasScopes(aliasScopes->first);
+    op.setNoAliasScopes(aliasScopes->second);
     return success();
   }
 };
@@ -1991,6 +2019,21 @@ public:
   }
 };
 
+/// Unpack the pointer returned by a memref.alias_domain_scope.
+class ConvertAliasDomainScope
+    : public ConvertOpToLLVMPattern<memref::AliasDomainScopeOp> {
+public:
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::AliasDomainScopeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // We no longer need AliasDomainScopeOp as this stage so just remove it.
+    memref::AliasDomainScopeOp::inlineIntoParent(rewriter, op);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
@@ -2000,8 +2043,9 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
   patterns.add<
       AllocaOpLowering,
       AllocaScopeOpLowering,
-      AtomicRMWOpLowering,
       AssumeAlignmentOpLowering,
+      AtomicRMWOpLowering,
+      ConvertAliasDomainScope,
       ConvertExtractAlignedPointerAsIndex,
       DimOpLowering,
       ExtractStridedMetadataOpLowering,
@@ -2009,13 +2053,13 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
       GetGlobalMemrefOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,
-      MemorySpaceCastOpLowering,
       MemRefReinterpretCastOpLowering,
       MemRefReshapeOpLowering,
+      MemorySpaceCastOpLowering,
       PrefetchOpLowering,
       RankOpLowering,
-      ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
       ReassociatingReshapeOpConversion<memref::CollapseShapeOp>,
+      ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
       StoreOpLowering,
       SubViewOpLowering,
       TransposeOpLowering,
