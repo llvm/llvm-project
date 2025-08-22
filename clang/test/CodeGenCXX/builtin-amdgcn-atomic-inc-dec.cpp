@@ -432,11 +432,11 @@ __attribute__((constant)) __UINT32_TYPE__ cval32;
 // AMDGCNSPIRV-NEXT:  entry:
 // AMDGCNSPIRV-NEXT:    [[LOCAL_VAL:%.*]] = alloca i32, align 4
 // AMDGCNSPIRV-NEXT:    [[LOCAL_VAL_ASCAST:%.*]] = addrspacecast ptr [[LOCAL_VAL]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) addrspacecast (ptr addrspace(2) @cval32 to ptr addrspace(4)), align 4
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = atomicrmw uinc_wrap ptr addrspace(4) addrspacecast (ptr addrspace(2) @cval32 to ptr addrspace(4)), i32 [[TMP0]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META5]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) addrspacecast (ptr addrspace(1) @cval32 to ptr addrspace(4)), align 4
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = atomicrmw uinc_wrap ptr addrspace(4) addrspacecast (ptr addrspace(1) @cval32 to ptr addrspace(4)), i32 [[TMP0]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META5]]
 // AMDGCNSPIRV-NEXT:    store i32 [[TMP1]], ptr addrspace(4) [[LOCAL_VAL_ASCAST]], align 4
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) addrspacecast (ptr addrspace(2) @cval32 to ptr addrspace(4)), align 4
-// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = atomicrmw udec_wrap ptr addrspace(4) addrspacecast (ptr addrspace(2) @cval32 to ptr addrspace(4)), i32 [[TMP2]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META5]]
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) addrspacecast (ptr addrspace(1) @cval32 to ptr addrspace(4)), align 4
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = atomicrmw udec_wrap ptr addrspace(4) addrspacecast (ptr addrspace(1) @cval32 to ptr addrspace(4)), i32 [[TMP2]] syncscope("workgroup") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META5]]
 // AMDGCNSPIRV-NEXT:    store i32 [[TMP3]], ptr addrspace(4) [[LOCAL_VAL_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -476,11 +476,11 @@ __attribute__((constant)) __UINT64_TYPE__ cval64;
 // AMDGCNSPIRV-NEXT:  entry:
 // AMDGCNSPIRV-NEXT:    [[LOCAL_VAL:%.*]] = alloca i64, align 8
 // AMDGCNSPIRV-NEXT:    [[LOCAL_VAL_ASCAST:%.*]] = addrspacecast ptr [[LOCAL_VAL]] to ptr addrspace(4)
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(4) addrspacecast (ptr addrspace(2) @cval64 to ptr addrspace(4)), align 8
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = atomicrmw uinc_wrap ptr addrspace(4) addrspacecast (ptr addrspace(2) @cval64 to ptr addrspace(4)), i64 [[TMP0]] syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META5]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(4) addrspacecast (ptr addrspace(1) @cval64 to ptr addrspace(4)), align 8
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = atomicrmw uinc_wrap ptr addrspace(4) addrspacecast (ptr addrspace(1) @cval64 to ptr addrspace(4)), i64 [[TMP0]] syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META5]]
 // AMDGCNSPIRV-NEXT:    store i64 [[TMP1]], ptr addrspace(4) [[LOCAL_VAL_ASCAST]], align 8
-// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i64, ptr addrspace(4) addrspacecast (ptr addrspace(2) @cval64 to ptr addrspace(4)), align 8
-// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = atomicrmw udec_wrap ptr addrspace(4) addrspacecast (ptr addrspace(2) @cval64 to ptr addrspace(4)), i64 [[TMP2]] syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META5]]
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i64, ptr addrspace(4) addrspacecast (ptr addrspace(1) @cval64 to ptr addrspace(4)), align 8
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = atomicrmw udec_wrap ptr addrspace(4) addrspacecast (ptr addrspace(1) @cval64 to ptr addrspace(4)), i64 [[TMP2]] syncscope("workgroup") seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META5]]
 // AMDGCNSPIRV-NEXT:    store i64 [[TMP3]], ptr addrspace(4) [[LOCAL_VAL_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    ret void
 //
