@@ -311,9 +311,6 @@ def ptxas_supported_isa_versions(ptxas):
     )
     versions = []
     for line in result.stdout.splitlines():
-        line = line.strip()
-        if not line:
-            continue
         match = re.match(r"(\d+)\.(\d+)", line)
         if match:
             versions.append((int(match.group(1)), int(match.group(2))))
@@ -352,23 +349,115 @@ def enable_ptxas(ptxas_executable):
     tools.extend(
         [
             ToolSubst("%ptxas", ptxas_executable),
-            ToolSubst("%ptxas-verify", f"{ptxas_executable} -c -"),
+            ToolSubst("%ptxas-verify", "{} -c -".format(ptxas_executable)),
         ]
     )
 
     major_version, minor_version = ptxas_version(ptxas_executable)
     config.available_features.add("ptxas-{}.{}".format(major_version, minor_version))
 
-    for major_version, minor_version in ptxas_supported_isa_versions(ptxas_executable):
-        config.available_features.add(
-            "ptxas-isa-v{}.{}".format(major_version, minor_version)
-        )
+    supported_isa_versions = ptxas_supported_isa_versions(ptxas_executable)
+    if supported_isa_versions:
+        for major_version, minor_version in supported_isa_versions:
+            config.available_features.add(
+                "ptxas(isa-{}.{})".format(major_version, minor_version)
+            )
+    else:
+        if major_version >= 13:
+            raise RuntimeError("ptxas {} does not support ISA version listing".format(ptxas_executable))
+        if major_version >= 12 and minor_version >= 9:
+            config.available_features.add("ptxas(isa-8.8)")
+        if major_version >= 12 and minor_version >= 8:
+            config.available_features.add("ptxas(isa-8.7)")
+        if major_version >= 12 and minor_version >= 7:
+            config.available_features.add("ptxas(isa-8.6)")
+        if major_version >= 12 and minor_version >= 6:
+            config.available_features.add("ptxas(isa-8.5)")
+        if major_version >= 12 and minor_version >= 5:
+            config.available_features.add("ptxas(isa-8.5)")
+        if major_version >= 12 and minor_version >= 4:
+            config.available_features.add("ptxas(isa-8.4)")
+        if major_version >= 12 and minor_version >= 3:
+            config.available_features.add("ptxas(isa-8.3)")
+        if major_version >= 12 and minor_version >= 2:
+            config.available_features.add("ptxas(isa-8.2)")
+        if major_version >= 12 and minor_version >= 1:
+            config.available_features.add("ptxas(isa-8.1)")
+        if major_version >= 12 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-8.0)")
+        if major_version >= 11 and minor_version >= 8:
+            config.available_features.add("ptxas(isa-7.8)")
+        if major_version >= 11 and minor_version >= 7:
+            config.available_features.add("ptxas(isa-7.7)")
+        if major_version >= 11 and minor_version >= 6:
+            config.available_features.add("ptxas(isa-7.6)")
+        if major_version >= 11 and minor_version >= 5:
+            config.available_features.add("ptxas(isa-7.5)")
+        if major_version >= 11 and minor_version >= 4:
+            config.available_features.add("ptxas(isa-7.4)")
+        if major_version >= 11 and minor_version >= 3:
+            config.available_features.add("ptxas(isa-7.3)")
+        if major_version >= 11 and minor_version >= 2:
+            config.available_features.add("ptxas(isa-7.2)")
+        if major_version >= 11 and minor_version >= 1:
+            config.available_features.add("ptxas(isa-7.1)")
+        if major_version >= 11 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-7.0)")
+        if major_version >= 10 and minor_version >= 2:
+            config.available_features.add("ptxas(isa-6.5)")
+        if major_version >= 10 and minor_version >= 1:
+            config.available_features.add("ptxas(isa-6.4)")
+        if major_version >= 10 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-6.3)")
+        if major_version >= 9 and minor_version >= 2:
+            config.available_features.add("ptxas(isa-6.2)")
+        if major_version >= 9 and minor_version >= 1:
+            config.available_features.add("ptxas(isa-6.1)")
+        if major_version >= 9 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-6.0)")
+        if major_version >= 8 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-5.0)")
+        if major_version >= 7 and minor_version >= 5:
+            config.available_features.add("ptxas(isa-4.3)")
+        if major_version >= 7 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-4.2)")
+        if major_version >= 6 and minor_version >= 5:
+            config.available_features.add("ptxas(isa-4.1)")
+        if major_version >= 6 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-4.0)")
+        if major_version >= 5 and minor_version >= 5:
+            config.available_features.add("ptxas(isa-3.2)")
+        if major_version >= 5 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-3.1)")
+        if major_version >= 4 and minor_version >= 2:
+            config.available_features.add("ptxas(isa-3.0)")
+        if major_version >= 4 and minor_version >= 1:
+            config.available_features.add("ptxas(isa-3.0)")
+        if major_version >= 4 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-2.3)")
+        if major_version >= 3 and minor_version >= 2:
+            config.available_features.add("ptxas(isa-2.2)")
+        if major_version >= 3 and minor_version >= 1:
+            config.available_features.add("ptxas(isa-2.1)")
+        if major_version >= 3 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-2.0)")
+            config.available_features.add("ptxas(isa-1.5)")
+        if major_version >= 2 and minor_version >= 2:
+            config.available_features.add("ptxas(isa-1.4)")
+        if major_version >= 2 and minor_version >= 1:
+            config.available_features.add("ptxas(isa-1.3)")
+        if major_version >= 2 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-1.2)")
+        if major_version >= 1 and minor_version >= 1:
+            config.available_features.add("ptxas(isa-1.1)")
+        if major_version >= 1 and minor_version >= 0:
+            config.available_features.add("ptxas(isa-1.0)")
 
     for sm in ptxas_supported_sms(ptxas_executable):
-        config.available_features.add("ptxas-sm_{}".format(sm))
+        config.available_features.add("ptxas(sm_{})".format(sm))
 
     if ptxas_supports_address_size_32(ptxas_executable):
-        config.available_features.add("ptxas-32")
+        config.available_features.add("ptxas(ptr32)")
 
 
 ptxas_executable = (
