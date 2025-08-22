@@ -9142,8 +9142,21 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
   QualType ltrans = QualType(lhptee, 0), rtrans = QualType(rhptee, 0);
 
   if (ltrans->isOverflowBehaviorType() || rtrans->isOverflowBehaviorType()) {
-    if (!S.Context.hasSameType(ltrans, rtrans))
+    if (!S.Context.hasSameType(ltrans, rtrans)) {
+      QualType LUnderlying =
+          ltrans->isOverflowBehaviorType()
+              ? ltrans->castAs<OverflowBehaviorType>()->getUnderlyingType()
+              : ltrans;
+      QualType RUnderlying =
+          rtrans->isOverflowBehaviorType()
+              ? rtrans->castAs<OverflowBehaviorType>()->getUnderlyingType()
+              : rtrans;
+
+      if (S.Context.hasSameType(LUnderlying, RUnderlying))
+        return AssignConvertType::IncompatiblePointerDiscardsOverflowBehavior;
+
       return AssignConvertType::IncompatiblePointer;
+    }
   }
 
   if (!S.Context.typesAreCompatible(ltrans, rtrans)) {
@@ -17162,6 +17175,12 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     llvm_unreachable("unknown error case for discarding qualifiers!");
     // fallthrough
   }
+  case AssignConvertType::IncompatiblePointerDiscardsOverflowBehavior:
+    if (SrcType->isArrayType())
+      SrcType = Context.getArrayDecayedType(SrcType);
+
+    DiagKind = diag::ext_typecheck_convert_discards_overflow_behavior;
+    break;
   case AssignConvertType::CompatiblePointerDiscardsQualifiers:
     // If the qualifiers lost were because we were applying the
     // (deprecated) C++ conversion from a string literal to a char*

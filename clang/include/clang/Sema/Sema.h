@@ -733,6 +733,11 @@ enum class AssignConvertType {
   /// like address spaces.
   IncompatiblePointerDiscardsQualifiers,
 
+  /// IncompatiblePointerDiscardsOverflowBehavior - The assignment
+  /// discards overflow behavior annotations between otherwise compatible
+  /// pointer types.
+  IncompatiblePointerDiscardsOverflowBehavior,
+
   /// IncompatibleNestedPointerAddressSpaceMismatch - The assignment
   /// changes address spaces in nested pointer types which is not allowed.
   /// For instance, converting __private int ** to __generic int ** is

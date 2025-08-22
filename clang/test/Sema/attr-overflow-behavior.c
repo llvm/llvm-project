@@ -19,11 +19,11 @@ void foo() {
 #define __no_wrap __attribute__((overflow_behavior(no_wrap)))
 
 void ptr(int a) {
-  int __no_wrap *p = &a; // expected-warning-re {{incompatible pointer types initializing '__no_wrap int *' {{.*}}of type 'int *'}}
+  int __no_wrap *p = &a; // expected-warning {{initializing '__no_wrap int *' with an expression of type 'int *' discards overflow behavior}}
 }
 
 void ptr2(__no_wrap int a) {
-  int *p = &a; // expected-warning-re {{incompatible pointer types initializing 'int *' {{.*}}of type '__no_wrap int *'}}
+  int *p = &a; // expected-warning {{initializing 'int *' with an expression of type '__no_wrap int *' discards overflow behavior}}
 }
 
 
@@ -72,4 +72,79 @@ void test_nested_typedef_control_flow() {
 
 int test_discard_on_return(unsigned long __no_wrap a) {
   return a; // expected-warning {{implicit conversion from '__no_wrap unsigned long' to 'int' discards overflow behavior}}
+}
+
+// Test OBT pointer compatibility
+void test_obt_pointer_compatibility() {
+  unsigned long x = 42;
+  unsigned long __no_wrap y = 42;
+  unsigned long __wrap z = 42;
+ 
+  unsigned long *px = &x;
+  unsigned long __no_wrap *py = &y;
+  unsigned long __wrap *pz = &z;
+ 
+  // Same types - should not warn
+  px = &x; // OK
+  py = &y; // OK
+  pz = &z; // OK
+ 
+  // Different OBT annotations - should warn but allow
+  // expected-warning@+1 {{assigning to 'unsigned long *' from '__no_wrap unsigned long *' discards overflow behavior}}
+  px = py;
+  // expected-warning@+1 {{assigning to 'unsigned long *' from '__wrap unsigned long *' discards overflow behavior}}
+  px = pz;
+  // expected-warning@+1 {{assigning to '__no_wrap unsigned long *' from 'unsigned long *' discards overflow behavior}}
+  py = px;
+  // expected-warning@+1 {{assigning to '__wrap unsigned long *' from 'unsigned long *' discards overflow behavior}}
+  pz = px;
+  // expected-warning@+1 {{assigning to '__no_wrap unsigned long *' from '__wrap unsigned long *' discards overflow behavior}}
+  py = pz;
+  // expected-warning@+1 {{assigning to '__wrap unsigned long *' from '__no_wrap unsigned long *' discards overflow behavior}}
+  pz = py;
+}
+
+// Test function parameter passing
+// expected-note@+2 {{passing argument to parameter 'p' here}}
+// expected-note@+1 {{passing argument to parameter 'p' here}}
+void func_takes_regular_ptr(unsigned long *p) {}
+// expected-note@+1 {{passing argument to parameter 'p' here}}
+void func_takes_no_wrap_ptr(unsigned long __no_wrap *p) {}
+  // expected-note@+1 {{passing argument to parameter 'p' here}}
+void func_takes_wrap_ptr(unsigned long __wrap *p) {}
+
+void test_function_parameters() {
+  unsigned long x = 42;
+  unsigned long __no_wrap y = 42;
+  unsigned long __wrap z = 42;
+
+  unsigned long *px = &x;
+  unsigned long __no_wrap *py = &y;
+  unsigned long __wrap *pz = &z;
+
+  // Same types - should not warn
+  func_takes_regular_ptr(px); // OK
+  func_takes_no_wrap_ptr(py); // OK
+  func_takes_wrap_ptr(pz); // OK
+
+  // Different OBT annotations - should warn but allow
+  // expected-warning@+1 {{passing '__no_wrap unsigned long *' to parameter of type 'unsigned long *' discards overflow behavior}}
+  func_takes_regular_ptr(py);
+  // expected-warning@+1 {{passing '__wrap unsigned long *' to parameter of type 'unsigned long *' discards overflow behavior}}
+  func_takes_regular_ptr(pz);
+  // expected-warning@+1 {{passing 'unsigned long *' to parameter of type '__no_wrap unsigned long *' discards overflow behavior}}
+  func_takes_no_wrap_ptr(px);
+  // expected-warning@+1 {{passing 'unsigned long *' to parameter of type '__wrap unsigned long *' discards overflow behavior}}
+  func_takes_wrap_ptr(px);
+}
+
+// Test different underlying types - should still error
+void test_different_underlying_types() {
+  int x = 42;
+  unsigned long __no_wrap y = 42;
+
+  int *px = &x;
+  unsigned long __no_wrap *py = &y;
+
+  px = py; // expected-warning {{incompatible pointer types assigning to 'int *' from '__no_wrap unsigned long *'}}
 }

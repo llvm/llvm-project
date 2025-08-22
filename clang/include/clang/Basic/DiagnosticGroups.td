@@ -570,12 +570,15 @@ def IncompatibleMSStruct : DiagGroup<"incompatible-ms-struct">;
 def IncompatibleMSPragmaSection : DiagGroup<"incompatible-ms-pragma-section">;
 def IncompatiblePointerTypesDiscardsQualifiers
   : DiagGroup<"incompatible-pointer-types-discards-qualifiers">;
+def IncompatiblePointerTypesDiscardsOverflowBehavior
+    : DiagGroup<"incompatible-pointer-types-discards-overflow-behavior">;
 def IncompatibleFunctionPointerTypes
   : DiagGroup<"incompatible-function-pointer-types">;
 def IncompatiblePointerTypes
-  : DiagGroup<"incompatible-pointer-types",
-    [IncompatiblePointerTypesDiscardsQualifiers,
-     IncompatibleFunctionPointerTypes]>;
+    : DiagGroup<"incompatible-pointer-types",
+                [IncompatiblePointerTypesDiscardsQualifiers,
+                 IncompatiblePointerTypesDiscardsOverflowBehavior,
+                 IncompatibleFunctionPointerTypes]>;
 def IncompleteUmbrella : DiagGroup<"incomplete-umbrella">;
 def IncompleteFrameworkModuleDeclaration
   : DiagGroup<"incomplete-framework-module-declaration">;

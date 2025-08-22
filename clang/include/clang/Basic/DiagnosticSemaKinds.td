@@ -9104,6 +9104,21 @@ def ext_typecheck_convert_discards_qualifiers : ExtWarn<
   "|%diff{casting $ to type $|casting between types}0,1}2"
   " discards qualifiers">,
   InGroup<IncompatiblePointerTypesDiscardsQualifiers>;
+def ext_typecheck_convert_discards_overflow_behavior
+    : ExtWarn<
+          "%select{%diff{assigning to $ from $|assigning to different types}0,1"
+          "|%diff{passing $ to parameter of type $|"
+          "passing to parameter of different type}0,1"
+          "|%diff{returning $ from a function with result type $|"
+          "returning from function with different return type}0,1"
+          "|%diff{converting $ to type $|converting between types}0,1"
+          "|%diff{initializing $ with an expression of type $|"
+          "initializing with expression of different type}0,1"
+          "|%diff{sending $ to parameter of type $|"
+          "sending to parameter of different type}0,1"
+          "|%diff{casting $ to type $|casting between types}0,1}2"
+          " discards overflow behavior">,
+      InGroup<IncompatiblePointerTypesDiscardsOverflowBehavior>;
 def err_typecheck_convert_discards_qualifiers : Error<
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
   "|%diff{passing $ to parameter of type $|"
