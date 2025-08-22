@@ -794,7 +794,6 @@ void OptTable::internalPrintHelp(
     std::function<bool(const Info &)> ExcludeOption,
     Visibility VisibilityMask) const {
   OS << "OVERVIEW: " << Title << "\n\n";
-  OS << "USAGE: " << Usage << "\n\n";
 
   // Render help text into a map of group-name to a list of (option, help)
   // pairs.
@@ -802,9 +801,10 @@ void OptTable::internalPrintHelp(
 
   const Command *ActiveCommand = getActiveCommand(Commands, Subcommand);
   if (ActiveCommand) {
-    if (ActiveCommand->HelpText)
-      OS << ActiveCommand->HelpText << "\n\n";
+    OS << ActiveCommand->HelpText << "\n\n";
+    OS << "USAGE: " << ActiveCommand->Usage << "\n\n";
   } else {
+    OS << "USAGE: " << Usage << "\n\n";
     // Assume top level command (toolname) is active.
     StringRef TopLevelCommandName = "TopLevelCommand";
     if (Commands.size() > 1) {

@@ -685,10 +685,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "static constexpr llvm::opt::OptTable::Command OptionCommands[] = {\n";
   for (const Record *Command : Commands) {
     OS << "  { \"" << Command->getValueAsString("Name") << "\", ";
-    if (Command->isSubClassOf("Subcommand"))
-      OS << "\"" << Command->getValueAsString("HelpText") << "\" },\n";
-    else
-      OS << "nullptr },\n";
+    if (Command->isSubClassOf("Subcommand")) {
+      OS << "\"" << Command->getValueAsString("HelpText") << "\", ";
+      OS << "\"" << Command->getValueAsString("Usage") << "\" },\n";
+    } else
+      OS << "nullptr, nullptr},\n";
   }
   OS << "};\n";
   OS << "#endif // OPTTABLE_COMMANDS_CODE\n\n";

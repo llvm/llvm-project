@@ -102,8 +102,9 @@ class HelpTextVariant<list<OptionVisibility> visibilities, string text> {
 class Command<string name> { string Name = name; }
 
 // Class definition for positional subcommands.
-class Subcommand<string name, string helpText> : Command<name> {
+class Subcommand<string name, string helpText, string usage> : Command<name> {
   string HelpText = helpText;
+  string Usage = usage;
 }
 
 // Compile time representation for top level command (aka toolname).

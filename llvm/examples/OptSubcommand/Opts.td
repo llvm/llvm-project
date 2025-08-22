@@ -1,10 +1,13 @@
 include "llvm/Option/OptParser.td"
 
-def sc_foo : Subcommand<"foo", "HelpText for Subcommand foo.">;
+def sc_foo : Subcommand<"foo", "HelpText for Subcommand foo.",
+                        "OptSubcommand foo <options>">;
 
-def sc_bar : Subcommand<"bar", "HelpText for Subcommand bar.">;
+def sc_bar : Subcommand<"bar", "HelpText for Subcommand bar.",
+                        "OptSubcommand bar <options>">;
 
-def help : Flag<["--"], "help">, HelpText<"Top Level Help Text for the tool.">;
+def help : Flag<["--"], "help">,
+           HelpText<"OptSubcommand <subcommand> <options>">;
 
 def version : Flag<["-"], "version">,
               HelpText<"Toplevel Display the version number">;

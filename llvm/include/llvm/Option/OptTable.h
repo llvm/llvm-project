@@ -58,6 +58,7 @@ public:
   struct Command {
     const char *Name;
     const char *HelpText;
+    const char *Usage;
   };
 
   /// Entry for a single option instance in the option data table.
