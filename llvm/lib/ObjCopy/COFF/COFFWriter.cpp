@@ -112,7 +112,8 @@ Error COFFWriter::finalizeSymIdxContents() {
   for (Symbol &Sym : Obj.getMutableSymbols()) {
     SymIdMap[Sym.OriginalRawIndex] = Sym.RawIndex;
 
-    // We collect only definition symbols of the sections to update the checksums.
+    // We collect only definition symbols of the sections to update the
+    // checksums.
     if (Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC &&
         Sym.Sym.NumberOfAuxSymbols == 1 && Sym.Sym.Value == 0 &&
         IsSymIdxSection(Sym.Name))
@@ -126,8 +127,8 @@ Error COFFWriter::finalizeSymIdxContents() {
       continue;
 
     ArrayRef<uint8_t> RawIds = Sec.getContents();
-    // Nothing to do and also the checksum will be -1 instead of 0 if we recalculate
-    // it on empty input.
+    // Nothing to do and also the checksum will be -1 instead of 0 if we
+    // recalculate it on empty input.
     if (RawIds.size() == 0)
       continue;
 
