@@ -49,13 +49,13 @@ bb5:
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[PHINODE1_CE_LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[PHINODE_CE_LOC:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[PHINODE_CE_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[PHINODE1_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[PHINODE_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[PHINODE1_CE_LOC]])
 ; CHECK-NEXT:    [[TARGETBLOCK:%.*]] = call i1 @outlined_ir_func_0(ptr [[PHINODE_CE_LOC]], ptr [[PHINODE1_CE_LOC]])
 ; CHECK-NEXT:    [[PHINODE_CE_RELOAD:%.*]] = load i32, ptr [[PHINODE_CE_LOC]], align 4
 ; CHECK-NEXT:    [[PHINODE1_CE_RELOAD:%.*]] = load i32, ptr [[PHINODE1_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[PHINODE_CE_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[PHINODE1_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[PHINODE_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[PHINODE1_CE_LOC]])
 ; CHECK-NEXT:    br i1 [[TARGETBLOCK]], label [[BB5:%.*]], label [[BB1_AFTER_OUTLINE:%.*]]
 ; CHECK:       bb1_after_outline:
 ; CHECK-NEXT:    ret void
@@ -69,13 +69,13 @@ bb5:
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[PHINODE1_CE_LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[PHINODE_CE_LOC:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[PHINODE_CE_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[PHINODE1_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[PHINODE_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[PHINODE1_CE_LOC]])
 ; CHECK-NEXT:    [[TARGETBLOCK:%.*]] = call i1 @outlined_ir_func_0(ptr [[PHINODE_CE_LOC]], ptr [[PHINODE1_CE_LOC]])
 ; CHECK-NEXT:    [[PHINODE_CE_RELOAD:%.*]] = load i32, ptr [[PHINODE_CE_LOC]], align 4
 ; CHECK-NEXT:    [[PHINODE1_CE_RELOAD:%.*]] = load i32, ptr [[PHINODE1_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[PHINODE_CE_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[PHINODE1_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[PHINODE_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[PHINODE1_CE_LOC]])
 ; CHECK-NEXT:    br i1 [[TARGETBLOCK]], label [[BB5:%.*]], label [[BB1_AFTER_OUTLINE:%.*]]
 ; CHECK:       bb1_after_outline:
 ; CHECK-NEXT:    ret void

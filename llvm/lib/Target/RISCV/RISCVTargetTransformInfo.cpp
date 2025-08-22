@@ -979,11 +979,11 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) const {
 
-  // The interleaved memory access pass will lower interleaved memory ops (i.e
-  // a load and store followed by a specific shuffle) to vlseg/vsseg
-  // intrinsics.
-  if (!UseMaskForCond && !UseMaskForGaps &&
-      Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+  // The interleaved memory access pass will lower (de)interleave ops combined
+  // with an adjacent appropriate memory to vlseg/vsseg intrinsics. vlseg/vsseg
+  // only support masking per-iteration (i.e. condition), not per-segment (i.e.
+  // gap).
+  if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     auto *VTy = cast<VectorType>(VecTy);
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
@@ -1431,7 +1431,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::ctlz:
   case Intrinsic::ctpop: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector()) {
+    if (ST->hasStdExtZvbb() && LT.second.isVector()) {
       unsigned Op;
       switch (ICA.getID()) {
       case Intrinsic::cttz:
@@ -1629,6 +1629,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // scalarized if the legalized Src and Dst are not equal sized.
   const DataLayout &DL = this->getDataLayout();
   if (!SrcLT.second.isVector() || !DstLT.second.isVector() ||
+      !SrcLT.first.isValid() || !DstLT.first.isValid() ||
       !TypeSize::isKnownLE(DL.getTypeSizeInBits(Src),
                            SrcLT.second.getSizeInBits()) ||
       !TypeSize::isKnownLE(DL.getTypeSizeInBits(Dst),
@@ -2414,6 +2415,24 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   return BaseCost + SlideCost;
 }
 
+InstructionCost
+RISCVTTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                               TTI::TargetCostKind CostKind,
+                                               unsigned Index) const {
+  if (isa<FixedVectorType>(Val))
+    return BaseT::getIndexedVectorInstrCostFromEnd(Opcode, Val, CostKind,
+                                                   Index);
+
+  // TODO: This code replicates what LoopVectorize.cpp used to do when asking
+  // for the cost of extracting the last lane of a scalable vector. It probably
+  // needs a more accurate cost.
+  ElementCount EC = cast<VectorType>(Val)->getElementCount();
+  assert(Index < EC.getKnownMinValue() && "Unexpected reverse index");
+  return getVectorInstrCost(Opcode, Val, CostKind,
+                            EC.getKnownMinValue() - 1 - Index, nullptr,
+                            nullptr);
+}
+
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -2627,18 +2646,17 @@ void RISCVTTIImpl::getUnrollingPreferences(
   if (L->getNumBlocks() > 4)
     return;
 
-  // Don't unroll vectorized loops, including the remainder loop
-  if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
-    return;
-
   // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining.
+  // inlining. Don't unroll auto-vectorized loops either, though do allow
+  // unrolling of the scalar remainder.
+  bool IsVectorized = getBooleanLoopAttribute(L, "llvm.loop.isvectorized");
   InstructionCost Cost = 0;
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
-      // Initial setting - Don't unroll loops containing vectorized
-      // instructions.
-      if (I.getType()->isVectorTy())
+      // Both auto-vectorized loops and the scalar remainder have the
+      // isvectorized attribute, so differentiate between them by the presence
+      // of vector instructions.
+      if (IsVectorized && I.getType()->isVectorTy())
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {

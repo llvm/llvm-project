@@ -3558,6 +3558,7 @@ LogicalResult AtomicRMWOp::verify() {
   case arith::AtomicRMWKind::minu:
   case arith::AtomicRMWKind::muli:
   case arith::AtomicRMWKind::ori:
+  case arith::AtomicRMWKind::xori:
   case arith::AtomicRMWKind::andi:
     if (!llvm::isa<IntegerType>(getValue().getType()))
       return emitOpError() << "with kind '"

@@ -421,7 +421,7 @@ TEST(ClangdAST, GetQualification) {
       {
           R"cpp(
             namespace ns1 { namespace ns2 { void Foo(); } }
-            void insert(); // ns2::Foo
+            void insert(); // ns1::ns2::Foo
             namespace ns1 {
               void insert(); // ns2::Foo
               namespace ns2 {
@@ -429,7 +429,7 @@ TEST(ClangdAST, GetQualification) {
               }
             }
           )cpp",
-          {"ns2::", "ns2::", ""},
+          {"ns1::ns2::", "ns2::", ""},
           {"ns1::"},
       },
       {
@@ -531,7 +531,8 @@ TEST(ClangdAST, PrintType) {
     ASSERT_EQ(InsertionPoints.size(), Case.Types.size());
     for (size_t I = 0, E = InsertionPoints.size(); I != E; ++I) {
       const auto *DC = InsertionPoints[I];
-      EXPECT_EQ(printType(AST.getASTContext().getTypeDeclType(TargetDecl), *DC),
+      EXPECT_EQ(printType(AST.getASTContext().getTypeDeclType(TargetDecl), *DC,
+                          /*Placeholder=*/"", /*FullyQualify=*/true),
                 Case.Types[I]);
     }
   }

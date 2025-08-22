@@ -379,6 +379,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeELFDynamicSymbols:
           case eSectionTypeELFRelocationEntries:
           case eSectionTypeELFDynamicLinkInfo:
+          case eSectionTypeWasmName:
           case eSectionTypeOther:
             return AddressClass::eUnknown;
           case eSectionTypeAbsoluteAddress:

@@ -276,7 +276,7 @@ std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
   if (!ubConstant)
     return std::nullopt;
   std::optional<int64_t> stepConstant = getConstantIntValue(step);
-  if (!stepConstant)
+  if (!stepConstant || *stepConstant == 0)
     return std::nullopt;
 
   return llvm::divideCeilSigned(*ubConstant - *lbConstant, *stepConstant);

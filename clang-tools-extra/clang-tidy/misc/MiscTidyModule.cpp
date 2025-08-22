@@ -22,6 +22,7 @@
 #include "NoRecursionCheck.h"
 #include "NonCopyableObjects.h"
 #include "NonPrivateMemberVariablesInClassesCheck.h"
+#include "OverrideWithDifferentVisibilityCheck.h"
 #include "RedundantExpressionCheck.h"
 #include "StaticAssertCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
@@ -81,6 +82,8 @@ public:
         "misc-use-anonymous-namespace");
     CheckFactories.registerCheck<UseInternalLinkageCheck>(
         "misc-use-internal-linkage");
+    CheckFactories.registerCheck<OverrideWithDifferentVisibilityCheck>(
+        "misc-override-with-different-visibility");
   }
 };
 

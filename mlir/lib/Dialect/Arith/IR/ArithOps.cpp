@@ -2678,6 +2678,7 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::addi:
   case AtomicRMWKind::maxu:
   case AtomicRMWKind::ori:
+  case AtomicRMWKind::xori:
     return builder.getZeroAttr(resultType);
   case AtomicRMWKind::andi:
     return builder.getIntegerAttr(
@@ -2736,7 +2737,7 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           // Integer operations.
           .Case([](arith::AddIOp op) { return AtomicRMWKind::addi; })
           .Case([](arith::OrIOp op) { return AtomicRMWKind::ori; })
-          .Case([](arith::XOrIOp op) { return AtomicRMWKind::ori; })
+          .Case([](arith::XOrIOp op) { return AtomicRMWKind::xori; })
           .Case([](arith::AndIOp op) { return AtomicRMWKind::andi; })
           .Case([](arith::MaxUIOp op) { return AtomicRMWKind::maxu; })
           .Case([](arith::MinUIOp op) { return AtomicRMWKind::minu; })
@@ -2806,6 +2807,8 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
     return arith::OrIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::andi:
     return arith::AndIOp::create(builder, loc, lhs, rhs);
+  case AtomicRMWKind::xori:
+    return arith::XOrIOp::create(builder, loc, lhs, rhs);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");
