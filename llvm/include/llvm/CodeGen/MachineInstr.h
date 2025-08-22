@@ -1447,7 +1447,9 @@ public:
     return getOpcode() == TargetOpcode::BUNDLE;
   }
 
-  bool isCopy() const { return getOpcode() == TargetOpcode::COPY; }
+  bool isCopy() const {
+    return getOpcode() == TargetOpcode::COPY;
+  }
 
   bool isCopyLanemask() const {
     return getOpcode() == TargetOpcode::COPY_LANEMASK;
