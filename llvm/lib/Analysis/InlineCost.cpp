@@ -1767,7 +1767,7 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
 // call that will cause the Cmp to fail/succeed for the recursive call.
 bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
   // FIXME Regression on AVR: github.com/llvm/llvm-project/issues/153156
-  if (!DL.isLegalInteger(32))
+  if (!DL.isLegalInteger(32) && DL.isLegalInteger(8))
     return false;
   // Bail out if LHS is not a function argument or RHS is NOT const:
   if (!isa<Argument>(Cmp.getOperand(0)) || !isa<Constant>(Cmp.getOperand(1)))
