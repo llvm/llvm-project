@@ -427,6 +427,25 @@ bool mlir::affine::isValidSymbol(Value value) {
   return false;
 }
 
+/// A utility function to check if a value is defined at the top level of
+/// `region` or is an argument of `region` or dominates the region.
+static bool isTopLevelValueOrDominator(Value value, Region *region) {
+  Region *parentRegion;
+  if (auto arg = dyn_cast<BlockArgument>(value))
+    parentRegion = arg.getParentRegion();
+  else
+    parentRegion = value.getDefiningOp()->getParentRegion();
+  do {
+    if (parentRegion == region)
+      return true;
+    Operation *regionOp = region->getParentOp();
+    if (regionOp->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
+    region = region->getParentOp()->getParentRegion();
+  } while (region);
+  return false;
+}
+
 /// A value can be used as a symbol for `region` iff it meets one of the
 /// following conditions:
 /// *) It is a constant.
@@ -445,17 +464,11 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
     return false;
 
   // A top-level value is a valid symbol.
-  if (region && ::isTopLevelValue(value, region))
+  if (region && isTopLevelValueOrDominator(value, region))
     return true;
 
   auto *defOp = value.getDefiningOp();
   if (!defOp) {
-    // A block argument that is not a top-level value is a valid symbol if it
-    // dominates region's parent op.
-    Operation *regionOp = region ? region->getParentOp() : nullptr;
-    if (regionOp && !regionOp->hasTrait<OpTrait::IsIsolatedFromAbove>())
-      if (auto *parentOpRegion = region->getParentOp()->getParentRegion())
-        return isValidSymbol(value, parentOpRegion);
     return false;
   }
 
@@ -465,21 +478,21 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
     return true;
 
   // `Pure` operation that whose operands are valid symbolic identifiers.
-  if (isPure(defOp) && llvm::all_of(defOp->getOperands(), [&](Value operand) {
-        return affine::isValidSymbol(operand, region);
-      })) {
-    return true;
+  if (isPure(defOp)) {
+    bool allValid = true;
+    for (auto operand : defOp->getOperands()) {
+      if (!affine::isValidSymbol(operand, region)) {
+        allValid = false;
+        break;
+      }
+    }
+    if (allValid)
+      return true;
   }
 
   // Dim op results could be valid symbols at any level.
   if (auto dimOp = dyn_cast<ShapedDimOpInterface>(defOp))
     return isDimOpValidSymbol(dimOp, region);
-
-  // Check for values dominating `region`'s parent op.
-  Operation *regionOp = region ? region->getParentOp() : nullptr;
-  if (regionOp && !regionOp->hasTrait<OpTrait::IsIsolatedFromAbove>())
-    if (auto *parentRegion = region->getParentOp()->getParentRegion())
-      return isValidSymbol(value, parentRegion);
 
   return false;
 }
