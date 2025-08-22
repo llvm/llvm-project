@@ -1459,8 +1459,9 @@ cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   StringRef name = getName();
 
   // Verify that the result type underlying pointer type matches the type of
-  // the referenced cir.global or cir.func op.
-  auto op = symbolTable.lookupNearestSymbolFrom<cir::GlobalOp>(*this, getNameAttr());
+  // the referenced cir.global.
+  auto op =
+      symbolTable.lookupNearestSymbolFrom<cir::GlobalOp>(*this, getNameAttr());
   if (!op)
     return emitOpError("'")
            << name << "' does not reference a valid cir.global";
