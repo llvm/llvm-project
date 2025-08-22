@@ -125,3 +125,6 @@ s_alloc_vgpr exec
 
 s_alloc_vgpr vcc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cvt_f32_fp8 v1, v3 clamp
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

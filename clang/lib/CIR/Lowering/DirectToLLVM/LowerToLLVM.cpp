@@ -202,8 +202,8 @@ public:
     return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)
         .Case<cir::IntAttr, cir::FPAttr, cir::ConstComplexAttr,
               cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
-              cir::ConstPtrAttr, cir::GlobalViewAttr, cir::ZeroAttr>(
-            [&](auto attrT) { return visitCirAttr(attrT); })
+              cir::ConstPtrAttr, cir::GlobalViewAttr, cir::VTableAttr,
+              cir::ZeroAttr>([&](auto attrT) { return visitCirAttr(attrT); })
         .Default([&](auto attrT) { return mlir::Value(); });
   }
 
@@ -215,6 +215,7 @@ public:
   mlir::Value visitCirAttr(cir::ConstRecordAttr attr);
   mlir::Value visitCirAttr(cir::ConstVectorAttr attr);
   mlir::Value visitCirAttr(cir::GlobalViewAttr attr);
+  mlir::Value visitCirAttr(cir::VTableAttr attr);
   mlir::Value visitCirAttr(cir::ZeroAttr attr);
 
 private:
@@ -498,6 +499,21 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
   }
 
   llvm_unreachable("Expecting pointer or integer type for GlobalViewAttr");
+}
+
+// VTableAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
+  mlir::Type llvmTy = converter->convertType(vtableArr.getType());
+  mlir::Location loc = parentOp->getLoc();
+  mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
+
+  for (auto [idx, elt] : llvm::enumerate(vtableArr.getData())) {
+    mlir::Value init = visit(elt);
+    result =
+        mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
+  }
+
+  return result;
 }
 
 /// ZeroAttr visitor.
@@ -1569,7 +1585,7 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   // TODO: Generalize this handling when more types are needed here.
   assert((isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
               cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
-              cir::ZeroAttr>(init)));
+              cir::VTableAttr, cir::ZeroAttr>(init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
@@ -1624,7 +1640,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     } else if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
                          cir::ConstRecordAttr, cir::ConstPtrAttr,
                          cir::ConstComplexAttr, cir::GlobalViewAttr,
-                         cir::ZeroAttr>(init.value())) {
+                         cir::VTableAttr, cir::ZeroAttr>(init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.
@@ -2256,6 +2272,9 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       }
       break;
     }
+    converter.addConversion([&](cir::VoidType type) -> mlir::Type {
+      return mlir::LLVM::LLVMVoidType::get(type.getContext());
+    });
 
     // Record has a name: lower as an identified record.
     mlir::LLVM::LLVMStructType llvmStruct;

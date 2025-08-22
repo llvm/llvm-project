@@ -1048,6 +1048,16 @@ ClangASTImporter::MapCompleter::~MapCompleter() = default;
 
 llvm::Expected<Decl *>
 ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
+  // FIXME: The Minimal import mode of clang::ASTImporter does not correctly
+  // import Lambda definitions. Work around this for now by not importing
+  // lambdas at all. This is most likely encountered when importing decls from
+  // the `std` module (not from debug-info), where lambdas can be defined in
+  // inline function bodies. Those will be imported by LLDB.
+  if (const auto *CXX = llvm::dyn_cast<clang::CXXRecordDecl>(From))
+    if (CXX->isLambda())
+      return llvm::make_error<ASTImportError>(
+          ASTImportError::UnsupportedConstruct);
+
   if (m_std_handler) {
     std::optional<Decl *> D = m_std_handler->Import(From);
     if (D) {

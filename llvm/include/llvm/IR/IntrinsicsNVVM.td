@@ -2161,6 +2161,7 @@ class NVVM_MMA_SP<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D>
     // The range [0;num_threads) is for the sparsity selector that indicates the threads
     // which contribute metadata.
     int num_threads = !if(!or(!and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "bf16")),
+                              !and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "f16")),
                               !and(!eq(A.geom, "m16n8k16"), !eq(A.ptx_elt_type, "tf32")),
                               !and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "u8")),
                               !and(!eq(A.geom, "m16n8k32"), !eq(A.ptx_elt_type, "s8")),
@@ -2175,7 +2176,11 @@ class NVVM_MMA_SP<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D>
                                       !eq(A.ptx_elt_type, "e3m2"),
                                       !eq(A.ptx_elt_type, "e2m3"),
                                       !eq(A.ptx_elt_type, "e2m1"))),
-                              1, 4));
+                              1,
+                              !if(!and(!eq(A.geom, "m16n8k128"),
+                                       !or(!eq(A.ptx_elt_type, "s4"),
+                                           !eq(A.ptx_elt_type, "u4"))),
+                                  1, 4)));
     let IntrProperties = [IntrNoMem, IntrNoCallback, ImmArg<ArgIndex<pos>>,
                           Range<ArgIndex<pos>, 0, num_threads>];
 }

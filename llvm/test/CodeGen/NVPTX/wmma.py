@@ -1135,6 +1135,7 @@ def sp_selector_gen(op):
     # (geom, type) -> allowed selector range
     range_01 = {
         ("m16n8k32", "bf16"),
+        ("m16n8k32", "f16"),
         ("m16n8k16", "tf32"),
         ("m16n8k32", "u8"),
         ("m16n8k32", "s8"),
@@ -1152,6 +1153,11 @@ def sp_selector_gen(op):
         "e3m2",
         "e2m3",
         "e2m1",
+    ]:
+        return range(1)
+    if op.a.geom == "m16n8k128" and op.a.mma_type.ptx_type in [
+        "u4",
+        "s4",
     ]:
         return range(1)
     return range(4)

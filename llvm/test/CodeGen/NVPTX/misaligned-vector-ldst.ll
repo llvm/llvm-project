@@ -185,40 +185,44 @@ define void @test_v4halfp0a1(ptr noalias readonly %from, ptr %to) {
 define void @s1(ptr %p1, <4 x float> %v) {
 ; CHECK-LABEL: s1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<17>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<18>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [s1_param_0];
 ; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [s1_param_1];
-; CHECK-NEXT:    st.b8 [%rd1+12], %r4;
-; CHECK-NEXT:    st.b8 [%rd1+8], %r3;
-; CHECK-NEXT:    st.b8 [%rd1+4], %r2;
-; CHECK-NEXT:    st.b8 [%rd1], %r1;
-; CHECK-NEXT:    shr.u32 %r5, %r4, 24;
-; CHECK-NEXT:    st.b8 [%rd1+15], %r5;
-; CHECK-NEXT:    shr.u32 %r6, %r4, 16;
-; CHECK-NEXT:    st.b8 [%rd1+14], %r6;
-; CHECK-NEXT:    shr.u32 %r7, %r4, 8;
-; CHECK-NEXT:    st.b8 [%rd1+13], %r7;
-; CHECK-NEXT:    shr.u32 %r8, %r3, 24;
-; CHECK-NEXT:    st.b8 [%rd1+11], %r8;
-; CHECK-NEXT:    shr.u32 %r9, %r3, 16;
-; CHECK-NEXT:    st.b8 [%rd1+10], %r9;
-; CHECK-NEXT:    shr.u32 %r10, %r3, 8;
-; CHECK-NEXT:    st.b8 [%rd1+9], %r10;
-; CHECK-NEXT:    shr.u32 %r11, %r2, 24;
-; CHECK-NEXT:    st.b8 [%rd1+7], %r11;
-; CHECK-NEXT:    shr.u32 %r12, %r2, 16;
-; CHECK-NEXT:    st.b8 [%rd1+6], %r12;
-; CHECK-NEXT:    shr.u32 %r13, %r2, 8;
-; CHECK-NEXT:    st.b8 [%rd1+5], %r13;
-; CHECK-NEXT:    shr.u32 %r14, %r1, 24;
-; CHECK-NEXT:    st.b8 [%rd1+3], %r14;
-; CHECK-NEXT:    shr.u32 %r15, %r1, 16;
-; CHECK-NEXT:    st.b8 [%rd1+2], %r15;
-; CHECK-NEXT:    shr.u32 %r16, %r1, 8;
-; CHECK-NEXT:    st.b8 [%rd1+1], %r16;
+; CHECK-NEXT:    cvt.u64.u32 %rd2, %r4;
+; CHECK-NEXT:    st.b8 [%rd1+12], %rd2;
+; CHECK-NEXT:    cvt.u64.u32 %rd3, %r3;
+; CHECK-NEXT:    st.b8 [%rd1+8], %rd3;
+; CHECK-NEXT:    cvt.u64.u32 %rd4, %r2;
+; CHECK-NEXT:    st.b8 [%rd1+4], %rd4;
+; CHECK-NEXT:    cvt.u64.u32 %rd5, %r1;
+; CHECK-NEXT:    st.b8 [%rd1], %rd5;
+; CHECK-NEXT:    shr.u64 %rd6, %rd2, 24;
+; CHECK-NEXT:    st.b8 [%rd1+15], %rd6;
+; CHECK-NEXT:    shr.u64 %rd7, %rd2, 16;
+; CHECK-NEXT:    st.b8 [%rd1+14], %rd7;
+; CHECK-NEXT:    shr.u64 %rd8, %rd2, 8;
+; CHECK-NEXT:    st.b8 [%rd1+13], %rd8;
+; CHECK-NEXT:    shr.u64 %rd9, %rd3, 24;
+; CHECK-NEXT:    st.b8 [%rd1+11], %rd9;
+; CHECK-NEXT:    shr.u64 %rd10, %rd3, 16;
+; CHECK-NEXT:    st.b8 [%rd1+10], %rd10;
+; CHECK-NEXT:    shr.u64 %rd11, %rd3, 8;
+; CHECK-NEXT:    st.b8 [%rd1+9], %rd11;
+; CHECK-NEXT:    shr.u64 %rd12, %rd4, 24;
+; CHECK-NEXT:    st.b8 [%rd1+7], %rd12;
+; CHECK-NEXT:    shr.u64 %rd13, %rd4, 16;
+; CHECK-NEXT:    st.b8 [%rd1+6], %rd13;
+; CHECK-NEXT:    shr.u64 %rd14, %rd4, 8;
+; CHECK-NEXT:    st.b8 [%rd1+5], %rd14;
+; CHECK-NEXT:    shr.u64 %rd15, %rd5, 24;
+; CHECK-NEXT:    st.b8 [%rd1+3], %rd15;
+; CHECK-NEXT:    shr.u64 %rd16, %rd5, 16;
+; CHECK-NEXT:    st.b8 [%rd1+2], %rd16;
+; CHECK-NEXT:    shr.u64 %rd17, %rd5, 8;
+; CHECK-NEXT:    st.b8 [%rd1+1], %rd17;
 ; CHECK-NEXT:    ret;
   store <4 x float> %v, ptr %p1, align 1
   ret void
