@@ -17,6 +17,7 @@
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/EndianStream.h"
@@ -111,7 +112,7 @@ public:
 private:
   /// Helper struct for containing some precomputed information on symbols.
   struct MachSymbolData {
-    const MCSymbol *Symbol;
+    const MCSymbolMachO *Symbol;
     uint64_t StringIndex;
     uint8_t SectionIndex;
 
@@ -120,7 +121,7 @@ private:
   };
 
   struct IndirectSymbolData {
-    MCSymbol *Symbol;
+    MCSymbolMachO *Symbol;
     MCSection *Section;
   };
 
