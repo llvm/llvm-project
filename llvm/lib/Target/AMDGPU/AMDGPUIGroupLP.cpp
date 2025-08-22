@@ -75,8 +75,9 @@ enum class SchedGroupMask {
   DS_READ = 1u << 8,
   DS_WRITE = 1u << 9,
   TRANS = 1u << 10,
+  INLINE_ASM = 1u << 11,
   ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE | TRANS,
+        DS_READ | DS_WRITE | TRANS | INLINE_ASM,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
@@ -2438,6 +2439,10 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 
   else if (((SGMask & SchedGroupMask::TRANS) != SchedGroupMask::NONE) &&
            TII->isTRANS(MI))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::INLINE_ASM) != SchedGroupMask::NONE) &&
+           MI.isInlineAsm())
     Result = true;
 
   LLVM_DEBUG(
