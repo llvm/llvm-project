@@ -2408,6 +2408,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_cospif16",
+    hdrs = ["src/__support/math/cospif16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_math_sincosf16_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -3242,9 +3254,7 @@ libc_math_function(
 libc_math_function(
     name = "cospif16",
     additional_deps = [
-        ":__support_fputil_multiply_add",
-        ":__support_macros_optimization",
-        ":__support_math_sincosf16_utils",
+        ":__support_math_cospif16",
     ],
 )
 

@@ -34,6 +34,7 @@ add_fp_unittest(
     libc.src.__support.math.coshf
     libc.src.__support.math.coshf16
     libc.src.__support.math.cospif
+    libc.src.__support.math.cospif16
     libc.src.__support.math.erff
     libc.src.__support.math.exp
     libc.src.__support.math.exp10
