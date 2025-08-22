@@ -1546,7 +1546,6 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
     if (LHSi && RHSi) {
       int64_t LHSv = LHSi->getValue(), RHSv = RHSi->getValue();
       int64_t Result;
-
       switch (getOpcode()) {
       default: llvm_unreachable("Bad opcode!");
       case ADD: Result = LHSv + RHSv; break;
