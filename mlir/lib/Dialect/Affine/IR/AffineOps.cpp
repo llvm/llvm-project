@@ -464,9 +464,8 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
     return true;
 
   auto *defOp = value.getDefiningOp();
-  if (!defOp) {
+  if (!defOp)
     return false;
-  }
 
   // Constant operation is ok.
   Attribute operandCst;
