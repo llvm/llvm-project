@@ -1115,6 +1115,8 @@ void RewriteScheduleStage::findReachingUses(
 
 bool RewriteScheduleStage::initGCNSchedStage() {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1)
+    return false;
 
   RegionsWithExcessArchVGPR.resize(DAG.Regions.size());
   RegionsWithExcessArchVGPR.reset();
@@ -1124,7 +1126,7 @@ bool RewriteScheduleStage::initGCNSchedStage() {
       RegionsWithExcessArchVGPR[Region] = true;
   }
 
-  if (!ST.hasGFX90AInsts() || RegionsWithExcessArchVGPR.none())
+  if (RegionsWithExcessArchVGPR.none())
     return false;
 
   TII = ST.getInstrInfo();
