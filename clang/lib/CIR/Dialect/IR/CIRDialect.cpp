@@ -2706,7 +2706,7 @@ mlir::LogicalResult cir::ThrowOp::verify() {
   if (rethrows())
     return success();
 
-  if (getNumOperands() == 1) {
+  if (getNumOperands() != 0) {
     if (getTypeInfo())
       return success();
     return emitOpError() << "'type_info' symbol attribute missing";

@@ -659,7 +659,7 @@ public:
 
   mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
     cgf.emitCXXThrowExpr(e);
-    return nullptr;
+    return {};
   }
 
   /// Emit a conversion from the specified type to the specified destination

@@ -32,7 +32,6 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerUnaryOp(cir::UnaryOp op);
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
-  void lowerThrowOp(ThrowOp op);
 
   cir::FuncOp buildRuntimeFunction(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
@@ -681,24 +680,6 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
                              true);
 }
 
-void LoweringPreparePass::lowerThrowOp(ThrowOp op) {
-  if (op.rethrows()) {
-    CIRBaseBuilderTy builder(getContext());
-    auto voidTy = cir::VoidType::get(builder.getContext());
-    auto fnType = cir::FuncType::get({}, voidTy);
-
-    builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
-    FuncOp f =
-        buildRuntimeFunction(builder, "__cxa_rethrow", op.getLoc(), fnType);
-
-    builder.setInsertionPointAfter(op.getOperation());
-    cir::CallOp call = builder.createTryCallOp(op.getLoc(), f, {});
-
-    op->replaceAllUsesWith(call);
-    op->erase();
-  }
-}
-
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<ArrayCtor>(op))
     lowerArrayCtor(arrayCtor);
@@ -712,8 +693,6 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerComplexMulOp(complexMul);
   else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op))
     lowerUnaryOp(unary);
-  else if (auto throwOp = mlir::dyn_cast<cir::ThrowOp>(op))
-    lowerThrowOp(throwOp);
 }
 
 void LoweringPreparePass::runOnOperation() {
@@ -725,8 +704,7 @@ void LoweringPreparePass::runOnOperation() {
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
-                  cir::ComplexMulOp, cir::ComplexDivOp, cir::UnaryOp,
-                  cir::ThrowOp>(op))
+                  cir::ComplexMulOp, cir::ComplexDivOp, cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
 

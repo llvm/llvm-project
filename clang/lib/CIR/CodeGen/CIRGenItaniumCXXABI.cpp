@@ -127,7 +127,7 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
 // Find out how to cirgen the complete destructor and constructor
 namespace {
 enum class StructorCIRGen { Emit, RAUW, Alias, COMDAT };
-} // namespace
+}
 
 static StructorCIRGen getCIRGenToUse(CIRGenModule &cgm,
                                      const CXXMethodDecl *md) {
@@ -378,18 +378,10 @@ static void insertThrowAndSplit(mlir::OpBuilder &builder, mlir::Location loc,
   }
 
   (void)builder.createBlock(region);
-
-  // This will be erased during codegen, it acts as a placeholder for the
-  // operations to be inserted (if any)
-  cir::ScopeOp::create(builder, loc, /*scopeBuilder=*/
-                       [&](mlir::OpBuilder &b, mlir::Location loc) {
-                         b.create<cir::YieldOp>(loc);
-                       });
 }
 
 void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &cgf, bool isNoReturn) {
   // void __cxa_rethrow();
-
   if (isNoReturn) {
     CIRGenBuilderTy &builder = cgf.getBuilder();
     assert(cgf.currSrcLoc && "expected source location");

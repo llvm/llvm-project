@@ -3871,7 +3871,7 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
 def CIR_ThrowOp : CIR_Op<"throw"> {
   let summary = "(Re)Throws an exception";
   let description = [{
-    Very similar to __cxa_throw:
+    It's equivalent __cxa_throw:
 
     ```
     void __cxa_throw(void *thrown_exception, std::type_info *tinfo,
