@@ -47,6 +47,11 @@ public:
     return true;
   }
   void Post(const parser::OmpClause &) { currStmt_ = std::nullopt; }
+  bool Pre(const parser::OpenMPGroupprivate &dir) {
+    currStmt_ = dir.source;
+    return true;
+  }
+  void Post(const parser::OpenMPGroupprivate &) { currStmt_ = std::nullopt; }
   bool Pre(const parser::OpenMPThreadprivate &dir) {
     currStmt_ = dir.source;
     return true;

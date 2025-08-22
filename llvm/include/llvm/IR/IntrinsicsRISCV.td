@@ -66,11 +66,11 @@ let TargetPrefix = "riscv" in {
 let TargetPrefix = "riscv" in {
 
   class RISCVBitManipGPRIntrinsics
-      : DefaultAttrsIntrinsic<[llvm_any_ty],
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                               [LLVMMatchType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
   class RISCVBitManipGPRGPRIntrinsics
-      : DefaultAttrsIntrinsic<[llvm_any_ty],
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
 
@@ -101,11 +101,11 @@ let TargetPrefix = "riscv" in {
 
   // Zimop
   def int_riscv_mopr
-      : DefaultAttrsIntrinsic<[llvm_any_ty],
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>],
                               [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
   def int_riscv_moprr
-      : DefaultAttrsIntrinsic<[llvm_any_ty],
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                               [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 } // TargetPrefix = "riscv"
@@ -121,7 +121,7 @@ defvar NoScalarOperand = 0xF;
 defvar NoVLOperand = 0x1F;
 
 class RISCVVIntrinsic {
-  // These intrinsics may accept illegal integer values in their llvm_any_ty
+  // These intrinsics may accept illegal integer values in their llvm_anyint_ty
   // operand, so they have to be extended.
   Intrinsic IntrinsicID = !cast<Intrinsic>(NAME);
   bits<4> ScalarOperand = NoScalarOperand;

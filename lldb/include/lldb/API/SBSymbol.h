@@ -85,12 +85,6 @@ public:
 
   SymbolType GetType();
 
-  /// Get the ID of this symbol, usually the original symbol table index.
-  ///
-  /// \returns
-  ///   Returns the ID of this symbol.
-  uint32_t GetID();
-
   bool operator==(const lldb::SBSymbol &rhs) const;
 
   bool operator!=(const lldb::SBSymbol &rhs) const;
@@ -104,15 +98,6 @@ public:
   // Returns true if the symbol was synthetically generated from something
   // other than the actual symbol table itself in the object file.
   bool IsSynthetic();
-
-  /// Returns true if the symbol is a debug symbol.
-  bool IsDebug();
-
-  /// Get the string representation of a symbol type.
-  static const char *GetTypeAsString(lldb::SymbolType symbol_type);
-
-  /// Get the symbol type from a string representation.
-  static lldb::SymbolType GetTypeFromString(const char *str);
 
 protected:
   lldb_private::Symbol *get();
