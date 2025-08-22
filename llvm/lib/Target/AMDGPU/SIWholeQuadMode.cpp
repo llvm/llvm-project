@@ -167,7 +167,7 @@ private:
   LiveIntervals *LIS;
   MachineDominatorTree *MDT;
   MachinePostDominatorTree *PDT;
-  const AMDGPU::LaneMaskConstants LMC;
+  const AMDGPU::LaneMaskConstants &LMC;
 
   Register LiveMaskReg;
 

@@ -29,11 +29,12 @@ namespace {
 
 class SIOptimizeExecMaskingPreRA {
 private:
+  const GCNSubtarget &ST;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
-  AMDGPU::LaneMaskConstants LMC;
+  const AMDGPU::LaneMaskConstants &LMC;
 
   MCRegister CondReg;
   MCRegister ExecReg;
@@ -42,7 +43,10 @@ private:
   bool optimizeElseBranch(MachineBasicBlock &MBB);
 
 public:
-  SIOptimizeExecMaskingPreRA(LiveIntervals *LIS) : LIS(LIS) {}
+  SIOptimizeExecMaskingPreRA(MachineFunction &MF, LiveIntervals *LIS)
+      : ST(MF.getSubtarget<GCNSubtarget>()), TRI(ST.getRegisterInfo()),
+        TII(ST.getInstrInfo()), MRI(&MF.getRegInfo()), LIS(LIS),
+        LMC(AMDGPU::LaneMaskConstants::get(&ST)) {}
   bool run(MachineFunction &MF);
 };
 
@@ -350,7 +354,7 @@ PreservedAnalyses
 SIOptimizeExecMaskingPreRAPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  SIOptimizeExecMaskingPreRA(&LIS).run(MF);
+  SIOptimizeExecMaskingPreRA(MF, &LIS).run(MF);
   return PreservedAnalyses::all();
 }
 
@@ -360,16 +364,10 @@ bool SIOptimizeExecMaskingPreRALegacy::runOnMachineFunction(
     return false;
 
   auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  return SIOptimizeExecMaskingPreRA(LIS).run(MF);
+  return SIOptimizeExecMaskingPreRA(MF, LIS).run(MF);
 }
 
 bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  TRI = ST.getRegisterInfo();
-  TII = ST.getInstrInfo();
-  MRI = &MF.getRegInfo();
-
-  LMC = AMDGPU::LaneMaskConstants::get(&ST);
   CondReg = MCRegister::from(LMC.VccReg);
   ExecReg = MCRegister::from(LMC.ExecReg);
 

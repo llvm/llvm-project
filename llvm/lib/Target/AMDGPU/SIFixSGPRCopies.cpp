@@ -1135,7 +1135,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 }
 
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
-  const auto LMC =
+  const AMDGPU::LaneMaskConstants &LMC =
       AMDGPU::LaneMaskConstants::get(&MF.getSubtarget<GCNSubtarget>());
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;

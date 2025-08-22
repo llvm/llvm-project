@@ -784,7 +784,8 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   MachineFunction *MF = &B.getMF();
 
   const TargetRegisterClass *WaveRC = TRI->getWaveMaskRegClass();
-  const auto LMC = AMDGPU::LaneMaskConstants::get(&Subtarget);
+  const AMDGPU::LaneMaskConstants &LMC =
+      AMDGPU::LaneMaskConstants::get(&Subtarget);
 
 #ifndef NDEBUG
   const int OrigRangeSize = std::distance(Range.begin(), Range.end());

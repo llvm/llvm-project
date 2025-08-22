@@ -39,7 +39,7 @@ private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
-  const AMDGPU::LaneMaskConstants LMC;
+  const AMDGPU::LaneMaskConstants &LMC;
 
   DenseMap<MachineInstr *, MachineInstr *> SaveExecVCmpMapping;
   SmallVector<std::pair<MachineInstr *, MachineInstr *>, 1> OrXors;

@@ -4810,7 +4810,7 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
   MachineFunction *MF = OrigBB.getParent();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(&ST);
   MachineBasicBlock::iterator I = LoopBB.begin();
 
   const TargetRegisterClass *BoolRC = TRI->getBoolRC();
@@ -4906,7 +4906,7 @@ loadM0FromVGPR(const SIInstrInfo *TII, MachineBasicBlock &MBB, MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
   Register TmpExec = MRI.createVirtualRegister(BoolXExecRC);
-  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(&ST);
 
   BuildMI(MBB, I, DL, TII->get(TargetOpcode::IMPLICIT_DEF), TmpExec);
 

@@ -31,7 +31,7 @@ private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   MachineDominatorTree *MDT;
-  const AMDGPU::LaneMaskConstants LMC;
+  const AMDGPU::LaneMaskConstants &LMC;
 
   void expandChainCall(MachineInstr &MI, const GCNSubtarget &ST,
                        bool DynamicVGPR);
