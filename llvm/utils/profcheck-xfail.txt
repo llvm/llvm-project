@@ -1173,6 +1173,7 @@ Transforms/LoopVectorize/AArch64/induction-costs-sve.ll
 Transforms/LoopVectorize/AArch64/interleave_count_for_estimated_tc.ll
 Transforms/LoopVectorize/AArch64/interleaved_cost.ll
 Transforms/LoopVectorize/AArch64/interleave-with-gaps.ll
+Transforms/LoopVectorize/AArch64/interleave-with-runtime-checks.ll
 Transforms/LoopVectorize/AArch64/interleaving-load-store.ll
 Transforms/LoopVectorize/AArch64/interleaving-reduction.ll
 Transforms/LoopVectorize/AArch64/intrinsiccost.ll
