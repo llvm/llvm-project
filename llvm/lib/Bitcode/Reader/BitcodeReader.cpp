@@ -6644,6 +6644,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE:
     case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
+    case bitc::FUNC_CODE_DEBUG_RECORD_COROFRAME_ENTRY:
     case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
       // DbgVariableRecords are placed after the Instructions that they are
       // attached to.
@@ -6659,6 +6660,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       // dbg_value (FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE - abbrev'd)
       //   ..., Value
       // dbg_declare (FUNC_CODE_DEBUG_RECORD_DECLARE)
+      //   ..., LocationMetadata
+      // dbg_coroframe_entry (FUNC_CODE_DEBUG_RECORD_COROFRAME_ENTRY)
       //   ..., LocationMetadata
       // dbg_assign (FUNC_CODE_DEBUG_RECORD_ASSIGN)
       //   ..., LocationMetadata, DIAssignID, DIExpression, LocationMetadata
@@ -6700,6 +6703,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
         DVR = new DbgVariableRecord(RawLocation, Var, Expr, DIL,
                                     DbgVariableRecord::LocationType::Declare);
+        break;
+      case bitc::FUNC_CODE_DEBUG_RECORD_COROFRAME_ENTRY:
+        DVR = new DbgVariableRecord(
+            RawLocation, Var, Expr, DIL,
+            DbgVariableRecord::LocationType::CoroFrameEntry);
         break;
       case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
         DIAssignID *ID = cast<DIAssignID>(getFnMetadataByID(Record[Slot++]));

@@ -401,6 +401,21 @@ This intrinsic is equivalent to ``#dbg_assign``:
       metadata ptr %i.addr, metadata !DIExpression(), metadata !3), !dbg !3
 
 
+``llvm.dbg.coroframe_entry``
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+  void @llvm.dbg.coroframe_entry(metadata, metadata, metadata)
+
+This intrinsic is equivalent to ``#dbg_coroframe_entry``:
+
+.. code-block:: llvm
+
+      #dbg_coroframe_entry(i32 %i., !1, !DIExpression(), !2)
+    call void @llvm.dbg.coroframe_entry(metadata i32 %i., metadata !1,
+                                metadata !DIExpression()), !dbg !2
+
 Object lifetimes and scoping
 ============================
 

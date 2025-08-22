@@ -4507,6 +4507,11 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
         DbgVariableRecord::LocationType::Declare, unwrapMAVMetadataOp(CI, 0),
         unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2), nullptr, nullptr, nullptr,
         getDebugLocSafe(CI));
+  } else if (Name == "coroframe_entry") {
+    DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
+        DbgVariableRecord::LocationType::CoroFrameEntry,
+        unwrapMAVMetadataOp(CI, 0), unwrapMAVOp(CI, 1), unwrapMAVOp(CI, 2),
+        nullptr, nullptr, nullptr, getDebugLocSafe(CI));
   } else if (Name == "addr") {
     // Upgrade dbg.addr to dbg.value with DW_OP_deref.
     MDNode *ExprNode = unwrapMAVOp(CI, 2);

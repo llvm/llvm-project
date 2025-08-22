@@ -81,6 +81,43 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
   return Declares;
 }
 
+TinyPtrVector<DbgCoroFrameEntryInst *> llvm::findDbgCoroFrameEntrys(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup. This check is a bitfield datamember lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = ValueAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+  auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L);
+  if (!MDV)
+    return {};
+
+  TinyPtrVector<DbgCoroFrameEntryInst *> Coros;
+  for (User *U : MDV->users())
+    if (auto *DDI = dyn_cast<DbgCoroFrameEntryInst>(U))
+      Coros.push_back(DDI);
+
+  return Coros;
+}
+
+TinyPtrVector<DbgVariableRecord *> llvm::findDVRCoroFrameEntrys(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup. This check is a bitfield datamember lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = ValueAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+
+  TinyPtrVector<DbgVariableRecord *> Coros;
+  for (DbgVariableRecord *DVR : L->getAllDbgVariableRecordUsers())
+    if (DVR->getType() == DbgVariableRecord::LocationType::CoroFrameEntry)
+      Coros.push_back(DVR);
+
+  return Coros;
+}
+
 TinyPtrVector<DbgVariableRecord *> llvm::findDVRValues(Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup. This check is a bitfield datamember lookup.

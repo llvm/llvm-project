@@ -1140,6 +1140,24 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   return DVR;
 }
 
+DbgInstPtr DIBuilder::insertCoroFrameEntry(Value *Storage,
+                                           DILocalVariable *VarInfo,
+                                           DIExpression *Expr,
+                                           const DILocation *DL,
+                                           InsertPosition InsertPt) {
+  assert(VarInfo &&
+         "empty or invalid DILocalVariable* passed to dbg.corofame_entry");
+  assert(DL && "Expected debug loc");
+  assert(DL->getScope()->getSubprogram() ==
+             VarInfo->getScope()->getSubprogram() &&
+         "Expected matching subprograms");
+
+  DbgVariableRecord *DVR =
+      DbgVariableRecord::createDVRCoroFrameEntry(Storage, VarInfo, Expr, DL);
+  insertDbgVariableRecord(DVR, InsertPt);
+  return DVR;
+}
+
 void DIBuilder::insertDbgVariableRecord(DbgVariableRecord *DVR,
                                         InsertPosition InsertPt) {
   assert(InsertPt.isValid());
