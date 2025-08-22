@@ -1,4 +1,4 @@
-//===-- Half-precision cospif function ------------------------------------===//
+//===-- Shared cospif16 function --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/cospif16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_COSPIF16_H
+#define LLVM_LIBC_SHARED_MATH_COSPIF16_H
+
+#include "shared/libc_common.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "src/__support/math/cospif16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, cospif16, (float16 x)) { return math::cospif16(x); }
+using math::cospif16;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#endif // LLVM_LIBC_SHARED_MATH_COSPIF_H
