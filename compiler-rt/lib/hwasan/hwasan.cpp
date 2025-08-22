@@ -176,7 +176,7 @@ static void HwasanFormatMemoryUsage(InternalScopedString &s) {
       "HWASAN pid: %d rss: %zd threads: %zd stacks: %zd"
       " thr_aux: %zd stack_depot: %zd uniq_stacks: %zd"
       " heap: %zd",
-      (int)internal_getpid(), GetRSS(), thread_stats.n_live_threads,
+      internal_getpid(), GetRSS(), thread_stats.n_live_threads,
       thread_stats.total_stack_size,
       thread_stats.n_live_threads * thread_list.MemoryUsedPerThread(),
       sds.allocated, sds.n_uniq_ids, asc[AllocatorStatMapped]);
@@ -692,7 +692,7 @@ void __hwasan_handle_longjmp(const void *sp_dst) {
         "WARNING: HWASan is ignoring requested __hwasan_handle_longjmp: "
         "stack top: %p; target %p; distance: %p (%zd)\n"
         "False positive error reports may follow\n",
-        (void *)sp, (void *)dst, (void *)(dst - sp), dst - sp);
+        (void *)sp, (void *)dst, dst - sp, dst - sp);
     return;
   }
   TagMemory(sp, dst - sp, 0);
