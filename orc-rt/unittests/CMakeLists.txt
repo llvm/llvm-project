@@ -13,9 +13,11 @@ endfunction()
 
 add_orc_rt_unittest(CoreTests
   bitmask-enum-test.cpp
+  error-test.cpp
   math-test.cpp
   rtti-test.cpp
   span-test.cpp
+  unique-function-test.cpp
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 target_link_libraries(CoreTests PRIVATE orc-rt-executor)
