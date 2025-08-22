@@ -25,6 +25,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
@@ -437,13 +438,14 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // Other relocation types don't want this bit though (branches couldn't encode
   // it if it *was* present, and no other relocations exist) and it can
   // interfere with checking valid expressions.
-  bool IsMachO = getContext().getObjectFileType() == MCContext::IsMachO;
-  if (const auto *SA = Target.getAddSym()) {
-    if (IsMachO && Asm.isThumbFunc(SA) && SA->isExternal() &&
-        (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
-         Kind == ARM::fixup_arm_movt_hi16 || Kind == ARM::fixup_t2_movw_lo16 ||
-         Kind == ARM::fixup_t2_movt_hi16))
-      Value |= 1;
+  if (getContext().getObjectFileType() == MCContext::IsMachO) {
+    if (auto *SA = static_cast<const MCSymbolMachO *>(Target.getAddSym())) {
+      if (Asm.isThumbFunc(SA) && SA->isExternal() &&
+          (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
+           Kind == ARM::fixup_arm_movt_hi16 ||
+           Kind == ARM::fixup_t2_movw_lo16 || Kind == ARM::fixup_t2_movt_hi16))
+        Value |= 1;
+    }
   }
 
   switch (Kind) {
