@@ -3475,9 +3475,9 @@ std::optional<int64_t> SIInstrInfo::extractSubregFromImm(int64_t Imm,
   case AMDGPU::NoSubRegister:
     return Imm;
   case AMDGPU::sub0:
-    return Lo_32(Imm);
+    return SignExtend64<32>(Imm);
   case AMDGPU::sub1:
-    return Hi_32(Imm);
+    return SignExtend64<32>(Imm >> 32);
   case AMDGPU::lo16:
     return SignExtend64<16>(Imm);
   case AMDGPU::hi16:
