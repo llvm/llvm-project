@@ -881,7 +881,8 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
       // FIXME: Can we just ignore DisableMacroExpansion here?
       // https://github.com/llvm/llvm-project/pull/137665 disable
       // macro expansion when current input file is preprocessed.
-      !InMacroArgs && /*!DisableMacroExpansion &&*/
+      !InMacroArgs &&
+      (!DisableMacroExpansion || MacroExpansionInDirectivesOverride) &&
       CurLexerCallback != CLK_CachingLexer) {
     ModuleImportLoc = Identifier.getLocation();
     IsAtImport = true;
