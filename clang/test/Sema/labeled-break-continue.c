@@ -99,7 +99,10 @@ void f6() {
     break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
     continue a; // expected-error {{'continue' label does not name an enclosing loop}}
     1;
-  })) {}
+  })) {
+    ({ break a; });
+    ({ continue a; });
+  }
 
   b: for (
     int x = ({
@@ -117,9 +120,15 @@ void f6() {
       continue b; // expected-error {{'continue' label does not name an enclosing loop}}
       1;
     })
-  ) {}
+    ) {
+      ({ break b; });
+      ({ continue b; });
+    }
 
-  c: do {} while (({
+  c: do {
+    ({ break c; });
+    ({ continue c; });
+  } while (({
     break c; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
     continue c; // expected-error {{'continue' label does not name an enclosing loop}}
     1;
@@ -129,7 +138,12 @@ void f6() {
     break d; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
     continue d; // expected-error {{'continue' label does not name an enclosing loop}}
     1;
-  })) { case 1:; }
+  })) {
+    case 1: {
+      ({ break d; });
+      ({ continue d; });
+    }
+  }
 }
 
 void f7() {

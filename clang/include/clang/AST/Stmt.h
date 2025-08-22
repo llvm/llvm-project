@@ -3082,7 +3082,8 @@ public:
   SourceLocation getLabelLoc() const { return Label; }
   void setLabelLoc(SourceLocation L) { Label = L; }
 
-  LabelDecl *getLabelDecl() const { return TargetLabel; }
+  LabelDecl *getLabelDecl() { return TargetLabel; }
+  const LabelDecl *getLabelDecl() const { return TargetLabel; }
   void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
 
   /// If this is a labeled break/continue, get the loop or switch statement
