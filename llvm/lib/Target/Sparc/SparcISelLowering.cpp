@@ -3578,8 +3578,10 @@ Instruction *SparcTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 Instruction *SparcTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
+  // V8 loads already come with implicit acquire barrier so there's no need to
+  // emit it again.
   bool HasLoadSemantics = isa<AtomicRMWInst>(Inst) || isa<LoadInst>(Inst);
-  if (HasLoadSemantics && isAcquireOrStronger(Ord))
+  if (Subtarget->isV9() && HasLoadSemantics && isAcquireOrStronger(Ord))
     return Builder.CreateFence(AtomicOrdering::Acquire);
 
   // SC plain stores would need a trailing full barrier.

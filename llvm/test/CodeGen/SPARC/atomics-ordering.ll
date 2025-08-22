@@ -16,10 +16,8 @@ define i32 @load_acq(ptr %0) nounwind {
 ;
 ; SPARC32-LEON4-LABEL: load_acq:
 ; SPARC32-LEON4:       ! %bb.0:
-; SPARC32-LEON4-NEXT:    ld [%o0], %o0
-; SPARC32-LEON4-NEXT:    nop
 ; SPARC32-LEON4-NEXT:    retl
-; SPARC32-LEON4-NEXT:    nop
+; SPARC32-LEON4-NEXT:    ld [%o0], %o0
 ;
 ; SPARC32-V9-LABEL: load_acq:
 ; SPARC32-V9:       ! %bb.0:
@@ -50,10 +48,8 @@ define i32 @load_sc(ptr %0) nounwind {
 ;
 ; SPARC32-LEON4-LABEL: load_sc:
 ; SPARC32-LEON4:       ! %bb.0:
-; SPARC32-LEON4-NEXT:    ld [%o0], %o0
-; SPARC32-LEON4-NEXT:    nop
 ; SPARC32-LEON4-NEXT:    retl
-; SPARC32-LEON4-NEXT:    nop
+; SPARC32-LEON4-NEXT:    ld [%o0], %o0
 ;
 ; SPARC32-V9-LABEL: load_sc:
 ; SPARC32-V9:       ! %bb.0:
@@ -156,7 +152,6 @@ define i32 @rmw_acq(ptr %0, i32 %1) nounwind {
 ; SPARC32-LEON4-LABEL: rmw_acq:
 ; SPARC32-LEON4:       ! %bb.0:
 ; SPARC32-LEON4-NEXT:    swap [%o0], %o1
-; SPARC32-LEON4-NEXT:    nop
 ; SPARC32-LEON4-NEXT:    retl
 ; SPARC32-LEON4-NEXT:    mov %o1, %o0
 ;
@@ -227,7 +222,6 @@ define i32 @rmw_acq_rel(ptr %0, i32 %1) nounwind {
 ; SPARC32-LEON4:       ! %bb.0:
 ; SPARC32-LEON4-NEXT:    stbar
 ; SPARC32-LEON4-NEXT:    swap [%o0], %o1
-; SPARC32-LEON4-NEXT:    nop
 ; SPARC32-LEON4-NEXT:    retl
 ; SPARC32-LEON4-NEXT:    mov %o1, %o0
 ;
@@ -265,7 +259,6 @@ define i32 @rmw_sc(ptr %0, i32 %1) nounwind {
 ; SPARC32-LEON4:       ! %bb.0:
 ; SPARC32-LEON4-NEXT:    stbar
 ; SPARC32-LEON4-NEXT:    swap [%o0], %o1
-; SPARC32-LEON4-NEXT:    nop
 ; SPARC32-LEON4-NEXT:    retl
 ; SPARC32-LEON4-NEXT:    mov %o1, %o0
 ;

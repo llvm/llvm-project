@@ -1959,8 +1959,7 @@ def : Pat<(store (i32 0), ADDRri:$dst), (STri ADDRri:$dst, (i32 G0))>;
 
 // All load-type operations in V8 comes with implicit acquire semantics.
 let Predicates = [HasNoV9] in {
-  // Acquire -> nothing
-  // FIXME how to prevent this from actually emitting anything?
+  // Acquire -> nop
   def : Pat<(atomic_fence (i32 4), timm), (NOP)>;
   // Release / AcqRel -> stbar
   def : Pat<(atomic_fence (i32 5), timm), (STBAR)>;
