@@ -2643,7 +2643,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         Pattern = *reinterpret_cast<const uint32_t *>(PatternPtr);
       } else {
         // Shouldn't be here if the pattern size is outwith those values
-        std::terminate();
+        llvm_unreachable("Invalid pattern size");
       }
 
       if (hasPendingWorkImpl(AsyncInfoWrapper)) {
