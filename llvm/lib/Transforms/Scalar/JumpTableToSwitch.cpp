@@ -9,7 +9,6 @@
 #include "llvm/Transforms/Scalar/JumpTableToSwitch.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
