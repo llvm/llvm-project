@@ -6529,19 +6529,19 @@ static unsigned getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2,
   if (((CC == ISD::SETOLT || CC == ISD::SETOLE) && (OrAndOpcode == ISD::OR)) ||
       ((CC == ISD::SETUGT || CC == ISD::SETUGE) && (OrAndOpcode == ISD::AND))) {
     return isFMAXNUMFMINNUM ? ISD::FMINNUM
-                            : arebothOperandsNotSNan(Operand1, Operand2, DAG) &&
-                                      isFMAXNUMFMINNUM_IEEE
-                                  ? ISD::FMINNUM_IEEE
-                                  : ISD::DELETED_NODE;
+           : arebothOperandsNotSNan(Operand1, Operand2, DAG) &&
+                   isFMAXNUMFMINNUM_IEEE
+               ? ISD::FMINNUM_IEEE
+               : ISD::DELETED_NODE;
   }
 
   if (((CC == ISD::SETOGT || CC == ISD::SETOGE) && (OrAndOpcode == ISD::OR)) ||
       ((CC == ISD::SETULT || CC == ISD::SETULE) && (OrAndOpcode == ISD::AND))) {
     return isFMAXNUMFMINNUM ? ISD::FMAXNUM
-                            : arebothOperandsNotSNan(Operand1, Operand2, DAG) &&
-                                      isFMAXNUMFMINNUM_IEEE
-                                  ? ISD::FMAXNUM_IEEE
-                                  : ISD::DELETED_NODE;
+           : arebothOperandsNotSNan(Operand1, Operand2, DAG) &&
+                   isFMAXNUMFMINNUM_IEEE
+               ? ISD::FMAXNUM_IEEE
+               : ISD::DELETED_NODE;
   }
 
   return ISD::DELETED_NODE;
@@ -11796,22 +11796,22 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
 
   // Match floor average as it is common to both floor/ceil avgs.
   if (sd_match(N, m_BinOp(Opcode,
-                           m_AllOf(m_Value(Add), m_Add(m_Value(A), m_Value(B))),
+                          m_AllOf(m_Value(Add), m_Add(m_Value(A), m_Value(B))),
                           m_One()))) {
     // Decide whether signed or unsigned.
     unsigned FloorISD = IsUnsigned ? ISD::AVGFLOORU : ISD::AVGFLOORS;
     if (!hasOperation(FloorISD, VT))
-    return SDValue();
+      return SDValue();
 
-  // Can't optimize adds that may wrap.
+    // Can't optimize adds that may wrap.
     if ((IsUnsigned && !Add->getFlags().hasNoUnsignedWrap()) ||
         (!IsUnsigned && !Add->getFlags().hasNoSignedWrap()))
-    return SDValue();
+      return SDValue();
 
     return DAG.getNode(FloorISD, DL, N->getValueType(0), {A, B});
   }
 
-    return SDValue();
+  return SDValue();
 }
 
 SDValue DAGCombiner::foldBitwiseOpWithNeg(SDNode *N, const SDLoc &DL, EVT VT) {
@@ -12847,8 +12847,8 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
 
   if (refineUniformBase(BasePtr, Index, HG->isIndexScaled(), DAG, DL) ||
       refineIndexType(Index, IndexType, DataVT, DAG)) {
-  SDValue Ops[] = {Chain,          Inc,           Mask, BasePtr, Index,
-                   HG->getScale(), HG->getIntID()};
+    SDValue Ops[] = {Chain,          Inc,           Mask, BasePtr, Index,
+                     HG->getScale(), HG->getIntID()};
     return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, Ops,
                                   MMO, IndexType);
   }
@@ -15276,21 +15276,21 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
       isa<ConstantSDNode>(N0.getOperand(1))) {
     const APInt &Mask = N0.getConstantOperandAPInt(1);
 
-  // If we have (AssertZext (and (AssertSext X, iX), M), iY) and Y is smaller
-  // than X, and the And doesn't change the lower iX bits, we can move the
-  // AssertZext in front of the And and drop the AssertSext.
+    // If we have (AssertZext (and (AssertSext X, iX), M), iY) and Y is smaller
+    // than X, and the And doesn't change the lower iX bits, we can move the
+    // AssertZext in front of the And and drop the AssertSext.
     if (N0.getOperand(0).getOpcode() == ISD::AssertSext && N0.hasOneUse()) {
-    SDValue BigA = N0.getOperand(0);
-    EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
-    if (AssertVT.bitsLT(BigA_AssertVT) &&
-        Mask.countr_one() >= BigA_AssertVT.getScalarSizeInBits()) {
-      SDLoc DL(N);
-      SDValue NewAssert =
-          DAG.getNode(Opcode, DL, N->getValueType(0), BigA.getOperand(0), N1);
-      return DAG.getNode(ISD::AND, DL, N->getValueType(0), NewAssert,
-                         N0.getOperand(1));
+      SDValue BigA = N0.getOperand(0);
+      EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
+      if (AssertVT.bitsLT(BigA_AssertVT) &&
+          Mask.countr_one() >= BigA_AssertVT.getScalarSizeInBits()) {
+        SDLoc DL(N);
+        SDValue NewAssert =
+            DAG.getNode(Opcode, DL, N->getValueType(0), BigA.getOperand(0), N1);
+        return DAG.getNode(ISD::AND, DL, N->getValueType(0), NewAssert,
+                           N0.getOperand(1));
+      }
     }
-  }
 
     // Remove AssertZext entirely if the mask guarantees the assertion cannot
     // fail.
@@ -16364,7 +16364,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
         unsigned NeededBits = SrcBits - TruncBits;
         CanFold = DAG.ComputeNumSignBits(B) > NeededBits &&
                   DAG.ComputeNumSignBits(A) > NeededBits;
-  }
+      }
 
       if (CanFold) {
         SDValue NewA = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, A);
@@ -29229,7 +29229,7 @@ SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 
     if (SDValue Res = matchMergedBFX(N0, DAG, TLI))
       return DAG.getSetCC(DL, VT, Res, N1, Cond);
-}
+  }
 
   return SDValue();
 }
