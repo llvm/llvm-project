@@ -1438,12 +1438,6 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
         if (CE->getCastKind() == CK_AddressSpaceConversion)
           Addr = CGF.Builder.CreateAddrSpaceCast(
               Addr, CGF.ConvertType(E->getType()), ElemTy);
-        // Note: Workaround for PR114062. See also the special handling in
-        // ScalarExprEmitter::VisitCastExpr.
-        if (auto *A = dyn_cast<llvm::Argument>(Addr.getBasePointer());
-            A && A->hasStructRetAttr())
-          Addr = CGF.Builder.CreateAddrSpaceCast(
-              Addr, CGF.ConvertType(E->getType()), ElemTy);
 
         return CGF.authPointerToPointerCast(Addr, CE->getSubExpr()->getType(),
                                             CE->getType());
