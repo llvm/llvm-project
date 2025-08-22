@@ -7874,8 +7874,8 @@ private:
     // For supporting stride in array section, we need to initialize the first
     // dimension size as 1, first offset as 0, and first count as 1
     MapValuesArrayTy CurOffsets = {llvm::ConstantInt::get(CGF.CGM.Int64Ty, 0)};
-    MapValuesArrayTy CurCounts = {llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
-    MapValuesArrayTy CurStrides;
+    MapValuesArrayTy CurCounts;
+    MapValuesArrayTy CurStrides = {llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
     MapValuesArrayTy DimSizes{llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
     uint64_t ElementTypeSize;
 
@@ -7899,8 +7899,8 @@ private:
              "Should be either ConstantArray or VariableArray if not the "
              "first Component");
 
-      // Get element size if CurStrides is empty.
-      if (CurStrides.empty()) {
+      // Get element size if CurCounts is empty.
+      if (CurCounts.empty()) {
         const Type *ElementType = nullptr;
         if (CAT)
           ElementType = CAT->getElementType().getTypePtr();
@@ -7920,7 +7920,7 @@ private:
             ElementType = ElementType->getPointeeOrArrayElementType();
           ElementTypeSize =
               Context.getTypeSizeInChars(ElementType).getQuantity();
-          CurStrides.push_back(
+          CurCounts.push_back(
               llvm::ConstantInt::get(CGF.Int64Ty, ElementTypeSize));
         }
       }
@@ -7980,7 +7980,6 @@ private:
                                            CGF.Int64Ty,
                                            /*isSigned=*/false);
       }
-      CurOffsets.push_back(Offset);
 
       // Count
       const Expr *CountExpr = OASE->getLength();
@@ -8017,11 +8016,12 @@ private:
       CurCounts.push_back(Count);
 
       // Stride_n' = Stride_n * (D_0 * D_1 ... * D_n-1) * Unit size
+      // Offset_n' = Offset_n * (D_0 * D_1 ... * D_n-1) * Unit size
       // Take `int arr[5][5][5]` and `arr[0:2:2][1:2:1][0:2:2]` as an example:
       //              Offset      Count     Stride
-      //    D0          0           1         4    (int)    <- dummy dimension
+      //    D0          0           4         1    (int)    <- dummy dimension
       //    D1          0           2         8    (2 * (1) * 4)
-      //    D2          1           2         20   (1 * (1 * 5) * 4)
+      //    D2          100         2         20   (1 * (1 * 5) * 4)
       //    D3          0           2         200  (2 * (1 * 5 * 4) * 4)
       const Expr *StrideExpr = OASE->getStride();
       llvm::Value *Stride =
@@ -8034,6 +8034,10 @@ private:
         CurStrides.push_back(CGF.Builder.CreateNUWMul(DimProd, Stride));
       else
         CurStrides.push_back(DimProd);
+
+      Offset = CGF.Builder.CreateNUWMul(DimProd, Offset);
+      CurOffsets.push_back(Offset);
+
       if (DI != DimSizes.end())
         ++DI;
     }
