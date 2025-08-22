@@ -81,7 +81,7 @@ class TestRichDisassembler(TestBase):
         self.assertRegex(out, r"\be\s*=\s*(DW_OP_reg8\b|R8\b)")
         self.assertRegex(out, r"\bf\s*=\s*(DW_OP_reg9\b|R9\b)")
         self.assertNotIn("<decoding error>", out)
-        
+
     @no_debug_info_test
     def test_regs_fp_params(self):
         obj = self._compile_or_assemble_object("regs_fp_params.s")
