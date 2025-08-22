@@ -218,6 +218,19 @@ private:
   void parseFixedLenOperands(const BitsInit &Bits);
 };
 
+/// Sorting predicate to sort encoding IDs by encoding width.
+class LessEncodingIDByWidth {
+  ArrayRef<InstructionEncoding> Encodings;
+
+public:
+  explicit LessEncodingIDByWidth(ArrayRef<InstructionEncoding> Encodings)
+      : Encodings(Encodings) {}
+
+  bool operator()(unsigned ID1, unsigned ID2) const {
+    return Encodings[ID1].getBitWidth() < Encodings[ID2].getBitWidth();
+  }
+};
+
 typedef std::vector<uint32_t> FixupList;
 typedef std::vector<FixupList> FixupScopeList;
 typedef SmallSetVector<CachedHashString, 16> PredicateSet;
@@ -475,8 +488,9 @@ protected:
   // Vector of encodings to choose our filter.
   ArrayRef<InstructionEncoding> Encodings;
 
-  // Vector of encoding IDs for this filter chooser to work on.
-  ArrayRef<unsigned> EncodingIDs;
+  /// Encoding IDs for this filter chooser to work on.
+  /// Sorted by non-decreasing encoding width.
+  SmallVector<unsigned, 0> EncodingIDs;
 
   // The selected filter, if any.
   std::unique_ptr<Filter> BestFilter;
@@ -488,8 +502,9 @@ protected:
   // Links to the FilterChooser above us in the decoding tree.
   const FilterChooser *Parent;
 
-  // Width of instructions
-  unsigned BitWidth;
+  /// Some targets (ARM) specify more encoding bits in Inst that Size allows.
+  /// This field allows us to ignore the extra bits.
+  unsigned MaxFilterWidth;
 
   // Parent emitter
   const DecoderEmitter *Emitter;
@@ -501,28 +516,47 @@ protected:
   };
 
 public:
+  /// Constructs a top-level filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
-                ArrayRef<unsigned> EncodingIDs, unsigned BW,
+                ArrayRef<unsigned> EncodingIDs, unsigned MaxFilterWidth,
                 const DecoderEmitter *E)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), FilterBits(BW),
-        Parent(nullptr), BitWidth(BW), Emitter(E) {
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr),
+        MaxFilterWidth(MaxFilterWidth), Emitter(E) {
+    // Sort encoding IDs once.
+    stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings));
+    // Filter width is the width of the smallest encoding.
+    unsigned FilterWidth = Encodings[this->EncodingIDs.front()].getBitWidth();
+    // Cap it as necessary.
+    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
+    FilterBits = KnownBits(FilterWidth);
     doFilter();
   }
 
+  /// Constructs an inferior filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
-                ArrayRef<unsigned> EncodingIDs,
-                const KnownBits &ParentFilterBits, const FilterChooser &parent)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs),
-        FilterBits(ParentFilterBits), Parent(&parent),
-        BitWidth(parent.BitWidth), Emitter(parent.Emitter) {
+                ArrayRef<unsigned> EncodingIDs, const KnownBits &FilterBits,
+                const FilterChooser &Parent)
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent),
+        MaxFilterWidth(Parent.MaxFilterWidth), Emitter(Parent.Emitter) {
+    // Inferior filter choosers are created from sorted array of encoding IDs.
+    assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings)));
     assert(!FilterBits.hasConflict() && "Broken filter");
+    // Filter width is the width of the smallest encoding.
+    unsigned FilterWidth = Encodings[EncodingIDs.front()].getBitWidth();
+    // Cap it as necessary.
+    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
+    this->FilterBits = FilterBits.anyext(FilterWidth);
     doFilter();
   }
 
   FilterChooser(const FilterChooser &) = delete;
   void operator=(const FilterChooser &) = delete;
 
-  unsigned getBitWidth() const { return BitWidth; }
+  /// Returns the width of the largest encoding.
+  unsigned getMaxEncodingWidth() const {
+    // The last encoding ID is the ID of an encoding with the largest width.
+    return Encodings[EncodingIDs.back()].getBitWidth();
+  }
 
 protected:
   KnownBits getMandatoryEncodingBits(unsigned EncodingID) const {
@@ -531,14 +565,12 @@ protected:
     // Clear all bits that are allowed to change according to SoftFail mask.
     EncodingBits.Zero &= ~Encoding.getSoftFailBits();
     EncodingBits.One &= ~Encoding.getSoftFailBits();
-    // Truncate or extend with unknown bits according to the filter bit width.
-    // FIXME: We should stop doing this.
-    return EncodingBits.anyextOrTrunc(BitWidth);
+    return EncodingBits;
   }
 
   /// dumpStack - dumpStack traverses the filter chooser chain and calls
   /// dumpFilterArray on each filter chooser up to the top level one.
-  void dumpStack(raw_ostream &OS, indent Indent) const;
+  void dumpStack(raw_ostream &OS, indent Indent, unsigned PadToWidth) const;
 
   bool isPositionFiltered(unsigned Idx) const {
     return FilterBits.Zero[Idx] || FilterBits.One[Idx];
@@ -620,7 +652,7 @@ Filter::Filter(Filter &&f)
 
 Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
     : Owner(owner), StartBit(startBit), NumBits(numBits) {
-  assert(StartBit + NumBits - 1 < Owner.BitWidth);
+  assert(StartBit + NumBits - 1 < Owner.FilterBits.getBitWidth());
 
   for (unsigned EncodingID : Owner.EncodingIDs) {
     // Populates the insn given the uid.
@@ -1057,10 +1089,12 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
 
 /// dumpStack - dumpStack traverses the filter chooser chain and calls
 /// dumpFilterArray on each filter chooser up to the top level one.
-void FilterChooser::dumpStack(raw_ostream &OS, indent Indent) const {
+void FilterChooser::dumpStack(raw_ostream &OS, indent Indent,
+                              unsigned PadToWidth) const {
   if (Parent)
-    Parent->dumpStack(OS, Indent);
-  OS << Indent;
+    Parent->dumpStack(OS, Indent, PadToWidth);
+  assert(PadToWidth >= FilterBits.getBitWidth());
+  OS << Indent << indent(PadToWidth - FilterBits.getBitWidth());
   printKnownBits(OS, FilterBits, '.');
   OS << '\n';
 }
@@ -1080,7 +1114,8 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
   // 2: Island (well-known bit value needed for decoding)
   unsigned State = 0;
 
-  for (unsigned i = 0; i < BitWidth; ++i) {
+  unsigned FilterWidth = FilterBits.getBitWidth();
+  for (unsigned i = 0; i != FilterWidth; ++i) {
     bool IsKnown = EncodingBits.Zero[i] || EncodingBits.One[i];
     bool Filtered = isPositionFiltered(i);
     switch (State) {
@@ -1110,7 +1145,7 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
   }
   // If we are still in Island after the loop, do some housekeeping.
   if (State == 2)
-    Islands.push_back({StartBit, BitWidth - StartBit, FieldVal});
+    Islands.push_back({StartBit, FilterWidth - StartBit, FieldVal});
 
   return Islands;
 }
@@ -1316,9 +1351,10 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
   if (SFBits.isZero())
     return;
 
-  APInt PositiveMask(BitWidth, 0ULL);
-  APInt NegativeMask(BitWidth, 0ULL);
-  for (unsigned i = 0; i < BitWidth; ++i) {
+  unsigned EncodingWidth = InstBits.getBitWidth();
+  APInt PositiveMask(EncodingWidth, 0);
+  APInt NegativeMask(EncodingWidth, 0);
+  for (unsigned i = 0; i != EncodingWidth; ++i) {
     if (!SFBits[i])
       continue;
 
@@ -1484,7 +1520,8 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
   unsigned StartBit = 0;
 
   std::vector<std::unique_ptr<Filter>> Filters;
-  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+  unsigned FilterWidth = FilterBits.getBitWidth();
+  for (unsigned BitIndex = 0; BitIndex != FilterWidth; ++BitIndex) {
     bitAttr_t bitAttr = BitAttrs[BitIndex];
 
     assert(bitAttr != ATTR_NONE && "Bit without attributes");
@@ -1565,12 +1602,12 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
   case ATTR_FILTERED:
     break;
   case ATTR_ALL_SET:
-    reportRegion(Filters, RA, StartBit, BitWidth, AllowMixed);
+    reportRegion(Filters, RA, StartBit, FilterWidth, AllowMixed);
     break;
   case ATTR_ALL_UNSET:
     break;
   case ATTR_MIXED:
-    reportRegion(Filters, RA, StartBit, BitWidth, AllowMixed);
+    reportRegion(Filters, RA, StartBit, FilterWidth, AllowMixed);
     break;
   }
 
@@ -1628,18 +1665,19 @@ void FilterChooser::doFilter() {
   // (MIXED) ------ . ----> (MIXED)
   // (FILTERED)---- . ----> (FILTERED)
 
-  SmallVector<bitAttr_t, 128> BitAttrs(BitWidth, ATTR_NONE);
+  unsigned FilterWidth = FilterBits.getBitWidth();
+  SmallVector<bitAttr_t, 128> BitAttrs(FilterWidth, ATTR_NONE);
 
   // FILTERED bit positions provide no entropy and are not worthy of pursuing.
   // Filter::recurse() set either 1 or 0 for each position.
-  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
+  for (unsigned BitIndex = 0; BitIndex != FilterWidth; ++BitIndex)
     if (isPositionFiltered(BitIndex))
       BitAttrs[BitIndex] = ATTR_FILTERED;
 
   for (unsigned EncodingID : EncodingIDs) {
     KnownBits EncodingBits = getMandatoryEncodingBits(EncodingID);
 
-    for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+    for (unsigned BitIndex = 0; BitIndex != FilterWidth; ++BitIndex) {
       bool IsKnown = EncodingBits.Zero[BitIndex] || EncodingBits.One[BitIndex];
       switch (BitAttrs[BitIndex]) {
       case ATTR_NONE:
@@ -1688,12 +1726,14 @@ void FilterChooser::doFilter() {
 
   // Dump filters.
   indent Indent(4);
-  dumpStack(errs(), Indent);
+  // Helps to keep the output right-justified.
+  unsigned PadToWidth = getMaxEncodingWidth();
+  dumpStack(errs(), Indent, PadToWidth);
 
   // Dump encodings.
   for (unsigned EncodingID : EncodingIDs) {
     const InstructionEncoding &Enc = Encodings[EncodingID];
-    errs() << Indent;
+    errs() << Indent << indent(PadToWidth - Enc.getBitWidth());
     printKnownBits(errs(), getMandatoryEncodingBits(EncodingID), '_');
     errs() << "  " << Enc.getName() << '\n';
   }
