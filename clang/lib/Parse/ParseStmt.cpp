@@ -36,10 +36,9 @@ using namespace clang;
 // C99 6.8: Statements and Blocks.
 //===----------------------------------------------------------------------===//
 
-StmtResult
-Parser::ParseStatement(SourceLocation *TrailingElseLoc,
-                       ParsedStmtContext StmtCtx,
-                       LabelDecl *PrecedingLabel) {
+StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
+                                  ParsedStmtContext StmtCtx,
+                                  LabelDecl *PrecedingLabel) {
   StmtResult Res;
 
   // We may get back a null statement if we found a #pragma. Keep going until
@@ -53,10 +52,10 @@ Parser::ParseStatement(SourceLocation *TrailingElseLoc,
   return Res;
 }
 
-StmtResult Parser::ParseStatementOrDeclaration(
-    StmtVector &Stmts, ParsedStmtContext StmtCtx,
-    SourceLocation *TrailingElseLoc,
-    LabelDecl *PrecedingLabel) {
+StmtResult Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
+                                               ParsedStmtContext StmtCtx,
+                                               SourceLocation *TrailingElseLoc,
+                                               LabelDecl *PrecedingLabel) {
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -134,8 +133,7 @@ private:
 StmtResult Parser::ParseStatementOrDeclarationAfterAttributes(
     StmtVector &Stmts, ParsedStmtContext StmtCtx,
     SourceLocation *TrailingElseLoc, ParsedAttributes &CXX11Attrs,
-    ParsedAttributes &GNUAttrs,
-    LabelDecl *PrecedingLabel) {
+    ParsedAttributes &GNUAttrs, LabelDecl *PrecedingLabel) {
   const char *SemiError = nullptr;
   StmtResult Res;
   SourceLocation GNUAttributeLoc;
@@ -685,9 +683,8 @@ static void DiagnoseLabelFollowedByDecl(Parser &P, const Stmt *SubStmt) {
   }
 }
 
-StmtResult
-Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
-                              ParsedStmtContext StmtCtx) {
+StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
+                                         ParsedStmtContext StmtCtx) {
   assert(Tok.is(tok::identifier) && Tok.getIdentifierInfo() &&
          "Not an identifier!");
 
@@ -1629,9 +1626,8 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                              ThenStmt.get(), ElseLoc, ElseStmt.get());
 }
 
-StmtResult
-Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
-                             LabelDecl *PrecedingLabel) {
+StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
+                                        LabelDecl *PrecedingLabel) {
   assert(Tok.is(tok::kw_switch) && "Not a switch stmt!");
   SourceLocation SwitchLoc = ConsumeToken();  // eat the 'switch'.
 
@@ -1715,9 +1711,8 @@ Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
   return Actions.ActOnFinishSwitchStmt(SwitchLoc, Switch.get(), Body.get());
 }
 
-StmtResult
-Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
-                            LabelDecl *PrecedingLabel) {
+StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
+                                       LabelDecl *PrecedingLabel) {
   assert(Tok.is(tok::kw_while) && "Not a while stmt!");
   SourceLocation WhileLoc = Tok.getLocation();
   ConsumeToken();  // eat the 'while'.
@@ -1794,8 +1789,7 @@ Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
   return Actions.ActOnWhileStmt(WhileLoc, LParen, Cond, RParen, Body.get());
 }
 
-StmtResult
-Parser::ParseDoStatement(LabelDecl *PrecedingLabel) {
+StmtResult Parser::ParseDoStatement(LabelDecl *PrecedingLabel) {
   assert(Tok.is(tok::kw_do) && "Not a do stmt!");
   SourceLocation DoLoc = ConsumeToken();  // eat the 'do'.
 
@@ -1896,9 +1890,8 @@ bool Parser::isForRangeIdentifier() {
   return false;
 }
 
-StmtResult
-Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
-                          LabelDecl *PrecedingLabel) {
+StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
+                                     LabelDecl *PrecedingLabel) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
@@ -2383,11 +2376,11 @@ StmtResult Parser::ParseReturnStatement() {
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
 }
 
-StmtResult
-Parser::ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
-                            SourceLocation *TrailingElseLoc,
-                            ParsedAttributes &Attrs,
-                            LabelDecl *PrecedingLabel) {
+StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
+                                       ParsedStmtContext StmtCtx,
+                                       SourceLocation *TrailingElseLoc,
+                                       ParsedAttributes &Attrs,
+                                       LabelDecl *PrecedingLabel) {
   // Create temporary attribute list.
   ParsedAttributes TempAttrs(AttrFactory);
 

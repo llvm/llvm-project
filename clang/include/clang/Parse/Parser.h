@@ -7267,16 +7267,15 @@ public:
   /// [OBC]   '@' 'throw' ';'
   /// \endverbatim
   ///
-  StmtResult ParseStatementOrDeclaration(
-      StmtVector &Stmts, ParsedStmtContext StmtCtx,
-      SourceLocation *TrailingElseLoc = nullptr,
-      LabelDecl *PrecedingLabel = nullptr);
+  StmtResult
+  ParseStatementOrDeclaration(StmtVector &Stmts, ParsedStmtContext StmtCtx,
+                              SourceLocation *TrailingElseLoc = nullptr,
+                              LabelDecl *PrecedingLabel = nullptr);
 
   StmtResult ParseStatementOrDeclarationAfterAttributes(
       StmtVector &Stmts, ParsedStmtContext StmtCtx,
       SourceLocation *TrailingElseLoc, ParsedAttributes &DeclAttrs,
-      ParsedAttributes &DeclSpecAttrs,
-      LabelDecl *PrecedingLabel);
+      ParsedAttributes &DeclSpecAttrs, LabelDecl *PrecedingLabel);
 
   /// Parse an expression statement.
   StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
@@ -7292,8 +7291,8 @@ public:
   ///         label statement
   /// \endverbatim
   ///
-  StmtResult
-  ParseLabeledStatement(ParsedAttributes &Attrs, ParsedStmtContext StmtCtx);
+  StmtResult ParseLabeledStatement(ParsedAttributes &Attrs,
+                                   ParsedStmtContext StmtCtx);
 
   /// ParseCaseStatement
   /// \verbatim
@@ -7401,9 +7400,8 @@ public:
   ///         'switch' '(' expression ')' statement
   /// [C++]   'switch' '(' condition ')' statement
   /// \endverbatim
-  StmtResult
-  ParseSwitchStatement(SourceLocation *TrailingElseLoc,
-                       LabelDecl *PrecedingLabel);
+  StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc,
+                                  LabelDecl *PrecedingLabel);
 
   /// ParseWhileStatement
   /// \verbatim
@@ -7411,9 +7409,8 @@ public:
   ///         'while' '(' expression ')' statement
   /// [C++]   'while' '(' condition ')' statement
   /// \endverbatim
-  StmtResult
-  ParseWhileStatement(SourceLocation *TrailingElseLoc,
-                      LabelDecl *PrecedingLabel);
+  StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc,
+                                 LabelDecl *PrecedingLabel);
 
   /// ParseDoStatement
   /// \verbatim
@@ -7496,10 +7493,10 @@ public:
 
   StmtResult ParseBreakOrContinueStatement(bool IsContinue);
 
-  StmtResult
-  ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
-                      SourceLocation *TrailingElseLoc, ParsedAttributes &Attrs,
-                      LabelDecl *PrecedingLabel);
+  StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
+                                 SourceLocation *TrailingElseLoc,
+                                 ParsedAttributes &Attrs,
+                                 LabelDecl *PrecedingLabel);
 
   void ParseMicrosoftIfExistsStatement(StmtVector &Stmts);
 
