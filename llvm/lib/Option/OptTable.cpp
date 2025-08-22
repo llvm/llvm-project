@@ -779,6 +779,15 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
       Visibility(0));
 }
 
+static const OptTable::Command *
+getActiveCommand(ArrayRef<OptTable::Command> Commands, StringRef Subcommand) {
+  for (const auto &C : Commands) {
+    if (Subcommand == C.Name)
+      return &C;
+  }
+  return nullptr;
+}
+
 void OptTable::internalPrintHelp(
     raw_ostream &OS, const char *Usage, const char *Title, StringRef Subcommand,
     bool ShowHidden, bool ShowAllAliases,
@@ -790,35 +799,36 @@ void OptTable::internalPrintHelp(
   // Render help text into a map of group-name to a list of (option, help)
   // pairs.
   std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
-  StringRef TopLevelCommandName = "TopLevelCommand";
-  if (Subcommand.empty()) {
-    // Assume top level command (toolname) by default.
-    Subcommand = TopLevelCommandName;
-  }
 
-  const Command *ActiveCommand = nullptr;
-  for (const auto &C : Commands) {
-    if (Subcommand == C.Name) {
-      ActiveCommand = &C;
-      if (ActiveCommand->HelpText)
-        OS << ActiveCommand->HelpText << "\n\n";
-      // TODO: Need to sortout how to maintain helptext for toplevel and
-      // subcommands and show them in view. What does existing tool do?
-      break;
+  const Command *ActiveCommand = getActiveCommand(Commands, Subcommand);
+  if (ActiveCommand) {
+    if (ActiveCommand->HelpText)
+      OS << ActiveCommand->HelpText << "\n\n";
+  } else {
+    // Assume top level command (toolname) is active.
+    StringRef TopLevelCommandName = "TopLevelCommand";
+    if (Commands.size() > 1) {
+      OS << "SUBCOMMANDS:\n\n";
+      for (const auto &C : Commands) {
+        if (C.Name == TopLevelCommandName)
+          continue;
+        OS << C.Name << " - " << C.HelpText << "\n";
+      }
+      OS << "\n";
     }
   }
 
-  if ((!ActiveCommand || ActiveCommand->Name == TopLevelCommandName) &&
-      Commands.size() > 1) {
-    OS << "SUBCOMMANDS:\n\n";
-    for (const auto &C : Commands) {
-      if (C.Name == TopLevelCommandName)
-        continue;
-      // TODO(prabhuk): This should be better aligned in UI using a helper
-      OS << C.Name << " - " << C.HelpText << "\n";
-    }
-    OS << "\n";
-  }
+  auto DoesOptionBelongToActiveCommand =
+      [this, &ActiveCommand](const Info &CandidateInfo) {
+        // ActiveCommand won't be set for tools that did not create command
+        // group info table.
+        if (!ActiveCommand)
+          return true;
+        ArrayRef<unsigned> CommandIDs =
+            CandidateInfo.getCommandIDs(CommandIDsTable);
+        unsigned ActiveCommandID = ActiveCommand - Commands.data();
+        return is_contained(CommandIDs, ActiveCommandID);
+      };
 
   for (unsigned Id = 1, e = getNumOptions() + 1; Id != e; ++Id) {
     // FIXME: Split out option groups.
@@ -832,17 +842,8 @@ void OptTable::internalPrintHelp(
     if (ExcludeOption(CandidateInfo))
       continue;
 
-    if (ActiveCommand) {
-      // ActiveCommand won't be set for tools that did not create command group
-      // info table.
-      // TODO: Move this to a lambda outside the loop.
-      ArrayRef<unsigned> CommandIDs =
-          CandidateInfo.getCommandIDs(CommandIDsTable);
-      unsigned ActiveCommandID = ActiveCommand - Commands.data();
-      bool IsInCommand = is_contained(CommandIDs, ActiveCommandID);
-      if (!IsInCommand)
-        continue;
-    }
+    if (!DoesOptionBelongToActiveCommand(CandidateInfo))
+      continue;
 
     // If an alias doesn't have a help text, show a help text for the aliased
     // option instead.
