@@ -102,7 +102,6 @@ define dso_local i32 @foo() {
 ; CHECK-PTX-LABEL: foo(
 ; CHECK-PTX:       {
 ; CHECK-PTX-NEXT:    .local .align 8 .b8 __local_depot1[40];
-; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b32 %r<2>;
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<3>;
@@ -139,7 +138,6 @@ define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-PTX-LABEL: variadics2(
 ; CHECK-PTX:       {
 ; CHECK-PTX-NEXT:    .local .align 2 .b8 __local_depot2[4];
-; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b16 %rs<6>;
 ; CHECK-PTX-NEXT:    .reg .b32 %r<6>;
@@ -199,7 +197,6 @@ define dso_local i32 @bar() {
 ; CHECK-PTX-LABEL: bar(
 ; CHECK-PTX:       {
 ; CHECK-PTX-NEXT:    .local .align 8 .b8 __local_depot3[24];
-; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b16 %rs<6>;
 ; CHECK-PTX-NEXT:    .reg .b32 %r<2>;
@@ -280,7 +277,6 @@ define dso_local i32 @baz() {
 ; CHECK-PTX-LABEL: baz(
 ; CHECK-PTX:       {
 ; CHECK-PTX-NEXT:    .local .align 16 .b8 __local_depot5[16];
-; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b32 %r<2>;
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<3>;
@@ -346,7 +342,6 @@ define dso_local void @qux() {
 ; CHECK-PTX-LABEL: qux(
 ; CHECK-PTX:       {
 ; CHECK-PTX-NEXT:    .local .align 8 .b8 __local_depot7[24];
-; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-PTX-EMPTY:

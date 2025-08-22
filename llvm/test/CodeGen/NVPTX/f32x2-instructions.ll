@@ -79,7 +79,6 @@ define float @test_extract_i(<2 x float> %a, i64 %idx) #0 {
 ; CHECK-NOF32X2-LABEL: test_extract_i(
 ; CHECK-NOF32X2:       {
 ; CHECK-NOF32X2-NEXT:    .local .align 8 .b8 __local_depot3[8];
-; CHECK-NOF32X2-NEXT:    .reg .b64 %SP;
 ; CHECK-NOF32X2-NEXT:    .reg .b64 %SPL;
 ; CHECK-NOF32X2-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NOF32X2-NEXT:    .reg .b64 %rd<6>;

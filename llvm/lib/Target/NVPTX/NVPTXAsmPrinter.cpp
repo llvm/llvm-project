@@ -80,6 +80,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -1485,13 +1486,10 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
     O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
       << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";
     if (static_cast<const NVPTXTargetMachine &>(MF.getTarget())
-            .getPointerSize(ADDRESS_SPACE_LOCAL) == 8) {
-      O << "\t.reg .b64 \t%SP;\n"
-        << "\t.reg .b64 \t%SPL;\n";
-    } else {
-      O << "\t.reg .b32 \t%SP;\n"
-        << "\t.reg .b32 \t%SPL;\n";
-    }
+            .getPointerSize(ADDRESS_SPACE_LOCAL) == 8)
+      O << "\t.reg .b64 \t%SPL;\n";
+    else
+      O << "\t.reg .b32 \t%SPL;\n";
   }
 
   // Go through all virtual registers to establish the mapping between the

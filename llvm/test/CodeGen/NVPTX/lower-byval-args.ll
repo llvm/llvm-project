@@ -136,7 +136,6 @@ define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out
 ; PTX-LABEL: escape_ptr(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot2[8];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b64 %rd<7>;
 ; PTX-EMPTY:
@@ -175,7 +174,6 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ; PTX-LABEL: escape_ptr_gep(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot3[8];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b64 %rd<8>;
 ; PTX-EMPTY:
@@ -215,7 +213,6 @@ define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeon
 ; PTX-LABEL: escape_ptr_store(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot4[8];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b64 %rd<9>;
 ; PTX-EMPTY:
@@ -252,7 +249,6 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ; PTX-LABEL: escape_ptr_gep_store(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot5[8];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b64 %rd<10>;
 ; PTX-EMPTY:
@@ -291,7 +287,6 @@ define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonl
 ; PTX-LABEL: escape_ptrtoint(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot6[8];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b64 %rd<9>;
 ; PTX-EMPTY:
@@ -448,7 +443,6 @@ define dso_local ptx_kernel void @memcpy_to_param(ptr nocapture noundef readonly
 ; PTX-LABEL: memcpy_to_param(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot9[8];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b16 %rs<17>;
 ; PTX-NEXT:    .reg .b64 %rd<8>;
@@ -628,7 +622,6 @@ define ptx_kernel void @test_select_write(ptr byval(i32) align 4 %input1, ptr by
 ; PTX-LABEL: test_select_write(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 4 .b8 __local_depot12[8];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b16 %rs<3>;
@@ -806,7 +799,6 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; PTX-LABEL: test_phi_write(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 4 .b8 __local_depot14[8];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b16 %rs<3>;
@@ -858,7 +850,6 @@ define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
 ; PTX-LABEL: test_forward_byval_arg(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 4 .b8 __local_depot15[4];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<2>;
 ; PTX-EMPTY:

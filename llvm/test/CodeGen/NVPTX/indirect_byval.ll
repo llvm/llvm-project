@@ -13,7 +13,6 @@ define internal i32 @foo() {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
 ; CHECK-NEXT:    .local .align 1 .b8 __local_depot0[2];
-; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
@@ -50,7 +49,6 @@ define internal i32 @bar() {
 ; CHECK:         // @bar
 ; CHECK-NEXT:  {
 ; CHECK-NEXT:    .local .align 8 .b8 __local_depot1[16];
-; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;

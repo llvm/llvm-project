@@ -10,7 +10,6 @@ define void @foo(i32 %a) {
 ; PTX32-LABEL: foo(
 ; PTX32:       {
 ; PTX32-NEXT:    .local .align 4 .b8 __local_depot0[4];
-; PTX32-NEXT:    .reg .b32 %SP;
 ; PTX32-NEXT:    .reg .b32 %SPL;
 ; PTX32-NEXT:    .reg .b32 %r<2>;
 ; PTX32-EMPTY:
@@ -23,7 +22,6 @@ define void @foo(i32 %a) {
 ; PTX64-LABEL: foo(
 ; PTX64:       {
 ; PTX64-NEXT:    .local .align 4 .b8 __local_depot0[4];
-; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
 ; PTX64-NEXT:    .reg .b32 %r<2>;
 ; PTX64-EMPTY:
@@ -41,7 +39,6 @@ define ptx_kernel void @foo2(i32 %a) {
 ; PTX32-LABEL: foo2(
 ; PTX32:       {
 ; PTX32-NEXT:    .local .align 4 .b8 __local_depot1[4];
-; PTX32-NEXT:    .reg .b32 %SP;
 ; PTX32-NEXT:    .reg .b32 %SPL;
 ; PTX32-NEXT:    .reg .b32 %r<4>;
 ; PTX32-EMPTY:
@@ -61,7 +58,6 @@ define ptx_kernel void @foo2(i32 %a) {
 ; PTX64-LABEL: foo2(
 ; PTX64:       {
 ; PTX64-NEXT:    .local .align 4 .b8 __local_depot1[4];
-; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
 ; PTX64-NEXT:    .reg .b32 %r<2>;
 ; PTX64-NEXT:    .reg .b64 %rd<3>;
@@ -90,7 +86,6 @@ define void @foo3(i32 %a) {
 ; PTX32-LABEL: foo3(
 ; PTX32:       {
 ; PTX32-NEXT:    .local .align 4 .b8 __local_depot2[12];
-; PTX32-NEXT:    .reg .b32 %SP;
 ; PTX32-NEXT:    .reg .b32 %SPL;
 ; PTX32-NEXT:    .reg .b32 %r<5>;
 ; PTX32-EMPTY:
@@ -106,7 +101,6 @@ define void @foo3(i32 %a) {
 ; PTX64-LABEL: foo3(
 ; PTX64:       {
 ; PTX64-NEXT:    .local .align 4 .b8 __local_depot2[12];
-; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
 ; PTX64-NEXT:    .reg .b32 %r<2>;
 ; PTX64-NEXT:    .reg .b64 %rd<3>;
@@ -128,7 +122,6 @@ define void @foo4() {
 ; PTX32-LABEL: foo4(
 ; PTX32:       {
 ; PTX32-NEXT:    .local .align 4 .b8 __local_depot3[8];
-; PTX32-NEXT:    .reg .b32 %SP;
 ; PTX32-NEXT:    .reg .b32 %SPL;
 ; PTX32-NEXT:    .reg .b32 %r<5>;
 ; PTX32-EMPTY:
@@ -155,7 +148,6 @@ define void @foo4() {
 ; PTX64-LABEL: foo4(
 ; PTX64:       {
 ; PTX64-NEXT:    .local .align 4 .b8 __local_depot3[8];
-; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
 ; PTX64-NEXT:    .reg .b64 %rd<5>;
 ; PTX64-EMPTY:

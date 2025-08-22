@@ -149,7 +149,6 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-LABEL: multiple_grid_const_escape(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 4 .b8 __local_depot4[4];
-; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<2>;
 ; PTX-NEXT:    .reg .b64 %rd<8>;
