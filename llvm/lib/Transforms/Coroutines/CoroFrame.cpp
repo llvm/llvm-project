@@ -975,63 +975,6 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
-static void finalizeBasicBlockCloneAndTrackSuccessors(
-    BasicBlock *InitialBlock, BasicBlock *ClonedBlock, ValueToValueMapTy &VMap,
-    SmallPtrSet<BasicBlock *, 3> &SuccessorBlocksSet) {
-  // This code will examine the basic block, fix issues caused by clones
-  //  for example - tailor cleanupret to the corresponding cleanuppad
-  //  using the VMap
-  // in addition, it will add the node successors to SuccessorBlocksSet
-
-    for (Instruction &ClonedBlockInstruction : *ClonedBlock) {
-    RemapInstruction(&ClonedBlockInstruction, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-  }
-
-  const auto &InitialBlockTerminator = InitialBlock->getTerminator();
-
-  // If it's cleanupret, find the correspondant cleanuppad (use the VMap to
-  // find it).
-  if (auto *InitialBlockTerminatorCleanupReturn =
-          dyn_cast<CleanupReturnInst>(InitialBlockTerminator)) {
-    // if none found do nothing
-    if (VMap.find(InitialBlockTerminatorCleanupReturn->getCleanupPad()) ==
-        VMap.end()) {
-      return;
-    }
-
-    auto *ClonedBlockTerminatorCleanupReturn =
-        cast<CleanupReturnInst>(ClonedBlock->getTerminator());
-
-    // Assuming reversed post-order traversal
-    llvm::Value *ClonedBlockCleanupPadValue =
-        VMap[InitialBlockTerminatorCleanupReturn->getCleanupPad()];
-    auto *ClonedBlockCleanupPad =
-        cast<CleanupPadInst>(ClonedBlockCleanupPadValue);
-    ClonedBlockTerminatorCleanupReturn->setCleanupPad(ClonedBlockCleanupPad);
-
-    // If it's a branch/invoke, keep track of its successors, we want to
-    // calculate dominance between CoroBegin and them also
-  } else if (auto *InitialBlockTerminatorBranch =
-                 dyn_cast<BranchInst>(InitialBlockTerminator)) {
-    for (unsigned int SuccessorIdx = 0;
-         SuccessorIdx < InitialBlockTerminatorBranch->getNumSuccessors();
-         ++SuccessorIdx) {
-      SuccessorBlocksSet.insert(
-          InitialBlockTerminatorBranch->getSuccessor(SuccessorIdx));
-    }
-  } else if (auto *InitialBlockTerminatorInvoke =
-                 dyn_cast<InvokeInst>(InitialBlockTerminator)) {
-    SuccessorBlocksSet.insert(InitialBlockTerminatorInvoke->getUnwindDest());
-  } else if (isa<ReturnInst>(InitialBlockTerminator)) {
-    // No action needed
-  } else {
-    InitialBlockTerminator->print(dbgs());
-    report_fatal_error("Terminator is not implemented in "
-                       "finalizeBasicBlockCloneAndTrackSuccessors");
-  }
-}
-
 // Dominance issue fixer for each predecessor satisfying predicate function
 static void
 cloneIfBasicBlockPredecessors(BasicBlock *InitialBlock,
@@ -1093,7 +1036,6 @@ cloneIfBasicBlockPredecessors(BasicBlock *InitialBlock,
 static void enforceDominationByCoroBegin(const FrameDataInfo &FrameData,
                                         const coro::Shape &Shape, Function *F,
                                         DominatorTree &DT) {
-  ValueToValueMapTy VMap;
   SmallPtrSet<BasicBlock *, 3> SpillUserBlocksSet;
 
   // Prepare the node set, logics will be run only on those nodes
@@ -1119,13 +1061,16 @@ static void enforceDominationByCoroBegin(const FrameDataInfo &FrameData,
     SpillUserBlocksSet.erase(CurrentBlock);
 
     // The duplicate will become the unspilled alternative
+    ValueToValueMapTy VMap;
     auto *UnspilledAlternativeBlock =
         CloneBasicBlock(CurrentBlock, VMap, ".unspilled_alternative", F);
 
-    // Remap node instructions, keep track of successors to visit them in next
-    // iterations
-    finalizeBasicBlockCloneAndTrackSuccessors(
-        CurrentBlock, UnspilledAlternativeBlock, VMap, SpillUserBlocksSet);
+    // Remap node instructions
+    for (Instruction &UnspilledAlternativeBlockInstruction :
+         *UnspilledAlternativeBlock) {
+      RemapInstruction(&UnspilledAlternativeBlockInstruction, VMap,
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    }
 
     // Clone only if predecessor breaks dominance against CoroBegin
     cloneIfBasicBlockPredecessors(CurrentBlock, UnspilledAlternativeBlock,
