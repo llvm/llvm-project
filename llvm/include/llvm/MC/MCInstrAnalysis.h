@@ -177,9 +177,9 @@ public:
     return false;
   }
 
-  /// Given an instruction that accesses memory, computes a memory address, or
-  // branches to another address, try to get the address these instructions
-  // target. Return true on success, and the address in \p Target.
+  /// Given an instruction that accesses memory or
+  /// that branches to another address, try to get the address it targets.
+  /// Return true on success, and the address in \p Target.
   virtual bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                                  uint64_t &Target,
                                  const MCSubtargetInfo *STI = nullptr) const;
