@@ -212,7 +212,7 @@ public:
 
 private:
   void parseVarLenEncoding(const VarLenInst &VLI);
-  void parseFixedLenEncoding(const BitsInit &Bits);
+  void parseFixedLenEncoding(const BitsInit &RecordInstBits);
 
   void parseVarLenOperands(const VarLenInst &VLI);
   void parseFixedLenOperands(const BitsInit &Bits);
@@ -1787,15 +1787,17 @@ void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
   assert(I == VLI.size());
 }
 
-void InstructionEncoding::parseFixedLenEncoding(const BitsInit &InstBits) {
+void InstructionEncoding::parseFixedLenEncoding(
+    const BitsInit &RecordInstBits) {
   // For fixed length instructions, sometimes the `Inst` field specifies more
   // bits than the actual size of the instruction, which is specified in `Size`.
   // In such cases, we do some basic validation and drop the upper bits.
   unsigned BitWidth = EncodingDef->getValueAsInt("Size") * 8;
-  unsigned InstNumBits = InstBits.getNumBits();
+  unsigned InstNumBits = RecordInstBits.getNumBits();
 
   // Returns true if all bits in `Bits` are zero or unset.
-  auto CheckAllZeroOrUnset = [&](ArrayRef<const Init *> Bits, const RecordVal *Field) {
+  auto CheckAllZeroOrUnset = [&](ArrayRef<const Init *> Bits,
+                                 const RecordVal *Field) {
     bool AllZeroOrUnset = llvm::all_of(Bits, [](const Init *Bit) {
       if (const auto *BI = dyn_cast<BitInit>(Bit))
         return !BI->getValue();
@@ -1803,30 +1805,28 @@ void InstructionEncoding::parseFixedLenEncoding(const BitsInit &InstBits) {
     });
     if (AllZeroOrUnset)
       return;
-    PrintNote([Field](raw_ostream &OS) {
-      Field->print(OS);
-    });
-    PrintFatalError(
-        EncodingDef,
-        Twine(Name) + ": Size is " + Twine(BitWidth) +
-            " bits, but " +  Field->getName() + " bits beyond that are not zero/unset");
+    PrintNote([Field](raw_ostream &OS) { Field->print(OS); });
+    PrintFatalError(EncodingDef, Twine(Name) + ": Size is " + Twine(BitWidth) +
+                                     " bits, but " + Field->getName() +
+                                     " bits beyond that are    not zero/unset");
   };
 
   if (InstNumBits < BitWidth)
-    PrintFatalError(EncodingDef, Twine(Name) + ": Size is " +
-                                      Twine(BitWidth) +
-                                      " bits, but Inst specifies only " +
-                                      Twine(InstNumBits) + " bits");
+    PrintFatalError(EncodingDef, Twine(Name) + ": Size is " + Twine(BitWidth) +
+                                     " bits, but Inst specifies only " +
+                                     Twine(InstNumBits) + " bits");
 
   if (InstNumBits > BitWidth) {
     // Ensure that all the bits beyond 'Size' are 0 or unset (i.e., carry no
     // actual encoding).
-    ArrayRef<const Init *> UpperBits = InstBits.getBits().drop_front(BitWidth);
+    ArrayRef<const Init *> UpperBits =
+        RecordInstBits.getBits().drop_front(BitWidth);
     const RecordVal *InstField = EncodingDef->getValue("Inst");
     CheckAllZeroOrUnset(UpperBits, InstField);
   }
 
-  ArrayRef<const Init *> ActiveInstBits = InstBits.getBits().take_front(BitWidth);
+  ArrayRef<const Init *> ActiveInstBits =
+      RecordInstBits.getBits().take_front(BitWidth);
   InstBits = KnownBits(BitWidth);
   SoftFailBits = APInt(BitWidth, 0);
 
@@ -1846,12 +1846,12 @@ void InstructionEncoding::parseFixedLenEncoding(const BitsInit &InstBits) {
     return;
 
   const auto *SFBits = dyn_cast<BitsInit>(SoftFailField->getValue());
-  if (!SFBits || SFBits->getNumBits() != Bits.getNumBits()) {
+  if (!SFBits || SFBits->getNumBits() != InstNumBits) {
     PrintNote(EncodingDef->getLoc(), "in record");
     PrintFatalError(SoftFailField,
                     formatv("SoftFail field, if defined, must be "
                             "of the same type as Inst, which is bits<{}>",
-                            Bits.getNumBits()));
+                            InstNumBits));
   }
 
   if (InstNumBits > BitWidth) {
@@ -1866,9 +1866,9 @@ void InstructionEncoding::parseFixedLenEncoding(const BitsInit &InstBits) {
       if (!InstBits.Zero[I] && !InstBits.One[I]) {
         PrintNote(EncodingDef->getLoc(), "in record");
         PrintError(SoftFailField,
-                    formatv("SoftFail{{{0}} = 1 requires Inst{{{0}} "
-                            "to be fully defined (0 or 1, not '?')",
-                            I));
+                   formatv("SoftFail{{{0}} = 1 requires Inst{{{0}} "
+                           "to be fully defined (0 or 1, not '?')",
+                           I));
       }
       SoftFailBits.setBit(I);
     }
