@@ -80,10 +80,12 @@ class VectorTypesFormattingTestCase(TestBase):
         self.expect(f"expr{jit_flag} -- float4(0)", substrs=["(0, 0, 0, 0)"])
         self.expect(f"expr{jit_flag} -- float4(1)", substrs=["(1, 1, 1, 1)"])
         self.expect(
-            f"expr{jit_flag} -- float4{0.1, 0.2, 0.3, 0.4}",
-            substrs=["(0.1, 0.2, 0.3, 0.4)"],
+            f"expr{jit_flag} -- float4{{1.25, 2.5, 3.25, 4.5}}",
+            substrs=["(1.25, 2.5, 3.25, 4.5)"],
         )
-        self.expect(f"expr{jit_flag} -- float4{0.1, 0.2, 0.3, 0.4}[0]", substrs=["0.1"])
+        self.expect(
+            f"expr{jit_flag} -- float4{{0.1, 0.2, 0.3, 0.4}}[0]", substrs=["0.1"]
+        )
 
         oldValue = v.GetChildAtIndex(0).GetValue()
         v.SetFormat(lldb.eFormatHex)
