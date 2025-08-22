@@ -1005,6 +1005,35 @@ public:
     __emplace_hint_multi(__p, std::move(__value));
   }
 
+  template <class _InIter, class _Sent>
+  _LIBCPP_HIDE_FROM_ABI void __insert_range_multi(_InIter __first, _Sent __last) {
+    if (__first == __last)
+      return;
+
+    if (__root() == nullptr) { // Make sure we always have a root node
+      __insert_node_at(
+          __end_node(), __end_node()->__left_, static_cast<__node_base_pointer>(__construct_node(*__first).release()));
+      ++__first;
+    }
+
+    auto __max_node = static_cast<__node_pointer>(std::__tree_max(static_cast<__node_base_pointer>(__root())));
+
+    for (; __first != __last; ++__first) {
+      __node_holder __nd = __construct_node(*__first);
+      // Always check the max node first. This optimizes for sorted ranges inserted at the end.
+      if (!value_comp()(__nd->__get_value(), __max_node->__get_value())) { // __node >= __max_val
+        __insert_node_at(static_cast<__end_node_pointer>(__max_node),
+                         __max_node->__right_,
+                         static_cast<__node_base_pointer>(__nd.get()));
+        __max_node = __nd.release();
+      } else {
+        __end_node_pointer __parent;
+        __node_base_pointer& __child = __find_leaf_high(__parent, __nd->__get_value());
+        __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd.release()));
+      }
+    }
+  }
+
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __node_assign_unique(const value_type& __v, __node_pointer __dest);
 
   _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(__node_pointer __nd);
