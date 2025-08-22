@@ -307,7 +307,8 @@ void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
 
   // Move instructions to new block.
   BasicBlock *Old = IP.getBlock();
-  New->splice(New->begin(), Old, IP.getPoint(), Old->end());
+  if (!Old->empty() || !New->empty())
+    New->splice(New->begin(), Old, IP.getPoint(), Old->end());
 
   if (CreateBranch) {
     auto *NewBr = BranchInst::Create(New, Old);
