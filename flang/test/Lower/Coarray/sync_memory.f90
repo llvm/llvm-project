@@ -3,7 +3,7 @@
 
 program test_sync_memory
   implicit none
-  ! NOCOARRAY: Coarrays disabled, use '-fcoarray' to enable.
+  ! NOCOARRAY: Multi-image features are disabled, use '-fcoarray' to enable.
  
   ! COARRAY: %[[ERRMSG:.*]]:2 = hlfir.declare %[[VAL_1:.*]] typeparams %[[C_128:.*]] {uniq_name = "_QFEerror_message"} : (!fir.ref<!fir.char<1,128>>, index) -> (!fir.ref<!fir.char<1,128>>, !fir.ref<!fir.char<1,128>>)
   ! COARRAY: %[[STAT:.*]]:2 = hlfir.declare %[[VAL_2:.*]] {uniq_name = "_QFEsync_status"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
