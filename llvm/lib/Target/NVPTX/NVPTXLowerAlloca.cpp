@@ -33,6 +33,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 
 using namespace llvm;
@@ -44,7 +45,7 @@ class NVPTXLowerAlloca : public ModulePass {
   bool lowerFunctionAllocas(Function &F);
 
 public:
-  static char ID; 
+  static char ID;
   NVPTXLowerAlloca() : ModulePass(ID) {}
   bool runOnModule(Module &M) override;
   StringRef getPassName() const override {
@@ -112,7 +113,8 @@ bool NVPTXLowerAlloca::changeDataLayout(Module &M) {
   auto DLStr = DL.getStringRepresentation();
 
   auto AddrSpaceStr = "A" + std::to_string(ADDRESS_SPACE_LOCAL);
-  assert(!StringRef(DLStr).contains("A") && "DataLayout should not contain A");
+  if (StringRef(DLStr).contains("A"))
+    report_fatal_error("DataLayout should not contain A");
   M.setDataLayout(DLStr.empty() ? AddrSpaceStr : DLStr + "-" + AddrSpaceStr);
   return true;
 }
