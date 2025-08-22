@@ -1809,6 +1809,11 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_masked_atomicrmw_umax:
   case Intrinsic::riscv_masked_atomicrmw_umin:
   case Intrinsic::riscv_masked_cmpxchg:
+    // riscv_masked_{atomicrmw_*,cmpxchg} intrinsics represent an emulated
+    // narrow atomic operation. These will be expanded to an LR/SC loop that
+    // reads/writes to/from an aligned 4 byte location. And, or, shift, etc.
+    // will be used to modify the appropriate part of the 4 byte data and
+    // preserve the rest.
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
