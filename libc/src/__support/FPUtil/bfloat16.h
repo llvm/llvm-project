@@ -29,8 +29,6 @@ struct BFloat16 {
 
   LIBC_INLINE BFloat16() = default;
 
-  LIBC_INLINE constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
-
   template <typename T> LIBC_INLINE constexpr explicit BFloat16(T value) {
     if constexpr (cpp::is_floating_point_v<T>) {
       bits = fputil::cast<bfloat16>(value).bits;
