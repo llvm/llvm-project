@@ -69,7 +69,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
     const VTableLayout &layout, unsigned componentIndex, mlir::Attribute rtti,
     unsigned &nextVTableThunkIndex, unsigned vtableAddressPoint,
     bool vtableHasLocalLinkage) {
-  auto &component = layout.vtable_components()[componentIndex];
+  const VTableComponent &component = layout.vtable_components()[componentIndex];
 
   CIRGenBuilderTy builder = cgm.getBuilder();
 
@@ -140,7 +140,7 @@ void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
                                             bool vtableHasLocalLinkage) {
   mlir::Type componentType = getVTableComponentType();
 
-  const llvm::SmallVector<unsigned, 4> &addressPoints =
+  const llvm::SmallVector<unsigned> &addressPoints =
       layout.getAddressPointIndices();
   unsigned nextVTableThunkIndex = 0;
 
@@ -154,7 +154,7 @@ void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
   size_t vtableEnd = vtableStart + layout.getVTableSize(vtableIndex);
 
   // Build a ConstArrayAttr of the vtable components.
-  llvm::SmallVector<mlir::Attribute, 4> components;
+  llvm::SmallVector<mlir::Attribute> components;
   for (size_t componentIndex = vtableStart; componentIndex < vtableEnd;
        ++componentIndex) {
     components.push_back(
