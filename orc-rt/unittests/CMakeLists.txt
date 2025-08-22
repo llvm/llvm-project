@@ -13,6 +13,7 @@ endfunction()
 
 add_orc_rt_unittest(CoreTests
   bitmask-enum-test.cpp
+  error-test.cpp
   math-test.cpp
   rtti-test.cpp
   span-test.cpp
