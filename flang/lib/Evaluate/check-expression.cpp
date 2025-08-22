@@ -1475,7 +1475,8 @@ public:
     // Explicit shape and assumed size arrays must be contiguous
     bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
         (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
-        dummyObj_.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
+        dummyObj_.attrs.test(
+            characteristics::DummyDataObject::Attr::Contiguous)};
     if (!actualTreatAsContiguous && dummyNeedsContiguity) {
       return true;
     }
@@ -1498,10 +1499,13 @@ public:
       // flang supports limited cases of passing polymorphic to non-polimorphic.
       // These cases require temporary of non-polymorphic type. (For example,
       // the actual argument could be polymorphic array of child type,
-      // while the dummy argument could be non-polymorphic array of parent type.)
+      // while the dummy argument could be non-polymorphic array of parent
+      // type.)
       bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
-      auto actualType{characteristics::TypeAndShape::Characterize(actual_, fc_)};
-      bool actualIsPolymorphic{actualType && actualType->type().IsPolymorphic()};
+      auto actualType{
+          characteristics::TypeAndShape::Characterize(actual_, fc_)};
+      bool actualIsPolymorphic{
+          actualType && actualType->type().IsPolymorphic()};
       if (actualIsPolymorphic && !dummyIsPolymorphic) {
         return true;
       }
@@ -1522,13 +1526,9 @@ public:
     return ExtractCoarrayRef(actual_) && dummyObj_.type.corank() == 0;
   }
 
-  bool HasIntentOut() const {
-    return dummyObj_.intent == common::Intent::Out;
-  }
+  bool HasIntentOut() const { return dummyObj_.intent == common::Intent::Out; }
 
-  bool HasIntentIn() const {
-    return dummyObj_.intent == common::Intent::In;
-  }
+  bool HasIntentIn() const { return dummyObj_.intent == common::Intent::In; }
 
 private:
   FoldingContext &fc_;
@@ -1644,8 +1644,9 @@ bool MayNeedCopy(const ActualArgument *actual,
   if (actual->isAlternateReturn()) {
     return false;
   }
-  const auto *dummyObj{
-      dummy ? std::get_if<characteristics::DummyDataObject>(&dummy->u) : nullptr};
+  const auto *dummyObj{dummy
+          ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
+          : nullptr};
   if (forCopyOut) {
     return MayNeedCopyOut(fc, *actual, dummyObj);
   } else {
