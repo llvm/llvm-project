@@ -6242,7 +6242,7 @@ static void replaceProxyReg(SDNode *N, SelectionDAG &DAG,
   Results.push_back(Res);
 }
 
-static void replaceAtomic128(SDNode *N, SelectionDAG &DAG,
+static void replaceAtomicSwap128(SDNode *N, SelectionDAG &DAG,
                              const NVPTXSubtarget &STI,
                              SmallVectorImpl<SDValue> &Results) {
   assert(N->getValueType(0) == MVT::i128 &&
@@ -6251,7 +6251,7 @@ static void replaceAtomic128(SDNode *N, SelectionDAG &DAG,
   AtomicSDNode *AN = cast<AtomicSDNode>(N);
   SDLoc dl(N);
 
-  if (STI.getSmVersion() < 90 || STI.getPTXVersion() < 83) {
+  if (!STI.hasAtomSwap128()) {
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
         "Support for b128 atomics introduced in PTX ISA version 8.3 and "
@@ -6307,7 +6307,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     return;
   case ISD::ATOMIC_CMP_SWAP:
   case ISD::ATOMIC_SWAP:
-    replaceAtomic128(N, DAG, STI, Results);
+    replaceAtomicSwap128(N, DAG, STI, Results);
     return;
   }
 }

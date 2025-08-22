@@ -172,7 +172,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   }
   case NVPTXISD::ATOMIC_CMP_SWAP_B128:
   case NVPTXISD::ATOMIC_SWAP_B128:
-    selectAtomic128(N);
+    selectAtomicSwap128(N);
     return;
   case ISD::FADD:
   case ISD::FMUL:
@@ -2342,7 +2342,7 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   }
 }
 
-void NVPTXDAGToDAGISel::selectAtomic128(SDNode *N) {
+void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   MemSDNode *AN = cast<MemSDNode>(N);
   SDLoc dl(N);
 
