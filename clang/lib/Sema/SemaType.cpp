@@ -6715,7 +6715,24 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
     return;
   }
 
-  Type = State.getOverflowBehaviorType(Kind, Type);
+  // Check for conflicting overflow behavior attributes
+  if (const auto *ExistingOBT = Type->getAs<OverflowBehaviorType>()) {
+    OverflowBehaviorType::OverflowBehaviorKind ExistingKind =
+        ExistingOBT->getBehaviorKind();
+    if (ExistingKind != Kind) {
+      // Conflicting attributes - issue warning and let no_wrap take precedence
+      S.Diag(Attr.getLoc(),
+             diag::warn_conflicting_overflow_behavior_attributes);
+      if (Kind == OverflowBehaviorType::OverflowBehaviorKind::NoWrap) {
+        // Current is no_wrap, replace existing
+        Type = State.getOverflowBehaviorType(Kind,
+                                             ExistingOBT->getUnderlyingType());
+      }
+      return;
+    }
+  } else {
+    Type = State.getOverflowBehaviorType(Kind, Type);
+  }
 }
 
 /// handleObjCOwnershipTypeAttr - Process an objc_ownership

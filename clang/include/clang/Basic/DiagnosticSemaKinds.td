@@ -4043,6 +4043,10 @@ def warn_overflow_behavior_attribute_disabled
     : Warning<"%0 attribute is ignored because it is not enabled; pass "
               "-foverflow-behavior-types">,
       InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_conflicting_overflow_behavior_attributes
+    : Warning<"conflicting 'overflow_behavior' attributes on the same type; "
+              "'no_wrap' takes precedence over 'wrap'">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
 def warn_impcast_overflow_behavior_assignment
     : Warning<"implicit conversion from %0 to %1 during assignment discards "
               "overflow behavior">,

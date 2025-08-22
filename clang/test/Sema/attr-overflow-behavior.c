@@ -79,16 +79,16 @@ void test_obt_pointer_compatibility() {
   unsigned long x = 42;
   unsigned long __no_wrap y = 42;
   unsigned long __wrap z = 42;
- 
+
   unsigned long *px = &x;
   unsigned long __no_wrap *py = &y;
   unsigned long __wrap *pz = &z;
- 
+
   // Same types - should not warn
   px = &x; // OK
   py = &y; // OK
   pz = &z; // OK
- 
+
   // Different OBT annotations - should warn but allow
   // expected-warning@+1 {{assigning to 'unsigned long *' from '__no_wrap unsigned long *' discards overflow behavior}}
   px = py;
@@ -138,8 +138,7 @@ void test_function_parameters() {
   func_takes_wrap_ptr(px);
 }
 
-// Test different underlying types - should still error
-void test_different_underlying_types() {
+void test_different_underlying_types_for_pointers() {
   int x = 42;
   unsigned long __no_wrap y = 42;
 
@@ -148,3 +147,19 @@ void test_different_underlying_types() {
 
   px = py; // expected-warning {{incompatible pointer types assigning to 'int *' from '__no_wrap unsigned long *'}}
 }
+
+// expected-warning@+1 {{conflicting 'overflow_behavior' attributes on the same type; 'no_wrap' takes precedence over 'wrap'}}
+typedef int __attribute__((overflow_behavior(wrap))) __attribute__((overflow_behavior(no_wrap))) conflicting_no_wrap_wins;
+// expected-warning@+1 {{conflicting 'overflow_behavior' attributes on the same type; 'no_wrap' takes precedence over 'wrap'}}
+typedef int __attribute__((overflow_behavior(no_wrap))) __attribute__((overflow_behavior(wrap))) conflicting_wrap_ignored;
+
+void test_conflicting_behavior_kinds() {
+  conflicting_no_wrap_wins x = 42;
+  conflicting_wrap_ignored y = 42;
+
+  int __no_wrap *px = &x;
+  int __no_wrap *py = &y;
+}
+
+typedef int __attribute__((overflow_behavior(wrap))) __attribute__((overflow_behavior(wrap))) duplicate_wrap; // no warn
+typedef int __attribute__((overflow_behavior(no_wrap))) __attribute__((overflow_behavior(no_wrap))) duplicate_no_wrap; // no warn
