@@ -192,6 +192,14 @@ static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, {Src0, Src1});
 }
 
+static inline StringRef mapScopeToSPIRV(StringRef AMDGCNScope) {
+  if (AMDGCNScope == "agent")
+    return "device";
+  if (AMDGCNScope == "wavefront")
+    return "subgroup";
+  return AMDGCNScope;
+}
+
 // For processing memory ordering and memory scope arguments of various
 // amdgcn builtins.
 // \p Order takes a C++11 compatible memory-ordering specifier and converts
@@ -227,12 +235,8 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   // Some of the atomic builtins take the scope as a string name.
   StringRef scp;
   if (llvm::getConstantStringInfo(Scope, scp)) {
-    if (getTarget().getTriple().isSPIRV()) {
-      if (scp == "agent")
-        scp = "device";
-      else if (scp == "wavefront")
-        scp = "subgroup";
-    }
+    if (getTarget().getTriple().isSPIRV())
+      scp = mapScopeToSPIRV(scp);
     SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
     return;
   }
