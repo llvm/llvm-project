@@ -878,7 +878,7 @@ AsmToken AsmLexer::LexToken() {
   case ' ':
   case '\t':
     IsAtStartOfStatement = OldIsAtStartOfStatement;
-    while (*CurPtr == ' ' || *CurPtr == '\t')
+    while (CurPtr != CurBuf.end() && (*CurPtr == ' ' || *CurPtr == '\t'))
       CurPtr++;
     if (SkipSpace)
       return LexToken(); // Ignore whitespace.
