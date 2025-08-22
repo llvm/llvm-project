@@ -10009,24 +10009,15 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
 
     // Avoid infinite recursion with
     // Fold (and X, (add (not Y), Z)) -> (and X, (not (sub Y, Z)))
-    bool hasAndUsers = false;
-    for (SDUse &Use : N->uses()) {
-      SDNode *User = Use.getUser();
-      if (User->getOpcode() == ISD::AND) {
-        hasAndUsers = true;
-        break;
-      }
-    }
-    if (!hasAndUsers) {
+    if (none_of(N->users(),
+                [](SDNode *User) { return User->getOpcode() == ISD::AND; })) {
       if (isa<ConstantSDNode>(Y) || N0.hasOneUse()) {
-        SDValue NotY =
-            DAG.getNode(ISD::XOR, DL, VT, Y, DAG.getAllOnesConstant(DL, VT));
+        SDValue NotY = DAG.getNOT(DL, Y, VT);
         return DAG.getNode(ISD::ADD, DL, VT, X, NotY, N->getFlags());
       }
     } else {
       if (isa<ConstantSDNode>(Y) && N0.hasOneUse()) {
-        SDValue NotY =
-            DAG.getNode(ISD::XOR, DL, VT, Y, DAG.getAllOnesConstant(DL, VT));
+        SDValue NotY = DAG.getNOT(DL, Y, VT);
         return DAG.getNode(ISD::ADD, DL, VT, X, NotY, N->getFlags());
       }
     }
