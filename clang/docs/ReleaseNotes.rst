@@ -309,6 +309,13 @@ NVPTX Support
 
 X86 Support
 ^^^^^^^^^^^
+- More SSE, AVX and AVX512 intrinsics, including initializers and general
+  arithmetic can now be used in C++ constant expressions.
+- Some SSE, AVX and AVX512 intrinsics have been converted to wrap
+  generic __builtin intrinsics.
+- NOTE: Please avoid use of the __builtin_ia32_* intrinsics - these are not 
+  guaranteed to exist in future releases, or match behaviour with previous
+  releases of clang or other compilers.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
