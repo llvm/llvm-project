@@ -380,12 +380,13 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
     // If the terminator is an invoke,
     // set the cleanupret unwind destination the same as the other edges, to
     // avoid validation errors
-    BasicBlock *UBB = nullptr;
-    if (auto II = dyn_cast<InvokeInst>(FromPad->getParent()->getTerminator())) {
-      UBB = II->getUnwindDest();
+    BasicBlock *UnwindDest = nullptr;
+    if (auto *Invoke =
+dyn_cast<InvokeInst>(FromPad->getParent()->getTerminator())) {
+      UnwindDest = Invoke->getUnwindDest();
     }
 
-    auto *CleanupRet = Builder.CreateCleanupRet(FromPad, UBB);
+    auto *CleanupRet = Builder.CreateCleanupRet(FromPad, UnwindDest);
     End->getParent()->splitBasicBlock(End);
     CleanupRet->getParent()->getTerminator()->eraseFromParent();
   }

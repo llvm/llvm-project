@@ -981,7 +981,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 // mapping to their corresponding clones
 static void finalizeBasicBlockCloneAndTrackSuccessors(
     BasicBlock *InitialBlock, BasicBlock *ClonedBlock, ValueToValueMapTy &VMap,
-    SmallSet<BasicBlock *, 20> &SuccessorBlocksSet) {
+    SmallPtrSet<BasicBlock *, 3> &SuccessorBlocksSet) {
   // This code will examine the basic block, fix issues caused by clones
   //  for example - tailor cleanupret to the corresponding cleanuppad
   //  it will use VMap to do so
@@ -1041,8 +1041,9 @@ static void finalizeBasicBlockCloneAndTrackSuccessors(
 }
 
 // Dominance issue fixer for each predecessor satisfying predicate function
-void splitIfBasicBlockPredecessors(
-    BasicBlock *InitialBlock, BasicBlock *ReplacementBlock,
+static void
+cloneIfBasicBlockPredecessors(BasicBlock *InitialBlock,
+                              BasicBlock *ReplacementBlock,
     std::function<bool(BasicBlock *)> Predicate) {
 
   SmallVector<BasicBlock *> InitialBlockPredecessors;
@@ -1097,12 +1098,11 @@ void splitIfBasicBlockPredecessors(
 // insertSpills intended to create (using the spill) and another one, preserving
 // the logics of pre-splitting, which would be triggered if unwinding happened
 // before CoroBegin
-static void
-splitBasicBlocksNotDominatedByCoroBegin(const FrameDataInfo &FrameData,
+static void enforceDominationByCoroBegin(const FrameDataInfo &FrameData,
                                         const coro::Shape &Shape, Function *F,
                                         DominatorTree &DT) {
   ValueToValueMapTy VMap;
-  SmallSet<BasicBlock *, 20> SpillUserBlocksSet;
+  SmallPtrSet<BasicBlock *, 3> SpillUserBlocksSet;
 
   // Prepare the node set, logics will be run only on those nodes
   for (const auto &E : FrameData.Spills) {
@@ -1141,6 +1141,10 @@ splitBasicBlocksNotDominatedByCoroBegin(const FrameDataInfo &FrameData,
 
     // We changed dominance tree, so recalculate
     DT.recalculate(*F);
+
+    if (SpillUserBlocksSet.empty()) {
+      return;
+    }
   }
 
   assert(SpillUserBlocksSet.empty() &&
@@ -1226,7 +1230,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     return GEP;
   };
 
-  splitBasicBlocksNotDominatedByCoroBegin(FrameData, Shape, F, DT);
+  enforceDominationByCoroBegin(FrameData, Shape, F, DT);
 
   for (auto const &E : FrameData.Spills) {
     Value *Def = E.first;
