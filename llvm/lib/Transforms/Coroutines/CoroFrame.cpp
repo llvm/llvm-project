@@ -1014,11 +1014,11 @@ static void finalizeBasicBlockCloneAndTrackSuccessors(
     // calculate dominance between CoroBegin and them also
   } else if (auto *InitialBlockTerminatorBranch =
                  dyn_cast<BranchInst>(InitialBlockTerminator)) {
-    for (unsigned int successorIdx = 0;
-         successorIdx < InitialBlockTerminatorBranch->getNumSuccessors();
-         ++successorIdx) {
+    for (unsigned int SuccessorIdx = 0;
+         SuccessorIdx < InitialBlockTerminatorBranch->getNumSuccessors();
+         ++SuccessorIdx) {
       SuccessorBlocksSet.insert(
-          InitialBlockTerminatorBranch->getSuccessor(successorIdx));
+          InitialBlockTerminatorBranch->getSuccessor(SuccessorIdx));
     }
   } else if (auto *InitialBlockTerminatorInvoke =
                  dyn_cast<InvokeInst>(InitialBlockTerminator)) {
@@ -1060,15 +1060,15 @@ cloneIfBasicBlockPredecessors(BasicBlock *InitialBlock,
       }
     } else if (auto *InitialBlockPredecessorTerminatorBranch =
                    dyn_cast<BranchInst>(InitialBlockPredecessorTerminator)) {
-      for (unsigned int successorIdx = 0;
-           successorIdx <
+      for (unsigned int SuccessorIdx = 0;
+           SuccessorIdx <
            InitialBlockPredecessorTerminatorBranch->getNumSuccessors();
-           ++successorIdx) {
+           ++SuccessorIdx) {
         if (InitialBlock ==
             InitialBlockPredecessorTerminatorBranch->getSuccessor(
-                successorIdx)) {
+                SuccessorIdx)) {
           InitialBlockPredecessorTerminatorBranch->setSuccessor(
-              successorIdx, ReplacementBlock);
+              SuccessorIdx, ReplacementBlock);
         }
       }
     } else if (auto *InitialBlockPredecessorTerminatorCleanupReturn =
@@ -1099,11 +1099,15 @@ static void enforceDominationByCoroBegin(const FrameDataInfo &FrameData,
   // Prepare the node set, logics will be run only on those nodes
   for (const auto &E : FrameData.Spills) {
     for (auto *U : E.second) {
-      auto CurrentBlock = U->getParent();
+      auto *CurrentBlock = U->getParent();
       if (!DT.dominates(Shape.CoroBegin, CurrentBlock)) {
         SpillUserBlocksSet.insert(CurrentBlock);
       }
     }
+  }
+
+  if (SpillUserBlocksSet.empty()) {
+    return;
   }
 
   // Run is in reversed post order, to enforce visiting predecessors before
@@ -1115,7 +1119,7 @@ static void enforceDominationByCoroBegin(const FrameDataInfo &FrameData,
     SpillUserBlocksSet.erase(CurrentBlock);
 
     // The duplicate will become the unspilled alternative
-    auto UnspilledAlternativeBlock =
+    auto *UnspilledAlternativeBlock =
         CloneBasicBlock(CurrentBlock, VMap, ".unspilled_alternative", F);
 
     // Remap node instructions, keep track of successors to visit them in next
