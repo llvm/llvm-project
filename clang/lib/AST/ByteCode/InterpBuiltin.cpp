@@ -145,11 +145,11 @@ static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
   assert(Val.getFieldDesc()->isPrimitiveArray() &&
          Val.getFieldDesc()->getElemQualType()->isBooleanType() &&
          "Not a boolean vector");
-  unsigned NumElts = Val.getNumElems();
+  unsigned NumElems = Val.getNumElems();
 
   // Each element is one bit, so create an integer with NumElts bits.
-  llvm::APSInt Result(NumElts, 0);
-  for (unsigned I = 0; I < NumElts; ++I) {
+  llvm::APSInt Result(NumElems, 0);
+  for (unsigned I = 0; I != NumElems; ++I) {
     if (Val.elem<bool>(I))
       Result.setBit(I);
   }
