@@ -986,13 +986,11 @@ static_assert(__builtin_elementwise_fshr((unsigned long long)1844674407370955161
 static_assert(__builtin_elementwise_fshr((long long)9223372036854775807, (long long)0, (long long)64) == (long long)0);
 static_assert(__builtin_elementwise_fshr((unsigned long long)0, (unsigned long long)18446744073709551615ULL, (unsigned long long)64) == (unsigned long long)18446744073709551615ULL);
 static_assert(__builtin_elementwise_fshr((long long)0, (long long)9223372036854775807, (long long)64) == (long long)9223372036854775807);
-//
 static_assert(__builtin_elementwise_fshl((short) 1, (short) 2, (short) 3) == (short)8);
 static_assert(__builtin_elementwise_fshl((short) 2, (short) 1, (short) 3) == (short)16);
 static_assert(__builtin_elementwise_fshl(1, 2 , 2) == 4);
 static_assert(__builtin_elementwise_fshl(2L, 1L , 2L) == 8L);
 static_assert(__builtin_elementwise_fshr((unsigned char)1, (unsigned char)2, (unsigned char)3) == (unsigned char)32);
-//
 constexpr vector4uchar v4s_fshl_var =
   __builtin_elementwise_fshl((vector4uchar){255, 15, 0, 2},
                              (vector4uchar){0, 15, 255, 1},
@@ -1009,3 +1007,5 @@ static_assert(v4s_fshr_var[0] == 254);
 static_assert(v4s_fshr_var[1] == 225);
 static_assert(v4s_fshr_var[2] == 255);
 static_assert(v4s_fshr_var[3] == 32);
+static_assert(__builtin_elementwise_fshl(v4s_fshl_var[0], v4s_fshl_var[1], v4s_fshl_var[2]) == 128);
+static_assert(__builtin_elementwise_fshr(v4s_fshr_var[0], v4s_fshr_var[1], v4s_fshr_var[2]) == 253);

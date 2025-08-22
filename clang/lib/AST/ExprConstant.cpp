@@ -11950,7 +11950,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         !EvaluateAsRValue(Info, E->getArg(2), SourceShift))
       return false;
 
-    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    const QualType &DestEltTy =
+        E->getType()->castAs<VectorType>()->getElementType();
 
     if (!DestEltTy->isIntegerType())
       return false;
@@ -11958,17 +11959,18 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     unsigned SourceLen = SourceHi.getVectorLength();
     SmallVector<APValue> ResultElements;
     ResultElements.reserve(SourceLen);
-
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
-      APSInt Hi = SourceHi.getVectorElt(EltNum).getInt();
-      APSInt Lo = SourceLo.getVectorElt(EltNum).getInt();
-      APSInt Shift = SourceShift.getVectorElt(EltNum).getInt();
+      const APSInt &Hi = SourceHi.getVectorElt(EltNum).getInt();
+      const APSInt &Lo = SourceLo.getVectorElt(EltNum).getInt();
+      const APSInt &Shift = SourceShift.getVectorElt(EltNum).getInt();
       switch (E->getBuiltinCallee()) {
       case Builtin::BI__builtin_elementwise_fshl:
-        ResultElements.push_back(APValue(APSInt(llvm::APIntOps::fshl(Hi, Lo, Shift), Hi.isUnsigned())));
+        ResultElements.push_back(APValue(
+            APSInt(llvm::APIntOps::fshl(Hi, Lo, Shift), Hi.isUnsigned())));
         break;
       case Builtin::BI__builtin_elementwise_fshr:
-        ResultElements.push_back(APValue(APSInt(llvm::APIntOps::fshr(Hi, Lo, Shift), Hi.isUnsigned())));
+        ResultElements.push_back(APValue(
+            APSInt(llvm::APIntOps::fshr(Hi, Lo, Shift), Hi.isUnsigned())));
         break;
       }
     }
@@ -13915,15 +13917,12 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
-    if (!E->getArg(0)->isPRValue() ||
-        !E->getArg(1)->isPRValue() ||
-        !E->getArg(2)->isPRValue())
-      return false;
     APSInt Hi, Lo, Shift;
     if (!EvaluateInteger(E->getArg(0), Hi, Info) ||
         !EvaluateInteger(E->getArg(1), Lo, Info) ||
         !EvaluateInteger(E->getArg(2), Shift, Info))
       return false;
+
     switch (BuiltinOp) {
     case Builtin::BI__builtin_elementwise_fshl: {
       APSInt Result(llvm::APIntOps::fshl(Hi, Lo, Shift), Hi.isUnsigned());
