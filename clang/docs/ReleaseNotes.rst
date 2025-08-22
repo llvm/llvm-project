@@ -404,8 +404,10 @@ AST Matchers
 clang-format
 ------------
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
-- Add ``BreakAfterOpenBracketIf``, ``BreakAfterOpenBracketLoop``,
-  ``BreakAfterOpenBracketSwitch``, ``BreakBeforeCloseBracketIf``,
+- Add ``BreakAfterOpenBracketBracedList'', ``BreakAfterOpenBracketFunction'',
+  ``BreakAfterOpenBracketIf``, ``BreakAfterOpenBracketLoop``,
+  ``BreakAfterOpenBracketSwitch``, ``BreakBeforeCloseBracketBracedList'',
+  ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
   ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch`` options.
 - Remove ``AlwaysBreak`` and ``BlockIndent`` suboptions from the
   ``AlignAfterOpenBracket`` option.
