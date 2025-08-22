@@ -18,6 +18,7 @@ add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
   Distro.cpp
+  DependencyScanner.cpp
   Driver.cpp
   DriverOptions.cpp
   Job.cpp
@@ -98,6 +99,7 @@ add_clang_library(clangDriver
 
   LINK_LIBS
   clangBasic
+  clangDependencyScanning
   clangLex
   ${system_libs}
   )
