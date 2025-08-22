@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   MC
   MCDisassembler
+  MCParser
   Object
   Support
   TargetParser
@@ -18,8 +19,8 @@ add_llvm_unittest(MCTests
   DwarfLineTables.cpp
   DwarfLineTableHeaders.cpp
   MCInstPrinter.cpp
+  MCParser.cpp
   StringTableBuilderTest.cpp
   TargetRegistry.cpp
   MCDisassemblerTest.cpp
   )
-
