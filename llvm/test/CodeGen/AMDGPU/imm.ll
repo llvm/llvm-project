@@ -2163,10 +2163,9 @@ define amdgpu_kernel void @store_inline_imm_0.0_f64(ptr addrspace(1) %out) {
 ; GFX942-LABEL: store_inline_imm_0.0_f64:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v1, v0
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
