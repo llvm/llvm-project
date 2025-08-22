@@ -37,6 +37,7 @@
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
+#include <__utility/three_way_comparator.h>
 #include <__utility/try_key_extraction.h>
 #include <limits>
 
@@ -1696,8 +1697,12 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(__end_node_pointer& __parent, co
   __node_pointer __nd           = __root();
   __node_base_pointer* __nd_ptr = __root_ptr();
   if (__nd != nullptr) {
+    auto __comp = __lazy_synth_three_way_comparator<_Compare, _Key, value_type>(value_comp());
+
     while (true) {
-      if (value_comp()(__v, __nd->__get_value())) {
+      auto __comp_res = __comp(__v, __nd->__get_value());
+
+      if (__comp_res.__less()) {
         if (__nd->__left_ != nullptr) {
           __nd_ptr = std::addressof(__nd->__left_);
           __nd     = static_cast<__node_pointer>(__nd->__left_);
@@ -1705,7 +1710,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(__end_node_pointer& __parent, co
           __parent = static_cast<__end_node_pointer>(__nd);
           return __parent->__left_;
         }
-      } else if (value_comp()(__nd->__get_value(), __v)) {
+      } else if (__comp_res.__greater()) {
         if (__nd->__right_ != nullptr) {
           __nd_ptr = std::addressof(__nd->__right_);
           __nd     = static_cast<__node_pointer>(__nd->__right_);
@@ -2030,10 +2035,12 @@ template <class _Key>
 typename __tree<_Tp, _Compare, _Allocator>::size_type
 __tree<_Tp, _Compare, _Allocator>::__count_unique(const _Key& __k) const {
   __node_pointer __rt = __root();
+  auto __comp = __lazy_synth_three_way_comparator<value_compare, _Key, value_type>(value_comp());
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__get_value())) {
+    auto __comp_res = __comp(__k, __rt->__get_value());
+    if (__comp_res.__less()) {
       __rt = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__get_value(), __k))
+    } else if (__comp_res.__greater())
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return 1;
@@ -2047,11 +2054,13 @@ typename __tree<_Tp, _Compare, _Allocator>::size_type
 __tree<_Tp, _Compare, _Allocator>::__count_multi(const _Key& __k) const {
   __end_node_pointer __result = __end_node();
   __node_pointer __rt         = __root();
+  auto __comp = __lazy_synth_three_way_comparator<value_compare, _Key, value_type>(value_comp());
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__get_value())) {
+    auto __comp_res = __comp(__k, __rt->__get_value());
+    if (__comp_res.__less()) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__get_value(), __k))
+    } else if (__comp_res.__greater())
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return std::distance(
@@ -2124,11 +2133,13 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_unique(const _Key& __k) {
   typedef pair<iterator, iterator> _Pp;
   __end_node_pointer __result = __end_node();
   __node_pointer __rt         = __root();
+  auto __comp = __lazy_synth_three_way_comparator<value_compare, _Key, value_type>(value_comp());
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__get_value())) {
+    auto __comp_res = __comp(__k, __rt->__get_value());
+    if (__comp_res.__less()) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__get_value(), __k))
+    } else if (__comp_res.__greater())
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(iterator(__rt),
@@ -2146,11 +2157,13 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_unique(const _Key& __k) const {
   typedef pair<const_iterator, const_iterator> _Pp;
   __end_node_pointer __result = __end_node();
   __node_pointer __rt         = __root();
+  auto __comp = __lazy_synth_three_way_comparator<value_compare, _Key, value_type>(value_comp());
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__get_value())) {
+    auto __comp_res = __comp(__k, __rt->__get_value());
+    if (__comp_res.__less()) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__get_value(), __k))
+    } else if (__comp_res.__greater())
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(
@@ -2168,11 +2181,13 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_multi(const _Key& __k) {
   typedef pair<iterator, iterator> _Pp;
   __end_node_pointer __result = __end_node();
   __node_pointer __rt     = __root();
+  auto __comp = __lazy_synth_three_way_comparator<value_compare, _Key, value_type>(value_comp());
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__get_value())) {
+    auto __comp_res = __comp(__k, __rt->__get_value());
+    if (__comp_res.__less()) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__get_value(), __k))
+    } else if (__comp_res.__greater())
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(__lower_bound(__k, static_cast<__node_pointer>(__rt->__left_), static_cast<__end_node_pointer>(__rt)),
@@ -2189,11 +2204,13 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_multi(const _Key& __k) const {
   typedef pair<const_iterator, const_iterator> _Pp;
   __end_node_pointer __result = __end_node();
   __node_pointer __rt     = __root();
+  auto __comp = __lazy_synth_three_way_comparator<value_compare, _Key, value_type>(value_comp());
   while (__rt != nullptr) {
-    if (value_comp()(__k, __rt->__get_value())) {
+    auto __comp_res = __comp(__k, __rt->__get_value());
+    if (__comp_res.__less()) {
       __result = static_cast<__end_node_pointer>(__rt);
       __rt     = static_cast<__node_pointer>(__rt->__left_);
-    } else if (value_comp()(__rt->__get_value(), __k))
+    } else if (__comp_res.__greater())
       __rt = static_cast<__node_pointer>(__rt->__right_);
     else
       return _Pp(__lower_bound(__k, static_cast<__node_pointer>(__rt->__left_), static_cast<__end_node_pointer>(__rt)),
