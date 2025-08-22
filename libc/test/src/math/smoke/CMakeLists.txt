@@ -4874,6 +4874,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  getpayloadbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    getpayloadbf16_test.cpp
+  HDRS
+    GetPayloadTest.h
+  DEPENDS
+    libc.src.math.getpayloadbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   setpayload_test
   SUITE
     libc-math-smoke-tests
@@ -4931,6 +4944,19 @@ add_fp_unittest(
     SetPayloadTest.h
   DEPENDS
     libc.src.math.setpayloadf128
+)
+
+add_fp_unittest(
+  setpayloadbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    setpayloadbf16_test.cpp
+  HDRS
+    SetPayloadTest.h
+  DEPENDS
+    libc.src.math.setpayloadbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -4993,6 +5019,18 @@ add_fp_unittest(
     libc.src.math.setpayloadsigf128
 )
 
+add_fp_unittest(
+  setpayloadsigbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    setpayloadsigbf16_test.cpp
+  HDRS
+    SetPayloadTest.h
+  DEPENDS
+    libc.src.math.setpayloadsigbf16
+    libc.src.__support.FPUtil.bfloat16
+)
 
 add_fp_unittest(
   f16add_test
