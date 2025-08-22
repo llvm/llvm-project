@@ -1184,6 +1184,19 @@ static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
   return foundParameter;
 }
 
+
+static bool
+isSimplyContiguous(const Fortran::evaluate::ActualArgument &arg,
+                   Fortran::evaluate::FoldingContext &foldingContext) {
+  if (const auto *expr = arg.UnwrapExpr())
+    return Fortran::evaluate::IsSimplyContiguous(*expr, foldingContext);
+  const Fortran::semantics::Symbol *sym = arg.GetAssumedTypeDummy();
+  assert(sym &&
+         "expect ActualArguments to be expression or assumed-type symbols");
+  return sym->Rank() == 0 ||
+         Fortran::evaluate::IsSimplyContiguous(*sym, foldingContext);
+}
+
 /// When dummy is not ALLOCATABLE, POINTER and is not passed in register,
 /// prepare the actual argument according to the interface. Do as needed:
 /// - address element if this is an array argument in an elemental call.
@@ -1249,6 +1262,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   bool mustDoCopyOut{false};
 
   if (callContext.doCopyIn) {
+
+    // DEBUG: old code
+    const bool oldMustDoCopyInOut =
+        actual.isArray() && arg.mustBeMadeContiguous() &&
+        (passingPolymorphicToNonPolymorphic ||
+         !isSimplyContiguous(*arg.entity, foldingContext));
+    const bool oldMustDoCopyOut = arg.mayBeModifiedByCall();
+
     Fortran::evaluate::FoldingContext &foldingContext{
         callContext.converter.getFoldingContext()};
     bool suggestCopyIn = Fortran::evaluate::MayNeedCopy(
@@ -1257,6 +1278,12 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
     mustDoCopyOut = mustDoCopyIn && suggestCopyOut;
+
+    // DEBUG:
+    llvm::dbgs() << "copyinout: oldMustDoCopyInOut = " << oldMustDoCopyInOut
+      << ", mustDoCopyIn = " << mustDoCopyIn
+      << "| oldMustDoCopyOut = " << oldMustDoCopyOut
+      << ", mustDoCopyOut " << mustDoCopyOut << "\n";
   }
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
