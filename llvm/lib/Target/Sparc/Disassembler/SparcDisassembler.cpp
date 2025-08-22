@@ -298,9 +298,8 @@ static DecodeStatus DecodeSIMM13(MCInst &MI, unsigned insn, uint64_t Address,
 }
 
 template <unsigned N>
-constexpr static DecodeStatus DecodeDisp(MCInst &MI, uint32_t ImmVal,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder) {
+static DecodeStatus DecodeDisp(MCInst &MI, uint32_t ImmVal, uint64_t Address,
+                               const MCDisassembler *Decoder) {
   int64_t BranchOffset = SignExtend64(ImmVal, N) * 4;
   if (!tryAddingSymbolicOperand(Address + BranchOffset, true, Address, 0, N, MI,
                                 Decoder))
