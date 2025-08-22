@@ -4710,7 +4710,10 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
     if (SDValue LogBase2 = BuildLogBase2(N1, DL)) {
       EVT ShiftVT = getShiftAmountTy(N0.getValueType());
       SDValue Trunc = DAG.getZExtOrTrunc(LogBase2, DL, ShiftVT);
-      return Matcher.getNode(ISD::SHL, DL, VT, N0, Trunc);
+      SDNodeFlags Flags;
+      Flags.setNoUnsignedWrap(N->getFlags().hasNoUnsignedWrap());
+      // TODO: Preserve setNoSignedWrap if LogBase2 isn't BitWidth - 1.
+      return Matcher.getNode(ISD::SHL, DL, VT, N0, Trunc, Flags);
     }
   }
 
@@ -11094,6 +11097,11 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   if (N0.getOpcode() == ISD::SHL &&
       (N0.getOperand(1) == N1 || N0->hasOneUse()) &&
       TLI.shouldFoldConstantShiftPairToMask(N, Level)) {
+    // If the shift amounts are the same and the shl doesn't shift out any
+    // non-zero bits, we can return the shl input.
+    if (N0.getOperand(1) == N1 && N0->getFlags().hasNoUnsignedWrap())
+      return N0.getOperand(0);
+
     auto MatchShiftAmount = [OpSizeInBits](ConstantSDNode *LHS,
                                            ConstantSDNode *RHS) {
       const APInt &LHSC = LHS->getAPIntValue();
