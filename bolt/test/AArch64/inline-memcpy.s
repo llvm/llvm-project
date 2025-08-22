@@ -1,6 +1,6 @@
 ## This test checks that BOLT correctly inlines memcpy calls on AArch64.
 
-# REQUIRES: system-linux
+# REQUIRES: system-linux, aarch64-registered-target
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang --target=aarch64-unknown-linux-gnu %t.o -o %t.exe -Wl,-q  
