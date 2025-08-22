@@ -18,15 +18,33 @@ class TestRichDisassembler(TestBase):
         self.assertTrue(os.path.exists(obj), f"missing object: {obj}")
         return obj
 
+    def _compile_or_assemble_object(
+        self,
+        src_name,
+        cflags="-g -gdwarf-5 -O2 -fno-inline -fno-omit-frame-pointer",
+    ):
+        cc = self.getCompiler()  # use the configured clang from dotest
+        src = self.getSourcePath(src_name)
+        stem, ext = os.path.splitext(src_name)
+        obj = self.getBuildArtifact(stem + ".o")
+
+        if ext == ".s":
+            # Assemble the already-generated DWARF-rich .s
+            cmd = f"'{cc}' -c -x assembler '{src}' -o '{obj}'"
+        else:
+            # Fallback for .c if needed
+            cmd = f"'{cc}' {cflags} -c '{src}' -o '{obj}'"
+
+        # run and validate
+        self.runCmd(f"platform shell {cmd}", check=True)
+        self.assertTrue(os.path.exists(obj), f"missing object: {obj}")
+        return obj
+
+
     def _create_target(self, path):
         target = self.dbg.CreateTarget(path)
         self.assertTrue(target, f"failed to create target for {path}")
         return target
-
-    def _disassemble_verbose_frame(self):
-        # Same as your original: current frame (-f), with --variable enabled.
-        self.runCmd("disassemble --variable -f", check=True)
-        return self.res.GetOutput()
 
     def _disassemble_verbose_symbol(self, symname):
         # For object-only tests, disassemble a named symbol from the .o
@@ -38,23 +56,10 @@ class TestRichDisassembler(TestBase):
         Tests disassembler output for d_original_example.c built with -O1,
         using the CLI with --rich for enabled annotations.
         """
-        self.build(
-            dictionary={"C_SOURCES": "d_original_example.c", "CFLAGS_EXTRAS": "-g -O1"}
-        )
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target)
-
-        bp = target.BreakpointCreateByName("main")
-        self.assertGreater(bp.GetNumLocations(), 0)
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, "Failed to launch process")
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
-
-        # Run the CLI command and read output from self.res
-        self.runCmd("disassemble --variable -f", check=True)
-        out = self.res.GetOutput()
+        obj = self._compile_or_assemble_object("d_original_example.s")
+        target = self._create_target(obj)
+        out = self._disassemble_verbose_symbol("main")
+    
         print(out)
 
         self.assertIn("argc = ", out)
@@ -64,7 +69,7 @@ class TestRichDisassembler(TestBase):
 
     @no_debug_info_test  # we explicitly request -g in _compile_object
     def test_regs_int_params(self):
-        obj = self._compile_object("regs_int_params.c")
+        obj = self._compile_or_assemble_object("regs_int_params.s")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("regs_int_params")
         print(out)
@@ -81,7 +86,7 @@ class TestRichDisassembler(TestBase):
 
     @no_debug_info_test
     def test_regs_fp_params(self):
-        obj = self._compile_object("regs_fp_params.c")
+        obj = self._compile_or_assemble_object("regs_fp_params.s")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("regs_fp_params")
         print(out)
@@ -97,7 +102,7 @@ class TestRichDisassembler(TestBase):
 
     @no_debug_info_test
     def test_regs_mixed_params(self):
-        obj = self._compile_object("regs_mixed_params.c")
+        obj = self._compile_or_assemble_object("regs_mixed_params.s")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("regs_mixed_params")
         print(out)
@@ -112,7 +117,7 @@ class TestRichDisassembler(TestBase):
 
     @no_debug_info_test
     def test_live_across_call(self):
-        obj = self._compile_object("live_across_call.c")
+        obj = self._compile_or_assemble_object("live_across_call.s")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("live_across_call")
         print(out)
@@ -125,13 +130,13 @@ class TestRichDisassembler(TestBase):
 
     @no_debug_info_test
     def test_loop_reg_rotate(self):
-        obj = self._compile_object("loop_reg_rotate.c")
+        obj = self._compile_or_assemble_object("loop_reg_rotate.s")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("loop_reg_rotate")
         print(out)
 
         self.assertRegex(out, r"\bn\s*=\s*()")
-        self.assertRegex(out, r"\bt\s*=\s*()")
+        self.assertRegex(out, r"\bseed\s*=\s*()")
         self.assertRegex(out, r"\bk\s*=\s*()")
         self.assertRegex(out, r"\bj\s*=\s*()")
         self.assertRegex(out, r"\bi\s*=\s*()")
@@ -145,8 +150,8 @@ class TestRichDisassembler(TestBase):
         can add an assertion for ' = 0' or similar.
         """
         # Use O1 to help keep a first reg range; still object-only
-        obj = self._compile_object("seed_reg_const_undef.c",
-                                   func_cflags="-g -gdwarf-5 -O1 -fno-inline")
+        obj = self._compile_or_assemble_object("seed_reg_const_undef.s",
+                                   cflags="-g -gdwarf-5 -O1 -fno-inline")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("main")
         print(out)
