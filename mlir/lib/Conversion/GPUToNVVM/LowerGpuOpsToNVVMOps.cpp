@@ -27,6 +27,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -369,6 +370,9 @@ struct LowerGpuOpsToNVVMOpsPass final
     {
       RewritePatternSet patterns(m.getContext());
       populateGpuRewritePatterns(patterns);
+      // Transform N-D vector.from_elements to 1-D vector.from_elements before
+      // conversion.
+      vector::populateVectorFromElementsLoweringPatterns(patterns);
       if (failed(applyPatternsGreedily(m, std::move(patterns))))
         return signalPassFailure();
     }
