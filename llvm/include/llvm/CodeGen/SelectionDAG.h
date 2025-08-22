@@ -1256,10 +1256,9 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
-  LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
-                                                 SDValue Dst, SDValue Src,
-                                                 SDValue Size,
-                                                 const CallInst *CI);
+  std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
+                                        SDValue Dst, SDValue Src, SDValue Size,
+                                        const CallInst *CI);
   LLVM_ABI std::pair<SDValue, SDValue>
   getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
 

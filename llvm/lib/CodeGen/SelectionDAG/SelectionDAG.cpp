@@ -9115,17 +9115,8 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
 
   TargetLowering::CallLoweringInfo CLI(*this);
 
-  // TODO: Intentionally not marking this libcall as a tail call.
-  //
-  // Why:
-  // - The only current in-tree user of SelectionDAG::getStrlen is the AIX path,
-  //   where generic tail-calling to libcalls is not safe due to ABI
-  //   constraints around r2 (TOC). We don¡¯t have a reliable way to validate a
-  //   tail call here.
-  //
-  // If another target starts using this and does support tail calls to
-  // libcalls, re-enable `.setTailCall(...)` under a target guard and add a
-  // test.
+  //  TODO: propagate tail call flag for targets where that is safe. Note
+  //  that it is not safe on AIX which is the only current target.
   CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(
       TLI->getLibcallCallingConv(RTLIB::STRLEN), CI->getType(),
       getExternalSymbol(LibCallName, TLI->getProgramPointerTy(getDataLayout())),
