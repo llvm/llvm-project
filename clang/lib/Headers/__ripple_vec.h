@@ -8,6 +8,8 @@
 
 #pragma once
 
+enum { __ripple_char_is_signed = (char)-1 < (char)0 };
+
 #define ripple_id(x, y) __builtin_ripple_get_index((x), (y))
 #define ripple_get_block_size(x, y) __builtin_ripple_get_size((x), (y))
 
@@ -316,7 +318,7 @@ vec_to_ripple_3d(ripple_block_t BS,
 #define ripple_reduceadd(bitmask, val)                                         \
   RIPPLE_DISABLE_GENERIC_WARNING                                               \
   _Generic((val),                                                              \
-      char: ((char)-1 < 0                                                      \
+      char: (__ripple_char_is_signed                                           \
                  ? __ripple_reduce_any_int(add, char, i, (bitmask), (val))     \
                  : __ripple_reduce_any_int(add, char, u, (bitmask), (val))),   \
       signed char: __ripple_reduce_any_int(add, signed char, i, (bitmask),     \
@@ -348,7 +350,7 @@ vec_to_ripple_3d(ripple_block_t BS,
 #define ripple_reducemin(bitmask, val)                                         \
   RIPPLE_DISABLE_GENERIC_WARNING                                               \
   _Generic((val),                                                              \
-      char: ((char)-1 < 0                                                      \
+      char: (__ripple_char_is_signed                                           \
                  ? __ripple_reduce_any_int(min, char, i, (bitmask), (val))     \
                  : __ripple_reduce_any_int(min, char, u, (bitmask), (val))),   \
       signed char: __ripple_reduce_any_int(min, signed char, i, (bitmask),     \
@@ -389,7 +391,7 @@ vec_to_ripple_3d(ripple_block_t BS,
 #define ripple_reducemax(bitmask, val)                                         \
   RIPPLE_DISABLE_GENERIC_WARNING                                               \
   _Generic((val),                                                              \
-      char: ((char)-1 < 0                                                      \
+      char: (__ripple_char_is_signed                                           \
                  ? __ripple_reduce_any_int(max, char, i, (bitmask), (val))     \
                  : __ripple_reduce_any_int(max, char, u, (bitmask), (val))),   \
       signed char: __ripple_reduce_any_int(max, signed char, i, (bitmask),     \
@@ -430,7 +432,7 @@ vec_to_ripple_3d(ripple_block_t BS,
 #define ripple_reduceand(bitmask, val)                                         \
   RIPPLE_DISABLE_GENERIC_WARNING                                               \
   _Generic((val),                                                              \
-      char: ((char)-1 < 0                                                      \
+      char: (__ripple_char_is_signed                                           \
                  ? __ripple_reduce_any_int(and, char, i, (bitmask), (val))     \
                  : __ripple_reduce_any_int(and, char, u, (bitmask), (val))),   \
       signed char: __ripple_reduce_any_int(and, signed char, i, (bitmask),     \
@@ -458,7 +460,7 @@ vec_to_ripple_3d(ripple_block_t BS,
 #define ripple_reduceor(bitmask, val)                                          \
   RIPPLE_DISABLE_GENERIC_WARNING                                               \
   _Generic((val),                                                              \
-      char: ((char)-1 < 0                                                      \
+      char: (__ripple_char_is_signed                                           \
                  ? __ripple_reduce_any_int(or, char, i, (bitmask), (val))      \
                  : __ripple_reduce_any_int(or, char, u, (bitmask), (val))),    \
       signed char: __ripple_reduce_any_int(or, signed char, i, (bitmask),      \
@@ -547,8 +549,9 @@ template <typename T> struct remove_reference<T &&> {
   template <uint64_t msk>                                                      \
   __attribute__((always_inline)) static char ripple_reduce##op(                \
       const char Val) {                                                        \
-    return (char)-1 < 0 ? __builtin_ripple_reduce##op##_i8(msk, Val)           \
-                        : __builtin_ripple_reduce##op##_u8(msk, Val);          \
+    return __ripple_char_is_signed                                             \
+               ? __builtin_ripple_reduce##op##_i8(msk, Val)                    \
+               : __builtin_ripple_reduce##op##_u8(msk, Val);                   \
   }
 
 #if __has_bf16__
@@ -675,10 +678,11 @@ spec_reduce_itypes(or);
 #define __ripple_shuffle_impl(Val1, Val2, IsPair, IdxFun)                      \
   RIPPLE_DISABLE_GENERIC_WARNING                                               \
   _Generic((Val1),                                                             \
-      char: ((char)-1 < 0 ? __ripple_shuffle_impl_int(char, i, (Val1), (Val2), \
-                                                      (IsPair), (IdxFun))      \
-                          : __ripple_shuffle_impl_int(char, u, (Val1), (Val2), \
-                                                      (IsPair), (IdxFun))),    \
+      char: (__ripple_char_is_signed                                           \
+                 ? __ripple_shuffle_impl_int(char, i, (Val1), (Val2),          \
+                                             (IsPair), (IdxFun))               \
+                 : __ripple_shuffle_impl_int(char, u, (Val1), (Val2),          \
+                                             (IsPair), (IdxFun))),             \
       signed char: __ripple_shuffle_impl_int(signed char, i, (Val1), (Val2),   \
                                              (IsPair), (IdxFun)),              \
       unsigned char: __ripple_shuffle_impl_int(unsigned char, u, (Val1),       \
@@ -734,7 +738,7 @@ spec_reduce_itypes(or);
 
 static __attribute__((always_inline)) char
 ripple_shuffle(char x, size_t (*index_func)(size_t, size_t)) {
-  return (char)-1 < 0
+  return __ripple_char_is_signed
              ? __ripple_shuffle_impl_int(char, i, x, x, false, index_func)
              : __ripple_shuffle_impl_int(char, u, x, x, false, index_func);
 }
@@ -781,7 +785,7 @@ ripple_shuffle(double x, size_t (*index_func)(size_t, size_t)) {
 
 static __attribute__((always_inline)) char
 ripple_shuffle_pair(char x, char y, size_t (*index_func)(size_t, size_t)) {
-  return (char)-1 < 0
+  return __ripple_char_is_signed
              ? __ripple_shuffle_impl_int(char, i, x, y, false, index_func)
              : __ripple_shuffle_impl_int(char, u, x, y, false, index_func);
 }
@@ -854,8 +858,8 @@ ripple_shuffle_pair(double x, double y, size_t (*index_func)(size_t, size_t)) {
 #define __ripple_sat_any_generic(Op, X, Y)                                     \
   RIPPLE_DISABLE_GENERIC_WARNING                                               \
   _Generic((X),                                                                \
-      char: ((char)-1 < 0 ? __ripple_sat_any(char, i, Op, X, Y)                \
-                          : __ripple_sat_any(char, u, Op, X, Y)),              \
+      char: (__ripple_char_is_signed ? __ripple_sat_any(char, i, Op, X, Y)     \
+                                     : __ripple_sat_any(char, u, Op, X, Y)),   \
       signed char: __ripple_sat_any(signed char, i, Op, X, Y),                 \
       unsigned char: __ripple_sat_any(unsigned char, u, Op, X, Y),             \
       signed short: __ripple_sat_any(signed short, i, Op, X, Y),               \
@@ -931,7 +935,7 @@ ripple_shuffle_pair(double x, double y, size_t (*index_func)(size_t, size_t)) {
 #define ripple_broadcast(PE, Mask, Val)                                        \
   RIPPLE_DISABLE_GENERIC_WARNING                                               \
   _Generic((Val),                                                              \
-      char: ((char)-1 < 0                                                      \
+      char: (__ripple_char_is_signed                                           \
                  ? __ripple_broadcast_any_int(char, i, (PE), (Mask), (Val))    \
                  : __ripple_broadcast_any_int(char, u, (PE), (Mask), (Val))),  \
       signed char: __ripple_broadcast_any_int(signed char, i, (PE), (Mask),    \
@@ -1034,8 +1038,8 @@ ripple_shuffle_pair(double x, double y, size_t (*index_func)(size_t, size_t)) {
 template <uint64_t msk>
 __attribute__((always_inline)) static char ripple_broadcast(ripple_block_t BS,
                                                             const char Val) {
-  return (char)-1 < 0 ? __builtin_ripple_broadcast_i8(BS, msk, Val)
-                      : __builtin_ripple_broadcast_u8(BS, msk, Val);
+  return __ripple_char_is_signed ? __builtin_ripple_broadcast_i8(BS, msk, Val)
+                                 : __builtin_ripple_broadcast_u8(BS, msk, Val);
 }
 
 spec_bcast_itypes();
@@ -1090,7 +1094,7 @@ spec_bcast_ftypes();
 #define ripple_slice(Val, ...)                                                 \
   RIPPLE_DISABLE_GENERIC_WARNING                                               \
   _Generic((Val),                                                              \
-      char: ((char)-1 < 0                                                      \
+      char: (__ripple_char_is_signed                                           \
                  ? __ripple_slice_any_int(char, i, (Val), __VA_ARGS__)         \
                  : __ripple_slice_any_int(char, u, (Val), __VA_ARGS__)),       \
       signed char: __ripple_slice_any_int(signed char, i, (Val), __VA_ARGS__), \
@@ -1203,7 +1207,7 @@ template <int arg0, int arg1 = -1, int arg2 = -1, int arg3 = -1, int arg4 = -1,
           int arg5 = -1, int arg6 = -1, int arg7 = -1, int arg8 = -1,
           int arg9 = -1>
 __attribute__((always_inline)) static char ripple_slice(const char Val) {
-  return (char)-1 < 0
+  return __ripple_char_is_signed
              ? __ripple_slice_any_int(char, i, (Val), arg0, arg1, arg2, arg3,
                                       arg4, arg5, arg6, arg7, arg8, arg9)
              : __ripple_slice_any_int(char, u, (Val), arg0, arg1, arg2, arg3,
