@@ -1,4 +1,4 @@
-name: "Check code formatting"
+name: "Code lint"
 
 permissions:
   contents: read
