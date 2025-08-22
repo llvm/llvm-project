@@ -594,20 +594,6 @@ public:
   llvm::Error Run(const protocol::CancelArguments &args) const override;
 };
 
-class ModuleSymbolsRequestHandler
-    : public RequestHandler<
-          protocol::ModuleSymbolsArguments,
-          llvm::Expected<protocol::ModuleSymbolsResponseBody>> {
-public:
-  using RequestHandler::RequestHandler;
-  static llvm::StringLiteral GetCommand() { return "__lldb_moduleSymbols"; }
-  FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsModuleSymbolsRequest};
-  }
-  llvm::Expected<protocol::ModuleSymbolsResponseBody>
-  Run(const protocol::ModuleSymbolsArguments &args) const override;
-};
-
 /// A request used in testing to get the details on all breakpoints that are
 /// currently set in the target. This helps us to test "setBreakpoints" and
 /// "setFunctionBreakpoints" requests to verify we have the correct set of
