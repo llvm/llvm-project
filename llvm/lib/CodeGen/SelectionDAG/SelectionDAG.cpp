@@ -7184,8 +7184,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (C1 && C2 && C3) {
       if (C1->isOpaque() || C2->isOpaque() || C3->isOpaque())
         return SDValue();
-      const APInt V1 = C1->getAPIntValue(), V2 = C2->getAPIntValue(),
-                  V3 = C3->getAPIntValue();
+      const APInt &V1 = C1->getAPIntValue(), &V2 = C2->getAPIntValue(),
+                  &V3 = C3->getAPIntValue();
 
       APInt FoldedVal = Opcode == ISD::FSHL ? APIntOps::fshl(V1, V2, V3)
                                             : APIntOps::fshr(V1, V2, V3);
