@@ -64,7 +64,7 @@ public:
       LLVM_DEBUG({
         dbgs() << "  Preserving debug section " << Sec.getName() << "\n";
       });
-      SmallSet<Block *, 8> PreservedBlocks;
+      SmallPtrSet<Block *, 8> PreservedBlocks;
       for (auto *Sym : Sec.symbols()) {
         bool NewPreservedBlock =
             PreservedBlocks.insert(&Sym->getBlock()).second;

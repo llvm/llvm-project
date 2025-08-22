@@ -340,7 +340,11 @@ struct ConstantLValue {
   llvm::PointerUnion<mlir::Value, mlir::Attribute> value;
   bool hasOffsetApplied;
 
-  ConstantLValue(std::nullptr_t) : value(nullptr), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(std::nullptr_t)
+      : value(nullptr), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(cir::GlobalViewAttr address)
+      : value(address), hasOffsetApplied(false) {}
+
   ConstantLValue() : value(nullptr), hasOffsetApplied(false) {}
 };
 
@@ -380,6 +384,43 @@ private:
   ConstantLValue VisitCXXTypeidExpr(const CXXTypeidExpr *e);
   ConstantLValue
   VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
+
+  /// Return GEP-like value offset
+  mlir::ArrayAttr getOffset(mlir::Type ty) {
+    int64_t offset = value.getLValueOffset().getQuantity();
+    cir::CIRDataLayout layout(cgm.getModule());
+    SmallVector<int64_t, 3> idxVec;
+    cgm.getBuilder().computeGlobalViewIndicesFromFlatOffset(offset, ty, layout,
+                                                            idxVec);
+
+    llvm::SmallVector<mlir::Attribute, 3> indices;
+    for (int64_t i : idxVec) {
+      mlir::IntegerAttr intAttr = cgm.getBuilder().getI32IntegerAttr(i);
+      indices.push_back(intAttr);
+    }
+
+    if (indices.empty())
+      return {};
+    return cgm.getBuilder().getArrayAttr(indices);
+  }
+
+  /// Apply the value offset to the given constant.
+  ConstantLValue applyOffset(ConstantLValue &c) {
+    // Handle attribute constant LValues.
+    if (auto attr = mlir::dyn_cast<mlir::Attribute>(c.value)) {
+      if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(attr)) {
+        auto baseTy = mlir::cast<cir::PointerType>(gv.getType()).getPointee();
+        mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+        assert(!gv.getIndices() && "Global view is already indexed");
+        return cir::GlobalViewAttr::get(destTy, gv.getSymbol(),
+                                        getOffset(baseTy));
+      }
+      llvm_unreachable("Unsupported attribute type to offset");
+    }
+
+    cgm.errorNYI("ConstantLValue: non-attribute offset");
+    return {};
+  }
 };
 
 } // namespace
@@ -411,10 +452,8 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
     return {};
 
   // Apply the offset if necessary and not already done.
-  if (!result.hasOffsetApplied) {
-    cgm.errorNYI("ConstantLValueEmitter: apply offset");
-    return {};
-  }
+  if (!result.hasOffsetApplied)
+    value = applyOffset(result).value;
 
   // Convert to the appropriate type; this could be an lvalue for
   // an integer. FIXME: performAddrSpaceCast
@@ -453,15 +492,35 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     }
 
     if (auto *fd = dyn_cast<FunctionDecl>(d)) {
-      cgm.errorNYI(fd->getSourceRange(),
-                   "ConstantLValueEmitter: function decl");
-      return {};
+      cir::FuncOp fop = cgm.getAddrOfFunction(fd);
+      CIRGenBuilderTy &builder = cgm.getBuilder();
+      mlir::MLIRContext *mlirContext = builder.getContext();
+      return cir::GlobalViewAttr::get(
+          builder.getPointerTo(fop.getFunctionType()),
+          mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
     }
 
     if (auto *vd = dyn_cast<VarDecl>(d)) {
-      cgm.errorNYI(vd->getSourceRange(), "ConstantLValueEmitter: var decl");
-      return {};
+      // We can never refer to a variable with local storage.
+      if (!vd->hasLocalStorage()) {
+        if (vd->isFileVarDecl() || vd->hasExternalStorage())
+          return cgm.getAddrOfGlobalVarAttr(vd);
+
+        if (vd->isLocalVarDecl()) {
+          cgm.errorNYI(vd->getSourceRange(),
+                       "ConstantLValueEmitter: local var decl");
+          return {};
+        }
+      }
     }
+
+    // Classic codegen handles MSGuidDecl,UnnamedGlobalConstantDecl, and
+    // TemplateParamObjectDecl, but it can also fall through from VarDecl,
+    // in which case it silently returns nullptr. For now, let's emit an
+    // error to see what cases we need to handle.
+    cgm.errorNYI(d->getSourceRange(),
+                 "ConstantLValueEmitter: unhandled value decl");
+    return {};
   }
 
   // Handle typeid(T).
@@ -591,7 +650,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
         // be a problem for the near future.
         if (cd->isTrivial() && cd->isDefaultConstructor()) {
           const auto *cxxrd =
-              cast<CXXRecordDecl>(ty->getAs<RecordType>()->getDecl());
+              cast<CXXRecordDecl>(ty->getAs<RecordType>()->getOriginalDecl())
+                  ->getDefinitionOrSelf();
           if (cxxrd->getNumBases() != 0) {
             // There may not be anything additional to do here, but this will
             // force us to pause and test this path when it is supported.
@@ -650,6 +710,16 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
   return (c ? emitForMemory(c, destType) : nullptr);
 }
 
+mlir::Attribute ConstantEmitter::emitAbstract(const Expr *e,
+                                              QualType destType) {
+  AbstractStateRAII state{*this, true};
+  mlir::Attribute c = mlir::cast<mlir::Attribute>(tryEmitPrivate(e, destType));
+  if (!c)
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitAbstract failed, emit null constaant");
+  return c;
+}
+
 mlir::Attribute ConstantEmitter::emitAbstract(SourceLocation loc,
                                               const APValue &value,
                                               QualType destType) {
@@ -669,6 +739,32 @@ mlir::Attribute ConstantEmitter::emitForMemory(mlir::Attribute c,
   }
 
   return c;
+}
+
+mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *e,
+                                                QualType destType) {
+  assert(!destType->isVoidType() && "can't emit a void constant");
+
+  if (mlir::Attribute c =
+          ConstExprEmitter(*this).Visit(const_cast<Expr *>(e), destType))
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+
+  Expr::EvalResult result;
+
+  bool success = false;
+
+  if (destType->isReferenceType())
+    success = e->EvaluateAsLValue(result, cgm.getASTContext());
+  else
+    success =
+        e->EvaluateAsRValue(result, cgm.getASTContext(), inConstantContext);
+
+  if (success && !result.hasSideEffects()) {
+    mlir::Attribute c = tryEmitPrivate(result.Val, destType);
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+  }
+
+  return nullptr;
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,

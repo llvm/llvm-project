@@ -367,18 +367,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v4f64, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f64, MVT::v4f16, Expand);
 
-  setTruncStoreAction(MVT::v5i32, MVT::v5i1, Expand);
-  setTruncStoreAction(MVT::v5i32, MVT::v5i8, Expand);
-  setTruncStoreAction(MVT::v5i32, MVT::v5i16, Expand);
-
-  setTruncStoreAction(MVT::v6i32, MVT::v6i1, Expand);
-  setTruncStoreAction(MVT::v6i32, MVT::v6i8, Expand);
-  setTruncStoreAction(MVT::v6i32, MVT::v6i16, Expand);
-
-  setTruncStoreAction(MVT::v7i32, MVT::v7i1, Expand);
-  setTruncStoreAction(MVT::v7i32, MVT::v7i8, Expand);
-  setTruncStoreAction(MVT::v7i32, MVT::v7i16, Expand);
-
   setTruncStoreAction(MVT::v8f64, MVT::v8f32, Expand);
   setTruncStoreAction(MVT::v8f64, MVT::v8bf16, Expand);
   setTruncStoreAction(MVT::v8f64, MVT::v8f16, Expand);
@@ -4014,7 +4002,8 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
   case Intrinsic::amdgcn_rsq_clamp:
-  case Intrinsic::amdgcn_tanh: {
+  case Intrinsic::amdgcn_tanh:
+  case Intrinsic::amdgcn_prng_b32: {
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
     return Src.isUndef() ? Src : SDValue();

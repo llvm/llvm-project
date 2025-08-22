@@ -246,6 +246,22 @@ defm SRC_SHARED_LIMIT  : ApertureRegister<"src_shared_limit",  236>;
 defm SRC_PRIVATE_BASE  : ApertureRegister<"src_private_base",  237>;
 defm SRC_PRIVATE_LIMIT : ApertureRegister<"src_private_limit", 238>;
 
+let isConstant = true in {
+  defm SRC_FLAT_SCRATCH_BASE_LO : SIRegLoHi16<"src_flat_scratch_base_lo", 230>;
+  defm SRC_FLAT_SCRATCH_BASE_HI : SIRegLoHi16<"src_flat_scratch_base_hi", 231>;
+
+  // Using src_flat_scratch_base_lo in a 64-bit context gets the full 64-bit
+  // hi:lo value.
+  def SRC_FLAT_SCRATCH_BASE :
+      RegisterWithSubRegs<"src_flat_scratch_base_lo",
+                          [SRC_FLAT_SCRATCH_BASE_LO,
+                           SRC_FLAT_SCRATCH_BASE_HI]> {
+    let Namespace = "AMDGPU";
+    let SubRegIndices = [sub0, sub1];
+    let HWEncoding = SRC_FLAT_SCRATCH_BASE_LO.HWEncoding;
+  }
+}
+
 defm SRC_POPS_EXITING_WAVE_ID : SIRegLoHi16<"src_pops_exiting_wave_id", 239>;
 
 // Not addressable
@@ -765,7 +781,7 @@ def SReg_32_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i
    SGPR_NULL, SGPR_NULL_HI, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE_LO,
    SRC_SHARED_LIMIT_LO, SRC_PRIVATE_BASE_LO, SRC_PRIVATE_LIMIT_LO, SRC_SHARED_BASE_HI,
    SRC_SHARED_LIMIT_HI, SRC_PRIVATE_BASE_HI, SRC_PRIVATE_LIMIT_HI, SRC_POPS_EXITING_WAVE_ID,
-   SRC_VCCZ, SRC_EXECZ, SRC_SCC)> {
+   SRC_VCCZ, SRC_EXECZ, SRC_SCC, SRC_FLAT_SCRATCH_BASE_LO, SRC_FLAT_SCRATCH_BASE_HI)> {
   let AllocationPriority = 0;
 }
 
@@ -776,7 +792,8 @@ def SReg_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
    SRC_SHARED_LIMIT_LO_LO16, SRC_PRIVATE_BASE_LO_LO16, SRC_PRIVATE_LIMIT_LO_LO16,
    SRC_SHARED_BASE_HI_LO16, SRC_SHARED_LIMIT_HI_LO16, SRC_PRIVATE_BASE_HI_LO16,
    SRC_PRIVATE_LIMIT_HI_LO16, SRC_POPS_EXITING_WAVE_ID_LO16, SRC_VCCZ_LO16,
-   SRC_EXECZ_LO16, SRC_SCC_LO16, EXEC_LO_LO16, EXEC_HI_LO16, M0_CLASS_LO16)> {
+   SRC_EXECZ_LO16, SRC_SCC_LO16, EXEC_LO_LO16, EXEC_HI_LO16, M0_CLASS_LO16,
+   SRC_FLAT_SCRATCH_BASE_LO_LO16, SRC_FLAT_SCRATCH_BASE_HI_LO16)> {
   let Size = 16;
   let isAllocatable = 0;
   let BaseClassOrder = 16;
@@ -849,7 +866,8 @@ def TTMP_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16, v4bf16],
 
 def SReg_64_XEXEC_XNULL : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16, v4bf16], 32,
   (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, SRC_SHARED_BASE,
-       SRC_SHARED_LIMIT, SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, TTMP_64, TBA, TMA)> {
+       SRC_SHARED_LIMIT, SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, TTMP_64, TBA, TMA,
+       SRC_FLAT_SCRATCH_BASE)> {
   let CopyCost = 1;
   let AllocationPriority = 1;
   let HasSGPR = 1;
@@ -1148,7 +1166,8 @@ class RegOrImmOperand <RegisterClass RegClass, string OperandTypeName>
 }
 
 //===----------------------------------------------------------------------===//
-//  SSrc_* Operands with an SGPR or a 32-bit immediate
+//  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
+//  if supported by target.
 //===----------------------------------------------------------------------===//
 
 class SrcRegOrImm9<RegisterClass regClass, string operandType>

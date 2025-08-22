@@ -1898,14 +1898,14 @@ public:
   void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
                             bool Qualified) const override;
 
-  // FIXME: This is broken. CXXRecordDecl::getMostRecentDecl() returns a
-  // different "most recent" declaration from this function for the same
-  // declaration, because we don't override getMostRecentDeclImpl(). But
-  // it's not clear that we should override that, because the most recent
-  // declaration as a CXXRecordDecl sometimes is the injected-class-name.
   ClassTemplateSpecializationDecl *getMostRecentDecl() {
     return cast<ClassTemplateSpecializationDecl>(
-        getMostRecentNonInjectedDecl());
+        CXXRecordDecl::getMostRecentDecl());
+  }
+
+  ClassTemplateSpecializationDecl *getDefinitionOrSelf() const {
+    return cast<ClassTemplateSpecializationDecl>(
+        CXXRecordDecl::getDefinitionOrSelf());
   }
 
   /// Retrieve the template that this specialization specializes.
@@ -2123,10 +2123,13 @@ class ClassTemplatePartialSpecializationDecl
   llvm::PointerIntPair<ClassTemplatePartialSpecializationDecl *, 1, bool>
       InstantiatedFromMember;
 
+  mutable CanQualType CanonInjectedTST;
+
   ClassTemplatePartialSpecializationDecl(
       ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
       SourceLocation IdLoc, TemplateParameterList *Params,
       ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
+      CanQualType CanonInjectedTST,
       ClassTemplatePartialSpecializationDecl *PrevDecl);
 
   ClassTemplatePartialSpecializationDecl(ASTContext &C)
@@ -2143,7 +2146,7 @@ public:
   Create(ASTContext &Context, TagKind TK, DeclContext *DC,
          SourceLocation StartLoc, SourceLocation IdLoc,
          TemplateParameterList *Params, ClassTemplateDecl *SpecializedTemplate,
-         ArrayRef<TemplateArgument> Args, QualType CanonInjectedType,
+         ArrayRef<TemplateArgument> Args, CanQualType CanonInjectedTST,
          ClassTemplatePartialSpecializationDecl *PrevDecl);
 
   static ClassTemplatePartialSpecializationDecl *
@@ -2158,12 +2161,6 @@ public:
   /// Get the list of template parameters
   TemplateParameterList *getTemplateParameters() const {
     return TemplateParams;
-  }
-
-  /// Get the template argument list of the template parameter list.
-  ArrayRef<TemplateArgument>
-  getInjectedTemplateArgs(const ASTContext &Context) const {
-    return getTemplateParameters()->getInjectedTemplateArgs(Context);
   }
 
   /// \brief All associated constraints of this partial specialization,
@@ -2247,14 +2244,10 @@ public:
     return First->InstantiatedFromMember.setInt(true);
   }
 
-  /// Retrieves the injected specialization type for this partial
-  /// specialization.  This is not the same as the type-decl-type for
-  /// this partial specialization, which is an InjectedClassNameType.
-  QualType getInjectedSpecializationType() const {
-    assert(getTypeForDecl() && "partial specialization has no type set!");
-    return cast<InjectedClassNameType>(getTypeForDecl())
-             ->getInjectedSpecializationType();
-  }
+  /// Retrieves the canonical injected specialization type for this partial
+  /// specialization.
+  CanQualType
+  getCanonicalInjectedSpecializationType(const ASTContext &Ctx) const;
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -2289,8 +2282,8 @@ protected:
     llvm::FoldingSetVector<ClassTemplatePartialSpecializationDecl>
       PartialSpecializations;
 
-    /// The injected-class-name type for this class template.
-    QualType InjectedClassNameType;
+    /// The Injected Template Specialization Type for this declaration.
+    CanQualType CanonInjectedTST;
 
     Common() = default;
   };
@@ -2427,7 +2420,7 @@ public:
   findPartialSpecInstantiatedFromMember(
                                      ClassTemplatePartialSpecializationDecl *D);
 
-  /// Retrieve the template specialization type of the
+  /// Retrieve the canonical template specialization type of the
   /// injected-class-name for this class template.
   ///
   /// The injected-class-name for a class template \c X is \c
@@ -2441,7 +2434,8 @@ public:
   ///   typedef array this_type; // "array" is equivalent to "array<T, N>"
   /// };
   /// \endcode
-  QualType getInjectedClassNameSpecialization();
+  CanQualType
+  getCanonicalInjectedSpecializationType(const ASTContext &Ctx) const;
 
   using spec_iterator = SpecIterator<ClassTemplateSpecializationDecl>;
   using spec_range = llvm::iterator_range<spec_iterator>;

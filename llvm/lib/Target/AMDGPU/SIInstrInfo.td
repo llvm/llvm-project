@@ -1954,6 +1954,7 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
         !eq(VT, v2f16)  : VCSrc_v2f16,
         !eq(VT, v2bf16) : VCSrc_v2bf16,
         !eq(VT, f32)    : VCSrc_f32,
+        !eq(VT, f64)    : VCSrc_f64,
         !eq(VT, v2i32)  : VCSrc_v2b32,
         1               : VCSrc_b32);
 }
@@ -2707,7 +2708,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
-  field bit HasMatrixReuse = 0;
   field bit HasMatrixFMT = 0;
   field bit HasMatrixScale = 0;
   field bit HasMatrixReuse = 0;

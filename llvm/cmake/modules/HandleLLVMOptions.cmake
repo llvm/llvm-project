@@ -212,10 +212,6 @@ endif()
 # LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE (non-cached) is expected to be
 # 1 or 0 here, assuming referenced in #cmakedefine01.
 
-if(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS)
-  add_compile_definitions(EXPERIMENTAL_KEY_INSTRUCTIONS)
-endif()
-
 if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()

@@ -111,6 +111,13 @@ Diagnostics which have a corresponding warning option, are named
 ``-Wliteral-conversion`` will be reported with check name
 ``clang-diagnostic-literal-conversion``.
 
+Clang compiler errors (such as syntax errors, semantic errors, or other failures
+that prevent Clang from compiling the code) are reported with the check name
+``clang-diagnostic-error``. These represent fundamental compilation failures that
+must be fixed before :program:`clang-tidy` can perform its analysis. Unlike other
+diagnostics, ``clang-diagnostic-error`` cannot be disabled, as :program:`clang-tidy`
+requires valid code to function.
+
 The ``-fix`` flag instructs :program:`clang-tidy` to fix found errors if
 supported by corresponding checks.
 
@@ -213,14 +220,19 @@ An overview of all the command-line options:
                                        Can be used together with -line-filter.
                                        This option overrides the 'HeaderFilterRegex'
                                        option in .clang-tidy file, if any.
-    --line-filter=<string>           - List of files with line ranges to filter the
-                                       warnings. Can be used together with
-                                       -header-filter. The format of the list is a
-                                       JSON array of objects:
+    --line-filter=<string>           - List of files and line ranges to output diagnostics from.
+                                       The range is inclusive on both ends. Can be used together
+                                       with -header-filter. The format of the list is a JSON
+                                       array of objects. For example:
+
                                          [
                                            {"name":"file1.cpp","lines":[[1,3],[5,7]]},
                                            {"name":"file2.h"}
                                          ]
+
+                                       This will output diagnostics from 'file1.cpp' only for
+                                       the line ranges [1,3] and [5,7], as well as all from the
+                                       entire 'file2.h'.
     --list-checks                    - List all enabled checks and exit. Use with
                                        -checks=* to list all available checks.
     --load=<pluginfilename>          - Load the specified plugin

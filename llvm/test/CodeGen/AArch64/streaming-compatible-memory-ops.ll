@@ -180,16 +180,15 @@ define void @sc_memcpy(i64 noundef %n) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-NO-SME-ROUTINES-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NO-SME-ROUTINES-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NO-SME-ROUTINES-NEXT:    bl __arm_sme_state
-; CHECK-NO-SME-ROUTINES-NEXT:    adrp x8, :got:dst
-; CHECK-NO-SME-ROUTINES-NEXT:    and x19, x0, #0x1
+; CHECK-NO-SME-ROUTINES-NEXT:    mov x19, x0
+; CHECK-NO-SME-ROUTINES-NEXT:    adrp x0, :got:dst
 ; CHECK-NO-SME-ROUTINES-NEXT:    adrp x1, :got:src
-; CHECK-NO-SME-ROUTINES-NEXT:    ldr x8, [x8, :got_lo12:dst]
+; CHECK-NO-SME-ROUTINES-NEXT:    ldr x0, [x0, :got_lo12:dst]
 ; CHECK-NO-SME-ROUTINES-NEXT:    ldr x1, [x1, :got_lo12:src]
 ; CHECK-NO-SME-ROUTINES-NEXT:    tbz w19, #0, .LBB3_2
 ; CHECK-NO-SME-ROUTINES-NEXT:  // %bb.1: // %entry
 ; CHECK-NO-SME-ROUTINES-NEXT:    smstop sm
 ; CHECK-NO-SME-ROUTINES-NEXT:  .LBB3_2: // %entry
-; CHECK-NO-SME-ROUTINES-NEXT:    mov x0, x8
 ; CHECK-NO-SME-ROUTINES-NEXT:    bl memcpy
 ; CHECK-NO-SME-ROUTINES-NEXT:    tbz w19, #0, .LBB3_4
 ; CHECK-NO-SME-ROUTINES-NEXT:  // %bb.3: // %entry

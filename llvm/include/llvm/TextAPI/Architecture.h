@@ -26,7 +26,7 @@ namespace MachO {
 
 /// Defines the architecture slices that are supported by Text-based Stub files.
 enum Architecture : uint8_t {
-#define ARCHINFO(Arch, Type, SubType, NumBits) AK_##Arch,
+#define ARCHINFO(Arch, Name, Type, SubType, NumBits) AK_##Arch,
 #include "llvm/TextAPI/Architecture.def"
 #undef ARCHINFO
   AK_unknown, // this has to go last.

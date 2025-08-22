@@ -5,12 +5,6 @@
 ; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t_savedmodel
 ; RUN: %python %S/../../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
 ;
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t1 -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s
-; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t1 | FileCheck %s
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t2 -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-output-spec-override=%S/Inputs/test_output_spec.json -S < %s
-; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t2 | FileCheck %s --check-prefixes=EXTRA-OUTPUTS,CHECK
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t3 -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s
-; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t3 | FileCheck %s
 ; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t4 -ml-inliner-model-under-training=%t -S < %s
 ; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t4 | FileCheck %s --check-prefix=NOREWARD
 ; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=%t5 -S < %s

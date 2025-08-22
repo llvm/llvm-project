@@ -379,7 +379,7 @@ static bool appendRecordType(SmallStringEnc &Enc, const RecordType *RT,
 
   // We collect all encoded fields and order as necessary.
   bool IsRecursive = false;
-  const RecordDecl *RD = RT->getDecl()->getDefinition();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
   if (RD && !RD->field_empty()) {
     // An incomplete TypeString stub is placed in the cache for this RecordType
     // so that recursive calls to this RecordType will use it whilst building a
@@ -428,7 +428,7 @@ static bool appendEnumType(SmallStringEnc &Enc, const EnumType *ET,
   Enc += "){";
 
   // We collect all encoded enumerations and order them alphanumerically.
-  if (const EnumDecl *ED = ET->getDecl()->getDefinition()) {
+  if (const EnumDecl *ED = ET->getOriginalDecl()->getDefinition()) {
     SmallVector<FieldEncoding, 16> FE;
     for (auto I = ED->enumerator_begin(), E = ED->enumerator_end(); I != E;
          ++I) {

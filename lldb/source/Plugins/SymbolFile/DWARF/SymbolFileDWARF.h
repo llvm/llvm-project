@@ -373,6 +373,13 @@ public:
   /// Returns the DWARFIndex for this symbol, if it exists.
   DWARFIndex *getIndex() { return m_index.get(); }
 
+private:
+  /// Find the definition DIE for the specified \c label in this
+  /// SymbolFile.
+  ///
+  /// \returns A valid definition DIE on success.
+  DWARFDIE FindFunctionDefinition(const FunctionCallLabel &label);
+
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
   const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;

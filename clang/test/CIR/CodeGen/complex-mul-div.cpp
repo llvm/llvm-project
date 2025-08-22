@@ -1,38 +1,38 @@
 // complex-range basic
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -complex-range=basic -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE-BASIC %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=basic -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-INT,CIR-AFTER-MUL-COMBINED
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-INT,CIR-AFTER-MUL-COMBINED,CIR-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=basic -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-INT,LLVM-MUL-COMBINED
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-INT,LLVM-MUL-COMBINED,LLVM-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=basic -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-INT,OGCG-MUL-COMBINED
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-INT,OGCG-MUL-COMBINED,OGCG-COMBINED
 
 // complex-range improved
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -complex-range=improved -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE-IMPROVED %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=improved -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-INT,CIR-AFTER-MUL-COMBINED
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-INT,CIR-AFTER-MUL-COMBINED,CIR-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=improved -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-INT,LLVM-MUL-COMBINED
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-INT,LLVM-MUL-COMBINED,LLVM-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=improved -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-INT,OGCG-MUL-COMBINED
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-INT,OGCG-MUL-COMBINED,OGCG-COMBINED
 
 // complex-range promoted
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -complex-range=promoted -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE-PROMOTED %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=promoted -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-INT,CIR-AFTER-MUL-COMBINED
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-INT,CIR-AFTER-MUL-COMBINED,CIR-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=promoted -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-INT,LLVM-MUL-COMBINED
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-INT,LLVM-MUL-COMBINED,LLVM-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=promoted -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-INT,OGCG-MUL-COMBINED
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-INT,OGCG-MUL-COMBINED,OGCG-COMBINED
 
 // complex-range full
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -complex-range=full -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-canonicalize -o %t.cir %s 2>&1 | FileCheck --check-prefix=CIR-BEFORE-FULL %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=full -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-FULL,CIR-AFTER-INT
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR-AFTER-FULL,CIR-AFTER-INT,CIR-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=full -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-FULL,LLVM-INT
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-FULL,LLVM-INT,LLVM-COMBINED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -complex-range=full -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-FULL,OGCG-INT
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG-FULL,OGCG-INT,OGCG-COMBINED
 
 void foo() {
   float _Complex a;
@@ -278,3 +278,49 @@ void foo1() {
 // OGCG-INT: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[C_ADDR]], i32 0, i32 1
 // OGCG-INT: store i32 %[[C_REAL]], ptr %[[C_REAL_PTR]], align 4
 // OGCG-INT: store i32 %[[C_IMAG]], ptr %[[C_IMAG_PTR]], align 4
+
+void foo2() {
+  float _Complex a;
+  float b;
+  float _Complex c = a * b;
+}
+
+// CIR-COMBINED: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-COMBINED: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b"]
+// CIR-COMBINED: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
+// CIR-COMBINED: %[[TMP_A:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-COMBINED: %[[TMP_B:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.float>, !cir.float
+// CIR-COMBINED: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-COMBINED: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-COMBINED: %[[RESULT_REAL:.*]] = cir.binop(mul, %[[A_REAL]], %[[TMP_B]]) : !cir.float
+// CIR-COMBINED: %[[RESULT_IMAG:.*]] = cir.binop(mul, %[[A_IMAG]], %[[TMP_B]]) : !cir.float
+// CIR-COMBINED: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// CIR-COMBINED: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM-COMBINED: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-COMBINED: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM-COMBINED: %[[C_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM-COMBINED: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM-COMBINED: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
+// LLVM-COMBINED: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
+// LLVM-COMBINED: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
+// LLVM-COMBINED: %[[RESULT_REAL:.*]] = fmul float %[[A_REAL]], %[[TMP_B]]
+// LLVM-COMBINED: %[[RESULT_IMAG:.*]] = fmul float %[[A_IMAG]], %[[TMP_B]]
+// LLVM-COMBINED: %[[TMP_RESULT:.*]] = insertvalue { float, float } {{.*}}, float %[[RESULT_REAL]], 0
+// LLVM-COMBINED: %[[RESULT:.*]] = insertvalue { float, float } %[[TMP_RESULT]], float %[[RESULT_IMAG]], 1
+// LLVM-COMBINED: store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
+
+// OGCG-COMBINED: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-COMBINED: %[[B_ADDR:.*]] = alloca float, align 4
+// OGCG-COMBINED: %[[C_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG-COMBINED: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG-COMBINED: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG-COMBINED: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG-COMBINED: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG-COMBINED: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
+// OGCG-COMBINED: %[[RESULT_REAL:.*]] = fmul float %[[A_REAL]], %[[TMP_B]]
+// OGCG-COMBINED: %[[RESULT_IMAG:.*]] = fmul float %[[A_IMAG]], %[[TMP_B]]
+// OGCG-COMBINED: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 0
+// OGCG-COMBINED: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[C_ADDR]], i32 0, i32 1
+// OGCG-COMBINED: store float %[[RESULT_REAL]], ptr %[[C_REAL_PTR]], align 4
+// OGCG-COMBINED: store float %[[RESULT_IMAG]], ptr %[[C_IMAG_PTR]], align 4

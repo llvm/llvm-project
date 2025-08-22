@@ -42,11 +42,11 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
   // A matcher for a `DstT::DstT(const Src&)` where DstT also has a
   // `DstT::DstT(Src&&)`.
   const auto LValueRefCtor = cxxConstructorDecl(
-      hasParameter(0,
-                   hasType(lValueReferenceType(pointee(type().bind("SrcT"))))),
+      hasParameter(0, hasType(hasCanonicalType(
+                          lValueReferenceType(pointee(type().bind("SrcT")))))),
       ofClass(cxxRecordDecl(hasMethod(cxxConstructorDecl(
-          hasParameter(0, hasType(rValueReferenceType(
-                              pointee(type(equalsBoundNode("SrcT")))))))))));
+          hasParameter(0, hasType(hasCanonicalType(rValueReferenceType(
+                              pointee(type(equalsBoundNode("SrcT"))))))))))));
 
   // A matcher for `DstT::DstT(const Src&&)`, which typically comes from an
   // instantiation of `template <typename U> DstT::DstT(U&&)`.

@@ -79,17 +79,30 @@ static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
   return canBeBare;
 }
 
-static Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
-                       const unsigned indexBitwidth) {
+static Value getLaneId(RewriterBase &rewriter, Location loc) {
   auto int32Type = IntegerType::get(rewriter.getContext(), 32);
   Value zero = arith::ConstantIntOp::create(rewriter, loc, 0, 32);
   Value minus1 = arith::ConstantIntOp::create(rewriter, loc, -1, 32);
-  Value mbcntLo = ROCDL::MbcntLoOp::create(rewriter, loc, int32Type,
-                                           ValueRange{minus1, zero});
-  Value laneId = ROCDL::MbcntHiOp::create(rewriter, loc, int32Type,
-                                          ValueRange{minus1, mbcntLo});
+  NamedAttribute noundef = rewriter.getNamedAttr(
+      LLVM::LLVMDialect::getNoUndefAttrName(), rewriter.getUnitAttr());
+  NamedAttribute lowRange = rewriter.getNamedAttr(
+      LLVM::LLVMDialect::getRangeAttrName(),
+      LLVM::ConstantRangeAttr::get(rewriter.getContext(), APInt::getZero(32),
+                                   APInt(32, 32)));
+  NamedAttribute highRange = rewriter.getNamedAttr(
+      LLVM::LLVMDialect::getRangeAttrName(),
+      LLVM::ConstantRangeAttr::get(rewriter.getContext(), APInt::getZero(32),
+                                   APInt(32, 64)));
+  Value mbcntLo = ROCDL::MbcntLoOp::create(
+      rewriter, loc, int32Type, minus1, zero, /*arg_attrs=*/{},
+      /*res_attrs=*/
+      rewriter.getArrayAttr(rewriter.getDictionaryAttr({noundef, lowRange})));
+  Value laneId = ROCDL::MbcntHiOp::create(
+      rewriter, loc, int32Type, minus1, mbcntLo, /*arg_attrs=*/{},
+      rewriter.getArrayAttr(rewriter.getDictionaryAttr({noundef, highRange})));
   return laneId;
 }
+
 static constexpr StringLiteral amdgcnDataLayout =
     "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
     "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:"
@@ -104,18 +117,16 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   LogicalResult
   matchAndRewrite(gpu::LaneIdOp op, gpu::LaneIdOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = op->getLoc();
+    Location loc = op.getLoc();
     MLIRContext *context = rewriter.getContext();
-    // convert to:  %mlo = call @llvm.amdgcn.mbcnt.lo(-1, 0)
-    // followed by: %lid = call @llvm.amdgcn.mbcnt.hi(-1, %mlo)
+    // convert to:
+    //   %mlo = call noundef range(i32 0, 32)
+    //     @llvm.amdgcn.mbcnt.lo(-1, 0)
+    // followed by:
+    //   %lid = call noundef range(i32 0, 64)
+    //     @llvm.amdgcn.mbcnt.hi(-1, %mlo)
 
-    Type intTy = IntegerType::get(context, 32);
-    Value zero = arith::ConstantIntOp::create(rewriter, loc, 0, 32);
-    Value minus1 = arith::ConstantIntOp::create(rewriter, loc, -1, 32);
-    Value mbcntLo = ROCDL::MbcntLoOp::create(rewriter, loc, intTy,
-                                             ValueRange{minus1, zero});
-    Value laneId = ROCDL::MbcntHiOp::create(rewriter, loc, intTy,
-                                            ValueRange{minus1, mbcntLo});
+    Value laneId = getLaneId(rewriter, loc);
     // Truncate or extend the result depending on the index bitwidth specified
     // by the LLVMTypeConverter options.
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
@@ -185,8 +196,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Location loc = op->getLoc();
     Value initShflValue = adaptor.getValue();
 
-    const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
-    Value srcLaneId = getLaneId(rewriter, loc, indexBitwidth);
+    Value srcLaneId = getLaneId(rewriter, loc);
 
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
     Value width = adaptor.getWidth();

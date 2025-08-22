@@ -18,7 +18,7 @@ define void @streaming_compatible() #0 {
 ; CHECK-NEXT:    bl __arm_get_current_vg
 ; CHECK-NEXT:    stp x0, x19, [sp, #72] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    tbz w19, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
@@ -57,7 +57,7 @@ define void @streaming_compatible_arg(float %f) #0 {
 ; CHECK-NEXT:    stp x0, x19, [sp, #88] // 16-byte Folded Spill
 ; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    tbz w19, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
