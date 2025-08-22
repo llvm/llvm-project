@@ -8341,7 +8341,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::FMA:
   case ISD::FMAD:
   case ISD::SETCC:
-  case ISD::BITCAST:
   case ISD::FSHL:
   case ISD::FSHR:
     if (SDValue SV =
