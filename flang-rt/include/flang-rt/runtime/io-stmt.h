@@ -438,7 +438,9 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
-  RT_API_ATTRS bool inNamelistSequence() const { return inNamelistSequence_; }
+  RT_API_ATTRS const NamelistGroup *namelistGroup() const {
+    return namelistGroup_;
+  }
   RT_API_ATTRS int EndIoStatement();
 
   // Skips value separators, handles repetition and null values.
@@ -451,15 +453,19 @@ public:
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  RT_API_ATTRS void ResetForNextNamelistItem(bool inNamelistSequence) {
+  RT_API_ATTRS void ResetForNextNamelistItem(
+      const NamelistGroup *namelistGroup) {
     remaining_ = 0;
     if (repeatPosition_) {
       repeatPosition_->Cancel();
     }
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
-    inNamelistSequence_ = inNamelistSequence;
+    namelistGroup_ = namelistGroup;
   }
+
+protected:
+  const NamelistGroup *namelistGroup_{nullptr};
 
 private:
   int remaining_{0}; // for "r*" repetition
@@ -468,7 +474,6 @@ private:
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
   bool imaginaryPart_{false};
-  bool inNamelistSequence_{false};
 };
 
 template <Direction DIR>
@@ -688,8 +693,10 @@ template <Direction DIR>
 class ChildListIoStatementState : public ChildIoStatementState<DIR>,
                                   public ListDirectedStatementState<DIR> {
 public:
-  using ChildIoStatementState<DIR>::ChildIoStatementState;
+  RT_API_ATTRS ChildListIoStatementState(
+      ChildIo &, const char *sourceFile = nullptr, int sourceLine = 0);
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS int EndIoStatement();
 };
 
@@ -723,6 +730,9 @@ public:
   RT_API_ATTRS void set_isUnformatted(bool yes = true) {
     isUnformatted_ = yes;
   } // FORM=
+  RT_API_ATTRS void set_mustBeFormatted(bool yes = true) {
+    mustBeFormatted_ = yes;
+  }
 
   RT_API_ATTRS void CompleteOperation();
   RT_API_ATTRS int EndIoStatement();
@@ -737,6 +747,7 @@ private:
   OwningPtr<char> path_;
   std::size_t pathLength_{};
   Fortran::common::optional<bool> isUnformatted_;
+  Fortran::common::optional<bool> mustBeFormatted_;
   Fortran::common::optional<Access> access_;
 };
 

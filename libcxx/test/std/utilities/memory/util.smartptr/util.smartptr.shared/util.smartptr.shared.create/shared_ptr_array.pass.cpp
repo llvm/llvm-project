@@ -20,11 +20,11 @@
 #include <memory>
 
 int main(int, char**) {
-  std::allocate_shared<int[]>(std::allocator<int>{}, 10);
-  std::make_shared<int[]>(10);
+  (void)std::allocate_shared<int[]>(std::allocator<int>{}, 10);
+  (void)std::make_shared<int[]>(10);
 
-  std::allocate_shared<int[10]>(std::allocator<int>{});
-  std::make_shared<int[10]>();
+  (void)std::allocate_shared<int[10]>(std::allocator<int>{});
+  (void)std::make_shared<int[10]>();
 
   return 0;
 }

@@ -417,12 +417,42 @@ struct MapperComponentsTy {
 typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t,
                                 void *);
 
+/// Structure to store information about a single ATTACH map entry.
+struct AttachMapInfo {
+  void *PointerBase;
+  void *PointeeBegin;
+  int64_t PointerSize;
+  int64_t MapType;
+  map_var_info_t Pointername;
+
+  AttachMapInfo(void *PointerBase, void *PointeeBegin, int64_t Size,
+                int64_t Type, map_var_info_t Name)
+      : PointerBase(PointerBase), PointeeBegin(PointeeBegin), PointerSize(Size),
+        MapType(Type), Pointername(Name) {}
+};
+
+/// Structure to track ATTACH entries and new allocations across recursive calls
+/// (for handling mappers) to targetDataBegin for a given construct.
+struct AttachInfoTy {
+  /// ATTACH map entries for deferred processing.
+  llvm::SmallVector<AttachMapInfo> AttachEntries;
+
+  /// Key: host pointer, Value: allocation size.
+  llvm::DenseMap<void *, int64_t> NewAllocations;
+
+  AttachInfoTy() = default;
+
+  // Delete copy constructor and copy assignment operator to prevent copying
+  AttachInfoTy(const AttachInfoTy &) = delete;
+  AttachInfoTy &operator=(const AttachInfoTy &) = delete;
+};
+
 // Function pointer type for targetData* functions (targetDataBegin,
 // targetDataEnd and targetDataUpdate).
 typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
                                    void **, int64_t *, int64_t *,
                                    map_var_info_t *, void **, AsyncInfoTy &,
-                                   bool);
+                                   AttachInfoTy *, bool);
 
 void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
                                bool toStdOut = false);
@@ -431,19 +461,25 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     void **ArgsBase, void **Args, int64_t *ArgSizes,
                     int64_t *ArgTypes, map_var_info_t *ArgNames,
                     void **ArgMappers, AsyncInfoTy &AsyncInfo,
+                    AttachInfoTy *AttachInfo = nullptr,
                     bool FromMapper = false);
 
 int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *ArgNames,
                   void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                  bool FromMapper = false);
+                  AttachInfoTy *AttachInfo = nullptr, bool FromMapper = false);
 
 int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                      void **ArgsBase, void **Args, int64_t *ArgSizes,
                      int64_t *ArgTypes, map_var_info_t *ArgNames,
                      void **ArgMappers, AsyncInfoTy &AsyncInfo,
+                     AttachInfoTy *AttachInfo = nullptr,
                      bool FromMapper = false);
+
+// Process deferred ATTACH map entries collected during targetDataBegin.
+int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
+                         AsyncInfoTy &AsyncInfo);
 
 struct MappingInfoTy {
   MappingInfoTy(DeviceTy &Device) : Device(Device) {}

@@ -9,7 +9,7 @@ declare i64 @callee_variadic(ptr %p, ...);
 define %struct.64 @test_return_type_mismatch(ptr %p) {
 ; CHECK-LABEL: test_return_type_mismatch(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<40>;
+; CHECK-NEXT:    .reg .b64 %rd<32>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_return_type_mismatch_param_0];
@@ -29,35 +29,35 @@ define %struct.64 @test_return_type_mismatch(ptr %p) {
 ; CHECK-NEXT:    ld.param.b8 %rd9, [retval0+1];
 ; CHECK-NEXT:    ld.param.b8 %rd10, [retval0];
 ; CHECK-NEXT:    } // callseq 0
-; CHECK-NEXT:    shl.b64 %rd13, %rd9, 8;
-; CHECK-NEXT:    or.b64 %rd14, %rd13, %rd10;
-; CHECK-NEXT:    shl.b64 %rd16, %rd8, 16;
-; CHECK-NEXT:    shl.b64 %rd18, %rd7, 24;
-; CHECK-NEXT:    or.b64 %rd19, %rd18, %rd16;
-; CHECK-NEXT:    or.b64 %rd20, %rd19, %rd14;
-; CHECK-NEXT:    shl.b64 %rd23, %rd5, 8;
-; CHECK-NEXT:    or.b64 %rd24, %rd23, %rd6;
-; CHECK-NEXT:    shl.b64 %rd26, %rd4, 16;
-; CHECK-NEXT:    shl.b64 %rd28, %rd3, 24;
-; CHECK-NEXT:    or.b64 %rd29, %rd28, %rd26;
-; CHECK-NEXT:    or.b64 %rd30, %rd29, %rd24;
-; CHECK-NEXT:    shl.b64 %rd31, %rd30, 32;
-; CHECK-NEXT:    or.b64 %rd32, %rd31, %rd20;
+; CHECK-NEXT:    shl.b64 %rd11, %rd9, 8;
+; CHECK-NEXT:    or.b64 %rd12, %rd11, %rd10;
+; CHECK-NEXT:    shl.b64 %rd13, %rd8, 16;
+; CHECK-NEXT:    shl.b64 %rd14, %rd7, 24;
+; CHECK-NEXT:    or.b64 %rd15, %rd14, %rd13;
+; CHECK-NEXT:    or.b64 %rd16, %rd15, %rd12;
+; CHECK-NEXT:    shl.b64 %rd17, %rd5, 8;
+; CHECK-NEXT:    or.b64 %rd18, %rd17, %rd6;
+; CHECK-NEXT:    shl.b64 %rd19, %rd4, 16;
+; CHECK-NEXT:    shl.b64 %rd20, %rd3, 24;
+; CHECK-NEXT:    or.b64 %rd21, %rd20, %rd19;
+; CHECK-NEXT:    or.b64 %rd22, %rd21, %rd18;
+; CHECK-NEXT:    shl.b64 %rd23, %rd22, 32;
+; CHECK-NEXT:    or.b64 %rd24, %rd23, %rd16;
 ; CHECK-NEXT:    st.param.b8 [func_retval0], %rd10;
-; CHECK-NEXT:    shr.u64 %rd33, %rd32, 56;
-; CHECK-NEXT:    st.param.b8 [func_retval0+7], %rd33;
-; CHECK-NEXT:    shr.u64 %rd34, %rd32, 48;
-; CHECK-NEXT:    st.param.b8 [func_retval0+6], %rd34;
-; CHECK-NEXT:    shr.u64 %rd35, %rd32, 40;
-; CHECK-NEXT:    st.param.b8 [func_retval0+5], %rd35;
-; CHECK-NEXT:    shr.u64 %rd36, %rd32, 32;
-; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rd36;
-; CHECK-NEXT:    shr.u64 %rd37, %rd32, 24;
-; CHECK-NEXT:    st.param.b8 [func_retval0+3], %rd37;
-; CHECK-NEXT:    shr.u64 %rd38, %rd32, 16;
-; CHECK-NEXT:    st.param.b8 [func_retval0+2], %rd38;
-; CHECK-NEXT:    shr.u64 %rd39, %rd32, 8;
-; CHECK-NEXT:    st.param.b8 [func_retval0+1], %rd39;
+; CHECK-NEXT:    shr.u64 %rd25, %rd24, 56;
+; CHECK-NEXT:    st.param.b8 [func_retval0+7], %rd25;
+; CHECK-NEXT:    shr.u64 %rd26, %rd24, 48;
+; CHECK-NEXT:    st.param.b8 [func_retval0+6], %rd26;
+; CHECK-NEXT:    shr.u64 %rd27, %rd24, 40;
+; CHECK-NEXT:    st.param.b8 [func_retval0+5], %rd27;
+; CHECK-NEXT:    shr.u64 %rd28, %rd24, 32;
+; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rd28;
+; CHECK-NEXT:    shr.u64 %rd29, %rd24, 24;
+; CHECK-NEXT:    st.param.b8 [func_retval0+3], %rd29;
+; CHECK-NEXT:    shr.u64 %rd30, %rd24, 16;
+; CHECK-NEXT:    st.param.b8 [func_retval0+2], %rd30;
+; CHECK-NEXT:    shr.u64 %rd31, %rd24, 8;
+; CHECK-NEXT:    st.param.b8 [func_retval0+1], %rd31;
 ; CHECK-NEXT:    ret;
   %ret = call %struct.64 @callee(ptr %p)
   ret %struct.64 %ret
@@ -66,7 +66,7 @@ define %struct.64 @test_return_type_mismatch(ptr %p) {
 define i64 @test_param_type_mismatch(ptr %p) {
 ; CHECK-LABEL: test_param_type_mismatch(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 1, 0
@@ -87,7 +87,7 @@ define i64 @test_param_type_mismatch(ptr %p) {
 define i64 @test_param_count_mismatch(ptr %p) {
 ; CHECK-LABEL: test_param_count_mismatch(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_param_count_mismatch_param_0];
@@ -111,7 +111,7 @@ define i64 @test_param_count_mismatch(ptr %p) {
 define %struct.64 @test_return_type_mismatch_variadic(ptr %p) {
 ; CHECK-LABEL: test_return_type_mismatch_variadic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<40>;
+; CHECK-NEXT:    .reg .b64 %rd<32>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_return_type_mismatch_variadic_param_0];
@@ -131,35 +131,35 @@ define %struct.64 @test_return_type_mismatch_variadic(ptr %p) {
 ; CHECK-NEXT:    ld.param.b8 %rd9, [retval0+1];
 ; CHECK-NEXT:    ld.param.b8 %rd10, [retval0];
 ; CHECK-NEXT:    } // callseq 3
-; CHECK-NEXT:    shl.b64 %rd13, %rd9, 8;
-; CHECK-NEXT:    or.b64 %rd14, %rd13, %rd10;
-; CHECK-NEXT:    shl.b64 %rd16, %rd8, 16;
-; CHECK-NEXT:    shl.b64 %rd18, %rd7, 24;
-; CHECK-NEXT:    or.b64 %rd19, %rd18, %rd16;
-; CHECK-NEXT:    or.b64 %rd20, %rd19, %rd14;
-; CHECK-NEXT:    shl.b64 %rd23, %rd5, 8;
-; CHECK-NEXT:    or.b64 %rd24, %rd23, %rd6;
-; CHECK-NEXT:    shl.b64 %rd26, %rd4, 16;
-; CHECK-NEXT:    shl.b64 %rd28, %rd3, 24;
-; CHECK-NEXT:    or.b64 %rd29, %rd28, %rd26;
-; CHECK-NEXT:    or.b64 %rd30, %rd29, %rd24;
-; CHECK-NEXT:    shl.b64 %rd31, %rd30, 32;
-; CHECK-NEXT:    or.b64 %rd32, %rd31, %rd20;
+; CHECK-NEXT:    shl.b64 %rd11, %rd9, 8;
+; CHECK-NEXT:    or.b64 %rd12, %rd11, %rd10;
+; CHECK-NEXT:    shl.b64 %rd13, %rd8, 16;
+; CHECK-NEXT:    shl.b64 %rd14, %rd7, 24;
+; CHECK-NEXT:    or.b64 %rd15, %rd14, %rd13;
+; CHECK-NEXT:    or.b64 %rd16, %rd15, %rd12;
+; CHECK-NEXT:    shl.b64 %rd17, %rd5, 8;
+; CHECK-NEXT:    or.b64 %rd18, %rd17, %rd6;
+; CHECK-NEXT:    shl.b64 %rd19, %rd4, 16;
+; CHECK-NEXT:    shl.b64 %rd20, %rd3, 24;
+; CHECK-NEXT:    or.b64 %rd21, %rd20, %rd19;
+; CHECK-NEXT:    or.b64 %rd22, %rd21, %rd18;
+; CHECK-NEXT:    shl.b64 %rd23, %rd22, 32;
+; CHECK-NEXT:    or.b64 %rd24, %rd23, %rd16;
 ; CHECK-NEXT:    st.param.b8 [func_retval0], %rd10;
-; CHECK-NEXT:    shr.u64 %rd33, %rd32, 56;
-; CHECK-NEXT:    st.param.b8 [func_retval0+7], %rd33;
-; CHECK-NEXT:    shr.u64 %rd34, %rd32, 48;
-; CHECK-NEXT:    st.param.b8 [func_retval0+6], %rd34;
-; CHECK-NEXT:    shr.u64 %rd35, %rd32, 40;
-; CHECK-NEXT:    st.param.b8 [func_retval0+5], %rd35;
-; CHECK-NEXT:    shr.u64 %rd36, %rd32, 32;
-; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rd36;
-; CHECK-NEXT:    shr.u64 %rd37, %rd32, 24;
-; CHECK-NEXT:    st.param.b8 [func_retval0+3], %rd37;
-; CHECK-NEXT:    shr.u64 %rd38, %rd32, 16;
-; CHECK-NEXT:    st.param.b8 [func_retval0+2], %rd38;
-; CHECK-NEXT:    shr.u64 %rd39, %rd32, 8;
-; CHECK-NEXT:    st.param.b8 [func_retval0+1], %rd39;
+; CHECK-NEXT:    shr.u64 %rd25, %rd24, 56;
+; CHECK-NEXT:    st.param.b8 [func_retval0+7], %rd25;
+; CHECK-NEXT:    shr.u64 %rd26, %rd24, 48;
+; CHECK-NEXT:    st.param.b8 [func_retval0+6], %rd26;
+; CHECK-NEXT:    shr.u64 %rd27, %rd24, 40;
+; CHECK-NEXT:    st.param.b8 [func_retval0+5], %rd27;
+; CHECK-NEXT:    shr.u64 %rd28, %rd24, 32;
+; CHECK-NEXT:    st.param.b8 [func_retval0+4], %rd28;
+; CHECK-NEXT:    shr.u64 %rd29, %rd24, 24;
+; CHECK-NEXT:    st.param.b8 [func_retval0+3], %rd29;
+; CHECK-NEXT:    shr.u64 %rd30, %rd24, 16;
+; CHECK-NEXT:    st.param.b8 [func_retval0+2], %rd30;
+; CHECK-NEXT:    shr.u64 %rd31, %rd24, 8;
+; CHECK-NEXT:    st.param.b8 [func_retval0+1], %rd31;
 ; CHECK-NEXT:    ret;
   %ret = call %struct.64 (ptr, ...) @callee_variadic(ptr %p)
   ret %struct.64 %ret
@@ -168,7 +168,7 @@ define %struct.64 @test_return_type_mismatch_variadic(ptr %p) {
 define i64 @test_param_type_mismatch_variadic(ptr %p) {
 ; CHECK-LABEL: test_param_type_mismatch_variadic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_param_type_mismatch_variadic_param_0];
@@ -190,7 +190,7 @@ define i64 @test_param_type_mismatch_variadic(ptr %p) {
 define i64 @test_param_count_mismatch_variadic(ptr %p) {
 ; CHECK-LABEL: test_param_count_mismatch_variadic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_param_count_mismatch_variadic_param_0];

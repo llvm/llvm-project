@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
 
 #include "SymbolFileDWARF.h"
+#include "lldb/lldb-private-enumerations.h"
 #include <optional>
 
 namespace lldb_private::plugin {
@@ -34,8 +35,9 @@ public:
 
   DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
 
-  void GetObjCMethods(ConstString class_name,
-                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetObjCMethods(
+      ConstString class_name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
 
   llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;

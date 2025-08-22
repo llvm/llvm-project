@@ -857,6 +857,9 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+
+  if (DeviceOffloadingKind == Action::OFK_None)
+    addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args);
 }
 
 void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {

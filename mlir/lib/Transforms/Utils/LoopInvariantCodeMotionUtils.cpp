@@ -13,11 +13,13 @@
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <queue>
 
 #define DEBUG_TYPE "licm"
@@ -64,8 +66,7 @@ size_t mlir::moveLoopInvariantCode(
   size_t numMoved = 0;
 
   for (Region *region : regions) {
-    LLVM_DEBUG(llvm::dbgs() << "Original loop:\n"
-                            << *region->getParentOp() << "\n");
+    LDBG() << "Original loop:\n" << *region->getParentOp();
 
     std::queue<Operation *> worklist;
     // Add top-level operations in the loop body to the worklist.
@@ -83,12 +84,13 @@ size_t mlir::moveLoopInvariantCode(
       if (op->getParentRegion() != region)
         continue;
 
-      LLVM_DEBUG(llvm::dbgs() << "Checking op: " << *op << "\n");
+      LDBG() << "Checking op: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       if (!shouldMoveOutOfRegion(op, region) ||
           !canBeHoisted(op, definedOutside))
         continue;
 
-      LLVM_DEBUG(llvm::dbgs() << "Moving loop-invariant op: " << *op << "\n");
+      LDBG() << "Moving loop-invariant op: " << *op;
       moveOutOfRegion(op, region);
       ++numMoved;
 

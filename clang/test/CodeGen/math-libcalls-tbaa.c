@@ -82,12 +82,12 @@ double test_remainder (double num[], double a) {
 // CHECK-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[E:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[E]]) #[[ATTR9]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[E]]) #[[ATTR9]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8]]
 // CHECK-NEXT:    [[CALL:%.*]] = call double @frexp(double noundef [[TMP0]], ptr noundef nonnull [[E]]) #[[ATTR9]]
 // CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[E]]) #[[ATTR9]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[E]]) #[[ATTR9]]
 // CHECK-NEXT:    ret double [[MUL]]
 //
 double test_frexp (double num[]) {
@@ -105,8 +105,8 @@ double test_frexp (double num[]) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SIN:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[COS:%.*]] = alloca float, align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[SIN]]) #[[ATTR9]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[COS]]) #[[ATTR9]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[COS]]) #[[ATTR9]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    call void @sincos(float noundef [[TMP0]], ptr noundef nonnull [[SIN]], ptr noundef nonnull [[COS]]) #[[ATTR9]]
@@ -115,8 +115,8 @@ double test_frexp (double num[]) {
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP1]], [[TMP2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[ADD:%.*]] = fadd float [[MUL]], [[TMP3]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[COS]]) #[[ATTR9]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[SIN]]) #[[ATTR9]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COS]]) #[[ATTR9]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
 // CHECK-NEXT:    ret float [[ADD]]
 //
 float test_sincos (float num[]) {

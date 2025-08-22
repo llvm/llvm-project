@@ -164,7 +164,7 @@ struct LlvmLibcExhaustiveMathTest
 
             range_begin = current_value;
             if (stop >= Increment && stop - Increment >= current_value) {
-              range_end = current_value + Increment;
+              range_end = static_cast<StorageType>(current_value + Increment);
             } else {
               range_end = stop;
             }

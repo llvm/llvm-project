@@ -63,7 +63,6 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCBoolRetToInt.cpp",
     "PPCBranchCoalescing.cpp",
     "PPCBranchSelector.cpp",
-    "PPCCCState.cpp",
     "PPCCTRLoops.cpp",
     "PPCCTRLoopsVerify.cpp",
     "PPCCallingConv.cpp",

@@ -36,6 +36,11 @@ int main(int, char**) {
     M example;
     assert(example.find(C2Int{5}) == example.end());
   }
+  {
+    using M = std::multimap<int, double, transparent_less_nonempty>;
+    M example;
+    assert(example.find(C2Int{5}) == example.end());
+  }
 
   return 0;
 }

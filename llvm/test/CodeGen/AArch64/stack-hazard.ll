@@ -388,7 +388,7 @@ define i32 @csr_d8_allocnxv4i32(i64 %d) "aarch64_pstate_sm_compatible" {
 ; CHECK0-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK0-NEXT:    str x29, [sp, #8] // 8-byte Folded Spill
 ; CHECK0-NEXT:    addvl sp, sp, #-1
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK0-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK0-NEXT:    .cfi_offset w29, -8
 ; CHECK0-NEXT:    .cfi_offset b8, -16
 ; CHECK0-NEXT:    mov z0.s, #0 // =0x0
@@ -407,7 +407,7 @@ define i32 @csr_d8_allocnxv4i32(i64 %d) "aarch64_pstate_sm_compatible" {
 ; CHECK64-NEXT:    str x29, [sp, #72] // 8-byte Folded Spill
 ; CHECK64-NEXT:    sub sp, sp, #64
 ; CHECK64-NEXT:    addvl sp, sp, #-1
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x90, 0x01, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 144 + 8 * VG
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 144 + 8 * VG
 ; CHECK64-NEXT:    .cfi_offset w29, -8
 ; CHECK64-NEXT:    .cfi_offset b8, -80
 ; CHECK64-NEXT:    mov z0.s, #0 // =0x0
@@ -429,7 +429,7 @@ define i32 @csr_d8_allocnxv4i32(i64 %d) "aarch64_pstate_sm_compatible" {
 ; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1024
 ; CHECK1024-NEXT:    addvl sp, sp, #-1
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x90, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 2064 + 8 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2064 + 8 * VG
 ; CHECK1024-NEXT:    .cfi_offset w29, -8
 ; CHECK1024-NEXT:    .cfi_offset b8, -1040
 ; CHECK1024-NEXT:    mov z0.s, #0 // =0x0
@@ -616,16 +616,13 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK0:       // %bb.0: // %entry
 ; CHECK0-NEXT:    sub sp, sp, #176
 ; CHECK0-NEXT:    .cfi_def_cfa_offset 176
-; CHECK0-NEXT:    rdsvl x9, #1
-; CHECK0-NEXT:    stp d15, d14, [sp, #48] // 16-byte Folded Spill
-; CHECK0-NEXT:    lsr x9, x9, #3
-; CHECK0-NEXT:    stp d13, d12, [sp, #64] // 16-byte Folded Spill
-; CHECK0-NEXT:    stp d11, d10, [sp, #80] // 16-byte Folded Spill
-; CHECK0-NEXT:    str x9, [sp, #32] // 8-byte Folded Spill
 ; CHECK0-NEXT:    cntd x9
-; CHECK0-NEXT:    str x9, [sp, #40] // 8-byte Folded Spill
-; CHECK0-NEXT:    stp d9, d8, [sp, #96] // 16-byte Folded Spill
-; CHECK0-NEXT:    str x25, [sp, #112] // 8-byte Folded Spill
+; CHECK0-NEXT:    stp d15, d14, [sp, #32] // 16-byte Folded Spill
+; CHECK0-NEXT:    stp d13, d12, [sp, #48] // 16-byte Folded Spill
+; CHECK0-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
+; CHECK0-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
+; CHECK0-NEXT:    stp x29, x30, [sp, #96] // 16-byte Folded Spill
+; CHECK0-NEXT:    stp x9, x25, [sp, #112] // 16-byte Folded Spill
 ; CHECK0-NEXT:    stp x24, x23, [sp, #128] // 16-byte Folded Spill
 ; CHECK0-NEXT:    stp x22, x21, [sp, #144] // 16-byte Folded Spill
 ; CHECK0-NEXT:    stp x20, x19, [sp, #160] // 16-byte Folded Spill
@@ -635,16 +632,18 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK0-NEXT:    .cfi_offset w22, -32
 ; CHECK0-NEXT:    .cfi_offset w23, -40
 ; CHECK0-NEXT:    .cfi_offset w24, -48
-; CHECK0-NEXT:    .cfi_offset w25, -64
-; CHECK0-NEXT:    .cfi_offset b8, -72
-; CHECK0-NEXT:    .cfi_offset b9, -80
-; CHECK0-NEXT:    .cfi_offset b10, -88
-; CHECK0-NEXT:    .cfi_offset b11, -96
-; CHECK0-NEXT:    .cfi_offset b12, -104
-; CHECK0-NEXT:    .cfi_offset b13, -112
-; CHECK0-NEXT:    .cfi_offset b14, -120
-; CHECK0-NEXT:    .cfi_offset b15, -128
-; CHECK0-NEXT:    .cfi_offset vg, -136
+; CHECK0-NEXT:    .cfi_offset w25, -56
+; CHECK0-NEXT:    .cfi_offset vg, -64
+; CHECK0-NEXT:    .cfi_offset w30, -72
+; CHECK0-NEXT:    .cfi_offset w29, -80
+; CHECK0-NEXT:    .cfi_offset b8, -88
+; CHECK0-NEXT:    .cfi_offset b9, -96
+; CHECK0-NEXT:    .cfi_offset b10, -104
+; CHECK0-NEXT:    .cfi_offset b11, -112
+; CHECK0-NEXT:    .cfi_offset b12, -120
+; CHECK0-NEXT:    .cfi_offset b13, -128
+; CHECK0-NEXT:    .cfi_offset b14, -136
+; CHECK0-NEXT:    .cfi_offset b15, -144
 ; CHECK0-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK0-NEXT:    smstart sm
 ; CHECK0-NEXT:    //APP
@@ -658,12 +657,13 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK0-NEXT:    ldp x20, x19, [sp, #160] // 16-byte Folded Reload
 ; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    ldp x22, x21, [sp, #144] // 16-byte Folded Reload
-; CHECK0-NEXT:    ldr x25, [sp, #112] // 8-byte Folded Reload
+; CHECK0-NEXT:    ldr x25, [sp, #120] // 8-byte Folded Reload
 ; CHECK0-NEXT:    ldp x24, x23, [sp, #128] // 16-byte Folded Reload
-; CHECK0-NEXT:    ldp d9, d8, [sp, #96] // 16-byte Folded Reload
-; CHECK0-NEXT:    ldp d11, d10, [sp, #80] // 16-byte Folded Reload
-; CHECK0-NEXT:    ldp d13, d12, [sp, #64] // 16-byte Folded Reload
-; CHECK0-NEXT:    ldp d15, d14, [sp, #48] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp x29, x30, [sp, #96] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp d15, d14, [sp, #32] // 16-byte Folded Reload
 ; CHECK0-NEXT:    add sp, sp, #176
 ; CHECK0-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK0-NEXT:    .cfi_restore w19
@@ -673,6 +673,9 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK0-NEXT:    .cfi_restore w23
 ; CHECK0-NEXT:    .cfi_restore w24
 ; CHECK0-NEXT:    .cfi_restore w25
+; CHECK0-NEXT:    .cfi_restore vg
+; CHECK0-NEXT:    .cfi_restore w30
+; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    .cfi_restore b8
 ; CHECK0-NEXT:    .cfi_restore b9
 ; CHECK0-NEXT:    .cfi_restore b10
@@ -687,16 +690,13 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK64:       // %bb.0: // %entry
 ; CHECK64-NEXT:    sub sp, sp, #304
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 304
-; CHECK64-NEXT:    rdsvl x9, #1
-; CHECK64-NEXT:    stp d15, d14, [sp, #112] // 16-byte Folded Spill
-; CHECK64-NEXT:    lsr x9, x9, #3
-; CHECK64-NEXT:    stp d13, d12, [sp, #128] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d11, d10, [sp, #144] // 16-byte Folded Spill
-; CHECK64-NEXT:    str x9, [sp, #96] // 8-byte Folded Spill
 ; CHECK64-NEXT:    cntd x9
-; CHECK64-NEXT:    str x9, [sp, #104] // 8-byte Folded Spill
-; CHECK64-NEXT:    stp d9, d8, [sp, #160] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x29, x25, [sp, #240] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp d15, d14, [sp, #96] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp d13, d12, [sp, #112] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp d11, d10, [sp, #128] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp d9, d8, [sp, #144] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x29, x30, [sp, #224] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x9, x25, [sp, #240] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp x24, x23, [sp, #256] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp x22, x21, [sp, #272] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp x20, x19, [sp, #288] // 16-byte Folded Spill
@@ -707,16 +707,17 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK64-NEXT:    .cfi_offset w23, -40
 ; CHECK64-NEXT:    .cfi_offset w24, -48
 ; CHECK64-NEXT:    .cfi_offset w25, -56
-; CHECK64-NEXT:    .cfi_offset w29, -64
-; CHECK64-NEXT:    .cfi_offset b8, -136
-; CHECK64-NEXT:    .cfi_offset b9, -144
-; CHECK64-NEXT:    .cfi_offset b10, -152
-; CHECK64-NEXT:    .cfi_offset b11, -160
-; CHECK64-NEXT:    .cfi_offset b12, -168
-; CHECK64-NEXT:    .cfi_offset b13, -176
-; CHECK64-NEXT:    .cfi_offset b14, -184
-; CHECK64-NEXT:    .cfi_offset b15, -192
-; CHECK64-NEXT:    .cfi_offset vg, -200
+; CHECK64-NEXT:    .cfi_offset vg, -64
+; CHECK64-NEXT:    .cfi_offset w30, -72
+; CHECK64-NEXT:    .cfi_offset w29, -80
+; CHECK64-NEXT:    .cfi_offset b8, -152
+; CHECK64-NEXT:    .cfi_offset b9, -160
+; CHECK64-NEXT:    .cfi_offset b10, -168
+; CHECK64-NEXT:    .cfi_offset b11, -176
+; CHECK64-NEXT:    .cfi_offset b12, -184
+; CHECK64-NEXT:    .cfi_offset b13, -192
+; CHECK64-NEXT:    .cfi_offset b14, -200
+; CHECK64-NEXT:    .cfi_offset b15, -208
 ; CHECK64-NEXT:    str d0, [sp, #80] // 8-byte Folded Spill
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:    //APP
@@ -730,12 +731,13 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK64-NEXT:    ldp x20, x19, [sp, #288] // 16-byte Folded Reload
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    ldp x22, x21, [sp, #272] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr x25, [sp, #248] // 8-byte Folded Reload
 ; CHECK64-NEXT:    ldp x24, x23, [sp, #256] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp x29, x25, [sp, #240] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d9, d8, [sp, #160] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d11, d10, [sp, #144] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d13, d12, [sp, #128] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d15, d14, [sp, #112] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x29, x30, [sp, #224] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp d9, d8, [sp, #144] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp d11, d10, [sp, #128] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp d13, d12, [sp, #112] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp d15, d14, [sp, #96] // 16-byte Folded Reload
 ; CHECK64-NEXT:    add sp, sp, #304
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK64-NEXT:    .cfi_restore w19
@@ -745,6 +747,8 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK64-NEXT:    .cfi_restore w23
 ; CHECK64-NEXT:    .cfi_restore w24
 ; CHECK64-NEXT:    .cfi_restore w25
+; CHECK64-NEXT:    .cfi_restore vg
+; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    .cfi_restore b8
 ; CHECK64-NEXT:    .cfi_restore b9
@@ -758,18 +762,16 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ;
 ; CHECK1024-LABEL: csr_x18_25_d8_15_allocdi64_locallystreaming:
 ; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    rdsvl x9, #1
-; CHECK1024-NEXT:    lsr x9, x9, #3
 ; CHECK1024-NEXT:    sub sp, sp, #1168
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 1168
-; CHECK1024-NEXT:    str x9, [sp] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    cntd x9
-; CHECK1024-NEXT:    str x9, [sp, #8] // 8-byte Folded Spill
-; CHECK1024-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK1024-NEXT:    str x29, [sp, #1104] // 8-byte Folded Spill
+; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK1024-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK1024-NEXT:    str x29, [sp, #1088] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x30, [sp, #1096] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x9, [sp, #1104] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x25, [sp, #1112] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x24, [sp, #1120] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x23, [sp, #1128] // 8-byte Folded Spill
@@ -784,16 +786,17 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK1024-NEXT:    .cfi_offset w23, -40
 ; CHECK1024-NEXT:    .cfi_offset w24, -48
 ; CHECK1024-NEXT:    .cfi_offset w25, -56
-; CHECK1024-NEXT:    .cfi_offset w29, -64
-; CHECK1024-NEXT:    .cfi_offset b8, -1096
-; CHECK1024-NEXT:    .cfi_offset b9, -1104
-; CHECK1024-NEXT:    .cfi_offset b10, -1112
-; CHECK1024-NEXT:    .cfi_offset b11, -1120
-; CHECK1024-NEXT:    .cfi_offset b12, -1128
-; CHECK1024-NEXT:    .cfi_offset b13, -1136
-; CHECK1024-NEXT:    .cfi_offset b14, -1144
-; CHECK1024-NEXT:    .cfi_offset b15, -1152
-; CHECK1024-NEXT:    .cfi_offset vg, -1160
+; CHECK1024-NEXT:    .cfi_offset vg, -64
+; CHECK1024-NEXT:    .cfi_offset w30, -72
+; CHECK1024-NEXT:    .cfi_offset w29, -80
+; CHECK1024-NEXT:    .cfi_offset b8, -1112
+; CHECK1024-NEXT:    .cfi_offset b9, -1120
+; CHECK1024-NEXT:    .cfi_offset b10, -1128
+; CHECK1024-NEXT:    .cfi_offset b11, -1136
+; CHECK1024-NEXT:    .cfi_offset b12, -1144
+; CHECK1024-NEXT:    .cfi_offset b13, -1152
+; CHECK1024-NEXT:    .cfi_offset b14, -1160
+; CHECK1024-NEXT:    .cfi_offset b15, -1168
 ; CHECK1024-NEXT:    sub sp, sp, #1056
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 2224
 ; CHECK1024-NEXT:    str d0, [sp, #1040] // 8-byte Folded Spill
@@ -809,18 +812,19 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    add sp, sp, #1056
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 1168
-; CHECK1024-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
+; CHECK1024-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x19, [sp, #1160] // 8-byte Folded Reload
-; CHECK1024-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
+; CHECK1024-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x20, [sp, #1152] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x21, [sp, #1144] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x22, [sp, #1136] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x23, [sp, #1128] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x24, [sp, #1120] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x25, [sp, #1112] // 8-byte Folded Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1104] // 8-byte Folded Reload
-; CHECK1024-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
+; CHECK1024-NEXT:    ldr x30, [sp, #1096] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x29, [sp, #1088] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK1024-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    add sp, sp, #1168
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK1024-NEXT:    .cfi_restore w19
@@ -830,6 +834,8 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK1024-NEXT:    .cfi_restore w23
 ; CHECK1024-NEXT:    .cfi_restore w24
 ; CHECK1024-NEXT:    .cfi_restore w25
+; CHECK1024-NEXT:    .cfi_restore vg
+; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    .cfi_restore b8
 ; CHECK1024-NEXT:    .cfi_restore b9
@@ -955,9 +961,9 @@ define i32 @svecc_csr_d8(i32 noundef %num, <vscale x 4 x i32> %vs) "aarch64_psta
 ; CHECK0-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK0-NEXT:    addvl sp, sp, #-1
 ; CHECK0-NEXT:    str z8, [sp] // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK0-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK0-NEXT:    .cfi_offset w29, -16
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
 ; CHECK0-NEXT:    mov w0, wzr
@@ -973,9 +979,9 @@ define i32 @svecc_csr_d8(i32 noundef %num, <vscale x 4 x i32> %vs) "aarch64_psta
 ; CHECK64-NEXT:    addvl sp, sp, #-1
 ; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
 ; CHECK64-NEXT:    sub sp, sp, #64
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x90, 0x01, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 144 + 8 * VG
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 144 + 8 * VG
 ; CHECK64-NEXT:    .cfi_offset w29, -16
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xb0, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 80 - 8 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
@@ -993,9 +999,9 @@ define i32 @svecc_csr_d8(i32 noundef %num, <vscale x 4 x i32> %vs) "aarch64_psta
 ; CHECK1024-NEXT:    addvl sp, sp, #-1
 ; CHECK1024-NEXT:    str z8, [sp] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x90, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 2064 + 8 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2064 + 8 * VG
 ; CHECK1024-NEXT:    .cfi_offset w29, -16
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xf0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1040 - 8 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
@@ -1017,10 +1023,10 @@ define i32 @svecc_csr_d8d9(i32 noundef %num, <vscale x 4 x i32> %vs) "aarch64_ps
 ; CHECK0-NEXT:    addvl sp, sp, #-2
 ; CHECK0-NEXT:    str z9, [sp] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK0-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK0-NEXT:    .cfi_offset w29, -16
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x40, 0x1c // $d9 @ cfa - 16 * VG - 16
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
 ; CHECK0-NEXT:    mov w0, wzr
@@ -1038,10 +1044,10 @@ define i32 @svecc_csr_d8d9(i32 noundef %num, <vscale x 4 x i32> %vs) "aarch64_ps
 ; CHECK64-NEXT:    str z9, [sp] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    sub sp, sp, #64
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x90, 0x01, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 144 + 16 * VG
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 144 + 16 * VG
 ; CHECK64-NEXT:    .cfi_offset w29, -16
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xb0, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 80 - 8 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0xb0, 0x7f, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 80 - 16 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d9 @ cfa - 16 * VG - 80
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
@@ -1061,10 +1067,10 @@ define i32 @svecc_csr_d8d9(i32 noundef %num, <vscale x 4 x i32> %vs) "aarch64_ps
 ; CHECK1024-NEXT:    str z9, [sp] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x90, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 2064 + 16 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 2064 + 16 * VG
 ; CHECK1024-NEXT:    .cfi_offset w29, -16
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xf0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1040 - 8 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0xf0, 0x77, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 1040 - 16 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d9 @ cfa - 16 * VG - 1040
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
@@ -1086,9 +1092,9 @@ define i32 @svecc_csr_d8_allocd(double %d, <vscale x 4 x i32> %vs) "aarch64_psta
 ; CHECK0-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK0-NEXT:    addvl sp, sp, #-1
 ; CHECK0-NEXT:    str z8, [sp] // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK0-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK0-NEXT:    .cfi_offset w29, -16
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
 ; CHECK0-NEXT:    addvl x8, sp, #1
@@ -1106,9 +1112,9 @@ define i32 @svecc_csr_d8_allocd(double %d, <vscale x 4 x i32> %vs) "aarch64_psta
 ; CHECK64-NEXT:    addvl sp, sp, #-1
 ; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
 ; CHECK64-NEXT:    sub sp, sp, #80
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0xa0, 0x01, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 160 + 8 * VG
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x01, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 160 + 8 * VG
 ; CHECK64-NEXT:    .cfi_offset w29, -16
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xb0, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 80 - 8 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
@@ -1127,9 +1133,9 @@ define i32 @svecc_csr_d8_allocd(double %d, <vscale x 4 x i32> %vs) "aarch64_psta
 ; CHECK1024-NEXT:    addvl sp, sp, #-1
 ; CHECK1024-NEXT:    str z8, [sp] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0xa0, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 2080 + 8 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
 ; CHECK1024-NEXT:    .cfi_offset w29, -16
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xf0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1040 - 8 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
@@ -1153,9 +1159,9 @@ define i32 @svecc_csr_d8_alloci64(i64 %d, <vscale x 4 x i32> %vs) "aarch64_pstat
 ; CHECK0-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK0-NEXT:    addvl sp, sp, #-1
 ; CHECK0-NEXT:    str z8, [sp] // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK0-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK0-NEXT:    .cfi_offset w29, -16
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
 ; CHECK0-NEXT:    mov x8, x0
@@ -1174,9 +1180,9 @@ define i32 @svecc_csr_d8_alloci64(i64 %d, <vscale x 4 x i32> %vs) "aarch64_pstat
 ; CHECK64-NEXT:    addvl sp, sp, #-1
 ; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
 ; CHECK64-NEXT:    sub sp, sp, #80
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0xa0, 0x01, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 160 + 8 * VG
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x01, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 160 + 8 * VG
 ; CHECK64-NEXT:    .cfi_offset w29, -16
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xb0, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 80 - 8 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
 ; CHECK64-NEXT:    mov x8, x0
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
@@ -1196,9 +1202,9 @@ define i32 @svecc_csr_d8_alloci64(i64 %d, <vscale x 4 x i32> %vs) "aarch64_pstat
 ; CHECK1024-NEXT:    addvl sp, sp, #-1
 ; CHECK1024-NEXT:    str z8, [sp] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0xa0, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 2080 + 8 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
 ; CHECK1024-NEXT:    .cfi_offset w29, -16
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xf0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1040 - 8 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
 ; CHECK1024-NEXT:    mov x8, x0
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
@@ -1224,9 +1230,9 @@ define i32 @svecc_csr_d8_allocnxv4i32(i64 %d, <vscale x 4 x i32> %vs) "aarch64_p
 ; CHECK0-NEXT:    addvl sp, sp, #-1
 ; CHECK0-NEXT:    str z8, [sp] // 16-byte Folded Spill
 ; CHECK0-NEXT:    addvl sp, sp, #-1
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK0-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK0-NEXT:    .cfi_offset w29, -16
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
 ; CHECK0-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    //APP
@@ -1246,9 +1252,9 @@ define i32 @svecc_csr_d8_allocnxv4i32(i64 %d, <vscale x 4 x i32> %vs) "aarch64_p
 ; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
 ; CHECK64-NEXT:    sub sp, sp, #64
 ; CHECK64-NEXT:    addvl sp, sp, #-1
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x90, 0x01, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 144 + 16 * VG
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 144 + 16 * VG
 ; CHECK64-NEXT:    .cfi_offset w29, -16
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xb0, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 80 - 8 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
 ; CHECK64-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK64-NEXT:    add x8, sp, #64
 ; CHECK64-NEXT:    mov w0, wzr
@@ -1271,9 +1277,9 @@ define i32 @svecc_csr_d8_allocnxv4i32(i64 %d, <vscale x 4 x i32> %vs) "aarch64_p
 ; CHECK1024-NEXT:    str z8, [sp] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1024
 ; CHECK1024-NEXT:    addvl sp, sp, #-1
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x90, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 2064 + 16 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 2064 + 16 * VG
 ; CHECK1024-NEXT:    .cfi_offset w29, -16
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xf0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1040 - 8 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
 ; CHECK1024-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK1024-NEXT:    add x8, sp, #1024
 ; CHECK1024-NEXT:    mov w0, wzr
@@ -1311,7 +1317,7 @@ define i32 @svecc_csr_x18_25_d8_15_allocdi64(i64 %d, double %e, <vscale x 4 x i3
 ; CHECK0-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    sub sp, sp, #16
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xd0, 0x00, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 80 + 64 * VG
+; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xd0, 0x00, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 80 + 64 * VG
 ; CHECK0-NEXT:    .cfi_offset w19, -8
 ; CHECK0-NEXT:    .cfi_offset w20, -16
 ; CHECK0-NEXT:    .cfi_offset w21, -24
@@ -1320,14 +1326,14 @@ define i32 @svecc_csr_x18_25_d8_15_allocdi64(i64 %d, double %e, <vscale x 4 x i3
 ; CHECK0-NEXT:    .cfi_offset w24, -48
 ; CHECK0-NEXT:    .cfi_offset w25, -56
 ; CHECK0-NEXT:    .cfi_offset w29, -64
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 64 - 8 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 64 - 16 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 64 - 24 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 64 - 32 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 64 - 40 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 64 - 48 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 64 - 56 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 64 - 64 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d8 @ cfa - 8 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d9 @ cfa - 16 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d10 @ cfa - 24 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d11 @ cfa - 32 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d12 @ cfa - 40 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d13 @ cfa - 48 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d14 @ cfa - 56 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d15 @ cfa - 64 * VG - 64
 ; CHECK0-NEXT:    mov x8, x0
 ; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    //APP
@@ -1368,7 +1374,7 @@ define i32 @svecc_csr_x18_25_d8_15_allocdi64(i64 %d, double %e, <vscale x 4 x i3
 ; CHECK64-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    sub sp, sp, #96
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xe0, 0x01, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 224 + 64 * VG
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xe0, 0x01, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 224 + 64 * VG
 ; CHECK64-NEXT:    .cfi_offset w19, -8
 ; CHECK64-NEXT:    .cfi_offset w20, -16
 ; CHECK64-NEXT:    .cfi_offset w21, -24
@@ -1377,14 +1383,14 @@ define i32 @svecc_csr_x18_25_d8_15_allocdi64(i64 %d, double %e, <vscale x 4 x i3
 ; CHECK64-NEXT:    .cfi_offset w24, -48
 ; CHECK64-NEXT:    .cfi_offset w25, -56
 ; CHECK64-NEXT:    .cfi_offset w29, -64
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 128 - 8 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 128 - 16 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 128 - 24 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 128 - 32 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 128 - 40 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 128 - 48 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 128 - 56 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 128 - 64 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d9 @ cfa - 16 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d10 @ cfa - 24 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d11 @ cfa - 32 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d12 @ cfa - 40 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d13 @ cfa - 48 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d14 @ cfa - 56 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 64 * VG - 128
 ; CHECK64-NEXT:    mov x8, x0
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
@@ -1431,7 +1437,7 @@ define i32 @svecc_csr_x18_25_d8_15_allocdi64(i64 %d, double %e, <vscale x 4 x i3
 ; CHECK1024-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xe0, 0x10, 0x22, 0x11, 0xc0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 2144 + 64 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xe0, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 2144 + 64 * VG
 ; CHECK1024-NEXT:    .cfi_offset w19, -8
 ; CHECK1024-NEXT:    .cfi_offset w20, -16
 ; CHECK1024-NEXT:    .cfi_offset w21, -24
@@ -1440,14 +1446,14 @@ define i32 @svecc_csr_x18_25_d8_15_allocdi64(i64 %d, double %e, <vscale x 4 x i3
 ; CHECK1024-NEXT:    .cfi_offset w24, -48
 ; CHECK1024-NEXT:    .cfi_offset w25, -56
 ; CHECK1024-NEXT:    .cfi_offset w29, -64
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1088 - 8 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 1088 - 16 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 1088 - 24 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 1088 - 32 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 1088 - 40 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 1088 - 48 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 1088 - 56 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 1088 - 64 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d9 @ cfa - 16 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d10 @ cfa - 24 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d11 @ cfa - 32 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d12 @ cfa - 40 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d13 @ cfa - 48 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d14 @ cfa - 56 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * VG - 1088
 ; CHECK1024-NEXT:    mov x8, x0
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
@@ -1570,36 +1576,38 @@ define [2 x <vscale x 4 x i1>] @sve_signature_pred_2xv4i1_caller([2 x <vscale x 
 define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32 %b) "aarch64_pstate_sm_compatible" {
 ; CHECK0-LABEL: f128_libcall:
 ; CHECK0:       // %bb.0:
-; CHECK0-NEXT:    sub sp, sp, #176
-; CHECK0-NEXT:    .cfi_def_cfa_offset 176
+; CHECK0-NEXT:    sub sp, sp, #192
+; CHECK0-NEXT:    .cfi_def_cfa_offset 192
 ; CHECK0-NEXT:    cntd x9
 ; CHECK0-NEXT:    stp d15, d14, [sp, #64] // 16-byte Folded Spill
 ; CHECK0-NEXT:    stp d13, d12, [sp, #80] // 16-byte Folded Spill
 ; CHECK0-NEXT:    stp d11, d10, [sp, #96] // 16-byte Folded Spill
 ; CHECK0-NEXT:    stp d9, d8, [sp, #112] // 16-byte Folded Spill
-; CHECK0-NEXT:    stp x30, x9, [sp, #128] // 16-byte Folded Spill
-; CHECK0-NEXT:    stp x22, x21, [sp, #144] // 16-byte Folded Spill
-; CHECK0-NEXT:    stp x20, x19, [sp, #160] // 16-byte Folded Spill
+; CHECK0-NEXT:    stp x29, x30, [sp, #128] // 16-byte Folded Spill
+; CHECK0-NEXT:    str x9, [sp, #144] // 8-byte Folded Spill
+; CHECK0-NEXT:    stp x22, x21, [sp, #160] // 16-byte Folded Spill
+; CHECK0-NEXT:    stp x20, x19, [sp, #176] // 16-byte Folded Spill
 ; CHECK0-NEXT:    .cfi_offset w19, -8
 ; CHECK0-NEXT:    .cfi_offset w20, -16
 ; CHECK0-NEXT:    .cfi_offset w21, -24
 ; CHECK0-NEXT:    .cfi_offset w22, -32
-; CHECK0-NEXT:    .cfi_offset w30, -48
-; CHECK0-NEXT:    .cfi_offset b8, -56
-; CHECK0-NEXT:    .cfi_offset b9, -64
-; CHECK0-NEXT:    .cfi_offset b10, -72
-; CHECK0-NEXT:    .cfi_offset b11, -80
-; CHECK0-NEXT:    .cfi_offset b12, -88
-; CHECK0-NEXT:    .cfi_offset b13, -96
-; CHECK0-NEXT:    .cfi_offset b14, -104
-; CHECK0-NEXT:    .cfi_offset b15, -112
+; CHECK0-NEXT:    .cfi_offset vg, -48
+; CHECK0-NEXT:    .cfi_offset w30, -56
+; CHECK0-NEXT:    .cfi_offset w29, -64
+; CHECK0-NEXT:    .cfi_offset b8, -72
+; CHECK0-NEXT:    .cfi_offset b9, -80
+; CHECK0-NEXT:    .cfi_offset b10, -88
+; CHECK0-NEXT:    .cfi_offset b11, -96
+; CHECK0-NEXT:    .cfi_offset b12, -104
+; CHECK0-NEXT:    .cfi_offset b13, -112
+; CHECK0-NEXT:    .cfi_offset b14, -120
+; CHECK0-NEXT:    .cfi_offset b15, -128
 ; CHECK0-NEXT:    mov w19, w1
 ; CHECK0-NEXT:    mov w20, w0
 ; CHECK0-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK0-NEXT:    stp q2, q3, [sp, #32] // 32-byte Folded Spill
 ; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x21, x0, #0x1
-; CHECK0-NEXT:    .cfi_offset vg, -40
+; CHECK0-NEXT:    mov x21, x0
 ; CHECK0-NEXT:    tbz w21, #0, .LBB27_2
 ; CHECK0-NEXT:  // %bb.1:
 ; CHECK0-NEXT:    smstop sm
@@ -1611,40 +1619,37 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK0-NEXT:    smstart sm
 ; CHECK0-NEXT:  .LBB27_4:
 ; CHECK0-NEXT:    cmp w0, #0
-; CHECK0-NEXT:    .cfi_restore vg
-; CHECK0-NEXT:    cset w21, lt
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x22, x0, #0x1
-; CHECK0-NEXT:    .cfi_offset vg, -40
-; CHECK0-NEXT:    tbz w22, #0, .LBB27_6
+; CHECK0-NEXT:    cset w22, mi
+; CHECK0-NEXT:    tbz w21, #0, .LBB27_6
 ; CHECK0-NEXT:  // %bb.5:
 ; CHECK0-NEXT:    smstop sm
 ; CHECK0-NEXT:  .LBB27_6:
 ; CHECK0-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
 ; CHECK0-NEXT:    bl __getf2
-; CHECK0-NEXT:    tbz w22, #0, .LBB27_8
+; CHECK0-NEXT:    tbz w21, #0, .LBB27_8
 ; CHECK0-NEXT:  // %bb.7:
 ; CHECK0-NEXT:    smstart sm
 ; CHECK0-NEXT:  .LBB27_8:
 ; CHECK0-NEXT:    cmp w0, #0
-; CHECK0-NEXT:    cset w8, ge
-; CHECK0-NEXT:    tst w8, w21
-; CHECK0-NEXT:    csel w0, w20, w19, ne
-; CHECK0-NEXT:    .cfi_restore vg
-; CHECK0-NEXT:    ldp x20, x19, [sp, #160] // 16-byte Folded Reload
-; CHECK0-NEXT:    ldr x30, [sp, #128] // 8-byte Folded Reload
-; CHECK0-NEXT:    ldp x22, x21, [sp, #144] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp x29, x30, [sp, #128] // 16-byte Folded Reload
+; CHECK0-NEXT:    cset w8, pl
 ; CHECK0-NEXT:    ldp d9, d8, [sp, #112] // 16-byte Folded Reload
+; CHECK0-NEXT:    tst w8, w22
+; CHECK0-NEXT:    ldp x22, x21, [sp, #160] // 16-byte Folded Reload
+; CHECK0-NEXT:    csel w0, w20, w19, ne
+; CHECK0-NEXT:    ldp x20, x19, [sp, #176] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldp d11, d10, [sp, #96] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldp d13, d12, [sp, #80] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldp d15, d14, [sp, #64] // 16-byte Folded Reload
-; CHECK0-NEXT:    add sp, sp, #176
+; CHECK0-NEXT:    add sp, sp, #192
 ; CHECK0-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK0-NEXT:    .cfi_restore w19
 ; CHECK0-NEXT:    .cfi_restore w20
 ; CHECK0-NEXT:    .cfi_restore w21
 ; CHECK0-NEXT:    .cfi_restore w22
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
+; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    .cfi_restore b8
 ; CHECK0-NEXT:    .cfi_restore b9
 ; CHECK0-NEXT:    .cfi_restore b10
@@ -1665,13 +1670,15 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    stp d11, d10, [sp, #160] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp d9, d8, [sp, #176] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x9, x22, [sp, #272] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x21, x20, [sp, #288] // 16-byte Folded Spill
-; CHECK64-NEXT:    str x19, [sp, #304] // 8-byte Folded Spill
-; CHECK64-NEXT:    .cfi_offset w19, -16
-; CHECK64-NEXT:    .cfi_offset w20, -24
-; CHECK64-NEXT:    .cfi_offset w21, -32
-; CHECK64-NEXT:    .cfi_offset w22, -40
+; CHECK64-NEXT:    stp x9, x28, [sp, #272] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x22, x21, [sp, #288] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x20, x19, [sp, #304] // 16-byte Folded Spill
+; CHECK64-NEXT:    .cfi_offset w19, -8
+; CHECK64-NEXT:    .cfi_offset w20, -16
+; CHECK64-NEXT:    .cfi_offset w21, -24
+; CHECK64-NEXT:    .cfi_offset w22, -32
+; CHECK64-NEXT:    .cfi_offset w28, -40
+; CHECK64-NEXT:    .cfi_offset vg, -48
 ; CHECK64-NEXT:    .cfi_offset w30, -56
 ; CHECK64-NEXT:    .cfi_offset w29, -64
 ; CHECK64-NEXT:    .cfi_offset b8, -136
@@ -1687,8 +1694,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    stp q0, q1, [sp, #64] // 32-byte Folded Spill
 ; CHECK64-NEXT:    stp q2, q3, [sp, #96] // 32-byte Folded Spill
 ; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x21, x0, #0x1
-; CHECK64-NEXT:    .cfi_offset vg, -48
+; CHECK64-NEXT:    mov x21, x0
 ; CHECK64-NEXT:    tbz w21, #0, .LBB27_2
 ; CHECK64-NEXT:  // %bb.1:
 ; CHECK64-NEXT:    smstop sm
@@ -1700,31 +1706,27 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:  .LBB27_4:
 ; CHECK64-NEXT:    cmp w0, #0
-; CHECK64-NEXT:    .cfi_restore vg
-; CHECK64-NEXT:    cset w21, lt
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x22, x0, #0x1
-; CHECK64-NEXT:    .cfi_offset vg, -48
-; CHECK64-NEXT:    tbz w22, #0, .LBB27_6
+; CHECK64-NEXT:    cset w22, mi
+; CHECK64-NEXT:    tbz w21, #0, .LBB27_6
 ; CHECK64-NEXT:  // %bb.5:
 ; CHECK64-NEXT:    smstop sm
 ; CHECK64-NEXT:  .LBB27_6:
 ; CHECK64-NEXT:    ldp q0, q1, [sp, #96] // 32-byte Folded Reload
 ; CHECK64-NEXT:    bl __getf2
-; CHECK64-NEXT:    tbz w22, #0, .LBB27_8
+; CHECK64-NEXT:    tbz w21, #0, .LBB27_8
 ; CHECK64-NEXT:  // %bb.7:
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:  .LBB27_8:
 ; CHECK64-NEXT:    cmp w0, #0
-; CHECK64-NEXT:    cset w8, ge
-; CHECK64-NEXT:    tst w8, w21
-; CHECK64-NEXT:    csel w0, w20, w19, ne
-; CHECK64-NEXT:    .cfi_restore vg
-; CHECK64-NEXT:    ldp x20, x19, [sp, #296] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp x22, x21, [sp, #280] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldp x29, x30, [sp, #256] // 16-byte Folded Reload
+; CHECK64-NEXT:    cset w8, pl
 ; CHECK64-NEXT:    ldp d9, d8, [sp, #176] // 16-byte Folded Reload
+; CHECK64-NEXT:    tst w8, w22
+; CHECK64-NEXT:    ldp x22, x21, [sp, #288] // 16-byte Folded Reload
+; CHECK64-NEXT:    csel w0, w20, w19, ne
+; CHECK64-NEXT:    ldp x20, x19, [sp, #304] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldp d11, d10, [sp, #160] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr x28, [sp, #280] // 8-byte Folded Reload
 ; CHECK64-NEXT:    ldp d13, d12, [sp, #144] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldp d15, d14, [sp, #128] // 16-byte Folded Reload
 ; CHECK64-NEXT:    add sp, sp, #320
@@ -1733,6 +1735,8 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    .cfi_restore w20
 ; CHECK64-NEXT:    .cfi_restore w21
 ; CHECK64-NEXT:    .cfi_restore w22
+; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    .cfi_restore b8
@@ -1757,14 +1761,17 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    str x29, [sp, #1088] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x30, [sp, #1096] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x9, [sp, #1104] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x22, [sp, #1112] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x21, [sp, #1120] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x20, [sp, #1128] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x19, [sp, #1136] // 8-byte Folded Spill
-; CHECK1024-NEXT:    .cfi_offset w19, -16
-; CHECK1024-NEXT:    .cfi_offset w20, -24
-; CHECK1024-NEXT:    .cfi_offset w21, -32
-; CHECK1024-NEXT:    .cfi_offset w22, -40
+; CHECK1024-NEXT:    str x28, [sp, #1112] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x22, [sp, #1120] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x21, [sp, #1128] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x20, [sp, #1136] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x19, [sp, #1144] // 8-byte Folded Spill
+; CHECK1024-NEXT:    .cfi_offset w19, -8
+; CHECK1024-NEXT:    .cfi_offset w20, -16
+; CHECK1024-NEXT:    .cfi_offset w21, -24
+; CHECK1024-NEXT:    .cfi_offset w22, -32
+; CHECK1024-NEXT:    .cfi_offset w28, -40
+; CHECK1024-NEXT:    .cfi_offset vg, -48
 ; CHECK1024-NEXT:    .cfi_offset w30, -56
 ; CHECK1024-NEXT:    .cfi_offset w29, -64
 ; CHECK1024-NEXT:    .cfi_offset b8, -1096
@@ -1784,8 +1791,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    str q1, [sp, #1040] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str q0, [sp, #1024] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x21, x0, #0x1
-; CHECK1024-NEXT:    .cfi_offset vg, -48
+; CHECK1024-NEXT:    mov x21, x0
 ; CHECK1024-NEXT:    tbz w21, #0, .LBB27_2
 ; CHECK1024-NEXT:  // %bb.1:
 ; CHECK1024-NEXT:    smstop sm
@@ -1798,35 +1804,31 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    smstart sm
 ; CHECK1024-NEXT:  .LBB27_4:
 ; CHECK1024-NEXT:    cmp w0, #0
-; CHECK1024-NEXT:    .cfi_restore vg
-; CHECK1024-NEXT:    cset w21, lt
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x22, x0, #0x1
-; CHECK1024-NEXT:    .cfi_offset vg, -48
-; CHECK1024-NEXT:    tbz w22, #0, .LBB27_6
+; CHECK1024-NEXT:    cset w22, mi
+; CHECK1024-NEXT:    tbz w21, #0, .LBB27_6
 ; CHECK1024-NEXT:  // %bb.5:
 ; CHECK1024-NEXT:    smstop sm
 ; CHECK1024-NEXT:  .LBB27_6:
 ; CHECK1024-NEXT:    ldr q0, [sp, #1056] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr q1, [sp, #1072] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    bl __getf2
-; CHECK1024-NEXT:    tbz w22, #0, .LBB27_8
+; CHECK1024-NEXT:    tbz w21, #0, .LBB27_8
 ; CHECK1024-NEXT:  // %bb.7:
 ; CHECK1024-NEXT:    smstart sm
 ; CHECK1024-NEXT:  .LBB27_8:
 ; CHECK1024-NEXT:    cmp w0, #0
-; CHECK1024-NEXT:    cset w8, ge
-; CHECK1024-NEXT:    tst w8, w21
+; CHECK1024-NEXT:    cset w8, pl
+; CHECK1024-NEXT:    tst w8, w22
 ; CHECK1024-NEXT:    csel w0, w20, w19, ne
-; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    add sp, sp, #1088
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 1152
 ; CHECK1024-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x19, [sp, #1136] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x19, [sp, #1144] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x20, [sp, #1128] // 8-byte Folded Reload
-; CHECK1024-NEXT:    ldr x21, [sp, #1120] // 8-byte Folded Reload
-; CHECK1024-NEXT:    ldr x22, [sp, #1112] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x20, [sp, #1136] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x21, [sp, #1128] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x22, [sp, #1120] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x28, [sp, #1112] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x30, [sp, #1096] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x29, [sp, #1088] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
@@ -1837,6 +1839,8 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    .cfi_restore w20
 ; CHECK1024-NEXT:    .cfi_restore w21
 ; CHECK1024-NEXT:    .cfi_restore w22
+; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    .cfi_restore b8
@@ -1848,6 +1852,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    .cfi_restore b14
 ; CHECK1024-NEXT:    .cfi_restore b15
 ; CHECK1024-NEXT:    ret
+;el w0, w20, w19, ne
   %c0 = fcmp olt fp128 %v0, %v1
   %c1 = fcmp oge fp128 %v2, %v3
   %cr = and i1 %c1, %c0
@@ -1858,18 +1863,22 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, i16 %P4) "aarch64_pstate_sm_compatible" {
 ; CHECK0-LABEL: svecc_call:
 ; CHECK0:       // %bb.0: // %entry
-; CHECK0-NEXT:    stp x29, x30, [sp, #-48]! // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_def_cfa_offset 48
+; CHECK0-NEXT:    stp x29, x30, [sp, #-64]! // 16-byte Folded Spill
+; CHECK0-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK0-NEXT:    cntd x9
-; CHECK0-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
-; CHECK0-NEXT:    stp x27, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK0-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
+; CHECK0-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; CHECK0-NEXT:    stp x26, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK0-NEXT:    mov x29, sp
+; CHECK0-NEXT:    .cfi_def_cfa w29, 64
 ; CHECK0-NEXT:    .cfi_offset w19, -8
-; CHECK0-NEXT:    .cfi_offset w27, -16
-; CHECK0-NEXT:    .cfi_offset w28, -24
-; CHECK0-NEXT:    .cfi_offset w30, -40
-; CHECK0-NEXT:    .cfi_offset w29, -48
+; CHECK0-NEXT:    .cfi_offset w26, -16
+; CHECK0-NEXT:    .cfi_offset w27, -24
+; CHECK0-NEXT:    .cfi_offset w28, -32
+; CHECK0-NEXT:    .cfi_offset vg, -48
+; CHECK0-NEXT:    .cfi_offset w30, -56
+; CHECK0-NEXT:    .cfi_offset w29, -64
 ; CHECK0-NEXT:    addvl sp, sp, #-18
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x30, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 48 + 144 * VG
 ; CHECK0-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK0-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK0-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
@@ -1898,20 +1907,19 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK0-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 48 - 8 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 48 - 16 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 48 - 24 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 48 - 32 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 48 - 40 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 48 - 48 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 48 - 56 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 48 - 64 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d8 @ cfa - 8 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d9 @ cfa - 16 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d10 @ cfa - 24 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d11 @ cfa - 32 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d12 @ cfa - 40 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d13 @ cfa - 48 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d14 @ cfa - 56 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d15 @ cfa - 64 * IncomingVG - 64
 ; CHECK0-NEXT:    mov x8, x0
+; CHECK0-NEXT:    bl __arm_sme_state
+; CHECK0-NEXT:    mov x19, x0
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x19, x0, #0x1
-; CHECK0-NEXT:    .cfi_offset vg, -32
 ; CHECK0-NEXT:    tbz w19, #0, .LBB28_2
 ; CHECK0-NEXT:  // %bb.1: // %entry
 ; CHECK0-NEXT:    smstop sm
@@ -1924,13 +1932,12 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK0-NEXT:  // %bb.3: // %entry
 ; CHECK0-NEXT:    smstart sm
 ; CHECK0-NEXT:  .LBB28_4: // %entry
-; CHECK0-NEXT:    mov w0, #22647 // =0x5877
-; CHECK0-NEXT:    movk w0, #59491, lsl #16
-; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK0-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK0-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK0-NEXT:    movk w0, #59491, lsl #16
 ; CHECK0-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
@@ -1956,7 +1963,6 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK0-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; CHECK0-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; CHECK0-NEXT:    addvl sp, sp, #18
-; CHECK0-NEXT:    .cfi_def_cfa wsp, 48
 ; CHECK0-NEXT:    .cfi_restore z8
 ; CHECK0-NEXT:    .cfi_restore z9
 ; CHECK0-NEXT:    .cfi_restore z10
@@ -1965,32 +1971,39 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK0-NEXT:    .cfi_restore z13
 ; CHECK0-NEXT:    .cfi_restore z14
 ; CHECK0-NEXT:    .cfi_restore z15
-; CHECK0-NEXT:    ldp x27, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK0-NEXT:    ldr x28, [sp, #24] // 8-byte Folded Reload
-; CHECK0-NEXT:    ldp x29, x30, [sp], #48 // 16-byte Folded Reload
+; CHECK0-NEXT:    .cfi_def_cfa wsp, 64
+; CHECK0-NEXT:    ldp x26, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp x29, x30, [sp], #64 // 16-byte Folded Reload
 ; CHECK0-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK0-NEXT:    .cfi_restore w19
+; CHECK0-NEXT:    .cfi_restore w26
 ; CHECK0-NEXT:    .cfi_restore w27
 ; CHECK0-NEXT:    .cfi_restore w28
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    ret
 ;
 ; CHECK64-LABEL: svecc_call:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #112
-; CHECK64-NEXT:    .cfi_def_cfa_offset 112
+; CHECK64-NEXT:    sub sp, sp, #128
+; CHECK64-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK64-NEXT:    cntd x9
 ; CHECK64-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp x9, x28, [sp, #80] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x27, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK64-NEXT:    .cfi_offset w19, -8
-; CHECK64-NEXT:    .cfi_offset w27, -16
-; CHECK64-NEXT:    .cfi_offset w28, -24
-; CHECK64-NEXT:    .cfi_offset w30, -40
-; CHECK64-NEXT:    .cfi_offset w29, -48
+; CHECK64-NEXT:    stp x27, x26, [sp, #96] // 16-byte Folded Spill
+; CHECK64-NEXT:    str x19, [sp, #112] // 8-byte Folded Spill
+; CHECK64-NEXT:    add x29, sp, #64
+; CHECK64-NEXT:    .cfi_def_cfa w29, 64
+; CHECK64-NEXT:    .cfi_offset w19, -16
+; CHECK64-NEXT:    .cfi_offset w26, -24
+; CHECK64-NEXT:    .cfi_offset w27, -32
+; CHECK64-NEXT:    .cfi_offset w28, -40
+; CHECK64-NEXT:    .cfi_offset vg, -48
+; CHECK64-NEXT:    .cfi_offset w30, -56
+; CHECK64-NEXT:    .cfi_offset w29, -64
 ; CHECK64-NEXT:    addvl sp, sp, #-18
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xf0, 0x00, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 112 + 144 * VG
 ; CHECK64-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK64-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK64-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
@@ -2019,22 +2032,20 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK64-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 112 - 8 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 112 - 16 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 112 - 24 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 112 - 32 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 112 - 40 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 112 - 48 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 112 - 56 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 112 - 64 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d8 @ cfa - 8 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d9 @ cfa - 16 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d10 @ cfa - 24 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d11 @ cfa - 32 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d12 @ cfa - 40 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d13 @ cfa - 48 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d14 @ cfa - 56 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 64 * IncomingVG - 128
 ; CHECK64-NEXT:    sub sp, sp, #64
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xb0, 0x01, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 176 + 144 * VG
 ; CHECK64-NEXT:    mov x8, x0
+; CHECK64-NEXT:    bl __arm_sme_state
+; CHECK64-NEXT:    mov x19, x0
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x19, x0, #0x1
-; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    tbz w19, #0, .LBB28_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
 ; CHECK64-NEXT:    smstop sm
@@ -2049,9 +2060,7 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK64-NEXT:  .LBB28_4: // %entry
 ; CHECK64-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK64-NEXT:    movk w0, #59491, lsl #16
-; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    add sp, sp, #64
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xf0, 0x00, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 112 + 144 * VG
 ; CHECK64-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -2081,7 +2090,6 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK64-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; CHECK64-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; CHECK64-NEXT:    addvl sp, sp, #18
-; CHECK64-NEXT:    .cfi_def_cfa wsp, 112
 ; CHECK64-NEXT:    .cfi_restore z8
 ; CHECK64-NEXT:    .cfi_restore z9
 ; CHECK64-NEXT:    .cfi_restore z10
@@ -2090,36 +2098,43 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK64-NEXT:    .cfi_restore z13
 ; CHECK64-NEXT:    .cfi_restore z14
 ; CHECK64-NEXT:    .cfi_restore z15
-; CHECK64-NEXT:    ldp x27, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldr x28, [sp, #88] // 8-byte Folded Reload
+; CHECK64-NEXT:    .cfi_def_cfa wsp, 128
+; CHECK64-NEXT:    ldp x26, x19, [sp, #104] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x28, x27, [sp, #88] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #112
+; CHECK64-NEXT:    add sp, sp, #128
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK64-NEXT:    .cfi_restore w19
+; CHECK64-NEXT:    .cfi_restore w26
 ; CHECK64-NEXT:    .cfi_restore w27
 ; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    ret
 ;
 ; CHECK1024-LABEL: svecc_call:
 ; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1072
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 1072
+; CHECK1024-NEXT:    sub sp, sp, #1088
+; CHECK1024-NEXT:    .cfi_def_cfa_offset 1088
 ; CHECK1024-NEXT:    cntd x9
 ; CHECK1024-NEXT:    str x29, [sp, #1024] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x30, [sp, #1032] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x9, [sp, #1040] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x28, [sp, #1048] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x27, [sp, #1056] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x19, [sp, #1064] // 8-byte Folded Spill
-; CHECK1024-NEXT:    .cfi_offset w19, -8
-; CHECK1024-NEXT:    .cfi_offset w27, -16
-; CHECK1024-NEXT:    .cfi_offset w28, -24
-; CHECK1024-NEXT:    .cfi_offset w30, -40
-; CHECK1024-NEXT:    .cfi_offset w29, -48
+; CHECK1024-NEXT:    str x26, [sp, #1064] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x19, [sp, #1072] // 8-byte Folded Spill
+; CHECK1024-NEXT:    add x29, sp, #1024
+; CHECK1024-NEXT:    .cfi_def_cfa w29, 64
+; CHECK1024-NEXT:    .cfi_offset w19, -16
+; CHECK1024-NEXT:    .cfi_offset w26, -24
+; CHECK1024-NEXT:    .cfi_offset w27, -32
+; CHECK1024-NEXT:    .cfi_offset w28, -40
+; CHECK1024-NEXT:    .cfi_offset vg, -48
+; CHECK1024-NEXT:    .cfi_offset w30, -56
+; CHECK1024-NEXT:    .cfi_offset w29, -64
 ; CHECK1024-NEXT:    addvl sp, sp, #-18
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xb0, 0x08, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 1072 + 144 * VG
 ; CHECK1024-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK1024-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK1024-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
@@ -2148,22 +2163,20 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK1024-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1072 - 8 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 1072 - 16 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 1072 - 24 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 1072 - 32 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 1072 - 40 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 1072 - 48 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 1072 - 56 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 1072 - 64 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d8 @ cfa - 8 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d9 @ cfa - 16 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d10 @ cfa - 24 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d11 @ cfa - 32 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d12 @ cfa - 40 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d13 @ cfa - 48 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d14 @ cfa - 56 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * IncomingVG - 1088
 ; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xb0, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 2096 + 144 * VG
 ; CHECK1024-NEXT:    mov x8, x0
+; CHECK1024-NEXT:    bl __arm_sme_state
+; CHECK1024-NEXT:    mov x19, x0
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x19, x0, #0x1
-; CHECK1024-NEXT:    .cfi_offset vg, -32
 ; CHECK1024-NEXT:    tbz w19, #0, .LBB28_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
 ; CHECK1024-NEXT:    smstop sm
@@ -2178,9 +2191,7 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK1024-NEXT:  .LBB28_4: // %entry
 ; CHECK1024-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK1024-NEXT:    movk w0, #59491, lsl #16
-; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    add sp, sp, #1024
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xb0, 0x08, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 1072 + 144 * VG
 ; CHECK1024-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -2210,7 +2221,6 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK1024-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; CHECK1024-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; CHECK1024-NEXT:    addvl sp, sp, #18
-; CHECK1024-NEXT:    .cfi_def_cfa wsp, 1072
 ; CHECK1024-NEXT:    .cfi_restore z8
 ; CHECK1024-NEXT:    .cfi_restore z9
 ; CHECK1024-NEXT:    .cfi_restore z10
@@ -2219,16 +2229,20 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK1024-NEXT:    .cfi_restore z13
 ; CHECK1024-NEXT:    .cfi_restore z14
 ; CHECK1024-NEXT:    .cfi_restore z15
-; CHECK1024-NEXT:    ldr x19, [sp, #1064] // 8-byte Folded Reload
+; CHECK1024-NEXT:    .cfi_def_cfa wsp, 1088
+; CHECK1024-NEXT:    ldr x19, [sp, #1072] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x26, [sp, #1064] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x27, [sp, #1056] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x28, [sp, #1048] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x30, [sp, #1032] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x29, [sp, #1024] // 8-byte Folded Reload
-; CHECK1024-NEXT:    add sp, sp, #1072
+; CHECK1024-NEXT:    add sp, sp, #1088
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK1024-NEXT:    .cfi_restore w19
+; CHECK1024-NEXT:    .cfi_restore w26
 ; CHECK1024-NEXT:    .cfi_restore w27
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    ret
@@ -2241,18 +2255,22 @@ entry:
 define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, i16 %P4) "aarch64_pstate_sm_compatible" {
 ; CHECK0-LABEL: svecc_alloca_call:
 ; CHECK0:       // %bb.0: // %entry
-; CHECK0-NEXT:    stp x29, x30, [sp, #-48]! // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_def_cfa_offset 48
+; CHECK0-NEXT:    stp x29, x30, [sp, #-64]! // 16-byte Folded Spill
+; CHECK0-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK0-NEXT:    cntd x9
-; CHECK0-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
-; CHECK0-NEXT:    stp x27, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK0-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
+; CHECK0-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; CHECK0-NEXT:    stp x26, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK0-NEXT:    mov x29, sp
+; CHECK0-NEXT:    .cfi_def_cfa w29, 64
 ; CHECK0-NEXT:    .cfi_offset w19, -8
-; CHECK0-NEXT:    .cfi_offset w27, -16
-; CHECK0-NEXT:    .cfi_offset w28, -24
-; CHECK0-NEXT:    .cfi_offset w30, -40
-; CHECK0-NEXT:    .cfi_offset w29, -48
+; CHECK0-NEXT:    .cfi_offset w26, -16
+; CHECK0-NEXT:    .cfi_offset w27, -24
+; CHECK0-NEXT:    .cfi_offset w28, -32
+; CHECK0-NEXT:    .cfi_offset vg, -48
+; CHECK0-NEXT:    .cfi_offset w30, -56
+; CHECK0-NEXT:    .cfi_offset w29, -64
 ; CHECK0-NEXT:    addvl sp, sp, #-18
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x30, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 48 + 144 * VG
 ; CHECK0-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK0-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK0-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
@@ -2281,21 +2299,19 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK0-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 48 - 8 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 48 - 16 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 48 - 24 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 48 - 32 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 48 - 40 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 48 - 48 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 48 - 56 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x50, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 48 - 64 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d8 @ cfa - 8 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d9 @ cfa - 16 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d10 @ cfa - 24 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d11 @ cfa - 32 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d12 @ cfa - 40 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d13 @ cfa - 48 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d14 @ cfa - 56 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d15 @ cfa - 64 * IncomingVG - 64
 ; CHECK0-NEXT:    sub sp, sp, #48
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xe0, 0x00, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 96 + 144 * VG
+; CHECK0-NEXT:    bl __arm_sme_state
+; CHECK0-NEXT:    mov x19, x0
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x19, x0, #0x1
-; CHECK0-NEXT:    .cfi_offset vg, -32
 ; CHECK0-NEXT:    tbz w19, #0, .LBB29_2
 ; CHECK0-NEXT:  // %bb.1: // %entry
 ; CHECK0-NEXT:    smstop sm
@@ -2310,9 +2326,7 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK0-NEXT:  .LBB29_4: // %entry
 ; CHECK0-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK0-NEXT:    movk w0, #59491, lsl #16
-; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    add sp, sp, #48
-; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x30, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 48 + 144 * VG
 ; CHECK0-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -2342,7 +2356,6 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK0-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; CHECK0-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; CHECK0-NEXT:    addvl sp, sp, #18
-; CHECK0-NEXT:    .cfi_def_cfa wsp, 48
 ; CHECK0-NEXT:    .cfi_restore z8
 ; CHECK0-NEXT:    .cfi_restore z9
 ; CHECK0-NEXT:    .cfi_restore z10
@@ -2351,32 +2364,39 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK0-NEXT:    .cfi_restore z13
 ; CHECK0-NEXT:    .cfi_restore z14
 ; CHECK0-NEXT:    .cfi_restore z15
-; CHECK0-NEXT:    ldp x27, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK0-NEXT:    ldr x28, [sp, #24] // 8-byte Folded Reload
-; CHECK0-NEXT:    ldp x29, x30, [sp], #48 // 16-byte Folded Reload
+; CHECK0-NEXT:    .cfi_def_cfa wsp, 64
+; CHECK0-NEXT:    ldp x26, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
+; CHECK0-NEXT:    ldp x29, x30, [sp], #64 // 16-byte Folded Reload
 ; CHECK0-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK0-NEXT:    .cfi_restore w19
+; CHECK0-NEXT:    .cfi_restore w26
 ; CHECK0-NEXT:    .cfi_restore w27
 ; CHECK0-NEXT:    .cfi_restore w28
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    ret
 ;
 ; CHECK64-LABEL: svecc_alloca_call:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #112
-; CHECK64-NEXT:    .cfi_def_cfa_offset 112
+; CHECK64-NEXT:    sub sp, sp, #128
+; CHECK64-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK64-NEXT:    cntd x9
 ; CHECK64-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK64-NEXT:    stp x9, x28, [sp, #80] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x27, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK64-NEXT:    .cfi_offset w19, -8
-; CHECK64-NEXT:    .cfi_offset w27, -16
-; CHECK64-NEXT:    .cfi_offset w28, -24
-; CHECK64-NEXT:    .cfi_offset w30, -40
-; CHECK64-NEXT:    .cfi_offset w29, -48
+; CHECK64-NEXT:    stp x27, x26, [sp, #96] // 16-byte Folded Spill
+; CHECK64-NEXT:    str x19, [sp, #112] // 8-byte Folded Spill
+; CHECK64-NEXT:    add x29, sp, #64
+; CHECK64-NEXT:    .cfi_def_cfa w29, 64
+; CHECK64-NEXT:    .cfi_offset w19, -16
+; CHECK64-NEXT:    .cfi_offset w26, -24
+; CHECK64-NEXT:    .cfi_offset w27, -32
+; CHECK64-NEXT:    .cfi_offset w28, -40
+; CHECK64-NEXT:    .cfi_offset vg, -48
+; CHECK64-NEXT:    .cfi_offset w30, -56
+; CHECK64-NEXT:    .cfi_offset w29, -64
 ; CHECK64-NEXT:    addvl sp, sp, #-18
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xf0, 0x00, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 112 + 144 * VG
 ; CHECK64-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK64-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK64-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
@@ -2405,21 +2425,19 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK64-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 112 - 8 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 112 - 16 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 112 - 24 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 112 - 32 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 112 - 40 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 112 - 48 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 112 - 56 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0x90, 0x7f, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 112 - 64 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d8 @ cfa - 8 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d9 @ cfa - 16 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d10 @ cfa - 24 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d11 @ cfa - 32 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d12 @ cfa - 40 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d13 @ cfa - 48 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d14 @ cfa - 56 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 64 * IncomingVG - 128
 ; CHECK64-NEXT:    sub sp, sp, #112
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xe0, 0x01, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 224 + 144 * VG
+; CHECK64-NEXT:    bl __arm_sme_state
+; CHECK64-NEXT:    mov x19, x0
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x19, x0, #0x1
-; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    tbz w19, #0, .LBB29_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
 ; CHECK64-NEXT:    smstop sm
@@ -2434,9 +2452,7 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK64-NEXT:  .LBB29_4: // %entry
 ; CHECK64-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK64-NEXT:    movk w0, #59491, lsl #16
-; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    add sp, sp, #112
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xf0, 0x00, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 112 + 144 * VG
 ; CHECK64-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -2466,7 +2482,6 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK64-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; CHECK64-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; CHECK64-NEXT:    addvl sp, sp, #18
-; CHECK64-NEXT:    .cfi_def_cfa wsp, 112
 ; CHECK64-NEXT:    .cfi_restore z8
 ; CHECK64-NEXT:    .cfi_restore z9
 ; CHECK64-NEXT:    .cfi_restore z10
@@ -2475,36 +2490,43 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK64-NEXT:    .cfi_restore z13
 ; CHECK64-NEXT:    .cfi_restore z14
 ; CHECK64-NEXT:    .cfi_restore z15
-; CHECK64-NEXT:    ldp x27, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldr x28, [sp, #88] // 8-byte Folded Reload
+; CHECK64-NEXT:    .cfi_def_cfa wsp, 128
+; CHECK64-NEXT:    ldp x26, x19, [sp, #104] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x28, x27, [sp, #88] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #112
+; CHECK64-NEXT:    add sp, sp, #128
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK64-NEXT:    .cfi_restore w19
+; CHECK64-NEXT:    .cfi_restore w26
 ; CHECK64-NEXT:    .cfi_restore w27
 ; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    ret
 ;
 ; CHECK1024-LABEL: svecc_alloca_call:
 ; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1072
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 1072
+; CHECK1024-NEXT:    sub sp, sp, #1088
+; CHECK1024-NEXT:    .cfi_def_cfa_offset 1088
 ; CHECK1024-NEXT:    cntd x9
 ; CHECK1024-NEXT:    str x29, [sp, #1024] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x30, [sp, #1032] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x9, [sp, #1040] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x28, [sp, #1048] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    str x27, [sp, #1056] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x19, [sp, #1064] // 8-byte Folded Spill
-; CHECK1024-NEXT:    .cfi_offset w19, -8
-; CHECK1024-NEXT:    .cfi_offset w27, -16
-; CHECK1024-NEXT:    .cfi_offset w28, -24
-; CHECK1024-NEXT:    .cfi_offset w30, -40
-; CHECK1024-NEXT:    .cfi_offset w29, -48
+; CHECK1024-NEXT:    str x26, [sp, #1064] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x19, [sp, #1072] // 8-byte Folded Spill
+; CHECK1024-NEXT:    add x29, sp, #1024
+; CHECK1024-NEXT:    .cfi_def_cfa w29, 64
+; CHECK1024-NEXT:    .cfi_offset w19, -16
+; CHECK1024-NEXT:    .cfi_offset w26, -24
+; CHECK1024-NEXT:    .cfi_offset w27, -32
+; CHECK1024-NEXT:    .cfi_offset w28, -40
+; CHECK1024-NEXT:    .cfi_offset vg, -48
+; CHECK1024-NEXT:    .cfi_offset w30, -56
+; CHECK1024-NEXT:    .cfi_offset w29, -64
 ; CHECK1024-NEXT:    addvl sp, sp, #-18
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xb0, 0x08, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 1072 + 144 * VG
 ; CHECK1024-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK1024-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK1024-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
@@ -2533,21 +2555,19 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK1024-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1072 - 8 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 1072 - 16 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 1072 - 24 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 1072 - 32 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 1072 - 40 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 1072 - 48 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 1072 - 56 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0xd0, 0x77, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 1072 - 64 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d8 @ cfa - 8 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d9 @ cfa - 16 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d10 @ cfa - 24 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d11 @ cfa - 32 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d12 @ cfa - 40 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d13 @ cfa - 48 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d14 @ cfa - 56 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * IncomingVG - 1088
 ; CHECK1024-NEXT:    sub sp, sp, #1072
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xe0, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 2144 + 144 * VG
+; CHECK1024-NEXT:    bl __arm_sme_state
+; CHECK1024-NEXT:    mov x19, x0
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x19, x0, #0x1
-; CHECK1024-NEXT:    .cfi_offset vg, -32
 ; CHECK1024-NEXT:    tbz w19, #0, .LBB29_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
 ; CHECK1024-NEXT:    smstop sm
@@ -2562,9 +2582,7 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK1024-NEXT:  .LBB29_4: // %entry
 ; CHECK1024-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK1024-NEXT:    movk w0, #59491, lsl #16
-; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    add sp, sp, #1072
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xb0, 0x08, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 1072 + 144 * VG
 ; CHECK1024-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -2594,7 +2612,6 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK1024-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; CHECK1024-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; CHECK1024-NEXT:    addvl sp, sp, #18
-; CHECK1024-NEXT:    .cfi_def_cfa wsp, 1072
 ; CHECK1024-NEXT:    .cfi_restore z8
 ; CHECK1024-NEXT:    .cfi_restore z9
 ; CHECK1024-NEXT:    .cfi_restore z10
@@ -2603,19 +2620,24 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK1024-NEXT:    .cfi_restore z13
 ; CHECK1024-NEXT:    .cfi_restore z14
 ; CHECK1024-NEXT:    .cfi_restore z15
-; CHECK1024-NEXT:    ldr x19, [sp, #1064] // 8-byte Folded Reload
+; CHECK1024-NEXT:    .cfi_def_cfa wsp, 1088
+; CHECK1024-NEXT:    ldr x19, [sp, #1072] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x26, [sp, #1064] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x27, [sp, #1056] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x28, [sp, #1048] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x30, [sp, #1032] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    ldr x29, [sp, #1024] // 8-byte Folded Reload
-; CHECK1024-NEXT:    add sp, sp, #1072
+; CHECK1024-NEXT:    add sp, sp, #1088
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK1024-NEXT:    .cfi_restore w19
+; CHECK1024-NEXT:    .cfi_restore w26
 ; CHECK1024-NEXT:    .cfi_restore w27
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    ret
+
 entry:
   tail call void asm sideeffect "", "~{x0},~{x28},~{x27},~{x3}"() #2
   %0 = alloca [37 x i8], align 16
@@ -2816,6 +2838,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK0-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK0-NEXT:    .cfi_offset w19, -8
 ; CHECK0-NEXT:    .cfi_offset w20, -16
+; CHECK0-NEXT:    .cfi_offset vg, -32
 ; CHECK0-NEXT:    .cfi_offset w30, -40
 ; CHECK0-NEXT:    .cfi_offset w29, -48
 ; CHECK0-NEXT:    .cfi_offset b8, -56
@@ -2838,11 +2861,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK0-NEXT:    stur wzr, [x29, #-68]
 ; CHECK0-NEXT:    sturh w8, [x29, #-72]
 ; CHECK0-NEXT:    msr TPIDR2_EL0, x9
-; CHECK0-NEXT:    .cfi_offset vg, -32
 ; CHECK0-NEXT:    smstop sm
 ; CHECK0-NEXT:    bl other
 ; CHECK0-NEXT:    smstart sm
-; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    smstart za
 ; CHECK0-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK0-NEXT:    sub x0, x29, #80
@@ -2863,6 +2884,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK0-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK0-NEXT:    .cfi_restore w19
 ; CHECK0-NEXT:    .cfi_restore w20
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    .cfi_restore b8
@@ -2890,6 +2912,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK64-NEXT:    .cfi_offset w19, -16
 ; CHECK64-NEXT:    .cfi_offset w20, -24
+; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    .cfi_offset w30, -40
 ; CHECK64-NEXT:    .cfi_offset w29, -48
 ; CHECK64-NEXT:    .cfi_offset b8, -120
@@ -2913,11 +2936,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    str wzr, [x19, #12]
 ; CHECK64-NEXT:    strh w8, [x19, #8]
 ; CHECK64-NEXT:    msr TPIDR2_EL0, x9
-; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    smstop sm
 ; CHECK64-NEXT:    bl other
 ; CHECK64-NEXT:    smstart sm
-; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    smstart za
 ; CHECK64-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK64-NEXT:    add x0, x19, #0
@@ -2939,6 +2960,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK64-NEXT:    .cfi_restore w19
 ; CHECK64-NEXT:    .cfi_restore w20
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    .cfi_restore b8
@@ -2971,6 +2993,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    .cfi_offset w19, -8
 ; CHECK1024-NEXT:    .cfi_offset w20, -16
 ; CHECK1024-NEXT:    .cfi_offset w28, -24
+; CHECK1024-NEXT:    .cfi_offset vg, -32
 ; CHECK1024-NEXT:    .cfi_offset w30, -40
 ; CHECK1024-NEXT:    .cfi_offset w29, -48
 ; CHECK1024-NEXT:    .cfi_offset b8, -1080
@@ -2994,11 +3017,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    str wzr, [x19, #12]
 ; CHECK1024-NEXT:    strh w8, [x19, #8]
 ; CHECK1024-NEXT:    msr TPIDR2_EL0, x9
-; CHECK1024-NEXT:    .cfi_offset vg, -32
 ; CHECK1024-NEXT:    smstop sm
 ; CHECK1024-NEXT:    bl other
 ; CHECK1024-NEXT:    smstart sm
-; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    smstart za
 ; CHECK1024-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK1024-NEXT:    add x0, x19, #0
@@ -3024,6 +3045,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    .cfi_restore w19
 ; CHECK1024-NEXT:    .cfi_restore w20
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    .cfi_restore b8
@@ -3161,6 +3183,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK0-NEXT:    .cfi_offset w26, -24
 ; CHECK0-NEXT:    .cfi_offset w27, -32
 ; CHECK0-NEXT:    .cfi_offset w28, -40
+; CHECK0-NEXT:    .cfi_offset vg, -48
 ; CHECK0-NEXT:    .cfi_offset w30, -56
 ; CHECK0-NEXT:    .cfi_offset w29, -64
 ; CHECK0-NEXT:    addvl sp, sp, #-18
@@ -3192,27 +3215,27 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK0-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 64 - 8 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 64 - 16 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 64 - 24 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 64 - 32 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 64 - 40 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 64 - 48 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 64 - 56 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 64 - 64 * VG
-; CHECK0-NEXT:    mov w9, w0
-; CHECK0-NEXT:    mov x8, sp
-; CHECK0-NEXT:    mov w2, w1
-; CHECK0-NEXT:    add x9, x9, #15
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d8 @ cfa - 8 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d9 @ cfa - 16 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d10 @ cfa - 24 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d11 @ cfa - 32 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d12 @ cfa - 40 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d13 @ cfa - 48 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d14 @ cfa - 56 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d15 @ cfa - 64 * IncomingVG - 64
 ; CHECK0-NEXT:    mov x19, sp
-; CHECK0-NEXT:    and x9, x9, #0x1fffffff0
-; CHECK0-NEXT:    sub x8, x8, x9
+; CHECK0-NEXT:    mov w2, w1
+; CHECK0-NEXT:    mov w8, w0
+; CHECK0-NEXT:    bl __arm_sme_state
+; CHECK0-NEXT:    mov w8, w8
+; CHECK0-NEXT:    mov x9, sp
+; CHECK0-NEXT:    mov x20, x0
+; CHECK0-NEXT:    add x8, x8, #15
+; CHECK0-NEXT:    and x8, x8, #0x1fffffff0
+; CHECK0-NEXT:    sub x8, x9, x8
 ; CHECK0-NEXT:    mov sp, x8
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x20, x0, #0x1
-; CHECK0-NEXT:    .cfi_offset vg, -48
 ; CHECK0-NEXT:    tbz w20, #0, .LBB35_2
 ; CHECK0-NEXT:  // %bb.1: // %entry
 ; CHECK0-NEXT:    smstop sm
@@ -3226,7 +3249,6 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK0-NEXT:  .LBB35_4: // %entry
 ; CHECK0-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK0-NEXT:    movk w0, #59491, lsl #16
-; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    addvl sp, x29, #-18
 ; CHECK0-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -3276,6 +3298,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK0-NEXT:    .cfi_restore w26
 ; CHECK0-NEXT:    .cfi_restore w27
 ; CHECK0-NEXT:    .cfi_restore w28
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    ret
@@ -3296,6 +3319,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK64-NEXT:    .cfi_offset w26, -24
 ; CHECK64-NEXT:    .cfi_offset w27, -32
 ; CHECK64-NEXT:    .cfi_offset w28, -40
+; CHECK64-NEXT:    .cfi_offset vg, -48
 ; CHECK64-NEXT:    .cfi_offset w30, -56
 ; CHECK64-NEXT:    .cfi_offset w29, -64
 ; CHECK64-NEXT:    addvl sp, sp, #-18
@@ -3327,28 +3351,28 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK64-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 128 - 8 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 128 - 16 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 128 - 24 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 128 - 32 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 128 - 40 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 128 - 48 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 128 - 56 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 128 - 64 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d8 @ cfa - 8 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d9 @ cfa - 16 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d10 @ cfa - 24 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d11 @ cfa - 32 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d12 @ cfa - 40 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d13 @ cfa - 48 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d14 @ cfa - 56 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 64 * IncomingVG - 128
 ; CHECK64-NEXT:    sub sp, sp, #64
-; CHECK64-NEXT:    mov w9, w0
-; CHECK64-NEXT:    mov x8, sp
-; CHECK64-NEXT:    mov w2, w1
-; CHECK64-NEXT:    add x9, x9, #15
 ; CHECK64-NEXT:    mov x19, sp
-; CHECK64-NEXT:    and x9, x9, #0x1fffffff0
-; CHECK64-NEXT:    sub x8, x8, x9
+; CHECK64-NEXT:    mov w2, w1
+; CHECK64-NEXT:    mov w8, w0
+; CHECK64-NEXT:    bl __arm_sme_state
+; CHECK64-NEXT:    mov w8, w8
+; CHECK64-NEXT:    mov x9, sp
+; CHECK64-NEXT:    mov x20, x0
+; CHECK64-NEXT:    add x8, x8, #15
+; CHECK64-NEXT:    and x8, x8, #0x1fffffff0
+; CHECK64-NEXT:    sub x8, x9, x8
 ; CHECK64-NEXT:    mov sp, x8
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x20, x0, #0x1
-; CHECK64-NEXT:    .cfi_offset vg, -48
 ; CHECK64-NEXT:    tbz w20, #0, .LBB35_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
 ; CHECK64-NEXT:    smstop sm
@@ -3361,9 +3385,8 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:  .LBB35_4: // %entry
 ; CHECK64-NEXT:    mov w0, #22647 // =0x5877
-; CHECK64-NEXT:    movk w0, #59491, lsl #16
-; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    sub x8, x29, #64
+; CHECK64-NEXT:    movk w0, #59491, lsl #16
 ; CHECK64-NEXT:    addvl sp, x8, #-18
 ; CHECK64-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -3414,6 +3437,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK64-NEXT:    .cfi_restore w26
 ; CHECK64-NEXT:    .cfi_restore w27
 ; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    ret
@@ -3438,6 +3462,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-NEXT:    .cfi_offset w26, -24
 ; CHECK1024-NEXT:    .cfi_offset w27, -32
 ; CHECK1024-NEXT:    .cfi_offset w28, -40
+; CHECK1024-NEXT:    .cfi_offset vg, -48
 ; CHECK1024-NEXT:    .cfi_offset w30, -56
 ; CHECK1024-NEXT:    .cfi_offset w29, -64
 ; CHECK1024-NEXT:    addvl sp, sp, #-18
@@ -3469,28 +3494,28 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1088 - 8 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 1088 - 16 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 1088 - 24 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 1088 - 32 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 1088 - 40 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 1088 - 48 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 1088 - 56 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 1088 - 64 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d8 @ cfa - 8 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d9 @ cfa - 16 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d10 @ cfa - 24 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d11 @ cfa - 32 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d12 @ cfa - 40 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d13 @ cfa - 48 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d14 @ cfa - 56 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * IncomingVG - 1088
 ; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    mov w9, w0
-; CHECK1024-NEXT:    mov x8, sp
-; CHECK1024-NEXT:    mov w2, w1
-; CHECK1024-NEXT:    add x9, x9, #15
 ; CHECK1024-NEXT:    mov x19, sp
-; CHECK1024-NEXT:    and x9, x9, #0x1fffffff0
-; CHECK1024-NEXT:    sub x8, x8, x9
+; CHECK1024-NEXT:    mov w2, w1
+; CHECK1024-NEXT:    mov w8, w0
+; CHECK1024-NEXT:    bl __arm_sme_state
+; CHECK1024-NEXT:    mov w8, w8
+; CHECK1024-NEXT:    mov x9, sp
+; CHECK1024-NEXT:    mov x20, x0
+; CHECK1024-NEXT:    add x8, x8, #15
+; CHECK1024-NEXT:    and x8, x8, #0x1fffffff0
+; CHECK1024-NEXT:    sub x8, x9, x8
 ; CHECK1024-NEXT:    mov sp, x8
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x20, x0, #0x1
-; CHECK1024-NEXT:    .cfi_offset vg, -48
 ; CHECK1024-NEXT:    tbz w20, #0, .LBB35_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
 ; CHECK1024-NEXT:    smstop sm
@@ -3503,9 +3528,8 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-NEXT:    smstart sm
 ; CHECK1024-NEXT:  .LBB35_4: // %entry
 ; CHECK1024-NEXT:    mov w0, #22647 // =0x5877
-; CHECK1024-NEXT:    movk w0, #59491, lsl #16
-; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    sub x8, x29, #1024
+; CHECK1024-NEXT:    movk w0, #59491, lsl #16
 ; CHECK1024-NEXT:    addvl sp, x8, #-18
 ; CHECK1024-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -3559,6 +3583,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-NEXT:    .cfi_restore w26
 ; CHECK1024-NEXT:    .cfi_restore w27
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    ret
@@ -3585,6 +3610,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK0-NEXT:    .cfi_offset w26, -16
 ; CHECK0-NEXT:    .cfi_offset w27, -24
 ; CHECK0-NEXT:    .cfi_offset w28, -32
+; CHECK0-NEXT:    .cfi_offset vg, -48
 ; CHECK0-NEXT:    .cfi_offset w30, -56
 ; CHECK0-NEXT:    .cfi_offset w29, -64
 ; CHECK0-NEXT:    addvl sp, sp, #-18
@@ -3616,22 +3642,21 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK0-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK0-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 64 - 8 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 64 - 16 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 64 - 24 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 64 - 32 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 64 - 40 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 64 - 48 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 64 - 56 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 64 - 64 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d8 @ cfa - 8 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d9 @ cfa - 16 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d10 @ cfa - 24 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d11 @ cfa - 32 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d12 @ cfa - 40 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d13 @ cfa - 48 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d14 @ cfa - 56 * IncomingVG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d15 @ cfa - 64 * IncomingVG - 64
 ; CHECK0-NEXT:    sub x9, sp, #1024
 ; CHECK0-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK0-NEXT:    mov w2, w1
+; CHECK0-NEXT:    bl __arm_sme_state
+; CHECK0-NEXT:    mov x19, x0
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x19, x0, #0x1
-; CHECK0-NEXT:    .cfi_offset vg, -48
 ; CHECK0-NEXT:    tbz w19, #0, .LBB36_2
 ; CHECK0-NEXT:  // %bb.1: // %entry
 ; CHECK0-NEXT:    smstop sm
@@ -3645,7 +3670,6 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK0-NEXT:  .LBB36_4: // %entry
 ; CHECK0-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK0-NEXT:    movk w0, #59491, lsl #16
-; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    addvl sp, x29, #-18
 ; CHECK0-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK0-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -3693,6 +3717,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK0-NEXT:    .cfi_restore w26
 ; CHECK0-NEXT:    .cfi_restore w27
 ; CHECK0-NEXT:    .cfi_restore w28
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    ret
@@ -3712,6 +3737,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    .cfi_offset w26, -24
 ; CHECK64-NEXT:    .cfi_offset w27, -32
 ; CHECK64-NEXT:    .cfi_offset w28, -40
+; CHECK64-NEXT:    .cfi_offset vg, -48
 ; CHECK64-NEXT:    .cfi_offset w30, -56
 ; CHECK64-NEXT:    .cfi_offset w29, -64
 ; CHECK64-NEXT:    addvl sp, sp, #-18
@@ -3743,22 +3769,21 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK64-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 128 - 8 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 128 - 16 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 128 - 24 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 128 - 32 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 128 - 40 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 128 - 48 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 128 - 56 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 128 - 64 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d8 @ cfa - 8 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d9 @ cfa - 16 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d10 @ cfa - 24 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d11 @ cfa - 32 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d12 @ cfa - 40 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d13 @ cfa - 48 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d14 @ cfa - 56 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 64 * IncomingVG - 128
 ; CHECK64-NEXT:    sub x9, sp, #1088
 ; CHECK64-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK64-NEXT:    mov w2, w1
+; CHECK64-NEXT:    bl __arm_sme_state
+; CHECK64-NEXT:    mov x19, x0
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x19, x0, #0x1
-; CHECK64-NEXT:    .cfi_offset vg, -48
 ; CHECK64-NEXT:    tbz w19, #0, .LBB36_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
 ; CHECK64-NEXT:    smstop sm
@@ -3771,9 +3796,8 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:  .LBB36_4: // %entry
 ; CHECK64-NEXT:    mov w0, #22647 // =0x5877
-; CHECK64-NEXT:    movk w0, #59491, lsl #16
-; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    sub x8, x29, #64
+; CHECK64-NEXT:    movk w0, #59491, lsl #16
 ; CHECK64-NEXT:    addvl sp, x8, #-18
 ; CHECK64-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -3822,6 +3846,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    .cfi_restore w26
 ; CHECK64-NEXT:    .cfi_restore w27
 ; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    ret
@@ -3844,6 +3869,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    .cfi_offset w26, -24
 ; CHECK1024-NEXT:    .cfi_offset w27, -32
 ; CHECK1024-NEXT:    .cfi_offset w28, -40
+; CHECK1024-NEXT:    .cfi_offset vg, -48
 ; CHECK1024-NEXT:    .cfi_offset w30, -56
 ; CHECK1024-NEXT:    .cfi_offset w29, -64
 ; CHECK1024-NEXT:    addvl sp, sp, #-18
@@ -3875,22 +3901,21 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1088 - 8 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 1088 - 16 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 1088 - 24 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 1088 - 32 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 1088 - 40 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 1088 - 48 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 1088 - 56 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 1088 - 64 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d8 @ cfa - 8 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d9 @ cfa - 16 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d10 @ cfa - 24 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d11 @ cfa - 32 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d12 @ cfa - 40 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d13 @ cfa - 48 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d14 @ cfa - 56 * IncomingVG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * IncomingVG - 1088
 ; CHECK1024-NEXT:    sub x9, sp, #2048
 ; CHECK1024-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK1024-NEXT:    mov w2, w1
+; CHECK1024-NEXT:    bl __arm_sme_state
+; CHECK1024-NEXT:    mov x19, x0
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x19, x0, #0x1
-; CHECK1024-NEXT:    .cfi_offset vg, -48
 ; CHECK1024-NEXT:    tbz w19, #0, .LBB36_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
 ; CHECK1024-NEXT:    smstop sm
@@ -3903,9 +3928,8 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    smstart sm
 ; CHECK1024-NEXT:  .LBB36_4: // %entry
 ; CHECK1024-NEXT:    mov w0, #22647 // =0x5877
-; CHECK1024-NEXT:    movk w0, #59491, lsl #16
-; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    sub x8, x29, #1024
+; CHECK1024-NEXT:    movk w0, #59491, lsl #16
 ; CHECK1024-NEXT:    addvl sp, x8, #-18
 ; CHECK1024-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -3957,6 +3981,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    .cfi_restore w26
 ; CHECK1024-NEXT:    .cfi_restore w27
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    ret
@@ -4016,14 +4041,14 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK0-NEXT:    .cfi_offset w28, -48
 ; CHECK0-NEXT:    .cfi_offset w30, -56
 ; CHECK0-NEXT:    .cfi_offset w29, -64
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 64 - 8 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 64 - 16 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 64 - 24 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 64 - 32 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 64 - 40 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 64 - 48 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 64 - 56 * VG
-; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x40, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 64 - 64 * VG
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d8 @ cfa - 8 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d9 @ cfa - 16 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d10 @ cfa - 24 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d11 @ cfa - 32 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d12 @ cfa - 40 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d13 @ cfa - 48 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d14 @ cfa - 56 * VG - 64
+; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d15 @ cfa - 64 * VG - 64
 ; CHECK0-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK0-NEXT:    ubfiz x8, x0, #2, #32
 ; CHECK0-NEXT:    mov x9, sp
@@ -4125,14 +4150,14 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK64-NEXT:    .cfi_offset w28, -48
 ; CHECK64-NEXT:    .cfi_offset w30, -56
 ; CHECK64-NEXT:    .cfi_offset w29, -64
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 128 - 8 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 128 - 16 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 128 - 24 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 128 - 32 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 128 - 40 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 128 - 48 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 128 - 56 * VG
-; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0x80, 0x7f, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 128 - 64 * VG
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d9 @ cfa - 16 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d10 @ cfa - 24 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d11 @ cfa - 32 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d12 @ cfa - 40 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d13 @ cfa - 48 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d14 @ cfa - 56 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 64 * VG - 128
 ; CHECK64-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK64-NEXT:    ubfiz x8, x0, #2, #32
 ; CHECK64-NEXT:    mov x9, sp
@@ -4240,14 +4265,14 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK1024-NEXT:    .cfi_offset w28, -48
 ; CHECK1024-NEXT:    .cfi_offset w30, -56
 ; CHECK1024-NEXT:    .cfi_offset w29, -64
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1088 - 8 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 1088 - 16 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 1088 - 24 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 1088 - 32 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 1088 - 40 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 1088 - 48 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 1088 - 56 * VG
-; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x11, 0xc0, 0x77, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 1088 - 64 * VG
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d9 @ cfa - 16 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d10 @ cfa - 24 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d11 @ cfa - 32 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d12 @ cfa - 40 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d13 @ cfa - 48 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d14 @ cfa - 56 * VG - 1088
+; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * VG - 1088
 ; CHECK1024-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK1024-NEXT:    ubfiz x8, x0, #2, #32
 ; CHECK1024-NEXT:    mov x9, sp

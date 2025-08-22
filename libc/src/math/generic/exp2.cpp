@@ -8,7 +8,6 @@
 
 #include "src/math/exp2.h"
 #include "common_constants.h" // Lookup tables EXP2_MID1 and EXP_M2.
-#include "explogxf.h"         // ziv_test_denorm.
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -24,6 +23,7 @@
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/exp_utils.h"      // ziv_test_denorm.
 
 namespace LIBC_NAMESPACE_DECL {
 

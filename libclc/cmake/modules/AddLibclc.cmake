@@ -1,8 +1,6 @@
 # Compiles an OpenCL C - or assembles an LL file - to bytecode
 #
 # Arguments:
-# * TARGET <string>
-#     Custom target to create
 # * TRIPLE <string>
 #     Target triple for which to compile the bytecode file.
 # * INPUT <string>
@@ -19,7 +17,7 @@
 function(compile_to_bc)
   cmake_parse_arguments(ARG
     ""
-    "TARGET;TRIPLE;INPUT;OUTPUT"
+    "TRIPLE;INPUT;OUTPUT"
     "EXTRA_OPTS;DEPENDENCIES"
     ${ARGN}
   )
@@ -65,12 +63,6 @@ function(compile_to_bc)
       ${ARG_DEPENDENCIES}
     DEPFILE ${ARG_OUTPUT}.d
   )
-  # FIXME: The target is added to ensure the parallel build of source files.
-  # However, this may result in a large number of targets.
-  # Starting with CMake 3.27, DEPENDS_EXPLICIT_ONLY can be used with
-  # add_custom_command to enable parallel build.
-  # Refer to https://gitlab.kitware.com/cmake/cmake/-/issues/17097 for details.
-  add_custom_target( ${ARG_TARGET} DEPENDS ${ARG_OUTPUT}${TMP_SUFFIX} )
 
   if( ${FILE_EXT} STREQUAL ".ll" )
     add_custom_command(
@@ -130,6 +122,37 @@ function(link_bc)
     TARGET_FILE ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.bc
     FOLDER "libclc/Device IR/Linking"
   )
+endfunction()
+
+# Create a custom target for each bitcode file, which is the output of a custom
+# command. This is required for parallel compilation of the custom commands that
+# generate the bitcode files when using the CMake MSVC generator on Windows.
+#
+# Arguments:
+#  * compile_tgts
+#      Output list of compile targets
+#  * ARCH_SUFFIX <string>
+#      libclc architecture/triple suffix
+#  * FILES <string> ...
+#     List of bitcode files
+function(create_compile_targets compile_tgts)
+  cmake_parse_arguments( ARG "" "ARCH_SUFFIX" "FILES" ${ARGN} )
+
+  if( NOT ARG_ARCH_SUFFIX OR NOT ARG_FILES )
+    message( FATAL_ERROR "Must provide ARCH_SUFFIX, and FILES" )
+  endif()
+
+  set( tgts )
+  foreach( file IN LISTS ARG_FILES )
+    cmake_path( GET file STEM stem )
+    cmake_path( GET file PARENT_PATH parent_path )
+    cmake_path( GET parent_path STEM parent_path_stem )
+    set( tgt compile-${ARG_ARCH_SUFFIX}-${parent_path_stem}-${stem} )
+    add_custom_target( ${tgt} DEPENDS ${file} )
+    list( APPEND tgts ${tgt} )
+  endforeach()
+
+  set( compile_tgts ${tgts} PARENT_SCOPE )
 endfunction()
 
 # Decomposes and returns variables based on a libclc triple and architecture
@@ -199,6 +222,33 @@ function(get_libclc_device_info)
   endif()
 endfunction()
 
+# Install libclc artifacts.
+#
+# Arguments:
+#  * FILES <string> ...
+#      List of libclc artifact files to be installed.
+function(libclc_install)
+  cmake_parse_arguments(ARG "" "" "FILES" ${ARGN})
+
+  if( NOT ARG_FILES )
+    message( FATAL_ERROR "Must provide FILES" )
+  endif()
+
+  if( NOT CMAKE_CFG_INTDIR STREQUAL "." )
+    # Replace CMAKE_CFG_INTDIR with CMAKE_INSTALL_CONFIG_NAME for multiple-
+    # configuration generators.
+    string( REPLACE ${CMAKE_CFG_INTDIR} "\$\{CMAKE_INSTALL_CONFIG_NAME\}"
+            files ${ARG_FILES} )
+  else()
+    set( files ${ARG_FILES} )
+  endif()
+
+  install(
+    FILES ${files}
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
+  )
+endfunction()
+
 # Compiles a list of library source files (provided by LIB_FILES/GEN_FILES) and
 # compiles them to LLVM bytecode (or SPIR-V), links them together and optimizes
 # them.
@@ -248,7 +298,6 @@ function(add_libclc_builtin_set)
 
   set( bytecode_files )
   set( bytecode_ir_files )
-  set( compile_tgts )
   foreach( file IN LISTS ARG_GEN_FILES ARG_LIB_FILES )
     # We need to take each file and produce an absolute input file, as well
     # as a unique architecture-specific output file. We deal with a mix of
@@ -278,9 +327,6 @@ function(add_libclc_builtin_set)
 
     get_filename_component( file_dir ${file} DIRECTORY )
 
-    string( REPLACE "/" "-" replaced ${file} )
-    set( tgt compile_tgt-${ARG_ARCH_SUFFIX}${replaced})
-
     set( file_specific_compile_options )
     get_source_file_property( compile_opts ${file} COMPILE_OPTIONS)
     if( compile_opts )
@@ -288,7 +334,6 @@ function(add_libclc_builtin_set)
     endif()
 
     compile_to_bc(
-      TARGET ${tgt}
       TRIPLE ${ARG_TRIPLE}
       INPUT ${input_file}
       OUTPUT ${output_file}
@@ -297,7 +342,6 @@ function(add_libclc_builtin_set)
         -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
       DEPENDENCIES ${input_file_dep}
     )
-    list( APPEND compile_tgts ${tgt} )
 
     # Collect all files originating in LLVM IR separately
     get_filename_component( file_ext ${file} EXT )
@@ -308,18 +352,28 @@ function(add_libclc_builtin_set)
     endif()
   endforeach()
 
+  set( builtins_comp_lib_tgt builtins.comp.${ARG_ARCH_SUFFIX} )
+  if ( CMAKE_GENERATOR MATCHES "Visual Studio" )
+    # Don't put commands in one custom target to avoid serialized compilation.
+    create_compile_targets( compile_tgts
+      ARCH_SUFFIX ${ARG_ARCH_SUFFIX}
+      FILES ${bytecode_files}
+    )
+    add_custom_target( ${builtins_comp_lib_tgt} DEPENDS ${bytecode_ir_files} )
+    add_dependencies( ${builtins_comp_lib_tgt} ${compile_tgts} )
+  else()
+    add_custom_target( ${builtins_comp_lib_tgt}
+      DEPENDS ${bytecode_files} ${bytecode_ir_files}
+    )
+  endif()
+  set_target_properties( ${builtins_comp_lib_tgt} PROPERTIES FOLDER "libclc/Device IR/Comp" )
+
   # Prepend all LLVM IR files to the list so they are linked into the final
   # bytecode modules first. This helps to suppress unnecessary warnings
   # regarding different data layouts while linking. Any LLVM IR files without a
   # data layout will (silently) be given the first data layout the linking
   # process comes across.
   list( PREPEND bytecode_files ${bytecode_ir_files} )
-
-  set( builtins_comp_lib_tgt builtins.comp.${ARG_ARCH_SUFFIX} )
-  add_custom_target( ${builtins_comp_lib_tgt}
-    DEPENDS ${bytecode_files} ${compile_tgts}
-  )
-  set_target_properties( ${builtins_comp_lib_tgt} PROPERTIES FOLDER "libclc/Device IR/Comp" )
 
   if( NOT bytecode_files )
     message(FATAL_ERROR "Cannot create an empty builtins library")
@@ -409,7 +463,10 @@ function(add_libclc_builtin_set)
 
   # Add a 'prepare' target
   add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${libclc_builtins_lib} )
-  set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
+  set_target_properties( "prepare-${obj_suffix}" PROPERTIES
+    TARGET_FILE ${libclc_builtins_lib}
+    FOLDER "libclc/Device IR/Prepare"
+  )
 
   # Also add a 'prepare' target for the triple. Since a triple may have
   # multiple devices, ensure we only try to create the triple target once. The
@@ -422,10 +479,7 @@ function(add_libclc_builtin_set)
   # targets dependent on libclc.
   add_dependencies( ${ARG_PARENT_TARGET} prepare-${ARG_TRIPLE} )
 
-  install(
-    FILES ${libclc_builtins_lib}
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
-  )
+  libclc_install(FILES ${libclc_builtins_lib})
 
   # SPIR-V targets can exit early here
   if( ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64 )
@@ -467,10 +521,7 @@ function(add_libclc_builtin_set)
     set_target_properties( alias-${alias_suffix}
       PROPERTIES FOLDER "libclc/Device IR/Aliases"
     )
-    install(
-      FILES ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
-      DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
-    )
+    libclc_install(FILES ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix})
   endforeach( a )
 endfunction(add_libclc_builtin_set)
 

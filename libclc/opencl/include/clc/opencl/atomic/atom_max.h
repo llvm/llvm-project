@@ -12,19 +12,19 @@
 #include <clc/opencl/opencl-base.h>
 
 #ifdef cl_khr_global_int32_extended_atomics
-#define FUNCTION atom_max
+#define __CLC_FUNCTION atom_max
 #define __CLC_ADDRESS_SPACE global
 #include <clc/opencl/atomic/atom_decl_int32.inc>
 #endif // cl_khr_global_int32_extended_atomics
 
 #ifdef cl_khr_local_int32_extended_atomics
-#define FUNCTION atom_max
+#define __CLC_FUNCTION atom_max
 #define __CLC_ADDRESS_SPACE local
 #include <clc/opencl/atomic/atom_decl_int32.inc>
 #endif // cl_khr_local_int32_extended_atomics
 
 #ifdef cl_khr_int64_extended_atomics
-#define FUNCTION atom_max
+#define __CLC_FUNCTION atom_max
 #include <clc/opencl/atomic/atom_decl_int64.inc>
 #endif // cl_khr_int64_extended_atomics
 

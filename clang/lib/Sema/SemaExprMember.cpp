@@ -492,13 +492,14 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
 
   QualType VT = S.Context.getExtVectorType(vecType->getElementType(), CompSize);
   // Now look up the TypeDefDecl from the vector type. Without this,
-  // diagostics look bad. We want extended vector types to appear built-in.
+  // diagnostics look bad. We want extended vector types to appear built-in.
   for (Sema::ExtVectorDeclsType::iterator
          I = S.ExtVectorDecls.begin(S.getExternalSource()),
          E = S.ExtVectorDecls.end();
        I != E; ++I) {
     if ((*I)->getUnderlyingType() == VT)
-      return S.Context.getTypedefType(*I);
+      return S.Context.getTypedefType(ElaboratedTypeKeyword::None,
+                                      /*Qualifier=*/std::nullopt, *I);
   }
 
   return VT; // should never get here (a typedef type should always be found).
@@ -881,7 +882,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   // build a CXXDependentScopeMemberExpr.
   if (R.wasNotFoundInCurrentInstantiation() ||
       (R.getLookupName().getCXXOverloadedOperator() == OO_Equal &&
-       (SS.isSet() ? SS.getScopeRep()->isDependent()
+       (SS.isSet() ? SS.getScopeRep().isDependent()
                    : BaseExprType->isDependentType())))
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType, IsArrow, OpLoc, SS,
                                     TemplateKWLoc, FirstQualifierInScope,

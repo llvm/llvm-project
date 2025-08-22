@@ -161,6 +161,7 @@ public:
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
@@ -228,10 +229,17 @@ private:
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
-  bool initGlobalResourceDecl(VarDecl *VD);
   uint32_t getNextImplicitBindingOrderID() {
     return ImplicitBindingNextOrderID++;
   }
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  bool initGlobalResourceArrayDecl(VarDecl *VD);
+  void createResourceRecordCtorArgs(const Type *ResourceTy, StringRef VarName,
+                                    HLSLResourceBindingAttr *RBA,
+                                    HLSLVkBindingAttr *VkBinding,
+                                    uint32_t ArrayIndex,
+                                    llvm::SmallVectorImpl<Expr *> &Args);
 };
 
 } // namespace clang

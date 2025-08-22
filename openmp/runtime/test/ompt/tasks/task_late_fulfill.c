@@ -1,3 +1,4 @@
+// clang-format off
 // RUN: %libomp-compile && env OMP_NUM_THREADS='3' \
 // RUN:    %libomp-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
@@ -10,6 +11,7 @@
 // UNSUPPORTED: clang-10, clang-9, clang-8, clang-7
 // icc compiler does not support detach clause.
 // UNSUPPORTED: icc
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
@@ -34,6 +36,7 @@ int main() {
   return 0;
 }
 
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule'
@@ -47,15 +50,15 @@ int main() {
 // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
-// CHECK-SAME: parent_task_id=[[PARENT_TASK_ID:[0-9]+]],
+// CHECK-SAME: parent_task_id=[[PARENT_TASK_ID:[0-f]+]],
 // CHECK-SAME: parent_task_frame.exit=[[NULL]],
 // CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
-// CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]],
+// CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]],
 // CHECK-SAME: requested_team_size=3,
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID]],
-// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
+// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID:[0-f]+]]
 
 // The following is to match the taskwait task created in __kmpc_omp_wait_deps
 // this should go away, once codegen for "detached if(0)" is fixed
@@ -68,7 +71,7 @@ int main() {
 // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID]],
 // CHECK-SAME: parent_task_frame.exit={{(0x)?[0-f]+}},
 // CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
-// CHECK-SAME: new_task_id=[[TASK_ID:[0-9]+]],
+// CHECK-SAME: new_task_id=[[TASK_ID:[0-f]+]],
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_task_schedule:
 // CHECK-SAME: first_task_id=[[IMPLICIT_TASK_ID]],
@@ -82,5 +85,6 @@ int main() {
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_task_schedule:
 // CHECK-SAME: first_task_id=[[TASK_ID]],
-// CHECK-SAME: second_task_id=18446744073709551615,
+// CHECK-SAME: second_task_id=ffffffffffffffff,
 // CHECK-SAME: prior_task_status=ompt_task_late_fulfill=6
+// clang-format on

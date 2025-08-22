@@ -545,20 +545,6 @@ public:
     return const_cast<CXXRecordDecl*>(this)->getMostRecentDecl();
   }
 
-  CXXRecordDecl *getMostRecentNonInjectedDecl() {
-    CXXRecordDecl *Recent = getMostRecentDecl();
-    while (Recent->isInjectedClassName()) {
-      // FIXME: Does injected class name need to be in the redeclarations chain?
-      assert(Recent->getPreviousDecl());
-      Recent = Recent->getPreviousDecl();
-    }
-    return Recent;
-  }
-
-  const CXXRecordDecl *getMostRecentNonInjectedDecl() const {
-    return const_cast<CXXRecordDecl*>(this)->getMostRecentNonInjectedDecl();
-  }
-
   CXXRecordDecl *getDefinition() const {
     // We only need an update if we don't already know which
     // declaration is the definition.
@@ -566,13 +552,18 @@ public:
     return DD ? DD->Definition : nullptr;
   }
 
+  CXXRecordDecl *getDefinitionOrSelf() const {
+    if (auto *Def = getDefinition())
+      return Def;
+    return const_cast<CXXRecordDecl *>(this);
+  }
+
   bool hasDefinition() const { return DefinitionData || dataPtr(); }
 
   static CXXRecordDecl *Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                                SourceLocation StartLoc, SourceLocation IdLoc,
                                IdentifierInfo *Id,
-                               CXXRecordDecl *PrevDecl = nullptr,
-                               bool DelayTypeCreation = false);
+                               CXXRecordDecl *PrevDecl = nullptr);
   static CXXRecordDecl *CreateLambda(const ASTContext &C, DeclContext *DC,
                                      TypeSourceInfo *Info, SourceLocation Loc,
                                      unsigned DependencyKind, bool IsGeneric,
@@ -1903,6 +1894,20 @@ public:
   /// \endcode
   bool isInjectedClassName() const;
 
+  /// Determines whether this declaration has is canonically of an injected
+  /// class type. These are non-instantiated class template patterns, which can
+  /// be used from within the class template itself. For example:
+  ///
+  /// \code
+  /// template<class T> struct C {
+  ///   C *t; // Here `C *` is a pointer to an injected class type.
+  /// };
+  /// \endcode
+  bool hasInjectedClassType() const;
+
+  CanQualType
+  getCanonicalTemplateSpecializationType(const ASTContext &Ctx) const;
+
   // Determine whether this type is an Interface Like type for
   // __interface inheritance purposes.
   bool isInterfaceLike() const;
@@ -3131,7 +3136,7 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the
   /// name of the namespace.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3252,7 +3257,7 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the
   /// name of the namespace.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3614,7 +3619,7 @@ public:
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
 
   /// Retrieve the nested-name-specifier that qualifies the name.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3804,13 +3809,11 @@ public:
   /// The source location of the 'enum' keyword.
   SourceLocation getEnumLoc() const { return EnumLocation; }
   void setEnumLoc(SourceLocation L) { EnumLocation = L; }
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
   NestedNameSpecifierLoc getQualifierLoc() const {
-    if (auto ETL = EnumType->getTypeLoc().getAs<ElaboratedTypeLoc>())
-      return ETL.getQualifierLoc();
-    return NestedNameSpecifierLoc();
+    return getEnumTypeLoc().getPrefix();
   }
   // Returns the "qualifier::Name" part as a TypeLoc.
   TypeLoc getEnumTypeLoc() const {
@@ -3970,7 +3973,7 @@ public:
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
 
   /// Retrieve the nested-name-specifier that qualifies the name.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -4060,7 +4063,7 @@ public:
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
 
   /// Retrieve the nested-name-specifier that qualifies the name.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 

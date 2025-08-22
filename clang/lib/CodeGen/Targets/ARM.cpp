@@ -316,7 +316,7 @@ ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
   // Base can be a floating-point or a vector.
   if (const VectorType *VT = Base->getAs<VectorType>()) {
     // FP16 vectors should be converted to integer vectors
-    if (!getTarget().hasLegalHalfType() && containsAnyFP16Vectors(Ty)) {
+    if (!getTarget().hasFastHalfType() && containsAnyFP16Vectors(Ty)) {
       uint64_t Size = getContext().getTypeSize(VT);
       auto *NewVecTy = llvm::FixedVectorType::get(
           llvm::Type::getInt32Ty(getVMContext()), Size / 32);
@@ -383,7 +383,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>()) {
-      Ty = EnumTy->getDecl()->getIntegerType();
+      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
     }
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
@@ -516,7 +516,7 @@ static bool isIntegerLikeType(QualType Ty, ASTContext &Context,
   if (!RT) return false;
 
   // Ignore records with flexible arrays.
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   if (RD->hasFlexibleArrayMember())
     return false;
 
@@ -582,7 +582,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
                                      getDataLayout().getAllocaAddrSpace());
     // TODO: FP16/BF16 vectors should be converted to integer vectors
     // This check is similar  to isIllegalVectorType - refactor?
-    if ((!getTarget().hasLegalHalfType() &&
+    if ((!getTarget().hasFastHalfType() &&
         (VT->getElementType()->isFloat16Type() ||
          VT->getElementType()->isHalfType())) ||
         (IsFloatABISoftFP &&
@@ -593,7 +593,8 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
   if (!isAggregateTypeForABI(RetTy)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy = EnumTy->getDecl()->getIntegerType();
+      RetTy =
+          EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 64)
@@ -678,9 +679,9 @@ bool ARMABIInfo::isIllegalVectorType(QualType Ty) const {
     // into float, and we don't want the ABI to depend on whether or not they
     // are supported in hardware. Thus return false to coerce vectors of these
     // types into integer vectors.
-    // We do not depend on hasLegalHalfType for bfloat as it is a
+    // We do not depend on hasFastHalfType for bfloat as it is a
     // separate IR type.
-    if ((!getTarget().hasLegalHalfType() &&
+    if ((!getTarget().hasFastHalfType() &&
         (VT->getElementType()->isFloat16Type() ||
          VT->getElementType()->isHalfType())) ||
         (IsFloatABISoftFP &&
@@ -718,7 +719,7 @@ bool ARMABIInfo::containsAnyFP16Vectors(QualType Ty) const {
       return false;
     return containsAnyFP16Vectors(AT->getElementType());
   } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
 
     // If this is a C++ record, check the bases first.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))

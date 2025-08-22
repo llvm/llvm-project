@@ -21,6 +21,11 @@ namespace std {
     class optional;
 
   template<class T>
+   constexpr bool ranges::enable_view<optional<T>> = true;
+  template<class T>
+   constexpr auto format_kind<optional<T>> = range_format::disabled;
+
+  template<class T>
     concept is-derived-from-optional = requires(const T& t) {       // exposition only
       []<class U>(const optional<U>&){ }(t);
     };
@@ -102,6 +107,8 @@ namespace std {
   class optional {
   public:
     using value_type = T;
+    using iterator               = implementation-defined; // see [optional.iterators]
+    using const_iterator         = implementation-defined; // see [optional.iterators]
 
     // [optional.ctor], constructors
     constexpr optional() noexcept;
@@ -134,6 +141,12 @@ namespace std {
 
     // [optional.swap], swap
     void swap(optional &) noexcept(see below ); // constexpr in C++20
+
+    // [optional.iterators], iterator support
+    constexpr iterator begin() noexcept;
+    constexpr const_iterator begin() const noexcept;
+    constexpr iterator end() noexcept;
+    constexpr const_iterator end() const noexcept;
 
     // [optional.observe], observers
     constexpr T const *operator->() const noexcept;
@@ -186,13 +199,18 @@ namespace std {
 #  include <__compare/three_way_comparable.h>
 #  include <__concepts/invocable.h>
 #  include <__config>
+#  include <__cstddef/ptrdiff_t.h>
 #  include <__exception/exception.h>
+#  include <__format/range_format.h>
 #  include <__functional/hash.h>
 #  include <__functional/invoke.h>
 #  include <__functional/unary_function.h>
 #  include <__fwd/functional.h>
+#  include <__iterator/bounded_iter.h>
+#  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
+#  include <__ranges/enable_view.h>
 #  include <__tuple/sfinae_helpers.h>
 #  include <__type_traits/add_pointer.h>
 #  include <__type_traits/conditional.h>
@@ -207,6 +225,7 @@ namespace std {
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_core_convertible.h>
 #  include <__type_traits/is_destructible.h>
+#  include <__type_traits/is_function.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_object.h>
@@ -219,6 +238,7 @@ namespace std {
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_destructible.h>
 #  include <__type_traits/is_trivially_relocatable.h>
+#  include <__type_traits/is_unbounded_array.h>
 #  include <__type_traits/negation.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/remove_cv.h>
@@ -567,6 +587,14 @@ using __optional_sfinae_assign_base_t _LIBCPP_NODEBUG =
 template <class _Tp>
 class optional;
 
+#    if _LIBCPP_STD_VER >= 26
+template <class _Tp>
+constexpr bool ranges::enable_view<optional<_Tp>> = true;
+
+template <class _Tp>
+constexpr range_format format_kind<optional<_Tp>> = range_format::disabled;
+#    endif
+
 #    if _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
@@ -586,9 +614,21 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES optional
       private __optional_sfinae_assign_base_t<_Tp> {
   using __base _LIBCPP_NODEBUG = __optional_move_assign_base<_Tp>;
 
+  using __pointer _LIBCPP_NODEBUG       = std::add_pointer_t<_Tp>;
+  using __const_pointer _LIBCPP_NODEBUG = std::add_pointer_t<const _Tp>;
+
 public:
   using value_type = _Tp;
 
+#    if _LIBCPP_STD_VER >= 26
+#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+  using iterator       = __bounded_iter<__wrap_iter<__pointer>>;
+  using const_iterator = __bounded_iter<__wrap_iter<__const_pointer>>;
+#      else
+  using iterator       = __wrap_iter<__pointer>;
+  using const_iterator = __wrap_iter<__const_pointer>;
+#      endif
+#    endif
   using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
   using __replaceable _LIBCPP_NODEBUG = conditional_t<__is_replaceable_v<_Tp>, optional, void>;
@@ -791,6 +831,34 @@ public:
       }
     }
   }
+
+#    if _LIBCPP_STD_VER >= 26
+  // [optional.iterators], iterator support
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept {
+#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+    return std::__make_bounded_iter(
+        std::__wrap_iter<__pointer>(std::addressof(this->__get())),
+        std::__wrap_iter<__pointer>(std::addressof(this->__get())),
+        std::__wrap_iter<__pointer>(std::addressof(this->__get()) + (this->has_value() ? 1 : 0)));
+#      else
+    return iterator(std::addressof(this->__get()));
+#      endif
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept {
+#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+    return std::__make_bounded_iter(
+        std::__wrap_iter<__const_pointer>(std::addressof(this->__get())),
+        std::__wrap_iter<__const_pointer>(std::addressof(this->__get())),
+        std::__wrap_iter<__const_pointer>(std::addressof(this->__get()) + (this->has_value() ? 1 : 0)));
+#      else
+    return const_iterator(std::addressof(this->__get()));
+#      endif
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() noexcept { return begin() + (this->has_value() ? 1 : 0); }
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const noexcept { return begin() + (this->has_value() ? 1 : 0); }
+#    endif
 
   _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<value_type const> operator->() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");

@@ -605,33 +605,10 @@ public:
                          unsigned FormatMaxPadding = 3,
                          bool TruncateZero = true) const;
 
-  /// If this value has an exact multiplicative inverse, store it in inv and
-  /// return true.
-  LLVM_ABI bool getExactInverse(APFloat *inv) const;
-
-  // If this is an exact power of two, return the exponent while ignoring the
-  // sign bit. If it's not an exact power of 2, return INT_MIN
   LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
-  // If this is an exact power of two, return the exponent. If it's not an exact
-  // power of 2, return INT_MIN
-  LLVM_READONLY
-  int getExactLog2() const {
-    return isNegative() ? INT_MIN : getExactLog2Abs();
-  }
-
-  /// Returns the exponent of the internal representation of the APFloat.
-  ///
-  /// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
-  /// For special APFloat values, this returns special error codes:
-  ///
-  ///   NaN -> \c IEK_NaN
-  ///   0   -> \c IEK_Zero
-  ///   Inf -> \c IEK_Inf
-  ///
   LLVM_ABI friend int ilogb(const IEEEFloat &Arg);
 
-  /// Returns: X * 2^Exp for integral exponents.
   LLVM_ABI friend IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
 
   LLVM_ABI friend IEEEFloat frexp(const IEEEFloat &X, int &Exp, roundingMode);
@@ -824,6 +801,9 @@ class DoubleAPFloat final {
 
   opStatus addWithSpecial(const DoubleAPFloat &LHS, const DoubleAPFloat &RHS,
                           DoubleAPFloat &Out, roundingMode RM);
+  opStatus convertToSignExtendedInteger(MutableArrayRef<integerPart> Input,
+                                        unsigned int Width, bool IsSigned,
+                                        roundingMode RM, bool *IsExact) const;
 
 public:
   LLVM_ABI DoubleAPFloat(const fltSemantics &S);
@@ -902,11 +882,9 @@ public:
                          unsigned FormatMaxPadding,
                          bool TruncateZero = true) const;
 
-  LLVM_ABI bool getExactInverse(APFloat *inv) const;
-
-  LLVM_ABI LLVM_READONLY int getExactLog2() const;
   LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
+  LLVM_ABI friend int ilogb(const DoubleAPFloat &X);
   LLVM_ABI friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp,
                                        roundingMode);
   LLVM_ABI friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp,
@@ -1067,6 +1045,8 @@ class APFloat : public APFloatBase {
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
 
+  // Compares the absolute value of this APFloat with another.  Both operands
+  // must be finite non-zero.
   cmpResult compareAbsoluteValue(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
@@ -1345,12 +1325,23 @@ public:
 
   LLVM_ABI opStatus convert(const fltSemantics &ToSemantics, roundingMode RM,
                             bool *losesInfo);
+  // Convert a floating point number to an integer according to the
+  // rounding mode.  We provide deterministic values in case of an invalid
+  // operation exception, namely zero for NaNs and the minimal or maximal value
+  // respectively for underflow or overflow.
+  // The *IsExact output tells whether the result is exact, in the sense that
+  // converting it back to the original floating point type produces the
+  // original value.  This is almost equivalent to result==opOK, except for
+  // negative zeroes.
   opStatus convertToInteger(MutableArrayRef<integerPart> Input,
                             unsigned int Width, bool IsSigned, roundingMode RM,
                             bool *IsExact) const {
     APFLOAT_DISPATCH_ON_SEMANTICS(
         convertToInteger(Input, Width, IsSigned, RM, IsExact));
   }
+  // Same as convertToInteger(integerPart*, ...), except the result is returned
+  // in an APSInt, whose initial bit-width and signed-ness are used to determine
+  // the precision of the conversion.
   LLVM_ABI opStatus convertToInteger(APSInt &Result, roundingMode RM,
                                      bool *IsExact) const;
   opStatus convertFromAPInt(const APInt &Input, bool IsSigned,
@@ -1419,6 +1410,8 @@ public:
     return Res == cmpGreaterThan || Res == cmpEqual;
   }
 
+  // IEEE comparison with another floating point number (NaNs compare unordered,
+  // 0==-0).
   cmpResult compare(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
@@ -1505,22 +1498,26 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  bool getExactInverse(APFloat *inv) const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(getExactInverse(inv));
-  }
+  /// If this value is normal and has an exact, normal, multiplicative inverse,
+  /// store it in inv and return true.
+  bool getExactInverse(APFloat *Inv) const;
 
+  // If this is an exact power of two, return the exponent while ignoring the
+  // sign bit. If it's not an exact power of 2, return INT_MIN
   LLVM_READONLY
   int getExactLog2Abs() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2Abs());
   }
 
+  // If this is an exact power of two, return the exponent. If it's not an exact
+  // power of 2, return INT_MIN
   LLVM_READONLY
   int getExactLog2() const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2());
+    return isNegative() ? INT_MIN : getExactLog2Abs();
   }
 
   LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
-  friend int ilogb(const APFloat &Arg) { return ilogb(Arg.getIEEE()); }
+  friend int ilogb(const APFloat &Arg);
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
   friend IEEEFloat;
@@ -1535,6 +1532,25 @@ static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
 /// These additional declarations are required in order to compile LLVM with IBM
 /// xlC compiler.
 LLVM_ABI hash_code hash_value(const APFloat &Arg);
+
+/// Returns the exponent of the internal representation of the APFloat.
+///
+/// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
+/// For special APFloat values, this returns special error codes:
+///
+///   NaN -> \c IEK_NaN
+///   0   -> \c IEK_Zero
+///   Inf -> \c IEK_Inf
+///
+inline int ilogb(const APFloat &Arg) {
+  if (APFloat::usesLayout<detail::IEEEFloat>(Arg.getSemantics()))
+    return ilogb(Arg.U.IEEE);
+  if (APFloat::usesLayout<detail::DoubleAPFloat>(Arg.getSemantics()))
+    return ilogb(Arg.U.Double);
+  llvm_unreachable("Unexpected semantics");
+}
+
+/// Returns: X * 2^Exp for integral exponents.
 inline APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode RM) {
   if (APFloat::usesLayout<detail::IEEEFloat>(X.getSemantics()))
     return APFloat(scalbn(X.U.IEEE, Exp, RM), X.getSemantics());

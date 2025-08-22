@@ -190,7 +190,7 @@ bool isCombinedConstruct(Directive D) {
 }
 
 ArrayRef<unsigned> getOpenMPVersions() {
-  static unsigned Versions[]{31, 40, 45, 50, 51, 52, 60};
+  static unsigned Versions[]{31, 40, 45, 50, 51, 52, 60, 61};
   return Versions;
 }
 

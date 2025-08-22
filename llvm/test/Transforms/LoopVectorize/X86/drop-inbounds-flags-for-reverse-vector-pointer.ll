@@ -42,12 +42,10 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP12]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY20:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC35:%.*]] ]
-; CHECK-NEXT:    [[SUM_01:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUM_1:%.*]], [[FOR_INC35]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 10, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC35:%.*]] ]
+; CHECK-NEXT:    [[SUM_01:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[SUM_1:%.*]], [[FOR_INC35]] ]
 ; CHECK-NEXT:    [[REM4:%.*]] = and i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i64 [[REM4]], 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[NNO]], i64 [[INDVARS_IV]]

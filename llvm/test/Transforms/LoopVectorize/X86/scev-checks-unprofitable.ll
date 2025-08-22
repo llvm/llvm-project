@@ -23,9 +23,6 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK:       [[LOOP_3_PREHEADER]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[IV_1_LCSSA2]], 15
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[IV_1_LCSSA2]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
@@ -37,7 +34,6 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT_1_LOOPEXIT1:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[LOOP_3_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP_3:.*]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
@@ -53,7 +49,7 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK-NEXT:    [[EC_2:%.*]] = icmp ult i64 [[IV_2]], [[IV_1_LCSSA]]
 ; CHECK-NEXT:    br i1 [[EC_2]], label %[[LOOP_2]], label %[[EXIT_1_LOOPEXIT:.*]]
 ; CHECK:       [[LOOP_3]]:
-; CHECK-NEXT:    [[IV_4:%.*]] = phi i64 [ [[IV_4_NEXT:%.*]], %[[LOOP_3]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_4:%.*]] = phi i64 [ [[IV_4_NEXT:%.*]], %[[LOOP_3]] ], [ 0, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP_DST_2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_4]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_DST_2]], align 1
 ; CHECK-NEXT:    [[IV_4_NEXT]] = add i64 [[IV_4]], 1

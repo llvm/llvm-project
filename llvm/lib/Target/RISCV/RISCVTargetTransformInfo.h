@@ -114,6 +114,9 @@ public:
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();
   }
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
+    return ST->hasVInstructions();
+  }
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
@@ -240,6 +243,11 @@ public:
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
 
+  InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const override;
+
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
@@ -364,6 +372,8 @@ public:
 
     switch (RdxDesc.getRecurrenceKind()) {
     case RecurKind::Add:
+    case RecurKind::Sub:
+    case RecurKind::AddChainWithSubs:
     case RecurKind::And:
     case RecurKind::Or:
     case RecurKind::Xor:
@@ -397,6 +407,10 @@ public:
   }
 
   bool enableInterleavedAccessVectorization() const override { return true; }
+
+  bool enableMaskedInterleavedAccessVectorization() const override {
+    return ST->hasVInstructions();
+  }
 
   unsigned getMinTripCountTailFoldingThreshold() const override;
 

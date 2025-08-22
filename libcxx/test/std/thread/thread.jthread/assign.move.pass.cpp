@@ -112,5 +112,14 @@ int main(int, char**) {
     assert(j1.get_id() == j2Id);
   }
 
+  // LWG3788: self-assignement
+  {
+    std::jthread j = support::make_test_jthread([] {});
+    auto oldId     = j.get_id();
+    j              = std::move(j);
+
+    assert(j.get_id() == oldId);
+  }
+
   return 0;
 }

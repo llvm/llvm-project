@@ -242,7 +242,7 @@ ENUM(MotionExpectation, Present);
 // V5.2: [15.9.1] `task-dependence-type` modifier
 ENUM(DependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
      Source);
-ENUM(Prescriptiveness, Strict);
+ENUM(Prescriptiveness, Strict, Fallback);
 
 template <typename I, typename E> //
 struct LoopIterationT {
@@ -572,6 +572,15 @@ struct DoacrossT {
 template <typename T, typename I, typename E> //
 struct DynamicAllocatorsT {
   using EmptyTrait = std::true_type;
+};
+
+template <typename T, typename I, typename E> //
+struct DynGroupprivateT {
+  ENUM(AccessGroup, Cgroup);
+  using Prescriptiveness = type::Prescriptiveness;
+  using Size = E;
+  using TupleTrait = std::true_type;
+  std::tuple<OPT(AccessGroup), OPT(Prescriptiveness), Size> t;
 };
 
 // V5.2: [5.8.4] `enter` clause
@@ -1263,11 +1272,12 @@ template <typename T, typename I, typename E>
 using TupleClausesT =
     std::variant<AffinityT<T, I, E>, AlignedT<T, I, E>, AllocateT<T, I, E>,
                  DefaultmapT<T, I, E>, DeviceT<T, I, E>, DistScheduleT<T, I, E>,
-                 DoacrossT<T, I, E>, FromT<T, I, E>, GrainsizeT<T, I, E>,
-                 IfT<T, I, E>, InitT<T, I, E>, InReductionT<T, I, E>,
-                 LastprivateT<T, I, E>, LinearT<T, I, E>, MapT<T, I, E>,
-                 NumTasksT<T, I, E>, OrderT<T, I, E>, ReductionT<T, I, E>,
-                 ScheduleT<T, I, E>, TaskReductionT<T, I, E>, ToT<T, I, E>>;
+                 DoacrossT<T, I, E>, DynGroupprivateT<T, I, E>, FromT<T, I, E>,
+                 GrainsizeT<T, I, E>, IfT<T, I, E>, InitT<T, I, E>,
+                 InReductionT<T, I, E>, LastprivateT<T, I, E>, LinearT<T, I, E>,
+                 MapT<T, I, E>, NumTasksT<T, I, E>, OrderT<T, I, E>,
+                 ReductionT<T, I, E>, ScheduleT<T, I, E>,
+                 TaskReductionT<T, I, E>, ToT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using UnionClausesT = std::variant<DependT<T, I, E>>;

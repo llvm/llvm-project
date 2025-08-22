@@ -227,10 +227,10 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
-  SmallVector<VPWidenPHIRecipe *> Phis;
+  SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
-    Phis.push_back(cast<VPWidenPHIRecipe>(&R));
-  for (VPWidenPHIRecipe *PhiR : Phis) {
+    Phis.push_back(cast<VPPhi>(&R));
+  for (VPPhi *PhiR : Phis) {
     // The non-header Phi is converted into a Blend recipe below,
     // so we don't have to worry about the insertion order and we can just use
     // the builder. At this point we generate the predication tree. There may
@@ -238,14 +238,11 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // optimizations will clean it up.
 
     SmallVector<VPValue *, 2> OperandsWithMask;
-    unsigned NumIncoming = PhiR->getNumIncoming();
-    for (unsigned In = 0; In < NumIncoming; In++) {
-      const VPBasicBlock *Pred = PhiR->getIncomingBlock(In);
-      OperandsWithMask.push_back(PhiR->getIncomingValue(In));
-      VPValue *EdgeMask = getEdgeMask(Pred, VPBB);
+    for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
+      OperandsWithMask.push_back(InVPV);
+      VPValue *EdgeMask = getEdgeMask(InVPBB, VPBB);
       if (!EdgeMask) {
-        assert(In == 0 && "Both null and non-null edge masks found");
-        assert(all_equal(PhiR->operands()) &&
+        assert(all_equal(PhiR->incoming_values()) &&
                "Distinct incoming values with one having a full mask");
         break;
       }

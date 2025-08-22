@@ -13,7 +13,12 @@ struct __type_info_implementations {
   typedef __unique_impl __impl;
 };
 
-class type_info {
+class __pointer_type_info {
+public:
+  int __flags = 0;
+};
+
+class type_info : public __pointer_type_info {
 protected:
   typedef __type_info_implementations::__impl __impl;
   __impl::__type_name_t __type_name;
@@ -40,3 +45,10 @@ constexpr bool test() {
   return true;
 }
 static_assert(test());
+
+int dontcrash() {
+  auto& pti = static_cast<const std::__pointer_type_info&>(
+      typeid(int)
+  );
+  return pti.__flags == 0 ? 1 : 0;
+}

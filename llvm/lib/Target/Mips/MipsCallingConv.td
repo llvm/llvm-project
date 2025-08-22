@@ -20,25 +20,15 @@ class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
 /// Match if the original argument (before lowering) was a float.
 /// For example, this is true for i32's that were lowered from soft-float.
-class CCIfOrigArgWasFloat<CCAction A>
-    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgFloat(ValNo)",
-           A>;
+class CCIfOrigArgWasFloat<CCAction A> : CCIf<"OrigTy->isFloatingPointTy()", A>;
 
 /// Match if the original argument (before lowering) was a 128-bit float (i.e.
 /// long double).
-class CCIfOrigArgWasF128<CCAction A>
-    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgF128(ValNo)", A>;
+class CCIfOrigArgWasF128<CCAction A> : CCIf<"OrigTy->isFP128Ty()", A>;
 
-/// Match if this specific argument is a vararg.
-/// This is slightly different fro CCIfIsVarArg which matches if any argument is
-/// a vararg.
-class CCIfArgIsVarArg<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)->IsCallOperandFixed(ValNo)", A>;
-
-/// Match if the return was a floating point vector.
+/// Match if the return was not a floating point vector.
 class CCIfOrigArgWasNotVectorFloat<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)"
-                "->WasOriginalRetVectorFloat(ValNo)", A>;
+    : CCIf<"!OrigTy->isVectorTy() || !OrigTy->isFPOrFPVectorTy()", A>;
 
 /// Match if the special calling conv is the specified value.
 class CCIfSpecialCallingConv<string CC, CCAction A>
@@ -344,7 +334,7 @@ def CC_Mips_VarArg : CallingConv<[
 ]>;
 
 def CC_Mips : CallingConv<[
-  CCIfVarArg<CCIfArgIsVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
+  CCIfVarArg<CCIfArgVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
   CCDelegateTo<CC_Mips_FixedArg>
 ]>;
 

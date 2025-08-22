@@ -560,6 +560,13 @@ def right_identity_neg_zero_fp: GICombineRule<
   (apply (GIReplaceReg $dst, $x))
 >;
 
+def right_identity_neg_zero_fp_nsz: GICombineRule<
+  (defs root:$dst),
+  (match (G_FADD $dst, $x, $y, (MIFlags FmNsz)):$root,
+    [{ return Helper.matchConstantFPOp(${y}, 0.0); }]),
+  (apply (GIReplaceReg $dst, $x))
+>;
+
 // Fold x op 1 -> x
 def right_identity_one_int: GICombineRule<
   (defs root:$dst),
@@ -1242,6 +1249,35 @@ def mulh_to_lshr : GICombineRule<
   (apply [{ Helper.applyUMulHToLShr(*${root}); }])>;
 
 def mulh_combines : GICombineGroup<[mulh_to_lshr]>;
+
+def trunc_ssats : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_TRUNC $dst, $src):$root,
+         [{ return Helper.matchTruncSSatS(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyTruncSSatS(*${root}, ${matchinfo}); }])>;
+
+def trunc_ssatu : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_TRUNC $dst, $src):$root,
+    [{ return Helper.matchTruncSSatU(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyTruncSSatU(*${root}, ${matchinfo}); }])>;
+
+def trunc_usatu : GICombineRule<
+  (defs root:$root),
+  (match (G_UMIN $min, $x, $y):$Min, 
+         (G_TRUNC $dst, $min):$root,
+    [{ return Helper.matchTruncUSatU(*${root}, *${Min}); }]),
+  (apply (G_TRUNC_USAT_U $dst, $x))>;
+
+def truncusatu_to_fptouisat : GICombineRule<
+  (defs root:$root),
+  (match (G_FPTOUI $src, $x):$Src,
+         (G_TRUNC_USAT_U $dst, $src):$root,
+    [{ return Helper.matchTruncUSatUToFPTOUISat(*${root}, *${Src}); }]),
+  (apply (G_FPTOUI_SAT $dst, $x))
+>;
+
+def truncsat_combines : GICombineGroup<[trunc_ssats, trunc_ssatu, trunc_usatu, truncusatu_to_fptouisat]>;
 
 def redundant_neg_operands: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -2003,7 +2039,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
                                         bitcast_bitcast_fold, fptrunc_fpext_fold,
-                                        right_identity_neg_zero_fp,
+                                        right_identity_neg_zero_fp, right_identity_neg_zero_fp_nsz,
                                         right_identity_neg_one_fp]>;
 
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
@@ -2067,7 +2103,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines]>;
+    combine_use_vector_truncate, merge_combines, overflow_combines, truncsat_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

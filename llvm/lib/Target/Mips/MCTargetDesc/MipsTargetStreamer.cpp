@@ -26,7 +26,6 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -1034,12 +1033,14 @@ MCELFStreamer &MipsTargetELFStreamer::getStreamer() {
 
 void MipsTargetELFStreamer::emitGPRel32Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(4);
   S.addFixup(Value, Mips::fixup_Mips_GPREL32);
   S.appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitGPRel64Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(8);
   // fixup_Mips_GPREL32 desginates R_MIPS_GPREL32+R_MIPS_64 on MIPS64.
   S.addFixup(Value, Mips::fixup_Mips_GPREL32);
   S.appendContents(8, 0);
@@ -1047,24 +1048,28 @@ void MipsTargetELFStreamer::emitGPRel64Value(const MCExpr *Value) {
 
 void MipsTargetELFStreamer::emitDTPRel32Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(4);
   S.addFixup(Value, Mips::fixup_Mips_DTPREL32);
   S.appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitDTPRel64Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(8);
   S.addFixup(Value, Mips::fixup_Mips_DTPREL64);
   S.appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel32Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(4);
   S.addFixup(Value, Mips::fixup_Mips_TPREL32);
   S.appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel64Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(8);
   S.addFixup(Value, Mips::fixup_Mips_TPREL64);
   S.appendContents(8, 0);
 }
