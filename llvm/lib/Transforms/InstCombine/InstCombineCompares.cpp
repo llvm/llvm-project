@@ -6415,25 +6415,50 @@ Instruction *InstCombinerImpl::foldICmpWithSextAndAdd(ICmpInst &ICmp) {
     if (!NewY || !NewZ)
       return nullptr;
 
-    bool AreYZVariables =
-        match(Y, m_SExt(m_Value())) && match(Z, m_SExt(m_Value()));
-    if (AreYZVariables) {
+    bool IsYVariable = match(Y, m_SExt(m_Value()));
+    bool IsYOrZVariable =
+        match(Y, m_SExt(m_Value())) || match(Z, m_SExt(m_Value()));
+    if (IsYOrZVariable) {
       bool FoundCondition = false;
       BasicBlock *BB = ICmp.getParent();
       for (Instruction &I : *BB) {
         if (auto *Assume = dyn_cast<IntrinsicInst>(&I)) {
           if (Assume->getIntrinsicID() == Intrinsic::assume) {
             Value *Cond = Assume->getOperand(0);
-            ConstantInt *C;
-            APInt MaxValue(Z->getType()->getIntegerBitWidth(), 1);
+            ConstantInt *C, *C2;
+            unsigned CommonWidth = Z->getType()->getIntegerBitWidth();
+            APInt MaxValue(CommonWidth, 1);
             MaxValue <<= (XBitWidth - 1);
             APInt Limit = MaxValue;
             Limit += 1;
+            // if both "Y" and "Z" are variables, Op would be "Sub"
             if (match(Cond, m_SpecificICmp(
                                 CmpInst::ICMP_ULT,
                                 m_Sub(m_SExt(m_Value(Y)), m_SExt(m_Value(Z))),
-                                m_ConstantInt(C))) &&
-                C->getValue().ule(Limit)) {
+                                m_ConstantInt(C))) ||
+                match(Cond,
+                      m_SpecificICmp(CmpInst::ICMP_ULT,
+                                     m_Add(m_SExt(m_Value(Y)), m_Value(Z)),
+                                     m_ConstantInt(C)))) {
+              if (C->getValue().ugt(Limit))
+                return nullptr;
+
+              FoundCondition = true;
+              if (Assume->use_empty()) {
+                eraseInstFromFunction(*Assume);
+              }
+              break;
+            }
+            if (!IsYVariable &&
+                match(Cond, m_SpecificICmp(CmpInst::ICMP_ULT,
+                                           m_Add(m_Value(Z), m_ConstantInt(C2)),
+                                           m_ConstantInt(C)))) {
+              auto *K = llvm::dyn_cast<llvm::ConstantInt>(Y);
+              if ((C2->getValue().sextOrTrunc(CommonWidth) -
+                   C->getValue().sextOrTrunc(CommonWidth))
+                      .slt(K->getValue() - Limit))
+                return nullptr;
+
               FoundCondition = true;
               if (Assume->use_empty()) {
                 eraseInstFromFunction(*Assume);
