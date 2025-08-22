@@ -3067,9 +3067,8 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // Update the loop infos
     loopInfos.clear();
-    for (const auto &newLoop : NewLoops) {
+    for (const auto &newLoop : NewLoops)
       loopInfos.push_back(newLoop);
-    }
   } // Tiling done
 
   // Do collapse

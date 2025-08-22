@@ -856,18 +856,22 @@ public:
   const parser::OmpClause *GetAssociatedClause() { return associatedClause; }
 
 private:
+  /// Given a vector of loop levels and a vector of corresponding clauses find
+  /// the largest loop level and set the associated loop level to the found
+  /// maximum. This is used for error handling to ensure that the number of
+  /// affected loops is not larger that the number of available loops.
   std::int64_t SetAssociatedMaxClause(llvm::SmallVector<std::int64_t> &,
       llvm::SmallVector<const parser::OmpClause *> &);
-  std::int64_t GetAssociatedLoopLevelFromLoopConstruct(
+  std::int64_t GetNumAffectedLoopsFromLoopConstruct(
       const parser::OpenMPLoopConstruct &);
-  std::int64_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
-  void CollectAssociatedLoopLevelsFromLoopConstruct(
+  std::int64_t GetNumAffectedLoopsFromClauses(const parser::OmpClauseList &);
+  void CollectNumAffectedLoopsFromLoopConstruct(
       const parser::OpenMPLoopConstruct &, llvm::SmallVector<std::int64_t> &,
       llvm::SmallVector<const parser::OmpClause *> &);
-  void CollectAssociatedLoopLevelsFromInnerLoopContruct(
+  void CollectNumAffectedLoopsFromInnerLoopContruct(
       const parser::OpenMPLoopConstruct &, llvm::SmallVector<std::int64_t> &,
       llvm::SmallVector<const parser::OmpClause *> &);
-  void CollectAssociatedLoopLevelsFromClauses(const parser::OmpClauseList &,
+  void CollectNumAffectedLoopsFromClauses(const parser::OmpClauseList &,
       llvm::SmallVector<std::int64_t> &,
       llvm::SmallVector<const parser::OmpClause *> &);
 
@@ -1931,7 +1935,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
       beginDir.v == llvm::omp::Directive::OMPD_target_loop)
     IssueNonConformanceWarning(beginDir.v, beginDir.source, 52);
   ClearDataSharingAttributeObjects();
-  SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromLoopConstruct(x));
+  SetContextAssociatedLoopLevel(GetNumAffectedLoopsFromLoopConstruct(x));
 
   if (beginDir.v == llvm::omp::Directive::OMPD_do) {
     auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
@@ -1945,7 +1949,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
     }
   }
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
-  ordCollapseLevel = GetAssociatedLoopLevelFromLoopConstruct(x) + 1;
+  ordCollapseLevel = GetNumAffectedLoopsFromLoopConstruct(x) + 1;
   return true;
 }
 
@@ -2041,13 +2045,12 @@ std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
     llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
 
-  // Find the tile level to know how much to reduce the level for collapse
+  // Find the tile level to ensure that the COLLAPSE clause value
+  // does not exeed the number of tiled loops.
   std::int64_t tileLevel = 0;
-  for (auto [level, clause] : llvm::zip_equal(levels, clauses)) {
-    if (isSizesClause(clause)) {
+  for (auto [level, clause] : llvm::zip_equal(levels, clauses))
+    if (isSizesClause(clause))
       tileLevel = level;
-    }
-  }
 
   std::int64_t maxLevel = 1;
   const parser::OmpClause *maxClause = nullptr;
@@ -2056,12 +2059,9 @@ std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
       context_.Say(clause->source,
           "The value of the parameter in the COLLAPSE clause must"
           " not be larger than the number of the number of tiled loops"
-          " because collapse relies on independent loop iterations."_err_en_US);
+          " because collapse currently is limited to independent loop"
+          " iterations."_err_en_US);
       return 1;
-    }
-
-    if (!isSizesClause(clause)) {
-      level = level - tileLevel;
     }
 
     if (level > maxLevel) {
@@ -2074,36 +2074,36 @@ std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
   return maxLevel;
 }
 
-std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromLoopConstruct(
+std::int64_t OmpAttributeVisitor::GetNumAffectedLoopsFromLoopConstruct(
     const parser::OpenMPLoopConstruct &x) {
   llvm::SmallVector<std::int64_t> levels;
   llvm::SmallVector<const parser::OmpClause *> clauses;
 
-  CollectAssociatedLoopLevelsFromLoopConstruct(x, levels, clauses);
+  CollectNumAffectedLoopsFromLoopConstruct(x, levels, clauses);
   return SetAssociatedMaxClause(levels, clauses);
 }
 
-std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
+std::int64_t OmpAttributeVisitor::GetNumAffectedLoopsFromClauses(
     const parser::OmpClauseList &x) {
   llvm::SmallVector<std::int64_t> levels;
   llvm::SmallVector<const parser::OmpClause *> clauses;
 
-  CollectAssociatedLoopLevelsFromClauses(x, levels, clauses);
+  CollectNumAffectedLoopsFromClauses(x, levels, clauses);
   return SetAssociatedMaxClause(levels, clauses);
 }
 
-void OmpAttributeVisitor::CollectAssociatedLoopLevelsFromLoopConstruct(
+void OmpAttributeVisitor::CollectNumAffectedLoopsFromLoopConstruct(
     const parser::OpenMPLoopConstruct &x,
     llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
   const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
   const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
 
-  CollectAssociatedLoopLevelsFromClauses(clauseList, levels, clauses);
-  CollectAssociatedLoopLevelsFromInnerLoopContruct(x, levels, clauses);
+  CollectNumAffectedLoopsFromClauses(clauseList, levels, clauses);
+  CollectNumAffectedLoopsFromInnerLoopContruct(x, levels, clauses);
 }
 
-void OmpAttributeVisitor::CollectAssociatedLoopLevelsFromInnerLoopContruct(
+void OmpAttributeVisitor::CollectNumAffectedLoopsFromInnerLoopContruct(
     const parser::OpenMPLoopConstruct &x,
     llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
@@ -2117,12 +2117,12 @@ void OmpAttributeVisitor::CollectAssociatedLoopLevelsFromInnerLoopContruct(
           &(nestedOptional.value()));
 
   if (innerConstruct) {
-    CollectAssociatedLoopLevelsFromLoopConstruct(
+    CollectNumAffectedLoopsFromLoopConstruct(
         innerConstruct->value(), levels, clauses);
   }
 }
 
-void OmpAttributeVisitor::CollectAssociatedLoopLevelsFromClauses(
+void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
     const parser::OmpClauseList &x, llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
   for (const auto &clause : x.v) {

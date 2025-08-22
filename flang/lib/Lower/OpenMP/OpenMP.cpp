@@ -3870,7 +3870,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       std::get<parser::OmpBeginLoopDirective>(loopConstruct.t);
   List<Clause> clauses = makeClauses(
       std::get<parser::OmpClauseList>(beginLoopDirective.t), semaCtx);
-
   if (auto &endLoopDirective =
           std::get<std::optional<parser::OmpEndLoopDirective>>(
               loopConstruct.t)) {

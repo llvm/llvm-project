@@ -598,8 +598,8 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
   }
 }
 
-// Populates the sizes vector with values if the given OpenMPConstruct
-// Contains a loop construct with an inner tiling construct.
+/// Populates the sizes vector with values if the given OpenMPConstruct
+/// Contains a loop construct with an inner tiling construct.
 void collectTileSizesFromOpenMPConstruct(
     const parser::OpenMPConstruct *ompCons,
     llvm::SmallVectorImpl<int64_t> &tileSizes, SemanticsContext &semaCtx) {

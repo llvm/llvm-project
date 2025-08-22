@@ -172,7 +172,7 @@ func.func @collapse_size(%lb : index, %ub : index, %step : index) {
 
 func.func @tiles_length(%lb : index, %ub : index, %step : index) {
   omp.wsloop {
-    // expected-error@+1 {{number of tilings is larger than the number of loops}}
+    // expected-error@+1 {{op too few canonical loops for tile dimensions}}
     omp.loop_nest (%iv) : index =  (%lb) to (%ub) step (%step) tiles(2, 4) {
       omp.yield
     }
