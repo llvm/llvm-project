@@ -199,6 +199,10 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+- A new attribute ``[[clang::candiscard]]`` can be applied to a function returning a nodiscard type
+  to suppress the nodiscard warning on that function in particular. Also, it can be applied to
+  a typedef alias to suppress the nodiscard warning on all functions returning values of the
+  typedef type.
 
 Improvements to Clang's diagnostics
 -----------------------------------

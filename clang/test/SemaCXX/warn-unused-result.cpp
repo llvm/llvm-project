@@ -425,19 +425,36 @@ struct [[gnu::warn_unused_result]] WarnUnusedResult {
   WarnUnusedResult(const char*);
 };
 
+using NoDIgnored [[clang::candiscard]] = NoDiscard;
+using WUIgnored [[clang::candiscard]] = WarnUnused;
+using WURIgnored [[clang::candiscard]] = WarnUnusedResult;
+
 NoDiscard return_nodiscard();
 WarnUnused return_warnunused();
 WarnUnusedResult return_warnunusedresult();
+NoDIgnored return_nodiscard_ignored();
+WUIgnored return_warnunused_ignored();
+WURIgnored return_warnunusedresult_ignored();
+[[clang::candiscard]] NoDiscard return_nodiscard_ignored2();
+[[clang::candiscard]] WarnUnused return_warnunused_ignored2();
+[[clang::candiscard]] WarnUnusedResult return_warnunusedresult_ignored2();
 
 NoDiscard (*p_return_nodiscard)();
 WarnUnused (*p_return_warnunused)();
 WarnUnusedResult (*p_return_warnunusedresult)();
+NoDIgnored (*p_return_nodiscard_ignored)();
+WUIgnored (*p_return_warnunused_ignored)();
+WURIgnored (*p_return_warnunusedresult_ignored)();
+[[clang::candiscard]] NoDiscard (*p_return_nodiscard_ignored2)();
+[[clang::candiscard]] WarnUnused (*p_return_warnunused_ignored2)();
+[[clang::candiscard]] WarnUnusedResult (*p_return_warnunusedresult_ignored2)();
 
 NoDiscard (*(*pp_return_nodiscard)())();
 WarnUnused (*(*pp_return_warnunused)())();
 WarnUnusedResult (*(*pp_return_warnunusedresult)())();
 
 template <class T> T from_a_template();
+template <class T> [[clang::candiscard]] T from_a_template_ignored();
 
 void test() {
   // Unused but named variables
@@ -474,11 +491,23 @@ void test() {
   return_nodiscard(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
   return_warnunused(); // no warning
   return_warnunusedresult(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+  return_nodiscard_ignored();         // no warning
+  return_warnunused_ignored();        // no warning
+  return_warnunusedresult_ignored();  // no warning
+  return_nodiscard_ignored2();        // no warning
+  return_warnunused_ignored2();       // no warning
+  return_warnunusedresult_ignored2(); // no warning
 
   // Function pointer return values
   p_return_nodiscard(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
   p_return_warnunused(); // no warning
   p_return_warnunusedresult(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+  p_return_nodiscard_ignored();         // no warning
+  p_return_warnunused_ignored();        // no warning
+  p_return_warnunusedresult_ignored();  // no warning
+  p_return_nodiscard_ignored2();        // no warning
+  p_return_warnunused_ignored2();       // no warning
+  p_return_warnunusedresult_ignored2(); // no warning
 
   // Function pointer expression return values
   pp_return_nodiscard()(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
@@ -489,6 +518,16 @@ void test() {
   from_a_template<NoDiscard>(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
   from_a_template<WarnUnused>(); // no warning
   from_a_template<WarnUnusedResult>(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  // In a template instantiation the information about the typedef is lost,
+  // so the candiscard attribute is lost, so the diagnostic is not suppressed
+  from_a_template<NoDIgnored>();       // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  from_a_template<WUIgnored>();        // no warning
+  from_a_template<WURIgnored>();       // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  from_a_template_ignored<NoDiscard>();        // no warning
+  from_a_template_ignored<WarnUnused>();       // no warning
+  from_a_template_ignored<WarnUnusedResult>(); // no warning
 }
 
 } // namespace candiscard

@@ -2452,6 +2452,44 @@ use the annotated ``[[nodiscard]]`` constructor or result in an annotated type.
   }];
 }
 
+def CanDiscardDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "candiscard";
+  let Content  = [{
+A function whose return type is marked with ``[[nodiscard]]`` generally cannot have
+its return value discarded, even though this may be safe in some rare situations.
+Clang allows an individual function to be marked with ``[[clang::candiscard]]``
+or ``__attribute__((candiscard))`` to override the effect of a ``[[nodiscard]]``
+return type.
+
+.. code-block:: c++
+
+  struct [[nodiscard]] error_info { /*...*/ };
+  error_info enable_missile_safety_mode();
+  [[clang::candiscard]] error_info reload_missiles();
+
+  void test_missiles() {
+    enable_missile_safety_mode(); // diagnoses
+    reload_missiles(); // does not diagnose
+  }
+
+Also, a type alias can be marked with ``[[clang::candiscard]]`` to mask the
+effect of ``[[nodiscard]]`` on the underlying type.
+
+.. code-block:: c++
+
+  struct [[nodiscard]] error_info { /*...*/ };
+  using informational_error_info [[clang::candiscard]] = error_info;
+  error_info enable_missile_safety_mode();
+  informational_error_info reload_missiles();
+
+  void test_missiles() {
+    enable_missile_safety_mode(); // diagnoses
+    reload_missiles(); // does not diagnose
+  }
+  }];
+}
+
 def FallthroughDocs : Documentation {
   let Category = DocCatStmt;
   let Heading = "fallthrough";

@@ -1632,21 +1632,34 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
 
 std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
 Expr::getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType) {
-  // If the callee is marked nodiscard, return that attribute
-  if (Callee != nullptr)
+  // If the callee is marked nodiscard, return that attribute for the diagnostic.
+  // If the callee is marked candiscard, do not diagnose.
+  // If seen on the same level, candiscard beats nodiscard.
+  if (Callee != nullptr) {
+    if (const auto *A = Callee->getAttr<CanDiscardAttr>())
+      return {nullptr, nullptr};
     if (const auto *A = Callee->getAttr<WarnUnusedResultAttr>())
       return {nullptr, A};
+  }
 
-  // If the return type is a struct, union, or enum that is marked nodiscard,
-  // then return the return type attribute.
-  if (const TagDecl *TD = ReturnType->getAsTagDecl())
-    if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
-      return {TD, A};
-
+  // Walk the return type's (chain of) type aliases. The first alias
+  // that is marked either nodiscard or candiscard ends the walk.
   for (const auto *TD = ReturnType->getAs<TypedefType>(); TD;
-       TD = TD->desugar()->getAs<TypedefType>())
+       TD = TD->desugar()->getAs<TypedefType>()) {
+    if (const auto *A = TD->getDecl()->getAttr<CanDiscardAttr>())
+      return {nullptr, nullptr};
     if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
       return {TD->getDecl(), A};
+  }
+
+  // Check whether the return type's class declaration is marked nodiscard.
+  if (const TagDecl *TD = ReturnType->getAsTagDecl()) {
+    if (const auto *A = TD->getAttr<CanDiscardAttr>())
+      return {nullptr, nullptr};
+    if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
+      return {TD, A};
+  }
+
   return {nullptr, nullptr};
 }
 
