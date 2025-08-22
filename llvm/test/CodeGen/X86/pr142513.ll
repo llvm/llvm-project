@@ -21,8 +21,7 @@ define i64 @foo(i64 %x) {
 ; X64-NEXT:    cmpl $65509, %edi # imm = 0xFFE5
 ; X64-NEXT:    je .LBB0_1
 ; X64-NEXT:  # %bb.2: # %if.end
-; X64-NEXT:    movabsq $9219572124669181952, %rax # imm = 0x7FF2800000000000
-; X64-NEXT:    addq $3, %rax
+; X64-NEXT:    movabsq $9219572124669181955, %rax # imm = 0x7FF2800000000003
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB0_1: # %if.then
 entry:

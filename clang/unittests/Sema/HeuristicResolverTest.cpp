@@ -29,7 +29,7 @@ MATCHER_P2(matchAdapter, MatcherForElement, MatchFunction, "matchAdapter") {
 
 template <typename InputNode>
 using ResolveFnT = std::function<std::vector<const NamedDecl *>(
-    const HeuristicResolver *, const InputNode *)>;
+    const HeuristicResolver *, InputNode)>;
 
 // Test heuristic resolution on `Code` using the resolution procedure
 // `ResolveFn`, which takes a `HeuristicResolver` and an input AST node of type
@@ -37,8 +37,9 @@ using ResolveFnT = std::function<std::vector<const NamedDecl *>(
 // `InputMatcher` should be an AST matcher that matches a single node to pass as
 // input to `ResolveFn`, bound to the ID "input". `OutputMatchers` should be AST
 // matchers that each match a single node, bound to the ID "output".
-template <typename InputNode, typename InputMatcher, typename... OutputMatchers>
-void expectResolution(llvm::StringRef Code, ResolveFnT<InputNode> ResolveFn,
+template <typename InputNode, typename ParamT, typename InputMatcher,
+          typename... OutputMatchers>
+void expectResolution(llvm::StringRef Code, ResolveFnT<ParamT> ResolveFn,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
   auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
   auto &Ctx = TU->getASTContext();
@@ -59,7 +60,11 @@ void expectResolution(llvm::StringRef Code, ResolveFnT<InputNode> ResolveFn,
   };
 
   HeuristicResolver H(Ctx);
-  auto Results = ResolveFn(&H, Input);
+  std::vector<const NamedDecl *> Results;
+  if constexpr (std::is_pointer_v<ParamT>)
+    Results = ResolveFn(&H, Input);
+  else
+    Results = ResolveFn(&H, *Input);
   EXPECT_THAT(Results, ElementsAre(matchAdapter(OMS, OutputNodeMatches)...));
 }
 
@@ -71,8 +76,8 @@ void expectResolution(llvm::StringRef Code,
                           HeuristicResolver::*ResolveFn)(const InputNode *)
                           const,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
-  expectResolution(Code, ResolveFnT<InputNode>(std::mem_fn(ResolveFn)), IM,
-                   OMS...);
+  expectResolution<InputNode>(
+      Code, ResolveFnT<const InputNode *>(std::mem_fn(ResolveFn)), IM, OMS...);
 }
 
 TEST(HeuristicResolver, MemberExpr) {
@@ -643,15 +648,16 @@ TEST(HeuristicResolver, NestedNameSpecifier) {
   // expected by expectResolution() (returning a vector of decls).
   ResolveFnT<NestedNameSpecifier> ResolveFn =
       [](const HeuristicResolver *H,
-         const NestedNameSpecifier *NNS) -> std::vector<const NamedDecl *> {
+         NestedNameSpecifier NNS) -> std::vector<const NamedDecl *> {
     return {H->resolveNestedNameSpecifierToType(NNS)->getAsCXXRecordDecl()};
   };
-  expectResolution(Code, ResolveFn,
-                   nestedNameSpecifier(hasPrefix(specifiesType(hasDeclaration(
-                                           classTemplateDecl(hasName("A"))))))
-                       .bind("input"),
-                   classTemplateDecl(has(cxxRecordDecl(
-                       has(cxxRecordDecl(hasName("B")).bind("output"))))));
+  expectResolution<NestedNameSpecifier>(
+      Code, ResolveFn,
+      nestedNameSpecifier(hasPrefix(specifiesType(
+                              hasDeclaration(classTemplateDecl(hasName("A"))))))
+          .bind("input"),
+      classTemplateDecl(
+          has(cxxRecordDecl(has(cxxRecordDecl(hasName("B")).bind("output"))))));
 }
 
 TEST(HeuristicResolver, TemplateSpecializationType) {
@@ -764,6 +770,86 @@ TEST(HeuristicResolver, UsingValueDecl) {
   expectResolution(Code, &HeuristicResolver::resolveUsingValueDecl,
                    unresolvedUsingValueDecl(hasName("waldo")).bind("input"),
                    cxxMethodDecl(hasName("waldo")).bind("output"));
+}
+
+// `arg` is a ParamVarDecl*, `Expected` is a string
+MATCHER_P(ParamNameMatcher, Expected, "paramNameMatcher") {
+  EXPECT_TRUE(arg);
+  if (IdentifierInfo *Ident = arg->getDeclName().getAsIdentifierInfo()) {
+    return Ident->getName() == Expected;
+  }
+  return false;
+}
+
+// Helper function for testing HeuristicResolver::getProtoTypeLoc.
+// Takes a matcher that selects a callee expression bound to the ID "input",
+// calls getProtoTypeLoc() on it, and checks that the call found a
+// FunctionProtoTypeLoc encoding the given parameter names.
+template <typename InputMatcher, typename... ParameterNames>
+void expectParameterNames(ASTContext &Ctx, const InputMatcher &IM,
+                          ParameterNames... ExpectedParameterNames) {
+  auto InputMatches = match(IM, Ctx);
+  ASSERT_EQ(1u, InputMatches.size());
+  const auto *Input = InputMatches[0].template getNodeAs<Expr>("input");
+  ASSERT_TRUE(Input);
+
+  HeuristicResolver H(Ctx);
+  auto Loc = H.getFunctionProtoTypeLoc(Input);
+  ASSERT_TRUE(Loc);
+  EXPECT_THAT(Loc.getParams(),
+              ElementsAre(ParamNameMatcher(ExpectedParameterNames)...));
+}
+
+TEST(HeuristicResolver, ProtoTypeLoc) {
+  std::string Code = R"cpp(
+    void (*f1)(int param1);
+    void (__stdcall *f2)(int param2);
+    using f3_t = void(*)(int param3);
+    f3_t f3;
+    using f4_t = void(__stdcall *)(int param4);
+    f4_t f4;
+    struct S {
+      void (*f5)(int param5);
+      using f6_t = void(*)(int param6);
+      f6_t f6;
+    };
+    void bar() {
+      f1(42);
+      f2(42);
+      f3(42);
+      f4(42);
+      S s;
+      s.f5(42);
+      s.f6(42);
+    }
+  )cpp";
+  auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
+  auto &Ctx = TU->getASTContext();
+  auto checkFreeFunction = [&](llvm::StringRef FunctionName,
+                               llvm::StringRef ParamName) {
+    expectParameterNames(
+        Ctx,
+        callExpr(
+            callee(implicitCastExpr(hasSourceExpression(declRefExpr(
+                                        to(namedDecl(hasName(FunctionName))))))
+                       .bind("input"))),
+        ParamName);
+  };
+  checkFreeFunction("f1", "param1");
+  checkFreeFunction("f2", "param2");
+  checkFreeFunction("f3", "param3");
+  checkFreeFunction("f4", "param4");
+  auto checkMemberFunction = [&](llvm::StringRef MemberName,
+                                 llvm::StringRef ParamName) {
+    expectParameterNames(
+        Ctx,
+        callExpr(callee(implicitCastExpr(hasSourceExpression(memberExpr(
+                                             member(hasName(MemberName)))))
+                            .bind("input"))),
+        ParamName);
+  };
+  checkMemberFunction("f5", "param5");
+  checkMemberFunction("f6", "param6");
 }
 
 } // namespace

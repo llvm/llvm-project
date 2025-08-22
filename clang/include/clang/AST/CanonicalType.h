@@ -453,7 +453,7 @@ template<>
 struct CanProxyAdaptor<MemberPointerType>
   : public CanProxyBase<MemberPointerType> {
   LLVM_CLANG_CANPROXY_TYPE_ACCESSOR(getPointeeType)
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(NestedNameSpecifier *, getQualifier)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(NestedNameSpecifier, getQualifier)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(const CXXRecordDecl *,
                                       getMostRecentCXXRecordDecl)
 };
@@ -551,21 +551,18 @@ struct CanProxyAdaptor<UnaryTransformType>
 
 template<>
 struct CanProxyAdaptor<TagType> : public CanProxyBase<TagType> {
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(TagDecl *, getDecl)
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isBeingDefined)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(TagDecl *, getOriginalDecl)
 };
 
 template<>
 struct CanProxyAdaptor<RecordType> : public CanProxyBase<RecordType> {
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(RecordDecl *, getDecl)
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isBeingDefined)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(RecordDecl *, getOriginalDecl)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, hasConstFields)
 };
 
 template<>
 struct CanProxyAdaptor<EnumType> : public CanProxyBase<EnumType> {
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(EnumDecl *, getDecl)
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isBeingDefined)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(EnumDecl *, getOriginalDecl)
 };
 
 template<>

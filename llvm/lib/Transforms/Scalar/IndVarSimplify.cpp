@@ -1506,6 +1506,9 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
       auto *NewRHS = CastInst::Create(
           Instruction::Trunc, RHS, LHSOp->getType(), "",
           L->getLoopPreheader()->getTerminator()->getIterator());
+      // NewRHS is an operation that has been hoisted out of the loop, and
+      // therefore should have a dropped location.
+      NewRHS->setDebugLoc(DebugLoc::getDropped());
       ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
       ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
       // Samesign flag cannot be preserved after narrowing the compare.
@@ -1610,7 +1613,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (CurrMaxExit == MaxBECount)
       SkipLastIter = true;
   };
-  SmallSet<const SCEV *, 8> DominatingExactExitCounts;
+  SmallPtrSet<const SCEV *, 8> DominatingExactExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExactExitCount = SE->getExitCount(L, ExitingBB);
     const SCEV *MaxExitCount = SE->getExitCount(

@@ -23,6 +23,10 @@ S s;
 // CHECK: @sp = constant ptr getelementptr (i8, ptr @s, i64 16), align 8
 float &sp = s.c[3];
 
+namespace NearlyZeroInit {
+  // CHECK: @_ZN14NearlyZeroInit1bE ={{.*}} global{{.*}} { i32, <{ i32, [2147483647 x i32] }> } { i32 1, <{ i32, [2147483647 x i32] }> <{ i32 2, [2147483647 x i32] zeroinitializer }> }{{.*}}
+  struct B { int n; int arr[1024 * 1024 * 1024 * 2u]; } b = {1, {2}};
+}
 
 namespace BaseClassOffsets {
   struct A { int a; };

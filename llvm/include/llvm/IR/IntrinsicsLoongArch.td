@@ -19,20 +19,25 @@ let TargetPrefix = "loongarch" in {
 class MaskedAtomicRMW<LLVMType itype>
     : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype],
                 [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
+// T @llvm.<name>.T.<p>(any*, T, T, T, T imm);
+class LoongArchMaskedAtomicRMWFiveArg<LLVMType itype>
+    : Intrinsic<[itype], [llvm_anyptr_ty, itype, itype, itype, itype],
+                [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<4>>]>;
 
 // We define 32-bit and 64-bit variants of the above, where T stands for i32
 // or i64 respectively:
 multiclass MaskedAtomicRMWIntrinsics {
   // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32 imm);
   def _i32 : MaskedAtomicRMW<llvm_i32_ty>;
-  // i64 @llvm.<name>.i32.<p>(any*, i64, i64, i64 imm);
+  // i64 @llvm.<name>.i64.<p>(any*, i64, i64, i64 imm);
   def _i64 : MaskedAtomicRMW<llvm_i64_ty>;
 }
 
 multiclass MaskedAtomicRMWFiveOpIntrinsics {
-  // TODO: Support cmpxchg on LA32.
+  // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32, i32 imm);
+  def _i32 : LoongArchMaskedAtomicRMWFiveArg<llvm_i32_ty>;
   // i64 @llvm.<name>.i64.<p>(any*, i64, i64, i64, i64 imm);
-  def _i64 : MaskedAtomicRMWFiveArg<llvm_i64_ty>;
+  def _i64 : LoongArchMaskedAtomicRMWFiveArg<llvm_i64_ty>;
 }
 
 defm int_loongarch_masked_atomicrmw_xchg : MaskedAtomicRMWIntrinsics;
@@ -44,7 +49,7 @@ defm int_loongarch_masked_atomicrmw_umin : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_max : MaskedAtomicRMWFiveOpIntrinsics;
 defm int_loongarch_masked_atomicrmw_min : MaskedAtomicRMWFiveOpIntrinsics;
 
-// @llvm.loongarch.masked.cmpxchg.i64.<p>(
+// @llvm.loongarch.masked.cmpxchg.<i32,i64>.<p>(
 //   ptr addr, grlen cmpval, grlen newval, grlen mask, grlenimm ordering)
 defm int_loongarch_masked_cmpxchg : MaskedAtomicRMWFiveOpIntrinsics;
 

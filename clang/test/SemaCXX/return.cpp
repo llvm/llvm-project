@@ -115,9 +115,9 @@ namespace ctor_returns_void {
   };
 
   template <typename T> struct ST {
-    ST() { return f(); } // expected-error {{constructor 'ST<T>' must not return void expression}}
+    ST() { return f(); } // expected-error {{constructor 'ctor_returns_void::ST<T>' must not return void expression}}
                          // expected-error@-1 {{constructor 'ST' must not return void expression}}
-    ~ST() { return f(); } // expected-error {{destructor '~ST<T>' must not return void expression}}
+    ~ST() { return f(); } // expected-error {{destructor '~ctor_returns_void::ST<T>' must not return void expression}}
                           // expected-error@-1 {{destructor '~ST' must not return void expression}}
   };
 
@@ -130,5 +130,5 @@ void cxx_unresolved_expr() {
   // CXXUnresolvedConstructExpr, and the missing ')' gives it an invalid source
   // location for its rparen.  Check that emitting a diag on the range of the
   // expr doesn't assert.
-  return int(undeclared, 4; // expected-error {{expected ')'}} expected-note{{to match this '('}} expected-error {{use of undeclared identifier 'undeclared'}}
+  return int(undeclared, 4; // expected-error {{use of undeclared identifier 'undeclared'}}
 }

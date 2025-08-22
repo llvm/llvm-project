@@ -92,6 +92,8 @@ public:
 
   bool isTyped() const { return rec->getValueAsBit("is_typed"); }
 
+  bool isBitField() const { return rec->getValueAsBit("is_bit_field"); }
+
 private:
   const Record *rec;
   std::vector<EnumValueRec> vals;
@@ -157,9 +159,15 @@ public:
   bool isHandleType() const { return getType().ends_with("_handle_t"); }
   bool isFptrType() const { return getType().ends_with("_cb_t"); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
-  bool isIn() const { return dyn_cast<BitInit>(flags->getBit(0))->getValue(); }
-  bool isOut() const { return dyn_cast<BitInit>(flags->getBit(1))->getValue(); }
-  bool isOpt() const { return dyn_cast<BitInit>(flags->getBit(2))->getValue(); }
+  bool getFlagBit(unsigned int Bit) const {
+    if (auto *BitValue = dyn_cast<BitInit>(flags->getBit(Bit)))
+      return BitValue->getValue();
+    assert(false && "Parameter flags has no default or set value");
+    return false;
+  }
+  bool isIn() const { return getFlagBit(0); }
+  bool isOut() const { return getFlagBit(1); }
+  bool isOpt() const { return getFlagBit(2); }
 
   const Record *getRec() const { return rec; }
   std::optional<std::pair<StringRef, StringRef>> getRange() const {

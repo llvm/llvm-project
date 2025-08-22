@@ -6,8 +6,8 @@ target triple = "x86_64-apple-macosx10.14.0"
 @c = common global i32 0, align 4
 @h = common global i32 0, align 4
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
+declare void @llvm.lifetime.start.p0(ptr nocapture) #0
+declare void @llvm.lifetime.end.p0(ptr nocapture) #0
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
 
 declare ptr @m()
@@ -27,15 +27,15 @@ bb:
 
 bb3:                                              ; preds = %bb
   %i4 = call ptr @m()
-  call void @llvm.lifetime.start.p0(i64 20, ptr %.sroa.4.i)
-  call void @llvm.lifetime.start.p0(i64 6, ptr %.sroa.5.i)
+  call void @llvm.lifetime.start.p0(ptr %.sroa.4.i)
+  call void @llvm.lifetime.start.p0(ptr %.sroa.5.i)
   call void @llvm.memset.p0.i64(ptr align 2 %.sroa.4.i, i8 0, i64 20, i1 false)
   call void @llvm.memset.p0.i64(ptr align 8 %.sroa.5.i, i8 0, i64 6, i1 false)
   %i5 = load i32, ptr @c, align 4, !tbaa !4
   %i6 = trunc i32 %i5 to i16
-  call void @llvm.lifetime.end.p0(i64 20, ptr %.sroa.4.i)
-  call void @llvm.lifetime.end.p0(i64 6, ptr %.sroa.5.i)
-  call void @llvm.lifetime.start.p0(i64 6, ptr %.sroa.5.i)
+  call void @llvm.lifetime.end.p0(ptr %.sroa.4.i)
+  call void @llvm.lifetime.end.p0(ptr %.sroa.5.i)
+  call void @llvm.lifetime.start.p0(ptr %.sroa.5.i)
   call void @llvm.memset.p0.i64(ptr align 1 %.sroa.5.i, i8 3, i64 6, i1 false)
   br label %bb7
 
@@ -47,7 +47,7 @@ bb7:                                              ; preds = %bb7, %bb3
   br i1 %i10, label %bb7, label %l.exit
 
 l.exit:                                           ; preds = %bb7
-  call void @llvm.lifetime.end.p0(i64 6, ptr %.sroa.5.i)
+  call void @llvm.lifetime.end.p0(ptr %.sroa.5.i)
   br label %bb11
 
 bb11:                                             ; preds = %l.exit, %bb

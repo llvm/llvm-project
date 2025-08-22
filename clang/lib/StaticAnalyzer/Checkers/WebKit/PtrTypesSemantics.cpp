@@ -181,10 +181,6 @@ template <typename Predicate>
 static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
   QualType type = T;
   while (!type.isNull()) {
-    if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
-      type = elaboratedT->desugar();
-      continue;
-    }
     if (auto *SpecialT = type->getAs<TemplateSpecializationType>()) {
       auto *Decl = SpecialT->getTemplateName().getAsTemplateDecl();
       return Decl && Pred(Decl->getNameAsString());
@@ -236,6 +232,7 @@ std::optional<bool> isUnchecked(const QualType T) {
 void RetainTypeChecker::visitTranslationUnitDecl(
     const TranslationUnitDecl *TUD) {
   IsARCEnabled = TUD->getLangOpts().ObjCAutoRefCount;
+  DefaultSynthProperties = TUD->getLangOpts().ObjCDefaultSynthProperties;
 }
 
 void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
@@ -247,13 +244,15 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
   const RecordType *RT = PointeeQT->getAs<RecordType>();
   if (!RT) {
     if (TD->hasAttr<ObjCBridgeAttr>() || TD->hasAttr<ObjCBridgeMutableAttr>()) {
-      if (auto *Type = TD->getTypeForDecl())
-        RecordlessTypes.insert(Type);
+      RecordlessTypes.insert(TD->getASTContext()
+                                 .getTypedefType(ElaboratedTypeKeyword::None,
+                                                 /*Qualifier=*/std::nullopt, TD)
+                                 .getTypePtr());
     }
     return;
   }
 
-  for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
+  for (auto *Redecl : RT->getOriginalDecl()->getMostRecentDecl()->redecls()) {
     if (Redecl->getAttr<ObjCBridgeAttr>() ||
         Redecl->getAttr<ObjCBridgeMutableAttr>()) {
       CFPointees.insert(RT);
@@ -265,21 +264,10 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
 bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
   if (ento::cocoa::isCocoaObjectRef(QT) && (!IsARCEnabled || ignoreARC))
     return true;
-  auto CanonicalType = QT.getCanonicalType();
-  auto PointeeType = CanonicalType->getPointeeType();
-  auto *RT = dyn_cast_or_null<RecordType>(PointeeType.getTypePtrOrNull());
-  if (!RT) {
-    auto *Type = QT.getTypePtrOrNull();
-    while (Type) {
-      if (RecordlessTypes.contains(Type))
-        return true;
-      auto *ET = dyn_cast_or_null<ElaboratedType>(Type);
-      if (!ET)
-        break;
-      Type = ET->desugar().getTypePtrOrNull();
-    }
-  }
-  return RT && CFPointees.contains(RT);
+  if (auto *RT = dyn_cast_or_null<RecordType>(
+          QT.getCanonicalType()->getPointeeType().getTypePtrOrNull()))
+    return CFPointees.contains(RT);
+  return RecordlessTypes.contains(QT.getTypePtr());
 }
 
 std::optional<bool> isUnretained(const QualType T, bool IsARCEnabled) {
@@ -305,7 +293,7 @@ std::optional<bool> isUnretained(const QualType T, bool IsARCEnabled) {
   auto *Record = PointeeType->getAsStructureType();
   if (!Record)
     return false;
-  auto *Decl = Record->getDecl();
+  auto *Decl = Record->getOriginalDecl();
   if (!Decl)
     return false;
   auto TypeName = Decl->getName();
@@ -467,6 +455,18 @@ bool isPtrConversion(const FunctionDecl *F) {
       FunctionName == "dynamic_objc_cast" ||
       FunctionName == "checked_objc_cast")
     return true;
+
+  auto ReturnType = F->getReturnType();
+  if (auto *Type = ReturnType.getTypePtrOrNull()) {
+    if (auto *AttrType = dyn_cast<AttributedType>(Type)) {
+      if (auto *Attr = AttrType->getAttr()) {
+        if (auto *AnnotateType = dyn_cast<AnnotateTypeAttr>(Attr)) {
+          if (AnnotateType->getAnnotation() == "webkit.pointerconversion")
+            return true;
+        }
+      }
+    }
+  }
 
   return false;
 }

@@ -117,6 +117,15 @@ private:
     OpenACCDirectiveKind DirectiveKind = OpenACCDirectiveKind::Invalid;
   } TileInfo;
 
+  /// The 'cache' var-list requires some additional work to track variable
+  /// references to make sure they are on the 'other' side of a `loop`. This
+  /// structure is used during parse time to track vardecl use while parsing a
+  /// cache var list.
+  struct CacheParseInfo {
+    bool ParsingCacheVarList = false;
+    bool IsInvalidCacheRef = false;
+  } CacheInfo;
+
   /// A list of the active reduction clauses, which allows us to check that all
   /// vars on nested constructs for the same reduction var have the same
   /// reduction operator. Currently this is enforced against all constructs
@@ -167,10 +176,6 @@ private:
 
     void checkFor();
 
-    //  void checkRangeFor(); ?? ERICH
-    //  const ValueDecl *checkInit();
-    //  void checkCond(const ValueDecl *Init);
-    //  void checkInc(const ValueDecl *Init);
   public:
     // Checking for non-instantiation version of a Range-for.
     ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
@@ -231,6 +236,15 @@ public:
   bool DiagnoseExclusiveClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                 SourceLocation ClauseLoc,
                                 ArrayRef<const OpenACCClause *> Clauses);
+
+  // Creates a VarDecl with a proper default init for the purposes of a
+  // `private`/'firstprivate'/'reduction' clause, so it can be used to generate
+  // a recipe later.
+  //  The first entry is the recipe itself, the second is any required
+  //  'temporary' created for the init (in the case of a copy), such as with
+  //  firstprivate.
+  std::pair<VarDecl *, VarDecl *> CreateInitRecipe(OpenACCClauseKind CK,
+                                                   const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -861,6 +875,12 @@ public:
   ExprResult ActOnIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                           SourceLocation Loc, Expr *IntExpr);
 
+  /// Called right before a 'var' is parsed, so we can set the state for parsing
+  /// a 'cache' var.
+  void ActOnStartParseVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK);
+  /// Called only if the parse of a 'var' was invalid, else 'ActOnVar' should be
+  /// called.
+  void ActOnInvalidParseVar();
   /// Called when encountering a 'var' for OpenACC, ensures it is actually a
   /// declaration reference to a variable of the correct type.
   ExprResult ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
@@ -913,6 +933,10 @@ public:
                            OpenACCDirectiveKind DK, OpenACCGangKind GK,
                            Expr *E);
 
+  // Called when a declaration is referenced, so that we can make sure certain
+  // clauses don't do the 'wrong' thing/have incorrect references.
+  void CheckDeclReference(SourceLocation Loc, Expr *E, Decl *D);
+
   // Does the checking for a 'gang' clause that needs to be done in dependent
   // and not dependent cases.
   OpenACCClause *
@@ -923,12 +947,12 @@ public:
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
   // Does the checking for a 'reduction ' clause that needs to be done in
   // dependent and not dependent cases.
-  OpenACCClause *
-  CheckReductionClause(ArrayRef<const OpenACCClause *> ExistingClauses,
-                       OpenACCDirectiveKind DirectiveKind,
-                       SourceLocation BeginLoc, SourceLocation LParenLoc,
-                       OpenACCReductionOperator ReductionOp,
-                       ArrayRef<Expr *> Vars, SourceLocation EndLoc);
+  OpenACCClause *CheckReductionClause(
+      ArrayRef<const OpenACCClause *> ExistingClauses,
+      OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
+      SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
+      ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
+      SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);

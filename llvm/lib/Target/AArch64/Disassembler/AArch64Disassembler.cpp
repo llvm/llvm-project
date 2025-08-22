@@ -15,6 +15,7 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -27,6 +28,7 @@
 #include <memory>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "aarch64-disassembler"
 
@@ -310,7 +312,8 @@ createAArch64ExternalSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                                        SymbolLookUp, DisInfo);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Disassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAArch64Disassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheAArch64leTarget(),
                                          createAArch64Disassembler);
   TargetRegistry::RegisterMCDisassembler(getTheAArch64beTarget(),

@@ -30,34 +30,35 @@
 class InstFormat<bits<5> val> {
   bits<5> Value = val;
 }
-def InstFormatPseudo : InstFormat<0>;
-def InstFormatR      : InstFormat<1>;
-def InstFormatR4     : InstFormat<2>;
-def InstFormatI      : InstFormat<3>;
-def InstFormatS      : InstFormat<4>;
-def InstFormatB      : InstFormat<5>;
-def InstFormatU      : InstFormat<6>;
-def InstFormatJ      : InstFormat<7>;
-def InstFormatCR     : InstFormat<8>;
-def InstFormatCI     : InstFormat<9>;
-def InstFormatCSS    : InstFormat<10>;
-def InstFormatCIW    : InstFormat<11>;
-def InstFormatCL     : InstFormat<12>;
-def InstFormatCS     : InstFormat<13>;
-def InstFormatCA     : InstFormat<14>;
-def InstFormatCB     : InstFormat<15>;
-def InstFormatCJ     : InstFormat<16>;
-def InstFormatCU     : InstFormat<17>;
-def InstFormatCLB    : InstFormat<18>;
-def InstFormatCLH    : InstFormat<19>;
-def InstFormatCSB    : InstFormat<20>;
-def InstFormatCSH    : InstFormat<21>;
-def InstFormatQC_EAI : InstFormat<22>;
-def InstFormatQC_EI  : InstFormat<23>;
-def InstFormatQC_EB  : InstFormat<24>;
-def InstFormatQC_EJ  : InstFormat<25>;
-def InstFormatQC_ES  : InstFormat<26>;
-def InstFormatOther  : InstFormat<31>;
+def InstFormatPseudo        : InstFormat<0>;
+def InstFormatR             : InstFormat<1>;
+def InstFormatR4            : InstFormat<2>;
+def InstFormatI             : InstFormat<3>;
+def InstFormatS             : InstFormat<4>;
+def InstFormatB             : InstFormat<5>;
+def InstFormatU             : InstFormat<6>;
+def InstFormatJ             : InstFormat<7>;
+def InstFormatCR            : InstFormat<8>;
+def InstFormatCI            : InstFormat<9>;
+def InstFormatCSS           : InstFormat<10>;
+def InstFormatCIW           : InstFormat<11>;
+def InstFormatCL            : InstFormat<12>;
+def InstFormatCS            : InstFormat<13>;
+def InstFormatCA            : InstFormat<14>;
+def InstFormatCB            : InstFormat<15>;
+def InstFormatCJ            : InstFormat<16>;
+def InstFormatCU            : InstFormat<17>;
+def InstFormatCLB           : InstFormat<18>;
+def InstFormatCLH           : InstFormat<19>;
+def InstFormatCSB           : InstFormat<20>;
+def InstFormatCSH           : InstFormat<21>;
+def InstFormatQC_EAI        : InstFormat<22>;
+def InstFormatQC_EI         : InstFormat<23>;
+def InstFormatQC_EB         : InstFormat<24>;
+def InstFormatQC_EJ         : InstFormat<25>;
+def InstFormatQC_ES         : InstFormat<26>;
+def InstFormatNDS_BRANCH_10 : InstFormat<27>;
+def InstFormatOther         : InstFormat<31>;
 
 
 class RISCVVConstraint<bits<3> val> {
@@ -99,6 +100,8 @@ def VMConstraint  : RISCVVConstraint<0b100>;
 //
 // * vcompress: The destination vector register group cannot overlap the
 // source vector register group or the source mask register
+def WidenVNoMask : RISCVVConstraint<!or(VS2Constraint.Value,
+                                        VS1Constraint.Value)>;
 def WidenV       : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VS1Constraint.Value,
                                         VMConstraint.Value)>;
@@ -171,6 +174,7 @@ class EltDeps<bit vl, bit mask> {
 
 def EltDepsNone      : EltDeps<vl=0, mask=0>;
 def EltDepsVL        : EltDeps<vl=1, mask=0>;
+def EltDepsMask      : EltDeps<vl=0, mask=1>;
 def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
 
 class EEW <bits<2> val> {
@@ -190,7 +194,9 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
   let Pattern = pattern;
 
-  let TSFlags{4-0} = format.Value;
+  InstFormat Format = format;
+
+  let TSFlags{4-0} = Format.Value;
 
   // Defaults
   RISCVVConstraint RVVConstraint = NoConstraint;
@@ -255,17 +261,18 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // Indicates the EEW of a vector instruction's destination operand.
   EEW DestEEW = EEWSEWx1;
   let TSFlags{25-24} = DestEEW.Value;
+
+  // Some vector instructions like vslidedown/vrgather will read elements past
+  // VL, and should be marked to make sure RISCVVLOptimizer doesn't reduce its
+  // operands' VLs.
+  bit ReadsPastVL = 0;
+  let TSFlags{26} = ReadsPastVL;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
              list<dag> pattern, InstFormat format>
     : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<32> Inst;
-  // SoftFail is a field the disassembler can use to provide a way for
-  // instructions to not match without killing the whole decode process. It is
-  // mainly used for ARM, but Tablegen expects this field to exist or it fails
-  // to build the decode table.
-  field bits<32> SoftFail = 0;
   let Size = 4;
 }
 
@@ -273,7 +280,6 @@ class RVInst48<dag outs, dag ins, string opcodestr, string argstr,
                list<dag> pattern, InstFormat format>
     : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
   let Size = 6;
 }
 
@@ -281,7 +287,6 @@ class RVInst64<dag outs, dag ins, string opcodestr, string argstr,
                list<dag> pattern, InstFormat format>
     : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<64> Inst;
-  field bits<64> SoftFail = 0;
   let Size = 8;
 }
 

@@ -71,7 +71,7 @@ class NonLocalizedStringChecker
   // Methods that return a localized string
   mutable llvm::SmallSet<std::pair<const IdentifierInfo *, Selector>, 12> LSM;
   // C Functions that return a localized string
-  mutable llvm::SmallSet<const IdentifierInfo *, 5> LSF;
+  mutable llvm::SmallPtrSet<const IdentifierInfo *, 5> LSF;
 
   void initUIMethods(ASTContext &Ctx) const;
   void initLocStringsMethods(ASTContext &Ctx) const;
@@ -747,9 +747,7 @@ void NonLocalizedStringChecker::reportLocalizationError(
   if (isDebuggingContext(C))
     return;
 
-  static CheckerProgramPointTag Tag("NonLocalizedStringChecker",
-                                    "UnlocalizedString");
-  ExplodedNode *ErrNode = C.addTransition(C.getState(), C.getPredecessor(), &Tag);
+  ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
 
   if (!ErrNode)
     return;
@@ -1120,8 +1118,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
   // source, so SL should point to the NSLocalizedString macro.
   SourceLocation SL =
       Mgr.getSourceManager().getImmediateMacroCallerLoc(R.getBegin());
-  std::pair<FileID, unsigned> SLInfo =
-      Mgr.getSourceManager().getDecomposedLoc(SL);
+  FileIDAndOffset SLInfo = Mgr.getSourceManager().getDecomposedLoc(SL);
 
   SrcMgr::SLocEntry SE = Mgr.getSourceManager().getSLocEntry(SLInfo.first);
 

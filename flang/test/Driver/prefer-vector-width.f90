@@ -15,4 +15,4 @@ end subroutine func
 ! CHECK-NONE-SAME: "prefer-vector-width"="none"
 ! CHECK-128-SAME: "prefer-vector-width"="128"
 ! CHECK-256-SAME: "prefer-vector-width"="256"
-! CHECK-INVALID: error: invalid value 'xxx' in '-mprefer-vector-width=xxx'
+! CHECK-INVALID: error: invalid value 'xxx' in 'mprefer-vector-width='

@@ -927,8 +927,13 @@ LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
   // more definitions.
-  return ValueLatticeElement::getRange(LHSRange.castOp(CI->getOpcode(),
-                                                       ResultBitWidth));
+  ConstantRange Res = ConstantRange::getEmpty(ResultBitWidth);
+  if (auto *Trunc = dyn_cast<TruncInst>(CI))
+    Res = LHSRange.truncate(ResultBitWidth, Trunc->getNoWrapKind());
+  else
+    Res = LHSRange.castOp(CI->getOpcode(), ResultBitWidth);
+
+  return ValueLatticeElement::getRange(Res);
 }
 
 std::optional<ValueLatticeElement>
@@ -1745,14 +1750,10 @@ LazyValueInfoImpl &LazyValueInfo::getOrCreateImpl(const Module *M) {
         Intrinsic::getDeclarationIfExists(M, Intrinsic::experimental_guard);
     PImpl = new LazyValueInfoImpl(AC, DL, GuardDecl);
   }
-  return *static_cast<LazyValueInfoImpl *>(PImpl);
+  return *PImpl;
 }
 
-LazyValueInfoImpl *LazyValueInfo::getImpl() {
-  if (!PImpl)
-    return nullptr;
-  return static_cast<LazyValueInfoImpl *>(PImpl);
-}
+LazyValueInfoImpl *LazyValueInfo::getImpl() { return PImpl; }
 
 LazyValueInfo::~LazyValueInfo() { releaseMemory(); }
 

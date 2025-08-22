@@ -28,10 +28,6 @@ static bool WriteLock(lldb::rwlock_t rwlock) {
   return true;
 }
 
-static bool WriteTryLock(lldb::rwlock_t rwlock) {
-  return !!::TryAcquireSRWLockExclusive(GetLock(rwlock));
-}
-
 static bool WriteUnlock(lldb::rwlock_t rwlock) {
   ::ReleaseSRWLockExclusive(GetLock(rwlock));
   return true;

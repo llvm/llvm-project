@@ -245,7 +245,7 @@ static void reportGISelDiagnostic(DiagnosticSeverity Severity,
     R << (" (in function: " + MF.getName() + ")").str();
 
   if (IsFatal)
-    report_fatal_error(Twine(R.getMsg()));
+    reportFatalUsageError(Twine(R.getMsg()));
   else
     MORE.emit(R);
 }
@@ -1401,9 +1401,31 @@ bool llvm::isBuildVectorConstantSplat(const Register Reg,
   return false;
 }
 
+bool llvm::isBuildVectorConstantSplat(const Register Reg,
+                                      const MachineRegisterInfo &MRI,
+                                      APInt SplatValue, bool AllowUndef) {
+  if (auto SplatValAndReg = getAnyConstantSplat(Reg, MRI, AllowUndef)) {
+    if (SplatValAndReg->Value.getBitWidth() < SplatValue.getBitWidth())
+      return APInt::isSameValue(
+          SplatValAndReg->Value.sext(SplatValue.getBitWidth()), SplatValue);
+    return APInt::isSameValue(
+        SplatValAndReg->Value,
+        SplatValue.sext(SplatValAndReg->Value.getBitWidth()));
+  }
+
+  return false;
+}
+
 bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI,
                                       int64_t SplatValue, bool AllowUndef) {
+  return isBuildVectorConstantSplat(MI.getOperand(0).getReg(), MRI, SplatValue,
+                                    AllowUndef);
+}
+
+bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI,
+                                      APInt SplatValue, bool AllowUndef) {
   return isBuildVectorConstantSplat(MI.getOperand(0).getReg(), MRI, SplatValue,
                                     AllowUndef);
 }
@@ -1847,8 +1869,10 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_FSHR:
   case TargetOpcode::G_SMAX:
   case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SCMP:
   case TargetOpcode::G_UMAX:
   case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UCMP:
   case TargetOpcode::G_PTRMASK:
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SSUBO:
@@ -2001,6 +2025,17 @@ Type *llvm::getTypeForLLT(LLT Ty, LLVMContext &C) {
     return VectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
                            Ty.getElementCount());
   return IntegerType::get(C, Ty.getSizeInBits());
+}
+
+bool llvm::isAssertMI(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_ASSERT_ALIGN:
+  case TargetOpcode::G_ASSERT_SEXT:
+  case TargetOpcode::G_ASSERT_ZEXT:
+    return true;
+  }
 }
 
 APInt llvm::GIConstant::getScalarValue() const {

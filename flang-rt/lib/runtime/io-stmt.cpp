@@ -352,6 +352,17 @@ void OpenStatementState::CompleteOperation() {
     // Set default format (C.7.4 point 2).
     unit().isUnformatted = unit().access != Access::Sequential;
   }
+  if (unit().isUnformatted.value_or(false) && mustBeFormatted_) {
+    // This is an unformatted unit, but the OPEN statement contained at least
+    // one specifier that is not permitted unless the unit is formatted
+    // (e.g., BLANK=).  Programs that want to detect this error (i.e., tests)
+    // should be informed about it, but don't crash the program otherwise
+    // since most other compilers let it slide.
+    if (HasErrorRecovery()) {
+      SignalError("FORM='UNFORMATTED' is not allowed with OPEN specifiers that "
+                  "apply only to formatted units");
+    }
+  }
   if (!wasExtant_ && InError()) {
     // Release the new unit on failure
     set_destroy();
@@ -526,6 +537,17 @@ Fortran::common::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
       [&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
 }
 
+const NonTbpDefinedIoTable *IoStatementState::nonTbpDefinedIoTable() const {
+  return common::visit(
+      [&](auto &x) { return x.get().nonTbpDefinedIoTable(); }, u_);
+}
+
+void IoStatementState::set_nonTbpDefinedIoTable(
+    const NonTbpDefinedIoTable *table) {
+  common::visit(
+      [&](auto &x) { return x.get().set_nonTbpDefinedIoTable(table); }, u_);
+}
+
 bool IoStatementState::Emit(
     const char *data, std::size_t bytes, std::size_t elementBytes) {
   return common::visit(
@@ -633,10 +655,10 @@ IoStatementState::FastAsciiField IoStatementState::GetUpcomingFastAsciiField() {
   if (!connection.isUTF8 && connection.internalIoCharKind <= 1) {
     const char *p{nullptr};
     if (std::size_t bytes{GetNextInputBytes(p)}) {
-      return FastAsciiField(connection, p, bytes);
+      return FastAsciiField{connection, p, bytes};
     }
   }
-  return FastAsciiField(connection);
+  return FastAsciiField{connection};
 }
 
 Fortran::common::optional<char32_t> IoStatementState::NextInField(
@@ -828,10 +850,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
   }
-  char32_t comma{','};
-  if (edit.modes.editingFlags & decimalComma) {
-    comma = ';';
-  }
+  const char32_t comma{edit.modes.GetSeparatorChar()};
   std::size_t byteCount{0};
   if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
     RUNTIME_CHECK(io.GetIoErrorHandler(), repeatPosition_.has_value());
@@ -920,9 +939,12 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       fastField.connection().positionInRecord = start;
     }
   }
-  if (!imaginaryPart_ && ch && *ch == '(') {
-    realPart_ = true;
-    fastField.connection().HandleRelativePosition(byteCount);
+  if (!imaginaryPart_ && edit.descriptor == DataEdit::ListDirected && ch &&
+      *ch == '(') {
+    if (maxRepeat > 0) { // not being peeked at fram DefinedFormattedIo()
+      realPart_ = true;
+      fastField.connection().HandleRelativePosition(byteCount);
+    }
     edit.descriptor = DataEdit::ListDirectedRealPart;
   }
   return edit;
@@ -952,12 +974,24 @@ bool ExternalUnformattedIoStatementState<DIR>::Receive(
 template <Direction DIR>
 ChildIoStatementState<DIR>::ChildIoStatementState(
     ChildIo &child, const char *sourceFile, int sourceLine)
-    : IoStatementBase{sourceFile, sourceLine}, child_{child} {}
+    : IoStatementBase{sourceFile, sourceLine}, child_{child},
+      mutableModes_{child.parent().mutableModes()} {}
 
 template <Direction DIR>
-MutableModes &ChildIoStatementState<DIR>::mutableModes() {
+const NonTbpDefinedIoTable *
+ChildIoStatementState<DIR>::nonTbpDefinedIoTable() const {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  return child_.parent().mutableModes();
+  return child_.parent().nonTbpDefinedIoTable();
+#else
+  ReportUnsupportedChildIo();
+#endif
+}
+
+template <Direction DIR>
+void ChildIoStatementState<DIR>::set_nonTbpDefinedIoTable(
+    const NonTbpDefinedIoTable *table) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  child_.parent().set_nonTbpDefinedIoTable(table);
 #else
   ReportUnsupportedChildIo();
 #endif
@@ -1030,9 +1064,7 @@ ChildFormattedIoStatementState<DIR, CHAR>::ChildFormattedIoStatementState(
     ChildIo &child, const CHAR *format, std::size_t formatLength,
     const Descriptor *formatDescriptor, const char *sourceFile, int sourceLine)
     : ChildIoStatementState<DIR>{child, sourceFile, sourceLine},
-      mutableModes_{child.parent().mutableModes()}, format_{*this, format,
-                                                        formatLength,
-                                                        formatDescriptor} {}
+      format_{*this, format, formatLength, formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void ChildFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -1058,10 +1090,30 @@ bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
 }
 
 template <Direction DIR>
-bool ChildUnformattedIoStatementState<DIR>::Receive(
-    char *data, std::size_t bytes, std::size_t elementBytes) {
+ChildListIoStatementState<DIR>::ChildListIoStatementState(
+    ChildIo &child, const char *sourceFile, int sourceLine)
+    : ChildIoStatementState<DIR>{child, sourceFile, sourceLine} {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  return this->child().parent().Receive(data, bytes, elementBytes);
+  if constexpr (DIR == Direction::Input) {
+    if (auto *listInput{child.parent()
+                .get_if<ListDirectedStatementState<Direction::Input>>()}) {
+      this->namelistGroup_ = listInput->namelistGroup();
+    }
+  }
+#else
+  this->ReportUnsupportedChildIo();
+#endif
+}
+
+template <Direction DIR>
+bool ChildListIoStatementState<DIR>::AdvanceRecord(int n) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  // Allow child NAMELIST input to advance
+  if (DIR == Direction::Input && this->mutableModes().inNamelist) {
+    return this->child().parent().AdvanceRecord(n);
+  } else {
+    return false;
+  }
 #else
   this->ReportUnsupportedChildIo();
 #endif
@@ -1075,6 +1127,16 @@ template <Direction DIR> int ChildListIoStatementState<DIR>::EndIoStatement() {
     }
   }
   return ChildIoStatementState<DIR>::EndIoStatement();
+}
+
+template <Direction DIR>
+bool ChildUnformattedIoStatementState<DIR>::Receive(
+    char *data, std::size_t bytes, std::size_t elementBytes) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  return this->child().parent().Receive(data, bytes, elementBytes);
+#else
+  this->ReportUnsupportedChildIo();
+#endif
 }
 
 template class InternalIoStatementState<Direction::Output>;

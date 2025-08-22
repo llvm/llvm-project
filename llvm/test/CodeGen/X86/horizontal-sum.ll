@@ -247,13 +247,13 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vhaddps %xmm4, %xmm4, %xmm1
-; AVX2-SLOW-NEXT:    vhaddps %xmm5, %xmm5, %xmm8
+; AVX2-SLOW-NEXT:    vhaddps %xmm5, %xmm5, %xmm4
 ; AVX2-SLOW-NEXT:    vhaddps %xmm3, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[0,2],xmm1[0,1]
-; AVX2-SLOW-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm8[0]
-; AVX2-SLOW-NEXT:    vhaddps %xmm4, %xmm5, %xmm3
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[1,3],xmm3[3,1]
-; AVX2-SLOW-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm3 = xmm2[0,2],xmm1[0,1]
+; AVX2-SLOW-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm4[0]
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,3]
+; AVX2-SLOW-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
+; AVX2-SLOW-NEXT:    vaddps %xmm1, %xmm3, %xmm1
 ; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -268,13 +268,13 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; AVX2-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vhaddps %xmm4, %xmm4, %xmm1
-; AVX2-FAST-NEXT:    vhaddps %xmm5, %xmm5, %xmm8
+; AVX2-FAST-NEXT:    vhaddps %xmm5, %xmm5, %xmm4
 ; AVX2-FAST-NEXT:    vhaddps %xmm3, %xmm2, %xmm2
-; AVX2-FAST-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[0,2],xmm1[0,1]
-; AVX2-FAST-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm8[0]
-; AVX2-FAST-NEXT:    vhaddps %xmm4, %xmm5, %xmm3
-; AVX2-FAST-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[1,3],xmm3[3,1]
-; AVX2-FAST-NEXT:    vaddps %xmm2, %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vshufps {{.*#+}} xmm3 = xmm2[0,2],xmm1[0,1]
+; AVX2-FAST-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm4[0]
+; AVX2-FAST-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,3]
+; AVX2-FAST-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
+; AVX2-FAST-NEXT:    vaddps %xmm1, %xmm3, %xmm1
 ; AVX2-FAST-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-FAST-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX2-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -424,7 +424,7 @@ define <8 x i32> @pair_sum_v8i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2,
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1],xmm1[2,3]
 ; AVX2-SLOW-NEXT:    vpbroadcastd %xmm4, %xmm5
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1,2],xmm5[3]
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,1]
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,3]
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
 ; AVX2-SLOW-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
 ; AVX2-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -447,7 +447,7 @@ define <8 x i32> @pair_sum_v8i32_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2,
 ; AVX2-FAST-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1],xmm1[2,3]
 ; AVX2-FAST-NEXT:    vpbroadcastd %xmm4, %xmm5
 ; AVX2-FAST-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1,2],xmm5[3]
-; AVX2-FAST-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,1]
+; AVX2-FAST-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm1[1,3]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3]
 ; AVX2-FAST-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
 ; AVX2-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -577,7 +577,7 @@ define <4 x float> @sequential_sum_v4f32_v4f32(<4 x float> %0, <4 x float> %1, <
 ; AVX-SLOW-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm4[0,2],xmm1[0,1]
 ; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[3,3]
-; AVX-SLOW-NEXT:    vblendps {{.*#+}} xmm2 = xmm5[0,1],xmm2[2,3]
+; AVX-SLOW-NEXT:    vmovsd {{.*#+}} xmm2 = xmm5[0],xmm2[1]
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddps %xmm3, %xmm4, %xmm4
 ; AVX-SLOW-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
@@ -596,7 +596,7 @@ define <4 x float> @sequential_sum_v4f32_v4f32(<4 x float> %0, <4 x float> %1, <
 ; AVX-FAST-NEXT:    vhaddps %xmm2, %xmm2, %xmm1
 ; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm1 = xmm4[0,2],xmm1[0,1]
 ; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[3,3]
-; AVX-FAST-NEXT:    vblendps {{.*#+}} xmm2 = xmm5[0,1],xmm2[2,3]
+; AVX-FAST-NEXT:    vmovsd {{.*#+}} xmm2 = xmm5[0],xmm2[1]
 ; AVX-FAST-NEXT:    vhaddps %xmm3, %xmm3, %xmm4
 ; AVX-FAST-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
 ; AVX-FAST-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[2]
