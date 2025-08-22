@@ -36,11 +36,7 @@ BindingInfo::BindingSpaces::getOrInsertSpace(uint32_t Space) {
 
 std::optional<const BindingInfo::RegisterSpace *>
 BindingInfo::BindingSpaces::contains(uint32_t Space) const {
-  const BindingInfo::RegisterSpace *It = Spaces.begin();
-  for (auto *End = Spaces.end(); It != End; ++It) {
-    if (It->Space == Space)
-      break;
-  }
+  const BindingInfo::RegisterSpace *It = llvm::find(Spaces, Space);
   if (It == Spaces.end())
     return std::nullopt;
   return It;

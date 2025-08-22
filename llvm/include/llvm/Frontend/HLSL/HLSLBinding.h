@@ -59,6 +59,10 @@ public:
     // Size == -1 means unbounded array
     LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);
     LLVM_ABI bool isBound(const BindingRange &Range) const;
+
+    bool operator==(const RegisterSpace &Other) const {
+      return Space == Other.Space;
+    }
   };
 
   struct BindingSpaces {
