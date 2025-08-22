@@ -27,12 +27,10 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "vector-utils"
-
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 
@@ -281,14 +279,16 @@ vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
   // Attempt to unroll until targetRank or the first scalable dimension (which
   // cannot be unrolled).
   auto shapeToUnroll = vType.getShape().drop_back(targetRank);
-  auto scalableDimsToUnroll = vType.getScalableDims().drop_back(targetRank);
-  auto it = llvm::find(scalableDimsToUnroll, true);
-  auto firstScalableDim = it - scalableDimsToUnroll.begin();
+  auto inputScalableVecDimsToUnroll =
+      vType.getScalableDims().drop_back(targetRank);
+  auto it = llvm::find(inputScalableVecDimsToUnroll, true);
+  auto firstScalableDim = it - inputScalableVecDimsToUnroll.begin();
   if (firstScalableDim == 0)
     return {};
   // All scalable dimensions should be removed now.
-  scalableDimsToUnroll = scalableDimsToUnroll.slice(0, firstScalableDim);
-  assert(!llvm::is_contained(scalableDimsToUnroll, true) &&
+  inputScalableVecDimsToUnroll =
+      inputScalableVecDimsToUnroll.slice(0, firstScalableDim);
+  assert(!llvm::is_contained(inputScalableVecDimsToUnroll, true) &&
          "unexpected leading scalable dimension");
   // Create an unroll iterator for leading dimensions.
   shapeToUnroll = shapeToUnroll.slice(0, firstScalableDim);
@@ -321,15 +321,15 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      ArrayRef<int64_t> inputVectorSizes,
                                      Value padValue,
                                      bool useInBoundsInsteadOfMasking,
-                                     ArrayRef<bool> scalableDims) {
+                                     ArrayRef<bool> inputScalableVecDims) {
   assert(!llvm::is_contained(inputVectorSizes, ShapedType::kDynamic) &&
          "invalid input vector sizes");
   auto sourceShapedType = cast<ShapedType>(source.getType());
   auto sourceShape = sourceShapedType.getShape();
   assert(sourceShape.size() == inputVectorSizes.size() &&
          "expected same ranks.");
-  auto vectorType =
-      VectorType::get(inputVectorSizes, padValue.getType(), scalableDims);
+  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType(),
+                                    inputScalableVecDims);
   assert(padValue.getType() == sourceShapedType.getElementType() &&
          "expected same pad element type to match source element type");
   int64_t readRank = inputVectorSizes.size();
@@ -358,8 +358,8 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
           ? memref::getMixedSizes(builder, loc, source)
           : tensor::getMixedSizes(builder, loc, source);
 
-  auto maskType =
-      VectorType::get(inputVectorSizes, builder.getI1Type(), scalableDims);
+  auto maskType = VectorType::get(inputVectorSizes, builder.getI1Type(),
+                                  inputScalableVecDims);
   Value mask =
       vector::CreateMaskOp::create(builder, loc, maskType, mixedSourceDims);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)
@@ -369,14 +369,14 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 LogicalResult
 vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                                  ArrayRef<int64_t> inputVectorSizes) {
-  LDBG("Iteration space static sizes:" << llvm::interleaved(shape));
+  LDBG() << "Iteration space static sizes:" << llvm::interleaved(shape);
 
   if (inputVectorSizes.size() != shape.size()) {
-    LDBG("Input vector sizes don't match the number of loops");
+    LDBG() << "Input vector sizes don't match the number of loops";
     return failure();
   }
   if (ShapedType::isDynamicShape(inputVectorSizes)) {
-    LDBG("Input vector sizes can't have dynamic dimensions");
+    LDBG() << "Input vector sizes can't have dynamic dimensions";
     return failure();
   }
   if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
@@ -386,9 +386,35 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                       return ShapedType::isDynamic(staticSize) ||
                              staticSize <= inputSize;
                     })) {
-    LDBG("Input vector sizes must be greater than or equal to iteration space "
-         "static sizes");
+    LDBG() << "Input vector sizes must be greater than or equal to iteration "
+              "space static sizes";
     return failure();
   }
+  return success();
+}
+
+LogicalResult vector::unrollVectorOp(Operation *op, PatternRewriter &rewriter,
+                                     vector::UnrollVectorOpFn unrollFn) {
+  assert(op->getNumResults() == 1 && "expected single result");
+  assert(isa<VectorType>(op->getResult(0).getType()) && "expected vector type");
+  VectorType resultTy = cast<VectorType>(op->getResult(0).getType());
+  if (resultTy.getRank() < 2)
+    return rewriter.notifyMatchFailure(op, "already 1-D");
+
+  // Unrolling doesn't take vscale into account. Pattern is disabled for
+  // vectors with leading scalable dim(s).
+  if (resultTy.getScalableDims().front())
+    return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
+
+  Location loc = op->getLoc();
+  Value result = ub::PoisonOp::create(rewriter, loc, resultTy);
+  VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
+
+  for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
+    Value subVector = unrollFn(rewriter, loc, subTy, i);
+    result = vector::InsertOp::create(rewriter, loc, subVector, result, i);
+  }
+
+  rewriter.replaceOp(op, result);
   return success();
 }
