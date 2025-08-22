@@ -69,7 +69,7 @@ struct FormatStyle {
   ///   if constexpr (          vs.       if constexpr (a ||
   ///      a || b)                                      b)
   /// \endcode
-  /// \version 21
+  /// \version 22
   bool BreakAfterOpenBracketIf;
 
   /// Force break after the left parenthesis of a loop control statement
@@ -79,7 +79,7 @@ struct FormatStyle {
   ///   while (                  vs.      while (a &&
   ///      a && b) {                             b) {
   /// \endcode
-  /// \version 21
+  /// \version 22
   bool BreakAfterOpenBracketLoop;
 
   /// Force break after the left parenthesis of a switch control statement
@@ -89,7 +89,7 @@ struct FormatStyle {
   ///   switch (                 vs.      switch (a &&
   ///      a && b) {                              b) {
   /// \endcode
-  /// \version 21
+  /// \version 22
   bool BreakAfterOpenBracketSwitch;
 
   /// Different styles for aligning after open brackets.
@@ -2255,7 +2255,7 @@ struct FormatStyle {
   ///      a || b                            a || b )
   ///   )
   /// \endcode
-  /// \version 21
+  /// \version 22
   bool BreakBeforeCloseBracketIf;
 
   /// Force break before the right parenthesis of a loop control statement
@@ -2268,7 +2268,7 @@ struct FormatStyle {
   ///      a && b                            a && b) {
   ///   ) {
   /// \endcode
-  /// \version 21
+  /// \version 22
   bool BreakBeforeCloseBracketLoop;
 
   /// Force break before the right parenthesis of a switch control statement
@@ -2281,7 +2281,7 @@ struct FormatStyle {
   ///      a && b                            a && b) {
   ///   ) {
   /// \endcode
-  /// \version 21
+  /// \version 22
   bool BreakBeforeCloseBracketSwitch;
 
   /// Different ways to break before concept declarations.
