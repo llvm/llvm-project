@@ -613,6 +613,8 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
         offsets is a vector of `index` type and vector length is either the subgroup size
         or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
     - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
+    - `offset_align_byte`: required if `source` is a pointer. If `source` is not a pointer,
+        it is not allowed. Represents the alignment in bytes of each offset in offsets.
 
     Example 1:
     ```mlir
@@ -645,13 +647,24 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
         : memref<256xf32>, vector<1xindex>
     ```
 
+    Example 4 (SIMT mode):
+    SIMT mode only accepts the offsets variant.
+    ```mlir
+      xegpu.prefetch %0[%1] {l1_hint = #xegpu.cache_hint<cached>,
+                             l2_hint = #xegpu.cache_hint<cached>,
+                             l3_hint = #xegpu.cache_hint<cached>,
+                             offset_align_byte = 2}
+        : i64, vector<1xindex>
+    ```
+
   }];
 
   let arguments = (ins XeGPU_GatherScatterSourceType:$source,
       Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
+      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
+      OptionalAttr<I64Attr>:$offset_align_byte);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     Type getSourceType() {

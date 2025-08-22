@@ -751,6 +751,13 @@ LogicalResult PrefetchOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
+  auto srcTy = getSourceType();
+  if (srcTy.isInteger() && !getOffsetAlignByteAttr())
+    return emitOpError("offset_align_byte is required with integer source.");
+
+  if (getOffsetAlignByteAttr() && !srcTy.isInteger())
+    return emitOpError("offset_align_byte only allowed with integer source.");
+
   return success();
 }
 
@@ -758,7 +765,8 @@ void PrefetchOp::build(OpBuilder &builder, OperationState &state, Value source,
                        xegpu::CachePolicyAttr l1_hint,
                        xegpu::CachePolicyAttr l2_hint,
                        xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint);
+  build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint,
+        IntegerAttr{});
 }
 
 //===----------------------------------------------------------------------===//

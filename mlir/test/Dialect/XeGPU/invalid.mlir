@@ -410,6 +410,22 @@ func.func @prefetch_offset_wi_3(%src: memref<16xf32>) {
 }
 
 // -----
+func.func @prefetch_offset_wi_4(%src: memref<16xf32>) {
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  // expected-error@+1 {{offset_align_byte only allowed with integer source.}}
+  xegpu.prefetch %src[%offsets] <{offset_align_byte = 4}>: memref<16xf32>, vector<1xindex>
+  return
+}
+
+// -----
+func.func @prefetch_offset_wi_5(%src: i64) {
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  // expected-error@+1 {{offset_align_byte is required with integer source.}}
+  xegpu.prefetch %src[%offsets] : i64, vector<1xindex>
+  return
+}
+
+// -----
 func.func @load_gather_offset_sg(%src: memref<?xf16>) {
   %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %mask = arith.constant dense<1>: vector<8xi1>
