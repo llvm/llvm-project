@@ -2393,6 +2393,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_cospif",
+    hdrs = ["src/__support/math/cospif.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_sincosf_utils",
+        ":common_constants",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -3220,14 +3235,7 @@ libc_math_function(
 libc_math_function(
     name = "cospif",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_sincosf_utils",
-        ":common_constants",
+        ":__support_math_cospif",
     ],
 )
 
