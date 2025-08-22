@@ -1262,6 +1262,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   bool mustDoCopyOut{false};
 
   if (callContext.doCopyIn) {
+    Fortran::evaluate::FoldingContext &foldingContext{
+        callContext.converter.getFoldingContext()};
 
     // DEBUG: old code
     const bool oldMustDoCopyInOut =
@@ -1270,8 +1272,6 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
          !isSimplyContiguous(*arg.entity, foldingContext));
     const bool oldMustDoCopyOut = arg.mayBeModifiedByCall();
 
-    Fortran::evaluate::FoldingContext &foldingContext{
-        callContext.converter.getFoldingContext()};
     bool suggestCopyIn = Fortran::evaluate::MayNeedCopy(
         arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/false);
     bool suggestCopyOut = Fortran::evaluate::MayNeedCopy(
