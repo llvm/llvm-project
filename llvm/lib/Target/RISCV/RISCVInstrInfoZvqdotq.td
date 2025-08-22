@@ -52,6 +52,10 @@ let Predicates = [HasStdExtZvqdotq], mayLoad = 0, mayStore = 0,
   defm PseudoVQDOT : VPseudoVQDOT_VV_VX;
   defm PseudoVQDOTU : VPseudoVQDOT_VV_VX;
   defm PseudoVQDOTSU : VPseudoVQDOT_VV_VX;
+  // VQDOTUS does not have a VV variant
+  foreach m = MxListVF4 in {
+    defm "PseudoVQDOTUS_VX" : VPseudoTernaryWithPolicy<m.vrclass, m.vrclass, GPR, m>;
+  }
 }
 
 defvar AllE32Vectors = [VI32MF2, VI32M1, VI32M2, VI32M4, VI32M8];
@@ -59,3 +63,61 @@ defm : VPatBinaryVL_VV_VX<riscv_vqdot_vl, "PseudoVQDOT", AllE32Vectors>;
 defm : VPatBinaryVL_VV_VX<riscv_vqdotu_vl, "PseudoVQDOTU", AllE32Vectors>;
 defm : VPatBinaryVL_VV_VX<riscv_vqdotsu_vl, "PseudoVQDOTSU", AllE32Vectors>;
 
+// These VPat definitions are for vqdot because they have a different operand
+// order with other ternary instructions (i.e. vop.vx vd, vs2, rs1)
+multiclass VPatTernaryV_VX_AAXASwapped<string intrinsic, string instruction,
+                                       list<VTypeInfoToWide> info_pairs> {
+  foreach pair = info_pairs in {
+    defvar VdInfo = pair.Wti;
+    defvar Vs2Info = pair.Vti;
+    let Predicates = GetVTypePredicates<VdInfo>.Predicates in
+    // we have op1 and op2 swapped here
+    defm : VPatTernaryWithPolicy<intrinsic, instruction,
+                                 "V"#VdInfo.ScalarSuffix,
+                                 VdInfo.Vector, Vs2Info.Vector, Vs2Info.Scalar,
+                                 VdInfo.Mask, VdInfo.Log2SEW, VdInfo.LMul,
+                                 VdInfo.RegClass, Vs2Info.RegClass,
+                                 Vs2Info.ScalarRegClass>;
+  }
+}
+
+multiclass VPatTernaryV_VV_AAXASwapped<string intrinsic, string instruction,
+                                       list<VTypeInfoToWide> info_pairs> {
+  foreach pair = info_pairs in {
+    defvar VdInfo = pair.Wti;
+    defvar Vs2Info = pair.Vti;
+    let Predicates = GetVTypePredicates<VdInfo>.Predicates in
+    // we have op1 and op2 swapped here
+    defm : VPatTernaryWithPolicy<intrinsic, instruction,
+                                 "VV",
+                                 VdInfo.Vector, Vs2Info.Vector, Vs2Info.Vector,
+                                 VdInfo.Mask, VdInfo.Log2SEW, VdInfo.LMul,
+                                 VdInfo.RegClass, Vs2Info.RegClass,
+                                 Vs2Info.RegClass>;
+  }
+}
+
+multiclass VPatTernaryV_VV_VX_AAXASwapped<string intrinsic, string instruction,
+                                          list<VTypeInfoToWide> info_pairs>
+    // keep the original VV because the order doesn't matter
+    : VPatTernaryV_VV_AAXASwapped<intrinsic, instruction, info_pairs>,
+      VPatTernaryV_VX_AAXASwapped<intrinsic, instruction, info_pairs>;
+
+defset list<VTypeInfoToWide> VQDOTInfoPairs = {
+  def : VTypeInfoToWide<VI8MF2, VI32MF2>;
+  def : VTypeInfoToWide<VI8M1, VI32M1>;
+  def : VTypeInfoToWide<VI8M2, VI32M2>;
+  def : VTypeInfoToWide<VI8M4, VI32M4>;
+  def : VTypeInfoToWide<VI8M8, VI32M8>;
+}
+
+let Predicates = [HasStdExtZvqdotq] in {
+  defm : VPatTernaryV_VV_VX_AAXASwapped<"int_riscv_vqdot", "PseudoVQDOT",
+                                        VQDOTInfoPairs>;
+  defm : VPatTernaryV_VV_VX_AAXASwapped<"int_riscv_vqdotu", "PseudoVQDOTU",
+                                        VQDOTInfoPairs>;
+  defm : VPatTernaryV_VV_VX_AAXASwapped<"int_riscv_vqdotsu", "PseudoVQDOTSU",
+                                        VQDOTInfoPairs>;
+  defm : VPatTernaryV_VX_AAXASwapped<"int_riscv_vqdotus", "PseudoVQDOTUS",
+                                     VQDOTInfoPairs>;
+}
