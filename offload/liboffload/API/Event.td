@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Function {
-    let name = "olCreateEvent";
+def olCreateEvent : Function {
     let desc = "Enqueue an event to `Queue` and return it.";
     let details = [
       "This event can be used with `olSyncEvent` and `olWaitEvents` and will be complete once all enqueued work prior to the `olCreateEvent` call is complete.",
@@ -23,8 +22,7 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olDestroyEvent";
+def olDestroyEvent : Function {
     let desc = "Destroy the event and free all underlying resources.";
     let details = [];
     let params = [
@@ -33,8 +31,7 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olSyncEvent";
+def olSyncEvent : Function {
     let desc = "Block the calling thread until the event is complete.";
     let details = [];
     let params = [
@@ -43,8 +40,7 @@ def : Function {
     let returns = [];
 }
 
-def : Enum {
-  let name = "ol_event_info_t";
+def ol_event_info_t : Enum {
   let desc = "Supported event info.";
   let is_typed = 1;
   let etors = [
@@ -52,8 +48,7 @@ def : Enum {
   ];
 }
 
-def : Function {
-  let name = "olGetEventInfo";
+def olGetEventInfo : Function {
   let desc = "Queries the given property of the event.";
   let details = [
     "`olGetEventInfoSize` can be used to query the storage size "
@@ -77,8 +72,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetEventInfoSize";
+def olGetEventInfoSize : Function {
   let desc = "Returns the storage size of the given event query.";
   let details = [];
   let params = [
