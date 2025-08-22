@@ -4512,15 +4512,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
          "Illegal type which will result in reserved encoding");
 
   const unsigned Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
-  auto getVSlide = [&](bool SlideUp, EVT ContainerVT, SDValue Passthru,
-                       SDValue Vec, SDValue Offset, SDValue Mask,
-                       SDValue VL) -> SDValue {
-    if (SlideUp)
-      return getVSlideup(DAG, Subtarget, DL, ContainerVT, Passthru, Vec, Offset,
-                         Mask, VL, Policy);
-    return getVSlidedown(DAG, Subtarget, DL, ContainerVT, Passthru, Vec, Offset,
-                         Mask, VL, Policy);
-  };
 
   // General case: splat the first operand and slide other operands down one
   // by one to form a vector. Alternatively, if the last operand is an
@@ -4529,6 +4520,15 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   SmallVector<SDValue> Operands(Op->op_begin(), Op->op_end());
   SDValue EVec;
   bool SlideUp = false;
+  auto getVSlide = [&](EVT ContainerVT, SDValue Passthru, SDValue Vec,
+                       SDValue Offset, SDValue Mask, SDValue VL) -> SDValue {
+    if (SlideUp)
+      return getVSlideup(DAG, Subtarget, DL, ContainerVT, Passthru, Vec, Offset,
+                         Mask, VL, Policy);
+    return getVSlidedown(DAG, Subtarget, DL, ContainerVT, Passthru, Vec, Offset,
+                         Mask, VL, Policy);
+  };
+
   // Find the first first non-undef from the tail.
   auto ItLastNonUndef = find_if(Operands.rbegin(), Operands.rend(),
                                 [](SDValue V) { return !V.isUndef(); });
@@ -4583,26 +4583,26 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
     if (UndefCount) {
       const SDValue Offset = DAG.getConstant(UndefCount, DL, Subtarget.getXLenVT());
-      Vec = getVSlide(SlideUp, ContainerVT, DAG.getUNDEF(ContainerVT), Vec,
-                      Offset, Mask, VL);
+      Vec = getVSlide(ContainerVT, DAG.getUNDEF(ContainerVT), Vec, Offset, Mask,
+                      VL);
       UndefCount = 0;
     }
 
-    unsigned OpCode;
+    unsigned Opcode;
     if (VT.isFloatingPoint())
-      OpCode = SlideUp ? RISCVISD::VFSLIDE1UP_VL : RISCVISD::VFSLIDE1DOWN_VL;
+      Opcode = SlideUp ? RISCVISD::VFSLIDE1UP_VL : RISCVISD::VFSLIDE1DOWN_VL;
     else
-      OpCode = SlideUp ? RISCVISD::VSLIDE1UP_VL : RISCVISD::VSLIDE1DOWN_VL;
+      Opcode = SlideUp ? RISCVISD::VSLIDE1UP_VL : RISCVISD::VSLIDE1DOWN_VL;
 
     if (!VT.isFloatingPoint())
       V = DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), V);
-    Vec = DAG.getNode(OpCode, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Vec,
+    Vec = DAG.getNode(Opcode, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Vec,
                       V, Mask, VL);
   }
   if (UndefCount) {
     const SDValue Offset = DAG.getConstant(UndefCount, DL, Subtarget.getXLenVT());
-    Vec = getVSlide(SlideUp, ContainerVT, DAG.getUNDEF(ContainerVT), Vec,
-                    Offset, Mask, VL);
+    Vec = getVSlide(ContainerVT, DAG.getUNDEF(ContainerVT), Vec, Offset, Mask,
+                    VL);
   }
   return convertFromScalableVector(VT, Vec, DAG, Subtarget);
 }
