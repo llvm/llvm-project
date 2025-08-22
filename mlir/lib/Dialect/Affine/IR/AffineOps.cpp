@@ -430,11 +430,7 @@ bool mlir::affine::isValidSymbol(Value value) {
 /// A utility function to check if a value is defined at the top level of
 /// `region` or is an argument of `region` or dominates the region.
 static bool isTopLevelValueOrDominator(Value value, Region *region) {
-  Region *parentRegion;
-  if (auto arg = dyn_cast<BlockArgument>(value))
-    parentRegion = arg.getParentRegion();
-  else
-    parentRegion = value.getDefiningOp()->getParentRegion();
+  Region *parentRegion = value.getParentRegion();
   do {
     if (parentRegion == region)
       return true;
