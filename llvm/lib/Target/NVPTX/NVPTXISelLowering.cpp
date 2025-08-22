@@ -6243,8 +6243,8 @@ static void replaceProxyReg(SDNode *N, SelectionDAG &DAG,
 }
 
 static void replaceAtomicSwap128(SDNode *N, SelectionDAG &DAG,
-                             const NVPTXSubtarget &STI,
-                             SmallVectorImpl<SDValue> &Results) {
+                                 const NVPTXSubtarget &STI,
+                                 SmallVectorImpl<SDValue> &Results) {
   assert(N->getValueType(0) == MVT::i128 &&
          "Custom lowering for atomic128 only supports i128");
 
