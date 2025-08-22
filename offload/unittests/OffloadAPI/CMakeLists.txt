@@ -25,6 +25,7 @@ add_offload_unittest("kernel"
 
 add_offload_unittest("memory"
     memory/olMemAlloc.cpp
+    memory/olMemFill.cpp
     memory/olMemFree.cpp
     memory/olMemcpy.cpp)
 

@@ -310,6 +310,21 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
+                     int64_t Size,
+                     AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (PatternSize == 1) {
+      std::memset(TgtPtr, *static_cast<const char *>(PatternPtr), Size);
+    } else {
+      for (unsigned int Step = 0; Step < Size; Step += PatternSize) {
+        auto *Dst = static_cast<char *>(TgtPtr) + Step;
+        std::memcpy(Dst, PatternPtr, PatternSize);
+      }
+    }
+
+    return Plugin::success();
+  }
+
   /// All functions are already synchronous. No need to do anything on this
   /// synchronization function.
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,

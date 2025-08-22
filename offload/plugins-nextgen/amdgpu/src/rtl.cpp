@@ -2608,6 +2608,31 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
+                     int64_t Size,
+                     AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    hsa_status_t Status;
+
+    // We can use hsa_amd_memory_fill for this size, but it's not async so the
+    // queue needs to be synchronized first
+    if (PatternSize == 4) {
+      if (AsyncInfoWrapper.hasQueue())
+        if (auto Err = synchronize(AsyncInfoWrapper))
+          return Err;
+      Status = hsa_amd_memory_fill(TgtPtr,
+                                   *static_cast<const uint32_t *>(PatternPtr),
+                                   Size / PatternSize);
+
+      if (auto Err =
+              Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n"))
+        return Err;
+    } else {
+      // TODO: Implement for AMDGPU. Most likely by doing the fill in pinned
+      // memory and copying to the device in one go.
+      return Plugin::error(ErrorCode::UNSUPPORTED, "Unsupported fill size");
+    }
+  }
+
   /// Initialize the async info for interoperability purposes.
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     // TODO: Implement this function.

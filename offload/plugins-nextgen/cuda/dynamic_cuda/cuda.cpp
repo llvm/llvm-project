@@ -53,6 +53,13 @@ DLWRAP(cuMemcpyDtoHAsync, 4)
 DLWRAP(cuMemcpyHtoD, 3)
 DLWRAP(cuMemcpyHtoDAsync, 4)
 
+DLWRAP(cuMemsetD8Async, 4)
+DLWRAP(cuMemsetD16Async, 4)
+DLWRAP(cuMemsetD32Async, 4)
+DLWRAP(cuMemsetD2D8Async, 6)
+DLWRAP(cuMemsetD2D16Async, 6)
+DLWRAP(cuMemsetD2D32Async, 6)
+
 DLWRAP(cuMemFree, 1)
 DLWRAP(cuMemFreeHost, 1)
 DLWRAP(cuMemFreeAsync, 2)
