@@ -265,7 +265,7 @@ body:             |
     ; GCN-LABEL: name: fmac_sreg_64_sub0_src0_to_fmamk
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[V_FMAMK_F32_:%[0-9]+]]:vgpr_32 = V_FMAMK_F32 [[DEF]], 2882399984, [[DEF1]], implicit $mode, implicit $exec
+    ; GCN-NEXT: [[V_FMAMK_F32_:%[0-9]+]]:vgpr_32 = V_FMAMK_F32 [[DEF]], -1412567312, [[DEF1]], implicit $mode, implicit $exec
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_FMAMK_F32_]]
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
@@ -319,7 +319,7 @@ body:             |
     ; GCN-LABEL: name: fma_sreg_64_sub0_to_fmaak
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[V_FMAAK_F32_:%[0-9]+]]:vgpr_32 = V_FMAAK_F32 [[DEF]], [[DEF1]], 2882399984, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[V_FMAAK_F32_:%[0-9]+]]:vgpr_32 = V_FMAAK_F32 [[DEF]], [[DEF1]], -1412567312, implicit $mode, implicit $exec
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_FMAAK_F32_]]
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF

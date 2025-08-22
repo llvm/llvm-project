@@ -487,8 +487,7 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
                                                        InductionTy, TheLoop);
-  Plan.setTripCount(
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
+  Plan.setTripCount(vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount));
 
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
@@ -722,7 +721,7 @@ void VPlanTransforms::addMinimumIterationCheck(
                                     TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
-      VPValue *MinTripCountVPV = Builder.createExpandSCEV(Step, SE);
+      VPValue *MinTripCountVPV = Builder.createExpandSCEV(Step);
       TripCountCheck = Builder.createICmp(
           CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
     } // else step known to be < trip count, use TripCountCheck preset to false.
@@ -740,7 +739,7 @@ void VPlanTransforms::addMinimumIterationCheck(
 
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
     TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
-                                        Builder.createExpandSCEV(Step, SE), DL);
+                                        Builder.createExpandSCEV(Step), DL);
   }
   VPInstruction *Term =
       Builder.createNaryOp(VPInstruction::BranchOnCond, {TripCountCheck}, DL);

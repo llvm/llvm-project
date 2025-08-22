@@ -334,8 +334,8 @@ public:
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
-  VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr, ScalarEvolution &SE) {
-    return tryInsertInstruction(new VPExpandSCEVRecipe(Expr, SE));
+  VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {
+    return tryInsertInstruction(new VPExpandSCEVRecipe(Expr));
   }
 
   //===--------------------------------------------------------------------===//
