@@ -17,11 +17,11 @@ void kernel testFloatTypes() {
 }
 
 // CHECK: VarDecl=scalarHalf:11:8 (Definition){{( \(invalid\))?}} [type=__private half] [typekind=Half] [isPOD=1]
-// CHECK: VarDecl=vectorHalf:12:9 (Definition) [type=__private half4] [typekind=Elaborated] [canonicaltype=half __private __attribute__((ext_vector_type(4)))] [canonicaltypekind=ExtVector] [isPOD=1]
+// CHECK: VarDecl=vectorHalf:12:9 (Definition) [type=__private half4] [typekind=Typedef] [canonicaltype=half __private __attribute__((ext_vector_type(4)))] [canonicaltypekind=ExtVector] [isPOD=1]
 // CHECK: VarDecl=scalarFloat:13:9 (Definition) [type=__private float] [typekind=Float] [isPOD=1]
-// CHECK: VarDecl=vectorFloat:14:10 (Definition) [type=__private float4] [typekind=Elaborated] [canonicaltype=float __private __attribute__((ext_vector_type(4)))] [canonicaltypekind=ExtVector] [isPOD=1]
+// CHECK: VarDecl=vectorFloat:14:10 (Definition) [type=__private float4] [typekind=Typedef] [canonicaltype=float __private __attribute__((ext_vector_type(4)))] [canonicaltypekind=ExtVector] [isPOD=1]
 // CHECK: VarDecl=scalarDouble:15:10 (Definition){{( \(invalid\))?}} [type=__private double] [typekind=Double] [isPOD=1]
-// CHECK: VarDecl=vectorDouble:16:11 (Definition){{( \(invalid\))?}} [type=__private double4] [typekind=Elaborated] [canonicaltype=double __private __attribute__((ext_vector_type(4)))] [canonicaltypekind=ExtVector] [isPOD=1]
+// CHECK: VarDecl=vectorDouble:16:11 (Definition){{( \(invalid\))?}} [type=__private double4] [typekind=Typedef] [canonicaltype=double __private __attribute__((ext_vector_type(4)))] [canonicaltypekind=ExtVector] [isPOD=1]
 
 #pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing : enable
 
@@ -120,10 +120,10 @@ void kernel testMiscOpenCLTypes() {
   reserve_id_t scalarOCLReserveID;
 }
 
-// CHECK: VarDecl=scalarOCLSampler:117:19 (Definition) [type=const sampler_t] [typekind=Elaborated] const [canonicaltype=const sampler_t] [canonicaltypekind=OCLSampler] [isPOD=1]
-// CHECK: VarDecl=scalarOCLEvent:118:15 (Definition) [type=__private clk_event_t] [typekind=Elaborated] [canonicaltype=__private clk_event_t] [canonicaltypekind=Unexposed] [isPOD=1]
-// CHECK: VarDecl=scalarOCLQueue:119:11 (Definition) [type=__private queue_t] [typekind=Elaborated] [canonicaltype=__private queue_t] [canonicaltypekind=OCLQueue] [isPOD=1]
-// CHECK: VarDecl=scalarOCLReserveID:120:16 (Definition) [type=__private reserve_id_t] [typekind=Elaborated] [canonicaltype=__private reserve_id_t] [canonicaltypekind=OCLReserveID] [isPOD=1]
+// CHECK: VarDecl=scalarOCLSampler:117:19 (Definition) [type=const sampler_t] [typekind=Typedef] const [canonicaltype=const sampler_t] [canonicaltypekind=OCLSampler] [isPOD=1]
+// CHECK: VarDecl=scalarOCLEvent:118:15 (Definition) [type=__private clk_event_t] [typekind=Typedef] [canonicaltype=__private clk_event_t] [canonicaltypekind=Unexposed] [isPOD=1]
+// CHECK: VarDecl=scalarOCLQueue:119:11 (Definition) [type=__private queue_t] [typekind=Typedef] [canonicaltype=__private queue_t] [canonicaltypekind=OCLQueue] [isPOD=1]
+// CHECK: VarDecl=scalarOCLReserveID:120:16 (Definition) [type=__private reserve_id_t] [typekind=Typedef] [canonicaltype=__private reserve_id_t] [canonicaltypekind=OCLReserveID] [isPOD=1]
 
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : enable
 
@@ -131,4 +131,4 @@ void kernel testExtOpenCLTypes() {
   intel_sub_group_avc_mce_payload_t mce_payload;
 }
 
-// CHECK: VarDecl=mce_payload:131:37 (Definition){{( \(invalid\))?}} [type=__private intel_sub_group_avc_mce_payload_t] [typekind=Elaborated] [canonicaltype=__private intel_sub_group_avc_mce_payload_t] [canonicaltypekind=OCLIntelSubgroupAVCMcePayload] [isPOD=1]
+// CHECK: VarDecl=mce_payload:131:37 (Definition){{( \(invalid\))?}} [type=__private intel_sub_group_avc_mce_payload_t] [typekind=Typedef] [canonicaltype=__private intel_sub_group_avc_mce_payload_t] [canonicaltypekind=OCLIntelSubgroupAVCMcePayload] [isPOD=1]

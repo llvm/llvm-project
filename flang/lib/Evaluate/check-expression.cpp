@@ -405,6 +405,88 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   }
 }
 
+class SuspiciousRealLiteralFinder
+    : public AnyTraverse<SuspiciousRealLiteralFinder> {
+public:
+  using Base = AnyTraverse<SuspiciousRealLiteralFinder>;
+  SuspiciousRealLiteralFinder(int kind, FoldingContext &c)
+      : Base{*this}, kind_{kind}, context_{c} {}
+  using Base::operator();
+  template <int KIND>
+  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
+    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+      context_.messages().Say(common::UsageWarning::RealConstantWidening,
+          "Default real literal in REAL(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
+          kind_, x.AsFortran());
+      return true;
+    } else {
+      return false;
+    }
+  }
+  template <int KIND>
+  bool operator()(const Constant<Type<TypeCategory::Complex, KIND>> &x) const {
+    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+      context_.messages().Say(common::UsageWarning::RealConstantWidening,
+          "Default real literal in COMPLEX(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
+          kind_, x.AsFortran());
+      return true;
+    } else {
+      return false;
+    }
+  }
+  template <TypeCategory TOCAT, int TOKIND, TypeCategory FROMCAT>
+  bool operator()(const Convert<Type<TOCAT, TOKIND>, FROMCAT> &x) const {
+    if constexpr ((TOCAT == TypeCategory::Real ||
+                      TOCAT == TypeCategory::Complex) &&
+        (FROMCAT == TypeCategory::Real || FROMCAT == TypeCategory::Complex)) {
+      auto fromType{x.left().GetType()};
+      if (!fromType || fromType->kind() < TOKIND) {
+        return false;
+      }
+    }
+    return (*this)(x.left());
+  }
+
+private:
+  int kind_;
+  FoldingContext &context_;
+};
+
+void CheckRealWidening(const Expr<SomeType> &expr, const DynamicType &toType,
+    FoldingContext &context) {
+  if (toType.category() == TypeCategory::Real ||
+      toType.category() == TypeCategory::Complex) {
+    if (auto fromType{expr.GetType()}) {
+      if ((fromType->category() == TypeCategory::Real ||
+              fromType->category() == TypeCategory::Complex) &&
+          toType.kind() > fromType->kind()) {
+        SuspiciousRealLiteralFinder{toType.kind(), context}(expr);
+      }
+    }
+  }
+}
+
+void CheckRealWidening(const Expr<SomeType> &expr,
+    const std::optional<DynamicType> &toType, FoldingContext &context) {
+  if (toType) {
+    CheckRealWidening(expr, *toType, context);
+  }
+}
+
+class InexactLiteralConversionFlagClearer
+    : public AnyTraverse<InexactLiteralConversionFlagClearer> {
+public:
+  using Base = AnyTraverse<InexactLiteralConversionFlagClearer>;
+  InexactLiteralConversionFlagClearer() : Base(*this) {}
+  using Base::operator();
+  template <int KIND>
+  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
+    auto &mut{const_cast<Type<TypeCategory::Real, KIND> &>(x.result())};
+    mut.set_isFromInexactLiteralConversion(false);
+    return false;
+  }
+};
+
 // Converts, folds, and then checks type, rank, and shape of an
 // initialization expression for a named constant, a non-pointer
 // variable static initialization, a component default initializer,
@@ -416,6 +498,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
   if (auto symTS{
           characteristics::TypeAndShape::Characterize(symbol, context)}) {
     auto xType{x.GetType()};
+    CheckRealWidening(x, symTS->type(), context);
     auto converted{ConvertToType(symTS->type(), Expr<SomeType>{x})};
     if (!converted &&
         symbol.owner().context().IsEnabled(
@@ -433,6 +516,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
     if (converted) {
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
+        InexactLiteralConversionFlagClearer{}(folded);
         int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {

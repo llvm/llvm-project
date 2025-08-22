@@ -1479,7 +1479,7 @@ func.func @execute_region_no_inline() {
 // CHECK-NEXT:       scf.execute_region
 // CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
 // CHECK-NEXT:       scf.yield %[[VAL]] : i64
-// CHECK-NEXT:     }
+// CHECK-NOT:      no_inline
 
 // -----
 
@@ -1912,3 +1912,16 @@ func.func @index_switch_fold_no_res() {
 
 // CHECK-LABEL: func.func @index_switch_fold_no_res()
 //  CHECK-NEXT: "test.op"() : () -> ()
+
+// -----
+
+// CHECK-LABEL: func @scf_for_all_step_size_0()
+//       CHECK:   scf.forall (%{{.*}}) = (0) to (1) step (0)
+func.func @scf_for_all_step_size_0()  {
+  %x = arith.constant 0 : index
+  scf.forall (%i, %j) = (0, 4) to (1, 5) step (%x, 8) {
+    vector.print %x : index
+    scf.forall.in_parallel {}
+  }
+  return
+}

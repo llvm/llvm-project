@@ -753,15 +753,24 @@ TEST_F(RtsanOpenedFileTest, RewindDieWhenRealtime) {
 #endif
 
 TEST_F(RtsanOpenedFileTest, IoctlDiesWhenRealtime) {
-  auto Func = [this]() { ioctl(GetOpenFd(), FIONREAD); };
+  auto Func = [this]() {
+    int arg{};
+    ioctl(GetOpenFd(), FIONREAD, &arg);
+    EXPECT_THAT(arg, Ge(0));
+  };
   ExpectRealtimeDeath(Func, "ioctl");
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST_F(RtsanOpenedFileTest, IoctlBehavesWithoutOutputArg) {
+  const int result = ioctl(GetOpenFd(), FIONCLEX);
+  EXPECT_THAT(result, Ne(-1));
+}
+
 TEST_F(RtsanOpenedFileTest, IoctlBehavesWithOutputArg) {
   int arg{};
-  ioctl(GetOpenFd(), FIONREAD, &arg);
-
+  const int result = ioctl(GetOpenFd(), FIONREAD, &arg);
+  ASSERT_THAT(result, Ne(-1));
   EXPECT_THAT(arg, Ge(0));
 }
 
