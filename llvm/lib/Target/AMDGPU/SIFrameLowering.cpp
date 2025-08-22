@@ -985,7 +985,7 @@ void SIFrameLowering::emitCSRSpillStores(
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::getLaneMaskConstants(&ST);
+  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
 
   // Spill Whole-Wave Mode VGPRs. Save only the inactive lanes of the scratch
   // registers. However, save all lanes of callee-saved VGPRs. Due to this, we
@@ -1092,7 +1092,7 @@ void SIFrameLowering::emitCSRSpillRestores(
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
-  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::getLaneMaskConstants(&ST);
+  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
   Register FramePtrReg = FuncInfo->getFrameOffsetReg();
 
   for (const auto &Spill : FuncInfo->getPrologEpilogSGPRSpills()) {

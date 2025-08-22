@@ -69,7 +69,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULegalizerInfo.cpp
   AMDGPULibCalls.cpp
   AMDGPUImageIntrinsicOptimizer.cpp
-  AMDGPULaneMaskUtils.cpp
   AMDGPULibFunc.cpp
   AMDGPULowerBufferFatPointers.cpp
   AMDGPULowerKernelArguments.cpp

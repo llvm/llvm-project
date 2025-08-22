@@ -156,7 +156,7 @@ public:
                   MachineDominatorTree *MDT, MachinePostDominatorTree *PDT)
       : ST(&MF.getSubtarget<GCNSubtarget>()), TII(ST->getInstrInfo()),
         TRI(&TII->getRegisterInfo()), MRI(&MF.getRegInfo()), LIS(LIS), MDT(MDT),
-        PDT(PDT), LMC(AMDGPU::getLaneMaskConstants(ST)) {}
+        PDT(PDT), LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
   bool run(MachineFunction &MF);
 
 private:
@@ -167,7 +167,7 @@ private:
   LiveIntervals *LIS;
   MachineDominatorTree *MDT;
   MachinePostDominatorTree *PDT;
-  const AMDGPU::LaneMaskConstants &LMC;
+  const AMDGPU::LaneMaskConstants LMC;
 
   Register LiveMaskReg;
 

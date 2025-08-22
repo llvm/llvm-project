@@ -86,7 +86,7 @@ private:
   SmallSet<Register, 8> RecomputeRegs;
 
   const TargetRegisterClass *BoolRC = nullptr;
-  const AMDGPU::LaneMaskConstants &LMC;
+  const AMDGPU::LaneMaskConstants LMC;
 
   bool EnableOptimizeEndCf = false;
 
@@ -136,7 +136,7 @@ public:
                      LiveVariables *LV, MachineDominatorTree *MDT,
                      MachinePostDominatorTree *PDT)
       : LIS(LIS), LV(LV), MDT(MDT), PDT(PDT),
-        LMC(AMDGPU::getLaneMaskConstants(ST)) {}
+        LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
   bool run(MachineFunction &MF);
 };
 

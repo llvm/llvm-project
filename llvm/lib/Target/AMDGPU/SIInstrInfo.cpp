@@ -1196,7 +1196,7 @@ void SIInstrInfo::insertVectorSelect(MachineBasicBlock &MBB,
                                      Register FalseReg) const {
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *BoolXExecRC = RI.getWaveMaskRegClass();
-  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::getLaneMaskConstants(&ST);
+  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
   assert(MRI.getRegClass(DstReg) == &AMDGPU::VGPR_32RegClass &&
          "Not a VGPR32 reg");
 
@@ -2032,7 +2032,7 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
 bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
-  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::getLaneMaskConstants(&ST);
+  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
   switch (MI.getOpcode()) {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
   case AMDGPU::S_MOV_B64_term:
@@ -5805,7 +5805,7 @@ void SIInstrInfo::insertScratchExecCopy(MachineFunction &MF,
                                         SlotIndexes *Indexes) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::getLaneMaskConstants(&ST);
+  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
   if (IsSCCLive) {
     // Insert two move instructions, one to save the original value of EXEC and
     // the other to turn on all bits in EXEC. This is required as we can't use
@@ -5831,7 +5831,7 @@ void SIInstrInfo::restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               const DebugLoc &DL, Register Reg,
                               SlotIndexes *Indexes) const {
-  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::getLaneMaskConstants(&ST);
+  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
   auto ExecRestoreMI = BuildMI(MBB, MBBI, DL, get(LMC.MovOpc), LMC.ExecReg)
                            .addReg(Reg, RegState::Kill);
   if (Indexes)
@@ -6698,7 +6698,7 @@ emitLoadScalarOpsFromVGPRLoop(const SIInstrInfo &TII,
   MachineFunction &MF = *LoopBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::getLaneMaskConstants(&ST);
+  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
   const auto *BoolXExecRC = TRI->getWaveMaskRegClass();
 
   MachineBasicBlock::iterator I = LoopBB.begin();
@@ -6846,7 +6846,7 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
     ++End;
   }
   const DebugLoc &DL = MI.getDebugLoc();
-  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::getLaneMaskConstants(&ST);
+  const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
   const auto *BoolXExecRC = TRI->getWaveMaskRegClass();
 
   // Save SCC. Waterfall Loop may overwrite SCC.
@@ -7625,7 +7625,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     // Clear unused bits of vcc
     Register CondReg = Inst.getOperand(1).getReg();
     bool IsSCC = CondReg == AMDGPU::SCC;
-    const AMDGPU::LaneMaskConstants &LMC = AMDGPU::getLaneMaskConstants(&ST);
+    const auto LMC = AMDGPU::LaneMaskConstants::get(&ST);
     BuildMI(*MBB, Inst, Inst.getDebugLoc(), get(LMC.AndOpc), LMC.VccReg)
         .addReg(LMC.ExecReg)
         .addReg(IsSCC ? LMC.VccReg : CondReg);
@@ -10082,7 +10082,7 @@ MachineInstr *SIInstrInfo::createPHISourceCopy(
       InsPt->definesRegister(Src, /*TRI=*/nullptr)) {
     InsPt++;
     return BuildMI(MBB, InsPt, DL,
-                   get(AMDGPU::getLaneMaskConstants(&ST).MovTermOpc), Dst)
+                   get(AMDGPU::LaneMaskConstants::get(&ST).MovTermOpc), Dst)
         .addReg(Src, 0, SrcSubReg)
         .addReg(AMDGPU::EXEC, RegState::Implicit);
   }
