@@ -194,7 +194,7 @@ static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
 
 // For processing memory ordering and memory scope arguments of various
 // amdgcn builtins.
-// \p Order takes a C++11 comptabile memory-ordering specifier and converts
+// \p Order takes a C++11 compatible memory-ordering specifier and converts
 // it into LLVM's memory ordering specifier using atomic C ABI, and writes
 // to \p AO. \p Scope takes a const char * and converts it into AMDGCN
 // specific SyncScopeID and writes it to \p SSID.
@@ -227,6 +227,12 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   // Some of the atomic builtins take the scope as a string name.
   StringRef scp;
   if (llvm::getConstantStringInfo(Scope, scp)) {
+    if (getTarget().getTriple().isSPIRV()) {
+      if (scp == "agent")
+        scp = "device";
+      else if (scp == "wavefront")
+        scp = "subgroup";
+    }
     SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
     return;
   }
@@ -238,13 +244,19 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
     SSID = llvm::SyncScope::System;
     break;
   case 1: // __MEMORY_SCOPE_DEVICE
-    SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+    if (getTarget().getTriple().isSPIRV())
+      SSID = getLLVMContext().getOrInsertSyncScopeID("device");
+    else
+      SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
     break;
   case 2: // __MEMORY_SCOPE_WRKGRP
     SSID = getLLVMContext().getOrInsertSyncScopeID("workgroup");
     break;
   case 3: // __MEMORY_SCOPE_WVFRNT
-    SSID = getLLVMContext().getOrInsertSyncScopeID("wavefront");
+    if (getTarget().getTriple().isSPIRV())
+      SSID = getLLVMContext().getOrInsertSyncScopeID("subgroup");
+    else
+      SSID = getLLVMContext().getOrInsertSyncScopeID("wavefront");
     break;
   case 4: // __MEMORY_SCOPE_SINGLE
     SSID = llvm::SyncScope::SingleThread;
@@ -1381,7 +1393,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       //
       // The global/flat cases need to use agent scope to consistently produce
       // the native instruction instead of a cmpxchg expansion.
-      SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+      if (getTarget().getTriple().isSPIRV())
+        SSID = getLLVMContext().getOrInsertSyncScopeID("device");
+      else
+        SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
       AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
