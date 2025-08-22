@@ -237,8 +237,9 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::minidump;
     break;
 
-  case 0x64: // x86-64 or ARM64 Windows.
-    if (Magic[1] == char(0x86) || Magic[1] == char(0xaa))
+  case 0x64: // x86-64, ARM64 Windows, or loongarch64.
+    if (Magic[1] == char(0x86) || Magic[1] == char(0xaa) ||
+        Magic[1] == char(0x62))
       return file_magic::coff_object;
     break;
 

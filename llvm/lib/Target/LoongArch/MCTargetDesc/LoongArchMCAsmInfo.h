@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHMCASMINFO_H
 #define LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHMCASMINFO_H
 
+#include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoELF.h"
 #include "llvm/MC/MCExpr.h"
 
@@ -38,13 +39,20 @@ public:
   bool getRelaxHint() const { return RelaxHint; }
 };
 
-class LoongArchMCAsmInfo : public MCAsmInfoELF {
+class LoongArchMCAsmInfoELF : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit LoongArchMCAsmInfo(const Triple &TargetTriple);
+  explicit LoongArchMCAsmInfoELF(const Triple &TargetTriple);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
+};
+
+class LoongArchMCAsmInfoMicrosoftCOFF : public MCAsmInfoMicrosoft {
+  void anchor() override;
+
+public:
+  explicit LoongArchMCAsmInfoMicrosoftCOFF(const Triple &Triple);
 };
 
 namespace LoongArch {

@@ -1115,7 +1115,14 @@ dynamic_reloc_iterator COFFObjectFile::dynamic_reloc_end() const {
 }
 
 uint8_t COFFObjectFile::getBytesInAddress() const {
-  return getArch() == Triple::x86_64 || getArch() == Triple::aarch64 ? 8 : 4;
+  switch (getArch()) {
+  case Triple::x86_64:
+  case Triple::aarch64:
+  case Triple::loongarch64:
+    return 8;
+  default:
+    return 4;
+  }
 }
 
 StringRef COFFObjectFile::getFileFormatName() const {
@@ -1132,6 +1139,8 @@ StringRef COFFObjectFile::getFileFormatName() const {
     return "COFF-ARM64EC";
   case COFF::IMAGE_FILE_MACHINE_ARM64X:
     return "COFF-ARM64X";
+  case COFF::IMAGE_FILE_MACHINE_LOONGARCH64:
+    return "COFF-loongarch64";
   case COFF::IMAGE_FILE_MACHINE_R4000:
     return "COFF-MIPS";
   default:

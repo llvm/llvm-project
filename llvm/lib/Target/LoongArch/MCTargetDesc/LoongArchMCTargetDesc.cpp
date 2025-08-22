@@ -14,6 +14,7 @@
 #include "LoongArchELFStreamer.h"
 #include "LoongArchInstPrinter.h"
 #include "LoongArchMCAsmInfo.h"
+#include "LoongArchWinCOFFStreamer.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -62,7 +63,13 @@ createLoongArchMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
 static MCAsmInfo *createLoongArchMCAsmInfo(const MCRegisterInfo &MRI,
                                            const Triple &TT,
                                            const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new LoongArchMCAsmInfo(TT);
+  MCAsmInfo *MAI;
+  if (TT.isOSBinFormatCOFF()) {
+    MAI = new LoongArchMCAsmInfoMicrosoftCOFF(TT);
+  } else {
+    assert(TT.isOSBinFormatELF() && "Invalid target");
+    MAI = new LoongArchMCAsmInfoELF(TT);
+  }
 
   // Initial state of the frame pointer is sp(r3).
   unsigned SP = MRI.getDwarfRegNum(LoongArch::R3, true);
@@ -82,9 +89,11 @@ static MCInstPrinter *createLoongArchMCInstPrinter(const Triple &T,
 
 static MCTargetStreamer *
 createLoongArchObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
-  return STI.getTargetTriple().isOSBinFormatELF()
-             ? new LoongArchTargetELFStreamer(S, STI)
-             : nullptr;
+  if (STI.getTargetTriple().isOSBinFormatELF())
+    return new LoongArchTargetELFStreamer(S, STI);
+  if (STI.getTargetTriple().isOSBinFormatCOFF())
+    return new LoongArchTargetWinCOFFStreamer(S);
+  return nullptr;
 }
 
 static MCTargetStreamer *
@@ -296,6 +305,7 @@ LLVMInitializeLoongArchTargetMC() {
     TargetRegistry::RegisterMCInstPrinter(*T, createLoongArchMCInstPrinter);
     TargetRegistry::RegisterMCInstrAnalysis(*T, createLoongArchInstrAnalysis);
     TargetRegistry::RegisterELFStreamer(*T, createLoongArchELFStreamer);
+    TargetRegistry::RegisterCOFFStreamer(*T, createLoongArchWinCOFFStreamer);
     TargetRegistry::RegisterObjectTargetStreamer(
         *T, createLoongArchObjectTargetStreamer);
     TargetRegistry::RegisterAsmTargetStreamer(*T,
