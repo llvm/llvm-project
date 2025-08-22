@@ -1,7 +1,7 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
 ! OpenMP Version 6.0
 ! workdistribute Construct
-! Invalid do construct inside !$omp workdistribute
+! Unsuported OpenMP version
 
 subroutine teams_workdistribute()
   use iso_fortran_env
