@@ -335,8 +335,6 @@ static llvm::StringLiteral ToString(AdapterFeature feature) {
     return "supportsWriteMemoryRequest";
   case eAdapterFeatureTerminateDebuggee:
     return "supportTerminateDebuggee";
-  case eAdapterFeatureSupportsModuleSymbolsRequest:
-    return "supportsModuleSymbolsRequest";
   }
   llvm_unreachable("unhandled adapter feature.");
 }
@@ -408,8 +406,6 @@ bool fromJSON(const llvm::json::Value &Params, AdapterFeature &feature,
                 eAdapterFeatureValueFormattingOptions)
           .Case("supportsWriteMemoryRequest", eAdapterFeatureWriteMemoryRequest)
           .Case("supportTerminateDebuggee", eAdapterFeatureTerminateDebuggee)
-          .Case("supportsModuleSymbolsRequest",
-                eAdapterFeatureSupportsModuleSymbolsRequest)
           .Default(std::nullopt);
 
   if (!parsedFeature) {

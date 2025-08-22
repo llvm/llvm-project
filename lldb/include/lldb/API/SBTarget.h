@@ -324,16 +324,6 @@ public:
 
   lldb::SBModule FindModule(const lldb::SBFileSpec &file_spec);
 
-  /// Find a module with the given module specification.
-  ///
-  /// \param[in] module_spec
-  ///     A lldb::SBModuleSpec object that contains module specification.
-  ///
-  /// \return
-  ///     A lldb::SBModule object that represents the found module, or an
-  ///     invalid SBModule object if no module was found.
-  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
-
   /// Find compile units related to *this target and passed source
   /// file.
   ///

@@ -242,11 +242,8 @@ enum AdapterFeature : unsigned {
   /// The debug adapter supports the `terminateDebuggee` attribute on the
   /// `disconnect` request.
   eAdapterFeatureTerminateDebuggee,
-  /// The debug adapter supports the `supportsModuleSymbols` request.
-  /// This request is a custom request of lldb-dap.
-  eAdapterFeatureSupportsModuleSymbolsRequest,
   eAdapterFeatureFirst = eAdapterFeatureANSIStyling,
-  eAdapterFeatureLast = eAdapterFeatureSupportsModuleSymbolsRequest,
+  eAdapterFeatureLast = eAdapterFeatureTerminateDebuggee,
 };
 bool fromJSON(const llvm::json::Value &, AdapterFeature &, llvm::json::Path);
 llvm::json::Value toJSON(const AdapterFeature &);

@@ -15,7 +15,6 @@
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
-#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/JSON.h"
 
@@ -301,10 +300,6 @@ public:
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
   bool operator==(const Symbol &rhs) const;
-
-  static const char *GetTypeAsString(lldb::SymbolType symbol_type);
-
-  static lldb::SymbolType GetTypeFromString(const char *str);
 
 protected:
   // This is the internal guts of ResolveReExportedSymbol, it assumes
