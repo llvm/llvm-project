@@ -9,8 +9,6 @@ define void @pr154103(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalia
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[C]], i64 0
@@ -27,8 +25,7 @@ define void @pr154103(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalia
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 [[EVL_BASED_IV]], 7
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP18]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i8> @llvm.experimental.vp.strided.load.nxv4i8.p0.i64(ptr align 1 [[TMP19]], i64 7, <vscale x 4 x i1> [[TMP6]], i32 [[TMP7]])
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i8> @llvm.experimental.vp.strided.load.nxv4i8.p0.i64(ptr align 1 [[TMP19]], i64 7, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 4 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> [[TMP8]], <vscale x 4 x i64> splat (i64 1), i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = sdiv <vscale x 4 x i64> zeroinitializer, [[TMP9]]

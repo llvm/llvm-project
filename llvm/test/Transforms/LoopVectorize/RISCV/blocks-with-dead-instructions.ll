@@ -425,8 +425,6 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_6(ptr %src, i1 %
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i1> poison, i1 [[IC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <vscale x 8 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
@@ -450,8 +448,7 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_6(ptr %src, i1 %
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[EVL_BASED_IV]], 3
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i16, ptr [[SRC]], <vscale x 8 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP30:%.*]] = trunc i64 [[TMP4]] to i32
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vp.strided.load.nxv8i16.p0.i64(ptr align 2 [[TMP29]], i64 6, <vscale x 8 x i1> [[TMP15]], i32 [[TMP30]])
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vp.strided.load.nxv8i16.p0.i64(ptr align 2 [[TMP29]], i64 6, <vscale x 8 x i1> splat (i1 true), i32 [[TMP27]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq <vscale x 8 x i16> [[WIDE_MASKED_GATHER]], zeroinitializer
 ; CHECK-NEXT:    [[TMP18:%.*]] = select <vscale x 8 x i1> [[TMP15]], <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP19:%.*]] = select <vscale x 8 x i1> [[TMP18]], <vscale x 8 x i1> [[TMP8]], <vscale x 8 x i1> zeroinitializer
