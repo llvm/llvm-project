@@ -113,7 +113,7 @@ static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
   return DecodeStatus::Success;
 }
 
-#include "M68kGenDisassemblerTable.inc"
+#include "M68kGenDisassemblerTables.inc"
 
 #undef DecodeFPDR32RegisterClass
 #undef DecodeFPDR64RegisterClass
