@@ -14,6 +14,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -194,9 +195,9 @@ LoongArchMCExpr::Specifier LoongArch::parseSpecifier(StringRef name) {
       .Default(0);
 }
 
-void LoongArchMCAsmInfo::anchor() {}
+void LoongArchMCAsmInfoELF::anchor() {}
 
-LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT) {
+LoongArchMCAsmInfoELF::LoongArchMCAsmInfoELF(const Triple &TT) {
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   AlignmentIsInBytes = false;
   Data8bitsDirective = "\t.byte\t";
@@ -211,8 +212,8 @@ LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT) {
   ExceptionsType = ExceptionHandling::DwarfCFI;
 }
 
-void LoongArchMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                            const MCSpecifierExpr &Expr) const {
+void LoongArchMCAsmInfoELF::printSpecifierExpr(
+    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   auto S = Expr.getSpecifier();
   bool HasSpecifier = S != 0 && S != ELF::R_LARCH_B26;
   if (HasSpecifier)
@@ -220,4 +221,23 @@ void LoongArchMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
   printExpr(OS, *Expr.getSubExpr());
   if (HasSpecifier)
     OS << ')';
+}
+
+void LoongArchMCAsmInfoMicrosoftCOFF::anchor() {}
+
+LoongArchMCAsmInfoMicrosoftCOFF::LoongArchMCAsmInfoMicrosoftCOFF(
+    const Triple &TT) {
+  PrivateGlobalPrefix = ".L";
+  PrivateLabelPrefix = ".L";
+
+  Data16bitsDirective = "\t.hword\t";
+  Data32bitsDirective = "\t.word\t";
+
+  AlignmentIsInBytes = false;
+  SupportsDebugInformation = true;
+  CodePointerSize = 8;
+
+  CommentString = "//";
+  ExceptionsType = ExceptionHandling::WinEH;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
 }
