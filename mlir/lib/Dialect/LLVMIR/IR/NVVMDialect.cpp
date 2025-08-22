@@ -1925,19 +1925,31 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
       attrName == NVVMDialect::getReqntidAttrName() ||
       attrName == NVVMDialect::getClusterDimAttrName()) {
     auto values = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
-    if (!values || values.empty() || values.size() > 3)
+    if (!values || values.empty() || values.size() > 3) {
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
+    }
   }
   // If minctasm / maxnreg / cluster_max_blocks exist, it must be an integer
   // attribute
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
       attrName == NVVMDialect::getMaxnregAttrName() ||
       attrName == NVVMDialect::getClusterMaxBlocksAttrName()) {
-    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
+    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue())) {
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";
+    }
+  }
+  // blocksareclusters must be used along with reqntid and cluster_dim
+  if (attrName == NVVMDialect::getBlocksAreClustersAttrName()) {
+    if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
+        !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
+      return op->emitError()
+             << "'" << attrName << "' attribute must be used along with "
+             << "'" << NVVMDialect::getReqntidAttrName() << "' and "
+             << "'" << NVVMDialect::getClusterDimAttrName() << "'";
+    }
   }
 
   return success();
