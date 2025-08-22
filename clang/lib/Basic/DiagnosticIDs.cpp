@@ -395,6 +395,8 @@ unsigned DiagnosticIDs::getCustomDiagID(CustomDiagDesc Diag) {
 }
 
 bool DiagnosticIDs::isWarningOrExtension(unsigned DiagID) const {
+  // FIXME: Returning `true` for notes, remarks, traps, and
+  // CLASS_INVALID classes looks wrong.
   return DiagID < diag::DIAG_UPPER_LIMIT
              ? getDiagClass(DiagID) != CLASS_ERROR
              : CustomDiagInfo->getDescription(DiagID).GetClass() != CLASS_ERROR;
