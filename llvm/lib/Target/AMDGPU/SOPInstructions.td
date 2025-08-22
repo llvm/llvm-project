@@ -1655,7 +1655,7 @@ let OtherPredicates = [HasImageInsts] in {
 
 
 let SubtargetPredicate = HasWaitXcnt in {
-  def S_WAIT_XCNT_soft : SOPP_Pseudo<"s_soft_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_XCNT_soft : SOPP_Pseudo<"", (ins s16imm:$simm16), "$simm16">;
 }
 
 // Represents the point at which a wave must wait for all outstanding direct loads to LDS.

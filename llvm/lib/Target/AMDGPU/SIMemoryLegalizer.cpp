@@ -609,7 +609,7 @@ public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {
     // GFX12.0 and GFX12.5 memory models greatly overlap, and in some cases
     // the behavior is the same if assuming GFX12.0 in CU mode.
-    assert(ST.hasGFX1250Insts() ? ST.isCuModeEnabled() : true);
+    assert(!ST.hasGFX1250Insts() || ST.isCuModeEnabled());
   }
 
   bool insertWait(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
@@ -2630,14 +2630,15 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const bool IsRMW = (MI.mayLoad() && MI.mayStore());
   bool Changed = false;
 
-  // GFX12.5 only: xcnt wait is needed before flat and global atomics stores/rmw
+  // GFX12.5 only: xcnt wait is needed before flat and global atomics
+  // stores/rmw.
   if (Atomic && ST.requiresWaitXCntBeforeAtomicStores() && TII->isFLAT(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
     Changed = true;
   }
 
-  // Remaining fixes do not apply to RMWs
+  // Remaining fixes do not apply to RMWs.
   if (IsRMW)
     return Changed;
 
