@@ -73,6 +73,16 @@ struct FormatStyle {
   /// \version 22
   bool BreakAfterOpenBracketBracedList;
 
+  /// Force break after the left parenthesis of a function (declaration,
+  /// definition, call) when the parameters exceed the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   foo (                   vs.       foo (a ||
+  ///      a || b)                             b)
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketFunction;
+
   /// Force break after the left parenthesis of an if control statement
   /// when the expression exceeds the column limit.
   /// \code
@@ -2268,6 +2278,17 @@ struct FormatStyle {
   /// \endcode
   /// \version 22
   bool BreakBeforeCloseBracketBracedList;
+
+  /// Force break before the right parenthesis of a function (declaration,
+  /// definition, call) when the parameters exceed the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   foo (                   vs.       foo (
+  ///      a || b                            a || b)
+  ///   )
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketFunction;
 
   /// Force break before the right parenthesis of an if control statement
   /// when the expression exceeds the column limit. The break before the
@@ -5580,6 +5601,7 @@ struct FormatStyle {
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakAfterOpenBracketBracedList ==
                R.BreakAfterOpenBracketBracedList &&
+           BreakAfterOpenBracketFunction == R.BreakAfterOpenBracketFunction &&
            BreakAfterOpenBracketIf == R.BreakAfterOpenBracketIf &&
            BreakAfterOpenBracketLoop == R.BreakAfterOpenBracketLoop &&
            BreakAfterOpenBracketSwitch == R.BreakAfterOpenBracketSwitch &&
@@ -5589,6 +5611,8 @@ struct FormatStyle {
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeCloseBracketBracedList ==
                R.BreakBeforeCloseBracketBracedList &&
+           BreakBeforeCloseBracketFunction ==
+               R.BreakBeforeCloseBracketFunction &&
            BreakBeforeCloseBracketIf == R.BreakBeforeCloseBracketIf &&
            BreakBeforeCloseBracketLoop == R.BreakBeforeCloseBracketLoop &&
            BreakBeforeCloseBracketSwitch == R.BreakBeforeCloseBracketSwitch &&

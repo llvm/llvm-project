@@ -6242,12 +6242,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return Style.BreakBeforeCloseBracketLoop;
     if (Previous->is(tok::kw_switch))
       return Style.BreakBeforeCloseBracketSwitch;
-    return Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
+    return Style.BreakBeforeCloseBracketFunction;
   }
 
   if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&
       Right.is(TT_TrailingAnnotation) &&
-      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+      Style.BreakBeforeCloseBracketFunction) {
     return false;
   }
 
