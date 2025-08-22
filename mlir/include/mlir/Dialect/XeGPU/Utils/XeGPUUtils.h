@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_
 #define MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_
 
+#include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 namespace mlir {
