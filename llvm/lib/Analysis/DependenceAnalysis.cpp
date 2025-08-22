@@ -3308,6 +3308,322 @@ void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
     llvm_unreachable("constraint has unexpected kind");
 }
 
+namespace {
+
+enum class MonotonicityType {
+  MaySignedWrap, ///< The expression contains arithmetic operations that may
+                 ///< cause signed wrap.
+  Constant,      ///< The expression is constant. If a SCEV is classified as
+                 ///< Constant, it also implies that it doesn't contain any
+            ///< arithmetic operations that may cause signed wrap.
+  Monotonic, ///< The expression is monotonically increasing or decreasing. This
+             ///< is exclusive of Constant. That is, we say an SCEV is Monotonic
+             ///< iff it contains at least one AddRec where its step reccurence
+             ///< value is non-zero.
+};
+
+/// A visitor that checks the signed monotonicity of SCEVs.
+struct SCEVSignedMonotonicityChecker
+    : public SCEVVisitor<SCEVSignedMonotonicityChecker, MonotonicityType> {
+  /// \p Ptr is the pointer that the SCEV is associated with, if any. It may be
+  /// used for the inferrence.
+  SCEVSignedMonotonicityChecker(ScalarEvolution *SE, const Loop *OutermostLoop,
+                                const Value *Ptr = nullptr)
+      : SE(SE), OutermostLoop(OutermostLoop), Ptr(Ptr) {}
+
+  MonotonicityType visitAddExpr(const SCEVAddExpr *Expr);
+  MonotonicityType visitAddRecExpr(const SCEVAddRecExpr *Expr);
+  MonotonicityType visitMulExpr(const SCEVMulExpr *Expr);
+  MonotonicityType visitUnknown(const SCEVUnknown *Expr);
+  MonotonicityType visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr);
+  MonotonicityType visitSignExtendExpr(const SCEVSignExtendExpr *Expr);
+
+  MonotonicityType visitConstant(const SCEVConstant *) {
+    return MonotonicityType::Constant;
+  }
+  MonotonicityType visitVScale(const SCEVVScale *) {
+    return MonotonicityType::Constant;
+  }
+
+  // TODO: Handle more cases.
+  MonotonicityType visitPtrToIntExpr(const SCEVPtrToIntExpr *) {
+    return MonotonicityType::MaySignedWrap;
+  }
+  MonotonicityType visitTruncateExpr(const SCEVTruncateExpr *) {
+    return MonotonicityType::MaySignedWrap;
+  }
+  MonotonicityType visitUDivExpr(const SCEVUDivExpr *) {
+    return MonotonicityType::MaySignedWrap;
+  }
+  MonotonicityType visitSMaxExpr(const SCEVSMaxExpr *) {
+    return MonotonicityType::MaySignedWrap;
+  }
+  MonotonicityType visitUMaxExpr(const SCEVUMaxExpr *) {
+    return MonotonicityType::MaySignedWrap;
+  }
+  MonotonicityType visitSMinExpr(const SCEVSMinExpr *) {
+    return MonotonicityType::MaySignedWrap;
+  }
+  MonotonicityType visitUMinExpr(const SCEVUMinExpr *) {
+    return MonotonicityType::MaySignedWrap;
+  }
+  MonotonicityType visitSequentialUMinExpr(const SCEVSequentialUMinExpr *) {
+    return MonotonicityType::MaySignedWrap;
+  }
+  MonotonicityType visitCouldNotCompute(const SCEVCouldNotCompute *) {
+    return MonotonicityType::MaySignedWrap;
+  }
+
+private:
+  ScalarEvolution *SE;
+  const Loop *OutermostLoop;
+  const Value *Ptr = nullptr;
+};
+
+using MinMaxType = std::pair<const SCEV *, const SCEV *>;
+const MinMaxType Bottom = {nullptr, nullptr};
+
+/// A visitor that calculates the possible minimum and maximum values of SCEVs.
+/// This class assumes that the given SCEV is constant or monotonic.
+struct SCEVMinMaxCalculator
+    : public SCEVVisitor<SCEVMinMaxCalculator, MinMaxType> {
+  SCEVMinMaxCalculator(ScalarEvolution *SE, const Loop *OutermostLoop)
+      : SE(SE), OutermostLoop(OutermostLoop) {}
+
+  MinMaxType visitAddExpr(const SCEVAddExpr *Expr);
+  MinMaxType visitAddRecExpr(const SCEVAddRecExpr *Expr);
+  MinMaxType visitMulExpr(const SCEVMulExpr *Expr);
+  MinMaxType visitSignExtendExpr(const SCEVSignExtendExpr *Expr);
+
+  MinMaxType visitUnknown(const SCEVUnknown *Expr) {
+    return constantHelper(Expr);
+  }
+  MinMaxType visitConstant(const SCEVConstant *Expr) {
+    return constantHelper(Expr);
+  }
+  MinMaxType visitVScale(const SCEVVScale *Expr) {
+    return constantHelper(Expr);
+  }
+
+  MinMaxType visitZeroExtendExpr(const SCEVZeroExtendExpr *) { return Bottom; }
+  MinMaxType visitPtrToIntExpr(const SCEVPtrToIntExpr *) { return Bottom; }
+  MinMaxType visitTruncateExpr(const SCEVTruncateExpr *) { return Bottom; }
+  MinMaxType visitUDivExpr(const SCEVUDivExpr *) { return Bottom; }
+  MinMaxType visitSMaxExpr(const SCEVSMaxExpr *) { return Bottom; }
+  MinMaxType visitUMaxExpr(const SCEVUMaxExpr *) { return Bottom; }
+  MinMaxType visitSMinExpr(const SCEVSMinExpr *) { return Bottom; }
+  MinMaxType visitUMinExpr(const SCEVUMinExpr *) { return Bottom; }
+  MinMaxType visitSequentialUMinExpr(const SCEVSequentialUMinExpr *) {
+    return Bottom;
+  }
+  MinMaxType visitCouldNotCompute(const SCEVCouldNotCompute *) {
+    return Bottom;
+  }
+
+  MinMaxType constantHelper(const SCEV *C) { return MinMaxType(C, C); }
+
+private:
+  ScalarEvolution *SE;
+  const Loop *OutermostLoop;
+};
+
+} // anonymous namespace
+
+MonotonicityType
+SCEVSignedMonotonicityChecker::visitAddExpr(const SCEVAddExpr *Expr) {
+  if (!Expr->hasNoSignedWrap())
+    return MonotonicityType::MaySignedWrap;
+
+  MonotonicityType Result = MonotonicityType::Constant;
+  for (const SCEV *Op : Expr->operands()) {
+    switch (visit(Op)) {
+    case MonotonicityType::MaySignedWrap:
+      return MonotonicityType::MaySignedWrap;
+    case MonotonicityType::Constant:
+      break;
+    case MonotonicityType::Monotonic:
+      // Monotonic + Monotonic might be constant, so at the moment return
+      // MaySignedWrap.
+      // TODO: Should we separate Monotonically increasing and decreasing? Or
+      // SCEV is always simplified enough so that we don't have to consider such
+      // cases?
+      if (Result == MonotonicityType::Monotonic)
+        return MonotonicityType::MaySignedWrap;
+      Result = MonotonicityType::Constant;
+      break;
+    }
+  }
+  return Result;
+}
+
+MonotonicityType
+SCEVSignedMonotonicityChecker::visitMulExpr(const SCEVMulExpr *Expr) {
+  if (!Expr->hasNoSignedWrap())
+    return MonotonicityType::MaySignedWrap;
+
+  // Same as visitAddExpr.
+  MonotonicityType Result = MonotonicityType::Constant;
+  for (const SCEV *Op : Expr->operands()) {
+    switch (visit(Op)) {
+    case MonotonicityType::MaySignedWrap:
+      return MonotonicityType::MaySignedWrap;
+    case MonotonicityType::Constant:
+      break;
+    case MonotonicityType::Monotonic:
+      if (Result == MonotonicityType::Monotonic)
+        return MonotonicityType::MaySignedWrap;
+      Result = MonotonicityType::Constant;
+      break;
+    }
+  }
+  return Result;
+}
+
+MonotonicityType
+SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
+  if (!Expr->isAffine())
+    return MonotonicityType::MaySignedWrap;
+
+  const SCEV *Start = Expr->getStart();
+  const SCEV *Step = Expr->getStepRecurrence(*SE);
+
+  MonotonicityType StartRes = visit(Start);
+  if (StartRes == MonotonicityType::MaySignedWrap)
+    return MonotonicityType::MaySignedWrap;
+
+  MonotonicityType StepRes = visit(Step);
+  if (StepRes != MonotonicityType::Constant || !SE->isKnownNonZero(Step))
+    return MonotonicityType::MaySignedWrap;
+
+  bool IsNSW = [&] {
+    if (Expr->hasNoSignedWrap())
+      return true;
+
+    if (Ptr) {
+      // TODO: This seems incorrect. Maybe we should check the reachability from
+      // the GEP to the target instruction. E.g., in the following case, maybe
+      // no-wrap is not guaranteed:
+      //
+      //  entry:
+      //    ...
+      //    %gep = getelementptr inbounds i32, ptr %ptr, i32 %addrec
+      //    br i1 %cond, label %store, label %sink
+      //
+      //   store:
+      //     store i32 42, ptr %ptr
+      //     br label %sink
+      //
+      //   sink:
+      //     ...
+      //
+      auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+      if (GEP && GEP->hasNoUnsignedSignedWrap())
+        return true;
+    }
+
+    return false;
+  }();
+
+  if (!IsNSW) {
+    if (!SE->isKnownNegative(Step))
+      // If the coefficient can be positive value, ensure that the AddRec is
+      // monotonically increasing.
+      if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SGE, Expr, Start))
+        return MonotonicityType::MaySignedWrap;
+
+    if (!SE->isKnownPositive(Step))
+      // If the coefficient can be positive value, ensure that the AddRec is
+      // monotonically decreasing.
+      if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SLE, Expr, Start))
+        return MonotonicityType::MaySignedWrap;
+  }
+
+  return MonotonicityType::Monotonic;
+}
+
+MonotonicityType SCEVSignedMonotonicityChecker::visitZeroExtendExpr(
+    const SCEVZeroExtendExpr *Expr) {
+  return visit(Expr->getOperand());
+}
+
+MonotonicityType SCEVSignedMonotonicityChecker::visitSignExtendExpr(
+    const SCEVSignExtendExpr *Expr) {
+  return visit(Expr->getOperand());
+}
+
+MonotonicityType
+SCEVSignedMonotonicityChecker::visitUnknown(const SCEVUnknown *Expr) {
+  return SE->isLoopInvariant(Expr, OutermostLoop)
+             ? MonotonicityType::Constant
+             : MonotonicityType::MaySignedWrap;
+}
+
+MinMaxType SCEVMinMaxCalculator::visitAddExpr(const SCEVAddExpr *Expr) {
+  if (!Expr->hasNoSignedWrap())
+    return Bottom;
+
+  const SCEV *Min = SE->getZero(Expr->getType());
+  const SCEV *Max = SE->getZero(Expr->getType());
+  for (const SCEV *Op : Expr->operands()) {
+    auto [OpMin, OpMax] = visit(Op);
+    if (!OpMin || !OpMax)
+      return Bottom;
+    Min = SE->getAddExpr(Min, OpMin, Expr->getNoWrapFlags());
+    Max = SE->getAddExpr(Max, OpMax, Expr->getNoWrapFlags());
+  }
+  return MinMaxType(Min, Max);
+}
+
+MinMaxType SCEVMinMaxCalculator::visitMulExpr(const SCEVMulExpr *Expr) {
+  // TODO: Impl
+  return Bottom;
+}
+
+MinMaxType SCEVMinMaxCalculator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
+  assert(Expr->isAffine() && "Expected affine AddRecExpr");
+  const SCEV *Start = Expr->getStart();
+  const SCEV *Step = Expr->getStepRecurrence(*SE);
+
+  const SCEV *BTC = SE->getBackedgeTakenCount(Expr->getLoop());
+  if (!BTC || !SE->isLoopInvariant(BTC, OutermostLoop))
+    return Bottom;
+
+  auto [StartMin, StartMax] = visit(Start);
+  if (!StartMin || !StartMax)
+    return Bottom;
+  assert(SE->isLoopInvariant(Step, OutermostLoop) &&
+         "Expected step to be loop invariant");
+
+  const SCEVAddRecExpr *MinAddRec = dyn_cast<SCEVAddRecExpr>(SE->getAddRecExpr(
+      StartMin, Step, Expr->getLoop(), Expr->getNoWrapFlags()));
+  const SCEVAddRecExpr *MaxAddRec = dyn_cast<SCEVAddRecExpr>(SE->getAddRecExpr(
+      StartMax, Step, Expr->getLoop(), Expr->getNoWrapFlags()));
+
+  const SCEV *MinLast = MinAddRec->evaluateAtIteration(BTC, *SE);
+  const SCEV *MaxLast = MaxAddRec->evaluateAtIteration(BTC, *SE);
+
+  // If the step value is positive, the AddRec is monotonically increasing,
+  if (SE->isKnownPositive(Step))
+    return MinMaxType(StartMin, MaxLast);
+
+  // If the step value is negative, the AddRec is monotonically decreasing,
+  if (SE->isKnownNegative(Step))
+    return MinMaxType(MinLast, StartMax);
+
+  const SCEV *Min = SE->getSMinExpr(StartMin, MinLast);
+  const SCEV *Max = SE->getSMaxExpr(StartMax, MaxLast);
+  return MinMaxType(Min, Max);
+}
+
+MinMaxType
+SCEVMinMaxCalculator::visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
+  auto [Min, Max] = visit(Expr->getOperand());
+  if (!Min || !Max)
+    return Bottom;
+  return MinMaxType(SE->getSignExtendExpr(Min, Expr->getType()),
+                    SE->getSignExtendExpr(Max, Expr->getType()));
+}
+
 /// Check if we can delinearize the subscripts. If the SCEVs representing the
 /// source and destination array references are recurrences on a nested loop,
 /// this function flattens the nested recurrences into separate recurrences
@@ -3506,24 +3822,40 @@ bool DependenceInfo::tryDelinearizeParametricSize(
       if (!Ty)
         return false;
 
-      const SCEV *SrcMin = nullptr, *SrcMax = nullptr;
-      if (!isMonotonicSCEV(SrcSubscripts[I], SrcMin, SrcMax, SE, OutermostLoop,
-                           Ty, SrcPtr))
-        return false;
-      if (!SE->isKnownNonNegative(SrcMin))
-        return false;
-      if (!SE->isKnownPredicate(CmpInst::ICMP_SLT, SrcMax, Sizes[I - 1]))
+      MonotonicityType SrcMonotonicity =
+          SCEVSignedMonotonicityChecker(SE, OutermostLoop, SrcPtr)
+              .visit(SrcSubscripts[I]);
+      if (SrcMonotonicity == MonotonicityType::MaySignedWrap)
         return false;
 
-      const SCEV *DstMin = nullptr, *DstMax = nullptr;
-      if (!isMonotonicSCEV(DstSubscripts[I], DstMin, DstMax, SE, OutermostLoop,
-                           Ty, DstPtr))
+      MonotonicityType DstMonotonicity =
+          SCEVSignedMonotonicityChecker(SE, OutermostLoop, DstPtr)
+              .visit(DstSubscripts[I]);
+      if (DstMonotonicity == MonotonicityType::MaySignedWrap)
         return false;
-      if (!SE->isKnownNonNegative(DstMin))
+
+      auto [SrcMin, SrcMax] =
+          SCEVMinMaxCalculator(SE, OutermostLoop).visit(SrcSubscripts[I]);
+      if (!SrcMin || !SrcMax)
         return false;
-      if (!SE->isKnownPredicate(CmpInst::ICMP_SLT, DstMax, Sizes[I - 1]))
+      if (!SE->isKnownPositive(SrcMin) ||
+          !SE->isKnownPredicate(CmpInst::ICMP_SLT, SrcMax, Sizes[I - 1]))
+        return false;
+
+      auto [DstMin, DstMax] =
+          SCEVMinMaxCalculator(SE, OutermostLoop).visit(DstSubscripts[I]);
+      if (!DstMin || !DstMax)
+        return false;
+      if (!SE->isKnownPositive(DstMin) ||
+          !SE->isKnownPredicate(CmpInst::ICMP_SLT, DstMax, Sizes[I - 1]))
         return false;
     }
+
+  // TODO: Maybe we must check the the address calculation against delinearized
+  // result is safe. That is, the following calculation doesn't wrap, where Sub
+  // is either SrcSubscripts or DstSubscripts and Sz is Sizes:
+  //
+  //   Sub[0] + Sub[1]*Sz[0] + ... + Sub[N-1]*Sz[N-2]*Sz[N-3]*...*Sz[0]
 
   return true;
 }
@@ -3558,102 +3890,6 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 
 SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
   return SCEVUnionPredicate(Assumptions, *SE);
-}
-
-bool DependenceInfo::isMonotonicSCEV(const SCEV *Expr, const SCEV *&Min,
-                                     const SCEV *&Max, ScalarEvolution *SE,
-                                     const Loop *OutermostLoop, IntegerType *Ty,
-                                     const Value *Ptr) const {
-  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
-  if (!AddRec) {
-    if (!SE->isLoopInvariant(Expr, OutermostLoop))
-      return false;
-    const SCEV *Init = Expr ? Expr : SE->getZero(Ty);
-    Min = Init;
-    Max = Init;
-    return true;
-  }
-
-  if (!AddRec->isAffine())
-    return false;
-
-  // TODO: Support cast?
-  auto *AddRecTy = dyn_cast<IntegerType>(AddRec->getType());
-  if (!AddRecTy || AddRecTy->getBitWidth() != Ty->getBitWidth())
-    return false;
-
-  if (!isMonotonicSCEV(AddRec->getStart(), Min, Max, SE, OutermostLoop, Ty))
-    return false;
-
-  const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-  const Loop *L = AddRec->getLoop();
-
-  // Bail out if the coefficient can be zero.
-  if (!SE->isKnownNonZero(Coeff))
-    return false;
-  if (!SE->isLoopInvariant(Coeff, OutermostLoop))
-    return false;
-
-  bool IsKnownCoeffPositive = SE->isKnownPositive(Coeff);
-  bool IsKnownCoeffNegative = SE->isKnownNegative(Coeff);
-
-  bool IsNoWrap = AddRec->hasNoUnsignedWrap();
-  if (Ptr) {
-    // TODO: This seems incorrect. Maybe we should check the reachability from
-    // the GEP to the target instruction.
-    auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-    if (GEP && GEP->hasNoUnsignedSignedWrap())
-      IsNoWrap = true;
-  }
-
-  if (!IsNoWrap) {
-    if (!IsKnownCoeffNegative)
-      // If the coefficient can be positive value, ensure that the AddRec is
-      // monotonically increasing.
-      if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SGE, AddRec,
-                                       AddRec->getStart()))
-        return false;
-
-    if (!IsKnownCoeffPositive)
-      // If the coefficient can be positive value, ensure that the AddRec is
-      // monotonically decreasing.
-      if (!SE->isKnownOnEveryIteration(ICmpInst::ICMP_SLE, AddRec,
-                                       AddRec->getStart()))
-        return false;
-  }
-
-  const SCEV *BTC = SE->getBackedgeTakenCount(L);
-  if (!BTC || !SE->isLoopInvariant(BTC, OutermostLoop))
-    return false;
-
-  const SCEVAddRecExpr *MinAddRec = dyn_cast<SCEVAddRecExpr>(
-      SE->getAddRecExpr(Min, Coeff, L, AddRec->getNoWrapFlags()));
-  if (!MinAddRec)
-    return false;
-
-  const SCEVAddRecExpr *MaxAddRec = dyn_cast<SCEVAddRecExpr>(
-      SE->getAddRecExpr(Max, Coeff, L, AddRec->getNoWrapFlags()));
-  if (!MaxAddRec)
-    return false;
-
-  // If we know the coefficient is positive, the maximum value of AddRec is
-  // MaxLast. Similarly, if we know the coefficient is negative, the minimum
-  // value of AddRec is MinLast. If we don't know the sign of the coefficient,
-  // use SMin/SMax.
-  const SCEV *MinLast = MinAddRec->evaluateAtIteration(BTC, *SE);
-  const SCEV *MaxLast = MaxAddRec->evaluateAtIteration(BTC, *SE);
-  if (IsKnownCoeffPositive) {
-    Max = MaxLast;
-  } else if (IsKnownCoeffNegative) {
-    Min = MinLast;
-  } else {
-    assert(!IsKnownCoeffPositive && !IsKnownCoeffNegative &&
-           "Unexpected coefficient sign");
-    Min = SE->getSMinExpr(Min, MinLast);
-    Max = SE->getSMaxExpr(Max, MaxLast);
-  }
-
-  return true;
 }
 
 // depends -
