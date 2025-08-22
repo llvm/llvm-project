@@ -473,16 +473,10 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
     return true;
 
   // `Pure` operation that whose operands are valid symbolic identifiers.
-  if (isPure(defOp)) {
-    bool allValid = true;
-    for (auto operand : defOp->getOperands()) {
-      if (!affine::isValidSymbol(operand, region)) {
-        allValid = false;
-        break;
-      }
-    }
-    if (allValid)
-      return true;
+  if (isPure(defOp) && llvm::all_of(defOp->getOperands(), [&](Value operand) {
+        return affine::isValidSymbol(operand, region);
+      })) {
+    return true;
   }
 
   // Dim op results could be valid symbols at any level.
