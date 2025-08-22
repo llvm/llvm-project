@@ -556,11 +556,11 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
     // Check if we have meaningful code ranges before adding LLVM_stmt_sequence
     // Only add it if there are multiple basic block sections or if the single
     // range represents substantial code (not just a trivial function)
-    bool hasSubstantialCode =
+    bool HasSubstantialCode =
         BB_List.size() > 1 ||
         (BB_List.size() == 1 && BB_List[0].Begin != BB_List[0].End);
 
-    if (hasSubstantialCode) {
+    if (HasSubstantialCode) {
       addSectionLabel(
           *SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
           Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol());

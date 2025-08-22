@@ -41,11 +41,11 @@
 
 # Functions from the first object file - all functions share the same address but belong to a.o
 # VERIFY-MULTI-STABS: N_FUN{{.*}}[[FUNC_ADDR:[0-9a-f]+]] '_func_A'
-# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}}
 # VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}[[FUNC_ADDR]] '_func_B'
-# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}}
 # VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}[[FUNC_ADDR]] '_func_C'
-# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}}
 # VERIFY-MULTI-STABS-NEXT-NEXT: N_FUN{{.*}}[0-9a-f]+ '_take_func_addr'
 
 # End of first object file's entries
@@ -57,11 +57,11 @@
 
 # Functions from the second object file - same addresses but different object file
 # VERIFY-MULTI-STABS: N_FUN{{.*}}[[FUNC_ADDR]] '_func_D'
-# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}}
 # VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}[[FUNC_ADDR]] '_func_E'
-# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}}
 # VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}[[FUNC_ADDR]] '_func_F'
-# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}}
 # VERIFY-MULTI-STABS-NEXT-NEXT: N_FUN{{.*}}[0-9a-f]+ '_take_func_addr_b'
 
 ; RUN: dsymutil --flat --verify-dwarf=none %t/a_thunks.dylib -o %t/a_thunks.dSYM
@@ -117,9 +117,21 @@
 #define ATTR __attribute__((noinline)) extern "C"
 typedef unsigned long long ULL;
 
-ATTR int func_A() { return 1; }
-ATTR int func_B() { return 1; }
-ATTR int func_C() { return 1; }
+// Now that safe thunk has two instructions, trivial one-instruction
+// functions will not be ICF'ed anymore. We need to make the functions
+// more non-trivial to ensure that they are ICF'ed
+ATTR int func_A(int A) {
+  int tmp = A + 1;
+  return tmp / 2;
+}
+ATTR int func_B(int B) {
+  int tmp = B + 1;
+  return tmp / 2;
+}
+ATTR int func_C(int C) {
+  int tmp = C + 1;
+  return tmp / 2;
+}
 
 ATTR ULL take_func_addr() {
     ULL val = 0;
@@ -134,9 +146,18 @@ ATTR ULL take_func_addr() {
 typedef unsigned long long ULL;
 
 // Identical functions in a different object file
-ATTR int func_D() { return 1; }
-ATTR int func_E() { return 1; }
-ATTR int func_F() { return 1; }
+ATTR int func_D(int D) {
+  int tmp = D + 1;
+  return tmp / 2;
+}
+ATTR int func_E(int E) {
+  int tmp = E + 1;
+  return tmp / 2;
+}
+ATTR int func_F(int F) {
+  int tmp = F + 1;
+  return tmp / 2;
+}
 
 ATTR ULL take_func_addr_b() {
     ULL val = 0;
@@ -159,39 +180,48 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:
 target triple = "arm64-apple-macosx11.0.0"
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
-define noundef i32 @func_A() #0 !dbg !12 {
-entry:
-  ret i32 1, !dbg !16
+define range(i32 -1073741823, 1073741824) i32 @func_A(i32 noundef %0) #0 !dbg !13 {
+    #dbg_value(i32 %0, !18, !DIExpression(), !20)
+  %2 = add nsw i32 %0, 1, !dbg !21
+    #dbg_value(i32 %2, !19, !DIExpression(), !20)
+  %3 = sdiv i32 %2, 2, !dbg !22
+  ret i32 %3, !dbg !23
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
-define noundef i32 @func_B() #0 !dbg !17 {
-entry:
-  ret i32 1, !dbg !18
+define range(i32 -1073741823, 1073741824) i32 @func_B(i32 noundef %0) #0 !dbg !24 {
+    #dbg_value(i32 %0, !26, !DIExpression(), !28)
+  %2 = add nsw i32 %0, 1, !dbg !29
+    #dbg_value(i32 %2, !27, !DIExpression(), !28)
+  %3 = sdiv i32 %2, 2, !dbg !30
+  ret i32 %3, !dbg !31
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
-define noundef i32 @func_C() #0 !dbg !19 {
-entry:
-  ret i32 1, !dbg !20
+define range(i32 -1073741823, 1073741824) i32 @func_C(i32 noundef %0) #0 !dbg !32 {
+    #dbg_value(i32 %0, !34, !DIExpression(), !36)
+  %2 = add nsw i32 %0, 1, !dbg !37
+    #dbg_value(i32 %2, !35, !DIExpression(), !36)
+  %3 = sdiv i32 %2, 2, !dbg !38
+  ret i32 %3, !dbg !39
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
-define noundef i64 @take_func_addr() local_unnamed_addr #0 !dbg !21 {
-entry:
-    #dbg_value(i64 0, !25, !DIExpression(), !26)
-    #dbg_value(i64 ptrtoint (ptr @func_A to i64), !25, !DIExpression(), !26)
-    #dbg_value(i64 add (i64 ptrtoint (ptr @func_A to i64), i64 ptrtoint (ptr @func_B to i64)), !25, !DIExpression(), !26)
-    #dbg_value(i64 add (i64 add (i64 ptrtoint (ptr @func_A to i64), i64 ptrtoint (ptr @func_B to i64)), i64 ptrtoint (ptr @func_C to i64)), !25, !DIExpression(), !26)
-  ret i64 add (i64 add (i64 ptrtoint (ptr @func_A to i64), i64 ptrtoint (ptr @func_B to i64)), i64 ptrtoint (ptr @func_C to i64)), !dbg !27
+define noundef i64 @take_func_addr() local_unnamed_addr #0 !dbg !40 {
+    #dbg_value(i64 0, !44, !DIExpression(), !45)
+    #dbg_value(i64 ptrtoint (ptr @func_A to i64), !44, !DIExpression(), !45)
+    #dbg_value(i64 add (i64 ptrtoint (ptr @func_A to i64), i64 ptrtoint (ptr @func_B to i64)), !44, !DIExpression(), !45)
+    #dbg_value(i64 add (i64 add (i64 ptrtoint (ptr @func_A to i64), i64 ptrtoint (ptr @func_B to i64)), i64 ptrtoint (ptr @func_C to i64)), !44, !DIExpression(), !45)
+  ret i64 add (i64 add (i64 ptrtoint (ptr @func_A to i64), i64 ptrtoint (ptr @func_B to i64)), i64 ptrtoint (ptr @func_C to i64)), !dbg !46
 }
 
-attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
+attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7, !8, !9, !10, !11}
+!llvm.ident = !{!12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "Facebook clang version 15.0.0 (https://git.internal.tfbnw.net/repos/git/ro/osmeta/external/llvm-project a85823b9dd90d425da12e921b64332583924ef3b)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
 !1 = !DIFile(filename: "a.cpp", directory: "/proc/self/cwd")
 !2 = !{!3, !5}
 !3 = !DIDerivedType(tag: DW_TAG_typedef, name: "ULL", file: !1, line: 2, baseType: !4)
@@ -203,22 +233,41 @@ attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp wil
 !9 = !{i32 8, !"PIC Level", i32 2}
 !10 = !{i32 7, !"uwtable", i32 1}
 !11 = !{i32 7, !"frame-pointer", i32 1}
-!12 = distinct !DISubprogram(name: "func_A", scope: !1, file: !1, line: 4, type: !13, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!13 = !DISubroutineType(types: !14)
-!14 = !{!15}
-!15 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!16 = !DILocation(line: 4, column: 21, scope: !12)
-!17 = distinct !DISubprogram(name: "func_B", scope: !1, file: !1, line: 5, type: !13, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!18 = !DILocation(line: 5, column: 21, scope: !17)
-!19 = distinct !DISubprogram(name: "func_C", scope: !1, file: !1, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!20 = !DILocation(line: 6, column: 21, scope: !19)
-!21 = distinct !DISubprogram(name: "take_func_addr", scope: !1, file: !1, line: 8, type: !22, scopeLine: 8, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !24)
-!22 = !DISubroutineType(types: !23)
-!23 = !{!3}
-!24 = !{!25}
-!25 = !DILocalVariable(name: "val", scope: !21, file: !1, line: 9, type: !3)
-!26 = !DILocation(line: 0, scope: !21)
-!27 = !DILocation(line: 13, column: 5, scope: !21)
+!12 = !{!"Facebook clang version 15.0.0 (https://git.internal.tfbnw.net/repos/git/ro/osmeta/external/llvm-project a85823b9dd90d425da12e921b64332583924ef3b)"}
+!13 = distinct !DISubprogram(name: "func_A", scope: !1, file: !1, line: 4, type: !14, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !17)
+!14 = !DISubroutineType(types: !15)
+!15 = !{!16, !16}
+!16 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!17 = !{!18, !19}
+!18 = !DILocalVariable(name: "A", arg: 1, scope: !13, file: !1, line: 4, type: !16)
+!19 = !DILocalVariable(name: "tmp", scope: !13, file: !1, line: 5, type: !16)
+!20 = !DILocation(line: 0, scope: !13)
+!21 = !DILocation(line: 5, column: 15, scope: !13)
+!22 = !DILocation(line: 6, column: 14, scope: !13)
+!23 = !DILocation(line: 6, column: 3, scope: !13)
+!24 = distinct !DISubprogram(name: "func_B", scope: !1, file: !1, line: 8, type: !14, scopeLine: 8, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !25)
+!25 = !{!26, !27}
+!26 = !DILocalVariable(name: "B", arg: 1, scope: !24, file: !1, line: 8, type: !16)
+!27 = !DILocalVariable(name: "tmp", scope: !24, file: !1, line: 9, type: !16)
+!28 = !DILocation(line: 0, scope: !24)
+!29 = !DILocation(line: 9, column: 15, scope: !24)
+!30 = !DILocation(line: 10, column: 14, scope: !24)
+!31 = !DILocation(line: 10, column: 3, scope: !24)
+!32 = distinct !DISubprogram(name: "func_C", scope: !1, file: !1, line: 12, type: !14, scopeLine: 12, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !33)
+!33 = !{!34, !35}
+!34 = !DILocalVariable(name: "C", arg: 1, scope: !32, file: !1, line: 12, type: !16)
+!35 = !DILocalVariable(name: "tmp", scope: !32, file: !1, line: 13, type: !16)
+!36 = !DILocation(line: 0, scope: !32)
+!37 = !DILocation(line: 13, column: 15, scope: !32)
+!38 = !DILocation(line: 14, column: 14, scope: !32)
+!39 = !DILocation(line: 14, column: 3, scope: !32)
+!40 = distinct !DISubprogram(name: "take_func_addr", scope: !1, file: !1, line: 17, type: !41, scopeLine: 17, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !43)
+!41 = !DISubroutineType(types: !42)
+!42 = !{!3}
+!43 = !{!44}
+!44 = !DILocalVariable(name: "val", scope: !40, file: !1, line: 18, type: !3)
+!45 = !DILocation(line: 0, scope: !40)
+!46 = !DILocation(line: 22, column: 5, scope: !40)
 
 ;--- b.ll
 ; ModuleID = 'b.cpp'
@@ -227,39 +276,48 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:
 target triple = "arm64-apple-macosx11.0.0"
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
-define noundef i32 @func_D() #0 !dbg !12 {
-entry:
-  ret i32 1, !dbg !16
+define range(i32 -1073741823, 1073741824) i32 @func_D(i32 noundef %0) #0 !dbg !13 {
+    #dbg_value(i32 %0, !18, !DIExpression(), !20)
+  %2 = add nsw i32 %0, 1, !dbg !21
+    #dbg_value(i32 %2, !19, !DIExpression(), !20)
+  %3 = sdiv i32 %2, 2, !dbg !22
+  ret i32 %3, !dbg !23
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
-define noundef i32 @func_E() #0 !dbg !17 {
-entry:
-  ret i32 1, !dbg !18
+define range(i32 -1073741823, 1073741824) i32 @func_E(i32 noundef %0) #0 !dbg !24 {
+    #dbg_value(i32 %0, !26, !DIExpression(), !28)
+  %2 = add nsw i32 %0, 1, !dbg !29
+    #dbg_value(i32 %2, !27, !DIExpression(), !28)
+  %3 = sdiv i32 %2, 2, !dbg !30
+  ret i32 %3, !dbg !31
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
-define noundef i32 @func_F() #0 !dbg !19 {
-entry:
-  ret i32 1, !dbg !20
+define range(i32 -1073741823, 1073741824) i32 @func_F(i32 noundef %0) #0 !dbg !32 {
+    #dbg_value(i32 %0, !34, !DIExpression(), !36)
+  %2 = add nsw i32 %0, 1, !dbg !37
+    #dbg_value(i32 %2, !35, !DIExpression(), !36)
+  %3 = sdiv i32 %2, 2, !dbg !38
+  ret i32 %3, !dbg !39
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
-define noundef i64 @take_func_addr_b() local_unnamed_addr #0 !dbg !21 {
-entry:
-    #dbg_value(i64 0, !25, !DIExpression(), !26)
-    #dbg_value(i64 ptrtoint (ptr @func_D to i64), !25, !DIExpression(), !26)
-    #dbg_value(i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), !25, !DIExpression(), !26)
-    #dbg_value(i64 add (i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), i64 ptrtoint (ptr @func_F to i64)), !25, !DIExpression(), !26)
-  ret i64 add (i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), i64 ptrtoint (ptr @func_F to i64)), !dbg !27
+define noundef i64 @take_func_addr_b() local_unnamed_addr #0 !dbg !40 {
+    #dbg_value(i64 0, !44, !DIExpression(), !45)
+    #dbg_value(i64 ptrtoint (ptr @func_D to i64), !44, !DIExpression(), !45)
+    #dbg_value(i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), !44, !DIExpression(), !45)
+    #dbg_value(i64 add (i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), i64 ptrtoint (ptr @func_F to i64)), !44, !DIExpression(), !45)
+  ret i64 add (i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), i64 ptrtoint (ptr @func_F to i64)), !dbg !46
 }
 
-attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
+attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7, !8, !9, !10, !11}
+!llvm.ident = !{!12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "Facebook clang version 15.0.0 (https://git.internal.tfbnw.net/repos/git/ro/osmeta/external/llvm-project a85823b9dd90d425da12e921b64332583924ef3b)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
 !1 = !DIFile(filename: "b.cpp", directory: "/proc/self/cwd")
 !2 = !{!3, !5}
 !3 = !DIDerivedType(tag: DW_TAG_typedef, name: "ULL", file: !1, line: 2, baseType: !4)
@@ -271,19 +329,38 @@ attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp wil
 !9 = !{i32 8, !"PIC Level", i32 2}
 !10 = !{i32 7, !"uwtable", i32 1}
 !11 = !{i32 7, !"frame-pointer", i32 1}
-!12 = distinct !DISubprogram(name: "func_D", scope: !1, file: !1, line: 5, type: !13, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!13 = !DISubroutineType(types: !14)
-!14 = !{!15}
-!15 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!16 = !DILocation(line: 5, column: 21, scope: !12)
-!17 = distinct !DISubprogram(name: "func_E", scope: !1, file: !1, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!18 = !DILocation(line: 6, column: 21, scope: !17)
-!19 = distinct !DISubprogram(name: "func_F", scope: !1, file: !1, line: 7, type: !13, scopeLine: 7, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!20 = !DILocation(line: 7, column: 21, scope: !19)
-!21 = distinct !DISubprogram(name: "take_func_addr_b", scope: !1, file: !1, line: 9, type: !22, scopeLine: 9, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !24)
-!22 = !DISubroutineType(types: !23)
-!23 = !{!3}
-!24 = !{!25}
-!25 = !DILocalVariable(name: "val", scope: !21, file: !1, line: 10, type: !3)
-!26 = !DILocation(line: 0, scope: !21)
-!27 = !DILocation(line: 14, column: 5, scope: !21)
+!12 = !{!"Facebook clang version 15.0.0 (https://git.internal.tfbnw.net/repos/git/ro/osmeta/external/llvm-project a85823b9dd90d425da12e921b64332583924ef3b)"}
+!13 = distinct !DISubprogram(name: "func_D", scope: !1, file: !1, line: 5, type: !14, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !17)
+!14 = !DISubroutineType(types: !15)
+!15 = !{!16, !16}
+!16 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!17 = !{!18, !19}
+!18 = !DILocalVariable(name: "D", arg: 1, scope: !13, file: !1, line: 5, type: !16)
+!19 = !DILocalVariable(name: "tmp", scope: !13, file: !1, line: 6, type: !16)
+!20 = !DILocation(line: 0, scope: !13)
+!21 = !DILocation(line: 6, column: 15, scope: !13)
+!22 = !DILocation(line: 7, column: 14, scope: !13)
+!23 = !DILocation(line: 7, column: 3, scope: !13)
+!24 = distinct !DISubprogram(name: "func_E", scope: !1, file: !1, line: 9, type: !14, scopeLine: 9, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !25)
+!25 = !{!26, !27}
+!26 = !DILocalVariable(name: "E", arg: 1, scope: !24, file: !1, line: 9, type: !16)
+!27 = !DILocalVariable(name: "tmp", scope: !24, file: !1, line: 10, type: !16)
+!28 = !DILocation(line: 0, scope: !24)
+!29 = !DILocation(line: 10, column: 15, scope: !24)
+!30 = !DILocation(line: 11, column: 14, scope: !24)
+!31 = !DILocation(line: 11, column: 3, scope: !24)
+!32 = distinct !DISubprogram(name: "func_F", scope: !1, file: !1, line: 13, type: !14, scopeLine: 13, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !33)
+!33 = !{!34, !35}
+!34 = !DILocalVariable(name: "F", arg: 1, scope: !32, file: !1, line: 13, type: !16)
+!35 = !DILocalVariable(name: "tmp", scope: !32, file: !1, line: 14, type: !16)
+!36 = !DILocation(line: 0, scope: !32)
+!37 = !DILocation(line: 14, column: 15, scope: !32)
+!38 = !DILocation(line: 15, column: 14, scope: !32)
+!39 = !DILocation(line: 15, column: 3, scope: !32)
+!40 = distinct !DISubprogram(name: "take_func_addr_b", scope: !1, file: !1, line: 18, type: !41, scopeLine: 18, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !43)
+!41 = !DISubroutineType(types: !42)
+!42 = !{!3}
+!43 = !{!44}
+!44 = !DILocalVariable(name: "val", scope: !40, file: !1, line: 19, type: !3)
+!45 = !DILocation(line: 0, scope: !40)
+!46 = !DILocation(line: 23, column: 5, scope: !40)
