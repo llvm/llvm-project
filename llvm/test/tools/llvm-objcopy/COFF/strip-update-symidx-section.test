@@ -1,43 +1,24 @@
-# .gehcont$y section consists of .symidx directives. The test checks that
-# indices in the section are updated after stripping as the symbol table could
-# be changed during stripping.
+## Check sections consisting only of .symidx directives. The test checks that
+## indices in the sections are updated after stripping as the symbol table could
+## be changed during stripping.
 
 # RUN: yaml2obj %s -o %t.in.o
 
-# RUN: llvm-readobj -r -s -x '.gehcont$y' %t.in.o | FileCheck %s --check-prefix=ORIG
 # RUN: llvm-objcopy --strip-debug %t.in.o %t.out.o
-# RUN: llvm-readobj -r -s -x '.gehcont$y' %t.out.o | FileCheck %s --check-prefix=STRIP
+# RUN: llvm-readobj -x '.gehcont$y' -x '.gfids$y' -x '.giats$y' -x '.gljmp$y' %t.out.o | FileCheck %s
 
-# ORIG:      Symbols [
-# ORIG:          Name: .text
-# ORIG:          Name: .data
-# ORIG:          Name: .bss
-# ORIG:          Name: .text
-# ORIG:          Name: ?foo@@YAXXZ
-# ORIG:          Name: .data
-# ORIG:          Name: .drectve
-# ORIG:          Name: .debug$S
-# ORIG:          Name: .gehcont$y
-# ORIG:          Name: ?foo2@@YAXXZ
-# ORIG:          Name: $ehgcr_0_1
-# ORIG:      Hex dump of section '.gehcont$y':
-# ORIG-NEXT: 0x00000000 12000000 12000000 12000000          ............
+# CHECK:      Hex dump of section '.gehcont$y':
+# CHECK-NEXT: 0x00000000 10000000 10000000 10000000
 
-# .debug$S is going to be stripped and index of $ehgcr_0_1 is decreased by 2
+# CHECK:      Hex dump of section '.gfids$y':
+# CHECK-NEXT: 0x00000000 17000000 19000000
 
-# STRIP:      Symbols [
-# STRIP:          Name: .text
-# STRIP:          Name: .data
-# STRIP:          Name: .bss
-# STRIP:          Name: .text
-# STRIP:          Name: ?foo@@YAXXZ
-# STRIP:          Name: .data
-# STRIP:          Name: .drectve
-# STRIP:          Name: .gehcont$y
-# STRIP:          Name: ?foo2@@YAXXZ
-# STRIP:          Name: $ehgcr_0_1
-# STRIP:      Hex dump of section '.gehcont$y':
-# STRIP-NEXT: 0x00000000 10000000 10000000 10000000          ............
+# CHECK:      Hex dump of section '.giats$y':
+# CHECK-NEXT: 0x00000000 18000000
+
+# CHECK:      Hex dump of section '.gljmp$y':
+# CHECK-NEXT: 0x00000000 17000000 18000000 19000000
+
 
 --- !COFF
 header:
@@ -62,7 +43,16 @@ sections:
     SectionData:     554883EC30488D6C243048C745F0FEFFFFFFE800000000904883C4305DC366904889542410554883EC20488D6A30488D05E2FFFFFF4883C4205DC3
     SizeOfRawData:   59
     Relocations:
-      - VirtualAddress:  19
+      - VirtualAddress:  3
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_REL32
+      - VirtualAddress:  10
+        SymbolName:      bar
+        Type:            IMAGE_REL_AMD64_REL32
+      - VirtualAddress:  17
+        SymbolName:      baz
+        Type:            IMAGE_REL_AMD64_REL32
+      - VirtualAddress:  24
         SymbolName:      '?foo2@@YAXXZ'
         Type:            IMAGE_REL_AMD64_REL32
   - Name:            .data
@@ -84,6 +74,21 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
     SectionData:     '120000001200000012000000'
+    SizeOfRawData:   12
+  - Name:            '.gfids$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '190000001B000000'
+    SizeOfRawData:   8
+  - Name:            '.giats$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '1A000000'
+    SizeOfRawData:   4
+  - Name:            '.gljmp$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '190000001A0000001B000000'
     SizeOfRawData:   12
 symbols:
   - Name:            .text
@@ -202,4 +207,58 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '.gfids$y'
+    Value:           0
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1167279533
+      Number:          9
+  - Name:            '.giats$y'
+    Value:           0
+    SectionNumber:   10
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        830808662
+      Number:          10
+  - Name:            '.gljmp$y'
+    Value:           0
+    SectionNumber:   11
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          16
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        3322439691
+      Number:          11
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            bar
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            baz
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
 ...
