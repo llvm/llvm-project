@@ -1,4 +1,4 @@
-//===---- bitmask-enum.h - Enable bitmask operations on enums ---*- C++ -*-===//
+//===---- BitmaskEnum.h - Enable bitmask operations on enums ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_BITMASK_ENUM_H
-#define ORC_RT_BITMASK_ENUM_H
+#ifndef ORC_RT_BITMASKENUM_H
+#define ORC_RT_BITMASKENUM_H
 
-#include "math.h"
+#include "Math.h"
 
 #include <cassert>
 #include <type_traits>
@@ -158,4 +158,4 @@ constexpr E &operator^=(E &LHS, E RHS) noexcept {
 
 } // namespace orc_rt
 
-#endif // ORC_RT_BITMASK_ENUM_H
+#endif // ORC_RT_BITMASKENUM_H

@@ -1,4 +1,4 @@
-//===- math-test.cpp ------------------------------------------------------===//
+//===- MathTest.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests for orc-rt's math.h APIs.
+// Tests for orc-rt's Math.h APIs.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/math.h"
+#include "orc-rt/Math.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

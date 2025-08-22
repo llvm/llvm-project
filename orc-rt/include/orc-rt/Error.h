@@ -1,4 +1,4 @@
-//===-------- error.h - Enforced error checking for ORC RT ------*- C++ -*-===//
+//===-------- Error.h - Enforced error checking for ORC RT ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 #ifndef ORC_RT_ERROR_H
 #define ORC_RT_ERROR_H
 
-#include "orc-rt/compiler.h"
-#include "orc-rt/rtti.h"
+#include "orc-rt/Compiler.h"
+#include "orc-rt/RTTI.h"
 
 #include <cassert>
 #include <cstdlib>

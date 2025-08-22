@@ -1,10 +1,10 @@
 set(ORC_RT_HEADERS
     orc-rt-c/orc-rt.h
-    orc-rt/bitmask-enum.h
-    orc-rt/error.h
-    orc-rt/compiler.h
-    orc-rt/math.h
-    orc-rt/rtti.h
+    orc-rt/BitmaskEnum.h
+    orc-rt/Compiler.h
+    orc-rt/Error.h
+    orc-rt/Math.h
+    orc-rt/RTTI.h
     orc-rt/span.h
     orc-rt/unique-function.h
 )
