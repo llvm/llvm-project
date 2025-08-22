@@ -24,7 +24,8 @@ namespace LLVM {
 using namespace mlir;
 
 struct TargetToTargetFeaturesPass
-    : public LLVM::impl::LLVMTargetToTargetFeaturesBase<TargetToTargetFeaturesPass> {
+    : public LLVM::impl::LLVMTargetToTargetFeaturesBase<
+          TargetToTargetFeaturesPass> {
   using LLVM::impl::LLVMTargetToTargetFeaturesBase<
       TargetToTargetFeaturesPass>::LLVMTargetToTargetFeaturesBase;
 
@@ -53,10 +54,19 @@ struct TargetToTargetFeaturesPass
     llvm::MCSubtargetInfo const *subTargetInfo =
         (*targetMachine)->getMCSubtargetInfo();
 
-    StringRef fullTargetFeaturesStr = subTargetInfo->getFeatureString();
+    const std::vector<llvm::SubtargetFeatureKV> enabledFeatures =
+        subTargetInfo->getEnabledProcessorFeatures();
+
+    auto plussedFeatures = llvm::to_vector(
+        llvm::map_range(enabledFeatures, [](llvm::SubtargetFeatureKV feature) {
+          return std::string("+") + feature.Key;
+        }));
+
+    auto plussedFeaturesRefs = llvm::to_vector(llvm::map_range(
+        plussedFeatures, [](auto &it) { return StringRef(it.c_str()); }));
 
     auto fullTargetFeaturesAttr =
-        LLVM::TargetFeaturesAttr::get(&getContext(), fullTargetFeaturesStr);
+        LLVM::TargetFeaturesAttr::get(&getContext(), plussedFeaturesRefs);
 
     auto updatedTargetAttr =
         LLVM::TargetAttr::get(&getContext(), targetAttr.getTriple(),
