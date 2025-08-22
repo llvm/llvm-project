@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=riscv32 -mattr=+c,+d < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=riscv32 -mattr=+zcd < %s 2>&1 | FileCheck %s
 
 ## FPRC
 c.fld  ft3, 8(a5) # CHECK: :[[@LINE]]:8: error: invalid operand for instruction

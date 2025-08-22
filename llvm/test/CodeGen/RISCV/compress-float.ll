@@ -5,27 +5,6 @@
 ;
 ; RUN: cat %s > %t.tgtattr
 ; RUN: echo 'attributes #0 = { nounwind }' >> %t.tgtattr
-; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+c,+f -filetype=obj \
-; RUN:   -disable-block-placement < %t.tgtattr \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFDC %s
-;
-; RUN: cat %s > %t.fnattr
-; RUN: echo 'attributes #0 = { nounwind "target-features"="+c,+f" }' >> %t.fnattr
-; RUN: llc -mtriple=riscv32 -target-abi ilp32f -filetype=obj \
-; RUN:   -disable-block-placement < %t.fnattr \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFDC %s
-;
-; RUN: cat %s > %t.mixedattr
-; RUN: echo 'attributes #0 = { nounwind "target-features"="+f" }' >> %t.mixedattr
-; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+c -filetype=obj \
-; RUN:   -disable-block-placement < %t.mixedattr \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFDC %s
-;
-; RUN: cat %s > %t.tgtattr
-; RUN: echo 'attributes #0 = { nounwind }' >> %t.tgtattr
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+zcf,+f -filetype=obj \
 ; RUN:   -disable-block-placement < %t.tgtattr \
 ; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zcf,+f -M no-aliases - \
@@ -43,27 +22,6 @@
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+zcf -filetype=obj \
 ; RUN:   -disable-block-placement < %t.mixedattr \
 ; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zcf,+f -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFDC %s
-;
-; RUN: cat %s > %t.tgtattr
-; RUN: echo 'attributes #0 = { nounwind }' >> %t.tgtattr
-; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+zce,+f -filetype=obj \
-; RUN:   -disable-block-placement < %t.tgtattr \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zce,+f -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFDC %s
-;
-; RUN: cat %s > %t.fnattr
-; RUN: echo 'attributes #0 = { nounwind "target-features"="+zce,+f" }' >> %t.fnattr
-; RUN: llc -mtriple=riscv32 -target-abi ilp32f -filetype=obj \
-; RUN:   -disable-block-placement < %t.fnattr \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zce,+f -M no-aliases - \
-; RUN:   | FileCheck -check-prefix=RV32IFDC %s
-;
-; RUN: cat %s > %t.mixedattr
-; RUN: echo 'attributes #0 = { nounwind "target-features"="+f" }' >> %t.mixedattr
-; RUN: llc -mtriple=riscv32 -target-abi ilp32f -mattr=+zce -filetype=obj \
-; RUN:   -disable-block-placement < %t.mixedattr \
-; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zce,+f -M no-aliases - \
 ; RUN:   | FileCheck -check-prefix=RV32IFDC %s
 
 ; This acts as a basic correctness check for the codegen instruction compression
