@@ -667,10 +667,7 @@ public:
   }
 
   bool VisitGCCAsmStmt(const GCCAsmStmt *AS) {
-    auto *Asm = AS->getAsmString();
-    if (!Asm)
-      return false;
-    return Asm->getString() == "brk #0xc471";
+    return AS->getAsmString() == "brk #0xc471";
   }
 
   bool
