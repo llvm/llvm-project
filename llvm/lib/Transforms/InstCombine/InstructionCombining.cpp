@@ -1358,34 +1358,33 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     if (Opcode != Instruction::Or)
       return nullptr;
 
+    const APInt *C1;
+    if (!match(V1, m_APInt(C1)))
+      return nullptr;
+
     Value *X;
-    const APInt *C;
-    if (!match(Masked, m_OneUse(m_And(m_Value(X), m_APInt(C)))))
+    const APInt *Mask;
+    if (!match(Masked, m_OneUse(m_And(m_Value(X), m_APInt(Mask)))))
       return nullptr;
 
     const APInt *V2;
     Value *Trunc;
-    if (!match(ZExtSel,
-               m_ZExt(m_OneUse(m_Select(m_Specific(Cond), m_APInt(V2),
-                                        m_Value(Trunc))))))
+    if (!match(ZExtSel, m_ZExt(m_OneUse(m_Select(m_Specific(Cond), m_APInt(V2),
+                                                 m_Value(Trunc))))))
       return nullptr;
 
-    if (*C != APInt::getBitsSetFrom(X->getType()->getScalarSizeInBits(),
-                                    Trunc->getType()->getScalarSizeInBits())) {
+    if (*Mask != APInt::getBitsSetFrom(X->getType()->getScalarSizeInBits(),
+                                       Trunc->getType()->getScalarSizeInBits()))
       return nullptr;
-    }
 
     if (!match(Trunc, m_Trunc(m_Specific(X))))
       return nullptr;
 
     unsigned V1Width = V1->getType()->getScalarSizeInBits();
-    APInt ZextV2 = V2->zext(V1Width);
-    Value *True = simplifyBinOp(
-        Opcode, V1, ConstantInt::get(V1->getType(), ZextV2), FMF, Q);
-    if (!True)
-      return nullptr;
 
-    return Builder.CreateSelect(Cond, True, X, I.getName());
+    return Builder.CreateSelect(
+        Cond, ConstantInt::get(V1->getType(), *C1 | V2->zext(V1Width)), X,
+        I.getName());
   };
 
   if (LHSIsSelect && RHSIsSelect && A == D) {
