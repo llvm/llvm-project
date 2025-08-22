@@ -150,8 +150,9 @@ def _construct_aggregate(ag_name: str, job_list: list[JobMetrics]) -> AggregateM
     # Compute aggregate queue time (in seconds, not ns)
     ag_queue_time = (latest_start - earliest_create) / 1000000000
     # Append the aggregate metrics to the workflow metrics list.
-    return  AggregateMetric(ag_name, ag_queue_time, ag_run_time, ag_status,
-                            latest_complete, ag_workflow_id)
+    return  AggregateMetric(
+        ag_name, ag_queue_time, ag_run_time, ag_status, latest_complete, ag_workflow_id
+    )
 
 def create_and_append_libcxx_aggregates(workflow_metrics: list[JobMetrics]):
     """Find libc++ JobMetric entries and create aggregate metrics for them.
@@ -174,7 +175,7 @@ def create_and_append_libcxx_aggregates(workflow_metrics: list[JobMetrics]):
         if job.workflow_name != "Build and Test libc++":
             continue
         if job.workflow_id not in aggregate_data.keys():
-            aggregate_data[job.workflow_id] = [ job ]
+            aggregate_data[job.workflow_id] = [job]
         else:
             aggregate_data[job.workflow_id].append(job)
 
@@ -187,25 +188,29 @@ def create_and_append_libcxx_aggregates(workflow_metrics: list[JobMetrics]):
         stage3_jobs = list()
         # sort jobs into stage1, stage2, & stage3.
         for job in job_list:
-            if job.job_name.find('stage1') > 0:
+            if job.job_name.find("stage1") > 0:
                 stage1_jobs.append(job)
-            elif job.job_name.find('stage2') > 0:
+            elif job.job_name.find("stage2") > 0:
                 stage2_jobs.append(job)
-            elif job.job_name.find('stage3') > 0:
+            elif job.job_name.find("stage3") > 0:
                 stage3_jobs.append(job)
 
         if len(stage1_jobs) > 0:
             aggregate = _construct_aggregate(
-                "github_libcxx_premerge_checks_stage1_aggregate", stage1_jobs)
+                "github_libcxx_premerge_checks_stage1_aggregate", stage1_jobs
+            )
             workflow_metrics.append(aggregate)
         if len(stage2_jobs) > 0:
             aggregate = _construct_aggregate(
-                "github_libcxx_premerge_checks_stage2_aggregate", stage2_jobs)
+                "github_libcxx_premerge_checks_stage2_aggregate", stage2_jobs
+            )
             workflow_metrics.append(aggregate)
         if len(stage3_jobs) > 0:
             aggregate = _construct_aggregate(
-                "github_libcxx_premerge_checks_stage3_aggregate", stage3_jobs)
+                "github_libcxx_premerge_checks_stage3_aggregate", stage3_jobs
+            )
             workflow_metrics.append(aggregate)
+
 
 def clean_up_libcxx_job_name(old_name: str) -> str:
     """Convert libcxx job names to generically legal strings.
@@ -224,17 +229,17 @@ def clean_up_libcxx_job_name(old_name: str) -> str:
     """
     # Names should have exactly one set of parentheses, so break on that. If
     # they don't have any parentheses, then don't update them at all.
-    if old_name.find('(') == -1:
+    if old_name.find("(") == -1:
         return old_name
-    stage, remainder = old_name.split('(')
+    stage, remainder = old_name.split("(")
     stage = stage.strip()
-    if remainder[-1] == ')':
+    if remainder[-1] == ")":
         remainder = remainder[:-1]
-    remainder = remainder.replace('-', '_')
-    remainder = remainder.replace(',', '_')
-    remainder = remainder.replace(' ', '_')
-    remainder = remainder.replace('+', 'x')
-    new_name = stage + '_' + remainder
+    remainder = remainder.replace("-", "_")
+    remainder = remainder.replace(",", "_")
+    remainder = remainder.replace(" ", "_")
+    remainder = remainder.replace("+", "x")
+    new_name = stage + "_" + remainder
     return new_name
 
 def github_get_metrics(
@@ -304,7 +309,7 @@ def github_get_metrics(
 
         libcxx_testing = False
         if task.name == "Build and Test libc++":
-          libcxx_testing = True
+            libcxx_testing = True
 
         if task.status == "completed":
             workflow_seen_as_completed.add(task.id)
@@ -318,8 +323,7 @@ def github_get_metrics(
             if libcxx_testing:
                 # We're not running macos or windows libc++ tests on our
                 # infrastructure.
-                if (job.name.find("macos") != -1 or
-                    job.name.find("windows") != -1):
+                if job.name.find("macos") != -1 or job.name.find("windows") != -1:
                     continue
             # This job is not interesting to us.
             elif job.name not in GITHUB_JOB_TO_TRACK[name_prefix]:
