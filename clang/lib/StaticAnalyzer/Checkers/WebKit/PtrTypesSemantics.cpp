@@ -666,6 +666,13 @@ public:
     return IsFunctionTrivial(Callee);
   }
 
+  bool VisitGCCAsmStmt(const GCCAsmStmt *AS) {
+    auto *Asm = AS->getAsmString();
+    if (!Asm)
+      return false;
+    return Asm->getString() == "brk #0xc471";
+  }
+
   bool
   VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E) {
     // Non-type template paramter is compile time constant and trivial.
