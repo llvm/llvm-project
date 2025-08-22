@@ -592,7 +592,7 @@ private:
   /// Try to set the current value used for the comparison, it succeeds only if
   /// it wasn't set before or if the new value is the same as the old one
   bool setValueOnce(Value *NewVal) {
-    if (IgnoreFirstMatch && NewVal) {
+    if (IgnoreFirstMatch) {
       IgnoreFirstMatch = false;
       return false;
     }
@@ -601,7 +601,7 @@ private:
       return false;
     }
     CompValue = NewVal;
-    return (CompValue != nullptr);
+    return true;
   }
 
   /// Try to match Instruction "I" as a comparison against a constant and
