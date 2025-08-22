@@ -594,6 +594,14 @@ void CodeGenModule::destroyConstantSignedPointerCaches() {
   destroyCache<ByDeclCacheTy>(SignedThunkPointers);
 }
 
+llvm::Constant *
+CodeGen::getConstantSignedPointer(CodeGenModule &CGM, llvm::Constant *Pointer,
+                                  unsigned Key, llvm::Constant *StorageAddress,
+                                  llvm::ConstantInt *OtherDiscriminator) {
+  return CGM.getConstantSignedPointer(Pointer, Key, StorageAddress,
+                                      OtherDiscriminator);
+}
+
 /// If applicable, sign a given constant function pointer with the ABI rules for
 /// functionType.
 llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *Pointer,
