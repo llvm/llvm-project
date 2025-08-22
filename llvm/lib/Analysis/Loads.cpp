@@ -362,21 +362,17 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     AccessSizeSCEV = PtrDiff;
   } else if (auto *MinAdd = dyn_cast<SCEVAddExpr>(AccessStart)) {
     const auto *NewBase = dyn_cast<SCEVUnknown>(SE.getPointerBase(MinAdd));
-    auto *OffsetSCEV = SE.removePointerBase(MinAdd);
-
     if (!NewBase)
       return false;
 
+    auto *OffsetSCEV = SE.removePointerBase(MinAdd);
     if (!SE.isKnownNonNegative(OffsetSCEV))
       return false;
 
     // For the moment, restrict ourselves to the case where the offset is a
     // multiple of the requested alignment and the base is aligned.
     // TODO: generalize if a case found which warrants
-    auto *OffsetSCEVTy = OffsetSCEV->getType();
-    if (!SE.getConstantMultiple(OffsetSCEV)
-             .urem(APInt(OffsetSCEVTy->getIntegerBitWidth(), Alignment.value()))
-             .isZero())
+    if (SE.getMinTrailingZeros(OffsetSCEV) < Log2(Alignment))
       return false;
     AccessSize = MaxPtrDiff + SE.getUnsignedRangeMax(OffsetSCEV);
     AccessSizeSCEV = SE.getAddExpr(PtrDiff, OffsetSCEV);
