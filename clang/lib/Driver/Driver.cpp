@@ -4642,26 +4642,28 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  // Call validator for dxil when -Vd not in Args.
   if (C.getDefaultToolChain().getTriple().isDXIL()) {
-    // Only add action when needValidation.
     const auto &TC =
         static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
+
+    // Call objcopy for manipulation of the DXContainer when an option in Args
+    // requires it.
     if (TC.requiresObjcopy(Args)) {
       Action *LastAction = Actions.back();
-      // llvm-objcopy expects a DXIL container, which can either be
-      // validated (in which case they are TY_DX_CONTAINER), or unvalidated
-      // (TY_OBJECT).
-      if (LastAction->getType() == types::TY_DX_CONTAINER ||
-          LastAction->getType() == types::TY_Object)
+      // llvm-objcopy expects an unvalidated DXIL container (TY_OBJECT).
+      if (LastAction->getType() == types::TY_Object)
         Actions.push_back(
             C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_DX_CONTAINER));
     }
+
+    // Call validator for dxil when -Vd not in Args.
     if (TC.requiresValidation(Args)) {
       Action *LastAction = Actions.back();
       Actions.push_back(C.MakeAction<BinaryAnalyzeJobAction>(
           LastAction, types::TY_DX_CONTAINER));
     }
+
+    // Call metal-shaderconverter when targeting metal.
     if (TC.requiresBinaryTranslation(Args)) {
       Action *LastAction = Actions.back();
       // Metal shader converter runs on DXIL containers, which can either be
