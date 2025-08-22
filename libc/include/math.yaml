@@ -2432,14 +2432,6 @@ functions:
     return_type: double
     arguments:
       - type: double
-  - name: sincosf
-    standards:
-      - gnu
-    return_type: void
-    arguments:
-      - type: float
-      - type: float *
-      - type: float *
   - name: sinf
     standards:
       - stdc
@@ -2453,6 +2445,22 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: sincos
+    standards:
+      - gnu
+    return_type: void
+    arguments:
+      - type: double
+      - type: double *
+      - type: double *
+  - name: sincosf
+    standards:
+      - gnu
+    return_type: void
+    arguments:
+      - type: float
+      - type: float *
+      - type: float *
   - name: sinhf
     standards:
       - stdc
