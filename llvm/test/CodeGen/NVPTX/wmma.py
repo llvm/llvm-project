@@ -1234,7 +1234,6 @@ def gen_mma_sp_tests():
         ["", ".kind::f8f6f4"],
         [".satfinite", ""],
     ):
-
         if not is_mma_sp_variant_supported(op, metadata, kind, satf):
             continue
 
