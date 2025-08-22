@@ -279,6 +279,7 @@ struct MissingFeatures {
   static bool appleKext() { return false; }
   static bool dtorCleanups() { return false; }
   static bool vtableInitialization() { return false; }
+  static bool vtableEmitMetadata() { return false; }
   static bool vtableRelativeLayout() { return false; }
   static bool msvcBuiltins() { return false; }
   static bool vaArgABILowering() { return false; }

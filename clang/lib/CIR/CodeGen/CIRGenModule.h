@@ -190,6 +190,16 @@ public:
       mlir::Location loc, llvm::StringRef name, mlir::Type ty,
       cir::GlobalLinkageKind linkage, clang::CharUnits alignment);
 
+  void emitVTable(const CXXRecordDecl *rd);
+
+  /// Return the appropriate linkage for the vtable, VTT, and type information
+  /// of the given class.
+  cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *rd);
+
+  /// Get the address of the RTTI descriptor for the given type.
+  mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
+                                          bool forEH = false);
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -289,6 +299,13 @@ public:
   mlir::Operation *
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
+
+  // Return whether RTTI information should be emitted for this target.
+  bool shouldEmitRTTI(bool forEH = false) {
+    return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
+           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
+             getTriple().isNVPTX());
+  }
 
   /// Emit type info if type of an expression is a variably modified
   /// type. Also emit proper debug info for cast types.

@@ -95,6 +95,10 @@ public:
   isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
                                       CIRGenFunction::VPtr vptr) = 0;
 
+  /// Emits the VTable definitions required for the given record type.
+  virtual void emitVTableDefinitions(CIRGenVTables &cgvt,
+                                     const CXXRecordDecl *rd) = 0;
+
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or
   /// not.

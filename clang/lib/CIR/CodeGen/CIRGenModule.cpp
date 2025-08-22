@@ -845,7 +845,7 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
         emitGlobalFunctionDefinition(gd, op);
 
       if (method->isVirtual())
-        errorNYI(method->getSourceRange(), "virtual member function");
+        getVTables().emitThunks(gd);
 
       return;
     }
@@ -2149,6 +2149,18 @@ bool CIRGenModule::verifyModule() const {
   // check the structural properties of the IR and invoke any specific
   // verifiers we have on the CIR operations.
   return mlir::verify(theModule).succeeded();
+}
+
+mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
+                                                      QualType ty, bool forEh) {
+  // Return a bogus pointer if RTTI is disabled, unless it's for EH.
+  // FIXME: should we even be calling this method if RTTI is disabled
+  // and it's not for EH?
+  if (!shouldEmitRTTI(forEh))
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+
+  errorNYI(loc, "getAddrOfRTTIDescriptor");
+  return mlir::Attribute();
 }
 
 // TODO(cir): this can be shared with LLVM codegen.
