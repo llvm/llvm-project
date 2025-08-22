@@ -9,8 +9,9 @@ add_mlir_dialect_library(MLIRMemRefDialect
   ${PROJECT_SOURCE_DIR}/inlude/mlir/Dialect/MemRefDialect
 
   DEPENDS
-  MLIRMemRefOpsIncGen
   MLIRMemRefAttrsIncGen
+  MLIRMemRefInterfacesIncGen
+  MLIRMemRefOpsIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

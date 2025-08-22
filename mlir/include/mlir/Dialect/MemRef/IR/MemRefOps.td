@@ -10,8 +10,11 @@
 #define MEMREF_OPS
 
 include "mlir/Dialect/Arith/IR/ArithBase.td"
-include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Dialect/MemRef/IR/MemRefAttrs.td"
+include "mlir/Dialect/MemRef/IR/MemRefBase.td"
+include "mlir/Dialect/MemRef/IR/MemRefInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
@@ -21,8 +24,6 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
-include "mlir/IR/OpAsmInterface.td"
-include "mlir/IR/SymbolInterfaces.td"
 
 /// A TypeAttr for memref types.
 def MemRefTypeAttr
@@ -1234,7 +1235,8 @@ def LoadOp : MemRef_Op<"load",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
-      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
+      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+      DeclareOpInterfaceMethods<AliasAnalysisOpInterface>]> {
   let summary = "load operation";
   let description = [{
     The `load` op reads an element from a memref at the specified indices.
@@ -1974,7 +1976,8 @@ def MemRef_StoreOp : MemRef_Op<"store",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
-      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
+      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+      DeclareOpInterfaceMethods<AliasAnalysisOpInterface>]> {
   let summary = "store operation";
   let description = [{
     The `store` op stores an element into a memref at the specified indices.

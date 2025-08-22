@@ -25,6 +25,8 @@
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/MemRef/IR/MemRefAttrs.cpp.inc"
 
+#include "mlir/Dialect/MemRef/IR/MemRefInterfaces.cpp.inc"
+
 using namespace mlir;
 using namespace mlir::memref;
 
