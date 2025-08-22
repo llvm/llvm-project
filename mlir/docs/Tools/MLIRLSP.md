@@ -389,6 +389,25 @@ LSP Language plugins are available for many popular editors, and in principle
 the language servers provided by MLIR should work with any of them, though
 feature sets and interfaces may vary. Below are a set of plugins that are known
 to work:
+### Neovim
+
+#### Setup
+Neovim supports integration of all three language servers through its built-in LSP client, which requires
+hooking up to third party servers.
+
+The quick start guide on its [LSP help page](https://neovim.io/doc/user/lsp.html) details how to set up
+a generic LSP config.
+
+For the most up-to-date configs of all three language server, visit the 
+[lsp directory](https://github.com/neovim/nvim-lspconfig/tree/master/lsp) of nvim-lspconfig, copy and paste the config of 
+choice to your local neovim config of the LSP. The file names of the servers' config are:
+
+- `mlir_lsp_server.lua`: for the MLIR LSP Language Server
+- `mlir_pdll_lsp_server.lua`: for the PDLL LSP Language Server
+- `tblgen_lsp_server.lua`: for the TableGen LSP Language Server
+
+Features such as find definitions, find references, hover, live diagnostics and verifiers are well supported. 
+For extra information, please refer to each LSP's dedicated's section.
 
 ### Visual Studio Code
 
