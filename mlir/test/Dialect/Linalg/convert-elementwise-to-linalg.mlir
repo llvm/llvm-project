@@ -19,6 +19,53 @@ func.func @addf_rank0(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
   return %0 : tensor<f32>
 }
 
+// Test a binary elementwise op with a tensor and a scalar operand.
+// CHECK-LABEL: func @addf_tensor_plus_scalar_rank1
+//  CHECK-SAME:   %[[T:[0-9a-zA-Z]*]]: tensor<?xf32>, %[[S:[0-9a-zA-Z]*]]: f32
+func.func @addf_tensor_plus_scalar_rank1(%t: tensor<?xf32>, %s: f32) -> tensor<?xf32> {
+  %c0 = arith.constant 0 : index
+  %d0 = tensor.dim %t, %c0 : tensor<?xf32>
+  %init = tensor.empty(%d0) : tensor<?xf32>
+  %splat = linalg.fill ins(%s : f32) outs(%init : tensor<?xf32>) -> tensor<?xf32>
+  // CHECK: linalg.generic
+  // CHECK-SAME: iterator_types = ["parallel"]
+  // CHECK-SAME: ins(%[[T]], %{{.*}}
+  %0 = arith.addf %t, %splat : tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// Test a comparison op between a tensor and a scalar.
+// CHECK-LABEL: func @cmpf_tensor_scalar
+//  CHECK-SAME:   %[[A:[0-9a-zA-Z]*]]: tensor<?xf32>, %[[S:[0-9a-zA-Z]*]]: f32
+func.func @cmpf_tensor_scalar(%a: tensor<?xf32>, %s: f32) -> tensor<?xi1> {
+  %c0 = arith.constant 0 : index
+  %d0 = tensor.dim %a, %c0 : tensor<?xf32>
+  %initS = tensor.empty(%d0) : tensor<?xf32>
+  %splat = linalg.fill ins(%s : f32) outs(%initS : tensor<?xf32>) -> tensor<?xf32>
+
+  %init = tensor.empty(%d0) : tensor<?xi1>
+  // CHECK: %[[INIT:.*]] = tensor.empty
+  // CHECK: linalg.generic
+  // CHECK-SAME: ins(%[[A]], %{{.*}}
+  %0 = arith.cmpf olt, %a, %splat : tensor<?xf32>
+  return %0 : tensor<?xi1>
+}
+
+// Test a binary elementwise op with a tensor and a zero-dimensional
+// (rank-0) tensor.
+// CHECK-LABEL: func @addf_tensor_plus_rank0_tensor
+//  CHECK-SAME:   %[[T:[0-9a-zA-Z]*]]: tensor<4xf32>, %[[R0:[0-9a-zA-Z]*]]: tensor<f32>
+func.func @addf_tensor_plus_rank0_tensor(%t: tensor<4xf32>, %r0: tensor<f32>) -> tensor<4xf32> {
+  %c = tensor.extract %r0[] : tensor<f32>
+  %init = tensor.empty() : tensor<4xf32>
+  %splat = linalg.fill ins(%c : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  // CHECK: linalg.generic
+  // CHECK-SAME: ins(%[[T]], %{{.*}}
+  %0 = arith.addf %t, %splat : tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+
 // -----
 
 // Check indexing maps and iterator types for the rank > 0 case.
