@@ -1642,9 +1642,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       // Void return type
       if (returnType->isVoidTy()) {
         // Cant assign to void types, so we leave the frame untouched
-      } else
-          // Integer or pointer return type
-          if (returnType->isIntegerTy() || returnType->isPointerTy()) {
+      } else if (returnType->isIntegerTy() || returnType->isPointerTy()) {
         // Get the encapsulated return value
         lldb::ValueObjectSP retVal = call_plan_sp.get()->GetReturnValueObject();
 
