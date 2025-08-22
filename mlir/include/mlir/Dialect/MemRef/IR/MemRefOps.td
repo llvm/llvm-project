@@ -459,10 +459,32 @@ def MemRef_AllocaScopeReturnOp : MemRef_Op<"alloca_scope.return",
 def MemRef_AliasDomainScopeOp : MemRef_Op<"alias_domain_scope", [
     DeclareOpInterfaceMethods<RegionBranchOpInterface>,
     SingleBlockImplicitTerminator<"AliasDomainScopeReturnOp">,
-    RecursiveMemoryEffects]> {
-  let summary = "TBD";
+    RecursiveMemoryEffects,
+    NoRegionArguments]> {
+  let summary = "aliasing domain scope for alias_scope annotations";
   let description = [{
-    TBD
+    Defines a domain that will be associated with an alias scope for the ops
+    inside the region. In case of multiple nested `alias_domain_scope` ops the
+    innermost will take the precence.
+
+    Example:
+    ```
+    #alias_scope1 = #memref.alias_scope<id = distinct[0]<>, description = "scope">
+    #alias_scope2 = #memref.alias_scope<id = distinct[1]<>>
+
+    func.func @memref_alias_scope(%arg1 : memref<?xf32>, %arg2 : memref<?xf32>, %arg3: index) -> f32 {
+      %0 = memref.alias_domain_scope "The Domain" -> f32 {
+        %val = memref.load %arg1[%arg3] { alias = #memref.aliasing<alias_scopes=[#alias_scope1], noalias=[#alias_scope2]> } : memref<?xf32>
+        memref.store %val, %arg2[%arg3] { alias = #memref.aliasing<alias_scopes=[#alias_scope2], noalias=[#alias_scope1]> } : memref<?xf32>
+        memref.alias_domain_scope.return %val: f32
+      }
+      return %0 : f32
+    }
+    ```
+
+    The alias scopes are modeled against LLVM alias scopes, see the following
+    link for more details:
+    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
   }];
 
   let arguments = (ins OptionalAttr<StrAttr>:$description);
@@ -484,9 +506,16 @@ def MemRef_AliasDomainScopeReturnOp : MemRef_Op<"alias_domain_scope.return", [
   HasParent<"AliasDomainScopeOp">
   ]> {
 
-  let summary = "TBD";
+  let summary = "terminator for alias_domain_scope operation";
   let description = [{
-    TBD
+    `memref.alias_domain_scope.return` operation returns zero or more SSA values
+    from the region within `memref.alias_domain_scope`. If no values are returned,
+    the return operation may be omitted. Otherwise, it has to be present
+    to indicate which values are going to be returned. For example:
+
+    ```mlir
+    memref.alias_domain_scope.return %value
+    ```
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);
