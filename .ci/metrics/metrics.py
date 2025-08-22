@@ -380,8 +380,11 @@ def github_get_metrics(
                 continue
 
             logging.info(f"Adding a job metric for job {job.id} in workflow {task.id}")
-            # The timestamp associated with the event is expected by Grafana to
-            # be in nanoseconds.
+            # The completed_at_ns timestamp associated with the event is
+            # expected by Grafana to be in nanoseconds. Because we do math using
+            # all three times (when creating libc++ aggregates), we need them
+            # all to be in nanoseconds, even though created_at and started_at
+            # are not returned to Grafana.
             created_at_ns = int(created_at.timestamp()) * 10**9
             started_at_ns = int(started_at.timestamp()) * 10**9
             completed_at_ns = int(completed_at.timestamp()) * 10**9
