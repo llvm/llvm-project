@@ -153,11 +153,7 @@ template <typename LTy, typename RTy> struct match_combine_or {
   match_combine_or(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
 
   template <typename ITy> bool match(ITy *V) const {
-    if (L.match(V))
-      return true;
-    if (R.match(V))
-      return true;
-    return false;
+    return L.match(V) || R.match(V);
   }
 };
 
