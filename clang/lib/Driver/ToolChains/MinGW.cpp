@@ -852,6 +852,8 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     llvm::sys::path::append(CppIncludeBases[8], "include",
                             "g++-v" + GccVer.MajorStr);
     for (auto &CppIncludeBase : CppIncludeBases) {
+      if (!getDriver().getVFS().exists(CppIncludeBase))
+        continue;
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);
       CppIncludeBase += Slash;
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + TripleDirName);

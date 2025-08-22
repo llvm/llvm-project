@@ -21,9 +21,9 @@
 
 
 // RUN: %clang --target=i686-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_arch_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_ARCH_TREE %s
-// CHECK_MINGW_ARCH_TREE: "[[BASE:[^"]+]]/Inputs/mingw_arch_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}5.1.0"
-// CHECK_MINGW_ARCH_TREE: "[[BASE]]/Inputs/mingw_arch_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}5.1.0{{/|\\\\}}i686-w64-mingw32"
-// CHECK_MINGW_ARCH_TREE: "[[BASE]]/Inputs/mingw_arch_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}5.1.0{{/|\\\\}}backward"
+// CHECK_MINGW_ARCH_TREE: "[[BASE:[^"]+]]/Inputs/mingw_arch_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}5.1.0"
+// CHECK_MINGW_ARCH_TREE: "[[BASE]]/Inputs/mingw_arch_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}5.1.0{{/|\\\\}}i686-w64-mingw32"
+// CHECK_MINGW_ARCH_TREE: "[[BASE]]/Inputs/mingw_arch_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}5.1.0{{/|\\\\}}backward"
 
 
 // RUN: %clang --target=x86_64-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_ubuntu_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_UBUNTU_TREE %s
