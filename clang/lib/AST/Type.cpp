@@ -704,10 +704,8 @@ bool Type::isInterfaceType() const {
 }
 
 bool Type::isStructureOrClassType() const {
-  if (const auto *RT = getAs<RecordType>()) {
-    RecordDecl *RD = RT->getOriginalDecl();
-    return RD->isStruct() || RD->isClass() || RD->isInterface();
-  }
+  if (const auto *RT = getAsCanonical<RecordType>())
+    return RT->getOriginalDecl()->isStructureOrClass();
   return false;
 }
 
