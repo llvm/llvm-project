@@ -410,21 +410,21 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 
   // Stateful annotator: updates live_vars and returns only what should be
   // printed for THIS instruction.
-  auto annotate_static =
-    [&](Instruction &inst, Target &target, ModuleSP module_sp)
-      -> std::vector<std::string> {
-
+  auto annotate_static = [&](Instruction &inst, Target &target,
+                             ModuleSP module_sp) -> std::vector<std::string> {
     std::vector<std::string> events;
 
     // Reset per-instruction seen flags.
-    for (auto &kv : live_vars) kv.second.seen_this_inst = false;
+    for (auto &kv : live_vars)
+      kv.second.seen_this_inst = false;
 
     const Address &iaddr = inst.GetAddress();
     if (!module_sp) {
       // Everything previously live becomes <undef>.
-      for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
+      for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
         auto Cur = I++;
-        events.push_back(llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        events.push_back(
+            llvm::formatv("{0} = <undef>", Cur->second.name).str());
         live_vars.erase(Cur);
       }
       return events;
@@ -434,11 +434,13 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     SymbolContext sc;
     const lldb::SymbolContextItem mask =
         eSymbolContextFunction | eSymbolContextBlock;
-    if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) || !sc.function) {
+    if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
+        !sc.function) {
       // No function context: everything dies here.
-      for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
+      for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
         auto Cur = I++;
-        events.push_back(llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        events.push_back(
+            llvm::formatv("{0} = <undef>", Cur->second.name).str());
         live_vars.erase(Cur);
       }
       return events;
@@ -447,18 +449,16 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     Block *B = sc.block; ///< Innermost block containing iaddr.
     VariableList var_list;
     if (B) {
-      auto filter = [](Variable *v) -> bool {
-        return v && !v->IsArtificial();
-      };
+      auto filter = [](Variable *v) -> bool { return v && !v->IsArtificial(); };
 
       B->AppendVariables(/*can_create*/ true,
-                        /*get_parent_variables*/ true,
-                        /*stop_if_block_is_inlined_function*/ false,
-                        /*filter*/ filter,
-                        /*variable_list*/ &var_list);
+                         /*get_parent_variables*/ true,
+                         /*stop_if_block_is_inlined_function*/ false,
+                         /*filter*/ filter,
+                         /*variable_list*/ &var_list);
     }
 
-    const lldb::addr_t pc_file   = iaddr.GetFileAddress();
+    const lldb::addr_t pc_file = iaddr.GetFileAddress();
     const lldb::addr_t func_file = sc.function->GetAddress().GetFileAddress();
 
     // ABI from Target (pretty reg names if plugin exists). Safe to be null.
@@ -495,8 +495,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
       if (loc.empty())
         continue;
 
-      auto ins = live_vars.insert({v->GetID(),
-                                  VarState{name.str(), loc.str(), /*seen*/ true}});
+      auto ins = live_vars.insert(
+          {v->GetID(), VarState{name.str(), loc.str(), /*seen*/ true}});
       if (ins.second) {
         // Newly live.
         events.push_back(llvm::formatv("{0} = {1}", name, loc).str());
@@ -512,10 +512,11 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 
     // Anything previously live that we didn't see a location for at this inst
     // is now <undef>.
-    for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
+    for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
       auto Cur = I++;
       if (!Cur->second.seen_this_inst) {
-        events.push_back(llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        events.push_back(
+            llvm::formatv("{0} = <undef>", Cur->second.name).str());
         live_vars.erase(Cur);
       }
     }

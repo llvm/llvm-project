@@ -4,6 +4,7 @@ import lldb
 import os
 import re
 
+
 class TestRichDisassembler(TestBase):
     def _compile_object(self, src_name, func_cflags="-g -gdwarf-5 -O2 -fno-inline"):
         """
@@ -40,7 +41,6 @@ class TestRichDisassembler(TestBase):
         self.assertTrue(os.path.exists(obj), f"missing object: {obj}")
         return obj
 
-
     def _create_target(self, path):
         target = self.dbg.CreateTarget(path)
         self.assertTrue(target, f"failed to create target for {path}")
@@ -59,7 +59,6 @@ class TestRichDisassembler(TestBase):
         obj = self._compile_or_assemble_object("d_original_example.s")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("main")
-    
         print(out)
 
         self.assertIn("argc = ", out)
@@ -83,7 +82,6 @@ class TestRichDisassembler(TestBase):
         self.assertRegex(out, r"\bf\s*=\s*(DW_OP_reg9\b|R9\b)")
         self.assertNotIn("<decoding error>", out)
         
-
     @no_debug_info_test
     def test_regs_fp_params(self):
         obj = self._compile_or_assemble_object("regs_fp_params.s")
@@ -150,8 +148,9 @@ class TestRichDisassembler(TestBase):
         can add an assertion for ' = 0' or similar.
         """
         # Use O1 to help keep a first reg range; still object-only
-        obj = self._compile_or_assemble_object("seed_reg_const_undef.s",
-                                   cflags="-g -gdwarf-5 -O1 -fno-inline")
+        obj = self._compile_or_assemble_object(
+            "seed_reg_const_undef.s", cflags="-g -gdwarf-5 -O1 -fno-inline"
+        )
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("main")
         print(out)
