@@ -271,12 +271,14 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
     }
     I = std::make_unique<RISCVSubtarget>(
         TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
+  }
 
-    const Module &M = *F.getParent();
-    if (const Metadata *CF = M.getModuleFlag("cf-protection-branch");
+  if (const Module *const M = F.getParent()) {
+    if (const Metadata *const CF = M->getModuleFlag("cf-protection-branch");
         CF && !mdconst::extract<ConstantInt>(CF)->isZero()) {
       StringRef LabelScheme;
-      if (const Metadata *MD = M.getModuleFlag("cf-branch-label-scheme")) {
+      if (const Metadata *const MD =
+              M->getModuleFlag("cf-branch-label-scheme")) {
         LabelScheme = cast<MDString>(MD)->getString();
         if (LabelScheme != "func-sig" && LabelScheme != "unlabeled")
           reportFatalUsageError("cf-branch-label-scheme=" + LabelScheme +
