@@ -42,7 +42,7 @@ template <> struct FunctionConfig<sincosSin> {
   static constexpr llvm::StringRef KernelName = "sincosSinKernel";
 
   // Source: The Khronos Group, The OpenCL C Specification v3.0.19, Sec. 7.4,
-  //         Table 65, Khronos Registry [July 10, 2025].
+  //         Table 68, Khronos Registry [July 10, 2025].
   static constexpr uint64_t UlpTolerance = 4;
 };
 
