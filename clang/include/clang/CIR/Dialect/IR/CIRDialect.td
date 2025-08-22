@@ -35,6 +35,7 @@ def CIR_Dialect : Dialect {
   let hasConstantMaterializer = 1;
 
   let extraClassDeclaration = [{
+    static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }

@@ -331,7 +331,7 @@ public:
 
   void emitFREs() {
     Streamer.emitLabel(FRESubSectionStart);
-    for (auto FDE : FDEs)
+    for (auto &FDE : FDEs)
       Streamer.emitLabel(FDE.FREStart);
     Streamer.emitLabel(FRESubSectionEnd);
   }

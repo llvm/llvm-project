@@ -10,11 +10,6 @@
 // tree-based pattern matches on the VPlan values and recipes, based on
 // LLVM's IR pattern matchers.
 //
-// Currently it provides generic matchers for unary and binary VPInstructions,
-// and specialized matchers like m_Not, m_ActiveLaneMask, m_BranchOnCond,
-// m_BranchOnCount to match specific VPInstructions.
-// TODO: Add missing matchers for additional opcodes and recipes as needed.
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORM_VECTORIZE_VPLANPATTERNMATCH_H
@@ -158,11 +153,7 @@ template <typename LTy, typename RTy> struct match_combine_or {
   match_combine_or(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
 
   template <typename ITy> bool match(ITy *V) const {
-    if (L.match(V))
-      return true;
-    if (R.match(V))
-      return true;
-    return false;
+    return L.match(V) || R.match(V);
   }
 };
 
@@ -359,6 +350,18 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>
 m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_commutative_match<Instruction::Add, Op0_t, Op1_t>
+m_c_Add(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_c_Binary<Instruction::Add, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::Sub, Op0_t, Op1_t> m_Sub(const Op0_t &Op0,
+                                                             const Op1_t &Op1) {
+  return m_Binary<Instruction::Sub, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
