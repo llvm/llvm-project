@@ -156,12 +156,12 @@ class DebuginfodServer {
 public:
   HTTPServer Server;
   DebuginfodServer(DebuginfodLog &Log, DebuginfodCollection &Collection);
-  static llvm::Expected<DebuginfodServer>
+  static Expected<DebuginfodServer>
   create(DebuginfodLog &Log, DebuginfodCollection &Collection);
 
 private:
   DebuginfodServer() = default;
-  llvm::Error init(DebuginfodLog &Log, DebuginfodCollection &Collection);
+  Error init(DebuginfodLog &Log, DebuginfodCollection &Collection);
 };
 
 } // end namespace llvm
