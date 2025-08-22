@@ -61,41 +61,31 @@ void test_array_destructor() {
   array_element arr[5]{};
 }
 
-// CIR: cir.func dso_local @_Z21test_array_destructorv()
+// CIR: cir.func dso_local @_Z21test_array_destructorv() {
 // CIR:   %[[ARR:.*]] = cir.alloca !cir.array<!rec_array_element x 5>, !cir.ptr<!cir.array<!rec_array_element x 5>>, ["arr", init]
 // CIR:   %[[ARR_PTR:.*]] = cir.alloca !cir.ptr<!rec_array_element>, !cir.ptr<!cir.ptr<!rec_array_element>>, ["arrayinit.temp", init]
-// CIR:   %[[BEGIN:.*]] = cir.cast(array_to_ptrdecay, %[[ARR]] : !cir.ptr<!cir.array<!rec_array_element x 5>>)
-// CIR:   cir.store{{.*}} %[[BEGIN]], %[[ARR_PTR]]
+// CIR:   %[[BEGIN:.*]] = cir.cast(array_to_ptrdecay, %[[ARR]] : !cir.ptr<!cir.array<!rec_array_element x 5>>), !cir.ptr<!rec_array_element>
+// CIR:   cir.store{{.*}} %[[BEGIN]], %[[ARR_PTR]] : !cir.ptr<!rec_array_element>, !cir.ptr<!cir.ptr<!rec_array_element>>
 // CIR:   %[[FIVE:.*]] = cir.const #cir.int<5> : !s64i
-// CIR:   %[[ARR_END:.*]] = cir.ptr_stride(%[[BEGIN]] : !cir.ptr<!rec_array_element>, %[[FIVE]] : !s64i)
+// CIR:   %[[ARR_END:.*]] = cir.ptr_stride(%[[BEGIN]] : !cir.ptr<!rec_array_element>, %3 : !s64i), !cir.ptr<!rec_array_element>
 // CIR:   cir.do {
-// CIR:     %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]]
+// CIR:     %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]] : !cir.ptr<!cir.ptr<!rec_array_element>>, !cir.ptr<!rec_array_element>
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:     %[[ARR_NEXT:.*]] = cir.ptr_stride(%[[ARR_CUR]] : !cir.ptr<!rec_array_element>, %[[ONE]] : !s64i)
+// CIR:     %[[ARR_NEXT:.*]] = cir.ptr_stride(%[[ARR_CUR]] : !cir.ptr<!rec_array_element>, %6 : !s64i), !cir.ptr<!rec_array_element>
 // CIR:     cir.store{{.*}} %[[ARR_NEXT]], %[[ARR_PTR]] : !cir.ptr<!rec_array_element>, !cir.ptr<!cir.ptr<!rec_array_element>>
 // CIR:     cir.yield
 // CIR:   } while {
-// CIR:     %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]]
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[ARR_CUR]], %[[ARR_END]])
+// CIR:     %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]] : !cir.ptr<!cir.ptr<!rec_array_element>>, !cir.ptr<!rec_array_element>
+// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[ARR_CUR]], %[[ARR_END]]) : !cir.ptr<!rec_array_element>, !cir.bool
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
-// CIR:   %[[FOUR:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:   %[[BEGIN:.*]] = cir.cast(array_to_ptrdecay, %[[ARR]] : !cir.ptr<!cir.array<!rec_array_element x 5>>)
-// CIR:   %[[END:.*]] = cir.ptr_stride(%[[BEGIN]] : !cir.ptr<!rec_array_element>, %[[FOUR]] : !u64i)
-// CIR:   %[[ARR_PTR:.*]] = cir.alloca !cir.ptr<!rec_array_element>, !cir.ptr<!cir.ptr<!rec_array_element>>, ["__array_idx"]
-// CIR:   cir.store %[[END]], %[[ARR_PTR]]
-// CIR:   cir.do {
-// CIR:     %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]]
-// CIR:     cir.call @_ZN13array_elementD1Ev(%[[ARR_CUR]]) nothrow : (!cir.ptr<!rec_array_element>) -> ()
-// CIR:     %[[NEG_ONE:.*]] = cir.const #cir.int<-1> : !s64i
-// CIR:     %[[ARR_NEXT:.*]] = cir.ptr_stride(%[[ARR_CUR]] : !cir.ptr<!rec_array_element>, %[[NEG_ONE]] : !s64i)
-// CIR:     cir.store %[[ARR_NEXT]], %[[ARR_PTR]]
+// CIR:   cir.array.dtor %[[ARR]] : !cir.ptr<!cir.array<!rec_array_element x 5>> {
+// CIR:   ^bb0(%{{.*}}: !cir.ptr<!rec_array_element> {{.*}}):
+// CIR:     cir.call @_ZN13array_elementD1Ev(%{{.*}}) nothrow : (!cir.ptr<!rec_array_element>) -> ()
 // CIR:     cir.yield
-// CIR:   } while {
-// CIR:     %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]]
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[ARR_CUR]], %[[BEGIN]])
-// CIR:     cir.condition(%[[CMP]])
 // CIR:   }
+// CIR:   cir.return
+// CIR: }
 
 // LLVM: define{{.*}} void @_Z21test_array_destructorv()
 // LLVM:   %[[ARR:.*]] = alloca [5 x %struct.array_element]

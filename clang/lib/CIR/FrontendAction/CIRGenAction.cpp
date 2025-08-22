@@ -110,9 +110,10 @@ public:
 
     if (!FEOptions.ClangIRDisablePasses) {
       // Setup and run CIR pipeline.
+      bool EnableLoweringPrepare = Action != CIRGenAction::OutputType::EmitCIR;
       if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
                             !FEOptions.ClangIRDisableCIRVerifier,
-                            CGO.OptimizationLevel > 0)
+                            CGO.OptimizationLevel > 0, EnableLoweringPrepare)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;

@@ -15,11 +15,9 @@
 
 #include "mlir/Pass/Pass.h"
 
-#include <memory>
-
 namespace clang {
 class ASTContext;
-}
+} // namespace clang
 
 namespace mlir {
 class MLIRContext;
@@ -29,11 +27,10 @@ class ModuleOp;
 namespace cir {
 
 // Run set of cleanup/prepare/etc passes CIR <-> CIR.
-mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
-                                      mlir::MLIRContext &mlirCtx,
-                                      clang::ASTContext &astCtx,
-                                      bool enableVerifier,
-                                      bool enableCIRSimplify);
+mlir::LogicalResult
+runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirCtx,
+                  clang::ASTContext &astCtx, bool enableVerifier,
+                  bool enableCIRSimplify, bool enableLoweringPrepare);
 
 } // namespace cir
 

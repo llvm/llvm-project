@@ -787,8 +787,7 @@ void foo30() {
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
 // CIR: %[[CONST_1F:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
-// CIR: %[[CONST_0F:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
-// CIR: %[[COMPLEX:.*]] = cir.complex.create %[[CONST_1F]], %[[CONST_0F]] : !cir.float -> !cir.complex<!cir.float>
+// CIR: %[[COMPLEX:.*]] = cir.cast(float_to_complex, %[[CONST_1F]] : !cir.float), !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
