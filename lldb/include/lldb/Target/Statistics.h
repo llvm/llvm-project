@@ -155,6 +155,7 @@ struct ModuleStats {
   bool debug_info_had_incomplete_types = false;
   uint32_t dwo_file_count = 0;
   uint32_t loaded_dwo_file_count = 0;
+  uint32_t dwo_load_error_count = 0;
 };
 
 struct ConstStringStats {

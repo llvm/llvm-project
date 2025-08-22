@@ -75,6 +75,7 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("symbolTableSymbolCount", symtab_symbol_count);
   module.try_emplace("dwoFileCount", dwo_file_count);
   module.try_emplace("loadedDwoFileCount", loaded_dwo_file_count);
+  module.try_emplace("dwoLoadErrorCount", dwo_load_error_count);
 
   if (!symbol_locator_time.map.empty()) {
     json::Object obj;
@@ -326,6 +327,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t symtab_symbol_count = 0;
   uint32_t total_loaded_dwo_file_count = 0;
   uint32_t total_dwo_file_count = 0;
+  uint32_t total_dwo_load_error_count = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -361,6 +363,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
           sym_file->GetDwoFileCounts();
       total_dwo_file_count += module_stat.dwo_file_count;
       total_loaded_dwo_file_count += module_stat.loaded_dwo_file_count;
+      module_stat.dwo_load_error_count += current_dwo_errors;
+      total_dwo_load_error_count += current_dwo_errors;
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
@@ -437,6 +441,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalSymbolTableSymbolCount", symtab_symbol_count},
       {"totalLoadedDwoFileCount", total_loaded_dwo_file_count},
       {"totalDwoFileCount", total_dwo_file_count},
+      {"totalDwoLoadErrorCount", total_dwo_load_error_count},
   };
 
   if (include_targets) {

@@ -496,6 +496,10 @@ public:
   ///     symbol file doesn't support DWO files, both counts will be 0.
   virtual std::pair<uint32_t, uint32_t> GetDwoFileCounts() { return {0, 0}; }
 
+  /// Calculates the count of dwo load error, return the number of dwo file with
+  /// errors, 0 by default.
+  virtual uint32_t CountDwoLoadErrors() { return 0; }
+
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,
            std::optional<uint64_t> byte_size, SymbolContextScope *context,

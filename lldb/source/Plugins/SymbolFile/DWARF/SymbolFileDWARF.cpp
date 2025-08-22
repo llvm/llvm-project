@@ -4529,3 +4529,21 @@ std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
 
   return {loaded_dwo_count, total_dwo_count};
 }
+
+uint32_t SymbolFileDWARF::CountDwoLoadErrors() {
+  uint32_t dwo_load_error_count = 0;
+
+  DWARFDebugInfo &info = DebugInfo();
+  const size_t num_cus = info.GetNumUnits();
+  for (size_t cu_idx = 0; cu_idx < num_cus; cu_idx++) {
+    DWARFUnit *dwarf_cu = info.GetUnitAtIndex(cu_idx);
+    if (dwarf_cu == nullptr)
+      continue;
+
+    // Check if this unit has dwo error (False by default).
+    const Status &dwo_error = dwarf_cu->GetDwoError();
+    if (dwo_error.Fail())
+      dwo_load_error_count++;
+  }
+  return dwo_load_error_count;
+}

@@ -288,6 +288,9 @@ public:
   // CUs and total DWO CUs. For non-split-dwarf files, this reports 0 for both.
   std::pair<uint32_t, uint32_t> GetDwoFileCounts() override;
 
+  /// Count the number of dwo load errors happened.
+  uint32_t CountDwoLoadErrors() override;
+
   DWARFContext &GetDWARFContext() { return m_context; }
 
   const std::shared_ptr<SymbolFileDWARFDwo> &GetDwpSymbolFile();
