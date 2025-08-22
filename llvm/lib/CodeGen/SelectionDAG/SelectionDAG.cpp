@@ -7189,11 +7189,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
       APInt FoldedVal = Opcode == ISD::FSHL ? APIntOps::fshl(V1, V2, V3)
                                             : APIntOps::fshr(V1, V2, V3);
-
-      SDValue Folded = getConstant(FoldedVal, DL, VT);
-      assert((!Folded || !VT.isVector()) &&
-             "Can't fold vectors ops with scalar operands");
-      return Folded;
+      return getConstant(FoldedVal, DL, VT);
     }
   }
 
