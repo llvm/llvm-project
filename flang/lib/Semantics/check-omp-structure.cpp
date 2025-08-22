@@ -1203,8 +1203,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
     }
     if (auto *obj{sym->detailsIf<ObjectEntityDetails>()}) {
       if (obj->IsCoarray()) {
-        context_.Say(arg.source,
-            "GROUPPRIVATE argument cannot be a coarray"_err_en_US);
+        context_.Say(
+            arg.source, "GROUPPRIVATE argument cannot be a coarray"_err_en_US);
         continue;
       }
       if (obj->init()) {
