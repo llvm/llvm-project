@@ -136,17 +136,6 @@ public:
 
   ~InterpreterStackFrame() = default;
 
-  bool MemoryMatchesIRElementOrder() {
-    lldb::TargetSP target_sp = m_execution_unit.GetTarget();
-    if (target_sp) {
-      const auto *arch_plugin = target_sp->GetArchitecturePlugin();
-      if (arch_plugin) {
-        return arch_plugin->GetVectorElementOrder() == lldb::eByteOrderLittle;
-      }
-    }
-    return true;
-  }
-
   void Jump(const BasicBlock *bb) {
     m_prev_bb = m_bb;
     m_bb = bb;
@@ -185,7 +174,7 @@ public:
   }
 
   bool EvaluateValue(lldb_private::Scalar &scalar, const Value *value,
-                     Module &module) {
+                     Module &module, lldb_private::ExecutionContext &exe_ctx) {
     const Constant *constant = dyn_cast<Constant>(value);
 
     if (constant) {
@@ -209,7 +198,7 @@ public:
       return AssignToMatchType(scalar, value_apint, value->getType());
     }
 
-    lldb::addr_t process_address = ResolveValue(value, module);
+    lldb::addr_t process_address = ResolveValue(value, module, exe_ctx);
     size_t value_size = m_target_data.getTypeStoreSize(value->getType());
 
     lldb_private::DataExtractor value_extractor;
@@ -241,8 +230,8 @@ public:
   }
 
   bool AssignValue(const Value *value, lldb_private::Scalar scalar,
-                   Module &module) {
-    lldb::addr_t process_address = ResolveValue(value, module);
+                   Module &module, lldb_private::ExecutionContext &exe_ctx) {
+    lldb::addr_t process_address = ResolveValue(value, module, exe_ctx);
 
     if (process_address == LLDB_INVALID_ADDRESS)
       return false;
@@ -391,7 +380,8 @@ public:
   }
 
   bool ResolveVectorConstant(lldb::addr_t process_address,
-                             const Constant *constant) {
+                             const Constant *constant,
+                             lldb_private::ExecutionContext &exe_ctx) {
     auto *vector_type = dyn_cast<FixedVectorType>(constant->getType());
     if (!vector_type)
       return false;
@@ -400,7 +390,7 @@ public:
     unsigned num_elements = vector_type->getNumElements();
     size_t element_size = m_target_data.getTypeStoreSize(element_type);
     size_t total_size = element_size * num_elements;
-    bool reverse_elements = !MemoryMatchesIRElementOrder();
+    bool reverse_elements = !MemoryMatchesIRElementOrder(exe_ctx);
 
     lldb_private::DataBufferHeap buf(total_size, 0);
     uint8_t *data_ptr = buf.GetBytes();
@@ -442,11 +432,12 @@ public:
     return false;
   }
 
-  bool ResolveConstant(lldb::addr_t process_address, const Constant *constant) {
+  bool ResolveConstant(lldb::addr_t process_address, const Constant *constant,
+                       lldb_private::ExecutionContext &exe_ctx) {
     // Handle vector constants specially since they can't be represented as a
     // single APInt
     if (constant->getType()->isVectorTy()) {
-      return ResolveVectorConstant(process_address, constant);
+      return ResolveVectorConstant(process_address, constant, exe_ctx);
     }
 
     APInt resolved_value;
@@ -517,7 +508,8 @@ public:
     return std::string(ss.GetString());
   }
 
-  lldb::addr_t ResolveValue(const Value *value, Module &module) {
+  lldb::addr_t ResolveValue(const Value *value, Module &module,
+                            lldb_private::ExecutionContext &exe_ctx) {
     ValueMap::iterator i = m_values.find(value);
 
     if (i != m_values.end())
@@ -528,7 +520,7 @@ public:
     lldb::addr_t data_address = Malloc(value->getType());
 
     if (const Constant *constant = dyn_cast<Constant>(value)) {
-      if (!ResolveConstant(data_address, constant)) {
+      if (!ResolveConstant(data_address, constant, exe_ctx)) {
         lldb_private::Status free_error;
         m_execution_unit.Free(data_address, free_error);
         return LLDB_INVALID_ADDRESS;
@@ -906,13 +898,13 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       lldb_private::Scalar L;
       lldb_private::Scalar R;
 
-      if (!frame.EvaluateValue(L, lhs, module)) {
+      if (!frame.EvaluateValue(L, lhs, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(lhs).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
       }
 
-      if (!frame.EvaluateValue(R, rhs, module)) {
+      if (!frame.EvaluateValue(R, rhs, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(rhs).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
@@ -979,7 +971,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         break;
       }
 
-      frame.AssignValue(inst, result, module);
+      frame.AssignValue(inst, result, module, exe_ctx);
 
       if (log) {
         LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
@@ -1054,13 +1046,13 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       lldb_private::Scalar S;
 
-      if (!frame.EvaluateValue(S, source, module)) {
+      if (!frame.EvaluateValue(S, source, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(source).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
       }
 
-      frame.AssignValue(inst, S, module);
+      frame.AssignValue(inst, S, module, exe_ctx);
     } break;
     case Instruction::SExt: {
       const CastInst *cast_inst = cast<CastInst>(inst);
@@ -1069,7 +1061,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       lldb_private::Scalar S;
 
-      if (!frame.EvaluateValue(S, source, module)) {
+      if (!frame.EvaluateValue(S, source, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(source).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
@@ -1079,7 +1071,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       lldb_private::Scalar S_signextend(S.SLongLong());
 
-      frame.AssignValue(inst, S_signextend, module);
+      frame.AssignValue(inst, S_signextend, module, exe_ctx);
     } break;
     case Instruction::Br: {
       const BranchInst *br_inst = cast<BranchInst>(inst);
@@ -1089,7 +1081,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
         lldb_private::Scalar C;
 
-        if (!frame.EvaluateValue(C, condition, module)) {
+        if (!frame.EvaluateValue(C, condition, module, exe_ctx)) {
           LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(condition).c_str());
           error = lldb_private::Status::FromErrorString(bad_value_error);
           return false;
@@ -1127,12 +1119,12 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       Value *value = phi_inst->getIncomingValueForBlock(frame.m_prev_bb);
       lldb_private::Scalar result;
-      if (!frame.EvaluateValue(result, value, module)) {
+      if (!frame.EvaluateValue(result, value, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(value).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
       }
-      frame.AssignValue(inst, result, module);
+      frame.AssignValue(inst, result, module, exe_ctx);
 
       if (log) {
         LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
@@ -1148,7 +1140,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       lldb_private::Scalar P;
 
-      if (!frame.EvaluateValue(P, pointer_operand, module)) {
+      if (!frame.EvaluateValue(P, pointer_operand, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s",
                   PrintValue(pointer_operand).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
@@ -1170,7 +1162,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         if (!constant_index) {
           lldb_private::Scalar I;
 
-          if (!frame.EvaluateValue(I, *ii, module)) {
+          if (!frame.EvaluateValue(I, *ii, module, exe_ctx)) {
             LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(*ii).c_str());
             error = lldb_private::Status::FromErrorString(bad_value_error);
             return false;
@@ -1191,7 +1183,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       lldb_private::Scalar Poffset = P + offset;
 
-      frame.AssignValue(inst, Poffset, module);
+      frame.AssignValue(inst, Poffset, module, exe_ctx);
 
       if (log) {
         LLDB_LOGF(log, "Interpreted a GetElementPtrInst");
@@ -1212,13 +1204,13 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       lldb_private::Scalar L;
       lldb_private::Scalar R;
 
-      if (!frame.EvaluateValue(L, lhs, module)) {
+      if (!frame.EvaluateValue(L, lhs, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(lhs).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
       }
 
-      if (!frame.EvaluateValue(R, rhs, module)) {
+      if (!frame.EvaluateValue(R, rhs, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(rhs).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
@@ -1291,7 +1283,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         break;
       }
 
-      frame.AssignValue(inst, result, module);
+      frame.AssignValue(inst, result, module, exe_ctx);
 
       if (log) {
         LLDB_LOGF(log, "Interpreted an ICmpInst");
@@ -1307,13 +1299,13 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       lldb_private::Scalar I;
 
-      if (!frame.EvaluateValue(I, src_operand, module)) {
+      if (!frame.EvaluateValue(I, src_operand, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(src_operand).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
       }
 
-      frame.AssignValue(inst, I, module);
+      frame.AssignValue(inst, I, module, exe_ctx);
 
       if (log) {
         LLDB_LOGF(log, "Interpreted an IntToPtr");
@@ -1328,13 +1320,13 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       lldb_private::Scalar I;
 
-      if (!frame.EvaluateValue(I, src_operand, module)) {
+      if (!frame.EvaluateValue(I, src_operand, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(src_operand).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
       }
 
-      frame.AssignValue(inst, I, module);
+      frame.AssignValue(inst, I, module, exe_ctx);
 
       if (log) {
         LLDB_LOGF(log, "Interpreted a PtrToInt");
@@ -1349,13 +1341,13 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       lldb_private::Scalar I;
 
-      if (!frame.EvaluateValue(I, src_operand, module)) {
+      if (!frame.EvaluateValue(I, src_operand, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(src_operand).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
         return false;
       }
 
-      frame.AssignValue(inst, I, module);
+      frame.AssignValue(inst, I, module, exe_ctx);
 
       if (log) {
         LLDB_LOGF(log, "Interpreted a Trunc");
@@ -1374,8 +1366,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       const Value *pointer_operand = load_inst->getPointerOperand();
 
-      lldb::addr_t D = frame.ResolveValue(load_inst, module);
-      lldb::addr_t P = frame.ResolveValue(pointer_operand, module);
+      lldb::addr_t D = frame.ResolveValue(load_inst, module, exe_ctx);
+      lldb::addr_t P = frame.ResolveValue(pointer_operand, module, exe_ctx);
 
       if (D == LLDB_INVALID_ADDRESS) {
         LLDB_LOGF(log, "LoadInst's value doesn't resolve to anything");
@@ -1443,8 +1435,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       const Value *value_operand = store_inst->getValueOperand();
       const Value *pointer_operand = store_inst->getPointerOperand();
 
-      lldb::addr_t D = frame.ResolveValue(value_operand, module);
-      lldb::addr_t P = frame.ResolveValue(pointer_operand, module);
+      lldb::addr_t D = frame.ResolveValue(value_operand, module, exe_ctx);
+      lldb::addr_t P = frame.ResolveValue(pointer_operand, module, exe_ctx);
 
       if (D == LLDB_INVALID_ADDRESS) {
         LLDB_LOGF(log, "StoreInst's value doesn't resolve to anything");
@@ -1537,7 +1529,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       lldb_private::Scalar I;
       const llvm::Value *val = call_inst->getCalledOperand();
 
-      if (!frame.EvaluateValue(I, val, module)) {
+      if (!frame.EvaluateValue(I, val, module, exe_ctx)) {
         error = lldb_private::Status::FromErrorString(
             "unable to get address of function");
         return false;
@@ -1576,7 +1568,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
         // Extract the arguments value
         lldb_private::Scalar tmp_op = 0;
-        if (!frame.EvaluateValue(tmp_op, arg_op, module)) {
+        if (!frame.EvaluateValue(tmp_op, arg_op, module, exe_ctx)) {
           error = lldb_private::Status::FromErrorStringWithFormat(
               "unable to evaluate argument %d", i);
           return false;
@@ -1671,7 +1663,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         returnVal = value.GetScalar();
 
         // Push the return value as the result
-        frame.AssignValue(inst, returnVal, module);
+        frame.AssignValue(inst, returnVal, module, exe_ctx);
       }
     } break;
     case Instruction::ExtractElement: {
@@ -1682,7 +1674,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       const Value *index_operand = extract_inst->getIndexOperand();
 
       // Get the vector address
-      lldb::addr_t vector_addr = frame.ResolveValue(vector_operand, module);
+      lldb::addr_t vector_addr =
+          frame.ResolveValue(vector_operand, module, exe_ctx);
 
       if (vector_addr == LLDB_INVALID_ADDRESS) {
         LLDB_LOGF(log, "ExtractElement's vector doesn't resolve to anything");
@@ -1692,7 +1685,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       // Evaluate the index
       lldb_private::Scalar index_scalar;
-      if (!frame.EvaluateValue(index_scalar, index_operand, module)) {
+      if (!frame.EvaluateValue(index_scalar, index_operand, module, exe_ctx)) {
         LLDB_LOGF(log, "Couldn't evaluate index %s",
                   PrintValue(index_operand).c_str());
         error = lldb_private::Status::FromErrorString(bad_value_error);
@@ -1731,7 +1724,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       size_t element_offset = target_index * element_size;
 
       // Allocate space for the result element
-      lldb::addr_t result_addr = frame.ResolveValue(extract_inst, module);
+      lldb::addr_t result_addr =
+          frame.ResolveValue(extract_inst, module, exe_ctx);
       if (result_addr == LLDB_INVALID_ADDRESS) {
         LLDB_LOGF(log, "ExtractElement's result doesn't resolve to anything");
         error = lldb_private::Status::FromErrorString(bad_value_error);
