@@ -2459,6 +2459,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         VPValue *NewAddr = GetNewAddr(L->getAddr());
         return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL, NewMask);
       })
+      .Case<VPWidenStridedLoadRecipe>([&](VPWidenStridedLoadRecipe *L) {
+        VPValue *NewMask = GetNewMask(L->getMask());
+        return new VPWidenStridedLoadRecipe(
+            *cast<LoadInst>(&L->getIngredient()), L->getAddr(), L->getStride(),
+            &EVL, NewMask, *L, L->getDebugLoc());
+      })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
         VPValue *NewAddr = GetNewAddr(S->getAddr());
