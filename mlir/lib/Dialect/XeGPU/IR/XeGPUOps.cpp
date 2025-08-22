@@ -126,26 +126,33 @@ isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
                                  VectorType valueTy, int64_t chunkSize,
                                  function_ref<InFlightDiagnostic()> emitError) {
 
+  auto maskVecTy = dyn_cast<VectorType>(maskTy);
+  auto offsetsVecTy = dyn_cast<VectorType>(offsetsTy);
   if (!valueTy) {
     if (chunkSize > 1)
       return emitError() << "Expecting chunk size == 1 for scalar result";
-    auto maskVecTy = dyn_cast<VectorType>(maskTy);
-    auto offsetsVecTy = dyn_cast<VectorType>(offsetsTy);
     if (maskVecTy || offsetsVecTy)
       return emitError() << "Expecting scalar mask and offsets.";
     else if (maskVecTy && offsetsVecTy)
       return emitError() << "Expecting a vector type result.";
     return success();
   }
+
+  auto valueSize = valueTy.getNumElements();
+  // SIMT mode with scalar mask and offsets.
+  if (!maskVecTy && !offsetsVecTy) {
+    if (valueSize != chunkSize)
+      return emitError() << "value elements must match chunk size "
+                         << chunkSize;
+    return success();
+  }
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
 
-  auto maskVecTy = dyn_cast<VectorType>(maskTy);
   if (!maskVecTy)
     return emitError() << "Expecting a vector type mask.";
   int64_t maskSize = maskVecTy.getNumElements();
 
-  auto valueSize = valueTy.getNumElements();
   if (chunkSize > 1) {
     if ((valueTy.getRank() == 1) && (valueSize != chunkSize))
       return emitError() << "value elements must match chunk size "
@@ -156,7 +163,9 @@ isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
              << "Mask should match value except the chunk size dim.";
   }
   llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
-  if (maskSize > 1 && chunkSize > 1)
+  if (maskSize == 1)
+    return success();
+  if (chunkSize > 1)
     expectedMaskShape.pop_back();
   if (expectedMaskShape != maskShape)
     return emitError() << "Mask should match value except the chunk size dim.";
@@ -785,7 +794,7 @@ LogicalResult LoadGatherOp::verify() {
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(srcTy);
 
-  if (memTy && (valueTy.getElementType() != memTy.getElementType()))
+  if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
   auto offsetsTy = getOffsets().getType();
@@ -836,7 +845,7 @@ LogicalResult StoreScatterOp::verify() {
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(destTy);
 
-  if (memTy && (valueTy.getElementType() != memTy.getElementType()))
+  if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
   auto offsetsTy = getOffsets().getType();

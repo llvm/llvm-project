@@ -901,7 +901,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
 
-  let extraClassDeclaration = extraBaseClassDeclaration # [{
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {
       return getDest().getType();
     }
@@ -915,6 +915,11 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
 
     xegpu::TensorDescType getTensorDescType() {
       return dyn_cast<xegpu::TensorDescType>(getDestType());
+    }
+
+    mlir::Type getElementType() {
+      auto type = getValue().getType();
+      return getElementTypeOrSelf(type);
     }
 
     VectorType getValueType() {
