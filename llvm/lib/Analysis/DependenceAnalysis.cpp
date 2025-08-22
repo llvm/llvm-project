@@ -3315,7 +3315,7 @@ enum class MonotonicityType {
                  ///< cause signed wrap.
   Constant,      ///< The expression is constant. If a SCEV is classified as
                  ///< Constant, it also implies that it doesn't contain any
-            ///< arithmetic operations that may cause signed wrap.
+                 ///< arithmetic operations that may cause signed wrap.
   Monotonic, ///< The expression is monotonically increasing or decreasing. This
              ///< is exclusive of Constant. That is, we say an SCEV is Monotonic
              ///< iff it contains at least one AddRec where its step reccurence
@@ -3818,9 +3818,6 @@ bool DependenceInfo::tryDelinearizeParametricSize(
     for (size_t I = 1; I < Size; ++I) {
       const Loop *OutermostLoop =
           LI->getLoopFor(Src->getParent())->getOutermostLoop();
-      IntegerType *Ty = cast<IntegerType>(Sizes[I - 1]->getType());
-      if (!Ty)
-        return false;
 
       MonotonicityType SrcMonotonicity =
           SCEVSignedMonotonicityChecker(SE, OutermostLoop, SrcPtr)
