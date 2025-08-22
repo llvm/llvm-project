@@ -114,15 +114,27 @@ static void PrintCurStackTrace(raw_ostream &OS) {
 //  If any clients of llvm try to link to libCrashReporterClient.a themselves,
 //  only one crash info struct will be used.
 extern "C" {
+#ifdef CRASHREPORTER_ANNOTATIONS_INITIALIZER
+// Should be available in CRASHREPORTER_ANNOTATIONS_VERSION > 5
+CRASHREPORTER_ANNOTATIONS_INITIALIZER()
+#else
+// Older CrashReporter annotations layouts
 CRASH_REPORTER_CLIENT_HIDDEN
 struct crashreporter_annotations_t gCRAnnotations
-        __attribute__((section("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION)))
-#if CRASHREPORTER_ANNOTATIONS_VERSION < 5
-        = { CRASHREPORTER_ANNOTATIONS_VERSION, 0, 0, 0, 0, 0, 0 };
-#else
-        = { CRASHREPORTER_ANNOTATIONS_VERSION, 0, 0, 0, 0, 0, 0, 0 };
-#endif
-}
+    __attribute__((section("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION))) = {
+        CRASHREPORTER_ANNOTATIONS_VERSION,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+#if CRASHREPORTER_ANNOTATIONS_VERSION > 4
+        0
+#endif // CRASHREPORTER_ANNOTATIONS_VERSION > 4
+};
+#endif // CRASHREPORTER_ANNOTATIONS_INITIALIZER
+} // extern "C"
 #elif defined(__APPLE__) && HAVE_CRASHREPORTER_INFO
 extern "C" const char *__crashreporter_info__
     __attribute__((visibility("hidden"))) = 0;

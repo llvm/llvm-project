@@ -17,6 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 namespace xegpu {
@@ -26,8 +27,6 @@ namespace xegpu {
 } // namespace mlir
 
 #define DEBUG_TYPE "xegpu-blocking"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 
@@ -53,7 +52,7 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   // We only interest in the case where all inputs and outputs have the
   // identical VectorTypes
   if (!hasIdenticalVectorTypes(inputs) || !hasIdenticalVectorTypes(outputs)) {
-    LDBG("skip unrealized conversion cast op not emulating pack/unpack.");
+    LDBG() << "skip unrealized conversion cast op not emulating pack/unpack.";
     return;
   }
 
@@ -75,6 +74,29 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
     castOp->erase();
   }
 }
+
+// This pattern lowers ConvertLayoutOp by removing the inst_data field from the
+// layout attributes. Since both producer and consumer operations handle data
+// partitioning based on their own inst_data, while maintaining original input
+// and output shape, ConvertLayoutOp does not need to manage inst_data.
+struct ConvertLayoutOpPattern
+    : public OpRewritePattern<xegpu::ConvertLayoutOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
+                                PatternRewriter &rewriter) const override {
+    xegpu::LayoutAttr input_layout = op.getInputLayoutAttr();
+    xegpu::LayoutAttr target_layout = op.getTargetLayoutAttr();
+    if (!input_layout.getInstData() || !target_layout.getInstData())
+      return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
+
+    input_layout = input_layout.dropInstData();
+    target_layout = target_layout.dropInstData();
+    auto newOp = rewriter.createOrFold<xegpu::ConvertLayoutOp>(
+        op.getLoc(), op.getType(), op.getSource(), input_layout, target_layout);
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
 
 //===------------------------------------------------------------------------===//
 // The XeGPUBlockingPass leverages the unroll patterns for XeGPU and Vector ops
@@ -119,14 +141,14 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
     value = (Value)operandOrResult;
 
   xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operandOrResult);
-  if (layout && layout.isSgLayout()) {
+  if (layout && layout.isForSubgroup()) {
     if (auto inst_data = layout.getInstData())
       return llvm::to_vector_of<int64_t>(inst_data.asArrayRef());
 
     if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
   }
-  LDBG("failed to getTileShape for: " << value);
+  LDBG() << "failed to getTileShape for: " << value;
   return std::nullopt;
 }
 
@@ -183,15 +205,15 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   bool hasWgLayoutOperands =
       llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
         xegpu::LayoutAttr layout = xegpu::getLayoutAttr(opr);
-        return layout && layout.isWgLayout();
+        return layout && layout.isForWorkgroup();
       });
   bool hasWgLayoutResults =
       llvm::any_of(op->getOpResults(), [](OpResult result) {
         xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
-        return layout && layout.isWgLayout();
+        return layout && layout.isForWorkgroup();
       });
   if (hasWgLayoutOperands || hasWgLayoutResults) {
-    LDBG("skip unrolling for op with workgroup level layout: " << *op);
+    LDBG() << "skip unrolling for op with workgroup level layout: " << *op;
     return false;
   }
 
@@ -250,7 +272,7 @@ void XeGPUBlockingPass::runOnOperation() {
 
         auto layout =
             llvm::dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding());
-        if (layout && layout.isWgLayout())
+        if (layout && layout.isForWorkgroup())
           return failure();
 
         int count;
@@ -267,7 +289,7 @@ void XeGPUBlockingPass::runOnOperation() {
         ArrayRef<int64_t> shape = type.getShape();
 
         xegpu::LayoutAttr layout = type.getLayoutAttr();
-        if (layout && layout.isWgLayout())
+        if (layout && layout.isForWorkgroup())
           return failure();
 
         int count;
@@ -331,6 +353,7 @@ void XeGPUBlockingPass::runOnOperation() {
   });
 
   RewritePatternSet patterns(ctx);
+  patterns.add<ConvertLayoutOpPattern>(ctx);
 
   vector::UnrollVectorOptions vectorOptions;
   vectorOptions.setNativeShapeFn(options.nativeShape);

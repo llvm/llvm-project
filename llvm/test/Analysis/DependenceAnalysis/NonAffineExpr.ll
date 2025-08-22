@@ -12,7 +12,7 @@ define void @f(ptr %a, i32 %n, i1 %arg) align 2 {
 ; CHECK-NEXT:  Src: %t.2 = load ptr, ptr %a, align 4 --> Dst: %t.4 = load i32, ptr %t.3, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %t.4 = load i32, ptr %t.3, align 4 --> Dst: %t.4 = load i32, ptr %t.3, align 4
-; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 for.preheader:
   %t.0 = ashr exact i32 %n, 3

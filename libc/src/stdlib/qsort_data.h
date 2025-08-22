@@ -9,10 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QSORT_DATA_H
 #define LLVM_LIBC_SRC_STDLIB_QSORT_DATA_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/macros/config.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

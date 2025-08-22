@@ -24,34 +24,54 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Semantics/attr.h"
+#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
+#include <variant>
 
 namespace Fortran {
 namespace lower {
 namespace omp {
 bool DataSharingProcessor::OMPConstructSymbolVisitor::isSymbolDefineBy(
     const semantics::Symbol *symbol, lower::pft::Evaluation &eval) const {
-  return eval.visit(
-      common::visitors{[&](const parser::OpenMPConstruct &functionParserNode) {
-                         return symDefMap.count(symbol) &&
-                                symDefMap.at(symbol) == &functionParserNode;
-                       },
-                       [](const auto &functionParserNode) { return false; }});
+  return eval.visit(common::visitors{
+      [&](const parser::OpenMPConstruct &functionParserNode) {
+        return symDefMap.count(symbol) &&
+               symDefMap.at(symbol) == ConstructPtr(&functionParserNode);
+      },
+      [](const auto &functionParserNode) { return false; }});
+}
+
+bool DataSharingProcessor::OMPConstructSymbolVisitor::
+    isSymbolDefineByNestedDeclaration(const semantics::Symbol *symbol) const {
+  return symDefMap.count(symbol) &&
+         std::holds_alternative<const parser::DeclarationConstruct *>(
+             symDefMap.at(symbol));
+}
+
+static bool isConstructWithTopLevelTarget(lower::pft::Evaluation &eval) {
+  const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
+  if (ompEval) {
+    auto dir = parser::omp::GetOmpDirectiveName(*ompEval).v;
+    if (llvm::omp::topTargetSet.test(dir))
+      return true;
+  }
+  return false;
 }
 
 DataSharingProcessor::DataSharingProcessor(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, lower::pft::Evaluation &eval,
     bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
-    lower::SymMap &symTable)
+    lower::SymMap &symTable, bool isTargetPrivatization)
     : converter(converter), semaCtx(semaCtx),
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
       shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
       useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
-      visitor(semaCtx) {
+      isTargetPrivatization(isTargetPrivatization), visitor(semaCtx) {
   eval.visit([&](const auto &functionParserNode) {
     parser::Walk(functionParserNode, visitor);
   });
@@ -61,10 +81,12 @@ DataSharingProcessor::DataSharingProcessor(lower::AbstractConverter &converter,
                                            semantics::SemanticsContext &semaCtx,
                                            lower::pft::Evaluation &eval,
                                            bool useDelayedPrivatization,
-                                           lower::SymMap &symTable)
+                                           lower::SymMap &symTable,
+                                           bool isTargetPrivatization)
     : DataSharingProcessor(converter, semaCtx, {}, eval,
                            /*shouldCollectPreDeterminedSymols=*/false,
-                           useDelayedPrivatization, symTable) {}
+                           useDelayedPrivatization, symTable,
+                           isTargetPrivatization) {}
 
 void DataSharingProcessor::processStep1(
     mlir::omp::PrivateClauseOps *clauseOps) {
@@ -291,7 +313,7 @@ void DataSharingProcessor::insertBarrier(
       clauseOps->privateNeedsBarrier =
           mlir::UnitAttr::get(&converter.getMLIRContext());
   } else {
-    firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
+    mlir::omp::BarrierOp::create(firOpBuilder, converter.getCurrentLocation());
   }
 }
 
@@ -351,32 +373,32 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
              loopOp.getIVs(), result.loopUpperBounds, result.loopSteps)) {
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub
-      mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
+      mlir::Value v = mlir::arith::AddIOp::create(firOpBuilder, loc, iv, step);
       vs.push_back(v);
       mlir::Value zero =
           firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
-      mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, step, zero);
-      mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, v, ub);
-      mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::sgt, v, ub);
-      mlir::Value icmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
-          loc, negativeStep, vLT, vGT);
+      mlir::Value negativeStep = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, step, zero);
+      mlir::Value vLT = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, v, ub);
+      mlir::Value vGT = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::sgt, v, ub);
+      mlir::Value icmpOp = mlir::arith::SelectOp::create(
+          firOpBuilder, loc, negativeStep, vLT, vGT);
 
       if (cmpOp)
-        cmpOp = firOpBuilder.create<mlir::arith::AndIOp>(loc, cmpOp, icmpOp);
+        cmpOp = mlir::arith::AndIOp::create(firOpBuilder, loc, cmpOp, icmpOp);
       else
         cmpOp = icmpOp;
     }
 
-    auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
+    auto ifOp = fir::IfOp::create(firOpBuilder, loc, cmpOp, /*else*/ false);
     firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
       hlfir::Entity loopIVEntity{loopIV};
       loopIVEntity =
           hlfir::derefPointersAndAllocatables(loc, firOpBuilder, loopIVEntity);
-      firOpBuilder.create<hlfir::AssignOp>(loc, v, loopIVEntity);
+      hlfir::AssignOp::create(firOpBuilder, loc, v, loopIVEntity);
     }
     lastPrivIP = firOpBuilder.saveInsertionPoint();
   } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
@@ -388,42 +410,16 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   }
 }
 
-static const parser::CharBlock *
-getSource(const semantics::SemanticsContext &semaCtx,
-          const lower::pft::Evaluation &eval) {
-  const parser::CharBlock *source = nullptr;
-
-  auto ompConsVisit = [&](const parser::OpenMPConstruct &x) {
-    std::visit(
-        common::visitors{
-            [&](const parser::OpenMPSectionsConstruct &x) {
-              source = &std::get<0>(x.t).source;
-            },
-            [&](const parser::OpenMPLoopConstruct &x) {
-              source = &std::get<0>(x.t).source;
-            },
-            [&](const parser::OpenMPBlockConstruct &x) {
-              source = &std::get<0>(x.t).source;
-            },
-            [&](const parser::OpenMPCriticalConstruct &x) {
-              source = &std::get<0>(x.t).source;
-            },
-            [&](const parser::OpenMPAtomicConstruct &x) {
-              source = &std::get<parser::OmpDirectiveSpecification>(x.t).source;
-            },
-            [&](const auto &x) { source = &x.source; },
-        },
-        x.u);
-  };
-
-  eval.visit(common::visitors{
-      [&](const parser::OpenMPConstruct &x) { ompConsVisit(x); },
-      [&](const parser::OpenMPDeclarativeConstruct &x) { source = &x.source; },
-      [&](const parser::OmpEndLoopDirective &x) { source = &x.source; },
-      [&](const auto &x) {},
+static parser::CharBlock getSource(const semantics::SemanticsContext &semaCtx,
+                                   const lower::pft::Evaluation &eval) {
+  return eval.visit(common::visitors{
+      [&](const parser::OpenMPConstruct &x) {
+        return parser::omp::GetOmpDirectiveName(x).source;
+      },
+      [&](const parser::OpenMPDeclarativeConstruct &x) { return x.source; },
+      [&](const parser::OmpEndLoopDirective &x) { return x.source; },
+      [&](const auto &x) { return parser::CharBlock{}; },
   });
-
-  return source;
 }
 
 static void collectPrivatizingConstructs(
@@ -465,7 +461,8 @@ bool DataSharingProcessor::isOpenMPPrivatizingConstruct(
   // allow a privatizing clause) are: dispatch, distribute, do, for, loop,
   // parallel, scope, sections, simd, single, target, target_data, task,
   // taskgroup, taskloop, and teams.
-  return llvm::is_contained(privatizing, extractOmpDirective(omp));
+  return llvm::is_contained(privatizing,
+                            parser::omp::GetOmpDirectiveName(omp).v);
 }
 
 bool DataSharingProcessor::isOpenMPPrivatizingEvaluation(
@@ -516,11 +513,11 @@ void DataSharingProcessor::collectSymbols(
         for (const semantics::Scope &child : scope->children())
           collectScopes(&child);
       };
-  const parser::CharBlock *source =
-      clauses.empty() ? getSource(semaCtx, eval) : &clauses.front().source;
+  parser::CharBlock source =
+      clauses.empty() ? getSource(semaCtx, eval) : clauses.front().source;
   const semantics::Scope *curScope = nullptr;
-  if (source && !source->empty()) {
-    curScope = &semaCtx.FindScope(*source);
+  if (!source.empty()) {
+    curScope = &semaCtx.FindScope(source);
     collectScopes(curScope);
   }
   // Collect all symbols referenced in the evaluation being processed,
@@ -550,11 +547,34 @@ void DataSharingProcessor::collectSymbols(
   };
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
-    if (collectImplicit)
-      return sym->test(semantics::Symbol::Flag::OmpImplicit);
+    if (collectImplicit) {
+      // If we're a combined construct with a target region, implicit
+      // firstprivate captures, should only belong to the target region
+      // and not be added/captured by later directives. Parallel regions
+      // will likely want the same captures to be shared and for SIMD it's
+      // illegal to have firstprivate clauses.
+      if (isConstructWithTopLevelTarget(eval) && !isTargetPrivatization &&
+          sym->test(semantics::Symbol::Flag::OmpFirstPrivate)) {
+        return false;
+      }
 
-    if (collectPreDetermined)
-      return sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+      // Collect implicit symbols only if they are not defined by a nested
+      // `DeclarationConstruct`. If `sym` is not defined by the current OpenMP
+      // evaluation then it is defined by a block nested within the OpenMP
+      // construct. This, in turn, means that the private allocation for the
+      // symbol will be emitted as part of the nested block and there is no need
+      // to privatize it within the OpenMP construct.
+      return !visitor.isSymbolDefineByNestedDeclaration(sym) &&
+             sym->test(semantics::Symbol::Flag::OmpImplicit);
+    }
+
+    if (collectPreDetermined) {
+      // Similar to implicit symbols, collect pre-determined symbols only if
+      // they are not defined by a nested `DeclarationConstruct`
+      return visitor.isSymbolDefineBy(sym, eval) &&
+             !visitor.isSymbolDefineByNestedDeclaration(sym) &&
+             sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+    }
 
     return !sym->test(semantics::Symbol::Flag::OmpImplicit) &&
            !sym->test(semantics::Symbol::Flag::OmpPreDetermined);

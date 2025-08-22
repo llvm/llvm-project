@@ -9,6 +9,7 @@
 #include <OffloadAPI.h>
 #include <OffloadPrint.hpp>
 #include <gtest/gtest.h>
+#include <thread>
 
 #include "Environment.hpp"
 
@@ -19,6 +20,20 @@
   do {                                                                         \
     ol_result_t Res = ACTUAL;                                                  \
     if (Res && Res->Code != OL_ERRC_SUCCESS) {                                 \
+      GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
+                   << Res->Details;                                            \
+    }                                                                          \
+  } while (0)
+#endif
+
+#ifndef ASSERT_SUCCESS_OR_UNSUPPORTED
+#define ASSERT_SUCCESS_OR_UNSUPPORTED(ACTUAL)                                  \
+  do {                                                                         \
+    ol_result_t Res = ACTUAL;                                                  \
+    if (Res && Res->Code == OL_ERRC_UNSUPPORTED) {                             \
+      GTEST_SKIP() << #ACTUAL " returned unsupported; skipping test";          \
+      return;                                                                  \
+    } else if (Res && Res->Code != OL_ERRC_SUCCESS) {                          \
       GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
                    << Res->Details;                                            \
     }                                                                          \
@@ -55,6 +70,23 @@ inline std::string SanitizeString(const std::string &Str) {
       NewStr.begin(), NewStr.end(), [](char C) { return !std::isalnum(C); },
       '_');
   return NewStr;
+}
+
+template <typename Fn> inline void threadify(Fn body) {
+  std::vector<std::thread> Threads;
+  for (size_t I = 0; I < 20; I++) {
+    Threads.emplace_back(
+        [&body](size_t I) {
+          std::string ScopeMsg{"Thread #"};
+          ScopeMsg.append(std::to_string(I));
+          SCOPED_TRACE(ScopeMsg);
+          body(I);
+        },
+        I);
+  }
+  for (auto &T : Threads) {
+    T.join();
+  }
 }
 
 struct OffloadTest : ::testing::Test {
@@ -171,16 +203,8 @@ struct OffloadQueueTest : OffloadDeviceTest {
 struct OffloadEventTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-    // Get an event from a memcpy. We can still use it in olGetEventInfo etc
-    // after it has been waited on.
-    void *Alloc;
-    uint32_t Value = 42;
-    ASSERT_SUCCESS(
-        olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(Value), &Alloc));
-    ASSERT_SUCCESS(
-        olMemcpy(Queue, Alloc, Device, &Value, Host, sizeof(Value), &Event));
-    ASSERT_SUCCESS(olWaitEvent(Event));
-    ASSERT_SUCCESS(olMemFree(Alloc));
+    ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+    ASSERT_SUCCESS(olSyncQueue(Queue));
   }
 
   void TearDown() override {

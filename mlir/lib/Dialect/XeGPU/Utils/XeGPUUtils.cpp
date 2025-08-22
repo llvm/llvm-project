@@ -11,6 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -19,7 +22,6 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -39,7 +41,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(tdescTy.getLayout());
   // It only works for subgroup level layout, which only has lane_layout
   // and lane_data, and is to distribute a SIMD code into SIMT code.
-  if (!layout || !layout.isSgLayout())
+  if (!layout || !layout.isForSubgroup())
     return failure();
 
   SmallVector<int64_t> laneData(layout.getLaneData().asArrayRef());
@@ -54,7 +56,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
                                 std::multiplies<int64_t>());
 
   // Case 1: regular loads/stores
-  auto scatterAttr = tdescTy.getEncodingAsScatterTensorDescAttr();
+  auto scatterAttr = tdescTy.getEncodingOfType<ScatterTensorDescAttr>();
   if (scatterAttr) {
     auto chunkSize = scatterAttr.getChunkSize().getInt();
     // Verify if the first dimension of the tensor descriptor shape is
@@ -124,6 +126,10 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
 
+    // For ConvertLayoutOp, the layout is stored in the targetLayoutAttr
+    if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
+      return convertOp.getTargetLayoutAttr();
+
     // for LoadNdOp, the layout is stored in the tensor descriptor
     if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
       return getLayoutAttr(loadNd.getTensorDesc());
@@ -137,7 +143,8 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     auto parentOp = arg.getOwner()->getParentOp();
     if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      return getLayoutAttr(tiedInit->get());
+      if (tiedInit)
+        return getLayoutAttr(tiedInit->get());
     }
   }
 
@@ -223,8 +230,8 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   SmallVector<Value> result;
   for (SmallVector<int64_t> offsets : StaticTileOffsetRange(srcShape, shape)) {
     SmallVector<int64_t> staticStrides(offsets.size(), 1);
-    result.push_back(builder.create<vector::ExtractStridedSliceOp>(
-        loc, value, offsets, shape, staticStrides));
+    result.push_back(vector::ExtractStridedSliceOp::create(
+        builder, loc, value, offsets, shape, staticStrides));
   }
 
   return result;
@@ -243,14 +250,14 @@ Value xegpu::createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 
   VectorType resultTy = VectorType::get(shape, elemTy);
   auto zeroAttr = builder.getZeroAttr(elemTy);
-  Value result = builder.create<arith::ConstantOp>(
-      loc, resultTy, DenseElementsAttr::get(resultTy, zeroAttr));
+  Value result = arith::ConstantOp::create(
+      builder, loc, resultTy, DenseElementsAttr::get(resultTy, zeroAttr));
 
   for (auto [src, offsets] :
        llvm::zip_equal(values, StaticTileOffsetRange(shape, tileShape))) {
     SmallVector<int64_t> staticStrides(offsets.size(), 1);
-    result = builder.create<vector::InsertStridedSliceOp>(
-        loc, src, result, offsets, staticStrides);
+    result = vector::InsertStridedSliceOp::create(builder, loc, src, result,
+                                                  offsets, staticStrides);
   }
   return result;
 }
@@ -261,7 +268,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
 
   auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
                             Location loc) -> Value {
-    return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
         .getResult(0);
   };
 
@@ -368,8 +375,8 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
 
         if (isa<RankedTensorType>(inputTy) && isa<VectorType>(outputTy)) {
           SmallVector<Value> values = xegpu::flattenValues(adaptor.getInputs());
-          auto newOp = rewriter.create<UnrealizedConversionCastOp>(
-              op.getLoc(), outputTy, values);
+          auto newOp = UnrealizedConversionCastOp::create(rewriter, op.getLoc(),
+                                                          outputTy, values);
           rewriter.replaceOp(op, newOp);
           return success();
         }
@@ -380,7 +387,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
     converter.addSourceMaterialization(materializeCast);
     converter.addTargetMaterialization([&](OpBuilder &builder, TypeRange type,
                                            ValueRange inputs, Location loc) {
-      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResults();
     });
 
@@ -399,4 +406,50 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
                                                          target);
     (void)mlir::applyPartialConversion(op, target, std::move(patterns));
   }
+}
+
+std::optional<std::string> xegpu::getChipStr(Operation *op) {
+  auto gpuModuleOp = op->getParentOfType<gpu::GPUModuleOp>();
+
+  if (!gpuModuleOp)
+    return std::nullopt;
+
+  auto targetAttrs = gpuModuleOp.getTargets();
+  if (targetAttrs) {
+    for (auto &attr : *targetAttrs) {
+      auto xevmAttr = llvm::dyn_cast<xevm::XeVMTargetAttr>(attr);
+      if (xevmAttr)
+        return xevmAttr.getChip().str();
+    }
+  }
+
+  return std::nullopt;
+}
+
+/// Generates element-wise addition ops of two arrays with automatic alignment.
+/// When the input arrays have different sizes, the shorter array is
+/// right-aligned with the longer array, and the unmatched leading elements from
+/// the longer array are preserved unchanged. This is commonly used for offset
+/// computation where higher-dimensional offsets need to be added to
+/// lower-dimensional adjustments.
+///
+/// Example:
+///   lhs = [l1, l2, l3], rhs = [r1, r2]
+///   Result: [11, l2+r1, l3+r2]
+SmallVector<OpFoldResult>
+xegpu::addWithRightAligned(OpBuilder &builder, Location loc,
+                           ArrayRef<OpFoldResult> lhs,
+                           ArrayRef<OpFoldResult> rhs) {
+  // ensure a is longer than b
+  ArrayRef<OpFoldResult> a = lhs.size() >= rhs.size() ? lhs : rhs;
+  ArrayRef<OpFoldResult> b = lhs.size() >= rhs.size() ? rhs : lhs;
+  SmallVector<OpFoldResult> results(a.take_front(a.size() - b.size()));
+  a = a.slice(a.size() - b.size());
+  for (auto [l, r] : llvm::zip(a, b)) {
+    auto lval = getValueOrCreateConstantIndexOp(builder, loc, l);
+    auto rval = getValueOrCreateConstantIndexOp(builder, loc, r);
+    results.push_back(builder.createOrFold<index::AddOp>(loc, lval, rval));
+  }
+  return results;
+  return {};
 }

@@ -11,6 +11,9 @@
 // FIXME: Investigate
 // UNSUPPORTED: target=powerpc64{{.*}}
 
+// Fails because AArch64 uses TLSDESC instead of __tls_get_addr.
+// UNSUPPORTED: aarch64-target-arch
+
 #include <string.h>
 
 #ifndef BUILD_DSO

@@ -14,16 +14,10 @@ using olDestroyEventTest = OffloadQueueTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olDestroyEventTest);
 
 TEST_P(olDestroyEventTest, Success) {
-  uint32_t Src = 42;
-  void *DstPtr;
-
   ol_event_handle_t Event = nullptr;
-  ASSERT_SUCCESS(
-      olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(uint32_t), &DstPtr));
-  ASSERT_SUCCESS(
-      olMemcpy(Queue, DstPtr, Device, &Src, Host, sizeof(Src), &Event));
+  ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
   ASSERT_NE(Event, nullptr);
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
   ASSERT_SUCCESS(olDestroyEvent(Event));
 }
 

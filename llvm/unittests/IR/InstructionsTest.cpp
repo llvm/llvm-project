@@ -1935,5 +1935,22 @@ TEST(InstructionsTest, CmpPredicate) {
   EXPECT_EQ(P2, R2);
 }
 
+TEST(InstructionsTest, StripAndAccumulateConstantOffset) {
+  LLVMContext C;
+  DataLayout DL;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+  define void @foo(ptr %ptr, i64 %offset) {
+    %gep = getelementptr inbounds [1 x i8], ptr %ptr, i64 4, i64 %offset
+    ret void
+  })");
+  ASSERT_TRUE(M);
+  Value *GEP = &M->getFunction("foo")->getEntryBlock().front();
+  APInt Offset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+  Value *Stripped = GEP->stripAndAccumulateConstantOffsets(
+      DL, Offset, /*AllowNonInBounds=*/true);
+  EXPECT_EQ(Stripped, GEP);
+  EXPECT_TRUE(Offset.isZero());
+}
+
 } // end anonymous namespace
 } // end namespace llvm

@@ -66,7 +66,8 @@ add_lldb_library(lldbDAP
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
   Handler/WriteMemoryRequestHandler.cpp
-  
+
+  Protocol/DAPTypes.cpp
   Protocol/ProtocolBase.cpp
   Protocol/ProtocolEvents.cpp
   Protocol/ProtocolTypes.cpp

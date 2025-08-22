@@ -9,75 +9,10 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 
-define void @lifetime_no_size(i64 %i) sanitize_address {
-; CHECK-LABEL: define void @lifetime_no_size(
-; CHECK-SAME: i64 [[I:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[MYALLOCA:%.*]] = alloca i8, i64 64, align 32
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[MYALLOCA]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP0]] to ptr
-; CHECK-NEXT:    store i64 1102416563, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; CHECK-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 16
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
-; CHECK-NEXT:    store i64 ptrtoint (ptr @lifetime_no_size to i64), ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 2147450880
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
-; CHECK-NEXT:    store i64 -868083117767659023, ptr [[TMP11]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[TMP2]])
-; CHECK-NEXT:    [[AI:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP2]], i64 0, i64 [[I]]
-; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[AI]] to i64
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP12]], 3
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP13]], 2147450880
-; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr
-; CHECK-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP15]], align 1
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i8 [[TMP16]], 0
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[BB18:.*]], label %[[BB23:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB18]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = and i64 [[TMP12]], 7
-; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[TMP19]] to i8
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp sge i8 [[TMP20]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[BB22:.*]], label %[[BB23]]
-; CHECK:       [[BB22]]:
-; CHECK-NEXT:    call void @__asan_report_store1(i64 [[TMP12]]) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB23]]:
-; CHECK-NEXT:    store volatile i8 0, ptr [[AI]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[TMP2]])
-; CHECK-NEXT:    store i64 1172321806, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP25:%.*]] = inttoptr i64 [[TMP24]] to ptr
-; CHECK-NEXT:    store i64 0, ptr [[TMP25]], align 1
-; CHECK-NEXT:    ret void
-;
-entry:
-  %a = alloca [2 x i32], align 4
-
-  ; Poison memory in prologue: 0xf3f3f300f1f1f1f1
-
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %a)
-  ; Check that lifetime with no size are ignored.
-
-  %ai = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 %i
-  store volatile i8 0, ptr %ai, align 4
-
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
-  ; Check that lifetime with no size are ignored.
-
-  ; Unpoison stack frame on exit.
-  ret void
-}
-
 ; Generic case of lifetime analysis.
 define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-LABEL: define void @lifetime(
-; CHECK-DEFAULT-SAME: ) #[[ATTR1]] {
+; CHECK-DEFAULT-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-DEFAULT-NEXT:    [[TMP1:%.*]] = alloca i64, align 32
 ; CHECK-DEFAULT-NEXT:    store i64 0, ptr [[TMP1]], align 8
 ; CHECK-DEFAULT-NEXT:    [[MYALLOCA:%.*]] = alloca i8, i64 64, align 32
@@ -88,7 +23,7 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    store i64 1102416563, ptr [[TMP5]], align 8
 ; CHECK-DEFAULT-NEXT:    [[TMP6:%.*]] = add i64 [[TMP2]], 8
 ; CHECK-DEFAULT-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
-; CHECK-DEFAULT-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack.1 to i64), ptr [[TMP7]], align 8
+; CHECK-DEFAULT-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP7]], align 8
 ; CHECK-DEFAULT-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], 16
 ; CHECK-DEFAULT-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
 ; CHECK-DEFAULT-NEXT:    store i64 ptrtoint (ptr @lifetime to i64), ptr [[TMP9]], align 8
@@ -100,32 +35,29 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    [[TMP14:%.*]] = add i64 [[TMP11]], 4
 ; CHECK-DEFAULT-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr
 ; CHECK-DEFAULT-NEXT:    store i8 4, ptr [[TMP15]], align 1
-; CHECK-DEFAULT-NEXT:    call void @llvm.lifetime.start.p0(i64 3, ptr [[TMP4]])
 ; CHECK-DEFAULT-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[TMP4]] to i64
 ; CHECK-DEFAULT-NEXT:    [[TMP17:%.*]] = lshr i64 [[TMP16]], 3
 ; CHECK-DEFAULT-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], 2147450880
 ; CHECK-DEFAULT-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
 ; CHECK-DEFAULT-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
 ; CHECK-DEFAULT-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP20]], 0
-; CHECK-DEFAULT-NEXT:    br i1 [[TMP21]], label %[[BB22:.*]], label %[[BB27:.*]], !prof [[PROF1]]
+; CHECK-DEFAULT-NEXT:    br i1 [[TMP21]], label %[[BB22:.*]], label %[[BB27:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK-DEFAULT:       [[BB22]]:
 ; CHECK-DEFAULT-NEXT:    [[TMP23:%.*]] = and i64 [[TMP16]], 7
 ; CHECK-DEFAULT-NEXT:    [[TMP24:%.*]] = trunc i64 [[TMP23]] to i8
 ; CHECK-DEFAULT-NEXT:    [[TMP25:%.*]] = icmp sge i8 [[TMP24]], [[TMP20]]
 ; CHECK-DEFAULT-NEXT:    br i1 [[TMP25]], label %[[BB26:.*]], label %[[BB27]]
 ; CHECK-DEFAULT:       [[BB26]]:
-; CHECK-DEFAULT-NEXT:    call void @__asan_report_store1(i64 [[TMP16]]) #[[ATTR4]]
+; CHECK-DEFAULT-NEXT:    call void @__asan_report_store1(i64 [[TMP16]]) #[[ATTR4:[0-9]+]]
 ; CHECK-DEFAULT-NEXT:    unreachable
 ; CHECK-DEFAULT:       [[BB27]]:
 ; CHECK-DEFAULT-NEXT:    store volatile i8 0, ptr [[TMP4]], align 1
 ; CHECK-DEFAULT-NEXT:    [[TMP28:%.*]] = add i64 [[TMP11]], 4
 ; CHECK-DEFAULT-NEXT:    [[TMP29:%.*]] = inttoptr i64 [[TMP28]] to ptr
 ; CHECK-DEFAULT-NEXT:    store i8 -8, ptr [[TMP29]], align 1
-; CHECK-DEFAULT-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP4]])
 ; CHECK-DEFAULT-NEXT:    [[TMP30:%.*]] = add i64 [[TMP11]], 4
 ; CHECK-DEFAULT-NEXT:    [[TMP31:%.*]] = inttoptr i64 [[TMP30]] to ptr
 ; CHECK-DEFAULT-NEXT:    store i8 -8, ptr [[TMP31]], align 1
-; CHECK-DEFAULT-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP4]])
 ; CHECK-DEFAULT-NEXT:    [[TMP32:%.*]] = alloca i8, i64 128, align 32
 ; CHECK-DEFAULT-NEXT:    [[TMP33:%.*]] = ptrtoint ptr [[TMP32]] to i64
 ; CHECK-DEFAULT-NEXT:    [[TMP34:%.*]] = add i64 [[TMP33]], 32
@@ -135,7 +67,6 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    [[TMP36:%.*]] = inttoptr i64 [[TMP34]] to ptr
 ; CHECK-DEFAULT-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-DEFAULT-NEXT:    call void @__asan_unpoison_stack_memory(i64 [[TMP37]], i64 40)
-; CHECK-DEFAULT-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr [[TMP36]])
 ; CHECK-DEFAULT-NEXT:    [[TMP38:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-DEFAULT-NEXT:    [[TMP39:%.*]] = lshr i64 [[TMP38]], 3
 ; CHECK-DEFAULT-NEXT:    [[TMP40:%.*]] = add i64 [[TMP39]], 2147450880
@@ -155,11 +86,9 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    store volatile i8 0, ptr [[TMP36]], align 1
 ; CHECK-DEFAULT-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-DEFAULT-NEXT:    call void @__asan_poison_stack_memory(i64 [[TMP50]], i64 40)
-; CHECK-DEFAULT-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr [[TMP36]])
 ; CHECK-DEFAULT-NEXT:    [[TMP51:%.*]] = add i64 [[TMP11]], 4
 ; CHECK-DEFAULT-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
 ; CHECK-DEFAULT-NEXT:    store i8 4, ptr [[TMP52]], align 1
-; CHECK-DEFAULT-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP4]])
 ; CHECK-DEFAULT-NEXT:    [[TMP53:%.*]] = ptrtoint ptr [[TMP4]] to i64
 ; CHECK-DEFAULT-NEXT:    [[TMP54:%.*]] = lshr i64 [[TMP53]], 3
 ; CHECK-DEFAULT-NEXT:    [[TMP55:%.*]] = add i64 [[TMP54]], 2147450880
@@ -180,7 +109,6 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    [[TMP65:%.*]] = add i64 [[TMP11]], 4
 ; CHECK-DEFAULT-NEXT:    [[TMP66:%.*]] = inttoptr i64 [[TMP65]] to ptr
 ; CHECK-DEFAULT-NEXT:    store i8 -8, ptr [[TMP66]], align 1
-; CHECK-DEFAULT-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP4]])
 ; CHECK-DEFAULT-NEXT:    [[TMP67:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-DEFAULT-NEXT:    [[TMP68:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-DEFAULT-NEXT:    call void @__asan_allocas_unpoison(i64 [[TMP68]], i64 [[TMP67]])
@@ -191,7 +119,7 @@ define void @lifetime() sanitize_address {
 ; CHECK-DEFAULT-NEXT:    ret void
 ;
 ; CHECK-NO-DYNAMIC-LABEL: define void @lifetime(
-; CHECK-NO-DYNAMIC-SAME: ) #[[ATTR1]] {
+; CHECK-NO-DYNAMIC-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NO-DYNAMIC-NEXT:    [[MYALLOCA:%.*]] = alloca i8, i64 64, align 32
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[MYALLOCA]] to i64
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 32
@@ -200,7 +128,7 @@ define void @lifetime() sanitize_address {
 ; CHECK-NO-DYNAMIC-NEXT:    store i64 1102416563, ptr [[TMP4]], align 8
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], 8
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
-; CHECK-NO-DYNAMIC-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack.1 to i64), ptr [[TMP6]], align 8
+; CHECK-NO-DYNAMIC-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP6]], align 8
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP7:%.*]] = add i64 [[TMP1]], 16
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    store i64 ptrtoint (ptr @lifetime to i64), ptr [[TMP8]], align 8
@@ -212,34 +140,31 @@ define void @lifetime() sanitize_address {
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP13:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP13]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    store i8 4, ptr [[TMP14]], align 1
-; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.start.p0(i64 3, ptr [[TMP3]])
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP3]] to i64
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP16:%.*]] = lshr i64 [[TMP15]], 3
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], 2147450880
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP19]], 0
-; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP20]], label %[[BB21:.*]], label %[[BB26:.*]], !prof [[PROF1]]
+; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP20]], label %[[BB21:.*]], label %[[BB26:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK-NO-DYNAMIC:       [[BB21]]:
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP22:%.*]] = and i64 [[TMP15]], 7
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP23:%.*]] = trunc i64 [[TMP22]] to i8
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP24:%.*]] = icmp sge i8 [[TMP23]], [[TMP19]]
 ; CHECK-NO-DYNAMIC-NEXT:    br i1 [[TMP24]], label %[[BB25:.*]], label %[[BB26]]
 ; CHECK-NO-DYNAMIC:       [[BB25]]:
-; CHECK-NO-DYNAMIC-NEXT:    call void @__asan_report_store1(i64 [[TMP15]]) #[[ATTR4]]
+; CHECK-NO-DYNAMIC-NEXT:    call void @__asan_report_store1(i64 [[TMP15]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NO-DYNAMIC-NEXT:    unreachable
 ; CHECK-NO-DYNAMIC:       [[BB26]]:
 ; CHECK-NO-DYNAMIC-NEXT:    store volatile i8 0, ptr [[TMP3]], align 1
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP27:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP28:%.*]] = inttoptr i64 [[TMP27]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    store i8 -8, ptr [[TMP28]], align 1
-; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP3]])
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP29:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP30:%.*]] = inttoptr i64 [[TMP29]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    store i8 -8, ptr [[TMP30]], align 1
-; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP3]])
 ; CHECK-NO-DYNAMIC-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
-; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr [[ARR]])
+; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARR]])
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[ARR]] to i64
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP32:%.*]] = lshr i64 [[TMP31]], 3
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP33:%.*]] = add i64 [[TMP32]], 2147450880
@@ -257,11 +182,10 @@ define void @lifetime() sanitize_address {
 ; CHECK-NO-DYNAMIC-NEXT:    unreachable
 ; CHECK-NO-DYNAMIC:       [[BB42]]:
 ; CHECK-NO-DYNAMIC-NEXT:    store volatile i8 0, ptr [[ARR]], align 1
-; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr [[ARR]])
+; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARR]])
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP43:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP44:%.*]] = inttoptr i64 [[TMP43]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    store i8 4, ptr [[TMP44]], align 1
-; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP3]])
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP45:%.*]] = ptrtoint ptr [[TMP3]] to i64
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP46:%.*]] = lshr i64 [[TMP45]], 3
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP47:%.*]] = add i64 [[TMP46]], 2147450880
@@ -282,7 +206,6 @@ define void @lifetime() sanitize_address {
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP57:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP58:%.*]] = inttoptr i64 [[TMP57]] to ptr
 ; CHECK-NO-DYNAMIC-NEXT:    store i8 -8, ptr [[TMP58]], align 1
-; CHECK-NO-DYNAMIC-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP3]])
 ; CHECK-NO-DYNAMIC-NEXT:    store i64 1172321806, ptr [[TMP4]], align 8
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP59:%.*]] = add i64 [[TMP10]], 0
 ; CHECK-NO-DYNAMIC-NEXT:    [[TMP60:%.*]] = inttoptr i64 [[TMP59]] to ptr
@@ -325,166 +248,6 @@ define void @lifetime() sanitize_address {
   ret void
 }
 
-; Check that arguments of lifetime may come from phi nodes.
-define void @phi_args(i1 %x) sanitize_address {
-; CHECK-LABEL: define void @phi_args(
-; CHECK-SAME: i1 [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[MYALLOCA:%.*]] = alloca i8, i64 64, align 32
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[MYALLOCA]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP0]] to ptr
-; CHECK-NEXT:    store i64 1102416563, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; CHECK-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack.2 to i64), ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 16
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
-; CHECK-NEXT:    store i64 ptrtoint (ptr @phi_args to i64), ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 2147450880
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
-; CHECK-NEXT:    store i64 -868082052615769615, ptr [[TMP11]], align 1
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP9]], 4
-; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr
-; CHECK-NEXT:    store i8 0, ptr [[TMP13]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[TMP2]])
-; CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP14]], 3
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], 2147450880
-; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to ptr
-; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr [[TMP17]], align 1
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne i8 [[TMP18]], 0
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[BB20:.*]], label %[[BB25:.*]], !prof [[PROF1]]
-; CHECK:       [[BB20]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = and i64 [[TMP14]], 7
-; CHECK-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP21]] to i8
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp sge i8 [[TMP22]], [[TMP18]]
-; CHECK-NEXT:    br i1 [[TMP23]], label %[[BB24:.*]], label %[[BB25]]
-; CHECK:       [[BB24]]:
-; CHECK-NEXT:    call void @__asan_report_store1(i64 [[TMP14]]) #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB25]]:
-; CHECK-NEXT:    store volatile i8 0, ptr [[TMP2]], align 1
-; CHECK-NEXT:    br i1 [[X]], label %[[BB0:.*]], label %[[BB1:.*]]
-; CHECK:       [[BB0]]:
-; CHECK-NEXT:    br label %[[BB1]]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[I_PHI:%.*]] = phi ptr [ [[TMP2]], %[[BB25]] ], [ [[TMP2]], %[[BB0]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[TMP9]], 4
-; CHECK-NEXT:    [[TMP27:%.*]] = inttoptr i64 [[TMP26]] to ptr
-; CHECK-NEXT:    store i8 -8, ptr [[TMP27]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[I_PHI]])
-; CHECK-NEXT:    store i64 1172321806, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP29:%.*]] = inttoptr i64 [[TMP28]] to ptr
-; CHECK-NEXT:    store i64 0, ptr [[TMP29]], align 1
-; CHECK-NEXT:    ret void
-;
-
-entry:
-  %i = alloca i64, align 4
-
-  ; Poison memory in prologue: F1F1F1F1F8F3F3F3
-
-  call void @llvm.lifetime.start.p0(i64 8, ptr %i)
-
-  store volatile i8 0, ptr %i
-
-  br i1 %x, label %bb0, label %bb1
-
-bb0:
-  br label %bb1
-
-bb1:
-  %i.phi = phi ptr [ %i, %entry ], [ %i, %bb0 ]
-  call void @llvm.lifetime.end.p0(i64 8, ptr %i.phi)
-
-  ret void
-}
-
-; Check that arguments of lifetime may come from getelementptr nodes.
-define void @getelementptr_args(i64 %i) sanitize_address{
-; CHECK-LABEL: define void @getelementptr_args(
-; CHECK-SAME: i64 [[I:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[MYALLOCA:%.*]] = alloca i8, i64 1216, align 32
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[MYALLOCA]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 1184
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP0]] to ptr
-; CHECK-NEXT:    store i64 1102416563, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 8
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
-; CHECK-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack.3 to i64), ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP0]], 16
-; CHECK-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
-; CHECK-NEXT:    store i64 ptrtoint (ptr @getelementptr_args to i64), ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 2147450880
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr
-; CHECK-NEXT:    store i32 -235802127, ptr [[TMP13]], align 1
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP11]], 4
-; CHECK-NEXT:    call void @__asan_set_shadow_f8(i64 [[TMP14]], i64 128)
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP11]], 132
-; CHECK-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[TMP15]] to ptr
-; CHECK-NEXT:    store i64 -940422246894996750, ptr [[TMP16]], align 1
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP11]], 140
-; CHECK-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; CHECK-NEXT:    store i64 -940422246894996750, ptr [[TMP18]], align 1
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP11]], 150
-; CHECK-NEXT:    [[TMP20:%.*]] = inttoptr i64 [[TMP19]] to ptr
-; CHECK-NEXT:    store i16 -3085, ptr [[TMP20]], align 1
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[TMP11]], 4
-; CHECK-NEXT:    call void @__asan_set_shadow_00(i64 [[TMP21]], i64 128)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1024, ptr [[TMP2]])
-; CHECK-NEXT:    [[AI:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP4]], i64 0, i64 [[I]]
-; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr [[AI]] to i64
-; CHECK-NEXT:    [[TMP23:%.*]] = lshr i64 [[TMP22]], 3
-; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP23]], 2147450880
-; CHECK-NEXT:    [[TMP25:%.*]] = inttoptr i64 [[TMP24]] to ptr
-; CHECK-NEXT:    [[TMP26:%.*]] = load i8, ptr [[TMP25]], align 1
-; CHECK-NEXT:    [[TMP27:%.*]] = icmp ne i8 [[TMP26]], 0
-; CHECK-NEXT:    br i1 [[TMP27]], label %[[BB28:.*]], label %[[BB29:.*]]
-; CHECK:       [[BB28]]:
-; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP22]]) #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB29]]:
-; CHECK-NEXT:    store ptr [[TMP2]], ptr [[AI]], align 8
-; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[TMP11]], 4
-; CHECK-NEXT:    call void @__asan_set_shadow_f8(i64 [[TMP30]], i64 128)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1024, ptr [[TMP2]])
-; CHECK-NEXT:    store i64 1172321806, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[TMP11]], 0
-; CHECK-NEXT:    call void @__asan_set_shadow_00(i64 [[TMP31]], i64 148)
-; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[TMP11]], 150
-; CHECK-NEXT:    [[TMP33:%.*]] = inttoptr i64 [[TMP32]] to ptr
-; CHECK-NEXT:    store i16 0, ptr [[TMP33]], align 1
-; CHECK-NEXT:    ret void
-;
-entry:
-  %x = alloca [1024 x i8], align 16
-  %a = alloca [2 x ptr], align 8
-
-  ; F1F1F1F1
-  ; 0xf2f2f2f2f2f2f2f2
-  ; 0xf2f2f2f2f2f2f2f2
-
-  call void @llvm.lifetime.start.p0(i64 1024, ptr %x)
-
-  %ai = getelementptr inbounds [2 x ptr], ptr %a, i64 0, i64 %i
-  store ptr %x, ptr %ai, align 8
-
-  call void @llvm.lifetime.end.p0(i64 1024, ptr %x)
-
-  ret void
-}
-
 define void @zero_sized(i64 %a) #0 {
 ; CHECK-LABEL: define void @zero_sized(
 ; CHECK-SAME: i64 [[A:%.*]]) {
@@ -492,8 +255,8 @@ define void @zero_sized(i64 %a) #0 {
 ; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[B:%.*]] = alloca [0 x i8], align 1
 ; CHECK-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 0, ptr [[B]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 0, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B]])
 ; CHECK-NEXT:    ret void
 ;
 
@@ -506,6 +269,21 @@ entry:
 
   call void @llvm.lifetime.end.p0(i64 0, ptr %b) #2
 
+  ret void
+}
+
+; Lifetimes on poison should be ignored.
+define void @lifetime_poison(i64 %a) #0 {
+; CHECK-LABEL: define void @lifetime_poison(
+; CHECK-SAME: i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a.addr = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr poison)
+  store i64 %a, ptr %a.addr, align 8
+  call void @llvm.lifetime.end.p0(i64 8, ptr poison)
   ret void
 }
 ;.

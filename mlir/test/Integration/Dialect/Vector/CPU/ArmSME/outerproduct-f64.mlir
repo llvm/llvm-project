@@ -52,7 +52,7 @@ func.func @test_outerproduct_with_accumulator_2x2xf64() {
   %ones = arith.constant dense<1> : vector<[2]xi32>
   %f10 = arith.constant 10.0 : f64
 
-  %acc = vector.splat %f10 : vector<[2]x[2]xf64>
+  %acc = vector.broadcast %f10 : f64 to vector<[2]x[2]xf64>
   %step_vector = llvm.intr.stepvector : vector<[2]xi32>
   %vector_i32 = arith.addi %step_vector, %ones : vector<[2]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[2]xi32> to vector<[2]xf64>
@@ -108,7 +108,7 @@ func.func @test_masked_outerproduct_with_accumulator_2x2xf64() {
   %ones = arith.constant dense<1> : vector<[2]xi32>
   %f10 = arith.constant 10.0 : f64
 
-  %acc = vector.splat %f10 : vector<[2]x[2]xf64>
+  %acc = vector.broadcast %f10 : f64 to vector<[2]x[2]xf64>
   %step_vector = llvm.intr.stepvector : vector<[2]xi32>
   %vector_i32 = arith.addi %step_vector, %ones : vector<[2]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[2]xi32> to vector<[2]xf64>
