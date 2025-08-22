@@ -11166,7 +11166,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue SplatVal =
         DAG.getNode(ISD::SPLAT_VECTOR, dl, MVT::v4i32, Op.getOperand(2));
     return DAG.getNode(Opcode, dl, MVT::v16i8, SplatVal, Op.getOperand(1),
-                      Op.getOperand(3));
+                       Op.getOperand(3));
   };
   // Lowers BCD intrinsics without rounding operand
   auto MapNodeWithSplatVectorInt = [&](unsigned Opcode) -> SDValue {
