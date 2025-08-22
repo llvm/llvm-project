@@ -100,7 +100,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755697961000000000,
                 completed_at_ns=1755698349000000000,
                 workflow_id=3,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage1_test2",
@@ -111,7 +111,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755698060000000000,
                 completed_at_ns=1755698417000000000,
                 workflow_id=3,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage1_test3",
@@ -122,7 +122,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755697961000000000,
                 completed_at_ns=1755698785000000000,
                 workflow_id=3,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
         ]
         metrics.create_and_append_libcxx_aggregates(test_metrics)
@@ -150,7 +150,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755697961000000000,
                 completed_at_ns=1755698349000000000,
                 workflow_id=3,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage1_test2",
@@ -161,7 +161,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755698060000000000,
                 completed_at_ns=1755698417000000000,
                 workflow_id=3,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage1_test3",
@@ -172,7 +172,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755697961000000000,
                 completed_at_ns=1755698785000000000,
                 workflow_id=25,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
         ]
         metrics.create_and_append_libcxx_aggregates(test_metrics)
@@ -211,7 +211,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755697053000000000,
                 completed_at_ns=1755698507000000000,
                 workflow_id=17,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage1_test2",
@@ -222,7 +222,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755697058000000000,
                 completed_at_ns=1755697885000000000,
                 workflow_id=17,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage2_test1",
@@ -233,7 +233,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755698513000000000,
                 completed_at_ns=1755699093000000000,
                 workflow_id=17,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage2_test2",
@@ -244,7 +244,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755698514000000000,
                 completed_at_ns=1755698987000000000,
                 workflow_id=17,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage2_test3",
@@ -255,7 +255,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755698514000000000,
                 completed_at_ns=1755699334000000000,
                 workflow_id=17,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage3_test1",
@@ -266,7 +266,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755709012000000000,
                 completed_at_ns=1755709931000000000,
                 workflow_id=17,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage3_test2",
@@ -277,7 +277,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755709146000000000,
                 completed_at_ns=1755709980000000000,
                 workflow_id=17,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "libcxx_stage3_test3",
@@ -288,7 +288,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755709136000000000,
                 completed_at_ns=1755709514000000000,
                 workflow_id=17,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
         ]
         metrics.create_and_append_libcxx_aggregates(test_metrics)
@@ -341,7 +341,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755697961000000000,
                 completed_at_ns=1755698349000000000,
                 workflow_id=3,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "ci_test2", 3, 20, 1, 2000, 2200, 2400, 37, "premerge_test"
@@ -355,7 +355,7 @@ class TestMetrics(unittest.TestCase):
                 started_at_ns=1755698060000000000,
                 completed_at_ns=1755698417000000000,
                 workflow_id=3,
-                workflow_name="Build and Test libc++"
+                workflow_name="Build and Test libc++",
             ),
             metrics.JobMetrics(
                 "ci_test3", 7, 35, 1, 3000, 3200, 3400, 85, "premerge_test"

@@ -150,9 +150,10 @@ def _construct_aggregate(ag_name: str, job_list: list[JobMetrics]) -> AggregateM
     # Compute aggregate queue time (in seconds, not ns)
     ag_queue_time = (latest_start - earliest_create) / 1000000000
     # Append the aggregate metrics to the workflow metrics list.
-    return  AggregateMetric(
+    return AggregateMetric(
         ag_name, ag_queue_time, ag_run_time, ag_status, latest_complete, ag_workflow_id
     )
+
 
 def create_and_append_libcxx_aggregates(workflow_metrics: list[JobMetrics]):
     """Find libc++ JobMetric entries and create aggregate metrics for them.
