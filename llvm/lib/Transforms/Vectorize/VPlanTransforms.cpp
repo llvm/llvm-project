@@ -2605,6 +2605,14 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
                                     AdjustEndPtr(EndPtr), EVL, Mask);
 
+  if (auto *StridedL = dyn_cast<VPWidenStridedLoadRecipe>(&CurRecipe))
+    if (StridedL->isMasked() &&
+        match(StridedL->getMask(), m_RemoveMask(HeaderMask, Mask)))
+      return new VPWidenStridedLoadRecipe(
+          *cast<LoadInst>(&StridedL->getIngredient()), StridedL->getAddr(),
+          StridedL->getStride(), &EVL, Mask, *StridedL,
+          StridedL->getDebugLoc());
+
   if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(),
                                       m_RemoveMask(HeaderMask, Mask))) &&
       !cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
