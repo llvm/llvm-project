@@ -1574,6 +1574,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   if (F.empty())
     return;
 
+  if (F.isPresplitCoroutine())
+    return;
+
   NumTotalFuncs++;
 
   OptimizationRemarkEmitter &ORE =
