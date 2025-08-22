@@ -1043,7 +1043,12 @@ def get_mma_sp_ops():
         make_mma_ops(["m16n8k16", "m16n8k32"], ["bf16"], [], ["f32"], [], True)
         + make_mma_ops(["m16n8k8", "m16n8k16"], ["tf32"], [], ["f32"], [], True)
         + make_mma_ops(
-            ["m16n8k16", "m16n8k32"], ["f16"], [], ["f16", "f32"], ["f16", "f32"], True
+            ["m16n8k16", "m16n8k32"],
+            ["f16"],
+            [],
+            ["f16", "f32"],
+            ["f16", "f32"],
+            True,
         )
         + make_mma_ops(
             ["m16n8k64", "m16n8k128"], ["s4", "u4"], ["s4", "u4"], ["s32"], [], True
