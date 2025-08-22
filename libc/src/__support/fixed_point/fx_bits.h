@@ -224,6 +224,59 @@ idiv(T x, T y) {
   return static_cast<XType>(result);
 }
 
+LIBC_INLINE long accum nrstep(long accum d, long accum x0) {
+  auto v = x0 * (2.lk - (d * x0));
+  return v;
+}
+
+/* Divide the two integers and return a fixed_point value
+ *
+ * For reference, see:
+ * https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division
+ * https://stackoverflow.com/a/9231996
+ */
+template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
+  // If the value of the second operand of the / operator is zero, the
+  // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
+  LIBC_CRASH_ON_VALUE(d, 0);
+
+  if (LIBC_UNLIKELY(n == 0)) {
+    return FXRep<XType>::ZERO();
+  }
+  bool d_is_signed = false;
+  if (d < 0) {
+    d = (d * -1);
+    d_is_signed = true;
+  }
+
+  unsigned int nv = static_cast<unsigned int>(n);
+  unsigned int dv = static_cast<unsigned int>(d);
+  unsigned int clz = cpp::countl_zero<unsigned int>(dv) - 1;
+  unsigned long int scaled_val = dv << clz;
+  /* Scale denominator to be in the range of [0.5,1] */
+  FXBits<long accum> d_scaled{scaled_val};
+  unsigned long int scaled_val_n = nv << clz;
+  /* Scale the numerator as much as the denominator to maintain correctness of
+   * the original equation
+   */
+  FXBits<long accum> n_scaled{scaled_val_n};
+  long accum n_scaled_val = n_scaled.get_val();
+  long accum d_scaled_val = d_scaled.get_val();
+  /* x0 = (48/17) - (32/17) * d_n */
+  long accum a = 2.8235lk; /* 48/17 */
+  long accum b = 1.8823lk; /* 32/17 */
+  long accum initial_approx = a - (b * d_scaled_val);
+  long accum val = nrstep(d_scaled_val, initial_approx);
+  val = nrstep(d_scaled_val, val);
+  val = nrstep(d_scaled_val, val);
+  val = nrstep(d_scaled_val, val);
+  long accum res = n_scaled_val * val;
+  if (d_is_signed) {
+    res *= static_cast<XType>(-1);
+  }
+  return static_cast<XType>(res);
+}
+
 } // namespace fixed_point
 } // namespace LIBC_NAMESPACE_DECL
 
