@@ -116,8 +116,11 @@ static std::string computeCSKYDataLayout(const Triple &TT) {
 }
 
 static std::string computeLoongArchDataLayout(const Triple &TT) {
-  if (TT.isLoongArch64())
+  if (TT.isLoongArch64()) {
+    if (TT.isUEFI())
+      return "e-m:w-p:64:64-i64:64-i128:128-n32:64-S128";
     return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+  }
   assert(TT.isLoongArch32() && "only LA32 and LA64 are currently supported");
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
