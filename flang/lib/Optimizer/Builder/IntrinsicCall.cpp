@@ -400,7 +400,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"co_broadcast",
      &I::genCoBroadcast,
      {{{"a", asBox},
-       {"source_image", asAddr, handleDynamicOptional},
+       {"source_image", asAddr},
        {"stat", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental*/ false},
@@ -3681,14 +3681,14 @@ mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
 void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
   checkCoarrayEnabled();
   assert(args.size() == 4);
-  mlir::Value refNone =
-      builder
-          .create<fir::AbsentOp>(loc, builder.getRefType(builder.getI32Type()))
-          .getResult();
-  mlir::Value sourceImage =
-      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
+  mlir::Value sourceImage = fir::getBase(args[1]);
   mlir::Value status =
-      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
+      isStaticallyAbsent(args[2])
+          ? builder
+                .create<fir::AbsentOp>(loc,
+                                       builder.getRefType(builder.getI32Type()))
+                .getResult()
+          : fir::getBase(args[2]);
   mlir::Value errmsg =
       isStaticallyAbsent(args[3])
           ? builder.create<fir::AbsentOp>(loc, PRIF_ERRMSG_TYPE).getResult()
