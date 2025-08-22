@@ -19,6 +19,12 @@
   __attribute__((__always_inline__, __nodebug__,                               \
                  __target__("avx512cd,evex512"), __min_vector_width__(512)))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_conflict_epi64 (__m512i __A)
 {
@@ -63,10 +69,9 @@ _mm512_maskz_conflict_epi32 (__mmask16 __U, __m512i __A)
                                             (__v16si)_mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_lzcnt_epi32 (__m512i __A)
-{
-  return (__m512i) __builtin_ia32_vplzcntd_512 ((__v16si) __A);
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_lzcnt_epi32(__m512i __A) {
+  return (__m512i)__builtin_elementwise_ctlz((__v16si)__A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -85,10 +90,9 @@ _mm512_maskz_lzcnt_epi32 (__mmask16 __U, __m512i __A)
                                              (__v16si)_mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_lzcnt_epi64 (__m512i __A)
-{
-  return (__m512i) __builtin_ia32_vplzcntq_512 ((__v8di) __A);
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_lzcnt_epi64(__m512i __A) {
+  return (__m512i)__builtin_elementwise_ctlz((__v8di)__A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
