@@ -5279,7 +5279,7 @@ public:
                 Checked,
             SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
             ArrayRef<llvm::Value *> DynamicArgs,
-            std::unique_ptr<RuntimeTrapDiagnosticBuilder> RTDB = nullptr);
+            const TrapReason *TR = nullptr);
 
   /// Emit a slow path cross-DSO CFI check which calls __cfi_slowpath
   /// if Cond if false.
@@ -5295,8 +5295,7 @@ public:
   /// Create a basic block that will call the trap intrinsic, and emit a
   /// conditional branch to it, for the -ftrapv checks.
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
-                     bool NoMerge = false, StringRef Message = "",
-                     StringRef Category = "");
+                     bool NoMerge = false, const TrapReason *TR = nullptr);
 
   /// Emit a call to trap or debugtrap and attach function attribute
   /// "trap-func-name" if specified.

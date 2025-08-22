@@ -1814,6 +1814,7 @@ void ScalarExprEmitter::EmitBinOpCheck(
   SmallVector<llvm::Constant *, 4> StaticData;
   SmallVector<llvm::Value *, 2> DynamicData;
   std::unique_ptr<RuntimeTrapDiagnosticBuilder> RTDB = nullptr;
+  TrapReason TR;
 
   BinaryOperatorKind Opcode = Info.Opcode;
   if (BinaryOperator::isCompoundAssignmentOp(Opcode))
@@ -1867,16 +1868,16 @@ void ScalarExprEmitter::EmitBinOpCheck(
               SanitizerKind::SignedIntegerOverflow)) {
         // Only pay the cost for constructing the trap diagnostic if they are
         // going to be used.
-        RTDB = CGF.CGM.RuntimeDiag(diag::trap_ubsan_arith_overflow);
-        *RTDB << Info.Ty->isSignedIntegerOrEnumerationType()
-              << ArithOverflowKind << Info.E;
+        CGF.CGM.RuntimeDiag(diag::trap_ubsan_arith_overflow, TR)
+            << Info.Ty->isSignedIntegerOrEnumerationType() << ArithOverflowKind
+            << Info.E;
       }
     }
     DynamicData.push_back(Info.LHS);
     DynamicData.push_back(Info.RHS);
   }
 
-  CGF.EmitCheck(Checks, Check, StaticData, DynamicData, std::move(RTDB));
+  CGF.EmitCheck(Checks, Check, StaticData, DynamicData, TR.getPtr());
 }
 
 //===----------------------------------------------------------------------===//

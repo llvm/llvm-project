@@ -1826,9 +1826,8 @@ public:
   }
 
   /// Helper function to construct a RuntimeTrapDiagnosticBuilder
-  [[nodiscard]] std::unique_ptr<RuntimeTrapDiagnosticBuilder>
-  RuntimeDiag(unsigned DiagID) {
-    return std::make_unique<RuntimeTrapDiagnosticBuilder>(&getDiags(), DiagID);
+  RuntimeTrapDiagnosticBuilder RuntimeDiag(unsigned DiagID, TrapReason &TR) {
+    return RuntimeTrapDiagnosticBuilder(&getDiags(), DiagID, TR);
   }
 
 private:
