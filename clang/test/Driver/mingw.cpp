@@ -14,9 +14,9 @@
 
 
 // RUN: %clang --target=i686-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_msys2_tree/msys64/mingw32 %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_MSYS_TREE %s
-// CHECK_MINGW_MSYS_TREE: "[[BASE:[^"]+]]/Inputs/mingw_msys2_tree/msys64{{/|\\\\}}mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}4.9.2"
-// CHECK_MINGW_MSYS_TREE: "[[BASE]]/Inputs/mingw_msys2_tree/msys64/mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}4.9.2{{/|\\\\}}i686-w64-mingw32"
-// CHECK_MINGW_MSYS_TREE: "[[BASE]]/Inputs/mingw_msys2_tree/msys64/mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}4.9.2{{/|\\\\}}backward"
+// CHECK_MINGW_MSYS_TREE: "[[BASE:[^"]+]]/Inputs/mingw_msys2_tree/msys64{{/|\\\\}}mingw32{{/|\\\\}}include{{/|\\\\}}c++"
+// CHECK_MINGW_MSYS_TREE: "[[BASE]]/Inputs/mingw_msys2_tree/msys64/mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}i686-w64-mingw32"
+// CHECK_MINGW_MSYS_TREE: "[[BASE]]/Inputs/mingw_msys2_tree/msys64/mingw32{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
 // CHECK_MINGW_MSYS_TREE: "[[BASE]]/Inputs/mingw_msys2_tree/msys64/mingw32{{/|\\\\}}include"
 
 
@@ -27,9 +27,9 @@
 
 
 // RUN: %clang --target=x86_64-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_ubuntu_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_UBUNTU_TREE %s
-// CHECK_MINGW_UBUNTU_TREE: "[[BASE:[^"]+]]/Inputs/mingw_ubuntu_tree/usr{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}4.8"
-// CHECK_MINGW_UBUNTU_TREE: "[[BASE]]/Inputs/mingw_ubuntu_tree/usr{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}4.8{{/|\\\\}}x86_64-w64-mingw32"
-// CHECK_MINGW_UBUNTU_TREE: "[[BASE]]/Inputs/mingw_ubuntu_tree/usr{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}4.8{{/|\\\\}}backward"
+// CHECK_MINGW_UBUNTU_TREE: "[[BASE:[^"]+]]/Inputs/mingw_ubuntu_tree/usr{{/|\\\\}}include{{/|\\\\}}c++"
+// CHECK_MINGW_UBUNTU_TREE: "[[BASE]]/Inputs/mingw_ubuntu_tree/usr{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
+// CHECK_MINGW_UBUNTU_TREE: "[[BASE]]/Inputs/mingw_ubuntu_tree/usr{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
 
 
 // RUN: %clang --target=x86_64-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_ubuntu_posix_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_UBUNTU_POSIX_TREE %s

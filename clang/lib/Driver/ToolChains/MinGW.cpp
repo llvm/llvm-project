@@ -858,6 +858,7 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
       CppIncludeBase += Slash;
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + TripleDirName);
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + "backward");
+      break;
     }
     break;
   }
