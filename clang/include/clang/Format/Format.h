@@ -62,6 +62,17 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
+  /// Force break after the left bracket of a braced initializer list (when
+  ///  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  /// limit.
+  /// \code
+  ///   true:                             false:
+  ///   vector<int> x {         vs.       vector<int> x {1,
+  ///      1, 2, 3}                            2, 3}
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketBracedList;
+
   /// Force break after the left parenthesis of an if control statement
   /// when the expression exceeds the column limit.
   /// \code
@@ -2250,6 +2261,19 @@ struct FormatStyle {
   /// The brace breaking style to use.
   /// \version 3.7
   BraceBreakingStyle BreakBeforeBraces;
+
+  /// Force break before the right bracket of a braced initializer list (when
+  ///  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  /// limit. The break before the right bracket is only made if there is a
+  /// break after the opening bracket.
+  /// \code
+  ///   true:                             false:
+  ///   vector<int> x {         vs.       vector<int> x {
+  ///      1, 2, 3                           1, 2, 3}
+  ///   }
+  /// \endcode
+  /// \version 22
+  bool BreakBeforeCloseBracketBracedList;
 
   /// Force break before the right parenthesis of an if control statement
   /// when the expression exceeds the column limit. The break before the
@@ -5561,6 +5585,8 @@ struct FormatStyle {
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakAfterOpenBracketBracedList ==
+               R.BreakAfterOpenBracketBracedList &&
            BreakAfterOpenBracketIf == R.BreakAfterOpenBracketIf &&
            BreakAfterOpenBracketLoop == R.BreakAfterOpenBracketLoop &&
            BreakAfterOpenBracketSwitch == R.BreakAfterOpenBracketSwitch &&
@@ -5568,6 +5594,8 @@ struct FormatStyle {
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
+           BreakBeforeCloseBracketBracedList ==
+               R.BreakBeforeCloseBracketBracedList &&
            BreakBeforeCloseBracketIf == R.BreakBeforeCloseBracketIf &&
            BreakBeforeCloseBracketLoop == R.BreakBeforeCloseBracketLoop &&
            BreakBeforeCloseBracketSwitch == R.BreakBeforeCloseBracketSwitch &&

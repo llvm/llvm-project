@@ -5106,6 +5106,7 @@ TEST_F(FormatTest, BracedInitializerIndentWidth) {
   auto Style = getLLVMStyleWithColumns(60);
   Style.BinPackArguments = true;
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketBracedList = true;
   Style.BracedInitializerIndentWidth = 6;
 
   // Non-initializing braces are unaffected by BracedInitializerIndentWidth.
@@ -5282,6 +5283,7 @@ TEST_F(FormatTest, BracedInitializerIndentWidth) {
 
   // Aligning after open braces unaffected by BracedInitializerIndentWidth.
   Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.BreakAfterOpenBracketBracedList = false;
   verifyFormat("SomeStruct s{\"xxxxxxxxxxxxx\", \"yyyyyyyyyyyyy\",\n"
                "             \"zzzzzzzzzzzzz\"};",
                Style);
@@ -9423,7 +9425,7 @@ TEST_F(FormatTest, AlignsAfterReturn) {
                "    code == a || code == b;");
 }
 
-TEST_F(FormatTest, AlignAfterConditionalStatements) {
+TEST_F(FormatTest, AlignAndBreakControlStatements) {
   FormatStyle Style = getLLVMStyle();
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
@@ -14615,7 +14617,7 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
                "};",
                NoBinPacking);
 
-  NoBinPacking.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  NoBinPacking.BreakAfterOpenBracketBracedList = true;
   verifyFormat("static uint8 CddDp83848Reg[] = {\n"
                "    CDDDP83848_BMCR_REGISTER,\n"
                "    CDDDP83848_BMSR_REGISTER,\n"
@@ -27632,6 +27634,409 @@ TEST_F(FormatTest, MultilineLambdaInConditional) {
                Style);
 }
 
+<<<<<<< HEAD
+=======
+TEST_F(FormatTest, AlignAfterOpenBracketBlockIndent) {
+  auto Style = getLLVMStyle();
+
+  StringRef Short = "functionCall(paramA, paramB, paramC);\n"
+                    "void functionDecl(int a, int b, int c);";
+
+  StringRef Medium = "functionCall(paramA, paramB, paramC, paramD, paramE, "
+                     "paramF, paramG, paramH, paramI);\n"
+                     "void functionDecl(int argumentA, int argumentB, int "
+                     "argumentC, int argumentD, int argumentE);";
+
+  verifyFormat(Short, Style);
+
+  StringRef NoBreak = "functionCall(paramA, paramB, paramC, paramD, paramE, "
+                      "paramF, paramG, paramH,\n"
+                      "             paramI);\n"
+                      "void functionDecl(int argumentA, int argumentB, int "
+                      "argumentC, int argumentD,\n"
+                      "                  int argumentE);";
+
+  verifyFormat(NoBreak, Medium, Style);
+  verifyFormat(NoBreak,
+               "functionCall(\n"
+               "    paramA,\n"
+               "    paramB,\n"
+               "    paramC,\n"
+               "    paramD,\n"
+               "    paramE,\n"
+               "    paramF,\n"
+               "    paramG,\n"
+               "    paramH,\n"
+               "    paramI\n"
+               ");\n"
+               "void functionDecl(\n"
+               "    int argumentA,\n"
+               "    int argumentB,\n"
+               "    int argumentC,\n"
+               "    int argumentD,\n"
+               "    int argumentE\n"
+               ");",
+               Style);
+
+  verifyFormat("outerFunctionCall(nestedFunctionCall(argument1),\n"
+               "                  nestedLongFunctionCall(argument1, "
+               "argument2, argument3,\n"
+               "                                         argument4, "
+               "argument5));",
+               Style);
+
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+
+  verifyFormat(Short, Style);
+  verifyFormat(
+      "functionCall(\n"
+      "    paramA, paramB, paramC, paramD, paramE, paramF, paramG, paramH, "
+      "paramI\n"
+      ");\n"
+      "void functionDecl(\n"
+      "    int argumentA, int argumentB, int argumentC, int argumentD, int "
+      "argumentE\n"
+      ");",
+      Medium, Style);
+
+  Style.AllowAllArgumentsOnNextLine = false;
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+
+  verifyFormat(Short, Style);
+  verifyFormat(
+      "functionCall(\n"
+      "    paramA, paramB, paramC, paramD, paramE, paramF, paramG, paramH, "
+      "paramI\n"
+      ");\n"
+      "void functionDecl(\n"
+      "    int argumentA, int argumentB, int argumentC, int argumentD, int "
+      "argumentE\n"
+      ");",
+      Medium, Style);
+
+  Style.BinPackArguments = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+
+  verifyFormat(Short, Style);
+
+  verifyFormat("functionCall(\n"
+               "    paramA,\n"
+               "    paramB,\n"
+               "    paramC,\n"
+               "    paramD,\n"
+               "    paramE,\n"
+               "    paramF,\n"
+               "    paramG,\n"
+               "    paramH,\n"
+               "    paramI\n"
+               ");\n"
+               "void functionDecl(\n"
+               "    int argumentA,\n"
+               "    int argumentB,\n"
+               "    int argumentC,\n"
+               "    int argumentD,\n"
+               "    int argumentE\n"
+               ");",
+               Medium, Style);
+
+  verifyFormat("outerFunctionCall(\n"
+               "    nestedFunctionCall(argument1),\n"
+               "    nestedLongFunctionCall(\n"
+               "        argument1,\n"
+               "        argument2,\n"
+               "        argument3,\n"
+               "        argument4,\n"
+               "        argument5\n"
+               "    )\n"
+               ");",
+               Style);
+
+  verifyFormat("int a = (int)b;", Style);
+  verifyFormat("int a = (int)b;",
+               "int a = (\n"
+               "    int\n"
+               ") b;",
+               Style);
+
+  verifyFormat("return (true);", Style);
+  verifyFormat("return (true);",
+               "return (\n"
+               "    true\n"
+               ");",
+               Style);
+
+  verifyFormat("void foo();", Style);
+  verifyFormat("void foo();",
+               "void foo(\n"
+               ");",
+               Style);
+
+  verifyFormat("void foo() {}", Style);
+  verifyFormat("void foo() {}",
+               "void foo(\n"
+               ") {\n"
+               "}",
+               Style);
+
+  verifyFormat("auto string = std::string();", Style);
+  verifyFormat("auto string = std::string();",
+               "auto string = std::string(\n"
+               ");",
+               Style);
+
+  verifyFormat("void (*functionPointer)() = nullptr;", Style);
+  verifyFormat("void (*functionPointer)() = nullptr;",
+               "void (\n"
+               "    *functionPointer\n"
+               ")\n"
+               "(\n"
+               ") = nullptr;",
+               Style);
+}
+
+TEST_F(FormatTest, AlignAfterOpenBracketBlockIndentIfStatement) {
+  auto Style = getLLVMStyle();
+
+  verifyFormat("if (foo()) {\n"
+               "  return;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (quiteLongArg !=\n"
+               "    (alsoLongArg - 1)) { // ABC is a very longgggggggggggg "
+               "comment\n"
+               "  return;\n"
+               "}",
+               Style);
+
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+
+  verifyFormat("if (foo()) {\n"
+               "  return;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (quiteLongArg !=\n"
+               "    (alsoLongArg - 1)) { // ABC is a very longgggggggggggg "
+               "comment\n"
+               "  return;\n"
+               "}",
+               Style);
+
+  verifyFormat("void foo() {\n"
+               "  if (camelCaseName < alsoLongName ||\n"
+               "      anotherEvenLongerName <=\n"
+               "          thisReallyReallyReallyReallyReallyReallyLongerName ||"
+               "\n"
+               "      otherName < thisLastName) {\n"
+               "    return;\n"
+               "  } else if (quiteLongName < alsoLongName ||\n"
+               "             anotherEvenLongerName <=\n"
+               "                 thisReallyReallyReallyReallyReallyReallyLonger"
+               "Name ||\n"
+               "             otherName < thisLastName) {\n"
+               "    return;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  Style.ContinuationIndentWidth = 2;
+  verifyFormat("void foo() {\n"
+               "  if (ThisIsRatherALongIfClause && thatIExpectToBeBroken ||\n"
+               "      ontoMultipleLines && whenFormattedCorrectly) {\n"
+               "    if (false) {\n"
+               "      return;\n"
+               "    } else if (thisIsRatherALongIfClause && "
+               "thatIExpectToBeBroken ||\n"
+               "               ontoMultipleLines && whenFormattedCorrectly) {\n"
+               "      return;\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, AlignAfterOpenBracketBlockIndentForStatement) {
+  auto Style = getLLVMStyle();
+
+  verifyFormat("for (int i = 0; i < 5; ++i) {\n"
+               "  doSomething();\n"
+               "}",
+               Style);
+
+  verifyFormat("for (int myReallyLongCountVariable = 0; "
+               "myReallyLongCountVariable < count;\n"
+               "     myReallyLongCountVariable++) {\n"
+               "  doSomething();\n"
+               "}",
+               Style);
+
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+
+  verifyFormat("for (int i = 0; i < 5; ++i) {\n"
+               "  doSomething();\n"
+               "}",
+               Style);
+
+  verifyFormat("for (int myReallyLongCountVariable = 0; "
+               "myReallyLongCountVariable < count;\n"
+               "     myReallyLongCountVariable++) {\n"
+               "  doSomething();\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, AlignAfterOpenBracketBlockIndentInitializers) {
+  auto Style = getLLVMStyleWithColumns(60);
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
+  // Aggregate initialization.
+  verifyFormat("int LooooooooooooooooooooooooongVariable[2] = {\n"
+               "    10000000, 20000000\n"
+               "};",
+               Style);
+  verifyFormat("SomeStruct s{\n"
+               "    \"xxxxxxxxxxxxxxxx\", \"yyyyyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzzzzz\"\n"
+               "};",
+               Style);
+  // Designated initializers.
+  verifyFormat("int LooooooooooooooooooooooooongVariable[2] = {\n"
+               "    [0] = 10000000, [1] = 20000000\n"
+               "};",
+               Style);
+  verifyFormat("SomeStruct s{\n"
+               "    .foo = \"xxxxxxxxxxxxx\",\n"
+               "    .bar = \"yyyyyyyyyyyyy\",\n"
+               "    .baz = \"zzzzzzzzzzzzz\"\n"
+               "};",
+               Style);
+  // List initialization.
+  verifyFormat("SomeStruct s{\n"
+               "    \"xxxxxxxxxxxxx\",\n"
+               "    \"yyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzz\",\n"
+               "};",
+               Style);
+  verifyFormat("SomeStruct{\n"
+               "    \"xxxxxxxxxxxxx\",\n"
+               "    \"yyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzz\",\n"
+               "};",
+               Style);
+  verifyFormat("new SomeStruct{\n"
+               "    \"xxxxxxxxxxxxx\",\n"
+               "    \"yyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzz\",\n"
+               "};",
+               Style);
+  // Member initializer.
+  verifyFormat("class SomeClass {\n"
+               "  SomeStruct s{\n"
+               "      \"xxxxxxxxxxxxx\",\n"
+               "      \"yyyyyyyyyyyyy\",\n"
+               "      \"zzzzzzzzzzzzz\",\n"
+               "  };\n"
+               "};",
+               Style);
+  // Constructor member initializer.
+  verifyFormat("SomeClass::SomeClass : strct{\n"
+               "                           \"xxxxxxxxxxxxx\",\n"
+               "                           \"yyyyyyyyyyyyy\",\n"
+               "                           \"zzzzzzzzzzzzz\",\n"
+               "                       } {}",
+               Style);
+  // Copy initialization.
+  verifyFormat("SomeStruct s = SomeStruct{\n"
+               "    \"xxxxxxxxxxxxx\",\n"
+               "    \"yyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzz\",\n"
+               "};",
+               Style);
+  // Copy list initialization.
+  verifyFormat("SomeStruct s = {\n"
+               "    \"xxxxxxxxxxxxx\",\n"
+               "    \"yyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzz\",\n"
+               "};",
+               Style);
+  // Assignment operand initialization.
+  verifyFormat("s = {\n"
+               "    \"xxxxxxxxxxxxx\",\n"
+               "    \"yyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzz\",\n"
+               "};",
+               Style);
+  // Returned object initialization.
+  verifyFormat("return {\n"
+               "    \"xxxxxxxxxxxxx\",\n"
+               "    \"yyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzz\",\n"
+               "};",
+               Style);
+  // Initializer list.
+  verifyFormat("auto initializerList = {\n"
+               "    \"xxxxxxxxxxxxx\",\n"
+               "    \"yyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzz\",\n"
+               "};",
+               Style);
+  // Function parameter initialization.
+  verifyFormat("func({\n"
+               "    \"xxxxxxxxxxxxx\",\n"
+               "    \"yyyyyyyyyyyyy\",\n"
+               "    \"zzzzzzzzzzzzz\",\n"
+               "});",
+               Style);
+  // Nested init lists.
+  verifyFormat("SomeStruct s = {\n"
+               "    {{init1, init2, init3, init4, init5},\n"
+               "     {init1, init2, init3, init4, init5}}\n"
+               "};",
+               Style);
+  verifyFormat("SomeStruct s = {\n"
+               "    {{\n"
+               "         .init1 = 1,\n"
+               "         .init2 = 2,\n"
+               "         .init3 = 3,\n"
+               "         .init4 = 4,\n"
+               "         .init5 = 5,\n"
+               "     },\n"
+               "     {init1, init2, init3, init4, init5}}\n"
+               "};",
+               Style);
+  verifyFormat("SomeArrayT a[3] = {\n"
+               "    {\n"
+               "        foo,\n"
+               "        bar,\n"
+               "    },\n"
+               "    {\n"
+               "        foo,\n"
+               "        bar,\n"
+               "    },\n"
+               "    SomeArrayT{},\n"
+               "};",
+               Style);
+  verifyFormat("SomeArrayT a[3] = {\n"
+               "    {foo},\n"
+               "    {\n"
+               "        {\n"
+               "            init1,\n"
+               "            init2,\n"
+               "            init3,\n"
+               "        },\n"
+               "        {\n"
+               "            init1,\n"
+               "            init2,\n"
+               "            init3,\n"
+               "        },\n"
+               "    },\n"
+               "    {baz},\n"
+               "};",
+               Style);
+}
+
+>>>>>>> cbd14c5d622a (add support for braced list initializers)
 TEST_F(FormatTest, UnderstandsDigraphs) {
   verifyFormat("int arr<:5:> = {};");
   verifyFormat("int arr[5] = <%%>;");

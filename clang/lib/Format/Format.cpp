@@ -1067,6 +1067,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakAfterAttributes", Style.BreakAfterAttributes);
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
+    IO.mapOptional("BreakAfterOpenBracketBracedList",
+                   Style.BreakAfterOpenBracketBracedList);
     IO.mapOptional("BreakAfterOpenBracketIf", Style.BreakAfterOpenBracketIf);
     IO.mapOptional("BreakAfterOpenBracketLoop",
                    Style.BreakAfterOpenBracketLoop);
@@ -1076,6 +1078,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakArrays", Style.BreakArrays);
     IO.mapOptional("BreakBeforeBinaryOperators",
                    Style.BreakBeforeBinaryOperators);
+    IO.mapOptional("BreakBeforeCloseBracketBracedList",
+                   Style.BreakBeforeCloseBracketBracedList);
     IO.mapOptional("BreakBeforeCloseBracketIf",
                    Style.BreakBeforeCloseBracketIf);
     IO.mapOptional("BreakBeforeCloseBracketLoop",
@@ -1620,6 +1624,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakAdjacentStringLiterals = true;
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
+  LLVMStyle.BreakAfterOpenBracketBracedList = false;
   LLVMStyle.BreakAfterOpenBracketIf = false;
   LLVMStyle.BreakAfterOpenBracketLoop = false;
   LLVMStyle.BreakAfterOpenBracketSwitch = false;
@@ -1627,6 +1632,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
+  LLVMStyle.BreakBeforeCloseBracketBracedList = false;
   LLVMStyle.BreakBeforeCloseBracketIf = false;
   LLVMStyle.BreakBeforeCloseBracketLoop = false;
   LLVMStyle.BreakBeforeCloseBracketSwitch = false;
@@ -1895,6 +1901,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.SpacesBeforeTrailingComments = 1;
   } else if (Language == FormatStyle::LK_JavaScript) {
     GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+    GoogleStyle.BreakAfterOpenBracketBracedList = true;
     GoogleStyle.BreakAfterOpenBracketIf = true;
     GoogleStyle.BreakAfterOpenBracketLoop = false;
     GoogleStyle.BreakAfterOpenBracketSwitch = false;
