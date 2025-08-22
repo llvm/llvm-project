@@ -2137,15 +2137,15 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case AMDGPU::AV_MOV_B64_IMM_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
     if (SIRegisterInfo::isAGPRClass(RI.getPhysRegBaseClass(Dst))) {
-      uint64_t Imm = static_cast<uint64_t>(MI.getOperand(1).getImm());
+      int64_t Imm = MI.getOperand(1).getImm();
 
       Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
       Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
       BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DstLo)
-          .addImm(SignExtend64<32>(Lo_32(Imm)))
+          .addImm(SignExtend64<32>(Imm))
           .addReg(Dst, RegState::Implicit | RegState::Define);
       BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DstHi)
-          .addImm(SignExtend64<32>(Hi_32(Imm)))
+          .addImm(SignExtend64<32>(Imm >> 32))
           .addReg(Dst, RegState::Implicit | RegState::Define);
       MI.eraseFromParent();
       break;
