@@ -3936,7 +3936,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
             Ctx.TTI.getStridedMemoryOpCost(Instruction::Load, DataTy, PtrUV,
                                            MemR->isMasked(), Alignment,
                                            Ctx.CostKind, &Ingredient);
-        return StridedLoadStoreCost < CurrentCost;
+        // FIXME: Fix the cost of gather/scatter and strided access.
+        return StridedLoadStoreCost <= CurrentCost;
       };
 
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
