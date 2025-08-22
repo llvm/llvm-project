@@ -657,7 +657,7 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
 }
 
 Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
-                     void *PatternPtr, size_t FillSize) {
+                     const void *PatternPtr, size_t FillSize) {
   return Queue->Device->Device->dataFill(Ptr, PatternPtr, PatternSize, FillSize,
                                          Queue->AsyncInfo);
 }

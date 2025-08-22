@@ -76,7 +76,7 @@ def : Function {
       Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN_OPTIONAL>,
       Param<"void*", "Ptr", "destination pointer to start filling at", PARAM_IN>,
       Param<"size_t", "PatternSize", "the size of the pattern in bytes", PARAM_IN>,
-      Param<"void*", "PatternPtr", "", PARAM_IN>,
+      Param<"const void*", "PatternPtr", "", PARAM_IN>,
       Param<"size_t", "FillSize", "number of bytes to fill", PARAM_IN>,
   ];
   let returns = [
