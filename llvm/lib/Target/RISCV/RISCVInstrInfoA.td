@@ -304,39 +304,42 @@ def : Pat<(XLenVT (atomic_load_nand_i32_acq_rel GPR:$addr, GPR:$incr)),
 def : Pat<(XLenVT (atomic_load_nand_i32_seq_cst GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 7)>;
 
-let Size = 28 in
-def PseudoMaskedAtomicSwap32 : PseudoMaskedAMO;
+let Size = 28 in {
+  def PseudoMaskedAtomicSwap32 : PseudoMaskedAMO;
+  def PseudoMaskedAtomicLoadAdd32 : PseudoMaskedAMO;
+  def PseudoMaskedAtomicLoadSub32 : PseudoMaskedAMO;
+}
+let Size = 32 in {
+  def PseudoMaskedAtomicLoadNand32 : PseudoMaskedAMO;
+}
+let Size = 44 in {
+  def PseudoMaskedAtomicLoadMax32 : PseudoMaskedAMOMinMax;
+  def PseudoMaskedAtomicLoadMin32 : PseudoMaskedAMOMinMax;
+}
+let Size = 36 in {
+ def PseudoMaskedAtomicLoadUMax32 : PseudoMaskedAMOUMinUMax;
+ def PseudoMaskedAtomicLoadUMin32 : PseudoMaskedAMOUMinUMax;
+}
+} // Predicates = [HasStdExtA]
+
+let Predicates = [HasStdExtA, IsRV32] in {
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i32,
                          PseudoMaskedAtomicSwap32>;
-let Size = 28 in
-def PseudoMaskedAtomicLoadAdd32 : PseudoMaskedAMO;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_add_i32,
                          PseudoMaskedAtomicLoadAdd32>;
-let Size = 28 in
-def PseudoMaskedAtomicLoadSub32 : PseudoMaskedAMO;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_sub_i32,
                          PseudoMaskedAtomicLoadSub32>;
-let Size = 32 in
-def PseudoMaskedAtomicLoadNand32 : PseudoMaskedAMO;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_nand_i32,
                          PseudoMaskedAtomicLoadNand32>;
-let Size = 44 in
-def PseudoMaskedAtomicLoadMax32 : PseudoMaskedAMOMinMax;
 def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_max_i32,
                                PseudoMaskedAtomicLoadMax32>;
-let Size = 44 in
-def PseudoMaskedAtomicLoadMin32 : PseudoMaskedAMOMinMax;
 def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_min_i32,
                                PseudoMaskedAtomicLoadMin32>;
-let Size = 36 in
-def PseudoMaskedAtomicLoadUMax32 : PseudoMaskedAMOUMinUMax;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umax_i32,
                          PseudoMaskedAtomicLoadUMax32>;
-let Size = 36 in
-def PseudoMaskedAtomicLoadUMin32 : PseudoMaskedAMOUMinUMax;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umin_i32,
                          PseudoMaskedAtomicLoadUMin32>;
-} // Predicates = [HasStdExtA]
+} // Predicates = [HasStdExtA, IsRV32]
 
 let Predicates = [HasStdExtA, IsRV64] in {
 

@@ -27,6 +27,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -605,7 +606,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Bytes = Bytes_.slice(0, MaxInstBytesNum);
     }
 
-    if (isGFX11Plus() && Bytes.size() >= 12 ) {
+    if (isGFX11Plus() && Bytes.size() >= 12) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
 
       if (isGFX11() &&
