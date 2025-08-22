@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -1162,7 +1163,7 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 163840;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
-  return 0;
+  return 32768;
 }
 
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
@@ -1675,6 +1676,29 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
     return std::nullopt;
   }
   return Vals;
+}
+
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
+  assert((MD.getNumOperands() % 2 == 0) && "invalid number of operands!");
+  for (unsigned I = 0, E = MD.getNumOperands() / 2; I != E; ++I) {
+    auto Low =
+        mdconst::extract<ConstantInt>(MD.getOperand(2 * I + 0))->getValue();
+    auto High =
+        mdconst::extract<ConstantInt>(MD.getOperand(2 * I + 1))->getValue();
+    // There are two types of [A; B) ranges:
+    //  A < B, e.g. [4; 5) which is a range that only includes 4.
+    //  A > B, e.g. [5; 4) which is a range that wraps around and includes
+    //         everything except 4.
+    if (Low.ult(High)) {
+      if (Low.ule(Val) && High.ugt(Val))
+        return true;
+    } else {
+      if (Low.uge(Val) && High.ult(Val))
+        return true;
+    }
+  }
+
+  return false;
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {
@@ -2417,7 +2441,11 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
   return 0;
 }
 
-unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) { return 16; }
+unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
+  if (isGFX1250(STI))
+    return 32;
+  return 16;
+}
 
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
