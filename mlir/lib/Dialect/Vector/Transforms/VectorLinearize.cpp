@@ -771,7 +771,7 @@ struct LinearizeVectorStore final
 ///
 ///     %0 = vector.from_elements %a, %b, %c, %d : vector<2x2xf32>
 ///
-///   is converted to:
+/// is converted to:
 ///
 ///     %0 = vector.from_elements %a, %b, %c, %d : vector<4xf32>
 ///     %1 = vector.shape_cast %0 : vector<4xf32> to vector<2x2xf32>
