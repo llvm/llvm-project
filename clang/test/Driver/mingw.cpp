@@ -10,9 +10,9 @@
 
 
 // RUN: %clang --target=i686-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_mingw_org_tree/mingw %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_ORG_TREE %s
-// CHECK_MINGW_ORG_TREE: "[[BASE:[^"]+]]/Inputs/mingw_mingw_org_tree/mingw{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}mingw32{{/|\\\\}}4.8.1{{/|\\\\}}include{{/|\\\\}}c++"
-// CHECK_MINGW_ORG_TREE: "[[BASE]]/Inputs/mingw_mingw_org_tree/mingw{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}mingw32{{/|\\\\}}4.8.1{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}mingw32"
-// CHECK_MINGW_ORG_TREE: "[[BASE]]/Inputs/mingw_mingw_org_tree/mingw{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}mingw32{{/|\\\\}}4.8.1{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
+// CHECK_MINGW_ORG_TREE: "[[BASE:[^"]+]]/Inputs/mingw_mingw_org_tree/mingw{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}mingw32{{/|\\\\}}4.8.1{{/|\\\\}}include{{/|\\\\}}c++"
+// CHECK_MINGW_ORG_TREE: "[[BASE]]/Inputs/mingw_mingw_org_tree/mingw{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}mingw32{{/|\\\\}}4.8.1{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}mingw32"
+// CHECK_MINGW_ORG_TREE: "[[BASE]]/Inputs/mingw_mingw_org_tree/mingw{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}mingw32{{/|\\\\}}4.8.1{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
 // CHECK_MINGW_ORG_TREE: "[[BASE]]/Inputs/mingw_mingw_org_tree/mingw{{/|\\\\}}mingw32{{/|\\\\}}include"
 // CHECK_MINGW_ORG_TREE: "[[BASE]]/Inputs/mingw_mingw_org_tree/mingw{{/|\\\\}}include"
 
@@ -33,9 +33,9 @@
 
 
 // RUN: %clang --target=x86_64-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_opensuse_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_OPENSUSE_TREE %s
-// CHECK_MINGW_OPENSUSE_TREE: "[[BASE:[^"]+]]/Inputs/mingw_opensuse_tree/usr{{/|\\\\}}lib64{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}5.1.0{{/|\\\\}}include{{/|\\\\}}c++"
-// CHECK_MINGW_OPENSUSE_TREE: "[[BASE]]/Inputs/mingw_opensuse_tree/usr{{/|\\\\}}lib64{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}5.1.0{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
-// CHECK_MINGW_OPENSUSE_TREE: "[[BASE]]/Inputs/mingw_opensuse_tree/usr{{/|\\\\}}lib64{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}5.1.0{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
+// CHECK_MINGW_OPENSUSE_TREE: "[[BASE:[^"]+]]/Inputs/mingw_opensuse_tree/usr{{/|\\\\}}lib64{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}5.1.0{{/|\\\\}}include{{/|\\\\}}c++"
+// CHECK_MINGW_OPENSUSE_TREE: "[[BASE]]/Inputs/mingw_opensuse_tree/usr{{/|\\\\}}lib64{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}5.1.0{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
+// CHECK_MINGW_OPENSUSE_TREE: "[[BASE]]/Inputs/mingw_opensuse_tree/usr{{/|\\\\}}lib64{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}5.1.0{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
 // CHECK_MINGW_OPENSUSE_TREE: "[[BASE]]/Inputs/mingw_opensuse_tree/usr{{/|\\\\}}x86_64-w64-mingw32/sys-root/mingw{{/|\\\\}}include"
 
 
@@ -61,9 +61,9 @@
 
 
 // RUN: %clang --target=x86_64-pc-windows-gnu -rtlib=platform -stdlib=libstdc++ -c -### --sysroot=%S/Inputs/mingw_ubuntu_posix_tree/usr %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_UBUNTU_POSIX_TREE %s
-// CHECK_MINGW_UBUNTU_POSIX_TREE: "[[BASE:[^"]+]]/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++"
-// CHECK_MINGW_UBUNTU_POSIX_TREE: "[[BASE]]/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
-// CHECK_MINGW_UBUNTU_POSIX_TREE: "[[BASE]]/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
+// CHECK_MINGW_UBUNTU_POSIX_TREE: "[[BASE:[^"]+]]/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++"
+// CHECK_MINGW_UBUNTU_POSIX_TREE: "[[BASE]]/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
+// CHECK_MINGW_UBUNTU_POSIX_TREE: "[[BASE]]/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
 // CHECK_MINGW_UBUNTU_POSIX_TREE: "[[BASE]]/Inputs/mingw_ubuntu_posix_tree/usr{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}include"
 
 // RUN: %clang --target=i686-windows-gnu -E -### %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_NO_UNICODE %s

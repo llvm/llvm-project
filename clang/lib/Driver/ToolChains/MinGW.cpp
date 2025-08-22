@@ -441,6 +441,9 @@ void toolchains::MinGW::findGccLibDir(const llvm::Triple &LiteralTriple) {
       llvm::SmallString<1024> LibDir(Base);
       llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateSysroot);
       if (findGccVersion(LibDir, GccLibDir, Ver, GccVer)) {
+        llvm::SmallString<1024> ParentLib(LibDir);
+        llvm::sys::path::append(ParentLib, "..", "..");
+        GccParentLibPath = ParentLib.str();
         SubdirName = std::string(CandidateSysroot);
         return;
       }
@@ -797,7 +800,7 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
   }
 
   case ToolChain::CST_Libstdcxx:
-    llvm::SmallVector<llvm::SmallString<1024>, 7> CppIncludeBases;
+    llvm::SmallVector<llvm::SmallString<1024>, 9> CppIncludeBases;
     CppIncludeBases.emplace_back(Base);
     llvm::sys::path::append(CppIncludeBases[0], SubdirName, "include", "c++");
     CppIncludeBases.emplace_back(Base);
@@ -805,16 +808,24 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
                             Ver);
     CppIncludeBases.emplace_back(Base);
     llvm::sys::path::append(CppIncludeBases[2], "include", "c++", Ver);
-    CppIncludeBases.emplace_back(GccLibDir);
-    llvm::sys::path::append(CppIncludeBases[3], "include", "c++");
-    CppIncludeBases.emplace_back(GccLibDir);
-    llvm::sys::path::append(CppIncludeBases[4], "include",
-                            "g++-v" + GccVer.Text);
-    CppIncludeBases.emplace_back(GccLibDir);
-    llvm::sys::path::append(CppIncludeBases[5], "include",
-                            "g++-v" + GccVer.MajorStr + "." + GccVer.MinorStr);
+    CppIncludeBases.emplace_back(GccParentLibPath);
+    llvm::sys::path::append(CppIncludeBases[3], "..", TripleDirName);
+    llvm::sys::path::append(CppIncludeBases[3], "include", "c++", GccVer.Text);
+    CppIncludeBases.emplace_back(GccParentLibPath);
+    llvm::sys::path::append(CppIncludeBases[4],
+                            "gcc", TripleDirName, GccVer.Text);
+    llvm::sys::path::append(CppIncludeBases[4], "include", "c++");
+    CppIncludeBases.emplace_back(GccParentLibPath);
+    llvm::sys::path::append(CppIncludeBases[5],
+                            "..", "include", "c++", GccVer.Text);
     CppIncludeBases.emplace_back(GccLibDir);
     llvm::sys::path::append(CppIncludeBases[6], "include",
+                            "g++-v" + GccVer.Text);
+    CppIncludeBases.emplace_back(GccLibDir);
+    llvm::sys::path::append(CppIncludeBases[7], "include",
+                            "g++-v" + GccVer.MajorStr + "." + GccVer.MinorStr);
+    CppIncludeBases.emplace_back(GccLibDir);
+    llvm::sys::path::append(CppIncludeBases[8], "include",
                             "g++-v" + GccVer.MajorStr);
     for (auto &CppIncludeBase : CppIncludeBases) {
       addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);

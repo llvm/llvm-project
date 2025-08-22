@@ -34,9 +34,9 @@
 // cross toolchains installed in /usr.
 
 // RUN: env "PATH=%t.dir/testroot-gcc/bin:%PATH%" %clang --target=x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC %s --implicit-check-not="\"{{.*}}/testroot-gcc{{/|\\\\}}include\""
-// CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE:[^"]+]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++"
-// CHECK_TESTROOT_GCC-SAME: {{^}} "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
-// CHECK_TESTROOT_GCC-SAME: {{^}} "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
+// CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE:[^"]+]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++"
+// CHECK_TESTROOT_GCC-SAME: {{^}} "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
+// CHECK_TESTROOT_GCC-SAME: {{^}} "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}..{{/|\\\\}}..{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
 // CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}g++-v10.2-posix"
 // CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}g++-v10.2"
 // CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}g++-v10"
