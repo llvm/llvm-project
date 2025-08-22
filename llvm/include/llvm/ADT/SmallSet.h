@@ -270,11 +270,27 @@ private:
 /// SmallPtrSet for performance.
 template <typename PointeeType, unsigned N>
 class SmallSet<PointeeType *, N> : public SmallPtrSet<PointeeType *, N> {
-public:
+  using Base = SmallPtrSet<PointeeType *, N>;
+
+  public:
   // LLVM_DEPRECATED placed between "template" and "class" above won't work for
-  // some reason.  Put a deprecation message on the default constructor instead.
+  // some reason.  Put a deprecation message on constructors instead.
   LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
   SmallSet<PointeeType *, N>() = default;
+  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
+  SmallSet<PointeeType *, N>(const SmallSet &) = default;
+  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
+  SmallSet<PointeeType *, N>(SmallSet &&) = default;
+  template <typename IterT>
+  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
+  SmallSet<PointeeType *, N>(IterT Begin, IterT End) : Base(Begin, End) {}
+  template <typename Range>
+  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
+  SmallSet<PointeeType *, N>(llvm::from_range_t, Range &&R)
+      : Base(llvm::from_range, std::move(R)) {}
+  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
+  SmallSet<PointeeType *, N>(std::initializer_list<PointeeType *> L)
+      : Base(L) {}
 };
 
 /// Equality comparison for SmallSet.
