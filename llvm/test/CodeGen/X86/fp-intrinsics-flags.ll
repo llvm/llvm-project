@@ -100,6 +100,55 @@ entry:
   ret i32 %result
 }
 
+; These 4 divs only differ in their exception behavior. They form two groups,
+; whithin each the constrained functions have the same exception hehavior and
+; may be CSE'd. Instructions with different exception behavior belong to
+; different groups, they have different chain argument and cannot be CSE'd.
+define void @binop_cse(double %a, double %b, ptr %x, ptr %y) #0 {
+entry:
+; CHECK-LABEL: name: binop_cse
+; CHECK: [[Y:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
+; CHECK: [[X:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1, align 16)
+; CHECK: [[B:%[0-9]+]]:fr64 = MOVSDrm_alt %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.2)
+; CHECK: [[A:%[0-9]+]]:fr64 = MOVSDrm_alt %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.3, align 16)
+; CHECK: [[DIV0:%[0-9]+]]:fr64 = DIVSDrr [[A]], [[B]], implicit $mxcsr
+; CHECK: [[DIV1:%[0-9]+]]:fr64 = nofpexcept DIVSDrr [[A]], [[B]], implicit $mxcsr
+; CHECK: MOVSDmr killed [[X]], 1, $noreg, 0, $noreg, [[DIV1]] :: (store (s64) into %ir.x, align 4)
+; CHECK: MOVSDmr killed [[Y]], 1, $noreg, 0, $noreg, [[DIV1]] :: (store (s64) into %ir.y, align 4)
+; CHECK: RET 0
+  %div = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %div1 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %div2 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %div3 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  store double %div2, ptr %x
+  store double %div3, ptr %y
+  ret void
+}
+
+; These 4 divs only differ in their exception behavior. They form two groups,
+; whithin each the constrained functions have the same exception hehavior and
+; may be CSE'd. Instructions with different exception behavior belong to
+; different groups, they have different chain argument and cannot be CSE'd.
+define void @sitofp_cse(i32 %a, ptr %x, ptr %y) #0 {
+entry:
+; CHECK-LABEL: name: sitofp_cse
+; CHECK: [[Y:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0, align 8)
+; CHECK: [[X:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1)
+; CHECK: [[A:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.2, align 16)
+; CHECK: [[CVT0:%[0-9]+]]:fr64 = CVTSI2SDrr [[A]]
+; CHECK: [[CVT1:%[0-9]+]]:fr64 = nofpexcept CVTSI2SDrr [[A]]
+; CHECK: MOVSDmr killed [[X]], 1, $noreg, 0, $noreg, [[CVT1]] :: (store (s64) into %ir.x, align 4)
+; CHECK: MOVSDmr killed [[Y]], 1, $noreg, 0, $noreg, [[CVT1]] :: (store (s64) into %ir.y, align 4)
+; CHECK: RET 0
+  %result = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %result1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %result2 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %result3 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  store double %result2, ptr %x
+  store double %result3, ptr %y
+  ret void
+}
+
 attributes #0 = { strictfp }
 
 declare double @llvm.experimental.constrained.sitofp.f64.i8(i8, metadata, metadata)
