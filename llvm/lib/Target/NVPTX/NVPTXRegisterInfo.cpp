@@ -128,7 +128,7 @@ bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 Register NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const NVPTXTargetMachine &TM =
       static_cast<const NVPTXTargetMachine &>(MF.getTarget());
-  return TM.getPointerSize(NVPTXAS::ADDRESS_SPACE_LOCAL) == 8
+  return TM.getPointerSize(NVPTXAS::ADDRESS_SPACE_GENERIC) == 8
              ? NVPTX::VRFrame64
              : NVPTX::VRFrame32;
 }
