@@ -70,7 +70,7 @@ void ExitOnErr(zx_status_t Status, const char *Syscall) {
 void AlarmHandler(int Seconds) {
   // Signal the alarm thread started.
   ExitOnErr(_zx_object_signal(SignalHandlerEvent, 0, ZX_USER_SIGNAL_0),
-            "_zx_object_signal AlarmHandler");
+            "_zx_object_signal alarm");
   while (true) {
     SleepSeconds(Seconds);
     Fuzzer::StaticAlarmCallback();
