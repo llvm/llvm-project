@@ -32,8 +32,8 @@
 	.type	main,@function
 main:                                   # @main
 .Lfunc_begin0:
-	.file	0 "F:\\llvm-project" "F:\\inbox\\compile\\compile.cpp" md5 0xd6c1ff0111a28a274dda09b8b649ba31
-	.loc	0 2 0                           # F:\inbox\compile\compile.cpp:2:0
+	.file	0 "test.cpp"
+	.loc	0 2 0
 	.cfi_startproc
 # %bb.0:                                # %entry
 	pushl	%ebp
@@ -44,42 +44,42 @@ main:                                   # @main
 	subl	$12, %esp
 	movl	$0, -4(%ebp)
 .Ltmp0:
-	.loc	0 3 15 prologue_end             # F:\inbox\compile\compile.cpp:3:15
+	.loc	0 3 15 prologue_end
 	xorps	%xmm0, %xmm0
 	movss	%xmm0, -8(%ebp)
 .Ltmp1:
-	.loc	0 4 18                          # F:\inbox\compile\compile.cpp:4:18
+	.loc	0 4 18
 	movl	$0, -12(%ebp)
 .LBB0_1:                                # %for.cond
                                         # =>This Inner Loop Header: Depth=1
 .Ltmp2:
-	.loc	0 4 27 is_stmt 0                # F:\inbox\compile\compile.cpp:4:27
+	.loc	0 4 27 is_stmt 0
 	cmpl	$10, -12(%ebp)
 .Ltmp3:
-	.loc	0 4 9                           # F:\inbox\compile\compile.cpp:4:9
+	.loc	0 4 9
 	jge	.LBB0_4
 # %bb.2:                                # %for.body
                                         #   in Loop: Header=BB0_1 Depth=1
 .Ltmp4:
-	.loc	0 5 18 is_stmt 1                # F:\inbox\compile\compile.cpp:5:18
+	.loc	0 5 18 is_stmt 1
 	cvtsi2ssl	-12(%ebp), %xmm0
-	.loc	0 5 15 is_stmt 0                # F:\inbox\compile\compile.cpp:5:15
+	.loc	0 5 15 is_stmt 0
 	addss	-8(%ebp), %xmm0
 	movss	%xmm0, -8(%ebp)
 .Ltmp5:
 # %bb.3:                                # %for.inc
                                         #   in Loop: Header=BB0_1 Depth=1
-	.loc	0 4 34 is_stmt 1                # F:\inbox\compile\compile.cpp:4:34
+	.loc	0 4 34 is_stmt 1
 	movl	-12(%ebp), %eax
 	addl	$1, %eax
 	movl	%eax, -12(%ebp)
-	.loc	0 4 9 is_stmt 0                 # F:\inbox\compile\compile.cpp:4:9
+	.loc	0 4 9 is_stmt 0
 	jmp	.LBB0_1
 .Ltmp6:
 .LBB0_4:                                # %for.end
-	.loc	0 7 16 is_stmt 1                # F:\inbox\compile\compile.cpp:7:16
+	.loc	0 7 16 is_stmt 1
 	cvttss2si	-8(%ebp), %eax
-	.loc	0 7 9 epilogue_begin is_stmt 0  # F:\inbox\compile\compile.cpp:7:9
+	.loc	0 7 9 epilogue_begin is_stmt 0
 	addl	$12, %esp
 	popl	%ebp
 	.cfi_def_cfa %esp, 4
@@ -236,9 +236,9 @@ main:                                   # @main
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 22.0.0git (https://github.com/adam-yang/llvm-project.git a7fd15039d9846389b5e7fd7af1a63b1bfc70935)" # string offset=0
+	.asciz	"clang version 22.0.0" # string offset=0
 .Linfo_string1:
-	.asciz	"F:\\inbox\\compile\\compile.cpp" # string offset=113
+	.asciz	"test.cpp" # string offset=113
 .Linfo_string2:
 	.asciz	"F:\\llvm-project"              # string offset=142
 .Linfo_string3:
@@ -270,7 +270,7 @@ main:                                   # @main
 	.long	.Lfunc_begin0
 	.long	.Ltmp1
 .Ldebug_addr_end0:
-	.ident	"clang version 22.0.0git (https://github.com/adam-yang/llvm-project.git a7fd15039d9846389b5e7fd7af1a63b1bfc70935)"
+	.ident	"clang version 22.0.0"
 	.section	".note.GNU-stack","",@progbits
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:

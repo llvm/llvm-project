@@ -27,15 +27,15 @@
 # CHECK: [006] {Range} Lines 3:10 [0x0000000055:0x0000000058]
 # CHECK: [006] {Range} Lines 3:10 [0x0000000088:0x000000008b]
 
-	.file	"compile2.cpp"
-	.file	0 "F:\\llvm-project" "F:\\inbox\\compile\\compile2.cpp" md5 0xc01496e8fb5eea15c55e9b40a56ed900
+	.file	"test.cpp"
+	.file	0 "F:\\llvm-project" "test.cpp"
 	.text
 	.globl	_Z3foof                         # -- Begin function _Z3foof
 	.p2align	4
 	.type	_Z3foof,@function
 _Z3foof:                                # @_Z3foof
 .Lfunc_begin0:
-	.loc	0 2 0                           # F:\inbox\compile\compile2.cpp:2:0
+	.loc	0 2 0
 	.cfi_startproc
 # %bb.0:                                # %entry
 	pushl	%eax
@@ -44,12 +44,12 @@ _Z3foof:                                # @_Z3foof
 	#DEBUG_VALUE: foo:a <- [DW_OP_plus_uconst 8] [$esp+0]
 	movss	8(%esp), %xmm0                  # xmm0 = mem[0],zero,zero,zero
 .Ltmp1:
-	.loc	0 3 11 prologue_end             # F:\inbox\compile\compile2.cpp:3:11
+	.loc	0 3 11 prologue_end
 	addss	%xmm0, %xmm0
-	.loc	0 3 3 is_stmt 0                 # F:\inbox\compile\compile2.cpp:3:3
+	.loc	0 3 3 is_stmt 0
 	movss	%xmm0, (%esp)
 	flds	(%esp)
-	.loc	0 3 3 epilogue_begin            # F:\inbox\compile\compile2.cpp:3:3
+	.loc	0 3 3 epilogue_begin
 	popl	%eax
 	.cfi_def_cfa_offset 4
 	retl
@@ -63,19 +63,19 @@ _Z3foof:                                # @_Z3foof
 	.type	main,@function
 main:                                   # @main
 .Lfunc_begin1:
-	.loc	0 6 0 is_stmt 1                 # F:\inbox\compile\compile2.cpp:6:0
+	.loc	0 6 0 is_stmt 1
 	.cfi_startproc
 # %bb.0:                                # %entry
 	#DEBUG_VALUE: main:argc <- [DW_OP_plus_uconst 4] [$esp+0]
 	#DEBUG_VALUE: main:argv <- [DW_OP_plus_uconst 8] [$esp+0]
 	movl	8(%esp), %eax
 .Ltmp3:
-	.loc	0 7 18 prologue_end             # F:\inbox\compile\compile2.cpp:7:18
+	.loc	0 7 18 prologue_end
 	cvtsi2ssl	4(%esp), %xmm2
 .Ltmp4:
 	#DEBUG_VALUE: main:my_var <- $xmm2
 	#DEBUG_VALUE: i <- 0
-	.loc	0 9 33                          # F:\inbox\compile\compile2.cpp:9:33
+	.loc	0 9 33
 	movl	(%eax), %ecx
 .Ltmp5:
 	#DEBUG_VALUE: i <- 1
@@ -91,10 +91,10 @@ main:                                   # @main
 	psrad	$24, %xmm1
 	cvtdq2ps	%xmm1, %xmm1
 .Ltmp6:
-	.loc	0 3 11                          # F:\inbox\compile\compile2.cpp:3:11 @[ F:\inbox\compile\compile2.cpp:10:15 ]
+	.loc	0 3 11
 	addps	%xmm1, %xmm1
 .Ltmp7:
-	.loc	0 10 12                         # F:\inbox\compile\compile2.cpp:10:12
+	.loc	0 10 12
 	addss	%xmm1, %xmm2
 .Ltmp8:
 	#DEBUG_VALUE: main:my_var <- $xmm2
@@ -103,7 +103,7 @@ main:                                   # @main
 .Ltmp9:
 	#DEBUG_VALUE: main:my_var <- $xmm1
 	#DEBUG_VALUE: i <- 2
-	.loc	0 9 33                          # F:\inbox\compile\compile2.cpp:9:33
+	.loc	0 9 33
 	movl	8(%eax), %ecx
 .Ltmp10:
 	#DEBUG_VALUE: i <- 3
@@ -117,10 +117,10 @@ main:                                   # @main
 	psrad	$24, %xmm0
 	cvtdq2ps	%xmm0, %xmm0
 .Ltmp11:
-	.loc	0 3 11                          # F:\inbox\compile\compile2.cpp:3:11 @[ F:\inbox\compile\compile2.cpp:10:15 ]
+	.loc	0 3 11
 	addps	%xmm0, %xmm0
 .Ltmp12:
-	.loc	0 10 12                         # F:\inbox\compile\compile2.cpp:10:12
+	.loc	0 10 12
 	addss	%xmm0, %xmm1
 .Ltmp13:
 	#DEBUG_VALUE: main:my_var <- $xmm1
@@ -129,9 +129,9 @@ main:                                   # @main
 .Ltmp14:
 	#DEBUG_VALUE: main:my_var <- $xmm0
 	#DEBUG_VALUE: i <- 4
-	.loc	0 12 15                         # F:\inbox\compile\compile2.cpp:12:15
+	.loc	0 12 15
 	cvttss2si	%xmm0, %eax
-	.loc	0 12 3 is_stmt 0                # F:\inbox\compile\compile2.cpp:12:3
+	.loc	0 12 3 is_stmt 0
 	retl
 .Ltmp15:
 .Lfunc_end1:
@@ -546,9 +546,9 @@ main:                                   # @main
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 22.0.0git (https://github.com/adam-yang/llvm-project.git a7fd15039d9846389b5e7fd7af1a63b1bfc70935)" # string offset=0
+	.asciz	"clang version 22.0.0" # string offset=0
 .Linfo_string1:
-	.asciz	"F:\\inbox\\compile\\compile2.cpp" # string offset=113
+	.asciz	"test.cpp" # string offset=113
 .Linfo_string2:
 	.asciz	"F:\\llvm-project"              # string offset=143
 .Linfo_string3:
@@ -602,7 +602,7 @@ main:                                   # @main
 	.long	.Lfunc_begin1
 	.long	.Ltmp4
 .Ldebug_addr_end0:
-	.ident	"clang version 22.0.0git (https://github.com/adam-yang/llvm-project.git a7fd15039d9846389b5e7fd7af1a63b1bfc70935)"
+	.ident	"clang version 22.0.0"
 	.section	".note.GNU-stack","",@progbits
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:

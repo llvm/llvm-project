@@ -36,7 +36,7 @@
 # CHECK-NOT: [0x0000000114][004]
 # CHECK: [0x0000000114][003]
 
-	.file	0 "F:\\inbox\\llpc_dbg\\tests_new\\for.hlsl"
+	.file	0 "test.hlsl"
 	.text
 	.globl	_amdgpu_cs_main
 	.p2align	8
@@ -572,9 +572,9 @@ _amdgpu_cs_main:
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"dxcoob 1.8.2505.32 (b106a961d)"
+	.asciz	"dxc"
 .Linfo_string1:
-	.asciz	"F:\\inbox\\llpc_dbg\\tests_new\\for.hlsl"
+	.asciz	"test.hlsl"
 .Linfo_string2:
 	.asciz	"u0"
 .Linfo_string3:
