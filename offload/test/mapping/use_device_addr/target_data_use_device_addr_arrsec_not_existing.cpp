@@ -111,6 +111,7 @@ struct S {
 
     int *original_paa020 = &paa[0][2][0];
     int **original_paa0 = (int **)&paa[0];
+
 // (H) use_device_addr/map: different base-pointers.
 // No corresponding storage for use_device_addr opnd, lookup should fail.
 // CHECK: H: 1 1 1
