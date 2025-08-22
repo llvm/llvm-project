@@ -868,6 +868,15 @@ def ConvertMemRefToEmitC : Pass<"convert-memref-to-emitc", "ModuleOp"> {
 // MemRefToLLVM
 //===----------------------------------------------------------------------===//
 
+def ConvertMemRefAliasAttributesToLLVMPass :
+    Pass<"convert-memref-alias-attributes-to-llvm"> {
+  let summary = "Convert MemRef aliasing attributes to LLVM";
+  let description = [{
+    TBD
+  }];
+  let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
 def FinalizeMemRefToLLVMConversionPass :
     Pass<"finalize-memref-to-llvm", "ModuleOp"> {
   let summary = "Finalize MemRef dialect to LLVM dialect conversion";

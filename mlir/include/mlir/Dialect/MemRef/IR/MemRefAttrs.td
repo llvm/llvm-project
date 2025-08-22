@@ -105,6 +105,16 @@ def MemRef_AliasingAttr : MemRef_Attr<"Aliasing", "aliasing"> {
     TBD
   }];
 
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "MLIRContext*":$context,
+      CArg<"ArrayRef<Attribute>", "{}">:$alias_scopes,
+      CArg<"ArrayRef<Attribute>", "{}">:$noalias
+    ), [{
+      return $_get(context, ArrayAttr::get(context, alias_scopes), ArrayAttr::get(context, noalias));
+    }]>
+  ];
+
   let assemblyFormat = "`<` struct(params) `>`";
 }
 

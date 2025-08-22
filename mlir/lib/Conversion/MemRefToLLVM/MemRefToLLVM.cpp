@@ -32,6 +32,9 @@
 #define DEBUG_TYPE "memref-to-llvm"
 
 namespace mlir {
+#define GEN_PASS_DEF_CONVERTMEMREFALIASATTRIBUTESTOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 #define GEN_PASS_DEF_FINALIZEMEMREFTOLLVMCONVERSIONPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
@@ -2059,6 +2062,51 @@ struct FinalizeMemRefToLLVMConversionPass
     target.addLegalOp<func::FuncOp>();
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
+  }
+};
+
+struct ConvertMemRefAliasAttributesToLLVMPass
+    : public impl::ConvertMemRefAliasAttributesToLLVMPassBase<
+          ConvertMemRefAliasAttributesToLLVMPass> {
+  using ConvertMemRefAliasAttributesToLLVMPassBase::
+      ConvertMemRefAliasAttributesToLLVMPassBase;
+
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    MLIRContext *ctx = &getContext();
+    auto visitor = [&](memref::AliasAnalysisOpInterface aliasOp) -> WalkResult {
+      memref::AliasingAttr aliasingAttr = aliasOp.getAliasingAttr();
+      if (!aliasingAttr)
+        return WalkResult::advance();
+
+      auto scope = aliasOp->getParentOfType<memref::AliasDomainScopeOp>();
+      if (!scope) {
+        aliasOp.emitError("alias scope not found");
+        return WalkResult::interrupt();
+      }
+
+      memref::AliasScopeDomainAttr domain = scope.getDomain();
+      auto llvmDomain = LLVM::AliasScopeDomainAttr::get(
+          ctx, domain.getId(), domain.getDescription());
+      auto convertScope = [&](Attribute scope) -> Attribute {
+        auto memrefScope = dyn_cast_if_present<memref::AliasScopeAttr>(scope);
+        if (!memrefScope)
+          return scope;
+
+        return LLVM::AliasScopeAttr::get(ctx, memrefScope.getId(), llvmDomain,
+                                         memrefScope.getDescription());
+      };
+      SmallVector<Attribute> scopes =
+          llvm::map_to_vector(aliasingAttr.getAliasScopes(), convertScope);
+      SmallVector<Attribute> noaliasScopes =
+          llvm::map_to_vector(aliasingAttr.getNoalias(), convertScope);
+      auto newAliasingAttr =
+          memref::AliasingAttr::get(ctx, scopes, noaliasScopes);
+      aliasOp.setAliasingAttr(newAliasingAttr);
+      return WalkResult::advance();
+    };
+    if (op->walk(visitor).wasInterrupted())
+      return signalPassFailure();
   }
 };
 
