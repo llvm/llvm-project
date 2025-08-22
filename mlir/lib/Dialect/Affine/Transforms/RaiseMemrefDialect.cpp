@@ -65,59 +65,117 @@ findInListOrAdd(Value value, llvm::SmallVectorImpl<Value> &dims,
 
 /// Convert a value to an affine expr if possible. Adds dims and symbols
 /// if needed.
-static AffineExpr toAffineExpr(Value value,
+static AffineExpr toAffineExpr(Value root,
                                llvm::SmallVectorImpl<Value> &affineDims,
                                llvm::SmallVectorImpl<Value> &affineSymbols) {
   using namespace matchers;
-  IntegerAttr::ValueType cst;
-  if (matchPattern(value, m_ConstantInt(&cst))) {
-    return getAffineConstantExpr(cst.getSExtValue(), value.getContext());
-  }
 
-  Operation *definingOp = value.getDefiningOp();
-  if (llvm::isa_and_nonnull<arith::AddIOp>(definingOp) ||
-      llvm::isa_and_nonnull<arith::MulIOp>(definingOp)) {
-    // TODO: replace recursion with explicit stack.
-    // For the moment this can be tolerated as we only recurse on
-    // arith.addi and arith.muli, so there cannot be any infinite
-    // recursion. The depth of these expressions should be in most
-    // cases very manageable, as affine expressions should be as
-    // simple as `a + b * c`.
-    AffineExpr lhsE =
-        toAffineExpr(definingOp->getOperand(0), affineDims, affineSymbols);
-    AffineExpr rhsE =
-        toAffineExpr(definingOp->getOperand(1), affineDims, affineSymbols);
+  // Table for already-built subexpressions.
+  llvm::DenseMap<Value, AffineExpr> built;
 
-    if (lhsE && rhsE) {
-      AffineExprKind kind;
-      if (isa<arith::AddIOp>(definingOp)) {
-        kind = mlir::AffineExprKind::Add;
-      } else {
-        kind = mlir::AffineExprKind::Mul;
+  // Post-order traversal stack: (value, state)
+  // state = 0 -> first-time seen (push the children).
+  // state = 1 -> children have been processed (build the node).
+  llvm::SmallVector<std::pair<Value, unsigned>, 16> stack;
+  stack.emplace_back(root, 0); // push the root value onto the stack.
 
-        if (!lhsE.isSymbolicOrConstant() && !rhsE.isSymbolicOrConstant()) {
-          // This is not an affine expression, give up.
-          return {};
-        }
-      }
-      return getAffineBinaryOpExpr(kind, lhsE, rhsE);
+  auto makeLeaf = [&](Value v) -> AffineExpr {
+    // Constant?
+    IntegerAttr::ValueType cst;
+    if (matchPattern(root, m_ConstantInt(&cst)))
+      return getAffineConstantExpr(cst.getSExtValue(), v.getContext());
+
+    // Symbol?
+    if (auto symIx = findInListOrAdd(
+            v, affineSymbols, [](Value x) { return isValidSymbol(x); })) {
+      return getAffineSymbolExpr(*symIx, v.getContext());
     }
-    return {};
+
+    // Dimension?
+    if (auto dimIx = findInListOrAdd(v, affineDims,
+                                     [](Value x) { return isValidDim(x); })) {
+      return getAffineDimExpr(*dimIx, v.getContext());
+    }
+
+    // Not representable.
+    return AffineExpr();
+  };
+
+  while (!stack.empty()) {
+    auto [v, state] = stack.back();
+    stack.pop_back();
+
+    // If we already built the current value, nothing more to do.
+    if (built.count(v))
+      continue;
+
+    if (state == 0) {
+      Operation *def = v.getDefiningOp();
+
+      // If not an addi/muli, we'll handle it as a leaf in state == 1,
+      bool isAddOrMul = llvm::isa_and_nonnull<arith::AddIOp>(def) ||
+                        llvm::isa_and_nonnull<arith::MulIOp>(def);
+
+      if (!isAddOrMul) {
+        // Defer to leaf handling.
+        stack.emplace_back(v, 1);
+        continue;
+      }
+
+      // For addi/muli, push the ops.
+      stack.emplace_back(v, 1);
+      Value lhs = def->getOperand(0);
+      Value rhs = def->getOperand(1);
+
+      if (!built.count(lhs))
+        stack.emplace_back(lhs, 0);
+      if (!built.count(rhs))
+        stack.emplace_back(rhs, 0);
+      continue;
+    }
+    // state == 1, time to build the node (either add/mul or a leaf).
+    Operation *def = v.getDefiningOp();
+    if (llvm::isa_and_nonnull<arith::AddIOp>(def) ||
+        llvm::isa_and_nonnull<arith::MulIOp>(def)) {
+      Value lhsV = def->getOperand(0);
+      Value rhsV = def->getOperand(1);
+
+      auto itL = built.find(lhsV);
+      auto itR = built.find(rhsV);
+      if (itL == built.end() || itR == built.end()) {
+        // Child failed to build.
+        return AffineExpr();
+      }
+
+      AffineExpr lhsE = itL->second;
+      AffineExpr rhsE = itR->second;
+
+      if (!lhsE || !rhsE)
+        return AffineExpr();
+
+      AffineExprKind kind;
+      if (llvm::isa<arith::AddIOp>(def)) {
+        kind = AffineExprKind::Add;
+      } else {
+        kind = AffineExprKind::Mul;
+        // Enforce restriction: one side must by symbolic or constant.
+        if (!lhsE.isSymbolicOrConstant() && !rhsE.isSymbolicOrConstant())
+          return AffineExpr();
+      }
+
+      built[v] = getAffineBinaryOpExpr(kind, lhsE, rhsE);
+      continue;
+    }
+
+    // Not addi/muli: treat as leaf.
+    AffineExpr leaf = makeLeaf(v);
+    if (!leaf)
+      return AffineExpr();
+    built[v] = leaf;
   }
-
-  if (auto dimIx = findInListOrAdd(value, affineSymbols, [](Value v) {
-        return affine::isValidSymbol(v);
-      })) {
-    return getAffineSymbolExpr(*dimIx, value.getContext());
-  }
-
-  if (auto dimIx = findInListOrAdd(
-          value, affineDims, [](Value v) { return affine::isValidDim(v); })) {
-
-    return getAffineDimExpr(*dimIx, value.getContext());
-  }
-
-  return {};
+  auto it = built.find(root);
+  return it == built.end() ? AffineExpr()
+                           : it->second; // Return the root expression.
 }
 
 static LogicalResult
