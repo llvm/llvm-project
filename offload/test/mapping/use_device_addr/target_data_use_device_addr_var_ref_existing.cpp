@@ -2,8 +2,8 @@
 
 // XFAIL: *
 
-#include <stdio.h>
 #include <omp.h>
+#include <stdio.h>
 
 // Test for various cases of use_device_addr on a reference variable.
 // The corresponding data is mapped on a previous enter_data directive.
@@ -38,7 +38,7 @@ struct S {
     void *original_addr_ph = &ph;
     void *original_addr_paa = &paa;
 
-    #pragma omp target enter data map(to:g, h, ph, paa)
+#pragma omp target enter data map(to : g, h, ph, paa)
     void *mapped_ptr_g = omp_get_mapped_ptr(&g, omp_get_default_device());
     void *mapped_ptr_h = omp_get_mapped_ptr(&h, omp_get_default_device());
     void *mapped_ptr_ph = omp_get_mapped_ptr(&ph, omp_get_default_device());
@@ -54,49 +54,47 @@ struct S {
     printf("%d\n", original_addr_ph != mapped_ptr_ph);
     printf("%d\n", original_addr_paa != mapped_ptr_paa);
 
-    // (A)
-    // CHECK: A: 1
-    #pragma omp target data use_device_addr(g)
+// (A)
+// CHECK: A: 1
+#pragma omp target data use_device_addr(g)
     printf("A: %d\n", mapped_ptr_g == &g);
 
-    // (B)
-    // CHECK: B: 1
-    #pragma omp target data use_device_addr(h)
+// (B)
+// CHECK: B: 1
+#pragma omp target data use_device_addr(h)
     printf("B: %d\n", mapped_ptr_h == &h);
 
-    // (C)
-    // CHECK: C: 1
-    #pragma omp target data use_device_addr(ph)
+// (C)
+// CHECK: C: 1
+#pragma omp target data use_device_addr(ph)
     printf("C: %d\n", mapped_ptr_ph == &ph);
 
-    // (D) use_device_addr/map with different base-array/pointer.
-    // Address translation should happen for &ph, not &ph[0/1].
-    // CHECK: D: 1
-    #pragma omp target data map(ph[1:2]) use_device_addr(ph)
+// (D) use_device_addr/map with different base-array/pointer.
+// Address translation should happen for &ph, not &ph[0/1].
+// CHECK: D: 1
+#pragma omp target data map(ph[1 : 2]) use_device_addr(ph)
     printf("D: %d\n", mapped_ptr_ph == &ph);
 
-    // (E)
-    // CHECK: E: 1
-    #pragma omp target data use_device_addr(paa)
+// (E)
+// CHECK: E: 1
+#pragma omp target data use_device_addr(paa)
     printf("E: %d\n", mapped_ptr_paa == &paa);
 
-    // (F) use_device_addr/map with same base-array, paa.
-    // Address translation should happen for &paa.
-    // CHECK: F: 1
-    #pragma omp target data map(paa[0][2]) use_device_addr(paa)
+// (F) use_device_addr/map with same base-array, paa.
+// Address translation should happen for &paa.
+// CHECK: F: 1
+#pragma omp target data map(paa[0][2]) use_device_addr(paa)
     printf("F: %d\n", mapped_ptr_paa == &paa);
 
-    // (G) use_device_addr/map with different base-array/pointer.
-    // Address translation should happen for &paa.
-    // CHECK: G: 1
-    #pragma omp target data map(paa[0][2][0]) use_device_addr(paa)
+// (G) use_device_addr/map with different base-array/pointer.
+// Address translation should happen for &paa.
+// CHECK: G: 1
+#pragma omp target data map(paa[0][2][0]) use_device_addr(paa)
     printf("G: %d\n", mapped_ptr_paa == &paa);
 
-    #pragma omp target exit data map(release:g, h, ph, paa)
+#pragma omp target exit data map(release : g, h, ph, paa)
   }
 };
 
 S s1;
-int main() {
-  s1.f1(1);
-}
+int main() { s1.f1(1); }

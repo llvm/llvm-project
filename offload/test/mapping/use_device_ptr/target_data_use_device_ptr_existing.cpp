@@ -2,8 +2,8 @@
 
 // XFAIL: *
 
-#include <stdio.h>
 #include <omp.h>
+#include <stdio.h>
 
 // Test for various cases of use_device_ptr on a variable.
 // The corresponding data is mapped on a previous enter_data directive.
@@ -29,9 +29,10 @@ struct S {
     void *original_ph3 = &ph[3];
     void *original_paa102 = &paa[1][0][2];
 
-    #pragma omp target enter data map(to:ph[3:4], paa[1][0][2:5])
+#pragma omp target enter data map(to : ph[3 : 4], paa[1][0][2 : 5])
     void *mapped_ptr_ph3 = omp_get_mapped_ptr(&ph[3], omp_get_default_device());
-    void *mapped_ptr_paa102 = omp_get_mapped_ptr(&paa[1][0][2], omp_get_default_device());
+    void *mapped_ptr_paa102 =
+        omp_get_mapped_ptr(&paa[1][0][2], omp_get_default_device());
 
     // CHECK-COUNT-4: 1
     printf("%d\n", mapped_ptr_ph3 != nullptr);
@@ -39,64 +40,61 @@ struct S {
     printf("%d\n", original_ph3 != mapped_ptr_ph3);
     printf("%d\n", original_paa102 != mapped_ptr_paa102);
 
-    // (A) Mapped data is within extended address range. Lookup should succeed.
-    // CHECK: A: 1
-    #pragma omp target data use_device_ptr(ph)
+// (A) Mapped data is within extended address range. Lookup should succeed.
+// CHECK: A: 1
+#pragma omp target data use_device_ptr(ph)
     printf("A: %d\n", mapped_ptr_ph3 == &ph[3]);
 
-    // (B) use_device_ptr/map on pointer, and pointee already exists.
-    // Lookup should succeed.
-    // CHECK: B: 1
-    #pragma omp target data map(ph) use_device_ptr(ph)
+// (B) use_device_ptr/map on pointer, and pointee already exists.
+// Lookup should succeed.
+// CHECK: B: 1
+#pragma omp target data map(ph) use_device_ptr(ph)
     printf("B: %d\n", mapped_ptr_ph3 == &ph[3]);
 
-    // (C) map on pointee: base-pointer of map matches use_device_ptr operand.
-    // Lookup should succeed.
-    // CHECK: C: 1
-    #pragma omp target data map(ph[3:2]) use_device_ptr(ph)
+// (C) map on pointee: base-pointer of map matches use_device_ptr operand.
+// Lookup should succeed.
+// CHECK: C: 1
+#pragma omp target data map(ph[3 : 2]) use_device_ptr(ph)
     printf("C: %d\n", mapped_ptr_ph3 == &ph[3]);
 
-    // (D) map on pointer and pointee. Base-pointer of map on pointee matches
-    // use_device_ptr operand.
-    // Lookup should succeed.
-    // CHECK: D: 1
-    #pragma omp target data map(ph) map(ph[3:2]) use_device_ptr(ph)
+// (D) map on pointer and pointee. Base-pointer of map on pointee matches
+// use_device_ptr operand.
+// Lookup should succeed.
+// CHECK: D: 1
+#pragma omp target data map(ph) map(ph[3 : 2]) use_device_ptr(ph)
     printf("D: %d\n", mapped_ptr_ph3 == &ph[3]);
 
-    // (E) Mapped data is within extended address range. Lookup should succeed.
-    // Lookup should succeed.
-    // CHECK: E: 1
-    #pragma omp target data use_device_ptr(paa)
+// (E) Mapped data is within extended address range. Lookup should succeed.
+// Lookup should succeed.
+// CHECK: E: 1
+#pragma omp target data use_device_ptr(paa)
     printf("E: %d\n", mapped_ptr_paa102 == &paa[1][0][2]);
 
-    // (F) use_device_ptr/map on pointer, and pointee already exists.
-    // &paa[0] should be in extended address-range of the existing paa[1][...]
-    // Lookup should succeed.
-    // FIXME: However, it currently does not. Might need an RT fix.
-    // EXPECTED: F: 1
-    // CHECK:    F: 0
-    #pragma omp target data map(paa) use_device_ptr(paa)
+// (F) use_device_ptr/map on pointer, and pointee already exists.
+// &paa[0] should be in extended address-range of the existing paa[1][...]
+// Lookup should succeed.
+// FIXME: However, it currently does not. Might need an RT fix.
+// EXPECTED: F: 1
+// CHECK:    F: 0
+#pragma omp target data map(paa) use_device_ptr(paa)
     printf("F: %d\n", mapped_ptr_paa102 == &paa[1][0][2]);
 
-    // (G) map on pointee: base-pointer of map matches use_device_ptr operand.
-    // Lookup should succeed.
-    // CHECK: G: 1
-    #pragma omp target data map(paa[1][0][2]) use_device_ptr(paa)
+// (G) map on pointee: base-pointer of map matches use_device_ptr operand.
+// Lookup should succeed.
+// CHECK: G: 1
+#pragma omp target data map(paa[1][0][2]) use_device_ptr(paa)
     printf("G: %d\n", mapped_ptr_paa102 == &paa[1][0][2]);
 
-    // (H) map on pointer and pointee. Base-pointer of map on pointee matches
-    // use_device_ptr operand.
-    // Lookup should succeed.
-    // CHECK: H: 1
-    #pragma omp target data map(paa) map(paa[1][0][2]) use_device_ptr(paa)
+// (H) map on pointer and pointee. Base-pointer of map on pointee matches
+// use_device_ptr operand.
+// Lookup should succeed.
+// CHECK: H: 1
+#pragma omp target data map(paa) map(paa[1][0][2]) use_device_ptr(paa)
     printf("H: %d\n", mapped_ptr_paa102 == &paa[1][0][2]);
 
-
-    #pragma omp target exit data map(release:ph[3:4], paa[1][0][2:5])
+#pragma omp target exit data map(release : ph[3 : 4], paa[1][0][2 : 5])
   }
 };
 
 S s1;
-int main() {
-  s1.f1(1);
-}
+int main() { s1.f1(1); }
