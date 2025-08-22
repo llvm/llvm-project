@@ -3864,4 +3864,58 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// ThrowOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ThrowOp : CIR_Op<"throw"> {
+  let summary = "(Re)Throws an exception";
+  let description = [{
+    Very similar to __cxa_throw:
+
+    ```
+    void __cxa_throw(void *thrown_exception, std::type_info *tinfo,
+                     void (*dest) (void *));
+    ```
+
+    The absense of arguments for `cir.throw` means it rethrows.
+
+    For the no-rethrow version, it must have at least two operands, the RTTI
+    information, a pointer to the exception object (likely allocated via
+    `cir.cxa.allocate_exception`) and finally an optional dtor, which might
+    run as part of this operation.
+
+    Example:
+    ```mlir
+      // throw;
+      cir.throw
+
+      // if (b == 0)
+      //   throw "Division by zero condition!";
+      cir.if %cond {
+        %exception_addr = cir.alloc_exception 8 -> !cir.ptr<!void>
+        ...
+        cir.store %string_addr, %exception_addr : // Store string addr for "Division by zero condition!"
+        cir.throw %exception_addr : !cir.ptr<!cir.ptr<!u8i>>, @"typeinfo for char const*"
+    ```
+  }];
+
+  let arguments = (ins Optional<CIR_PointerType>:$exception_ptr,
+                       OptionalAttr<FlatSymbolRefAttr>:$type_info,
+                       OptionalAttr<FlatSymbolRefAttr>:$dtor);
+
+  let assemblyFormat = [{
+    ($exception_ptr^ `:` type($exception_ptr))?
+    (`,` $type_info^)?
+    (`,` $dtor^)?
+    attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    bool rethrows() { return getNumOperands() == 0; }
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

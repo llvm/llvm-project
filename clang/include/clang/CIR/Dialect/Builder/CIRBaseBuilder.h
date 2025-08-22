@@ -19,7 +19,6 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 
@@ -311,6 +310,26 @@ public:
     resOperands.append(operands.begin(), operands.end());
     return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
                         resOperands, attrs);
+  }
+
+  cir::CallOp
+  createTryCallOp(mlir::Location loc,
+                  mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
+                  mlir::Type returnType = cir::VoidType(),
+                  mlir::ValueRange operands = mlir::ValueRange(),
+                  cir::SideEffect sideEffect = cir::SideEffect::All) {
+    assert(!cir::MissingFeatures::opCallCallConv());
+    return createCallOp(loc, callee, returnType, operands);
+  }
+
+  cir::CallOp
+  createTryCallOp(mlir::Location loc, cir::FuncOp callee,
+                  mlir::ValueRange operands,
+                  cir::SideEffect sideEffect = cir::SideEffect::All) {
+    assert(!cir::MissingFeatures::opCallCallConv());
+    return createTryCallOp(loc, mlir::SymbolRefAttr::get(callee),
+                           callee.getFunctionType().getReturnType(), operands,
+                           sideEffect);
   }
 
   //===--------------------------------------------------------------------===//

@@ -657,6 +657,11 @@ public:
     return cgf.emitCXXNewExpr(e);
   }
 
+  mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
+    cgf.emitCXXThrowExpr(e);
+    return nullptr;
+  }
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
