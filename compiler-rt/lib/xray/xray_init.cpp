@@ -105,7 +105,7 @@ __xray_register_sleds(const XRaySledEntry *SledsBegin,
   }
 
   if (Verbosity())
-    Report("Registering %d new functions!\n", (int)SledMap.Functions);
+    Report("Registering %d new functions!\n", SledMap.Functions);
 
   {
     SpinMutexLock Guard(&XRayInstrMapMutex);
