@@ -1402,21 +1402,26 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   std::string RealMode = getExecutableForDriverMode(Mode);
   llvm::Triple Triple;
 
-  // If name prefix is present, no --target= override was passed via CLOptions
-  // and the name prefix is not a valid triple, force it for backwards
-  // compatibility.
-  if (!ClangNameParts.TargetPrefix.empty() &&
-      computeTargetTriple(*this, "/invalid/", *CLOptions).str() ==
-          "/invalid/") {
+  llvm::Triple RealTriple =
+      computeTargetTriple(*this, TargetTriple, *CLOptions);
+
+  // If name prefix is present, we might prefer that over the actual triple
+  if (!ClangNameParts.TargetPrefix.empty()) {
     llvm::Triple PrefixTriple{ClangNameParts.TargetPrefix};
-    if (PrefixTriple.getArch() == llvm::Triple::UnknownArch ||
-        PrefixTriple.isOSUnknown())
+    llvm::Triple NormalizedTriple{llvm::Triple::normalize(ClangNameParts.TargetPrefix)};
+    // If no --target= override was passed via CLOptions
+    // and the name prefix is not a valid triple
+    if ((computeTargetTriple(*this, "/invalid/", *CLOptions).str() ==
+            "/invalid/") &&
+        (PrefixTriple.getArch() == llvm::Triple::UnknownArch ||
+         PrefixTriple.isOSUnknown()))
+      Triple = PrefixTriple;
+    // If name prefix is just an unnormalised form
+    else if (NormalizedTriple == RealTriple)
       Triple = PrefixTriple;
   }
 
   // Otherwise, use the real triple as used by the driver.
-  llvm::Triple RealTriple =
-      computeTargetTriple(*this, TargetTriple, *CLOptions);
   if (Triple.str().empty()) {
     Triple = RealTriple;
     assert(!Triple.str().empty());
@@ -1442,6 +1447,12 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   if (findTripleConfigFile(ExpCtx, CfgFilePath, Triple,
                            "-" + RealMode + ".cfg"))
     return readConfigFile(CfgFilePath, ExpCtx);
+  bool TryRealTriple = Triple != RealTriple;
+  if (TryRealTriple) {
+    if (findTripleConfigFile(ExpCtx, CfgFilePath, RealTriple,
+                            "-" + RealMode + ".cfg"))
+      return readConfigFile(CfgFilePath, ExpCtx);
+  }
 
   bool TryModeSuffix = !ClangNameParts.ModeSuffix.empty() &&
                        ClangNameParts.ModeSuffix != RealMode;
@@ -1449,6 +1460,11 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
     if (findTripleConfigFile(ExpCtx, CfgFilePath, Triple,
                              "-" + ClangNameParts.ModeSuffix + ".cfg"))
       return readConfigFile(CfgFilePath, ExpCtx);
+    if (TryRealTriple) {
+      if (findTripleConfigFile(ExpCtx, CfgFilePath, RealTriple,
+                              "-" + ClangNameParts.ModeSuffix + ".cfg"))
+        return readConfigFile(CfgFilePath, ExpCtx);
+    }
   }
 
   // Try loading <mode>.cfg, and return if loading failed.  If a matching file
@@ -1467,6 +1483,10 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   // Try loading <triple>.cfg and return if we find a match.
   if (findTripleConfigFile(ExpCtx, CfgFilePath, Triple, ".cfg"))
     return readConfigFile(CfgFilePath, ExpCtx);
+  if (TryRealTriple) {
+    if (findTripleConfigFile(ExpCtx, CfgFilePath, RealTriple, ".cfg"))
+      return readConfigFile(CfgFilePath, ExpCtx);
+  }
 
   // If we were unable to find a config file deduced from executable name,
   // that is not an error.
