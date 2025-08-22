@@ -45,7 +45,7 @@ void AnalysisState::addDependency(ProgramPoint *dependent,
   DATAFLOW_DEBUG({
     if (inserted) {
       LDBG() << "Creating dependency between " << debugName << " of " << anchor
-             << "\nand " << debugName << " on " << dependent;
+             << "\nand " << debugName << " on " << *dependent;
     }
   });
 }
@@ -128,7 +128,7 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
     worklist.pop();
 
     DATAFLOW_DEBUG(LDBG() << "Invoking '" << analysis->debugName
-                          << "' on: " << point);
+                          << "' on: " << *point);
     if (failed(analysis->visit(point)))
       return failure();
   }
