@@ -112,7 +112,6 @@ def _construct_aggregate(ag_name: str, job_list: list[JobMetrics]) -> AggregateM
 
     Args:
       ag_name: The name for this particular AggregateMetric
-
       job_list: This list of JobMetrics to be combined into the AggregateMetric.
         The input list should contain all (and only!) the libc++ JobMetrics
         for a particular stage and a particular workflow_id.
@@ -131,30 +130,28 @@ def _construct_aggregate(ag_name: str, job_list: list[JobMetrics]) -> AggregateM
     ag_workflow_id = job_list[0].workflow_id
 
     # Go through rest of jobs for this workflow id, if any, updating stats
-    if len(job_list) > 1:
-        for job in job_list[1:]:
-            # Update the status
-            ag_status = ag_status and job.status
-            # Get the earliest & latest times
-            if job.created_at_ns < earliest_create:
-                earliest_create = job.created_at_ns
-            if job.completed_at_ns < earliest_complete:
-                earliest_complete = job.completed_at_ns
-            if job.started_at_ns > latest_start:
-                latest_start = job.started_at_ns
-            if job.started_at_ns < earliest_start:
-                earliest_start = job.started_at_ns
-            if job.completed_at_ns > latest_complete:
-                latest_complete = job.completed_at_ns
+    for job in job_list[1:]:
+        # Update the status
+        ag_status = ag_status and job.status
+        # Get the earliest & latest times
+        if job.created_at_ns < earliest_create:
+            earliest_create = job.created_at_ns
+        if job.completed_at_ns < earliest_complete:
+            earliest_complete = job.completed_at_ns
+        if job.started_at_ns > latest_start:
+            latest_start = job.started_at_ns
+        if job.started_at_ns < earliest_start:
+            earliest_start = job.started_at_ns
+        if job.completed_at_ns > latest_complete:
+            latest_complete = job.completed_at_ns
 
     # Compute aggregate run time (in seconds, not ns)
     ag_run_time = (latest_complete - earliest_start) / 1000000000
     # Compute aggregate queue time (in seconds, not ns)
     ag_queue_time = (latest_start - earliest_create) / 1000000000
     # Append the aggregate metrics to the workflow metrics list.
-    aggregate = AggregateMetric(ag_name, ag_queue_time, ag_run_time, ag_status,
-                                latest_complete, ag_workflow_id)
-    return aggregate
+    return  AggregateMetric(ag_name, ag_queue_time, ag_run_time, ag_status,
+                            latest_complete, ag_workflow_id)
 
 def create_and_append_libcxx_aggregates(workflow_metrics: list[JobMetrics]):
     """Find libc++ JobMetric entries and create aggregate metrics for them.
@@ -302,7 +299,7 @@ def github_get_metrics(
             break
 
         # This workflow is not interesting to us.
-        if (task.name not in GITHUB_WORKFLOW_TO_TRACK):
+        if task.name not in GITHUB_WORKFLOW_TO_TRACK:
             continue
 
         libcxx_testing = False
