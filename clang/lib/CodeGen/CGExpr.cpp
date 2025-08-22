@@ -4678,6 +4678,26 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         emitArraySubscriptGEP(*this, Int8Ty, Addr.emitRawPointer(*this),
                               ScaledIdx, false, SignedIndices, E->getExprLoc());
     Addr = Address(EltPtr, OrigBaseElemTy, EltAlign);
+  } else if (E->getType().getAddressSpace() == LangAS::hlsl_constant) {
+    // This is an array inside of a cbuffer.
+    Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+
+    // ...
+    CharUnits RowAlignedSize = getContext()
+                                   .getTypeSizeInChars(E->getType())
+                                   .alignTo(CharUnits::fromQuantity(32));
+
+    llvm::Value *RowAlignedSizeVal =
+        llvm::ConstantInt::get(Idx->getType(), RowAlignedSize.getQuantity());
+    llvm::Value *ScaledIdx = Builder.CreateMul(Idx, RowAlignedSizeVal);
+
+    CharUnits EltAlign =
+      getArrayElementAlign(Addr.getAlignment(), Idx, RowAlignedSize);
+    llvm::Value *EltPtr =
+        emitArraySubscriptGEP(*this, Int8Ty, Addr.emitRawPointer(*this),
+                              ScaledIdx, false, SignedIndices, E->getExprLoc());
+    Addr = Address(EltPtr, Addr.getElementType(), EltAlign);
   } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
     // If this is A[i] where A is an array, the frontend will have decayed the
     // base to be a ArrayToPointerDecay implicit cast.  While correct, it is
