@@ -480,7 +480,7 @@ private:
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 
   /// Map source language used to a CIR attribute.
-  cir::SourceLanguage getCIRSourceLanguage() const;
+  std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
 };
 } // namespace CIRGen
 
