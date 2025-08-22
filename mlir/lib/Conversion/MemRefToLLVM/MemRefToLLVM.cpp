@@ -2019,21 +2019,6 @@ public:
   }
 };
 
-/// Unpack the pointer returned by a memref.alias_domain_scope.
-class ConvertAliasDomainScope
-    : public ConvertOpToLLVMPattern<memref::AliasDomainScopeOp> {
-public:
-  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(memref::AliasDomainScopeOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // We no longer need AliasDomainScopeOp as this stage so just remove it.
-    memref::AliasDomainScopeOp::inlineIntoParent(rewriter, op);
-    return success();
-  }
-};
-
 } // namespace
 
 void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
@@ -2045,7 +2030,6 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
       AllocaScopeOpLowering,
       AssumeAlignmentOpLowering,
       AtomicRMWOpLowering,
-      ConvertAliasDomainScope,
       ConvertExtractAlignedPointerAsIndex,
       DimOpLowering,
       ExtractStridedMetadataOpLowering,
@@ -2109,6 +2093,11 @@ struct FinalizeMemRefToLLVMConversionPass
   }
 };
 
+struct TrivialPatternRewriter : public PatternRewriter {
+  explicit TrivialPatternRewriter(MLIRContext *context)
+      : PatternRewriter(context) {}
+};
+
 struct ConvertMemRefAliasAttributesToLLVMPass
     : public impl::ConvertMemRefAliasAttributesToLLVMPassBase<
           ConvertMemRefAliasAttributesToLLVMPass> {
@@ -2118,6 +2107,9 @@ struct ConvertMemRefAliasAttributesToLLVMPass
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *ctx = &getContext();
+    llvm::SmallDenseMap<memref::AliasDomainScopeOp, LLVM::AliasScopeDomainAttr>
+        aliasScopeMap;
+    SmallVector<memref::AliasDomainScopeOp> aliasScopeOps;
     auto visitor = [&](memref::AliasAnalysisOpInterface aliasOp) -> WalkResult {
       memref::AliasingAttr aliasingAttr = aliasOp.getAliasingAttr();
       if (!aliasingAttr)
@@ -2129,15 +2121,21 @@ struct ConvertMemRefAliasAttributesToLLVMPass
         return WalkResult::interrupt();
       }
 
-      memref::AliasScopeDomainAttr domain = scope.getDomain();
-      auto llvmDomain = LLVM::AliasScopeDomainAttr::get(
-          ctx, domain.getId(), domain.getDescription());
+      LLVM::AliasScopeDomainAttr domain = aliasScopeMap.lookup(scope);
+
+      if (!domain) {
+        domain =
+            LLVM::AliasScopeDomainAttr::get(ctx, scope.getDescriptionAttr());
+        aliasScopeMap[scope] = domain;
+        aliasScopeOps.push_back(scope);
+      }
+
       auto convertScope = [&](Attribute scope) -> Attribute {
         auto memrefScope = dyn_cast_if_present<memref::AliasScopeAttr>(scope);
         if (!memrefScope)
           return scope;
 
-        return LLVM::AliasScopeAttr::get(ctx, memrefScope.getId(), llvmDomain,
+        return LLVM::AliasScopeAttr::get(ctx, memrefScope.getId(), domain,
                                          memrefScope.getDescription());
       };
       SmallVector<Attribute> scopes =
@@ -2151,6 +2149,10 @@ struct ConvertMemRefAliasAttributesToLLVMPass
     };
     if (op->walk(visitor).wasInterrupted())
       return signalPassFailure();
+
+    TrivialPatternRewriter rewriter(ctx);
+    for (memref::AliasDomainScopeOp scope : aliasScopeOps)
+      memref::AliasDomainScopeOp::inlineIntoParent(rewriter, scope);
   }
 };
 

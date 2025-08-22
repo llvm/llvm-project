@@ -465,12 +465,13 @@ def MemRef_AliasDomainScopeOp : MemRef_Op<"alias_domain_scope", [
     TBD
   }];
 
-  let arguments = (ins MemRef_AliasScopeDomainAttr:$domain);
+  let arguments = (ins OptionalAttr<StrAttr>:$description);
   let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region SizedRegion<1>:$region);
 
-  let assemblyFormat = "attr-dict $domain (`->` type($results)^)? $region";
+  let assemblyFormat =
+      "( $description^ )? (`->` type($results)^)? $region attr-dict";
 
   let extraClassDeclaration = [{
     /// Inline op body into parent region and erase the op.

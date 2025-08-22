@@ -20,36 +20,6 @@ class MemRef_Attr<string name, string attrMnemonic,
   let mnemonic = attrMnemonic;
 }
 
-
-//===----------------------------------------------------------------------===//
-// AliasScopeDomainAttr
-//===----------------------------------------------------------------------===//
-
-def MemRef_AliasScopeDomainAttr : MemRef_Attr<"AliasScopeDomain",
-                                              "alias_scope_domain"> {
-  let parameters = (ins
-    "Attribute":$id,
-    OptionalParameter<"StringAttr">:$description
-  );
-
-  let builders = [
-    AttrBuilder<(ins CArg<"StringAttr", "{}">:$description), [{
-      return $_get($_ctxt, DistinctAttr::create(UnitAttr::get($_ctxt)), description);
-    }]>
-  ];
-
-  let summary = "TBD";
-
-  let description = [{
-    TBD
-  }];
-
-  let assemblyFormat = "`<` struct(params) `>`";
-
-  // Generate mnemonic alias for the attribute.
-  let genMnemonicAlias = 1;
-}
-
 //===----------------------------------------------------------------------===//
 // AliasScopeAttr
 //===----------------------------------------------------------------------===//

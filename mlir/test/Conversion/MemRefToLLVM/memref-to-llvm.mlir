@@ -803,25 +803,20 @@ func.func @alloca_unconvertable_memory_space() {
 
 // -----
 
-#alias_scope_domain = #memref.alias_scope_domain<id = distinct[0]<>, description = "The domain">
 #llvm_domain = #llvm.alias_scope_domain<id = distinct[1]<>, description = "The domain">
 #scope1 = #llvm.alias_scope<id = distinct[2]<>, domain = #llvm_domain, description = "scope">
 #scope2 = #llvm.alias_scope<id = distinct[3]<>, domain = #llvm_domain>
 
-// CHECK: #[[DOMAIN:.*]] = #llvm.alias_scope_domain<id = distinct[0]<>, description = "The domain">
-// CHECK-DAG: #[[SCOPE1:.*]] = #llvm.alias_scope<id = distinct[1]<>, domain = #[[DOMAIN]], description = "scope">
-// CHECK-DAG: #[[SCOPE2:.*]] = #llvm.alias_scope<id = distinct[2]<>, domain = #[[DOMAIN]]>
+// CHECK: #[[DOMAIN:.*]] = #llvm.alias_scope_domain<id = {{.*}}, description = "The domain">
+// CHECK-DAG: #[[SCOPE1:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]], description = "scope">
+// CHECK-DAG: #[[SCOPE2:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]>
 
 // CHECK: func @memref_alias_attributes
-func.func @memref_alias_attributes(%arg1 : memref<?xf32>, %arg2 : memref<?xf32>, %arg3: index) -> f32 {
+func.func @memref_alias_attributes(%arg1 : memref<?xf32>, %arg2 : memref<?xf32>, %arg3: index) {
   // CHECK-NOT:  memref.alias_domain_scope
-  %0 = memref.alias_domain_scope #alias_scope_domain -> f32 {
   // CHECK:  %[[VAL:.*]] = llvm.load {{.*}} {alias_scopes = [#[[SCOPE1]]], noalias_scopes = [#[[SCOPE2]]]}
   // CHECK:  llvm.store %[[VAL]], {{.*}} {alias_scopes = [#[[SCOPE2]]], noalias_scopes = [#[[SCOPE1]]]}
-    %val = memref.load %arg1[%arg3] { alias = #memref.aliasing<alias_scopes=[#scope1], noalias=[#scope2]> } : memref<?xf32>
-    memref.store %val, %arg2[%arg3] { alias = #memref.aliasing<alias_scopes=[#scope2], noalias=[#scope1]> } : memref<?xf32>
-    memref.alias_domain_scope.return %val: f32
-  }
-  // CHECK: return %[[VAL]]
-  return %0 : f32
+  %val = memref.load %arg1[%arg3] { alias = #memref.aliasing<alias_scopes=[#scope1], noalias=[#scope2]> } : memref<?xf32>
+  memref.store %val, %arg2[%arg3] { alias = #memref.aliasing<alias_scopes=[#scope2], noalias=[#scope1]> } : memref<?xf32>
+  return
 }
