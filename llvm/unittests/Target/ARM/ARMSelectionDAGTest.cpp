@@ -93,8 +93,8 @@ TEST_F(ARMSelectionDAGTest, computeKnownBits_VORRIMM) {
   EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 32), 4);
   SDValue LHS = DAG->getRegister(0, VT);
 
-  SDValue EncSD = DAG->getTargetConstant(ARM_AM::createVMOVModImm(0x0, 0xAA),
-                                         DL, MVT::i32);
+  SDValue EncSD =
+      DAG->getTargetConstant(ARM_AM::createVMOVModImm(0x0, 0xAA), DL, MVT::i32);
   SDValue Op = DAG->getNode(ARMISD::VORRIMM, DL, VT, LHS, EncSD);
 
   // LHS(per-lane)     = ???????? ???????? ???????? ????????
@@ -116,8 +116,8 @@ TEST_F(ARMSelectionDAGTest, computeKnownBits_VBICIMM) {
 
   SDValue LHS = DAG->getConstant(APInt(32, 0xFFFFFFFF), DL, VT);
 
-  SDValue EncSD = DAG->getTargetConstant(ARM_AM::createVMOVModImm(0x0, 0xAA),
-                                         DL, MVT::i32);
+  SDValue EncSD =
+      DAG->getTargetConstant(ARM_AM::createVMOVModImm(0x0, 0xAA), DL, MVT::i32);
   SDValue Op = DAG->getNode(ARMISD::VBICIMM, DL, VT, LHS, EncSD);
 
   // LHS(per-lane)     = 11111111 11111111 11111111 11111111  (0xFFFFFFFF)
