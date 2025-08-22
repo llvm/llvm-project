@@ -20065,29 +20065,21 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = KnownOp0.intersectWith(KnownOp1);
     break;
   }
-  case ARMISD::VORRIMM: {
-    KnownBits KnownLHS = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
-
-    unsigned Encoded = Op.getConstantOperandVal(1);
-    unsigned ElemSize = Op.getScalarValueSizeInBits();
-    uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, ElemSize);
-    APInt Imm(ElemSize, DecodedVal);
-
-    Known.One = KnownLHS.One | Imm;
-    Known.Zero = KnownLHS.Zero & ~Imm;
-    return;
-  }
+  case ARMISD::VORRIMM:
   case ARMISD::VBICIMM: {
     KnownBits KnownLHS = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
-
     unsigned Encoded = Op.getConstantOperandVal(1);
-    unsigned ElemSize = Op.getScalarValueSizeInBits();
-    uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, ElemSize);
-    APInt Imm(ElemSize, DecodedVal);
+    unsigned DecEltBits = 0;
+    uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, DecEltBits);
 
-    APInt NotImm = ~Imm;
-    Known.One = KnownLHS.One & NotImm;
-    Known.Zero = KnownLHS.Zero | Imm;
+    if (Op.getScalarValueSizeInBits() == DecEltBits) {
+      bool IsVORR = Op.getOpcode() == ARMISD::VORRIMM;
+      APInt Imm(DecEltBits, DecodedVal);
+      Known.One = IsVORR ? (KnownLHS.One | Imm) : (KnownLHS.One & ~Imm);
+      Known.Zero = IsVORR ? (KnownLHS.Zero & ~Imm) : (KnownLHS.Zero | Imm);
+    } else {
+      Known = KnownLHS;
+    }
     return;
   }
   }

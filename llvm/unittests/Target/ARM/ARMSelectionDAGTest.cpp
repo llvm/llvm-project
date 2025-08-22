@@ -86,47 +86,49 @@ protected:
   std::unique_ptr<SelectionDAG> DAG;
 };
 
+/// VORR (immediate): per-lane OR with 32-bit elements.
+/// cmode=0x0 puts imm8 in byte0 => per-lane constant = 0x000000AA.
 TEST_F(ARMSelectionDAGTest, computeKnownBits_VORRIMM) {
   SDLoc DL;
-  EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 8), 2);
+  EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 32), 4);
   SDValue LHS = DAG->getRegister(0, VT);
 
-  unsigned Encoded = 0xAA;
-  SDValue EncSD = DAG->getTargetConstant(ARM_AM::createVMOVModImm(0xe, Encoded),
+  SDValue EncSD = DAG->getTargetConstant(ARM_AM::createVMOVModImm(0x0, 0xAA),
                                          DL, MVT::i32);
   SDValue Op = DAG->getNode(ARMISD::VORRIMM, DL, VT, LHS, EncSD);
 
-  // LHS     = ????????
-  // Encoded = 10101010
+  // LHS(per-lane)     = ???????? ???????? ???????? ????????
+  // Encoded(per-lane) = 00000000 00000000 00000000 10101010  (0x000000AA)
   //  =>
-  // Known.One  = 10101010 (0xAA)
-  // Known.Zero = 00000000 (0x0)
-  APInt DemandedElts = APInt::getAllOnes(2);
+  // Known.One  = 00000000 00000000 00000000 10101010  (0x000000AA)
+  // Known.Zero = 00000000 00000000 00000000 00000000  (0x00000000)
+  APInt DemandedElts = APInt::getAllOnes(4);
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
-  EXPECT_EQ(Known.One, APInt(8, 0xAA));
-  EXPECT_EQ(Known.Zero, APInt(8, 0x0));
+  EXPECT_EQ(Known.One, APInt(32, 0xAA));
+  EXPECT_EQ(Known.Zero, APInt(32, 0x0));
 }
 
+/// VBIC (immediate): x & ~imm with 32-bit elements.
+/// LHS(per-lane)=0xFFFFFFFF; imm per-lane = 0x000000AA => result = 0xFFFFFF55
 TEST_F(ARMSelectionDAGTest, computeKnownBits_VBICIMM) {
   SDLoc DL;
-  EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 8), 2);
+  EVT VT = EVT::getVectorVT(Context, EVT::getIntegerVT(Context, 32), 4);
 
-  SDValue LHS = DAG->getConstant(APInt(8, 0xCC), DL, VT);
+  SDValue LHS = DAG->getConstant(APInt(32, 0xFFFFFFFF), DL, VT);
 
-  unsigned Encoded = 0xAA;
-  SDValue EncSD = DAG->getTargetConstant(ARM_AM::createVMOVModImm(0xe, Encoded),
+  SDValue EncSD = DAG->getTargetConstant(ARM_AM::createVMOVModImm(0x0, 0xAA),
                                          DL, MVT::i32);
   SDValue Op = DAG->getNode(ARMISD::VBICIMM, DL, VT, LHS, EncSD);
 
-  // LHS     = 11001100
-  // Encoded = 10101010
+  // LHS(per-lane)     = 11111111 11111111 11111111 11111111  (0xFFFFFFFF)
+  // Encoded(per-lane) = 00000000 00000000 00000000 10101010  (0x000000AA)
   //  =>
-  // Known.One  = 01000100 (0x44)
-  // Known.Zero = 10111011 (0xBB)
-  APInt DemandedElts = APInt::getAllOnes(2);
+  // Known.One  = 11111111 11111111 11111111 01010101  (0xFFFFFF55)
+  // Known.Zero = 00000000 00000000 00000000 10101010  (0x000000AA)
+  APInt DemandedElts = APInt::getAllOnes(4);
   KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
-  EXPECT_EQ(Known.One, APInt(8, 0x44));
-  EXPECT_EQ(Known.Zero, APInt(8, 0xBB));
+  EXPECT_EQ(Known.One, APInt(32, 0xFFFFFF55));
+  EXPECT_EQ(Known.Zero, APInt(32, 0x000000AA));
 }
 
 } // end namespace llvm
