@@ -811,6 +811,7 @@ public:
       AccCommonBlock, AccThreadPrivate, AccReduction, AccNone, AccPreDetermined,
       // OpenMP data-sharing attribute
       OmpShared, OmpPrivate, OmpLinear, OmpFirstPrivate, OmpLastPrivate,
+      OmpGroupPrivate,
       // OpenMP data-mapping attribute
       OmpMapTo, OmpMapFrom, OmpMapToFrom, OmpMapStorage, OmpMapDelete,
       OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr, OmpHasDeviceAddr,
@@ -823,7 +824,7 @@ public:
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
       OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
       OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction,
-      OmpUniform, OmpGroupPrivate);
+      OmpUniform);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
