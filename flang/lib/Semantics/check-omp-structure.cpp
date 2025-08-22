@@ -1198,13 +1198,13 @@ void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
 
     if (sym->has<AssocEntityDetails>()) {
       context_.SayWithDecl(*sym, arg.source,
-          "GROUPPRIVATE argument cannot be an an ASSOCIATE name"_err_en_US);
+          "GROUPPRIVATE argument cannot be an ASSOCIATE name"_err_en_US);
       continue;
     }
     if (auto *obj{sym->detailsIf<ObjectEntityDetails>()}) {
       if (obj->IsCoarray()) {
-        context_.Say(arg.source,
-            "GROUPPRIVATE argument cannot be an a coarray"_err_en_US);
+        context_.Say(
+            arg.source, "GROUPPRIVATE argument cannot be a coarray"_err_en_US);
         continue;
       }
       if (obj->init()) {
@@ -1215,7 +1215,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
     }
     if (sym->test(Symbol::Flag::InCommonBlock)) {
       context_.Say(arg.source,
-          "GROUPPRIVATE argument cannot be an a member of a common block"_err_en_US);
+          "GROUPPRIVATE argument cannot be a member of a common block"_err_en_US);
       continue;
     }
     if (!IsCommonBlock(*sym)) {
