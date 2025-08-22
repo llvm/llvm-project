@@ -226,8 +226,8 @@ exit:
   ret void
 }
 
-define <vscale x 4 x i32> @phi(<vscale x 4 x i32> %v, i1 %cond, iXLen %vl) {
-; CHECK-LABEL: phi:
+define <vscale x 4 x i32> @join(<vscale x 4 x i32> %v, i1 %cond, iXLen %vl) {
+; CHECK-LABEL: join:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
