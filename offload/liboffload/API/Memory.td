@@ -60,8 +60,7 @@ def olMemcpy : Function {
     let returns = [];
 }
 
-def : Function {
-  let name = "olMemFill";
+def olMemFill : Function {
   let desc = "Fill memory with copies of the given pattern";
   let details = [
     "Filling with patterns larger than 4 bytes may be less performant",
