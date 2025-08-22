@@ -127,26 +127,16 @@ struct FormatStyle {
     ///       argument2);
     /// \endcode
     BAS_DontAlign,
-    /// Always break after an open bracket, if the parameters don't fit
-    /// on a single line, e.g.:
-    /// \code
-    ///   someLongFunction(
-    ///       argument1, argument2);
-    /// \endcode
+    /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
     BAS_AlwaysBreak,
-    /// Always break after an open bracket, if the parameters don't fit
-    /// on a single line. Closing brackets will be placed on a new line.
-    /// E.g.:
-    /// \code
-    ///   someLongFunction(
-    ///       argument1, argument2
-    ///   )
-    /// \endcode
-    ///
-    /// \note
-    ///  This currently only applies to braced initializer lists (when
-    ///  ``Cpp11BracedListStyle`` is ``true``) and parentheses.
-    /// \endnote
+    /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+    /// in combination with ``BreakBeforeCloseBracketBracedList``,
+    /// ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
+    /// ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
     BAS_BlockIndent,
   };
 
