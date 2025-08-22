@@ -1479,7 +1479,7 @@ func.func @execute_region_no_inline() {
 // CHECK-NEXT:       scf.execute_region
 // CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
 // CHECK-NEXT:       scf.yield %[[VAL]] : i64
-// CHECK-NEXT:     }
+// CHECK-NOT:      no_inline
 
 // -----
 

@@ -134,8 +134,8 @@ static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
 
 bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
   LLVM_DEBUG(dbgs() << "[isIndirectAccess] " << *Inst << '\n');
-  SmallSet<const Value *, 32> WorkSet;
-  SmallSet<const Value *, 32> Visited;
+  SmallPtrSet<const Value *, 32> WorkSet;
+  SmallPtrSet<const Value *, 32> Visited;
   if (const Value *MO = getMemoryInstrPtrAndType(Inst).first) {
     if (isGlobalAddr(MO))
       WorkSet.insert(MO);

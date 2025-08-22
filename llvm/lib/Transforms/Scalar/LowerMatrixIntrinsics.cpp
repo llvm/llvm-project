@@ -1209,7 +1209,7 @@ public:
     //
     // For verification, we keep track of where we changed uses to poison in
     // PoisonedInsts and then check that we in fact remove them.
-    SmallSet<Instruction *, 16> PoisonedInsts;
+    SmallPtrSet<Instruction *, 16> PoisonedInsts;
     for (auto *Inst : reverse(ToRemove)) {
       for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
         if (auto *Poisoned = dyn_cast<Instruction>(U.getUser()))
