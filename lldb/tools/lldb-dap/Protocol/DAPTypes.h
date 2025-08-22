@@ -48,38 +48,6 @@ struct SourceLLDBData {
 bool fromJSON(const llvm::json::Value &, SourceLLDBData &, llvm::json::Path);
 llvm::json::Value toJSON(const SourceLLDBData &);
 
-struct Symbol {
-  /// The symbol id, usually the original symbol table index.
-  uint32_t id;
-
-  /// True if this symbol is debug information in a symbol.
-  bool isDebug;
-
-  /// True if this symbol is not actually in the symbol table, but synthesized
-  /// from other info in the object file.
-  bool isSynthetic;
-
-  /// True if this symbol is globally visible.
-  bool isExternal;
-
-  /// The symbol type.
-  lldb::SymbolType type;
-
-  /// The symbol file address.
-  lldb::addr_t fileAddress;
-
-  /// The symbol load address.
-  std::optional<lldb::addr_t> loadAddress;
-
-  /// The symbol size.
-  lldb::addr_t size;
-
-  /// The symbol name.
-  std::string name;
-};
-bool fromJSON(const llvm::json::Value &, Symbol &, llvm::json::Path);
-llvm::json::Value toJSON(const Symbol &);
-
 } // namespace lldb_dap::protocol
 
 #endif
