@@ -5,8 +5,8 @@ set(ORC_RT_HEADERS
     orc-rt/Error.h
     orc-rt/Math.h
     orc-rt/RTTI.h
+    orc-rt/move_only_function.h
     orc-rt/span.h
-    orc-rt/unique-function.h
 )
 
 # TODO: Switch to filesets when we move to cmake-3.23.
