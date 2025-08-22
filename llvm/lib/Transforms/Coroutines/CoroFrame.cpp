@@ -975,23 +975,15 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
-// This function assumes that it is being called on basic block in reversed
-// post-order, meaning predecessors are visited before successors failing to do
-// so will cause VMap to be non-valid and will cause instructions to fail
-// mapping to their corresponding clones
 static void finalizeBasicBlockCloneAndTrackSuccessors(
     BasicBlock *InitialBlock, BasicBlock *ClonedBlock, ValueToValueMapTy &VMap,
     SmallPtrSet<BasicBlock *, 3> &SuccessorBlocksSet) {
   // This code will examine the basic block, fix issues caused by clones
   //  for example - tailor cleanupret to the corresponding cleanuppad
-  //  it will use VMap to do so
+  //  using the VMap
   // in addition, it will add the node successors to SuccessorBlocksSet
 
-  // Remap the instructions, VMap here aggregates instructions across
-  // multiple BasicBlocks, and we assume that traversal is reversed post-order,
-  // therefore successor blocks (for example instructions having funclet
-  // tags) will be mapped correctly to the new cloned cleanuppad
-  for (Instruction &ClonedBlockInstruction : *ClonedBlock) {
+    for (Instruction &ClonedBlockInstruction : *ClonedBlock) {
     RemapInstruction(&ClonedBlockInstruction, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
   }
@@ -1096,7 +1088,7 @@ cloneIfBasicBlockPredecessors(BasicBlock *InitialBlock,
 // The fix consists of mapping problematic paths (where CoroBegin does not
 // dominate cleanup nodes) and duplicates them to 2 flows - the one that
 // insertSpills intended to create (using the spill) and another one, preserving
-// the logics of pre-splitting, which would be triggered if unwinding happened
+// the logics of pre-splitting, which would be executed if unwinding happened
 // before CoroBegin
 static void enforceDominationByCoroBegin(const FrameDataInfo &FrameData,
                                         const coro::Shape &Shape, Function *F,
@@ -1122,8 +1114,7 @@ static void enforceDominationByCoroBegin(const FrameDataInfo &FrameData,
     }
     SpillUserBlocksSet.erase(CurrentBlock);
 
-    // Preserve the current node. the duplicate will become the unspilled
-    // alternative
+    // The duplicate will become the unspilled alternative
     auto UnspilledAlternativeBlock =
         CloneBasicBlock(CurrentBlock, VMap, ".unspilled_alternative", F);
 
@@ -1132,14 +1123,14 @@ static void enforceDominationByCoroBegin(const FrameDataInfo &FrameData,
     finalizeBasicBlockCloneAndTrackSuccessors(
         CurrentBlock, UnspilledAlternativeBlock, VMap, SpillUserBlocksSet);
 
-    // Split only if predecessor breaks dominance against CoroBegin
-    splitIfBasicBlockPredecessors(CurrentBlock, UnspilledAlternativeBlock,
+    // Clone only if predecessor breaks dominance against CoroBegin
+    cloneIfBasicBlockPredecessors(CurrentBlock, UnspilledAlternativeBlock,
                                   [&DT, &Shape](BasicBlock *PredecessorNode) {
                                     return !DT.dominates(Shape.CoroBegin,
                                                          PredecessorNode);
                                   });
 
-    // We changed dominance tree, so recalculate
+    // We changed dominance tree, so recalculate it
     DT.recalculate(*F);
 
     if (SpillUserBlocksSet.empty()) {

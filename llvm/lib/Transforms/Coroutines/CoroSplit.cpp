@@ -379,7 +379,8 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
 
     // If the terminator is an invoke,
     // set the cleanupret unwind destination the same as the other edges, to
-    // avoid validation errors
+    // preserve the invariant of "Unwind edges out of a funclet pad must have
+    // the same unwind dest"
     BasicBlock *UnwindDest = nullptr;
     if (auto *Invoke =
 dyn_cast<InvokeInst>(FromPad->getParent()->getTerminator())) {
