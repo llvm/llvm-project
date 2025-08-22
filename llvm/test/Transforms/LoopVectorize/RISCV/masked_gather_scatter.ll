@@ -45,8 +45,6 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT8]]
 ; RV32-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; RV32:       vector.ph:
-; RV32-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP13:%.*]] = shl nuw i64 [[TMP12]], 1
 ; RV32-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; RV32-NEXT:    [[TMP9:%.*]] = mul nuw nsw <vscale x 2 x i64> [[TMP7]], splat (i64 16)
 ; RV32-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -55,24 +53,17 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP9]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[AVL:%.*]] = phi i64 [ 625, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; RV32-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP10]], i64 0
-; RV32-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT9]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; RV32-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP10]] to i64
 ; RV32-NEXT:    [[TMP11:%.*]] = shl nuw nsw i64 [[TMP8]], 4
 ; RV32-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP11]], i64 0
 ; RV32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; RV32-NEXT:    [[TMP23:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
-; RV32-NEXT:    [[TMP15:%.*]] = icmp ult <vscale x 2 x i32> [[TMP23]], [[BROADCAST_SPLAT10]]
 ; RV32-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[EVL_BASED_IV]], 16
 ; RV32-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[OFFSET_IDX]]
-; RV32-NEXT:    [[TMP25:%.*]] = trunc i64 [[TMP13]] to i32
-; RV32-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr align 4 [[TMP16]], i64 64, <vscale x 2 x i1> [[TMP15]], i32 [[TMP25]]), !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; RV32-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr align 4 [[TMP16]], i64 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; RV32-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], splat (i32 100)
-; RV32-NEXT:    [[TMP26:%.*]] = select <vscale x 2 x i1> [[TMP15]], <vscale x 2 x i1> [[TMP14]], <vscale x 2 x i1> zeroinitializer
 ; RV32-NEXT:    [[TMP20:%.*]] = shl nuw nsw i64 [[OFFSET_IDX]], 1
 ; RV32-NEXT:    [[TMP21:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP20]]
-; RV32-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP13]] to i32
-; RV32-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP21]], i64 256, <vscale x 2 x i1> [[TMP26]], i32 [[TMP22]]), !alias.scope [[META5:![0-9]+]]
+; RV32-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP21]], i64 256, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META5:![0-9]+]]
 ; RV32-NEXT:    [[TMP17:%.*]] = sitofp <vscale x 2 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 2 x double>
 ; RV32-NEXT:    [[TMP18:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_GATHER6]], [[TMP17]]
 ; RV32-NEXT:    [[TMP19:%.*]] = getelementptr inbounds double, ptr [[A]], <vscale x 2 x i64> [[VEC_IND]]
@@ -125,8 +116,6 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; RV64-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; RV64:       vector.ph:
-; RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 1
 ; RV64-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; RV64-NEXT:    [[TMP1:%.*]] = mul nuw nsw <vscale x 2 x i64> [[TMP7]], splat (i64 16)
 ; RV64-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -135,24 +124,17 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP1]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i64 [ 625, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; RV64-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP10]], i64 0
-; RV64-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT6]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; RV64-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP10]] to i64
 ; RV64-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP8]], 4
 ; RV64-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP4]], i64 0
 ; RV64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; RV64-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
-; RV64-NEXT:    [[TMP25:%.*]] = icmp ult <vscale x 2 x i32> [[TMP11]], [[BROADCAST_SPLAT7]]
 ; RV64-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[EVL_BASED_IV]], 16
 ; RV64-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[OFFSET_IDX]]
-; RV64-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP2]] to i32
-; RV64-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr align 4 [[TMP9]], i64 64, <vscale x 2 x i1> [[TMP25]], i32 [[TMP16]]), !alias.scope [[META0:![0-9]+]]
+; RV64-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr align 4 [[TMP9]], i64 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]]
 ; RV64-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], splat (i32 100)
-; RV64-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP25]], <vscale x 2 x i1> [[TMP14]], <vscale x 2 x i1> zeroinitializer
 ; RV64-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[OFFSET_IDX]], 1
 ; RV64-NEXT:    [[TMP28:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP13]]
-; RV64-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP2]] to i32
-; RV64-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP28]], i64 256, <vscale x 2 x i1> [[TMP12]], i32 [[TMP15]]), !alias.scope [[META3:![0-9]+]]
+; RV64-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP28]], i64 256, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]]
 ; RV64-NEXT:    [[TMP17:%.*]] = sitofp <vscale x 2 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 2 x double>
 ; RV64-NEXT:    [[TMP18:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_GATHER6]], [[TMP17]]
 ; RV64-NEXT:    [[TMP19:%.*]] = getelementptr inbounds double, ptr [[A]], <vscale x 2 x i64> [[VEC_IND]]

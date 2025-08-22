@@ -12,20 +12,13 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY1]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[FOR_BODY1]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP2]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
-; IF-EVL-NEXT:    [[TMP4:%.*]] = icmp ult <vscale x 2 x i32> [[TMP3]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[INDEX:%.*]], i64 [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP12]] to i32
-; IF-EVL-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP5]], i64 4, <vscale x 2 x i1> [[TMP4]], i32 [[TMP6]])
+; IF-EVL-NEXT:    [[WIDE_STRIDED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP5]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[IN:%.*]], <vscale x 2 x i64> [[WIDE_STRIDED_LOAD]]
 ; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> align 4 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[OUT:%.*]], <vscale x 2 x i64> [[WIDE_STRIDED_LOAD]]
