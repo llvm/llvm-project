@@ -17840,26 +17840,39 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
   auto Op = RMW->getOperation();
   switch (Op) {
-  case AtomicRMWInst::Xchg: {
+  case AtomicRMWInst::Xchg:
     // PCIe supports add and xchg for system atomics.
     return isAtomicRMWLegalXChgTy(RMW)
                ? TargetLowering::AtomicExpansionKind::None
                : TargetLowering::AtomicExpansionKind::CmpXChg;
-  }
   case AtomicRMWInst::Add:
-  case AtomicRMWInst::And:
-  case AtomicRMWInst::UIncWrap:
-  case AtomicRMWInst::UDecWrap:
+    // PCIe supports add and xchg for system atomics.
     return atomicSupportedIfLegalIntType(RMW);
   case AtomicRMWInst::Sub:
+  case AtomicRMWInst::And:
   case AtomicRMWInst::Or:
-  case AtomicRMWInst::Xor: {
-    // Atomic sub/or/xor do not work over PCI express, but atomic add
-    // does. InstCombine transforms these with 0 to or, so undo that.
-    if (HasSystemScope && AMDGPU::isFlatGlobalAddrSpace(AS)) {
-      if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
-          ConstVal && ConstVal->isNullValue())
-        return AtomicExpansionKind::Expand;
+  case AtomicRMWInst::Xor:
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::UMax:
+  case AtomicRMWInst::UMin:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap: {
+    if (AMDGPU::isFlatGlobalAddrSpace(AS) ||
+        AS == AMDGPUAS::BUFFER_FAT_POINTER) {
+      // Always expand system scope atomics.
+      if (HasSystemScope && !Subtarget->hasEmulatedSystemScopeAtomics()) {
+        if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
+            Op == AtomicRMWInst::Xor) {
+          // Atomic sub/or/xor do not work over PCI express, but atomic add
+          // does. InstCombine transforms these with 0 to or, so undo that.
+          if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
+              ConstVal && ConstVal->isNullValue())
+            return AtomicExpansionKind::Expand;
+        }
+
+        return AtomicExpansionKind::CmpXChg;
+      }
     }
 
     return atomicSupportedIfLegalIntType(RMW);
@@ -18013,18 +18026,6 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     }
 
     return AtomicExpansionKind::CmpXChg;
-  }
-  case AtomicRMWInst::Min:
-  case AtomicRMWInst::Max:
-  case AtomicRMWInst::UMin:
-  case AtomicRMWInst::UMax: {
-    if (AMDGPU::isFlatGlobalAddrSpace(AS) ||
-        AS == AMDGPUAS::BUFFER_FAT_POINTER) {
-      if (HasSystemScope && !Subtarget->hasEmulatedSystemScopeAtomics())
-        return AtomicExpansionKind::CmpXChg;
-    }
-
-    return atomicSupportedIfLegalIntType(RMW);
   }
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::FSub:
