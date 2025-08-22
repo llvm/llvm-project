@@ -2929,7 +2929,19 @@ void AppleMachO::AddGnuCPlusPlusStdlibLibArgs(
 
 void DarwinClang::AddGnuCPlusPlusStdlibLibArgs(
     const ArgList &Args, ArgStringList &CmdArgs) const {
-  if (!GCCInstallation.isValid()) {
+  if (GCCInstallation.isValid()) {
+    if (Args.hasArg(options::OPT_static_libstdcxx)) {
+      // ld64 doesn't support -Bstatic, so we need to find the actual library
+      for (const auto &Path : getFilePaths()) {
+        llvm::SmallString<128> UsrLibStdCxx(Path);
+        llvm::sys::path::append(UsrLibStdCxx, "libstdc++.a");
+        if (getVFS().exists(UsrLibStdCxx)) {
+          CmdArgs.push_back(Args.MakeArgString(UsrLibStdCxx));
+          return;
+        }
+      }
+    }
+  } else {
     // Unfortunately, -lstdc++ doesn't always exist in the standard search path;
     // it was previously found in the gcc lib dir. However, for all the Darwin
     // platforms we care about it was -lstdc++.6, so we search for that
