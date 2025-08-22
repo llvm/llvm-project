@@ -594,6 +594,19 @@ TEST(ToolChainTest, UEFICallingConventionTest) {
 
   EXPECT_EQ(compiler.getTarget().getCallingConvKind(true),
             TargetInfo::CallingConvKind::CCK_MicrosoftWin64);
+
+  TrStr = "loongarch64-unknown-uefi";
+  Tr.setOS(llvm::Triple::OSType::UEFI);
+  Tr.setVendor(llvm::Triple::VendorType::UnknownVendor);
+  Tr.setEnvironment(llvm::Triple::EnvironmentType::UnknownEnvironment);
+  Tr.setArch(llvm::Triple::ArchType::loongarch64);
+
+  compiler.getTargetOpts().Triple = Tr.getTriple();
+  compiler.setTarget(clang::TargetInfo::CreateTargetInfo(
+      compiler.getDiagnostics(), compiler.getTargetOpts()));
+
+  EXPECT_EQ(compiler.getTarget().getCallingConvKind(true),
+            TargetInfo::CallingConvKind::CCK_Default);
 }
 
 TEST(ToolChainTest, UEFIDefaultDebugFormatTest) {

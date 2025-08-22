@@ -77,3 +77,9 @@
 // RUN: not %clang_cl --target=x86-unknown-uefi -o %t.o %s 2> %t.err
 // RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-x86 %s
 // CHECK-x86: error: unknown target triple 'x86-unknown-uefi'{{$}}
+
+// RUN: not %clang --target=loongarch-unknown-uefi -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-la %s
+// RUN: not %clang_cl --target=loongarch-unknown-uefi -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-la %s
+// CHECK-la: error: unknown target triple 'loongarch-unknown-uefi'{{$}}
