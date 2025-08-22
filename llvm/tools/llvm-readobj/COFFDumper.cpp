@@ -2115,8 +2115,8 @@ void COFFDumper::printCOFFPseudoReloc() {
       Begin >= Data.size() || End > Data.size()) {
     reportUniqueWarning(
         createStringError("the marker symbol of runtime pseudo-relocation "
-                          "points past the end of the section: 0x%x",
-                          Begin >= Data.size() ? Begin : End));
+                          "points past the end of the section 0x%x: got 0x%x",
+                          Data.size(), Begin >= Data.size() ? Begin : End));
     return;
   }
 
