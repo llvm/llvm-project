@@ -1440,6 +1440,26 @@ static unsigned convertToNonFlagSettingOpc(const MachineInstr &MI) {
     return MIDefinesZeroReg ? AArch64::SUBSXrs : AArch64::SUBXrs;
   case AArch64::SUBSXrx:
     return AArch64::SUBXrx;
+  case AArch64::ANDSWri:
+    return AArch64::ANDWri;
+  case AArch64::ANDSWrr:
+    return AArch64::ANDWrr;
+  case AArch64::ANDSWrs:
+    return AArch64::ANDWrs;
+  case AArch64::ANDSXri:
+    return AArch64::ANDXri;
+  case AArch64::ANDSXrr:
+    return AArch64::ANDXrr;
+  case AArch64::ANDSXrs:
+    return AArch64::ANDXrs;
+  case AArch64::BICSWrr:
+    return AArch64::BICWrr;
+  case AArch64::BICSXrr:
+    return AArch64::BICXrr;
+  case AArch64::BICSWrs:
+    return AArch64::BICWrs;
+  case AArch64::BICSXrs:
+    return AArch64::BICXrs;
   }
 }
 
@@ -1724,6 +1744,20 @@ static unsigned sForm(MachineInstr &Instr) {
   case AArch64::SUBSWri:
   case AArch64::SUBSXrr:
   case AArch64::SUBSXri:
+  case AArch64::ANDSWri:
+  case AArch64::ANDSWrr:
+  case AArch64::ANDSWrs:
+  case AArch64::ANDSXri:
+  case AArch64::ANDSXrr:
+  case AArch64::ANDSXrs:
+  case AArch64::BICSWrr:
+  case AArch64::BICSXrr:
+  case AArch64::BICSWrs:
+  case AArch64::BICSXrs:
+  case AArch64::ADCSWr:
+  case AArch64::ADCSXr:
+  case AArch64::SBCSWr:
+  case AArch64::SBCSXr:
     return Instr.getOpcode();
 
   case AArch64::ADDWrr:
@@ -1754,6 +1788,22 @@ static unsigned sForm(MachineInstr &Instr) {
     return AArch64::ANDSWri;
   case AArch64::ANDXri:
     return AArch64::ANDSXri;
+  case AArch64::ANDWrr:
+    return AArch64::ANDSWrr;
+  case AArch64::ANDWrs:
+    return AArch64::ANDSWrs;
+  case AArch64::ANDXrr:
+    return AArch64::ANDSXrr;
+  case AArch64::ANDXrs:
+    return AArch64::ANDSXrs;
+  case AArch64::BICWrr:
+    return AArch64::BICSWrr;
+  case AArch64::BICXrr:
+    return AArch64::BICSXrr;
+  case AArch64::BICWrs:
+    return AArch64::BICSWrs;
+  case AArch64::BICXrs:
+    return AArch64::BICSXrs;
   }
 }
 
@@ -1891,6 +1941,25 @@ static bool isSUBSRegImm(unsigned Opcode) {
   return Opcode == AArch64::SUBSWri || Opcode == AArch64::SUBSXri;
 }
 
+static bool isANDOpcode(MachineInstr &MI) {
+  unsigned Opc = sForm(MI);
+  switch (Opc) {
+  case AArch64::ANDSWri:
+  case AArch64::ANDSWrr:
+  case AArch64::ANDSWrs:
+  case AArch64::ANDSXri:
+  case AArch64::ANDSXrr:
+  case AArch64::ANDSXrs:
+  case AArch64::BICSWrr:
+  case AArch64::BICSXrr:
+  case AArch64::BICSWrs:
+  case AArch64::BICSXrs:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Check if CmpInstr can be substituted by MI.
 ///
 /// CmpInstr can be substituted:
@@ -1928,7 +1997,8 @@ static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
   // 1) MI and CmpInstr set N and V to the same value.
   // 2) If MI is add/sub with no-signed-wrap, it produces a poison value when
   //    signed overflow occurs, so CmpInstr could still be simplified away.
-  if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap))
+  // Note that Ands and Bics instructions always clear the V flag.
+  if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap) && !isANDOpcode(MI))
     return false;
 
   AccessKind AccessToCheck = AK_Write;

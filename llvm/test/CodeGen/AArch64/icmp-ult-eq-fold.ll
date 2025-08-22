@@ -167,8 +167,7 @@ define i1 @test_disjoint(i1 %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    orr w9, w2, #0x800000
 ; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    and w8, w9, w8
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    tst w9, w8
 ; CHECK-NEXT:    cset w8, eq
 ; CHECK-NEXT:    orr w8, w0, w8
 ; CHECK-NEXT:    and w0, w8, #0x1
@@ -188,8 +187,7 @@ define i1 @test_disjoint2(i1 %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    orr w9, w2, #0x800000
 ; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    and w8, w9, w8
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    tst w9, w8
 ; CHECK-NEXT:    cset w8, gt
 ; CHECK-NEXT:    orr w8, w0, w8
 ; CHECK-NEXT:    and w0, w8, #0x1
@@ -209,8 +207,7 @@ define i1 @test_disjoint3(i1 %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    orr w9, w2, #0x800000
 ; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    and w8, w9, w8
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    tst w9, w8
 ; CHECK-NEXT:    cset w8, mi
 ; CHECK-NEXT:    orr w8, w0, w8
 ; CHECK-NEXT:    and w0, w8, #0x1
