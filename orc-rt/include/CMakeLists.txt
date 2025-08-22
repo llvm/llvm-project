@@ -6,6 +6,8 @@ set(ORC_RT_HEADERS
     orc-rt/Compiler.h
     orc-rt/Error.h
     orc-rt/ExecutorAddr.h
+    orc-rt/IntervalMap.h
+    orc-rt/IntervalSet.h
     orc-rt/Math.h
     orc-rt/RTTI.h
     orc-rt/WrapperFunctionResult.h
