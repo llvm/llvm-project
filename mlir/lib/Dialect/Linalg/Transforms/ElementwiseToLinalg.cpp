@@ -20,13 +20,37 @@ namespace mlir {
 
 using namespace mlir;
 
+// Treats primitive scalars and 0-D tensors as "scalar-like" for broadcasting.
+static inline bool isScalarLike(Type t) {
+  if (llvm::isa<IntegerType, FloatType, IndexType, ComplexType>(t))
+    return true;
+  if (auto rt = dyn_cast<RankedTensorType>(t))
+    return rt.getRank() == 0; // 0-D tensors are scalar-like
+  return false;
+}
+
 static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
   if (!OpTrait::hasElementwiseMappableTraits(op))
     return false;
 
-  // TODO: The conversion pattern can be made to work for `any_of` here, but
-  // it's more complex as it requires tracking which operands are scalars.
-  return llvm::all_of(op->getOperandTypes(), llvm::IsaPred<RankedTensorType>);
+  auto types = op->getOperandTypes();
+
+  // We want at least one ranked tensor.
+  bool anyRankedTensor = llvm::any_of(
+      types, [](Type type) { return isa<RankedTensorType>(type); });
+
+  // No invalid operands (i.e., every operand is a ranked tensor or
+  // scalar-like).
+  bool noneInvalid = llvm::none_of(types, [](Type t) {
+    // Invalid if neither ranked tensor nor scalar-like.
+    if (llvm::isa<RankedTensorType>(t))
+      return false;
+    if (isScalarLike(t))
+      return false;
+    return true; // Could be a memref, unranked tensor, vector, etc.
+  });
+
+  return anyRankedTensor && noneInvalid;
 }
 
 /// Given `op` assumed `isElementwiseMappableOpOnRankedTensors`, iterate over
