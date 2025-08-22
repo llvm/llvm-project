@@ -8,6 +8,7 @@
 
 #include "SymbolFileDWARF.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
@@ -998,12 +999,12 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   const char *sdk = cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr);
   if (!sdk)
     return {};
-  std::string sysroot =
+  llvm::StringRef sysroot =
       cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
 
   // RegisterXcodeSDK calls into xcrun which is not aware of CLT, which is
   // expensive.
-  if (sysroot.find("/Library/Developer/CommandLineTools/SDKs") != 0) {
+  if (!sysroot.starts_with("/Library/Developer/CommandLineTools/SDKs")) {
     // Register the sysroot path remapping with the module belonging to
     // the CU as well as the one belonging to the symbol file. The two
     // would be different if this is an OSO object and module is the
@@ -1017,7 +1018,7 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
       local_module_sp->RegisterXcodeSDK(sdk, sysroot);
   }
 
-  return {sdk, FileSpec{std::move(sysroot)}};
+  return {sdk, FileSpec(sysroot)};
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
