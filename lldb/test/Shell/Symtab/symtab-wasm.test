@@ -1,9 +1,15 @@
 # RUN: yaml2obj %S/Inputs/simple.wasm.yaml -o %t.wasm
-# RUN: %lldb %t.wasm -o 'image dump symtab'
+# RUN: %lldb %t.wasm -o 'image dump symtab' -o 'image dump sections' | FileCheck %s
 
-# CHECK: Code 0x0000000000000002 0x0000000000000002 {{.*}} __wasm_call_ctors
-# CHECK: Code 0x0000000000000005 0x0000000000000029 {{.*}} add
-# CHECK: Code 0x000000000000002f 0x000000000000004c {{.*}} __original_main
-# CHECK: Code 0x000000000000007c 0x0000000000000009 {{.*}} main
-# CHECK: Data 0x000000000000022f 0x0000000000000041 {{.*}} .rodata
-# CHECK: Data 0x0000000000000270 0x0000000000000000 {{.*}} .data
+CHECK: Code 0x0000000000000002 0x0000000000000002 0x00000000 __wasm_call_ctors
+CHECK: Code 0x0000000000000005 0x0000000000000029 0x00000000 add
+CHECK: Code 0x000000000000002f 0x000000000000004c 0x00000000 __original_main
+CHECK: Code 0x000000000000007c 0x0000000000000009 0x00000000 main
+CHECK: Data 0x0000000000000233 0x0000000000000009 0x00000000 .rodata
+CHECK: Data 0x0000000000000242 0x0000000000000004 0x00000000 .data
+
+CHECK: 0x0000000000000001 code       {{.*}} 0x000001a1 0x00000085 0x00000000 symtab-wasm.test.tmp.wasm.code
+CHECK: 0x0000000000000003 data       {{.*}} 0x0000022c 0x0000001a 0x00000000 symtab-wasm.test.tmp.wasm.data
+CHECK: 0x0000000000000040 wasm-name  {{.*}} 0x00000251 0x00000059 0x00000000 symtab-wasm.test.tmp.wasm.name
+CHECK: 0x0000000000000100 data       {{.*}} 0x00000233 0x00000009 0x00000000 symtab-wasm.test.tmp.wasm.data..rodata
+CHECK: 0x0000000000000200 data       {{.*}} 0x00000242 0x00000004 0x00000000 symtab-wasm.test.tmp.wasm.data..data

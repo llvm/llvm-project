@@ -1409,13 +1409,6 @@ void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
-/// Utility function to add a system include directory to CC1 arguments.
-void ToolChain::addSystemInclude(const ArgList &DriverArgs,
-                                 ArgStringList &CC1Args, const Twine &Path) {
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(Path));
-}
-
 /// Utility function to add a system include directory with extern "C"
 /// semantics to CC1 arguments.
 ///
@@ -1436,6 +1429,14 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
                                                 const Twine &Path) {
   if (llvm::sys::fs::exists(Path))
     addExternCSystemInclude(DriverArgs, CC1Args, Path);
+}
+
+/// Utility function to add a system include directory to CC1 arguments.
+/*static*/ void ToolChain::addSystemInclude(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args,
+                                            const Twine &Path) {
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
 /// Utility function to add a list of system framework directories to CC1.
