@@ -1039,19 +1039,31 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   if (GEP->getType()->isVectorTy())
     return false;
 
+  // If the base of this GEP is a ptradd of a constant, lets pass the constant
+  // along. This ensures that when we have a chain of GEPs the constant
+  // offset from each is accumulated.
+  Value *NewBase;
+  const APInt *BaseOffset;
+  const bool ExtractBase =
+      match(GEP->getPointerOperand(),
+            m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+
+  const int64_t BaseByteOffset = ExtractBase ? BaseOffset->getSExtValue() : 0;
+
   // The backend can already nicely handle the case where all indices are
   // constant.
-  if (GEP->hasAllConstantIndices())
+  if (GEP->hasAllConstantIndices() && !ExtractBase)
     return false;
 
   bool Changed = canonicalizeArrayIndicesToIndexSize(GEP);
 
   bool NeedsExtraction;
-  int64_t AccumulativeByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
+  int64_t AccumulativeByteOffset =
+      BaseByteOffset + accumulateByteOffset(GEP, NeedsExtraction);
 
   TargetTransformInfo &TTI = GetTTI(*GEP->getFunction());
 
-  if (!NeedsExtraction) {
+  if (!NeedsExtraction && !ExtractBase) {
     Changed |= reorderGEP(GEP, TTI);
     return Changed;
   }
@@ -1075,7 +1087,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   // Track information for preserving GEP flags.
   bool AllOffsetsNonNegative = AccumulativeByteOffset >= 0;
-  bool AllNUWPreserved = true;
+  bool AllNUWPreserved = GEP->hasNoUnsignedWrap();
+  bool NewGEPInBounds = GEP->isInBounds();
+  bool NewGEPNUSW = GEP->hasNoUnsignedSignedWrap();
 
   // Remove the constant offset in each sequential index. The resultant GEP
   // computes the variadic base.
@@ -1111,6 +1125,16 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
       }
     }
   }
+  if (ExtractBase) {
+    GEPOperator *Base = cast<GEPOperator>(GEP->getPointerOperand());
+    AllNUWPreserved &= Base->hasNoUnsignedWrap();
+    NewGEPInBounds &= Base->isInBounds();
+    NewGEPNUSW &= Base->hasNoUnsignedSignedWrap();
+    AllOffsetsNonNegative &= BaseByteOffset >= 0;
+
+    GEP->setOperand(0, NewBase);
+    RecursivelyDeleteTriviallyDeadInstructions(Base);
+  }
 
   // Clear the inbounds attribute because the new index may be off-bound.
   // e.g.,
@@ -1138,7 +1162,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   // If the initial GEP was NUW and all operations that we reassociate were NUW
   // additions, the resulting GEPs are also NUW.
-  if (GEP->hasNoUnsignedWrap() && AllNUWPreserved) {
+  if (AllNUWPreserved) {
     NewGEPFlags |= GEPNoWrapFlags::noUnsignedWrap();
     // If the initial GEP additionally had NUSW (or inbounds, which implies
     // NUSW), we know that the indices in the initial GEP must all have their
@@ -1146,13 +1170,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     // add-operands therefore also don't have their signbit set. Therefore, all
     // indices of the resulting GEPs are non-negative -> we can preserve
     // the inbounds/nusw flag.
-    CanPreserveInBoundsNUSW |= GEP->hasNoUnsignedSignedWrap();
+    CanPreserveInBoundsNUSW |= NewGEPNUSW;
   }
 
   if (CanPreserveInBoundsNUSW) {
-    if (GEP->isInBounds())
+    if (NewGEPInBounds)
       NewGEPFlags |= GEPNoWrapFlags::inBounds();
-    else if (GEP->hasNoUnsignedSignedWrap())
+    else if (NewGEPNUSW)
       NewGEPFlags |= GEPNoWrapFlags::noUnsignedSignedWrap();
   }
 
@@ -1220,11 +1244,13 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
 
   DL = &F.getDataLayout();
   bool Changed = false;
-  for (BasicBlock &B : F) {
-    if (!DT->isReachableFromEntry(&B))
+
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *B : RPOT) {
+    if (!DT->isReachableFromEntry(B))
       continue;
 
-    for (Instruction &I : llvm::make_early_inc_range(B))
+    for (Instruction &I : llvm::make_early_inc_range(*B))
       if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
         Changed |= splitGEP(GEP);
     // No need to split GEP ConstantExprs because all its indices are constant
