@@ -340,52 +340,57 @@ entry:
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-24], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-40], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-16 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-32 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-48 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-64 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-80 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-96 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-112 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-128 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-144 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-160 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-176 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-192 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-208 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-224 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-240 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-256 x vscale], Type: Spill, Align: 16, Size: vscale x 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-258 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-260 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-262 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-264 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-266 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-268 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-270 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-272 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-274 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-276 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-278 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48-280 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-48], Type: Spill, Align: 16, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-56], Type: Spill, Align: 8, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64], Type: Spill, Align: 8, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-16 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-32 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-48 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-64 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-80 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-96 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-112 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-128 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-144 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-160 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-176 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-192 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-208 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-224 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-240 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-256 x vscale], Type: Spill, Align: 16, Size: vscale x 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-258 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-260 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-262 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-264 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-266 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-268 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-270 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-272 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-274 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-276 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-278 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-64-280 x vscale], Type: Spill, Align: 2, Size: vscale x 2
 
 define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, i16 %P4) "aarch64_pstate_sm_compatible" {
 ; CHECK-COMMON-LABEL: svecc_call:
 ; CHECK-COMMON:       // %bb.0: // %entry
-; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-48]! // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-COMMON-NEXT:    cntd x9
-; CHECK-COMMON-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp x27, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp x26, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    mov x29, sp
+; CHECK-COMMON-NEXT:    .cfi_def_cfa w29, 64
 ; CHECK-COMMON-NEXT:    .cfi_offset w19, -8
-; CHECK-COMMON-NEXT:    .cfi_offset w27, -16
-; CHECK-COMMON-NEXT:    .cfi_offset w28, -24
-; CHECK-COMMON-NEXT:    .cfi_offset w30, -40
-; CHECK-COMMON-NEXT:    .cfi_offset w29, -48
+; CHECK-COMMON-NEXT:    .cfi_offset w26, -16
+; CHECK-COMMON-NEXT:    .cfi_offset w27, -24
+; CHECK-COMMON-NEXT:    .cfi_offset w28, -32
+; CHECK-COMMON-NEXT:    .cfi_offset vg, -48
+; CHECK-COMMON-NEXT:    .cfi_offset w30, -56
+; CHECK-COMMON-NEXT:    .cfi_offset w29, -64
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #-18
-; CHECK-COMMON-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x30, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 48 + 144 * VG
 ; CHECK-COMMON-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
@@ -414,20 +419,19 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-COMMON-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d8 @ cfa - 8 * VG - 48
-; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d9 @ cfa - 16 * VG - 48
-; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d10 @ cfa - 24 * VG - 48
-; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d11 @ cfa - 32 * VG - 48
-; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d12 @ cfa - 40 * VG - 48
-; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d13 @ cfa - 48 * VG - 48
-; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d14 @ cfa - 56 * VG - 48
-; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d15 @ cfa - 64 * VG - 48
+; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x48, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d8 @ cfa - 8 * IncomingVG - 64
+; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x49, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d9 @ cfa - 16 * IncomingVG - 64
+; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4a, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d10 @ cfa - 24 * IncomingVG - 64
+; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4b, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d11 @ cfa - 32 * IncomingVG - 64
+; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4c, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d12 @ cfa - 40 * IncomingVG - 64
+; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4d, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d13 @ cfa - 48 * IncomingVG - 64
+; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4e, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d14 @ cfa - 56 * IncomingVG - 64
+; CHECK-COMMON-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d15 @ cfa - 64 * IncomingVG - 64
 ; CHECK-COMMON-NEXT:    mov x8, x0
 ; CHECK-COMMON-NEXT:    bl __arm_sme_state
 ; CHECK-COMMON-NEXT:    mov x19, x0
 ; CHECK-COMMON-NEXT:    //APP
 ; CHECK-COMMON-NEXT:    //NO_APP
-; CHECK-COMMON-NEXT:    .cfi_offset vg, -32
 ; CHECK-COMMON-NEXT:    tbz w19, #0, .LBB7_2
 ; CHECK-COMMON-NEXT:  // %bb.1: // %entry
 ; CHECK-COMMON-NEXT:    smstop sm
@@ -440,13 +444,12 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-COMMON-NEXT:  // %bb.3: // %entry
 ; CHECK-COMMON-NEXT:    smstart sm
 ; CHECK-COMMON-NEXT:  .LBB7_4: // %entry
-; CHECK-COMMON-NEXT:    mov w0, #22647 // =0x5877
-; CHECK-COMMON-NEXT:    movk w0, #59491, lsl #16
-; CHECK-COMMON-NEXT:    .cfi_restore vg
 ; CHECK-COMMON-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    mov w0, #22647 // =0x5877
 ; CHECK-COMMON-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    movk w0, #59491, lsl #16
 ; CHECK-COMMON-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
@@ -472,7 +475,6 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-COMMON-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
 ; CHECK-COMMON-NEXT:    addvl sp, sp, #18
-; CHECK-COMMON-NEXT:    .cfi_def_cfa wsp, 48
 ; CHECK-COMMON-NEXT:    .cfi_restore z8
 ; CHECK-COMMON-NEXT:    .cfi_restore z9
 ; CHECK-COMMON-NEXT:    .cfi_restore z10
@@ -481,13 +483,16 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-COMMON-NEXT:    .cfi_restore z13
 ; CHECK-COMMON-NEXT:    .cfi_restore z14
 ; CHECK-COMMON-NEXT:    .cfi_restore z15
-; CHECK-COMMON-NEXT:    ldp x27, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr x28, [sp, #24] // 8-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #48 // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    .cfi_def_cfa wsp, 64
+; CHECK-COMMON-NEXT:    ldp x26, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp x28, x27, [sp, #32] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #64 // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-COMMON-NEXT:    .cfi_restore w19
+; CHECK-COMMON-NEXT:    .cfi_restore w26
 ; CHECK-COMMON-NEXT:    .cfi_restore w27
 ; CHECK-COMMON-NEXT:    .cfi_restore w28
+; CHECK-COMMON-NEXT:    .cfi_restore vg
 ; CHECK-COMMON-NEXT:    .cfi_restore w30
 ; CHECK-COMMON-NEXT:    .cfi_restore w29
 ; CHECK-COMMON-NEXT:    ret
@@ -534,6 +539,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
+; CHECK-NEXT:    .cfi_offset vg, -32
 ; CHECK-NEXT:    .cfi_offset w30, -40
 ; CHECK-NEXT:    .cfi_offset w29, -48
 ; CHECK-NEXT:    .cfi_offset b8, -56
@@ -556,11 +562,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    stur wzr, [x29, #-68]
 ; CHECK-NEXT:    sturh w8, [x29, #-72]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x9
-; CHECK-NEXT:    .cfi_offset vg, -32
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl other
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    .cfi_restore vg
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #80
@@ -581,6 +585,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
 ; CHECK-NEXT:    .cfi_restore w20
+; CHECK-NEXT:    .cfi_restore vg
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    .cfi_restore b8
@@ -608,6 +613,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEWLOWERING-NEXT:    .cfi_def_cfa w29, 48
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset w20, -16
+; CHECK-NEWLOWERING-NEXT:    .cfi_offset vg, -32
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset w30, -40
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset w29, -48
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset b8, -56
@@ -627,13 +633,11 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEWLOWERING-NEXT:    mov w20, w0
 ; CHECK-NEWLOWERING-NEXT:    stp x9, x8, [x29, #-80]
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, x10
-; CHECK-NEWLOWERING-NEXT:    .cfi_offset vg, -32
 ; CHECK-NEWLOWERING-NEXT:    smstop sm
 ; CHECK-NEWLOWERING-NEXT:    bl other
 ; CHECK-NEWLOWERING-NEXT:    smstart sm
 ; CHECK-NEWLOWERING-NEXT:    mov w0, w20
 ; CHECK-NEWLOWERING-NEXT:    mov w8, w0
-; CHECK-NEWLOWERING-NEXT:    .cfi_restore vg
 ; CHECK-NEWLOWERING-NEXT:    smstart za
 ; CHECK-NEWLOWERING-NEXT:    mrs x9, TPIDR2_EL0
 ; CHECK-NEWLOWERING-NEXT:    sub x0, x29, #80
@@ -654,6 +658,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEWLOWERING-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore w19
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore w20
+; CHECK-NEWLOWERING-NEXT:    .cfi_restore vg
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore w30
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore w29
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore b8

@@ -119,6 +119,9 @@ Improvements to clang-tidy
 - Improved documentation of the `-line-filter` command-line flag of
   :program:`clang-tidy` and :program:`run-clang-tidy.py`.
 
+- Improved :program:`clang-tidy` option `-quiet` by suppressing diagnostic
+  count messages.
+
 New checks
 ^^^^^^^^^^
 
@@ -212,7 +215,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
-  declarations in system headers.
+  declarations in system headers. The documentation is also improved to
+  differentiate the general options from the specific ones.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
