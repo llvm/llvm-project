@@ -9,6 +9,9 @@ int main(int argc, char **argv) {
   int *p = &x;
   int array[] = {1};
   enum Enum { kZero, kOne } enum_one = kOne;
+  wchar_t wchar = 1;
+  char16_t char16 = 2;
+  char32_t char32 = 3;
 
   struct BitFieldStruct {
     char a : 4;

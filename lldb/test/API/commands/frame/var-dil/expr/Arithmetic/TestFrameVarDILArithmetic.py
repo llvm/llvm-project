@@ -19,27 +19,30 @@ class TestFrameVarDILArithmetic(TestBase):
 
         self.runCmd("settings set target.experimental.use-DIL true")
 
-        # Check unary
+        # Check unary results and integral promotion
         self.expect_var_path("+0", value="0")
         self.expect_var_path("-0", value="0")
         self.expect_var_path("+1", value="1")
         self.expect_var_path("-1", value="-1")
-        self.expect_var_path("s", value="10")
-        self.expect_var_path("+s", value="10")
-        self.expect_var_path("-s", value="-10")
-        self.expect_var_path("us", value="1")
-        self.expect_var_path("-us", value="-1")
+        self.expect_var_path("-9223372036854775808", value="9223372036854775808")
+        self.expect_var_path("s", value="10", type="short")
+        self.expect_var_path("+s", value="10", type="int")
+        self.expect_var_path("-s", value="-10", type="int")
+        self.expect_var_path("+us", value="1", type="int")
+        self.expect_var_path("-us", value="-1", type="int")
         self.expect_var_path("+0.0", value="0")
         self.expect_var_path("-0.0", value="-0")
-        self.expect_var_path("-9223372036854775808", value="9223372036854775808")
-        self.expect_var_path("+array", type="int *")
         self.expect_var_path("+enum_one", value="1")
         self.expect_var_path("-enum_one", value="-1")
+        self.expect_var_path("+wchar", value="1")
+        self.expect_var_path("+char16", value="2")
+        self.expect_var_path("+char32", value="3")
         self.expect_var_path("-bitfield.a", value="-1", type="int")
         self.expect_var_path("+bitfield.a", value="1", type="int")
         self.expect_var_path("+bitfield.b", value="2", type="int")
         self.expect_var_path("+bitfield.c", value="3", type="unsigned int")
         self.expect_var_path("+bitfield.d", value="4", type="uint64_t")
+        self.expect_var_path("+array", type="int *")
         self.expect_var_path("+p", type="int *")
         self.expect(
             "frame var -- '-p'",
