@@ -277,6 +277,21 @@ class PseudoMaskedAMOUMinUMax
   let hasSideEffects = 0;
 }
 
+// Ordering constants must be kept in sync with the AtomicOrdering enum in
+// AtomicOrdering.h.
+multiclass PseudoAMOPat<string AtomicOp, Pseudo AMOInst, ValueType vt = XLenVT> {
+  def : Pat<(vt (!cast<PatFrag>(AtomicOp#"_monotonic") GPR:$addr, GPR:$incr)),
+            (AMOInst GPR:$addr, GPR:$incr, 2)>;
+  def : Pat<(vt (!cast<PatFrag>(AtomicOp#"_acquire") GPR:$addr, GPR:$incr)),
+            (AMOInst GPR:$addr, GPR:$incr, 4)>;
+  def : Pat<(vt (!cast<PatFrag>(AtomicOp#"_release") GPR:$addr, GPR:$incr)),
+            (AMOInst GPR:$addr, GPR:$incr, 5)>;
+  def : Pat<(vt (!cast<PatFrag>(AtomicOp#"_acq_rel") GPR:$addr, GPR:$incr)),
+            (AMOInst GPR:$addr, GPR:$incr, 6)>;
+  def : Pat<(vt (!cast<PatFrag>(AtomicOp#"_seq_cst") GPR:$addr, GPR:$incr)),
+            (AMOInst GPR:$addr, GPR:$incr, 7)>;
+}
+
 class PseudoMaskedAMOPat<Intrinsic intrin, Pseudo AMOInst>
     : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
           (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering)>;
@@ -291,18 +306,7 @@ let Predicates = [HasStdExtA] in {
 
 let Size = 20 in
 def PseudoAtomicLoadNand32 : PseudoAMO;
-// Ordering constants must be kept in sync with the AtomicOrdering enum in
-// AtomicOrdering.h.
-def : Pat<(XLenVT (atomic_load_nand_i32_monotonic GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 2)>;
-def : Pat<(XLenVT (atomic_load_nand_i32_acquire GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 4)>;
-def : Pat<(XLenVT (atomic_load_nand_i32_release GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 5)>;
-def : Pat<(XLenVT (atomic_load_nand_i32_acq_rel GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 6)>;
-def : Pat<(XLenVT (atomic_load_nand_i32_seq_cst GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 7)>;
+defm : PseudoAMOPat<"atomic_load_nand_i32", PseudoAtomicLoadNand32>;
 
 let Size = 28 in {
   def PseudoMaskedAtomicSwap32 : PseudoMaskedAMO;
@@ -345,18 +349,7 @@ let Predicates = [HasStdExtA, IsRV64] in {
 
 let Size = 20 in
 def PseudoAtomicLoadNand64 : PseudoAMO;
-// Ordering constants must be kept in sync with the AtomicOrdering enum in
-// AtomicOrdering.h.
-def : Pat<(i64 (atomic_load_nand_i64_monotonic GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 2)>;
-def : Pat<(i64 (atomic_load_nand_i64_acquire GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 4)>;
-def : Pat<(i64 (atomic_load_nand_i64_release GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 5)>;
-def : Pat<(i64 (atomic_load_nand_i64_acq_rel GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 6)>;
-def : Pat<(i64 (atomic_load_nand_i64_seq_cst GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 7)>;
+defm : PseudoAMOPat<"atomic_load_nand_i64", PseudoAtomicLoadNand64, i64>;
 
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i64,
                          PseudoMaskedAtomicSwap32>;
