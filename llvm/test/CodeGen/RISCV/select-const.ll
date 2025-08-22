@@ -481,3 +481,131 @@ define i32 @select_sgt_negative_one_constant1_constant2(i32 signext %x) {
   %cond = select i1 %cmp, i32 7, i32 -3
   ret i32 %cond
 }
+
+define i32 @select_nonnegative_lui_addi(i32 signext %x) {
+; RV32I-LABEL: select_nonnegative_lui_addi:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    lui a0, 4
+; RV32I-NEXT:    bgez a1, .LBB21_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    li a0, 25
+; RV32I-NEXT:  .LBB21_2:
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_nonnegative_lui_addi:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    mv a1, a0
+; RV32IF-NEXT:    lui a0, 4
+; RV32IF-NEXT:    bgez a1, .LBB21_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    li a0, 25
+; RV32IF-NEXT:  .LBB21_2:
+; RV32IF-NEXT:    ret
+;
+; RV32ZICOND-LABEL: select_nonnegative_lui_addi:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    slti a0, a0, 0
+; RV32ZICOND-NEXT:    lui a1, 1048572
+; RV32ZICOND-NEXT:    addi a1, a1, 25
+; RV32ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZICOND-NEXT:    lui a1, 4
+; RV32ZICOND-NEXT:    add a0, a0, a1
+; RV32ZICOND-NEXT:    ret
+;
+; RV64I-LABEL: select_nonnegative_lui_addi:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    lui a0, 4
+; RV64I-NEXT:    bgez a1, .LBB21_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    li a0, 25
+; RV64I-NEXT:  .LBB21_2:
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_nonnegative_lui_addi:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    mv a1, a0
+; RV64IFD-NEXT:    lui a0, 4
+; RV64IFD-NEXT:    bgez a1, .LBB21_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    li a0, 25
+; RV64IFD-NEXT:  .LBB21_2:
+; RV64IFD-NEXT:    ret
+;
+; RV64ZICOND-LABEL: select_nonnegative_lui_addi:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    slti a0, a0, 0
+; RV64ZICOND-NEXT:    lui a1, 1048572
+; RV64ZICOND-NEXT:    addi a1, a1, 25
+; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZICOND-NEXT:    lui a1, 4
+; RV64ZICOND-NEXT:    add a0, a0, a1
+; RV64ZICOND-NEXT:    ret
+  %cmp = icmp sgt i32 %x, -1
+  %cond = select i1 %cmp, i32 16384, i32 25
+  ret i32 %cond
+}
+
+define i32 @select_nonnegative_lui_addi_swapped(i32 signext %x) {
+; RV32I-LABEL: select_nonnegative_lui_addi_swapped:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bgez a0, .LBB22_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    lui a0, 4
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB22_2:
+; RV32I-NEXT:    li a0, 25
+; RV32I-NEXT:    ret
+;
+; RV32IF-LABEL: select_nonnegative_lui_addi_swapped:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    bgez a0, .LBB22_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    lui a0, 4
+; RV32IF-NEXT:    ret
+; RV32IF-NEXT:  .LBB22_2:
+; RV32IF-NEXT:    li a0, 25
+; RV32IF-NEXT:    ret
+;
+; RV32ZICOND-LABEL: select_nonnegative_lui_addi_swapped:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    slti a0, a0, 0
+; RV32ZICOND-NEXT:    lui a1, 4
+; RV32ZICOND-NEXT:    addi a1, a1, -25
+; RV32ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZICOND-NEXT:    addi a0, a0, 25
+; RV32ZICOND-NEXT:    ret
+;
+; RV64I-LABEL: select_nonnegative_lui_addi_swapped:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    bgez a0, .LBB22_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    lui a0, 4
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB22_2:
+; RV64I-NEXT:    li a0, 25
+; RV64I-NEXT:    ret
+;
+; RV64IFD-LABEL: select_nonnegative_lui_addi_swapped:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    bgez a0, .LBB22_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    lui a0, 4
+; RV64IFD-NEXT:    ret
+; RV64IFD-NEXT:  .LBB22_2:
+; RV64IFD-NEXT:    li a0, 25
+; RV64IFD-NEXT:    ret
+;
+; RV64ZICOND-LABEL: select_nonnegative_lui_addi_swapped:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    slti a0, a0, 0
+; RV64ZICOND-NEXT:    lui a1, 4
+; RV64ZICOND-NEXT:    addi a1, a1, -25
+; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZICOND-NEXT:    addi a0, a0, 25
+; RV64ZICOND-NEXT:    ret
+  %cmp = icmp sgt i32 %x, -1
+  %cond = select i1 %cmp, i32 25, i32 16384
+  ret i32 %cond
+}
