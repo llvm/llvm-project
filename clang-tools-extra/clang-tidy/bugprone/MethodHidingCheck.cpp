@@ -1,4 +1,4 @@
-//===--- MethodHidingCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // SPDX-FileCopyrightText: 2025 Siemens Corporation and/or its affiliates
 //
