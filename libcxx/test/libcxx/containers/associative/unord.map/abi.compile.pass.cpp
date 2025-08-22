@@ -66,10 +66,36 @@ public:
   friend bool operator!=(final_small_iter_allocator, final_small_iter_allocator) { return false; }
 };
 
+struct allocator_base {};
+
+// Make sure that types with a common base type don't get broken. See https://llvm.org/PR154146
+template <class T>
+struct common_base_allocator : allocator_base {
+  using value_type = T;
+
+  common_base_allocator() TEST_NOEXCEPT {}
+
+  template <class U>
+  common_base_allocator(common_base_allocator<U>) TEST_NOEXCEPT {}
+
+  T* allocate(std::size_t n);
+  void deallocate(T* p, std::size_t);
+
+  friend bool operator==(common_base_allocator, common_base_allocator) { return true; }
+  friend bool operator!=(common_base_allocator, common_base_allocator) { return false; }
+};
+
 template <class T, class Alloc>
 using unordered_map_alloc = std::unordered_map<T, T, std::hash<T>, std::equal_to<T>, Alloc>;
 
+struct user_struct {
+  unordered_map_alloc<int, common_base_allocator<std::pair<const int, int> > > v;
+  [[no_unique_address]] common_base_allocator<int> a;
+};
+
 #if __SIZE_WIDTH__ == 64
+static_assert(sizeof(user_struct) == 48, "");
+static_assert(TEST_ALIGNOF(user_struct) == 8, "");
 
 static_assert(sizeof(unordered_map_alloc<int, std::allocator<std::pair<const int, int> > >) == 40, "");
 static_assert(sizeof(unordered_map_alloc<int, min_allocator<std::pair<const int, int> > >) == 40, "");
@@ -104,6 +130,8 @@ static_assert(sizeof(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>
 static_assert(TEST_ALIGNOF(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 32, "");
 
 #elif __SIZE_WIDTH__ == 32
+static_assert(sizeof(user_struct) == 24, "");
+static_assert(TEST_ALIGNOF(user_struct) == 4, "");
 
 static_assert(sizeof(unordered_map_alloc<int, std::allocator<std::pair<const int, int> > >) == 20, "");
 static_assert(sizeof(unordered_map_alloc<int, min_allocator<std::pair<const int, int> > >) == 20, "");
