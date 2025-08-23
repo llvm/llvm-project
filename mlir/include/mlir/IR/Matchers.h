@@ -129,7 +129,7 @@ struct infer_int_range_op_binder {
       *bind_value = argRanges;
       matched = true;
     };
-    inferIntRangeOp.inferResultRangesOrPoison(argRanges, setResultRanges);
+    inferIntRangeOp.inferResultRangesFromOptional(argRanges, setResultRanges);
     return matched;
   }
 };

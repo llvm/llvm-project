@@ -3211,7 +3211,7 @@ void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // InsertOp
 //===----------------------------------------------------------------------===//
 
-void vector::InsertOp::inferResultRangesOrPoison(
+void vector::InsertOp::inferResultRangesFromOptional(
     ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRanges) {
   if (argRanges[0].isUninitialized() || argRanges[1].isUninitialized())
     return;
