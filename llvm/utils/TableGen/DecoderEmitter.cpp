@@ -371,8 +371,6 @@ public:
 
 namespace {
 
-class FilterChooser;
-
 /// Filter - Filter works with FilterChooser to produce the decoding tree for
 /// the ISA.
 ///
@@ -409,9 +407,7 @@ class FilterChooser;
 /// decoder could try to decode the even/odd register numbering and assign to
 /// VST4q8a or VST4q8b, but for the time being, the decoder chooses the "a"
 /// version and return the Opcode since the two have the same Asm format string.
-class Filter {
-protected:
-  const FilterChooser &Owner; // FilterChooser who owns this filter
+struct Filter {
   unsigned StartBit; // the starting bit position
   unsigned NumBits;  // number of bits to filter
 
@@ -421,14 +417,8 @@ protected:
   // Set of uid's with non-constant segment values.
   std::vector<unsigned> VariableIDs;
 
-  // Map of well-known segment value to its delegate.
-  std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
-
-  // A filter chooser for encodings that contain some '?' in the filtered range.
-  std::unique_ptr<const FilterChooser> VariableFC;
-
-public:
-  Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits);
+  Filter(ArrayRef<InstructionEncoding> Encodings,
+         ArrayRef<unsigned> EncodingIDs, unsigned StartBit, unsigned NumBits);
 
   bool hasSingleFilteredID() const {
     return FilteredIDs.size() == 1 && FilteredIDs.begin()->second.size() == 1;
@@ -438,25 +428,6 @@ public:
     assert(hasSingleFilteredID());
     return FilteredIDs.begin()->second.front();
   }
-
-  // Return the filter chooser for the group of instructions without constant
-  // segment values.
-  const FilterChooser &getVariableFC() const {
-    assert(hasSingleFilteredID() && FilterChooserMap.empty());
-    return *VariableFC;
-  }
-
-  // Divides the decoding task into sub tasks and delegates them to the
-  // inferior FilterChooser's.
-  //
-  // A special case arises when there's only one entry in the filtered
-  // instructions.  In order to unambiguously decode the singleton, we need to
-  // match the remaining undecoded encoding bits against the singleton.
-  void recurse();
-
-  // Emit table entries to decode instructions given a segment or segments of
-  // bits.
-  void emitTableEntry(DecoderTableInfo &TableInfo) const;
 
   // Returns the number of fanout produced by the filter.  More fanout implies
   // the filter distinguishes more categories of instructions.
@@ -490,18 +461,12 @@ enum bitAttr_t {
 /// decide what further remaining bits to look at.
 
 class FilterChooser {
-protected:
-  friend class Filter;
-
   // Vector of encodings to choose our filter.
   ArrayRef<InstructionEncoding> Encodings;
 
   /// Encoding IDs for this filter chooser to work on.
   /// Sorted by non-decreasing encoding width.
   SmallVector<unsigned, 0> EncodingIDs;
-
-  // The selected filter, if any.
-  std::unique_ptr<Filter> BestFilter;
 
   // Array of bit values passed down from our parent.
   // Set to all unknown for Parent == nullptr.
@@ -516,6 +481,29 @@ protected:
 
   // Parent emitter
   const DecoderEmitter *Emitter;
+
+  /// If the selected filter matches multiple encodings, then this is the
+  /// starting position and the width of the filtered range.
+  unsigned StartBit;
+  unsigned NumBits;
+
+  /// If the selected filter matches multiple encodings, and there is
+  /// *exactly one* encoding in which all bits are known in the filtered range,
+  /// then this is the ID of that encoding.
+  std::optional<unsigned> SingletonEncodingID;
+
+  /// If the selected filter matches multiple encodings, and there is
+  /// *at least one* encoding in which all bits are known in the filtered range,
+  /// then this is the FilterChooser created for the subset of encodings that
+  /// contain some unknown bits in the filtered range.
+  std::unique_ptr<const FilterChooser> VariableFC;
+
+  /// If the selected filter matches multiple encodings, and there is
+  /// *more than one* encoding in which all bits are known in the filtered
+  /// range, then this is a map of field values to FilterChoosers created for
+  /// the subset of encodings sharing that field value.
+  /// The "field value" here refers to the encoding bits in the filtered range.
+  std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
   struct Island {
     unsigned StartBit;
@@ -566,7 +554,11 @@ public:
     return Encodings[EncodingIDs.back()].getBitWidth();
   }
 
-protected:
+private:
+  /// Applies the given filter to the set of encodings this FilterChooser
+  /// works with, creating inferior FilterChoosers as necessary.
+  void applyFilter(const Filter &F);
+
   /// dumpStack - dumpStack traverses the filter chooser chain and calls
   /// dumpFilterArray on each filter chooser up to the top level one.
   void dumpStack(raw_ostream &OS, indent Indent, unsigned PadToWidth) const;
@@ -600,8 +592,11 @@ protected:
                                unsigned EncodingID) const;
 
   // Emits code to decode the singleton, and then to decode the rest.
-  void emitSingletonTableEntry(DecoderTableInfo &TableInfo,
-                               const Filter &Best) const;
+  void emitSingletonTableEntry(DecoderTableInfo &TableInfo) const;
+
+  // Emit table entries to decode instructions given a segment or segments of
+  // bits.
+  void emitTableEntry(DecoderTableInfo &TableInfo) const;
 
   void emitBinaryParser(raw_ostream &OS, indent Indent,
                         const OperandInfo &OpInfo) const;
@@ -644,12 +639,12 @@ public:
 //                       //
 ///////////////////////////
 
-Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
-    : Owner(owner), StartBit(startBit), NumBits(numBits) {
-  assert(StartBit + NumBits - 1 < Owner.FilterBits.getBitWidth());
-
-  for (unsigned EncodingID : Owner.EncodingIDs) {
-    const InstructionEncoding &Encoding = Owner.Encodings[EncodingID];
+Filter::Filter(ArrayRef<InstructionEncoding> Encodings,
+               ArrayRef<unsigned> EncodingIDs, unsigned StartBit,
+               unsigned NumBits)
+    : StartBit(StartBit), NumBits(NumBits) {
+  for (unsigned EncodingID : EncodingIDs) {
+    const InstructionEncoding &Encoding = Encodings[EncodingID];
     KnownBits EncodingBits = Encoding.getMandatoryBits();
 
     // Scans the segment for possibly well-specified encoding bits.
@@ -670,48 +665,44 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
          "Filter returns no instruction categories");
 }
 
-// Divides the decoding task into sub tasks and delegates them to the
-// inferior FilterChooser's.
-//
-// A special case arises when there's only one entry in the filtered
-// instructions.  In order to unambiguously decode the singleton, we need to
-// match the remaining undecoded encoding bits against the singleton.
-void Filter::recurse() {
-  assert(Owner.FilterBits.extractBits(NumBits, StartBit).isUnknown());
+void FilterChooser::applyFilter(const Filter &F) {
+  StartBit = F.StartBit;
+  NumBits = F.NumBits;
+  assert(FilterBits.extractBits(NumBits, StartBit).isUnknown());
 
-  if (!VariableIDs.empty()) {
+  if (!F.VariableIDs.empty()) {
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
-    VariableFC = std::make_unique<FilterChooser>(Owner.Encodings, VariableIDs,
-                                                 Owner.FilterBits, Owner);
+    VariableFC = std::make_unique<FilterChooser>(Encodings, F.VariableIDs,
+                                                 FilterBits, *this);
   }
 
   // No need to recurse for a singleton filtered instruction.
   // See also Filter::emit*().
-  if (hasSingleFilteredID()) {
+  if (F.hasSingleFilteredID()) {
+    SingletonEncodingID = F.getSingletonEncodingID();
     assert(VariableFC && "Shouldn't have created a filter for one encoding!");
     return;
   }
 
   // Otherwise, create sub choosers.
-  for (const auto &[FilterVal, InferiorEncodingIDs] : FilteredIDs) {
+  for (const auto &[FilterVal, InferiorEncodingIDs] : F.FilteredIDs) {
     // Create a new filter by inserting the field bits into the parent filter.
     APInt FieldBits(NumBits, FilterVal);
-    KnownBits InferiorFilterBits = Owner.FilterBits;
+    KnownBits InferiorFilterBits = FilterBits;
     InferiorFilterBits.insertBits(KnownBits::makeConstant(FieldBits), StartBit);
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.try_emplace(
-        FilterVal,
-        std::make_unique<FilterChooser>(Owner.Encodings, InferiorEncodingIDs,
-                                        InferiorFilterBits, Owner));
+    FilterChooserMap.try_emplace(FilterVal, std::make_unique<FilterChooser>(
+                                                Encodings, InferiorEncodingIDs,
+                                                InferiorFilterBits, *this));
   }
 }
 
 // Emit table entries to decode instructions given a segment or segments
 // of bits.
-void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
+void FilterChooser::emitTableEntry(DecoderTableInfo &TableInfo) const {
   assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
   TableInfo.Table.push_back(MCD::OPC_ExtractField);
 
@@ -1436,15 +1427,14 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
 }
 
 // Emits table entries to decode the singleton, and then to decode the rest.
-void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
-                                            const Filter &Best) const {
+void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo) const {
   // complex singletons need predicate checks from the first singleton
   // to refer forward to the variable filterchooser that follows.
   TableInfo.pushScope();
-  emitSingletonTableEntry(TableInfo, Best.getSingletonEncodingID());
+  emitSingletonTableEntry(TableInfo, *SingletonEncodingID);
   TableInfo.popScope();
 
-  Best.getVariableFC().emitTableEntries(TableInfo);
+  VariableFC->emitTableEntries(TableInfo);
 }
 
 // reportRegion is a helper function for filterProcessor to mark a region as
@@ -1453,8 +1443,8 @@ void FilterChooser::reportRegion(std::vector<std::unique_ptr<Filter>> &Filters,
                                  bitAttr_t RA, unsigned StartBit,
                                  unsigned BitIndex, bool AllowMixed) const {
   if (AllowMixed ? RA == ATTR_MIXED : RA == ATTR_ALL_SET)
-    Filters.push_back(
-        std::make_unique<Filter>(*this, StartBit, BitIndex - StartBit));
+    Filters.push_back(std::make_unique<Filter>(Encodings, EncodingIDs, StartBit,
+                                               BitIndex - StartBit));
 }
 
 std::unique_ptr<Filter>
@@ -1475,8 +1465,8 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
       std::vector<Island> Islands = getIslands(EncodingBits);
       if (!Islands.empty()) {
         // Found an instruction with island(s).  Now just assign a filter.
-        return std::make_unique<Filter>(*this, Islands[0].StartBit,
-                                        Islands[0].NumBits);
+        return std::make_unique<Filter>(
+            Encodings, EncodingIDs, Islands[0].StartBit, Islands[0].NumBits);
       }
     }
   }
@@ -1708,9 +1698,9 @@ void FilterChooser::doFilter() {
   if (EncodingIDs.size() < 2)
     return;
 
-  BestFilter = findBestFilter();
+  std::unique_ptr<Filter> BestFilter = findBestFilter();
   if (BestFilter) {
-    BestFilter->recurse();
+    applyFilter(*BestFilter);
     return;
   }
 
@@ -1749,10 +1739,10 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   }
 
   // Use the best filter to do the decoding!
-  if (BestFilter->hasSingleFilteredID())
-    emitSingletonTableEntry(TableInfo, *BestFilter);
+  if (SingletonEncodingID)
+    emitSingletonTableEntry(TableInfo);
   else
-    BestFilter->emitTableEntry(TableInfo);
+    emitTableEntry(TableInfo);
 }
 
 static std::string findOperandDecoderMethod(const Record *Record) {
