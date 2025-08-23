@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryResolver.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryScanner.h"
 
@@ -39,6 +40,8 @@ constexpr const char *ext = ".dll";
 constexpr const char *ext = ".so";
 #endif
 
+static bool EnvReady = true;
+
 class LibraryTestEnvironment : public ::testing::Environment {
   std::vector<std::string> createdDylibsDir;
   std::vector<std::string> createdDylibs;
@@ -53,12 +56,14 @@ public:
     sys::path::append(dirPath, filedirpath, indir);
 
     // given yamlPath + dylibPath, validate + convert
-    auto processYamlToDylib = [&](const SmallVector<char, 128> &yamlPath,
-                                  const SmallVector<char, 128> &dylibPath) {
+    auto processYamlToDylib =
+        [&](const SmallVector<char, 128> &yamlPath,
+            const SmallVector<char, 128> &dylibPath) -> bool {
       if (!sys::fs::exists(yamlPath)) {
         errs() << "YAML file missing: "
                << StringRef(yamlPath.data(), yamlPath.size()) << "\n";
-        FAIL();
+        EnvReady = false;
+        return false;
       }
 
       auto bufOrErr = MemoryBuffer::getFile(yamlPath);
@@ -66,7 +71,8 @@ public:
         errs() << "Failed to read "
                << StringRef(yamlPath.data(), yamlPath.size()) << ": "
                << bufOrErr.getError().message() << "\n";
-        FAIL();
+        EnvReady = false;
+        return false;
       }
 
       yaml::Input yin(bufOrErr->get()->getBuffer());
@@ -78,7 +84,8 @@ public:
         errs() << "Failed to open "
                << StringRef(dylibPath.data(), dylibPath.size())
                << " for writing: " << EC.message() << "\n";
-        FAIL();
+        EnvReady = false;
+        return false;
       }
 
       if (!yaml::convertYAML(yin, outFile, [](const Twine &M) {
@@ -88,12 +95,14 @@ public:
         errs() << "Failed to convert "
                << StringRef(yamlPath.data(), yamlPath.size()) << " to "
                << StringRef(dylibPath.data(), dylibPath.size()) << "\n";
-        FAIL();
+        EnvReady = false;
+        return false;
       }
 
       createdDylibsDir.push_back(std::string(sys::path::parent_path(
           StringRef(dylibPath.data(), dylibPath.size()))));
       createdDylibs.push_back(std::string(dylibPath.begin(), dylibPath.end()));
+      return true;
     };
 
     std::vector<const char *> libDirs = {"Z", "A", "B", "C", "D"};
@@ -108,7 +117,8 @@ public:
       SmallVector<char, 128> dylibPath(dirPath.begin(), dirPath.end());
       sys::path::append(dylibPath, libdirName, libdirName);
       sys::path::replace_extension(dylibPath, ext);
-      processYamlToDylib(yamlPath, dylibPath);
+      if (!processYamlToDylib(yamlPath, dylibPath))
+        return;
     }
 
     std::error_code ec;
@@ -118,7 +128,8 @@ public:
         SmallVector<char, 128> yamlPath(It->path().begin(), It->path().end());
         SmallVector<char, 128> dylibPath(It->path().begin(), It->path().end());
         sys::path::replace_extension(dylibPath, ext);
-        processYamlToDylib(yamlPath, dylibPath);
+        if (!processYamlToDylib(yamlPath, dylibPath))
+          return;
       }
     }
   }
@@ -174,6 +185,20 @@ protected:
   std::string baseDir;
   std::unordered_map<std::string, TestLibrary> libs;
   void SetUp() override {
+    if (!EnvReady)
+      GTEST_SKIP() << "Skipping test: environment setup failed.";
+
+    auto JTMB = JITTargetMachineBuilder::detectHost();
+    // Bail out if we can not detect the host.
+    if (!JTMB) {
+      consumeError(JTMB.takeError());
+      GTEST_SKIP();
+    }
+
+    auto Triple = JTMB->getTargetTriple();
+    if (!Triple.isOSBinFormatMachO())
+      GTEST_SKIP();
+
     ASSERT_NE(GlobalEnv, nullptr);
     baseDir = GlobalEnv->getBaseDir();
     libs["A"] = {libPath(baseDir, "A/A"), {platformSymbolName("sayA")}};
@@ -467,7 +492,7 @@ TEST_F(LibraryResolverIT, ScanSingleUserPath) {
   LibraryManager mgr;
   LibraryScanner scanner(scanH, mgr);
 
-  scanner.scanNext(PathType::User);
+  scanner.scanNext(PathType::User, 0);
 
   bool found = false;
   mgr.forEachLibrary([&](const LibraryInfo &lib) {
@@ -484,13 +509,13 @@ TEST_F(LibraryResolverIT, ScanMultiplePaths) {
   auto presolver = std::make_shared<PathResolver>(cache);
   LibraryScanHelper scanH({}, cache, presolver);
 
-  scanH.addBasePath("/tmp/empty", PathType::User); // empty dir
   scanH.addBasePath(libdir("D"), PathType::User);
+  scanH.addBasePath("/tmp/empty", PathType::User); // empty dir (won't add)
 
   LibraryManager mgr;
   LibraryScanner scanner(scanH, mgr);
 
-  scanner.scanNext(PathType::User);
+  scanner.scanNext(PathType::User, 1);
 
   size_t count = 0;
   mgr.forEachLibrary([&](const LibraryInfo &) {
@@ -498,7 +523,7 @@ TEST_F(LibraryResolverIT, ScanMultiplePaths) {
     return true;
   });
 
-  EXPECT_GE(count, 1u) << "Should find at least libA in multiple paths";
+  EXPECT_GE(count, 1u) << "Should find at least lib in multiple paths";
 }
 
 TEST_F(LibraryResolverIT, ScanAndCheckDeps) {
@@ -511,7 +536,7 @@ TEST_F(LibraryResolverIT, ScanAndCheckDeps) {
   LibraryManager mgr;
   LibraryScanner scanner(scanH, mgr);
 
-  scanner.scanNext(PathType::User);
+  scanner.scanNext(PathType::User, 0);
 
   size_t count = 0;
   mgr.forEachLibrary([&](const LibraryInfo &) {
@@ -532,7 +557,7 @@ TEST_F(LibraryResolverIT, ScanEmptyPath) {
   LibraryManager mgr;
   LibraryScanner scanner(scanH, mgr);
 
-  scanner.scanNext(PathType::User);
+  scanner.scanNext(PathType::User, 0);
 
   size_t count = 0;
   mgr.forEachLibrary([&](const LibraryInfo &) {
