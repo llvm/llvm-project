@@ -322,7 +322,8 @@ TEST(AMDGPU, TestReverseComposeSubRegIndices) {
 }
 
 TEST(AMDGPU, TestGetNamedOperandIdx) {
-  const TargetMachine *TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
+  const TargetMachine *TM =
+      createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
   if (!TM)
     return;
   const MCInstrInfo *MCII = TM->getMCInstrInfo();
