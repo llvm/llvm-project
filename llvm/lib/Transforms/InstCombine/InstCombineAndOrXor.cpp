@@ -1338,16 +1338,51 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
       V2 = X;
   }
 
+  // Look through and with a negative power of 2 mask on V1 or V2. This
+  // detects idioms of the form `(x == A) || ((x & Mask) == A + 1)` where A + 1
+  // is aligned to the mask and A + 1 >= |Mask|. This pattern corresponds to a
+  // contiguous range check, which can be folded into an addition and compare.
+  // The same applies for `(x != A) && ((x & Mask) != A + 1)`.
+  auto AreContiguousRangePredicates = [](CmpPredicate Pred1, CmpPredicate Pred2,
+                                         bool IsAnd) {
+    if (IsAnd)
+      return Pred1 == ICmpInst::ICMP_NE && Pred2 == ICmpInst::ICMP_NE;
+    return Pred1 == ICmpInst::ICMP_EQ && Pred2 == ICmpInst::ICMP_EQ;
+  };
+  const APInt *Mask1 = nullptr, *Mask2 = nullptr;
+  bool MatchedAnd1 = false, MatchedAnd2 = false;
+  if (V1 != V2 && AreContiguousRangePredicates(Pred1, Pred2, IsAnd)) {
+    Value *X;
+    if (match(V1, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask1)))) &&
+        C1->getBitWidth() == C2->getBitWidth() && *C1 == *C2 + 1 &&
+        C1->uge(Mask1->abs()) && C1->isPowerOf2()) {
+      MatchedAnd1 = true;
+      V1 = X;
+    }
+    if (match(V2, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask2)))) &&
+        C1->getBitWidth() == C2->getBitWidth() && *C2 == *C1 + 1 &&
+        C2->uge(Mask2->abs()) && C2->isPowerOf2()) {
+      MatchedAnd2 = true;
+      V2 = X;
+    }
+  }
+
   if (V1 != V2)
     return nullptr;
 
-  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
-      IsAnd ? ICmpInst::getInverseCmpPredicate(Pred1) : Pred1, *C1);
+  ConstantRange CR1 =
+      MatchedAnd1
+          ? ConstantRange(*C1, *C1 - *Mask1)
+          : ConstantRange::makeExactICmpRegion(
+                IsAnd ? ICmpInst::getInverseCmpPredicate(Pred1) : Pred1, *C1);
   if (Offset1)
     CR1 = CR1.subtract(*Offset1);
 
-  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(
-      IsAnd ? ICmpInst::getInverseCmpPredicate(Pred2) : Pred2, *C2);
+  ConstantRange CR2 =
+      MatchedAnd2
+          ? ConstantRange(*C2, *C2 - *Mask2)
+          : ConstantRange::makeExactICmpRegion(
+                IsAnd ? ICmpInst::getInverseCmpPredicate(Pred2) : Pred2, *C2);
   if (Offset2)
     CR2 = CR2.subtract(*Offset2);
 

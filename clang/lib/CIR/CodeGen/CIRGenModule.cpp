@@ -103,9 +103,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   PtrDiffTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
 
-  theModule->setAttr(
-      cir::CIRDialect::getSourceLanguageAttrName(),
-      cir::SourceLanguageAttr::get(&mlirContext, getCIRSourceLanguage()));
+  std::optional<cir::SourceLanguage> sourceLanguage = getCIRSourceLanguage();
+  if (sourceLanguage)
+    theModule->setAttr(
+        cir::CIRDialect::getSourceLanguageAttrName(),
+        cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
 
@@ -513,7 +515,7 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   assert(!cir::MissingFeatures::setTargetAttributes());
 }
 
-cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() const {
+std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
   using ClangStd = clang::LangStandard;
   using CIRLang = cir::SourceLanguage;
   auto opts = getLangOpts();
@@ -528,6 +530,7 @@ cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() const {
   // TODO(cir): support remaining source languages.
   assert(!cir::MissingFeatures::sourceLanguageCases());
   errorNYI("CIR does not yet support the given source language");
+  return std::nullopt;
 }
 
 static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
