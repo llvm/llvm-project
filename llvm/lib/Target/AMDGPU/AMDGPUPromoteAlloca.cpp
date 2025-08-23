@@ -70,7 +70,7 @@ static cl::opt<unsigned> PromoteAllocaToVectorMaxRegs(
     "amdgpu-promote-alloca-to-vector-max-regs",
     cl::desc(
         "Maximum vector size (in 32b registers) to use when promoting alloca"),
-    cl::init(16));
+    cl::init(32));
 
 // Use up to 1/4 of available register budget for vectorization.
 // FIXME: Increase the limit for whole function budgets? Perhaps x2?
