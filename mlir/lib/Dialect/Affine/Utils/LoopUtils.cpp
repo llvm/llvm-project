@@ -21,9 +21,11 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -365,12 +367,11 @@ checkIfHyperRectangular(MutableArrayRef<AffineForOp> input) {
   if (input.size() <= 1)
     return success();
   if (failed(getIndexSet(ops, &cst))) {
-    LLVM_DEBUG(llvm::dbgs() << "Index set computation failed!\n");
+    LDBG() << "Index set computation failed!";
     return failure();
   }
   if (!cst.isHyperRectangular(0, input.size())) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Non-hyperrectangular nests not supported for tiling!\n");
+    LDBG() << "Non-hyperrectangular nests not supported for tiling!";
     return failure();
   }
   return success();
@@ -385,14 +386,13 @@ static LogicalResult performPreTilingChecks(MutableArrayRef<AffineForOp> input,
 
   if (llvm::any_of(input,
                    [](AffineForOp op) { return op.getNumResults() > 0; })) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Cannot tile nest where a loop has yield values\n");
+    LDBG() << "Cannot tile nest where a loop has yield values";
     return failure();
   }
 
   // Check if the supplied `for` ops are all successively nested.
   if (!isPerfectlyNested(input)) {
-    LLVM_DEBUG(llvm::dbgs() << "input loops not perfectly nested");
+    LDBG() << "input loops not perfectly nested";
     return failure();
   }
 
@@ -1098,7 +1098,7 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
 
   // If the trip count is lower than the unroll jam factor, no unroll jam.
   if (mayBeConstantTripCount && *mayBeConstantTripCount < unrollJamFactor) {
-    LLVM_DEBUG(llvm::dbgs() << "[failed] trip count < unroll-jam factor\n");
+    LDBG() << "[failed] trip count < unroll-jam factor";
     return failure();
   }
 
@@ -1766,9 +1766,7 @@ findHighestBlockForPlacement(const MemRefRegion &region, Block &block,
     // We can't hoist past the definition of the memref being copied.
     Value memref = region.memref;
     if (!memref.getParentRegion()->isAncestor(enclosingOp->getParentRegion())) {
-      LLVM_DEBUG(
-          llvm::dbgs()
-          << "memref definition will end up not dominating hoist location\n");
+      LDBG() << "memref definition will end up not dominating hoist location";
       break;
     }
 
@@ -1977,7 +1975,7 @@ static LogicalResult generateCopy(
   auto memRefType = cast<MemRefType>(memref.getType());
 
   if (!memRefType.getLayout().isIdentity()) {
-    LLVM_DEBUG(llvm::dbgs() << "Non-identity layout map not yet supported\n");
+    LDBG() << "Non-identity layout map not yet supported";
     return failure();
   }
 
@@ -1989,7 +1987,7 @@ static LogicalResult generateCopy(
 
   unsigned rank = memRefType.getRank();
   if (rank == 0) {
-    LLVM_DEBUG(llvm::dbgs() << "Non-zero ranked memrefs supported\n");
+    LDBG() << "Non-zero ranked memrefs supported";
     return failure();
   }
 
@@ -2001,19 +1999,18 @@ static LogicalResult generateCopy(
   std::optional<int64_t> numElements =
       region.getConstantBoundingSizeAndShape(&fastBufferShape, &lbs);
   if (!numElements) {
-    LLVM_DEBUG(llvm::dbgs() << "Non-constant region size not supported\n");
+    LDBG() << "Non-constant region size not supported";
     return failure();
   }
 
   if (llvm::any_of(lbs, [](AffineMap lb) { return lb.getNumResults() > 1; })) {
     // This can be supported in the future if needed.
-    LLVM_DEBUG(llvm::dbgs()
-               << "Max lower bound for memref region start not supported\n");
+    LDBG() << "Max lower bound for memref region start not supported";
     return failure();
   }
 
   if (*numElements == 0) {
-    LLVM_DEBUG(llvm::dbgs() << "Nothing to copy\n");
+    LDBG() << "Nothing to copy";
     return success();
   }
 
@@ -2021,9 +2018,8 @@ static LogicalResult generateCopy(
   for (unsigned i = 0; i < rank; ++i) {
     region.getLowerAndUpperBound(i, lbMaps[i], ubMaps[i]);
     if (lbMaps[i].getNumResults() == 0 || ubMaps[i].getNumResults() == 0) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Missing lower or upper bound for region along dimension: "
-                 << i << '\n');
+      LDBG() << "Missing lower or upper bound for region along dimension: "
+             << i;
       return failure();
     }
   }
@@ -2122,7 +2118,7 @@ static LogicalResult generateCopy(
     // TODO: use all stride levels once DmaStartOp is extended for
     // multi-level strides.
     if (dmaStrideInfos.size() > 1) {
-      LLVM_DEBUG(llvm::dbgs() << "Only up to one level of stride supported\n");
+      LDBG() << "Only up to one level of stride supported";
       return failure();
     }
 
@@ -2309,10 +2305,11 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
   // surrounding the this block range.
   unsigned copyDepth = getNestingDepth(&*begin);
 
-  LLVM_DEBUG(llvm::dbgs() << "Generating copies at depth " << copyDepth
-                          << "\n");
-  LLVM_DEBUG(llvm::dbgs() << "from begin: " << *begin << "\n");
-  LLVM_DEBUG(llvm::dbgs() << "to inclusive end: " << *std::prev(end) << "\n");
+  LDBG() << "Generating copies at depth " << copyDepth;
+  LDBG() << "from begin: "
+         << OpWithFlags(&*begin, OpPrintingFlags().skipRegions());
+  LDBG() << "to inclusive end: "
+         << OpWithFlags(&*std::prev(end), OpPrintingFlags().skipRegions());
 
   // List of memory regions to copy for. We need a map vector to have a
   // guaranteed iteration order to write test cases. CHECK-DAG doesn't help here
@@ -2349,8 +2346,8 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
       return;
 
     if (!memref.getParentRegion()->isAncestor(block->getParent())) {
-      LLVM_DEBUG(llvm::dbgs() << "memref definition is inside of the depth at "
-                                 "which copy-in/copy-out would happen\n");
+      LDBG() << "memref definition is inside of the depth at "
+             << "which copy-in/copy-out would happen";
       return;
     }
 
@@ -2358,12 +2355,10 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
     auto region = std::make_unique<MemRefRegion>(opInst->getLoc());
     if (failed(region->compute(opInst, copyDepth, /*sliceState=*/nullptr,
                                /*addMemRefDimBounds=*/false))) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Error obtaining memory region: semi-affine maps?\n");
-      LLVM_DEBUG(llvm::dbgs() << "over-approximating to the entire memref\n");
+      LDBG() << "Error obtaining memory region: semi-affine maps?";
+      LDBG() << "over-approximating to the entire memref";
       if (!getFullMemRefAsRegion(opInst, copyDepth, region.get())) {
-        LLVM_DEBUG(
-            opInst->emitError("non-constant memref sizes not yet supported"));
+        LDBG() << "non-constant memref sizes not yet supported";
         error = true;
         return;
       }
@@ -2392,13 +2387,11 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
 
           // Perform a union with the existing region.
           if (failed(it->second->unionBoundingBox(*region))) {
-            LLVM_DEBUG(llvm::dbgs()
-                       << "Memory region bounding box failed; "
-                          "over-approximating to the entire memref\n");
+            LDBG() << "Memory region bounding box failed; "
+                   << "over-approximating to the entire memref";
             // If the union fails, we will overapproximate.
             if (!getFullMemRefAsRegion(opInst, copyDepth, region.get())) {
-              LLVM_DEBUG(opInst->emitError(
-                  "non-constant memref sizes not yet supported"));
+              LDBG() << "non-constant memref sizes not yet supported";
               error = true;
               return true;
             }
@@ -2428,8 +2421,7 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
   });
 
   if (error) {
-    LLVM_DEBUG(begin->emitError(
-        "copy generation failed for one or more memref's in this block\n"));
+    LDBG() << "copy generation failed for one or more memref's in this block";
     return failure();
   }
 
@@ -2466,8 +2458,7 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
   processRegions(writeRegions);
 
   if (!ret) {
-    LLVM_DEBUG(begin->emitError(
-        "copy generation failed for one or more memref's in this block\n"));
+    LDBG() << "copy generation failed for one or more memref's in this block";
     return failure();
   }
 
@@ -2608,7 +2599,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
                                         /*boundFloorDivisor=*/nullptr,
                                         /*ub=*/nullptr, &fullTileLbPos,
                                         &fullTileUbPos)) {
-      LLVM_DEBUG(llvm::dbgs() << "Can't get constant diff pair for a loop\n");
+      LDBG() << "Can't get constant diff pair for a loop";
       return nullptr;
     }
 
@@ -2667,8 +2658,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
   for (auto loop : inputNest) {
     // TODO: straightforward to generalize to a non-unit stride.
     if (loop.getStepAsInt() != 1) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "[tile separation] non-unit stride not implemented\n");
+      LDBG() << "[tile separation] non-unit stride not implemented";
       return failure();
     }
     SmallVector<Operation *, 1> loopOp{loop.getOperation()};
@@ -2682,8 +2672,8 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
                                         /*boundFloorDivisor=*/nullptr,
                                         /*ub=*/nullptr, &lbPos, &ubPos) ||
         lbPos == ubPos) {
-      LLVM_DEBUG(llvm::dbgs() << "[tile separation] Can't get constant diff / "
-                                 "equalities not yet handled\n");
+      LDBG() << "[tile separation] Can't get constant diff / "
+             << "equalities not yet handled";
       return failure();
     }
 
@@ -2741,8 +2731,8 @@ mlir::affine::separateFullTiles(MutableArrayRef<AffineForOp> inputNest,
   AffineIfOp ifOp = createSeparationCondition(inputNest, b);
   if (!ifOp) {
     fullTileLoops.front().erase();
-    LLVM_DEBUG(llvm::dbgs() << "All tiles are full tiles, or failure creating "
-                               "separation condition\n");
+    LDBG() << "All tiles are full tiles, or failure creating "
+           << "separation condition";
     return failure();
   }
 
