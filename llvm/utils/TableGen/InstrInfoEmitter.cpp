@@ -227,24 +227,23 @@ static void emitGetInstructionIndexForOpLookup(
     raw_ostream &OS, const MapVector<SmallVector<int>, unsigned> &OperandMap,
     ArrayRef<unsigned> InstructionIndex) {
   StringRef Type = OperandMap.size() <= UINT8_MAX + 1 ? "uint8_t" : "uint16_t";
-  OS << "LLVM_READONLY\n";
-  OS << "static " << Type
-     << " getInstructionIndexForOpLookup(uint16_t Opcode) {\n";
-  OS << "  static constexpr " << Type << " InstructionIndex[] = {";
+  OS << "LLVM_READONLY static " << Type
+     << " getInstructionIndexForOpLookup(uint16_t Opcode) {\n"
+        "  static constexpr "
+     << Type << " InstructionIndex[] = {";
   for (auto [TableIndex, Entry] : enumerate(InstructionIndex))
     OS << (TableIndex % 16 == 0 ? "\n    " : " ") << Entry << ',';
-  OS << "\n  };\n";
-  OS << "  return InstructionIndex[Opcode];\n";
-  OS << "}\n";
+  OS << "\n  };\n"
+        "  return InstructionIndex[Opcode];\n"
+        "}\n";
 }
 
 static void
-emitGetNamedOperandIdx(raw_ostream &OS, StringRef Namespace,
-                       const MapVector<StringRef, unsigned> &OperandNameToID,
+emitGetNamedOperandIdx(raw_ostream &OS,
                        const MapVector<SmallVector<int>, unsigned> &OperandMap,
                        unsigned MaxOperandNo, unsigned NumOperandNames) {
-  OS << "LLVM_READONLY\n";
-  OS << "int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name) {\n";
+  OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName "
+        "Name) {\n";
   OS << "  assert(Name != OpName::NUM_OPERAND_NAMES);\n";
   if (!NumOperandNames) {
     // There are no operands, so no need to emit anything
@@ -271,39 +270,40 @@ emitGetNamedOperandIdx(raw_ostream &OS, StringRef Namespace,
 }
 
 static void
-emitGetOperandIdxName(raw_ostream &OS, StringRef Namespace,
-                      const MapVector<StringRef, unsigned> &OperandNameToID,
+emitGetOperandIdxName(raw_ostream &OS,
+                      MapVector<StringRef, unsigned> OperandNameToID,
                       const MapVector<SmallVector<int>, unsigned> &OperandMap,
-                      unsigned MaxOperandNo, unsigned NumOperandNames) {
-  OS << "LLVM_READONLY\n";
-  OS << "OpName getOperandIdxName(uint16_t Opcode, int16_t Idx) {\n";
-  OS << "  assert(Idx >= 0 && Idx < " << MaxOperandNo << ");\n";
-  if (!MaxOperandNo) {
+                      unsigned MaxNumOperands, unsigned NumOperandNames) {
+  OS << "LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx) "
+        "{\n";
+  OS << "  assert(Idx >= 0 && Idx < " << MaxNumOperands << ");\n";
+  if (!MaxNumOperands) {
     // There are no operands, so no need to emit anything
     OS << "  return -1;\n}\n";
     return;
   }
-  assert(NumOperandNames <= UINT16_MAX &&
-         "Too many operands for the operand index -> name table");
-  StringRef Type = NumOperandNames <= UINT8_MAX ? "uint8_t" : "uint16_t";
-  OS << "  static constexpr " << Type << " OperandMap[][" << MaxOperandNo
+  OS << "  static constexpr OpName OperandMap[][" << MaxNumOperands
      << "] = {\n";
   for (const auto &[OpList, _] : OperandMap) {
-    SmallVector<unsigned> IDs(MaxOperandNo, NumOperandNames);
+    SmallVector<unsigned> IDs(MaxNumOperands, NumOperandNames);
     for (const auto &[ID, Idx] : enumerate(OpList)) {
       if (Idx >= 0)
         IDs[Idx] = ID;
     }
     // Emit a row of the OperandMap table. Map operand indices to enum values.
     OS << "    {";
-    for (unsigned ID : IDs)
-      OS << ID << ", ";
+    for (unsigned ID : IDs) {
+      if (ID == NumOperandNames)
+        OS << "OpName::NUM_OPERAND_NAMES, ";
+      else
+        OS << "OpName::" << OperandNameToID.getArrayRef()[ID].first << ", ";
+    }
     OS << "},\n";
   }
   OS << "  };\n";
 
   OS << "  unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);\n";
-  OS << "  return (OpName) OperandMap[InstrIdx][(unsigned)Idx];\n";
+  OS << "  return OperandMap[InstrIdx][(unsigned)Idx];\n";
   OS << "}\n";
 }
 
@@ -339,7 +339,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
   /// instructions that have identical OpName -> Operand index mapping.
   MapVector<SmallVector<int>, unsigned> OperandMap;
 
-  // Max operand index seen + 1.
+  // Max operand index seen.
   unsigned MaxOperandNo = 0;
 
   // Fixed/Predefined instructions do not have UseNamedOperandTable enabled, so
@@ -359,7 +359,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
               .first->second;
       OpList.resize(std::max((unsigned)OpList.size(), ID + 1), -1);
       OpList[ID] = Info.MIOperandNo;
-      MaxOperandNo = std::max(MaxOperandNo, Info.MIOperandNo + 1);
+      MaxOperandNo = std::max(MaxOperandNo, Info.MIOperandNo);
     }
     auto [It, Inserted] =
         OperandMap.try_emplace(std::move(OpList), OperandMap.size());
@@ -367,19 +367,25 @@ void InstrInfoEmitter::emitOperandNameMappings(
   }
 
   const size_t NumOperandNames = OperandNameToID.size();
+  const unsigned MaxNumOperands = MaxOperandNo + 1;
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "#undef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "namespace llvm::" << Namespace << " {\n";
-  OS << "enum class OpName {\n";
+
+  assert(NumOperandNames <= UINT16_MAX &&
+         "Too many operands for the operand index -> name table");
+  StringRef EnumType = getMinimalTypeForRange(NumOperandNames);
+  OS << "enum class OpName : " << EnumType << " {\n";
   for (const auto &[Op, I] : OperandNameToID)
     OS << "  " << Op << " = " << I << ",\n";
   OS << "  NUM_OPERAND_NAMES = " << NumOperandNames << ",\n";
   OS << "}; // enum class OpName\n\n";
-  OS << "LLVM_READONLY\n";
-  OS << "int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name);\n";
-  OS << "LLVM_READONLY\n";
-  OS << "OpName getOperandIdxName(uint16_t Opcode, int16_t Idx);\n";
+
+  OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName "
+        "Name);\n";
+  OS << "LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t "
+        "Idx);\n";
   OS << "} // end namespace llvm::" << Namespace << '\n';
   OS << "#endif //GET_INSTRINFO_OPERAND_ENUM\n\n";
 
@@ -389,10 +395,9 @@ void InstrInfoEmitter::emitOperandNameMappings(
 
   emitGetInstructionIndexForOpLookup(OS, OperandMap, InstructionIndex);
 
-  emitGetNamedOperandIdx(OS, Namespace, OperandNameToID, OperandMap,
-                         MaxOperandNo, NumOperandNames);
-  emitGetOperandIdxName(OS, Namespace, OperandNameToID, OperandMap,
-                        MaxOperandNo, NumOperandNames);
+  emitGetNamedOperandIdx(OS, OperandMap, MaxOperandNo, NumOperandNames);
+  emitGetOperandIdxName(OS, OperandNameToID, OperandMap, MaxNumOperands,
+                        NumOperandNames);
 
   OS << "} // end namespace llvm::" << Namespace << '\n';
   OS << "#endif //GET_INSTRINFO_NAMED_OPS\n\n";

@@ -51,7 +51,7 @@ def InstD : InstBase {
 // CHECK-LABEL: #ifdef GET_INSTRINFO_OPERAND_ENUM
 // CHECK-NEXT:  #undef GET_INSTRINFO_OPERAND_ENUM
 // CHECK-NEXT:  namespace llvm::MyNamespace {
-// CHECK-NEXT:  enum class OpName {
+// CHECK-NEXT:  enum class OpName : uint8_t {
 // CHECK-NEXT:    a = 0,
 // CHECK-NEXT:    b = 1,
 // CHECK-NEXT:    c = 2,
@@ -60,18 +60,15 @@ def InstD : InstBase {
 // CHECK-NEXT:    NUM_OPERAND_NAMES = 5,
 // CHECK-NEXT:  }; // enum class OpName
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_READONLY
-// CHECK-NEXT:  int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name);
-// CHECK-NEXT:  LLVM_READONLY
-// CHECK-NEXT:  OpName getOperandIdxName(uint16_t Opcode, int16_t Idx);
+// CHECK-NEXT:  LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name);
+// CHECK-NEXT:  LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx);
 // CHECK-NEXT:  } // end namespace llvm::MyNamespace
 // CHECK-NEXT:  #endif //GET_INSTRINFO_OPERAND_ENUM
 
 // CHECK-LABEL: #ifdef GET_INSTRINFO_NAMED_OPS
 // CHECK-NEXT:  #undef GET_INSTRINFO_NAMED_OPS
 // CHECK-NEXT:  namespace llvm::MyNamespace {
-// CHECK-NEXT:  LLVM_READONLY
-// CHECK-NEXT:  static uint8_t getInstructionIndexForOpLookup(uint16_t Opcode) {
+// CHECK-NEXT:  LLVM_READONLY static uint8_t getInstructionIndexForOpLookup(uint16_t Opcode) {
 // CHECK-NEXT:    static constexpr uint8_t InstructionIndex[] = {
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -96,8 +93,7 @@ def InstD : InstBase {
 // CHECK-NEXT:    };
 // CHECK-NEXT:    return InstructionIndex[Opcode];
 // CHECK-NEXT:  }
-// CHECK-NEXT:  LLVM_READONLY
-// CHECK-NEXT:  int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name) {
+// CHECK-NEXT:  LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name) {
 // CHECK-NEXT:    assert(Name != OpName::NUM_OPERAND_NAMES);
 // CHECK-NEXT:    static constexpr int8_t OperandMap[][5] = {
 // CHECK-NEXT:      {-1, -1, -1, -1, -1, },
@@ -107,16 +103,15 @@ def InstD : InstBase {
 // CHECK-NEXT:    unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);
 // CHECK-NEXT:    return OperandMap[InstrIdx][(unsigned)Name];
 // CHECK-NEXT:  }
-// CHECK-NEXT:  LLVM_READONLY
-// CHECK-NEXT:  OpName getOperandIdxName(uint16_t Opcode, int16_t Idx) {
+// CHECK-NEXT:  LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx) {
 // CHECK-NEXT:    assert(Idx >= 0 && Idx < 3);
-// CHECK-NEXT:    static constexpr uint8_t OperandMap[][3] = {
-// CHECK-NEXT:      {5, 5, 5, },
-// CHECK-NEXT:      {0, 1, 2, },
-// CHECK-NEXT:      {3, 4, 5, },
+// CHECK-NEXT:    static constexpr OpName OperandMap[][3] = {
+// CHECK-NEXT:      {OpName::NUM_OPERAND_NAMES, OpName::NUM_OPERAND_NAMES, OpName::NUM_OPERAND_NAMES, },
+// CHECK-NEXT:      {OpName::a, OpName::b, OpName::c, },
+// CHECK-NEXT:      {OpName::d, OpName::x, OpName::NUM_OPERAND_NAMES, },
 // CHECK-NEXT:    };
 // CHECK-NEXT:    unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);
-// CHECK-NEXT:    return (OpName) OperandMap[InstrIdx][(unsigned)Idx];
+// CHECK-NEXT:    return OperandMap[InstrIdx][(unsigned)Idx];
 // CHECK-NEXT:  }
 // CHECK-NEXT:  } // end namespace llvm::MyNamespace
 // CHECK-NEXT:  #endif //GET_INSTRINFO_NAMED_OPS
