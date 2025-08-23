@@ -375,7 +375,7 @@ std::error_code SampleProfileReaderText::readImpl() {
       StringRef FName;
       DenseMap<StringRef, uint64_t> TargetCountMap;
       uint32_t Depth, LineOffset, Discriminator;
-      LineType LineTy;
+      LineType LineTy = LineType::BodyProfile;
       uint64_t FunctionHash = 0;
       uint32_t Attributes = 0;
       bool IsFlat = false;
