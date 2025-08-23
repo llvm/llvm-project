@@ -1339,9 +1339,7 @@ define i32 @bsr_eq(i32 %a, i32 %b) {
 ; X86-LABEL: bsr_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl $31, %ecx
 ; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl $31, %edx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
 ; X86-NEXT:    sete %al
@@ -1350,9 +1348,7 @@ define i32 @bsr_eq(i32 %a, i32 %b) {
 ; X64-LABEL: bsr_eq:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bsrl %edi, %ecx
-; X64-NEXT:    xorl $31, %ecx
 ; X64-NEXT:    bsrl %esi, %edx
-; X64-NEXT:    xorl $31, %edx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl %edx, %ecx
 ; X64-NEXT:    sete %al

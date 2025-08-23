@@ -49009,6 +49009,28 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
 static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
                                   SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
+  // For EQ/NE, rewrite SUB(xor A,B, xor C,B) -> SUB(A,C) and
+  //            SUB(add A,K, add C,K)       -> SUB(A,C)
+  // Only safe if the arithmetic result is unused, since we only
+  // care about flags for EQ/NE.
+
+  // TODO: Can we do this for other comparions like 31 ^ A > 31 ^ B ?
+  if ((CC == X86::COND_E || CC == X86::COND_NE) &&
+      EFLAGS.getOpcode() == X86ISD::SUB &&
+      !EFLAGS.getNode()->hasAnyUseOfValue(0)) {
+    using namespace llvm::SDPatternMatch;
+    SDValue LHS = EFLAGS.getOperand(0);
+    SDValue RHS = EFLAGS.getOperand(1);
+    SDValue A, B, C;
+
+    // (xor A, B) - (xor C, B) -> A - C
+    if (sd_match(LHS, m_Xor(m_Value(A), m_Value(B))) &&
+        sd_match(RHS, m_Xor(m_Value(C), m_Specific(B)))) {
+      DAG.UpdateNodeOperands(EFLAGS.getNode(), A, C);
+      return SDValue(EFLAGS.getNode(), 1);
+    }
+  }
+
   if (CC == X86::COND_B)
     if (SDValue Flags = combineCarryThroughADD(EFLAGS, DAG))
       return Flags;
