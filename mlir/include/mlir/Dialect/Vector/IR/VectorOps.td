@@ -843,7 +843,7 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
 
 def Vector_InsertOp :
   Vector_Op<"insert", [Pure,
-     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesOrPoison"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      AllTypesMatch<["dest", "result"]>]> {

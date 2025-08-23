@@ -33,6 +33,9 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
       When operations take non-integer inputs, the
      `inferResultRangesFromOptional` method should be implemented instead.
 
+      If any of the operands have poison ranges, they will be propagated to the
+      results automatically after the metdod returns.
+
       When called on an op that also implements the RegionBranchOpInterface
       or BranchOpInterface, this method should not attempt to infer the values
       of the branch results, as this will be handled by the analyses that use
@@ -60,6 +63,9 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
       as an argument. When implemented, `setValueRange` should be called on
       all result values for the operation.
 
+      If any of the operands have poison ranges, they will be propagated to the
+      results automatically after the metdod returns.
+
       This method allows for more precise implementations when operations
       want to reason about inputs which may be undefined during the analysis.
     }],
@@ -72,6 +78,30 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
       ::mlir::intrange::detail::defaultInferResultRanges($_op,
                                                          argRanges,
                                                          setResultRanges);
+    }]>,
+
+    InterfaceMethod<[{
+      Infer the bounds on the results of this op given the lattice representation
+      of the bounds for its arguments. For each result value or block argument
+      (that isn't a branch argument, since the dataflow analysis handles
+      those case), the method should call `setValueRange` with that `Value`
+      as an argument. When implemented, `setValueRange` should be called on
+      all result values for the operation.
+
+      Unlike `inferResultRanges`/`inferResultRangesFromOptional` this method
+      does not automatically propagate poison from the inputs. This allows more
+      precise poison semantics implementation.
+    }],
+    /*retTy=*/"void",
+    /*methodName=*/"inferResultRangesOrPoison",
+    /*args=*/(ins "::llvm::ArrayRef<::mlir::IntegerValueRange>":$argRanges,
+                  "::mlir::SetIntLatticeFn":$setResultRanges),
+    /*methodBody=*/"",
+    /*defaultImplementation=*/[{
+      ::mlir::intrange::detail::defaultInferResultRangesOrPoison(
+        $_op,
+        argRanges,
+        setResultRanges);
     }]>
   ];
 }

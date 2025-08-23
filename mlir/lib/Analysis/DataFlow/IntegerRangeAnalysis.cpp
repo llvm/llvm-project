@@ -124,7 +124,7 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
     propagateIfChanged(lattice, changed);
   };
 
-  inferrable.inferResultRangesFromOptional(argRanges, joinCallback);
+  inferrable.inferResultRangesOrPoison(argRanges, joinCallback);
   return success();
 }
 
@@ -167,7 +167,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       propagateIfChanged(lattice, changed);
     };
 
-    inferrable.inferResultRangesFromOptional(argRanges, joinCallback);
+    inferrable.inferResultRangesOrPoison(argRanges, joinCallback);
     return;
   }
 
