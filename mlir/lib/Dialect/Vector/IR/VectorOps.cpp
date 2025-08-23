@@ -3211,9 +3211,14 @@ void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // InsertOp
 //===----------------------------------------------------------------------===//
 
-void vector::InsertOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                         SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), argRanges[0].rangeUnion(argRanges[1]));
+void vector::InsertOp::inferResultRangesOrPoison(
+    ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRanges) {
+  if (argRanges[0].isUninitialized() || argRanges[1].isUninitialized())
+    return;
+
+  const ConstantIntRanges &range0 = argRanges[0].getValue();
+  const ConstantIntRanges &range1 = argRanges[1].getValue();
+  setResultRanges(getResult(), range0.rangeUnion(range1));
 }
 
 void vector::InsertOp::build(OpBuilder &builder, OperationState &result,

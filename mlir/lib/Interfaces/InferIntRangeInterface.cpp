@@ -253,3 +253,38 @@ void mlir::intrange::detail::defaultInferResultRangesFromOptional(
           setResultRanges(value, argRanges.getValue());
       });
 }
+
+void mlir::intrange::detail::defaultInferResultRangesOrPoison(
+    InferIntRangeInterface interface, ArrayRef<IntegerValueRange> argRanges,
+    SetIntLatticeFn setResultRanges) {
+
+  bool signedPoison = false;
+  bool unsignedPoison = false;
+  for (const IntegerValueRange &range : argRanges) {
+    if (range.isUninitialized())
+      continue;
+
+    const ConstantIntRanges &value = range.getValue();
+    signedPoison = signedPoison || value.isSignedPoison();
+    unsignedPoison = unsignedPoison || value.isUnsignedPoison();
+  }
+
+  auto visitor = [&](Value value, const IntegerValueRange &range) {
+    if (range.isUninitialized())
+      return;
+
+    if (!signedPoison && !unsignedPoison)
+      return setResultRanges(value, range);
+
+    const ConstantIntRanges &origRange = range.getValue();
+    auto poison = ConstantIntRanges::poison(origRange.getBitWidth());
+    APInt umin = unsignedPoison ? poison.umin() : origRange.umin();
+    APInt umax = unsignedPoison ? poison.umax() : origRange.umax();
+    APInt smin = signedPoison ? poison.smin() : origRange.smin();
+    APInt smax = signedPoison ? poison.smax() : origRange.smax();
+
+    setResultRanges(value, ConstantIntRanges(umin, umax, smin, smax));
+  };
+
+  interface.inferResultRangesFromOptional(argRanges, visitor);
+}
