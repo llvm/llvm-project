@@ -285,7 +285,8 @@ private:
 class DependenceInfo {
 public:
   DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE, LoopInfo *LI)
-      : AA(AA), SE(SE), LI(LI), F(F) {}
+      : AA(AA), SE(SE), LI(LI), F(F), Assumptions({}, *SE),
+        UnderRuntimeAssumptions(false) {}
 
   /// Handle transitive invalidation when the cached analysis results go away.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -355,7 +356,33 @@ private:
   ScalarEvolution *SE;
   LoopInfo *LI;
   Function *F;
-  SmallVector<const SCEVPredicate *, 4> Assumptions;
+
+  /// Runtime assumptions collected during dependence analysis.
+  ///
+  /// The dependence analysis employs a cascade of tests from simple to complex:
+  /// ZIV -> SIV (Strong/Weak-Crossing/Weak-Zero) -> RDIV -> MIV -> Banerjee.
+  /// Each test attempts to characterize the dependence with increasing
+  /// precision.
+  ///
+  /// Assumption Management Strategy:
+  /// - Each test may require runtime assumptions (e.g., "coefficient != 0")
+  ///   to provide precise analysis.
+  /// - If UnderRuntimeAssumptions=true: tests can add assumptions and continue.
+  /// - If UnderRuntimeAssumptions=false: tests that need assumptions fail
+  ///   gracefully, allowing more complex tests to attempt analysis.
+  /// - Only assumptions from successful tests contribute to the final result.
+  /// - SCEVUnionPredicate automatically deduplicates redundant assumptions.
+  ///
+  /// This design ensures:
+  /// 1. Simpler tests get priority (better performance).
+  /// 2. Complex tests serve as fallbacks when simple tests fail.
+  /// 3. No unnecessary runtime checks from failed test attempts.
+  /// 4. Maintains the intended cascade behavior of the dependence analysis.
+  SCEVUnionPredicate Assumptions;
+
+  /// Indicates whether runtime assumptions are collected during the analysis.
+  /// When false, dependence tests that would require runtime assumptions fail.
+  bool UnderRuntimeAssumptions;
 
   /// Subscript - This private struct represents a pair of subscripts from
   /// a pair of potentially multi-dimensional array references. We use a
