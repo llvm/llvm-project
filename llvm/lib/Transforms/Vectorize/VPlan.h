@@ -901,6 +901,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
     return R && classof(R);
   }
 
+  virtual VPRecipeWithIRFlags *clone() override = 0;
+
   void execute(VPTransformState &State) override = 0;
 
   /// Compute the cost for this recipe for \p VF, using \p Opcode and \p Ctx.
@@ -1045,13 +1047,6 @@ public:
     VScale,
   };
 
-private:
-  typedef unsigned char OpcodeTy;
-  OpcodeTy Opcode;
-
-  /// An optional name that can be used for the generated IR instruction.
-  const std::string Name;
-
   /// Returns true if this VPInstruction generates scalar values for all lanes.
   /// Most VPInstructions generate a single value per part, either vector or
   /// scalar. VPReplicateRecipe takes care of generating multiple (scalar)
@@ -1059,6 +1054,13 @@ private:
   /// identifies the (rare) cases of VPInstructions that do so as well, w/o an
   /// underlying ingredient.
   bool doesGeneratePerAllLanes() const;
+
+private:
+  typedef unsigned char OpcodeTy;
+  OpcodeTy Opcode;
+
+  /// An optional name that can be used for the generated IR instruction.
+  const std::string Name;
 
   /// Returns true if we can generate a scalar for the first lane only if
   /// needed.
@@ -1068,11 +1070,6 @@ private:
   /// the modeled instruction. \returns the generated value. . In some cases an
   /// existing value is returned rather than a generated one.
   Value *generate(VPTransformState &State);
-
-  /// Utility methods serving execute(): generates a scalar single instance of
-  /// the modeled instruction for a given lane. \returns the scalar generated
-  /// value for lane \p Lane.
-  Value *generatePerLane(VPTransformState &State, const VPLane &Lane);
 
 #if !defined(NDEBUG)
   /// Return the number of operands determined by the opcode of the
