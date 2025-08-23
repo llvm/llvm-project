@@ -236,8 +236,8 @@ public:
   /// EnableGlobalISel - This flag enables global instruction selection.
   unsigned EnableGlobalISel : 1;
 
-  /// EnableGlobalISelExtendedLLT - This flag enables LLTs with extenden type info
-  /// so target may distinguish different formats of equal sized scalars.
+  /// EnableGlobalISelExtendedLLT - This flag enables LLTs with extenden type
+  /// info so target may distinguish different formats of equal sized scalars.
   unsigned EnableGlobalISelExtendedLLT : 1;
 
   /// EnableGlobalISelAbort - Control abort behaviour when global instruction

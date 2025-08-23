@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -46,7 +46,7 @@ public:
     TargetOptions Options;
     return std::unique_ptr<TargetMachine>(
         T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt,
-                              std::nullopt, CodeGenOptLevel::Aggressive));
+                               std::nullopt, CodeGenOptLevel::Aggressive));
   }
 
   std::unique_ptr<Module> parseIR(const char *IR) {
@@ -96,7 +96,8 @@ TEST_F(AArch64IRTranslatorTest, IRTranslateBfloat16) {
   legacy::PassManager PM;
   TargetPassConfig *TPC(TM->createPassConfig(PM));
 
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(TM.get());
+  MachineModuleInfoWrapperPass *MMIWP =
+      new MachineModuleInfoWrapperPass(TM.get());
   PM.add(TPC);
   PM.add(MMIWP);
   PM.add(new IRTranslator());
@@ -126,5 +127,6 @@ TEST_F(AArch64IRTranslatorTest, IRTranslateBfloat16) {
   TM->setGlobalISelExtendedLLT(false);
   PM.run(*M);
   MF = MMI->getMachineFunction(*F);
-  ASSERT_TRUE(MF->getProperties().hasProperty(llvm::MachineFunctionProperties::Property::FailedISel));
+  ASSERT_TRUE(MF->getProperties().hasProperty(
+      llvm::MachineFunctionProperties::Property::FailedISel));
 }

@@ -317,8 +317,9 @@ constexpr LLT V10S16 = LLT::fixed_vector(10, 16);
 constexpr LLT V12S16 = LLT::fixed_vector(12, 16);
 constexpr LLT V16S16 = LLT::fixed_vector(16, 16);
 
-constexpr LLT V2F16 = LLT::fixed_vector(2, LLT::scalar(16)); // TODO: Expected float16
-constexpr LLT V2BF16 = V2F16; // FIXME
+constexpr LLT V2F16 =
+    LLT::fixed_vector(2, LLT::scalar(16)); // TODO: Expected float16
+constexpr LLT V2BF16 = V2F16;              // FIXME
 
 constexpr LLT V2S32 = LLT::fixed_vector(2, 32);
 constexpr LLT V3S32 = LLT::fixed_vector(3, 32);

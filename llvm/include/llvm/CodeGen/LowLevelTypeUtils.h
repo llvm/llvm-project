@@ -27,7 +27,8 @@ class Type;
 struct fltSemantics;
 
 /// Construct a low-level type based on an LLVM type.
-LLVM_ABI LLT getLLTForType(Type &Ty, const DataLayout &DL, bool AllowExtendedLLT = false);
+LLVM_ABI LLT getLLTForType(Type &Ty, const DataLayout &DL,
+                           bool AllowExtendedLLT = false);
 
 /// Get a rough equivalent of an MVT for a given LLT. MVT can't distinguish
 /// pointers, so these will convert to a plain integer.

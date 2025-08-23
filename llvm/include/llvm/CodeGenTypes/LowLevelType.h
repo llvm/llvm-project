@@ -178,7 +178,8 @@ public:
 
   /// Get a low-level fixed-width vector of some number of elements and element
   /// width.
-  static constexpr LLT fixed_vector(unsigned NumElements, unsigned ScalarSizeInBits) {
+  static constexpr LLT fixed_vector(unsigned NumElements,
+                                    unsigned ScalarSizeInBits) {
     return vector(ElementCount::getFixed(NumElements),
                   LLT::scalar(ScalarSizeInBits));
   }
@@ -191,7 +192,8 @@ public:
 
   /// Get a low-level scalable vector of some number of elements and element
   /// width.
-  static constexpr LLT scalable_vector(unsigned MinNumElements, unsigned ScalarSizeInBits) {
+  static constexpr LLT scalable_vector(unsigned MinNumElements,
+                                       unsigned ScalarSizeInBits) {
     return vector(ElementCount::getScalable(MinNumElements),
                   LLT::scalar(ScalarSizeInBits));
   }
@@ -222,7 +224,10 @@ public:
   explicit constexpr LLT() : Info(static_cast<Kind>(0)), RawData(0) {}
 
   constexpr bool isValid() const { return isToken() || RawData != 0; }
-  constexpr bool isScalar() const { return Info == Kind::ANY_SCALAR || Info == Kind::INTEGER || Info == Kind::FLOAT; }
+  constexpr bool isScalar() const {
+    return Info == Kind::ANY_SCALAR || Info == Kind::INTEGER ||
+           Info == Kind::FLOAT;
+  }
   constexpr bool isScalar(unsigned Size) const {
     return isScalar() && getScalarSizeInBits() == Size;
   }
@@ -274,7 +279,7 @@ public:
   }
   constexpr bool isVector() const {
     return isValid() &&
-           (Info == Kind::VECTOR_ANY || Info == Kind::VECTOR_INTEGER||
+           (Info == Kind::VECTOR_ANY || Info == Kind::VECTOR_INTEGER ||
             Info == Kind::VECTOR_FLOAT || Info == Kind::VECTOR_POINTER);
   }
   constexpr bool isPointer() const {

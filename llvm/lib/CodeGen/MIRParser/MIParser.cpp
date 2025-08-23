@@ -1934,7 +1934,8 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
       TypeDigits.consume_front("f") || TypeDigits.consume_front("p") ||
       TypeDigits.consume_front("bf")) {
     if (TypeDigits.empty() || !llvm::all_of(TypeDigits, isdigit))
-      return error("expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
+      return error(
+          "expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
   }
 
   if (Token.range().starts_with("s") || Token.range().starts_with("i")) {
@@ -1994,15 +1995,17 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (HasVScale) {
     lex();
     if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
-      return error("expected <vscale x M x tN>, where t = {'s', 'i', 'f', 'bf', 'p'}");
+      return error(
+          "expected <vscale x M x tN>, where t = {'s', 'i', 'f', 'bf', 'p'}");
     lex();
   }
 
   auto GetError = [this, &HasVScale, Loc]() {
     if (HasVScale)
-      return error(
-          Loc, "expected <vscale x M x tN> for vector type, where t = {'s', 'i', 'f', 'bf', 'p'}");
-    return error(Loc, "expected <M x tN> for vector type, where t = {'s', 'i', 'f', 'bf', 'p'}");
+      return error(Loc, "expected <vscale x M x tN> for vector type, where t = "
+                        "{'s', 'i', 'f', 'bf', 'p'}");
+    return error(Loc, "expected <M x tN> for vector type, where t = {'s', 'i', "
+                      "'f', 'bf', 'p'}");
   };
 
   if (Token.isNot(MIToken::IntegerLiteral))
@@ -2073,7 +2076,8 @@ bool MIParser::parseTypedImmediateOperand(MachineOperand &Dest) {
     return error("a typed immediate operand should start with one of 'i', "
                  "'s', 'f', 'bf', or 'p'");
   if (TypeDigits.empty() || !llvm::all_of(TypeDigits, isdigit))
-    return error("expected integers after 'i'/'s'/'f'/'bf'/'p' type identifier");
+    return error(
+        "expected integers after 'i'/'s'/'f'/'bf'/'p' type identifier");
 
   auto Loc = Token.location();
   lex();
