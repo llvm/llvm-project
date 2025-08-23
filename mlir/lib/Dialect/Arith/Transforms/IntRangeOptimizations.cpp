@@ -54,6 +54,9 @@ static bool isPoison(DataFlowSolver &solver, Value value) {
     return false;
   const ConstantIntRanges &inferredRange =
       maybeInferredRange->getValue().getValue();
+
+  // Only generate poison if both signed and unsigned ranges are guranteed to be
+  // poison.
   return inferredRange.isSignedPoison() && inferredRange.isUnsignedPoison();
 }
 
