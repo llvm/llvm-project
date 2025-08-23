@@ -708,7 +708,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   // If linker relaxation is enabled and supported by this relocation, set a bit
   // so that the assembler knows the size of the instruction is not fixed/known,
   // and the relocation will need a R_RISCV_RELAX relocation.
-  LLVM_DEBUG(dbgs() << "Maybe Marking Fixup " << Fixups.back().getKind() << " as Relaxable " << EnableRelax << " " << RelaxCandidate << "\n");
   if (EnableRelax && RelaxCandidate)
     Fixups.back().setLinkerRelaxable();
   ++MCNumFixups;
