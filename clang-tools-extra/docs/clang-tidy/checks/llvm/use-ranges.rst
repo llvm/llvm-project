@@ -25,7 +25,7 @@ Transforms to:
 Supported algorithms
 --------------------
 
-Calls to the following ``std`` library algorithms are checked:
+Calls to the following STL algorithms are checked:
 
 ``std::all_of``,
 ``std::any_of``,
