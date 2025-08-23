@@ -1,16 +1,14 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -ffeature-availability=feature1:on -ffeature-availability=feature2:off -ffeature-availability=feature3:on -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-llvm -o - -DUSE_DOMAIN %s | FileCheck %s
 
-#include <feature-availability.h>
+#include <availability_domain.h>
 
 #define AVAIL 0
 
 #ifdef USE_DOMAIN
-int pred1(void);
-
-static struct __AvailabilityDomain feature1 __attribute__((availability_domain(feature1))) = {__AVAILABILITY_DOMAIN_ENABLED, 0};
-static struct __AvailabilityDomain feature2 __attribute__((availability_domain(feature2))) = {__AVAILABILITY_DOMAIN_DISABLED, 0};
-static struct __AvailabilityDomain feature3 __attribute__((availability_domain(feature3))) = {__AVAILABILITY_DOMAIN_ENABLED, 0};
+CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
+CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
+CLANG_ENABLED_AVAILABILITY_DOMAIN(feature3);
 #endif
 
 // CHECK: @"OBJC_CLASS_$_C0" = global %struct._class_t { ptr @"OBJC_METACLASS_$_C0", ptr null, ptr @_objc_empty_cache, ptr @_objc_empty_vtable, ptr @"_OBJC_CLASS_RO_$_C0" }, section "__DATA, __objc_data", align 8
