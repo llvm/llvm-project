@@ -373,8 +373,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                      m_VPValue(Op0))) ||
+    if (match(&R, m_ExtractLastElement(m_VPValue(Op0))) ||
         match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
                       m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
