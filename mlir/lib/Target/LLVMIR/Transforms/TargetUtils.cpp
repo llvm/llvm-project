@@ -13,12 +13,11 @@
 
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "mlir-llvm-target-utils"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 llvm::once_flag initializeBackendsOnce;
 
@@ -46,7 +45,7 @@ getTargetMachine(mlir::LLVM::TargetAttrInterface attr) {
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, error);
   if (!target || !error.empty()) {
-    LDBG("Looking up target '" << triple << "' failed: " << error << "\n");
+    LDBG() << "Looking up target '" << triple << "' failed: " << error << "\n";
     return failure();
   }
 
@@ -59,7 +58,7 @@ getDataLayout(mlir::LLVM::TargetAttrInterface attr) {
   FailureOr<std::unique_ptr<llvm::TargetMachine>> targetMachine =
       getTargetMachine(attr);
   if (failed(targetMachine)) {
-    LDBG("Failed to retrieve the target machine for data layout.\n");
+    LDBG() << "Failed to retrieve the target machine for data layout.\n";
     return failure();
   }
   return (targetMachine.value())->createDataLayout();

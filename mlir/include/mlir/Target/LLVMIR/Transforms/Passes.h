@@ -9,25 +9,10 @@
 #ifndef MLIR_TARGET_LLVMIR_TRANSFORMS_PASSES_H
 #define MLIR_TARGET_LLVMIR_TRANSFORMS_PASSES_H
 
-#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/Support/Threading.h"
-#include "llvm/Target/TargetMachine.h"
 
 namespace mlir {
-
 namespace LLVM {
-
-namespace detail {
-
-void initializeBackendsOnce();
-
-FailureOr<std::unique_ptr<llvm::TargetMachine>>
-getTargetMachine(mlir::LLVM::TargetAttrInterface attr);
-
-FailureOr<llvm::DataLayout> getDataLayout(mlir::LLVM::TargetAttrInterface attr);
-
-} // namespace detail
 
 #define GEN_PASS_DECL
 #define GEN_PASS_REGISTRATION
