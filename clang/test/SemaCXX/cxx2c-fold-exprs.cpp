@@ -117,7 +117,7 @@ void test() {
 }
 
 namespace substitution {
-    struct S {
+struct S {
     using type = int;
 };
 
@@ -453,4 +453,32 @@ constexpr int h() {
 }
 
 static_assert(h<double>() == 2);
+}
+
+
+namespace parameter_mapping_regressions {
+
+namespace case1 {
+namespace std {
+template <class _Tp, class... _Args>
+constexpr bool is_constructible_v = __is_constructible(_Tp, _Args...);
+template <class _Tp, class... _Args>
+concept constructible_from = is_constructible_v<_Tp, _Args...>;
+template <class _Tp>
+concept default_initializable = true;
+template <class> using iterator_t = int;
+template <class _Tp>
+concept view = constructible_from<_Tp, _Tp>;
+template <class... _Views>
+  requires(view<_Views> && ...)
+class zip_transform_view;
+} // namespace std
+struct IterDefaultCtrView {};
+template <class... Views>
+using Iter = std::iterator_t<std::zip_transform_view<Views...>>;
+static_assert(
+    std::default_initializable<Iter<IterDefaultCtrView, IterDefaultCtrView>>);
+
+}
+
 }

@@ -19,6 +19,7 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/UnsignedOrNone.h"
+#include "clang/Sema/Ownership.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -67,7 +68,7 @@ protected:
     unsigned Kind : 5;
     unsigned Placeholder : 1;
     unsigned PackSubstitutionIndex : 26;
-    llvm::SmallBitVector Indexes;
+    OccurenceList Indexes;
     TemplateArgumentLoc *Args;
     TemplateParameterList *ParamList;
     ExprOrConcept ConstraintExpr;
@@ -84,6 +85,7 @@ protected:
     TemplateArgumentLoc *Args;
     TemplateParameterList *ParamList;
     const Expr *Pattern;
+    const NamedDecl *ConstraintDecl;
     NormalizedConstraint *Constraint;
   };
 
@@ -128,7 +130,8 @@ protected:
                ConstraintDecl} {}
 
   NormalizedConstraint(const Expr *Pattern, FoldOperatorKind OpKind,
-                       NormalizedConstraint *Constraint)
+                       NormalizedConstraint *Constraint,
+                       const NamedDecl *ConstraintDecl)
       : FoldExpanded{llvm::to_underlying(ConstraintKind::FoldExpanded),
                      llvm::to_underlying(OpKind),
                      /*Placeholder=*/0,
@@ -136,6 +139,7 @@ protected:
                      /*Args=*/nullptr,
                      /*ParamList=*/nullptr,
                      Pattern,
+                     ConstraintDecl,
                      Constraint} {}
 
   NormalizedConstraint(const ConceptReference *ConceptId,
@@ -323,14 +327,17 @@ public:
   }
 };
 
-class FoldExpandedConstraint : public NormalizedConstraint {
-  using NormalizedConstraint::NormalizedConstraint;
+class FoldExpandedConstraint : public NormalizedConstraintWithParamMapping {
+  using NormalizedConstraintWithParamMapping::
+      NormalizedConstraintWithParamMapping;
 
 public:
   static FoldExpandedConstraint *Create(ASTContext &Ctx, const Expr *Pattern,
+                                        const NamedDecl *ConstraintDecl,
                                         FoldOperatorKind OpKind,
                                         NormalizedConstraint *Constraint) {
-    return new (Ctx) FoldExpandedConstraint(Pattern, OpKind, Constraint);
+    return new (Ctx)
+        FoldExpandedConstraint(Pattern, OpKind, Constraint, ConstraintDecl);
   }
 
   using NormalizedConstraint::hasMatchingParameterMapping;
@@ -381,6 +388,11 @@ public:
   }
 
   NormalizedConstraint &getNormalizedConstraint() { return *ConceptId.Sub; }
+};
+
+struct CachedConceptIdConstraint {
+  ExprResult SubstExpr;
+  ConstraintSatisfaction Satisfaction;
 };
 
 /// \brief SubsumptionChecker establishes subsumption
@@ -482,6 +494,6 @@ private:
   uint16_t getNewLiteralId();
 };
 
-} // clang
+} // namespace clang
 
 #endif // LLVM_CLANG_SEMA_SEMACONCEPT_H

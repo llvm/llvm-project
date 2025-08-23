@@ -5,10 +5,11 @@ template<typename T> concept True = true;
 template<typename T> concept Foo = True<T*>; // #Foo
 template<typename T> concept Bar = Foo<T&>;  // #Bar
 template<typename T> requires Bar<T> struct S { }; // #S
-template<typename T> requires Bar<T> && true struct S<T> { };
+template<typename T> requires Bar<T> && true struct S<T> { }; // #SpecS
 // expected-error@-1 {{class template partial specialization is not more specialized than the primary template}}
 // expected-error@#Foo 2{{'type name' declared as a pointer to a reference of type 'T &'}}
-// expected-note@#Foo 2{{while substituting into concept arguments here}}
+// expected-note@#SpecS {{while substituting into concept arguments here}}
+// expected-note@#S {{while substituting into concept arguments here}}
 // expected-note@#Bar 2{{while substituting into concept arguments here}}
 // expected-note@#S {{template is declared here}}
 
@@ -19,9 +20,9 @@ template<typename T> concept Foo2 = True2<T*>; // #Foo2
 
 template<typename T> concept Bar2 = Foo2<T&>; // #Bar2
 // expected-note@-1 3{{while substituting into concept arguments here; substitution failures not allowed in concept arguments}}
-template<typename T> requires Bar2<T> struct S2 { };
+template<typename T> requires Bar2<T> struct S2 { }; // #SpecS2_1
 // expected-note@-1{{template is declared here}}
-template<typename T> requires Bar2<T> && true struct S2<T> { };
+template<typename T> requires Bar2<T> && true struct S2<T> { }; // #SpecS2_2
 // expected-error@-1{{class template partial specialization is not more specialized than the primary template}}
 // expected-error@#Foo2{{'type name' declared as a pointer to a reference of type 'T &'}}
 
@@ -80,24 +81,26 @@ namespace non_type_pack {
 namespace PR47174 {
 // This checks that we don't crash with a failed substitution on the first constrained argument when
 // performing normalization.
-template <Bar2 T, True U>
+template <Bar2 T, True U> // #S3_Header
 requires true struct S3; // expected-note {{template is declared here}}
 template <True T, True U>
 requires true struct S3<T, U>;
 // expected-error@-1 {{class template partial specialization is not more specialized than the primary template}}
 // expected-error@#Foo2 2{{'type name' declared as a pointer to a reference of type 'T &'}}
-// expected-note@#Foo2 2{{while substituting into concept arguments here}}
+// expected-note@#SpecS2_1 {{while substituting into concept arguments here}}
+// expected-note@#SpecS2_2 {{while substituting into concept arguments here}}
+// expected-note@#S3_Header {{while substituting into concept arguments here}}
 // expected-note@#Bar2 {{while substituting into concept arguments here}}
 
 
 // Same as above, for the second position (but this was already working).
-template <True T, Bar2 U>
+template <True T, Bar2 U> // #S4_Header
 requires true struct S4; // #S4
 template <True T, True U>
 requires true struct S4<T, U>; // #S4-spec
 // expected-error@-1 {{class template partial specialization is not more specialized than the primary template}}
 // expected-error@#Foo2 {{'type name' declared as a pointer to a reference of type 'U &'}}
-// expected-note@#Foo2 2{{while substituting into concept arguments here}}
+// expected-note@#S4_Header {{while substituting into concept arguments here}}
 // expected-note@#S4 {{template is declared here}}
 // expected-note@#S4 {{similar constraint expressions not considered equivalent}}
 // expected-note@#S4-spec {{similar constraint expression here}}

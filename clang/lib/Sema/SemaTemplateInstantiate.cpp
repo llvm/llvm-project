@@ -628,7 +628,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Inst.DeductionInfo = DeductionInfo;
     Inst.InstantiationRange = InstantiationRange;
     Inst.InConstraintSubstitution =
-        Inst.Kind == CodeSynthesisContext::ConstraintsCheck;
+        Inst.Kind == CodeSynthesisContext::ConstraintSubstitution;
     Inst.InParameterMappingSubstitution =
         Inst.Kind == CodeSynthesisContext::ParameterMappingSubstitution;
     if (!SemaRef.CodeSynthesisContexts.empty()) {
@@ -1405,7 +1405,8 @@ class TemplateInstantiator : public TreeTransform<TemplateInstantiator> {
     // Whether an incomplete substituion should be treated as an error.
     bool BailOutOnIncomplete;
 
-  bool PreserveArgumentPacks = false;
+    bool PreserveArgumentPacks = false;
+    bool BuildPackExpansionTypes = true;
 
     // CWG2770: Function parameters should be instantiated when they are
     // needed by a satisfaction check of an atomic constraint or
@@ -1427,9 +1428,11 @@ public:
 
   TemplateInstantiator(ForParameterMappingSubstitution_t, Sema &SemaRef,
                        SourceLocation Loc,
-                       const MultiLevelTemplateArgumentList &TemplateArgs)
+                       const MultiLevelTemplateArgumentList &TemplateArgs,
+                       bool BuildPackExpansionTypes)
       : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
-        BailOutOnIncomplete(false), PreserveArgumentPacks(true) {}
+        BailOutOnIncomplete(false), PreserveArgumentPacks(true),
+        BuildPackExpansionTypes(BuildPackExpansionTypes) {}
 
   void setEvaluateConstraints(bool B) { EvaluateConstraints = B; }
   bool getEvaluateConstraints() { return EvaluateConstraints; }
@@ -1453,7 +1456,8 @@ public:
                                 bool &ShouldExpand, bool &RetainExpansion,
                                 UnsignedOrNone &NumExpansions) {
     if (SemaRef.CurrentInstantiationScope &&
-        SemaRef.inConstraintSubstitution()) {
+        (SemaRef.inConstraintSubstitution() ||
+         SemaRef.inParameterMappingSubstitution())) {
       for (UnexpandedParameterPack ParmPack : Unexpanded) {
         NamedDecl *VD = ParmPack.first.dyn_cast<NamedDecl *>();
         if (auto *PVD = dyn_cast_if_present<ParmVarDecl>(VD);
@@ -1526,12 +1530,10 @@ public:
       }
     }
 
-  bool ShouldPreserveTemplateArgumentsPacks() const {
-    // This is disabled temporarily.
-    // We need to figure out a way to correctly handle packs outside of
-    // CheckTemplateArguments
-    return false && PreserveArgumentPacks;
-  }
+    // FIXME: Rename the function
+    bool ShouldPreserveTemplateArgumentsPacks() const {
+      return PreserveArgumentPacks;
+    }
 
     TemplateArgument
     getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
@@ -1721,6 +1723,26 @@ public:
       return inherited::TransformTemplateArgument(Input, Output, Uneval);
     }
 
+#if 1
+    // This has to be here to allow its overload.
+    ExprResult RebuildPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
+                                    UnsignedOrNone NumExpansions) {
+      return inherited::RebuildPackExpansion(Pattern, EllipsisLoc,
+                                             NumExpansions);
+    }
+
+    TemplateArgumentLoc RebuildPackExpansion(TemplateArgumentLoc Pattern,
+                                             SourceLocation EllipsisLoc,
+                                             UnsignedOrNone NumExpansions) {
+      // We don't rewrite a PackExpansion type when we want to normalize a
+      // CXXFoldExpr constraint. We'll expand it when evaluating the constraint.
+      if (!PreserveArgumentPacks || BuildPackExpansionTypes)
+        return inherited::RebuildPackExpansion(Pattern, EllipsisLoc,
+                                               NumExpansions);
+      return Pattern;
+    }
+#endif
+
     UnsignedOrNone ComputeSizeOfPackExprWithoutSubstitution(
         ArrayRef<TemplateArgument> PackArgs) {
       // Don't do this when rewriting template parameters for CTAD:
@@ -1896,15 +1918,15 @@ public:
       return false;
     }
 
-  TemplateParameterList *
-  TransformTemplateParameterList(TemplateParameterList *OrigTPL) {
-    if (!OrigTPL || !OrigTPL->size())
-      return OrigTPL;
+    TemplateParameterList *
+    TransformTemplateParameterList(TemplateParameterList *OrigTPL) {
+      if (!OrigTPL || !OrigTPL->size())
+        return OrigTPL;
 
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
-      TemplateDeclInstantiator  DeclInstantiator(getSema(),
-                                              /* DeclContext *Owner */ Owner,
-                                              TemplateArgs);
+      TemplateDeclInstantiator DeclInstantiator(getSema(),
+                                                /* DeclContext *Owner */ Owner,
+                                                TemplateArgs);
       DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
       return DeclInstantiator.SubstTemplateParams(OrigTPL);
     }
@@ -1978,7 +2000,8 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
 
   if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(D);
       PVD && SemaRef.CurrentInstantiationScope &&
-      SemaRef.inConstraintSubstitution() &&
+      (SemaRef.inConstraintSubstitution() ||
+       SemaRef.inParameterMappingSubstitution()) &&
       maybeInstantiateFunctionParameterToScope(PVD))
     return nullptr;
 
@@ -2214,7 +2237,8 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     // template parameter.
     Arg = getTemplateArgumentPackPatternForRewrite(Arg);
     if (Arg.getKind() != TemplateArgument::Expression) {
-      assert(SemaRef.inParameterMappingSubstitution());
+      assert(SemaRef.inParameterMappingSubstitution() ||
+             SemaRef.inConstraintSubstitution());
       ExprResult Expr = SemaRef.BuildExpressionFromNonTypeTemplateArgument(
           Arg, E->getLocation());
       if (Expr.isInvalid())
@@ -4494,10 +4518,10 @@ bool Sema::SubstTemplateArguments(
 bool Sema::SubstTemplateArgumentsInParameterMapping(
     ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
     const MultiLevelTemplateArgumentList &TemplateArgs,
-    TemplateArgumentListInfo &Out) {
+    TemplateArgumentListInfo &Out, bool BuildPackExpansionTypes) {
   TemplateInstantiator Instantiator(
       TemplateInstantiator::ForParameterMappingSubstitution, *this, BaseLoc,
-      TemplateArgs);
+      TemplateArgs, BuildPackExpansionTypes);
   return Instantiator.TransformTemplateArguments(Args.begin(), Args.end(), Out);
 }
 

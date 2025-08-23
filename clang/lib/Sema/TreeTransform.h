@@ -5081,9 +5081,11 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
       TemplateArgumentListInfo *PackOutput = &Outputs;
       TemplateArgumentListInfo New;
 
+#if 0
       if (getDerived().ShouldPreserveTemplateArgumentsPacks()) {
         PackOutput = &New;
       }
+#endif
 
       if (TransformTemplateArguments(
               PackLocIterator(*this, In.getArgument().pack_begin()),
@@ -5091,6 +5093,7 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
               Uneval))
         return true;
 
+#if 0
       if (getDerived().ShouldPreserveTemplateArgumentsPacks()) {
         SmallVector<TemplateArgument> Args;
         Args.reserve(New.size());
@@ -5103,6 +5106,7 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
         InventTemplateArgumentLoc(Arg, ArgLoc);
         Outputs.addArgument(ArgLoc);
       }
+#endif
       continue;
     }
 

@@ -12737,7 +12737,8 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
         << (unsigned)FnKindPair.first << (unsigned)ocs_non_template
         << FnDesc /* Ignored */;
     ConstraintSatisfaction Satisfaction;
-    if (S.CheckFunctionConstraints(Fn, Satisfaction))
+    if (S.CheckFunctionConstraints(Fn, Satisfaction, SourceLocation(),
+                                   /*ForOverloadResolution=*/true))
       break;
     S.DiagnoseUnsatisfiedConstraint(Satisfaction);
   }

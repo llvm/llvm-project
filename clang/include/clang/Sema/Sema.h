@@ -13339,7 +13339,7 @@ public:
   bool SubstTemplateArgumentsInParameterMapping(
       ArrayRef<TemplateArgumentLoc> Args, SourceLocation BaseLoc,
       const MultiLevelTemplateArgumentList &TemplateArgs,
-      TemplateArgumentListInfo &Out);
+      TemplateArgumentListInfo &Out, bool BuildPackExpansionTypes);
 
   /// Retrieve the template argument list(s) that should be used to
   /// instantiate the definition of the given declaration.
@@ -13799,7 +13799,6 @@ public:
   }
 
   /// Determine whether we are currently performing constraint substitution.
-  // FIXME: Rename it
   bool inConstraintSubstitution() const {
     return !CodeSynthesisContexts.empty() &&
            CodeSynthesisContexts.back().InConstraintSubstitution;
@@ -13807,7 +13806,8 @@ public:
 
   bool inParameterMappingSubstitution() const {
     return !CodeSynthesisContexts.empty() &&
-           CodeSynthesisContexts.back().InParameterMappingSubstitution;
+           CodeSynthesisContexts.back().InParameterMappingSubstitution &&
+           !inConstraintSubstitution();
   }
 
   using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;
@@ -14818,6 +14818,9 @@ public:
   bool MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
       const NamedDecl *D1, ArrayRef<AssociatedConstraint> AC1,
       const NamedDecl *D2, ArrayRef<AssociatedConstraint> AC2);
+
+  llvm::DenseMap<unsigned, CachedConceptIdConstraint>
+      ConceptIdSatisfactionCache;
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were

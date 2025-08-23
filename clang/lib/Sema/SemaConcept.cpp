@@ -34,9 +34,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
+#include <chrono>
 #include <cstddef>
+#include <iterator>
 #include <optional>
 
 using namespace clang;
@@ -384,53 +389,53 @@ SubstitutionInTemplateArguments(
   Sema::SFINAETrap Trap(S);
 
   TemplateArgumentListInfo SubstArgs;
-    Sema::ArgPackSubstIndexRAII SubstIndex(
-        S, Constraint.getPackSubstitutionIndex()
-               ? Constraint.getPackSubstitutionIndex()
-               : PackSubstitutionIndex);
+  Sema::ArgPackSubstIndexRAII SubstIndex(
+      S, Constraint.getPackSubstitutionIndex()
+             ? Constraint.getPackSubstitutionIndex()
+             : PackSubstitutionIndex);
 
-    if (S.SubstTemplateArgumentsInParameterMapping(
-            Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
-          SubstArgs)) {
+  if (S.SubstTemplateArgumentsInParameterMapping(
+          Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
+          SubstArgs, /*BuildPackExpansionTypes=*/true)) {
     Satisfaction.IsSatisfied = false;
-      return std::nullopt;
+    return std::nullopt;
   }
 
-    Sema::CheckTemplateArgumentInfo CTAI;
-    auto *TD = const_cast<TemplateDecl *>(
-        cast<TemplateDecl>(Constraint.getConstraintDecl()));
-    if (S.CheckTemplateArgumentList(TD, Constraint.getUsedTemplateParamList(),
-                                    TD->getLocation(), SubstArgs,
-                                    /*DefaultArguments=*/{},
-                                    /*PartialTemplateArgs=*/false, CTAI))
-      return std::nullopt;
+  Sema::CheckTemplateArgumentInfo CTAI;
+  auto *TD = const_cast<TemplateDecl *>(
+      cast<TemplateDecl>(Constraint.getConstraintDecl()));
+  if (S.CheckTemplateArgumentList(TD, Constraint.getUsedTemplateParamList(),
+                                  TD->getLocation(), SubstArgs,
+                                  /*DefaultArguments=*/{},
+                                  /*PartialTemplateArgs=*/false, CTAI))
+    return std::nullopt;
   NormalizedConstraint::OccurenceList Used = Constraint.mappingOccurenceList();
-    SubstitutedOuterMost =
-        llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
-    unsigned Offset = 0;
-    for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
-      TemplateArgument Arg;
-      if (Used[I])
-        Arg = S.Context.getCanonicalTemplateArgument(
-            CTAI.SugaredConverted[MappedIndex++]);
-      if (I < SubstitutedOuterMost.size()) {
-          SubstitutedOuterMost[I] = Arg;
-        Offset = I + 1;
-      } else {
-          SubstitutedOuterMost.push_back(Arg);
-        Offset = SubstitutedOuterMost.size();
-      }
+  SubstitutedOuterMost =
+      llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
+  unsigned Offset = 0;
+  for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
+    TemplateArgument Arg;
+    if (Used[I])
+      Arg = S.Context.getCanonicalTemplateArgument(
+          CTAI.SugaredConverted[MappedIndex++]);
+    if (I < SubstitutedOuterMost.size()) {
+      SubstitutedOuterMost[I] = Arg;
+      Offset = I + 1;
+    } else {
+      SubstitutedOuterMost.push_back(Arg);
+      Offset = SubstitutedOuterMost.size();
     }
-    if (Offset < SubstitutedOuterMost.size())
-      SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
+  }
+  if (Offset < SubstitutedOuterMost.size())
+    SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
 
-    MLTAL.replaceOutermostTemplateArguments(
-        const_cast<NamedDecl *>(Constraint.getConstraintDecl()),
-        SubstitutedOuterMost);
+  MLTAL.replaceOutermostTemplateArguments(
+      const_cast<NamedDecl *>(Constraint.getConstraintDecl()),
+      SubstitutedOuterMost);
   return std::move(MLTAL);
 }
 
-static ExprResult calculateConstraintSatisfaction(
+static ExprResult calculateConstraintSatisfactionImpl(
     Sema &S, const AtomicConstraint &Constraint, const NamedDecl *Template,
     SourceLocation TemplateNameLoc, const MultiLevelTemplateArgumentList &MLTAL,
     ConstraintSatisfaction &Satisfaction,
@@ -514,10 +519,106 @@ static ExprResult calculateConstraintSatisfaction(
   return SubstitutedAtomicExpr;
 }
 
-static UnsignedOrNone EvaluateFoldExpandedConstraintSize(
-    Sema &S, const FoldExpandedConstraint &FE, const NamedDecl *Template,
+static ExprResult calculateConstraintSatisfaction(
+    Sema &S, const AtomicConstraint &Constraint, const NamedDecl *Template,
     SourceLocation TemplateNameLoc, const MultiLevelTemplateArgumentList &MLTAL,
-    ConstraintSatisfaction &Satisfaction) {
+    ConstraintSatisfaction &Satisfaction,
+    UnsignedOrNone PackSubstitutionIndex) {
+
+  unsigned Size = Satisfaction.Details.size();
+  llvm::SmallVector<TemplateArgument, 4> FlattenedArgs;
+  UnsignedOrNone SubstPackIndex = Constraint.getPackSubstitutionIndex()
+                                      ? Constraint.getPackSubstitutionIndex()
+                                      : PackSubstitutionIndex;
+
+  if (!Constraint.hasParameterMapping()) {
+    for (auto List : MLTAL)
+      for (const TemplateArgument &Arg : List.Args) {
+        FlattenedArgs.emplace_back(S.Context.getCanonicalTemplateArgument(Arg));
+      }
+  } else {
+    for (auto ArgLoc : Constraint.getParameterMapping()) {
+      FlattenedArgs.emplace_back(
+          S.Context.getCanonicalTemplateArgument(ArgLoc.getArgument()));
+    }
+    for (unsigned Depth = 0; Depth < MLTAL.getNumLevels(); ++Depth) {
+      unsigned NumArgs = MLTAL.getNumSubsitutedArgs(Depth);
+      llvm::SmallBitVector Used(NumArgs);
+      S.MarkUsedTemplateParameters(Constraint.getParameterMapping(), Depth,
+                                   Used);
+      for (unsigned I = 0; I < NumArgs; ++I)
+        if (Used[I]) {
+          if (SubstPackIndex &&
+              MLTAL(Depth, I).getKind() == TemplateArgument::Pack) {
+            FlattenedArgs.emplace_back(S.Context.getCanonicalTemplateArgument(
+                MLTAL(Depth, I).getPackAsArray()[*SubstPackIndex]));
+            continue;
+          }
+          FlattenedArgs.emplace_back(
+              S.Context.getCanonicalTemplateArgument(MLTAL(Depth, I)));
+        }
+    }
+  }
+
+  llvm::FoldingSetNodeID ID;
+  ID.AddPointer(Constraint.getConstraintExpr());
+  ID.AddInteger(FlattenedArgs.size());
+  for (auto &Arg : FlattenedArgs)
+    Arg.Profile(ID, S.Context);
+  ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
+  unsigned CacheKeyHash = ID.ComputeHash();
+
+#define UseCache 1
+  if (auto Iter = S.ConceptIdSatisfactionCache.find(CacheKeyHash);
+      Iter != S.ConceptIdSatisfactionCache.end()) {
+#if UseCache
+    auto &Cached = Iter->second.Satisfaction;
+    Satisfaction.ContainsErrors = Cached.ContainsErrors;
+    Satisfaction.IsSatisfied = Cached.IsSatisfied;
+    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
+                                Cached.Details.begin(), Cached.Details.end());
+    return Iter->second.SubstExpr;
+#else
+    // llvm::errs() << "Cache hit\n";
+#endif
+  }
+#if !UseCache
+  else
+    ;
+    // llvm::errs() << "Cache missed\n";
+#endif
+
+  ExprResult E = calculateConstraintSatisfactionImpl(
+      S, Constraint, Template, TemplateNameLoc, MLTAL, Satisfaction,
+      PackSubstitutionIndex);
+
+  if (auto Iter = S.ConceptIdSatisfactionCache.find(CacheKeyHash);
+      Iter != S.ConceptIdSatisfactionCache.end()) {
+#if UseCache
+    auto &Cached = Iter->second.Satisfaction;
+    Satisfaction.ContainsErrors = Cached.ContainsErrors;
+    Satisfaction.IsSatisfied = Cached.IsSatisfied;
+    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
+                                Cached.Details.begin(), Cached.Details.end());
+    return Iter->second.SubstExpr;
+#endif
+  }
+
+  CachedConceptIdConstraint Cache;
+  Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
+  Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
+  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
+            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.SubstExpr = E;
+  S.ConceptIdSatisfactionCache.insert({CacheKeyHash, std::move(Cache)});
+#undef UseCache
+
+  return E;
+}
+
+static UnsignedOrNone EvaluateFoldExpandedConstraintSize(
+    Sema &S, const FoldExpandedConstraint &FE,
+    const MultiLevelTemplateArgumentList &MLTAL) {
 
   // We should ignore errors in the presence of packs of different size.
   Sema::SFINAETrap Trap(S);
@@ -559,9 +660,7 @@ static ExprResult calculateConstraintSatisfaction(
   llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(
-          S,
-          static_cast<const NormalizedConstraintWithParamMapping &>(
-              FE.getNormalizedPattern()),
+          S, static_cast<const NormalizedConstraintWithParamMapping &>(FE),
           // FIXME: Is PackSubstitutionIndex correct?
           Template, MLTAL, SubstitutedOuterMost, Satisfaction,
           S.ArgPackSubstIndex);
@@ -571,8 +670,8 @@ static ExprResult calculateConstraintSatisfaction(
   }
 
   ExprResult Out;
-  UnsignedOrNone NumExpansions = EvaluateFoldExpandedConstraintSize(
-      S, FE, Template, TemplateNameLoc, *SubstitutedArgs, Satisfaction);
+  UnsignedOrNone NumExpansions =
+      EvaluateFoldExpandedConstraintSize(S, FE, *SubstitutedArgs);
   if (!NumExpansions)
     return ExprEmpty();
 
@@ -585,10 +684,9 @@ static ExprResult calculateConstraintSatisfaction(
     Sema::ArgPackSubstIndexRAII SubstIndex(S, I);
     Satisfaction.IsSatisfied = false;
     Satisfaction.ContainsErrors = false;
-    // FIXME: We can save a substitution if the next constraint is an atomic.
     ExprResult Expr = calculateConstraintSatisfaction(
-        S, FE.getNormalizedPattern(), Template, TemplateNameLoc, MLTAL,
-        Satisfaction, UnsignedOrNone(I));
+        S, FE.getNormalizedPattern(), Template, TemplateNameLoc,
+        *SubstitutedArgs, Satisfaction, UnsignedOrNone(I));
     if (Expr.isUsable()) {
       if (Out.isUnset())
         Out = Expr;
@@ -638,11 +736,14 @@ static ExprResult calculateConstraintSatisfaction(
     return E;
   }
 
-    llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
-    std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-        SubstitutionInTemplateArguments(S, Constraint, Template, MLTAL,
+  if (Satisfaction.IsSatisfied)
+    return E;
+
+  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
+      SubstitutionInTemplateArguments(S, Constraint, Template, MLTAL,
                                       SubstitutedOuterMost, Satisfaction,
-                                        PackSubstitutionIndex);
+                                      PackSubstitutionIndex);
 
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
@@ -650,25 +751,27 @@ static ExprResult calculateConstraintSatisfaction(
     return ExprError();
   }
 
-    Sema::SFINAETrap Trap(S);
-    Sema::ArgPackSubstIndexRAII SubstIndex(
-        S, Constraint.getPackSubstitutionIndex()
-               ? Constraint.getPackSubstitutionIndex()
-               : PackSubstitutionIndex);
+  Sema::SFINAETrap Trap(S);
+  Sema::ArgPackSubstIndexRAII SubstIndex(
+      S, Constraint.getPackSubstitutionIndex()
+             ? Constraint.getPackSubstitutionIndex()
+             : PackSubstitutionIndex);
 
-    const ASTTemplateArgumentListInfo *Ori =
-        Constraint.getConceptId()->getTemplateArgsAsWritten();
+  const ASTTemplateArgumentListInfo *Ori =
+      Constraint.getConceptId()->getTemplateArgsAsWritten();
 
-      TemplateArgumentListInfo TransArgs(Ori->LAngleLoc, Ori->RAngleLoc);
-    unsigned Depth = Template && Template->getTemplateDepth()
-                         ? Template->getTemplateDepth() - 1
-                         : 0;
-    AdjustConstraintDepth Adjust(S, Depth);
-      if (Adjust.TransformTemplateArguments(Ori->getTemplateArgs(),
+#if 0
+  TemplateArgumentListInfo TransArgs(Ori->LAngleLoc, Ori->RAngleLoc);
+  unsigned Depth = Template && Template->getTemplateDepth()
+                       ? Template->getTemplateDepth() - 1
+                       : 0;
+  AdjustConstraintDepth Adjust(S, Depth);
+  if (Adjust.TransformTemplateArguments(Ori->getTemplateArgs(),
                                         Ori->NumTemplateArgs, TransArgs)) {
     Satisfaction.IsSatisfied = false;
     return E;
   }
+#endif
 
   TemplateDeductionInfo Info(TemplateNameLoc);
   InstTemplate.emplace(
@@ -676,8 +779,7 @@ static ExprResult calculateConstraintSatisfaction(
       const_cast<NamedDecl *>(Template), Info, Constraint.getSourceRange());
 
   TemplateArgumentListInfo OutArgs(Ori->LAngleLoc, Ori->RAngleLoc);
-    if (S.SubstTemplateArguments(TransArgs.arguments(), *SubstitutedArgs,
-                                 OutArgs) ||
+  if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs, OutArgs) ||
       Trap.hasErrorOccurred()) {
     Satisfaction.IsSatisfied = false;
     if (!Trap.hasErrorOccurred())
@@ -838,6 +940,7 @@ static bool CheckConstraintSatisfaction(
                              const_cast<NamedDecl *>(Template), Args,
                              TemplateIDRange);
   }
+  // auto Point0 = std::chrono::system_clock::now();
 
   const NormalizedConstraint *C =
       S.getNormalizedAssociatedConstraints(Template, AssociatedConstraints);
@@ -851,10 +954,47 @@ static bool CheckConstraintSatisfaction(
                                     const_cast<NormalizedConstraint *>(C),
                                     Template, /*CSE=*/nullptr,
                                     S.ArgPackSubstIndex);
+  // auto Point1 = std::chrono::system_clock::now();
+
+  // llvm::errs() << std::chrono::duration_cast<std::chrono::milliseconds>(Point1 -
+  //                                                                       Point0)
+  //                     .count()
+  //              << "ms: ";
+  // llvm::errs() << "Normalizing ";
+  // for (auto AC : AssociatedConstraints) {
+  //   AC.ConstraintExpr->printPretty(llvm::errs(), nullptr,
+  //                                  S.getPrintingPolicy());
+  //   llvm::errs() << "\t";
+  // }
+  // llvm::errs() << "With argument <";
+  // for (auto Arg : Args) {
+  //   Arg.print(S.getPrintingPolicy(), llvm::errs(), /*IncludeType=*/true);
+  //   llvm::errs() << ", ";
+  // }
+  // llvm::errs() << ">\n";
 
   ExprResult Res = calculateConstraintSatisfaction(
-              S, *C, Template, TemplateIDRange.getBegin(), TemplateArgsLists,
-              Satisfaction, S.ArgPackSubstIndex);
+      S, *C, Template, TemplateIDRange.getBegin(), TemplateArgsLists,
+      Satisfaction, S.ArgPackSubstIndex);
+  // auto Point2 = std::chrono::system_clock::now();
+  // for (unsigned I = 1; I <= ACDepth; ++I)
+  //   llvm::errs() << "    ";
+  // llvm::errs() << std::chrono::duration_cast<std::chrono::milliseconds>(Point2 -
+  //                                                                       Point1)
+  //                     .count()
+  //              << "ms: ";
+  // llvm::errs() << "Computing ";
+  // for (auto AC : AssociatedConstraints) {
+  //   AC.ConstraintExpr->printPretty(llvm::errs(), nullptr,
+  //                                  S.getPrintingPolicy());
+  //   llvm::errs() << "\t";
+  // }
+  // llvm::errs() << "With argument <";
+  // for (auto Arg :Args) {
+  //   Arg.print(S.getPrintingPolicy(), llvm::errs(), /*IncludeType=*/true);
+  //   llvm::errs() << ", ";
+  // }
+  // llvm::errs() << ">\n";
 
   if (Res.isInvalid())
     return true;
@@ -1639,6 +1779,262 @@ void Sema::DiagnoseUnsatisfiedConstraint(
                                   ConstraintExpr->getBeginLoc(), First);
 }
 
+namespace {
+
+class SubstituteParameterMappings {
+  Sema &SemaRef;
+
+  const MultiLevelTemplateArgumentList *MLTAL;
+  const ASTTemplateArgumentListInfo *ArgsAsWritten;
+
+  bool InFoldExpr;
+
+  SubstituteParameterMappings(Sema &SemaRef,
+                              const MultiLevelTemplateArgumentList *MLTAL,
+                              const ASTTemplateArgumentListInfo *ArgsAsWritten,
+                              bool InFoldExpr)
+      : SemaRef(SemaRef), MLTAL(MLTAL), ArgsAsWritten(ArgsAsWritten),
+        InFoldExpr(InFoldExpr) {}
+
+  void buildParameterMapping(NormalizedConstraintWithParamMapping &N);
+
+  bool substitute(NormalizedConstraintWithParamMapping &N);
+
+  bool substitute(ConceptIdConstraint &CC);
+
+public:
+  SubstituteParameterMappings(Sema &SemaRef, bool InFoldExpr = false)
+      : SemaRef(SemaRef), MLTAL(nullptr), ArgsAsWritten(nullptr),
+        InFoldExpr(InFoldExpr) {}
+
+  bool substitute(NormalizedConstraint &N);
+};
+
+void SubstituteParameterMappings::buildParameterMapping(
+    NormalizedConstraintWithParamMapping &N) {
+  TemplateParameterList *TemplateParams =
+      cast<TemplateDecl>(N.getConstraintDecl())->getTemplateParameters();
+
+  llvm::SmallBitVector OccurringIndices(TemplateParams->size());
+
+  if (N.getKind() == NormalizedConstraint::ConstraintKind::Atomic) {
+    SemaRef.MarkUsedTemplateParameters(
+        static_cast<AtomicConstraint &>(N).getConstraintExpr(),
+        /*OnlyDeduced=*/false,
+        /*Depth=*/0, OccurringIndices);
+  } else if (N.getKind() ==
+             NormalizedConstraint::ConstraintKind::FoldExpanded) {
+    SemaRef.MarkUsedTemplateParameters(
+        static_cast<FoldExpandedConstraint &>(N).getPattern(),
+        /*OnlyDeduced=*/false,
+        /*Depth=*/0, OccurringIndices);
+  } else if (N.getKind() == NormalizedConstraint::ConstraintKind::ConceptId) {
+    auto *Args = static_cast<ConceptIdConstraint &>(N)
+                     .getConceptId()
+                     ->getTemplateArgsAsWritten();
+    if (Args)
+      SemaRef.MarkUsedTemplateParameters(Args->arguments(),
+                                         /*Depth=*/0, OccurringIndices);
+  }
+  TemplateArgumentLoc *TempArgs =
+      new (SemaRef.Context) TemplateArgumentLoc[OccurringIndices.count()];
+  llvm::SmallVector<NamedDecl *> UsedParams;
+  for (unsigned I = 0, J = 0, C = TemplateParams->size(); I != C; ++I) {
+    SourceLocation Loc = ArgsAsWritten->NumTemplateArgs > I
+                             ? ArgsAsWritten->arguments()[I].getLocation()
+                             : SourceLocation();
+    // FIXME: Investigate why we couldn't always preserve the SourceLoc. We
+    // can't assert Loc.isValid() now.
+    if (OccurringIndices[I]) {
+      NamedDecl *Param = TemplateParams->begin()[I];
+      new (&(TempArgs)[J]) TemplateArgumentLoc(
+          SemaRef.getIdentityTemplateArgumentLoc(Param, Loc));
+      UsedParams.push_back(Param);
+      J++;
+    }
+  }
+  auto *UsedList = TemplateParameterList::Create(
+      SemaRef.Context, TemplateParams->getTemplateLoc(),
+      TemplateParams->getLAngleLoc(), UsedParams,
+      /*RAngleLoc=*/SourceLocation(),
+      /*RequiresClause=*/nullptr);
+  N.updateParameterMapping(
+      OccurringIndices,
+      MutableArrayRef<TemplateArgumentLoc>{TempArgs, OccurringIndices.count()},
+      UsedList);
+}
+
+bool SubstituteParameterMappings::substitute(
+    NormalizedConstraintWithParamMapping &N) {
+  if (!N.hasParameterMapping())
+    buildParameterMapping(N);
+
+  SourceLocation InstLocBegin, InstLocEnd;
+  llvm::ArrayRef Arguments = ArgsAsWritten->arguments();
+  if (Arguments.empty()) {
+    InstLocBegin = ArgsAsWritten->getLAngleLoc();
+    InstLocEnd = ArgsAsWritten->getRAngleLoc();
+  } else {
+    auto SR = Arguments[0].getSourceRange();
+    InstLocBegin = SR.getBegin();
+    InstLocEnd = SR.getEnd();
+  }
+  Sema::InstantiatingTemplate Inst(
+      SemaRef, InstLocBegin,
+      Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
+      const_cast<NamedDecl *>(N.getConstraintDecl()),
+      {InstLocBegin, InstLocEnd});
+  if (Inst.isInvalid())
+    return true;
+
+  // TransformTemplateArguments is unable to preserve the source location of a
+  // pack. The SourceLocation is necessary for the instantiation location.
+  // FIXME: The BaseLoc will be used as the location of the pack expansion,
+  // which is wrong.
+  TemplateArgumentListInfo SubstArgs;
+  if (SemaRef.SubstTemplateArgumentsInParameterMapping(
+          N.getParameterMapping(), N.getBeginLoc(), *MLTAL, SubstArgs,
+          /*BuildPackExpansionTypes=*/!InFoldExpr))
+    return true;
+  Sema::CheckTemplateArgumentInfo CTAI;
+  auto *TD =
+      const_cast<TemplateDecl *>(cast<TemplateDecl>(N.getConstraintDecl()));
+  if (SemaRef.CheckTemplateArgumentList(TD, N.getUsedTemplateParamList(),
+                                        TD->getLocation(), SubstArgs,
+                                        /*DefaultArguments=*/{},
+                                        /*PartialTemplateArgs=*/false, CTAI))
+    return true;
+
+  TemplateArgumentLoc *TempArgs =
+      new (SemaRef.Context) TemplateArgumentLoc[CTAI.SugaredConverted.size()];
+
+  for (unsigned I = 0; I < CTAI.SugaredConverted.size(); ++I) {
+    SourceLocation Loc;
+    // If this is an empty pack, we have no corresponding SubstArgs.
+    if (I < SubstArgs.size())
+      Loc = SubstArgs.arguments()[I].getLocation();
+
+    TempArgs[I] = SemaRef.getTrivialTemplateArgumentLoc(
+        CTAI.SugaredConverted[I], QualType(), Loc);
+  }
+
+  MutableArrayRef<TemplateArgumentLoc> Mapping(TempArgs,
+                                               CTAI.SugaredConverted.size());
+  N.updateParameterMapping(N.mappingOccurenceList(), Mapping,
+                           N.getUsedTemplateParamList());
+  return false;
+}
+
+bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
+  assert(CC.getConstraintDecl() && MLTAL && ArgsAsWritten);
+
+  if (substitute(static_cast<NormalizedConstraintWithParamMapping &>(CC)))
+    return true;
+
+  auto *CSE = CC.getConceptSpecializationExpr();
+  assert(CSE);
+  assert(!CC.getBeginLoc().isInvalid());
+
+  SourceLocation InstLocBegin, InstLocEnd;
+  if (llvm::ArrayRef Arguments = ArgsAsWritten->arguments();
+      Arguments.empty()) {
+    InstLocBegin = ArgsAsWritten->getLAngleLoc();
+    InstLocEnd = ArgsAsWritten->getRAngleLoc();
+  } else {
+    auto SR = Arguments[0].getSourceRange();
+    InstLocBegin = SR.getBegin();
+    InstLocEnd = SR.getEnd();
+  }
+  // This is useful for name lookup across modules; see Sema::getLookupModules.
+  Sema::InstantiatingTemplate Inst(
+      SemaRef, InstLocBegin,
+      Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
+      const_cast<NamedDecl *>(CC.getConstraintDecl()),
+      {InstLocBegin, InstLocEnd});
+  if (Inst.isInvalid())
+    return true;
+
+  TemplateArgumentListInfo Out;
+  // TransformTemplateArguments is unable to preserve the source location of a
+  // pack. The SourceLocation is necessary for the instantiation location.
+  // FIXME: The BaseLoc will be used as the location of the pack expansion,
+  // which is wrong.
+  const ASTTemplateArgumentListInfo *ArgsAsWritten =
+      CSE->getTemplateArgsAsWritten();
+  if (SemaRef.SubstTemplateArgumentsInParameterMapping(
+          ArgsAsWritten->arguments(), CC.getBeginLoc(), *MLTAL, Out,
+          /*BuildPackExpansionTypes=*/!InFoldExpr))
+    return true;
+  Sema::CheckTemplateArgumentInfo CTAI;
+  if (SemaRef.CheckTemplateArgumentList(CSE->getNamedConcept(),
+                                        CSE->getConceptNameInfo().getLoc(), Out,
+                                        /*DefaultArgs=*/{},
+                                        /*PartialTemplateArgs=*/false, CTAI,
+                                        /*UpdateArgsWithConversions=*/false))
+    return true;
+  auto TemplateArgs = *MLTAL;
+  TemplateArgs.replaceOutermostTemplateArguments(
+      TemplateArgs.getAssociatedDecl(0).first, CTAI.SugaredConverted);
+  return SubstituteParameterMappings(SemaRef, &TemplateArgs, ArgsAsWritten,
+                                     InFoldExpr)
+      .substitute(CC.getNormalizedConstraint());
+}
+
+bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
+  switch (N.getKind()) {
+  case NormalizedConstraint::ConstraintKind::Atomic: {
+    if (!MLTAL) {
+      assert(!ArgsAsWritten);
+      return false;
+    }
+    return substitute(static_cast<NormalizedConstraintWithParamMapping &>(N));
+  }
+  case NormalizedConstraint::ConstraintKind::FoldExpanded: {
+    auto &FE = static_cast<FoldExpandedConstraint &>(N);
+    llvm::SaveAndRestore _1(InFoldExpr, true);
+    if (!MLTAL) {
+      assert(!ArgsAsWritten);
+      return substitute(FE.getNormalizedPattern());
+    }
+    Sema::ArgPackSubstIndexRAII _(SemaRef, std::nullopt);
+    substitute(static_cast<NormalizedConstraintWithParamMapping &>(FE));
+    return SubstituteParameterMappings(SemaRef, /*InFoldExpr=*/true)
+        .substitute(FE.getNormalizedPattern());
+  }
+  case NormalizedConstraint::ConstraintKind::ConceptId: {
+    auto &CC = static_cast<ConceptIdConstraint &>(N);
+    if (MLTAL) {
+      assert(ArgsAsWritten);
+      return substitute(CC);
+    }
+    assert(!ArgsAsWritten);
+    const ConceptSpecializationExpr *CSE = CC.getConceptSpecializationExpr();
+    ConceptDecl *Concept = CSE->getNamedConcept();
+    MultiLevelTemplateArgumentList MLTAL = SemaRef.getTemplateInstantiationArgs(
+        Concept, Concept->getLexicalDeclContext(),
+        /*Final=*/true, CSE->getTemplateArguments(),
+        /*RelativeToPrimary=*/true,
+        /*Pattern=*/nullptr,
+        /*ForConstraintInstantiation=*/true);
+
+    // Don't build Subst* nodes to model lambda expressions.
+    // The transform of Subst* is oblivious to the lambda type.
+    MLTAL.setKind(TemplateSubstitutionKind::Rewrite);
+    return SubstituteParameterMappings(
+               SemaRef, &MLTAL, CSE->getTemplateArgsAsWritten(), InFoldExpr)
+        .substitute(CC.getNormalizedConstraint());
+  }
+  case NormalizedConstraint::ConstraintKind::Compound: {
+    auto &Compound = static_cast<CompoundConstraint &>(N);
+    if (substitute(Compound.getLHS()))
+      return true;
+    return substitute(Compound.getRHS());
+  }
+  }
+}
+
+} // namespace
+#if 0
 static bool
 substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                             const MultiLevelTemplateArgumentList &MLTAL,
@@ -1818,10 +2214,21 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
     return substituteParameterMappings(S, static_cast<AtomicConstraint &>(N),
                                        MLTAL, ArgsAsWritten);
   case NormalizedConstraint::ConstraintKind::FoldExpanded: {
+    auto &FE = static_cast<FoldExpandedConstraint &>(N);
+    // FIXME: This is not used.
+    ConstraintSatisfaction CS;
+    UnsignedOrNone PackSize = EvaluateFoldExpandedConstraintSize(
+        S, FE, /*Template=*/nullptr, /*TemplateNameLoc=*/SourceLocation(),
+        MLTAL, CS);
+    if (!PackSize)
+      return true;
+
+    // Do we need to do something else when pack is empty?
+    if (!*PackSize)
+      return false;
     Sema::ArgPackSubstIndexRAII _(S, std::nullopt);
-    return substituteParameterMappings(
-        S, static_cast<FoldExpandedConstraint &>(N).getNormalizedPattern(),
-        MLTAL, ArgsAsWritten);
+    return substituteParameterMappings(S, FE.getNormalizedPattern(), MLTAL,
+                                       ArgsAsWritten);
   }
   case NormalizedConstraint::ConstraintKind::ConceptId:
     return substituteParameterMappings(S, static_cast<ConceptIdConstraint &>(N),
@@ -1881,6 +2288,7 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N) {
   }
   }
 }
+#endif
 
 NormalizedConstraint *NormalizedConstraint::fromAssociatedConstraints(
     Sema &S, const NamedDecl *D, ArrayRef<AssociatedConstraint> ACs) {
@@ -1986,10 +2394,10 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
 
       if (FE->isRightFold())
         LHS = FoldExpandedConstraint::Create(S.getASTContext(),
-                                             FE->getPattern(), Kind, LHS);
+                                             FE->getPattern(), D, Kind, LHS);
       else
         RHS = FoldExpandedConstraint::Create(S.getASTContext(),
-                                             FE->getPattern(), Kind, RHS);
+                                             FE->getPattern(), D, Kind, RHS);
 
       return CompoundConstraint::Create(
           S.getASTContext(), LHS,
@@ -2001,7 +2409,7 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
     if (!Sub)
       return nullptr;
     return FoldExpandedConstraint::Create(S.getASTContext(), FE->getPattern(),
-                                          Kind, Sub);
+                                          D, Kind, Sub);
   }
   return AtomicConstraint::Create(S.getASTContext(), E, D, SubstIndex);
 }
@@ -2012,7 +2420,8 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   if (!ConstrainedDeclOrNestedReq) {
     auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
         *this, nullptr, AssociatedConstraints);
-    if (!Normalized || substituteParameterMappings(*this, *Normalized))
+    if (!Normalized ||
+        SubstituteParameterMappings(*this).substitute(*Normalized))
       return nullptr;
 
     return Normalized;
@@ -2028,7 +2437,8 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
     CacheEntry =
         NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
             .first;
-    if (!Normalized || substituteParameterMappings(*this, *Normalized))
+    if (!Normalized ||
+        SubstituteParameterMappings(*this).substitute(*Normalized))
       return nullptr;
   }
   return CacheEntry->second;
