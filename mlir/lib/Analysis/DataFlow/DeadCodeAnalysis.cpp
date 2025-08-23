@@ -15,6 +15,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
@@ -147,7 +148,7 @@ LogicalResult DeadCodeAnalysis::initialize(Operation *top) {
 
 void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
   LDBG() << "[init] Entering initializeSymbolCallables for top-level op: "
-         << top->getName();
+         << OpWithFlags(top, OpPrintingFlags().skipRegions());
   analysisScope = top;
   auto walkFn = [&](Operation *symTable, bool allUsesVisible) {
     LDBG() << "[init] Processing symbol table op: " << symTable->getName();
@@ -217,7 +218,7 @@ void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
   SymbolTable::walkSymbolTables(top, /*allSymUsesVisible=*/!top->getBlock(),
                                 walkFn);
   LDBG() << "[init] Finished initializeSymbolCallables for top-level op: "
-         << top->getName();
+         << OpWithFlags(top, OpPrintingFlags().skipRegions());
 }
 
 /// Returns true if the operation is a returning terminator in region
@@ -229,8 +230,8 @@ static bool isRegionOrCallableReturn(Operation *op) {
 }
 
 LogicalResult DeadCodeAnalysis::initializeRecursively(Operation *op) {
-  LDBG() << "[init] Entering initializeRecursively for op: " << op->getName()
-         << " at " << op;
+  LDBG() << "[init] Entering initializeRecursively for op: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   // Initialize the analysis by visiting every op with control-flow semantics.
   if (op->getNumRegions() || op->getNumSuccessors() ||
       isRegionOrCallableReturn(op) || isa<CallOpInterface>(op)) {
@@ -248,14 +249,14 @@ LogicalResult DeadCodeAnalysis::initializeRecursively(Operation *op) {
   for (Region &region : op->getRegions()) {
     LDBG() << "[init] Recursing into region of op: " << op->getName();
     for (Operation &nestedOp : region.getOps()) {
-      LDBG() << "[init] Recursing into nested op: " << nestedOp.getName()
-             << " at " << &nestedOp;
+      LDBG() << "[init] Recursing into nested op: "
+             << OpWithFlags(&nestedOp, OpPrintingFlags().skipRegions());
       if (failed(initializeRecursively(&nestedOp)))
         return failure();
     }
   }
-  LDBG() << "[init] Finished initializeRecursively for op: " << op->getName()
-         << " at " << op;
+  LDBG() << "[init] Finished initializeRecursively for op: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   return success();
 }
 
@@ -281,7 +282,7 @@ void DeadCodeAnalysis::markEntryBlocksLive(Operation *op) {
 }
 
 LogicalResult DeadCodeAnalysis::visit(ProgramPoint *point) {
-  LDBG() << "Visiting program point: " << point << " " << *point;
+  LDBG() << "Visiting program point: " << *point;
   if (point->isBlockStart())
     return success();
   Operation *op = point->getPrevOp();
@@ -382,14 +383,14 @@ void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
         getOrCreate<PredecessorState>(getProgramPointAfter(callableOp));
     propagateIfChanged(callsites, callsites->join(call));
     LDBG() << "Added callsite as predecessor for callable: "
-           << callableOp->getName();
+           << OpWithFlags(callableOp, OpPrintingFlags().skipRegions());
   } else {
     // Mark this call op's predecessors as overdefined.
     auto *predecessors =
         getOrCreate<PredecessorState>(getProgramPointAfter(call));
     propagateIfChanged(predecessors, predecessors->setHasUnknownPredecessors());
     LDBG() << "Marked call op's predecessors as unknown for: "
-           << call.getOperation()->getName();
+           << OpWithFlags(call.getOperation(), OpPrintingFlags().skipRegions());
   }
 }
 
@@ -421,7 +422,8 @@ DeadCodeAnalysis::getOperandValues(Operation *op) {
 }
 
 void DeadCodeAnalysis::visitBranchOperation(BranchOpInterface branch) {
-  LDBG() << "visitBranchOperation: " << branch.getOperation()->getName();
+  LDBG() << "visitBranchOperation: "
+         << OpWithFlags(branch.getOperation(), OpPrintingFlags().skipRegions());
   // Try to deduce a single successor for the branch.
   std::optional<SmallVector<Attribute>> operands = getOperandValues(branch);
   if (!operands)

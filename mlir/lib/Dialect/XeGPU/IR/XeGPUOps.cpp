@@ -58,13 +58,6 @@ static SmallVector<int64_t> getShapeOf(Type type) {
   return shape;
 }
 
-static int64_t getRankOf(Value val) {
-  auto type = val.getType();
-  if (auto ty = llvm::dyn_cast<ShapedType>(type))
-    return ty.getRank();
-  return 0;
-}
-
 static bool isReadHintOrNone(const CachePolicyAttr &attr) {
   if (!attr)
     return true;
@@ -89,13 +82,18 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   if (!tdescTy.isScattered())
     return emitError() << "Expects a scattered TensorDesc.";
 
-  if (!valueTy)
-    return emitError() << "Expecting a vector type result.";
+  auto chunkSize = tdescTy.getChunkSizeAsInt();
+  if (!valueTy) {
+    if (chunkSize > 1)
+      return emitError() << "Expecting chunk size == 1 for scalar result";
+    if (dyn_cast<VectorType>(maskTy))
+      return emitError() << "Expecting a vector type result.";
+    return success();
+  }
 
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
   auto tdescShape = getShapeOf(tdescTy);
-  auto chunkSize = tdescTy.getChunkSizeAsInt();
 
   if (valueTy.getElementType() != tdescTy.getElementType())
     return emitError()
@@ -124,22 +122,37 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
 }
 
 static LogicalResult
-isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
-                                 int64_t chunkSize,
+isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
+                                 VectorType valueTy, int64_t chunkSize,
                                  function_ref<InFlightDiagnostic()> emitError) {
 
-  if (!valueTy)
-    return emitError() << "Expecting a vector type result.";
+  auto maskVecTy = dyn_cast<VectorType>(maskTy);
+  auto offsetsVecTy = dyn_cast<VectorType>(offsetsTy);
+  if (!valueTy) {
+    if (chunkSize > 1)
+      return emitError() << "Expecting chunk size == 1 for scalar result";
+    if (maskVecTy || offsetsVecTy)
+      return emitError() << "Expecting scalar mask and offsets.";
+    else if (maskVecTy && offsetsVecTy)
+      return emitError() << "Expecting a vector type result.";
+    return success();
+  }
 
+  auto valueSize = valueTy.getNumElements();
+  // SIMT mode with scalar mask and offsets.
+  if (!maskVecTy && !offsetsVecTy) {
+    if (valueSize != chunkSize)
+      return emitError() << "value elements must match chunk size "
+                         << chunkSize;
+    return success();
+  }
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
 
-  auto maskVecTy = dyn_cast<VectorType>(maskTy);
   if (!maskVecTy)
     return emitError() << "Expecting a vector type mask.";
   int64_t maskSize = maskVecTy.getNumElements();
 
-  auto valueSize = valueTy.getNumElements();
   if (chunkSize > 1) {
     if ((valueTy.getRank() == 1) && (valueSize != chunkSize))
       return emitError() << "value elements must match chunk size "
@@ -149,8 +162,9 @@ isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
       return emitError()
              << "Mask should match value except the chunk size dim.";
   }
-
   llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
+  if (maskSize == 1)
+    return success();
   if (chunkSize > 1)
     expectedMaskShape.pop_back();
   if (expectedMaskShape != maskShape)
@@ -685,10 +699,6 @@ void CreateDescOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult CreateDescOp::verify() {
   auto tdescTy = getTensorDescType();
 
-  if (getRankOf(getSource()) > 1)
-    return emitOpError(
-        "Expecting the source is a 1D memref or pointer (uint64_t).");
-
   if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
@@ -723,12 +733,14 @@ LogicalResult CreateDescOp::verify() {
 LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
 
+  if (!tdescTy && !getOffsets())
+    return emitOpError("Expects offsets.");
+
+  if (tdescTy && getOffsets())
+    return emitOpError("offsets not allowed.");
+
   if (tdescTy && !tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.");
-
-  if (!tdescTy && getRankOf(getSource()) > 1)
-    return emitOpError(
-        "Expecting the source is a 1D memref or pointer (uint64_t).");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -739,6 +751,13 @@ LogicalResult PrefetchOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
+  auto srcTy = getSourceType();
+  if (srcTy.isInteger() && !getOffsetAlignByteAttr())
+    return emitOpError("offset_align_byte is required with integer source.");
+
+  if (getOffsetAlignByteAttr() && !srcTy.isInteger())
+    return emitOpError("offset_align_byte only allowed with integer source.");
+
   return success();
 }
 
@@ -746,7 +765,8 @@ void PrefetchOp::build(OpBuilder &builder, OperationState &state, Value source,
                        xegpu::CachePolicyAttr l1_hint,
                        xegpu::CachePolicyAttr l2_hint,
                        xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint);
+  build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint,
+        IntegerAttr{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -757,12 +777,14 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
+  if (!tdescTy && !getOffsets())
+    return emitOpError("Expects offsets.");
+
+  if (tdescTy && getOffsets())
+    return emitOpError("offsets not allowed.");
+
   if (tdescTy && !tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.");
-
-  if (!tdescTy && getRankOf(getSource()) > 1)
-    return emitOpError(
-        "Expecting the source is a 1D memref or pointer (uint64_t).");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -780,10 +802,11 @@ LogicalResult LoadGatherOp::verify() {
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(srcTy);
 
-  if (memTy && (valueTy.getElementType() != memTy.getElementType()))
+  if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
-  return isValidGatherScatterBufferParams(maskTy, valueTy, chunkSize,
+  auto offsetsTy = getOffsets().getType();
+  return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
 }
 
@@ -804,12 +827,14 @@ LogicalResult StoreScatterOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
+  if (!tdescTy && !getOffsets())
+    return emitOpError("Expects offsets.");
+
+  if (tdescTy && getOffsets())
+    return emitOpError("offsets not allowed.");
+
   if (tdescTy && !tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.");
-
-  if (!tdescTy && getRankOf(getDest()) > 1)
-    return emitOpError(
-        "Expecting the dest is a 1D memref or pointer (uint64_t).");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -828,10 +853,11 @@ LogicalResult StoreScatterOp::verify() {
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(destTy);
 
-  if (memTy && (valueTy.getElementType() != memTy.getElementType()))
+  if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
-  return isValidGatherScatterBufferParams(maskTy, valueTy, chunkSize,
+  auto offsetsTy = getOffsets().getType();
+  return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
 }
 

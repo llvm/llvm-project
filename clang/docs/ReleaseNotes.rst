@@ -228,6 +228,12 @@ Improvements to Clang's diagnostics
 - Fixed false positive in ``-Wmissing-noreturn`` diagnostic when it was requiring the usage of
   ``[[noreturn]]`` on lambdas before C++23 (#GH154493).
 
+- Clang now diagnoses the use of ``#`` and ``##`` preprocessor tokens in
+  attribute argument lists in C++ when ``-pedantic`` is enabled. The operators
+  can be used in macro replacement lists with the usual preprocessor semantics,
+  however, non-preprocessor use of tokens now triggers a pedantic warning in C++.
+  Compilation in C mode is unchanged, and still permits these tokens to be used. (#GH147217)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
