@@ -56,6 +56,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   NonZeroEnumToBoolConversionCheck.cpp
   NondeterministicPointerIterationOrderCheck.cpp
   NotNullTerminatedResultCheck.cpp
+  NullCheckAfterDereferenceCheck.cpp
   OptionalValueConversionCheck.cpp
   ParentVirtualCallCheck.cpp
   PointerArithmeticOnPolymorphicObjectCheck.cpp
