@@ -42,9 +42,9 @@ public:
   enum class FPVariant {
     IEEE_FLOAT = 0x0,
     BRAIN_FLOAT = 0x1,     // BRAIN_FLOAT
-    VARIANT_FLOAT_2 = 0x2, // PPC_FLOAT
-    VARIANT_FLOAT_3 = 0x3, // FP80
-    VARIANT_FLOAT_4 = 0x4, // TENSOR_FLOAT
+    PPC128_FLOAT = 0x2,    // PPC128_FLOAT
+    EXTENDED_FP80 = 0x3,   // FP80
+    TENSOR_FLOAT32 = 0x4,  // TENSOR_FLOAT32
     VARIANT_FLOAT_5 = 0x5, // UNASSIGNED
     VARIANT_FLOAT_6 = 0x6, // UNASSIGNED
     VARIANT_FLOAT_7 = 0x7, // UNASSIGNED
@@ -163,7 +163,7 @@ public:
 
   /// Get a 80-bit X86 floating point value.
   static constexpr LLT x86fp80() {
-    return floatingPoint(80, FPVariant::VARIANT_FLOAT_3);
+    return floatingPoint(80, FPVariant::EXTENDED_FP80);
   }
 
   /// Get a 128-bit IEEE quad value.
@@ -173,7 +173,7 @@ public:
 
   /// Get a 128-bit PowerPC double double value.
   static constexpr LLT ppcf128() {
-    return floatingPoint(128, FPVariant::VARIANT_FLOAT_2);
+    return floatingPoint(128, FPVariant::PPC128_FLOAT);
   }
 
   /// Get a low-level fixed-width vector of some number of elements and element
@@ -249,10 +249,10 @@ public:
     return isVariantFloat(Size, FPVariant::BRAIN_FLOAT);
   }
   constexpr bool isX86FP80() const {
-    return isVariantFloat(80, FPVariant::VARIANT_FLOAT_3);
+    return isVariantFloat(80, FPVariant::EXTENDED_FP80);
   }
   constexpr bool isPPCF128() const {
-    return isVariantFloat(128, FPVariant::VARIANT_FLOAT_2);
+    return isVariantFloat(128, FPVariant::PPC128_FLOAT);
   }
   constexpr bool isToken() const {
     return Info == Kind::ANY_SCALAR && RawData == 0;

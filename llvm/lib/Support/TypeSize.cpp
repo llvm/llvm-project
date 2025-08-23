@@ -44,7 +44,7 @@ void llvm::reportInvalidSizeRequest(const char *Msg) {
     return;
   }
 #endif
-  report_fatal_error(Twine("Invalid size request on a scalable vector.") + Msg);
+  report_fatal_error("Invalid size request on a scalable vector.");
 }
 
 TypeSize::operator TypeSize::ScalarTy() const {

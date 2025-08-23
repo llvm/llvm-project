@@ -24,9 +24,9 @@ static std::optional<LLT::FPVariant> deriveFPInfo(MVT VT) {
   case MVT::bf16:
     return LLT::FPVariant::BRAIN_FLOAT;
   case MVT::f80:
-    return LLT::FPVariant::VARIANT_FLOAT_3;
+    return LLT::FPVariant::EXTENDED_FP80;
   case MVT::ppcf128:
-    return LLT::FPVariant::VARIANT_FLOAT_2;
+    return LLT::FPVariant::PPC128_FLOAT;
   default:
     return LLT::FPVariant::IEEE_FLOAT;
   }
