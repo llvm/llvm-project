@@ -422,6 +422,7 @@ add_math_entrypoint_object(nanf)
 add_math_entrypoint_object(nanl)
 add_math_entrypoint_object(nanf16)
 add_math_entrypoint_object(nanf128)
+add_math_entrypoint_object(nanbf16)
 
 add_math_entrypoint_object(nearbyint)
 add_math_entrypoint_object(nearbyintf)
