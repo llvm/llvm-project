@@ -166,7 +166,13 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
 void SPIRVSubtarget::initAvailableExtensions(
     const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
   AvailableExtensions.clear();
-  AvailableExtensions.insert_range(AllowedExtIds);
+  const std::set<SPIRV::Extension::Extension> &ValidExtensions =
+      SPIRVExtensionsParser::getValidExtensions(TargetTriple);
+
+  for (const auto &Ext : AllowedExtIds) {
+    if (ValidExtensions.count(Ext))
+      AvailableExtensions.insert(Ext);
+  }
 
   accountForAMDShaderTrinaryMinmax();
 }

@@ -28,6 +28,8 @@ namespace llvm {
 
     bool useSoftFloat() const override;
 
+    bool softPromoteHalfType() const override { return true; }
+
     /// computeKnownBitsForTargetNode - Determine which of the bits specified
     /// in Mask are known to be either zero or one and return them in the
     /// KnownZero/KnownOne bitsets.
@@ -77,7 +79,6 @@ namespace llvm {
 
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
-    void insertSSPDeclarations(Module &M) const override;
 
     /// getSetCCResultType - Return the ISD::SETCC ValueType
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,

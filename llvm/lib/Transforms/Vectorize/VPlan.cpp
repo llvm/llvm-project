@@ -295,27 +295,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (hasVectorValue(Def))
     return Data.VPV2Vector[Def];
 
-  auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist =
-        !Def->hasDefiningRecipe() ||
-        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
-                               Plan->getVectorPreheader());
-
+  auto GetBroadcastInstrs = [this](Value *V) {
     if (VF.isScalar())
       return V;
-    // Place the code for broadcasting invariant variables in the new preheader.
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader =
-          CFG.VPBB2IRBB[Plan->getVectorPreheader()];
-      if (LoopVectorPreHeader)
-        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-    }
-
-    // Place the code for broadcasting invariant variables in the new preheader.
     // Broadcast the scalar into all locations in the vector.
     Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
-
     return Shuf;
   };
 
@@ -371,6 +355,9 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     set(Def, VectorValue);
   } else {
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    assert(isa<VPInstruction>(Def) &&
+           "Explicit BuildVector recipes must have"
+           "handled packing for non-VPInstructions.");
     // Initialize packing with insertelements to start from poison.
     VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
     for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)

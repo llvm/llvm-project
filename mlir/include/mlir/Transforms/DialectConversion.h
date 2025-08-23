@@ -1300,6 +1300,12 @@ struct ConversionConfig {
   /// The folding mode to use during conversion.
   DialectConversionFoldingMode foldingMode =
       DialectConversionFoldingMode::BeforePatterns;
+
+  /// If set to "true", the materialization kind ("source" or "target") will be
+  /// attached to "builtin.unrealized_conversion_cast" ops. This flag is useful
+  /// for debugging, to find out what kind of materialization rule may be
+  /// missing.
+  bool attachDebugMaterializationKind = false;
 };
 
 //===----------------------------------------------------------------------===//

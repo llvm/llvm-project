@@ -79,11 +79,10 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     const Expr *base) {
   assert(isa<CXXMemberCallExpr>(ce) || isa<CXXOperatorCallExpr>(ce));
 
-  if (md->isVirtual()) {
-    cgm.errorNYI(ce->getSourceRange(),
-                 "emitCXXMemberOrOperatorMemberCallExpr: virtual call");
-    return RValue::get(nullptr);
-  }
+  // Compute the object pointer.
+  bool canUseVirtualCall = md->isVirtual() && !hasQualifier;
+  const CXXMethodDecl *devirtualizedMethod = nullptr;
+  assert(!cir::MissingFeatures::devirtualizeMemberFunction());
 
   // Note on trivial assignment
   // --------------------------
@@ -127,7 +126,8 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     return RValue::get(nullptr);
 
   // Compute the function type we're calling
-  const CXXMethodDecl *calleeDecl = md;
+  const CXXMethodDecl *calleeDecl =
+      devirtualizedMethod ? devirtualizedMethod : md;
   const CIRGenFunctionInfo *fInfo = nullptr;
   if (isa<CXXDestructorDecl>(calleeDecl)) {
     cgm.errorNYI(ce->getSourceRange(),
@@ -137,10 +137,18 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
 
   fInfo = &cgm.getTypes().arrangeCXXMethodDeclaration(calleeDecl);
 
-  mlir::Type ty = cgm.getTypes().getFunctionType(*fInfo);
+  cir::FuncType ty = cgm.getTypes().getFunctionType(*fInfo);
 
   assert(!cir::MissingFeatures::sanitizers());
   assert(!cir::MissingFeatures::emitTypeCheck());
+
+  // C++ [class.virtual]p12:
+  //   Explicit qualification with the scope operator (5.1) suppresses the
+  //   virtual call mechanism.
+  //
+  // We also don't emit a virtual call if the base expression has a record type
+  // because then we know what the type is.
+  bool useVirtualCall = canUseVirtualCall && !devirtualizedMethod;
 
   if (isa<CXXDestructorDecl>(calleeDecl)) {
     cgm.errorNYI(ce->getSourceRange(),
@@ -148,14 +156,27 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     return RValue::get(nullptr);
   }
 
-  assert(!cir::MissingFeatures::sanitizers());
-  if (getLangOpts().AppleKext) {
-    cgm.errorNYI(ce->getSourceRange(),
-                 "emitCXXMemberOrOperatorMemberCallExpr: AppleKext");
-    return RValue::get(nullptr);
+  CIRGenCallee callee;
+  if (useVirtualCall) {
+    callee = CIRGenCallee::forVirtual(ce, md, thisPtr.getAddress(), ty);
+  } else {
+    assert(!cir::MissingFeatures::sanitizers());
+    if (getLangOpts().AppleKext) {
+      cgm.errorNYI(ce->getSourceRange(),
+                   "emitCXXMemberOrOperatorMemberCallExpr: AppleKext");
+      return RValue::get(nullptr);
+    }
+
+    callee = CIRGenCallee::forDirect(cgm.getAddrOfFunction(calleeDecl, ty),
+                                     GlobalDecl(calleeDecl));
   }
-  CIRGenCallee callee =
-      CIRGenCallee::forDirect(cgm.getAddrOfFunction(md, ty), GlobalDecl(md));
+
+  if (md->isVirtual()) {
+    Address newThisAddr =
+        cgm.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
+            *this, calleeDecl, thisPtr.getAddress(), useVirtualCall);
+    thisPtr.setAddress(newThisAddr);
+  }
 
   return emitCXXMemberOrOperatorCall(
       calleeDecl, callee, returnValue, thisPtr.getPointer(),

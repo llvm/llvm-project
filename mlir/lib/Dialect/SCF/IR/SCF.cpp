@@ -157,8 +157,7 @@ void ExecuteRegionOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
-
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"no_inline"});
 }
 
 LogicalResult ExecuteRegionOp::verify() {
@@ -4236,14 +4235,15 @@ LogicalResult scf::IndexSwitchOp::verify() {
              << "see yield operation here";
     }
     for (auto [idx, result, operand] :
-         llvm::zip(llvm::seq<unsigned>(0, getNumResults()), getResultTypes(),
-                   yield.getOperandTypes())) {
-      if (result == operand)
+         llvm::enumerate(getResultTypes(), yield.getOperands())) {
+      if (!operand)
+        return yield.emitOpError() << "operand " << idx << " is null\n";
+      if (result == operand.getType())
         continue;
       return (emitOpError("expected result #")
               << idx << " of each region to be " << result)
                  .attachNote(yield.getLoc())
-             << name << " returns " << operand << " here";
+             << name << " returns " << operand.getType() << " here";
     }
     return success();
   };
