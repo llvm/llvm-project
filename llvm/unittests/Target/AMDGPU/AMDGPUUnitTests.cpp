@@ -322,7 +322,7 @@ TEST(AMDGPU, TestReverseComposeSubRegIndices) {
 }
 
 TEST(AMDGPU, TestGetNamedOperandIdx) {
-  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
+  const TargetMachine *TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
   if (!TM)
     return;
   const MCInstrInfo *MCII = TM->getMCInstrInfo();
@@ -335,7 +335,7 @@ TEST(AMDGPU, TestGetNamedOperandIdx) {
         continue;
       int16_t RetrievedIdx = AMDGPU::getNamedOperandIdx(Opcode, OpName);
       EXPECT_EQ(Idx, RetrievedIdx)
-          << "Opcode " << Opcode << " (" << MCII->getName(Opcode) << ")";
+          << "Opcode " << Opcode << " (" << MCII->getName(Opcode) << ')';
     }
   }
 }

@@ -264,9 +264,9 @@ emitGetNamedOperandIdx(raw_ostream &OS,
   }
   OS << "  };\n";
 
-  OS << "  unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);\n";
-  OS << "  return OperandMap[InstrIdx][(unsigned)Name];\n";
-  OS << "}\n";
+  OS << "  unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);\n"
+              "  return OperandMap[InstrIdx][(unsigned)Name];\n"
+              "}\n";
 }
 
 static void
@@ -302,9 +302,9 @@ emitGetOperandIdxName(raw_ostream &OS,
   }
   OS << "  };\n";
 
-  OS << "  unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);\n";
-  OS << "  return OperandMap[InstrIdx][(unsigned)Idx];\n";
-  OS << "}\n";
+  OS << "  unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);\n"
+              "  return OperandMap[InstrIdx][(unsigned)Idx];\n"
+              "}\n";
 }
 
 /// Generate a table and function for looking up the indices of operands by
