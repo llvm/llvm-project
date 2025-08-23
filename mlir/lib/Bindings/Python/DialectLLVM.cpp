@@ -24,7 +24,7 @@ using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
+static void populateDialectLLVMSubmodule(const nanobind::module_ &m) {
 
   //===--------------------------------------------------------------------===//
   // StructType
