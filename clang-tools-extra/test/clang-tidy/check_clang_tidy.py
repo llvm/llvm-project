@@ -135,8 +135,7 @@ class CheckRunner:
                 "-fblocks",
             ] + self.clang_extra_args
 
-        if extension in [".cpp", ".hpp", ".mm"]:
-            self.clang_extra_args.append("-std=" + self.std)
+        self.clang_extra_args.append("-std=" + self.std)
 
         # Tests should not rely on STL being available, and instead provide mock
         # implementations of relevant APIs.
@@ -374,7 +373,7 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
     parser.add_argument(
         "-std",
         type=csv,
-        default=["c++11-or-later"],
+        default=None,
         help="Passed to clang. Special -or-later values are expanded.",
     )
     parser.add_argument(
@@ -382,7 +381,15 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
         action="store_true",
         help="allow partial line matches for fixes",
     )
-    return parser.parse_known_args()
+
+    args, extra_args = parser.parse_known_args()
+    if args.std is None:
+        _, extension = os.path.splitext(args.assume_filename or args.input_file_name)
+        args.std = [
+            "c++11-or-later" if extension in [".cpp", ".hpp", ".mm"] else "c99-or-later"
+        ]
+
+    return (args, extra_args)
 
 
 def main() -> None:

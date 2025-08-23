@@ -2629,7 +2629,7 @@ void SampleOverlapAggregator::dumpFuncSimilarity(raw_fd_ostream &OS) const {
 }
 
 void SampleOverlapAggregator::dumpProgramSummary(raw_fd_ostream &OS) const {
-  OS << "Profile overlap infomation for base_profile: "
+  OS << "Profile overlap information for base_profile: "
      << ProfOverlap.BaseName.toString()
      << " and test_profile: " << ProfOverlap.TestName.toString()
      << "\nProgram level:\n";

@@ -791,6 +791,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
+  libc.src.math.nanbf16
   libc.src.math.nextafterbf16
   libc.src.math.nextdownbf16
   libc.src.math.nexttowardbf16

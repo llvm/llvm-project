@@ -209,6 +209,7 @@ Improvements to Clang's diagnostics
   an override of a virtual method.
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
+- Added fix-it hint for when scoped enumerations require explicit conversions for binary operations. (#GH24265)
 
 - Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
   diagnostic id. Besides being incorrect from an API standpoint, this was user visible, e.g.:
@@ -233,6 +234,10 @@ Improvements to Clang's diagnostics
   can be used in macro replacement lists with the usual preprocessor semantics,
   however, non-preprocessor use of tokens now triggers a pedantic warning in C++.
   Compilation in C mode is unchanged, and still permits these tokens to be used. (#GH147217)
+
+- Clang now diagnoses misplaced array bounds on declarators for template
+  specializations in th same way as it already did for other declarators.
+  (#GH147333)
 
 Improvements to Clang's time-trace
 ----------------------------------

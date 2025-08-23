@@ -354,7 +354,10 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
 
     return static_cast<T>(payload_dfloat);
   } else {
-    return static_cast<T>(payload);
+    if constexpr (cpp::is_same_v<T, bfloat16>)
+      return T(static_cast<int>(payload));
+    else
+      return static_cast<T>(payload);
   }
 }
 
