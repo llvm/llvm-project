@@ -204,6 +204,8 @@ void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI,
   MCRegister Dest = MI.getOperand(1).getReg();
   int64_t Imm = MI.getOperand(2).getImm();
   addFixup(Fixups, 0, Expr, ELF::R_RISCV_TLSDESC_CALL);
+  if (STI.hasFeature(RISCV::FeatureRelax))
+    Fixups.back().setLinkerRelaxable();
   MCInst Call =
       MCInstBuilder(RISCV::JALR).addReg(Link).addReg(Dest).addImm(Imm);
 
@@ -595,10 +597,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     if (!STI.hasFeature(RISCV::FeatureExactAssembly))
       RelaxCandidate = true;
   };
-  auto AsmRelaxToLinkerRelaxableWithFeature = [&](unsigned Feature) -> void {
-    if (!STI.hasFeature(RISCV::FeatureExactAssembly) && STI.hasFeature(Feature))
-      RelaxCandidate = true;
-  };
 
   unsigned FixupKind = RISCV::fixup_riscv_invalid;
   if (Kind == MCExpr::Specifier) {
@@ -662,6 +660,9 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     case ELF::R_RISCV_GOT_HI20:
     case ELF::R_RISCV_TPREL_HI20:
     case ELF::R_RISCV_TLSDESC_HI20:
+    case ELF::R_RISCV_TLSDESC_LOAD_LO12:
+    case ELF::R_RISCV_TLSDESC_ADD_LO12:
+    case ELF::R_RISCV_TLSDESC_CALL:
       RelaxCandidate = true;
       break;
     }
@@ -672,23 +673,24 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       RelaxCandidate = true;
     } else if (MIFrm == RISCVII::InstFormatB) {
       FixupKind = RISCV::fixup_riscv_branch;
-      // This might be assembler relaxed to `b<cc>; jal` but we cannot relax
-      // the `jal` again in the assembler.
+      // Relaxes to B<cc>; JAL, with fixup_riscv_jal
+      AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatCJ) {
       FixupKind = RISCV::fixup_riscv_rvc_jump;
+      // Relaxes to JAL with fixup_riscv_jal
       AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatCB) {
       FixupKind = RISCV::fixup_riscv_rvc_branch;
-      // This might be assembler relaxed to `b<cc>; jal` but we cannot relax
-      // the `jal` again in the assembler.
+      // Relaxes to B<cc>; JAL, with fixup_riscv_jal
+      AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatCI) {
       FixupKind = RISCV::fixup_riscv_rvc_imm;
     } else if (MIFrm == RISCVII::InstFormatI) {
       FixupKind = RISCV::fixup_riscv_12_i;
     } else if (MIFrm == RISCVII::InstFormatQC_EB) {
       FixupKind = RISCV::fixup_riscv_qc_e_branch;
-      // This might be assembler relaxed to `qc.e.b<cc>; jal` but we cannot
-      // relax the `jal` again in the assembler.
+      // Relaxes to QC.E.B<cc>I; JAL, with fixup_riscv_jal
+      AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatQC_EAI) {
       FixupKind = RISCV::fixup_riscv_qc_e_32;
       RelaxCandidate = true;
@@ -706,6 +708,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   // If linker relaxation is enabled and supported by this relocation, set a bit
   // so that the assembler knows the size of the instruction is not fixed/known,
   // and the relocation will need a R_RISCV_RELAX relocation.
+  LLVM_DEBUG(dbgs() << "Maybe Marking Fixup " << Fixups.back().getKind() << " as Relaxable " << EnableRelax << " " << RelaxCandidate << "\n");
   if (EnableRelax && RelaxCandidate)
     Fixups.back().setLinkerRelaxable();
   ++MCNumFixups;

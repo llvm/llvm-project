@@ -1,4 +1,3 @@
-
 ; RUN: llc -mtriple=riscv64 -mattr=-relax -filetype=obj < %s \
 ; RUN:     | llvm-objdump -d -r - | FileCheck %s --check-prefixes=CHECK,NORELAX
 ; RUN: llc -mtriple=riscv64 -mattr=+relax -filetype=obj < %s \
