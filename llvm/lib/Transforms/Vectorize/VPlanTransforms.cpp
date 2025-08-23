@@ -3512,6 +3512,9 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
     InsertPt = std::next(ExpSCEV->getIterator());
     ExpSCEV->eraseFromParent();
   }
+  assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
+         "VPExpandSCEVRecipes must be be at the beginning of the entry block, "
+         "after any VPIRInstructions");
   for (Instruction &I : *EntryBB) {
     if (!Expander.isInsertedInstruction(&I) || isa<PHINode>(I))
       continue;
