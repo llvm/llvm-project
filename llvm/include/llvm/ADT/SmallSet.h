@@ -268,8 +268,17 @@ private:
 
 /// If this set is of pointer values, transparently switch over to using
 /// SmallPtrSet for performance.
+///
+/// We use this middleman class DeprecatedSmallSet so that the deprecation
+/// warning works.  Placing LLVM_DEPRECATED just before SmallSet below won't
+/// work.
 template <typename PointeeType, unsigned N>
-class SmallSet<PointeeType*, N> : public SmallPtrSet<PointeeType*, N> {};
+class LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
+    DeprecatedSmallSet : public SmallPtrSet<PointeeType *, N> {};
+
+template <typename PointeeType, unsigned N>
+class SmallSet<PointeeType *, N> : public DeprecatedSmallSet<PointeeType *, N> {
+};
 
 /// Equality comparison for SmallSet.
 ///
