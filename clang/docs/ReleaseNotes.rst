@@ -235,6 +235,10 @@ Improvements to Clang's diagnostics
   however, non-preprocessor use of tokens now triggers a pedantic warning in C++.
   Compilation in C mode is unchanged, and still permits these tokens to be used. (#GH147217)
 
+- Clang now diagnoses misplaced array bounds on declarators for template
+  specializations in th same way as it already did for other declarators.
+  (#GH147333)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

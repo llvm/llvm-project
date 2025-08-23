@@ -7878,9 +7878,9 @@ void Parser::ParseMisplacedBracketDeclarator(Declarator &D) {
     D.AddTypeInfo(Chunk, TempDeclarator.getAttributePool(), SourceLocation());
   }
 
-  // The missing identifier would have been diagnosed in ParseDirectDeclarator.
+  // The missing name would have been diagnosed in ParseDirectDeclarator.
   // If parentheses are required, always suggest them.
-  if (!D.getIdentifier() && !NeedParens)
+  if (!D.hasName() && !NeedParens)
     return;
 
   SourceLocation EndBracketLoc = TempDeclarator.getEndLoc();
