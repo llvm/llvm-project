@@ -557,13 +557,12 @@ static bool CanResolveConstant(llvm::Constant *constant) {
     return false;
   case Value::ConstantIntVal:
   case Value::ConstantFPVal:
-    return true;
   case Value::ConstantDataVectorVal:
+    return constant->getType()->getTypeID() == Type::FixedVectorTyID;
   case Value::FunctionVal:
     return true;
   case Value::ConstantAggregateZeroVal:
-    // Zero initializers can be resolved
-    return true;
+    return constant->getType()->getTypeID() == Type::FixedVectorTyID;
   case Value::ConstantExprVal:
     if (const ConstantExpr *constant_expr = dyn_cast<ConstantExpr>(constant)) {
       switch (constant_expr->getOpcode()) {
