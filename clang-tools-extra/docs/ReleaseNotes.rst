@@ -140,8 +140,8 @@ New checks
 - New :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check.
 
-  Detects calls to standard library iterator algorithms that could be replaced
-  with LLVM range-based algorithms from ``llvm/ADT/STLExtras.h``.
+  Detects calls to STL library iterator algorithms that could be replaced with
+  LLVM range-based algorithms from ``llvm/ADT/STLExtras.h``.
 
 - New :doc:`misc-override-with-different-visibility
   <clang-tidy/checks/misc/override-with-different-visibility>` check.
