@@ -2109,7 +2109,6 @@ struct ConvertMemRefAliasAttributesToLLVMPass
     MLIRContext *ctx = &getContext();
     llvm::SmallDenseMap<memref::AliasDomainScopeOp, LLVM::AliasScopeDomainAttr>
         aliasScopeMap;
-    SmallVector<memref::AliasDomainScopeOp> aliasScopeOps;
     auto visitor = [&](memref::AliasAnalysisOpInterface aliasOp) -> WalkResult {
       memref::AliasingAttr aliasingAttr = aliasOp.getAliasingAttr();
       if (!aliasingAttr)
@@ -2127,7 +2126,6 @@ struct ConvertMemRefAliasAttributesToLLVMPass
         domain =
             LLVM::AliasScopeDomainAttr::get(ctx, scope.getDescriptionAttr());
         aliasScopeMap[scope] = domain;
-        aliasScopeOps.push_back(scope);
       }
 
       auto convertScope = [&](Attribute scope) -> Attribute {
@@ -2151,8 +2149,9 @@ struct ConvertMemRefAliasAttributesToLLVMPass
       return signalPassFailure();
 
     TrivialPatternRewriter rewriter(ctx);
-    for (memref::AliasDomainScopeOp scope : aliasScopeOps)
+    op->walk([&](memref::AliasDomainScopeOp scope) {
       memref::AliasDomainScopeOp::inlineIntoParent(rewriter, scope);
+    });
   }
 };
 
