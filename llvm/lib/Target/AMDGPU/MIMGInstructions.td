@@ -2044,9 +2044,9 @@ class VIMAGE_TENSOR_Pseudo<string opName, bit _UpTo2D = 0> :
   let hasSideEffects = 0;
 
   bit UpTo2D = _UpTo2D;
-  let InOperandList = !if(UpTo2D, (ins SReg_128:$vaddr0, SReg_256:$vaddr1, R128A16:$r128, CPol:$cpol),
-                                      (ins SReg_128:$vaddr0, SReg_256:$vaddr1, SReg_128:$vaddr2,
-                                       SReg_128:$vaddr3, R128A16:$r128, CPol:$cpol));
+  let InOperandList = !if(UpTo2D, (ins SReg_128_XNULL:$vaddr0, SReg_256_XNULL:$vaddr1, R128A16:$r128, CPol:$cpol),
+                                      (ins SReg_128_XNULL:$vaddr0, SReg_256_XNULL:$vaddr1, SReg_128_XNULL:$vaddr2,
+                                       SReg_128_XNULL:$vaddr3, R128A16:$r128, CPol:$cpol));
   string AsmOperands = " $vaddr0, $vaddr1"#!if(UpTo2D, "", ", $vaddr2, $vaddr3")#"$r128$cpol";
 }
 
