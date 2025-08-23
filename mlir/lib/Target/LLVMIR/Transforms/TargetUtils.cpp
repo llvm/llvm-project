@@ -18,8 +18,6 @@
 
 #define DEBUG_TYPE "mlir-llvm-target-utils"
 
-llvm::once_flag initializeBackendsOnce;
-
 namespace mlir {
 namespace LLVM {
 namespace detail {
