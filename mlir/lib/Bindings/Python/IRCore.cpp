@@ -67,6 +67,12 @@ Returns a new MlirModule or raises an MLIRError if the parsing fails.
 See also: https://mlir.llvm.org/docs/LangRef/
 )";
 
+static const char kModuleCAPICreate[] =
+    R"(Creates a Module from a MlirModule wrapped by a capsule (i.e. module._CAPIPtr).
+Note this returns a new object BUT _clear_mlir_module(module) must be called to
+prevent double-frees (of the underlying mlir::Module).
+)";
+
 static const char kOperationCreateDocstring[] =
     R"(Creates a new operation.
 
@@ -3221,7 +3227,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   //----------------------------------------------------------------------------
   nb::class_<PyModule>(m, "Module", nb::is_weak_referenceable())
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyModule::getCapsule)
-      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyModule::createFromCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyModule::createFromCapsule,
+           kModuleCAPICreate)
       .def("_clear_mlir_module", &PyModule::clearMlirModule)
       .def_static(
           "parse",

@@ -495,8 +495,8 @@ class PyModule;
 using PyModuleRef = PyObjectRef<PyModule>;
 class PyModule : public BaseContextObject {
 public:
-  /// Returns a PyModule reference for the given MlirModule. This may return
-  /// a pre-existing or new object.
+  /// Returns a PyModule reference for the given MlirModule. This always returns
+  /// a new object.
   static PyModuleRef forModule(MlirModule module);
   PyModule(PyModule &) = delete;
   PyModule(PyMlirContext &&) = delete;
@@ -517,9 +517,8 @@ public:
   nanobind::object getCapsule();
 
   /// Creates a PyModule from the MlirModule wrapped by a capsule.
-  /// Note that PyModule instances are uniqued, so the returned object
-  /// may be a pre-existing object. Ownership of the underlying MlirModule
-  /// is taken by calling this function.
+  /// Note this returns a new object BUT clearMlirModule() must be called to
+  /// prevent double-frees (of the underlying mlir::Module).
   static nanobind::object createFromCapsule(nanobind::object capsule);
 
   void clearMlirModule() { module = {nullptr}; }
