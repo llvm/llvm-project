@@ -2834,9 +2834,9 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     // Use INSERT_VECTOR_ELT operations rather than expand to stores, because
     // using memory operations is much lower.
     //
-    // For 256-bit vectors, normally spill into two halves and concatenate.
+    // For 256-bit vectors, normally split into two halves and concatenate.
     // Special case: for v8i32/v8f32/v4i64/v4f64, if the upper half has only
-    // one non-undef element, skip spilling to avoid a worse result.
+    // one non-undef element, skip spliting to avoid a worse result.
     if (ResTy == MVT::v8i32 || ResTy == MVT::v8f32 || ResTy == MVT::v4i64 ||
         ResTy == MVT::v4f64) {
       unsigned NonUndefCount = 0;
