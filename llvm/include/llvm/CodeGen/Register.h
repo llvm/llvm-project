@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_REGISTER_H
 
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 
 namespace llvm {
@@ -35,7 +36,10 @@ public:
   // DenseMapInfo<unsigned> uses -1u and -2u.
   static_assert(std::numeric_limits<decltype(Reg)>::max() >= 0xFFFFFFFF,
                 "Reg isn't large enough to hold full range.");
-  static constexpr unsigned FirstStackSlot = 1u << 30;
+  static constexpr unsigned MaxFrameIndexBitwidth = 30;
+  static constexpr unsigned FirstStackSlot = 1u << MaxFrameIndexBitwidth;
+  static const unsigned StackSlotMask =
+      (unsigned)(-1) >> (CHAR_BIT * sizeof(unsigned) - MaxFrameIndexBitwidth);
   static_assert(FirstStackSlot >= MCRegister::LastPhysicalReg);
   static constexpr unsigned VirtualRegFlag = 1u << 31;
 
@@ -46,8 +50,8 @@ public:
 
   /// Convert a non-negative frame index to a stack slot register value.
   static Register index2StackSlot(int FI) {
-    assert(FI >= 0 && "Cannot hold a negative frame index.");
-    return Register(FI + Register::FirstStackSlot);
+    assert(isInt<30>(FI) && "Frame index must be at most 30 bit integer");
+    return Register((FI & Register::StackSlotMask) | Register::FirstStackSlot);
   }
 
   /// Return true if the specified register number is in
@@ -87,7 +91,7 @@ public:
   /// Compute the frame index from a register value representing a stack slot.
   int stackSlotIndex() const {
     assert(isStack() && "Not a stack slot");
-    return static_cast<int>(Reg - Register::FirstStackSlot);
+    return static_cast<int>(SignExtend64(Reg & Register::StackSlotMask, 30));
   }
 
   constexpr operator unsigned() const { return Reg; }
