@@ -65,5 +65,11 @@ int main(int, char**)
         assert(X::dtor_called == true);
     }
 
+    {
+        typedef int& T;
+        static_assert(std::is_trivially_destructible<T>::value, "");
+        static_assert(std::is_trivially_destructible<optional<T>>::value, "");
+    }
+
   return 0;
 }

@@ -257,8 +257,88 @@ constexpr bool test() {
   return true;
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  // Test & overload
+  {
+    // Without & qualifier on F's operator()
+    {
+      int j = 42;
+      std::optional<int&> i{j};
+      assert(i.and_then(LVal{}) == 1);
+      assert(i.and_then(NOLVal{}) == std::nullopt);
+      ASSERT_SAME_TYPE(decltype(i.and_then(LVal{})), std::optional<int>);
+    }
+
+    //With & qualifier on F's operator()
+    {
+      int j = 42;
+      std::optional<int&> i{j};
+      RefQual l{};
+      assert(i.and_then(l) == 1);
+      NORefQual nl{};
+      assert(i.and_then(nl) == std::nullopt);
+      ASSERT_SAME_TYPE(decltype(i.and_then(l)), std::optional<int>);
+    }
+  }
+
+  // Test const& overload
+  {
+    // Without & qualifier on F's operator()
+    {
+      int j = 42;
+      std::optional<const int&> i{j};
+      assert(i.and_then(CLVal{}) == 1);
+      assert(i.and_then(NOCLVal{}) == std::nullopt);
+      ASSERT_SAME_TYPE(decltype(i.and_then(CLVal{})), std::optional<int>);
+    }
+
+    //With & qualifier on F's operator()
+    {
+      int j = 42;
+      const std::optional<int&> i{j};
+      const CRefQual l{};
+      assert(i.and_then(l) == 1);
+      const NOCRefQual nl{};
+      assert(i.and_then(nl) == std::nullopt);
+      ASSERT_SAME_TYPE(decltype(i.and_then(l)), std::optional<int>);
+    }
+  }
+
+  // Test && overload
+  {
+
+    //With & qualifier on F's operator()
+    {
+      int j = 42;
+      std::optional<int&> i{j};
+      assert(i.and_then(RVRefQual{}) == 1);
+      assert(i.and_then(NORVRefQual{}) == std::nullopt);
+      ASSERT_SAME_TYPE(decltype(i.and_then(RVRefQual{})), std::optional<int>);
+    }
+  }
+
+  // Test const&& overload
+  {
+    //With & qualifier on F's operator()
+    {
+      int j = 42;
+      const std::optional<int&> i{j};
+      const RVCRefQual l{};
+      assert(i.and_then(std::move(l)) == 1);
+      const NORVCRefQual nl{};
+      assert(i.and_then(std::move(nl)) == std::nullopt);
+      ASSERT_SAME_TYPE(decltype(i.and_then(std::move(l))), std::optional<int>);
+    }
+  }
+  return true;
+}
+#endif
+
 int main(int, char**) {
   test();
   static_assert(test());
+  test_ref();
+  static_assert(test_ref());
   return 0;
 }

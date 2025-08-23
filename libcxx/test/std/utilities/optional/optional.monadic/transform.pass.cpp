@@ -19,60 +19,61 @@
 #include <cassert>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 struct LVal {
   constexpr int operator()(int&) { return 1; }
-  int operator()(const int&) = delete;
-  int operator()(int&&) = delete;
+  int operator()(const int&)  = delete;
+  int operator()(int&&)       = delete;
   int operator()(const int&&) = delete;
 };
 
 struct CLVal {
   int operator()(int&) = delete;
   constexpr int operator()(const int&) { return 1; }
-  int operator()(int&&) = delete;
+  int operator()(int&&)       = delete;
   int operator()(const int&&) = delete;
 };
 
 struct RVal {
-  int operator()(int&) = delete;
+  int operator()(int&)       = delete;
   int operator()(const int&) = delete;
   constexpr int operator()(int&&) { return 1; }
   int operator()(const int&&) = delete;
 };
 
 struct CRVal {
-  int operator()(int&) = delete;
+  int operator()(int&)       = delete;
   int operator()(const int&) = delete;
-  int operator()(int&&) = delete;
+  int operator()(int&&)      = delete;
   constexpr int operator()(const int&&) { return 1; }
 };
 
 struct RefQual {
   constexpr int operator()(int) & { return 1; }
-  int operator()(int) const& = delete;
-  int operator()(int) && = delete;
+  int operator()(int) const&  = delete;
+  int operator()(int) &&      = delete;
   int operator()(int) const&& = delete;
 };
 
 struct CRefQual {
   int operator()(int) & = delete;
   constexpr int operator()(int) const& { return 1; }
-  int operator()(int) && = delete;
+  int operator()(int) &&      = delete;
   int operator()(int) const&& = delete;
 };
 
 struct RVRefQual {
-  int operator()(int) & = delete;
+  int operator()(int) &      = delete;
   int operator()(int) const& = delete;
   constexpr int operator()(int) && { return 1; }
   int operator()(int) const&& = delete;
 };
 
 struct RVCRefQual {
-  int operator()(int) & = delete;
+  int operator()(int) &      = delete;
   int operator()(int) const& = delete;
-  int operator()(int) && = delete;
+  int operator()(int) &&     = delete;
   constexpr int operator()(int) const&& { return 1; }
 };
 
@@ -83,7 +84,7 @@ struct NoCopy {
 };
 
 struct NoMove {
-  NoMove() = default;
+  NoMove()         = default;
   NoMove(NoMove&&) = delete;
   NoMove operator()(const NoCopy&&) { return NoMove{}; }
 };
@@ -200,8 +201,109 @@ constexpr bool test() {
   return true;
 }
 
+constexpr bool test_ref() {
+  {
+    std::optional<int&> opt1;
+    auto opt1r = opt1.transform([](int i) { return i + 2; });
+    assert(!opt1);
+    ASSERT_SAME_TYPE(decltype(opt1r), std::optional<int>);
+  }
+
+  {
+    int i = 42;
+    std::optional<int&> opt{i};
+    auto o2 = opt.transform([](int j) { return j + 2; });
+    assert(*o2 == 44);
+    ASSERT_SAME_TYPE(decltype(o2), std::optional<int>);
+  }
+  // Test & overload
+  {
+    // Without & qualifier on F's operator()
+    {
+      int i = 42;
+      std::optional<int&> opt{i};
+      auto o3 = opt.transform(LVal{});
+      assert(*o3 == 1);
+      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
+    }
+
+    //With & qualifier on F's operator()
+    {
+      int i = 42;
+      std::optional<int&> opt{i};
+      RefQual l{};
+      auto o3 = opt.transform(l);
+      assert(*o3 == 1);
+      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
+    }
+  }
+  // const& overload
+  { 
+    // Without & qualifier on F's operator()
+    {
+      int i = 42;
+      std::optional<const int&> opt{i};
+      auto o3 = std::as_const(opt).transform(CLVal{});
+      assert(*o3 == 1);
+      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
+    }
+
+    //With & qualifier on F's operator()
+    {
+      int i = 42;
+      const std::optional<int&> opt{i};
+      const CRefQual l{};
+      auto o3 = opt.transform(l);
+      assert(*o3 == 1);
+      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
+    }
+  }
+
+  // Test && overload
+  {
+    // Without & qualifier on F's operator()
+    {
+      int i = 42;
+      std::optional<int> opt{i};
+      auto o3 = std::move(opt).transform(RVal{});
+      assert(*o3 == 1);
+      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
+    }
+
+    //With & qualifier on F's operator()
+    {
+      int i = 42;
+      std::optional<int&> opt{i};
+      auto o3 = std::move(opt).transform(RVRefQual{});
+      assert(*o3 == 1);
+      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
+    }
+  }
+
+  // const&& overload
+  {
+    //With & qualifier on F's operator()
+    {
+      int i = 42;
+      std::optional<int&> opt{i};
+      const RVCRefQual rvc{};
+      auto o3 = opt.transform(std::move(rvc));
+      assert(*o3 == 1);
+      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
+    }
+  }
+  {
+    std::optional<int&> o6 = std::nullopt;
+    auto o6r               = o6.transform([](int) { return 42; });
+    assert(!o6r);
+  }
+  return true;
+}
+
 int main(int, char**) {
   test();
   static_assert(test());
+  test_ref();
+  static_assert(test_ref());
   return 0;
 }
