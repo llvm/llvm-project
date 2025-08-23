@@ -45,3 +45,109 @@ void f2(void) {
 // OGCG:         %[[SLOT:.+]] = alloca i32, align 4
 // OGCG-NEXT:    store i32 42, ptr %[[SLOT]], align 4
 // OGCG:       }
+
+void load(int *ptr) {
+  int x;
+  __atomic_load(ptr, &x, __ATOMIC_RELAXED);
+  __atomic_load(ptr, &x, __ATOMIC_CONSUME);
+  __atomic_load(ptr, &x, __ATOMIC_ACQUIRE);
+  __atomic_load(ptr, &x, __ATOMIC_SEQ_CST);
+}
+
+// CIR-LABEL: @load
+// CIR:   %{{.+}} = cir.load align(4) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.load align(4) atomic(consume) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.load align(4) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.load align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR: }
+
+// LLVM-LABEL: @load
+// LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
+// LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
+// LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
+// LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+// LLVM: }
+
+// OGCG-LABEL: @load
+// OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
+// OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
+// OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
+// OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+// OGCG: }
+
+void c11_load(_Atomic(int) *ptr) {
+  __c11_atomic_load(ptr, __ATOMIC_RELAXED);
+  __c11_atomic_load(ptr, __ATOMIC_CONSUME);
+  __c11_atomic_load(ptr, __ATOMIC_ACQUIRE);
+  __c11_atomic_load(ptr, __ATOMIC_SEQ_CST);
+}
+
+// CIR-LABEL: @c11_load
+// CIR:   %{{.+}} = cir.load align(4) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.load align(4) atomic(consume) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.load align(4) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.load align(4) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR: }
+
+// LLVM-LABEL: @c11_load
+// LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
+// LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
+// LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
+// LLVM:   %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+// LLVM: }
+
+// OGCG-LABEL: @c11_load
+// OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
+// OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
+// OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4
+// OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
+// OGCG: }
+
+void store(int *ptr, int x) {
+  __atomic_store(ptr, &x, __ATOMIC_RELAXED);
+  __atomic_store(ptr, &x, __ATOMIC_RELEASE);
+  __atomic_store(ptr, &x, __ATOMIC_SEQ_CST);
+}
+
+// CIR-LABEL: @store
+// CIR:   cir.store align(4) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR: }
+
+// LLVM-LABEL: @store
+// LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+// LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} release, align 4
+// LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} seq_cst, align 4
+// LLVM: }
+
+// OGCG-LABEL: @store
+// OGCG:   store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+// OGCG:   store atomic i32 %{{.+}}, ptr %{{.+}} release, align 4
+// OGCG:   store atomic i32 %{{.+}}, ptr %{{.+}} seq_cst, align 4
+// OGCG: }
+
+void c11_store(_Atomic(int) *ptr, int x) {
+  __c11_atomic_store(ptr, x, __ATOMIC_RELAXED);
+  __c11_atomic_store(ptr, x, __ATOMIC_RELEASE);
+  __c11_atomic_store(ptr, x, __ATOMIC_SEQ_CST);
+}
+
+// CIR-LABEL: @c11_store
+// CIR:   cir.store align(4) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR: }
+
+// LLVM-LABEL: @c11_store
+// LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+// LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} release, align 4
+// LLVM:   store atomic i32 %{{.+}}, ptr %{{.+}} seq_cst, align 4
+// LLVM: }
+
+// OGCG-LABEL: @c11_store
+// OGCG:   store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
+// OGCG:   store atomic i32 %{{.+}}, ptr %{{.+}} release, align 4
+// OGCG:   store atomic i32 %{{.+}}, ptr %{{.+}} seq_cst, align 4
+// OGCG: }
+
