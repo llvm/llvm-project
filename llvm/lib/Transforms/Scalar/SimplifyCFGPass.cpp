@@ -84,6 +84,10 @@ static cl::opt<bool> UserSpeculateUnpredictables(
     "speculate-unpredictables", cl::Hidden, cl::init(false),
     cl::desc("Speculate unpredictable branches (default = false)"));
 
+static cl::opt<unsigned> SimplifyCFGIterLimit(
+    "simplifycfg-iter-limit", cl::Hidden, cl::init(1000),
+    cl::desc("Max outer iterations in iterativelySimplifyCFG()"));
+
 STATISTIC(NumSimpl, "Number of blocks simplified");
 
 static bool
@@ -232,23 +236,33 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   bool Changed = false;
   bool LocalChange = true;
 
-  SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 32> Edges;
-  FindFunctionBackedges(F, Edges);
-  SmallPtrSet<BasicBlock *, 16> UniqueLoopHeaders;
-  for (const auto &Edge : Edges)
-    UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edge.second));
+  auto BuildLoopsHeaders = [&](SmallVectorImpl<WeakVH> &Out) {
+    Out.clear();
+    SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 32> Edges;
+    FindFunctionBackedges(F, Edges);
+    SmallPtrSet<BasicBlock *, 16> UniqueLoopHeaders;
+    for (const auto &Edge : Edges)
+      UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edge.second));
+    Out.reserve(UniqueLoopHeaders.size());
+    for (BasicBlock *H : UniqueLoopHeaders)
+      Out.emplace_back(WeakVH(H));
+  };
 
-  SmallVector<WeakVH, 16> LoopHeaders(UniqueLoopHeaders.begin(),
-                                      UniqueLoopHeaders.end());
+  SmallVector<WeakVH, 16> LoopHeaders;
+  BuildLoopsHeaders(LoopHeaders);
 
   unsigned IterCnt = 0;
-  (void)IterCnt;
   while (LocalChange) {
-    assert(IterCnt++ < 1000 && "Iterative simplification didn't converge!");
+    if (IterCnt++ >= SimplifyCFGIterLimit) {
+      LLVM_DEBUG(dbgs() << "iterativelySimplifyCFG: reached iteration limit ("
+                        << SimplifyCFGIterLimit
+                        << "), bailing out to avoid non-convergence.\n");
+      break;
+    }
     LocalChange = false;
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
-    for (Function::iterator BBIt = F.begin(); BBIt != F.end(); ) {
+    for (Function::iterator BBIt = F.begin(); BBIt != F.end();) {
       BasicBlock &BB = *BBIt++;
       if (DTU) {
         assert(
@@ -265,6 +279,11 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
       }
     }
     Changed |= LocalChange;
+    // The CFG may have changed enough that the original loop-header set is
+    // stale. Rebuild it so simplifyCFG doesn't oscillate across outdated
+    // boundaries.
+    if (LocalChange)
+      BuildLoopsHeaders(LoopHeaders);
   }
   return Changed;
 }
@@ -280,7 +299,8 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
   EverChanged |= iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
 
   // If neither pass changed anything, we're done.
-  if (!EverChanged) return false;
+  if (!EverChanged)
+    return false;
 
   // iterativelySimplifyCFG can (rarely) make some loops dead.  If this happens,
   // removeUnreachableBlocks is needed to nuke them, which means we should
@@ -424,7 +444,7 @@ struct CFGSimplifyPass : public FunctionPass {
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
-}
+} // namespace
 
 char CFGSimplifyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(CFGSimplifyPass, "simplifycfg", "Simplify the CFG", false,
