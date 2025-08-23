@@ -351,6 +351,12 @@ class TestStructuredDataAPI(TestBase):
             round_tripped = constructor(data)
             self.assertEqual(round_tripped, original)
 
+    def test_dynamic(self):
+        for original in (0, 11, -1, 0.0, 4.5, -0.25, "", "dirk", True, False):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            self.assertEqual(data.dynamic, original)
+
     def test_round_trip_string(self):
         # No 0.0, it inherently does not round trip.
         for original in (0, 11, -1, 4.5, -0.25, "", "dirk"):
@@ -393,7 +399,7 @@ class TestStructuredDataAPI(TestBase):
         data = lldb.SBStructuredData()
         data.SetFromJSON(json.dumps(array))
         for value in data:
-            self.assertEqual(int(value), array.pop(0))
+            self.assertEqual(value, array.pop(0))
 
     def test_iterate_dictionary(self):
         dictionary = {"0": 0, "1": 1, "2": 2}
@@ -407,11 +413,11 @@ class TestStructuredDataAPI(TestBase):
         data = lldb.SBStructuredData()
         data.SetFromJSON(json.dumps(array))
         for i in range(len(array)):
-            self.assertEqual(int(data[i]), array[i])
+            self.assertEqual(data[i], array[i])
 
     def test_getitem_dictionary(self):
         dictionary = {"one": 1, "two": 2, "three": 3}
         data = lldb.SBStructuredData()
         data.SetFromJSON(json.dumps(dictionary))
         for key in dictionary:
-            self.assertEqual(int(data[key]), dictionary[key])
+            self.assertEqual(data[key], dictionary[key])
