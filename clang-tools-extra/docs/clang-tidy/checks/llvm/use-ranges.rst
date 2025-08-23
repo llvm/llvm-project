@@ -3,7 +3,7 @@
 llvm-use-ranges
 ===============
 
-Detects calls to STL library iterator algorithms that could be replaced with
+Finds calls to STL library iterator algorithms that could be replaced with
 LLVM range-based algorithms from ``llvm/ADT/STLExtras.h``.
 
 Example
