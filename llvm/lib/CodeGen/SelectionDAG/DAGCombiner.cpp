@@ -11281,6 +11281,11 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
   unsigned BitWidth = VT.getScalarSizeInBits();
   SDLoc DL(N);
 
+  // fold (fshl/fshr C0, C1, C2) -> C3
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(N->getOpcode(), DL, VT, {N0, N1, N2}))
+    return C;
+
   // fold (fshl N0, N1, 0) -> N0
   // fold (fshr N0, N1, 0) -> N1
   if (isPowerOf2_32(BitWidth))
