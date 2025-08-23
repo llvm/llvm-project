@@ -1243,35 +1243,72 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
     LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
+
+    // Handle negative upper bound - loop doesn't execute.
+    if (SE->isKnownNegative(UpperBound)) {
+      LLVM_DEBUG(dbgs() << "\t    Negative upper bound - no dependence\n");
+      ++StrongSIVindependence;
+      ++StrongSIVsuccesses;
+      return true;
+    }
+
     const SCEV *AbsDelta =
         SE->isKnownNonNegative(Delta) ? Delta : SE->getNegativeSCEV(Delta);
     const SCEV *AbsCoeff =
         SE->isKnownNonNegative(Coeff) ? Coeff : SE->getNegativeSCEV(Coeff);
     const SCEV *Product = SE->getMulExpr(UpperBound, AbsCoeff);
+
     if (isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product)) {
       // Check if this involves symbolic expressions where we might be too
       // conservative.
       if (isa<SCEVUnknown>(Delta) || isa<SCEVUnknown>(Coeff) ||
           !isa<SCEVConstant>(AbsDelta) || !isa<SCEVConstant>(Product)) {
-        // For symbolic expressions, add runtime assumption rather than
-        // rejecting.
-        const SCEVPredicate *BoundPred =
-            SE->getComparePredicate(ICmpInst::ICMP_SLE, AbsDelta, Product);
-        if (UnderRuntimeAssumptions) {
-          SmallVector<const SCEVPredicate *, 4> NewPreds(
-              Assumptions.getPredicates());
-          NewPreds.push_back(BoundPred);
-          const_cast<DependenceInfo *>(this)->Assumptions =
-              SCEVUnionPredicate(NewPreds, *SE);
-          LLVM_DEBUG(dbgs() << "\t    Added runtime bound assumption\n");
+        // Check if the assumption would be meaningful and not trivially
+        // impossible. For relationships like Delta=n-m, UpperBound=m-n-1, the
+        // assumption |n-m| <= (m-n-1) can be impossible (e.g., 0 <= -1 when
+        // n=m).
+        bool MeaningfulAssumption = true;
+
+        // Detect cases where Delta and UpperBound have inverse relationships
+        // that could lead to impossible assumptions.
+        if (isa<SCEVAddExpr>(Delta) && isa<SCEVAddExpr>(UpperBound)) {
+          // Look for patterns where UpperBound = -Delta - 1 (or similar).
+          const SCEV *NegDelta = SE->getNegativeSCEV(Delta);
+          const SCEV *NegDeltaMinusOne =
+              SE->getAddExpr(NegDelta, SE->getConstant(Delta->getType(), -1));
+          if (UpperBound == NegDeltaMinusOne) {
+            MeaningfulAssumption = false;
+            LLVM_DEBUG(dbgs() << "\t    Detected inverse relationship - "
+                                 "assumption would be impossible\n");
+          }
+        }
+
+        if (MeaningfulAssumption && !SE->isKnownNonPositive(Product)) {
+          // For symbolic expressions, add runtime assumption rather than
+          // rejecting.
+          const SCEVPredicate *BoundPred =
+              SE->getComparePredicate(ICmpInst::ICMP_SLE, AbsDelta, Product);
+          if (UnderRuntimeAssumptions) {
+            SmallVector<const SCEVPredicate *, 4> NewPreds(
+                Assumptions.getPredicates());
+            NewPreds.push_back(BoundPred);
+            const_cast<DependenceInfo *>(this)->Assumptions =
+                SCEVUnionPredicate(NewPreds, *SE);
+            LLVM_DEBUG(dbgs() << "\t    Added runtime bound assumption\n");
+          } else {
+            // Cannot add runtime assumptions, let more complex tests try.
+            LLVM_DEBUG(dbgs() << "\t    Would need runtime bound assumption "
+                                 "but not allowed. Failing this test.\n");
+            return false;
+          }
         } else {
-          // Cannot add runtime assumptions, let more complex tests try.
-          LLVM_DEBUG(dbgs() << "\t    Would need runtime bound assumption but "
-                               "not allowed. Failing this test.\n");
+          LLVM_DEBUG(dbgs() << "\t    Cannot add meaningful assumption\n");
+          // When bound check fails and we can't add meaningful assumptions,
+          // this test cannot handle this case reliably.
           return false;
         }
       } else {
-        // Distance definitely greater than trip count - no dependence
+        // Distance definitely greater than trip count - no dependence.
         ++StrongSIVindependence;
         ++StrongSIVsuccesses;
         return true;
@@ -2189,8 +2226,39 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
   const SCEV *N2 = collectUpperBound(Loop2, A1->getType());
   LLVM_DEBUG(if (N1) dbgs() << "\t    N1 = " << *N1 << "\n");
   LLVM_DEBUG(if (N2) dbgs() << "\t    N2 = " << *N2 << "\n");
+
   const SCEV *C2_C1 = SE->getMinusSCEV(C2, C1);
   const SCEV *C1_C2 = SE->getMinusSCEV(C1, C2);
+
+  // Check for negative or problematic upper bounds
+  auto CheckUpperBound = [&](const SCEV *N, const SCEV *Delta,
+                             const char *Name) -> bool {
+    if (!N)
+      // No bound to check.
+      return true;
+
+    if (SE->isKnownNegative(N)) {
+      LLVM_DEBUG(dbgs() << "\t    " << Name
+                        << " is negative - analysis unreliable\n");
+      return false;
+    }
+
+    // Check for degenerate cases where upper bounds are too close to the delta
+    // values. This can happen when N is an expression like (Delta - 1), leading
+    // to trivially true comparisons like Delta > (Delta - 1).
+    const SCEV *NPlusOne = SE->getAddExpr(N, SE->getOne(N->getType()));
+    if (Delta == NPlusOne) {
+      LLVM_DEBUG(dbgs() << "\t    Degenerate case: Delta == " << Name
+                        << "+1 - analysis unreliable\n");
+      return false;
+    }
+    // Bound is OK.
+    return true;
+  };
+
+  if (!CheckUpperBound(N1, C2_C1, "N1") || !CheckUpperBound(N2, C1_C2, "N2"))
+    return false;
+
   LLVM_DEBUG(dbgs() << "\t    C2 - C1 = " << *C2_C1 << "\n");
   LLVM_DEBUG(dbgs() << "\t    C1 - C2 = " << *C1_C2 << "\n");
   if (SE->isKnownNonNegative(A1)) {
