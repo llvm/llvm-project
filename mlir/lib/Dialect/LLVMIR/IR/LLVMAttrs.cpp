@@ -374,6 +374,40 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
       getAttributeName());
 }
 
+FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
+  if (auto stringKey = dyn_cast<StringAttr>(key)) {
+    if (contains(stringKey))
+      return UnitAttr::get(getContext());
+
+    if (contains((std::string("+") + stringKey.strref()).str()))
+      return BoolAttr::get(getContext(), true);
+
+    if (contains((std::string("-") + stringKey.strref()).str()))
+      return BoolAttr::get(getContext(), false);
+  }
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAttr
+//===----------------------------------------------------------------------===//
+
+FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
+  if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
+    if (stringAttrKey.getValue() == "triple")
+      return getTriple();
+    if (stringAttrKey.getValue() == "chip")
+      return getChip();
+    if (stringAttrKey.getValue() == "features" && getFeatures())
+      return getFeatures();
+  }
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleFlagAttr
+//===----------------------------------------------------------------------===//
+
 LogicalResult
 ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        LLVM::ModFlagBehavior flagBehavior, StringAttr key,
@@ -401,35 +435,4 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return emitError() << "only integer and string values are currently "
                         "supported for unknown key '"
                      << key << "'";
-}
-
-FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
-  if (auto stringKey = dyn_cast<StringAttr>(key)) {
-    if (contains(stringKey))
-      return UnitAttr::get(getContext());
-
-    if (contains((std::string("+") + stringKey.strref()).str()))
-      return BoolAttr::get(getContext(), true);
-
-    if (contains((std::string("-") + stringKey.strref()).str()))
-      return BoolAttr::get(getContext(), false);
-  }
-  return failure();
-}
-
-//===----------------------------------------------------------------------===//
-// LLVM_TargetAttr
-//===----------------------------------------------------------------------===//
-
-FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
-  if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
-    if (stringAttrKey.getValue() == "triple")
-      return getTriple();
-    if (stringAttrKey.getValue() == "chip")
-      return getChip();
-    if (stringAttrKey.getValue() == "features" && getFeatures())
-      return getFeatures();
-  }
-
-  return failure();
 }

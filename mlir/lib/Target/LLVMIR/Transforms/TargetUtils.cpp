@@ -38,8 +38,11 @@ FailureOr<std::unique_ptr<llvm::TargetMachine>>
 getTargetMachine(mlir::LLVM::TargetAttrInterface attr) {
   StringRef triple = attr.getTriple();
   StringRef chipAKAcpu = attr.getChip();
-  std::string features =
-      attr.getFeatures() ? attr.getFeatures().getFeaturesString() : "";
+  // NB: `TargetAttrInterface::getFeatures()` is coarsely typed to work around
+  // cyclic dependency issue in tablegen files.
+  auto featuresAttr =
+      llvm::cast_or_null<LLVM::TargetFeaturesAttr>(attr.getFeatures());
+  std::string features = featuresAttr ? featuresAttr.getFeaturesString() : "";
 
   std::string error;
   const llvm::Target *target =

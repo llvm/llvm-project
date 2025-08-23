@@ -92,13 +92,8 @@ public:
 using cconv::CConv;
 using linkage::Linkage;
 using tailcallkind::TailCallKind;
-
-class TargetFeaturesAttr;
 } // namespace LLVM
 } // namespace mlir
-
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/LLVMIR/LLVMTargetFeaturesAttrDefs.h.inc"
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.h.inc"
 
