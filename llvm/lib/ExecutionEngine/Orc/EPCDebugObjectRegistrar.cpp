@@ -41,8 +41,11 @@ Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
   assert(Result->size() == 1 && "Unexpected number of dylibs in result");
   assert((*Result)[0].size() == 1 &&
          "Unexpected number of addresses in result");
-  assert((*Result)[0][0].has_value() &&
-         "Expected a valid address in the lookup result");
+
+  if (!(*Result)[0][0].has_value())
+    return make_error<StringError>(
+        "Expected a valid address in the lookup result",
+        inconvertibleErrorCode());
 
   ExecutorAddr RegisterAddr = (*Result)[0][0]->getAddress();
   return std::make_unique<EPCDebugObjectRegistrar>(ES, RegisterAddr);
