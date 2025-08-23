@@ -1,20 +1,8 @@
-# RUN: llvm-mc -filetype=obj -triple riscv32 < %s --defsym RV32=1  \
-# RUN:   | llvm-objdump -dr -M no-aliases - \
-# RUN:   | FileCheck %s --check-prefixes=INST,RV32
-# RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
-# RUN:   | llvm-objdump -dr -M no-aliases - \
-# RUN:   | FileCheck %s --check-prefixes=INST,RV64
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+relax < %s --defsym RV32=1  \
-# RUN:   | llvm-objdump -dr -M no-aliases - \
-# RUN:   | FileCheck %s --check-prefixes=INST,RV32,RELAX
-# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+relax < %s \
-# RUN:   | llvm-objdump -dr -M no-aliases - \
-# RUN:   | FileCheck %s --check-prefixes=INST,RV64,RELAX
+# RUN: llvm-mc -filetype=obj -triple riscv32 < %s --defsym RV32=1  | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RV32
+# RUN: llvm-mc -filetype=obj -triple riscv64 < %s | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RV64
 
-# RUN: not llvm-mc -triple riscv32 < %s --defsym RV32=1 --defsym ERR=1 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=ERR
-# RUN: not llvm-mc -triple riscv64 < %s --defsym ERR=1 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=ERR
+# RUN: not llvm-mc -triple riscv32 < %s --defsym RV32=1 --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR
+# RUN: not llvm-mc -triple riscv64 < %s --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR
 
 start:                                  # @start
 # %bb.0:                                # %entry
@@ -22,11 +10,9 @@ start:                                  # @start
 	auipc a0, %tlsdesc_hi(a-4)
 	# INST: auipc a0, 0x0
 	# INST-NEXT: R_RISCV_TLSDESC_HI20 a-0x4
-	# RELAX-NEXT: R_RISCV_RELAX
 	auipc	a0, %tlsdesc_hi(unspecified)
 	# INST-NEXT: auipc a0, 0x0
 	# INST-NEXT: R_RISCV_TLSDESC_HI20 unspecified
-	# RELAX-NEXT: R_RISCV_RELAX
 .ifdef RV32
 	lw	a1, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a0)
 	# RV32: lw a1, 0x0(a0)
@@ -36,15 +22,12 @@ start:                                  # @start
 	# RV64: ld a1, 0x0(a0)
 	# RV64-NEXT: R_RISCV_TLSDESC_LOAD_LO12 .Ltlsdesc_hi0
 .endif
-	# RELAX-NEXT: R_RISCV_RELAX
 	addi	a0, a0, %tlsdesc_add_lo(.Ltlsdesc_hi0)
 	# INST: addi a0, a0, 0x0
 	# INST-NEXT: R_RISCV_TLSDESC_ADD_LO12 .Ltlsdesc_hi0
-	# RELAX-NEXT: R_RISCV_RELAX
 	jalr	t0, 0(a1), %tlsdesc_call(.Ltlsdesc_hi0)
 	# INST-NEXT: jalr t0, 0x0(a1)
 	# INST-NEXT: R_RISCV_TLSDESC_CALL .Ltlsdesc_hi0
-	# RELAX-NEXT: R_RISCV_RELAX
 	add	a0, a0, tp
 	# INST-NEXT: add a0, a0, tp
 	ret

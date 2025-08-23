@@ -659,10 +659,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       break;
     case ELF::R_RISCV_GOT_HI20:
     case ELF::R_RISCV_TPREL_HI20:
-    case ELF::R_RISCV_TLSDESC_HI20:
-    case ELF::R_RISCV_TLSDESC_LOAD_LO12:
-    case ELF::R_RISCV_TLSDESC_ADD_LO12:
-    case ELF::R_RISCV_TLSDESC_CALL:
       RelaxCandidate = true;
       break;
     }
