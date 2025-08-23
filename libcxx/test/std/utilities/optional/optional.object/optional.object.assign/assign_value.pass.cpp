@@ -250,6 +250,37 @@ constexpr T pr38638(T v)
   return *o + 2;
 }
 
+#if TEST_STD_VER >= 26
+
+template <typename T, std::remove_reference_t<T> _Val>
+constexpr void test_with_ref() {
+  T t{_Val};
+  { // to empty
+    optional<T&> opt;
+    opt = t;
+    assert(static_cast<bool>(opt) == true);
+    assert(*opt == t);
+  }
+  { // to existing
+    optional<T&> opt{t};
+    opt = t;
+    assert(static_cast<bool>(opt) == true);
+    assert(*opt == t);
+  }
+  { // test default argument
+    optional<T&> opt;
+    opt = {t};
+    assert(static_cast<bool>(opt) == true);
+    assert(*opt == t);
+  }
+  { // test default argument
+    optional<T&> opt{t};
+    opt = {};
+    assert(static_cast<bool>(opt) == false);
+  }
+}
+#endif 
+
 
 int main(int, char**)
 {
@@ -281,5 +312,8 @@ int main(int, char**)
 
     static_assert(pr38638(3) == 5, "");
 
-  return 0;
+#if TEST_STD_VER >= 26
+    test_with_ref<int, 3>();
+#endif
+    return 0;
 }

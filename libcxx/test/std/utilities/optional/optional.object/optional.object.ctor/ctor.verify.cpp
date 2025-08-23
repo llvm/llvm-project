@@ -24,7 +24,11 @@ struct NonDestructible { ~NonDestructible() = delete; };
 int main(int, char**)
 {
     {
+#if TEST_STD_VER >= 26
+    std::optional<int&&> opt2;         // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with an rvalue reference type is ill-formed}}
+#else     
     std::optional<char &> o1;          // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with a reference type is ill-formed}}
+#endif 
     std::optional<NonDestructible> o2; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
     std::optional<char[20]> o3;        // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with an array type is ill-formed}}
     }
