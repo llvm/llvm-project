@@ -105,13 +105,39 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
       return rewriter.notifyMatchFailure(
           op, "requires elementwise op on ranked tensors");
 
-    auto rank = cast<RankedTensorType>(op->getResult(0).getType()).getRank();
-    SmallVector<AffineMap, 3> indexingMaps(
-        op->getNumResults() + op->getNumOperands(),
-        rewriter.getMultiDimIdentityMap(rank));
-    SmallVector<utils::IteratorType, 6> iteratorTypes(
+    auto resTy = cast<RankedTensorType>(op->getResult(0).getType());
+    auto rank = resTy.getRank();
+
+    // Maps: identity for tensors (rank > 0), scalar map for scalars/rank-0.
+    AffineMap scalarMap = AffineMap::get(/*dimCount=*/rank, /*symbolCount=*/0,
+                                         /*results=*/{}, rewriter.getContext());
+    AffineMap idMap = rewriter.getMultiDimIdentityMap(rank);
+
+    // Create indexing maps: one per operand, one per result.
+    SmallVector<AffineMap, 6> indexingMaps;
+    indexingMaps.reserve(op->getNumOperands() + op->getNumResults());
+
+    for (Value v : op->getOperands()) {
+      Type ty = v.getType();
+      if (isScalarLike(ty))
+        indexingMaps.push_back(scalarMap);
+      else if (auto rt = dyn_cast<RankedTensorType>(ty)) {
+        indexingMaps.push_back(idMap);
+      } else
+        return rewriter.notifyMatchFailure(
+            op,
+            "unsupported operand type (expected scalar-like or ranked tensor)");
+    }
+
+    for (Value r : op->getResults()) {
+      (void)r;
+      indexingMaps.push_back(idMap); // results use identity map.
+    }
+
+    SmallVector<utils::IteratorType, 4> iteratorTypes(
         rank, utils::IteratorType::parallel);
-    auto outputs = getOrCreateOperandsMatchingResultTypes(rewriter, op);
+    SmallVector<Value, 2> outputs =
+        getOrCreateOperandsMatchingResultTypes(rewriter, op);
     rewriter.replaceOpWithNewOp<linalg::GenericOp>(
         op, /*resultTensorTypes=*/op->getResultTypes(),
         /*inputs=*/op->getOperands(),
@@ -120,14 +146,14 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
         /*iteratorTypes=*/iteratorTypes,
         /*bodyBuilder=*/
         [&](OpBuilder &builder, Location loc, ValueRange regionArgs) {
-          auto resultTypes = llvm::to_vector<6>(
+          SmallVector<Type> resultEltTys = llvm::to_vector<6>(
               llvm::map_range(op->getResultTypes(), [](Type type) {
                 return cast<TensorType>(type).getElementType();
               }));
-          auto *scalarOp =
+          Operation *scalarOp =
               builder.create(loc, op->getName().getIdentifier(),
                              regionArgs.take_front(op->getNumOperands()),
-                             resultTypes, op->getAttrs());
+                             resultEltTys, op->getAttrs());
           linalg::YieldOp::create(builder, loc, scalarOp->getResults());
         });
     return success();
