@@ -366,7 +366,7 @@ bool llvm::isPhysRegUsedAfter(Register Reg, MachineBasicBlock::iterator MBI) {
   // If we hit the end of the block, check whether Reg is live into a
   //  successor.
   for (const auto &LO : MBB->liveouts())
-    if (LO.PhysReg == MCRegister(Reg) && LO.LaneMask.any())
+    if (LO.PhysReg == Reg.asMCReg() && LO.LaneMask.any())
       return true;
 
   return false;
