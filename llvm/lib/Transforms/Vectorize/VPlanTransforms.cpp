@@ -832,8 +832,7 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
                                VPBlockBase *PredVPBB, VPValue *Op,
                                DenseMap<VPValue *, VPValue *> &EndValues) {
   VPValue *Incoming;
-  if (!match(Op, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                     m_VPValue(Incoming))))
+  if (!match(Op, m_ExtractLastElement(m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming);
@@ -1173,8 +1172,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
 
   // Look through ExtractLastElement (BuildVector ....).
-  if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                    m_BuildVector()))) {
+  if (match(&R, m_ExtractLastElement(m_BuildVector()))) {
     auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
     Def->replaceAllUsesWith(
         BuildVector->getOperand(BuildVector->getNumOperands() - 1));
@@ -1228,15 +1226,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (match(Def, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                     m_Broadcast(m_VPValue(A))))) {
+  if (match(Def, m_ExtractLastElement(m_Broadcast(m_VPValue(A))))) {
     Def->replaceAllUsesWith(A);
     return;
   }
 
   VPInstruction *OpVPI;
-  if (match(Def, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                     m_VPInstruction(OpVPI))) &&
+  if (match(Def, m_ExtractLastElement(m_VPInstruction(OpVPI))) &&
       OpVPI->isVectorToScalar()) {
     Def->replaceAllUsesWith(OpVPI);
     return;
