@@ -21,6 +21,9 @@ namespace clang::tidy::google::readability {
 class AvoidUnderscoreInGoogletestNameCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
