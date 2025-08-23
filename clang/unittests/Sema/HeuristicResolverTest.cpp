@@ -29,7 +29,7 @@ MATCHER_P2(matchAdapter, MatcherForElement, MatchFunction, "matchAdapter") {
 
 template <typename InputNode>
 using ResolveFnT = std::function<std::vector<const NamedDecl *>(
-    const HeuristicResolver *, const InputNode *)>;
+    const HeuristicResolver *, InputNode)>;
 
 // Test heuristic resolution on `Code` using the resolution procedure
 // `ResolveFn`, which takes a `HeuristicResolver` and an input AST node of type
@@ -37,8 +37,9 @@ using ResolveFnT = std::function<std::vector<const NamedDecl *>(
 // `InputMatcher` should be an AST matcher that matches a single node to pass as
 // input to `ResolveFn`, bound to the ID "input". `OutputMatchers` should be AST
 // matchers that each match a single node, bound to the ID "output".
-template <typename InputNode, typename InputMatcher, typename... OutputMatchers>
-void expectResolution(llvm::StringRef Code, ResolveFnT<InputNode> ResolveFn,
+template <typename InputNode, typename ParamT, typename InputMatcher,
+          typename... OutputMatchers>
+void expectResolution(llvm::StringRef Code, ResolveFnT<ParamT> ResolveFn,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
   auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
   auto &Ctx = TU->getASTContext();
@@ -59,7 +60,11 @@ void expectResolution(llvm::StringRef Code, ResolveFnT<InputNode> ResolveFn,
   };
 
   HeuristicResolver H(Ctx);
-  auto Results = ResolveFn(&H, Input);
+  std::vector<const NamedDecl *> Results;
+  if constexpr (std::is_pointer_v<ParamT>)
+    Results = ResolveFn(&H, Input);
+  else
+    Results = ResolveFn(&H, *Input);
   EXPECT_THAT(Results, ElementsAre(matchAdapter(OMS, OutputNodeMatches)...));
 }
 
@@ -71,8 +76,8 @@ void expectResolution(llvm::StringRef Code,
                           HeuristicResolver::*ResolveFn)(const InputNode *)
                           const,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
-  expectResolution(Code, ResolveFnT<InputNode>(std::mem_fn(ResolveFn)), IM,
-                   OMS...);
+  expectResolution<InputNode>(
+      Code, ResolveFnT<const InputNode *>(std::mem_fn(ResolveFn)), IM, OMS...);
 }
 
 TEST(HeuristicResolver, MemberExpr) {
@@ -643,15 +648,16 @@ TEST(HeuristicResolver, NestedNameSpecifier) {
   // expected by expectResolution() (returning a vector of decls).
   ResolveFnT<NestedNameSpecifier> ResolveFn =
       [](const HeuristicResolver *H,
-         const NestedNameSpecifier *NNS) -> std::vector<const NamedDecl *> {
+         NestedNameSpecifier NNS) -> std::vector<const NamedDecl *> {
     return {H->resolveNestedNameSpecifierToType(NNS)->getAsCXXRecordDecl()};
   };
-  expectResolution(Code, ResolveFn,
-                   nestedNameSpecifier(hasPrefix(specifiesType(hasDeclaration(
-                                           classTemplateDecl(hasName("A"))))))
-                       .bind("input"),
-                   classTemplateDecl(has(cxxRecordDecl(
-                       has(cxxRecordDecl(hasName("B")).bind("output"))))));
+  expectResolution<NestedNameSpecifier>(
+      Code, ResolveFn,
+      nestedNameSpecifier(hasPrefix(specifiesType(
+                              hasDeclaration(classTemplateDecl(hasName("A"))))))
+          .bind("input"),
+      classTemplateDecl(
+          has(cxxRecordDecl(has(cxxRecordDecl(hasName("B")).bind("output"))))));
 }
 
 TEST(HeuristicResolver, TemplateSpecializationType) {

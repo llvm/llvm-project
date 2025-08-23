@@ -59,6 +59,6 @@ namespace TypoCorrection {
   int A<T>::template typo<int>::* f();
 
   template<typename T>
-  int A<T>::typo<int>::* g(); // expected-error {{no template named 'typo' in 'A<T>'; did you mean 'Typo'?}}
+  int A<T>::typo<int>::* g(); // expected-error {{no template named 'typo' in 'TypoCorrection::A<T>'; did you mean 'Typo'?}}
                               // expected-error@-1 {{expected unqualified-id}}
 }

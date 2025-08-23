@@ -109,7 +109,7 @@ void bad_news(int *ip)
 #elif __cplusplus <= 201103L
   // expected-error@-4 {{array size expression must have integral or unscoped enumeration type, not 'double'}}
 #else
-  // expected-warning@-6 {{implicit conversion from 'double' to 'unsigned int' changes value from 1.1 to 1}}
+  // expected-warning@-6 {{implicit conversion from 'double' to '__size_t' (aka 'unsigned int') changes value from 1.1 to 1}}
 #endif
 
   (void)new int[1][i];  // expected-note {{read of non-const variable 'i' is not allowed in a constant expression}}
@@ -168,6 +168,47 @@ void no_matching_placement_new() {
   (void)new(buffer) X; // expected-error {{no matching 'operator new' function for non-allocating placement new expression; include <new>}}
   (void)new(+buffer) X; // expected-error {{no matching 'operator new' function for non-allocating placement new expression; include <new>}}
   (void)new(&buffer) X; // expected-error {{no matching 'operator new' function for non-allocating placement new expression; include <new>}}
+}
+
+void const_placement_new() {
+  const int value = 42;
+  (void)new(&value) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+  struct X { int n; };
+  const X cx = {5};
+  (void)new(&cx) X{10}; // expected-error {{placement new expression with a const-qualified argument of type 'const X *' is not allowed}}
+  const X* const cx2 = 0;
+  (void)new(cx2) X{10}; // expected-error {{placement new expression with a const-qualified argument of type 'const X *const' is not allowed}}
+  const int arr[1] = {1};
+  (void)new(&arr[0]) int(10); // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+  const void* ptr = 0;
+  (void)new(ptr) int; // expected-error {{placement new expression with a const-qualified argument of type 'const void *' is not allowed}}
+  const int complex_arr[5][3] = {};
+  (void)new(&complex_arr[0][0]) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+  (void)new(complex_arr[0]) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int[3]' is not allowed}}
+  const char str[] = "test";
+  (void)new(str) int; // expected-error {{placement new expression with a const-qualified argument of type 'const char[5]' is not allowed}}
+  const int* const* ptr_to_const_ptr_to_const = 0;
+  (void)new(ptr_to_const_ptr_to_const) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *const *' is not allowed}}
+  int* const* ptr_to_const_ptr = 0;
+  (void)new(ptr_to_const_ptr) int; // expected-error {{placement new expression with a const-qualified argument of type 'int *const *' is not allowed}}
+  typedef const int* ConstIntPtr;
+  ConstIntPtr cip = 0;
+  (void)new(cip) int; // expected-error {{placement new expression with a const-qualified argument of type 'ConstIntPtr' (aka 'const int *') is not allowed}}
+  typedef const void* ConstVoidPtr;
+}
+
+void const_placement_new_param(const void* ptr) {
+  new (ptr) int; // expected-error {{placement new expression with a const-qualified argument of type 'const void *' is not allowed}}
+}
+
+template<typename T>
+void const_template_placement_new(const T* storage) {
+  (void)new(storage) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+}
+
+void const_template_placement_new_instantiation() {
+  int x = 5;
+  const_template_placement_new(&x); // expected-note {{in instantiation of function template specialization 'const_template_placement_new<int>' requested here}}
 }
 
 void good_deletes()
@@ -680,19 +721,7 @@ int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
 #if __cplusplus >= 201402L && !defined(NEW_INTERP)
 // expected-error@-2 {{array size is not a constant expression}}
 // expected-note@-3 {{cannot refer to element 12 of non-array}}
-#elif __cplusplus < 201103L && !defined(NEW_INTERP)
+#elif __cplusplus < 201103L
 // expected-error@-5 {{cannot allocate object of variably modified type}}
 // expected-warning@-6 {{variable length arrays in C++ are a Clang extension}}
-#endif
-#ifdef NEW_INTERP
-#if __cplusplus >= 201402L
-// expected-error@-10 {{array size is not a constant expression}}
-// expected-note@-11 {{cannot refer to element 12 of non-array}}
-#elif __cplusplus >= 201103L
-// expected-error@-13 {{only the first dimension of an allocated array may have dynamic size}}
-// expected-note@-14 {{cannot refer to element 12 of non-array}}
-#else
-// expected-error@-16 {{only the first dimension of an allocated array may have dynamic size}}
-// expected-note@-17 {{cannot refer to element 12 of non-array}}
-#endif
 #endif
