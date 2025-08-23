@@ -1282,7 +1282,40 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
       Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
     ++StrongSIVsuccesses;
   } else if (Delta->isZero()) {
-    // since 0/X == 0
+    // Check if coefficient could be zero. If so, 0/0 is undefined and we
+    // cannot conclude that only same-iteration dependencies exist.
+    // When coeff=0, all iterations access the same location.
+    if (isa<SCEVUnknown>(Coeff) && !SE->isKnownNonZero(Coeff)) {
+      // Use SCEV range analysis to prove coefficient != 0 in loop context.
+      const SCEV *Zero = SE->getZero(Coeff->getType());
+
+      // Ask SCEV's range analysis if it can prove Coeff != Zero.
+      if (SE->isKnownPredicate(ICmpInst::ICMP_NE, Coeff, Zero)) {
+        LLVM_DEBUG(
+            dbgs()
+            << "\t    Coefficient proven non-zero by SCEV range analysis\n");
+      } else {
+        // Cannot prove at compile time, would need runtime assumption.
+        if (UnderRuntimeAssumptions) {
+          const SCEVPredicate *Pred =
+              SE->getComparePredicate(ICmpInst::ICMP_NE, Coeff, Zero);
+          SmallVector<const SCEVPredicate *, 4> NewPreds(
+              Assumptions.getPredicates());
+          NewPreds.push_back(Pred);
+          const_cast<DependenceInfo *>(this)->Assumptions =
+              SCEVUnionPredicate(NewPreds, *SE);
+          LLVM_DEBUG(dbgs() << "\t    Added runtime assumption: " << *Coeff
+                            << " != 0\n");
+        } else {
+          // Cannot add runtime assumptions, this test cannot handle this case.
+          // Let more complex tests try.
+          LLVM_DEBUG(dbgs() << "\t    Would need runtime assumption " << *Coeff
+                            << " != 0, but not allowed. Failing this test.\n");
+          return false;
+        }
+      }
+    }
+    // since 0/X == 0 (where X is known non-zero)
     Result.DV[Level].Distance = Delta;
     NewConstraint.setDistance(Delta, CurLoop);
     Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
