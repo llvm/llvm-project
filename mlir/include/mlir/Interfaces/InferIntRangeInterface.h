@@ -199,12 +199,6 @@ void defaultInferResultRangesFromOptional(InferIntRangeInterface interface,
                                           ArrayRef<ConstantIntRanges> argRanges,
                                           SetIntRangeFn setResultRanges);
 
-/// Default implementation of `inferResultRangesOrPoison` which propagates
-/// poison and dispatches to the `inferResultRangesFromOptional`.
-void defaultInferResultRangesOrPoison(InferIntRangeInterface interface,
-                                      ArrayRef<IntegerValueRange> argRanges,
-                                      SetIntLatticeFn setResultRanges);
-
 } // end namespace intrange::detail
 } // end namespace mlir
 
