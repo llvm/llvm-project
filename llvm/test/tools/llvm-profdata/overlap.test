@@ -9,7 +9,7 @@ MAINFUNC:   # of edge counters overlap: 2
 MAINFUNC:   Edge profile overlap: 100.000%
 MAINFUNC:   Edge profile base count sum: 200000
 MAINFUNC:   Edge profile test count sum: 20000
-OVERLAP: Profile overlap infomation for base_profile: {{.*}} and test_profile:
+OVERLAP: Profile overlap information for base_profile: {{.*}} and test_profile:
 OVERLAP: Program level:
 OVERLAP:   # of functions overlap: 2
 OVERLAP:   # of functions mismatch: 1
