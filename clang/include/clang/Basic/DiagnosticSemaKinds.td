@@ -13931,6 +13931,10 @@ def note_acc_reduction_combiner_forming
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def warn_amdgcn_builtin_arg_truncation
+    : Warning<"the %0-bit argument will be truncated to %1 bits in this call "
+              "to %2">,
+      InGroup<DiagGroup<"amdgcn-builtin-arg-trunc">>;
 
 def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
 
@@ -13953,4 +13957,5 @@ def err_cuda_device_kernel_launch_not_supported
 def err_cuda_device_kernel_launch_require_rdc
     : Error<"kernel launch from __device__ or __global__ function requires "
             "relocatable device code (i.e. requires -fgpu-rdc)">;
+
 } // end of sema component.

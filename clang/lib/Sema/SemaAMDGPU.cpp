@@ -20,6 +20,48 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include <cstdint>
 
+namespace {
+
+using llvm::StringRef;
+using namespace clang;
+
+/// Validates and coerces the arguments to __builtin_amdgcn_ds_bpermute.
+/// Ensures the first argument (index) is int32 (with truncation warning as
+/// needed), and set the return type to be the same as the second argument
+/// (source).
+bool checkDsBpermuteFunctionCall(Sema &SemaRef, CallExpr *TheCall) {
+  if (SemaRef.checkArgCount(TheCall, 2))
+    return true;
+
+  ASTContext &AstContext = SemaRef.getASTContext();
+
+  const FunctionDecl *FuncDecl = TheCall->getDirectCallee();
+  StringRef BuiltinName = FuncDecl ? FuncDecl->getName()
+                                   : StringRef("__builtin_amdgcn_ds_bpermute");
+
+  Expr *IndexArg = TheCall->getArg(0);
+  QualType Int32Ty = AstContext.IntTy;
+
+  if (AstContext.getTypeSize(IndexArg->getType()) > 32 &&
+      !IndexArg->getType()->isRecordType())
+    SemaRef.Diag(IndexArg->getBeginLoc(),
+                 diag::warn_amdgcn_builtin_arg_truncation)
+        << AstContext.getTypeSize(IndexArg->getType()) << 32 << BuiltinName
+        << IndexArg->getSourceRange();
+
+  ExprResult ConvResult = SemaRef.PerformImplicitConversion(
+      IndexArg, Int32Ty, AssignmentAction::Converting);
+  if (ConvResult.isInvalid())
+    return true;
+
+  TheCall->setArg(0, ConvResult.get());
+  TheCall->setType(TheCall->getArg(1)->getType());
+
+  return false;
+}
+
+} // anonymous namespace
+
 namespace clang {
 
 SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
@@ -331,6 +373,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     }
     return false;
   }
+  case AMDGPU::BI__builtin_amdgcn_ds_bpermute:
+    return checkDsBpermuteFunctionCall(SemaRef, TheCall);
   default:
     return false;
   }

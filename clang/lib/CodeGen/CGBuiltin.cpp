@@ -108,7 +108,7 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     return CGF->EmitPPCBuiltinExpr(BuiltinID, E);
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-    return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E);
+    return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E, ReturnValue);
   case llvm::Triple::systemz:
     return CGF->EmitSystemZBuiltinExpr(BuiltinID, E);
   case llvm::Triple::nvptx:
@@ -127,7 +127,7 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
     if (CGF->getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
-      return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E);
+      return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E, ReturnValue);
     [[fallthrough]];
   case llvm::Triple::spirv:
     return CGF->EmitSPIRVBuiltinExpr(BuiltinID, E);
@@ -6564,7 +6564,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // ReturnValue to be non-null, so that the target-specific emission code can
   // always just emit into it.
   TypeEvaluationKind EvalKind = getEvaluationKind(E->getType());
-  if (EvalKind == TEK_Aggregate && ReturnValue.isNull()) {
+  if ((EvalKind == TEK_Aggregate || EvalKind == TEK_Complex) &&
+      ReturnValue.isNull()) {
     Address DestPtr = CreateMemTemp(E->getType(), "agg.tmp");
     ReturnValue = ReturnValueSlot(DestPtr, false);
   }
@@ -6580,7 +6581,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::getAggregate(ReturnValue.getAddress(),
                                   ReturnValue.isVolatile());
     case TEK_Complex:
-      llvm_unreachable("No current target builtin returns complex");
+      // Build an LValue for the provided return slot and load the complex
+      // result.
+      LValue LV = MakeAddrLValue(ReturnValue.getAddress(), E->getType());
+      ComplexPairTy C = EmitLoadOfComplex(LV, E->getExprLoc());
+      return RValue::getComplex(C);
     }
     llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
   }
