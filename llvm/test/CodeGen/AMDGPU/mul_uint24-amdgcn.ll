@@ -310,8 +310,8 @@ define amdgpu_kernel void @test_umul24_i8_vgpr(ptr addrspace(1) %out, ptr addrsp
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
-; SI-NEXT:    s_mov_b32 s14, 0
 ; SI-NEXT:    v_mov_b32_e32 v4, 0
+; SI-NEXT:    s_mov_b32 s14, 0
 ; SI-NEXT:    s_mov_b32 s15, s11
 ; SI-NEXT:    v_mov_b32_e32 v2, v4
 ; SI-NEXT:    s_mov_b64 s[6:7], s[14:15]
