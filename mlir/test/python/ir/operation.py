@@ -909,6 +909,11 @@ def testCapsuleConversions():
         m2 = Operation._CAPICreate(m_capsule)
         assert not m2 is m
         assert m2 == m
+        # Gc and verify destructed.
+        m = None
+        m_capsule = None
+        m2 = None
+        gc.collect()
 
 
 # CHECK-LABEL: TEST: testOperationErase
