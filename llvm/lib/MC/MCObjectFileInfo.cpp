@@ -776,10 +776,18 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       ".debug_loc.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                             COFF::IMAGE_SCN_MEM_READ);
+  DwarfLoclistsDWOSection = Ctx->getCOFFSection(
+      ".debug_loclists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                 COFF::IMAGE_SCN_MEM_READ);
   DwarfStrOffDWOSection = Ctx->getCOFFSection(
       ".debug_str_offsets.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                                     COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                     COFF::IMAGE_SCN_MEM_READ);
+  DwarfRnglistsDWOSection = Ctx->getCOFFSection(
+      ".debug_rnglists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                 COFF::IMAGE_SCN_MEM_READ);
   DwarfAddrSection = Ctx->getCOFFSection(
       ".debug_addr", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
