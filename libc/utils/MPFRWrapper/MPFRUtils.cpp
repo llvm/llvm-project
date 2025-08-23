@@ -39,6 +39,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.asin();
   case Operation::Asinh:
     return mpfrInput.asinh();
+  case Operation::Asinpi:
+    return mpfrInput.asinpi();
   case Operation::Atan:
     return mpfrInput.atan();
   case Operation::Atanh:
@@ -486,6 +488,21 @@ explain_ternary_operation_one_output_error(Operation,
                                            float16, double, RoundingMode);
 #endif
 
+template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<float> &, bfloat16, double, RoundingMode);
+template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<double> &, bfloat16, double, RoundingMode);
+template void
+explain_ternary_operation_one_output_error(Operation,
+                                           const TernaryInput<long double> &,
+                                           bfloat16, double, RoundingMode);
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    defined(LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE)
+template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<float128> &, bfloat16, double, RoundingMode);
+#endif // defined(LIBC_TYPES_HAS_FLOAT128) &&
+       // defined(LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE)
+
 template <typename InputType, typename OutputType>
 bool compare_unary_operation_single_output(Operation op, InputType input,
                                            OutputType libc_result,
@@ -733,6 +750,27 @@ compare_ternary_operation_one_output(Operation,
                                      const TernaryInput<long double> &, float16,
                                      double, RoundingMode);
 #endif
+
+template bool compare_ternary_operation_one_output(Operation,
+                                                   const TernaryInput<float> &,
+                                                   bfloat16, double,
+                                                   RoundingMode);
+template bool compare_ternary_operation_one_output(Operation,
+                                                   const TernaryInput<double> &,
+                                                   bfloat16, double,
+                                                   RoundingMode);
+template bool
+compare_ternary_operation_one_output(Operation,
+                                     const TernaryInput<long double> &,
+                                     bfloat16, double, RoundingMode);
+
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    defined(LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE)
+template bool
+compare_ternary_operation_one_output(Operation, const TernaryInput<float128> &,
+                                     bfloat16, double, RoundingMode);
+#endif // defined(LIBC_TYPES_HAS_FLOAT128) &&
+       // defined(LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE)
 
 } // namespace internal
 

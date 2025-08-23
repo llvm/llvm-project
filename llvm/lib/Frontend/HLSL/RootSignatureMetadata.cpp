@@ -15,6 +15,7 @@
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -119,9 +120,7 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Descriptor.Type)),
-                      dxbc::getResourceClasses());
+  StringRef ResName = dxil::getResourceClassName(Descriptor.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   SmallString<7> Name({"Root", ResName});
   Metadata *Operands[] = {
@@ -161,9 +160,7 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Clause.Type)),
-                      dxbc::getResourceClasses());
+  StringRef ResName = dxil::getResourceClassName(Clause.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
       MDString::get(Ctx, ResName),

@@ -459,8 +459,7 @@ public:
   }
 
   virtual InstructionCost
-  getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   ArrayRef<Type *> Tys,
+  getOperandsScalarizationOverhead(ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind) const {
     return 0;
   }
@@ -810,6 +809,13 @@ public:
   }
 
   virtual InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const {
+    return 1;
+  }
+
+  virtual InstructionCost
   getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                             const APInt &DemandedDstElts,
                             TTI::TargetCostKind CostKind) const {
@@ -937,8 +943,10 @@ public:
   // Assume that we have a register of the right size for the type.
   virtual unsigned getNumberOfParts(Type *Tp) const { return 1; }
 
-  virtual InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *,
-                                                    const SCEV *) const {
+  virtual InstructionCost getAddressComputationCost(Type *PtrTy,
+                                                    ScalarEvolution *,
+                                                    const SCEV *,
+                                                    TTI::TargetCostKind) const {
     return 0;
   }
 

@@ -2576,18 +2576,12 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   }
 
   TargetLowering::ArgListTy Args;
-  auto AddArgListEntry = [&](SDValue Node, Type *Ty) {
-    TargetLowering::ArgListEntry Entry{};
-    Entry.Ty = Ty;
-    Entry.Node = Node;
-    Args.push_back(Entry);
-  };
 
   // Pass the arguments.
   for (const SDValue &Op : Node->op_values()) {
     EVT ArgVT = Op.getValueType();
     Type *ArgTy = ArgVT.getTypeForEVT(Ctx);
-    AddArgListEntry(Op, ArgTy);
+    Args.emplace_back(Op, ArgTy);
   }
 
   // Pass the output pointers.
@@ -2599,7 +2593,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     EVT ResVT = Node->getValueType(ResNo);
     SDValue ResultPtr = ST ? ST->getBasePtr() : CreateStackTemporary(ResVT);
     ResultPtrs[ResNo] = ResultPtr;
-    AddArgListEntry(ResultPtr, PointerTy);
+    Args.emplace_back(ResultPtr, PointerTy);
   }
 
   SDLoc DL(Node);
@@ -2608,7 +2602,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   if (VD && VD->isMasked()) {
     EVT MaskVT = TLI->getSetCCResultType(getDataLayout(), Ctx, VT);
     SDValue Mask = getBoolConstant(true, DL, MaskVT, VT);
-    AddArgListEntry(Mask, MaskVT.getTypeForEVT(Ctx));
+    Args.emplace_back(Mask, MaskVT.getTypeForEVT(Ctx));
   }
 
   Type *RetType = CallRetResNo.has_value()
@@ -5460,6 +5454,83 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     }
     return true;
 
+  case ISD::EXTRACT_SUBVECTOR: {
+    SDValue Src = Op.getOperand(0);
+    if (Src.getValueType().isScalableVector())
+      break;
+    uint64_t Idx = Op.getConstantOperandVal(1);
+    unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
+    APInt DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+    return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, PoisonOnly,
+                                            Depth + 1);
+  }
+
+  case ISD::INSERT_SUBVECTOR: {
+    if (Op.getValueType().isScalableVector())
+      break;
+    SDValue Src = Op.getOperand(0);
+    SDValue Sub = Op.getOperand(1);
+    uint64_t Idx = Op.getConstantOperandVal(2);
+    unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+    APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+    APInt DemandedSrcElts = DemandedElts;
+    DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
+
+    if (!!DemandedSubElts && !isGuaranteedNotToBeUndefOrPoison(
+                                 Sub, DemandedSubElts, PoisonOnly, Depth + 1))
+      return false;
+    if (!!DemandedSrcElts && !isGuaranteedNotToBeUndefOrPoison(
+                                 Src, DemandedSrcElts, PoisonOnly, Depth + 1))
+      return false;
+    return true;
+  }
+
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue Src = Op.getOperand(0);
+    auto *IndexC = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT.isFixedLengthVector() && IndexC &&
+        IndexC->getAPIntValue().ult(SrcVT.getVectorNumElements())) {
+      APInt DemandedSrcElts = APInt::getOneBitSet(SrcVT.getVectorNumElements(),
+                                                  IndexC->getZExtValue());
+      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, PoisonOnly,
+                                              Depth + 1);
+    }
+    break;
+  }
+
+  case ISD::INSERT_VECTOR_ELT: {
+    SDValue InVec = Op.getOperand(0);
+    SDValue InVal = Op.getOperand(1);
+    SDValue EltNo = Op.getOperand(2);
+    EVT VT = InVec.getValueType();
+    auto *IndexC = dyn_cast<ConstantSDNode>(EltNo);
+    if (IndexC && VT.isFixedLengthVector() &&
+        IndexC->getAPIntValue().ult(VT.getVectorNumElements())) {
+      if (DemandedElts[IndexC->getZExtValue()] &&
+          !isGuaranteedNotToBeUndefOrPoison(InVal, PoisonOnly, Depth + 1))
+        return false;
+      APInt InVecDemandedElts = DemandedElts;
+      InVecDemandedElts.clearBit(IndexC->getZExtValue());
+      if (!!InVecDemandedElts &&
+          !isGuaranteedNotToBeUndefOrPoison(InVec, InVecDemandedElts,
+                                            PoisonOnly, Depth + 1))
+        return false;
+      return true;
+    }
+    break;
+  }
+
+  case ISD::SCALAR_TO_VECTOR:
+    // Check upper (known undef) elements.
+    if (DemandedElts.ugt(1) && !PoisonOnly)
+      return false;
+    // Check element zero.
+    if (DemandedElts[0] && !isGuaranteedNotToBeUndefOrPoison(
+                               Op.getOperand(0), PoisonOnly, Depth + 1))
+      return false;
+    return true;
+
   case ISD::SPLAT_VECTOR:
     return isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), PoisonOnly,
                                             Depth + 1);
@@ -5480,6 +5551,52 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
                                           PoisonOnly, Depth + 1))
       return false;
     return true;
+  }
+
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+    // Shift amount operand is checked by canCreateUndefOrPoison. So it is
+    // enough to check operand 0 if Op can't create undef/poison.
+    return !canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly,
+                                   /*ConsiderFlags*/ true, Depth) &&
+           isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
+                                            PoisonOnly, Depth + 1);
+
+  case ISD::BSWAP:
+  case ISD::CTPOP:
+  case ISD::BITREVERSE:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::MUL:
+  case ISD::SADDSAT:
+  case ISD::UADDSAT:
+  case ISD::SSUBSAT:
+  case ISD::USUBSAT:
+  case ISD::SSHLSAT:
+  case ISD::USHLSAT:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND:
+  case ISD::TRUNCATE:
+  case ISD::VSELECT: {
+    // If Op can't create undef/poison and none of its operands are undef/poison
+    // then Op is never undef/poison. A difference from the more common check
+    // below, outside the switch, is that we handle elementwise operations for
+    // which the DemandedElts mask is valid for all operands here.
+    return !canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly,
+                                   /*ConsiderFlags*/ true, Depth) &&
+           all_of(Op->ops(), [&](SDValue V) {
+             return isGuaranteedNotToBeUndefOrPoison(V, DemandedElts,
+                                                     PoisonOnly, Depth + 1);
+           });
   }
 
     // TODO: Search for noundef attributes from library functions.
@@ -5547,8 +5664,10 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::ABDS:
   case ISD::SMIN:
   case ISD::SMAX:
+  case ISD::SCMP:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::UCMP:
   case ISD::AND:
   case ISD::XOR:
   case ISD::ROTL:
@@ -5628,7 +5747,11 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FDIV:
   case ISD::FREM:
   case ISD::FCOPYSIGN:
+  case ISD::FMA:
+  case ISD::FMAD:
   case ISD::FP_EXTEND:
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
     // No poison except from flags (which is handled above)
     return false;
 
@@ -7052,6 +7175,45 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     }
   }
 
+  // Handle fshl/fshr special cases.
+  if (Opcode == ISD::FSHL || Opcode == ISD::FSHR) {
+    auto *C1 = dyn_cast<ConstantSDNode>(Ops[0]);
+    auto *C2 = dyn_cast<ConstantSDNode>(Ops[1]);
+    auto *C3 = dyn_cast<ConstantSDNode>(Ops[2]);
+
+    if (C1 && C2 && C3) {
+      if (C1->isOpaque() || C2->isOpaque() || C3->isOpaque())
+        return SDValue();
+      const APInt &V1 = C1->getAPIntValue(), &V2 = C2->getAPIntValue(),
+                  &V3 = C3->getAPIntValue();
+
+      APInt FoldedVal = Opcode == ISD::FSHL ? APIntOps::fshl(V1, V2, V3)
+                                            : APIntOps::fshr(V1, V2, V3);
+      return getConstant(FoldedVal, DL, VT);
+    }
+  }
+
+  // Handle fma/fmad special cases.
+  if (Opcode == ISD::FMA || Opcode == ISD::FMAD) {
+    assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
+    assert(Ops[0].getValueType() == VT && Ops[1].getValueType() == VT &&
+           Ops[2].getValueType() == VT && "FMA types must match!");
+    ConstantFPSDNode *C1 = dyn_cast<ConstantFPSDNode>(Ops[0]);
+    ConstantFPSDNode *C2 = dyn_cast<ConstantFPSDNode>(Ops[1]);
+    ConstantFPSDNode *C3 = dyn_cast<ConstantFPSDNode>(Ops[2]);
+    if (C1 && C2 && C3) {
+      APFloat V1 = C1->getValueAPF();
+      const APFloat &V2 = C2->getValueAPF();
+      const APFloat &V3 = C3->getValueAPF();
+      if (Opcode == ISD::FMAD) {
+        V1.multiply(V2, APFloat::rmNearestTiesToEven);
+        V1.add(V3, APFloat::rmNearestTiesToEven);
+      } else
+        V1.fusedMultiplyAdd(V2, V3, APFloat::rmNearestTiesToEven);
+      return getConstantFP(V1, DL, VT);
+    }
+  }
+
   // This is for vector folding only from here on.
   if (!VT.isVector())
     return SDValue();
@@ -7837,6 +7999,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(N2C->getAPIntValue().getBitWidth() ==
                TLI->getVectorIdxWidth(getDataLayout()) &&
            "Constant index for EXTRACT_SUBVECTOR has an invalid size");
+    assert(N2C->getZExtValue() % VT.getVectorMinNumElements() == 0 &&
+           "Extract index is not a multiple of the output vector length");
 
     // Trivial extraction.
     if (VT == N1VT)
@@ -8012,27 +8176,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
          "Operand is DELETED_NODE!");
   // Perform various simplifications.
   switch (Opcode) {
-  case ISD::FMA:
-  case ISD::FMAD: {
-    assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
-    assert(N1.getValueType() == VT && N2.getValueType() == VT &&
-           N3.getValueType() == VT && "FMA types must match!");
-    ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
-    ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
-    ConstantFPSDNode *N3CFP = dyn_cast<ConstantFPSDNode>(N3);
-    if (N1CFP && N2CFP && N3CFP) {
-      APFloat  V1 = N1CFP->getValueAPF();
-      const APFloat &V2 = N2CFP->getValueAPF();
-      const APFloat &V3 = N3CFP->getValueAPF();
-      if (Opcode == ISD::FMAD) {
-        V1.multiply(V2, APFloat::rmNearestTiesToEven);
-        V1.add(V3, APFloat::rmNearestTiesToEven);
-      } else
-        V1.fusedMultiplyAdd(V2, V3, APFloat::rmNearestTiesToEven);
-      return getConstantFP(V1, DL, VT);
-    }
-    break;
-  }
   case ISD::BUILD_VECTOR: {
     // Attempt to simplify BUILD_VECTOR.
     SDValue Ops[] = {N1, N2, N3};
@@ -8058,12 +8201,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // Use FoldSetCC to simplify SETCC's.
     if (SDValue V = FoldSetCC(VT, N1, N2, cast<CondCodeSDNode>(N3)->get(), DL))
       return V;
-    // Vector constant folding.
-    SDValue Ops[] = {N1, N2, N3};
-    if (SDValue V = FoldConstantArithmetic(Opcode, DL, VT, Ops)) {
-      NewSDValueDbgMsg(V, "New node vector constant folding: ", this);
-      return V;
-    }
     break;
   }
   case ISD::SELECT:
@@ -8197,6 +8334,19 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "the element type of the first operand and result!");
     break;
   }
+  }
+
+  // Perform trivial constant folding for arithmetic operators.
+  switch (Opcode) {
+  case ISD::FMA:
+  case ISD::FMAD:
+  case ISD::SETCC:
+  case ISD::FSHL:
+  case ISD::FSHR:
+    if (SDValue SV =
+            FoldConstantArithmetic(Opcode, DL, VT, {N1, N2, N3}, Flags))
+      return SV;
+    break;
   }
 
   // Memoize node if it doesn't produce a glue result.
@@ -8894,18 +9044,11 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
   if (!LibCallName)
     return {};
 
-  // Emit a library call.
-  auto GetEntry = [](Type *Ty, SDValue &SDV) {
-    TargetLowering::ArgListEntry E;
-    E.Ty = Ty;
-    E.Node = SDV;
-    return E;
-  };
-
   PointerType *PT = PointerType::getUnqual(*getContext());
   TargetLowering::ArgListTy Args = {
-      GetEntry(PT, Mem0), GetEntry(PT, Mem1),
-      GetEntry(getDataLayout().getIntPtrType(*getContext()), Size)};
+      {Mem0, PT},
+      {Mem1, PT},
+      {Size, getDataLayout().getIntPtrType(*getContext())}};
 
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall = false;
@@ -8976,13 +9119,10 @@ SDValue SelectionDAG::getMemcpy(
 
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = PointerType::getUnqual(*getContext());
-  Entry.Node = Dst; Args.push_back(Entry);
-  Entry.Node = Src; Args.push_back(Entry);
-
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Size; Args.push_back(Entry);
+  Type *PtrTy = PointerType::getUnqual(*getContext());
+  Args.emplace_back(Dst, PtrTy);
+  Args.emplace_back(Src, PtrTy);
+  Args.emplace_back(Size, getDataLayout().getIntPtrType(*getContext()));
   // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall = false;
@@ -9020,17 +9160,10 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
                                       MachinePointerInfo SrcPtrInfo) {
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Dst;
-  Args.push_back(Entry);
-
-  Entry.Node = Src;
-  Args.push_back(Entry);
-
-  Entry.Ty = SizeTy;
-  Entry.Node = Size;
-  Args.push_back(Entry);
+  Type *ArgTy = getDataLayout().getIntPtrType(*getContext());
+  Args.emplace_back(Dst, ArgTy);
+  Args.emplace_back(Src, ArgTy);
+  Args.emplace_back(Size, SizeTy);
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -9093,13 +9226,10 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
 
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = PointerType::getUnqual(*getContext());
-  Entry.Node = Dst; Args.push_back(Entry);
-  Entry.Node = Src; Args.push_back(Entry);
-
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Size; Args.push_back(Entry);
+  Type *PtrTy = PointerType::getUnqual(*getContext());
+  Args.emplace_back(Dst, PtrTy);
+  Args.emplace_back(Src, PtrTy);
+  Args.emplace_back(Size, getDataLayout().getIntPtrType(*getContext()));
   // FIXME:  pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
 
@@ -9137,17 +9267,10 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
                                        MachinePointerInfo SrcPtrInfo) {
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Dst;
-  Args.push_back(Entry);
-
-  Entry.Node = Src;
-  Args.push_back(Entry);
-
-  Entry.Ty = SizeTy;
-  Entry.Node = Size;
-  Args.push_back(Entry);
+  Type *IntPtrTy = getDataLayout().getIntPtrType(*getContext());
+  Args.emplace_back(Dst, IntPtrTy);
+  Args.emplace_back(Src, IntPtrTy);
+  Args.emplace_back(Size, SizeTy);
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -9224,28 +9347,20 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
 
   const char *BzeroName = getTargetLoweringInfo().getLibcallName(RTLIB::BZERO);
 
-  // Helper function to create an Entry from Node and Type.
-  const auto CreateEntry = [](SDValue Node, Type *Ty) {
-    TargetLowering::ArgListEntry Entry;
-    Entry.Node = Node;
-    Entry.Ty = Ty;
-    return Entry;
-  };
-
   bool UseBZero = isNullConstant(Src) && BzeroName;
   // If zeroing out and bzero is present, use it.
   if (UseBZero) {
     TargetLowering::ArgListTy Args;
-    Args.push_back(CreateEntry(Dst, PointerType::getUnqual(Ctx)));
-    Args.push_back(CreateEntry(Size, DL.getIntPtrType(Ctx)));
+    Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
+    Args.emplace_back(Size, DL.getIntPtrType(Ctx));
     CLI.setLibCallee(
         TLI->getLibcallCallingConv(RTLIB::BZERO), Type::getVoidTy(Ctx),
         getExternalSymbol(BzeroName, TLI->getPointerTy(DL)), std::move(Args));
   } else {
     TargetLowering::ArgListTy Args;
-    Args.push_back(CreateEntry(Dst, PointerType::getUnqual(Ctx)));
-    Args.push_back(CreateEntry(Src, Src.getValueType().getTypeForEVT(Ctx)));
-    Args.push_back(CreateEntry(Size, DL.getIntPtrType(Ctx)));
+    Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
+    Args.emplace_back(Src, Src.getValueType().getTypeForEVT(Ctx));
+    Args.emplace_back(Size, DL.getIntPtrType(Ctx));
     CLI.setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMSET),
                      Dst.getValueType().getTypeForEVT(Ctx),
                      getExternalSymbol(TLI->getLibcallName(RTLIB::MEMSET),
@@ -9274,18 +9389,9 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
                                       MachinePointerInfo DstPtrInfo) {
   // Emit a library call.
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Entry.Node = Dst;
-  Args.push_back(Entry);
-
-  Entry.Ty = Type::getInt8Ty(*getContext());
-  Entry.Node = Value;
-  Args.push_back(Entry);
-
-  Entry.Ty = SizeTy;
-  Entry.Node = Size;
-  Args.push_back(Entry);
+  Args.emplace_back(Dst, getDataLayout().getIntPtrType(*getContext()));
+  Args.emplace_back(Value, Type::getInt8Ty(*getContext()));
+  Args.emplace_back(Size, SizeTy);
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -13940,10 +14046,7 @@ SDValue SelectionDAG::makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
                                             const SDLoc &DLoc) {
   assert(InChain.getValueType() == MVT::Other && "Expected token chain");
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Node = Ptr;
-  Entry.Ty = Ptr.getValueType().getTypeForEVT(*getContext());
-  Args.push_back(Entry);
+  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   RTLIB::Libcall LC = static_cast<RTLIB::Libcall>(LibFunc);
   SDValue Callee = getExternalSymbol(TLI->getLibcallName(LC),
                                      TLI->getPointerTy(getDataLayout()));

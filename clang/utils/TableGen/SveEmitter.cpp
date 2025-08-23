@@ -972,10 +972,10 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
       BaseType(BT, 'd'), Flags(Flags), ImmChecks(Checks) {
 
   auto FormatGuard = [](StringRef Guard, StringRef Base) -> std::string {
+    if (Guard.empty() || Guard == Base)
+      return Guard.str();
     if (Guard.contains('|'))
       return Base.str() + ",(" + Guard.str() + ")";
-    if (Guard.empty() || Guard == Base || Guard.starts_with(Base.str() + ","))
-      return Guard.str();
     return Base.str() + "," + Guard.str();
   };
 
