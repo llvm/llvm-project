@@ -19,53 +19,6 @@ func.func @addf_rank0(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
   return %0 : tensor<f32>
 }
 
-// Test a binary elementwise op with a tensor and a scalar operand.
-// CHECK-LABEL: func @addf_tensor_plus_scalar_rank1
-//  CHECK-SAME:   %[[T:[0-9a-zA-Z]*]]: tensor<?xf32>, %[[S:[0-9a-zA-Z]*]]: f32
-func.func @addf_tensor_plus_scalar_rank1(%t: tensor<?xf32>, %s: f32) -> tensor<?xf32> {
-  %c0 = arith.constant 0 : index
-  %d0 = tensor.dim %t, %c0 : tensor<?xf32>
-  %init = tensor.empty(%d0) : tensor<?xf32>
-  %splat = linalg.fill ins(%s : f32) outs(%init : tensor<?xf32>) -> tensor<?xf32>
-  // CHECK: linalg.generic
-  // CHECK-SAME: iterator_types = ["parallel"]
-  // CHECK-SAME: ins(%[[T]], %{{.*}}
-  %0 = arith.addf %t, %splat : tensor<?xf32>
-  return %0 : tensor<?xf32>
-}
-
-// Test a comparison op between a tensor and a scalar.
-// CHECK-LABEL: func @cmpf_tensor_scalar
-//  CHECK-SAME:   %[[A:[0-9a-zA-Z]*]]: tensor<?xf32>, %[[S:[0-9a-zA-Z]*]]: f32
-func.func @cmpf_tensor_scalar(%a: tensor<?xf32>, %s: f32) -> tensor<?xi1> {
-  %c0 = arith.constant 0 : index
-  %d0 = tensor.dim %a, %c0 : tensor<?xf32>
-  %initS = tensor.empty(%d0) : tensor<?xf32>
-  %splat = linalg.fill ins(%s : f32) outs(%initS : tensor<?xf32>) -> tensor<?xf32>
-
-  %init = tensor.empty(%d0) : tensor<?xi1>
-  // CHECK: %[[INIT:.*]] = tensor.empty
-  // CHECK: linalg.generic
-  // CHECK-SAME: ins(%[[A]], %{{.*}}
-  %0 = arith.cmpf olt, %a, %splat : tensor<?xf32>
-  return %0 : tensor<?xi1>
-}
-
-// Test a binary elementwise op with a tensor and a zero-dimensional
-// (rank-0) tensor.
-// CHECK-LABEL: func @addf_tensor_plus_rank0_tensor
-//  CHECK-SAME:   %[[T:[0-9a-zA-Z]*]]: tensor<4xf32>, %[[R0:[0-9a-zA-Z]*]]: tensor<f32>
-func.func @addf_tensor_plus_rank0_tensor(%t: tensor<4xf32>, %r0: tensor<f32>) -> tensor<4xf32> {
-  %c = tensor.extract %r0[] : tensor<f32>
-  %init = tensor.empty() : tensor<4xf32>
-  %splat = linalg.fill ins(%c : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
-  // CHECK: linalg.generic
-  // CHECK-SAME: ins(%[[T]], %{{.*}}
-  %0 = arith.addf %t, %splat : tensor<4xf32>
-  return %0 : tensor<4xf32>
-}
-
-
 // -----
 
 // Check indexing maps and iterator types for the rank > 0 case.
@@ -155,3 +108,61 @@ func.func @cmpf(%arg0: tensor<4x?x?x8x2x?xf32>, %arg1: tensor<4x?x?x8x2x?xf32>) 
   return %0 : tensor<4x?x?x8x2x?xi1>
 }
 
+// -----
+
+// Check a mix of scalar and tensor input.
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> ()> 
+// CHECK: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d0, d1)> 
+// CHECK-LABEL: func @scalar_plus_tensor
+// CHECK: %[[GEN:.*]] = linalg.generic
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]
+// CHECK-SAME: ins(%[[S:.*]], %[[T:.*]] : f32, tensor<?x?xf32>)
+// CHECK-SAME: outs(%[[T]] : tensor<?x?xf32>)
+// CHECK: ^bb0(%[[SB:.*]]: f32, %[[TB:.*]]: f32, %[[OB:.*]]: f32):
+// CHECK:   "test.elementwise_mappable"(%[[SB]], %[[TB]]) : (f32, f32) -> f32
+// CHECK:   linalg.yield {{.*}} : f32
+// CHECK: } -> tensor<?x?xf32>
+func.func @scalar_plus_tensor(%arg0: f32, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = "test.elementwise_mappable"(%arg0, %arg1)
+       : (f32, tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+// This test exercises the case where an elementwise op has two scalar-like
+// operands and one ranked tensor operand. In this example, we chain two
+// `test.elementwise_mappable` calls:
+//   %0 = f(%s1, %t)
+//   %1 = f(%s2, %0)
+// CHECK-DAG: #[[$SC2:[A-Za-z0-9_]+]] = affine_map<(d0, d1) -> ()>
+// CHECK-DAG: #[[$ID2:[A-Za-z0-9_]+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-LABEL: func @scalar_tensor_scalar
+// First generic.
+// CHECK: %[[GEN0:.*]] = linalg.generic
+// CHECK-SAME: indexing_maps = [#[[$SC2]], #[[$ID2]], #[[$ID2]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]
+// CHECK-SAME: ins(%[[S1:[^,]+]], %[[T0:[^)]*]] : f32, tensor<?x?xf32>)
+// CHECK-SAME: outs(%[[T0]] : tensor<?x?xf32>)
+// CHECK: ^bb0(%[[S1E:.*]]: f32, %[[T0E:.*]]: f32, %[[O0E:.*]]: f32):
+// CHECK:   %[[APPLY0:.*]] = "test.elementwise_mappable"(%[[S1E]], %[[T0E]]) : (f32, f32) -> f32
+// CHECK:   linalg.yield %[[APPLY0]] : f32
+// CHECK: } -> tensor<?x?xf32>
+
+// Second generic.
+// CHECK: %[[GEN1:.*]] = linalg.generic
+// CHECK-SAME: indexing_maps = [#[[$SC2]], #[[$ID2]], #[[$ID2]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]
+// CHECK-SAME: ins(%[[S2:[^,]+]], %[[GEN0]] : f32, tensor<?x?xf32>)
+// CHECK-SAME: outs(%[[GEN0]] : tensor<?x?xf32>)
+// CHECK: ^bb0(%[[S2E:.*]]: f32, %[[G0E:.*]]: f32, %[[O1E:.*]]: f32):
+// CHECK:   %[[APPLY1:.*]] = "test.elementwise_mappable"(%[[S2E]], %[[G0E]]) : (f32, f32) -> f32
+// CHECK:   linalg.yield %[[APPLY1]] : f32
+// CHECK: } -> tensor<?x?xf32>
+// CHECK: return %[[GEN1]] : tensor<?x?xf32>
+func.func @scalar_tensor_scalar(%s1: f32, %t: tensor<?x?xf32>, %s2: f32) -> tensor<?x?xf32> {
+  %0 = "test.elementwise_mappable"(%s1, %t)
+       : (f32, tensor<?x?xf32>) -> tensor<?x?xf32>
+  %1 = "test.elementwise_mappable"(%s2, %0)
+       : (f32, tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
