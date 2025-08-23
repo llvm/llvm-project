@@ -6270,11 +6270,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitIntrinsicInst(IntrinsicInst &I) {
-    if (!maybeHandleCrossPlatformIntrinsic(I))
-      if (!maybeHandleX86SIMDIntrinsic(I))
-        if (!maybeHandleArmSIMDIntrinsic(I))
-          if (!maybeHandleUnknownIntrinsic(I))
-            visitInstruction(I);
+    if (maybeHandleCrossPlatformIntrinsic(I))
+      return;
+
+    if (maybeHandleX86SIMDIntrinsic(I))
+      return;
+
+    if (maybeHandleArmSIMDIntrinsic(I))
+      return;
+
+    if (maybeHandleUnknownIntrinsic(I))
+      return;
+
+    visitInstruction(I);
   }
 
   void visitLibAtomicLoad(CallBase &CB) {
