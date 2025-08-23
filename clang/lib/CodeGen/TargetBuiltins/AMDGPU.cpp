@@ -159,6 +159,242 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
                   llvm::MDNode::get(CGF.getLLVMContext(), {}));
   return LD;
 }
+
+// Emits LLVM IR to lower a generic AMDGCN ds_bpermute over arbitrary payload
+// types. Assumes DataLayout is accurate; index is coerced to i32; payload is
+// split/coerced to 32-bit words.
+llvm::Value *emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
+                                  const clang::CallExpr *Call,
+                                  ReturnValueSlot Dest) {
+  auto &B = CGF.Builder;
+  auto &CGM = CGF.CGM;
+  const llvm::DataLayout &DL = CGM.getDataLayout();
+
+  llvm::Type *I8 = B.getInt8Ty();
+  llvm::Type *I32 = B.getInt32Ty();
+
+  auto C32 = [&](uint32_t V) { return llvm::ConstantInt::get(I32, V); };
+
+  // Size/bitwidth and coercion helpers for arbitrary first-class types.
+  auto GetBitWidth = [&](llvm::Type *Ty) -> unsigned {
+    return DL.getTypeSizeInBits(Ty).getFixedValue();
+  };
+
+  auto ToI32Index = [&](llvm::Value *IdxVal,
+                        clang::QualType IdxQT) -> llvm::Value * {
+    (void)IdxQT;
+    llvm::Type *Ty = IdxVal->getType();
+    if (Ty->isIntegerTy())
+      return B.CreateZExtOrTrunc(IdxVal, I32);
+    if (Ty->isPointerTy()) {
+      unsigned PtrBits = DL.getPointerSizeInBits(Ty->getPointerAddressSpace());
+      return B.CreateZExtOrTrunc(B.CreatePtrToInt(IdxVal, B.getIntNTy(PtrBits)),
+                                 I32);
+    }
+    unsigned Bits = GetBitWidth(Ty);
+    return B.CreateZExtOrTrunc(B.CreateBitCast(IdxVal, B.getIntNTy(Bits)), I32);
+  };
+
+  auto CoercePayloadToI32 = [&](llvm::Value *Val,
+                                clang::QualType SrcQT) -> llvm::Value * {
+    llvm::Type *Ty = Val->getType();
+    if (Ty->isIntegerTy()) {
+      unsigned BW = Ty->getIntegerBitWidth();
+      if (BW < 32) {
+        if (SrcQT->isSignedIntegerType())
+          return B.CreateSExt(Val, I32);
+        return B.CreateZExt(Val, I32);
+      }
+      return B.CreateZExtOrTrunc(Val, I32);
+    }
+    if (Ty->isPointerTy()) {
+      unsigned PtrBits = DL.getPointerSizeInBits(Ty->getPointerAddressSpace());
+      return B.CreateZExtOrTrunc(B.CreatePtrToInt(Val, B.getIntNTy(PtrBits)),
+                                 I32);
+    }
+    unsigned Bits = GetBitWidth(Ty);
+    return B.CreateZExtOrTrunc(B.CreateBitCast(Val, B.getIntNTy(Bits)), I32);
+  };
+
+  auto CoerceFromI32ToType = [&](llvm::Value *I32Val, llvm::Type *DstTy,
+                                 clang::QualType SrcQT) -> llvm::Value * {
+    if (DstTy->isIntegerTy()) {
+      unsigned DW = DstTy->getIntegerBitWidth();
+      if (DW < 32) {
+        if (SrcQT->isSignedIntegerType())
+          return B.CreateTrunc(B.CreateSExt(I32Val, B.getIntNTy(32)), DstTy);
+        return B.CreateTrunc(B.CreateZExt(I32Val, B.getIntNTy(32)), DstTy);
+      }
+      if (DW == 32)
+        return B.CreateZExtOrTrunc(I32Val, DstTy);
+    }
+    if (DstTy->isPointerTy()) {
+      unsigned PW = DL.getPointerSizeInBits(DstTy->getPointerAddressSpace());
+      llvm::Value *AsInt = I32Val;
+      if (PW != 32)
+        AsInt = B.CreateZExtOrTrunc(I32Val, B.getIntNTy(PW));
+      return B.CreateIntToPtr(AsInt, DstTy);
+    }
+    unsigned BW = GetBitWidth(DstTy);
+    if (BW == 32)
+      return B.CreateBitCast(I32Val, DstTy);
+    llvm::Type *IntBW = B.getIntNTy(BW);
+    llvm::Value *Tr = I32Val;
+    if (BW < 32)
+      Tr = B.CreateTrunc(I32Val, IntBW);
+    else if (BW > 32)
+      Tr = B.CreateZExt(I32Val, IntBW);
+    return B.CreateBitCast(Tr, DstTy);
+  };
+
+  auto WordCountAndTail =
+      [&](unsigned TotalBits) -> std::pair<unsigned, unsigned> {
+    unsigned Bytes = TotalBits / 8;
+    return {Bytes / 4, Bytes % 4};
+  };
+
+  llvm::Value *IndexI32 = ToI32Index(CGF.EmitScalarExpr(Call->getArg(0)),
+                                     Call->getArg(0)->getType());
+
+  llvm::Function *Bperm = CGM.getIntrinsic(llvm::Intrinsic::amdgcn_ds_bpermute);
+
+  clang::QualType RetQT = Call->getType();
+  clang::QualType SrcQT = Call->getArg(1)->getType();
+  llvm::Type *RetTy = CGF.ConvertType(RetQT);
+
+  bool IsAggregate = RetQT->isAggregateType() || RetQT->isAnyComplexType();
+
+  // Fast path: <=32-bit scalar payloads kept entirely in registers.
+  if (!IsAggregate) {
+    llvm::Value *SrcVal = CGF.EmitScalarExpr(Call->getArg(1));
+    unsigned TotalBits = GetBitWidth(SrcVal->getType());
+    if (TotalBits <= 32) {
+      llvm::Value *SrcI32 = CoercePayloadToI32(SrcVal, SrcQT);
+      llvm::SmallVector<llvm::Value *, 2> ArgsA{IndexI32, SrcI32};
+      llvm::Value *ResI32 =
+          B.CreateCall(Bperm->getFunctionType(), Bperm, ArgsA);
+      llvm::Value *Res = CoerceFromI32ToType(ResI32, RetTy, SrcQT);
+      return Res;
+    }
+  }
+
+  // Fast path: non-aggregate with size being a multiple of 32 bits; bitcast to
+  // <N x i32> and permute per word.
+  if (!IsAggregate) {
+    llvm::Value *SrcVal = CGF.EmitScalarExpr(Call->getArg(1));
+    unsigned TotalBits = GetBitWidth(SrcVal->getType());
+    auto [Words, Tail] = WordCountAndTail(TotalBits);
+    if (Words > 0 && Tail == 0) {
+      llvm::Type *I32VecTy = llvm::FixedVectorType::get(I32, Words);
+
+      llvm::Value *AsIntN = SrcVal;
+      if (SrcVal->getType()->isPointerTy()) {
+        unsigned PW = DL.getPointerSizeInBits(
+            SrcVal->getType()->getPointerAddressSpace());
+        AsIntN = B.CreatePtrToInt(SrcVal, B.getIntNTy(PW));
+      }
+
+      llvm::Value *AsI32Vec = B.CreateBitCast(AsIntN, I32VecTy);
+
+      llvm::Value *ResVec = llvm::PoisonValue::get(I32VecTy);
+      for (unsigned WordIndex = 0; WordIndex < Words; ++WordIndex) {
+        llvm::Value *Lane = B.CreateExtractElement(AsI32Vec, C32(WordIndex));
+        llvm::Value *Perm =
+            B.CreateCall(Bperm->getFunctionType(), Bperm, {IndexI32, Lane});
+        ResVec = B.CreateInsertElement(ResVec, Perm, C32(WordIndex));
+      }
+
+      llvm::Value *ResIntN = B.CreateBitCast(ResVec, AsIntN->getType());
+      llvm::Value *Res = ResIntN;
+      if (RetTy->isPointerTy())
+        Res = B.CreateIntToPtr(ResIntN, RetTy);
+
+      return Res;
+    }
+  }
+
+  // General path: handle aggregates or odd sizes by materializing to memory,
+  // permuting 4-byte words, and packing/unpacking tail bytes.
+  auto EmitAggregatePath = [&]() -> llvm::Value * {
+    clang::QualType SrcQTLocal = Call->getArg(1)->getType();
+    llvm::Type *SrcTy = CGF.ConvertType(SrcQTLocal);
+
+    clang::CodeGen::Address SrcAddr =
+        CGF.CreateMemTemp(SrcQTLocal, "dsbperm.src");
+    CGF.EmitAnyExprToMem(Call->getArg(1), SrcAddr, SrcQTLocal.getQualifiers(),
+                         true);
+
+    clang::CodeGen::Address DestAddr = Dest.getAddress();
+
+    clang::CodeGen::Address SrcI8Addr = SrcAddr.withElementType(I8);
+    clang::CodeGen::Address DstI8Addr = DestAddr.withElementType(I8);
+
+    auto CU = [&](uint64_t N) { return clang::CharUnits::fromQuantity(N); };
+
+    uint64_t SizeBytes = DL.getTypeAllocSize(SrcTy);
+    uint64_t Words = SizeBytes / 4;
+    uint64_t Tail = SizeBytes % 4;
+
+    for (uint64_t WordIndex = 0; WordIndex < Words; ++WordIndex) {
+      uint64_t Off = WordIndex * 4;
+
+      clang::CodeGen::Address SrcWordI8Addr =
+          B.CreateConstInBoundsByteGEP(SrcI8Addr, CU(Off));
+      clang::CodeGen::Address DstWordI8Addr =
+          B.CreateConstInBoundsByteGEP(DstI8Addr, CU(Off));
+
+      clang::CodeGen::Address SrcWordI32Addr =
+          SrcWordI8Addr.withElementType(I32);
+      clang::CodeGen::Address DstWordI32Addr =
+          DstWordI8Addr.withElementType(I32);
+
+      auto *Ld = B.CreateLoad(SrcWordI32Addr);
+
+      llvm::SmallVector<llvm::Value *, 2> ArgsWord{IndexI32, Ld};
+      llvm::Value *Perm =
+          B.CreateCall(Bperm->getFunctionType(), Bperm, ArgsWord);
+
+      auto *St = B.CreateStore(Perm, DstWordI32Addr);
+      if (Dest.isVolatile())
+        St->setVolatile(true);
+    }
+
+    if (Tail) {
+      uint64_t Off = Words * 4;
+
+      llvm::Value *Pack = llvm::ConstantInt::get(I32, 0);
+      for (uint64_t ByteIndex = 0; ByteIndex < Tail; ++ByteIndex) {
+        clang::CodeGen::Address ByteAddr =
+            B.CreateConstInBoundsByteGEP(SrcI8Addr, CU(Off + ByteIndex));
+        auto *Lb = B.CreateLoad(ByteAddr);
+
+        llvm::Value *Z = B.CreateZExt(Lb, I32);
+        if (ByteIndex != 0)
+          Z = B.CreateShl(Z, C32(8 * ByteIndex));
+        Pack = B.CreateOr(Pack, Z);
+      }
+
+      llvm::SmallVector<llvm::Value *, 2> ArgsTail{IndexI32, Pack};
+      llvm::Value *Perm =
+          B.CreateCall(Bperm->getFunctionType(), Bperm, ArgsTail);
+
+      for (uint64_t ByteIndex = 0; ByteIndex < Tail; ++ByteIndex) {
+        llvm::Value *Byte =
+            B.CreateTrunc(B.CreateLShr(Perm, C32(8 * ByteIndex)), I8);
+        clang::CodeGen::Address ByteAddr =
+            B.CreateConstInBoundsByteGEP(DstI8Addr, CU(Off + ByteIndex));
+        auto *St = B.CreateStore(Byte, ByteAddr);
+        if (Dest.isVolatile())
+          St->setVolatile(true);
+      }
+    }
+
+    return CGF.Builder.getTrue();
+  };
+
+  return EmitAggregatePath();
+}
+
 } // namespace
 
 // Generates the IR for __builtin_read_exec_*.
@@ -296,7 +532,8 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
-                                              const CallExpr *E) {
+                                              const CallExpr *E,
+                                              ReturnValueSlot ReturnValue) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
   llvm::SyncScope::ID SSID;
   switch (BuiltinID) {
@@ -341,6 +578,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
     return emitBuiltinWithOneOverloadedType<2>(*this, E,
                                                Intrinsic::amdgcn_ds_swizzle);
+
+  case AMDGPU::BI__builtin_amdgcn_ds_bpermute:
+    return emitAMDGCNDsBpermute(*this, E, ReturnValue);
+
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {

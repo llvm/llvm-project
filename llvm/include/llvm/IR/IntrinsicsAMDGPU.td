@@ -2770,10 +2770,10 @@ def int_amdgcn_ds_permute :
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.ds.bpermute <index> <src>
-def int_amdgcn_ds_bpermute :
-  ClangBuiltin<"__builtin_amdgcn_ds_bpermute">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+def int_amdgcn_ds_bpermute
+    : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [
+      IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree
+    ]>;
 
 // llvm.amdgcn.perm <src0> <src1> <selector>
 def int_amdgcn_perm :
