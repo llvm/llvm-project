@@ -2257,7 +2257,7 @@ struct FormatStyle {
   BraceBreakingStyle BreakBeforeBraces;
 
   /// Force break before the right bracket of a braced initializer list (when
-  ///  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  /// ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
   /// limit. The break before the right bracket is only made if there is a
   /// break after the opening bracket.
   /// \code
