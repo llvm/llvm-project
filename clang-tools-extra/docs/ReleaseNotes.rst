@@ -104,6 +104,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- The :program:`check_clang_tidy.py` tool now recognizes the ``-std`` argument
+  when run over C files. If ``-std`` is not specified, it defaults to
+  ``c99-or-later``.
+
 - :program:`clang-tidy` no longer attemps to analyze code from system headers
   by default, greatly improving performance. This behavior is disabled if the
   `SystemHeaders` option is enabled.
