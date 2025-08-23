@@ -807,6 +807,136 @@ struct GpuBarrierDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+struct StoreDistribution final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    auto yield = cast<gpu::YieldOp>(
+        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    Operation *lastNode = yield->getPrevNode();
+    auto storeScatterOp = dyn_cast_or_null<xegpu::StoreScatterOp>(lastNode);
+    if (!storeScatterOp)
+      return failure();
+    else if (!storeScatterOp.getOffsets())
+      return rewriter.notifyMatchFailure(storeScatterOp,
+                                         "Store op must have offsets argument");
+    else if (cast<VectorType>(storeScatterOp.getOffsets().getType())
+                 .getRank() != 1)
+      return rewriter.notifyMatchFailure(storeScatterOp,
+                                         "Expected 1D offsets vector");
+
+    VectorType storeVecTy =
+        cast<VectorType>(storeScatterOp.getValue().getType());
+    assert(storeVecTy.getRank() <= 2 &&
+           "Expected at most 2D result at SG level");
+    VectorType distStoreVecTy;
+    if (storeVecTy.getRank() == 2)
+      distStoreVecTy = VectorType::Builder(storeVecTy).dropDim(0);
+    else // rank 1
+      distStoreVecTy = VectorType::Builder(storeVecTy).setDim(0, 1);
+
+    SmallVector<size_t> newRetIndices;
+    SmallVector<Value> operands =
+        llvm::to_vector_of<Value>(storeScatterOp->getOperands());
+    SmallVector<Type> operandTypes =
+        llvm::to_vector_of<Type>(storeScatterOp->getOperandTypes());
+    operandTypes[0] = distStoreVecTy;
+
+    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, operands, operandTypes, newRetIndices);
+    SmallVector<Value> newStoreScatterOpOperands = llvm::map_to_vector(
+        newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
+
+    Value offsetsVec = newStoreScatterOpOperands[2];
+    Value maskVec = newStoreScatterOpOperands[3];
+
+    auto loc = newWarpOp.getLoc();
+    Value laneId = warpOp.getLaneid();
+    rewriter.setInsertionPointAfter(newWarpOp);
+    Value laneOffset =
+        vector::ExtractOp::create(rewriter, loc, offsetsVec, laneId);
+    laneOffset = vector::BroadcastOp::create(
+        rewriter, loc, VectorType::get({1}, laneOffset.getType()), laneOffset);
+    Value laneMask = vector::ExtractOp::create(rewriter, loc, maskVec, laneId);
+    laneMask = vector::BroadcastOp::create(
+        rewriter, loc, VectorType::get({1}, laneMask.getType()), laneMask);
+    newStoreScatterOpOperands[2] = laneOffset;
+    newStoreScatterOpOperands[3] = laneMask;
+
+    xegpu::StoreScatterOp newOp = xegpu::StoreScatterOp::create(
+        rewriter, loc, TypeRange{}, newStoreScatterOpOperands,
+        storeScatterOp->getAttrs());
+    xegpu::removeLayoutAttrs(newOp);
+    rewriter.eraseOp(storeScatterOp);
+    return success();
+  }
+};
+
+struct LoadDistribution final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *yieldOperand = getWarpResult(warpOp, [&](Operation *op) {
+      if (!isa<xegpu::LoadGatherOp>(op))
+        return false;
+      auto yield = cast<gpu::YieldOp>(
+          warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+      return yield->getPrevNode() == op;
+    });
+    if (!yieldOperand)
+      return rewriter.notifyMatchFailure(
+          warpOp, "warp result is not a xegpu::LoadGatherOp op");
+
+    auto loadGatherOp =
+        yieldOperand->get().getDefiningOp<xegpu::LoadGatherOp>();
+    if (!loadGatherOp.getOffsets())
+      return rewriter.notifyMatchFailure(loadGatherOp,
+                                         "Load op must have offsets argument");
+    else if (cast<VectorType>(loadGatherOp.getOffsets().getType()).getRank() !=
+             1)
+      return rewriter.notifyMatchFailure(loadGatherOp,
+                                         "Expected 1D offsets vector");
+
+    SmallVector<size_t> newRetIndices;
+    SmallVector<Value> operands =
+        llvm::to_vector_of<Value>(loadGatherOp->getOperands());
+    SmallVector<Type> operandTypes =
+        llvm::to_vector_of<Type>(loadGatherOp->getOperandTypes());
+
+    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, operands, operandTypes, newRetIndices);
+
+    SmallVector<Value> newLoadGatherOperands = llvm::map_to_vector(
+        newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
+
+    const unsigned operandIdx = yieldOperand->getOperandNumber();
+    VectorType loadVecTy =
+        cast<VectorType>(warpOp.getResult(operandIdx).getType());
+    assert(loadVecTy.getRank() == 1 && "Expected a distributed vector");
+
+    Value offsetsVec = newLoadGatherOperands[1];
+    Value maskVec = newLoadGatherOperands[2];
+    auto loc = newWarpOp.getLoc();
+    Value laneId = warpOp.getLaneid();
+    rewriter.setInsertionPointAfter(newWarpOp);
+    Value laneOffset =
+        vector::ExtractOp::create(rewriter, loc, offsetsVec, laneId);
+    laneOffset = vector::BroadcastOp::create(
+        rewriter, loc, VectorType::get({1}, laneOffset.getType()), laneOffset);
+    Value laneMask = vector::ExtractOp::create(rewriter, loc, maskVec, laneId);
+    laneMask = vector::BroadcastOp::create(
+        rewriter, loc, VectorType::get({1}, laneMask.getType()), laneMask);
+    newLoadGatherOperands[1] = laneOffset;
+    newLoadGatherOperands[2] = laneMask;
+
+    xegpu::LoadGatherOp newOp = rewriter.create<xegpu::LoadGatherOp>(
+        loc, loadVecTy, newLoadGatherOperands, loadGatherOp->getAttrs());
+    Value distributedVal = newWarpOp.getResult(operandIdx);
+    rewriter.replaceAllUsesWith(distributedVal, newOp->getResult(0));
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -819,10 +949,11 @@ struct XeGPUSubgroupDistributePass final
 
 void xegpu::populateXeGPUSubgroupDistributePatterns(
     RewritePatternSet &patterns) {
-  patterns.add<CreateNdDescDistribution, StoreNdDistribution,
-               LoadNdDistribution, DpasDistribution, PrefetchNdDistribution,
-               UpdateNdOffsetDistribution, GpuBarrierDistribution>(
-      patterns.getContext());
+  patterns
+      .add<CreateNdDescDistribution, StoreNdDistribution, LoadNdDistribution,
+           DpasDistribution, PrefetchNdDistribution, UpdateNdOffsetDistribution,
+           GpuBarrierDistribution, LoadDistribution, StoreDistribution>(
+          patterns.getContext());
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
@@ -837,6 +968,8 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       if (!isa<VectorType>(operand.get().getType()))
         continue;
 
+      if (isa<xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op))
+        continue;      
       auto layout =
           xegpu::getDistributeLayoutAttrOfType<xegpu::LayoutAttr>(operand);
       if (!layout) {
