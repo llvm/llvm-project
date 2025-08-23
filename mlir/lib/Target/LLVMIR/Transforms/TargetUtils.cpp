@@ -12,7 +12,6 @@
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -25,13 +24,14 @@ namespace mlir {
 namespace LLVM {
 namespace detail {
 void initializeBackendsOnce() {
-  static llvm::once_flag initializeOnceFlag;
-  llvm::call_once(initializeOnceFlag, []() {
+  static const auto initOnce = [] {
     // Ensure that the targets, that LLVM has been configured to support,
     // are loaded into the TargetRegistry.
     llvm::InitializeAllTargets();
     llvm::InitializeAllTargetMCs();
-  });
+    return true;
+  }();
+  (void)initOnce; // Dummy usage.
 }
 
 FailureOr<std::unique_ptr<llvm::TargetMachine>>
