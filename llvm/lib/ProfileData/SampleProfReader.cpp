@@ -382,9 +382,16 @@ std::error_code SampleProfileReaderText::readImpl() {
       if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
                      Discriminator, FName, TargetCountMap, FunctionHash,
                      Attributes, IsFlat)) {
-        reportError(LineIt.line_number(),
-                    "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
-                        *LineIt);
+        switch (LineTy) {
+        case LineType::Metadata:
+          reportError(LineIt.line_number(),
+                      "Cannot parse metadata: " + *LineIt);
+          break;
+        default:
+          reportError(LineIt.line_number(),
+                      "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
+                          *LineIt);
+        }
         return sampleprof_error::malformed;
       }
       if (LineTy != LineType::Metadata && Depth == DepthMetadata) {
