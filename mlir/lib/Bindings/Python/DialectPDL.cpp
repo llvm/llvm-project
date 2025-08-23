@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-void populateDialectPDLSubmodule(const nanobind::module_ &m) {
+static void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   //===-------------------------------------------------------------------===//
   // PDLType
   //===-------------------------------------------------------------------===//
