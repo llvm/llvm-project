@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <queue>
 
 #define DEBUG_TYPE "pdl-predicate-tree"
@@ -544,7 +545,7 @@ static void visitUpward(std::vector<PositionalPredicate> &predList,
   Value value = opIndex.parent;
   TypeSwitch<Operation *>(value.getDefiningOp())
       .Case<pdl::OperationOp>([&](auto operationOp) {
-        LLVM_DEBUG(llvm::dbgs() << "  * Value: " << value << "\n");
+        LDBG() << "  * Value: " << value;
 
         // Get users and iterate over them.
         Position *usersPos = builder.getUsers(pos, /*useRepresentative=*/true);
@@ -618,19 +619,15 @@ static Value buildPredicateList(pdl::PatternOp pattern,
   RootOrderingGraph graph;
   ParentMaps parentMaps;
   buildCostGraph(roots, graph, parentMaps);
-  LLVM_DEBUG({
-    llvm::dbgs() << "Graph:\n";
-    for (auto &target : graph) {
-      llvm::dbgs() << "  * " << target.first.getLoc() << " " << target.first
-                   << "\n";
-      for (auto &source : target.second) {
-        RootOrderingEntry &entry = source.second;
-        llvm::dbgs() << "      <- " << source.first << ": " << entry.cost.first
-                     << ":" << entry.cost.second << " via "
-                     << entry.connector.getLoc() << "\n";
-      }
+  LDBG() << "Graph:";
+  for (auto &target : graph) {
+    LDBG() << "  * " << target.first.getLoc() << " " << target.first;
+    for (auto &source : target.second) {
+      RootOrderingEntry &entry = source.second;
+      LDBG() << "      <- " << source.first << ": " << entry.cost.first << ":"
+             << entry.cost.second << " via " << entry.connector.getLoc();
     }
-  });
+  }
 
   // Solve the optimal branching problem for each candidate root, or use the
   // provided one.
@@ -638,11 +635,11 @@ static Value buildPredicateList(pdl::PatternOp pattern,
   OptimalBranching::EdgeList bestEdges;
   if (!bestRoot) {
     unsigned bestCost = 0;
-    LLVM_DEBUG(llvm::dbgs() << "Candidate roots:\n");
+    LDBG() << "Candidate roots:";
     for (Value root : roots) {
       OptimalBranching solver(graph, root);
       unsigned cost = solver.solve();
-      LLVM_DEBUG(llvm::dbgs() << "  * " << root << ": " << cost << "\n");
+      LDBG() << "  * " << root << ": " << cost;
       if (!bestRoot || bestCost > cost) {
         bestCost = cost;
         bestRoot = root;
@@ -656,18 +653,15 @@ static Value buildPredicateList(pdl::PatternOp pattern,
   }
 
   // Print the best solution.
-  LLVM_DEBUG({
-    llvm::dbgs() << "Best tree:\n";
-    for (const std::pair<Value, Value> &edge : bestEdges) {
-      llvm::dbgs() << "  * " << edge.first;
-      if (edge.second)
-        llvm::dbgs() << " <- " << edge.second;
-      llvm::dbgs() << "\n";
-    }
-  });
+  LDBG() << "Best tree:";
+  for (const std::pair<Value, Value> &edge : bestEdges) {
+    if (edge.second)
+      LDBG() << "  * " << edge.first << " <- " << edge.second;
+    else
+      LDBG() << "  * " << edge.first;
+  }
 
-  LLVM_DEBUG(llvm::dbgs() << "Calling key getTreePredicates:\n");
-  LLVM_DEBUG(llvm::dbgs() << "  * Value: " << bestRoot << "\n");
+  LDBG() << "Calling key getTreePredicates (Value: " << bestRoot << ")";
 
   // The best root is the starting point for the traversal. Get the tree
   // predicates for the DAG rooted at bestRoot.
@@ -691,7 +685,7 @@ static Value buildPredicateList(pdl::PatternOp pattern,
     // Determine the connector.
     Value connector = graph[target][source].connector;
     assert(connector && "invalid edge");
-    LLVM_DEBUG(llvm::dbgs() << "  * Connector: " << connector.getLoc() << "\n");
+    LDBG() << "  * Connector: " << connector.getLoc();
     DenseMap<Value, OpIndex> parentMap = parentMaps.lookup(target);
     Position *pos = valueToPosition.lookup(connector);
     assert(pos && "connector has not been traversed yet");
