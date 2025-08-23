@@ -5,6 +5,7 @@ set(ORC_RT_HEADERS
     orc-rt/BitmaskEnum.h
     orc-rt/Compiler.h
     orc-rt/Error.h
+    orc-rt/ExecutorAddr.h
     orc-rt/Math.h
     orc-rt/RTTI.h
     orc-rt/WrapperFunctionResult.h

@@ -14,6 +14,7 @@ endfunction()
 add_orc_rt_unittest(CoreTests
   BitmaskEnumTest.cpp
   ErrorTest.cpp
+  ExecutorAddressTest.cpp
   MathTest.cpp
   RTTITest.cpp
   WrapperFunctionResultTest.cpp
