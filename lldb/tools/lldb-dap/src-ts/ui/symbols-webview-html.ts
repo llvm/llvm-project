@@ -23,11 +23,16 @@ export function getSymbolsTableHTMLContent(tabulatorJsPath: vscode.Uri, tabulato
       }
 
       .tabulator-row.tabulator-row-even {
-        background-color: var(--vscode-editor-background);
+        background-color: var(--vscode-tree-tableOddRowsBackground);
         color: var(--vscode-editor-foreground);
       }
 
       .tabulator-row.tabulator-selected {
+        background-color: var(--vscode-editor-background);
+        color: var(--vscode-editor-foreground);
+      }
+
+      .tabulator .tabulator-tableholder .tabulator-table {
         background-color: var(--vscode-editor-background);
         color: var(--vscode-editor-foreground);
       }
