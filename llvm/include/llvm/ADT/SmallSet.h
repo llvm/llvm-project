@@ -269,28 +269,7 @@ private:
 /// If this set is of pointer values, transparently switch over to using
 /// SmallPtrSet for performance.
 template <typename PointeeType, unsigned N>
-class SmallSet<PointeeType *, N> : public SmallPtrSet<PointeeType *, N> {
-  using Base = SmallPtrSet<PointeeType *, N>;
-
-public:
-  // LLVM_DEPRECATED placed between "template" and "class" above won't work for
-  // some reason.  Put a deprecation message on constructors instead.
-  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet() = default;
-  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet(const SmallSet &) = default;
-  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet(SmallSet &&) = default;
-  template <typename IterT>
-  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet(IterT Begin, IterT End) : Base(Begin, End) {}
-  template <typename Range>
-  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet(llvm::from_range_t, Range &&R)
-      : Base(llvm::from_range, std::move(R)) {}
-  LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet(std::initializer_list<PointeeType *> L) : Base(L) {}
-};
+class SmallSet<PointeeType*, N> : public SmallPtrSet<PointeeType*, N> {};
 
 /// Equality comparison for SmallSet.
 ///

@@ -151,23 +151,34 @@ bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
   return true;
 }
 
+/// Adds a register, taking associated lane masks into consideration.
+void LivePhysRegs::addRegMaskPair(
+    const MachineBasicBlock::RegisterMaskPair &Pair) {
+  MCRegister Reg = Pair.PhysReg;
+  LaneBitmask Mask = Pair.LaneMask;
+  MCSubRegIndexIterator S(Reg, TRI);
+  assert(Mask.any() && "Invalid livein mask");
+  if (Mask.all() || !S.isValid()) {
+    addReg(Reg);
+    return;
+  }
+  for (; S.isValid(); ++S) {
+    unsigned SI = S.getSubRegIndex();
+    if ((Mask & TRI->getSubRegIndexLaneMask(SI)).any())
+      addReg(S.getSubReg());
+  }
+}
+
 /// Add live-in registers of basic block \p MBB to \p LiveRegs.
 void LivePhysRegs::addBlockLiveIns(const MachineBasicBlock &MBB) {
-  for (const auto &LI : MBB.liveins()) {
-    MCRegister Reg = LI.PhysReg;
-    LaneBitmask Mask = LI.LaneMask;
-    MCSubRegIndexIterator S(Reg, TRI);
-    assert(Mask.any() && "Invalid livein mask");
-    if (Mask.all() || !S.isValid()) {
-      addReg(Reg);
-      continue;
-    }
-    for (; S.isValid(); ++S) {
-      unsigned SI = S.getSubRegIndex();
-      if ((Mask & TRI->getSubRegIndexLaneMask(SI)).any())
-        addReg(S.getSubReg());
-    }
-  }
+  for (const auto &LI : MBB.liveins())
+    addRegMaskPair(LI);
+}
+
+/// Add live-out registers of basic block \p MBB to \p LiveRegs.
+void LivePhysRegs::addBlockLiveOuts(const MachineBasicBlock &MBB) {
+  for (const auto &LO : MBB.liveouts())
+    addRegMaskPair(LO);
 }
 
 /// Adds all callee saved registers to \p LiveRegs.
@@ -207,9 +218,7 @@ void LivePhysRegs::addPristines(const MachineFunction &MF) {
 }
 
 void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
-  // To get the live-outs we simply merge the live-ins of all successors.
-  for (const MachineBasicBlock *Succ : MBB.successors())
-    addBlockLiveIns(*Succ);
+  addBlockLiveOuts(MBB);
   if (MBB.isReturnBlock()) {
     // Return blocks are a special case because we currently don't mark up
     // return instructions completely: specifically, there is no explicit
@@ -356,8 +365,8 @@ bool llvm::isPhysRegUsedAfter(Register Reg, MachineBasicBlock::iterator MBI) {
 
   // If we hit the end of the block, check whether Reg is live into a
   //  successor.
-  for (MachineBasicBlock *Succ : MBB->successors())
-    if (Succ->isLiveIn(Reg))
+  for (const auto &LO : MBB->liveouts())
+    if (LO.PhysReg == MCRegister(Reg) && LO.LaneMask.any())
       return true;
 
   return false;
