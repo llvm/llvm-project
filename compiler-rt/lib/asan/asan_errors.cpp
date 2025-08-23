@@ -691,11 +691,11 @@ void ErrorNonSelfGeneric::Print() {
   Decorator d;
   Printf("%s", d.Error());
   Report("ERROR: AddressSanitizer: %s on address %p at pc %p\n", bug_descr,
-         (void *)addresses[0], callstack[0]);
+         (void *)addresses[0], (void *)callstack[0]);
 
   Printf("%s%s of size %zu at %p thread id %zu\n", d.Access(),
          access_size ? (is_write ? "WRITE" : "READ") : "ACCESS", access_size,
-         (void *)addresses[0], thread_id[0]);
+         (void *)addresses[0], (usize)thread_id[0]);
 
   // todo: perform symbolization for the given callstack
   // can be done by creating in-memory object file or by writing
@@ -733,7 +733,7 @@ ErrorNonSelfAMDGPU::ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack,
 
 void ErrorNonSelfAMDGPU::PrintStack() {
   InternalScopedString source_location;
-  source_location.AppendF("  #0 %p", callstack[0]);
+  source_location.AppendF("  #0 %p", (void *)callstack[0]);
 #if SANITIZER_AMDGPU
   source_location.Append(" in ");
   __sanitizer::AMDGPUCodeObjectSymbolizer symbolizer;
@@ -754,7 +754,8 @@ void ErrorNonSelfAMDGPU::PrintThreadsAndAddresses() {
       str.Append("\n");
       per_row_count = 0;
     }
-    str.AppendF("%02d : %p ", workitem_ids[idx], device_address[idx]);
+    str.AppendF("%02d : %p ", (int)workitem_ids[idx],
+                (void *)device_address[idx]);
     per_row_count++;
   }
   str.Append("\n");
@@ -797,11 +798,12 @@ void ErrorNonSelfAMDGPU::PrintMallocStack() {
     uptr plo = ScanForMagicDown(start, lo, magic, lo);
     if (plo) {
       callstack[0] = ((uptr*)plo)[2];
-      Printf("%s%p is %u bytes above an address from a %sdevice malloc "
-              "(or free) call of size %u from%s\n",
-              d.Location(), device_address[0],
-              (int)(device_address[0] - (plo+offset)),
-              d.Allocation(), ((int*)plo)[7], d.Default());
+      Printf(
+          "%s%p is %u bytes above an address from a %sdevice malloc "
+          "(or free) call of size %u from%s\n",
+          d.Location(), (void *)device_address[0],
+          (u32)(device_address[0] - (plo + offset)), d.Allocation(),
+          ((u32*)plo)[7], d.Default());
       // TODO: The code object with the malloc call may not be the same
       // code object trying the illegal access.  A mechanism is needed
       // to obtain the former.
@@ -811,12 +813,13 @@ void ErrorNonSelfAMDGPU::PrintMallocStack() {
     uptr phi = ScanForMagicUp(start, hi, magic, lo);
     if (phi) {
       callstack[0] = ((uptr*)phi)[2];
-      Printf("%s%p is %u bytes below an address from a %sdevice malloc "
-              "(or free) call of size %u from%s\n",
-              d.Location(), device_address[0],
-              (int)((phi+offset) - device_address[0]),
+      Printf(
+          "%s%p is %u bytes below an address from a %sdevice malloc "
+          "(or free) call of size %u from%s\n",
+          d.Location(), (void *)device_address[0],
+          (u32)((phi + offset) - device_address[0]),
 
-              d.Allocation(), ((int*)phi)[7], d.Default());
+          d.Allocation(), ((u32*)phi)[7], d.Default());
       PrintStack();
     }
   }
@@ -825,10 +828,11 @@ void ErrorNonSelfAMDGPU::PrintMallocStack() {
 void ErrorNonSelfAMDGPU::Print() {
   Decorator d;
   Printf("%s", d.Error());
-  Report("ERROR: AddressSanitizer: %s on amdgpu device %zu at pc %p\n",
-         bug_descr, device_id, callstack[0]);
-  Printf("%s%s of size %zu in workgroup id (%zu,%zu,%zu)\n", d.Access(),
-         (is_write ? "WRITE" : "READ"), access_size, wg.idx, wg.idy, wg.idz);
+  Report("ERROR: AddressSanitizer: %s on amdgpu device %d at pc %p\n",
+         bug_descr, device_id, (void *)callstack[0]);
+  Printf("%s%s of size %zu in workgroup id (%llu,%llu,%llu)\n", d.Access(),
+         (is_write ? "WRITE" : "READ"), access_size, wg.idx,
+         wg.idy, wg.idz);
   Printf("%s", d.Default());
   PrintStack();
   Printf("%s", d.Location());
