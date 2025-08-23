@@ -1334,3 +1334,68 @@ define i64 @ctlz_i32_zext(i32 %x) {
   %ext = zext i32 %xor to i64
   ret i64 %ext
 }
+
+define i32 @bsr_eq(i32 %a, i32 %b) {
+; X86-LABEL: bsr_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl $31, %ecx
+; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl $31, %edx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl %edx, %ecx
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: bsr_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    bsrl %edi, %ecx
+; X64-NEXT:    xorl $31, %ecx
+; X64-NEXT:    bsrl %esi, %edx
+; X64-NEXT:    xorl $31, %edx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl %edx, %ecx
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
+;
+; X86-CLZ-LABEL: bsr_eq:
+; X86-CLZ:       # %bb.0:
+; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %ecx
+; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %edx
+; X86-CLZ-NEXT:    xorl %eax, %eax
+; X86-CLZ-NEXT:    cmpl %edx, %ecx
+; X86-CLZ-NEXT:    sete %al
+; X86-CLZ-NEXT:    retl
+;
+; X64-CLZ-LABEL: bsr_eq:
+; X64-CLZ:       # %bb.0:
+; X64-CLZ-NEXT:    lzcntl %edi, %ecx
+; X64-CLZ-NEXT:    lzcntl %esi, %edx
+; X64-CLZ-NEXT:    xorl %eax, %eax
+; X64-CLZ-NEXT:    cmpl %edx, %ecx
+; X64-CLZ-NEXT:    sete %al
+; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: bsr_eq:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntl %edi, %ecx
+; X64-FASTLZCNT-NEXT:    lzcntl %esi, %edx
+; X64-FASTLZCNT-NEXT:    xorl %eax, %eax
+; X64-FASTLZCNT-NEXT:    cmpl %edx, %ecx
+; X64-FASTLZCNT-NEXT:    sete %al
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: bsr_eq:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %ecx
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %edx
+; X86-FASTLZCNT-NEXT:    xorl %eax, %eax
+; X86-FASTLZCNT-NEXT:    cmpl %edx, %ecx
+; X86-FASTLZCNT-NEXT:    sete %al
+; X86-FASTLZCNT-NEXT:    retl
+  %1 = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %a, i1 true)
+  %2 = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %b, i1 true)
+  %cmp = icmp eq i32 %1, %2
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
