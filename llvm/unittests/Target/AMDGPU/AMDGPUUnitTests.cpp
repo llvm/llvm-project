@@ -322,7 +322,7 @@ TEST(AMDGPU, TestReverseComposeSubRegIndices) {
 }
 
 TEST(AMDGPU, TestGetNamedOperandIdx) {
-  const TargetMachine *TM =
+  std::unique_ptr<const GCNTargetMachine> TM =
       createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
   if (!TM)
     return;
