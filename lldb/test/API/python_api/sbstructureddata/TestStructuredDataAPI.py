@@ -403,10 +403,12 @@ class TestStructuredDataAPI(TestBase):
 
     def test_iterate_dictionary(self):
         dictionary = {"0": 0, "1": 1, "2": 2}
+        keys = set(dictionary.keys())
         data = lldb.SBStructuredData()
         data.SetFromJSON(json.dumps(dictionary))
         for key in data:
-            self.assertEqual(int(key), dictionary[key])
+            self.assertIn(key, keys)
+            keys.remove(key)
 
     def test_getitem_array(self):
         array = [1, 2, 3]
