@@ -94,8 +94,8 @@ static void addBlockLiveIns(LiveRegUnits &LiveUnits,
 /// Add live-out registers of basic block \p MBB to \p LiveUnits.
 static void addBlockLiveOuts(LiveRegUnits &LiveUnits,
                              const MachineBasicBlock &MBB) {
-  for (const auto &LI : MBB.liveouts())
-    LiveUnits.addRegMasked(LI.PhysReg, LI.LaneMask);
+  for (const auto &LO : MBB.liveouts())
+    LiveUnits.addRegMasked(LO.PhysReg, LO.LaneMask);
 }
 
 /// Adds all callee saved registers to \p LiveUnits.

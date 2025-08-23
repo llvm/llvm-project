@@ -338,3 +338,12 @@ static void *FooTable[1] = {
     }
 };
 
+int strcmp(const char *, const char *); // all-note {{passing argument to parameter here}}
+#define S "\x01\x02\x03\x04\x05\x06\x07\x08"
+const char _str[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
+const unsigned char _str2[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
+const int compared = strcmp(_str, (const char *)_str2); // all-error {{initializer element is not a compile-time constant}}
+
+
+const int compared2 = strcmp(strcmp, _str); // all-warning {{incompatible pointer types}} \
+                                            // all-error {{initializer element is not a compile-time constant}}
