@@ -10736,7 +10736,7 @@ Expr *UnwrapDerefAddrOfPairs(Expr *E) {
 class CountArgChecker : public TreeTransform<CountArgChecker> {
   using BaseTransform = TreeTransform<CountArgChecker>;
   using DeclList = llvm::SmallVector<TypeCoupledDeclRefInfo, 1>;
-  using DeclSet = llvm::SmallSet<Decl *, 1>;
+  using DeclSet = llvm::SmallPtrSet<Decl *, 1>;
   DeclList &Dependees;
   bool CountInBytes : 1;
   bool OrNull : 1;

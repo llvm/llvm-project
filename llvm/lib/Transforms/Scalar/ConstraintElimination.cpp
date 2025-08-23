@@ -1455,7 +1455,7 @@ void State::addInfoFor(BasicBlock &BB) {
         if (!GEP || !GEP->isInBounds())
           continue;
 
-        SmallSet<const Value *, 16> KnownPoison;
+        SmallPtrSet<const Value *, 16> KnownPoison;
         KnownPoison.insert(GEP);
 
         if (GuaranteedToExecute && programUndefinedIfPoison(Cmp))
@@ -1546,7 +1546,7 @@ void State::addInfoFor(BasicBlock &BB) {
             // block.
             if (LastBB && (LastBB == UserBB || DT.dominates(LastBB, UserBB)))
               continue;
-            SmallSet<const Value *, 16> KnownPoison;
+            SmallPtrSet<const Value *, 16> KnownPoison;
             KnownPoison.insert(GEP);
             // If GEP is poison the program is UB if either:
             // 1. U propagates poison and the program is UB if User is poison
