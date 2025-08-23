@@ -568,8 +568,19 @@ struct ConstantComparesGatherer {
   /// If the elements in Vals matches the comparisons
   bool IsEq = false;
 
+  // Used to check if the first matched CompValue shall be the Extra check.
+  bool IgnoreFirstMatch = false;
+  bool MultipleMatches = false;
+
   /// Construct and compute the result for the comparison instruction Cond
   ConstantComparesGatherer(Instruction *Cond, const DataLayout &DL) : DL(DL) {
+    gather(Cond);
+    if (CompValue || !MultipleMatches)
+      return;
+    Extra = nullptr;
+    Vals.clear();
+    UsedICmps = 0;
+    IgnoreFirstMatch = true;
     gather(Cond);
   }
 
@@ -581,10 +592,16 @@ private:
   /// Try to set the current value used for the comparison, it succeeds only if
   /// it wasn't set before or if the new value is the same as the old one
   bool setValueOnce(Value *NewVal) {
-    if (CompValue && CompValue != NewVal)
+    if (IgnoreFirstMatch) {
+      IgnoreFirstMatch = false;
       return false;
+    }
+    if (CompValue && CompValue != NewVal) {
+      MultipleMatches = true;
+      return false;
+    }
     CompValue = NewVal;
-    return (CompValue != nullptr);
+    return true;
   }
 
   /// Try to match Instruction "I" as a comparison against a constant and
