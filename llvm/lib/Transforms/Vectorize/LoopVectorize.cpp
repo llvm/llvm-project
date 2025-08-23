@@ -8641,7 +8641,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                   CM.foldTailByMasking());
 
   VPlanTransforms::createLoopRegions(*Plan);
-  VPlanTransforms::createExtractsForLiveOuts(*Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split

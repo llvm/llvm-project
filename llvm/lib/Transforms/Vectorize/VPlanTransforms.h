@@ -83,10 +83,6 @@ struct VPlanTransforms {
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
 
-  /// Creates extracts for values in \p Plan defined in a loop region and used
-  /// outside a loop region.
-  LLVM_ABI_FOR_TEST static void createExtractsForLiveOuts(VPlan &Plan);
-
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
   /// condition.
