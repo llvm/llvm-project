@@ -41,7 +41,7 @@ getTargetMachine(mlir::LLVM::TargetAttrInterface attr) {
   // NB: `TargetAttrInterface::getFeatures()` is coarsely typed to work around
   // cyclic dependency issue in tablegen files.
   auto featuresAttr =
-      llvm::cast_or_null<LLVM::TargetFeaturesAttr>(attr.getFeatures());
+      llvm::cast_if_present<LLVM::TargetFeaturesAttr>(attr.getFeatures());
   std::string features = featuresAttr ? featuresAttr.getFeaturesString() : "";
 
   std::string error;
