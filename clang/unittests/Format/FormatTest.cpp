@@ -26022,6 +26022,10 @@ TEST_F(FormatTest, SkipMacroDefinitionBody) {
                  "  A  a \\\n "
                  " A  a",
                  Style);
+  verifyNoChange("#define MY_MACRO  \\\n"
+                 " /* comment */  \\\n"
+                 "   1",
+                 Style);
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {

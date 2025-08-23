@@ -1182,10 +1182,8 @@ void UnwrappedLineParser::parsePPDefine() {
   if (MaybeIncludeGuard && !eof())
     IncludeGuard = IG_Rejected;
 
-  if (FormatTok->Tok.getKind() == tok::l_paren &&
-      !FormatTok->hasWhitespaceBefore()) {
+  if (FormatTok->is(tok::l_paren) && !FormatTok->hasWhitespaceBefore())
     parseParens();
-  }
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
@@ -1193,23 +1191,34 @@ void UnwrappedLineParser::parsePPDefine() {
 
   Line->PPLevel = PPBranchLevel + (IncludeGuard == IG_Defined ? 0 : 1);
   assert((int)Line->PPLevel >= 0);
+
+  if (eof())
+    return;
+
   Line->InMacroBody = true;
 
-  if (Style.SkipMacroDefinitionBody) {
-    while (!eof()) {
-      FormatTok->Finalized = true;
-      FormatTok = Tokens->getNextToken();
-    }
-    addUnwrappedLine();
+  if (!Style.SkipMacroDefinitionBody) {
+    // Errors during a preprocessor directive can only affect the layout of the
+    // preprocessor directive, and thus we ignore them. An alternative approach
+    // would be to use the same approach we use on the file level (no
+    // re-indentation if there was a structural error) within the macro
+    // definition.
+    parseFile();
     return;
   }
 
-  // Errors during a preprocessor directive can only affect the layout of the
-  // preprocessor directive, and thus we ignore them. An alternative approach
-  // would be to use the same approach we use on the file level (no
-  // re-indentation if there was a structural error) within the macro
-  // definition.
-  parseFile();
+  if (auto *Prev = Tokens->getPreviousToken(); Prev->is(tok::comment) &&
+                                               Prev->NewlinesBefore > 0 &&
+                                               !Prev->HasUnescapedNewline) {
+    Prev->Finalized = true;
+  }
+
+  do {
+    FormatTok->Finalized = true;
+    FormatTok = Tokens->getNextToken();
+  } while (!eof());
+
+  addUnwrappedLine();
 }
 
 void UnwrappedLineParser::parsePPPragma() {
