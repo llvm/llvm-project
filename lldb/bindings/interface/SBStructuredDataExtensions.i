@@ -40,66 +40,52 @@ STRING_EXTENSION_OUTSIDE(SBStructuredData)
 
     def __bool__(self):
         data_type = self.GetType()
-        if data_type == eStructuredDataTypeBoolean:
-            return self.GetBooleanValue()
-        elif data_type == eStructuredDataTypeInteger:
-            return bool(int(self))
-        elif data_type == eStructuredDataTypeSignedInteger:
-            return bool(int(self))
-        elif data_type == eStructuredDataTypeFloat:
-            return bool(float(self))
-        elif data_type == eStructuredDataTypeString:
-            return bool(str(self))
-        elif data_type == eStructuredDataTypeArray:
-            return bool(len(self))
-        elif data_type == eStructuredDataTypeDictionary:
-            return bool(len(self))
-        elif data_type == eStructuredDataTypeNull:
+        if data_type == eStructuredDataTypeInvalid:
             return False
-        elif data_type == eStructuredDataTypeInvalid:
-            return False
+        elif data_type in (
+            eStructuredDataTypeArray,
+            eStructuredDataTypeDictionary,
+        ):
+            return self.GetSize() != 0
+        elif data_type != eStructuredDataTypeGeneric:
+            return bool(self.dynamic)
         else:
-            raise TypeError(f"cannot convert {self.type_name(data_type)} to bool")
+            raise TypeError("cannot convert generic to bool")
 
     def __str__(self):
         data_type = self.GetType()
-        if data_type == eStructuredDataTypeString:
-            size = len(self) or 1023
-            return self.GetStringValue(size + 1)
-        elif data_type == eStructuredDataTypeInteger:
-            return str(int(self))
-        elif data_type == eStructuredDataTypeSignedInteger:
-            return str(int(self))
-        elif data_type == eStructuredDataTypeFloat:
-            return str(float(self))
+        if data_type in (
+            eStructuredDataTypeString,
+            eStructuredDataTypeInteger,
+            eStructuredDataTypeSignedInteger,
+            eStructuredDataTypeFloat,
+        ):
+            return str(self.dynamic)
         else:
             raise TypeError(f"cannot convert {self.type_name(data_type)} to string")
 
     def __int__(self):
         data_type = self.GetType()
-        if data_type == eStructuredDataTypeInteger:
-            return self.GetUnsignedIntegerValue()
-        elif data_type == eStructuredDataTypeSignedInteger:
-            return self.GetSignedIntegerValue()
-        elif data_type == eStructuredDataTypeFloat:
-            return int(float(self))
-        elif data_type == eStructuredDataTypeString:
-            return int(str(self))
-        elif data_type == eStructuredDataTypeBoolean:
-            return int(bool(self))
+        if data_type in (
+            eStructuredDataTypeInteger,
+            eStructuredDataTypeSignedInteger,
+            eStructuredDataTypeFloat,
+            eStructuredDataTypeString,
+            eStructuredDataTypeBoolean,
+        ):
+            return int(self.dynamic)
         else:
             raise TypeError(f"cannot convert {self.type_name(data_type)} to int")
 
     def __float__(self):
         data_type = self.GetType()
-        if data_type == eStructuredDataTypeFloat:
-            return self.GetFloatValue()
-        elif data_type == eStructuredDataTypeInteger:
-            return float(int(self))
-        elif data_type == eStructuredDataTypeSignedInteger:
-            return float(int(self))
-        elif data_type == eStructuredDataTypeString:
-            return float(str(self))
+        if data_type in (
+            eStructuredDataTypeFloat,
+            eStructuredDataTypeInteger,
+            eStructuredDataTypeSignedInteger,
+            eStructuredDataTypeString,
+        ):
+            return float(self.dynamic)
         else:
             raise TypeError(f"cannot convert {self.type_name(data_type)} to float")
 
