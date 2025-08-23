@@ -178,6 +178,10 @@ public:
   mlir::Value VisitBinMulAssign(const CompoundAssignOperator *e) {
     return emitCompoundAssign(e, &ComplexExprEmitter::emitBinMul);
   }
+
+  mlir::Value VisitBinDivAssign(const CompoundAssignOperator *e) {
+    return emitCompoundAssign(e, &ComplexExprEmitter::emitBinDiv);
+  }
 };
 } // namespace
 
@@ -865,6 +869,10 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
   assert(!cir::MissingFeatures::cgFPOptionsRAII());
 
+  // Handle division between Complex LHS and RHS with element type
+  // floating-point, and also handling if the element type is integer and either
+  // LHS or RHS is scalar because it will be implicitly casted to ComplexType
+  // from the frontend
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
@@ -873,8 +881,20 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
                                      rangeKind);
   }
 
-  cgf.cgm.errorNYI("ComplexExprEmitter::emitBinDiv between Complex & Scalar");
-  return {};
+  if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
+    mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
+    mlir::Value imag = builder.createComplexImag(op.loc, op.lhs);
+    mlir::Value newReal = builder.createFDiv(op.loc, real, op.rhs);
+    mlir::Value newImag = builder.createFDiv(op.loc, imag, op.rhs);
+    return builder.createComplexCreate(op.loc, newReal, newImag);
+  }
+
+  assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
+  cir::ConstantOp nullValue = builder.getNullValue(op.lhs.getType(), op.loc);
+  mlir::Value lhs = builder.createComplexCreate(op.loc, op.lhs, nullValue);
+  cir::ComplexRangeKind rangeKind =
+      getComplexRangeAttr(op.fpFeatures.getComplexRange());
+  return cir::ComplexDivOp::create(builder, op.loc, lhs, op.rhs, rangeKind);
 }
 
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
@@ -903,7 +923,7 @@ static CompoundFunc getComplexOp(BinaryOperatorKind op) {
   case BO_MulAssign:
     return &ComplexExprEmitter::emitBinMul;
   case BO_DivAssign:
-    llvm_unreachable("getComplexOp: BO_DivAssign");
+    return &ComplexExprEmitter::emitBinDiv;
   case BO_SubAssign:
     return &ComplexExprEmitter::emitBinSub;
   case BO_AddAssign:
