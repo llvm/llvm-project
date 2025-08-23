@@ -23,8 +23,8 @@ static void populateDialectNVGPUSubmodule(const nb::module_ &m) {
 
   nvgpuTensorMapDescriptorType.def_classmethod(
       "get",
-      [](nb::object cls, MlirType tensorMemrefType, int swizzle, int l2promo,
-         int oobFill, int interleave, MlirContext ctx) {
+      [](const nb::object &cls, MlirType tensorMemrefType, int swizzle,
+         int l2promo, int oobFill, int interleave, MlirContext ctx) {
         return cls(mlirNVGPUTensorMapDescriptorTypeGet(
             ctx, tensorMemrefType, swizzle, l2promo, oobFill, interleave));
       },
