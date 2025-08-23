@@ -158,6 +158,8 @@ def testModuleCapsule():
     module_dup = Module._CAPICreate(module_capsule)
     assert not module is module_dup
     assert module == module_dup
+    module._clear_mlir_module()
+    assert not module == module_dup
     assert module_dup.context is ctx
     # Gc and verify destructed.
     module = None

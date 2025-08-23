@@ -522,6 +522,8 @@ public:
   /// is taken by calling this function.
   static nanobind::object createFromCapsule(nanobind::object capsule);
 
+  void clearMlirModule() { module = {nullptr}; }
+
 private:
   PyModule(PyMlirContextRef contextRef, MlirModule module);
   MlirModule module;
