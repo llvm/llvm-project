@@ -1106,6 +1106,8 @@ inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {
 /// useful to act as a "stream modifier" to customize printing an operation
 /// with a stream using the operator<< overload, e.g.:
 ///   llvm::dbgs() << OpWithFlags(op, OpPrintingFlags().skipRegions());
+/// This always prints the operation with the local scope, to avoid introducing
+/// spurious newlines in the stream.
 class OpWithFlags {
 public:
   OpWithFlags(Operation *op, OpPrintingFlags flags = {})
@@ -1116,11 +1118,11 @@ public:
 private:
   Operation *op;
   OpPrintingFlags theFlags;
-  friend raw_ostream &operator<<(raw_ostream &os, const OpWithFlags &op);
+  friend raw_ostream &operator<<(raw_ostream &os, OpWithFlags op);
 };
 
-inline raw_ostream &operator<<(raw_ostream &os,
-                               const OpWithFlags &opWithFlags) {
+inline raw_ostream &operator<<(raw_ostream &os, OpWithFlags opWithFlags) {
+  opWithFlags.flags().useLocalScope();
   opWithFlags.op->print(os, opWithFlags.flags());
   return os;
 }
