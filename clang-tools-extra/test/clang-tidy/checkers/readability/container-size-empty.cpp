@@ -930,5 +930,15 @@ public:
 void foo(std::vector<int> v) {
   if (TypeRange(1) == TypeRange(v)) { // no warning
   }
+
+  if (TypeRange(1) == TypeRange()) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of comparing to an empty object
+    // CHECK-FIXES: if (TypeRange(1).empty()) {
+  }
+
+  if (TypeRange(v) == TypeRange()) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of comparing to an empty object
+    // CHECK-FIXES: if (TypeRange(v).empty()) {
+  }
 }
 }
