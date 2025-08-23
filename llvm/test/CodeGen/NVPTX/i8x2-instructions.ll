@@ -137,35 +137,27 @@ define void @test_store_i8x2_unaligned(ptr %ptr, <2 x i8> %a) {
 ; O0-LABEL: test_store_i8x2_unaligned(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<3>;
-; O0-NEXT:    .reg .b32 %r<3>;
+; O0-NEXT:    .reg .b32 %r<2>;
 ; O0-NEXT:    .reg .b64 %rd<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b64 %rd1, [test_store_i8x2_unaligned_param_0];
 ; O0-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_store_i8x2_unaligned_param_1];
 ; O0-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; O0-NEXT:    st.b8 [%rd1], %r1;
-; O0-NEXT:    shr.u32 %r2, %r1, 16;
-; O0-NEXT:    st.b8 [%rd1+2], %r2;
-; O0-NEXT:    st.b8 [%rd1+1], 0;
-; O0-NEXT:    st.b8 [%rd1+3], 0;
+; O0-NEXT:    st.b8 [%rd1+1], %rs2;
+; O0-NEXT:    st.b8 [%rd1], %rs1;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_store_i8x2_unaligned(
 ; O3:       {
 ; O3-NEXT:    .reg .b16 %rs<3>;
-; O3-NEXT:    .reg .b32 %r<3>;
 ; O3-NEXT:    .reg .b64 %rd<2>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b64 %rd1, [test_store_i8x2_unaligned_param_0];
 ; O3-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_store_i8x2_unaligned_param_1];
-; O3-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; O3-NEXT:    st.b8 [%rd1], %r1;
-; O3-NEXT:    shr.u32 %r2, %r1, 16;
-; O3-NEXT:    st.b8 [%rd1+2], %r2;
-; O3-NEXT:    st.b8 [%rd1+3], 0;
-; O3-NEXT:    st.b8 [%rd1+1], 0;
+; O3-NEXT:    st.b8 [%rd1+1], %rs2;
+; O3-NEXT:    st.b8 [%rd1], %rs1;
 ; O3-NEXT:    ret;
   store <2 x i8> %a, ptr %ptr, align 1
   ret void
@@ -178,9 +170,7 @@ define void @test_store_i8x2_unaligned_immediate(ptr %ptr) {
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b64 %rd1, [test_store_i8x2_unaligned_immediate_param_0];
-; O0-NEXT:    st.b8 [%rd1+3], 0;
-; O0-NEXT:    st.b8 [%rd1+2], 2;
-; O0-NEXT:    st.b8 [%rd1+1], 0;
+; O0-NEXT:    st.b8 [%rd1+1], 2;
 ; O0-NEXT:    st.b8 [%rd1], 1;
 ; O0-NEXT:    ret;
 ;
@@ -190,9 +180,7 @@ define void @test_store_i8x2_unaligned_immediate(ptr %ptr) {
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b64 %rd1, [test_store_i8x2_unaligned_immediate_param_0];
-; O3-NEXT:    st.b8 [%rd1+3], 0;
-; O3-NEXT:    st.b8 [%rd1+2], 2;
-; O3-NEXT:    st.b8 [%rd1+1], 0;
+; O3-NEXT:    st.b8 [%rd1+1], 2;
 ; O3-NEXT:    st.b8 [%rd1], 1;
 ; O3-NEXT:    ret;
   store <2 x i8> <i8 1, i8 2>, ptr %ptr, align 1
@@ -202,46 +190,26 @@ define void @test_store_i8x2_unaligned_immediate(ptr %ptr) {
 define i32 @test_zext_load_i8x2_unaligned(ptr %ptr) {
 ; O0-LABEL: test_zext_load_i8x2_unaligned(
 ; O0:       {
-; O0-NEXT:    .local .align 2 .b8 __local_depot6[2];
-; O0-NEXT:    .reg .b64 %SP;
-; O0-NEXT:    .reg .b64 %SPL;
-; O0-NEXT:    .reg .b16 %rs<5>;
-; O0-NEXT:    .reg .b32 %r<2>;
+; O0-NEXT:    .reg .b16 %rs<3>;
 ; O0-NEXT:    .reg .b64 %rd<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    mov.b64 %SPL, __local_depot6;
-; O0-NEXT:    cvta.local.u64 %SP, %SPL;
 ; O0-NEXT:    ld.param.b64 %rd1, [test_zext_load_i8x2_unaligned_param_0];
-; O0-NEXT:    ld.b8 %rs1, [%rd1];
-; O0-NEXT:    ld.b8 %rs2, [%rd1+1];
-; O0-NEXT:    shl.b16 %rs3, %rs2, 8;
-; O0-NEXT:    or.b16 %rs4, %rs3, %rs1;
-; O0-NEXT:    st.b16 [%SP], %rs4;
-; O0-NEXT:    ld.b16 %r1, [%SP];
-; O0-NEXT:    st.param.b32 [func_retval0], %r1;
+; O0-NEXT:    ld.b8 %rs1, [%rd1+1];
+; O0-NEXT:    ld.b8 %rs2, [%rd1];
+; O0-NEXT:    st.param.v2.b16 [func_retval0], {%rs2, %rs1};
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_zext_load_i8x2_unaligned(
 ; O3:       {
-; O3-NEXT:    .local .align 2 .b8 __local_depot6[2];
-; O3-NEXT:    .reg .b64 %SP;
-; O3-NEXT:    .reg .b64 %SPL;
-; O3-NEXT:    .reg .b16 %rs<5>;
-; O3-NEXT:    .reg .b32 %r<2>;
+; O3-NEXT:    .reg .b16 %rs<3>;
 ; O3-NEXT:    .reg .b64 %rd<2>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
-; O3-NEXT:    mov.b64 %SPL, __local_depot6;
-; O3-NEXT:    cvta.local.u64 %SP, %SPL;
 ; O3-NEXT:    ld.param.b64 %rd1, [test_zext_load_i8x2_unaligned_param_0];
-; O3-NEXT:    ld.b8 %rs1, [%rd1];
-; O3-NEXT:    ld.b8 %rs2, [%rd1+1];
-; O3-NEXT:    shl.b16 %rs3, %rs2, 8;
-; O3-NEXT:    or.b16 %rs4, %rs3, %rs1;
-; O3-NEXT:    st.b16 [%SP], %rs4;
-; O3-NEXT:    ld.b16 %r1, [%SP];
-; O3-NEXT:    st.param.b32 [func_retval0], %r1;
+; O3-NEXT:    ld.b8 %rs1, [%rd1+1];
+; O3-NEXT:    ld.b8 %rs2, [%rd1];
+; O3-NEXT:    st.param.v2.b16 [func_retval0], {%rs2, %rs1};
 ; O3-NEXT:    ret;
   %a = load <2 x i8>, ptr %ptr, align 1
   %b = zext <2 x i8> %a to <2 x i16>
@@ -252,46 +220,26 @@ define i32 @test_zext_load_i8x2_unaligned(ptr %ptr) {
 define i32 @test_sext_load_i8x2_unaligned(ptr %ptr) {
 ; O0-LABEL: test_sext_load_i8x2_unaligned(
 ; O0:       {
-; O0-NEXT:    .local .align 2 .b8 __local_depot7[2];
-; O0-NEXT:    .reg .b64 %SP;
-; O0-NEXT:    .reg .b64 %SPL;
-; O0-NEXT:    .reg .b16 %rs<5>;
-; O0-NEXT:    .reg .b32 %r<2>;
+; O0-NEXT:    .reg .b16 %rs<3>;
 ; O0-NEXT:    .reg .b64 %rd<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    mov.b64 %SPL, __local_depot7;
-; O0-NEXT:    cvta.local.u64 %SP, %SPL;
 ; O0-NEXT:    ld.param.b64 %rd1, [test_sext_load_i8x2_unaligned_param_0];
-; O0-NEXT:    ld.b8 %rs1, [%rd1];
-; O0-NEXT:    ld.b8 %rs2, [%rd1+1];
-; O0-NEXT:    shl.b16 %rs3, %rs2, 8;
-; O0-NEXT:    or.b16 %rs4, %rs3, %rs1;
-; O0-NEXT:    st.b16 [%SP], %rs4;
-; O0-NEXT:    ld.s16 %r1, [%SP];
-; O0-NEXT:    st.param.b32 [func_retval0], %r1;
+; O0-NEXT:    ld.s8 %rs1, [%rd1+1];
+; O0-NEXT:    ld.s8 %rs2, [%rd1];
+; O0-NEXT:    st.param.v2.b16 [func_retval0], {%rs2, %rs1};
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_sext_load_i8x2_unaligned(
 ; O3:       {
-; O3-NEXT:    .local .align 2 .b8 __local_depot7[2];
-; O3-NEXT:    .reg .b64 %SP;
-; O3-NEXT:    .reg .b64 %SPL;
-; O3-NEXT:    .reg .b16 %rs<5>;
-; O3-NEXT:    .reg .b32 %r<2>;
+; O3-NEXT:    .reg .b16 %rs<3>;
 ; O3-NEXT:    .reg .b64 %rd<2>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
-; O3-NEXT:    mov.b64 %SPL, __local_depot7;
-; O3-NEXT:    cvta.local.u64 %SP, %SPL;
 ; O3-NEXT:    ld.param.b64 %rd1, [test_sext_load_i8x2_unaligned_param_0];
-; O3-NEXT:    ld.b8 %rs1, [%rd1];
-; O3-NEXT:    ld.b8 %rs2, [%rd1+1];
-; O3-NEXT:    shl.b16 %rs3, %rs2, 8;
-; O3-NEXT:    or.b16 %rs4, %rs3, %rs1;
-; O3-NEXT:    st.b16 [%SP], %rs4;
-; O3-NEXT:    ld.s16 %r1, [%SP];
-; O3-NEXT:    st.param.b32 [func_retval0], %r1;
+; O3-NEXT:    ld.s8 %rs1, [%rd1+1];
+; O3-NEXT:    ld.s8 %rs2, [%rd1];
+; O3-NEXT:    st.param.v2.b16 [func_retval0], {%rs2, %rs1};
 ; O3-NEXT:    ret;
   %a = load <2 x i8>, ptr %ptr, align 1
   %b = sext <2 x i8> %a to <2 x i16>
