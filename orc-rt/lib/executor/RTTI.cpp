@@ -6,11 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is a part of the ORC runtime support library.
-//
-// Note:
-//   This source file was adapted from lib/Support/ExtensibleRTTI.cpp, however
-// the data structures are not shared and the code need not be kept in sync.
+// Contains the implementation of APIs in the orc-rt/RTTI.h header.
 //
 //===----------------------------------------------------------------------===//
 
