@@ -1687,7 +1687,7 @@ class BooleanConditionOrMatchingShape<string condition, string result> :
 def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
     BooleanConditionOrMatchingShape<"condition", "result">,
-    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesOrPoison"]>,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
     DeclareOpInterfaceMethods<SelectLikeOpInterface>]> {
   let summary = "select operation";
   let description = [{

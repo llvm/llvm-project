@@ -229,17 +229,32 @@ void mlir::intrange::detail::defaultInferResultRanges(
   llvm::SmallVector<ConstantIntRanges> unpacked;
   unpacked.reserve(argRanges.size());
 
+  bool signedPoison = false;
+  bool unsignedPoison = false;
   for (const IntegerValueRange &range : argRanges) {
     if (range.isUninitialized())
       return;
-    unpacked.push_back(range.getValue());
+
+    const ConstantIntRanges &value = range.getValue();
+    unpacked.push_back(value);
+    signedPoison = signedPoison || value.isSignedPoison();
+    unsignedPoison = unsignedPoison || value.isUnsignedPoison();
   }
 
-  interface.inferResultRanges(
-      unpacked,
-      [&setResultRanges](Value value, const ConstantIntRanges &argRanges) {
-        setResultRanges(value, IntegerValueRange{argRanges});
-      });
+  auto visitor = [&](Value value, const ConstantIntRanges &range) {
+    if (!signedPoison && !unsignedPoison)
+      return setResultRanges(value, range);
+
+    auto poison = ConstantIntRanges::poison(range.getBitWidth());
+    APInt umin = unsignedPoison ? poison.umin() : range.umin();
+    APInt umax = unsignedPoison ? poison.umax() : range.umax();
+    APInt smin = signedPoison ? poison.smin() : range.smin();
+    APInt smax = signedPoison ? poison.smax() : range.smax();
+
+    setResultRanges(value, ConstantIntRanges(umin, umax, smin, smax));
+  };
+
+  interface.inferResultRanges(unpacked, visitor);
 }
 
 void mlir::intrange::detail::defaultInferResultRangesFromOptional(
@@ -252,39 +267,4 @@ void mlir::intrange::detail::defaultInferResultRangesFromOptional(
         if (!argRanges.isUninitialized())
           setResultRanges(value, argRanges.getValue());
       });
-}
-
-void mlir::intrange::detail::defaultInferResultRangesOrPoison(
-    InferIntRangeInterface interface, ArrayRef<IntegerValueRange> argRanges,
-    SetIntLatticeFn setResultRanges) {
-
-  bool signedPoison = false;
-  bool unsignedPoison = false;
-  for (const IntegerValueRange &range : argRanges) {
-    if (range.isUninitialized())
-      continue;
-
-    const ConstantIntRanges &value = range.getValue();
-    signedPoison = signedPoison || value.isSignedPoison();
-    unsignedPoison = unsignedPoison || value.isUnsignedPoison();
-  }
-
-  auto visitor = [&](Value value, const IntegerValueRange &range) {
-    if (range.isUninitialized())
-      return;
-
-    if (!signedPoison && !unsignedPoison)
-      return setResultRanges(value, range);
-
-    const ConstantIntRanges &origRange = range.getValue();
-    auto poison = ConstantIntRanges::poison(origRange.getBitWidth());
-    APInt umin = unsignedPoison ? poison.umin() : origRange.umin();
-    APInt umax = unsignedPoison ? poison.umax() : origRange.umax();
-    APInt smin = signedPoison ? poison.smin() : origRange.smin();
-    APInt smax = signedPoison ? poison.smax() : origRange.smax();
-
-    setResultRanges(value, ConstantIntRanges(umin, umax, smin, smax));
-  };
-
-  interface.inferResultRangesFromOptional(argRanges, visitor);
 }

@@ -312,7 +312,7 @@ void arith::CmpIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 // SelectOp
 //===----------------------------------------------------------------------===//
 
-void arith::SelectOp::inferResultRangesOrPoison(
+void arith::SelectOp::inferResultRangesFromOptional(
     ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRange) {
   std::optional<APInt> mbCondVal =
       argRanges[0].isUninitialized()
