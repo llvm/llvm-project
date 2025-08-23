@@ -691,7 +691,7 @@ LibraryScanHelper::getNextBatch(PathType kind, size_t batchSize) {
 
   std::unique_lock<std::shared_mutex> lock(m_mutex);
 
-  while (!queue.empty() && result.size() < batchSize) {
+  while (!queue.empty() && (batchSize == 0 || result.size() < batchSize)) {
     StringRef base = queue.front();
     auto it = m_units.find(base);
     if (it != m_units.end()) {
@@ -750,7 +750,7 @@ PathType LibraryScanHelper::classifyKind(StringRef path) const {
 
   static const std::array<std::string, 5> userPrefixes = {
       "/usr/local",    // often used by users for manual installs
-      "/opt/homebrew", // common on macOS M1/M2
+      "/opt/homebrew", // common on macOS
       "/opt/local",    // MacPorts
       "/home",         // Linux home dirs
       "/Users",        // macOS user dirs
