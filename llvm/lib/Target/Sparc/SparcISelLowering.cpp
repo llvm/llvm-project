@@ -3549,12 +3549,6 @@ bool SparcTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return Subtarget->isUA2007() && !Subtarget->useSoftFloat();
 }
 
-// Override to disable global variable loading on Linux.
-void SparcTargetLowering::insertSSPDeclarations(Module &M) const {
-  if (!Subtarget->isTargetLinux())
-    return TargetLowering::insertSSPDeclarations(M);
-}
-
 void SparcTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
   assert(MI.getOpcode() == SP::SUBCCrr || MI.getOpcode() == SP::SUBCCri);
