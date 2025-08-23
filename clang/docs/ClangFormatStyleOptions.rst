@@ -3428,7 +3428,7 @@ the configuration (without a prefix: ``Auto``).
 
 **BreakBeforeCloseBracketBracedList** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketBracedList>`
   Force break before the right bracket of a braced initializer list (when
-   ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
   limit. The break before the right bracket is only made if there is a
   break after the opening bracket.
 
