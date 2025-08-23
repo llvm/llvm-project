@@ -716,7 +716,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 /// Check if \p VPV is an untruncated wide induction, either before or after the
 /// increment. If so return the header IV (before the increment), otherwise
 /// return null.
-static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
+static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV,
+                                                  ScalarEvolution &SE) {
   auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
     // VPV itself is a wide induction, separately compute the end value for exit
@@ -753,13 +754,13 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
       // IVStep will be the negated step of the subtraction. Check if Step == -1
       // * IVStep.
       VPValue *Step;
-      if (!match(VPV, m_Sub(m_VPValue(), m_VPValue(Step))) ||
-          !Step->isLiveIn() || !IVStep->isLiveIn())
+      if (!match(VPV, m_Sub(m_VPValue(), m_VPValue(Step))))
         return false;
-      auto *StepCI = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
-      auto *IVStepCI = dyn_cast<ConstantInt>(IVStep->getLiveInIRValue());
-      return StepCI && IVStepCI &&
-             StepCI->getValue() == (-1 * IVStepCI->getValue());
+      const SCEV *IVStepSCEV = vputils::getSCEVExprForVPValue(IVStep, SE);
+      const SCEV *StepSCEV = vputils::getSCEVExprForVPValue(Step, SE);
+      return !isa<SCEVCouldNotCompute>(IVStepSCEV) &&
+             !isa<SCEVCouldNotCompute>(StepSCEV) &&
+             IVStepSCEV == SE.getNegativeSCEV(StepSCEV);
     }
     default:
       return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
@@ -776,7 +777,8 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
 static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
                                                VPTypeAnalysis &TypeInfo,
                                                VPBlockBase *PredVPBB,
-                                               VPValue *Op) {
+                                               VPValue *Op,
+                                               ScalarEvolution &SE) {
   VPValue *Incoming, *Mask;
   if (!match(Op, m_VPInstruction<VPInstruction::ExtractLane>(
                      m_VPInstruction<VPInstruction::FirstActiveLane>(
@@ -784,7 +786,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
                      m_VPValue(Incoming))))
     return nullptr;
 
-  auto *WideIV = getOptimizableIVOf(Incoming);
+  auto *WideIV = getOptimizableIVOf(Incoming, SE);
   if (!WideIV)
     return nullptr;
 
@@ -827,15 +829,14 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
 
 /// Attempts to optimize the induction variable exit values for users in the
 /// exit block coming from the latch in the original scalar loop.
-static VPValue *
-optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
-                               VPBlockBase *PredVPBB, VPValue *Op,
-                               DenseMap<VPValue *, VPValue *> &EndValues) {
+static VPValue *optimizeLatchExitInductionUser(
+    VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
+    DenseMap<VPValue *, VPValue *> &EndValues, ScalarEvolution &SE) {
   VPValue *Incoming;
   if (!match(Op, m_ExtractLastElement(m_VPValue(Incoming))))
     return nullptr;
 
-  auto *WideIV = getOptimizableIVOf(Incoming);
+  auto *WideIV = getOptimizableIVOf(Incoming, SE);
   if (!WideIV)
     return nullptr;
 
@@ -874,7 +875,8 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
 }
 
 void VPlanTransforms::optimizeInductionExitUsers(
-    VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues) {
+    VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues,
+    ScalarEvolution &SE) {
   VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPTypeAnalysis TypeInfo(Plan);
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
@@ -884,11 +886,12 @@ void VPlanTransforms::optimizeInductionExitUsers(
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
         if (PredVPBB == MiddleVPBB)
-          Escape = optimizeLatchExitInductionUser(
-              Plan, TypeInfo, PredVPBB, ExitIRI->getOperand(Idx), EndValues);
+          Escape = optimizeLatchExitInductionUser(Plan, TypeInfo, PredVPBB,
+                                                  ExitIRI->getOperand(Idx),
+                                                  EndValues, SE);
         else
           Escape = optimizeEarlyExitInductionUser(Plan, TypeInfo, PredVPBB,
-                                                  ExitIRI->getOperand(Idx));
+                                                  ExitIRI->getOperand(Idx), SE);
         if (Escape)
           ExitIRI->setOperand(Idx, Escape);
       }

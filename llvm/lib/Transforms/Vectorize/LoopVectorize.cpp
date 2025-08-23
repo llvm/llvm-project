@@ -8908,7 +8908,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
                                        WithoutRuntimeCheck);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues);
+  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, *PSE.getSE());
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
