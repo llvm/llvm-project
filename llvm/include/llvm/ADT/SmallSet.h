@@ -276,21 +276,20 @@ public:
   // LLVM_DEPRECATED placed between "template" and "class" above won't work for
   // some reason.  Put a deprecation message on constructors instead.
   LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet<PointeeType *, N>() = default;
+  SmallSet() = default;
   LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet<PointeeType *, N>(const SmallSet &) = default;
+  SmallSet(const SmallSet &) = default;
   LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet<PointeeType *, N>(SmallSet &&) = default;
+  SmallSet(SmallSet &&) = default;
   template <typename IterT>
   LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet<PointeeType *, N>(IterT Begin, IterT End) : Base(Begin, End) {}
+  SmallSet(IterT Begin, IterT End) : Base(Begin, End) {}
   template <typename Range>
   LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet<PointeeType *, N>(llvm::from_range_t, Range &&R)
+  SmallSet(llvm::from_range_t, Range &&R)
       : Base(llvm::from_range, std::move(R)) {}
   LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-  SmallSet<PointeeType *, N>(std::initializer_list<PointeeType *> L)
-      : Base(L) {}
+  SmallSet(std::initializer_list<PointeeType *> L) : Base(L) {}
 };
 
 /// Equality comparison for SmallSet.
