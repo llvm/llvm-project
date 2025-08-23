@@ -519,6 +519,101 @@ static ExprResult calculateConstraintSatisfactionImpl(
   return SubstitutedAtomicExpr;
 }
 
+namespace {
+
+class HashUsedTemplateArguments
+    : public TreeTransform<HashUsedTemplateArguments> {
+  using inherited = TreeTransform<HashUsedTemplateArguments>;
+  friend inherited;
+
+  const MultiLevelTemplateArgumentList &TemplateArgs;
+
+  llvm::FoldingSetNodeID &ID;
+
+  llvm::SmallVector<TemplateArgument, 10> UsedTemplateArgs;
+
+  bool AlwaysRebuild() const { return false; }
+
+  TemplateArgument getPackSubstitutedTemplateArgument(TemplateArgument Arg) {
+    assert(*SemaRef.ArgPackSubstIndex < Arg.pack_size());
+    Arg = Arg.pack_begin()[*SemaRef.ArgPackSubstIndex];
+    if (Arg.isPackExpansion())
+      Arg = Arg.getPackExpansionPattern();
+    return Arg;
+  }
+
+  using inherited::TransformTemplateTypeParmType;
+  QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
+                                         TemplateTypeParmTypeLoc TL, bool) {
+    const TemplateTypeParmType *T = TL.getTypePtr();
+    assert(T->getDepth() < TemplateArgs.getNumLevels());
+
+    TemplateArgument Arg = TemplateArgs(T->getDepth(), T->getIndex());
+
+    if (T->isParameterPack() && SemaRef.ArgPackSubstIndex) {
+      assert(Arg.getKind() == TemplateArgument::Pack &&
+             "Missing argument pack");
+
+      Arg = getPackSubstitutedTemplateArgument(Arg);
+    }
+
+    UsedTemplateArgs.push_back(
+        SemaRef.Context.getCanonicalTemplateArgument(Arg));
+
+    TemplateTypeParmTypeLoc NewTL =
+        TLB.push<TemplateTypeParmTypeLoc>(TL.getType());
+    NewTL.setNameLoc(TL.getNameLoc());
+    return TL.getType();
+  }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    NamedDecl *D = E->getDecl();
+    NonTypeTemplateParmDecl *NTTP = dyn_cast<NonTypeTemplateParmDecl>(D);
+    if (!NTTP)
+      return E;
+
+    TemplateArgument Arg = TemplateArgs(NTTP->getDepth(), NTTP->getPosition());
+    if (NTTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
+      assert(Arg.getKind() == TemplateArgument::Pack &&
+             "Missing argument pack");
+      Arg = getPackSubstitutedTemplateArgument(Arg);
+    }
+
+    UsedTemplateArgs.push_back(
+        SemaRef.Context.getCanonicalTemplateArgument(Arg));
+    return E;
+  }
+
+public:
+  HashUsedTemplateArguments(Sema &SemaRef,
+                            const MultiLevelTemplateArgumentList &TemplateArgs,
+                            llvm::FoldingSetNodeID &ID)
+      : inherited(SemaRef), TemplateArgs(TemplateArgs), ID(ID) {}
+
+  void TraverseTemplateParameterMapping(
+      llvm::ArrayRef<TemplateArgumentLoc> Mapping) {
+    for (auto ArgLoc : Mapping)
+      UsedTemplateArgs.push_back(
+          SemaRef.Context.getCanonicalTemplateArgument(ArgLoc.getArgument()));
+
+    TemplateArgumentListInfo Info;
+    inherited::TransformTemplateArguments(Mapping.data(),
+                                          Mapping.data() + Mapping.size(), Info,
+                                          /*Uneval=*/false);
+
+    llvm::SmallSet<unsigned, 10> ArgHash;
+    for (auto &Used : UsedTemplateArgs) {
+      llvm::FoldingSetNodeID ID;
+      Used.Profile(ID, SemaRef.Context);
+      ArgHash.insert(ID.ComputeHash());
+    }
+    for (unsigned V : ArgHash)
+      ID.AddInteger(V);
+  }
+};
+
+} // namespace
+
 static ExprResult calculateConstraintSatisfaction(
     Sema &S, const AtomicConstraint &Constraint, const NamedDecl *Template,
     SourceLocation TemplateNameLoc, const MultiLevelTemplateArgumentList &MLTAL,
@@ -527,16 +622,18 @@ static ExprResult calculateConstraintSatisfaction(
 
   unsigned Size = Satisfaction.Details.size();
   llvm::SmallVector<TemplateArgument, 4> FlattenedArgs;
-  UnsignedOrNone SubstPackIndex = Constraint.getPackSubstitutionIndex()
-                                      ? Constraint.getPackSubstitutionIndex()
-                                      : PackSubstitutionIndex;
 
+  llvm::FoldingSetNodeID ID;
   if (!Constraint.hasParameterMapping()) {
     for (auto List : MLTAL)
       for (const TemplateArgument &Arg : List.Args) {
         FlattenedArgs.emplace_back(S.Context.getCanonicalTemplateArgument(Arg));
       }
   } else {
+#if 0
+    UnsignedOrNone SubstPackIndex = Constraint.getPackSubstitutionIndex()
+                                        ? Constraint.getPackSubstitutionIndex()
+                                        : PackSubstitutionIndex;
     for (auto ArgLoc : Constraint.getParameterMapping()) {
       FlattenedArgs.emplace_back(
           S.Context.getCanonicalTemplateArgument(ArgLoc.getArgument()));
@@ -558,11 +655,17 @@ static ExprResult calculateConstraintSatisfaction(
               S.Context.getCanonicalTemplateArgument(MLTAL(Depth, I)));
         }
     }
+#else
+    Sema::ArgPackSubstIndexRAII SubstIndex(
+        S, Constraint.getPackSubstitutionIndex()
+               ? Constraint.getPackSubstitutionIndex()
+               : PackSubstitutionIndex);
+    HashUsedTemplateArguments(S, MLTAL, ID)
+        .TraverseTemplateParameterMapping(Constraint.getParameterMapping());
+#endif
   }
 
-  llvm::FoldingSetNodeID ID;
   ID.AddPointer(Constraint.getConstraintExpr());
-  ID.AddInteger(FlattenedArgs.size());
   for (auto &Arg : FlattenedArgs)
     Arg.Profile(ID, S.Context);
   ID.AddInteger(PackSubstitutionIndex.toInternalRepresentation());
@@ -1991,8 +2094,8 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
   }
   case NormalizedConstraint::ConstraintKind::FoldExpanded: {
     auto &FE = static_cast<FoldExpandedConstraint &>(N);
-    llvm::SaveAndRestore _1(InFoldExpr, true);
     if (!MLTAL) {
+      llvm::SaveAndRestore _1(InFoldExpr, true);
       assert(!ArgsAsWritten);
       return substitute(FE.getNormalizedPattern());
     }

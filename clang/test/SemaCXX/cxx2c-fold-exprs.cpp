@@ -481,4 +481,28 @@ static_assert(
 
 }
 
+namespace case2 {
+
+template <class _Bp>
+constexpr bool False = false;
+
+template <class... _Views>
+concept __zip_all_random_access = (False<_Views> && ...);
+// expected-note@-1 {{evaluated to false}}
+
+template <typename... _Views>
+struct zip_view {
+  void f() requires __zip_all_random_access<_Views...>{};
+  // expected-note@-1 {{because 'int' does not satisfy}}
+};
+
+zip_view<int> test_v;
+static_assert(!__zip_all_random_access<int>);
+
+void test() {
+  test_v.f(); // expected-error {{invalid reference to function 'f'}}
+}
+
+}
+
 }
