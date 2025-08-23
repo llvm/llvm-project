@@ -1772,7 +1772,8 @@ def note_unsatisfied_trait
            "%Replaceable{replaceable}|"
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
-           "%StandardLayout{standard-layout}"
+           "%StandardLayout{standard-layout}|"
+           "%Final{final}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1815,7 +1816,9 @@ def note_unsatisfied_trait_reason
            "%sub{select_special_member_kind}1}|"
            "%FunctionType{is a function type}|"
            "%CVVoidType{is a cv void type}|"
-           "%IncompleteArrayType{is an incomplete array type}"
+           "%IncompleteArrayType{is an incomplete array type}|"
+           "%NotClassOrUnion{is not a class or union type}|"
+           "%NotMarkedFinal{is not marked 'final'}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
