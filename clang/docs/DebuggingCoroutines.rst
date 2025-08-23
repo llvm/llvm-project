@@ -9,14 +9,14 @@ Introduction
 ============
 
 Coroutines in C++ were introduced in C++20, and the user experience for
-debugging them can still be challenging. This document guides you how to most
+debugging them can still be challenging. This document guides you on how to most
 efficiently debug coroutines and how to navigate existing shortcomings in
 debuggers and compilers.
 
 Coroutines are generally used either as generators or for asynchronous
 programming. In this document, we will discuss both use cases. Even if you are
 using coroutines for asynchronous programming, you should still read the
-generators section, as it will introduce foundational debugging techniques also
+generators section, as it introduces foundational debugging techniques also
 applicable to the debugging of asynchronous programs.
 
 Both compilers (clang, gcc, ...) and debuggers (lldb, gdb, ...) are
@@ -34,15 +34,15 @@ scripting. This guide comes with a basic GDB script for coroutine debugging.
 This guide will first showcase the more polished, bleeding-edge experience, but
 will also show you how to debug coroutines with older toolchains. In general,
 the older your toolchain, the deeper you will have to dive into the
-implementation details of coroutines (such as their ABI). The further down in
-this document you go, the more low-level, technical the content will become. If
+implementation details of coroutines (such as their ABI). The further down you go in
+this document, the more low-level, technical the content will become. If
 you are on an up-to-date toolchain, you will hopefully be able to stop reading
 earlier.
 
 Debugging generators
 ====================
 
-One of the two major use cases for coroutines in C++ are generators, i.e.,
+One of the two major use cases for coroutines in C++ is generators, i.e.,
 functions which can produce values via ``co_yield``. Values are produced
 lazily, on-demand. For this purpose, every time a new value is requested, the
 coroutine gets resumed. As soon as it reaches a ``co_yield`` and thereby
@@ -141,7 +141,7 @@ a regular function.
 
 Note the two additional variables ``__promise`` and ``__coro_frame``. Those
 show the internal state of the coroutine. They are not relevant for our
-generator example, but will be relevant for asynchronous programming described
+generator example but will be relevant for asynchronous programming described
 in the next section.
 
 Stepping out of a coroutine
@@ -174,7 +174,7 @@ Inspecting a suspended coroutine
 --------------------------------
 
 The ``print10Elements`` function receives an opaque ``generator`` type. Let's
-assume we are suspended at the ``++gen;`` line, and want to inspect the
+assume we are suspended at the ``++gen;`` line and want to inspect the
 generator and its internal state.
 
 To do so, we can simply look into the ``gen.hdl`` variable. LLDB comes with a
@@ -188,7 +188,7 @@ We can see two function pointers ``resume`` and ``destroy``. These pointers
 point to the resume / destroy functions. By inspecting those function pointers,
 we can see that our ``generator`` is actually backed by our ``fibonacci``
 coroutine. When using VS Code + lldb-dap, you can Cmd+Click on the function
-address (``0x555...`` in the screenshot) to directly jump to the function
+address (``0x555...`` in the screenshot) to jump directly to the function
 definition backing your coroutine handle.
 
 Next, we see the ``promise``. In our case, this reveals the current value of
@@ -247,12 +247,12 @@ the line number of the current suspension point in the promise:
   };
 
 This stores the return address of ``await_suspend`` within the promise.
-Thereby, we can read it back from the promise of a suspended coroutine, and map
+Thereby, we can read it back from the promise of a suspended coroutine and map
 it to an exact source code location. For a complete example, see the ``task``
 type used below for asynchronous programming.
 
 Alternatively, we can modify the C++ code to store the line number in the
-promise type. We can use a ``std::source_location`` to get the line number of
+promise type. We can use ``std::source_location`` to get the line number of
 the await and store it inside the ``promise_type``. In the debugger, we can
 then read the line number from the promise of the suspended coroutine.
 
@@ -270,7 +270,7 @@ then read the line number from the promise of the suspended coroutine.
   };
 
 The downside of both approaches is that they come at the price of additional
-runtime cost. In particular the second approach increases binary size, since it
+runtime cost. In particular, the second approach increases binary size, since it
 requires additional ``std::source_location`` objects, and those source
 locations are not stripped by split-dwarf. Whether the first approach is worth
 the additional runtime cost is a trade-off you need to make yourself.
@@ -285,7 +285,7 @@ provide custom debugging support, so in addition to this guide, you might want
 to check out their documentation.
 
 When using coroutines for asynchronous programming, your library usually
-provides you some ``task`` type. This type usually looks similar to this:
+provides you with some ``task`` type. This type usually looks similar to this:
 
 .. code-block:: c++
 
@@ -479,7 +479,7 @@ One such solution is to store the list of in-flight coroutines in a collection:
   };
 
 With this in place, it is possible to inspect ``inflight_coroutines`` from the
-debugger, and rely on LLDB's ``std::coroutine_handle`` pretty-printer to
+debugger and rely on LLDB's ``std::coroutine_handle`` pretty-printer to
 inspect the coroutines.
 
 This technique will track *all* coroutines, also the ones which are currently
@@ -498,8 +498,8 @@ LLDB before 21.0 did not yet show the ``__coro_frame`` inside
 ``coroutine_handle``. To inspect the coroutine frame, you had to use the
 approach described in the :ref:`devirtualization` section.
 
-LLDB before 18.0 was hiding the ``__promise`` and ``__coro_frame``
-variable by default. The variables are still present, but they need to be
+LLDB before 18.0 hid the ``__promise`` and ``__coro_frame``
+variables by default. The variables are still present, but they need to be
 explicitly added to the "watch" pane in VS Code or requested via
 ``print __promise`` and ``print __coro_frame`` from the debugger console.
 
@@ -511,9 +511,9 @@ section.
 Toolchain Implementation Details
 ================================
 
-This section covers the ABI, as well as additional compiler-specific behavior.
+This section covers the ABI as well as additional compiler-specific behavior.
 The ABI is followed by all compilers, on all major systems, including Windows,
-Linux and macOS. Different compilers emit different debug information, though.
+Linux, and macOS. Different compilers emit different debug information, though.
 
 Ramp, resume and destroy functions
 ----------------------------------
@@ -595,7 +595,7 @@ functions as their first two members. As such, we can read the function
 pointers from the coroutine frame and then obtain the function's name from its
 address.
 
-The promise is guaranteed to be at a 16 byte offset from the coroutine frame.
+The promise is guaranteed to be at a 16-byte offset from the coroutine frame.
 If we have a coroutine handle at address 0x416eb0, we can hence reinterpret-cast
 the promise as follows:
 
@@ -607,8 +607,8 @@ Implementation in clang / LLVM
 ------------------------------
 
 The C++ Coroutines feature in the Clang compiler is implemented in two parts of
-the compiler. Semantic analysis is performed in Clang, and Coroutine
-construction and optimization takes place in the LLVM middle-end.
+the compiler. Semantic analysis is performed in Clang, and coroutine
+construction and optimization take place in the LLVM middle-end.
 
 For each coroutine function, the frontend generates a single corresponding
 LLVM-IR function. This function uses special ``llvm.coro.suspend`` intrinsics
@@ -622,7 +622,7 @@ points into the coroutine frame. Most of the heavy lifting to preserve debugging
 information is done in this pass. This pass needs to rewrite all variable
 locations to point into the coroutine frame.
 
-Afterwards, a couple of additional optimizations are applied, before code
+Afterwards, a couple of additional optimizations are applied before code
 gets emitted, but none of them are really interesting regarding debugging
 information.
 
@@ -636,8 +636,8 @@ However, this is not possible for coroutine frames because the frames are
 constructed in the LLVM middle-end.
 
 To mitigate this problem, the LLVM middle end attempts to generate some debug
-information, which is unfortunately incomplete, since much of the language
-specific information is missing in the middle end.
+information, which is unfortunately incomplete, since much of the
+language-specific information is missing in the middle end.
 
 .. _devirtualization:
 
@@ -655,7 +655,7 @@ There are two possible approaches to do so:
    We can lookup their types and thereby get the types of promise
    and coroutine frame.
 
-In gdb, one can use the following approach to devirtualize coroutine type,
+In gdb, one can use the following approach to devirtualize a coroutine type,
 assuming we have a ``std::coroutine_handle`` is at address 0x418eb0:
 
 ::
@@ -679,7 +679,7 @@ LLDB comes with devirtualization support out of the box, as part of the
 pretty-printer for ``std::coroutine_handle``. Internally, this pretty-printer
 uses the second approach. We look up the types in the destroy function and not
 the resume function because the resume function pointer will be set to a
-nullptr as soon as a coroutine reaches its final suspension point. If we used
+``nullptr`` as soon as a coroutine reaches its final suspension point. If we used
 the resume function, devirtualization would hence fail for all coroutines that
 have reached their final suspension point.
 
@@ -687,10 +687,10 @@ Interpreting the coroutine frame in optimized builds
 ----------------------------------------------------
 
 The ``__coro_frame`` variable usually refers to the coroutine frame of an
-*in-flight* coroutine. This means, the coroutine is currently executing.
+*in-flight* coroutine. This means the coroutine is currently executing.
 However, the compiler only guarantees the coroutine frame to be in a consistent
 state while the coroutine is suspended. As such, the variables inside the
-``__coro_frame`` variable might be outdated, in particular when optimizations
+``__coro_frame`` variable might be outdated, particularly when optimizations
 are enabled.
 
 Furthermore, when optimizations are enabled, the compiler will layout the
@@ -731,7 +731,7 @@ despite ``a`` being frequently incremented.
 
 While this might be surprising, this is a result of the optimizer recognizing
 that it can eliminate most of the load/store operations.
-The above code gets optimized to the equivalent of:
+The above code is optimized to the equivalent of:
 
 .. code-block:: c++
 
@@ -1180,5 +1180,5 @@ The authors of the Folly libraries wrote a blog post series on how they debug co
 * `Async stack traces in folly: Improving debugging in the developer lifecycle <https://developers.facebook.com/blog/post/2021/10/21/async-stack-traces-folly-improving-debugging-developer-lifecycle/>`_
 
 Besides some topics also covered here (stack traces from the debugger), Folly's blog post series also covers
-more additional topics, such as capturing async stack traces in performance profiles via eBPF filters
+additional topics, such as capturing async stack traces in performance profiles via eBPF filters
 and printing async stack traces on crashes.

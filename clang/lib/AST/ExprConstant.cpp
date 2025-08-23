@@ -401,7 +401,7 @@ namespace {
       assert(!Invalid && "invalid designator has no subobject type");
       return MostDerivedPathLength == Entries.size()
                  ? MostDerivedType
-                 : Ctx.getRecordType(getAsBaseClass(Entries.back()));
+                 : Ctx.getCanonicalTagType(getAsBaseClass(Entries.back()));
     }
 
     /// Update this designator to refer to the first element within this array.
@@ -2623,7 +2623,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
         Value.getUnionValue(), Kind, Value.getUnionField(), CheckedTemps);
   }
   if (Value.isStruct()) {
-    RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
+    RecordDecl *RD =
+        Type->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
       unsigned BaseIndex = 0;
       for (const CXXBaseSpecifier &BS : CD->bases()) {
@@ -4109,7 +4110,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       }
 
       // Next subobject is a class, struct or union field.
-      RecordDecl *RD = ObjType->castAs<RecordType>()->getDecl();
+      RecordDecl *RD = ObjType->castAs<RecordType>()->getOriginalDecl();
       if (RD->isUnion()) {
         const FieldDecl *UnionField = O->getUnionField();
         if (!UnionField ||
@@ -4144,7 +4145,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       const CXXRecordDecl *Base = getAsBaseClass(Sub.Entries[I]);
       O = &O->getStructBase(getBaseIndex(Derived, Base));
 
-      ObjType = getSubobjectType(ObjType, Info.Ctx.getRecordType(Base));
+      ObjType = getSubobjectType(ObjType, Info.Ctx.getCanonicalTagType(Base));
     }
   }
 }
@@ -5035,6 +5036,9 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
     // This is a member of some derived class. Truncate LV appropriately.
     // The end of the derived-to-base path for the base object must match the
     // derived-to-base path for the member pointer.
+    // C++23 [expr.mptr.oper]p4:
+    //   If the result of E1 is an object [...] whose most derived object does
+    //   not contain the member to which E2 refers, the behavior is undefined.
     if (LV.Designator.MostDerivedPathLength + MemPtr.Path.size() >
         LV.Designator.Entries.size()) {
       Info.FFDiag(RHS);
@@ -5050,6 +5054,24 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
         Info.FFDiag(RHS);
         return nullptr;
       }
+    }
+    // MemPtr.Path only contains the base classes of the class directly
+    // containing the member E2. It is still necessary to check that the class
+    // directly containing the member E2 lies on the derived-to-base path of E1
+    // to avoid incorrectly permitting member pointer access into a sibling
+    // class of the class containing the member E2. If this class would
+    // correspond to the most-derived class of E1, it either isn't contained in
+    // LV.Designator.Entries or the corresponding entry refers to an array
+    // element instead. Therefore get the most derived class directly in this
+    // case. Otherwise the previous entry should correpond to this class.
+    const CXXRecordDecl *LastLVDecl =
+        (PathLengthToMember > LV.Designator.MostDerivedPathLength)
+            ? getAsBaseClass(LV.Designator.Entries[PathLengthToMember - 1])
+            : LV.Designator.MostDerivedType->getAsCXXRecordDecl();
+    const CXXRecordDecl *LastMPDecl = MemPtr.getContainingRecord();
+    if (LastLVDecl->getCanonicalDecl() != LastMPDecl->getCanonicalDecl()) {
+      Info.FFDiag(RHS);
+      return nullptr;
     }
 
     // Truncate the lvalue to the appropriate derived class.
@@ -6342,7 +6364,7 @@ static bool HandleDynamicCast(EvalInfo &Info, const ExplicitCastExpr *E,
 
   const CXXRecordDecl *C = E->getTypeAsWritten()->getPointeeCXXRecordDecl();
   assert(C && "dynamic_cast target is not void pointer nor class");
-  CanQualType CQT = Info.Ctx.getCanonicalType(Info.Ctx.getRecordType(C));
+  CanQualType CQT = Info.Ctx.getCanonicalTagType(C);
 
   auto RuntimeCheckFailed = [&] (CXXBasePaths *Paths) {
     // C++ [expr.dynamic.cast]p9:
@@ -6368,7 +6390,7 @@ static bool HandleDynamicCast(EvalInfo &Info, const ExplicitCastExpr *E,
     }
     Info.FFDiag(E, diag::note_constexpr_dynamic_cast_to_reference_failed)
         << DiagKind << Ptr.Designator.getType(Info.Ctx)
-        << Info.Ctx.getRecordType(DynType->Type)
+        << Info.Ctx.getCanonicalTagType(DynType->Type)
         << E->getType().getUnqualifiedType();
     return false;
   };
@@ -6865,8 +6887,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
             // FIXME: This immediately starts the lifetime of all members of
             // an anonymous struct. It would be preferable to strictly start
             // member lifetime in initialization order.
-            Success &=
-                handleDefaultInitValue(Info.Ctx.getRecordType(CD), *Value);
+            Success &= handleDefaultInitValue(Info.Ctx.getCanonicalTagType(CD),
+                                              *Value);
         }
         // Store Subobject as its parent before updating it for the last element
         // in the chain.
@@ -7773,7 +7795,8 @@ class BufferToAPValueConverter {
   }
 
   std::optional<APValue> visit(const EnumType *Ty, CharUnits Offset) {
-    QualType RepresentationType = Ty->getDecl()->getIntegerType();
+    QualType RepresentationType =
+        Ty->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
     assert(!RepresentationType.isNull() &&
            "enum forward decl should be caught by Sema");
     const auto *AsBuiltin =
@@ -8507,7 +8530,7 @@ public:
     if (auto *DD = dyn_cast<CXXDestructorDecl>(FD)) {
       assert(This && "no 'this' pointer for destructor call");
       return HandleDestruction(Info, E, *This,
-                               Info.Ctx.getRecordType(DD->getParent())) &&
+                               Info.Ctx.getCanonicalTagType(DD->getParent())) &&
              CallScope.destroy();
     }
 
@@ -8568,8 +8591,10 @@ public:
     const FieldDecl *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
     if (!FD) return Error(E);
     assert(!FD->getType()->isReferenceType() && "prvalue reference?");
-    assert(BaseTy->castAs<RecordType>()->getDecl()->getCanonicalDecl() ==
-           FD->getParent()->getCanonicalDecl() && "record / field mismatch");
+    assert(
+        BaseTy->castAs<RecordType>()->getOriginalDecl()->getCanonicalDecl() ==
+            FD->getParent()->getCanonicalDecl() &&
+        "record / field mismatch");
 
     // Note: there is no lvalue base here. But this case should only ever
     // happen in C or in C++98, where we cannot be evaluating a constexpr
@@ -8796,8 +8821,10 @@ public:
 
     const ValueDecl *MD = E->getMemberDecl();
     if (const FieldDecl *FD = dyn_cast<FieldDecl>(E->getMemberDecl())) {
-      assert(BaseTy->castAs<RecordType>()->getDecl()->getCanonicalDecl() ==
-             FD->getParent()->getCanonicalDecl() && "record / field mismatch");
+      assert(
+          BaseTy->castAs<RecordType>()->getOriginalDecl()->getCanonicalDecl() ==
+              FD->getParent()->getCanonicalDecl() &&
+          "record / field mismatch");
       (void)BaseTy;
       if (!HandleLValueMember(this->Info, E, Result, FD))
         return false;
@@ -9236,8 +9263,8 @@ bool LValueExprEvaluator::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
     if (!DynType)
       return false;
 
-    TypeInfo =
-        TypeInfoLValue(Info.Ctx.getRecordType(DynType->Type).getTypePtr());
+    TypeInfo = TypeInfoLValue(
+        Info.Ctx.getCanonicalTagType(DynType->Type).getTypePtr());
   }
 
   return Success(APValue::LValueBase::getTypeInfo(TypeInfo, E->getType()));
@@ -9839,11 +9866,15 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (Value.isInt()) {
       unsigned Size = Info.Ctx.getTypeSize(E->getType());
       uint64_t N = Value.getInt().extOrTrunc(Size).getZExtValue();
-      Result.Base = (Expr*)nullptr;
-      Result.InvalidBase = false;
-      Result.Offset = CharUnits::fromQuantity(N);
-      Result.Designator.setInvalid();
-      Result.IsNullPtr = false;
+      if (N == Info.Ctx.getTargetNullPointerValue(E->getType())) {
+        Result.setNull(Info.Ctx, E->getType());
+      } else {
+        Result.Base = (Expr *)nullptr;
+        Result.InvalidBase = false;
+        Result.Offset = CharUnits::fromQuantity(N);
+        Result.Designator.setInvalid();
+        Result.IsNullPtr = false;
+      }
       return true;
     } else {
       // In rare instances, the value isn't an lvalue.
@@ -10793,7 +10824,8 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
 }
 
 bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
-  const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
+  const RecordDecl *RD =
+      T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
   if (RD->isInvalidDecl()) return false;
   if (RD->isUnion()) {
     // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
@@ -10862,8 +10894,10 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
 
 bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
     const Expr *ExprToVisit, ArrayRef<Expr *> Args) {
-  const RecordDecl *RD =
-      ExprToVisit->getType()->castAs<RecordType>()->getDecl();
+  const RecordDecl *RD = ExprToVisit->getType()
+                             ->castAs<RecordType>()
+                             ->getOriginalDecl()
+                             ->getDefinitionOrSelf();
   if (RD->isInvalidDecl()) return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
   auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
@@ -11011,10 +11045,6 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
 
   bool ZeroInit = E->requiresZeroInitialization();
   if (CheckTrivialDefaultConstructor(Info, E->getExprLoc(), FD, ZeroInit)) {
-    // If we've already performed zero-initialization, we're already done.
-    if (Result.hasValue())
-      return true;
-
     if (ZeroInit)
       return ZeroInitialization(E, T);
 
@@ -11091,7 +11121,10 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
   Result = APValue(APValue::UninitStruct(), 0, 2);
   Array.moveInto(Result.getStructField(0));
 
-  RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
+  RecordDecl *Record = E->getType()
+                           ->castAs<RecordType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
   RecordDecl::field_iterator Field = Record->field_begin();
   assert(Field != Record->field_end() &&
          Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
@@ -11602,14 +11635,54 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case Builtin::BI__builtin_elementwise_abs: {
+    APValue Source;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned SourceLen = Source.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APValue CurrentEle = Source.getVectorElt(EltNum);
+      APValue Val = DestEltTy->isFloatingType()
+                        ? APValue(llvm::abs(CurrentEle.getFloat()))
+                        : APValue(APSInt(
+                              CurrentEle.getInt().abs(),
+                              DestEltTy->isUnsignedIntegerOrEnumerationType()));
+      ResultElements.push_back(Val);
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case Builtin::BI__builtin_elementwise_add_sat:
-  case Builtin::BI__builtin_elementwise_sub_sat: {
+  case Builtin::BI__builtin_elementwise_sub_sat:
+  case clang::X86::BI__builtin_ia32_pmulhuw128:
+  case clang::X86::BI__builtin_ia32_pmulhuw256:
+  case clang::X86::BI__builtin_ia32_pmulhuw512:
+  case clang::X86::BI__builtin_ia32_pmulhw128:
+  case clang::X86::BI__builtin_ia32_pmulhw256:
+  case clang::X86::BI__builtin_ia32_pmulhw512:
+  case clang::X86::BI__builtin_ia32_psllv2di:
+  case clang::X86::BI__builtin_ia32_psllv4di:
+  case clang::X86::BI__builtin_ia32_psllv4si:
+  case clang::X86::BI__builtin_ia32_psllv8si:
+  case clang::X86::BI__builtin_ia32_psrav4si:
+  case clang::X86::BI__builtin_ia32_psrav8si:
+  case clang::X86::BI__builtin_ia32_psrlv2di:
+  case clang::X86::BI__builtin_ia32_psrlv4di:
+  case clang::X86::BI__builtin_ia32_psrlv4si:
+  case clang::X86::BI__builtin_ia32_psrlv8si:{
     APValue SourceLHS, SourceRHS;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
       return false;
 
     QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
     unsigned SourceLen = SourceLHS.getVectorLength();
     SmallVector<APValue, 4> ResultElements;
     ResultElements.reserve(SourceLen);
@@ -11621,16 +11694,247 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       case Builtin::BI__builtin_elementwise_add_sat:
         ResultElements.push_back(APValue(
             APSInt(LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS),
-                   DestEltTy->isUnsignedIntegerOrEnumerationType())));
+                   DestUnsigned)));
         break;
       case Builtin::BI__builtin_elementwise_sub_sat:
         ResultElements.push_back(APValue(
             APSInt(LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS),
+                   DestUnsigned)));
+        break;
+      case clang::X86::BI__builtin_ia32_pmulhuw128:
+      case clang::X86::BI__builtin_ia32_pmulhuw256:
+      case clang::X86::BI__builtin_ia32_pmulhuw512:
+        ResultElements.push_back(APValue(APSInt(llvm::APIntOps::mulhu(LHS, RHS),
+                                                /*isUnsigned=*/true)));
+        break;
+      case clang::X86::BI__builtin_ia32_pmulhw128:
+      case clang::X86::BI__builtin_ia32_pmulhw256:
+      case clang::X86::BI__builtin_ia32_pmulhw512:
+        ResultElements.push_back(APValue(APSInt(llvm::APIntOps::mulhs(LHS, RHS),
+                                                /*isUnsigned=*/false)));
+        break;
+      case clang::X86::BI__builtin_ia32_psllv2di:
+      case clang::X86::BI__builtin_ia32_psllv4di:
+      case clang::X86::BI__builtin_ia32_psllv4si:
+      case clang::X86::BI__builtin_ia32_psllv8si:
+        if (RHS.uge(RHS.getBitWidth())) {
+          ResultElements.push_back(
+              APValue(APSInt(APInt::getZero(RHS.getBitWidth()), DestUnsigned)));
+          break;
+        }
+        ResultElements.push_back(
+            APValue(APSInt(LHS.shl(RHS.getZExtValue()), DestUnsigned)));
+        break;
+      case clang::X86::BI__builtin_ia32_psrav4si:
+      case clang::X86::BI__builtin_ia32_psrav8si:
+        if (RHS.uge(RHS.getBitWidth())) {
+          ResultElements.push_back(
+              APValue(APSInt(LHS.ashr(RHS.getBitWidth() - 1), DestUnsigned)));
+          break;
+        }
+        ResultElements.push_back(
+            APValue(APSInt(LHS.ashr(RHS.getZExtValue()), DestUnsigned)));
+        break;
+      case clang::X86::BI__builtin_ia32_psrlv2di:
+      case clang::X86::BI__builtin_ia32_psrlv4di:
+      case clang::X86::BI__builtin_ia32_psrlv4si:
+      case clang::X86::BI__builtin_ia32_psrlv8si:
+        if (RHS.uge(RHS.getBitWidth())) {
+          ResultElements.push_back(
+              APValue(APSInt(APInt::getZero(RHS.getBitWidth()), DestUnsigned)));
+          break;
+        }
+        ResultElements.push_back(
+            APValue(APSInt(LHS.lshr(RHS.getZExtValue()), DestUnsigned)));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case clang::X86::BI__builtin_ia32_pmuldq128:
+  case clang::X86::BI__builtin_ia32_pmuldq256:
+  case clang::X86::BI__builtin_ia32_pmuldq512:
+  case clang::X86::BI__builtin_ia32_pmuludq128:
+  case clang::X86::BI__builtin_ia32_pmuludq256:
+  case clang::X86::BI__builtin_ia32_pmuludq512: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
+      APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+      APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
+
+      switch (E->getBuiltinCallee()) {
+      case clang::X86::BI__builtin_ia32_pmuludq128:
+      case clang::X86::BI__builtin_ia32_pmuludq256:
+      case clang::X86::BI__builtin_ia32_pmuludq512:
+        ResultElements.push_back(
+            APValue(APSInt(llvm::APIntOps::muluExtended(LHS, RHS), true)));
+        break;
+      case clang::X86::BI__builtin_ia32_pmuldq128:
+      case clang::X86::BI__builtin_ia32_pmuldq256:
+      case clang::X86::BI__builtin_ia32_pmuldq512:
+        ResultElements.push_back(
+            APValue(APSInt(llvm::APIntOps::mulsExtended(LHS, RHS), false)));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case Builtin::BI__builtin_elementwise_max:
+  case Builtin::BI__builtin_elementwise_min: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+
+    if (!DestEltTy->isIntegerType())
+      return false;
+
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+      APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
+      switch (E->getBuiltinCallee()) {
+      case Builtin::BI__builtin_elementwise_max:
+        ResultElements.push_back(
+            APValue(APSInt(std::max(LHS, RHS),
+                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      case Builtin::BI__builtin_elementwise_min:
+        ResultElements.push_back(
+            APValue(APSInt(std::min(LHS, RHS),
+                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_selectb_128:
+  case X86::BI__builtin_ia32_selectb_256:
+  case X86::BI__builtin_ia32_selectb_512:
+  case X86::BI__builtin_ia32_selectw_128:
+  case X86::BI__builtin_ia32_selectw_256:
+  case X86::BI__builtin_ia32_selectw_512:
+  case X86::BI__builtin_ia32_selectd_128:
+  case X86::BI__builtin_ia32_selectd_256:
+  case X86::BI__builtin_ia32_selectd_512:
+  case X86::BI__builtin_ia32_selectq_128:
+  case X86::BI__builtin_ia32_selectq_256:
+  case X86::BI__builtin_ia32_selectq_512:
+  case X86::BI__builtin_ia32_selectph_128:
+  case X86::BI__builtin_ia32_selectph_256:
+  case X86::BI__builtin_ia32_selectph_512:
+  case X86::BI__builtin_ia32_selectpbf_128:
+  case X86::BI__builtin_ia32_selectpbf_256:
+  case X86::BI__builtin_ia32_selectpbf_512:
+  case X86::BI__builtin_ia32_selectps_128:
+  case X86::BI__builtin_ia32_selectps_256:
+  case X86::BI__builtin_ia32_selectps_512:
+  case X86::BI__builtin_ia32_selectpd_128:
+  case X86::BI__builtin_ia32_selectpd_256:
+  case X86::BI__builtin_ia32_selectpd_512: {
+    // AVX512 predicated move: "Result = Mask[] ? LHS[] : RHS[]".
+    APValue SourceMask, SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceMask) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceRHS))
+      return false;
+
+    APSInt Mask = SourceMask.getInt();
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      const APValue &LHS = SourceLHS.getVectorElt(EltNum);
+      const APValue &RHS = SourceRHS.getVectorElt(EltNum);
+      ResultElements.push_back(Mask[EltNum] ? LHS : RHS);
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case Builtin::BI__builtin_elementwise_ctlz:
+  case Builtin::BI__builtin_elementwise_cttz: {
+    APValue SourceLHS;
+    std::optional<APValue> Fallback;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS))
+      return false;
+    if (E->getNumArgs() > 1) {
+      APValue FallbackTmp;
+      if (!EvaluateAsRValue(Info, E->getArg(1), FallbackTmp))
+        return false;
+      Fallback = FallbackTmp;
+    }
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+      if (!LHS) {
+        // Without a fallback, a zero element is undefined
+        if (!Fallback) {
+          Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
+              << /*IsTrailing=*/(E->getBuiltinCallee() ==
+                                 Builtin::BI__builtin_elementwise_cttz);
+          return false;
+        }
+        ResultElements.push_back(Fallback->getVectorElt(EltNum));
+        continue;
+      }
+      switch (E->getBuiltinCallee()) {
+      case Builtin::BI__builtin_elementwise_ctlz:
+        ResultElements.push_back(APValue(
+            APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countl_zero()),
+                   DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      case Builtin::BI__builtin_elementwise_cttz:
+        ResultElements.push_back(APValue(
+            APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countr_zero()),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
       }
     }
 
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case Builtin::BI__builtin_elementwise_fma: {
+    APValue SourceX, SourceY, SourceZ;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceX) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceY) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceZ))
+      return false;
+
+    unsigned SourceLen = SourceX.getVectorLength();
+    SmallVector<APValue> ResultElements;
+    ResultElements.reserve(SourceLen);
+    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      const APFloat &X = SourceX.getVectorElt(EltNum).getFloat();
+      const APFloat &Y = SourceY.getVectorElt(EltNum).getFloat();
+      const APFloat &Z = SourceZ.getVectorElt(EltNum).getFloat();
+      APFloat Result(X);
+      (void)Result.fusedMultiplyAdd(Y, Z, RM);
+      ResultElements.push_back(APValue(Result));
+    }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   }
@@ -12864,7 +13168,10 @@ static bool convertUnsignedAPIntToCharUnits(const llvm::APInt &Int,
 static void addFlexibleArrayMemberInitSize(EvalInfo &Info, const QualType &T,
                                            const LValue &LV, CharUnits &Size) {
   if (!T.isNull() && T->isStructureType() &&
-      T->getAsStructureType()->getDecl()->hasFlexibleArrayMember())
+      T->getAsStructureType()
+          ->getOriginalDecl()
+          ->getDefinitionOrSelf()
+          ->hasFlexibleArrayMember())
     if (const auto *V = LV.getLValueBase().dyn_cast<const ValueDecl *>())
       if (const auto *VD = dyn_cast<VarDecl>(V))
         if (VD->hasInit())
@@ -13185,6 +13492,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clzg:
+  case Builtin::BI__builtin_elementwise_ctlz:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64: {
@@ -13193,7 +13501,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     std::optional<APSInt> Fallback;
-    if (BuiltinOp == Builtin::BI__builtin_clzg && E->getNumArgs() > 1) {
+    if ((BuiltinOp == Builtin::BI__builtin_clzg ||
+         BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) &&
+        E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
         return false;
@@ -13210,6 +13520,11 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
                              BuiltinOp != Builtin::BI__lzcnt &&
                              BuiltinOp != Builtin::BI__lzcnt64;
+
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) {
+        Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
+            << /*IsTrailing=*/false;
+      }
 
       if (ZeroIsUndefined)
         return Error(E);
@@ -13265,13 +13580,16 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzs:
-  case Builtin::BI__builtin_ctzg: {
+  case Builtin::BI__builtin_ctzg:
+  case Builtin::BI__builtin_elementwise_cttz: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
     std::optional<APSInt> Fallback;
-    if (BuiltinOp == Builtin::BI__builtin_ctzg && E->getNumArgs() > 1) {
+    if ((BuiltinOp == Builtin::BI__builtin_ctzg ||
+         BuiltinOp == Builtin::BI__builtin_elementwise_cttz) &&
+        E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
         return false;
@@ -13282,6 +13600,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (Fallback)
         return Success(*Fallback, E);
 
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_cttz) {
+        Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
+            << /*IsTrailing=*/true;
+      }
       return Error(E);
     }
 
@@ -13292,6 +13614,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     int Operand = E->getArg(0)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
     Operand = Info.Ctx.getTargetInfo().getEHDataRegisterNumber(Operand);
     return Success(Operand, E);
+  }
+
+  case Builtin::BI__builtin_elementwise_abs: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+
+    return Success(Val.abs(), E);
   }
 
   case Builtin::BI__builtin_expect:
@@ -13527,7 +13857,24 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APInt Result = LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
     return Success(APSInt(Result, !LHS.isSigned()), E);
   }
+  case Builtin::BI__builtin_elementwise_max: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
 
+    APInt Result = std::max(LHS, RHS);
+    return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
+  case Builtin::BI__builtin_elementwise_min: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
+
+    APInt Result = std::min(LHS, RHS);
+    return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
   case Builtin::BIstrlen:
   case Builtin::BIwcslen:
     // A call to strlen is not a constant expression.
@@ -15111,7 +15458,7 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return Error(OOE);
-      RecordDecl *RD = RT->getDecl();
+      RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl()) return false;
       const ASTRecordLayout &RL = Info.Ctx.getASTRecordLayout(RD);
       unsigned i = MemberDecl->getFieldIndex();
@@ -15133,7 +15480,7 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return Error(OOE);
-      RecordDecl *RD = RT->getDecl();
+      RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl()) return false;
       const ASTRecordLayout &RL = Info.Ctx.getASTRecordLayout(RD);
 
@@ -15144,7 +15491,8 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
         return Error(OOE);
 
       // Add the offset to the base.
-      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(BaseRT->getDecl()));
+      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(
+          BaseRT->getOriginalDecl()->getDefinitionOrSelf()));
       break;
     }
     }
@@ -15323,7 +15671,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
     if (Info.Ctx.getLangOpts().CPlusPlus && DestType->isEnumeralType()) {
       const EnumType *ET = dyn_cast<EnumType>(DestType.getCanonicalType());
-      const EnumDecl *ED = ET->getDecl();
+      const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
       // Check that the value is within the range of the enumeration values.
       //
       // This corressponds to [expr.static.cast]p10 which says:
@@ -15767,6 +16115,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return Error(E);
     return true;
 
+  case Builtin::BI__builtin_elementwise_abs:
   case Builtin::BI__builtin_fabs:
   case Builtin::BI__builtin_fabsf:
   case Builtin::BI__builtin_fabsl:
@@ -15851,6 +16200,21 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
     Result = minimumnum(Result, RHS);
+    return true;
+  }
+
+  case Builtin::BI__builtin_elementwise_fma: {
+    if (!E->getArg(0)->isPRValue() || !E->getArg(1)->isPRValue() ||
+        !E->getArg(2)->isPRValue()) {
+      return false;
+    }
+    APFloat SourceY(0.), SourceZ(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), SourceY, Info) ||
+        !EvaluateFloat(E->getArg(2), SourceZ, Info))
+      return false;
+    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
+    (void)Result.fusedMultiplyAdd(SourceY, SourceZ, RM);
     return true;
   }
   }
@@ -17985,7 +18349,8 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
   // Fabricate an arbitrary expression on the stack and pretend that it
   // is a temporary being used as the 'this' pointer.
   LValue This;
-  ImplicitValueInitExpr VIE(RD ? Info.Ctx.getRecordType(RD) : Info.Ctx.IntTy);
+  ImplicitValueInitExpr VIE(RD ? Info.Ctx.getCanonicalTagType(RD)
+                               : Info.Ctx.IntTy);
   This.set({&VIE, Info.CurrentCall->Index});
 
   ArrayRef<const Expr*> Args;

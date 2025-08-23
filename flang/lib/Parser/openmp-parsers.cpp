@@ -469,6 +469,9 @@ TYPE_PARSER(sourced(construct<OmpContextSelectorSpecification>(
 
 // --- Parsers for clause modifiers -----------------------------------
 
+TYPE_PARSER(construct<OmpAccessGroup>( //
+    "CGROUP" >> pure(OmpAccessGroup::Value::Cgroup)))
+
 TYPE_PARSER(construct<OmpAlignment>(scalarIntExpr))
 
 TYPE_PARSER(construct<OmpAlignModifier>( //
@@ -573,7 +576,8 @@ TYPE_PARSER(construct<OmpOrderingModifier>(
     "SIMD" >> pure(OmpOrderingModifier::Value::Simd)))
 
 TYPE_PARSER(construct<OmpPrescriptiveness>(
-    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict)))
+    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict) ||
+    "FALLBACK" >> pure(OmpPrescriptiveness::Value::Fallback)))
 
 TYPE_PARSER(construct<OmpPresentModifier>( //
     "PRESENT" >> pure(OmpPresentModifier::Value::Present)))
@@ -635,6 +639,12 @@ TYPE_PARSER(sourced(construct<OmpDependClause::TaskDep::Modifier>(sourced(
     construct<OmpDependClause::TaskDep::Modifier>(Parser<OmpIterator>{}) ||
     construct<OmpDependClause::TaskDep::Modifier>(
         Parser<OmpTaskDependenceType>{})))))
+
+TYPE_PARSER( //
+    sourced(construct<OmpDynGroupprivateClause::Modifier>(
+        Parser<OmpAccessGroup>{})) ||
+    sourced(construct<OmpDynGroupprivateClause::Modifier>(
+        Parser<OmpPrescriptiveness>{})))
 
 TYPE_PARSER(
     sourced(construct<OmpDeviceClause::Modifier>(Parser<OmpDeviceModifier>{})))
@@ -776,6 +786,10 @@ TYPE_PARSER(construct<OmpDefaultClause>(
     construct<OmpDefaultClause>(
         Parser<OmpDefaultClause::DataSharingAttribute>{}) ||
     construct<OmpDefaultClause>(indirect(Parser<OmpDirectiveSpecification>{}))))
+
+TYPE_PARSER(construct<OmpDynGroupprivateClause>(
+    maybe(nonemptyList(Parser<OmpDynGroupprivateClause::Modifier>{}) / ":"),
+    scalarIntExpr))
 
 TYPE_PARSER(construct<OmpEnterClause>(
     maybe(nonemptyList(Parser<OmpEnterClause::Modifier>{}) / ":"),
@@ -1068,6 +1082,9 @@ TYPE_PARSER( //
         construct<OmpClause>(parenthesized(Parser<OmpDoacrossClause>{})) ||
     "DYNAMIC_ALLOCATORS" >>
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
+    "DYN_GROUPPRIVATE" >>
+        construct<OmpClause>(construct<OmpClause::DynGroupprivate>(
+            parenthesized(Parser<OmpDynGroupprivateClause>{}))) ||
     "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
                    parenthesized(Parser<OmpEnterClause>{}))) ||
     "EXCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Exclusive>(
@@ -1758,17 +1775,8 @@ TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
     construct<OmpReductionCombiner>(Parser<FunctionReference>{}))
 
-// 2.13.2 OMP CRITICAL
-TYPE_PARSER(startOmpLine >>
-    sourced(construct<OmpEndCriticalDirective>(
-        verbatim("END CRITICAL"_tok), maybe(parenthesized(name)))) /
-        endOmpLine)
-TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
-                maybe(parenthesized(name)), Parser<OmpClauseList>{})) /
-    endOmpLine)
-
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
-    Parser<OmpCriticalDirective>{}, block, Parser<OmpEndCriticalDirective>{}))
+    OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical}))
 
 // 2.11.3 Executable Allocate directive
 TYPE_PARSER(
@@ -1781,6 +1789,12 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
     verbatim("DECLARE SIMD"_tok) || verbatim("DECLARE_SIMD"_tok),
     maybe(parenthesized(name)), Parser<OmpClauseList>{})))
+
+TYPE_PARSER(sourced( //
+    construct<OpenMPGroupprivate>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_groupprivate)) >=
+        Parser<OmpDirectiveSpecification>{})))
 
 // 2.4 Requires construct
 TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
@@ -1817,6 +1831,8 @@ TYPE_PARSER(
                                 Parser<OmpDeclareVariantDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OpenMPDeclarativeAllocate>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPGroupprivate>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OpenMPRequiresConstruct>{}) ||
                             construct<OpenMPDeclarativeConstruct>(

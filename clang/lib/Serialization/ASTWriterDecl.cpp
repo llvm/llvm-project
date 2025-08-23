@@ -524,7 +524,7 @@ void ASTDeclWriter::VisitDecl(Decl *D) {
   // bits actually. However, if we changed the order to be 0x0f, then we can
   // store it as 0b001111, which takes 6 bits only now.
   DeclBits.addBits((uint64_t)D->getModuleOwnershipKind(), /*BitWidth=*/3);
-  DeclBits.addBit(D->isReferenced());
+  DeclBits.addBit(D->isThisDeclarationReferenced());
   DeclBits.addBit(D->isUsed(false));
   DeclBits.addBits(D->getAccess(), /*BitWidth=*/2);
   DeclBits.addBit(D->isImplicit());
@@ -601,7 +601,8 @@ void ASTDeclWriter::VisitNamedDecl(NamedDecl *D) {
 void ASTDeclWriter::VisitTypeDecl(TypeDecl *D) {
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getBeginLoc());
-  Record.AddTypeRef(QualType(D->getTypeForDecl(), 0));
+  if (!isa<TagDecl, TypedefDecl, TypeAliasDecl>(D))
+    Record.AddTypeRef(QualType(D->getTypeForDecl(), 0));
 }
 
 void ASTDeclWriter::VisitTypedefNameDecl(TypedefNameDecl *D) {
@@ -2561,7 +2562,6 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // AnonDeclNumber
   // TypeDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type Ref
   // TagDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IdentifierNamespace
   Abv->Add(BitCodeAbbrevOp(
@@ -2607,7 +2607,6 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // AnonDeclNumber
   // TypeDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type Ref
   // TagDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IdentifierNamespace
   Abv->Add(BitCodeAbbrevOp(

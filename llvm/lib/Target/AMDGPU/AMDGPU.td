@@ -1013,6 +1013,14 @@ def FeatureAgentScopeFineGrainedRemoteMemoryAtomics
   "device memory."
 >;
 
+def FeatureEmulatedSystemScopeAtomics
+  : SubtargetFeature<"emulated-system-scope-atomics",
+  "HasEmulatedSystemScopeAtomics",
+  "true",
+  "System scope atomics unsupported by the PCI-e are emulated in HW via CAS "
+  "loop and functional."
+>;
+
 def FeatureDefaultComponentZero : SubtargetFeature<"default-component-zero",
   "HasDefaultComponentZero",
   "true",
@@ -1365,6 +1373,13 @@ def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
    "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
  >;
 
+def FeatureGloballyAddressableScratch : SubtargetFeature<
+  "globally-addressable-scratch",
+  "HasGloballyAddressableScratch",
+  "true",
+  "FLAT instructions can access scratch memory for any thread in any wave"
+>;
+
 // FIXME: Remove after all users are migrated to attribute.
 def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "DynamicVGPR",
@@ -1533,7 +1548,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
 
 def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   "gfx12",
-  [FeatureFP64, FeatureAddressableLocalMemorySize65536, FeatureMIMG_R128,
+  [FeatureFP64, FeatureMIMG_R128,
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
@@ -1962,6 +1977,7 @@ def FeatureISAVersion11_5_3 : FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
+   FeatureAddressableLocalMemorySize65536,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot7Insts,
@@ -2004,6 +2020,7 @@ def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
    FeatureCUStores,
+   FeatureAddressableLocalMemorySize327680,
    FeatureCuMode,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
@@ -2055,6 +2072,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
    FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureEmulatedSystemScopeAtomics,
+   FeatureGloballyAddressableScratch,
    FeatureKernargPreload,
    FeatureVmemPrefInsts,
    FeatureLshlAddU64Inst,
@@ -2593,6 +2612,10 @@ def HasPkAddMinMaxInsts :
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
+def HasSGetShaderCyclesInst :
+  Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,

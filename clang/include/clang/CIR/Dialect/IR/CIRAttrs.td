@@ -51,6 +51,45 @@ class CIR_UnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
+// SourceLanguageAttr
+//===----------------------------------------------------------------------===//
+
+// TODO: Add cases for other languages that Clang supports.
+
+def CIR_SourceLanguage : CIR_I32EnumAttr<"SourceLanguage", "source language", [
+  I32EnumAttrCase<"C", 1, "c">,
+  I32EnumAttrCase<"CXX", 2, "cxx">
+]> {
+  // The enum attr class is defined in `CIR_SourceLanguageAttr` below,
+  // so that it can define extra class methods.
+  let genSpecializedAttr = 0;
+}
+
+def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
+
+  let summary = "Module source language";
+  let description = [{
+    Represents the source language used to generate the module.
+
+    Example:
+    ```
+    // Module compiled from C.
+    module attributes {cir.lang = cir.lang<c>} {}
+    // Module compiled from C++.
+    module attributes {cir.lang = cir.lang<cxx>} {}
+    ```
+
+    Module source language attribute name is `cir.lang` is defined by
+    `getSourceLanguageAttrName` method in CIRDialect class.
+  }];
+
+  let extraClassDeclaration = [{
+    bool isC() const { return getValue() == SourceLanguage::C; }
+    bool isCXX() const { return getValue() == SourceLanguage::CXX; }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // OptInfoAttr
 //===----------------------------------------------------------------------===//
 
@@ -342,6 +381,44 @@ def CIR_ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector", [
 }
 
 //===----------------------------------------------------------------------===//
+// ConstRecordAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_ConstRecordAttr : CIR_Attr<"ConstRecord", "const_record", [
+  TypedAttrInterface
+]> {
+  let summary = "Represents a constant record";
+  let description = [{
+    Effectively supports "struct-like" constants. It's must be built from
+    an `mlir::ArrayAttr` instance where each element is a typed attribute
+    (`mlir::TypedAttribute`).
+
+    Example:
+    ```
+    cir.global external @rgb2 = #cir.const_record<{0 : i8,
+                                                   5 : i64, #cir.null : !cir.ptr<i8>
+                                                  }> : !cir.record<"", i8, i64, !cir.ptr<i8>>
+    ```
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::ArrayAttr":$members);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::RecordType":$type,
+                                        "mlir::ArrayAttr":$members), [{
+      return $_get(type.getContext(), type, members);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` custom<RecordMembers>($members) `>`
+  }];
+
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstPtrAttr
 //===----------------------------------------------------------------------===//
 
@@ -367,6 +444,160 @@ def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 
   let assemblyFormat = [{
     `<` custom<ConstPtr>($value) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalViewAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
+  TypedAttrInterface
+]> {
+  let summary = "Provides constant access to a global address";
+  let description = [{
+    Get constant address of global `symbol` and optionally apply offsets to
+    access existing subelements. It provides a way to access globals from other
+    global and always produces a pointer.
+
+    The type of the input symbol can be different from `#cir.global_view`
+    output type, since a given view of the global might require a static
+    cast for initializing other globals.
+
+    A list of indices can be optionally passed and each element subsequently
+    indexes underlying types. For `symbol` types like `!cir.array`
+    and `!cir.record`, it leads to the constant address of sub-elements, while
+    for `!cir.ptr`, an offset is applied. The first index is relative to the
+    original symbol type, not the produced one.
+
+    The result type of this attribute may be an integer type. In such a case,
+    the pointer to the referenced global is casted to an integer and this
+    attribute represents the casted result.
+
+    Example:
+
+    ```
+      cir.global external @s = @".str2": !cir.ptr<i8>
+      cir.global external @x = #cir.global_view<@s> : !cir.ptr<i8>
+      cir.global external @s_addr = #cir.global_view<@s> : !s64i
+
+      cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8]
+                                                   : !cir.array<i8 x 3>>
+      cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<i8>
+    ```
+
+    Note, that unlike LLVM IR's gep instruction, CIR doesn't add the leading
+    zero index when it's known to be constant zero, e.g. for pointers, i.e. we
+    use indexes exactly to access sub elements or for the offset. The leading
+    zero index is added later in the lowering.
+
+    Example:
+    ```
+    struct A {
+      int a;
+    };
+
+    struct B:  virtual A {
+      int b;
+    };
+    ```
+    VTT for B in CIR:
+    ```
+    cir.global linkonce_odr @_ZTT1B = #cir.const_array<[
+              #cir.global_view<@_ZTV1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]>
+                   : !cir.array<!cir.ptr<!u8i> x 1>
+    ```
+    VTT for B in LLVM IR:
+    ```
+    @_ZTT1B = linkonce_odr global [1 x ptr] [ptr getelementptr inbounds
+              ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)], align 8
+    ```
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::FlatSymbolRefAttr":$symbol,
+                        OptionalParameter<"mlir::ArrayAttr">:$indices);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol,
+                                        CArg<"mlir::ArrayAttr", "{}">:$indices), [{
+      return $_get(type.getContext(), type, symbol, indices);
+    }]>
+  ];
+
+  // let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<`
+      $symbol
+      (`,` $indices^)?
+    `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
+  let summary = "Represents a C++ vtable";
+  let description = [{
+    Wraps a #cir.const_record containing one or more vtable arrays.
+
+    In most cases, the anonymous record type wrapped by this attribute will
+    contain a single array corresponding to the vtable for one class. However,
+    in the case of multiple inheritence, the anonymous structure may contain
+    multiple arrays, each of which is a vtable.
+
+    Example 1 (single vtable):
+    ```mlir
+    cir.global linkonce_odr @_ZTV6Mother =
+      #cir.vtable<{
+        #cir.const_array<[
+          #cir.ptr<null> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI6Mother> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother9MotherFooEv> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 4>
+      }> : !rec_anon_struct1
+    ```
+
+    Example 2 (multiple vtables):
+    ```mlir
+    cir.global linkonce_odr @_ZTV5Child =
+      #cir.vtable<{
+        #cir.const_array<[
+          #cir.ptr<null> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN5Child9MotherFooEv> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 4>,
+        #cir.const_array<[
+          #cir.ptr<-8 : i64> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
+          #cir.global_view<@_ZN6Father9FatherFooEv> : !cir.ptr<!u8i>
+        ]> : !cir.array<!cir.ptr<!u8i> x 3>
+      }> : !rec_anon_struct2
+    ```
+  }];
+
+  // `data` is a const record with one element, containing an array of
+  // vtable information.
+  let parameters = (ins
+    AttributeSelfTypeParameter<"">:$type,
+    "mlir::ArrayAttr":$data
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::ArrayAttr":$data), [{
+      return $_get(type.getContext(), type, data);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<` custom<RecordMembers>($data) `>`
   }];
 }
 
@@ -514,6 +745,38 @@ def CIR_BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
                    size, offset, is_signed);
     }]>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// AddressPointAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
+  let summary = "Address point attribute";
+
+  let description = [{
+    Attribute specifying the address point within a C++ virtual table (vtable).
+
+    The `index` (vtable index) parameter identifies which vtable to use within a
+    vtable group, while the `offset` (address point index) specifies the offset
+    within that vtable where the address begins.
+
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.vtable.address_point(@_ZTV1B,
+                                  address_point = <index = 0, offset = 2>)
+                                 : !cir.vptr
+    ```
+  }];
+
+  let parameters = (ins "int32_t":$index,
+                        "int32_t":$offset);
+
+  let assemblyFormat = [{
+    `<` struct($index, $offset) `>`
+  }];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

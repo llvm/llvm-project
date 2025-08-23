@@ -163,7 +163,7 @@ void CIRGenerator::HandleCXXStaticMemberVarInstantiation(VarDecl *D) {
   if (diags.hasErrorOccurred())
     return;
 
-  cgm->errorNYI(D->getSourceRange(), "HandleCXXStaticMemberVarInstantiation");
+  cgm->handleCXXStaticMemberVarInstantiation(D);
 }
 
 void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {
@@ -177,5 +177,5 @@ void CIRGenerator::HandleVTable(CXXRecordDecl *rd) {
   if (diags.hasErrorOccurred())
     return;
 
-  cgm->errorNYI(rd->getSourceRange(), "HandleVTable");
+  cgm->emitVTable(rd);
 }

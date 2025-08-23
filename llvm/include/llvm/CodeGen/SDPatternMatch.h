@@ -1098,9 +1098,9 @@ struct ConstantInt_match {
                                       BindVal ? *BindVal : Discard);
   }
 };
-/// Match any interger constants or splat of an integer constant.
+/// Match any integer constants or splat of an integer constant.
 inline ConstantInt_match m_ConstInt() { return ConstantInt_match(nullptr); }
-/// Match any interger constants or splat of an integer constant; return the
+/// Match any integer constants or splat of an integer constant; return the
 /// specific constant or constant splat value.
 inline ConstantInt_match m_ConstInt(APInt &V) { return ConstantInt_match(&V); }
 

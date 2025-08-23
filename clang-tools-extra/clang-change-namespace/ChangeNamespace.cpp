@@ -31,24 +31,9 @@ llvm::SmallVector<llvm::StringRef, 4> splitSymbolName(llvm::StringRef Name) {
   return Splitted;
 }
 
-SourceLocation startLocationForType(TypeLoc TLoc) {
-  // For elaborated types (e.g. `struct a::A`) we want the portion after the
-  // `struct` but including the namespace qualifier, `a::`.
-  if (TLoc.getTypeLocClass() == TypeLoc::Elaborated) {
-    NestedNameSpecifierLoc NestedNameSpecifier =
-        TLoc.castAs<ElaboratedTypeLoc>().getQualifierLoc();
-    if (NestedNameSpecifier.getNestedNameSpecifier())
-      return NestedNameSpecifier.getBeginLoc();
-    TLoc = TLoc.getNextTypeLoc();
-  }
-  return TLoc.getBeginLoc();
-}
-
 SourceLocation endLocationForType(TypeLoc TLoc) {
-  // Dig past any namespace or keyword qualifications.
-  while (TLoc.getTypeLocClass() == TypeLoc::Elaborated ||
-         TLoc.getTypeLocClass() == TypeLoc::Qualified)
-    TLoc = TLoc.getNextTypeLoc();
+  if (auto QTL = TLoc.getAs<QualifiedTypeLoc>())
+    TLoc = QTL.getUnqualifiedLoc();
 
   // The location for template specializations (e.g. Foo<int>) includes the
   // templated types in its location range.  We want to restrict this to just
@@ -550,8 +535,8 @@ void ChangeNamespaceTool::run(
                  Result.Nodes.getNodeAs<NestedNameSpecifierLoc>(
                      "nested_specifier_loc")) {
     SourceLocation Start = Specifier->getBeginLoc();
-    SourceLocation End = endLocationForType(Specifier->getTypeLoc());
-    fixTypeLoc(Result, Start, End, Specifier->getTypeLoc());
+    SourceLocation End = endLocationForType(Specifier->castAsTypeLoc());
+    fixTypeLoc(Result, Start, End, Specifier->castAsTypeLoc());
   } else if (const auto *BaseInitializer =
                  Result.Nodes.getNodeAs<CXXCtorInitializer>(
                      "base_initializer")) {
@@ -562,19 +547,16 @@ void ChangeNamespaceTool::run(
     // filtered by matchers in some cases, e.g. the type is templated. We should
     // handle the record type qualifier instead.
     TypeLoc Loc = *TLoc;
-    while (Loc.getTypeLocClass() == TypeLoc::Qualified)
-      Loc = Loc.getNextTypeLoc();
-    if (Loc.getTypeLocClass() == TypeLoc::Elaborated) {
-      NestedNameSpecifierLoc NestedNameSpecifier =
-          Loc.castAs<ElaboratedTypeLoc>().getQualifierLoc();
-      // FIXME: avoid changing injected class names.
-      if (auto *NNS = NestedNameSpecifier.getNestedNameSpecifier()) {
-        const Type *SpecifierType = NNS->getAsType();
-        if (SpecifierType && SpecifierType->isRecordType())
-          return;
-      }
-    }
-    fixTypeLoc(Result, startLocationForType(Loc), endLocationForType(Loc), Loc);
+    if (auto QTL = Loc.getAs<QualifiedTypeLoc>())
+      Loc = QTL.getUnqualifiedLoc();
+    // FIXME: avoid changing injected class names.
+    if (NestedNameSpecifier NestedNameSpecifier =
+            Loc.getPrefix().getNestedNameSpecifier();
+        NestedNameSpecifier.getKind() == NestedNameSpecifier::Kind::Type &&
+        NestedNameSpecifier.getAsType()->isRecordType())
+      return;
+    fixTypeLoc(Result, Loc.getNonElaboratedBeginLoc(), endLocationForType(Loc),
+               Loc);
   } else if (const auto *VarRef =
                  Result.Nodes.getNodeAs<DeclRefExpr>("var_ref")) {
     const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var_decl");
@@ -588,10 +570,9 @@ void ChangeNamespaceTool::run(
   } else if (const auto *EnumConstRef =
                  Result.Nodes.getNodeAs<DeclRefExpr>("enum_const_ref")) {
     // Do not rename the reference if it is already scoped by the EnumDecl name.
-    if (EnumConstRef->hasQualifier() &&
-        EnumConstRef->getQualifier()->getKind() ==
-            NestedNameSpecifier::SpecifierKind::TypeSpec &&
-        EnumConstRef->getQualifier()->getAsType()->isEnumeralType())
+    if (NestedNameSpecifier Qualifier = EnumConstRef->getQualifier();
+        Qualifier.getKind() == NestedNameSpecifier::Kind::Type &&
+        Qualifier.getAsType()->isEnumeralType())
       return;
     const auto *EnumConstDecl =
         Result.Nodes.getNodeAs<EnumConstantDecl>("enum_const_decl");

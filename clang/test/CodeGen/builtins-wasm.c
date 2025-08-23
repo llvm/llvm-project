@@ -751,24 +751,3 @@ void *tp (void) {
   return __builtin_thread_pointer ();
   // WEBASSEMBLY: call {{.*}} @llvm.thread.pointer.p0()
 }
-
-typedef void (*Fvoid)(void);
-typedef float (*Ffloats)(float, double, int);
-typedef void (*Fpointers)(Fvoid, Ffloats, void*, int*, int***, char[5]);
-
-void use(int);
-
-void test_function_pointer_signature_void(Fvoid func) {
-  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison)
-  use(__builtin_wasm_test_function_pointer_signature(func));
-}
-
-void test_function_pointer_signature_floats(Ffloats func) {
-  // WEBASSEMBLY:  tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, float 0.000000e+00, token poison, float 0.000000e+00, double 0.000000e+00, i32 0)
-  use(__builtin_wasm_test_function_pointer_signature(func));
-}
-
-void test_function_pointer_signature_pointers(Fpointers func) {
-  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null)
-  use(__builtin_wasm_test_function_pointer_signature(func));
-}

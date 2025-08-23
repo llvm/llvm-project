@@ -15,6 +15,9 @@
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/comparison_operations.h"
 #include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/FPUtil/generic/add_sub.h"
+#include "src/__support/FPUtil/generic/div.h"
+#include "src/__support/FPUtil/generic/mul.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
@@ -25,8 +28,6 @@ struct BFloat16 {
   uint16_t bits;
 
   LIBC_INLINE BFloat16() = default;
-
-  LIBC_INLINE constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
 
   template <typename T> LIBC_INLINE constexpr explicit BFloat16(T value) {
     if constexpr (cpp::is_floating_point_v<T>) {
@@ -80,6 +81,28 @@ struct BFloat16 {
 
   LIBC_INLINE bool operator>=(BFloat16 other) const {
     return fputil::greater_than_or_equals(*this, other);
+  }
+
+  LIBC_INLINE constexpr BFloat16 operator-() const {
+    fputil::FPBits<bfloat16> result(*this);
+    result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
+    return result.get_val();
+  }
+
+  LIBC_INLINE BFloat16 operator+(BFloat16 other) const {
+    return fputil::generic::add<BFloat16>(*this, other);
+  }
+
+  LIBC_INLINE BFloat16 operator-(BFloat16 other) const {
+    return fputil::generic::sub<BFloat16>(*this, other);
+  }
+
+  LIBC_INLINE BFloat16 operator*(BFloat16 other) const {
+    return fputil::generic::mul<bfloat16>(*this, other);
+  }
+
+  LIBC_INLINE BFloat16 operator/(BFloat16 other) const {
+    return fputil::generic::div<bfloat16>(*this, other);
   }
 }; // struct BFloat16
 

@@ -6,6 +6,15 @@
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
+// RUN: mlir-opt %s -generate-runtime-verification \
+// RUN:     -expand-strided-metadata \
+// RUN:     -test-cf-assert \
+// RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
+// RUN:     -reconcile-unrealized-casts | \
+// RUN: mlir-runner -e main -entry-point-result=void \
+// RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
+// RUN: FileCheck %s
+
 // Put memref.copy in a function, otherwise the memref.cast may fold.
 func.func @memcpy_helper(%src: memref<?xf32>, %dest: memref<?xf32>) {
   memref.copy %src, %dest : memref<?xf32> to memref<?xf32>

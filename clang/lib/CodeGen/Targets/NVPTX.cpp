@@ -133,7 +133,7 @@ bool NVPTXABIInfo::isUnsupportedType(QualType T) const {
   const auto *RT = T->getAs<RecordType>();
   if (!RT)
     return false;
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
 
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
@@ -174,7 +174,7 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-    RetTy = EnumTy->getDecl()->getIntegerType();
+    RetTy = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
@@ -183,7 +183,7 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
 ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   // Return aggregates type as indirect by value
   if (isAggregateTypeForABI(Ty)) {

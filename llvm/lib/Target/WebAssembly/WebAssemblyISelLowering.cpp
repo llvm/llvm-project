@@ -246,6 +246,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                    MVT::v2f64})
       setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
 
+    setOperationAction(ISD::AVGCEILU, {MVT::v8i16, MVT::v16i8}, Legal);
+
     // Custom lowering since wasm shifts must have a scalar shift amount
     for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})
@@ -1309,7 +1311,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       OutVal = FINode;
     }
     // Count the number of fixed args *after* legalization.
-    NumFixedArgs += Out.IsFixed;
+    NumFixedArgs += !Out.Flags.isVarArg();
   }
 
   bool IsVarArg = CLI.IsVarArg;
@@ -1320,18 +1322,21 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // signature They are necessary to match callee and caller signature for
   // indirect call.
   if (CallConv == CallingConv::Swift) {
+    Type *PtrTy = PointerType::getUnqual(*DAG.getContext());
     if (!HasSwiftSelfArg) {
       NumFixedArgs++;
-      ISD::OutputArg Arg;
-      Arg.Flags.setSwiftSelf();
+      ISD::ArgFlagsTy Flags;
+      Flags.setSwiftSelf();
+      ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
       CLI.Outs.push_back(Arg);
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
       CLI.OutVals.push_back(ArgVal);
     }
     if (!HasSwiftErrorArg) {
       NumFixedArgs++;
-      ISD::OutputArg Arg;
-      Arg.Flags.setSwiftError();
+      ISD::ArgFlagsTy Flags;
+      Flags.setSwiftError();
+      ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
       CLI.Outs.push_back(Arg);
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
       CLI.OutVals.push_back(ArgVal);
@@ -1503,7 +1508,7 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
   for (const ISD::OutputArg &Out : Outs) {
     assert(!Out.Flags.isByVal() && "byval is not valid for return values");
     assert(!Out.Flags.isNest() && "nest is not valid for return values");
-    assert(Out.IsFixed && "non-fixed return value is not valid");
+    assert(!Out.Flags.isVarArg() && "non-fixed return value is not valid");
     if (Out.Flags.isInAlloca())
       fail(DL, DAG, "WebAssembly hasn't implemented inalloca results");
     if (Out.Flags.isInConsecutiveRegs())
@@ -3383,14 +3388,65 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 
+/// Try to convert a i128 comparison to a v16i8 comparison before type
+/// legalization splits it up into chunks
+static SDValue
+combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                                const WebAssemblySubtarget *Subtarget) {
+
+  SDLoc DL(N);
+  SDValue X = N->getOperand(0);
+  SDValue Y = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  EVT OpVT = X.getValueType();
+
+  SelectionDAG &DAG = DCI.DAG;
+  if (DCI.DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  // We're looking for an oversized integer equality comparison with SIMD
+  if (!OpVT.isScalarInteger() || !OpVT.isByteSized() || OpVT != MVT::i128 ||
+      !Subtarget->hasSIMD128() || !isIntEqualitySetCC(CC))
+    return SDValue();
+
+  // Don't perform this combine if constructing the vector will be expensive.
+  auto IsVectorBitCastCheap = [](SDValue X) {
+    X = peekThroughBitcasts(X);
+    return isa<ConstantSDNode>(X) || X.getOpcode() == ISD::LOAD;
+  };
+
+  if (!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y))
+    return SDValue();
+
+  SDValue VecX = DAG.getBitcast(MVT::v16i8, X);
+  SDValue VecY = DAG.getBitcast(MVT::v16i8, Y);
+  SDValue Cmp = DAG.getSetCC(DL, MVT::v16i8, VecX, VecY, CC);
+
+  SDValue Intr =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                  {DAG.getConstant(CC == ISD::SETEQ ? Intrinsic::wasm_alltrue
+                                                    : Intrinsic::wasm_anytrue,
+                                   DL, MVT::i32),
+                   Cmp});
+
+  return DAG.getSetCC(DL, VT, Intr, DAG.getConstant(0, DL, MVT::i32),
+                      ISD::SETNE);
+}
+
 static SDValue performSETCCCombine(SDNode *N,
-                                   TargetLowering::DAGCombinerInfo &DCI) {
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const WebAssemblySubtarget *Subtarget) {
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
   EVT VT = N->getValueType(0);
   if (!VT.isScalarInteger())
     return SDValue();
+
+  if (SDValue V = combineVectorSizedSetCCEquality(N, DCI, Subtarget))
+    return V;
 
   SDValue LHS = N->getOperand(0);
   if (LHS->getOpcode() != ISD::BITCAST)
@@ -3571,7 +3627,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::BITCAST:
     return performBitcastCombine(N, DCI);
   case ISD::SETCC:
-    return performSETCCCombine(N, DCI);
+    return performSETCCCombine(N, DCI, Subtarget);
   case ISD::VECTOR_SHUFFLE:
     return performVECTOR_SHUFFLECombine(N, DCI);
   case ISD::SIGN_EXTEND:

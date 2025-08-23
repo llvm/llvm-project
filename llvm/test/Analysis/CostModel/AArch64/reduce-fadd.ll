@@ -26,10 +26,10 @@ define void @strict_fp_reductions() {
 
 define void @strict_fp_reductions_fp16() {
 ; CHECK-NOFP16-LABEL: 'strict_fp_reductions_fp16'
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:10 SizeLat:6 for: %fadd_v2f16 = call half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f16 = call half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:23 Lat:46 SizeLat:30 for: %fadd_v8f16 = call half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:46 Lat:92 SizeLat:60 for: %fadd_v16f16 = call half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:5 Lat:10 SizeLat:6 for: %fadd_v2f16 = call half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f16 = call half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:54 CodeSize:23 Lat:46 SizeLat:30 for: %fadd_v8f16 = call half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:108 CodeSize:46 Lat:92 SizeLat:60 for: %fadd_v16f16 = call half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'strict_fp_reductions_fp16'
@@ -40,10 +40,10 @@ define void @strict_fp_reductions_fp16() {
 ; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'strict_fp_reductions_fp16'
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:10 SizeLat:6 for: %fadd_v2f16 = call half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f16 = call half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:23 Lat:46 SizeLat:30 for: %fadd_v8f16 = call half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:46 Lat:92 SizeLat:60 for: %fadd_v16f16 = call half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:5 Lat:10 SizeLat:6 for: %fadd_v2f16 = call half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f16 = call half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:54 CodeSize:23 Lat:46 SizeLat:30 for: %fadd_v8f16 = call half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:108 CodeSize:46 Lat:92 SizeLat:60 for: %fadd_v16f16 = call half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v2f16 = call half @llvm.vector.reduce.fadd.v2f16(half 0.0, <2 x half> undef)
@@ -55,15 +55,15 @@ define void @strict_fp_reductions_fp16() {
 
 define void @strict_fp_reductions_bf16() {
 ; CHECK-NOFP16-LABEL: 'strict_fp_reductions_bf16'
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f8 = call bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:54 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f8 = call bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'strict_fp_reductions_bf16'
-; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f8 = call bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
+; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:54 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f8 = call bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
 ; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'strict_fp_reductions_bf16'
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f8 = call bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f8 = call bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR0000, <4 x bfloat> undef)
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v4f8 = call bfloat @llvm.vector.reduce.fadd.v4f8(bfloat 0.0, <4 x bfloat> undef)
@@ -117,16 +117,16 @@ define void @fast_fp_reductions() {
 
 define void @fast_fp_reductions_fp16() {
 ; CHECK-NOFP16-LABEL: 'fast_fp_reductions_fp16'
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %fadd_v2f16_fast = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %fadd_v2f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f16_fast = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8f16 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16f16 = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:35 Lat:41 SizeLat:35 for: %fadd_v11f16 = call fast half @llvm.vector.reduce.fadd.v11f16(half 0xH0000, <11 x half> undef)
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:35 Lat:41 SizeLat:35 for: %fadd_v13f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v13f16(half 0xH0000, <13 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:6 SizeLat:4 for: %fadd_v2f16_fast = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:6 SizeLat:4 for: %fadd_v2f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f16_fast = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8f16 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16f16 = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:203 CodeSize:35 Lat:41 SizeLat:35 for: %fadd_v11f16 = call fast half @llvm.vector.reduce.fadd.v11f16(half 0xH0000, <11 x half> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:248 CodeSize:35 Lat:41 SizeLat:35 for: %fadd_v13f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v13f16(half 0xH0000, <13 x half> undef)
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'fast_fp_reductions_fp16'
@@ -143,16 +143,16 @@ define void @fast_fp_reductions_fp16() {
 ; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'fast_fp_reductions_fp16'
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %fadd_v2f16_fast = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %fadd_v2f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f16_fast = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8f16 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16f16 = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:35 Lat:41 SizeLat:35 for: %fadd_v11f16 = call fast half @llvm.vector.reduce.fadd.v11f16(half 0xH0000, <11 x half> undef)
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:35 Lat:41 SizeLat:35 for: %fadd_v13f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v13f16(half 0xH0000, <13 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:6 SizeLat:4 for: %fadd_v2f16_fast = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:6 SizeLat:4 for: %fadd_v2f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f16_fast = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8f16 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16f16 = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:203 CodeSize:35 Lat:41 SizeLat:35 for: %fadd_v11f16 = call fast half @llvm.vector.reduce.fadd.v11f16(half 0xH0000, <11 x half> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:248 CodeSize:35 Lat:41 SizeLat:35 for: %fadd_v13f16_reassoc = call reassoc half @llvm.vector.reduce.fadd.v13f16(half 0xH0000, <13 x half> undef)
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v2f16_fast = call fast half @llvm.vector.reduce.fadd.v2f16(half 0.0, <2 x half> undef)
@@ -175,15 +175,15 @@ define void @fast_fp_reductions_fp16() {
 
 define void @fast_fp_reductions_bf16() {
 ; CHECK-NOFP16-LABEL: 'fast_fp_reductions_bf16'
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f8 = call reassoc bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR8000, <4 x bfloat> undef)
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f8 = call reassoc bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR8000, <4 x bfloat> undef)
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'fast_fp_reductions_bf16'
-; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f8 = call reassoc bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR8000, <4 x bfloat> undef)
+; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f8 = call reassoc bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR8000, <4 x bfloat> undef)
 ; CHECK-F16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'fast_fp_reductions_bf16'
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f8 = call reassoc bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR8000, <4 x bfloat> undef)
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:8 Lat:12 SizeLat:8 for: %fadd_v4f8 = call reassoc bfloat @llvm.vector.reduce.fadd.v4bf16(bfloat 0xR8000, <4 x bfloat> undef)
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v4f8 = call reassoc bfloat @llvm.vector.reduce.fadd.v4f8(bfloat -0.0, <4 x bfloat> undef)
