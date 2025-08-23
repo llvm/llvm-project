@@ -20,6 +20,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/MDBuilder.h"
 
 #define DEBUG_TYPE "vplan"
@@ -531,12 +532,30 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   createExtractsForLiveOuts(Plan, MiddleVPBB);
 }
 
+static void simplifyPlanWithSCEV(VPlan &Plan, ScalarEvolution &SE) {
+  auto SimplifyWithSCEV = [&](VPValue *VPV) -> VPValue * {
+    Value *UV = VPV->getUnderlyingValue();
+    if (!UV || !SE.isSCEVable(UV->getType()))
+      return nullptr;
+    auto *S = SE.getSCEV(UV);
+    if (auto *C = dyn_cast<SCEVConstant>(S))
+      return Plan.getOrAddLiveIn(C->getValue());
+    return nullptr;
+  };
+
+  for (VPValue *LiveIn : Plan.getLiveIns()) {
+    if (auto *Simp = SimplifyWithSCEV(LiveIn))
+      LiveIn->replaceAllUsesWith(Simp);
+  }
+}
+
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
                              DebugLoc IVDL, PredicatedScalarEvolution &PSE) {
   PlainCFGBuilder Builder(TheLoop, &LI);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
+  simplifyPlanWithSCEV(*VPlan0, *PSE.getSE());
   return VPlan0;
 }
 
