@@ -677,15 +677,13 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
 // instructions.  In order to unambiguously decode the singleton, we need to
 // match the remaining undecoded encoding bits against the singleton.
 void Filter::recurse() {
-  // Starts by inheriting our parent filter chooser's filter bit values.
-  KnownBits FilterBits = Owner.FilterBits;
-  assert(FilterBits.extractBits(NumBits, StartBit).isUnknown());
+  assert(Owner.FilterBits.extractBits(NumBits, StartBit).isUnknown());
 
   if (!VariableIDs.empty()) {
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
     VariableFC = std::make_unique<FilterChooser>(Owner.Encodings, VariableIDs,
-                                                 FilterBits, Owner);
+                                                 Owner.FilterBits, Owner);
   }
 
   // No need to recurse for a singleton filtered instruction.
@@ -696,16 +694,18 @@ void Filter::recurse() {
   }
 
   // Otherwise, create sub choosers.
-  for (const auto &[FilterVal, EncodingIDs] : FilteredIDs) {
+  for (const auto &[FilterVal, InferiorEncodingIDs] : FilteredIDs) {
     // Create a new filter by inserting the field bits into the parent filter.
     APInt FieldBits(NumBits, FilterVal);
-    FilterBits.insertBits(KnownBits::makeConstant(FieldBits), StartBit);
+    KnownBits InferiorFilterBits = Owner.FilterBits;
+    InferiorFilterBits.insertBits(KnownBits::makeConstant(FieldBits), StartBit);
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
     FilterChooserMap.try_emplace(
-        FilterVal, std::make_unique<FilterChooser>(Owner.Encodings, EncodingIDs,
-                                                   FilterBits, Owner));
+        FilterVal,
+        std::make_unique<FilterChooser>(Owner.Encodings, InferiorEncodingIDs,
+                                        InferiorFilterBits, Owner));
   }
 }
 
@@ -1386,15 +1386,14 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
 
   // Check any additional encoding fields needed.
   for (const Island &Ilnd : reverse(Islands)) {
-    unsigned NumBits = Ilnd.NumBits;
-    assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
+    assert(isUInt<8>(Ilnd.NumBits) && "NumBits overflowed uint8 table entry!");
     const uint8_t DecoderOp = TableInfo.isOutermostScope()
                                   ? MCD::OPC_CheckFieldOrFail
                                   : MCD::OPC_CheckField;
     TableInfo.Table.push_back(DecoderOp);
 
     TableInfo.Table.insertULEB128(Ilnd.StartBit);
-    TableInfo.Table.push_back(NumBits);
+    TableInfo.Table.push_back(Ilnd.NumBits);
     TableInfo.Table.insertULEB128(Ilnd.FieldVal);
 
     if (DecoderOp == MCD::OPC_CheckField) {
