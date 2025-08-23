@@ -233,7 +233,7 @@ define <4 x float> @ins3_ins3_fdiv(float %x, float %y) {
   ret <4 x float> %r
 }
 
-; EEnsure we don't crash when erasing dead instructions.
+; Ensure we don't crash when erasing dead instructions.
 
 define i32 @pr155110(i32 %x) {
 ; CHECK-LABEL: @pr155110(
