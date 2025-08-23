@@ -1259,6 +1259,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, s64}});
 
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
 
   getActionDefinitionsBuilder({G_STACKSAVE, G_STACKRESTORE}).lower();
