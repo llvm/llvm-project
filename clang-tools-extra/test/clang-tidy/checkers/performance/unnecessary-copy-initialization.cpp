@@ -954,7 +954,7 @@ bool CopiedFromParmVarField(const Struct &crs, const Struct cs, Struct &rs, Stru
   // CHECK-FIXES: const auto& m5 = crs.Member;
 
   auto m6 = cs.Member;
-  // CHECK-NOT-FIXES: const auto& m6 = cs.Member;
+  // CHECK-NOT-FIXES: const auto m6 = cs.Member;
 
   m6 = ExpensiveToCopyType();
   return m1 == m2 || m3 == m4 || m5 == m6;
@@ -976,7 +976,9 @@ bool CopiedFromVarField() {
 
 struct NestedStruct {
   Struct s;
-  const Struct& getS() const { return s; }
+  const Struct& getConstRefS() const { return s; }
+  const Struct getConstS() const { return s; }
+  Struct getS() const { return s; }
 };
 
 bool CopiedFromParmVarNestedField(const NestedStruct &ncrs, const NestedStruct ncs, NestedStruct &nrs, NestedStruct ns) {
@@ -1042,11 +1044,19 @@ void callNegativeAllTemplateTypesCopiedFromVarField() {
   negativeTemplateTypesCopiedFromVarNestedField<NestedStruct, ExpensiveToCopyType>(ns, ns);
 }
 
-ExpensiveToCopyType CopiedFromMethodCall(const NestedStruct &ns) {
-  const auto m = ns.getS().Member;
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm' of the subobject 'ns.getS().Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
-  // CHECK-FIXES: const auto& m = ns.getS().Member;
-  const auto s = ns.getS();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 's' of type 'const Struct' is copy-constructed from a const reference but is never used; consider removing the statement
-  return m;
+bool CopiedFromMethodCall(const NestedStruct &ns) {
+  const auto m1 = ns.getConstRefS().Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'ns.getConstRefS().Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = ns.getConstRefS().Member;
+
+  const auto m2 = ns.getConstS().Member;
+  // CHECK-NOT-FIXES: const auto m2 = ns.getConstS().Member;
+
+  const auto m3 = ns.getS().Member;
+  // CHECK-NOT-FIXES: const auto m3 = ns.getConstS().Member;
+
+  const auto s1 = ns.getConstRefS();
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 's1' of type 'const Struct' is copy-constructed from a const reference but is never used; consider removing the statement
+
+  return m1 == m2 || m2 == m3;
 }
