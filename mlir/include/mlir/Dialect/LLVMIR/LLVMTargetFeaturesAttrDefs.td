@@ -1,8 +1,15 @@
-//===-- LLVMAttrDefs.td - LLVM Attributes definition file --*- tablegen -*-===//
+//===-- LLVMTargetFeaturesAttrDefs.td ----------------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Separate out the LLVM_TargetFeaturesAttr definition from LLVMAttrDefs.td so
+// as to break a circular dependency between LLVMInterfaces.td and LLVMAttrDefs.
+// In particular, the TargetAttrInterface requires LLVMTargetFeaturesAttr
+// and attrs in LLVMAttrDefs.td require interfaces from LLVMInterfaces.td.
 //
 //===----------------------------------------------------------------------===//
 
