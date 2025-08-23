@@ -134,7 +134,7 @@ static LogicalResult checkAffineLoopNestMappable(AffineForOp forOp,
                                                  unsigned numBlockDims,
                                                  unsigned numThreadDims) {
   if (numBlockDims < 1 || numThreadDims < 1) {
-    LLVM_DEBUG(llvm::dbgs() << "nothing to map");
+    LDBG() << "nothing to map";
     return success();
   }
 
