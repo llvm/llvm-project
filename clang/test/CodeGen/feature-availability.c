@@ -15,15 +15,15 @@
 #ifndef HEADER
 #define HEADER
 
-#include <feature-availability.h>
+#include <availability_domain.h>
 
 #define AVAIL 0
 
 #ifdef USE_DOMAIN
 // DOMAIN: @g3 = extern_weak global i32, align 4
 
-static struct __AvailabilityDomain feature1 __attribute__((availability_domain(feature1))) = {__AVAILABILITY_DOMAIN_ENABLED, 0};
-static struct __AvailabilityDomain feature2 __attribute__((availability_domain(feature2))) = {__AVAILABILITY_DOMAIN_DISABLED, 0};
+CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
+CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
 #endif
 
 __attribute__((availability(domain:feature1, AVAIL))) int func0(void);
@@ -94,7 +94,7 @@ void test3(struct S0 *s0) {
 // DOMAIN-NEXT: ret void
 
 int pred1(void);
-static struct __AvailabilityDomain feature3 __attribute__((availability_domain(feature3))) = {__AVAILABILITY_DOMAIN_DYNAMIC, pred1};
+CLANG_DYNAMIC_AVAILABILITY_DOMAIN(feature3, pred1);
 __attribute__((availability(domain:feature3, AVAIL))) int func3(void);
 __attribute__((availability(domain:feature3, AVAIL))) extern int g3;
 

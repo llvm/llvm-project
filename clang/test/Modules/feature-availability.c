@@ -3,14 +3,14 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fmodules -fmodule-file=%t/feature2.pcm -I %S/Inputs/feature-availability -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/feature-availability -Werror=non-modular-include-in-module -emit-llvm -o - %s | FileCheck %s
 
-#include <feature-availability.h>
+#include <availability_domain.h>
 #include "feature2.h"
 
 #define AVAIL 0
 #define UNAVAIL 1
 
 int pred1(void);
-static struct __AvailabilityDomain feature3 __attribute__((availability_domain(feature3))) = {__AVAILABILITY_DOMAIN_DYNAMIC, pred1};
+CLANG_DYNAMIC_AVAILABILITY_DOMAIN(feature3, pred1);
 
 void func0(void);
 __attribute__((availability(domain:feature1, AVAIL))) void func1(void);
