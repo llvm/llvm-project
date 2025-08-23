@@ -3882,27 +3882,32 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
 
     For the no-rethrow version, it must have at least two operands, the RTTI
     information, a pointer to the exception object (likely allocated via
-    `cir.cxa.allocate_exception`) and finally an optional dtor, which might
-    run as part of this operation.
+    `cir.alloc_exception`) and finally an optional dtor, which might run as
+    part of this operation.
 
     Example:
     ```mlir
-      // throw;
-      cir.throw
+    // throw;
+    cir.throw
 
-      // if (b == 0)
-      //   throw "Division by zero condition!";
-      cir.if %cond {
-        %exception_addr = cir.alloc_exception 8 -> !cir.ptr<!void>
-        ...
-        cir.store %string_addr, %exception_addr : // Store string addr for "Division by zero condition!"
-        cir.throw %exception_addr : !cir.ptr<!cir.ptr<!u8i>>, @"typeinfo for char const*"
+    // if (b == 0)
+    //   throw "Division by zero condition!";
+    cir.if %cond {
+      %exception_addr = cir.alloc_exception 8 -> !cir.ptr<!void>
+      ...
+      // Store string addr for "Division by zero condition!"
+      cir.store %string_addr, %exception_addr : !cir.ptr<!s8i>,
+        !cir.ptr<!cir.ptr<!s8i>>
+      cir.throw %exception_addr : !cir.ptr<!cir.ptr<!u8i>>,
+        @"typeinfo for char const*"
     ```
   }];
 
-  let arguments = (ins Optional<CIR_PointerType>:$exception_ptr,
-                       OptionalAttr<FlatSymbolRefAttr>:$type_info,
-                       OptionalAttr<FlatSymbolRefAttr>:$dtor);
+  let arguments = (ins
+    Optional<CIR_PointerType>:$exception_ptr,
+    OptionalAttr<FlatSymbolRefAttr>:$type_info,
+    OptionalAttr<FlatSymbolRefAttr>:$dtor
+  );
 
   let assemblyFormat = [{
     ($exception_ptr^ `:` type($exception_ptr))?
