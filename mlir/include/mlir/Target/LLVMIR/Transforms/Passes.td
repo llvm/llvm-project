@@ -29,7 +29,6 @@ def LLVMTargetToDataLayout : Pass<"llvm-target-to-data-layout"> {
 
 def LLVMTargetToTargetFeatures : Pass<"llvm-target-to-target-features"> {
   let summary = "Update attached #llvm.target's features per the described target";
-  let dependentDialects = ["mlir::DLTIDialect"];
   let description = [{
     Obtain the TargetMachine specified by the attached #llvm.target's attributes
     and obtain from it the full list of features of the selected target. Updates
