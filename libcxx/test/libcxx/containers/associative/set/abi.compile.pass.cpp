@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: libcpp-abi-no-compressed-pair-padding
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cstdint>
 #include <set>
 
@@ -90,7 +88,12 @@ struct user_struct {
 };
 
 #if __SIZE_WIDTH__ == 64
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(user_struct) == 32, "");
+#  else
+static_assert(sizeof(user_struct) == 24, "");
+#  endif
 static_assert(TEST_ALIGNOF(user_struct) == 8, "");
 
 static_assert(sizeof(set_alloc<int, std::allocator<int> >) == 24, "");
@@ -119,12 +122,16 @@ static_assert(TEST_ALIGNOF(set_alloc<char, final_small_iter_allocator<char> >) =
 
 struct TEST_ALIGNAS(32) AlignedLess {};
 
-// This part of the ABI has been broken between LLVM 19 and LLVM 20.
 static_assert(sizeof(std::set<int, AlignedLess>) == 64, "");
 static_assert(TEST_ALIGNOF(std::set<int, AlignedLess>) == 32, "");
 
 #elif __SIZE_WIDTH__ == 32
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(user_struct) == 16, "");
+#  else
+static_assert(sizeof(user_struct) == 12, "");
+#  endif
 static_assert(TEST_ALIGNOF(user_struct) == 4, "");
 
 static_assert(sizeof(set_alloc<int, std::allocator<int> >) == 12, "");
