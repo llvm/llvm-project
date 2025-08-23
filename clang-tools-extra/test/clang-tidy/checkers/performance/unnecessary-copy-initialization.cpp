@@ -948,7 +948,16 @@ bool CopiedFromParmVarField(const Struct &crs, const Struct cs, Struct &rs, Stru
   // CHECK-FIXES: const auto& m2 = cs.Member;
   const auto m3 = rs.Member;
   const auto m4 = s.Member;
-  return m1 == m2 || m3 == m4;
+
+  auto m5 = crs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: local copy 'm5' of the subobject 'crs.Member' of type 'ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m5 = crs.Member;
+
+  auto m6 = cs.Member;
+  // CHECK-NOT-FIXES: const auto& m6 = cs.Member;
+
+  m6 = ExpensiveToCopyType();
+  return m1 == m2 || m3 == m4 || m5 == m6;
 }
 
 const Struct GlobalS;

@@ -363,6 +363,9 @@ void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
 
 void UnnecessaryCopyInitialization::handleCopyFromConstVarMember(
     const CheckContext &Ctx, const MemberExpr &ME) {
+  bool IsConstQualified = Ctx.Var.getType().isConstQualified();
+  if (!IsConstQualified && !Ctx.IsVarOnlyUsedAsConst)
+    return;
   diagnoseCopyFromConstVarMember(Ctx, ME);
 }
 
