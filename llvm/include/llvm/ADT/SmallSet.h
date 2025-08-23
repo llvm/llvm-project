@@ -272,9 +272,9 @@ private:
 /// We use this middleman class DeprecatedSmallSet so that the deprecation
 /// warning works.  Placing LLVM_DEPRECATED just before SmallSet below won't
 /// work.
-template <typename PointeeType, unsigned N>
+template <typename PointerType, unsigned N>
 class LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-    DeprecatedSmallSet : public SmallPtrSet<PointeeType *, N> {};
+    DeprecatedSmallSet : public SmallPtrSet<PointerType, N> {};
 
 template <typename PointeeType, unsigned N>
 class SmallSet<PointeeType *, N> : public DeprecatedSmallSet<PointeeType *, N> {
