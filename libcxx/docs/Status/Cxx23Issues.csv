@@ -58,7 +58,7 @@
 "`LWG3495 <https://wg21.link/LWG3495>`__","``constexpr launder`` makes pointers to inactive members of unions usable","2021-02 (Virtual)","|Nothing To Do|","",""
 "`LWG3500 <https://wg21.link/LWG3500>`__","``join_view::iterator::operator->()`` is bogus","2021-02 (Virtual)","|Complete|","14",""
 "`LWG3502 <https://wg21.link/LWG3502>`__","``elements_view`` should not be allowed to return dangling reference","2021-02 (Virtual)","|Complete|","16",""
-"`LWG3505 <https://wg21.link/LWG3505>`__","``split_view::outer-iterator::operator++`` misspecified","2021-02 (Virtual)","","",""
+"`LWG3505 <https://wg21.link/LWG3505>`__","``split_view::outer-iterator::operator++`` misspecified","2021-02 (Virtual)","|Complete|","15",""
 "","","","","",""
 "`LWG2774 <https://wg21.link/LWG2774>`__","``std::function`` construction vs assignment","2021-06 (Virtual)","","",""
 "`LWG2818 <https://wg21.link/LWG2818>`__","``::std::`` everywhere rule needs tweaking","2021-06 (Virtual)","|Nothing To Do|","",""
