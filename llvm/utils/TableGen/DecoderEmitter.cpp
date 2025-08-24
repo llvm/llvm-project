@@ -252,7 +252,6 @@ public:
   DecoderTable() { Data.reserve(16384); }
 
   void clear() { Data.clear(); }
-  void push_back(uint8_t Item) { Data.push_back(Item); }
   size_t size() const { return Data.size(); }
   const uint8_t *data() const { return Data.data(); }
 
@@ -260,7 +259,16 @@ public:
   const_iterator begin() const { return Data.begin(); }
   const_iterator end() const { return Data.end(); }
 
-  // Insert a ULEB128 encoded value into the table.
+  /// Inserts a state machine opcode into the table.
+  void insertOpcode(MCD::DecoderOps Opcode) { Data.push_back(Opcode); }
+
+  /// Inserts a uint8 encoded value into the table.
+  void insertUInt8(unsigned Value) {
+    assert(isUInt<8>(Value));
+    Data.push_back(Value);
+  }
+
+  /// Inserts a ULEB128 encoded value into the table.
   void insertULEB128(uint64_t Value) {
     // Encode and emit the value to filter against.
     uint8_t Buffer[16];
@@ -1243,10 +1251,10 @@ void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
   // computed.
   unsigned PIdx = getPredicateIndex(TableInfo, PS.str());
 
-  const uint8_t DecoderOp = TableInfo.isOutermostScope()
-                                ? MCD::OPC_CheckPredicateOrFail
-                                : MCD::OPC_CheckPredicate;
-  TableInfo.Table.push_back(DecoderOp);
+  const MCD::DecoderOps DecoderOp = TableInfo.isOutermostScope()
+                                        ? MCD::OPC_CheckPredicateOrFail
+                                        : MCD::OPC_CheckPredicate;
+  TableInfo.Table.insertOpcode(DecoderOp);
   TableInfo.Table.insertULEB128(PIdx);
 
   if (DecoderOp == MCD::OPC_CheckPredicate) {
@@ -1286,7 +1294,7 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
   if (!NeedPositiveMask && !NeedNegativeMask)
     return;
 
-  TableInfo.Table.push_back(MCD::OPC_SoftFail);
+  TableInfo.Table.insertOpcode(MCD::OPC_SoftFail);
   TableInfo.Table.insertULEB128(PositiveMask.getZExtValue());
   TableInfo.Table.insertULEB128(NegativeMask.getZExtValue());
 }
@@ -1305,14 +1313,12 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
 
   // Check any additional encoding fields needed.
   for (const Island &Ilnd : reverse(Islands)) {
-    assert(isUInt<8>(Ilnd.NumBits) && "NumBits overflowed uint8 table entry!");
-    const uint8_t DecoderOp = TableInfo.isOutermostScope()
-                                  ? MCD::OPC_CheckFieldOrFail
-                                  : MCD::OPC_CheckField;
-    TableInfo.Table.push_back(DecoderOp);
-
+    const MCD::DecoderOps DecoderOp = TableInfo.isOutermostScope()
+                                          ? MCD::OPC_CheckFieldOrFail
+                                          : MCD::OPC_CheckField;
+    TableInfo.Table.insertOpcode(DecoderOp);
     TableInfo.Table.insertULEB128(Ilnd.StartBit);
-    TableInfo.Table.push_back(Ilnd.NumBits);
+    TableInfo.Table.insertUInt8(Ilnd.NumBits);
     TableInfo.Table.insertULEB128(Ilnd.FieldVal);
 
     if (DecoderOp == MCD::OPC_CheckField) {
@@ -1338,12 +1344,11 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   // decoder method indicates that additional processing should be done to see
   // if there is any other instruction that also matches the bitpattern and
   // can decode it.
-  const uint8_t DecoderOp =
-      Encoding.hasCompleteDecoder()
-          ? MCD::OPC_Decode
-          : (TableInfo.isOutermostScope() ? MCD::OPC_TryDecodeOrFail
-                                          : MCD::OPC_TryDecode);
-  TableInfo.Table.push_back(DecoderOp);
+  const MCD::DecoderOps DecoderOp =
+      Encoding.hasCompleteDecoder()  ? MCD::OPC_Decode
+      : TableInfo.isOutermostScope() ? MCD::OPC_TryDecodeOrFail
+                                     : MCD::OPC_TryDecode;
+  TableInfo.Table.insertOpcode(DecoderOp);
   const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
   TableInfo.Table.insertULEB128(Emitter->getTarget().getInstrIntValue(InstDef));
   TableInfo.Table.insertULEB128(DIdx);
@@ -1661,14 +1666,13 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   } else {
     // The general case: emit a switch over the field value.
     DecoderTable &Table = TableInfo.Table;
-    Table.push_back(MCD::OPC_ExtractField);
+    Table.insertOpcode(MCD::OPC_ExtractField);
     Table.insertULEB128(StartBit);
-    assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
-    Table.push_back(NumBits);
+    Table.insertUInt8(NumBits);
 
     // Emit switch cases for all but the last element.
     for (const auto &[FilterVal, Delegate] : drop_end(FilterChooserMap)) {
-      Table.push_back(MCD::OPC_FilterValue);
+      Table.insertOpcode(MCD::OPC_FilterValue);
       Table.insertULEB128(FilterVal);
       size_t FixupPos = Table.insertNumToSkip();
 
@@ -1682,8 +1686,9 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
     // Emit a switch case for the last element. It never falls through;
     // if it doesn't match, we leave the current scope.
     const auto &[FilterVal, Delegate] = *FilterChooserMap.rbegin();
-    Table.push_back(!TableInfo.isOutermostScope() ? MCD::OPC_FilterValue
-                                                  : MCD::OPC_FilterValueOrFail);
+    Table.insertOpcode(!TableInfo.isOutermostScope()
+                           ? MCD::OPC_FilterValue
+                           : MCD::OPC_FilterValueOrFail);
     Table.insertULEB128(FilterVal);
     if (!TableInfo.isOutermostScope())
       TableInfo.FixupStack.back().push_back(Table.insertNumToSkip());
@@ -2519,7 +2524,7 @@ namespace {
     assert(TableInfo.isOutermostScope() && "fixup stack phasing error!");
     TableInfo.popScope();
 
-    TableInfo.Table.push_back(MCD::OPC_Fail);
+    TableInfo.Table.insertOpcode(MCD::OPC_Fail);
 
     // Print the table to the output stream.
     OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
