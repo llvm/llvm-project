@@ -672,8 +672,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   Style.AllowShortRecordsOnASingleLine = FormatStyle::SRS_Never;
   CHECK_PARSE("AllowShortRecordsOnASingleLine: Empty",
               AllowShortRecordsOnASingleLine, FormatStyle::SRS_Empty);
-  CHECK_PARSE("AllowShortRecordsOnASingleLine: All",
-              AllowShortRecordsOnASingleLine, FormatStyle::SRS_All);
+  CHECK_PARSE("AllowShortRecordsOnASingleLine: Always",
+              AllowShortRecordsOnASingleLine, FormatStyle::SRS_Always);
   CHECK_PARSE("AllowShortRecordsOnASingleLine: Never",
               AllowShortRecordsOnASingleLine, FormatStyle::SRS_Never);
 
