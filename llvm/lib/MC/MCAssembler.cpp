@@ -353,10 +353,9 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
 }
 
 uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
-  assert(HasLayout);
-  // The size is the last fragment's end offset.
   const MCFragment &F = *Sec.curFragList()->Tail;
-  return getFragmentOffset(F) + computeFragmentSize(F);
+  assert(HasLayout && F.getKind() == MCFragment::FT_Data);
+  return getFragmentOffset(F) + F.getSize();
 }
 
 uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
