@@ -39,18 +39,6 @@ Examples
   int64_t global_int64 = 100L;
   uint64_t global_uint64 = 100UL;
 
-  void function_with_int32_param(int32_t param) {
-    // ...
-  }
-
-  int32_t function_returning_int32() {
-    return 42;
-  }
-
-  struct MyStruct {
-    int32_t member_int32;
-    int64_t member_int64;
-  };
 
 The check will also warn about typedef declarations that use fundamental types
 as their underlying type:
