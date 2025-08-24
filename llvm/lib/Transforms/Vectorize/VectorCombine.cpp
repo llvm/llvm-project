@@ -4488,6 +4488,7 @@ bool VectorCombine::run() {
       case Instruction::ExtractElement:
         if (foldShuffleChainsToReduce(I))
           return true;
+        break;
       case Instruction::ICmp:
       case Instruction::FCmp:
         if (foldExtractExtract(I))
