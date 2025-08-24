@@ -111,7 +111,7 @@ Options
    When `true`, the check will warn about fundamental integer types
    (``short``, ``int``, ``long``, ``long long`` and their ``signed`` and 
    ``unsigned`` variants).
-   When `false`, integer types are not flagged. Default is `true`
+   When `false`, integer types are not flagged. Default is `true`.
 
    Example with :option:`WarnOnInts` enabled:
 
