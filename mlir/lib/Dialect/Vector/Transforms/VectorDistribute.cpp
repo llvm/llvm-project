@@ -451,10 +451,9 @@ struct WarpOpTransferWrite : public WarpDistributionPattern {
     }
     SmallVector<Value> delinearized;
     if (map.getNumResults() > 1) {
-      delinearized = rewriter
-                         .create<mlir::affine::AffineDelinearizeIndexOp>(
-                             newWarpOp.getLoc(), newWarpOp.getLaneid(),
-                             delinearizedIdSizes)
+      delinearized = mlir::affine::AffineDelinearizeIndexOp::create(
+                         rewriter, newWarpOp.getLoc(), newWarpOp.getLaneid(),
+                         delinearizedIdSizes)
                          .getResults();
     } else {
       // If there is only one map result, we can elide the delinearization
@@ -529,8 +528,7 @@ struct WarpOpTransferWrite : public WarpDistributionPattern {
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp yield = warpOp.getTerminator();
     Operation *lastNode = yield->getPrevNode();
     auto writeOp = dyn_cast_or_null<vector::TransferWriteOp>(lastNode);
     if (!writeOp)
@@ -847,8 +845,7 @@ struct WarpOpDeadResult : public WarpDistributionPattern {
     newYieldValues.reserve(warpOp->getNumResults());
     DenseMap<Value, int64_t> dedupYieldOperandPositionMap;
     DenseMap<OpResult, int64_t> dedupResultPositionMap;
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp yield = warpOp.getTerminator();
 
     // Some values may be yielded multiple times and correspond to multiple
     // results. Deduplicating occurs by taking each result with its matching
@@ -902,8 +899,7 @@ struct WarpOpForwardOperand : public WarpDistributionPattern {
   using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp yield = warpOp.getTerminator();
     Value valForwarded;
     unsigned resultIndex;
     for (OpOperand &operand : yield->getOpOperands()) {
@@ -1538,19 +1534,18 @@ struct WarpOpInsertScalar : public WarpDistributionPattern {
         arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
                               newWarpOp.getLaneid(), insertingLane);
     Value newResult =
-        rewriter
-            .create<scf::IfOp>(
-                loc, isInsertingLane,
-                /*thenBuilder=*/
-                [&](OpBuilder &builder, Location loc) {
-                  Value newInsert = vector::InsertOp::create(
-                      builder, loc, newSource, distributedVec, newPos);
-                  scf::YieldOp::create(builder, loc, newInsert);
-                },
-                /*elseBuilder=*/
-                [&](OpBuilder &builder, Location loc) {
-                  scf::YieldOp::create(builder, loc, distributedVec);
-                })
+        scf::IfOp::create(
+            rewriter, loc, isInsertingLane,
+            /*thenBuilder=*/
+            [&](OpBuilder &builder, Location loc) {
+              Value newInsert = vector::InsertOp::create(
+                  builder, loc, newSource, distributedVec, newPos);
+              scf::YieldOp::create(builder, loc, newInsert);
+            },
+            /*elseBuilder=*/
+            [&](OpBuilder &builder, Location loc) {
+              scf::YieldOp::create(builder, loc, distributedVec);
+            })
             .getResult(0);
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newResult);
     return success();
@@ -1661,10 +1656,9 @@ struct WarpOpInsert : public WarpDistributionPattern {
       auto nonInsertingBuilder = [&](OpBuilder &builder, Location loc) {
         scf::YieldOp::create(builder, loc, distributedDest);
       };
-      newResult = rewriter
-                      .create<scf::IfOp>(loc, isInsertingLane,
-                                         /*thenBuilder=*/insertingBuilder,
-                                         /*elseBuilder=*/nonInsertingBuilder)
+      newResult = scf::IfOp::create(rewriter, loc, isInsertingLane,
+                                    /*thenBuilder=*/insertingBuilder,
+                                    /*elseBuilder=*/nonInsertingBuilder)
                       .getResult(0);
     }
 
@@ -1711,8 +1705,7 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto warpOpYield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp warpOpYield = warpOp.getTerminator();
     // Only pick up `ForOp` if it is the last op in the region.
     Operation *lastNode = warpOpYield->getPrevNode();
     auto forOp = dyn_cast_or_null<scf::ForOp>(lastNode);
@@ -1829,7 +1822,8 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     rewriter.setInsertionPointAfter(newWarpOp);
     auto newForOp = scf::ForOp::create(
         rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), newForOpOperands);
+        forOp.getStep(), newForOpOperands, /*bodyBuilder=*/nullptr,
+        forOp.getUnsignedCmp());
     // Next, we insert a new `WarpOp` (called inner `WarpOp`) inside the
     // newly created `ForOp`. This `WarpOp` will contain all ops that were
     // contained within the original `ForOp` body.

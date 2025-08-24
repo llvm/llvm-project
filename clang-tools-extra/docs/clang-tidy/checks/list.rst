@@ -106,6 +106,7 @@ Clang-Tidy Checks
    :doc:`bugprone-incorrect-roundings <bugprone/incorrect-roundings>`,
    :doc:`bugprone-infinite-loop <bugprone/infinite-loop>`,
    :doc:`bugprone-integer-division <bugprone/integer-division>`,
+   :doc:`bugprone-invalid-enum-default-initialization <bugprone/invalid-enum-default-initialization>`,
    :doc:`bugprone-lambda-function-name <bugprone/lambda-function-name>`,
    :doc:`bugprone-macro-parentheses <bugprone/macro-parentheses>`, "Yes"
    :doc:`bugprone-macro-repeated-side-effects <bugprone/macro-repeated-side-effects>`,
@@ -270,6 +271,7 @@ Clang-Tidy Checks
    :doc:`misc-no-recursion <misc/no-recursion>`,
    :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
+   :doc:`misc-override-with-different-visibility <misc/override-with-different-visibility>`,
    :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes"
    :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,

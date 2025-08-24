@@ -2,6 +2,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
@@ -680,12 +682,13 @@ cc_test(
     args = [
         # TODO: some tests fail with: "JIT session error: Symbols not found:
         # [ _ZnwmPv26__clang_Interpreter_NewTag, __clang_Interpreter_SetValueWithAlloc ]
-        "--gtest_filter=-InterpreterTest.*",
+        "--gtest_filter=-InterpreterTest.*:InterpreterTestBase.*",
     ],
     deps = [
         "//clang:ast",
         "//clang:basic",
         "//clang:codegen",
+        "//clang:config",
         "//clang:frontend",
         "//clang:interpreter",
         "//clang:lex",

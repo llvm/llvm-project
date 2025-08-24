@@ -13,15 +13,15 @@ define i32 @cse_gep(ptr %ptr, i32 %idx) {
   ; O0-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; O0-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
   ; O0-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; O0-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
-  ; O0-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
+  ; O0-NEXT:   [[MUL:%[0-9]+]]:_(s64) = nsw G_MUL [[SEXT]], [[C]]
+  ; O0-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL]](s64)
   ; O0-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; O0-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir.gep1)
-  ; O0-NEXT:   [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
-  ; O0-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL1]](s64)
+  ; O0-NEXT:   [[MUL1:%[0-9]+]]:_(s64) = nsw G_MUL [[SEXT]], [[C]]
+  ; O0-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL1]](s64)
   ; O0-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; O0-NEXT:   %11:_(p0) = nuw nusw G_PTR_ADD [[PTR_ADD1]], [[C1]](s64)
-  ; O0-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %11(p0) :: (load (s32) from %ir.gep2)
+  ; O0-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[PTR_ADD1]], [[C1]](s64)
+  ; O0-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32) from %ir.gep2)
   ; O0-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[LOAD1]]
   ; O0-NEXT:   $w0 = COPY [[ADD]](s32)
   ; O0-NEXT:   RET_ReallyLR implicit $w0
@@ -34,13 +34,13 @@ define i32 @cse_gep(ptr %ptr, i32 %idx) {
   ; O3-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; O3-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
   ; O3-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; O3-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
-  ; O3-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
+  ; O3-NEXT:   [[MUL:%[0-9]+]]:_(s64) = nsw G_MUL [[SEXT]], [[C]]
+  ; O3-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL]](s64)
   ; O3-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; O3-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir.gep1)
   ; O3-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; O3-NEXT:   %9:_(p0) = nuw nusw G_PTR_ADD [[PTR_ADD]], [[C1]](s64)
-  ; O3-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %9(p0) :: (load (s32) from %ir.gep2)
+  ; O3-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[PTR_ADD]], [[C1]](s64)
+  ; O3-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir.gep2)
   ; O3-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[LOAD1]]
   ; O3-NEXT:   $w0 = COPY [[ADD]](s32)
   ; O3-NEXT:   RET_ReallyLR implicit $w0

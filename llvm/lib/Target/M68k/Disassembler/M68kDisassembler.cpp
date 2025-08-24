@@ -19,6 +19,7 @@
 
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "m68k-disassembler"
 
@@ -83,12 +85,6 @@ static DecodeStatus DecodeXR32RegisterClass(MCInst &Inst, uint64_t RegNo,
   return DecodeRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static DecodeStatus DecodeXR32RegisterClass(MCInst &Inst, APInt RegNo,
-                                            uint64_t Address,
-                                            const void *Decoder) {
-  return DecodeRegisterClass(Inst, RegNo.getZExtValue(), Address, Decoder);
-}
-
 static DecodeStatus DecodeXR16RegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
@@ -111,25 +107,13 @@ static DecodeStatus DecodeFPCSCRegisterClass(MCInst &Inst, uint64_t RegNo,
 }
 #define DecodeFPICRegisterClass DecodeFPCSCRegisterClass
 
-static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, APInt &Insn,
-                                            uint64_t Address,
-                                            const void *Decoder) {
-  llvm_unreachable("unimplemented");
-}
-
-static DecodeStatus DecodeSRCRegisterClass(MCInst &Inst, APInt &Insn,
-                                           uint64_t Address,
-                                           const void *Decoder) {
-  llvm_unreachable("unimplemented");
-}
-
 static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                 const void *Decoder) {
   Inst.addOperand(MCOperand::createImm(M68k::swapWord<uint32_t>(Imm)));
   return DecodeStatus::Success;
 }
 
-#include "M68kGenDisassemblerTable.inc"
+#include "M68kGenDisassemblerTables.inc"
 
 #undef DecodeFPDR32RegisterClass
 #undef DecodeFPDR64RegisterClass

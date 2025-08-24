@@ -13,16 +13,14 @@
 
 namespace clang::tidy::utils::type_traits {
 
-namespace {
-
-bool classHasTrivialCopyAndDestroy(QualType Type) {
+static bool classHasTrivialCopyAndDestroy(QualType Type) {
   auto *Record = Type->getAsCXXRecordDecl();
   return Record && Record->hasDefinition() &&
          !Record->hasNonTrivialCopyConstructor() &&
          !Record->hasNonTrivialDestructor();
 }
 
-bool hasDeletedCopyConstructor(QualType Type) {
+static bool hasDeletedCopyConstructor(QualType Type) {
   auto *Record = Type->getAsCXXRecordDecl();
   if (!Record || !Record->hasDefinition())
     return false;
@@ -32,8 +30,6 @@ bool hasDeletedCopyConstructor(QualType Type) {
   }
   return false;
 }
-
-} // namespace
 
 std::optional<bool> isExpensiveToCopy(QualType Type,
                                       const ASTContext &Context) {
@@ -124,7 +120,8 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
     return true;
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
-    return recordIsTriviallyDefaultConstructible(*RT->getDecl(), Context);
+    return recordIsTriviallyDefaultConstructible(
+        *RT->getOriginalDecl()->getDefinitionOrSelf(), Context);
   }
 
   // No other types can match.

@@ -17,17 +17,17 @@ S0:
 
 S1:
 ; CHECK-LABEL: S1:
-  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %v) #1
+  call void @llvm.lifetime.start.p0(ptr nonnull %v) #1
 ; CHECK: call void @llvm.aarch64.settag(ptr %v.tag, i64 48)
-  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %w) #1
+  call void @llvm.lifetime.start.p0(ptr nonnull %w) #1
 ; CHECK: call void @llvm.aarch64.settag(ptr %w.tag, i64 48)
   %t1 = call i32 @g1(ptr nonnull %v, ptr nonnull %w) #1
 ; CHECK: call i32 @g1
 ; CHECK-NOT: settag{{.*}}%v
 ; CHECK: call void @llvm.aarch64.settag(ptr %w, i64 48)
 ; CHECK-NOT: settag{{.*}}%v
-  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %w) #1
-; CHECK: call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %w)
+  call void @llvm.lifetime.end.p0(ptr nonnull %w) #1
+; CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %w)
   %b1 = icmp eq i32 %t1, 0
   br i1 %b1, label %S2, label %S3
 ; CHECK-NOT: settag
@@ -40,7 +40,7 @@ S2:
 
 S3:
 ; CHECK-LABEL: S3:
-  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %v) #1
+  call void @llvm.lifetime.end.p0(ptr nonnull %v) #1
   tail call void @z1() #1
   br label %exit2
 ; CHECK-NOT: settag
@@ -73,9 +73,9 @@ declare void @z1() #0
 
 declare void @z2() #0
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 attributes #0 = { sanitize_memtag "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+mte,+neon,+v8.5a" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind }
