@@ -2833,8 +2833,7 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
     return Value;
   }
   if (auto *CI = dyn_cast<CastInst>(I)) {
-    auto *Value = Builder.CreateCast((Instruction::CastOps)CI->getOpcode(),
-                                     Ops[0], DstTy);
+    auto *Value = Builder.CreateCast(CI->getOpcode(), Ops[0], DstTy);
     propagateIRFlags(Value, ValueList);
     return Value;
   }

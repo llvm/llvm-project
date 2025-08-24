@@ -163,7 +163,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
-  declarations in system headers.
+  declarations and macros in system headers.
 
 - Improved :doc:`bugprone-signed-char-misuse
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
@@ -229,8 +229,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
-  declarations in system headers. The documentation is also improved to
-  differentiate the general options from the specific ones.
+  declarations and macros in system headers. The documentation is also improved
+  to differentiate the general options from the specific ones.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
