@@ -1963,7 +1963,8 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_assignable", TypeTrait::BTT_IsAssignable)
       .Case("is_empty", TypeTrait::UTT_IsEmpty)
       .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
-      .Case("is_trivially_default_constructible", TypeTrait::UTT_HasTrivialDefaultConstructor)
+      .Case("is_trivially_default_constructible",
+            TypeTrait::UTT_HasTrivialDefaultConstructor)
       .Case("is_constructible", TypeTrait::TT_IsConstructible)
       .Case("is_final", TypeTrait::UTT_IsFinal)
       .Default(std::nullopt);
@@ -2640,9 +2641,8 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
-static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
-                                                          SourceLocation Loc,
-                                                          const CXXRecordDecl *D) {
+static void DiagnoseNonTriviallyDefaultConstructibleReason(
+    Sema &SemaRef, SourceLocation Loc, const CXXRecordDecl *D) {
   SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
       << D << diag::TraitName::TriviallyDefaultConstructible;
 
@@ -2710,8 +2710,8 @@ static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
     }
     if (HasNonTrivialMember) {
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::UnionWithUserDeclaredSMF << /*Constructor*/ 0
-          << D->getSourceRange();
+          << diag::TraitNotSatisfiedReason::UnionWithUserDeclaredSMF
+          << /*Constructor*/ 0 << D->getSourceRange();
     }
   }
 
@@ -2719,8 +2719,8 @@ static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
 }
 
 static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
-                                                          SourceLocation Loc,
-                                                          QualType T) {
+                                                           SourceLocation Loc,
+                                                           QualType T) {
   SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
       << T << diag::TraitName::TriviallyDefaultConstructible;
 
@@ -2775,7 +2775,8 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     DiagnoseNonStandardLayoutReason(*this, E->getBeginLoc(), Args[0]);
     break;
   case UTT_HasTrivialDefaultConstructor:
-    DiagnoseNonTriviallyDefaultConstructibleReason(*this, E->getBeginLoc(), Args[0]);
+    DiagnoseNonTriviallyDefaultConstructibleReason(*this, E->getBeginLoc(),
+                                                   Args[0]);
     break;
   case TT_IsConstructible:
     DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
