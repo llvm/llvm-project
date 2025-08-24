@@ -305,7 +305,6 @@ body:             |
     liveins: $x0, $x1
     ; 7 isn't an extend mask for G_AND, so there's no folding opportunities
     ; here.
-    ;
     ; LOWER-LABEL: name: dont_swap_and_lhs_wrong_mask
     ; LOWER: liveins: $x0, $x1
     ; LOWER-NEXT: {{  $}}
@@ -643,7 +642,6 @@ body:             |
 
     ; Don't swap when the RHS's subtract offers a better constant folding
     ; opportunity than the LHS's subtract.
-    ;
     ; In this case, the RHS has a supported extend, plus a shift with a constant
     ; <= 4.
 
@@ -669,11 +667,10 @@ body:             |
     ; SELECT-NEXT: {{  $}}
     ; SELECT-NEXT: %zero:gpr64 = COPY $xzr
     ; SELECT-NEXT: %reg0:gpr64 = COPY $x0
-    ; SELECT-NEXT: %shl:gpr64 = UBFMXri %reg0, 1, 0
+    ; SELECT-NEXT: %cmp_lhs:gpr64 = SUBSXrs %zero, %reg0, 63, implicit-def dead $nzcv
     ; SELECT-NEXT: %reg1:gpr64 = COPY $x1
     ; SELECT-NEXT: %sext_in_reg:gpr64 = SBFMXri %reg1, 0, 0
-    ; SELECT-NEXT: %cmp_rhs:gpr64 = SUBSXrs %zero, %sext_in_reg, 131, implicit-def dead $nzcv
-    ; SELECT-NEXT: [[ADDSXrr:%[0-9]+]]:gpr64 = ADDSXrr %shl, %cmp_rhs, implicit-def $nzcv
+    ; SELECT-NEXT: [[ADDSXrs:%[0-9]+]]:gpr64 = ADDSXrs %cmp_lhs, %sext_in_reg, 131, implicit-def $nzcv
     ; SELECT-NEXT: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; SELECT-NEXT: $w0 = COPY %cmp
     ; SELECT-NEXT: RET_ReallyLR implicit $w0

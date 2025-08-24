@@ -22,6 +22,7 @@ libc_test(
     name = "strcpy_test",
     srcs = ["strcpy_test.cpp"],
     deps = [
+        "//libc:hdr_signal_macros",
         "//libc:strcpy",
     ],
 )
@@ -38,6 +39,7 @@ libc_test(
     name = "memchr_test",
     srcs = ["memchr_test.cpp"],
     deps = [
+        "//libc:hdr_signal_macros",
         "//libc:memchr",
     ],
 )
@@ -54,6 +56,15 @@ libc_test(
     deps = [
         ":strchr_test_helper",
         "//libc:strchr",
+    ],
+)
+
+libc_test(
+    name = "strsep_test",
+    srcs = ["strsep_test.cpp"],
+    deps = [
+        "//libc:hdr_signal_macros",
+        "//libc:strsep",
     ],
 )
 
@@ -77,6 +88,7 @@ libc_test(
     name = "memrchr_test",
     srcs = ["memrchr_test.cpp"],
     deps = [
+        "//libc:hdr_signal_macros",
         "//libc:memrchr",
     ],
 )
@@ -102,6 +114,7 @@ libc_test(
     name = "strspn_test",
     srcs = ["strspn_test.cpp"],
     deps = [
+        "//libc:hdr_signal_macros",
         "//libc:strspn",
     ],
 )
@@ -122,6 +135,7 @@ libc_test_library(
         "//libc:__support_libc_assert",
         "//libc:__support_macros_config",
         "//libc:__support_macros_sanitizer",
+        "//libc:hdr_stdint_proxy",
         "//libc:string_memory_utils",
     ],
 )
@@ -132,6 +146,7 @@ libc_test_library(
     deps = [
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_properties_os",
+        "//libc:hdr_stdint_proxy",
     ],
 )
 
@@ -142,6 +157,7 @@ libc_test(
         ":memory_check_utils",
         ":protected_pages",
         "//libc:__support_macros_properties_os",
+        "//libc:hdr_signal_macros",
         "//libc:memcpy",
     ],
 )
@@ -150,6 +166,7 @@ libc_test(
     name = "mempcpy_test",
     srcs = ["mempcpy_test.cpp"],
     deps = [
+        "//libc:hdr_signal_macros",
         "//libc:mempcpy",
     ],
 )
@@ -161,6 +178,7 @@ libc_test(
         ":memory_check_utils",
         ":protected_pages",
         "//libc:__support_macros_properties_os",
+        "//libc:hdr_signal_macros",
         "//libc:memset",
     ],
 )
@@ -171,6 +189,7 @@ libc_test(
     deps = [
         ":memory_check_utils",
         "//libc:__support_cpp_span",
+        "//libc:hdr_signal_macros",
         "//libc:memcmp",
         "//libc:memmove",
         "//libc/test/UnitTest:memory_matcher",
@@ -182,6 +201,7 @@ libc_test(
     srcs = ["memcmp_test.cpp"],
     deps = [
         ":memory_check_utils",
+        "//libc:hdr_signal_macros",
         "//libc:memcmp",
         "//libc/test/UnitTest:test_logger",
     ],

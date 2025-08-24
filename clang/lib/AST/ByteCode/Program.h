@@ -19,10 +19,7 @@
 #include "Record.h"
 #include "Source.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include <map>
 #include <vector>
 
 namespace clang {
@@ -74,6 +71,10 @@ public:
   Block *getGlobal(unsigned Idx) {
     assert(Idx < Globals.size());
     return Globals[Idx]->block();
+  }
+
+  bool isGlobalInitialized(unsigned Index) const {
+    return getPtrGlobal(Index).isInitialized();
   }
 
   /// Finds a global's index.
@@ -132,6 +133,14 @@ public:
                                bool IsMutable = false, bool IsVolatile = false,
                                const Expr *Init = nullptr);
 
+  void *Allocate(size_t Size, unsigned Align = 8) const {
+    return Allocator.Allocate(Size, Align);
+  }
+  template <typename T> T *Allocate(size_t Num = 1) const {
+    return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
+  }
+  void Deallocate(void *Ptr) const {}
+
   /// Context to manage declaration lifetimes.
   class DeclScope {
   public:
@@ -147,7 +156,7 @@ public:
   };
 
   /// Returns the current declaration ID.
-  std::optional<unsigned> getCurrentDecl() const {
+  UnsignedOrNone getCurrentDecl() const {
     if (CurrentDeclaration == NoDeclaration)
       return std::nullopt;
     return CurrentDeclaration;
@@ -166,9 +175,6 @@ private:
   llvm::DenseMap<const FunctionDecl *, std::unique_ptr<Function>> Funcs;
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
-
-  /// Function relocation locations.
-  llvm::DenseMap<const FunctionDecl *, std::vector<unsigned>> Relocs;
 
   /// Native pointers referenced by bytecode.
   std::vector<const void *> NativePointers;
@@ -204,7 +210,7 @@ private:
   };
 
   /// Allocator for globals.
-  PoolAllocTy Allocator;
+  mutable PoolAllocTy Allocator;
 
   /// Global objects.
   std::vector<Global *> Globals;
@@ -237,5 +243,19 @@ public:
 
 } // namespace interp
 } // namespace clang
+
+inline void *operator new(size_t Bytes, const clang::interp::Program &C,
+                          size_t Alignment = 8) {
+  return C.Allocate(Bytes, Alignment);
+}
+
+inline void operator delete(void *Ptr, const clang::interp::Program &C,
+                            size_t) {
+  C.Deallocate(Ptr);
+}
+inline void *operator new[](size_t Bytes, const clang::interp::Program &C,
+                            size_t Alignment = 8) {
+  return C.Allocate(Bytes, Alignment);
+}
 
 #endif

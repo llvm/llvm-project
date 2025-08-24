@@ -8,6 +8,7 @@
 
 #include "UseConstraintsCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -60,9 +61,11 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
          Keyword != ElaboratedTypeKeyword::None)) {
       return std::nullopt;
     }
-    TheType = Dep.getQualifierLoc().getTypeLoc();
+    TheType = Dep.getQualifierLoc().getAsTypeLoc();
     if (TheType.isNull())
       return std::nullopt;
+  } else {
+    return std::nullopt;
   }
 
   if (const auto SpecializationLoc =
@@ -78,6 +81,13 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
     if (!TD || TD->getName() != "enable_if")
       return std::nullopt;
 
+    assert(!TD->getTemplateParameters()->empty() &&
+           "found template with no template parameters?");
+    const auto *FirstParam = dyn_cast<NonTypeTemplateParmDecl>(
+        TD->getTemplateParameters()->getParam(0));
+    if (!FirstParam || !FirstParam->getType()->isBooleanType())
+      return std::nullopt;
+
     int NumArgs = SpecializationLoc.getNumArgs();
     if (NumArgs != 1 && NumArgs != 2)
       return std::nullopt;
@@ -89,9 +99,6 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
 
 static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
-  if (const auto Elaborated = TheType.getAs<ElaboratedTypeLoc>())
-    TheType = Elaborated.getNamedTypeLoc();
-
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
 
@@ -106,6 +113,13 @@ matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
       return std::nullopt;
 
     if (!Specialization->isTypeAlias())
+      return std::nullopt;
+
+    assert(!TD->getTemplateParameters()->empty() &&
+           "found template with no template parameters?");
+    const auto *FirstParam = dyn_cast<NonTypeTemplateParmDecl>(
+        TD->getTemplateParameters()->getParam(0));
+    if (!FirstParam || !FirstParam->getType()->isBooleanType())
       return std::nullopt;
 
     if (const auto *AliasedType =
@@ -161,7 +175,7 @@ matchTrailingTemplateParam(const FunctionTemplateDecl *FunctionTemplate) {
 
   const TemplateParameterList *TemplateParams =
       FunctionTemplate->getTemplateParameters();
-  if (TemplateParams->size() == 0)
+  if (TemplateParams->empty())
     return {};
 
   const NamedDecl *LastParam =
@@ -279,7 +293,7 @@ findInsertionForConstraint(const FunctionDecl *Function, ASTContext &Context) {
   return Body->getBeginLoc();
 }
 
-bool isPrimaryExpression(const Expr *Expression) {
+static bool isPrimaryExpression(const Expr *Expression) {
   // This function is an incomplete approximation of checking whether
   // an Expr is a primary expression. In particular, if this function
   // returns true, the expression is a primary expression. The converse
@@ -419,7 +433,7 @@ handleTrailingTemplateType(const FunctionTemplateDecl *FunctionTemplate,
   SourceRange RemovalRange;
   const TemplateParameterList *TemplateParams =
       FunctionTemplate->getTemplateParameters();
-  if (!TemplateParams || TemplateParams->size() == 0)
+  if (!TemplateParams || TemplateParams->empty())
     return {};
 
   if (TemplateParams->size() == 1) {

@@ -895,6 +895,10 @@ private:
   SmallVector<AttrEntry> attributes;
   SmallVector<TypeEntry> types;
 
+  /// The map of cached attributes, used to avoid re-parsing the same
+  /// attribute multiple times.
+  llvm::StringMap<Attribute> attributesCache;
+
   /// A location used for error emission.
   Location fileLoc;
 
@@ -1235,7 +1239,7 @@ LogicalResult AttrTypeReader::parseAsmEntry(T &result, EncodingReader &reader,
         ::parseType(asmStr, context, &numRead, /*isKnownNullTerminated=*/true);
   else
     result = ::parseAttribute(asmStr, context, Type(), &numRead,
-                              /*isKnownNullTerminated=*/true);
+                              /*isKnownNullTerminated=*/true, &attributesCache);
   if (!result)
     return failure();
 
@@ -1993,8 +1997,7 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   UseListOrderStorage customOrder =
       valueToUseListMap.at(value.getAsOpaquePointer());
   SmallVector<unsigned, 4> shuffle = std::move(customOrder.indices);
-  uint64_t numUses =
-      std::distance(value.getUses().begin(), value.getUses().end());
+  uint64_t numUses = value.getNumUses();
 
   // If the encoding was a pair of indices `(src, dst)` for every permutation,
   // reconstruct the shuffle vector for every use. Initialize the shuffle vector

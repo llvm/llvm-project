@@ -310,7 +310,7 @@ static bool LocPropertyAttribute( ASTContext &Context, const char *attrName,
     return false;
 
   SourceManager &SM = Context.getSourceManager();
-  std::pair<FileID, unsigned> locInfo = SM.getDecomposedLoc(LParenLoc);
+  FileIDAndOffset locInfo = SM.getDecomposedLoc(LParenLoc);
   // Try to load the file buffer.
   bool invalidTemp = false;
   StringRef file = SM.getBufferData(locInfo.first, &invalidTemp);
@@ -1298,6 +1298,15 @@ Decl *SemaObjC::ActOnPropertyImplDecl(
         }
       }
 
+      if (Context.getLangOpts().PointerAuthObjcInterfaceSel &&
+          !PropertyIvarType.getPointerAuth()) {
+        if (Context.isObjCSelType(QualType(PropertyIvarType.getTypePtr(), 0))) {
+          if (auto PAQ = Context.getObjCMemberSelTypePtrAuth())
+            PropertyIvarType =
+                Context.getPointerAuthType(PropertyIvarType, PAQ);
+        }
+      }
+
       Ivar = ObjCIvarDecl::Create(Context, ClassImpDecl,
                                   PropertyIvarLoc,PropertyIvarLoc, PropertyIvar,
                                   PropertyIvarType, /*TInfo=*/nullptr,
@@ -1312,7 +1321,9 @@ Decl *SemaObjC::ActOnPropertyImplDecl(
       }
       if (!CompleteTypeErr) {
         const RecordType *RecordTy = PropertyIvarType->getAs<RecordType>();
-        if (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember()) {
+        if (RecordTy && RecordTy->getOriginalDecl()
+                            ->getDefinitionOrSelf()
+                            ->hasFlexibleArrayMember()) {
           Diag(PropertyIvarLoc, diag::err_synthesize_variable_sized_ivar)
             << PropertyIvarType;
           CompleteTypeErr = true; // suppress later diagnostics about the ivar

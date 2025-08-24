@@ -22,16 +22,9 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t stream, bool *pinned,
+int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t *stream, bool *pinned,
     bool hasStat, const Descriptor *errMsg, const char *sourceFile,
     int sourceLine) {
-  if (desc.HasAddendum()) {
-    Terminator terminator{sourceFile, sourceLine};
-    // TODO: This require a bit more work to set the correct type descriptor
-    // address
-    terminator.Crash(
-        "not yet implemented: CUDA descriptor allocation with addendum");
-  }
   // Perform the standard allocation.
   int stat{
       RTNAME(PointerAllocate)(desc, hasStat, errMsg, sourceFile, sourceLine)};
@@ -43,7 +36,7 @@ int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t stream, bool *pinned,
   return stat;
 }
 
-int RTDEF(CUFPointerAllocateSync)(Descriptor &desc, int64_t stream,
+int RTDEF(CUFPointerAllocateSync)(Descriptor &desc, int64_t *stream,
     bool *pinned, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFPointerAllocate)(
@@ -62,7 +55,7 @@ int RTDEF(CUFPointerAllocateSync)(Descriptor &desc, int64_t stream,
 }
 
 int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
-    const Descriptor &source, int64_t stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFPointerAllocate)(
       pointer, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
@@ -75,7 +68,7 @@ int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
 }
 
 int RTDEF(CUFPointerAllocateSourceSync)(Descriptor &pointer,
-    const Descriptor &source, int64_t stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFPointerAllocateSync)(
       pointer, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};

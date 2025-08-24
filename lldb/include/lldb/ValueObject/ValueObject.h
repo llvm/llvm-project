@@ -573,10 +573,14 @@ public:
   /// child as well.
   void SetName(ConstString name) { m_name = name; }
 
-  virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
-                                    AddressType *address_type = nullptr);
+  struct AddrAndType {
+    lldb::addr_t address = LLDB_INVALID_ADDRESS;
+    AddressType type = eAddressTypeInvalid;
+  };
 
-  lldb::addr_t GetPointerValue(AddressType *address_type = nullptr);
+  virtual AddrAndType GetAddressOf(bool scalar_is_load_address = true);
+
+  AddrAndType GetPointerValue();
 
   lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;
 
@@ -732,6 +736,12 @@ public:
   static lldb::ValueObjectSP
   CreateValueObjectFromAPFloat(lldb::TargetSP target, const llvm::APFloat &v,
                                CompilerType type, llvm::StringRef name);
+
+  /// Create a value object containing the given Scalar value.
+  static lldb::ValueObjectSP CreateValueObjectFromScalar(lldb::TargetSP target,
+                                                         Scalar &s,
+                                                         CompilerType type,
+                                                         llvm::StringRef name);
 
   /// Create a value object containing the given boolean value.
   static lldb::ValueObjectSP CreateValueObjectFromBool(lldb::TargetSP target,

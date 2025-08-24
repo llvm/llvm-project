@@ -42,10 +42,12 @@ public:
   friend class MCExpr;
   MCValue() = default;
   int64_t getConstant() const { return Cst; }
+  void setConstant(int64_t C) { Cst = C; }
   uint32_t getSpecifier() const { return Specifier; }
   void setSpecifier(uint32_t S) { Specifier = S; }
 
   const MCSymbol *getAddSym() const { return SymA; }
+  void setAddSym(const MCSymbol *A) { SymA = A; }
   const MCSymbol *getSubSym() const { return SymB; }
 
   /// Is this an absolute (as opposed to relocatable) value.

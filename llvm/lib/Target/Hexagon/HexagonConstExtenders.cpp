@@ -107,11 +107,7 @@ namespace {
       return !operator==(R);
     }
     bool operator<(const OffsetRange &R) const {
-      if (Min != R.Min)
-        return Min < R.Min;
-      if (Max != R.Max)
-        return Max < R.Max;
-      return Align < R.Align;
+      return std::tie(Min, Max, Align) < std::tie(R.Min, R.Max, R.Align);
     }
     static OffsetRange zero() { return {0, 0, 1}; }
   };
@@ -257,7 +253,7 @@ namespace {
       bool operator!=(Register R) const { return !operator==(R); }
       bool operator<(Register R) const {
         // For std::map.
-        return Reg < R.Reg || (Reg == R.Reg && Sub < R.Sub);
+        return std::tie(Reg, Sub) < std::tie(R.Reg, R.Sub);
       }
       llvm::Register Reg;
       unsigned Sub = 0;
@@ -302,11 +298,7 @@ namespace {
         return !operator==(Ex);
       }
       bool operator<(const ExtExpr &Ex) const {
-        if (Rs != Ex.Rs)
-          return Rs < Ex.Rs;
-        if (S != Ex.S)
-          return S < Ex.S;
-        return !Neg && Ex.Neg;
+        return std::tie(Rs, S, Neg) < std::tie(Ex.Rs, Ex.S, Ex.Neg);
       }
     };
 

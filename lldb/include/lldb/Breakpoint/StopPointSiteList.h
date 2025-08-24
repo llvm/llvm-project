@@ -278,9 +278,8 @@ protected:
         [site_id](const std::pair<lldb::addr_t, StopPointSiteSP> s) {
           return site_id == s.second->GetID();
         };
-    return std::find_if(m_site_list.begin(),
-                        m_site_list.end(), // Search full range
-                        id_matches);
+    return llvm::find_if(m_site_list, // Search full range
+                         id_matches);
   }
 
   typename collection::const_iterator
@@ -290,9 +289,8 @@ protected:
         [site_id](const std::pair<lldb::addr_t, StopPointSiteSP> s) {
           return site_id == s.second->GetID();
         };
-    return std::find_if(m_site_list.begin(),
-                        m_site_list.end(), // Search full range
-                        id_matches);
+    return llvm::find_if(m_site_list, // Search full range
+                         id_matches);
   }
 
   mutable std::recursive_mutex m_mutex;

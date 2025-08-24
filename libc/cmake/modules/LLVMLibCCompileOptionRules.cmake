@@ -13,7 +13,7 @@ endif()
 function(_get_compile_options_from_flags output_var)
   set(compile_options "")
 
-  if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
+  if(LIBC_CPU_FEATURES MATCHES "FMA")
     check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${ARGN})
   endif()
   check_flag(ADD_ROUND_OPT_FLAG ${ROUND_OPT_FLAG} ${ARGN})
@@ -25,8 +25,6 @@ function(_get_compile_options_from_flags output_var)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
         list(APPEND compile_options "-mavx2")
         list(APPEND compile_options "-mfma")
-      elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
-        list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
       endif()
       # For clang, we will build the math functions with `-fno-math-errno` so that
       # __builtin_fma* will generate the fused-mutliply-add instructions.  We
@@ -106,14 +104,42 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
   endif()
 
+  if(LIBC_CONF_ERRNO_MODE)
+    list(APPEND config_options "-DLIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
+  endif()
+
+  if(LIBC_CONF_THREAD_MODE)
+    list(APPEND config_options "-DLIBC_THREAD_MODE=${LIBC_CONF_THREAD_MODE}")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
+
+function(_get_compile_options_from_arch output_var)
+  # Set options that are not found in src/__support/macros/properties/architectures.h
+  # and src/__support/macros/properties/os.h
+  # TODO: we probably want to unify these at some point for consistency
+  set(config_options "")
+
+  if (LIBC_TARGET_OS_IS_BAREMETAL)
+    list(APPEND config_options "-DLIBC_TARGET_OS_IS_BAREMETAL")  
+  endif()
+  if (LIBC_TARGET_OS_IS_GPU)
+    list(APPEND config_options "-DLIBC_TARGET_OS_IS_GPU")  
+  endif()
+  if (LIBC_TARGET_OS_IS_UEFI)
+    list(APPEND config_options "-DLIBC_TARGET_OS_IS_UEFI")  
+  endif()
+
+  set(${output_var} ${config_options} PARENT_SCOPE)
+endfunction(_get_compile_options_from_arch)
 
 function(_get_common_compile_options output_var flags)
   _get_compile_options_from_flags(compile_flags ${flags})
   _get_compile_options_from_config(config_flags)
+  _get_compile_options_from_arch(arch_flags)
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags} ${arch_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")

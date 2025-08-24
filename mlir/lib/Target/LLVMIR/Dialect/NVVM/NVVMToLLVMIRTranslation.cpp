@@ -13,7 +13,6 @@
 
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -119,6 +118,7 @@ static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
     return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
                                  : llvm::Intrinsic::nvvm_match_all_sync_i64p;
   }
+  llvm_unreachable("unsupported match sync kind");
 }
 
 static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
@@ -135,33 +135,119 @@ static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
   llvm_unreachable("unsupported vote kind");
 }
 
-/// Return the intrinsic ID associated with ldmatrix for the given paramters.
-static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
-                                                  int32_t num) {
-  if (layout == NVVM::MMALayout::row) {
+static llvm::Intrinsic::ID
+getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
+                       NVVM::LdStMatrixShapeAttr shape,
+                       NVVM::LdStMatrixEltType eltType) {
+  if (shape.getM() == 8 && shape.getN() == 8) {
     switch (num) {
     case 1:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16;
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16
+                 : llvm::Intrinsic::
+                       nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16;
     case 2:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16;
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16
+                 : llvm::Intrinsic::
+                       nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16;
     case 4:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16;
-    default:
-      llvm_unreachable("unsupported number of matrix");
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16
+                 : llvm::Intrinsic::
+                       nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16;
     }
-
-  } else {
-    switch (num) {
-    case 1:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16;
-    case 2:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16;
-    case 4:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16;
-    default:
-      llvm_unreachable("unsupported number of matrix");
+  } else if (shape.getM() == 8 && shape.getN() == 16) {
+    if (eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32;
+      case 4:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64;
+      case 4:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64;
+      }
+    }
+  } else if (shape.getM() == 16 && shape.getN() == 16) {
+    if (eltType == NVVM::LdStMatrixEltType::B8) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8;
+      case 2:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64;
+      }
     }
   }
+  llvm_unreachable("unknown ldmatrix kind");
+}
+
+/// Return the intrinsic ID associated with stmatrix for the given paramters.
+static llvm::Intrinsic::ID
+getStMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
+                       NVVM::LdStMatrixShapeAttr shape,
+                       NVVM::LdStMatrixEltType eltType) {
+  if (shape.getM() == 8 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x1_trans_b16;
+    case 2:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x2_trans_b16;
+    case 4:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x4_trans_b16;
+    }
+  } else if (shape.getM() == 16 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x1_trans_b8;
+    case 2:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x2_trans_b8;
+    case 4:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x4_trans_b8;
+    }
+  }
+  llvm_unreachable("unknown stmatrix kind");
 }
 
 /// Return the intrinsic ID associated with st.bulk for the given address type.
@@ -344,7 +430,7 @@ public:
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
 
     if (attribute.getName() == NVVM::NVVMDialect::getMaxntidAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(
@@ -352,7 +438,7 @@ public:
                                        values.asArrayRef().end()));
       llvmFunc->addFnAttr("nvvm.maxntid", attr);
     } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(
@@ -361,7 +447,7 @@ public:
       llvmFunc->addFnAttr("nvvm.reqntid", attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterDimAttrName()) {
-      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       const std::string attr = llvm::formatv(
@@ -382,7 +468,11 @@ public:
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getKernelFuncAttrName()) {
       llvmFunc->setCallingConv(llvm::CallingConv::PTX_Kernel);
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getBlocksAreClustersAttrName()) {
+      llvmFunc->addFnAttr("nvvm.blocksareclusters");
     }
+
     return success();
   }
 

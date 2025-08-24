@@ -10,12 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 2,
-                             [SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 1,
+                             [SDTCisInt<0>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 2,
-                             [SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 1,
+                             [SDTCisInt<0>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_cond_smstart : SDNode<"AArch64ISD::COND_SMSTART", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_cond_smstop  : SDNode<"AArch64ISD::COND_SMSTOP", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
 def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
@@ -31,11 +39,18 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, [SDNPOptInGlue, SDNPOutGlue]>;
 
-def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
-                           [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64EntryPStateSM
+  : SDNode<"AArch64ISD::ENTRY_PSTATE_SM", SDTypeProfile<1, 0,
+    [SDTCisInt<0>]>, [SDNPHasChain, SDNPSideEffect]>;
 
-def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
-                              [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+let usesCustomInserter = 1 in {
+  def EntryPStateSM : Pseudo<(outs GPR64:$is_streaming), (ins), []>, Sched<[]> {}
+}
+def : Pat<(i64 (AArch64EntryPStateSM)), (EntryPStateSM)>;
+
+//===----------------------------------------------------------------------===//
+// Old SME ABI lowering ISD nodes/pseudos (deprecated)
+//===----------------------------------------------------------------------===//
 
 def AArch64AllocateZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
                               [SDTCisInt<0>, SDTCisInt<1>]>,
@@ -53,6 +68,7 @@ let usesCustomInserter = 1 in {
 }
 
 // Nodes to allocate a save buffer for SME.
+// Needed for __arm_agnostic("sme_za_state").
 def AArch64SMESaveSize : SDNode<"AArch64ISD::GET_SME_SAVE_SIZE", SDTypeProfile<1, 0,
                                [SDTCisInt<0>]>, [SDNPHasChain]>;
 let usesCustomInserter = 1, Defs = [X0] in {
@@ -67,6 +83,30 @@ let usesCustomInserter = 1, Defs = [SP] in {
 }
 def : Pat<(i64 (AArch64AllocateSMESaveBuffer GPR64:$size)),
           (AllocateSMESaveBuffer $size)>;
+
+//===----------------------------------------------------------------------===//
+// New SME ABI lowering ISD nodes/pseudos (-aarch64-new-sme-abi)
+//===----------------------------------------------------------------------===//
+
+let hasSideEffects = 1, isMeta = 1 in {
+  def InOutZAUsePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
+
+def CommitZASavePseudo
+  : Pseudo<(outs),
+           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i64imm:$commit_routine, variable_ops), []>,
+           Sched<[]>;
+
+def AArch64_inout_za_use
+  : SDNode<"AArch64ISD::INOUT_ZA_USE", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPInGlue]>;
+def : Pat<(AArch64_inout_za_use), (InOutZAUsePseudo)>;
+
+def AArch64_requires_za_save
+  : SDNode<"AArch64ISD::REQUIRES_ZA_SAVE", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPInGlue]>;
+def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
 
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
@@ -305,26 +345,16 @@ def MSRpstatePseudo :
   let Defs = [VG];
 }
 
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b1, timm0_31:$condition)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b0, timm0_31:$condition)>;
+def : Pat<(AArch64_cond_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b1, timm0_31:$condition, GPR64:$pstatesm)>;
+def : Pat<(AArch64_cond_smstop (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b0, timm0_31:$condition, GPR64:$pstatesm)>;
 
 // Unconditional start/stop
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
-
-
-// Pseudo to insert cfi_offset/cfi_restore instructions. Used to save or restore
-// the streaming value of VG around streaming-mode changes in locally-streaming
-// functions.
-def VGSavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
-def : Pat<(AArch64VGSave), (VGSavePseudo)>;
-
-def VGRestorePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
-def : Pat<(AArch64VGRestore), (VGRestorePseudo)>;
 
 //===----------------------------------------------------------------------===//
 // SME2 Instructions
@@ -906,7 +936,9 @@ defm FADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"fadd", 0b0100, MatrixOp16
 defm FADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"fadd", 0b0100, MatrixOp16, ZZZZ_h_mul_r, nxv8f16,  int_aarch64_sme_add_za16_vg1x4>;
 defm FSUB_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"fsub", 0b0101, MatrixOp16, ZZ_h_mul_r, nxv8f16,  int_aarch64_sme_sub_za16_vg1x2>;
 defm FSUB_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"fsub", 0b0101, MatrixOp16, ZZZZ_h_mul_r, nxv8f16,  int_aarch64_sme_sub_za16_vg1x4>;
+}
 
+let Predicates = [HasSMEF16F16] in {
 defm FMLA_VG2_M2ZZI_H : sme2p1_multi_vec_array_vg2_index_16b<"fmla", 0b00, 0b100, ZZ_h_mul_r, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_lane_vg1x2>;
 defm FMLA_VG4_M4ZZI_H : sme2p1_multi_vec_array_vg4_index_16b<"fmla", 0b000, ZZZZ_h_mul_r, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_lane_vg1x4>;
 defm FMLA_VG2_M2ZZ_H :  sme2_dot_mla_add_sub_array_vg2_single<"fmla", 0b0011100, MatrixOp16, ZZ_h, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_single_vg1x2>;

@@ -15,12 +15,15 @@
 #include "VE.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "ve-disassembler"
 
@@ -47,7 +50,8 @@ static MCDisassembler *createVEDisassembler(const Target &T,
   return new VEDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeVEDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheVETarget(),
                                          createVEDisassembler);

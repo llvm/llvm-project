@@ -1,3 +1,4 @@
+#include "attach.h"
 #include <stdio.h>
 #ifdef _WIN32
 #include <process.h>

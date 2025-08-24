@@ -12,7 +12,6 @@
 
 #include "AMDGPU.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
@@ -33,10 +32,9 @@ static const char *const DataLayoutStringR600 =
 
 static const char *const DataLayoutStringAMDGCN =
     "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-    "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:"
-    "32-v48:64-v96:128"
-    "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"
-    "-ni:7:8:9";
+    "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-"
+    "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-"
+    "v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
@@ -64,6 +62,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     // will break loudly.
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
     llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_device
+    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_input
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
@@ -91,6 +90,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
     llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_private
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // hlsl_device
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_input
 };
 } // namespace targets
 } // namespace clang
@@ -251,7 +251,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     BFloat16Format = &llvm::APFloat::BFloat();
   }
 
-  HasLegalHalfType = true;
+  HasFastHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
 
@@ -266,13 +266,17 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
-  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"})
-    ReadOnlyFeatures.insert(F);
+
+  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"}) {
+    if (GPUKind != llvm::AMDGPU::GK_NONE)
+      ReadOnlyFeatures.insert(F);
+  }
   HalfArgsAndReturns = true;
 }
 
-void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
-  TargetInfo::adjust(Diags, Opts);
+void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                              const TargetInfo *Aux) {
+  TargetInfo::adjust(Diags, Opts, Aux);
   // ToDo: There are still a few places using default address space as private
   // address space in OpenCL, which needs to be cleaned up, then the references
   // to OpenCL can be removed from the following line.
@@ -310,7 +314,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   // e.g. gfx10-1-generic -> gfx10_1_generic
   if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
       GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
-    std::replace(CanonName.begin(), CanonName.end(), '-', '_');
+    llvm::replace(CanonName, '-', '_');
   }
 
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
@@ -329,7 +333,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
       auto Loc = OffloadArchFeatures.find(F);
       if (Loc != OffloadArchFeatures.end()) {
         std::string NewF = F.str();
-        std::replace(NewF.begin(), NewF.end(), '-', '_');
+        llvm::replace(NewF, '-', '_');
         Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
                                 Twine("__"),
                             Loc->second ? "1" : "0");

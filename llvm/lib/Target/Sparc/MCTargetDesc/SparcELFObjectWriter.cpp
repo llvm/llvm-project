@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SparcFixupKinds.h"
-#include "MCTargetDesc/SparcMCExpr.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -32,17 +31,15 @@ namespace {
     ~SparcELFObjectWriter() override = default;
 
   protected:
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
+    unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                          bool IsPCRel) const override;
 
-    bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                                 unsigned Type) const override;
+    bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
   };
 }
 
-unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
-                                            const MCFixup &Fixup,
                                             bool IsPCRel) const {
   switch (Target.getSpecifier()) {
   case ELF::R_SPARC_TLS_GD_HI22:
@@ -61,8 +58,8 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   case ELF::R_SPARC_TLS_IE_ADD:
   case ELF::R_SPARC_TLS_LE_HIX22:
   case ELF::R_SPARC_TLS_LE_LOX10:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -70,11 +67,11 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
 
   // Extract the relocation type from the fixup kind, after applying STT_TLS as
   // needed.
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   if (mc::isRelocation(Fixup.getKind()))
     return Kind;
 
-  if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Fixup.getValue())) {
+  if (const auto *SExpr = dyn_cast<MCSpecifierExpr>(Fixup.getValue())) {
     if (SExpr->getSpecifier() == ELF::R_SPARC_DISP32)
       return ELF::R_SPARC_DISP32;
   }
@@ -88,14 +85,14 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_4:                  return ELF::R_SPARC_DISP32;
     case FK_Data_8:                  return ELF::R_SPARC_DISP64;
     case Sparc::fixup_sparc_call30:
-      if (Ctx.getObjectFileInfo()->isPositionIndependent())
+      if (getContext().getObjectFileInfo()->isPositionIndependent())
         return ELF::R_SPARC_WPLT30;
       return ELF::R_SPARC_WDISP30;
     }
   }
 
   // clang-format off
-  switch(Fixup.getTargetKind()) {
+  switch(Fixup.getKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
   case FK_NONE:                  return ELF::R_SPARC_NONE;
@@ -110,7 +107,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
                                          ? ELF::R_SPARC_UA64
                                          : ELF::R_SPARC_64);
   case Sparc::fixup_sparc_13:
-    if (Ctx.getObjectFileInfo()->isPositionIndependent())
+    if (getContext().getObjectFileInfo()->isPositionIndependent())
       return ELF::R_SPARC_GOT13;
     return ELF::R_SPARC_13;
   }
@@ -120,7 +117,6 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
 }
 
 bool SparcELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
-                                                   const MCSymbol &,
                                                    unsigned Type) const {
   switch (Type) {
     default:

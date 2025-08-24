@@ -25,11 +25,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "vector-transfer-opt"
-
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
 using namespace mlir;
 
@@ -88,11 +86,10 @@ bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
 /// transfer_write is dead if all reads that can be reached from the potentially
 /// dead transfer_write are dominated by the overwriting transfer_write.
 void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
-  LLVM_DEBUG(DBGS() << "Candidate for dead store: " << *write.getOperation()
-                    << "\n");
+  LDBG() << "Candidate for dead store: " << *write.getOperation();
   llvm::SmallVector<Operation *, 8> blockingAccesses;
   Operation *firstOverwriteCandidate = nullptr;
-  Value source = memref::skipViewLikeOps(cast<MemrefValue>(write.getSource()));
+  Value source = memref::skipViewLikeOps(cast<MemrefValue>(write.getBase()));
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
   llvm::SmallDenseSet<Operation *, 32> processed;
@@ -101,8 +98,9 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
     // If the user has already been processed skip.
     if (!processed.insert(user).second)
       continue;
-    if (isa<ViewLikeOpInterface>(user)) {
-      users.append(user->getUsers().begin(), user->getUsers().end());
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      Value viewDest = viewLike.getViewDest();
+      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user))
@@ -112,8 +110,8 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
     if (auto nextWrite = dyn_cast<vector::TransferWriteOp>(user)) {
       // Check candidate that can override the store.
       if (memref::isSameViewOrTrivialAlias(
-              cast<MemrefValue>(nextWrite.getSource()),
-              cast<MemrefValue>(write.getSource())) &&
+              cast<MemrefValue>(nextWrite.getBase()),
+              cast<MemrefValue>(write.getBase())) &&
           checkSameValueWAW(nextWrite, write) &&
           postDominators.postDominates(nextWrite, write)) {
         if (firstOverwriteCandidate == nullptr ||
@@ -150,13 +148,12 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
         !isReachable(writeAncestor, accessAncestor))
       continue;
     if (!dominators.dominates(firstOverwriteCandidate, accessAncestor)) {
-      LLVM_DEBUG(DBGS() << "Store may not be dead due to op: "
-                        << *accessAncestor << "\n");
+      LDBG() << "Store may not be dead due to op: " << *accessAncestor;
       return;
     }
   }
-  LLVM_DEBUG(DBGS() << "Found dead store: " << *write.getOperation()
-                    << " overwritten by: " << *firstOverwriteCandidate << "\n");
+  LDBG() << "Found dead store: " << *write.getOperation()
+         << " overwritten by: " << *firstOverwriteCandidate;
   opToErase.push_back(write.getOperation());
 }
 
@@ -174,11 +171,10 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
 void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
   if (read.hasOutOfBoundsDim())
     return;
-  LLVM_DEBUG(DBGS() << "Candidate for Forwarding: " << *read.getOperation()
-                    << "\n");
+  LDBG() << "Candidate for Forwarding: " << *read.getOperation();
   SmallVector<Operation *, 8> blockingWrites;
   vector::TransferWriteOp lastwrite = nullptr;
-  Value source = memref::skipViewLikeOps(cast<MemrefValue>(read.getSource()));
+  Value source = memref::skipViewLikeOps(cast<MemrefValue>(read.getBase()));
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
   llvm::SmallDenseSet<Operation *, 32> processed;
@@ -187,8 +183,9 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
     // If the user has already been processed skip.
     if (!processed.insert(user).second)
       continue;
-    if (isa<ViewLikeOpInterface>(user)) {
-      users.append(user->getUsers().begin(), user->getUsers().end());
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      Value viewDest = viewLike.getViewDest();
+      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
@@ -202,8 +199,8 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
               /*testDynamicValueUsingBounds=*/true))
         continue;
       if (memref::isSameViewOrTrivialAlias(
-              cast<MemrefValue>(read.getSource()),
-              cast<MemrefValue>(write.getSource())) &&
+              cast<MemrefValue>(read.getBase()),
+              cast<MemrefValue>(write.getBase())) &&
           dominators.dominates(write, read) && checkSameValueRAW(write, read)) {
         if (lastwrite == nullptr || dominators.dominates(lastwrite, write))
           lastwrite = write;
@@ -230,14 +227,13 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
     if (writeAncestor == nullptr || !isReachable(writeAncestor, readAncestor))
       continue;
     if (!postDominators.postDominates(lastwrite, write)) {
-      LLVM_DEBUG(DBGS() << "Fail to do write to read forwarding due to op: "
-                        << *write << "\n");
+      LDBG() << "Fail to do write to read forwarding due to op: " << *write;
       return;
     }
   }
 
-  LLVM_DEBUG(DBGS() << "Forward value from " << *lastwrite.getOperation()
-                    << " to: " << *read.getOperation() << "\n");
+  LDBG() << "Forward value from " << *lastwrite.getOperation()
+         << " to: " << *read.getOperation();
   read.replaceAllUsesWith(lastwrite.getVector());
   opToErase.push_back(read.getOperation());
 }
@@ -286,8 +282,8 @@ static Value rankReducingSubviewDroppingUnitDims(PatternRewriter &rewriter,
   if (resultType.canonicalizeStridedLayout() ==
       inputType.canonicalizeStridedLayout())
     return input;
-  return rewriter.create<memref::SubViewOp>(loc, resultType, input, offsets,
-                                            sizes, strides);
+  return memref::SubViewOp::create(rewriter, loc, resultType, input, offsets,
+                                   sizes, strides);
 }
 
 /// Returns the number of dims that aren't unit dims.
@@ -330,8 +326,8 @@ createMaskDropNonScalableUnitDims(PatternRewriter &rewriter, Location loc,
     }
     reducedOperands.push_back(operand);
   }
-  return rewriter
-      .create<vector::CreateMaskOp>(loc, reducedType, reducedOperands)
+  return vector::CreateMaskOp::create(rewriter, loc, reducedType,
+                                      reducedOperands)
       .getResult();
 }
 
@@ -351,7 +347,7 @@ class TransferReadDropUnitDimsPattern
     auto loc = transferReadOp.getLoc();
     Value vector = transferReadOp.getVector();
     VectorType vectorType = cast<VectorType>(vector.getType());
-    Value source = transferReadOp.getSource();
+    Value source = transferReadOp.getBase();
     MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // TODO: support tensor types.
     if (!sourceType)
@@ -395,13 +391,13 @@ class TransferReadDropUnitDimsPattern
 
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
-    Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
     SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
-    Operation *newTransferReadOp = rewriter.create<vector::TransferReadOp>(
-        loc, reducedVectorType, reducedShapeSource, zeros, identityMap,
-        transferReadOp.getPadding(), maskOp,
+    Operation *newTransferReadOp = vector::TransferReadOp::create(
+        rewriter, loc, reducedVectorType, reducedShapeSource, zeros,
+        identityMap, transferReadOp.getPadding(), maskOp,
         rewriter.getBoolArrayAttr(inBounds));
 
     if (maskingOp) {
@@ -433,7 +429,7 @@ class TransferWriteDropUnitDimsPattern
     auto loc = transferWriteOp.getLoc();
     Value vector = transferWriteOp.getVector();
     VectorType vectorType = cast<VectorType>(vector.getType());
-    Value source = transferWriteOp.getSource();
+    Value source = transferWriteOp.getBase();
     MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // TODO: support tensor type.
     if (!sourceType)
@@ -477,15 +473,15 @@ class TransferWriteDropUnitDimsPattern
     }
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
-    Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
     SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
     auto shapeCastSrc = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, reducedVectorType, vector);
-    Operation *newXferWrite = rewriter.create<vector::TransferWriteOp>(
-        loc, Type(), shapeCastSrc, reducedShapeSource, zeros, identityMap,
-        maskOp, rewriter.getBoolArrayAttr(inBounds));
+    Operation *newXferWrite = vector::TransferWriteOp::create(
+        rewriter, loc, Type(), shapeCastSrc, reducedShapeSource, zeros,
+        identityMap, maskOp, rewriter.getBoolArrayAttr(inBounds));
 
     if (maskingOp) {
       auto shapeCastMask = rewriter.createOrFold<vector::ShapeCastOp>(
@@ -520,7 +516,7 @@ static Value collapseInnerDims(PatternRewriter &rewriter, mlir::Location loc,
   for (int64_t i = firstDimToCollapse; i < inputType.getRank(); ++i)
     collapsedIndices.push_back(i);
   reassociation.push_back(collapsedIndices);
-  return rewriter.create<memref::CollapseShapeOp>(loc, input, reassociation);
+  return memref::CollapseShapeOp::create(rewriter, loc, input, reassociation);
 }
 
 /// Returns the new indices that collapses the inner dimensions starting from
@@ -538,7 +534,7 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
       indices.begin(), indices.begin() + firstDimToCollapse);
   SmallVector<Value> indicesToCollapse(indices.begin() + firstDimToCollapse,
                                        indices.end());
-  if (llvm::all_of(indicesToCollapse, isZeroIndex)) {
+  if (llvm::all_of(indicesToCollapse, isZeroInteger)) {
     indicesAfterCollapsing.push_back(indicesToCollapse[0]);
     return indicesAfterCollapsing;
   }
@@ -559,7 +555,7 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   // one would get the following offset:
   //    %offset = %arg0 * 43
   OpFoldResult collapsedOffset =
-      rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
+      arith::ConstantIndexOp::create(rewriter, loc, 0).getResult();
 
   auto collapsedStrides = computeSuffixProduct(
       ArrayRef<int64_t>(shape.begin() + firstDimToCollapse, shape.end()));
@@ -573,15 +569,14 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   if (auto value = dyn_cast<Value>(collapsedOffset)) {
     indicesAfterCollapsing.push_back(value);
   } else {
-    indicesAfterCollapsing.push_back(rewriter.create<arith::ConstantIndexOp>(
-        loc, *getConstantIntValue(collapsedOffset)));
+    indicesAfterCollapsing.push_back(arith::ConstantIndexOp::create(
+        rewriter, loc, *getConstantIntValue(collapsedOffset)));
   }
 
   return indicesAfterCollapsing;
 }
 
 namespace {
-
 /// Rewrites contiguous row-major vector.transfer_read ops by inserting
 /// memref.collapse_shape on the source so that the resulting
 /// vector.transfer_read has a 1D source. Requires the source shape to be
@@ -604,7 +599,7 @@ public:
     auto loc = transferReadOp.getLoc();
     Value vector = transferReadOp.getVector();
     VectorType vectorType = cast<VectorType>(vector.getType());
-    auto source = transferReadOp.getSource();
+    auto source = transferReadOp.getBase();
     MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
 
     // 0. Check pre-conditions
@@ -630,7 +625,11 @@ public:
     if (transferReadOp.getMask())
       return failure();
 
-    int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
+    // Determine the first memref dimension to collapse - just enough so we can
+    // read a flattened vector.
+    int64_t firstDimToCollapse =
+        sourceType.getRank() -
+        vectorType.getShape().drop_while([](auto v) { return v == 1; }).size();
 
     // 1. Collapse the source memref
     Value collapsedSource =
@@ -656,8 +655,9 @@ public:
     // 3. Create new vector.transfer_read that reads from the collapsed memref
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
-    vector::TransferReadOp flatRead = rewriter.create<vector::TransferReadOp>(
-        loc, flatVectorType, collapsedSource, collapsedIndices, collapsedMap);
+    vector::TransferReadOp flatRead = vector::TransferReadOp::create(
+        rewriter, loc, flatVectorType, collapsedSource, collapsedIndices,
+        transferReadOp.getPadding(), collapsedMap);
     flatRead.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
 
     // 4. Replace the old transfer_read with the new one reading from the
@@ -695,7 +695,7 @@ public:
     auto loc = transferWriteOp.getLoc();
     Value vector = transferWriteOp.getVector();
     VectorType vectorType = cast<VectorType>(vector.getType());
-    Value source = transferWriteOp.getSource();
+    Value source = transferWriteOp.getBase();
     MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
 
     // 0. Check pre-conditions
@@ -722,7 +722,11 @@ public:
     if (transferWriteOp.getMask())
       return failure();
 
-    int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
+    // Determine the first memref dimension to collapse - just enough so we can
+    // read a flattened vector.
+    int64_t firstDimToCollapse =
+        sourceType.getRank() -
+        vectorType.getShape().drop_while([](auto v) { return v == 1; }).size();
 
     // 1. Collapse the source memref
     Value collapsedSource =
@@ -749,10 +753,10 @@ public:
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
     Value flatVector =
-        rewriter.create<vector::ShapeCastOp>(loc, flatVectorType, vector);
-    vector::TransferWriteOp flatWrite =
-        rewriter.create<vector::TransferWriteOp>(
-            loc, flatVector, collapsedSource, collapsedIndices, collapsedMap);
+        vector::ShapeCastOp::create(rewriter, loc, flatVectorType, vector);
+    vector::TransferWriteOp flatWrite = vector::TransferWriteOp::create(
+        rewriter, loc, flatVector, collapsedSource, collapsedIndices,
+        collapsedMap);
     flatWrite.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
 
     // 4. Replace the old transfer_write with the new one writing the
@@ -767,23 +771,26 @@ private:
   unsigned targetVectorBitwidth;
 };
 
-/// Base class for `vector.extract/vector.extract_element(vector.transfer_read)`
-/// to `memref.load` patterns. The `match` method is shared for both
-/// `vector.extract` and `vector.extract_element`.
-template <class VectorExtractOp>
-class RewriteScalarExtractOfTransferReadBase
-    : public OpRewritePattern<VectorExtractOp> {
-  using Base = OpRewritePattern<VectorExtractOp>;
-
+/// Rewrite `vector.extract(vector.transfer_read)` to `memref.load`.
+///
+/// All the users of the transfer op must be `vector.extract` ops. If
+/// `allowMultipleUses` is set to true, rewrite transfer ops with any number of
+/// users. Otherwise, rewrite only if the extract op is the single user of the
+/// transfer op. Rewriting a single vector load with multiple scalar loads may
+/// negatively affect performance.
+class RewriteScalarExtractOfTransferRead
+    : public OpRewritePattern<vector::ExtractOp> {
 public:
-  RewriteScalarExtractOfTransferReadBase(MLIRContext *context,
-                                         PatternBenefit benefit,
-                                         bool allowMultipleUses)
-      : Base(context, benefit), allowMultipleUses(allowMultipleUses) {}
+  RewriteScalarExtractOfTransferRead(MLIRContext *context,
+                                     PatternBenefit benefit,
+                                     bool allowMultipleUses)
+      : OpRewritePattern(context, benefit),
+        allowMultipleUses(allowMultipleUses) {}
 
-  LogicalResult match(VectorExtractOp extractOp) const {
-    auto xferOp =
-        extractOp.getVector().template getDefiningOp<vector::TransferReadOp>();
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    // Match phase.
+    auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
     if (!xferOp)
       return failure();
     // Check that we are extracting a scalar and not a sub-vector.
@@ -795,8 +802,7 @@ public:
     // If multiple uses are allowed, check if all the xfer uses are extract ops.
     if (allowMultipleUses &&
         !llvm::all_of(xferOp->getUses(), [](OpOperand &use) {
-          return isa<vector::ExtractOp, vector::ExtractElementOp>(
-              use.getOwner());
+          return isa<vector::ExtractOp>(use.getOwner());
         }))
       return failure();
     // Mask not supported.
@@ -808,107 +814,51 @@ public:
     // Cannot rewrite if the indices may be out of bounds.
     if (xferOp.hasOutOfBoundsDim())
       return failure();
+
+    // Rewrite phase: construct scalar load.
+    SmallVector<Value> newIndices(xferOp.getIndices().begin(),
+                                  xferOp.getIndices().end());
+    for (auto [i, pos] : llvm::enumerate(extractOp.getMixedPosition())) {
+      int64_t idx = newIndices.size() - extractOp.getNumIndices() + i;
+
+      // Compute affine expression `newIndices[idx] + pos` where `pos` can be
+      // either a constant or a value.
+      OpFoldResult composedIdx;
+      if (auto attr = dyn_cast<Attribute>(pos)) {
+        int64_t offset = cast<IntegerAttr>(attr).getInt();
+        composedIdx = affine::makeComposedFoldedAffineApply(
+            rewriter, extractOp.getLoc(),
+            rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});
+      } else {
+        Value dynamicOffset = cast<Value>(pos);
+        AffineExpr sym0, sym1;
+        bindSymbols(rewriter.getContext(), sym0, sym1);
+        composedIdx = affine::makeComposedFoldedAffineApply(
+            rewriter, extractOp.getLoc(), sym0 + sym1,
+            {newIndices[idx], dynamicOffset});
+      }
+
+      // Update the corresponding index with the folded result.
+      if (auto value = dyn_cast<Value>(composedIdx)) {
+        newIndices[idx] = value;
+      } else {
+        newIndices[idx] = arith::ConstantIndexOp::create(
+            rewriter, extractOp.getLoc(), *getConstantIntValue(composedIdx));
+      }
+    }
+    if (isa<MemRefType>(xferOp.getBase().getType())) {
+      rewriter.replaceOpWithNewOp<memref::LoadOp>(extractOp, xferOp.getBase(),
+                                                  newIndices);
+    } else {
+      rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
+          extractOp, xferOp.getBase(), newIndices);
+    }
+
     return success();
   }
 
 private:
   bool allowMultipleUses;
-};
-
-/// Rewrite `vector.extractelement(vector.transfer_read)` to `memref.load`.
-///
-/// All the users of the transfer op must be either `vector.extractelement` or
-/// `vector.extract` ops. If `allowMultipleUses` is set to true, rewrite
-/// transfer ops with any number of users. Otherwise, rewrite only if the
-/// extract op is the single user of the transfer op. Rewriting a single
-/// vector load with multiple scalar loads may negatively affect performance.
-class RewriteScalarExtractElementOfTransferRead
-    : public RewriteScalarExtractOfTransferReadBase<vector::ExtractElementOp> {
-  using RewriteScalarExtractOfTransferReadBase::
-      RewriteScalarExtractOfTransferReadBase;
-
-  LogicalResult matchAndRewrite(vector::ExtractElementOp extractOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(match(extractOp)))
-      return failure();
-
-    // Construct scalar load.
-    auto loc = extractOp.getLoc();
-    auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
-    SmallVector<Value> newIndices(xferOp.getIndices().begin(),
-                                  xferOp.getIndices().end());
-    if (extractOp.getPosition()) {
-      AffineExpr sym0, sym1;
-      bindSymbols(extractOp.getContext(), sym0, sym1);
-      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-          rewriter, loc, sym0 + sym1,
-          {newIndices[newIndices.size() - 1], extractOp.getPosition()});
-      if (auto value = dyn_cast<Value>(ofr)) {
-        newIndices[newIndices.size() - 1] = value;
-      } else {
-        newIndices[newIndices.size() - 1] =
-            rewriter.create<arith::ConstantIndexOp>(loc,
-                                                    *getConstantIntValue(ofr));
-      }
-    }
-    if (isa<MemRefType>(xferOp.getSource().getType())) {
-      rewriter.replaceOpWithNewOp<memref::LoadOp>(extractOp, xferOp.getSource(),
-                                                  newIndices);
-    } else {
-      rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
-          extractOp, xferOp.getSource(), newIndices);
-    }
-
-    return success();
-  }
-};
-
-/// Rewrite `vector.extractelement(vector.transfer_read)` to `memref.load`.
-/// Rewrite `vector.extract(vector.transfer_read)` to `memref.load`.
-///
-/// All the users of the transfer op must be either `vector.extractelement` or
-/// `vector.extract` ops. If `allowMultipleUses` is set to true, rewrite
-/// transfer ops with any number of users. Otherwise, rewrite only if the
-/// extract op is the single user of the transfer op. Rewriting a single
-/// vector load with multiple scalar loads may negatively affect performance.
-class RewriteScalarExtractOfTransferRead
-    : public RewriteScalarExtractOfTransferReadBase<vector::ExtractOp> {
-  using RewriteScalarExtractOfTransferReadBase::
-      RewriteScalarExtractOfTransferReadBase;
-
-  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(match(extractOp)))
-      return failure();
-
-    // Construct scalar load.
-    auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
-    SmallVector<Value> newIndices(xferOp.getIndices().begin(),
-                                  xferOp.getIndices().end());
-    for (auto [i, pos] : llvm::enumerate(extractOp.getMixedPosition())) {
-      assert(isa<Attribute>(pos) && "Unexpected non-constant index");
-      int64_t offset = cast<IntegerAttr>(cast<Attribute>(pos)).getInt();
-      int64_t idx = newIndices.size() - extractOp.getNumIndices() + i;
-      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-          rewriter, extractOp.getLoc(),
-          rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});
-      if (auto value = dyn_cast<Value>(ofr)) {
-        newIndices[idx] = value;
-      } else {
-        newIndices[idx] = rewriter.create<arith::ConstantIndexOp>(
-            extractOp.getLoc(), *getConstantIntValue(ofr));
-      }
-    }
-    if (isa<MemRefType>(xferOp.getSource().getType())) {
-      rewriter.replaceOpWithNewOp<memref::LoadOp>(extractOp, xferOp.getSource(),
-                                                  newIndices);
-    } else {
-      rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
-          extractOp, xferOp.getSource(), newIndices);
-    }
-
-    return success();
-  }
 };
 
 /// Rewrite transfer_writes of vectors of size 1 (e.g., vector<1x1xf32>)
@@ -929,15 +879,15 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
     if (!xferOp.getPermutationMap().isMinorIdentity())
       return failure();
     // Only float and integer element types are supported.
-    Value scalar =
-        rewriter.create<vector::ExtractOp>(xferOp.getLoc(), xferOp.getVector());
+    Value scalar = vector::ExtractOp::create(rewriter, xferOp.getLoc(),
+                                             xferOp.getVector());
     // Construct a scalar store.
-    if (isa<MemRefType>(xferOp.getSource().getType())) {
+    if (isa<MemRefType>(xferOp.getBase().getType())) {
       rewriter.replaceOpWithNewOp<memref::StoreOp>(
-          xferOp, scalar, xferOp.getSource(), xferOp.getIndices());
+          xferOp, scalar, xferOp.getBase(), xferOp.getIndices());
     } else {
       rewriter.replaceOpWithNewOp<tensor::InsertOp>(
-          xferOp, scalar, xferOp.getSource(), xferOp.getIndices());
+          xferOp, scalar, xferOp.getBase(), xferOp.getIndices());
     }
     return success();
   }
@@ -965,8 +915,7 @@ void mlir::vector::transferOpflowOpt(RewriterBase &rewriter,
 void mlir::vector::populateScalarVectorTransferLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit,
     bool allowMultipleUses) {
-  patterns.add<RewriteScalarExtractElementOfTransferRead,
-               RewriteScalarExtractOfTransferRead>(patterns.getContext(),
+  patterns.add<RewriteScalarExtractOfTransferRead>(patterns.getContext(),
                                                    benefit, allowMultipleUses);
   patterns.add<RewriteScalarWrite>(patterns.getContext(), benefit);
 }

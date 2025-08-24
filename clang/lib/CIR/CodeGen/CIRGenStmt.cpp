@@ -14,6 +14,8 @@
 #include "CIRGenFunction.h"
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Location.h"
+#include "mlir/Support/LLVM.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
@@ -23,26 +25,80 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
-void CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s) {
-  for (auto *curStmt : s.body()) {
-    if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
-      getCIRGenModule().errorNYI(curStmt->getSourceRange(), "statement");
+static mlir::LogicalResult emitStmtWithResult(CIRGenFunction &cgf,
+                                              const Stmt *exprResult,
+                                              AggValueSlot slot,
+                                              Address *lastValue) {
+  // We have to special case labels here. They are statements, but when put
+  // at the end of a statement expression, they yield the value of their
+  // subexpression. Handle this by walking through all labels we encounter,
+  // emitting them before we evaluate the subexpr.
+  // Similar issues arise for attributed statements.
+  while (!isa<Expr>(exprResult)) {
+    if (const auto *ls = dyn_cast<LabelStmt>(exprResult)) {
+      if (cgf.emitLabel(*ls->getDecl()).failed())
+        return mlir::failure();
+      exprResult = ls->getSubStmt();
+    } else if (const auto *as = dyn_cast<AttributedStmt>(exprResult)) {
+      // FIXME: Update this if we ever have attributes that affect the
+      // semantics of an expression.
+      exprResult = as->getSubStmt();
+    } else {
+      llvm_unreachable("Unknown value statement");
+    }
   }
+
+  const Expr *e = cast<Expr>(exprResult);
+  QualType exprTy = e->getType();
+  if (cgf.hasAggregateEvaluationKind(exprTy)) {
+    cgf.emitAggExpr(e, slot);
+  } else {
+    // We can't return an RValue here because there might be cleanups at
+    // the end of the StmtExpr.  Because of that, we have to emit the result
+    // here into a temporary alloca.
+    cgf.emitAnyExprToMem(e, *lastValue, Qualifiers(),
+                         /*IsInit*/ false);
+  }
+
+  return mlir::success();
 }
 
-void CIRGenFunction::emitCompoundStmt(const CompoundStmt &s) {
+mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
+    const CompoundStmt &s, Address *lastValue, AggValueSlot slot) {
+  mlir::LogicalResult result = mlir::success();
+  const Stmt *exprResult = s.getStmtExprResult();
+  assert((!lastValue || (lastValue && exprResult)) &&
+         "If lastValue is not null then the CompoundStmt must have a "
+         "StmtExprResult");
+
+  for (const Stmt *curStmt : s.body()) {
+    const bool saveResult = lastValue && exprResult == curStmt;
+    if (saveResult) {
+      if (emitStmtWithResult(*this, exprResult, slot, lastValue).failed())
+        result = mlir::failure();
+    } else {
+      if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
+        result = mlir::failure();
+    }
+  }
+  return result;
+}
+
+mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
+                                                     Address *lastValue,
+                                                     AggValueSlot slot) {
+  // Add local scope to track new declared variables.
+  SymTableScopeTy varScope(symbolTable);
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
   mlir::OpBuilder::InsertPoint scopeInsPt;
   builder.create<cir::ScopeOp>(
       scopeLoc, [&](mlir::OpBuilder &b, mlir::Type &type, mlir::Location loc) {
         scopeInsPt = b.saveInsertionPoint();
       });
-  {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(scopeInsPt);
-    LexicalScope lexScope(*this, scopeLoc, builder.getInsertionBlock());
-    emitCompoundStmtWithoutScope(s);
-  }
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.restoreInsertionPoint(scopeInsPt);
+  LexicalScope lexScope(*this, scopeLoc, builder.getInsertionBlock());
+  return emitCompoundStmtWithoutScope(s, lastValue, slot);
 }
 
 void CIRGenFunction::emitStopPoint(const Stmt *s) {
@@ -77,14 +133,15 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
 #define EXPR(Type, Base) case Stmt::Type##Class:
 #include "clang/AST/StmtNodes.inc"
     {
-      // Remember the block we came in on.
-      mlir::Block *incoming = builder.getInsertionBlock();
-      assert(incoming && "expression emission must have an insertion point");
+      assert(builder.getInsertionBlock() &&
+             "expression emission must have an insertion point");
 
       emitIgnoredExpr(cast<Expr>(s));
 
-      mlir::Block *outgoing = builder.getInsertionBlock();
-      assert(outgoing && "expression emission cleared block!");
+      // Classic codegen has a check here to see if the emitter created a new
+      // block that isn't used (comparing the incoming and outgoing insertion
+      // points) and deletes the outgoing block if it's not used. In CIR, we
+      // will handle that during the cir.canonicalize pass.
       return mlir::success();
     }
   case Stmt::IfStmtClass:
@@ -127,6 +184,9 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOpenACCCacheConstruct(cast<OpenACCCacheConstruct>(*s));
   case Stmt::OpenACCAtomicConstructClass:
     return emitOpenACCAtomicConstruct(cast<OpenACCAtomicConstruct>(*s));
+  case Stmt::GCCAsmStmtClass:
+  case Stmt::MSAsmStmtClass:
+    return emitAsmStmt(cast<AsmStmt>(*s));
   case Stmt::OMPScopeDirectiveClass:
   case Stmt::OMPErrorDirectiveClass:
   case Stmt::LabelStmtClass:
@@ -140,8 +200,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::CoreturnStmtClass:
   case Stmt::CXXTryStmtClass:
   case Stmt::IndirectGotoStmtClass:
-  case Stmt::GCCAsmStmtClass:
-  case Stmt::MSAsmStmtClass:
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPTaskwaitDirectiveClass:
   case Stmt::OMPTaskyieldDirectiveClass:
@@ -243,16 +301,19 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     return emitDeclStmt(cast<DeclStmt>(*s));
   case Stmt::CompoundStmtClass:
     if (useCurrentScope)
-      emitCompoundStmtWithoutScope(cast<CompoundStmt>(*s));
-    else
-      emitCompoundStmt(cast<CompoundStmt>(*s));
-    break;
+      return emitCompoundStmtWithoutScope(cast<CompoundStmt>(*s));
+    return emitCompoundStmt(cast<CompoundStmt>(*s));
+  case Stmt::GotoStmtClass:
+    return emitGotoStmt(cast<GotoStmt>(*s));
   case Stmt::ContinueStmtClass:
     return emitContinueStmt(cast<ContinueStmt>(*s));
 
   // NullStmt doesn't need any handling, but we need to say we handled it.
   case Stmt::NullStmtClass:
     break;
+
+  case Stmt::LabelStmtClass:
+    return emitLabelStmt(cast<LabelStmt>(*s));
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
     // If we reached here, we must not handling a switch case in the top level.
@@ -267,6 +328,17 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
   }
 
   return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
+
+  if (emitLabel(*s.getDecl()).failed())
+    return mlir::failure();
+
+  if (getContext().getLangOpts().EHAsynch && s.isSideEntry())
+    getCIRGenModule().errorNYI(s.getSourceRange(), "IsEHa: not implemented.");
+
+  return emitStmt(s.getSubStmt(), /*useCurrentScope*/ true);
 }
 
 // Add a terminating yield on a body region if no other terminators are used.
@@ -361,8 +433,8 @@ mlir::LogicalResult CIRGenFunction::emitIfStmt(const IfStmt &s) {
 mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
   assert(builder.getInsertionBlock() && "expected valid insertion point");
 
-  for (const Decl *I : s.decls())
-    emitDecl(*I);
+  for (const Decl *i : s.decls())
+    emitDecl(*i, /*evaluateConditionDecl=*/true);
 
   return mlir::success();
 }
@@ -389,7 +461,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     // If this function returns a reference, take the address of the
     // expression rather than the value.
     RValue result = emitReferenceBindingToExpr(rv);
-    builder.createStore(loc, result.getScalarVal(), *fnRetAlloca);
+    builder.CIRBaseBuilderTy::createStore(loc, result.getValue(), *fnRetAlloca);
   } else {
     mlir::Value value = nullptr;
     switch (CIRGenFunction::getEvaluationKind(rv->getType())) {
@@ -407,7 +479,28 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   }
 
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
+  // This should emit a branch through the cleanup block if one exists.
   builder.create<cir::BrOp>(loc, retBlock);
+  if (ehStack.stable_begin() != currentCleanupStackDepth)
+    cgm.errorNYI(s.getSourceRange(), "return with cleanup stack");
+  builder.createBlock(builder.getBlock()->getParent());
+
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
+  // FIXME: LLVM codegen inserts emit a stop point here for debug info
+  // sake when the insertion point is available, but doesn't do
+  // anything special when there isn't. We haven't implemented debug
+  // info support just yet, look at this again once we have it.
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  cir::GotoOp::create(builder, getLoc(s.getSourceRange()),
+                      s.getLabel()->getName());
+
+  // A goto marks the end of a block, create a new one for codegen after
+  // emitGotoStmt can resume building in that block.
+  // Insert the new block to continue codegen after goto.
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();
@@ -420,6 +513,32 @@ CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
   // Insert the new block to continue codegen after the continue statement.
   builder.createBlock(builder.getBlock()->getParent());
 
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
+  // Create a new block to tag with a label and add a branch from
+  // the current one to it. If the block is empty just call attach it
+  // to this label.
+  mlir::Block *currBlock = builder.getBlock();
+  mlir::Block *labelBlock = currBlock;
+
+  if (!currBlock->empty()) {
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      labelBlock = builder.createBlock(builder.getBlock()->getParent());
+    }
+    builder.create<cir::BrOp>(getLoc(d.getSourceRange()), labelBlock);
+  }
+
+  builder.setInsertionPointToEnd(labelBlock);
+  builder.create<cir::LabelOp>(getLoc(d.getSourceRange()), d.getName());
+  builder.setInsertionPointToEnd(labelBlock);
+
+  //  FIXME: emit debug info for labels, incrementProfileCounter
+  assert(!cir::MissingFeatures::ehstackBranches());
+  assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::generateDebugInfo());
   return mlir::success();
 }
 
@@ -531,12 +650,6 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
     value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal),
                                   cir::IntAttr::get(condType, endVal)});
     kind = cir::CaseOpKind::Range;
-
-    // We don't currently fold case range statements with other case statements.
-    // TODO(cir): Add this capability. Folding these cases is going to be
-    // implemented in CIRSimplify when it is upstreamed.
-    assert(!cir::MissingFeatures::foldRangeCase());
-    assert(!cir::MissingFeatures::foldCascadingCases());
   } else {
     value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal)});
     kind = cir::CaseOpKind::Equal;
@@ -876,7 +989,7 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
         return mlir::failure();
 
     if (s.getConditionVariable())
-      emitDecl(*s.getConditionVariable());
+      emitDecl(*s.getConditionVariable(), /*evaluateConditionDecl=*/true);
 
     mlir::Value condV = emitScalarExpr(s.getCond());
 

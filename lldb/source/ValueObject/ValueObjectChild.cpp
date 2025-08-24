@@ -118,7 +118,7 @@ bool ValueObjectChild::UpdateValue() {
            (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
-        m_value.GetScalar() = parent->GetPointerValue();
+        m_value.GetScalar() = parent->GetPointerValue().address;
 
         switch (parent->GetAddressTypeOfChildren()) {
         case eAddressTypeFile: {

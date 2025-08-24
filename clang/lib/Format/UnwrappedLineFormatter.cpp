@@ -223,8 +223,6 @@ private:
   tryFitMultipleLinesInOne(LevelIndentTracker &IndentTracker,
                            ArrayRef<AnnotatedLine *>::const_iterator I,
                            ArrayRef<AnnotatedLine *>::const_iterator E) {
-    const unsigned Indent = IndentTracker.getIndent();
-
     // Can't join the last line with anything.
     if (I + 1 == E)
       return 0;
@@ -240,6 +238,7 @@ private:
       return 0;
     }
 
+    const auto Indent = IndentTracker.getIndent();
     if (Style.ColumnLimit > 0 && Indent > Style.ColumnLimit)
       return 0;
 
@@ -314,8 +313,8 @@ private:
           const AnnotatedLine *Line = nullptr;
           for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
             assert(*J);
-            if ((*J)->InPPDirective || (*J)->isComment() ||
-                (*J)->Level > TheLine->Level) {
+            if (((*J)->InPPDirective && !(*J)->InMacroBody) ||
+                (*J)->isComment() || (*J)->Level > TheLine->Level) {
               continue;
             }
             if ((*J)->Level < TheLine->Level ||
@@ -865,7 +864,8 @@ private:
       if (ShouldMerge()) {
         // We merge empty blocks even if the line exceeds the column limit.
         Tok->SpacesRequiredBefore =
-            (Style.SpaceInEmptyBlock || Line.Last->is(tok::comment)) ? 1 : 0;
+            Style.SpaceInEmptyBraces != FormatStyle::SIEB_Never ||
+            Line.Last->is(tok::comment);
         Tok->CanBreakBefore = true;
         return 1;
       } else if (Limit != 0 && !Line.startsWithNamespace() &&
@@ -986,8 +986,10 @@ private:
   void join(AnnotatedLine &A, const AnnotatedLine &B) {
     assert(!A.Last->Next);
     assert(!B.First->Previous);
-    if (B.Affected)
+    if (B.Affected || B.LeadingEmptyLinesAffected) {
+      assert(B.Affected || A.Last->Children.empty());
       A.Affected = true;
+    }
     A.Last->Next = B.First;
     B.First->Previous = A.Last;
     B.First->CanBreakBefore = true;
@@ -1088,7 +1090,7 @@ protected:
     const FormatToken *LBrace = State.NextToken->getPreviousNonComment();
     bool HasLBrace = LBrace && LBrace->is(tok::l_brace) && LBrace->is(BK_Block);
     FormatToken &Previous = *State.NextToken->Previous;
-    if (Previous.Children.size() == 0 || (!HasLBrace && !LBrace->MacroParent)) {
+    if (Previous.Children.empty() || (!HasLBrace && !LBrace->MacroParent)) {
       // The previous token does not open a block. Nothing to do. We don't
       // assert so that we can simply call this function for all tokens.
       return true;

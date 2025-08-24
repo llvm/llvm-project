@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "CommonArgs.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -31,6 +30,68 @@ using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
+
+RocmInstallationDetector::CommonBitcodeLibsPreferences::
+    CommonBitcodeLibsPreferences(const Driver &D,
+                                 const llvm::opt::ArgList &DriverArgs,
+                                 StringRef GPUArch,
+                                 const Action::OffloadKind DeviceOffloadingKind,
+                                 const bool NeedsASanRT)
+    : ABIVer(DeviceLibABIVersion::fromCodeObjectVersion(
+          tools::getAMDGPUCodeObjectVersion(D, DriverArgs))) {
+  const auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
+  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
+
+  IsOpenMP = DeviceOffloadingKind == Action::OFK_OpenMP;
+
+  const bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
+  Wave64 =
+      !HasWave32 || DriverArgs.hasFlag(options::OPT_mwavefrontsize64,
+                                       options::OPT_mno_wavefrontsize64, false);
+
+  const bool IsKnownOffloading = DeviceOffloadingKind == Action::OFK_OpenMP ||
+                                 DeviceOffloadingKind == Action::OFK_HIP;
+
+  // Default to enabling f32 denormals on subtargets where fma is fast with
+  // denormals
+  const bool DefaultDAZ =
+      (Kind == llvm::AMDGPU::GK_NONE)
+          ? false
+          : !((ArchAttr & llvm::AMDGPU::FEATURE_FAST_FMA_F32) &&
+              (ArchAttr & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32));
+  // TODO: There are way too many flags that change this. Do we need to
+  // check them all?
+  DAZ = IsKnownOffloading
+            ? DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
+                                 options::OPT_fno_gpu_flush_denormals_to_zero,
+                                 DefaultDAZ)
+            : DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) || DefaultDAZ;
+
+  FiniteOnly = DriverArgs.hasArg(options::OPT_cl_finite_math_only) ||
+               DriverArgs.hasFlag(options::OPT_ffinite_math_only,
+                                  options::OPT_fno_finite_math_only, false);
+
+  UnsafeMathOpt =
+      DriverArgs.hasArg(options::OPT_cl_unsafe_math_optimizations) ||
+      DriverArgs.hasFlag(options::OPT_funsafe_math_optimizations,
+                         options::OPT_fno_unsafe_math_optimizations, false);
+
+  FastRelaxedMath = DriverArgs.hasArg(options::OPT_cl_fast_relaxed_math) ||
+                    DriverArgs.hasFlag(options::OPT_ffast_math,
+                                       options::OPT_fno_fast_math, false);
+
+  const bool DefaultSqrt = IsKnownOffloading ? true : false;
+  CorrectSqrt =
+      DriverArgs.hasArg(options::OPT_cl_fp32_correctly_rounded_divide_sqrt) ||
+      DriverArgs.hasFlag(
+          options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
+          options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, DefaultSqrt);
+  // GPU Sanitizer currently only supports ASan and is enabled through host
+  // ASan.
+  GPUSan = (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                               options::OPT_fno_gpu_sanitize, true) &&
+            NeedsASanRT);
+}
 
 void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
   assert(!Path.empty());
@@ -221,7 +282,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     std::string VerStr = DirName.drop_front(strlen("rocm-")).str();
     // The ROCm directory name follows the format of
     // rocm-{major}.{minor}.{subMinor}[-{build}]
-    std::replace(VerStr.begin(), VerStr.end(), '-', '.');
+    llvm::replace(VerStr, '-', '.');
     V.tryParse(VerStr);
     return V;
   };
@@ -526,7 +587,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
                     "hipstdpar_lib.hpp"});
   };
 
-  if (DriverArgs.hasArg(options::OPT_nogpuinc)) {
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true)) {
     if (HasHipStdPar)
       HandleHipStdPar();
 
@@ -560,7 +622,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().isUsingLTO()) {
     const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0], ThinLTO);
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs, ThinLTO);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +
@@ -795,6 +857,9 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+
+  if (DeviceOffloadingKind == Action::OFK_None)
+    addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args);
 }
 
 void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
@@ -836,12 +901,12 @@ Expected<SmallVector<std::string>>
 AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
   // Detect AMD GPUs availible on the system.
   std::string Program;
-  if (Arg *A = Args.getLastArg(options::OPT_amdgpu_arch_tool_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_offload_arch_tool_EQ))
     Program = A->getValue();
   else
     Program = GetProgramPath("amdgpu-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program);
+  auto StdoutOrErr = getDriver().executeProgram({Program});
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -884,33 +949,14 @@ void ROCMToolChain::addClangTargetOptions(
                                                 ABIVer))
     return;
 
-  bool Wave64 = isWave64(DriverArgs, Kind);
-  // TODO: There are way too many flags that change this. Do we need to check
-  // them all?
-  bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
-             getDefaultDenormsAreZeroForTarget(Kind);
-  bool FiniteOnly = DriverArgs.hasArg(options::OPT_cl_finite_math_only);
-
-  bool UnsafeMathOpt =
-      DriverArgs.hasArg(options::OPT_cl_unsafe_math_optimizations);
-  bool FastRelaxedMath = DriverArgs.hasArg(options::OPT_cl_fast_relaxed_math);
-  bool CorrectSqrt =
-      DriverArgs.hasArg(options::OPT_cl_fp32_correctly_rounded_divide_sqrt);
-
-  // GPU Sanitizer currently only supports ASan and is enabled through host
-  // ASan.
-  bool GPUSan = DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                                   options::OPT_fno_gpu_sanitize, true) &&
-                getSanitizerArgs(DriverArgs).needsAsanRt();
-
   // Add the OpenCL specific bitcode library.
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   BCLibs.emplace_back(RocmInstallation->getOpenCLPath().str());
 
   // Add the generic set of libraries.
   BCLibs.append(RocmInstallation->getCommonBitcodeLibs(
-      DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-      FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, false));
+      DriverArgs, LibDeviceFile, GpuArch, DeviceOffloadingKind,
+      getSanitizerArgs(DriverArgs).needsAsanRt()));
 
   for (auto [BCFile, Internalize] : BCLibs) {
     if (Internalize)
@@ -947,11 +993,13 @@ bool RocmInstallationDetector::checkCommonBitcodeLibs(
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 RocmInstallationDetector::getCommonBitcodeLibs(
-    const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile, bool Wave64,
-    bool DAZ, bool FiniteOnly, bool UnsafeMathOpt, bool FastRelaxedMath,
-    bool CorrectSqrt, DeviceLibABIVersion ABIVer, bool GPUSan,
-    bool isOpenMP) const {
+    const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile,
+    StringRef GPUArch, const Action::OffloadKind DeviceOffloadingKind,
+    const bool NeedsASanRT) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
+
+  CommonBitcodeLibsPreferences Pref{D, DriverArgs, GPUArch,
+                                    DeviceOffloadingKind, NeedsASanRT};
 
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
                       bool Internalize = true) {
@@ -959,23 +1007,23 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     BCLibs.emplace_back(BCLib);
   };
   auto AddSanBCLibs = [&]() {
-    if (GPUSan)
+    if (Pref.GPUSan)
       AddBCLib(getAsanRTLPath(), false);
   };
 
   AddSanBCLibs();
   AddBCLib(getOCMLPath());
-  if (!isOpenMP)
+  if (!Pref.IsOpenMP)
     AddBCLib(getOCKLPath());
-  else if (GPUSan && isOpenMP)
+  else if (Pref.GPUSan && Pref.IsOpenMP)
     AddBCLib(getOCKLPath(), false);
-  AddBCLib(getDenormalsAreZeroPath(DAZ));
-  AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
-  AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));
-  AddBCLib(getCorrectlyRoundedSqrtPath(CorrectSqrt));
-  AddBCLib(getWavefrontSize64Path(Wave64));
+  AddBCLib(getDenormalsAreZeroPath(Pref.DAZ));
+  AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
+  AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
+  AddBCLib(getCorrectlyRoundedSqrtPath(Pref.CorrectSqrt));
+  AddBCLib(getWavefrontSize64Path(Pref.Wave64));
   AddBCLib(LibDeviceFile);
-  auto ABIVerPath = getABIVersionPath(ABIVer);
+  auto ABIVerPath = getABIVersionPath(Pref.ABIVer);
   if (!ABIVerPath.empty())
     AddBCLib(ABIVerPath);
 
@@ -983,9 +1031,9 @@ RocmInstallationDetector::getCommonBitcodeLibs(
 }
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
-                                       const std::string &GPUArch,
-                                       bool isOpenMP) const {
+ROCMToolChain::getCommonDeviceLibNames(
+    const llvm::opt::ArgList &DriverArgs, const std::string &GPUArch,
+    Action::OffloadKind DeviceOffloadingKind) const {
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
   const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
 
@@ -996,33 +1044,9 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                                                 ABIVer))
     return {};
 
-  // If --hip-device-lib is not set, add the default bitcode libraries.
-  // TODO: There are way too many flags that change this. Do we need to check
-  // them all?
-  bool DAZ = DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
-                                options::OPT_fno_gpu_flush_denormals_to_zero,
-                                getDefaultDenormsAreZeroForTarget(Kind));
-  bool FiniteOnly = DriverArgs.hasFlag(
-      options::OPT_ffinite_math_only, options::OPT_fno_finite_math_only, false);
-  bool UnsafeMathOpt =
-      DriverArgs.hasFlag(options::OPT_funsafe_math_optimizations,
-                         options::OPT_fno_unsafe_math_optimizations, false);
-  bool FastRelaxedMath = DriverArgs.hasFlag(options::OPT_ffast_math,
-                                            options::OPT_fno_fast_math, false);
-  bool CorrectSqrt = DriverArgs.hasFlag(
-      options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
-      options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
-  bool Wave64 = isWave64(DriverArgs, Kind);
-
-  // GPU Sanitizer currently only supports ASan and is enabled through host
-  // ASan.
-  bool GPUSan = DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                                   options::OPT_fno_gpu_sanitize, true) &&
-                getSanitizerArgs(DriverArgs).needsAsanRt();
-
   return RocmInstallation->getCommonBitcodeLibs(
-      DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-      FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, isOpenMP);
+      DriverArgs, LibDeviceFile, GPUArch, DeviceOffloadingKind,
+      getSanitizerArgs(DriverArgs).needsAsanRt());
 }
 
 bool AMDGPUToolChain::shouldSkipSanitizeOption(

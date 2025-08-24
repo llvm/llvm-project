@@ -245,7 +245,7 @@ def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_op
                   "$res = OpSpecConstantComposite $type">;
 def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
                   "OpSpecConstantCompositeContinuedINTEL">;
-def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, i32imm:$c, ID:$o, variable_ops),
+def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ID:$o, variable_ops),
                   "$res = OpSpecConstantOp $t $c $o">;
 
 // 3.42.8 Memory Instructions
@@ -444,6 +444,9 @@ def OpCrossWorkgroupCastToPtrINTEL : UnOp<"OpCrossWorkgroupCastToPtrINTEL", 5938
 // SPV_INTEL_bfloat16_conversion
 def OpConvertFToBF16INTEL : UnOp<"OpConvertFToBF16INTEL", 6116>;
 def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
+
+// SPV_INTEL_tensor_float32_conversion
+def OpRoundFToTF32INTEL : UnOp<"OpRoundFToTF32INTEL", 6426>;
 
 // 3.42.12 Composite Instructions
 
@@ -936,3 +939,20 @@ def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
 // SPV_INTEL_ternary_bitwise_function
 def OpBitwiseFunctionINTEL: Op<6242, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c, ID:$lut_index),
                   "$res = OpBitwiseFunctionINTEL $type $a $b $c $lut_index">;
+
+// SPV_INTEL_2d_block_io
+def OpSubgroup2DBlockLoadINTEL: Op<6231, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord, ID:$dst_ptr),
+                  "OpSubgroup2DBlockLoadINTEL $element_size $block_width $block_height $block_count $src_base_ptr $memory_width $memory_height $memory_pitch $coord $dst_ptr">;
+def OpSubgroup2DBlockLoadTransposeINTEL: Op<6233, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord, ID:$dst_ptr),
+                  "OpSubgroup2DBlockLoadTransposeINTEL $element_size $block_width $block_height $block_count $src_base_ptr $memory_width $memory_height $memory_pitch $coord $dst_ptr">;
+def OpSubgroup2DBlockLoadTransformINTEL: Op<6232, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord, ID:$dst_ptr),
+                  "OpSubgroup2DBlockLoadTransformINTEL $element_size $block_width $block_height $block_count $src_base_ptr $memory_width $memory_height $memory_pitch $coord $dst_ptr">;
+def OpSubgroup2DBlockPrefetchINTEL: Op<6234, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord),
+                  "OpSubgroup2DBlockPrefetchINTEL $element_size $block_width $block_height $block_count $src_base_ptr $memory_width $memory_height $memory_pitch $coord">;
+def OpSubgroup2DBlockStoreINTEL: Op<6235, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
+                  ID:$block_count, ID:$src_ptr, ID:$dst_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord),
+                  "OpSubgroup2DBlockStoreINTEL $element_size $block_width $block_height $block_count $src_ptr $dst_base_ptr $memory_width $memory_height $memory_pitch $coord">;

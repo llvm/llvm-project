@@ -1232,6 +1232,13 @@ func.func @parse_base64_test() {
   return
 }
 
+// CHECK-LABEL: func @parse_slash_test
+func.func @parse_slash_test() {
+  // CHECK: "test.slash_attr"() <{attr = #test.slash_attr<1 / 2>}> : () -> ()
+  "test.slash_attr"() { attr = #test.slash_attr<1 / 2> } : () -> ()
+  return
+}
+
 // CHECK-LABEL: func @"\22_string_symbol_reference\22"
 func.func @"\"_string_symbol_reference\""() {
   // CHECK: ref = @"\22_string_symbol_reference\22"

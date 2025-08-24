@@ -32,6 +32,7 @@ add_llvm_target(DirectXCodeGen
   DXILPrepare.cpp
   DXILPrettyPrinter.cpp
   DXILResourceAccess.cpp
+  DXILResourceImplicitBinding.cpp
   DXILShaderFlags.cpp
   DXILTranslateMetadata.cpp
   DXILRootSignature.cpp
@@ -48,6 +49,7 @@ add_llvm_target(DirectXCodeGen
   DirectXInfo
   DirectXPointerTypeAnalysis
   FrontendHLSL
+  IPO
   MC
   ScalarOpts
   SelectionDAG

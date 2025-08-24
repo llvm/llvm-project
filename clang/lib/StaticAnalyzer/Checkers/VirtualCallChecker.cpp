@@ -40,21 +40,22 @@ template <> struct FoldingSetTrait<ObjectState> {
 
 namespace {
 class VirtualCallChecker
-    : public Checker<check::BeginFunction, check::EndFunction, check::PreCall> {
+    : public CheckerFamily<check::BeginFunction, check::EndFunction,
+                           check::PreCall> {
 public:
-  enum : CheckerPartIdx { PureChecker, ImpureChecker, NumCheckerParts };
-
-  BugType BugTypes[NumCheckerParts] = {
-      {this, PureChecker, "Pure virtual method call",
-       categories::CXXObjectLifecycle},
-      {this, ImpureChecker, "Unexpected loss of virtual dispatch",
-       categories::CXXObjectLifecycle}};
+  CheckerFrontendWithBugType PureChecker{"Pure virtual method call",
+                                         categories::CXXObjectLifecycle};
+  CheckerFrontendWithBugType ImpureChecker{
+      "Unexpected loss of virtual dispatch", categories::CXXObjectLifecycle};
 
   bool ShowFixIts = false;
 
   void checkBeginFunction(CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+
+  /// Identifies this checker family for debugging purposes.
+  StringRef getDebugTag() const override { return "VirtualCallChecker"; }
 
 private:
   void registerCtorDtorCallInState(bool IsBeginFunction,
@@ -147,15 +148,14 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   if (!N)
     return;
 
-  const CheckerPartIdx Part = IsPure ? PureChecker : ImpureChecker;
+  const CheckerFrontendWithBugType &Part = IsPure ? PureChecker : ImpureChecker;
 
-  if (!isPartEnabled(Part)) {
+  if (!Part.isEnabled()) {
     // The respective check is disabled.
     return;
   }
 
-  auto Report =
-      std::make_unique<PathSensitiveBugReport>(BugTypes[Part], OS.str(), N);
+  auto Report = std::make_unique<PathSensitiveBugReport>(Part, OS.str(), N);
 
   if (ShowFixIts && !IsPure) {
     // FIXME: These hints are valid only when the virtual call is made
@@ -210,7 +210,7 @@ void VirtualCallChecker::registerCtorDtorCallInState(bool IsBeginFunction,
 }
 
 void ento::registerPureVirtualCallChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<VirtualCallChecker, VirtualCallChecker::PureChecker>();
+  Mgr.getChecker<VirtualCallChecker>()->PureChecker.enable(Mgr);
 }
 
 bool ento::shouldRegisterPureVirtualCallChecker(const CheckerManager &Mgr) {
@@ -218,8 +218,8 @@ bool ento::shouldRegisterPureVirtualCallChecker(const CheckerManager &Mgr) {
 }
 
 void ento::registerVirtualCallChecker(CheckerManager &Mgr) {
-  auto *Chk = Mgr.registerChecker<VirtualCallChecker,
-                                  VirtualCallChecker::ImpureChecker>();
+  auto *Chk = Mgr.getChecker<VirtualCallChecker>();
+  Chk->ImpureChecker.enable(Mgr);
   Chk->ShowFixIts = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
       Mgr.getCurrentCheckerName(), "ShowFixIts");
 }

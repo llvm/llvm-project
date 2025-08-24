@@ -20,6 +20,7 @@
 #include "NVPTXRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER
@@ -72,6 +73,10 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  bool has256BitVectorLoadStore(unsigned AS) const {
+    return SmVersion >= 100 && PTXVersion >= 88 &&
+           AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
+  }
   bool hasAtomAddF64() const { return SmVersion >= 60; }
   bool hasAtomScope() const { return SmVersion >= 60; }
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
@@ -103,13 +108,29 @@ public:
     switch (FullSmVersion) {
     default:
       break;
-    case 1001: // sm_100a
-    case 1011: // sm_101a
+    case 1003: // sm_100a
+    case 1013: // sm_101a
       HasTcgen05 = true;
       break;
     }
 
     return HasTcgen05 && PTXVersion >= 86;
+  }
+  // f32x2 instructions in Blackwell family
+  bool hasF32x2Instructions() const;
+
+  // TMA G2S copy with cta_group::1/2 support
+  bool hasCpAsyncBulkTensorCTAGroupSupport() const {
+    // TODO: Update/tidy-up after the family-conditional support arrives
+    switch (FullSmVersion) {
+    case 1003:
+    case 1013:
+      return PTXVersion >= 86;
+    case 1033:
+      return PTXVersion >= 88;
+    default:
+      return false;
+    }
   }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
@@ -123,14 +144,24 @@ public:
   bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
-  // GPUs with "a" suffix have include architecture-accelerated features that
-  // are supported on the specified architecture only, hence such targets do not
-  // follow the onion layer model. hasArchAccelFeatures() allows
-  // distinguishing such GPU variants from the base GPU architecture.
-  // - 0 represents base GPU model,
-  // - non-zero value identifies particular architecture-accelerated variant.
-  bool hasArchAccelFeatures() const { return getFullSmVersion() % 10; }
-
+  // GPUs with "a" suffix have architecture-accelerated features that are
+  // supported on the specified architecture only, hence such targets do not
+  // follow the onion layer model. hasArchAccelFeatures() allows distinguishing
+  // such GPU variants from the base GPU architecture.
+  // - false represents non-accelerated architecture.
+  // - true represents architecture-accelerated variant.
+  bool hasArchAccelFeatures() const {
+    return (getFullSmVersion() & 1) && PTXVersion >= 80;
+  }
+  // GPUs with 'f' suffix have architecture-accelerated features which are
+  // portable across all future architectures under same SM major. For example,
+  // sm_100f features will work for sm_10X*f*/sm_10X*a* future architectures.
+  // - false represents non-family-specific architecture.
+  // - true represents family-specific variant.
+  bool hasFamilySpecificFeatures() const {
+    return getFullSmVersion() % 10 == 2 ? PTXVersion >= 88
+                                        : hasArchAccelFeatures();
+  }
   // If the user did not provide a target we default to the `sm_30` target.
   std::string getTargetName() const {
     return TargetName.empty() ? "sm_30" : TargetName;

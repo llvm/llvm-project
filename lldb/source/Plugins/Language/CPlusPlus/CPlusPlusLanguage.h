@@ -93,8 +93,8 @@ public:
   static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
   bool SymbolNameFitsToLanguage(Mangled mangled) const override;
-  
-  bool DemangledNameContainsPath(llvm::StringRef path, 
+
+  bool DemangledNameContainsPath(llvm::StringRef path,
                                  ConstString demangled) const override;
 
   ConstString
@@ -111,6 +111,36 @@ public:
                                  Stream &s) override;
 
   static bool IsCPPMangledName(llvm::StringRef name);
+
+  static llvm::StringRef GetDemangledBasename(llvm::StringRef demangled,
+                                              const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledTemplateArguments(llvm::StringRef demangled,
+                                const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledReturnTypeLHS(llvm::StringRef demangled,
+                            const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledFunctionQualifiers(llvm::StringRef demangled,
+                                 const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledScope(llvm::StringRef demangled, const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledReturnTypeRHS(llvm::StringRef demangled,
+                            const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledFunctionArguments(llvm::StringRef demangled,
+                                const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledFunctionSuffix(llvm::StringRef demangled,
+                             const DemangledNameInfo &info);
 
   // Extract C++ context and identifier from a string using heuristic matching
   // (as opposed to
@@ -136,7 +166,7 @@ public:
 
   llvm::StringRef GetInstanceVariableName() override { return "this"; }
 
-  const FormatEntity::Entry *GetFunctionNameFormat() const override;
+  FormatEntity::Entry GetFunctionNameFormat() const override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }

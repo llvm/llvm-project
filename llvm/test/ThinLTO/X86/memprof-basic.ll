@@ -52,6 +52,7 @@
 ; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should have cloned bar, baz, and foo, for the cold memory allocation.
 ; RUN:	cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
+; RUN:	cat %t.ccg.clonefuncassign.dot | FileCheck %s --check-prefix=DOTFUNCASSIGN
 
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IR
 
@@ -100,7 +101,7 @@ declare void @_ZdaPv()
 
 declare i32 @sleep()
 
-define internal ptr @_Z3barv() #0 {
+define internal ptr @_Z3barv() #0 !dbg !15 {
 entry:
   %call = call ptr @_Znam(i64 0), !memprof !2, !callsite !7
   ret ptr null
@@ -125,6 +126,9 @@ uselistorder ptr @_Z3foov, { 1, 0 }
 
 attributes #0 = { noinline optnone }
 
+!llvm.dbg.cu = !{!13}
+!llvm.module.flags = !{!20, !21}
+
 !0 = !{i64 8632435727821051414}
 !1 = !{i64 -3421689549917153178}
 !2 = !{!3, !5}
@@ -138,7 +142,16 @@ attributes #0 = { noinline optnone }
 !10 = !{i64 123, i64 100}
 !11 = !{i64 456, i64 200}
 !12 = !{i64 789, i64 300}
-
+!13 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !14, producer: "clang version 21.0.0git (git@github.com:llvm/llvm-project.git e391301e0e4d9183fe06e69602e87b0bc889aeda)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+!14 = !DIFile(filename: "basic.cc", directory: "", checksumkind: CSK_MD5, checksum: "8636c46e81402013b9d54e8307d2f149")
+!15 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !14, file: !14, line: 1, type: !16, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !13, declaration: !22)
+!16 = !DISubroutineType(types: !17)
+!17 = !{!18}
+!18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+!19 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+!20 = !{i32 7, !"Dwarf Version", i32 5}
+!21 = !{i32 2, !"Debug Info Version", i32 3}
+!22 = !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !14, file: !14, line: 1, type: !16, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
 
 ; DUMP: CCG before cloning:
 ; DUMP: Callsite Context Graph:
@@ -301,7 +314,7 @@ attributes #0 = { noinline optnone }
 ; IR:   call {{.*}} @_Z3barv()
 ; IR: define internal {{.*}} @_Z3foov()
 ; IR:   call {{.*}} @_Z3bazv()
-; IR: define internal {{.*}} @_Z3barv.memprof.1()
+; IR: define internal {{.*}} @_Z3barv.memprof.1() {{.*}} !dbg ![[SP:[0-9]+]]
 ; IR:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
 ; IR: define internal {{.*}} @_Z3bazv.memprof.1()
 ; IR:   call {{.*}} @_Z3barv.memprof.1()
@@ -309,6 +322,9 @@ attributes #0 = { noinline optnone }
 ; IR:   call {{.*}} @_Z3bazv.memprof.1()
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
+;; Make sure the clone's linkageName was updated.
+; IR: ![[SP]] = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv.memprof.1", {{.*}} declaration: ![[SP2:[0-9]+]])
+; IR: ![[SP2]] = !DISubprogram(name: "bar", linkageName: "_Z3barv.memprof.1"
 
 
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
@@ -355,6 +371,10 @@ attributes #0 = { noinline optnone }
 ; DOTCLONED: 	Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z3barv -\> alloc}"];
 ; DOTCLONED: }
 
+;; Here we are just ensuring that the post-function assign dot graph includes
+;; clone information for both the caller and callee in the node labels.
+; DOTFUNCASSIGN: _Z3bazv.memprof.1 -\> _Z3barv.memprof.1
+; DOTFUNCASSIGN: _Z3barv.memprof.1 -\> alloc
 
 ; DISTRIB: ^[[BAZ:[0-9]+]] = gv: (guid: 1807954217441101578, {{.*}} callsites: ((callee: ^[[BAR:[0-9]+]], clones: (0, 1)
 ; DISTRIB: ^[[FOO:[0-9]+]] = gv: (guid: 8107868197919466657, {{.*}} callsites: ((callee: ^[[BAZ]], clones: (0, 1)

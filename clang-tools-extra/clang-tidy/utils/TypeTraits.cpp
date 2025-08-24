@@ -9,21 +9,18 @@
 #include "TypeTraits.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <optional>
 
 namespace clang::tidy::utils::type_traits {
 
-namespace {
-
-bool classHasTrivialCopyAndDestroy(QualType Type) {
+static bool classHasTrivialCopyAndDestroy(QualType Type) {
   auto *Record = Type->getAsCXXRecordDecl();
   return Record && Record->hasDefinition() &&
          !Record->hasNonTrivialCopyConstructor() &&
          !Record->hasNonTrivialDestructor();
 }
 
-bool hasDeletedCopyConstructor(QualType Type) {
+static bool hasDeletedCopyConstructor(QualType Type) {
   auto *Record = Type->getAsCXXRecordDecl();
   if (!Record || !Record->hasDefinition())
     return false;
@@ -34,16 +31,13 @@ bool hasDeletedCopyConstructor(QualType Type) {
   return false;
 }
 
-} // namespace
-
 std::optional<bool> isExpensiveToCopy(QualType Type,
                                       const ASTContext &Context) {
   if (Type->isDependentType() || Type->isIncompleteType())
     return std::nullopt;
   return !Type.isTriviallyCopyableType(Context) &&
          !classHasTrivialCopyAndDestroy(Type) &&
-         !hasDeletedCopyConstructor(Type) &&
-         !Type->isObjCLifetimeType();
+         !hasDeletedCopyConstructor(Type) && !Type->isObjCLifetimeType();
 }
 
 bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
@@ -126,7 +120,8 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
     return true;
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
-    return recordIsTriviallyDefaultConstructible(*RT->getDecl(), Context);
+    return recordIsTriviallyDefaultConstructible(
+        *RT->getOriginalDecl()->getDefinitionOrSelf(), Context);
   }
 
   // No other types can match.
