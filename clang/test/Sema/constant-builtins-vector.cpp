@@ -957,3 +957,7 @@ static_assert(fmaDouble1[0] == 5.0);
 static_assert(fmaDouble1[1] == 10.0);
 static_assert(fmaDouble1[2] == 17.0);
 static_assert(fmaDouble1[3] == 26.0);
+
+constexpr float fmaArray[] = {2.0f, 2.0f, 2.0f, 2.0f};
+constexpr float fmaResult = __builtin_elementwise_fma(fmaArray[1], fmaArray[2], fmaArray[3]);
+static_assert(fmaResult == 6.0f, "");

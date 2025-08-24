@@ -1,11 +1,17 @@
 import { DebugProtocol } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
 
+export interface LLDBDapCapabilities extends DebugProtocol.Capabilities {
+  /** The debug adapter supports the `moduleSymbols` request. */
+  supportsModuleSymbolsRequest?: boolean;
+}
+
 /** A helper type for mapping event types to their corresponding data type. */
 // prettier-ignore
 interface EventMap {
   "module": DebugProtocol.ModuleEvent;
   "exited": DebugProtocol.ExitedEvent;
+  "capabilities": DebugProtocol.CapabilitiesEvent;
 }
 
 /** A type assertion to check if a ProtocolMessage is an event or if it is a specific event. */
@@ -39,6 +45,9 @@ export class DebugSessionTracker
   private modulesChanged = new vscode.EventEmitter<
     vscode.DebugSession | undefined
   >();
+  private sessionReceivedCapabilities =
+      new vscode.EventEmitter<[ vscode.DebugSession, LLDBDapCapabilities ]>();
+  private sessionExited = new vscode.EventEmitter<vscode.DebugSession>();
 
   /**
    * Fired when modules are changed for any active debug session.
@@ -47,6 +56,15 @@ export class DebugSessionTracker
    */
   onDidChangeModules: vscode.Event<vscode.DebugSession | undefined> =
     this.modulesChanged.event;
+
+  /** Fired when a debug session is initialized. */
+  onDidReceiveSessionCapabilities:
+      vscode.Event<[ vscode.DebugSession, LLDBDapCapabilities ]> =
+      this.sessionReceivedCapabilities.event;
+
+  /** Fired when a debug session is exiting. */
+  onDidExitSession: vscode.Event<vscode.DebugSession> =
+    this.sessionExited.event;
 
   constructor(private logger: vscode.LogOutputChannel) {
     this.onDidChangeModules(this.moduleChangedListener, this);
@@ -146,6 +164,10 @@ export class DebugSessionTracker
       this.logger.info(
         `Session "${session.name}" exited with code ${exitCode}`,
       );
+
+      this.sessionExited.fire(session);
+    } else if (isEvent(message, "capabilities")) {
+      this.sessionReceivedCapabilities.fire([ session, message.body.capabilities ]);
     }
   }
 }
