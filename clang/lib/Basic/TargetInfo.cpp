@@ -62,7 +62,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   TLSSupported = true;
   VLASupported = true;
   NoAsmVariants = false;
-  HasLegalHalfType = false;
+  HasFastHalfType = false;
   HalfArgsAndReturns = false;
   HasFloat128 = false;
   HasIbm128 = false;

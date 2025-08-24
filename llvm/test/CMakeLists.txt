@@ -118,6 +118,7 @@ set(LLVM_TEST_DEPENDS
           llvm-objdump
           llvm-opt-fuzzer
           llvm-opt-report
+          llvm-offload-wrapper
           llvm-otool
           llvm-pdbutil
           llvm-profdata

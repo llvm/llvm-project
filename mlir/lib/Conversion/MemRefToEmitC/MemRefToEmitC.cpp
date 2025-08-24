@@ -156,19 +156,21 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     Type sizeTType = emitc::SizeTType::get(rewriter.getContext());
     Type elementType = memrefType.getElementType();
     IndexType indexType = rewriter.getIndexType();
-    emitc::CallOpaqueOp sizeofElementOp = rewriter.create<emitc::CallOpaqueOp>(
-        loc, sizeTType, rewriter.getStringAttr("sizeof"), ValueRange{},
+    emitc::CallOpaqueOp sizeofElementOp = emitc::CallOpaqueOp::create(
+        rewriter, loc, sizeTType, rewriter.getStringAttr("sizeof"),
+        ValueRange{},
         ArrayAttr::get(rewriter.getContext(), {TypeAttr::get(elementType)}));
 
     int64_t numElements = 1;
     for (int64_t dimSize : memrefType.getShape()) {
       numElements *= dimSize;
     }
-    Value numElementsValue = rewriter.create<emitc::ConstantOp>(
-        loc, indexType, rewriter.getIndexAttr(numElements));
+    Value numElementsValue = emitc::ConstantOp::create(
+        rewriter, loc, indexType, rewriter.getIndexAttr(numElements));
 
-    Value totalSizeBytes = rewriter.create<emitc::MulOp>(
-        loc, sizeTType, sizeofElementOp.getResult(0), numElementsValue);
+    Value totalSizeBytes =
+        emitc::MulOp::create(rewriter, loc, sizeTType,
+                             sizeofElementOp.getResult(0), numElementsValue);
 
     emitc::CallOpaqueOp allocCall;
     StringAttr allocFunctionName;
@@ -176,8 +178,8 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     SmallVector<Value, 2> argsVec;
     if (allocOp.getAlignment()) {
       allocFunctionName = rewriter.getStringAttr(alignedAllocFunctionName);
-      alignmentValue = rewriter.create<emitc::ConstantOp>(
-          loc, sizeTType,
+      alignmentValue = emitc::ConstantOp::create(
+          rewriter, loc, sizeTType,
           rewriter.getIntegerAttr(indexType,
                                   allocOp.getAlignment().value_or(0)));
       argsVec.push_back(alignmentValue);
@@ -188,15 +190,15 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     argsVec.push_back(totalSizeBytes);
     ValueRange args(argsVec);
 
-    allocCall = rewriter.create<emitc::CallOpaqueOp>(
-        loc,
+    allocCall = emitc::CallOpaqueOp::create(
+        rewriter, loc,
         emitc::PointerType::get(
             emitc::OpaqueType::get(rewriter.getContext(), "void")),
         allocFunctionName, args);
 
     emitc::PointerType targetPointerType = emitc::PointerType::get(elementType);
-    emitc::CastOp castOp = rewriter.create<emitc::CastOp>(
-        loc, targetPointerType, allocCall.getResult(0));
+    emitc::CastOp castOp = emitc::CastOp::create(
+        rewriter, loc, targetPointerType, allocCall.getResult(0));
 
     rewriter.replaceOp(allocOp, castOp);
     return success();
