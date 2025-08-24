@@ -2,11 +2,6 @@
 
 ; RUN: opt -passes=instcombine -S < %s 2>&1 | FileCheck %s
 
-declare i8 @llvm.usub.sat.i8(i8, i8)
-declare i16 @llvm.usub.sat.i16(i16, i16)
-declare i32 @llvm.usub.sat.i32(i32, i32)
-declare i64 @llvm.usub.sat.i64(i64, i64)
-
 define i8 @test_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @test_i8(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
@@ -146,15 +141,14 @@ define <4 x i32> @vector_test(<4 x i32> %a, <4 x i32> %b) {
 
 
   %a_sub = call <4 x i32> @llvm.usub.sat.v4i32(
-  <4 x i32> %a,
-  <4 x i32> <i32 2147483871, i32 2147483871, i32 2147483871, i32 2147483871>)
+  <4 x i32> %a, <4 x i32> splat (i32 2147483871))
   %b_sub = call <4 x i32> @llvm.usub.sat.v4i32(
-  <4 x i32> %b,
-  <4 x i32> <i32 2147483887, i32 2147483887, i32 2147483887, i32 2147483887>)
+  <4 x i32> %b, <4 x i32> splat (i32 2147483887))
   %or = or <4 x i32> %a_sub, %b_sub
   %cmp = icmp eq <4 x i32> %or, zeroinitializer
-  %res = select <4 x i1> %cmp, <4 x i32> zeroinitializer,
-  <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %res = select <4 x i1> %cmp,
+  <4 x i32> zeroinitializer,
+  <4 x i32> splat (i32 -2147483648)
   ret <4 x i32> %res
 }
 
@@ -193,14 +187,13 @@ define <4 x i32> @vector_ne_test(<4 x i32> %a, <4 x i32> %b) {
 
 
   %a_sub = call <4 x i32> @llvm.usub.sat.v4i32(
-  <4 x i32> %a,
-  <4 x i32> <i32 2147483871, i32 2147483871, i32 2147483871, i32 2147483871>)
+  <4 x i32> %a, <4 x i32> splat (i32 2147483871))
   %b_sub = call <4 x i32> @llvm.usub.sat.v4i32(
-  <4 x i32> %b,
-  <4 x i32> <i32 2147483887, i32 2147483887, i32 2147483887, i32 2147483887>)
+  <4 x i32> %b, <4 x i32> splat (i32 2147483887))
   %or = or <4 x i32> %a_sub, %b_sub
   %cmp = icmp eq <4 x i32> %or, zeroinitializer
-  %res = select <4 x i1> %cmp, <4 x i32> zeroinitializer,
-  <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %res = select <4 x i1> %cmp,
+  <4 x i32> zeroinitializer,
+  <4 x i32> splat (i32 -2147483648)
   ret <4 x i32> %res
 }
