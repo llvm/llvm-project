@@ -15418,7 +15418,7 @@ TEST_F(FormatTest, AllowShortRecordsOnASingleLine) {
                Style);
   verifyFormat("union foo {};", Style);
 
-  Style.AllowShortRecordsOnASingleLine = FormatStyle::SRS_All;
+  Style.AllowShortRecordsOnASingleLine = FormatStyle::SRS_Always;
 
   verifyFormat("class foo { void bar(); };", Style);
   verifyFormat("class foo {};", Style);
