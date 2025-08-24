@@ -2006,120 +2006,68 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
     SelectInst &SI, ICmpInst *ICI, InstCombiner::BuilderTy &Builder) {
   auto *CI = dyn_cast<ICmpInst>(SI.getCondition());
-  if (!CI) {
+  if (!CI)
     return nullptr;
-  }
 
   Value *CmpLHS = CI->getOperand(0);
   Value *CmpRHS = CI->getOperand(1);
-  if (!match(CmpRHS, m_Zero())) {
+  if (!match(CmpRHS, m_Zero()))
     return nullptr;
-  }
+
   auto Pred = CI->getPredicate();
-  auto *TrueVal = SI.getTrueValue();
-  auto *FalseVal = SI.getFalseValue();
-
-  if (Pred != ICmpInst::ICMP_EQ && Pred != llvm::ICmpInst::ICMP_NE)
+  if (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE)
     return nullptr;
 
-  // Match: icmp eq (or (usub.sat A, IntConst1), (usub.sat B, IntConst2)), 0
   Value *A, *B;
-  ConstantInt *IntConst1, *IntConst2, *PossibleMSBInt;
+  const APInt *Constant1, *Constant2, *PossibleMSB;
+  if (!match(CmpLHS, m_Or(m_Intrinsic<Intrinsic::usub_sat>(m_Value(A),
+                                                           m_APInt(Constant1)),
+                          m_Intrinsic<Intrinsic::usub_sat>(
+                              m_Value(B), m_APInt(Constant2)))))
+    return nullptr;
 
-  if (match(CmpLHS, m_Or(m_Intrinsic<Intrinsic::usub_sat>(
-                             m_Value(A), m_ConstantInt(IntConst1)),
-                         m_Intrinsic<Intrinsic::usub_sat>(
-                             m_Value(B), m_ConstantInt(IntConst2)))) &&
-      (match(TrueVal, m_Zero()) &&
-           match(FalseVal, m_ConstantInt(PossibleMSBInt)) ||
-       match(TrueVal, m_ConstantInt(PossibleMSBInt)) &&
-           match(FalseVal, m_Zero()))) {
-    auto *Ty = A->getType();
-    unsigned BW = Ty->getIntegerBitWidth();
-    APInt MostSignificantBit = APInt::getOneBitSet(BW, BW - 1);
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+  if (!((match(TrueVal, m_Zero()) && match(FalseVal, m_APInt(PossibleMSB))) ||
+        (match(TrueVal, m_APInt(PossibleMSB)) && match(FalseVal, m_Zero()))))
+    return nullptr;
 
-    if (PossibleMSBInt->getValue() != MostSignificantBit)
-      return nullptr;
-    // Ensure IntConst1 and IntConst2 are >= MostSignificantBit
-    if (IntConst1->getValue().ult(MostSignificantBit) ||
-        IntConst2->getValue().ult(MostSignificantBit))
-      return nullptr;
+  auto *Ty = A->getType();
+  auto *VecTy = dyn_cast<VectorType>(Ty);
+  unsigned BW = PossibleMSB->getBitWidth();
+  APInt MostSignificantBit = APInt::getOneBitSet(BW, BW - 1);
 
-    // Rewrite:
-    Value *NewA = Builder.CreateBinaryIntrinsic(
-        Intrinsic::usub_sat, A,
-        ConstantInt::get(Ty, IntConst1->getValue() - MostSignificantBit + 1));
-    Value *NewB = Builder.CreateBinaryIntrinsic(
-        Intrinsic::usub_sat, B,
-        ConstantInt::get(Ty, IntConst2->getValue() - MostSignificantBit + 1));
-    Value *Or = Builder.CreateOr(NewA, NewB);
-    Value *And =
-        Builder.CreateAnd(Or, ConstantInt::get(Ty, MostSignificantBit));
-    return cast<Instruction>(And);
+  if (*PossibleMSB != MostSignificantBit ||
+      Constant1->ult(MostSignificantBit) || Constant2->ult(MostSignificantBit))
+    return nullptr;
+
+  APInt AdjAP1 = *Constant1 - MostSignificantBit + 1;
+  APInt AdjAP2 = *Constant2 - MostSignificantBit + 1;
+
+  Constant *Adj1, *Adj2;
+  if (VecTy) {
+    Constant *Elt1 = ConstantInt::get(VecTy->getElementType(), AdjAP1);
+    Constant *Elt2 = ConstantInt::get(VecTy->getElementType(), AdjAP2);
+    Adj1 = ConstantVector::getSplat(VecTy->getElementCount(), Elt1);
+    Adj2 = ConstantVector::getSplat(VecTy->getElementCount(), Elt2);
+  } else {
+    Adj1 = ConstantInt::get(Ty, AdjAP1);
+    Adj2 = ConstantInt::get(Ty, AdjAP2);
   }
-  Constant *Const1, *Const2, *PossibleMSB;
-  if (match(CmpLHS, m_Or(m_Intrinsic<Intrinsic::usub_sat>(m_Value(A),
-                                                          m_Constant(Const1)),
-                         m_Intrinsic<Intrinsic::usub_sat>(
-                             m_Value(B), m_Constant(Const2)))) &&
-      (match(TrueVal, m_Zero()) && match(FalseVal, m_Constant(PossibleMSB))
-    || match(TrueVal, m_Constant(PossibleMSB) ) && match(FalseVal, m_Zero()))) {
-    auto *VecTy1 = dyn_cast<FixedVectorType>(Const1->getType());
-    auto *VecTy2 = dyn_cast<FixedVectorType>(Const2->getType());
-    auto *VecTyMSB = dyn_cast<FixedVectorType>(PossibleMSB->getType());
-    if (!VecTy1 || !VecTy2 || !VecTyMSB) {
-      return nullptr;
-    }
 
-    unsigned NumElements = VecTy1->getNumElements();
-
-    if (NumElements != VecTy2->getNumElements() ||
-        NumElements != VecTyMSB->getNumElements() || NumElements == 0) {
-      return nullptr;
-    }
-    auto *SplatMSB =
-        dyn_cast<ConstantInt>(PossibleMSB->getAggregateElement(0u));
-    unsigned BW = SplatMSB->getValue().getBitWidth();
-    APInt MostSignificantBit = APInt::getOneBitSet(BW, BW - 1);
-    if (!SplatMSB || SplatMSB->getValue() != MostSignificantBit) {
-      return nullptr;
-    }
-    for (unsigned int i = 1; i < NumElements; ++i) {
-      auto *Element =
-          dyn_cast<ConstantInt>(PossibleMSB->getAggregateElement(i));
-      if (!Element || Element->getValue() != SplatMSB->getValue()) {
-        return nullptr;
-      }
-    }
-    SmallVector<Constant *, 16> Arg1, Arg2;
-    for (unsigned int i = 0; i < NumElements; ++i) {
-      auto *E1 = dyn_cast<ConstantInt>(Const1->getAggregateElement(i));
-      auto *E2 = dyn_cast<ConstantInt>(Const2->getAggregateElement(i));
-      if (!E1 || !E2) {
-        return nullptr;
-      }
-      if (E1->getValue().ult(SplatMSB->getValue()) ||
-          E2->getValue().ult(SplatMSB->getValue())) {
-        return nullptr;
-      }
-      Arg1.emplace_back(
-          ConstantInt::get(A->getType()->getScalarType(),
-                           E1->getValue() - MostSignificantBit + 1));
-      Arg2.emplace_back(
-          ConstantInt::get(B->getType()->getScalarType(),
-                           E2->getValue() - MostSignificantBit + 1));
-    }
-    Constant *ConstVec1 = ConstantVector::get(Arg1);
-    Constant *ConstVec2 = ConstantVector::get(Arg2);
-    Value *NewA =
-        Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, ConstVec1);
-    Value *NewB =
-        Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, B, ConstVec2);
-    Value *Or = Builder.CreateOr(NewA, NewB);
-    Value *And = Builder.CreateAnd(Or, PossibleMSB);
-    return cast<Instruction>(And);
+  Value *NewA = Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, Adj1);
+  Value *NewB = Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, B, Adj2);
+  Value *Or = Builder.CreateOr(NewA, NewB);
+  Constant *MSBConst;
+  if (VecTy) {
+    MSBConst = ConstantVector::getSplat(
+        VecTy->getElementCount(),
+        ConstantInt::get(VecTy->getScalarType(), *PossibleMSB));
+  } else {
+    MSBConst = ConstantInt::get(Ty->getScalarType(), *PossibleMSB);
   }
-  return nullptr;
+  Value *And = Builder.CreateAnd(Or, MSBConst);
+  return cast<Instruction>(And);
 }
 
 /// Visit a SelectInst that has an ICmpInst as its first operand.
