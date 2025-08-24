@@ -49016,8 +49016,7 @@ static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
 
   // TODO: Can we do this for other comparions like 31 ^ A > 31 ^ B ?
   if ((CC == X86::COND_E || CC == X86::COND_NE) &&
-      EFLAGS.getOpcode() == X86ISD::SUB &&
-      !EFLAGS->hasAnyUseOfValue(0)) {
+      EFLAGS.getOpcode() == X86ISD::SUB && !EFLAGS->hasAnyUseOfValue(0)) {
     using namespace llvm::SDPatternMatch;
     SDValue LHS = EFLAGS.getOperand(0);
     SDValue RHS = EFLAGS.getOperand(1);
