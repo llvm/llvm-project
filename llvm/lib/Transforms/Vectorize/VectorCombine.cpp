@@ -1813,6 +1813,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   // erased in the correct order.
   Worklist.push(LI);
 
+  Type *ElemType = VecTy->getElementType();
+
   // Replace extracts with narrow scalar loads.
   for (User *U : LI->users()) {
     auto *EI = cast<ExtractElementInst>(U);
@@ -1826,12 +1828,18 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     Builder.SetInsertPoint(EI);
     Value *GEP =
         Builder.CreateInBoundsGEP(VecTy, Ptr, {Builder.getInt32(0), Idx});
-    auto *NewLoad = cast<LoadInst>(Builder.CreateLoad(
-        VecTy->getElementType(), GEP, EI->getName() + ".scalar"));
+    auto *NewLoad = cast<LoadInst>(
+        Builder.CreateLoad(ElemType, GEP, EI->getName() + ".scalar"));
 
-    Align ScalarOpAlignment = computeAlignmentAfterScalarization(
-        LI->getAlign(), VecTy->getElementType(), Idx, *DL);
+    Align ScalarOpAlignment =
+        computeAlignmentAfterScalarization(LI->getAlign(), ElemType, Idx, *DL);
     NewLoad->setAlignment(ScalarOpAlignment);
+
+    if (auto *ConstIdx = dyn_cast<ConstantInt>(Idx)) {
+      size_t Offset = ConstIdx->getZExtValue() * DL->getTypeStoreSize(ElemType);
+      AAMDNodes OldAAMD = LI->getAAMetadata();
+      NewLoad->setAAMetadata(OldAAMD.adjustForAccess(Offset, ElemType, *DL));
+    }
 
     replaceValue(*EI, *NewLoad, false);
   }
@@ -2826,8 +2834,7 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
     return Value;
   }
   if (auto *CI = dyn_cast<CastInst>(I)) {
-    auto *Value = Builder.CreateCast((Instruction::CastOps)CI->getOpcode(),
-                                     Ops[0], DstTy);
+    auto *Value = Builder.CreateCast(CI->getOpcode(), Ops[0], DstTy);
     propagateIRFlags(Value, ValueList);
     return Value;
   }
