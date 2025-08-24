@@ -15378,7 +15378,7 @@ TEST_F(FormatTest, AllowShortRecordsOnASingleLine) {
   Style.BraceWrapping.AfterStruct = true;
   Style.BraceWrapping.AfterUnion = true;
   Style.BraceWrapping.SplitEmptyRecord = false;
-  Style.AllowShortRecordsOnASingleLine = FormatStyle::SRS_Never;
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
 
   verifyFormat("class foo\n{\n"
                "  void bar();\n"
@@ -15398,7 +15398,7 @@ TEST_F(FormatTest, AllowShortRecordsOnASingleLine) {
                Style);
   verifyFormat("union foo\n{};", Style);
 
-  Style.AllowShortRecordsOnASingleLine = FormatStyle::SRS_Empty;
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
 
   verifyFormat("class foo\n{\n"
                "  void bar();\n"
@@ -15418,7 +15418,7 @@ TEST_F(FormatTest, AllowShortRecordsOnASingleLine) {
                Style);
   verifyFormat("union foo {};", Style);
 
-  Style.AllowShortRecordsOnASingleLine = FormatStyle::SRS_Always;
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
 
   verifyFormat("class foo { void bar(); };", Style);
   verifyFormat("class foo {};", Style);
