@@ -56,7 +56,20 @@ bool X86Disassembler::isImmediateOperand(const Record *Rec) {
          Rec->getValueAsString("OperandType") == "OPERAND_IMMEDIATE";
 }
 
+// A RegClassByHwMode resolves to a different register class per subtarget, but
+// every mode maps to a class with the same encoding and width. Return one of
+// them as a representative so the operand can be treated like a plain register
+// class (for encoding, size, etc.) instead of enumerating each by-hwmode
+// operand name in the switches below.
+static const Record *getRegClassByHwModeRepresentative(const Record *Rec) {
+  const ListInit *Objects = Rec->getValueAsListInit("Objects");
+  assert(Objects->size() && "RegClassByHwMode with no register classes");
+  return Objects->getElementAsRecord(0);
+}
+
 unsigned X86Disassembler::getRegOperandSize(const Record *RegRec) {
+  if (RegRec->isSubClassOf("RegClassByHwMode"))
+    RegRec = getRegClassByHwModeRepresentative(RegRec);
   if (RegRec->isSubClassOf("RegisterClass"))
     return RegRec->getValueAsInt("Alignment");
   if (RegRec->isSubClassOf("RegisterOperand"))
@@ -435,7 +448,10 @@ void RecognizableInstr::handleOperand(bool optional, unsigned &operandIndex,
     ++operandIndex;
   }
 
-  StringRef typeName = (*Operands)[operandIndex].Rec->getName();
+  const Record *OpRec = (*Operands)[operandIndex].Rec;
+  if (OpRec->isSubClassOf("RegClassByHwMode"))
+    OpRec = getRegClassByHwModeRepresentative(OpRec);
+  StringRef typeName = OpRec->getName();
 
   OperandEncoding encoding = encodingFromString(typeName, OpSize);
   // Adjust the encoding type for an operand based on the instruction.
@@ -1018,21 +1034,21 @@ OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
   }
   // clang-format off
   OperandType Type =
-      Switch.Case("i16mem", TYPE_M)
+      Switch.Cases({"i16mem", "i16mem_norex2"}, TYPE_M)
           .Case("i16imm", TYPE_IMM)
           .Case("i16i8imm", TYPE_IMM)
           .Case("GR16", TYPE_R16)
           .Case("GR16orGR32orGR64", TYPE_R16)
-          .Case("i32mem", TYPE_M)
+          .Cases({"i32mem", "i32mem_norex2"}, TYPE_M)
           .Case("i32imm", TYPE_IMM)
           .Case("i32i8imm", TYPE_IMM)
           .Case("GR32", TYPE_R32)
           .Case("GR32orGR64", TYPE_R32)
-          .Case("i64mem", TYPE_M)
+          .Cases({"i64mem", "i64mem_norex2"}, TYPE_M)
           .Case("i64i32imm", TYPE_IMM)
           .Case("i64i8imm", TYPE_IMM)
           .Case("GR64", TYPE_R64)
-          .Case("i8mem", TYPE_M)
+          .Cases({"i8mem", "i8mem_norex2"}, TYPE_M)
           .Case("i8imm", TYPE_IMM)
           .Case("u4imm", TYPE_UIMM8)
           .Case("u8imm", TYPE_UIMM8)
@@ -1048,19 +1064,19 @@ OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
           .Case("FR128", TYPE_XMM)
           .Case("FR64", TYPE_XMM)
           .Case("FR64X", TYPE_XMM)
-          .Case("f64mem", TYPE_M)
-          .Case("sdmem", TYPE_M)
+          .Cases({"f64mem", "f64mem_norex2"}, TYPE_M)
+          .Cases({"sdmem", "sdmem_norex2"}, TYPE_M)
           .Case("FR16X", TYPE_XMM)
           .Case("FR32", TYPE_XMM)
           .Case("FR32X", TYPE_XMM)
-          .Case("f32mem", TYPE_M)
+          .Cases({"f32mem", "f32mem_norex2"}, TYPE_M)
           .Case("f16mem", TYPE_M)
-          .Case("ssmem", TYPE_M)
+          .Cases({"ssmem", "ssmem_norex2"}, TYPE_M)
           .Case("shmem", TYPE_M)
           .Case("RST", TYPE_ST)
           .Case("RSTi", TYPE_ST)
-          .Case("i128mem", TYPE_M)
-          .Case("i256mem", TYPE_M)
+          .Cases({"i128mem", "i128mem_norex2"}, TYPE_M)
+          .Cases({"i256mem", "i256mem_norex2"}, TYPE_M)
           .Case("i512mem", TYPE_M)
           .Case("i512mem_GR16", TYPE_M)
           .Case("i512mem_GR32", TYPE_M)
@@ -1075,16 +1091,16 @@ OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
           .Case("brtarget32", TYPE_REL)
           .Case("brtarget16", TYPE_REL)
           .Case("brtarget8", TYPE_REL)
-          .Case("f80mem", TYPE_M)
+          .Cases({"f80mem", "f80mem_norex2"}, TYPE_M)
           .Case("lea64_8mem", TYPE_M)
           .Case("lea64_16mem", TYPE_M)
           .Case("lea64_32mem", TYPE_M)
           .Case("lea64mem", TYPE_M)
           .Case("VR64", TYPE_MM64)
           .Case("i64imm", TYPE_IMM)
-          .Case("anymem", TYPE_M)
-          .Case("opaquemem", TYPE_M)
-          .Case("sibmem", TYPE_MSIB)
+          .Cases({"anymem", "anymem_norex2"}, TYPE_M)
+          .Cases({"opaquemem", "opaquemem_norex2"}, TYPE_M)
+          .Cases({"sibmem", "sibmem_norex2"}, TYPE_MSIB)
           .Case("SEGMENT_REG", TYPE_SEGMENTREG)
           .Case("DEBUG_REG", TYPE_DEBUGREG)
           .Case("CONTROL_REG", TYPE_CONTROLREG)
@@ -1367,33 +1383,33 @@ OperandEncoding RecognizableInstr::memoryEncodingFromString(StringRef Str,
   // clang-format off
   auto Encoding =
       StringSwitch<OperandEncoding>(Str)
-          .Case("i16mem", ENCODING_RM)
-          .Case("i32mem", ENCODING_RM)
-          .Case("i64mem", ENCODING_RM)
-          .Case("i8mem", ENCODING_RM)
+          .Cases({"i16mem", "i16mem_norex2"}, ENCODING_RM)
+          .Cases({"i32mem", "i32mem_norex2"}, ENCODING_RM)
+          .Cases({"i64mem", "i64mem_norex2"}, ENCODING_RM)
+          .Cases({"i8mem", "i8mem_norex2"}, ENCODING_RM)
           .Case("shmem", ENCODING_RM)
-          .Case("ssmem", ENCODING_RM)
-          .Case("sdmem", ENCODING_RM)
+          .Cases({"ssmem", "ssmem_norex2"}, ENCODING_RM)
+          .Cases({"sdmem", "sdmem_norex2"}, ENCODING_RM)
           .Case("f128mem", ENCODING_RM)
           .Case("f256mem", ENCODING_RM)
           .Case("f512mem", ENCODING_RM)
-          .Case("f64mem", ENCODING_RM)
-          .Case("f32mem", ENCODING_RM)
+          .Cases({"f64mem", "f64mem_norex2"}, ENCODING_RM)
+          .Cases({"f32mem", "f32mem_norex2"}, ENCODING_RM)
           .Case("f16mem", ENCODING_RM)
-          .Case("i128mem", ENCODING_RM)
-          .Case("i256mem", ENCODING_RM)
+          .Cases({"i128mem", "i128mem_norex2"}, ENCODING_RM)
+          .Cases({"i256mem", "i256mem_norex2"}, ENCODING_RM)
           .Case("i512mem", ENCODING_RM)
           .Case("i512mem_GR16", ENCODING_RM)
           .Case("i512mem_GR32", ENCODING_RM)
           .Case("i512mem_GR64", ENCODING_RM)
-          .Case("f80mem", ENCODING_RM)
+          .Cases({"f80mem", "f80mem_norex2"}, ENCODING_RM)
           .Case("lea64_8mem", ENCODING_RM)
           .Case("lea64_16mem", ENCODING_RM)
           .Case("lea64_32mem", ENCODING_RM)
           .Case("lea64mem", ENCODING_RM)
-          .Case("anymem", ENCODING_RM)
-          .Case("opaquemem", ENCODING_RM)
-          .Case("sibmem", ENCODING_SIB)
+          .Cases({"anymem", "anymem_norex2"}, ENCODING_RM)
+          .Cases({"opaquemem", "opaquemem_norex2"}, ENCODING_RM)
+          .Cases({"sibmem", "sibmem_norex2"}, ENCODING_SIB)
           .Case("vx32mem", ENCODING_VSIB)
           .Case("vx64mem", ENCODING_VSIB)
           .Case("vy32mem", ENCODING_VSIB)
