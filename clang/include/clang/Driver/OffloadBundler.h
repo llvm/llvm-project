@@ -120,7 +120,7 @@ public:
     static llvm::Expected<CompressedBundleHeader> tryParse(llvm::StringRef);
   };
 
-  static inline const uint16_t DefaultVersion = 2;
+  static inline const uint16_t DefaultVersion = 3;
 
   static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   compress(llvm::compression::Params P, const llvm::MemoryBuffer &Input,

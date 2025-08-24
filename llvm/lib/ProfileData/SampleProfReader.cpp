@@ -410,7 +410,7 @@ std::error_code SampleProfileReaderText::readImpl() {
       DenseMap<StringRef, uint64_t> TargetCountMap;
       DenseMap<StringRef, uint64_t> TypeCountMap;
       uint32_t Depth, LineOffset, Discriminator;
-      LineType LineTy;
+      LineType LineTy = LineType::BodyProfile;
       uint64_t FunctionHash = 0;
       uint32_t Attributes = 0;
       bool IsFlat = false;
@@ -419,9 +419,21 @@ std::error_code SampleProfileReaderText::readImpl() {
       if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
                      Discriminator, FName, TargetCountMap, TypeCountMap,
                      FunctionHash, Attributes, IsFlat)) {
-        reportError(LineIt.line_number(),
-                    "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
-                        *LineIt);
+        switch (LineTy) {
+        case LineType::Metadata:
+          reportError(LineIt.line_number(),
+                      "Cannot parse metadata: " + *LineIt);
+          break;
+        case LineType::VirtualCallTypeProfile:
+          reportError(LineIt.line_number(),
+                      "Expected 'vtables [mangled_vtable:NUM]+', found " +
+                          *LineIt);
+          break;
+        default:
+          reportError(LineIt.line_number(),
+                      "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
+                          *LineIt);
+        }
         return sampleprof_error::malformed;
       }
       if (LineTy != LineType::Metadata && Depth == DepthMetadata) {
@@ -1950,7 +1962,7 @@ std::error_code SampleProfileReaderGCC::readImpl() {
 }
 
 bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
-  StringRef Magic(reinterpret_cast<const char *>(Buffer.getBufferStart()));
+  StringRef Magic(Buffer.getBufferStart());
   return Magic == "adcg*704";
 }
 

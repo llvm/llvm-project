@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -54,8 +55,8 @@ X86FrameLowering::X86FrameLowering(const X86Subtarget &STI,
   SlotSize = TRI->getSlotSize();
   Is64Bit = STI.is64Bit();
   IsLP64 = STI.isTarget64BitLP64();
-  // standard x86_64 and NaCl use 64-bit frame/stack pointers, x32 - 32-bit.
-  Uses64BitFramePtr = STI.isTarget64BitLP64() || STI.isTargetNaCl64();
+  // standard x86_64 uses 64-bit frame/stack pointers, x32 - 32-bit.
+  Uses64BitFramePtr = STI.isTarget64BitLP64();
   StackPtr = TRI->getStackRegister();
 }
 
@@ -2412,7 +2413,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   DebugLoc DL;
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
-  // standard x86_64 and NaCl use 64-bit frame/stack pointers, x32 - 32-bit.
+  // standard x86_64 uses 64-bit frame/stack pointers, x32 - 32-bit.
   const bool Is64BitILP32 = STI.isTarget64BitILP32();
   Register FramePtr = TRI->getFrameRegister(MF);
   Register MachineFramePtr =
@@ -2678,7 +2679,7 @@ StackOffset X86FrameLowering::getFrameIndexReference(const MachineFunction &MF,
   // object.
   // We need to factor in additional offsets applied during the prologue to the
   // frame, base, and stack pointer depending on which is used.
-  int Offset = MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
+  int64_t Offset = MFI.getObjectOffset(FI) - getOffsetOfLocalArea();
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   unsigned CSSize = X86FI->getCalleeSavedFrameSize();
   uint64_t StackSize = MFI.getStackSize();
@@ -4212,6 +4213,14 @@ void X86FrameLowering::processFunctionBeforeFrameFinalized(
   // emitPrologue if it gets called and emits CFI.
   MF.setHasWinCFI(false);
 
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // If the frame is big enough that we might need to scavenge a register to
+  // handle huge offsets, reserve a stack slot for that now.
+  if (!isInt<32>(MFI.estimateStackSize(MF))) {
+    int FI = MFI.CreateStackObject(SlotSize, Align(SlotSize), false);
+    RS->addScavengingFrameIndex(FI);
+  }
+
   // If we are using Windows x64 CFI, ensure that the stack is always 8 byte
   // aligned. The format doesn't support misaligned stack adjustments.
   if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
@@ -4241,7 +4250,7 @@ void X86FrameLowering::adjustFrameForMsvcCxxEh(MachineFunction &MF) const {
   for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
     for (WinEHHandlerType &H : TBME.HandlerArray) {
       int FrameIndex = H.CatchObj.FrameIndex;
-      if (FrameIndex != INT_MAX) {
+      if ((FrameIndex != INT_MAX) && MFI.getObjectOffset(FrameIndex) == 0) {
         // Ensure alignment.
         unsigned Align = MFI.getObjectAlign(FrameIndex).value();
         MinFixedObjOffset -= std::abs(MinFixedObjOffset) % Align;

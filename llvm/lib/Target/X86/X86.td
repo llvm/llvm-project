@@ -355,6 +355,9 @@ def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
 def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
                                  "Support status flags update suppression">;
+// FeatureCF is not enabled by default for APXF and targets that support APXF
+// due to performance reason, though it is part of APXF. Users need to enable it
+// manually.
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
@@ -1169,7 +1172,6 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
-                                                  FeatureCF,
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
@@ -1291,7 +1293,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> ADLAdditionalTuning = [TuningPERMFalseDeps,
                                                 TuningPreferMovmskOverVTest,
                                                 TuningFastImmVectorShift];
-  list<SubtargetFeature> ADLTuning = !listconcat(SKLTuning, ADLAdditionalTuning);
+  list<SubtargetFeature> ADLRemoveTuning = [TuningPOPCNTFalseDeps];
+  list<SubtargetFeature> ADLTuning =
+      !listremove(!listconcat(SKLTuning, ADLAdditionalTuning), ADLRemoveTuning);
   list<SubtargetFeature> ADLFeatures =
     !listconcat(TRMFeatures, ADLAdditionalFeatures);
 
@@ -1331,7 +1335,7 @@ def ProcessorFeatures {
   // Pantherlake
   list<SubtargetFeature> PTLAdditionalFeatures = [FeaturePREFETCHI];
   list<SubtargetFeature> PTLFeatures =
-    !listconcat(ARLSFeatures, PTLAdditionalFeatures);
+    !listremove(!listconcat(ARLSFeatures, PTLAdditionalFeatures), [FeatureWIDEKL]);
 
 
   // Clearwaterforest
@@ -1342,7 +1346,7 @@ def ProcessorFeatures {
                                                   FeatureSM4,
                                                   FeatureUSERMSR];
   list<SubtargetFeature> CWFFeatures =
-    !listconcat(SRFFeatures, CWFAdditionalFeatures);
+    !listremove(!listconcat(SRFFeatures, CWFAdditionalFeatures), [FeatureWIDEKL]);
 
   // Knights Landing
   list<SubtargetFeature> KNLFeatures = [FeatureX87,

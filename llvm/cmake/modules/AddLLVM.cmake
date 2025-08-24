@@ -99,7 +99,7 @@ function(llvm_update_compile_flags name)
 endfunction()
 
 function(add_llvm_symbol_exports target_name export_file)
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     set(native_export_file "${target_name}.exports")
     add_custom_command(OUTPUT ${native_export_file}
       COMMAND sed -e "s/^/_/" < ${export_file} > ${native_export_file}
@@ -108,7 +108,7 @@ function(add_llvm_symbol_exports target_name export_file)
       COMMENT "Creating export file for ${target_name}")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-exported_symbols_list,\"${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}\"")
-  elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     # FIXME: `-Wl,-bE:` bypasses whatever handling there is in the build
     # compiler driver to defer to the specified export list.
     set(native_export_file "${export_file}")
@@ -268,7 +268,7 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     endif()
   endif()
 
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     include(CheckLinkerFlag)
     # Linkers that support Darwin allow a setting to internalize all symbol exports,
     # aiding in reducing binary size and often is applicable for executables.
@@ -315,11 +315,11 @@ function(add_link_opts target_name)
   # linker in a context where the optimizations are not important.
   if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     if(NOT LLVM_NO_DEAD_STRIP)
-      if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+      if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
         # ld64's implementation of -dead_strip breaks tools that use plugins.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-dead_strip")
-      elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
+      elseif("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
         # Support for ld -z discard-unused=sections was only added in
         # Solaris 11.4.  GNU ld ignores it, but warns every time.
         check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
@@ -333,7 +333,7 @@ function(add_link_opts target_name)
                      LINK_FLAGS " -Wl,--gc-sections")
       endif()
     else() #LLVM_NO_DEAD_STRIP
-      if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+      if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-bnogc")
       endif()
@@ -345,7 +345,7 @@ function(add_link_opts target_name)
                  LINK_FLAGS " -Wl,-no_warn_duplicate_libraries")
   endif()
 
-  if(ARG_SUPPORT_PLUGINS AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  if(ARG_SUPPORT_PLUGINS AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-brtl")
   endif()
@@ -667,7 +667,7 @@ function(llvm_add_library name)
     # that are used across shared objects which we can't hide.
     if (LLVM_BUILD_LLVM_DYLIB_VIS AND NOT BUILD_SHARED_LIBS AND NOT APPLE AND
         (NOT (WIN32 OR CYGWIN) OR ((MINGW OR CYGWIN) AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")) AND
-        NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND
+        NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX") AND
         NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET)
 
       set_target_properties(${name} PROPERTIES
@@ -1094,7 +1094,7 @@ macro(add_llvm_executable name)
     llvm_update_compile_flags(${name})
   endif()
 
-  if (ARG_SUPPORT_PLUGINS AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  if (ARG_SUPPORT_PLUGINS AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(LLVM_NO_DEAD_STRIP On)
   endif()
 
@@ -1417,7 +1417,7 @@ function(export_executable_symbols target)
     # CMake doesn't set CMAKE_EXE_EXPORTS_${lang}_FLAG on Solaris, so
     # ENABLE_EXPORTS has no effect.  While Solaris ld defaults to -rdynamic
     # behaviour, GNU ld needs it.
-    if (APPLE OR ${CMAKE_SYSTEM_NAME} STREQUAL "SunOS")
+    if (APPLE OR "${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
       set_property(TARGET ${target} APPEND_STRING PROPERTY
         LINK_FLAGS " -rdynamic")
     endif()
@@ -2540,7 +2540,7 @@ function(llvm_setup_rpath name)
   if (APPLE)
     set(_install_name_dir INSTALL_NAME_DIR "@rpath")
     set(_install_rpath "@loader_path/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
-  elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND BUILD_SHARED_LIBS)
+  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX" AND BUILD_SHARED_LIBS)
     # $ORIGIN is not interpreted at link time by aix ld.
     # Since BUILD_SHARED_LIBS is only recommended for use by developers,
     # hardcode the rpath to build/install lib dir first in this mode.
@@ -2549,7 +2549,7 @@ function(llvm_setup_rpath name)
   elseif(UNIX)
     set(_build_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
     set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
-    if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
+    if("${CMAKE_SYSTEM_NAME}" MATCHES "(FreeBSD|DragonFly)")
       set_property(TARGET ${name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-z,origin ")
     endif()
@@ -2567,7 +2567,7 @@ function(llvm_setup_rpath name)
   # On AIX, the tool chain doesn't support modifying rpaths/libpaths for XCOFF
   # on install at the moment, so BUILD_WITH_INSTALL_RPATH is required.
   if("${CMAKE_BUILD_RPATH}" STREQUAL "")
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin|AIX")
+    if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin|AIX")
       set_property(TARGET ${name} PROPERTY BUILD_WITH_INSTALL_RPATH ON)
     else()
       set_property(TARGET ${name} APPEND PROPERTY BUILD_RPATH "${_build_rpath}")

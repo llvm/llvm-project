@@ -737,15 +737,6 @@ let Predicates = [HasSVE_or_SME] in {
   defm FABS_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b100, "fabs", AArch64fabs_mt>;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b101, "fneg", AArch64fneg_mt>;
 
-  foreach VT = [nxv2bf16, nxv4bf16, nxv8bf16] in {
-    // No dedicated instruction, so just clear the sign bit.
-    def : Pat<(VT (fabs VT:$op)),
-              (AND_ZI $op, (i64 (logical_imm64_XFORM(i64 0x7fff7fff7fff7fff))))>;
-    // No dedicated instruction, so just invert the sign bit.
-    def : Pat<(VT (fneg VT:$op)),
-              (EOR_ZI $op, (i64 (logical_imm64_XFORM(i64 0x8000800080008000))))>;
-  }
-
   // zext(cmpeq(x, splat(0))) -> cnot(x)
   def : Pat<(nxv16i8 (zext (nxv16i1 (AArch64setcc_z (nxv16i1 (SVEAllActive):$Pg), nxv16i8:$Op2, (SVEDup0), SETEQ)))),
             (CNOT_ZPmZ_B $Op2, $Pg, $Op2)>;
@@ -1030,7 +1021,9 @@ let Predicates = [HasNonStreamingSVE_or_SME2p2] in {
 let Predicates = [HasSVE_or_SME] in {
   defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
   defm INSR_ZV : sve_int_perm_insrv<"insr", AArch64insr>;
-  defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext>;
+  defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext, "EXT_ZZI_CONSTRUCTIVE">;
+
+  def EXT_ZZI_CONSTRUCTIVE : UnpredRegImmPseudo<ZPR8, imm0_255>;
 
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", AArch64rbit_mt>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", AArch64revb_mt>;
@@ -2140,21 +2133,37 @@ let Predicates = [HasSVE_or_SME] in {
             (LASTB_VPZ_D (PTRUE_D 31), ZPR:$Z1), dsub))>;
 
   // Splice with lane bigger or equal to 0
-  foreach VT = [nxv16i8] in
+  foreach VT = [nxv16i8] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_255 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_255 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
-  foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in
+  foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_127 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_127 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
-  foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in
+  foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_63 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_63 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
-  foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in
+  foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_31 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_31 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", SETUGE, SETULE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", SETUGT, SETULT>;
@@ -2634,16 +2643,22 @@ let Predicates = [HasSVE_or_SME] in {
   // These get expanded to individual LDR_ZXI/STR_ZXI instructions in
   // AArch64ExpandPseudoInsts.
   let mayLoad = 1, hasSideEffects = 0 in {
-    def LDR_ZZXI   : Pseudo<(outs   ZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs   ZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs ZZZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+
+    def LDR_ZZXI   : Pseudo<(outs   ZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
     def LDR_ZZZXI  : Pseudo<(outs  ZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_PPXI   : Pseudo<(outs PPR2:$pp), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_PPXI   : Pseudo<(outs   PPR2:$pp), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
   }
   let mayStore = 1, hasSideEffects = 0 in {
-    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs), (ins   ZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs), (ins ZZZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+
+    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
     def STR_ZZZXI  : Pseudo<(outs), (ins  ZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_PPXI   : Pseudo<(outs), (ins PPR2:$pp, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_PPXI   : Pseudo<(outs), (ins   PPR2:$pp, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
   }
 
   let AddedComplexity = 1 in {
@@ -4034,6 +4049,36 @@ let Predicates = [HasSVE2_or_SME] in {
   defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", AArch64bsl2n>;
   defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  AArch64nbsl>;
 
+  multiclass binary_bitwise<ValueType VT, SDPatternOperator InOp, SDPatternOperator OutOp> {
+    def : Pat<(InOp VT:$op1, VT:$op2), (OutOp $op1, $op2)>;
+
+    def : Pat<(SVEType<VT>.DSub (InOp V64:$op1, V64:$op2)),
+              (EXTRACT_SUBREG (OutOp (INSERT_SUBREG (IMPLICIT_DEF), (SVEType<VT>.DSub $op1), dsub),
+                                     (INSERT_SUBREG (IMPLICIT_DEF), (SVEType<VT>.DSub $op2), dsub)), dsub)>;
+
+    def : Pat<(SVEType<VT>.ZSub (InOp V128:$op1, V128:$op2)),
+              (EXTRACT_SUBREG (OutOp (INSERT_SUBREG (IMPLICIT_DEF), (SVEType<VT>.ZSub $op1), zsub),
+                                     (INSERT_SUBREG (IMPLICIT_DEF), (SVEType<VT>.ZSub $op2), zsub)), zsub)>;
+  }
+
+  foreach VT = [nxv16i8, nxv8i16, nxv4i32, nxv2i64] in {
+    // EON (a, b) = BSL2N (a, a, b) = BSL2N (b, b, a)
+    defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (vnot (xor node:$op1, node:$op2))>,
+                              OutPatFrag<(ops node:$op1, node:$op2), (BSL2N_ZZZZ $op1, $op1, $op2)>>;
+
+    // NAND (a, b) = NBSL (a, b, b) = NBSL (b, a, a)
+    defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (vnot (and node:$op1, node:$op2))>,
+                              OutPatFrag<(ops node:$op1, node:$op2), (NBSL_ZZZZ $op2, $op1, $op1)>>;
+
+    // NOR (a, b) = NBSL (a, b, a) = NBSL (b, a, b)
+    defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (vnot (or node:$op1, node:$op2))>,
+                              OutPatFrag<(ops node:$op1, node:$op2), (NBSL_ZZZZ $op2, $op1, $op2)>>;
+
+    // ORN (a, b) = BSL2N (a, b, a)
+    defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (or node:$op1, (vnot node:$op2))>,
+                              OutPatFrag<(ops node:$op1, node:$op2), (BSL2N_ZZZZ $op1, $op2, $op1)>>;
+  }
+
   // SVE2 bitwise xor and rotate right by immediate
   defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar", int_aarch64_sve_xar>;
 
@@ -4363,7 +4408,7 @@ def : InstAlias<"pfalse\t$Pd", (PFALSE PPRorPNR8:$Pd), 0>;
 // Non-widening BFloat16 to BFloat16 instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasSVEB16B16] in {
+let Predicates = [HasSVEB16B16, HasNonStreamingSVE_or_SME2] in {
 defm BFADD_ZZZ : sve_fp_3op_u_zd_bfloat<0b000, "bfadd", AArch64fadd>;
 defm BFSUB_ZZZ : sve_fp_3op_u_zd_bfloat<0b001, "bfsub", AArch64fsub>;
 defm BFMUL_ZZZ : sve_fp_3op_u_zd_bfloat<0b010, "bfmul", AArch64fmul>;
@@ -4396,9 +4441,9 @@ defm BFMLS_ZZZI : sve_fp_fma_by_indexed_elem_bfloat<"bfmls", 0b11, AArch64fmlsid
 defm BFMUL_ZZZI : sve_fp_fmul_by_indexed_elem_bfloat<"bfmul", AArch64fmulidx>;
 
 defm BFCLAMP_ZZZ : sve_fp_clamp_bfloat<"bfclamp", AArch64fclamp>;
-} // End HasSVEB16B16
+} // End HasSVEB16B16, HasNonStreamingSVE_or_SME2
 
-let Predicates = [HasSVEB16B16, UseExperimentalZeroingPseudos] in {
+let Predicates = [HasSVEB16B16, HasNonStreamingSVE_or_SME2, UseExperimentalZeroingPseudos] in {
 defm BFADD_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fadd>;
 defm BFSUB_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fsub>;
 defm BFMUL_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmul>;
@@ -4406,7 +4451,7 @@ defm BFMAXNM_ZPZZ : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmaxnm>;
 defm BFMINNM_ZPZZ : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fminnm>;
 defm BFMIN_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmin>;
 defm BFMAX_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmax>;
-} // HasSVEB16B16, UseExperimentalZeroingPseudos
+} // HasSVEB16B16, HasNonStreamingSVE_or_SME2, UseExperimentalZeroingPseudos
 
 let Predicates = [HasSVEBFSCALE] in {
   def BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", DestructiveBinary>;

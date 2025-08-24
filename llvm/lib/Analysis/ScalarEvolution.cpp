@@ -67,7 +67,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -600,6 +599,9 @@ static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
 
   if (const auto *LGV = dyn_cast<GlobalValue>(LV)) {
     const auto *RGV = cast<GlobalValue>(RV);
+
+    if (auto L = LGV->getLinkage() - RGV->getLinkage())
+      return L;
 
     const auto IsGVNameSemantic = [&](const GlobalValue *GV) {
       auto LT = GV->getLinkage();
@@ -2677,6 +2679,20 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
         SmallVector<const SCEV *, 4> NewOps(AddExpr->operands());
         NewOps[0] = getConstant(ConstAdd);
         return getAddExpr(NewOps, PreservedFlags);
+      }
+    }
+
+    // Try to push the constant operand into a ZExt: A + zext (-A + B) -> zext
+    // (B), if trunc (A) + -A + B  does not unsigned-wrap.
+    const SCEVAddExpr *InnerAdd;
+    if (match(B, m_scev_ZExt(m_scev_Add(InnerAdd)))) {
+      const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType());
+      if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
+          getZeroExtendExpr(NarrowA, B->getType()) == A &&
+          hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
+                                         SCEV::FlagAnyWrap),
+                   SCEV::FlagNUW)) {
+        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
       }
     }
   }
@@ -7267,7 +7283,7 @@ ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops,
                                        bool &Precise) {
   Precise = true;
   // Do a bounded search of the def relation of the requested SCEVs.
-  SmallSet<const SCEV *, 16> Visited;
+  SmallPtrSet<const SCEV *, 16> Visited;
   SmallVector<const SCEV *> Worklist;
   auto pushOp = [&](const SCEV *S) {
     if (!Visited.insert(S).second)
@@ -7418,7 +7434,15 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
       if (auto *SI = dyn_cast<StoreInst>(I))
         return !SI->isSimple();
 
-      return I->mayThrow() || I->mayWriteToMemory();
+      if (I->mayThrow())
+        return true;
+
+      // Non-volatile memset / memcpy do not count as side-effect for forward
+      // progress.
+      if (isa<MemIntrinsic>(I) && !I->isVolatile())
+        return false;
+
+      return I->mayWriteToMemory();
     };
 
     LoopProperties LP = {/* HasNoAbnormalExits */ true,
@@ -11415,8 +11439,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
       XNonConstOp = X;
       XFlagsPresent = ExpectedFlags;
     }
-    if (!isa<SCEVConstant>(XConstOp) ||
-        (XFlagsPresent & ExpectedFlags) != ExpectedFlags)
+    if (!isa<SCEVConstant>(XConstOp))
       return false;
 
     if (!splitBinaryAdd(Y, YConstOp, YNonConstOp, YFlagsPresent)) {
@@ -11425,12 +11448,20 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
       YFlagsPresent = ExpectedFlags;
     }
 
-    if (!isa<SCEVConstant>(YConstOp) ||
-        (YFlagsPresent & ExpectedFlags) != ExpectedFlags)
-      return false;
-
     if (YNonConstOp != XNonConstOp)
       return false;
+
+    if (!isa<SCEVConstant>(YConstOp))
+      return false;
+
+    // When matching ADDs with NUW flags (and unsigned predicates), only the
+    // second ADD (with the larger constant) requires NUW.
+    if ((YFlagsPresent & ExpectedFlags) != ExpectedFlags)
+      return false;
+    if (ExpectedFlags != SCEV::FlagNUW &&
+        (XFlagsPresent & ExpectedFlags) != ExpectedFlags) {
+      return false;
+    }
 
     OutC1 = cast<SCEVConstant>(XConstOp)->getAPInt();
     OutC2 = cast<SCEVConstant>(YConstOp)->getAPInt();
@@ -11469,7 +11500,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_ULE:
-    // (X + C1)<nuw> u<= (X + C2)<nuw> for C1 u<= C2.
+    // (X + C1) u<= (X + C2)<nuw> for C1 u<= C2.
     if (MatchBinaryAddToConst(LHS, RHS, C1, C2, SCEV::FlagNUW) && C1.ule(C2))
       return true;
 
@@ -11479,7 +11510,7 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_ULT:
-    // (X + C1)<nuw> u< (X + C2)<nuw> if C1 u< C2.
+    // (X + C1) u< (X + C2)<nuw> if C1 u< C2.
     if (MatchBinaryAddToConst(LHS, RHS, C1, C2, SCEV::FlagNUW) && C1.ult(C2))
       return true;
     break;
@@ -14919,6 +14950,29 @@ const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
 
   if (!AddRec)
     return nullptr;
+
+  // Check if any of the transformed predicates is known to be false. In that
+  // case, it doesn't make sense to convert to a predicated AddRec, as the
+  // versioned loop will never execute.
+  for (const SCEVPredicate *Pred : TransformPreds) {
+    auto *WrapPred = dyn_cast<SCEVWrapPredicate>(Pred);
+    if (!WrapPred || WrapPred->getFlags() != SCEVWrapPredicate::IncrementNSSW)
+      continue;
+
+    const SCEVAddRecExpr *AddRecToCheck = WrapPred->getExpr();
+    const SCEV *ExitCount = getBackedgeTakenCount(AddRecToCheck->getLoop());
+    if (isa<SCEVCouldNotCompute>(ExitCount))
+      continue;
+
+    const SCEV *Step = AddRecToCheck->getStepRecurrence(*this);
+    if (!Step->isOne())
+      continue;
+
+    ExitCount = getTruncateOrSignExtend(ExitCount, Step->getType());
+    const SCEV *Add = getAddExpr(AddRecToCheck->getStart(), ExitCount);
+    if (isKnownPredicate(CmpInst::ICMP_SLT, Add, AddRecToCheck->getStart()))
+      return nullptr;
+  }
 
   // Since the transformation was successful, we can now transfer the SCEV
   // predicates.

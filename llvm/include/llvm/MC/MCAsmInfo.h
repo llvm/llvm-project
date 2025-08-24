@@ -35,6 +35,7 @@ class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class MCValue;
+class Triple;
 class raw_ostream;
 
 namespace WinEH {
@@ -485,6 +486,9 @@ public:
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
 
+  virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
+                                    const Triple &, raw_ostream &) const {}
+
   /// Return true if the .section directive should be omitted when
   /// emitting \p SectionName.  For example:
   ///
@@ -493,6 +497,10 @@ public:
   /// returns false => .section .text,#alloc,#execinstr
   /// returns true  => .text
   virtual bool shouldOmitSectionDirective(StringRef SectionName) const;
+
+  // Return true if a .align directive should use "optimized nops" to fill
+  // instead of 0s.
+  virtual bool useCodeAlign(const MCSection &Sec) const { return false; }
 
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;

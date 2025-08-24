@@ -93,13 +93,13 @@ FlatAffineValueConstraints::addAffineForOpDomain(AffineForOp forOp) {
       int64_t lb = forOp.getConstantLowerBound();
       dividend[pos] = 1;
       dividend.back() -= lb;
-      addLocalFloorDiv(dividend, step);
+      unsigned qPos = addLocalFloorDiv(dividend, step);
       // Second constraint: (iv - lb) - step * q = 0.
       SmallVector<int64_t, 8> eq(getNumCols(), 0);
       eq[pos] = 1;
       eq.back() -= lb;
       // For the local var just added above.
-      eq[getNumCols() - 2] = -step;
+      eq[qPos] = -step;
       addEquality(eq);
     }
   }

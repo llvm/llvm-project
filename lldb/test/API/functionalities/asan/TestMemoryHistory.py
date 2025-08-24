@@ -41,18 +41,16 @@ class MemoryHistoryTestCase(TestBase):
         self.line_free = line_number("main.c", "// free line")
         self.line_breakpoint = line_number("main.c", "// break line")
 
-    # Test line numbers: rdar://126237493
-    # for libsanitizers and remove `skip_line_numbers` parameter
-    def check_traces(self, skip_line_numbers=False):
+    def check_traces(self):
         self.expect(
             "memory history 'pointer'",
             substrs=[
                 "Memory deallocated by Thread",
                 "a.out`f2",
-                "main.c" if skip_line_numbers else f"main.c:{self.line_free}",
+                f"main.c:{self.line_free}",
                 "Memory allocated by Thread",
                 "a.out`f1",
-                "main.c" if skip_line_numbers else f"main.c:{self.line_malloc}",
+                f"main.c:{self.line_malloc}",
             ],
         )
 
@@ -76,7 +74,7 @@ class MemoryHistoryTestCase(TestBase):
         self.runCmd("env SanitizersAllocationTraces=all")
 
         self.run_to_breakpoint(target)
-        self.check_traces(skip_line_numbers=True)
+        self.check_traces()
 
     def libsanitizers_asan_tests(self):
         target = self.createTestTarget()
@@ -84,7 +82,7 @@ class MemoryHistoryTestCase(TestBase):
         self.runCmd("env SanitizersAddress=1 MallocSanitizerZone=1")
 
         self.run_to_breakpoint(target)
-        self.check_traces(skip_line_numbers=True)
+        self.check_traces()
 
         self.runCmd("continue")
 
@@ -94,7 +92,7 @@ class MemoryHistoryTestCase(TestBase):
             "Process should be stopped due to ASan report",
             substrs=["stopped", "stop reason = Use of deallocated memory"],
         )
-        self.check_traces(skip_line_numbers=True)
+        self.check_traces()
 
         # do the same using SB API
         process = self.dbg.GetSelectedTarget().process
