@@ -1254,8 +1254,10 @@ namespace cwg181 { // cwg181: 2.7
   namespace X {
     template <template X<class T> > struct A { };
     // expected-error@-1 +{{}}
+    //   expected-note@-2 {{did you mean to use 'typename'?}}
     template <template X<class T> > void f(A<X>) { }
     // expected-error@-1 +{{}}
+    //   expected-note@-2 {{did you mean to use 'typename'?}}
   }
 
   namespace Y {
