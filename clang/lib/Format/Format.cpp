@@ -664,7 +664,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortRecordStyle> {
   static void enumeration(IO &IO, FormatStyle::ShortRecordStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::SRS_Never);
     IO.enumCase(Value, "Empty", FormatStyle::SRS_Empty);
-    IO.enumCase(Value, "All", FormatStyle::SRS_All);
+    IO.enumCase(Value, "Always", FormatStyle::SRS_Always);
   }
 };
 
