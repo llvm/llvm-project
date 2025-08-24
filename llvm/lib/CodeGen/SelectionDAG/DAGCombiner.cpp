@@ -11281,6 +11281,11 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
   unsigned BitWidth = VT.getScalarSizeInBits();
   SDLoc DL(N);
 
+  // fold (fshl/fshr C0, C1, C2) -> C3
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(N->getOpcode(), DL, VT, {N0, N1, N2}))
+    return C;
+
   // fold (fshl N0, N1, 0) -> N0
   // fold (fshr N0, N1, 0) -> N1
   if (isPowerOf2_32(BitWidth))
@@ -15132,7 +15137,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       return foldedExt;
   } else if (ISD::isNON_EXTLoad(N0.getNode()) &&
              ISD::isUNINDEXEDLoad(N0.getNode()) &&
-             TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, VT, N0.getValueType())) {
+             TLI.isLoadExtLegal(ISD::EXTLOAD, VT, N0.getValueType())) {
     bool DoXform = true;
     SmallVector<SDNode *, 4> SetCCs;
     if (!N0.hasOneUse())
@@ -18983,7 +18988,9 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     // single-step fp_round we want to fold to.
     // In other words, double rounding isn't the same as rounding.
     // Also, this is a value preserving truncation iff both fp_round's are.
-    if (DAG.getTarget().Options.UnsafeFPMath || N0IsTrunc)
+    if ((N->getFlags().hasAllowContract() &&
+         N0->getFlags().hasAllowContract()) ||
+        N0IsTrunc)
       return DAG.getNode(
           ISD::FP_ROUND, DL, VT, N0.getOperand(0),
           DAG.getIntPtrConstant(NIsTrunc && N0IsTrunc, DL, /*isTarget=*/true));
