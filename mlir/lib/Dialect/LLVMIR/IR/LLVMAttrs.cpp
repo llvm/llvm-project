@@ -375,16 +375,19 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
 }
 
 FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
-  if (auto stringKey = dyn_cast<StringAttr>(key)) {
-    if (contains(stringKey))
-      return UnitAttr::get(getContext());
+  auto stringKey = dyn_cast<StringAttr>(key);
+  if (!stringKey)
+    return failure();
 
-    if (contains((std::string("+") + stringKey.strref()).str()))
-      return BoolAttr::get(getContext(), true);
+  if (contains(stringKey))
+    return UnitAttr::get(getContext());
 
-    if (contains((std::string("-") + stringKey.strref()).str()))
-      return BoolAttr::get(getContext(), false);
-  }
+  if (contains((std::string("+") + stringKey.strref()).str()))
+    return BoolAttr::get(getContext(), true);
+
+  if (contains((std::string("-") + stringKey.strref()).str()))
+    return BoolAttr::get(getContext(), false);
+
   return failure();
 }
 

@@ -25,7 +25,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-
 // -----
 
 // Check that newer processor features, like AMX, are appropriated derived and queryable.
