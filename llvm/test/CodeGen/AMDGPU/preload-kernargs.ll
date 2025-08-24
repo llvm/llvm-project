@@ -837,9 +837,9 @@ define amdgpu_kernel void @i64_kernel_preload_arg(ptr addrspace(1) inreg %out, i
 ; GFX942-NEXT:    .p2align 8
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB16_0:
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
+; GFX942-NEXT:    global_store_dwordx2 v0, v[2:3], s[2:3]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX90a-LABEL: i64_kernel_preload_arg:
@@ -850,9 +850,9 @@ define amdgpu_kernel void @i64_kernel_preload_arg(ptr addrspace(1) inreg %out, i
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB16_0:
-; GFX90a-NEXT:    v_mov_b32_e32 v2, 0
-; GFX90a-NEXT:    v_pk_mov_b32 v[0:1], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90a-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
+; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90a-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90a-NEXT:    global_store_dwordx2 v0, v[2:3], s[8:9]
 ; GFX90a-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: i64_kernel_preload_arg:
@@ -875,9 +875,9 @@ define amdgpu_kernel void @f64_kernel_preload_arg(ptr addrspace(1) inreg %out, d
 ; GFX942-NEXT:    .p2align 8
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB17_0:
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
+; GFX942-NEXT:    global_store_dwordx2 v0, v[2:3], s[2:3]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX90a-LABEL: f64_kernel_preload_arg:
@@ -888,9 +888,9 @@ define amdgpu_kernel void @f64_kernel_preload_arg(ptr addrspace(1) inreg %out, d
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB17_0:
-; GFX90a-NEXT:    v_mov_b32_e32 v2, 0
-; GFX90a-NEXT:    v_pk_mov_b32 v[0:1], s[10:11], s[10:11] op_sel:[0,1]
-; GFX90a-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
+; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90a-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GFX90a-NEXT:    global_store_dwordx2 v0, v[2:3], s[8:9]
 ; GFX90a-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: f64_kernel_preload_arg:

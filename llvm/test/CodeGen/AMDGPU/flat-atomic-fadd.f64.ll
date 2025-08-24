@@ -18,7 +18,7 @@ define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_intrinsic(ptr %ptr, double %d
   ; GFX90A_GFX942-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX90A_GFX942-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; GFX90A_GFX942-NEXT:   [[COPY4:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
-  ; GFX90A_GFX942-NEXT:   [[COPY5:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
+  ; GFX90A_GFX942-NEXT:   [[COPY5:%[0-9]+]]:av_64_align2 = COPY [[REG_SEQUENCE]]
   ; GFX90A_GFX942-NEXT:   FLAT_ATOMIC_ADD_F64 killed [[COPY4]], killed [[COPY5]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (s64) on %ir.ptr)
   ; GFX90A_GFX942-NEXT:   S_ENDPGM 0
   %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p1.f64(ptr %ptr, double %data)
@@ -70,7 +70,7 @@ define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw(ptr %ptr, double %d
   ; GFX90A_GFX942-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX90A_GFX942-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; GFX90A_GFX942-NEXT:   [[COPY4:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
-  ; GFX90A_GFX942-NEXT:   [[COPY5:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
+  ; GFX90A_GFX942-NEXT:   [[COPY5:%[0-9]+]]:av_64_align2 = COPY [[REG_SEQUENCE]]
   ; GFX90A_GFX942-NEXT:   FLAT_ATOMIC_ADD_F64 killed [[COPY4]], killed [[COPY5]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s64) on %ir.ptr)
   ; GFX90A_GFX942-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr %ptr, double %data syncscope("wavefront") monotonic, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
@@ -93,7 +93,7 @@ define amdgpu_ps void @flat_atomic_fadd_f64_no_rtn_atomicrmw_noprivate(ptr %ptr,
   ; GFX90A_GFX942-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX90A_GFX942-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; GFX90A_GFX942-NEXT:   [[COPY4:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
-  ; GFX90A_GFX942-NEXT:   [[COPY5:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
+  ; GFX90A_GFX942-NEXT:   [[COPY5:%[0-9]+]]:av_64_align2 = COPY [[REG_SEQUENCE]]
   ; GFX90A_GFX942-NEXT:   FLAT_ATOMIC_ADD_F64 killed [[COPY4]], killed [[COPY5]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s64) on %ir.ptr)
   ; GFX90A_GFX942-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr %ptr, double %data syncscope("wavefront") monotonic, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
