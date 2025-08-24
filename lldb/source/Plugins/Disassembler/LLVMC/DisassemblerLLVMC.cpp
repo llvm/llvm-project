@@ -1453,19 +1453,19 @@ void DisassemblerLLVMC::UpdateFeatureString(llvm::StringRef additional_features,
     flag = flag.trim();
     if (flag.empty())
       continue;
-    // Check if disable (-c) is already present before adding default enable
-    // (+c), since enable (+c) takes precedence whether disable (-c) appears
-    // before or after in the feature string.
+    // By default, if both +flag and -flag are present in the feature string,
+    // disassembler keeps the feature enabled (+flag).
+    // To respect user intent, we make -flag(user) take priority over the
+    // default +flag coming from ELF.
+    bool add_flag = true;
     if (flag.starts_with('+')) {
       std::string disable_flag = "-" + flag.substr(1).str();
-      if (features.find(disable_flag) == std::string::npos) {
-        if (!features.empty() && flag.back() != ',') {
-          features = ',' + features;
-        }
-        features = flag.str() + features;
+      if (features.find(disable_flag) != std::string::npos) {
+        add_flag = false;
       }
-    } else {
-      if (flag.back() != ',') {
+    }
+    if (add_flag) {
+      if (!features.empty()) {
         features = ',' + features;
       }
       features = flag.str() + features;
