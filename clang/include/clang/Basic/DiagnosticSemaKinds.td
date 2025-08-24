@@ -1773,7 +1773,7 @@ def note_unsatisfied_trait
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
-           "%TriviallyDefaultConstructible{trivially default constructible}"
+           "%TriviallyDefaultConstructible{trivially default constructible}|"
            "%Final{final}"
            "}1">;
 
