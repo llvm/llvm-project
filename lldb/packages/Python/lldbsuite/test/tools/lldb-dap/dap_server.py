@@ -1316,7 +1316,7 @@ class DebugCommunication(object):
                 "count": count,
             },
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_stackTrace(
         self, threadId=None, startFrame=None, levels=None, format=None, dump=False
