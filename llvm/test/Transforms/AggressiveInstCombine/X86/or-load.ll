@@ -103,18 +103,7 @@ define i32 @loadCombine_4consecutive(ptr %p) {
 
 define i32 @loadCombine_4consecutive_commuted(ptr %p) {
 ; LE-LABEL: @loadCombine_4consecutive_commuted(
-; LE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
-; LE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
-; LE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
-; LE-NEXT:    [[L2:%.*]] = load i16, ptr [[P1]], align 1
-; LE-NEXT:    [[TMP1:%.*]] = zext i16 [[L2]] to i32
-; LE-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 8
-; LE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
-; LE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
-; LE-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
-; LE-NEXT:    [[S4:%.*]] = shl i32 [[E4]], 24
-; LE-NEXT:    [[O2:%.*]] = or i32 [[S4]], [[TMP2]]
-; LE-NEXT:    [[O3:%.*]] = or i32 [[E1]], [[O2]]
+; LE-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; LE-NEXT:    ret i32 [[O3]]
 ;
 ; BE-LABEL: @loadCombine_4consecutive_commuted(
@@ -162,19 +151,10 @@ define i32 @loadCombine_4consecutive_commuted(ptr %p) {
 
 define i32 @loadCombine_4consecutive_multiuse(ptr %p) {
 ; LE-LABEL: @loadCombine_4consecutive_multiuse(
-; LE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 2
-; LE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
-; LE-NEXT:    [[L1:%.*]] = load i16, ptr [[P]], align 1
-; LE-NEXT:    [[TMP1:%.*]] = zext i16 [[L1]] to i32
-; LE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
+; LE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 3
+; LE-NEXT:    [[O3:%.*]] = load i32, ptr [[P]], align 1
 ; LE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
 ; LE-NEXT:    call void @use(i8 [[L4]])
-; LE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
-; LE-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
-; LE-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 16
-; LE-NEXT:    [[S4:%.*]] = shl i32 [[E4]], 24
-; LE-NEXT:    [[O2:%.*]] = or i32 [[TMP1]], [[S3]]
-; LE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
 ; LE-NEXT:    ret i32 [[O3]]
 ;
 ; BE-LABEL: @loadCombine_4consecutive_multiuse(
