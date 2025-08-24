@@ -37,4 +37,3 @@
 # CHECK-NEXT: --
 # CHECK-EMPTY:
 # CHECK-NEXT: ********************
-

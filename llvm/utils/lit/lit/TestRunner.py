@@ -1203,7 +1203,8 @@ def executeScriptInternal(
                 str(result.timeoutReached),
             )
 
-        if (litConfig.update_tests
+        if (
+            litConfig.update_tests
             and result.exitCode != 0
             and not timeoutInfo
             # Don't run test updaters on XPASS failures -
