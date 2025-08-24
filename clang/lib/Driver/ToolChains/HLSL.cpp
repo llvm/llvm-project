@@ -215,7 +215,6 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
     return;
   }
   out << SpvExtensionArg;
-  return;
 }
 
 SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {

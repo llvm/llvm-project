@@ -955,7 +955,6 @@ void RISCVABIInfo::createCoercedStore(llvm::Value *Val, Address Dst,
       cast<llvm::FixedVectorType>(EltTy), Val, uint64_t(0));
   auto *I = CGF.Builder.CreateStore(Coerced, Dst, DestIsVolatile);
   CGF.addInstToCurrentSourceAtom(I, Val);
-  return;
 }
 
 namespace {
