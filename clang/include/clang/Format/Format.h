@@ -1011,7 +1011,7 @@ struct FormatStyle {
 
   /// Dependent on the value, ``struct bar { int i; }`` can be put on a single
   /// line.
-  ShortRecordStyle AllowShortRecordsOnASingleLine;
+  ShortRecordStyle AllowShortRecordOnASingleLine;
 
   /// Different ways to break after the function definition return type.
   /// This option is **deprecated** and is retained for backwards compatibility.

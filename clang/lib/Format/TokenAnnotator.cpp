@@ -6039,7 +6039,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
                Style.BraceWrapping.AfterStruct) ||
               (Line.startsWith(tok::kw_union) &&
                Style.BraceWrapping.AfterUnion)) &&
-             Style.AllowShortRecordsOnASingleLine == FormatStyle::SRS_Never;
+             Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Never;
     }
   }
 

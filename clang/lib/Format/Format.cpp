@@ -1133,8 +1133,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowShortLoopsOnASingleLine);
     IO.mapOptional("AllowShortNamespacesOnASingleLine",
                    Style.AllowShortNamespacesOnASingleLine);
-    IO.mapOptional("AllowShortRecordsOnASingleLine",
-                   Style.AllowShortRecordsOnASingleLine);
+    IO.mapOptional("AllowShortRecordOnASingleLine",
+                   Style.AllowShortRecordOnASingleLine);
     IO.mapOptional("AlwaysBreakAfterDefinitionReturnType",
                    Style.AlwaysBreakAfterDefinitionReturnType);
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
@@ -1685,7 +1685,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
-  LLVMStyle.AllowShortRecordsOnASingleLine = FormatStyle::SRS_Never;
+  LLVMStyle.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
   LLVMStyle.AllowShortNamespacesOnASingleLine = false;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
