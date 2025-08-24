@@ -222,9 +222,9 @@ define void @ptrtoint_of_addrec(ptr %in, i32 %count) {
 ; X64-NEXT:    %i6 = phi i64 [ 0, %entry ], [ %i9, %loop ]
 ; X64-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: (-1 + (zext i32 %count to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; X64-NEXT:    %i7 = getelementptr inbounds i32, ptr %in, i64 %i6
-; X64-NEXT:    --> {%in,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + %in) LoopDispositions: { %loop: Computable }
+; X64-NEXT:    --> {%in,+,4}<nw><%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + %in) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:    %i8 = ptrtoint ptr %i7 to i64
-; X64-NEXT:    --> {(ptrtoint ptr %in to i64),+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + (ptrtoint ptr %in to i64)) LoopDispositions: { %loop: Computable }
+; X64-NEXT:    --> {(ptrtoint ptr %in to i64),+,4}<nw><%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + (ptrtoint ptr %in to i64)) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:    %i9 = add nuw nsw i64 %i6, 1
 ; X64-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (zext i32 %count to i64) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrec
@@ -240,9 +240,9 @@ define void @ptrtoint_of_addrec(ptr %in, i32 %count) {
 ; X32-NEXT:    %i6 = phi i64 [ 0, %entry ], [ %i9, %loop ]
 ; X32-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: (-1 + (zext i32 %count to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; X32-NEXT:    %i7 = getelementptr inbounds i32, ptr %in, i64 %i6
-; X32-NEXT:    --> {%in,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %in) LoopDispositions: { %loop: Computable }
+; X32-NEXT:    --> {%in,+,4}<nw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %in) LoopDispositions: { %loop: Computable }
 ; X32-NEXT:    %i8 = ptrtoint ptr %i7 to i64
-; X32-NEXT:    --> (zext i32 {(ptrtoint ptr %in to i32),+,4}<%loop> to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (-4 + (4 * %count) + (ptrtoint ptr %in to i32)) to i64) LoopDispositions: { %loop: Computable }
+; X32-NEXT:    --> (zext i32 {(ptrtoint ptr %in to i32),+,4}<nw><%loop> to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (-4 + (4 * %count) + (ptrtoint ptr %in to i32)) to i64) LoopDispositions: { %loop: Computable }
 ; X32-NEXT:    %i9 = add nuw nsw i64 %i6, 1
 ; X32-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (zext i32 %count to i64) LoopDispositions: { %loop: Computable }
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrec
