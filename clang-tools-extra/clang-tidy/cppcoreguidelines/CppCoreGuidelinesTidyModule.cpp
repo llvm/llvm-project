@@ -36,6 +36,7 @@
 #include "OwningMemoryCheck.h"
 #include "PreferMemberInitializerCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
+#include "ProBoundsAvoidUncheckedContainerAccess.h"
 #include "ProBoundsConstantArrayIndexCheck.h"
 #include "ProBoundsPointerArithmeticCheck.h"
 #include "ProTypeConstCastCheck.h"
@@ -107,6 +108,8 @@ public:
         "cppcoreguidelines-prefer-member-initializer");
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(
         "cppcoreguidelines-pro-bounds-array-to-pointer-decay");
+    CheckFactories.registerCheck<ProBoundsAvoidUncheckedContainerAccess>(
+        "cppcoreguidelines-pro-bounds-avoid-unchecked-container-access");
     CheckFactories.registerCheck<ProBoundsConstantArrayIndexCheck>(
         "cppcoreguidelines-pro-bounds-constant-array-index");
     CheckFactories.registerCheck<ProBoundsPointerArithmeticCheck>(
