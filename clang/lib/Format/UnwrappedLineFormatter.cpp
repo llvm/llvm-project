@@ -463,7 +463,7 @@ private:
     }
 
     const bool MergeShortRecord = [this, &NextLine]() {
-      switch (Style.AllowShortRecordsOnASingleLine) {
+      switch (Style.AllowShortRecordOnASingleLine) {
       case FormatStyle::SRS_Always:
         return true;
       case FormatStyle::SRS_Empty:
@@ -893,7 +893,7 @@ private:
                  !startsExternCBlock(Line)) {
         // Merge short records only when requested.
         if (isRecordLBrace(*Line.Last) &&
-            Style.AllowShortRecordsOnASingleLine == FormatStyle::SRS_Never) {
+            Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Never) {
           return 0;
         }
 
