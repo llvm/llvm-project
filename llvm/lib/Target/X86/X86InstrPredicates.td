@@ -267,6 +267,18 @@ def NotUseIndirectThunkCalls : Predicate<"!Subtarget->useIndirectThunkCalls()">;
 // HwModes
 //===----------------------------------------------------------------------===//
 
+// Like HasEGPR/NoEGPR, but with an AssemblerPredicate so the modes below also
+// resolve in the MC layer. Without it the two 64-bit modes would share the same
+// MC condition and getHwMode() would report both active.
+def HasEGPRMode : Predicate<"Subtarget->hasEGPR()">,
+                  AssemblerPredicate<(all_of FeatureEGPR), "egpr">;
+def NoEGPRMode  : Predicate<"!Subtarget->hasEGPR()">,
+                  AssemblerPredicate<(all_of (not FeatureEGPR)), "not egpr">;
+
 defvar X86_32 = DefaultMode;
-def X86_64 : HwMode<[In64BitMode, NotX32Mode]>;
+// getHwMode(RegInfo) modes must be mutually exclusive, so split the 64-bit mode
+// on EGPR (x32 is left alone, as it does not use EGPR). The norex2 operands in
+// X86InstrOperands.td key on X86_64_EGPR.
+def X86_64 : HwMode<[In64BitMode, NotX32Mode, NoEGPRMode]>;
+def X86_64_EGPR : HwMode<[In64BitMode, NotX32Mode, HasEGPRMode]>;
 def X86_64_X32 : HwMode<[IsX32Mode]>;
