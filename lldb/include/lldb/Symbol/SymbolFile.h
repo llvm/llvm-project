@@ -488,17 +488,23 @@ public:
     return false;
   };
 
-  /// Get number of loaded/parsed DWO files. This is emitted in "statistics
-  /// dump"
+  /// Holds statistics about DWO (Debug With Object) files.
+  struct DWOStats {
+    uint32_t loaded_dwo_file_count = 0;
+    uint32_t dwo_file_count = 0;
+    uint32_t dwo_error_count = 0;
+  };
+
+  /// Retrieves statistics about DWO files associated with this symbol file.
+  /// This function returns a DWOStats struct containing:
+  ///   - The number of successfully loaded/parsed DWO files.
+  ///   - The total number of DWO files encountered.
+  ///   - The number of DWO CUs that failed to load due to errors.
+  /// If this symbol file does not support DWO files, all counts will be zero.
   ///
   /// \returns
-  ///     A pair containing (loaded_dwo_count, total_dwo_count). If this
-  ///     symbol file doesn't support DWO files, both counts will be 0.
-  virtual std::pair<uint32_t, uint32_t> GetDwoFileCounts() { return {0, 0}; }
-
-  /// Calculates the count of dwo load error, return the number of dwo file with
-  /// errors, 0 by default.
-  virtual uint32_t CountDwoLoadErrors() { return 0; }
+  ///   A DWOStats struct with loaded, total, and error counts for DWO files.
+  virtual DWOStats GetDwoStats() { return {}; }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,

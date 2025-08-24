@@ -670,7 +670,7 @@ class TestCase(TestBase):
         This test:
         1) Builds a program with split DWARF (.dwo files)
         2) Delete all two .dwo files
-        3) Verify that 2 DWO load errors are reported in statistics
+        3) Verify that 2 DWO errors are reported in statistics
         """
         da = {
             "CXX_SOURCES": "dwo_error_main.cpp dwo_error_foo.cpp",
@@ -691,12 +691,12 @@ class TestCase(TestBase):
         debug_stats = self.get_stats()
 
         # Check DWO load error statistics are reported
-        self.assertIn("totalDwoLoadErrorCount", debug_stats)
-        self.assertEqual(debug_stats["totalDwoLoadErrorCount"], 2)
+        self.assertIn("totalDwoErrorCount", debug_stats)
+        self.assertEqual(debug_stats["totalDwoErrorCount"], 2)
 
         # Since there's only one module, module stats should have the same count as total count
-        self.assertIn("dwoLoadErrorCount", debug_stats["modules"][0])
-        self.assertEqual(debug_stats["modules"][0]["dwoLoadErrorCount"], 2)
+        self.assertIn("dwoErrorCount", debug_stats["modules"][0])
+        self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 2)
 
         # Restore the original .dwo file
         for dwo_file in dwo_files:
@@ -710,7 +710,7 @@ class TestCase(TestBase):
         1) Builds a program with split DWARF (.dwo files)
         2) Change one of the source file content and rebuild
         3) Replace the new .dwo file with the original one to create a DWO ID mismatch
-        4) Verifies that a DWO load error is reported in statistics
+        4) Verifies that a DWO error is reported in statistics
         5) Restores the original source file
         """
         da = {
@@ -732,8 +732,8 @@ class TestCase(TestBase):
 
         target = self.createTestTarget(file_path=exe)
         initial_stats = self.get_stats()
-        self.assertIn("totalDwoLoadErrorCount", initial_stats)
-        self.assertEqual(initial_stats["totalDwoLoadErrorCount"], 0)
+        self.assertIn("totalDwoErrorCount", initial_stats)
+        self.assertEqual(initial_stats["totalDwoErrorCount"], 0)
         self.dbg.DeleteTarget(target)
 
         # Get the original file size before modification
@@ -754,12 +754,12 @@ class TestCase(TestBase):
             debug_stats = self.get_stats()
 
             # Check that DWO load error statistics are reported
-            self.assertIn("totalDwoLoadErrorCount", debug_stats)
-            self.assertEqual(debug_stats["totalDwoLoadErrorCount"], 1)
+            self.assertIn("totalDwoErrorCount", debug_stats)
+            self.assertEqual(debug_stats["totalDwoErrorCount"], 1)
 
             # Since there's only one module, module stats should have the same count as total count
-            self.assertIn("dwoLoadErrorCount", debug_stats["modules"][0])
-            self.assertEqual(debug_stats["modules"][0]["dwoLoadErrorCount"], 1)
+            self.assertIn("dwoErrorCount", debug_stats["modules"][0])
+            self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 1)
 
         finally:
             # Remove the appended content
