@@ -465,7 +465,7 @@ private:
 
     const bool MergeShortRecord = [this, &NextLine]() {
       switch (Style.AllowShortRecordsOnASingleLine) {
-      case FormatStyle::SRS_All:
+      case FormatStyle::SRS_Always:
         return true;
       case FormatStyle::SRS_Empty:
         return NextLine.First->is(tok::r_brace);
