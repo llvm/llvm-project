@@ -8,13 +8,13 @@
 
 #include <clc/opencl/atomic/atomic_max.h>
 
-#define IMPL(TYPE, AS, OP)                                                     \
+#define __CLC_IMPL(TYPE, AS, OP)                                               \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_max(volatile AS TYPE *p, TYPE val) {      \
     return __sync_fetch_and_##OP(p, val);                                      \
   }
 
-IMPL(int, global, max)
-IMPL(unsigned int, global, umax)
-IMPL(int, local, max)
-IMPL(unsigned int, local, umax)
-#undef IMPL
+__CLC_IMPL(int, global, max)
+__CLC_IMPL(unsigned int, global, umax)
+__CLC_IMPL(int, local, max)
+__CLC_IMPL(unsigned int, local, umax)
+#undef __CLC_IMPL

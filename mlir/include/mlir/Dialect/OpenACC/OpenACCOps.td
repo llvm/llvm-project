@@ -1540,6 +1540,11 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     /// recipe.
     void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
                                mlir::acc::FirstprivateRecipeOp recipe);
+
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -1689,6 +1694,10 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     /// recipe.
     void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
                                mlir::acc::FirstprivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -2415,6 +2424,10 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     /// Adds a private clause variable to this operation, including its recipe.
     void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
                           mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let hasCustomAssemblyFormat = 1;

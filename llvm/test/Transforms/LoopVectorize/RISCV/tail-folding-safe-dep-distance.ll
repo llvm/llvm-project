@@ -127,10 +127,9 @@ define void @test_may_clobber1(ptr %p) {
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br label [[EXIT:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; IF-EVL-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
 ; IF-EVL-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 100
@@ -160,10 +159,9 @@ define void @test_may_clobber1(ptr %p) {
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    br label [[EXIT:%.*]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
 ; NO-VP:       loop:
-; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; NO-VP-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
 ; NO-VP-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
 ; NO-VP-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 100
@@ -263,10 +261,9 @@ define void @test_may_clobber3(ptr %p) {
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br label [[EXIT:%.*]]
 ; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; IF-EVL-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
 ; IF-EVL-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 10
@@ -296,10 +293,9 @@ define void @test_may_clobber3(ptr %p) {
 ; NO-VP:       middle.block:
 ; NO-VP-NEXT:    br label [[EXIT:%.*]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
 ; NO-VP:       loop:
-; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; NO-VP-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
 ; NO-VP-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
 ; NO-VP-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 10
