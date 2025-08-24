@@ -468,7 +468,11 @@ public:
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getKernelFuncAttrName()) {
       llvmFunc->setCallingConv(llvm::CallingConv::PTX_Kernel);
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getBlocksAreClustersAttrName()) {
+      llvmFunc->addFnAttr("nvvm.blocksareclusters");
     }
+
     return success();
   }
 

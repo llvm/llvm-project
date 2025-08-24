@@ -215,7 +215,7 @@ public:
         Value = nullptr;
         kind = Kind::Regular;
       }
-      setUndefined();
+      Fragment = nullptr;
       IsRedefinable = false;
     }
   }
@@ -258,9 +258,6 @@ public:
     assert(!isVariable() && "Cannot set fragment of variable");
     Fragment = F;
   }
-
-  /// Mark the symbol as undefined.
-  void setUndefined() { Fragment = nullptr; }
 
   /// @}
   /// \name Variable Symbols
@@ -354,10 +351,6 @@ public:
     Fragment = getVariableValue()->findAssociatedFragment();
     return Fragment;
   }
-
-  // For ELF, use MCSymbolELF::setBinding instead.
-  bool isExternal() const { return IsExternal; }
-  void setExternal(bool Value) const { IsExternal = Value; }
 
   // COFF-specific
   bool isWeakExternal() const { return IsWeakExternal; }
