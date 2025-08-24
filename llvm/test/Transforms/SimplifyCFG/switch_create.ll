@@ -1195,11 +1195,12 @@ if.end:
 
 define void @and_chain_trunc_nuw_i1_condition(i8 %x) {
 ; CHECK-LABEL: @and_chain_trunc_nuw_i1_condition(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i8 [[ADD]], 2
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[ICMP]], i1 [[TRUNC]], i1 false
-; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[COMMON_RET:%.*]]
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[IF_THEN:%.*]] [
+; CHECK-NEXT:      i8 4, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:      i8 3, label [[COMMON_RET]]
+; CHECK-NEXT:      i8 2, label [[COMMON_RET]]
+; CHECK-NEXT:      i8 0, label [[COMMON_RET]]
+; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.then:
@@ -1220,9 +1221,8 @@ if.end:
 
 define void @or_chain_trunc_nuw_i1_condition(i8 %x) {
 ; CHECK-LABEL: @or_chain_trunc_nuw_i1_condition(
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    [[SWITCH:%.*]] = select i1 [[ICMP]], i1 true, i1 [[TRUNC]]
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[X_OFF]], 2
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[IF_THEN:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
