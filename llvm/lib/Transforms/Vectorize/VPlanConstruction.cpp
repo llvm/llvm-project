@@ -687,30 +687,47 @@ void VPlanTransforms::addMinimumIterationCheck(
   VPValue *TripCountVPV = Plan.getTripCount();
   const SCEV *TripCount = vputils::getSCEVExprForVPValue(TripCountVPV, SE);
   Type *TripCountTy = TripCount->getType();
-  auto CreateMinTripCount = [&]() -> const SCEV * {
-    // Create or get max(MinProfitableTripCount, UF * VF) and return it.
+  auto GetMinTripCount = [&]() -> const SCEV * {
+    // Compute max(MinProfitableTripCount, UF * VF) and return it.
     const SCEV *VFxUF =
         SE.getElementCount(TripCountTy, (VF * UF), SCEV::FlagNUW);
-    const SCEV *MinProfitableTripCountSCEV =
-        SE.getElementCount(TripCountTy, MinProfitableTripCount, SCEV::FlagNUW);
-    const SCEV *Max = SE.getUMaxExpr(MinProfitableTripCountSCEV, VFxUF);
-    if (!VF.isScalable())
-      return Max;
-
     if (UF * VF.getKnownMinValue() >=
         MinProfitableTripCount.getKnownMinValue()) {
       // TODO: SCEV should be able to simplify test.
       return VFxUF;
     }
-
-    return Max;
+    const SCEV *MinProfitableTripCountSCEV =
+        SE.getElementCount(TripCountTy, MinProfitableTripCount, SCEV::FlagNUW);
+    return SE.getUMaxExpr(MinProfitableTripCountSCEV, VFxUF);
   };
 
   VPBasicBlock *EntryVPBB = Plan.getEntry();
   VPBuilder Builder(EntryVPBB);
   VPValue *TripCountCheck = Plan.getFalse();
-  const SCEV *Step = CreateMinTripCount();
-  if (!TailFolded) {
+  const SCEV *Step = GetMinTripCount();
+  if (TailFolded) {
+    if (CheckNeededWithTailFolding) {
+      // vscale is not necessarily a power-of-2, which means we cannot guarantee
+      // an overflow to zero when updating induction variables and so an
+      // additional overflow check is required before entering the vector loop.
+
+      // Get the maximum unsigned value for the type.
+      VPValue *MaxUIntTripCount = Plan.getOrAddLiveIn(ConstantInt::get(
+          TripCountTy, cast<IntegerType>(TripCountTy)->getMask()));
+      VPValue *DistanceToMax = Builder.createNaryOp(
+          Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
+          DebugLoc::getUnknown());
+
+      // Don't execute the vector loop if (UMax - n) < (VF * UF).
+      // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
+      // minProfitableTripCount).
+      TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
+                                          Builder.createExpandSCEV(Step), DL);
+    } else {
+      // TripCountCheck = false, folding tail implies positive vector trip
+      // count.
+    }
+  } else {
     // TODO: Emit unconditional branch to vector preheader instead of
     // conditional branch with known condition.
     TripCount = SE.applyLoopGuards(TripCount, OrigLoop);
@@ -727,23 +744,6 @@ void VPlanTransforms::addMinimumIterationCheck(
       TripCountCheck = Builder.createICmp(
           CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
     } // else step known to be < trip count, use TripCountCheck preset to false.
-  } else if (CheckNeededWithTailFolding) {
-    // vscale is not necessarily a power-of-2, which means we cannot guarantee
-    // an overflow to zero when updating induction variables and so an
-    // additional overflow check is required before entering the vector loop.
-
-    // Get the maximum unsigned value for the type.
-    VPValue *MaxUIntTripCount = Plan.getOrAddLiveIn(ConstantInt::get(
-        TripCountTy, cast<IntegerType>(TripCountTy)->getMask()));
-    VPValue *DistanceToMax =
-        Builder.createNaryOp(Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
-                             DebugLoc::getUnknown());
-
-    // Don't execute the vector loop if (UMax - n) < (VF * UF).
-    // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
-    // minProfitableTripCount).
-    TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
-                                        Builder.createExpandSCEV(Step), DL);
   }
   VPInstruction *Term =
       Builder.createNaryOp(VPInstruction::BranchOnCond, {TripCountCheck}, DL);

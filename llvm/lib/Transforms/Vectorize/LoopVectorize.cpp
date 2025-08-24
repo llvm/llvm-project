@@ -512,11 +512,9 @@ public:
 
   virtual ~InnerLoopVectorizer() = default;
 
-  /// Create new basic blocks needed as entries and exits of the code generated
-  /// by executing a VPlan. For epilogue vectorization, it will create blocks
-  /// for the minimum iteration checks and IR basic blocks for the vector and
-  /// scalar preheaders. Otherwise it will create a basic block for the scalar
-  /// preheader only.
+  /// Creates a basic block for the scalar preheader. Both
+  /// EpilogueVectorizerMainLoop and EpilogueVectorizerEpilogueLoop overwrite
+  /// the method to create blocks and checks needed for epilogue vectorization.
   virtual BasicBlock *createVectorizedLoopSkeleton();
 
   /// Fix the vectorized code, taking care of header phi's, and more.
@@ -2386,8 +2384,8 @@ void InnerLoopVectorizer::createScalarPreheader(StringRef Prefix) {
                  LI, nullptr, Twine(Prefix) + "scalar.ph");
   // NOTE: The Plan's scalar preheader VPBB isn't replaced with a VPIRBasicBlock
   // wrapping LoopScalarPreHeader here at the moment, because the Plan's scalar
-  // preheader may be unreachable at this point and SCEV expansion may add to it
-  // later.
+  // preheader may be unreachable at this point. Instead it is replaced in
+  // executePlan.
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
