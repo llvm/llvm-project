@@ -1017,7 +1017,7 @@ struct FormatStyle {
     ///   struct foo {};
     ///   struct bar { int i; };
     /// \endcode
-    SRS_All
+    SRS_Always
   };
 
   /// Dependent on the value, ``struct bar { int i; }`` can be put on a single
