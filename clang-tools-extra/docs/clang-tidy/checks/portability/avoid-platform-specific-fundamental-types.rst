@@ -39,22 +39,6 @@ Examples
   int64_t global_int64 = 100L;
   uint64_t global_uint64 = 100UL;
 
-
-The check will also warn about typedef declarations that use fundamental types
-as their underlying type:
-
-.. code-block:: c++
-
-  // Bad: typedef using fundamental type
-  typedef long long MyLongType;
-  using MyIntType = int;
-
-.. code-block:: c++
-
-  // Good: use descriptive names or fixed-width types
-  typedef int64_t TimestampType;
-  using CounterType = uint32_t;
-
 Rationale
 ---------
 
