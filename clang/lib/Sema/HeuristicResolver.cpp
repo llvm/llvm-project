@@ -323,7 +323,8 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   QualType BaseType = ME->getBaseType();
   BaseType = simplifyType(BaseType, Base, ME->isArrow());
 
-  if (BaseType->isUndeducedAutoType() || BaseType->isTemplateTypeParmType()) {
+  if (!BaseType.isNull() &&
+      (BaseType->isUndeducedAutoType() || BaseType->isTemplateTypeParmType())) {
     if (auto Type = ExplicitMemberHeuristic(Base); !Type.isNull()) {
       BaseType = Type;
     }
