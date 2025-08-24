@@ -28,6 +28,8 @@
 
 namespace llvm {
 
+class CodeGenRegisterClass;
+class CodeGenTarget;
 class Record;
 class raw_ostream;
 
@@ -243,6 +245,16 @@ struct EncodingInfoByHwMode : public InfoByHwMode<const Record *> {
   EncodingInfoByHwMode(const Record *R, const CodeGenHwModes &CGH);
   EncodingInfoByHwMode() = default;
 };
+
+struct RegClassByHwMode : public InfoByHwMode<const CodeGenRegisterClass *> {
+public:
+  RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
+                   const CodeGenTarget &Target);
+  RegClassByHwMode() = default;
+};
+
+raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T);
+raw_ostream &operator<<(raw_ostream &OS, const RegClassByHwMode &T);
 
 } // namespace llvm
 

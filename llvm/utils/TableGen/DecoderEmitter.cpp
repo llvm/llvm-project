@@ -13,6 +13,7 @@
 
 #include "Common/CodeGenHwModes.h"
 #include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/InfoByHwMode.h"
 #include "Common/InstructionEncoding.h"
@@ -276,6 +277,8 @@ public:
                          ArrayRef<unsigned> InstrLen) const;
   void emitPredicateFunction(formatted_raw_ostream &OS,
                              const PredicateSet &Predicates) const;
+
+  void emitRegClassByHwModeDecoders(formatted_raw_ostream &OS) const;
   void emitDecoderFunction(formatted_raw_ostream &OS,
                            const DecoderSet &Decoders,
                            unsigned BucketBitWidth) const;
@@ -842,9 +845,66 @@ void DecoderEmitter::emitPredicateFunction(
   OS << "}\n\n";
 }
 
+/// Emit a default implementation of a decoder for all RegClassByHwModes which
+/// do not have an explicit DecoderMethodSet, which dispatches over the decoder
+/// methods for the member classes.
+void DecoderEmitter::emitRegClassByHwModeDecoders(
+    formatted_raw_ostream &OS) const {
+  const CodeGenHwModes &CGH = Target.getHwModes();
+  if (CGH.getNumModeIds() == 1)
+    return;
+
+  ArrayRef<const Record *> RegClassByHwMode = Target.getAllRegClassByHwMode();
+  if (RegClassByHwMode.empty())
+    return;
+
+  const CodeGenRegBank &RegBank = Target.getRegBank();
+
+  for (const Record *ClassByHwMode : RegClassByHwMode) {
+    // Ignore cases that had an explicit DecoderMethod set.
+    if (!InstructionEncoding::findOperandDecoderMethod(Target, ClassByHwMode)
+             .second)
+      continue;
+
+    const HwModeSelect &ModeSelect = CGH.getHwModeSelect(ClassByHwMode);
+
+    // Mips has a system where this is only used by compound operands with
+    // custom decoders, and we don't try to detect if this decoder is really
+    // needed.
+    OS << "[[maybe_unused]]\n";
+
+    OS << "static DecodeStatus Decode" << ClassByHwMode->getName()
+       << "RegClassByHwMode";
+    OS << R"((MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
+  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegClass)) {
+)";
+    for (const HwModeSelect::PairType &P : ModeSelect.Items) {
+      const CodeGenRegisterClass *RegClass = RegBank.getRegClass(P.second);
+
+      OS << indent(2) << "case " << P.first << ": // "
+         << CGH.getModeName(P.first, /*IncludeDefault=*/true) << '\n'
+         << indent(4) << "return "
+         << InstructionEncoding::findOperandDecoderMethod(Target,
+                                                          RegClass->getDef())
+                .first
+         << "(Inst, Imm, Addr, Decoder);\n";
+    }
+    OS << indent(2) << R"(default:
+    llvm_unreachable("no decoder for hwmode");
+  }
+}
+
+)";
+  }
+
+  OS << '\n';
+}
+
 void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
                                          const DecoderSet &Decoders,
                                          unsigned BucketBitWidth) const {
+  emitRegClassByHwModeDecoders(OS);
+
   // The decoder function is just a big switch statement or a table of function
   // pointers based on the input decoder index.
 
@@ -1800,7 +1860,7 @@ void DecoderEmitter::parseInstructionEncodings() {
           continue;
         }
         unsigned EncodingID = Encodings.size();
-        Encodings.emplace_back(EncodingDef, Inst);
+        Encodings.emplace_back(Target, EncodingDef, Inst);
         EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
       }
       continue; // Ignore encoding specified by Instruction itself.
@@ -1812,7 +1872,7 @@ void DecoderEmitter::parseInstructionEncodings() {
     }
 
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(InstDef, Inst);
+    Encodings.emplace_back(Target, InstDef, Inst);
 
     // This instruction is encoded the same on all HwModes.
     // According to user needs, add it to all, some, or only the default HwMode.
@@ -1835,7 +1895,8 @@ void DecoderEmitter::parseInstructionEncodings() {
       continue;
     }
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
+    Encodings.emplace_back(Target, EncodingDef,
+                           &Target.getInstruction(InstDef));
     EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
   }
 

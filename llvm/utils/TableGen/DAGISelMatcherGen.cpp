@@ -238,7 +238,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
   }
 
   if ( // Handle register references.  Nothing to do here, they always match.
-      LeafRec->isSubClassOf("RegisterClass") ||
+      LeafRec->isSubClassOf("RegisterClassLike") ||
       LeafRec->isSubClassOf("RegisterOperand") ||
       LeafRec->isSubClassOf("PointerLikeRegClass") ||
       LeafRec->isSubClassOf("SubRegIndex") ||
