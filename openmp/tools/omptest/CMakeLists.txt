@@ -13,8 +13,8 @@ option(LIBOMPTEST_BUILD_STANDALONE
 option(LIBOMPTEST_BUILD_UNITTESTS
        "Build ompTest's unit tests, requires GoogleTest." OFF)
 
-# In absence of corresponding OMPT support: exit early
-if(NOT ${LIBOMP_OMPT_SUPPORT})
+# Exit early if OMPT support or LLVM-tests were disabled by the user.
+if((NOT ${LIBOMP_OMPT_SUPPORT}) OR (NOT ${LLVM_INCLUDE_TESTS}))
   return()
 endif()
 
@@ -61,12 +61,7 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
     set(LIBOMPTEST_BUILD_STANDALONE OFF)
   endif()
 
-  # Make sure target llvm_gtest is available
-  if (NOT TARGET llvm_gtest)
-    message(FATAL_ERROR "Required target not found: llvm_gtest")
-  endif()
-
-  # Add llvm_gtest as dependency
+  # Add dependency llvm_gtest; emits error if unavailable.
   add_dependencies(omptest llvm_gtest)
 
   # Link llvm_gtest as whole-archive to expose required symbols

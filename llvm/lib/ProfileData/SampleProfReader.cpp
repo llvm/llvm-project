@@ -375,16 +375,23 @@ std::error_code SampleProfileReaderText::readImpl() {
       StringRef FName;
       DenseMap<StringRef, uint64_t> TargetCountMap;
       uint32_t Depth, LineOffset, Discriminator;
-      LineType LineTy;
+      LineType LineTy = LineType::BodyProfile;
       uint64_t FunctionHash = 0;
       uint32_t Attributes = 0;
       bool IsFlat = false;
       if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
                      Discriminator, FName, TargetCountMap, FunctionHash,
                      Attributes, IsFlat)) {
-        reportError(LineIt.line_number(),
-                    "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
-                        *LineIt);
+        switch (LineTy) {
+        case LineType::Metadata:
+          reportError(LineIt.line_number(),
+                      "Cannot parse metadata: " + *LineIt);
+          break;
+        default:
+          reportError(LineIt.line_number(),
+                      "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
+                          *LineIt);
+        }
         return sampleprof_error::malformed;
       }
       if (LineTy != LineType::Metadata && Depth == DepthMetadata) {

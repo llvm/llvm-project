@@ -7,7 +7,7 @@ define i8 @monotonic_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -22,22 +22,23 @@ define i8 @monotonic_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB0_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB0_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB0_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB0_1;
 ; SM70-NEXT:  $L__BB0_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r12;
@@ -51,7 +52,7 @@ define i8 @monotonic_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -66,22 +67,23 @@ define i8 @monotonic_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB1_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB1_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB1_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB1_1;
 ; SM70-NEXT:  $L__BB1_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -96,7 +98,7 @@ define i8 @monotonic_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -112,22 +114,23 @@ define i8 @monotonic_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB2_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB2_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB2_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB2_1;
 ; SM70-NEXT:  $L__BB2_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -142,7 +145,7 @@ define i8 @acquire_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -157,22 +160,23 @@ define i8 @acquire_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB3_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB3_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB3_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB3_1;
 ; SM70-NEXT:  $L__BB3_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -187,7 +191,7 @@ define i8 @acquire_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -202,22 +206,23 @@ define i8 @acquire_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB4_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB4_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB4_1;
 ; SM70-NEXT:  $L__BB4_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -232,7 +237,7 @@ define i8 @acquire_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -248,22 +253,23 @@ define i8 @acquire_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB5_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB5_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB5_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB5_1;
 ; SM70-NEXT:  $L__BB5_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -278,7 +284,7 @@ define i8 @release_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -294,22 +300,23 @@ define i8 @release_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB6_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB6_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB6_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB6_1;
 ; SM70-NEXT:  $L__BB6_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r12;
@@ -323,7 +330,7 @@ define i8 @release_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -339,22 +346,23 @@ define i8 @release_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB7_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB7_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB7_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB7_1;
 ; SM70-NEXT:  $L__BB7_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -369,7 +377,7 @@ define i8 @release_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -385,22 +393,23 @@ define i8 @release_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB8_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB8_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB8_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB8_1;
 ; SM70-NEXT:  $L__BB8_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -415,7 +424,7 @@ define i8 @acq_rel_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -431,22 +440,23 @@ define i8 @acq_rel_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB9_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB9_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB9_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB9_1;
 ; SM70-NEXT:  $L__BB9_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -461,7 +471,7 @@ define i8 @acq_rel_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -477,22 +487,23 @@ define i8 @acq_rel_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB10_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB10_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB10_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB10_1;
 ; SM70-NEXT:  $L__BB10_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -507,7 +518,7 @@ define i8 @acq_rel_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -523,22 +534,23 @@ define i8 @acq_rel_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB11_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB11_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB11_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB11_1;
 ; SM70-NEXT:  $L__BB11_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -553,7 +565,7 @@ define i8 @seq_cst_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -569,22 +581,23 @@ define i8 @seq_cst_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB12_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB12_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB12_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB12_1;
 ; SM70-NEXT:  $L__BB12_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -599,7 +612,7 @@ define i8 @seq_cst_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -615,22 +628,23 @@ define i8 @seq_cst_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB13_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB13_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB13_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB13_1;
 ; SM70-NEXT:  $L__BB13_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -645,7 +659,7 @@ define i8 @seq_cst_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -661,22 +675,23 @@ define i8 @seq_cst_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB14_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB14_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB14_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB14_1;
 ; SM70-NEXT:  $L__BB14_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -1884,7 +1899,7 @@ define i8 @acq_rel_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -1900,22 +1915,23 @@ define i8 @acq_rel_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.global.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB60_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.sys.global.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.sys.global.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB60_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB60_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB60_1;
 ; SM70-NEXT:  $L__BB60_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.sys;
@@ -1981,7 +1997,7 @@ define i8 @acq_rel_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -1997,22 +2013,23 @@ define i8 @acq_rel_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB64_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB64_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB64_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB64_1;
 ; SM70-NEXT:  $L__BB64_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;
@@ -2027,7 +2044,7 @@ define i8 @acq_rel_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<17>;
+; SM70-NEXT:    .reg .b32 %r<18>;
 ; SM70-NEXT:    .reg .b64 %rd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -2043,22 +2060,23 @@ define i8 @acq_rel_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM70-NEXT:    shl.b32 %r11, %r10, %r1;
 ; SM70-NEXT:    not.b32 %r2, %r11;
 ; SM70-NEXT:    cvt.u32.u16 %r12, %rs1;
-; SM70-NEXT:    shl.b32 %r3, %r12, %r1;
+; SM70-NEXT:    and.b32 %r13, %r12, 255;
+; SM70-NEXT:    shl.b32 %r3, %r13, %r1;
 ; SM70-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM70-NEXT:    ld.shared.b32 %r13, [%rd1];
-; SM70-NEXT:    and.b32 %r16, %r13, %r2;
+; SM70-NEXT:    ld.shared.b32 %r14, [%rd1];
+; SM70-NEXT:    and.b32 %r17, %r14, %r2;
 ; SM70-NEXT:  $L__BB65_1: // %partword.cmpxchg.loop
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM70-NEXT:    or.b32 %r14, %r16, %r3;
-; SM70-NEXT:    or.b32 %r15, %r16, %r4;
-; SM70-NEXT:    atom.relaxed.cta.shared.cas.b32 %r5, [%rd1], %r15, %r14;
-; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r15;
+; SM70-NEXT:    or.b32 %r15, %r17, %r3;
+; SM70-NEXT:    or.b32 %r16, %r17, %r4;
+; SM70-NEXT:    atom.relaxed.cta.shared.cas.b32 %r5, [%rd1], %r16, %r15;
+; SM70-NEXT:    setp.eq.b32 %p1, %r5, %r16;
 ; SM70-NEXT:    @%p1 bra $L__BB65_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB65_1 Depth=1
 ; SM70-NEXT:    and.b32 %r6, %r5, %r2;
-; SM70-NEXT:    setp.ne.b32 %p2, %r16, %r6;
-; SM70-NEXT:    mov.b32 %r16, %r6;
+; SM70-NEXT:    setp.ne.b32 %p2, %r17, %r6;
+; SM70-NEXT:    mov.b32 %r17, %r6;
 ; SM70-NEXT:    @%p2 bra $L__BB65_1;
 ; SM70-NEXT:  $L__BB65_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    fence.acq_rel.cta;

@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: libcpp-abi-no-compressed-pair-padding
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cstdint>
 #include <deque>
 
@@ -88,14 +86,24 @@ static_assert(sizeof(std::deque<int, min_allocator<int> >) == 48, "");
 static_assert(sizeof(std::deque<int, test_allocator<int> >) == 80, "");
 static_assert(sizeof(std::deque<int, small_iter_allocator<int> >) == 12, "");
 static_assert(sizeof(std::deque<int, final_small_iter_allocator<int> >) == 16, "");
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(std::deque<int, common_base_allocator<int> >) == 56, "");
+#  else
+static_assert(sizeof(std::deque<int, common_base_allocator<int> >) == 48, "");
+#  endif
 
 static_assert(sizeof(std::deque<char>) == 48, "");
 static_assert(sizeof(std::deque<char, min_allocator<char> >) == 48, "");
 static_assert(sizeof(std::deque<char, test_allocator<char> >) == 80, "");
 static_assert(sizeof(std::deque<char, small_iter_allocator<char> >) == 12, "");
 static_assert(sizeof(std::deque<char, final_small_iter_allocator<char> >) == 16, "");
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(std::deque<char, common_base_allocator<char> >) == 56, "");
+#  else
+static_assert(sizeof(std::deque<char, common_base_allocator<char> >) == 48, "");
+#  endif
 
 static_assert(TEST_ALIGNOF(std::deque<int>) == 8, "");
 static_assert(TEST_ALIGNOF(std::deque<int, min_allocator<int> >) == 8, "");
@@ -118,14 +126,24 @@ static_assert(sizeof(std::deque<int, min_allocator<int> >) == 24, "");
 static_assert(sizeof(std::deque<int, test_allocator<int> >) == 48, "");
 static_assert(sizeof(std::deque<int, small_iter_allocator<int> >) == 12, "");
 static_assert(sizeof(std::deque<int, final_small_iter_allocator<int> >) == 16, "");
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(std::deque<int, common_base_allocator<int> >) == 28, "");
+#  else
+static_assert(sizeof(std::deque<int, common_base_allocator<int> >) == 24, "");
+#  endif
 
 static_assert(sizeof(std::deque<char>) == 24, "");
 static_assert(sizeof(std::deque<char, min_allocator<char> >) == 24, "");
 static_assert(sizeof(std::deque<char, test_allocator<char> >) == 48, "");
 static_assert(sizeof(std::deque<char, small_iter_allocator<char> >) == 12, "");
 static_assert(sizeof(std::deque<char, final_small_iter_allocator<char> >) == 16, "");
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(std::deque<char, common_base_allocator<char> >) == 28, "");
+#  else
+static_assert(sizeof(std::deque<char, common_base_allocator<char> >) == 24, "");
+#  endif
 
 static_assert(TEST_ALIGNOF(std::deque<int>) == 4, "");
 static_assert(TEST_ALIGNOF(std::deque<int, min_allocator<int> >) == 4, "");
