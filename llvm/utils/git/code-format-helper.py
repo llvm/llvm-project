@@ -198,7 +198,7 @@ class ClangFormatHelper(FormatHelper):
 
     @property
     def instructions(self) -> str:
-        return " ".join(self._construct_command(["origin/main...HEAD"]))
+        return " ".join(self._construct_command(["origin/main", "HEAD", "--diff_from_common_commit"]))
 
     def should_include_extensionless_file(self, path: str) -> bool:
         return path.startswith("libcxx/include")
