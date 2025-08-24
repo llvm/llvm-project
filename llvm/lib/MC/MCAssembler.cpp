@@ -915,7 +915,7 @@ void MCAssembler::relaxDwarfCallFrameFragment(MCFragment &F) {
 }
 
 bool MCAssembler::relaxFragment(MCFragment &F) {
-  size_t Size = computeFragmentSize(F);
+  auto Size = computeFragmentSize(F);
   switch (F.getKind()) {
   default:
     return false;
@@ -943,20 +943,9 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
     getContext().getCVContext().encodeDefRange(
         *this, static_cast<MCCVDefRangeFragment &>(F));
     break;
-  case MCFragment::FT_Fill: {
-    auto &FF = static_cast<MCFillFragment &>(F);
-    if (FF.getSize() == Size)
-      return false;
-    FF.setSize(Size);
-    return true;
-  }
-  case MCFragment::FT_Org: {
-    auto &FF = static_cast<MCOrgFragment &>(F);
-    if (FF.getSize() == Size)
-      return false;
-    FF.setSize(Size);
-    return true;
-  }
+  case MCFragment::FT_Fill:
+  case MCFragment::FT_Org:
+    return F.getNext()->Offset - F.Offset != Size;
   }
   return computeFragmentSize(F) != Size;
 }
