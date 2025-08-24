@@ -1108,33 +1108,31 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       return Def->replaceAllUsesWith(A);
 
     // Try to fold Not into compares by adjusting the predicate in-place.
-    if (auto *WideCmp = dyn_cast<VPWidenRecipe>(A)) {
-      if ((WideCmp->getOpcode() == Instruction::ICmp ||
-           WideCmp->getOpcode() == Instruction::FCmp) &&
-          all_of(WideCmp->users(), [&WideCmp](VPUser *U) {
-            return match(U, m_CombineOr(m_Not(m_Specific(WideCmp)),
-                                        m_Select(m_Specific(WideCmp),
-                                                 m_VPValue(), m_VPValue())));
+    CmpPredicate Pred;
+    if (match(A, m_Cmp(Pred, m_VPValue(), m_VPValue()))) {
+      auto *Cmp = cast<VPRecipeWithIRFlags>(A);
+      if (all_of(Cmp->users(), [&Cmp](VPUser *U) {
+            return match(U, m_CombineOr(m_Not(m_Specific(Cmp)),
+                                        m_Select(m_Specific(Cmp), m_VPValue(),
+                                                 m_VPValue())));
           })) {
-        WideCmp->setPredicate(
-            CmpInst::getInversePredicate(WideCmp->getPredicate()));
-        for (VPUser *U : to_vector(WideCmp->users())) {
+        Cmp->setPredicate(CmpInst::getInversePredicate(Pred));
+        for (VPUser *U : to_vector(Cmp->users())) {
           auto *R = cast<VPSingleDefRecipe>(U);
-          if (match(R, m_Select(m_Specific(WideCmp), m_VPValue(X),
-                                m_VPValue(Y)))) {
+          if (match(R, m_Select(m_Specific(Cmp), m_VPValue(X), m_VPValue(Y)))) {
             // select (cmp pred), x, y -> select (cmp inv_pred), y, x
             R->setOperand(1, Y);
             R->setOperand(2, X);
           } else {
             // not (cmp pred) -> cmp inv_pred
-            assert(match(R, m_Not(m_Specific(WideCmp))) && "Unexpected user");
-            R->replaceAllUsesWith(WideCmp);
+            assert(match(R, m_Not(m_Specific(Cmp))) && "Unexpected user");
+            R->replaceAllUsesWith(Cmp);
           }
         }
-        // If WideCmp doesn't have a debug location, use the one from the
-        // negation, to preserve the location.
-        if (!WideCmp->getDebugLoc() && R.getDebugLoc())
-          WideCmp->setDebugLoc(R.getDebugLoc());
+        // If Cmp doesn't have a debug location, use the one from the negation,
+        // to preserve the location.
+        if (!Cmp->getDebugLoc() && R.getDebugLoc())
+          Cmp->setDebugLoc(R.getDebugLoc());
       }
     }
   }

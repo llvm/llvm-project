@@ -805,6 +805,9 @@ public:
 
   GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
 
+  /// Returns true if the recipe has a comparison predicate.
+  bool hasPredicate() const { return OpType == OperationType::Cmp; }
+
   /// Returns true if the recipe has fast-math flags.
   bool hasFastMathFlags() const { return OpType == OperationType::FPMathOp; }
 
