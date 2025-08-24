@@ -380,8 +380,8 @@ public:
     unsigned BucketNo = LookupBucketFor(Key, FullHashValue);
     StringMapEntryBase *&Bucket = TheTable[BucketNo];
     if (Bucket && Bucket != getTombstoneVal())
-      return std::make_pair(iterator(TheTable + BucketNo, false),
-                            false); // Already exists in map.
+      return {iterator(TheTable + BucketNo, false),
+              false}; // Already exists in map.
 
     if (Bucket == getTombstoneVal())
       --NumTombstones;
@@ -391,7 +391,7 @@ public:
     assert(NumItems + NumTombstones <= NumBuckets);
 
     BucketNo = RehashTable(BucketNo);
-    return std::make_pair(iterator(TheTable + BucketNo, false), true);
+    return {iterator(TheTable + BucketNo, false), true};
   }
 
   // clear - Empties out the StringMap
