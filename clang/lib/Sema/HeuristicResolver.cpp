@@ -14,6 +14,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/identity.h"
+#include <optional>
 
 namespace clang {
 
@@ -301,9 +302,34 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
     return {};
   }
 
+  // check if member expr is in the context of an explicit object method
+  // If so, it's safe to assume the templated arg is of type of the record
+  const auto ExplicitMemberHeuristic =
+      [&](const Expr *Base) -> std::optional<QualType> {
+    if (auto *DeclRef = dyn_cast_if_present<DeclRefExpr>(Base)) {
+      auto *PrDecl = dyn_cast_if_present<ParmVarDecl>(DeclRef->getDecl());
+
+      if (PrDecl && PrDecl->isExplicitObjectParameter()) {
+        auto CxxRecord = dyn_cast_if_present<CXXRecordDecl>(
+            PrDecl->getDeclContext()->getParent());
+
+        if (CxxRecord) {
+          return Ctx.getTypeDeclType(dyn_cast<TypeDecl>(CxxRecord));
+        }
+      }
+    }
+
+    return std::nullopt;
+  };
+
   // Try resolving the member inside the expression's base type.
   Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
   QualType BaseType = ME->getBaseType();
+
+  if (auto Type = ExplicitMemberHeuristic(Base)) {
+    BaseType = *Type;
+  }
+
   BaseType = simplifyType(BaseType, Base, ME->isArrow());
   return resolveDependentMember(BaseType, ME->getMember(), NoFilter);
 }

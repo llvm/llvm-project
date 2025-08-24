@@ -41,7 +41,7 @@ template <typename InputNode, typename ParamT, typename InputMatcher,
           typename... OutputMatchers>
 void expectResolution(llvm::StringRef Code, ResolveFnT<ParamT> ResolveFn,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
-  auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
+  auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++23"});
   auto &Ctx = TU->getASTContext();
   auto InputMatches = match(IM, Ctx);
   ASSERT_EQ(1u, InputMatches.size());
@@ -447,6 +447,23 @@ TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_Recursive) {
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
       cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_ExplicitObjectParameter) {
+  std::string Code = R"cpp(
+    struct Foo {
+      int m_int;
+
+      int bar(this auto&& self) {
+        return self.m_int;
+      }
+    };
+  )cpp";
+  // Test resolution of "m_int" in "self.m_int()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("m_int")).bind("input"),
+      fieldDecl(hasName("m_int")).bind("output"));
 }
 
 TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {

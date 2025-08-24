@@ -17,9 +17,10 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -2465,6 +2466,46 @@ TEST(CrossFileRenameTests, adjustmentCost) {
     EXPECT_EQ(renameRangeAdjustmentCost(
                   C.ranges("idx"), symbolRanges(C.ranges("lex")), MappedIndex),
               T.ExpectedCost);
+  }
+}
+
+TEST(RenameTest, RenameWithExplicitObjectPararameter) {
+  Annotations Test = {R"cpp(
+    struct Foo {
+      int [[memb^er]] {};
+      auto&& getter1(this auto&& self) {
+        auto local = [&] {
+          return self.[[memb^er]];
+        }();
+        return local + self.[[memb^er]];
+      }
+      auto&& getter2(this Foo&& self) {
+        return self.[[memb^er]];
+      }
+      int normal() {
+        return [[memb^er]];
+      }
+    };
+  )cpp"};
+
+  auto TU = TestTU::withCode(Test.code());
+  TU.ExtraArgs.push_back("-std=c++23");
+  auto AST = TU.build();
+
+  llvm::StringRef NewName = "m_member";
+  auto Index = TU.index();
+
+  for (const auto &RenamePos : Test.points()) {
+    auto RenameResult = rename({RenamePos, NewName, AST, testPath(TU.Filename),
+                                getVFSFromAST(AST), Index.get()});
+
+    ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
+    auto Res = RenameResult.get();
+
+    ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
+    ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
+    EXPECT_EQ(applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
+              expectedResult(Test, NewName));
   }
 }
 
