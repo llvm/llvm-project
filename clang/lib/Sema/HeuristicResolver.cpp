@@ -304,18 +304,14 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
 
   // check if member expr is in the context of an explicit object method
   // If so, it's safe to assume the templated arg is of type of the record
-  const auto ExplicitMemberHeuristic =
-      [&](const Expr *Base) -> QualType {
+  const auto ExplicitMemberHeuristic = [&](const Expr *Base) -> QualType {
     if (auto *DeclRef = dyn_cast_if_present<DeclRefExpr>(Base)) {
       auto *PrDecl = dyn_cast_if_present<ParmVarDecl>(DeclRef->getDecl());
 
       if (PrDecl && PrDecl->isExplicitObjectParameter()) {
-        auto CxxRecord = dyn_cast_if_present<CXXRecordDecl>(
-            PrDecl->getDeclContext()->getParent());
-
-        if (CxxRecord) {
-          return Ctx.getTypeDeclType(dyn_cast<TypeDecl>(CxxRecord));
-        }
+        // get the parent, a cxxrecord
+        return Ctx.getTypeDeclType(
+            dyn_cast<TypeDecl>(PrDecl->getDeclContext()->getParent()));
       }
     }
 
