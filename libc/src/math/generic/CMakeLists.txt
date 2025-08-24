@@ -2294,7 +2294,6 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
 )
 
-
 add_entrypoint_object(
   fmin
   SRCS
@@ -3212,7 +3211,6 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.config
 )
-
 
 add_entrypoint_object(
   remainderf
