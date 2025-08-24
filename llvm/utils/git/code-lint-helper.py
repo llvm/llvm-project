@@ -7,14 +7,8 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 # ==-------------------------------------------------------------------------==#
+"""A helper script to run clang-tidy linter in GitHub actions
 
-import argparse
-import os
-import subprocess
-import sys
-from typing import List, Optional
-
-"""
 This script is run by GitHub actions to ensure that the code in PR's conform to
 the coding style of LLVM. The canonical source of this script is in the LLVM
 source tree under llvm/utils/git.
@@ -22,6 +16,11 @@ source tree under llvm/utils/git.
 You can learn more about the LLVM coding style on llvm.org:
 https://llvm.org/docs/CodingStandards.html
 """
+
+import argparse
+import os
+import subprocess
+from typing import List, Optional
 
 
 class LintArgs:
@@ -54,7 +53,7 @@ COMMENT_TAG = "<!--LLVM CODE LINT COMMENT: clang-tidy-->"
 def get_instructions(cpp_files: List[str]) -> str:
     files_str = " ".join(cpp_files)
     return f"""
-git diff -U0 origin/main..HEAD -- {files_str} |
+git diff -U0 origin/main...HEAD -- {files_str} |
 python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \\
   -path build -p1 -quiet"""
 
@@ -87,8 +86,8 @@ def clean_clang_tidy_output(output: str) -> Optional[str]:
     return None
 
 
+# TODO: Add more rules when enabling other projects to use clang-tidy in CI.
 def should_lint_file(filepath: str) -> bool:
-    # For add other paths/files to this function
     return filepath.startswith("clang-tools-extra/clang-tidy/")
 
 
@@ -104,16 +103,6 @@ def filter_changed_files(changed_files: List[str]) -> List[str]:
             filtered_files.append(filepath)
 
     return filtered_files
-
-
-def has_clang_tidy(clang_tidy_binary: str) -> bool:
-    cmd = [clang_tidy_binary, "--version"]
-    proc = None
-    try:
-        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except:
-        return False
-    return proc.returncode == 0
 
 
 def create_comment_text(warning: str, cpp_files: List[str]) -> str:
@@ -181,7 +170,7 @@ def run_clang_tidy(changed_files: List[str], args: LintArgs) -> Optional[str]:
         "git",
         "diff",
         "-U0",
-        f"{args.start_rev}..{args.end_rev}",
+        f"{args.start_rev}...{args.end_rev}",
         "--",
     ] + changed_files
 
@@ -314,11 +303,6 @@ if __name__ == "__main__":
 
     if args.verbose:
         print(f"got changed files: {changed_files}")
-
-    # Check for clang-tidy tool
-    if not has_clang_tidy(args.clang_tidy_binary):
-        print("Couldn't find C/C++ code linter: clang-tidy")
-        sys.exit(1)
 
     if args.verbose:
         print("running linter clang-tidy")
