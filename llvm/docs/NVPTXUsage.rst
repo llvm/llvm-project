@@ -57,6 +57,19 @@ not.
 
 When compiled, the PTX kernel functions are callable by host-side code.
 
+
+Parameter Attributes
+--------------------
+
+``"nvvm.grid_constant"``
+    This attribute may be attached to a ``byval`` parameter of a kernel function
+    to indicate that the parameter should be lowered as a direct reference to
+    the grid-constant memory of the parameter, as opposed to a copy of the
+    parameter in local memory. Writing to a grid-constant parameter is
+    undefined behavior. Unlike a normal ``byval`` parameter, the address of a
+    grid-constant parameter is not unique to a given function invocation but
+    instead is shared by all kernels in the grid.
+
 .. _nvptx_fnattrs:
 
 Function Attributes
@@ -2289,9 +2302,9 @@ The Kernel
   ; Intrinsic to read X component of thread ID
   declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
-  define void @kernel(ptr addrspace(1) %A,
-                      ptr addrspace(1) %B,
-                      ptr addrspace(1) %C) {
+  define ptx_kernel void @kernel(ptr addrspace(1) %A,
+                                 ptr addrspace(1) %B,
+                                 ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
@@ -2313,9 +2326,6 @@ The Kernel
 
     ret void
   }
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 We can use the LLVM ``llc`` tool to directly run the NVPTX code generator:
@@ -2440,34 +2450,6 @@ instructions. Intrinsics are provided to convert pointers between the generic
 and non-generic address spaces.
 
 See :ref:`address_spaces` and :ref:`nvptx_intrinsics` for more information.
-
-
-Kernel Metadata
-^^^^^^^^^^^^^^^
-
-In PTX, a function can be either a `kernel` function (callable from the host
-program), or a `device` function (callable only from GPU code). You can think
-of `kernel` functions as entry-points in the GPU program. To mark an LLVM IR
-function as a `kernel` function, we make use of special LLVM metadata. The
-NVPTX back-end will look for a named metadata node called
-``nvvm.annotations``. This named metadata must contain a list of metadata that
-describe the IR. For our purposes, we need to declare a metadata node that
-assigns the "kernel" attribute to the LLVM IR function that should be emitted
-as a PTX `kernel` function. These metadata nodes take the form:
-
-.. code-block:: text
-
-  !{<function ref>, metadata !"kernel", i32 1}
-
-For the previous example, we have:
-
-.. code-block:: llvm
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
-
-Here, we have a single metadata declaration in ``nvvm.annotations``. This
-metadata annotates our ``@kernel`` function with the ``kernel`` attribute.
 
 
 Running the Kernel
@@ -2669,9 +2651,9 @@ Libdevice provides an ``__nv_powf`` function that we will use.
   ; libdevice function
   declare float @__nv_powf(float, float)
 
-  define void @kernel(ptr addrspace(1) %A,
-                      ptr addrspace(1) %B,
-                      ptr addrspace(1) %C) {
+  define ptx_kernel void @kernel(ptr addrspace(1) %A,
+                                 ptr addrspace(1) %B,
+                                 ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
@@ -2693,9 +2675,6 @@ Libdevice provides an ``__nv_powf`` function that we will use.
 
     ret void
   }
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 To compile this kernel, we perform the following steps:
