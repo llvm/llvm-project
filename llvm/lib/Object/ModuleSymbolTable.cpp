@@ -21,6 +21,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -90,8 +91,11 @@ initializeRecordStreamer(const Module &M,
   if (!MAI)
     return;
 
+  LLVMContext &Context = M.getContext();
+
   std::unique_ptr<MCSubtargetInfo> STI(
-      T->createMCSubtargetInfo(TT.str(), "", ""));
+      T->createMCSubtargetInfo(TT.str(), Context.getDefaultTargetCPU(),
+                               Context.getDefaultTargetFeatures()));
   if (!STI)
     return;
 
