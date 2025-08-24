@@ -223,7 +223,7 @@ public:
 
 private:
   void parseVarLenEncoding(const VarLenInst &VLI);
-  void parseFixedLenEncoding(const BitsInit &Bits);
+  void parseFixedLenEncoding(const BitsInit &RecordInstBits);
 
   void parseVarLenOperands(const VarLenInst &VLI);
   void parseFixedLenOperands(const BitsInit &Bits);
@@ -1772,12 +1772,51 @@ void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
   assert(I == VLI.size());
 }
 
-void InstructionEncoding::parseFixedLenEncoding(const BitsInit &Bits) {
-  InstBits = KnownBits(Bits.getNumBits());
-  SoftFailBits = APInt(Bits.getNumBits(), 0);
+void InstructionEncoding::parseFixedLenEncoding(
+    const BitsInit &RecordInstBits) {
+  // For fixed length instructions, sometimes the `Inst` field specifies more
+  // bits than the actual size of the instruction, which is specified in `Size`.
+  // In such cases, we do some basic validation and drop the upper bits.
+  unsigned BitWidth = EncodingDef->getValueAsInt("Size") * 8;
+  unsigned InstNumBits = RecordInstBits.getNumBits();
+
+  // Returns true if all bits in `Bits` are zero or unset.
+  auto CheckAllZeroOrUnset = [&](ArrayRef<const Init *> Bits,
+                                 const RecordVal *Field) {
+    bool AllZeroOrUnset = llvm::all_of(Bits, [](const Init *Bit) {
+      if (const auto *BI = dyn_cast<BitInit>(Bit))
+        return !BI->getValue();
+      return isa<UnsetInit>(Bit);
+    });
+    if (AllZeroOrUnset)
+      return;
+    PrintNote([Field](raw_ostream &OS) { Field->print(OS); });
+    PrintFatalError(EncodingDef, Twine(Name) + ": Size is " + Twine(BitWidth) +
+                                     " bits, but " + Field->getName() +
+                                     " bits beyond that are    not zero/unset");
+  };
+
+  if (InstNumBits < BitWidth)
+    PrintFatalError(EncodingDef, Twine(Name) + ": Size is " + Twine(BitWidth) +
+                                     " bits, but Inst specifies only " +
+                                     Twine(InstNumBits) + " bits");
+
+  if (InstNumBits > BitWidth) {
+    // Ensure that all the bits beyond 'Size' are 0 or unset (i.e., carry no
+    // actual encoding).
+    ArrayRef<const Init *> UpperBits =
+        RecordInstBits.getBits().drop_front(BitWidth);
+    const RecordVal *InstField = EncodingDef->getValue("Inst");
+    CheckAllZeroOrUnset(UpperBits, InstField);
+  }
+
+  ArrayRef<const Init *> ActiveInstBits =
+      RecordInstBits.getBits().take_front(BitWidth);
+  InstBits = KnownBits(BitWidth);
+  SoftFailBits = APInt(BitWidth, 0);
 
   // Parse Inst field.
-  for (auto [I, V] : enumerate(Bits.getBits())) {
+  for (auto [I, V] : enumerate(ActiveInstBits)) {
     if (const auto *B = dyn_cast<BitInit>(V)) {
       if (B->getValue())
         InstBits.One.setBit(I);
@@ -1787,26 +1826,36 @@ void InstructionEncoding::parseFixedLenEncoding(const BitsInit &Bits) {
   }
 
   // Parse SoftFail field.
-  if (const RecordVal *SoftFailField = EncodingDef->getValue("SoftFail")) {
-    const auto *SFBits = dyn_cast<BitsInit>(SoftFailField->getValue());
-    if (!SFBits || SFBits->getNumBits() != Bits.getNumBits()) {
-      PrintNote(EncodingDef->getLoc(), "in record");
-      PrintFatalError(SoftFailField,
-                      formatv("SoftFail field, if defined, must be "
-                              "of the same type as Inst, which is bits<{}>",
-                              Bits.getNumBits()));
-    }
-    for (auto [I, V] : enumerate(SFBits->getBits())) {
-      if (const auto *B = dyn_cast<BitInit>(V); B && B->getValue()) {
-        if (!InstBits.Zero[I] && !InstBits.One[I]) {
-          PrintNote(EncodingDef->getLoc(), "in record");
-          PrintError(SoftFailField,
-                     formatv("SoftFail{{{0}} = 1 requires Inst{{{0}} "
-                             "to be fully defined (0 or 1, not '?')",
-                             I));
-        }
-        SoftFailBits.setBit(I);
+  const RecordVal *SoftFailField = EncodingDef->getValue("SoftFail");
+  if (!SoftFailField)
+    return;
+
+  const auto *SFBits = dyn_cast<BitsInit>(SoftFailField->getValue());
+  if (!SFBits || SFBits->getNumBits() != InstNumBits) {
+    PrintNote(EncodingDef->getLoc(), "in record");
+    PrintFatalError(SoftFailField,
+                    formatv("SoftFail field, if defined, must be "
+                            "of the same type as Inst, which is bits<{}>",
+                            InstNumBits));
+  }
+
+  if (InstNumBits > BitWidth) {
+    // Ensure that all upper bits of `SoftFail` are 0 or unset.
+    ArrayRef<const Init *> UpperBits = SFBits->getBits().drop_front(BitWidth);
+    CheckAllZeroOrUnset(UpperBits, SoftFailField);
+  }
+
+  ArrayRef<const Init *> ActiveSFBits = SFBits->getBits().take_front(BitWidth);
+  for (auto [I, V] : enumerate(ActiveSFBits)) {
+    if (const auto *B = dyn_cast<BitInit>(V); B && B->getValue()) {
+      if (!InstBits.Zero[I] && !InstBits.One[I]) {
+        PrintNote(EncodingDef->getLoc(), "in record");
+        PrintError(SoftFailField,
+                   formatv("SoftFail{{{0}} = 1 requires Inst{{{0}} "
+                           "to be fully defined (0 or 1, not '?')",
+                           I));
       }
+      SoftFailBits.setBit(I);
     }
   }
 }
