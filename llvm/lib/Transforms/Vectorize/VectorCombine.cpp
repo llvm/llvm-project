@@ -3186,16 +3186,15 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
   // This stores the last used instructions for shuffle/common op.
   //
-  // PrevVecV[2] stores the first vector from extract element instruction,
-  // while PrevVecV[0] / PrevVecV[1] store the last two simultaneous
+  // PrevVecV[0] / PrevVecV[1] store the last two simultaneous
   // instructions from either shuffle/common op.
-  SmallVector<Value *, 3> PrevVecV(3, nullptr);
+  SmallVector<Value *, 2> PrevVecV(2, nullptr);
 
-  Value *VecOp;
-  if (!match(&I, m_ExtractElt(m_Value(VecOp), m_Zero())))
+  Value *VecOpEE;
+  if (!match(&I, m_ExtractElt(m_Value(VecOpEE), m_Zero())))
     return false;
 
-  auto *FVT = dyn_cast<FixedVectorType>(VecOp->getType());
+  auto *FVT = dyn_cast<FixedVectorType>(VecOpEE->getType());
   if (!FVT)
     return false;
 
@@ -3222,8 +3221,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       ExpectedParityMask |= (1ll << Mask);
   }
 
-  PrevVecV[2] = VecOp;
-  InstWorklist.push(PrevVecV[2]);
+  InstWorklist.push(VecOpEE);
 
   while (!InstWorklist.empty()) {
     Value *CI = InstWorklist.front();
@@ -3239,7 +3237,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
       // For the first found call/bin op, the vector has to come from the
       // extract element op.
-      if (II != (IsFirstCallOrBinInst ? PrevVecV[2] : PrevVecV[0]))
+      if (II != (IsFirstCallOrBinInst ? VecOpEE : PrevVecV[0]))
         return false;
       IsFirstCallOrBinInst = false;
 
@@ -3285,7 +3283,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
           any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
         return false;
 
-      if (BinOp != (IsFirstCallOrBinInst ? PrevVecV[2] : PrevVecV[0]))
+      if (BinOp != (IsFirstCallOrBinInst ? VecOpEE : PrevVecV[0]))
         return false;
       IsFirstCallOrBinInst = false;
 
