@@ -2308,16 +2308,16 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   }
   if (HasSoftFail) {
     OS << R"(
-      case MCD::OPC_SoftFail: {
-        // Decode the mask values.
-        uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
-        uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
-        bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
-        if (Failed)
-          S = MCDisassembler::SoftFail;
-        LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
-        break;
-  })";
+    case MCD::OPC_SoftFail: {
+      // Decode the mask values.
+      uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
+      uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
+      bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
+      if (Failed)
+        S = MCDisassembler::SoftFail;
+      LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
+      break;
+    })";
   }
   OS << R"(
     case MCD::OPC_Fail: {
