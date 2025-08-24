@@ -1001,7 +1001,7 @@ static void computeMaxPressureDelta(ArrayRef<unsigned> OldMaxPressureVec,
         ++CritIdx;
 
       if (CritIdx != CritEnd && CriticalPSets[CritIdx].getPSet() == i) {
-        int PDiff = (int)PNew - (int)CriticalPSets[CritIdx].getUnitInc();
+        int PDiff = (int)PNew - CriticalPSets[CritIdx].getUnitInc();
         if (PDiff > 0) {
           Delta.CriticalMax = PressureChange(i);
           Delta.CriticalMax.setUnitInc(PDiff);
@@ -1191,7 +1191,7 @@ getUpwardPressureDelta(const MachineInstr *MI, /*const*/ PressureDiff &PDiff,
         ++CritIdx;
 
       if (CritIdx != CritEnd && CriticalPSets[CritIdx].getPSet() == PSetID) {
-        int CritInc = (int)MNew - (int)CriticalPSets[CritIdx].getUnitInc();
+        int CritInc = (int)MNew - CriticalPSets[CritIdx].getUnitInc();
         if (CritInc > 0 && CritInc <= std::numeric_limits<int16_t>::max()) {
           Delta.CriticalMax = PressureChange(PSetID);
           Delta.CriticalMax.setUnitInc(CritInc);

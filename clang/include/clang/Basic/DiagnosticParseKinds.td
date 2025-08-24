@@ -830,6 +830,9 @@ def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
   "property declaration cannot have a default member initializer">;
+def ext_invalid_attribute_argument
+    : Extension<"'%0' is not allowed in an attribute argument list">,
+    InGroup<DiagGroup<"attribute-preprocessor-tokens">>;
 
 def err_assume_attr_expects_cond_expr : Error<
   "use of this expression in an %0 attribute requires parentheses">;
@@ -930,6 +933,10 @@ def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
 def warn_missing_dependent_template_keyword : ExtWarn<
   "use 'template' keyword to treat '%0' as a dependent template name">;
+
+def err_cxx26_template_template_params
+    : Error<"%select{variable template|concept}0 template parameter is a C++2c "
+            "extension">;
 
 def ext_extern_template : Extension<
   "extern templates are a C++11 extension">, InGroup<CXX11>;

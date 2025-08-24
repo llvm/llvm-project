@@ -151,7 +151,7 @@ public:
       AllocFunType allocFun = &::malloc,
       std::function<void(StridedMemRefType<T, Rank>)> freeFun =
           [](StridedMemRefType<T, Rank> descriptor) {
-            ::free(descriptor.data);
+            ::free(descriptor.basePtr);
           })
       : freeFunc(freeFun) {
     if (shapeAlloc.empty())

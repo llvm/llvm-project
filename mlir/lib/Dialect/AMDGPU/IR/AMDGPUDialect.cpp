@@ -511,6 +511,18 @@ LogicalResult DPPOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// PermlaneSwapOp
+//===----------------------------------------------------------------------===//
+LogicalResult PermlaneSwapOp::verify() {
+  unsigned rowLength = getRowLength();
+
+  if (rowLength != 16 && rowLength != 32)
+    return emitOpError("row_length attribute must either be 16 or 32.");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GatherToLDSOp
 //===----------------------------------------------------------------------===//
 
@@ -518,8 +530,8 @@ LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (!dstType.areTrailingDimsContiguous(dstType.getRank()))
-    return emitOpError("destination types must be contiguous");
+  if (!dstType.areTrailingDimsContiguous(1))
+    return emitOpError("destination type inner most dim must be contiguous");
 
   auto elemType = srcType.getElementType();
   // Check $src and $dst element types are the same.

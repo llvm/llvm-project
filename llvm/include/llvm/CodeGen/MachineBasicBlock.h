@@ -323,10 +323,11 @@ public:
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
 
-  /// Returns true if the original IR terminator is an `indirectbr`. This
-  /// typically corresponds to a `goto` in C, rather than jump tables.
-  bool terminatorIsComputedGoto() const {
-    return back().isIndirectBranch() &&
+  /// Returns true if the original IR terminator is an `indirectbr` with
+  /// successor blocks. This typically corresponds to a `goto` in C, rather than
+  /// jump tables.
+  bool terminatorIsComputedGotoWithSuccessors() const {
+    return back().isIndirectBranch() && !succ_empty() &&
            llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
              return Succ->isIRBlockAddressTaken();
            });
@@ -552,8 +553,8 @@ public:
         LiveRegI = (*BlockI)->livein_begin();
         if (!advanceToValidPosition())
           return;
-        if (LiveRegI->PhysReg == ExceptionPointer ||
-            LiveRegI->PhysReg == ExceptionSelector)
+        if ((*BlockI)->isEHPad() && (LiveRegI->PhysReg == ExceptionPointer ||
+                                     LiveRegI->PhysReg == ExceptionSelector))
           ++(*this);
       }
     }

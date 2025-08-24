@@ -31,7 +31,7 @@ define amdgpu_ps void @global_prefetch_offset(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    global_prefetch_b8 v[0:1], off offset:512
 ; GCN-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 128
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %ptr, i32 128
   tail call void @llvm.amdgcn.global.prefetch(ptr addrspace(1) %gep, i32 0)
   ret void
 }

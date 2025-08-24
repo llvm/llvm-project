@@ -48,8 +48,8 @@ namespace clang {
     ///
     /// \param Arg the template type argument or non-type template argument.
     /// \param Loc the location of the type.
-    ParsedTemplateArgument(KindType Kind, void *Arg, SourceLocation Loc)
-      : Kind(Kind), Arg(Arg), Loc(Loc) { }
+    ParsedTemplateArgument(KindType Kind, void *Arg, SourceLocation NameLoc)
+        : Kind(Kind), Arg(Arg), NameLoc(NameLoc) {}
 
     /// Create a template template argument.
     ///
@@ -60,11 +60,11 @@ namespace clang {
     /// argument refers.
     ///
     /// \param TemplateLoc the location of the template name.
-    ParsedTemplateArgument(const CXXScopeSpec &SS,
-                           ParsedTemplateTy Template,
-                           SourceLocation TemplateLoc)
-      : Kind(ParsedTemplateArgument::Template),
-        Arg(Template.getAsOpaquePtr()), SS(SS), Loc(TemplateLoc) {}
+    ParsedTemplateArgument(SourceLocation TemplateKwLoc, const CXXScopeSpec &SS,
+                           ParsedTemplateTy Template, SourceLocation NameLoc)
+        : Kind(ParsedTemplateArgument::Template),
+          Arg(Template.getAsOpaquePtr()), SS(SS), TemplateKwLoc(TemplateKwLoc),
+          NameLoc(NameLoc) {}
 
     /// Determine whether the given template argument is invalid.
     bool isInvalid() const { return Arg == nullptr; }
@@ -91,7 +91,10 @@ namespace clang {
     }
 
     /// Retrieve the location of the template argument.
-    SourceLocation getLocation() const { return Loc; }
+    SourceLocation getTemplateKwLoc() const { return TemplateKwLoc; }
+
+    /// Retrieve the location of the template argument.
+    SourceLocation getNameLoc() const { return NameLoc; }
 
     /// Retrieve the nested-name-specifier that precedes the template
     /// name in a template template argument.
@@ -128,8 +131,11 @@ namespace clang {
     /// argument.
     CXXScopeSpec SS;
 
-    /// the location of the template argument.
-    SourceLocation Loc;
+    /// the location of the template keyword.
+    SourceLocation TemplateKwLoc;
+
+    /// the location of the template name.
+    SourceLocation NameLoc;
 
     /// The ellipsis location that can accompany a template template
     /// argument (turning it into a template template argument expansion).
