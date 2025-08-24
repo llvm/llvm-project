@@ -321,12 +321,14 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   // Try resolving the member inside the expression's base type.
   Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
   QualType BaseType = ME->getBaseType();
+  BaseType = simplifyType(BaseType, Base, ME->isArrow());
 
-  if (auto Type = ExplicitMemberHeuristic(Base); !Type.isNull()) {
-    BaseType = Type;
+  if (BaseType->isUndeducedAutoType() || BaseType->isTemplateTypeParmType()) {
+    if (auto Type = ExplicitMemberHeuristic(Base); !Type.isNull()) {
+      BaseType = Type;
+    }
   }
 
-  BaseType = simplifyType(BaseType, Base, ME->isArrow());
   return resolveDependentMember(BaseType, ME->getMember(), NoFilter);
 }
 

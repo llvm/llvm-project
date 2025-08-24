@@ -2483,7 +2483,7 @@ TEST(RenameTest, RenameWithExplicitObjectPararameter) {
         return self.[[memb^er]];
       }
       int normal() {
-        return [[memb^er]];
+        return this->[[mem^ber]] + [[memb^er]];
       }
     };
   )cpp"};
