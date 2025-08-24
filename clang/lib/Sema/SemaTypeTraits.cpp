@@ -1964,6 +1964,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_empty", TypeTrait::UTT_IsEmpty)
       .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
       .Case("is_constructible", TypeTrait::TT_IsConstructible)
+      .Case("is_final", TypeTrait::UTT_IsFinal)
       .Default(std::nullopt);
 }
 
@@ -2448,6 +2449,52 @@ static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
   }
 }
 
+static void DiagnoseIsFinalReason(Sema &S, SourceLocation Loc,
+                                  const CXXRecordDecl *D) {
+  if (!D || D->isInvalidDecl())
+    return;
+
+  // Complete record but not 'final'.
+  if (!D->isEffectivelyFinal()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotMarkedFinal;
+    S.Diag(D->getLocation(), diag::note_defined_here) << D;
+    return;
+  }
+}
+
+static void DiagnoseIsFinalReason(Sema &S, SourceLocation Loc, QualType T) {
+  // Primary: “%0 is not final”
+  S.Diag(Loc, diag::note_unsatisfied_trait) << T << diag::TraitName::Final;
+  if (T->isReferenceType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotClassOrUnion;
+    return;
+  }
+  // Arrays / functions / non-records → not a class/union.
+  if (S.Context.getAsArrayType(T)) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotClassOrUnion;
+    return;
+  }
+  if (T->isFunctionType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotClassOrUnion;
+    return;
+  }
+  if (!T->isRecordType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotClassOrUnion;
+    return;
+  }
+  if (const auto *D = T->getAsCXXRecordDecl())
+    DiagnoseIsFinalReason(S, Loc, D);
+}
+
 static bool hasMultipleDataBaseClassesWithFields(const CXXRecordDecl *D) {
   int NumBasesWithFields = 0;
   for (const CXXBaseSpecifier &Base : D->bases()) {
@@ -2624,6 +2671,15 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   case TT_IsConstructible:
     DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
     break;
+  case UTT_IsFinal: {
+    QualType QT = Args[0];
+    if (QT->isDependentType())
+      break;
+    const auto *RD = QT->getAsCXXRecordDecl();
+    if (!RD || !RD->isEffectivelyFinal())
+      DiagnoseIsFinalReason(*this, E->getBeginLoc(), QT); // unsatisfied
+    break;
+  }
   default:
     break;
   }

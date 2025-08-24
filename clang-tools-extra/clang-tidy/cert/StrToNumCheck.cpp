@@ -46,7 +46,9 @@ enum class ConversionKind {
   ToLongDouble
 };
 
-ConversionKind classifyConversionFunc(const FunctionDecl *FD) {
+} // namespace
+
+static ConversionKind classifyConversionFunc(const FunctionDecl *FD) {
   return llvm::StringSwitch<ConversionKind>(FD->getName())
       .Cases("atoi", "atol", ConversionKind::ToInt)
       .Case("atoll", ConversionKind::ToLongInt)
@@ -54,8 +56,8 @@ ConversionKind classifyConversionFunc(const FunctionDecl *FD) {
       .Default(ConversionKind::None);
 }
 
-ConversionKind classifyFormatString(StringRef Fmt, const LangOptions &LO,
-                                    const TargetInfo &TI) {
+static ConversionKind classifyFormatString(StringRef Fmt, const LangOptions &LO,
+                                           const TargetInfo &TI) {
   // Scan the format string for the first problematic format specifier, then
   // report that as the conversion type. This will miss additional conversion
   // specifiers, but that is acceptable behavior.
@@ -128,7 +130,7 @@ ConversionKind classifyFormatString(StringRef Fmt, const LangOptions &LO,
   return H.get();
 }
 
-StringRef classifyConversionType(ConversionKind K) {
+static StringRef classifyConversionType(ConversionKind K) {
   switch (K) {
   case ConversionKind::None:
     llvm_unreachable("Unexpected conversion kind");
@@ -148,7 +150,7 @@ StringRef classifyConversionType(ConversionKind K) {
   llvm_unreachable("Unknown conversion kind");
 }
 
-StringRef classifyReplacement(ConversionKind K) {
+static StringRef classifyReplacement(ConversionKind K) {
   switch (K) {
   case ConversionKind::None:
     llvm_unreachable("Unexpected conversion kind");
@@ -173,7 +175,6 @@ StringRef classifyReplacement(ConversionKind K) {
   }
   llvm_unreachable("Unknown conversion kind");
 }
-} // unnamed namespace
 
 void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("expr");

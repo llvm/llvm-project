@@ -727,6 +727,23 @@ public:
   bool matchUMulHToLShr(MachineInstr &MI) const;
   void applyUMulHToLShr(MachineInstr &MI) const;
 
+  // Combine trunc(smin(smax(x, C1), C2)) -> truncssat_s(x)
+  // or      trunc(smax(smin(x, C2), C1)) -> truncssat_s(x).
+  bool matchTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+  void applyTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+
+  // Combine trunc(smin(smax(x, 0), C)) -> truncssat_u(x)
+  // or      trunc(smax(smin(x, C), 0)) -> truncssat_u(x)
+  // or      trunc(umin(smax(x, 0), C)) -> truncssat_u(x)
+  bool matchTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+  void applyTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+
+  // Combine trunc(umin(x, C)) -> truncusat_u(x).
+  bool matchTruncUSatU(MachineInstr &MI, MachineInstr &MinMI) const;
+
+  // Combine truncusat_u(fptoui(x)) -> fptoui_sat(x)
+  bool matchTruncUSatUToFPTOUISat(MachineInstr &MI, MachineInstr &SrcMI) const;
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI) const;

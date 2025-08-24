@@ -2,6 +2,147 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX900 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck -check-prefixes=GFX9,GFX942 %s
 
+define <3 x float> @extract_subvector_v3f32_v33f32_elt30_0(ptr addrspace(1) %ptr) #0 {
+; GFX900-LABEL: extract_subvector_v3f32_v33f32_elt30_0:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:96 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:80 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:64 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:48 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:32 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    global_load_dword v2, v[0:1], off offset:128 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[3:6], v[0:1], off offset:112 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    v_mov_b32_e32 v0, v5
+; GFX900-NEXT:    v_mov_b32_e32 v1, v6
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: extract_subvector_v3f32_v33f32_elt30_0:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:96 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:80 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:64 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:48 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:32 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    global_load_dword v2, v[0:1], off offset:128 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:112 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    v_mov_b32_e32 v0, v6
+; GFX942-NEXT:    v_mov_b32_e32 v1, v7
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+  %val = load volatile <33 x float>, ptr addrspace(1) %ptr, align 4
+  %extract.subvector = shufflevector <33 x float> %val, <33 x float> poison, <3 x i32> <i32 30, i32 31, i32 32>
+  ret <3 x float> %extract.subvector
+}
+
+define <3 x float> @extract_subvector_v3f32_v33f32_elt30_1(ptr addrspace(1) %ptr) #0 {
+; GFX900-LABEL: extract_subvector_v3f32_v33f32_elt30_1:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[3:6], v[0:1], off
+; GFX900-NEXT:    global_load_dwordx4 v[7:10], v[0:1], off offset:112
+; GFX900-NEXT:    global_load_dword v2, v[0:1], off offset:128
+; GFX900-NEXT:    s_mov_b32 s4, 0
+; GFX900-NEXT:    s_mov_b32 s5, s4
+; GFX900-NEXT:    s_mov_b32 s6, s4
+; GFX900-NEXT:    s_mov_b32 s7, s4
+; GFX900-NEXT:    s_waitcnt vmcnt(2)
+; GFX900-NEXT:    buffer_store_dwordx4 v[3:6], off, s[4:7], 0
+; GFX900-NEXT:    s_waitcnt vmcnt(2)
+; GFX900-NEXT:    v_mov_b32_e32 v0, v9
+; GFX900-NEXT:    v_mov_b32_e32 v1, v10
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: extract_subvector_v3f32_v33f32_elt30_1:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX942-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:112
+; GFX942-NEXT:    global_load_dword v2, v[0:1], off offset:128
+; GFX942-NEXT:    s_mov_b32 s0, 0
+; GFX942-NEXT:    s_mov_b32 s1, s0
+; GFX942-NEXT:    s_mov_b32 s2, s0
+; GFX942-NEXT:    s_mov_b32 s3, s0
+; GFX942-NEXT:    s_waitcnt vmcnt(2)
+; GFX942-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
+; GFX942-NEXT:    s_waitcnt vmcnt(2)
+; GFX942-NEXT:    v_mov_b32_e32 v0, v10
+; GFX942-NEXT:    v_mov_b32_e32 v1, v11
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+  %val = load <33 x float>, ptr addrspace(1) %ptr, align 4
+  %val.slice.0 = shufflevector <33 x float> %val, <33 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %val.slice.0, ptr addrspace(8) null, i32 0, i32 0, i32 0)
+  %val.slice.48 = shufflevector <33 x float> %val, <33 x float> poison, <3 x i32> <i32 30, i32 31, i32 32>
+  ret <3 x float> %val.slice.48
+}
+
+define <6 x float> @extract_subvector_v6f32_v36f32_elt30(ptr addrspace(1) %ptr) #0 {
+; GFX900-LABEL: extract_subvector_v6f32_v36f32_elt30:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
+; GFX900-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off offset:112
+; GFX900-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:128
+; GFX900-NEXT:    s_mov_b32 s4, 0
+; GFX900-NEXT:    s_mov_b32 s5, s4
+; GFX900-NEXT:    s_mov_b32 s6, s4
+; GFX900-NEXT:    s_mov_b32 s7, s4
+; GFX900-NEXT:    s_waitcnt vmcnt(2)
+; GFX900-NEXT:    buffer_store_dwordx4 v[6:9], off, s[4:7], 0
+; GFX900-NEXT:    s_waitcnt vmcnt(2)
+; GFX900-NEXT:    v_mov_b32_e32 v0, v12
+; GFX900-NEXT:    v_mov_b32_e32 v1, v13
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: extract_subvector_v6f32_v36f32_elt30:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
+; GFX942-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off offset:112
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:128
+; GFX942-NEXT:    s_mov_b32 s0, 0
+; GFX942-NEXT:    s_mov_b32 s1, s0
+; GFX942-NEXT:    s_mov_b32 s2, s0
+; GFX942-NEXT:    s_mov_b32 s3, s0
+; GFX942-NEXT:    s_waitcnt vmcnt(2)
+; GFX942-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0
+; GFX942-NEXT:    s_waitcnt vmcnt(2)
+; GFX942-NEXT:    v_mov_b32_e32 v0, v12
+; GFX942-NEXT:    v_mov_b32_e32 v1, v13
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+  %val = load <36 x float>, ptr addrspace(1) %ptr, align 4
+  %val.slice.0 = shufflevector <36 x float> %val, <36 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %val.slice.0, ptr addrspace(8) null, i32 0, i32 0, i32 0)
+  %val.slice.1 = shufflevector <36 x float> %val, <36 x float> poison, <6 x i32> <i32 30, i32 31, i32 32, i32 33, i32 34, i32 35>
+  ret <6 x float> %val.slice.1
+}
+
 define <3 x float> @issue153808_vector_extract_assert(ptr addrspace(1) %ptr) #0 {
 ; GFX900-LABEL: issue153808_vector_extract_assert:
 ; GFX900:       ; %bb.0:

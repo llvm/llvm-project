@@ -387,8 +387,41 @@ func.func @load_gather_vc_3(%src: ui64) {
 // -----
 func.func @prefetch_offset_wi_1(%src: memref<4x4xf32>) {
   %offsets = arith.constant dense<[0]> : vector<1xindex>
-  // expected-error@+1 {{Expecting the source is a 1D memref or pointer}}
+  // expected-error@+1 {{op operand #0 must be TensorDesc describing regions of interested data}}
   xegpu.prefetch %src[%offsets]: memref<4x4xf32>, vector<1xindex>
+  return
+}
+
+// -----
+func.func @prefetch_offset_wi_2(%src: memref<16xf32>) {
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  %1 = xegpu.create_tdesc %src, %offsets : memref<16xf32>, vector<1xindex>
+          -> !xegpu.tensor_desc<1x3xf32, #xegpu.scatter_tdesc_attr<chunk_size = 3>>
+  // expected-error@+1 {{offsets not allowed}}
+  xegpu.prefetch %1[%offsets]: !xegpu.tensor_desc<1x3xf32, #xegpu.scatter_tdesc_attr<chunk_size = 3>>, vector<1xindex>
+  return
+}
+
+// -----
+func.func @prefetch_offset_wi_3(%src: memref<16xf32>) {
+  // expected-error@+1 {{Expects offsets}}
+  xegpu.prefetch %src: memref<16xf32>
+  return
+}
+
+// -----
+func.func @prefetch_offset_wi_4(%src: memref<16xf32>) {
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  // expected-error@+1 {{offset_align_byte only allowed with integer source.}}
+  xegpu.prefetch %src[%offsets] <{offset_align_byte = 4}>: memref<16xf32>, vector<1xindex>
+  return
+}
+
+// -----
+func.func @prefetch_offset_wi_5(%src: i64) {
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  // expected-error@+1 {{offset_align_byte is required with integer source.}}
+  xegpu.prefetch %src[%offsets] : i64, vector<1xindex>
   return
 }
 
@@ -428,9 +461,47 @@ func.func @store_scatter_offset_wi_2(%src: memref<4x4xf16>) {
   %val = arith.constant dense<2.9>: vector<4xf16>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   %mask = arith.constant dense<1>: vector<1xi1>
-  // expected-error@+1 {{Expecting the dest is a 1D memref or pointer}}
+  // expected-error@+1 {{op operand #1 must be TensorDesc describing regions of interested data}}
   xegpu.store %val, %src[%offsets], %mask
         : vector<4xf16>, memref<4x4xf16>, vector<1xindex>, vector<1xi1>
+  return
+}
+
+// -----
+func.func @store_scatter_offset_wi_3(%src: memref<16xf16>) {
+  %val = arith.constant dense<2.9>: vector<1xf16>
+  %mask = arith.constant dense<1>: vector<1xi1>
+  // expected-error@+1 {{Expects offsets}}
+  xegpu.store %val, %src, %mask
+        : vector<1xf16>, memref<16xf16>, vector<1xi1>
+  return
+}
+
+// -----
+func.func @store_scatter_offset_wi_4(%src: !xegpu.tensor_desc<1x1xf32, #xegpu.scatter_tdesc_attr<>>) {
+  %val = arith.constant dense<2.9>: vector<1xf16>
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  %mask = arith.constant dense<1>: vector<1xi1>
+  // expected-error@+1 {{offsets not allowed}}
+  xegpu.store %val, %src[%offsets], %mask
+        : vector<1xf16>, !xegpu.tensor_desc<1x1xf32, #xegpu.scatter_tdesc_attr<>>, vector<1xindex>, vector<1xi1>
+  return
+}
+
+// -----
+func.func @load_gather_offset_wi_4(%src: !xegpu.tensor_desc<1x2xf16, #xegpu.scatter_tdesc_attr<>>) {
+  %mask = arith.constant dense<1>: vector<1xi1>
+  %offsets = arith.constant dense<[0]> : vector<1xindex>
+  // expected-error@+1 {{offsets not allowed}}
+  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : !xegpu.tensor_desc<1x2xf16, #xegpu.scatter_tdesc_attr<>>, vector<1xindex>, vector<1xi1> -> vector<2xf16>
+  return
+}
+
+// -----
+func.func @load_gather_offset_wi_3(%src: ui64) {
+  %mask = arith.constant dense<1>: vector<1xi1>
+  // expected-error@+1 {{Expects offsets}}
+  %2 = xegpu.load %src, %mask <{chunk_size = 2}> : ui64, vector<1xi1> -> vector<2xf16>
   return
 }
 
@@ -447,7 +518,7 @@ func.func @load_gather_offset_wi_2(%src: ui64) {
 func.func @load_gather_offset_wi_1(%src: memref<4x4xf32>) {
   %mask = arith.constant dense<1>: vector<1xi1>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
-  // expected-error@+1 {{Expecting the source is a 1D memref or pointer}}
+  // expected-error@+1 {{op operand #0 must be TensorDesc describing regions of interested data}}
   %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : memref<4x4xf32>,  vector<1xindex>, vector<1xi1> -> vector<2xf32>
   return
 }

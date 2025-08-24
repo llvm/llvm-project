@@ -148,6 +148,21 @@ ABI Affecting Changes
   comparison between shared libraries, since all RTTI has the correct visibility now. There is no behaviour change on
   Clang.
 
+- LLVM 20 contained an ABI break that can result in the size of ``std::unordered_{map,set,multimap,multiset}`` and ``std::deque`` changing when used with an allocator type that is empty and contains a base class that is the same across rebound allocator instantiations (e.g. ``Allocator<int>`` and ``Allocator<char>`` are both empty and contain the same base class).
+  In addition, the layout of a user-defined type that:
+
+    - contains one of the following containers: ``std::unordered_{map,set,multimap,multiset}``, ``std::deque``, ``std::map``, ``std::set``, ``std::multimap``, ``std::multiset``, ``std::list`` or ``std::vector``, and
+    - passes an empty allocator, comparator or hasher type to that container, and
+    - has a member of that same empty allocator, comparator or hasher type inside the enclosing struct, and
+    - that member is either marked with ``[[no_unique_address]]`` or optimized out via the EBO (empty base optimization) technique
+
+  saw its size increase from LLVM 19 to LLVM 20. This was caused by the usage of ``[[no_unique_address]]`` within some of libc++'s containers in a way that allowed subtle interactions with enclosing objects. This is fixed in LLVM 21 when using the Clang compiler (returning to the LLVM 19 ABI), however that implies an ABI break from LLVM 20 to LLVM 21.
+
+  Furthermore, fixing this causes a slight regression to constant evaluation support in ``std::unique_ptr``. Specifically, constant evaluation will now fail when the deleter relies on being value-initialized for constant-evaluation admissibility. If a default-initialized deleter can be used during constant evaluation, or if the default constructor is non-trivial, the ``unique_ptr`` is not affected by this regression. In particular, this regression does not impact any ``unique_ptr`` using the default deleter.
+
+  Note that there is currently no way to realistically fix this ABI break on GCC, therefore GCC will remain on the ABI introduced in LLVM 19. That also means that Clang and GCC will have a slightly different ABI for the small subset of types listed above until we are able to apply the same fix we did with Clang on GCC.
+
+  For more details see https://llvm.org/PR154146.
 
 Build System Changes
 --------------------

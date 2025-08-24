@@ -829,3 +829,46 @@ static_assert(__is_standard_layout(H)); // no diagnostics
 static_assert(__is_standard_layout(I)); // no diagnostics
 }
 
+namespace is_final_tests {
+    struct C {}; // #e-C
+    static_assert(__is_final(C));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_final(is_final_tests::C)'}} \
+    // expected-note@-1 {{'C' is not final}} \
+    // expected-note@-1 {{because it is not marked 'final'}} \
+    // expected-note@#e-C {{'C' defined here}}
+
+    union U {}; // #e-U
+    static_assert(__is_final(U));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_final(is_final_tests::U)'}} \
+    // expected-note@-1 {{'U' is not final}} \
+    // expected-note@-1 {{because it is not marked 'final'}} \
+    // expected-note@#e-U {{'U' defined here}}
+
+    // ----- non-class/union types -----
+    using I = int;
+    static_assert(__is_final(I));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_final(int)'}} \
+    // expected-note@-1 {{'I' (aka 'int') is not final}} \
+    // expected-note@-1 {{because it is not a class or union type}}
+
+    using Fty = void(); // function type
+    static_assert(__is_final(Fty));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_final(void ())'}} \
+    // expected-note@-1 {{'Fty' (aka 'void ()') is not final}} \
+    // expected-note@-1 {{because it is a function type}} \
+    // expected-note@-1 {{because it is not a class or union type}}
+
+    using Arr = int[3];
+    static_assert(__is_final(Arr));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_final(int[3])'}} \
+    // expected-note@-1 {{'Arr' (aka 'int[3]') is not final}} \
+    // expected-note@-1 {{because it is not a class or union type}}
+
+    using Ref = int&;
+    static_assert(__is_final(Ref));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_final(int &)'}} \
+    // expected-note@-1 {{'Ref' (aka 'int &') is not final}} \
+    // expected-note@-1 {{because it is a reference type}} \
+    // expected-note@-1 {{because it is not a class or union type}}
+
+}

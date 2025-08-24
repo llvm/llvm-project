@@ -226,31 +226,23 @@ OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
 void EmitOffloadAPI(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   OS << FileHeader;
-  // Generate main API definitions
-  for (auto *R : Records.getAllDerivedDefinitions("APIObject")) {
-    if (R->isSubClassOf("Macro")) {
-      ProcessMacro(MacroRec{R}, OS);
-    } else if (R->isSubClassOf("Typedef")) {
-      ProcessTypedef(TypedefRec{R}, OS);
-    } else if (R->isSubClassOf("Handle")) {
-      ProcessHandle(HandleRec{R}, OS);
-    } else if (R->isSubClassOf("Function")) {
-      ProcessFunction(FunctionRec{R}, OS);
-    } else if (R->isSubClassOf("Enum")) {
-      ProcessEnum(EnumRec{R}, OS);
-    } else if (R->isSubClassOf("Struct")) {
-      ProcessStruct(StructRec{R}, OS);
-    } else if (R->isSubClassOf("FptrTypedef")) {
-      ProcessFptrTypedef(FptrTypedefRec{R}, OS);
-    }
-  }
 
-  // Generate auxiliary definitions (func param structs etc)
+  // Generate main API definitions
+  for (auto *R : Records.getAllDerivedDefinitions("Macro"))
+    ProcessMacro(MacroRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Handle"))
+    ProcessHandle(HandleRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Enum"))
+    ProcessEnum(EnumRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Typedef"))
+    ProcessTypedef(TypedefRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("FptrTypedef"))
+    ProcessFptrTypedef(FptrTypedefRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Struct"))
+    ProcessStruct(StructRec{R}, OS);
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     ProcessFuncParamStruct(FunctionRec{R}, OS);
-  }
-
-  for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    ProcessFunction(FunctionRec{R}, OS);
     ProcessFuncWithCodeLocVariant(FunctionRec{R}, OS);
   }
 

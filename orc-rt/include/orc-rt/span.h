@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TODO: Replace all uses with std::span once we can use C++20.
+// A substitute for std::span that can be used until the ORC runtime is allowed
+// to assume c++-20.
+//
+// TODO: Replace all uses with std::span once we can assume c++20.
 //
 //===----------------------------------------------------------------------===//
 

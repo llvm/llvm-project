@@ -1,0 +1,12 @@
+executable("llvm-offload-wrapper") {
+  deps = [
+    "//llvm/lib/Bitcode/Writer",
+    "//llvm/lib/IR",
+    "//llvm/lib/Frontend/Offloading",
+    "//llvm/lib/Object",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [ "llvm-offload-wrapper.cpp" ]
+}

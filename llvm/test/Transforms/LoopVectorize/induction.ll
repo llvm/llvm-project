@@ -4978,8 +4978,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 -20, i16 -19>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_UREM_CONTINUE2]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 -20, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i16> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i16> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_UREM_IF:%.*]], label [[PRED_UREM_CONTINUE:%.*]]
 ; CHECK:       pred.urem.if:
@@ -4998,7 +4997,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE2]]
 ; CHECK:       pred.urem.continue2:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i16> [ [[TMP8]], [[PRED_UREM_CONTINUE]] ], [ [[TMP12]], [[PRED_UREM_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i16> zeroinitializer, <2 x i16> [[TMP13]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x i16> [[TMP13]], <2 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext <2 x i16> [[PREDPHI]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP15]] = or <2 x i32> [[VEC_PHI]], [[TMP14]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
@@ -5172,10 +5171,8 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC-NEXT:    [[STEP_ADD:%.*]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; UNROLL-NO-IC-NEXT:    [[OFFSET_IDX:%.*]] = add i32 -20, [[INDEX]]
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
-; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i16> [[VEC_IND]], zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i16> [[STEP_ADD]], zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
-; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
+; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i16> [[VEC_IND]], zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i16> [[STEP_ADD]], zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP6]], label [[PRED_UREM_IF:%.*]], label [[PRED_UREM_CONTINUE:%.*]]
 ; UNROLL-NO-IC:       pred.urem.if:
@@ -5212,8 +5209,8 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UREM_CONTINUE7]]
 ; UNROLL-NO-IC:       pred.urem.continue7:
 ; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = phi <2 x i16> [ [[TMP20]], [[PRED_UREM_CONTINUE5]] ], [ [[TMP24]], [[PRED_UREM_IF6]] ]
-; UNROLL-NO-IC-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i16> zeroinitializer, <2 x i16> [[TMP15]]
-; UNROLL-NO-IC-NEXT:    [[PREDPHI8:%.*]] = select <2 x i1> [[TMP3]], <2 x i16> zeroinitializer, <2 x i16> [[TMP25]]
+; UNROLL-NO-IC-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP4]], <2 x i16> [[TMP15]], <2 x i16> zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[PREDPHI8:%.*]] = select <2 x i1> [[TMP5]], <2 x i16> [[TMP25]], <2 x i16> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = sext <2 x i16> [[PREDPHI]] to <2 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP27:%.*]] = sext <2 x i16> [[PREDPHI8]] to <2 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP28]] = or <2 x i32> [[VEC_PHI]], [[TMP26]]

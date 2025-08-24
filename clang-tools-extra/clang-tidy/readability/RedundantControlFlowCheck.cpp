@@ -14,18 +14,17 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-namespace {
+static const char *const RedundantReturnDiag =
+    "redundant return statement at the end "
+    "of a function with a void return type";
+static const char *const RedundantContinueDiag =
+    "redundant continue statement at the "
+    "end of loop statement";
 
-const char *const RedundantReturnDiag = "redundant return statement at the end "
-                                        "of a function with a void return type";
-const char *const RedundantContinueDiag = "redundant continue statement at the "
-                                          "end of loop statement";
-
-bool isLocationInMacroExpansion(const SourceManager &SM, SourceLocation Loc) {
+static bool isLocationInMacroExpansion(const SourceManager &SM,
+                                       SourceLocation Loc) {
   return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
 }
-
-} // namespace
 
 void RedundantControlFlowCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

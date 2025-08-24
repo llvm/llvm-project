@@ -333,28 +333,30 @@ define ptx_kernel void @foo10(ptr noalias readonly %from, ptr %to) {
 define ptx_kernel void @foo11(ptr noalias readonly %from, ptr %to) {
 ; SM20-LABEL: foo11(
 ; SM20:       {
-; SM20-NEXT:    .reg .b64 %rd<6>;
+; SM20-NEXT:    .reg .b32 %r<3>;
+; SM20-NEXT:    .reg .b64 %rd<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
 ; SM20-NEXT:    ld.param.b64 %rd1, [foo11_param_0];
 ; SM20-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; SM20-NEXT:    ld.param.b64 %rd3, [foo11_param_1];
 ; SM20-NEXT:    cvta.to.global.u64 %rd4, %rd3;
-; SM20-NEXT:    ld.global.b64 %rd5, [%rd2];
-; SM20-NEXT:    st.global.b64 [%rd4], %rd5;
+; SM20-NEXT:    ld.global.v2.b32 {%r1, %r2}, [%rd2];
+; SM20-NEXT:    st.global.v2.b32 [%rd4], {%r1, %r2};
 ; SM20-NEXT:    ret;
 ;
 ; SM35-LABEL: foo11(
 ; SM35:       {
-; SM35-NEXT:    .reg .b64 %rd<6>;
+; SM35-NEXT:    .reg .b32 %r<3>;
+; SM35-NEXT:    .reg .b64 %rd<5>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
 ; SM35-NEXT:    ld.param.b64 %rd1, [foo11_param_0];
 ; SM35-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; SM35-NEXT:    ld.param.b64 %rd3, [foo11_param_1];
 ; SM35-NEXT:    cvta.to.global.u64 %rd4, %rd3;
-; SM35-NEXT:    ld.global.nc.b64 %rd5, [%rd2];
-; SM35-NEXT:    st.global.b64 [%rd4], %rd5;
+; SM35-NEXT:    ld.global.nc.v2.b32 {%r1, %r2}, [%rd2];
+; SM35-NEXT:    st.global.v2.b32 [%rd4], {%r1, %r2};
 ; SM35-NEXT:    ret;
   %1 = load <2 x float>, ptr %from
   store <2 x float> %1, ptr %to
@@ -494,28 +496,30 @@ define ptx_kernel void @foo15(ptr noalias readonly %from, ptr %to) {
 define ptx_kernel void @foo16(ptr noalias readonly %from, ptr %to) {
 ; SM20-LABEL: foo16(
 ; SM20:       {
-; SM20-NEXT:    .reg .b64 %rd<7>;
+; SM20-NEXT:    .reg .b32 %r<5>;
+; SM20-NEXT:    .reg .b64 %rd<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
 ; SM20-NEXT:    ld.param.b64 %rd1, [foo16_param_0];
 ; SM20-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; SM20-NEXT:    ld.param.b64 %rd3, [foo16_param_1];
 ; SM20-NEXT:    cvta.to.global.u64 %rd4, %rd3;
-; SM20-NEXT:    ld.global.v2.b64 {%rd5, %rd6}, [%rd2];
-; SM20-NEXT:    st.global.v2.b64 [%rd4], {%rd5, %rd6};
+; SM20-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd2];
+; SM20-NEXT:    st.global.v4.b32 [%rd4], {%r1, %r2, %r3, %r4};
 ; SM20-NEXT:    ret;
 ;
 ; SM35-LABEL: foo16(
 ; SM35:       {
-; SM35-NEXT:    .reg .b64 %rd<7>;
+; SM35-NEXT:    .reg .b32 %r<5>;
+; SM35-NEXT:    .reg .b64 %rd<5>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
 ; SM35-NEXT:    ld.param.b64 %rd1, [foo16_param_0];
 ; SM35-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; SM35-NEXT:    ld.param.b64 %rd3, [foo16_param_1];
 ; SM35-NEXT:    cvta.to.global.u64 %rd4, %rd3;
-; SM35-NEXT:    ld.global.nc.v2.b64 {%rd5, %rd6}, [%rd2];
-; SM35-NEXT:    st.global.v2.b64 [%rd4], {%rd5, %rd6};
+; SM35-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd2];
+; SM35-NEXT:    st.global.v4.b32 [%rd4], {%r1, %r2, %r3, %r4};
 ; SM35-NEXT:    ret;
   %1 = load <4 x float>, ptr %from
   store <4 x float> %1, ptr %to

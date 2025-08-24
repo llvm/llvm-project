@@ -14,10 +14,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-namespace {
-
-bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
-                                     const StringLiteral *Lit) {
+static bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
+                                            const StringLiteral *Lit) {
   // String literals surrounded by parentheses are assumed to be on purpose.
   //    i.e.:  const char* Array[] = { ("a" "b" "c"), "d", [...] };
 
@@ -57,6 +55,8 @@ bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
   // There is no pattern recognized by the checker, assume it's not on purpose.
   return false;
 }
+
+namespace {
 
 AST_MATCHER_P(StringLiteral, isConcatenatedLiteral, unsigned,
               MaxConcatenatedTokens) {

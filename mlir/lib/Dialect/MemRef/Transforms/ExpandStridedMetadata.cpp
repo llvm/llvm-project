@@ -959,7 +959,7 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
                   PatternRewriter &rewriter) const override {
     auto viewLikeOp =
         extractOp.getSource().getDefiningOp<ViewLikeOpInterface>();
-    if (!viewLikeOp)
+    if (!viewLikeOp || extractOp.getSource() != viewLikeOp.getViewDest())
       return rewriter.notifyMatchFailure(extractOp, "not a ViewLike source");
     rewriter.modifyOpInPlace(extractOp, [&]() {
       extractOp.getSourceMutable().assign(viewLikeOp.getViewSource());

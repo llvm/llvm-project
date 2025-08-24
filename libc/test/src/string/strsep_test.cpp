@@ -18,21 +18,21 @@ TEST(LlvmLibcStrsepTest, NullSrc) {
 TEST(LlvmLibcStrsepTest, NoTokenFound) {
   {
     char s[] = "";
-    char *string = s, *orig = s;
+    char *string = s;
     EXPECT_STREQ(LIBC_NAMESPACE::strsep(&string, ""), nullptr);
-    EXPECT_EQ(orig, string);
+    EXPECT_TRUE(string == nullptr);
   }
   {
     char s[] = "abcde";
     char *string = s, *orig = s;
     EXPECT_STREQ(LIBC_NAMESPACE::strsep(&string, ""), orig);
-    EXPECT_EQ(string, orig + 5);
+    EXPECT_TRUE(string == nullptr);
   }
   {
     char s[] = "abcde";
     char *string = s, *orig = s;
     EXPECT_STREQ(LIBC_NAMESPACE::strsep(&string, "fghijk"), orig);
-    EXPECT_EQ(string, orig + 5);
+    EXPECT_TRUE(string == nullptr);
   }
 }
 
@@ -51,6 +51,14 @@ TEST(LlvmLibcStrsepTest, DelimitersShouldNotBeIncludedInToken) {
   for (int i = 0; expected[i]; i++) {
     ASSERT_STREQ(LIBC_NAMESPACE::strsep(&string, "_:"), expected[i]);
   }
+}
+
+TEST(LlvmLibcStrsepTest, SubsequentSearchesReturnNull) {
+  char s[] = "a";
+  char *string = s;
+  ASSERT_STREQ(LIBC_NAMESPACE::strsep(&string, ":"), "a");
+  ASSERT_EQ(LIBC_NAMESPACE::strsep(&string, ":"), nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::strsep(&string, ":"), nullptr);
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS)

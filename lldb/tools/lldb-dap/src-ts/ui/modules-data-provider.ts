@@ -19,6 +19,7 @@ class ModuleItem extends vscode.TreeItem {
   constructor(module: DebugProtocol.Module) {
     super(module.name, vscode.TreeItemCollapsibleState.Collapsed);
     this.description = module.symbolStatus;
+    this.contextValue = "module";
   }
 
   static getProperties(module: DebugProtocol.Module): ModuleProperty[] {

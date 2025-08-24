@@ -4784,8 +4784,8 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__nonmac(<8 x 
 ; GISEL-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0x0
 ; GISEL-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x40
 ; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x80
+; GISEL-NEXT:    v_mov_b64_e32 v[16:17], 0
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], 16
-; GISEL-NEXT:    v_mov_b64_e32 v[20:21], 32
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[36:37]
 ; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[38:39]
@@ -4811,16 +4811,16 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__nonmac(<8 x 
 ; GISEL-NEXT:    v_accvgpr_write_b32 a13, s21
 ; GISEL-NEXT:    v_accvgpr_write_b32 a14, s22
 ; GISEL-NEXT:    v_accvgpr_write_b32 a15, s23
-; GISEL-NEXT:    v_mov_b32_e32 v16, s1
+; GISEL-NEXT:    v_mov_b32_e32 v20, s1
 ; GISEL-NEXT:    v_mov_b64_e32 v[22:23], 48
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], s0, v16 op_sel_hi:[0,0,0]
+; GISEL-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], s0, v20 op_sel_hi:[0,0,0]
 ; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; GISEL-NEXT:    v_mov_b64_e32 v[16:17], 0
 ; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
 ; GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[16:17]
 ; GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[20:21]
+; GISEL-NEXT:    v_mov_b64_e32 v[20:21], 32
 ; GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[18:19]
 ; GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[22:23]
