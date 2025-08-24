@@ -2930,6 +2930,9 @@ static void scalarizeInstruction(const Instruction *Instr,
   RepRecipe->applyFlags(*Cloned);
   RepRecipe->applyMetadata(*Cloned);
 
+  if (RepRecipe->hasPredicate())
+    cast<CmpInst>(Cloned)->setPredicate(RepRecipe->getPredicate());
+
   if (auto DL = RepRecipe->getDebugLoc())
     State.setDebugLocFrom(DL);
 
