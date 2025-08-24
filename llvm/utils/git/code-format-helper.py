@@ -194,6 +194,7 @@ class ClangFormatHelper(FormatHelper):
 
         cf_cmd.append("--")
         cf_cmd += self._cpp_files
+        return cf_cmd
 
     @property
     def instructions(self) -> str:
@@ -278,6 +279,7 @@ class DarkerFormatHelper(FormatHelper):
         if diff_expression:
             darker_cmd += ["-r", diff_expression]
         darker_cmd += self._py_files
+        return darker_cmd
 
     @property
     def instructions(self) -> str:
