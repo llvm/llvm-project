@@ -10092,6 +10092,48 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   if (SDValue Combined = combineCarryDiamond(DAG, TLI, N0, N1, N))
     return Combined;
 
+  // fold (xor (smin(x, C), C)) -> select (x < C), xor(x, C), 0
+  // fold (xor (smin(C, x), C)) -> select (x < C), xor(x, C), 0
+  if (N0.getOpcode() == ISD::SMIN && N0.hasOneUse()) {
+    SDValue Op0 = N0.getOperand(0);
+    SDValue Op1 = N0.getOperand(1);
+
+    if (Op1 != N1) {
+      std::swap(Op0, Op1);
+    }
+
+    if (Op1 == N1) {
+      if (isa<ConstantSDNode>(N1)) {
+        EVT CCVT = getSetCCResultType(VT);
+        SDValue Cmp = DAG.getSetCC(SDLoc(N), CCVT, Op0, N1, ISD::SETLT);
+        SDValue XorXC = DAG.getNode(ISD::XOR, SDLoc(N), VT, Op0, N1);
+        SDValue Zero = DAG.getConstant(0, SDLoc(N), VT);
+        return DAG.getSelect(SDLoc(N), VT, Cmp, XorXC, Zero);
+      }
+    }
+  }
+
+  // fold (xor (smax(x, C), C)) -> select (x > C), xor(x, C), 0
+  // fold (xor (smax(C, x), C)) -> select (x > C), xor(x, C), 0
+  if (N0.getOpcode() == ISD::SMAX && N0.hasOneUse()) {
+    SDValue Op0 = N0.getOperand(0);
+    SDValue Op1 = N0.getOperand(1);
+
+    if (Op1 != N1) {
+      std::swap(Op0, Op1);
+    }
+
+    if (Op1 == N1) {
+      if (isa<ConstantSDNode>(N1)) {
+        EVT CCVT = getSetCCResultType(VT);
+        SDValue Cmp = DAG.getSetCC(SDLoc(N), CCVT, Op0, N1, ISD::SETGT);
+        SDValue XorXC = DAG.getNode(ISD::XOR, SDLoc(N), VT, Op0, N1);
+        SDValue Zero = DAG.getConstant(0, SDLoc(N), VT);
+        return DAG.getSelect(SDLoc(N), VT, Cmp, XorXC, Zero);
+      }
+    }
+  }
+
   return SDValue();
 }
 
