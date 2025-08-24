@@ -25,9 +25,18 @@ Examples
   // Bad: platform-dependent fundamental types
   int global_int = 42;
   short global_short = 10;
-  long global_long = 100L;
-  unsigned long global_unsigned_long = 100UL;
-
+  // unsigned long is 32 bits on Windows and 64 bits on Mac/Linux, so this will
+  // overflow depending on platform.
+  unsigned long global_unsigned_long = 1 << 36;
+  // On many systems, loading into a register must be done at the processor's
+  // word size. On a 64-bit system with 32-bit integers, loading an element from
+  // slowVec could take multiple instructions. The first will load two elements,
+  // and additional instructions will delete the unneeded element.
+  std::vector<int> slowVec;
+  // This could overflow and cause undefined behaviour if slowVec is too big.
+  for(int i = 0U; i<slowVec.size();i++) {
+    slowVec[i];
+  }
 
 .. code-block:: c++
 
@@ -35,9 +44,16 @@ Examples
   #include <cstdint>
 
   int32_t global_int32 = 42;
-  int16_t global_int16 = 10;
-  int64_t global_int64 = 100L;
   uint64_t global_uint64 = 100UL;
+  // On a 64-bit system, int_fast32_t will probably be 64 bits in size,
+  // potentially allowing faster accesses.
+  std::vector<int_fast32_t> fastVec;
+  // A size_t can hold any index into an array or vector on a given platform,
+  // because it can hold the maximum size of any theoretical object, so we will
+  // never overflow fastVec's size.
+  for(size_t i = 0U; i<fastVec.size();i++) {
+    fastVec[i];
+  }
 
 Rationale
 ---------
@@ -96,38 +112,6 @@ Options
    (``short``, ``int``, ``long``, ``long long`` and their ``signed`` and 
    ``unsigned`` variants).
    When `false`, integer types are not flagged. Default is `true`.
-
-   Example with :option:`WarnOnInts` enabled:
-
-   .. code-block:: c++
-
-     // Bad: platform-dependent integer types
-     #include <vector>
-
-     int counter = 0;
-     long timestamp = 12345L;
-     unsigned short port = 8080;
-
-     std::vector<uint32_t> vec;
-     // If int is 32 bits and (vec.size > 2^31 - 1), this overflows
-     for(int i = 0; i<vec.size();i++) {
-       vec[i];
-     }
-
-   .. code-block:: c++
-
-     // Good: use fixed-width or descriptive types
-     #include <cstdint>
-     #include <vector>
-
-     int32_t counter = 0;           // When you need exactly 32 bits
-     int64_t timestamp = 12345L;    // When you need exactly 64 bits
-     uint16_t port = 8080;          // When you need exactly 16 unsigned bits
-     std::vector<uint32_t> vec;
-     // A size_t is the maximum size of an object on a given platform
-     for(size_t i = 0U; i<vec.size();i++) {
-       vec[i];
-     }
 
 .. option:: WarnOnFloats
 
