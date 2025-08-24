@@ -49,8 +49,7 @@ static void consumeInlineNamespace(llvm::StringRef &name) {
   }
 }
 
-bool lldb_private::formatters::isOldCompressedPairLayout(
-    ValueObject &pair_obj) {
+static bool isOldCompressedPairLayout(ValueObject &pair_obj) {
   return isStdTemplate(pair_obj.GetTypeName(), "__compressed_pair");
 }
 
@@ -103,6 +102,40 @@ lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
     value = pair.GetChildMemberWithName("__second_");
   }
   return value;
+}
+
+std::pair<lldb::ValueObjectSP, bool>
+lldb_private::formatters::GetValueOrOldCompressedPair(
+    ValueObject &obj, size_t anon_struct_idx, llvm::StringRef child_name,
+    llvm::StringRef compressed_pair_name) {
+  // Try searching the child member in an anonymous structure first.
+  if (auto unwrapped = obj.GetChildAtIndex(anon_struct_idx)) {
+    ValueObjectSP node_sp(obj.GetChildMemberWithName(child_name));
+    if (node_sp)
+      return {node_sp, isOldCompressedPairLayout(*node_sp)};
+  }
+
+  // Older versions of libc++ don't wrap the children in anonymous structures.
+  // Try that instead.
+  ValueObjectSP node_sp(obj.GetChildMemberWithName(child_name));
+  if (node_sp)
+    return {node_sp, isOldCompressedPairLayout(*node_sp)};
+
+  // Try the even older __compressed_pair layout.
+
+  assert(!compressed_pair_name.empty());
+
+  node_sp = obj.GetChildMemberWithName(compressed_pair_name);
+
+  // Unrecognized layout (possibly older than LLDB supports).
+  if (!node_sp)
+    return {nullptr, false};
+
+  // Expected old compressed_pair layout, but got something else.
+  if (!isOldCompressedPairLayout(*node_sp))
+    return {nullptr, false};
+
+  return {node_sp, true};
 }
 
 bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
