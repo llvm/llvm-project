@@ -58,6 +58,7 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/DependencyScanner.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
@@ -4672,7 +4673,24 @@ void Driver::BuildDriverManagedModuleBuildActions(
     Compilation &C, llvm::opt::DerivedArgList &Args, const InputList &Inputs,
     ActionList &Actions) const {
   Diags.Report(diag::remark_performing_driver_managed_module_build);
-  return;
+  auto ScanResults =
+      dependencies::scanDependencies(getClangProgramPath(), Diags, Args);
+  if (!ScanResults) {
+    llvm::consumeError(ScanResults.takeError());
+    Diags.Report(diag::err_failed_depdendency_scan);
+    return;
+  }
+
+  auto DepGraph =
+      dependencies::buildModuleDepGraph(std::move(*ScanResults), Diags);
+  if (!DepGraph) {
+    llvm::consumeError(DepGraph.takeError());
+    Diags.Report(diag::err_building_depdendency_graph);
+    return;
+  }
+  Diags.Report(diag::remark_printing_module_graph);
+  if (!Diags.isLastDiagnosticIgnored())
+    dependencies::writeModuleDepGraph(llvm::errs(), *DepGraph);
 }
 
 /// Returns the canonical name for the offloading architecture when using a HIP
