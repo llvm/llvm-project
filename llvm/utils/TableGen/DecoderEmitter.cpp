@@ -490,6 +490,7 @@ class FilterChooser {
   /// If the selected filter matches multiple encodings, and there is
   /// *exactly one* encoding in which all bits are known in the filtered range,
   /// then this is the ID of that encoding.
+  /// Also used when there is only one encoding.
   std::optional<unsigned> SingletonEncodingID;
 
   /// If the selected filter matches multiple encodings, and there is
@@ -591,13 +592,6 @@ private:
   void emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                unsigned EncodingID) const;
 
-  // Emits code to decode the singleton, and then to decode the rest.
-  void emitSingletonTableEntry(DecoderTableInfo &TableInfo) const;
-
-  // Emit table entries to decode instructions given a segment or segments of
-  // bits.
-  void emitTableEntry(DecoderTableInfo &TableInfo) const;
-
   void emitBinaryParser(raw_ostream &OS, indent Indent,
                         const OperandInfo &OpInfo) const;
 
@@ -624,8 +618,7 @@ private:
   void doFilter();
 
 public:
-  // emitTableEntries - Emit state machine entries to decode our share of
-  // instructions.
+  /// Emits state machine entries to decode our share of instructions.
   void emitTableEntries(DecoderTableInfo &TableInfo) const;
 
   void dump() const;
@@ -698,70 +691,6 @@ void FilterChooser::applyFilter(const Filter &F) {
                                                 Encodings, InferiorEncodingIDs,
                                                 InferiorFilterBits, *this));
   }
-}
-
-// Emit table entries to decode instructions given a segment or segments
-// of bits.
-void FilterChooser::emitTableEntry(DecoderTableInfo &TableInfo) const {
-  assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
-  TableInfo.Table.push_back(MCD::OPC_ExtractField);
-
-  TableInfo.Table.insertULEB128(StartBit);
-  TableInfo.Table.push_back(NumBits);
-
-  // If VariableFC is present, we need to add a new scope for this filter.
-  // Otherwise, we can skip adding a new scope and any patching added will
-  // automatically be added to the enclosing scope.
-  const uint64_t LastFilter = FilterChooserMap.rbegin()->first;
-  if (VariableFC)
-    TableInfo.FixupStack.emplace_back();
-
-  DecoderTable &Table = TableInfo.Table;
-
-  size_t PrevFilter = 0;
-  for (const auto &[FilterVal, Delegate] : FilterChooserMap) {
-    // The last filtervalue emitted can be OPC_FilterValue if we are at
-    // outermost scope.
-    const uint8_t DecoderOp =
-        FilterVal == LastFilter && TableInfo.isOutermostScope()
-            ? MCD::OPC_FilterValueOrFail
-            : MCD::OPC_FilterValue;
-    Table.push_back(DecoderOp);
-    Table.insertULEB128(FilterVal);
-    if (DecoderOp == MCD::OPC_FilterValue) {
-      // Reserve space for the NumToSkip entry. We'll backpatch the value later.
-      PrevFilter = Table.insertNumToSkip();
-    } else {
-      PrevFilter = 0;
-    }
-
-    // We arrive at a category of instructions with the same segment value.
-    // Now delegate to the sub filter chooser for further decodings.
-    // The case may fallthrough, which happens if the remaining well-known
-    // encoding bits do not match exactly.
-    Delegate->emitTableEntries(TableInfo);
-
-    // Now that we've emitted the body of the handler, update the NumToSkip
-    // of the filter itself to be able to skip forward when false.
-    if (PrevFilter)
-      Table.patchNumToSkip(PrevFilter, Table.size());
-  }
-
-  if (VariableFC) {
-    // Each scope should always have at least one filter value to check for.
-    assert(PrevFilter != 0 && "empty filter set!");
-    TableInfo.popScope();
-    PrevFilter = 0; // Don't re-process the filter's fallthrough.
-
-    // Delegate to the sub filter chooser for further decoding.
-    VariableFC->emitTableEntries(TableInfo);
-  }
-
-  // If there is no fallthrough and the final filter was not in the outermost
-  // scope, then it must be fixed up according to the enclosing scope rather
-  // than the current position.
-  if (PrevFilter)
-    TableInfo.FixupStack.back().push_back(PrevFilter);
 }
 
 // Returns the number of fanout produced by the filter.  More fanout implies
@@ -1425,17 +1354,6 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   }
 }
 
-// Emits table entries to decode the singleton, and then to decode the rest.
-void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo) const {
-  // complex singletons need predicate checks from the first singleton
-  // to refer forward to the variable filterchooser that follows.
-  TableInfo.pushScope();
-  emitSingletonTableEntry(TableInfo, *SingletonEncodingID);
-  TableInfo.popScope();
-
-  VariableFC->emitTableEntries(TableInfo);
-}
-
 // reportRegion is a helper function for filterProcessor to mark a region as
 // eligible for use as a filter region.
 void FilterChooser::reportRegion(std::vector<std::unique_ptr<Filter>> &Filters,
@@ -1694,8 +1612,10 @@ void FilterChooser::doFilter() {
   assert(!EncodingIDs.empty() && "FilterChooser created with no instructions");
 
   // No filter needed.
-  if (EncodingIDs.size() < 2)
+  if (EncodingIDs.size() == 1) {
+    SingletonEncodingID = EncodingIDs.front();
     return;
+  }
 
   std::unique_ptr<Filter> BestFilter = findBestFilter();
   if (BestFilter) {
@@ -1726,22 +1646,56 @@ void FilterChooser::dump() const {
   }
 }
 
-// emitTableEntries - Emit state machine entries to decode our share of
-// instructions.
 void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
-  if (EncodingIDs.size() == 1) {
-    // There is only one instruction in the set, which is great!
-    // Call emitSingletonDecoder() to see whether there are any remaining
-    // encodings bits.
-    emitSingletonTableEntry(TableInfo, EncodingIDs[0]);
-    return;
+  // If there are other encodings that could match if those with all bits
+  // known don't, enter a scope so that they have a chance.
+  if (VariableFC)
+    TableInfo.pushScope();
+
+  if (SingletonEncodingID) {
+    assert(FilterChooserMap.empty());
+    // There is only one encoding in which all bits in the filtered range are
+    // fully defined, but we still need to check if the remaining (unfiltered)
+    // bits are valid for this encoding. We also need to check predicates etc.
+    emitSingletonTableEntry(TableInfo, *SingletonEncodingID);
+  } else {
+    // The general case: emit a switch over the field value.
+    DecoderTable &Table = TableInfo.Table;
+    Table.push_back(MCD::OPC_ExtractField);
+    Table.insertULEB128(StartBit);
+    assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
+    Table.push_back(NumBits);
+
+    // Emit switch cases for all but the last element.
+    for (const auto &[FilterVal, Delegate] : drop_end(FilterChooserMap)) {
+      Table.push_back(MCD::OPC_FilterValue);
+      Table.insertULEB128(FilterVal);
+      size_t FixupPos = Table.insertNumToSkip();
+
+      // Emit table entries for this case.
+      Delegate->emitTableEntries(TableInfo);
+
+      // Patch the previous OPC_FilterValue to fall through to the next case.
+      Table.patchNumToSkip(FixupPos, Table.size());
+    }
+
+    // Emit a switch case for the last element. It never falls through;
+    // if it doesn't match, we leave the current scope.
+    const auto &[FilterVal, Delegate] = *FilterChooserMap.rbegin();
+    Table.push_back(!TableInfo.isOutermostScope() ? MCD::OPC_FilterValue
+                                                  : MCD::OPC_FilterValueOrFail);
+    Table.insertULEB128(FilterVal);
+    if (!TableInfo.isOutermostScope())
+      TableInfo.FixupStack.back().push_back(Table.insertNumToSkip());
+
+    // Emit table entries for the last case.
+    Delegate->emitTableEntries(TableInfo);
   }
 
-  // Use the best filter to do the decoding!
-  if (SingletonEncodingID)
-    emitSingletonTableEntry(TableInfo);
-  else
-    emitTableEntry(TableInfo);
+  if (VariableFC) {
+    TableInfo.popScope();
+    VariableFC->emitTableEntries(TableInfo);
+  }
 }
 
 static std::string findOperandDecoderMethod(const Record *Record) {
