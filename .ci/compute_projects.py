@@ -31,6 +31,7 @@ PROJECT_DEPENDENCIES = {
     "lld": {"llvm"},
     "mlir": {"llvm"},
     "polly": {"llvm"},
+    "libcxx": {"clang"},
 }
 
 # This mapping describes the additional projects that should be tested when a
@@ -66,6 +67,7 @@ DEPENDENTS_TO_TEST = {
         "libclc",
         "openmp",
     },
+    "libcxx": {"lldb"},
 }
 
 # This mapping describes runtimes that should be enabled for a specific project,
@@ -86,6 +88,7 @@ DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
     "clang": {"libcxx", "libcxxabi", "libunwind"},
     ".ci": {"libcxx", "libcxxabi", "libunwind"},
+    "libcxx": {"libcxx"},
 }
 
 EXCLUDE_LINUX = {
@@ -197,20 +200,19 @@ def _exclude_projects(current_projects: Set[str], platform: str) -> Set[str]:
 def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
     projects_to_test = set()
     for modified_project in modified_projects:
+        if modified_project in DEPENDENTS_TO_TEST:
+            for dependent_project in DEPENDENTS_TO_TEST[modified_project]:
+                if (
+                    platform == "Windows"
+                    and dependent_project in EXCLUDE_DEPENDENTS_WINDOWS
+                ):
+                    continue
+                projects_to_test.add(dependent_project)
         if modified_project in RUNTIMES:
             continue
         # Skip all projects where we cannot run tests.
         if modified_project in PROJECT_CHECK_TARGETS:
             projects_to_test.add(modified_project)
-        if modified_project not in DEPENDENTS_TO_TEST:
-            continue
-        for dependent_project in DEPENDENTS_TO_TEST[modified_project]:
-            if (
-                platform == "Windows"
-                and dependent_project in EXCLUDE_DEPENDENTS_WINDOWS
-            ):
-                continue
-            projects_to_test.add(dependent_project)
     projects_to_test = _exclude_projects(projects_to_test, platform)
     return projects_to_test
 
