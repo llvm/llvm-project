@@ -4260,6 +4260,10 @@ bool VectorCombine::run() {
     if (!DT.isReachableFromEntry(&BB))
       continue;
     // Use early increment range so that we can erase instructions in loop.
+    // make_early_inc_range is not applicable here, as the next iterator may
+    // be invalidated by RecursivelyDeleteTriviallyDeadInstructions.
+    // We manually maintain the next instruction and update it when it is about
+    // to be deleted.
     Instruction *I = &BB.front();
     while (I) {
       NextInst = I->getNextNode();
