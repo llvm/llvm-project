@@ -118,7 +118,7 @@ void genCollectiveSubroutine(fir::FirOpBuilder &builder, mlir::Location loc,
   auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, ftype, A, rootImage, stat, errmsgArg, errmsgAllocArg);
-  builder.create<fir::CallOp>(loc, funcOp, args);
+  fir::CallOp::create(builder, loc, funcOp, args);
 }
 
 /// Generate call to runtime subroutine prif_co_broadcast
