@@ -2005,69 +2005,45 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 /// Likewise, for vector arguments as well.
 static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
     SelectInst &SI, ICmpInst *ICI, InstCombiner::BuilderTy &Builder) {
-  auto *CI = dyn_cast<ICmpInst>(SI.getCondition());
-  if (!CI)
-    return nullptr;
-
-  Value *CmpLHS = CI->getOperand(0);
-  Value *CmpRHS = CI->getOperand(1);
-  if (!match(CmpRHS, m_Zero()))
-    return nullptr;
-
-  auto Pred = CI->getPredicate();
-  if (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE)
-    return nullptr;
-
+  CmpPredicate Pred;
   Value *A, *B;
-  const APInt *Constant1, *Constant2, *PossibleMSB;
-  if (!match(CmpLHS, m_Or(m_Intrinsic<Intrinsic::usub_sat>(m_Value(A),
-                                                           m_APInt(Constant1)),
-                          m_Intrinsic<Intrinsic::usub_sat>(
-                              m_Value(B), m_APInt(Constant2)))))
+  const APInt *Constant1, *Constant2;
+  if (!match(SI.getCondition(),
+             m_ICmp(Pred,
+                    m_Or(m_Intrinsic<Intrinsic::usub_sat>(m_Value(A),
+                                                          m_APInt(Constant1)),
+                         m_Intrinsic<Intrinsic::usub_sat>(m_Value(B),
+                                                          m_APInt(Constant2))),
+                    m_Zero())))
     return nullptr;
 
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
-  if (!((match(TrueVal, m_Zero()) && match(FalseVal, m_APInt(PossibleMSB))) ||
-        (match(TrueVal, m_APInt(PossibleMSB)) && match(FalseVal, m_Zero()))))
+  if (!(Pred == ICmpInst::ICMP_EQ &&
+        (match(TrueVal, m_Zero()) && match(FalseVal, m_SignMask()))) ||
+      (Pred == ICmpInst::ICMP_NE &&
+       (match(TrueVal, m_SignMask()) && match(FalseVal, m_Zero()))))
     return nullptr;
 
   auto *Ty = A->getType();
-  auto *VecTy = dyn_cast<VectorType>(Ty);
-  unsigned BW = PossibleMSB->getBitWidth();
-  APInt MostSignificantBit = APInt::getOneBitSet(BW, BW - 1);
+  unsigned BW = Constant1->getBitWidth();
+  APInt MostSignificantBit = APInt::getSignMask(BW);
 
-  if (*PossibleMSB != MostSignificantBit ||
-      Constant1->ult(MostSignificantBit) || Constant2->ult(MostSignificantBit))
+  // Anything over MSB is negative
+  if (Constant1->isNonNegative() || Constant2->isNonNegative())
     return nullptr;
 
   APInt AdjAP1 = *Constant1 - MostSignificantBit + 1;
   APInt AdjAP2 = *Constant2 - MostSignificantBit + 1;
 
-  Constant *Adj1, *Adj2;
-  if (VecTy) {
-    Constant *Elt1 = ConstantInt::get(VecTy->getElementType(), AdjAP1);
-    Constant *Elt2 = ConstantInt::get(VecTy->getElementType(), AdjAP2);
-    Adj1 = ConstantVector::getSplat(VecTy->getElementCount(), Elt1);
-    Adj2 = ConstantVector::getSplat(VecTy->getElementCount(), Elt2);
-  } else {
-    Adj1 = ConstantInt::get(Ty, AdjAP1);
-    Adj2 = ConstantInt::get(Ty, AdjAP2);
-  }
+  auto *Adj1 = ConstantInt::get(Ty, AdjAP1);
+  auto *Adj2 = ConstantInt::get(Ty, AdjAP2);
 
   Value *NewA = Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, Adj1);
   Value *NewB = Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, B, Adj2);
   Value *Or = Builder.CreateOr(NewA, NewB);
-  Constant *MSBConst;
-  if (VecTy) {
-    MSBConst = ConstantVector::getSplat(
-        VecTy->getElementCount(),
-        ConstantInt::get(VecTy->getScalarType(), *PossibleMSB));
-  } else {
-    MSBConst = ConstantInt::get(Ty->getScalarType(), *PossibleMSB);
-  }
-  Value *And = Builder.CreateAnd(Or, MSBConst);
-  return cast<Instruction>(And);
+  Constant *MSBConst = ConstantInt::get(Ty, MostSignificantBit);
+  return BinaryOperator::CreateAnd(Or, MSBConst);
 }
 
 /// Visit a SelectInst that has an ICmpInst as its first operand.
@@ -2088,7 +2064,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return NewSel;
   if (Instruction *Folded =
           foldICmpUSubSatWithAndForMostSignificantBitCmp(SI, ICI, Builder))
-    return replaceInstUsesWith(SI, Folded);
+    return Folded;
+  ;
 
   // NOTE: if we wanted to, this is where to detect integer MIN/MAX
   bool Changed = false;
