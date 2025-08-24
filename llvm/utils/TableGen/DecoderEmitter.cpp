@@ -795,7 +795,7 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
   OS << "static const uint8_t DecoderTable" << Namespace;
   if (HwModeID != DefaultMode)
     OS << '_' << Target.getHwModes().getModeName(HwModeID);
-  OS << BitWidth << "[] = {\n";
+  OS << BitWidth << "[" << Table.size() << "] = {\n";
 
   // Emit ULEB128 encoded value to OS, returning the number of bytes emitted.
   auto emitULEB128 = [](DecoderTable::const_iterator &I,
@@ -978,7 +978,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       break;
     }
   }
-  OS << "  0\n";
   OS << "};\n\n";
 
   return OpcodeMask;
@@ -2308,16 +2307,16 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   }
   if (HasSoftFail) {
     OS << R"(
-      case MCD::OPC_SoftFail: {
-        // Decode the mask values.
-        uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
-        uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
-        bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
-        if (Failed)
-          S = MCDisassembler::SoftFail;
-        LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
-        break;
-  })";
+    case MCD::OPC_SoftFail: {
+      // Decode the mask values.
+      uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
+      uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
+      bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
+      if (Failed)
+        S = MCDisassembler::SoftFail;
+      LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
+      break;
+    })";
   }
   OS << R"(
     case MCD::OPC_Fail: {

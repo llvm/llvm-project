@@ -8518,8 +8518,7 @@ static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
     // the VPIRInstruction modeling the phi.
     for (VPUser *U : FOR->users()) {
       using namespace llvm::VPlanPatternMatch;
-      if (!match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                        m_Specific(FOR))))
+      if (!match(U, m_ExtractLastElement(m_Specific(FOR))))
         continue;
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
       // penultimate value of the recurrence. Instead we rely on the existing
@@ -8828,7 +8827,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
                                        WithoutRuntimeCheck);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues);
+  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, *PSE.getSE());
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -9161,8 +9160,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                       m_VPValue())))
+      if (match(U, m_ExtractLastElement(m_VPValue())))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 
