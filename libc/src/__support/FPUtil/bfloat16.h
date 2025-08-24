@@ -59,6 +59,11 @@ struct BFloat16 {
     return cpp::bit_cast<float>(x_bits);
   }
 
+  template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
+  LIBC_INLINE constexpr explicit operator T() const {
+    return static_cast<T>(static_cast<float>(*this));
+  }
+
   LIBC_INLINE bool operator==(BFloat16 other) const {
     return fputil::equals(*this, other);
   }

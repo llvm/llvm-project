@@ -261,16 +261,22 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fminimum_magbf16
   libc.src.math.fminimum_mag_numbf16
   libc.src.math.fminimum_numbf16
+  libc.src.math.llrintbf16
+  libc.src.math.llroundbf16
+  libc.src.math.lrintbf16
+  libc.src.math.lroundbf16
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
   libc.src.math.nanbf16
+  libc.src.math.nearbyintbf16
   libc.src.math.nextafterbf16
   libc.src.math.nextdownbf16
   libc.src.math.nexttowardbf16
   libc.src.math.nextupbf16
   libc.src.math.roundbf16
   libc.src.math.roundevenbf16
+  libc.src.math.rintbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.truncbf16
