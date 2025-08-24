@@ -136,7 +136,7 @@ define void @loads_of_same_pointer_with_different_sizes_retry_with_runtime_check
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: ((4 * %off) + %B) High: ((4 * %N) + (4 * %off) + %B))
-; CHECK-NEXT:            Member: {((4 * %off) + %B),+,4}<%loop>
+; CHECK-NEXT:            Member: {((4 * %off) + %B),+,4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %A High: (%N + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
