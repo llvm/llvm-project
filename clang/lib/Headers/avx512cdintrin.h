@@ -125,5 +125,6 @@ _mm512_broadcastmw_epi32 (__mmask16 __A)
 }
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif
