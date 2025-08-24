@@ -35,7 +35,7 @@ define void @f(ptr noalias %A, ptr noalias %B, ptr noalias %C, i64 %N) {
 ; CHECK-NEXT:            store i32 %b_p2, ptr %Aidx_next, align 4 ->
 ; CHECK-NEXT:            %a = load i32, ptr %Aidx, align 4
 ; CHECK-EMPTY:
-; CHECK-NEXT:        Forward:
+; CHECK-NEXT:        Unknown:
 ; CHECK-NEXT:            store i32 %b_p2, ptr %Aidx_next, align 4 ->
 ; CHECK-NEXT:            store i32 %b_p1, ptr %Aidx, align 4
 ; CHECK-EMPTY:
