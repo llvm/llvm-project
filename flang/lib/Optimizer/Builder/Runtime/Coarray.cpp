@@ -178,7 +178,7 @@ void fir::runtime::genSyncAllStatement(fir::FirOpBuilder &builder,
   auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
-  builder.create<fir::CallOp>(loc, funcOp, args);
+  fir::CallOp::create(builder, loc, funcOp, args);
 }
 
 /// Generate call to runtime subroutine prif_sync_memory
@@ -193,7 +193,7 @@ void fir::runtime::genSyncMemoryStatement(fir::FirOpBuilder &builder,
   auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
-  builder.create<fir::CallOp>(loc, funcOp, args);
+  fir::CallOp::create(builder, loc, funcOp, args);
 }
 
 /// Generate call to runtime subroutine prif_sync_images
@@ -224,5 +224,5 @@ void fir::runtime::genSyncImagesStatement(fir::FirOpBuilder &builder,
   auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, ftype, imageSet, stat, errmsgArg, errmsgAllocArg);
-  builder.create<fir::CallOp>(loc, funcOp, args);
+  fir::CallOp::create(builder, loc, funcOp, args);
 }
