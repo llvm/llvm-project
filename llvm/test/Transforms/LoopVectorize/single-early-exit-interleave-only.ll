@@ -19,11 +19,9 @@ define i8 @iv_used_in_exit_with_math(i8 noundef %g) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i8 1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP1]], [[G]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i8 [[TMP2]], [[G]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP4]], 0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP5]], true
-; CHECK-NEXT:    [[TMP8:%.*]] = xor i1 [[TMP6]], true
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
@@ -88,11 +86,9 @@ define i32 @iv_used_in_exit_with_loads(ptr align 4 dereferenceable(128) %src) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP4]], 0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP5]], true
-; CHECK-NEXT:    [[TMP8:%.*]] = xor i1 [[TMP6]], true
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
