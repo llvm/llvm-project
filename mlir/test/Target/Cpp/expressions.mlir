@@ -295,6 +295,25 @@ func.func @different_expressions(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32)
   return %v_load : i32
 }
 
+// CPP-DEFAULT:      int32_t expression_with_dereference(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_3:v[0-9]+]] = *([[VAL_2]] - [[VAL_1]]);
+// CPP-DEFAULT-NEXT:   return [[VAL_3]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP:      int32_t expression_with_dereference(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_3:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_3]] = *([[VAL_2]] - [[VAL_1]]);
+// CPP-DECLTOP-NEXT:   return [[VAL_3]];
+// CPP-DECLTOP-NEXT: }
+func.func @expression_with_dereference(%arg1: i32, %arg2: !emitc.ptr<i32>) -> i32 {
+  %c = emitc.expression : i32 {
+    %e = emitc.sub %arg2, %arg1 : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
+    %d = emitc.apply "*"(%e) : (!emitc.ptr<i32>) -> i32
+    emitc.yield %d : i32
+  }
+  return %c : i32
+}
+
 // CPP-DEFAULT:      bool expression_with_address_taken(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t* [[VAL_3]]) {
 // CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v[0-9]+]] = 42;
 // CPP-DEFAULT-NEXT:   return &[[VAL_4]] - [[VAL_2]] < [[VAL_3]];
