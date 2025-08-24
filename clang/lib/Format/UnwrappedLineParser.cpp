@@ -957,7 +957,7 @@ static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
   bool IsEmptyBlock = NextToken.is(tok::r_brace);
   bool WrapRecordAllowed =
       !(IsEmptyBlock &&
-        Style.AllowShortRecordsOnASingleLine != FormatStyle::SRS_Never);
+        Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never);
 
   switch (Kind) {
   case tok::kw_namespace:
@@ -4159,7 +4159,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
     if (ParseAsExpr) {
       parseChildBlock();
     } else {
-      if (Style.AllowShortRecordsOnASingleLine != FormatStyle::SRS_Always &&
+      if (Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Always &&
           ShouldBreakBeforeBrace(Style, InitialToken,
                                  *Tokens->peekNextToken())) {
         addUnwrappedLine();
