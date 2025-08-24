@@ -28,18 +28,6 @@ Examples
   long global_long = 100L;
   unsigned long global_unsigned_long = 100UL;
 
-  void function_with_int_param(int param) {
-    // ...
-  }
-
-  int function_returning_int() {
-    return 42;
-  }
-
-  struct MyStruct {
-    int member_int;
-    long member_long;
-  };
 
 .. code-block:: c++
 
