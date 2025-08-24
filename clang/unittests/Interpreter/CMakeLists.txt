@@ -29,7 +29,6 @@ set(CLANG_LIBS_TO_LINK
   )
 endif()
 
-add_distinct_clang_unittest(ClangReplInterpreterTests
 set(CLANG_REPL_TEST_SOURCES
   IncrementalCompilerBuilderTest.cpp
   IncrementalProcessingTest.cpp
@@ -60,6 +59,14 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   LLVM_COMPONENTS
   ${LLVM_COMPONENTS_TO_LINK}
   )
+
+if(TARGET compiler-rt)
+  add_dependencies(ClangReplInterpreterTests 
+    llvm-jitlink-executor 
+    compiler-rt
+  )
+  message(STATUS "Adding dependency on compiler-rt for out of process JIT tests")
+endif()
 
 if(EMSCRIPTEN)
 # Without the above you try to link to LLVMSupport twice, and end

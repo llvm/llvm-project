@@ -22,17 +22,35 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
+
+using namespace clang;
 
 // Disable LSan for this test.
 // FIXME: Re-enable once we can assume GCC 13.2 or higher.
@@ -81,6 +99,40 @@ static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
+static std::string getCompilerRTPath() {
+  clang::DiagnosticOptions DiagOpts;
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(
+      new clang::DiagnosticIDs());
+
+  clang::IgnoringDiagConsumer DiagConsumer;
+  clang::DiagnosticsEngine Diags(DiagID, DiagOpts, &DiagConsumer, false);
+  std::vector<const char *> Args = {"clang", "--version"};
+  clang::driver::Driver D("clang", llvm::sys::getProcessTriple(), Diags);
+  D.setCheckInputsExist(false);
+
+  std::unique_ptr<clang::driver::Compilation> C(D.BuildCompilation(Args));
+  if (!C) {
+    return "";
+  }
+
+  const clang::driver::ToolChain &TC = C->getDefaultToolChain();
+  std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
+
+  return CompilerRTPath ? *CompilerRTPath : "";
+}
+
+static std::string getOrcRuntimePath() {
+  if (OrcRuntimePath.empty()) {
+    llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
+        "clang-repl", reinterpret_cast<void *>(&getOrcRuntimePath)));
+    llvm::sys::path::remove_filename(BasePath); // Remove clang-repl filename.
+    llvm::sys::path::remove_filename(BasePath); // Remove ./bin directory.
+    llvm::sys::path::append(BasePath, getCompilerRTPath());
+    return BasePath.str().str();
+  }
+  return OrcRuntimePath;
+}
+
 static llvm::Error sanitizeOopArguments(const char *ArgV0) {
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OOPExecutor.getNumOccurrences() &&
@@ -121,17 +173,21 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
         ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
     llvm::sys::path::remove_filename(BasePath); // Remove clang-repl filename.
     llvm::sys::path::remove_filename(BasePath); // Remove ./bin directory.
-    llvm::sys::path::append(BasePath, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
-                            CLANG_VERSION_MAJOR_STRING);
-    if (SystemTriple.isOSBinFormatELF())
-      OrcRuntimePath =
-          BasePath.str().str() + "/lib/x86_64-unknown-linux-gnu/liborc_rt.a";
-    else if (SystemTriple.isOSBinFormatMachO())
-      OrcRuntimePath = BasePath.str().str() + "/lib/darwin/liborc_rt_osx.a";
-    else
+    std::string CompilerRTPath = getCompilerRTPath();
+    if (llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt.a")) {
+      llvm::sys::path::append(BasePath, CompilerRTPath);
+      OrcRuntimePath = BasePath.str().str() + "/liborc_rt.a";
+    } else if (!llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt_osx.a")) {
+      llvm::sys::path::append(BasePath, CompilerRTPath);
+      OrcRuntimePath = BasePath.str().str() + "/liborc_rt_osx.a";
+    } else if (!llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt-x86_64.a")) {
+      llvm::sys::path::append(BasePath, CompilerRTPath);
+      OrcRuntimePath = BasePath.str().str() + "/liborc_rt-x86_64.a";
+    } else {
       return llvm::make_error<llvm::StringError>(
-          "Out-of-process execution is not supported on non-unix platforms",
+          "ORC runtime not found in " + CompilerRTPath,
           llvm::inconvertibleErrorCode());
+    }
   }
 
   // If -oop-executor was used but no value was specified then use a sensible
@@ -186,7 +242,7 @@ struct ReplListCompleter {
   clang::Interpreter &MainInterp;
   ReplListCompleter(clang::IncrementalCompilerBuilder &CB,
                     clang::Interpreter &Interp)
-      : CB(CB), MainInterp(Interp){};
+      : CB(CB), MainInterp(Interp) {};
 
   std::vector<llvm::LineEditor::Completion> operator()(llvm::StringRef Buffer,
                                                        size_t Pos) const;
@@ -275,10 +331,10 @@ int main(int argc, const char **argv) {
     if (!CudaPath.empty())
       CB.SetCudaSDK(CudaPath);
 
-    if (OffloadArch.empty()) {
-      OffloadArch = "sm_35";
+    if (::OffloadArch.empty()) {
+      ::OffloadArch = "sm_35";
     }
-    CB.SetOffloadArch(OffloadArch);
+    CB.SetOffloadArch(::OffloadArch);
 
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
