@@ -258,6 +258,9 @@ Bug Fixes in This Version
   initializers involving string literals. (#GH154046)
 - Fixed scope of typedefs present inside a template class. (#GH91451)
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix an ambiguous reference to the builtin `type_info` (available when using

@@ -61,6 +61,7 @@ Y y(1);
 namespace NoCrashOnGettingDefaultArgLoc {
 template <typename>
 class A {
+  // FIXME: Print something better for the default argument than <null expr>
   A(int = 1); // expected-note {{candidate template ignored: couldn't infer template argumen}} \
               // expected-note {{implicit deduction guide declared as 'template <typename> D(int = <null expr>) -> NoCrashOnGettingDefaultArgLoc::D<type-parameter-0-0>'}}
 };
