@@ -212,6 +212,28 @@ TEST(ApplyPathMappingTests, MapsKeys) {
   EXPECT_EQ(*Params, *ExpectedParams);
 }
 
+
+TEST(DoPathMappingTests, HandlesEncodedWindowsFragmentsInbound) {
+  // Simulate a client sending a WSL-style path that embeds an encoded Windows
+  // fragment (percent-encoded backslashes and drive letter). The server should
+  // normalize and map it to a Windows-style path.
+  PathMappings Mappings{{"/mnt/c/", "/C:/"}};
+  const char *Orig = "file:///mnt/c/projects/cod2-asi/C:%5cUsers%5caukx%5cprojects%5ccod2-asi%5csrc%5cedge_detection.h";
+  std::optional<std::string> Mapped = doPathMapping(Orig, PathMapping::Direction::ClientToServer, Mappings);
+  ASSERT_TRUE(bool(Mapped));
+  EXPECT_EQ(*Mapped, std::string("file:///C:/Users/aukx/projects/cod2-asi/src/edge_detection.h"));
+}
+
+TEST(DoPathMappingTests, HandlesWindowsToWslOutbound) {
+  // Server returns Windows-style URIs; they should be mapped back to the
+  // client's WSL-style paths before sending out.
+  PathMappings Mappings{{"/mnt/c/", "/C:/"}};
+  const char *Orig = "file:///C:/projects/cod2-asi/src/edge_detection.h";
+  std::optional<std::string> Mapped = doPathMapping(Orig, PathMapping::Direction::ServerToClient, Mappings);
+  ASSERT_TRUE(bool(Mapped));
+  EXPECT_EQ(*Mapped, std::string("file:///mnt/c/projects/cod2-asi/src/edge_detection.h"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
