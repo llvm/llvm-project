@@ -987,8 +987,8 @@ struct FormatStyle {
   /// \version 20
   bool AllowShortNamespacesOnASingleLine;
 
-  /// Different styles for merging short records
-  /// (``class``,``struct``,``union``).
+  /// Different styles for merging short records (``class``,``struct``, and
+  /// ``union``).
   enum ShortRecordStyle : int8_t {
     /// Never merge records into a single line.
     SRS_Never,
@@ -1011,6 +1011,7 @@ struct FormatStyle {
 
   /// Dependent on the value, ``struct bar { int i; }`` can be put on a single
   /// line.
+  /// \version 22
   ShortRecordStyle AllowShortRecordOnASingleLine;
 
   /// Different ways to break after the function definition return type.
