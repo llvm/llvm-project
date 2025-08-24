@@ -166,7 +166,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
       }
     } else {
       diag(Loc, "avoid using platform-dependent floating point type '%0'; "
-                "consider using a 'typedef' or fixed-width type instead")
+                "consider using a type alias or fixed-width type instead")
           << TypeName;
     }
   } else if (QT->isCharType() || QT->isWideCharType()) {
