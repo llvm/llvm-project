@@ -11,7 +11,6 @@ define i1 @func1() {
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_cmp_eq_u32 0, 0
-; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
@@ -27,7 +26,6 @@ define i1 @func1() {
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 0, 0
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe

@@ -42,10 +42,6 @@
 #include <vector>
 
 namespace llvm {
-
-extern cl::opt<bool> EnableCSPreInliner;
-extern cl::opt<bool> UseContextCostForPreInliner;
-
 namespace sampleprof {
 
 class ProfiledBinary;

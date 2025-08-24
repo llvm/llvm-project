@@ -1772,7 +1772,8 @@ def note_unsatisfied_trait
            "%Replaceable{replaceable}|"
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
-           "%StandardLayout{standard-layout}"
+           "%StandardLayout{standard-layout}|"
+           "%Final{final}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1815,7 +1816,9 @@ def note_unsatisfied_trait_reason
            "%sub{select_special_member_kind}1}|"
            "%FunctionType{is a function type}|"
            "%CVVoidType{is a cv void type}|"
-           "%IncompleteArrayType{is an incomplete array type}"
+           "%IncompleteArrayType{is an incomplete array type}|"
+           "%NotClassOrUnion{is not a class or union type}|"
+           "%NotMarkedFinal{is not marked 'final'}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -4404,6 +4407,11 @@ def warn_impcast_different_enum_types : Warning<
 def warn_impcast_int_to_enum : Warning<
   "implicit conversion from %0 to enumeration type %1 is invalid in C++">,
   InGroup<ImplicitIntToEnumCast>, DefaultIgnore;
+
+def note_no_implicit_conversion_for_scoped_enum
+    : Note<"no implicit conversion for scoped enum; consider casting to "
+           "underlying type">;
+
 def warn_impcast_bool_to_null_pointer : Warning<
     "initialization of pointer of type %0 to null from a constant boolean "
     "expression">, InGroup<BoolConversion>;
@@ -6073,6 +6081,13 @@ def warn_cxx23_pack_indexing : Warning<
 
 def err_pack_outside_template : Error<
   "pack declaration outside of template">;
+
+def err_builtin_pack_outside_template
+    : Error<"%0 cannot be used outside of template">;
+
+def err_unsupported_builtin_template_pack_expansion
+    : Error<"expansions of %0 are not supported here. Only expansions in "
+            "template arguments and class bases are supported">;
 
 def err_fold_expression_packs_both_sides : Error<
   "binary fold expression has unexpanded parameter packs in both operands">;
@@ -10994,10 +11009,15 @@ def err_block_on_vm : Error<
 def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
 
+def err_vec_masked_load_store_ptr : Error<
+ "%ordinal0 argument must be a %1">;
+def err_vec_masked_load_store_size : Error<
+ "all arguments to %0 must have the same number of elements (was %1 and %2)">;
+
 def err_vec_builtin_non_vector : Error<
  "%select{first two|all}1 arguments to %0 must be vectors">;
 def err_vec_builtin_incompatible_vector : Error<
-  "%select{first two|all}1 arguments to %0 must have the same type">;
+  "%select{first two|all|last two}1 arguments to %0 must have the same type">;
 def err_vsx_builtin_nonconstant_argument : Error<
   "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
 
@@ -12859,7 +12879,7 @@ def err_builtin_invalid_arg_type: Error<
   "%plural{0:|: }1"
   // Second component: integer-like types
   "%select{|integer|signed integer|unsigned integer|'int'|"
-  "pointer to a valid matrix element}2"
+  "pointer to a valid matrix element|boolean}2"
   // A space after a non-empty second component
   "%plural{0:|: }2"
   // An 'or' if non-empty second and third components are combined
@@ -12951,6 +12971,17 @@ def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
 
+// SYCL external attribute diagnostics
+def err_sycl_external_invalid_linkage : Error<
+  "%0 can only be applied to functions with external linkage">;
+def err_sycl_external_invalid_main : Error<
+  "%0 cannot be applied to the 'main' function">;
+def err_sycl_external_invalid_deleted_function : Error<
+  "%0 cannot be applied to an explicitly deleted function">;
+def warn_sycl_external_missing_on_first_decl : Warning<
+  "%0 attribute does not appear on the first declaration">,
+  InGroup<NonPortableSYCL>;
+
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
   "the %0 attribute cannot be applied to a"
@@ -12965,7 +12996,7 @@ def err_sycl_kernel_name_conflict : Error<
   "the %0 kernel name argument conflicts with a previous declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
   "%0 is not a valid SYCL kernel name type; a non-union class type is required">,
-  InGroup<DiagGroup<"nonportable-sycl">>, DefaultError;
+  InGroup<NonPortableSYCL>, DefaultError;
 def warn_sycl_entry_point_redundant_declaration : Warning<
   "redundant %0 attribute">, InGroup<RedundantAttribute>;
 def err_sycl_entry_point_after_definition : Error<
@@ -13368,16 +13399,23 @@ def err_acc_reduction_num_gangs_conflict
             "appear on a '%2' construct "
             "with a '%3' clause%select{ with more than 1 argument|}0">;
 def err_acc_reduction_type
-    : Error<"OpenACC 'reduction' variable must be of scalar type, aggregate, "
-            "sub-array, or a composite of scalar types;%select{| sub-array "
-            "base}1 type is %0">;
-def err_acc_reduction_composite_type
-    : Error<"OpenACC 'reduction' variable must be a composite of scalar types; "
-            "%1 %select{is not a class or struct|is incomplete|is not an "
-            "aggregate}0">;
-def err_acc_reduction_composite_member_type :Error<
-    "OpenACC 'reduction' composite variable must not have non-scalar field">;
-def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
+    : Error<"invalid type %0 used in OpenACC 'reduction' variable reference; "
+            "type is %enum_select<OACCReductionTy>{%NotScalar{not a scalar "
+            "value, or array of scalars, or composite of "
+            "scalars}|%MemberNotScalar{not a scalar value}|%NotAgg{not an "
+            "aggregate}|%NotComplete{not a complete type}|%NotClassStruct{not "
+            "a class or struct}}1">;
+def note_acc_reduction_array
+    : Note<"used as element type of "
+           "%enum_select<OACCReductionArray>{%Section{sub-array"
+           "}|%Subscript{array}|%ArrayTy{array}}0 type %1">;
+def note_acc_reduction_member_of_composite
+    : Note<"used as field '%0' of composite '%1'">;
+def note_acc_reduction_type_summary
+    : Note<"OpenACC 'reduction' variable reference must be a scalar variable "
+           "or a "
+           "composite of scalars, or an array, sub-array, or element of scalar "
+           "types">;
 def err_acc_loop_not_for_loop
     : Error<"OpenACC '%0' construct can only be applied to a 'for' loop">;
 def note_acc_construct_here : Note<"'%0' construct is here">;
