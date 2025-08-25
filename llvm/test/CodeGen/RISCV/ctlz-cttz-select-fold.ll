@@ -48,9 +48,12 @@ define i7 @test_cttz_select_i7(i7 %0) {
 ;
 ; RV32ZBB-LABEL: test_cttz_select_i7:
 ; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    andi a1, a0, 127
 ; RV32ZBB-NEXT:    ori a0, a0, 128
 ; RV32ZBB-NEXT:    ctz a0, a0
-; RV32ZBB-NEXT:    andi a0, a0, 6
+; RV32ZBB-NEXT:    seqz a1, a1
+; RV32ZBB-NEXT:    addi a1, a1, -1
+; RV32ZBB-NEXT:    and a0, a1, a0
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_cttz_select_i7:
@@ -98,9 +101,12 @@ define i7 @test_cttz_select_i7(i7 %0) {
 ;
 ; RV64ZBB-LABEL: test_cttz_select_i7:
 ; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    andi a1, a0, 127
 ; RV64ZBB-NEXT:    ori a0, a0, 128
 ; RV64ZBB-NEXT:    ctz a0, a0
-; RV64ZBB-NEXT:    andi a0, a0, 6
+; RV64ZBB-NEXT:    seqz a1, a1
+; RV64ZBB-NEXT:    addi a1, a1, -1
+; RV64ZBB-NEXT:    and a0, a1, a0
 ; RV64ZBB-NEXT:    ret
   %2 = call i7 @llvm.cttz.i7(i7 %0, i1 false)
   %3 = icmp eq i7 %0, 0
@@ -159,9 +165,11 @@ define i10 @test_ctlz_select_i10(i10 %0) {
 ; RV32ZBB-LABEL: test_ctlz_select_i10:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    andi a0, a0, 1023
-; RV32ZBB-NEXT:    clz a0, a0
-; RV32ZBB-NEXT:    addi a0, a0, -22
-; RV32ZBB-NEXT:    andi a0, a0, 9
+; RV32ZBB-NEXT:    clz a1, a0
+; RV32ZBB-NEXT:    seqz a0, a0
+; RV32ZBB-NEXT:    addi a1, a1, -22
+; RV32ZBB-NEXT:    addi a0, a0, -1
+; RV32ZBB-NEXT:    and a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_ctlz_select_i10:
@@ -219,9 +227,11 @@ define i10 @test_ctlz_select_i10(i10 %0) {
 ; RV64ZBB-LABEL: test_ctlz_select_i10:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    andi a0, a0, 1023
-; RV64ZBB-NEXT:    clz a0, a0
-; RV64ZBB-NEXT:    addi a0, a0, -54
-; RV64ZBB-NEXT:    andi a0, a0, 9
+; RV64ZBB-NEXT:    clz a1, a0
+; RV64ZBB-NEXT:    seqz a0, a0
+; RV64ZBB-NEXT:    addi a1, a1, -54
+; RV64ZBB-NEXT:    addi a0, a0, -1
+; RV64ZBB-NEXT:    and a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %2 = call i10 @llvm.ctlz.i10(i10 %0, i1 false)
   %3 = icmp eq i10 %0, 0
