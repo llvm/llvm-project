@@ -1050,7 +1050,12 @@ ClassTemplateSpecializationDecl::getSourceRange() const {
     if (const auto *CTPSD =
             dyn_cast<ClassTemplatePartialSpecializationDecl *>(Pattern))
       return CTPSD->getSourceRange();
-    return cast<ClassTemplateDecl *>(Pattern)->getSourceRange();
+
+    const auto *CTD = cast<ClassTemplateDecl *>(Pattern);
+    if (CTD->getTemplatedDecl()->hasDefinition())
+      return CTD->getTemplatedDecl()->getDefinition()->getSourceRange();
+
+    return CTD->getSourceRange();
   }
   case TSK_ExplicitSpecialization: {
     SourceRange Range = CXXRecordDecl::getSourceRange();
