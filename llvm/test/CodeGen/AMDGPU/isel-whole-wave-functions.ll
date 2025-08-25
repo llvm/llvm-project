@@ -135,11 +135,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
   ; DAGISEL-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; DAGISEL-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; DAGISEL-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; DAGISEL-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
-  ; DAGISEL-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; DAGISEL-NEXT:   [[SI_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:sreg_32 = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
   ; DAGISEL-NEXT:   [[COPY4:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[SI_WHOLE_WAVE_FUNC_SETUP]]
@@ -158,7 +154,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
   ; DAGISEL-NEXT:   [[V_MOV_B32_dpp1:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_CNDMASK_B32_e64_]], killed [[V_CNDMASK_B32_e64_2]], 1, 1, 1, 0, implicit $exec
   ; DAGISEL-NEXT:   $vgpr0 = COPY [[V_MOV_B32_dpp]]
   ; DAGISEL-NEXT:   $vgpr1 = COPY [[V_MOV_B32_dpp1]]
-  ; DAGISEL-NEXT:   [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; DAGISEL-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; DAGISEL-NEXT:   SI_WHOLE_WAVE_FUNC_RETURN killed [[SI_WHOLE_WAVE_FUNC_SETUP]], implicit $vgpr0, implicit $vgpr1
   ;
   ; GISEL-LABEL: name: ret_64
