@@ -934,7 +934,7 @@ endif()
 
 # Link the tools against the libllvm DSO by default.
 set(LLVM_LINK_LLVM_DYLIB_default ON)
-if (BUILD_SHARED_LIBS OR WIN32)
+if (BUILD_SHARED_LIBS OR WIN32 OR CMAKE_SYSTEM_NAME MATCHES "AIX")
   set(LLVM_LINK_LLVM_DYLIB_default OFF)
 endif()
 

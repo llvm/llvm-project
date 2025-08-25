@@ -179,11 +179,11 @@ Non-comprehensive list of changes in this release
   Currently, the use of ``__builtin_dedup_pack`` is limited to template arguments and base
   specifiers, it also must be used within a template context.
 
-- On non-Windows platforms, Clang now builds as a large shared library,
-  ``libclang-cpp``, by default. To revert to the old behavior of producing and
-  linking static libraries, pass ``-DCLANG_LINK_CLANG_DYLIB=OFF`` to CMake when
-  configuring your build. The new behavior matches LLVM, which also builds as a
-  large shared library.
+- On all platforms excluding Windows and AIX, Clang now builds as a large shared
+  library, ``libclang-cpp``, by default. To revert to the old behavior of
+  producing and linking static libraries, pass ``-DCLANG_LINK_CLANG_DYLIB=OFF``
+  to CMake when configuring your build. The new behavior matches LLVM, which
+  also builds as a large shared library.
 
 New Compiler Flags
 ------------------
