@@ -1813,7 +1813,6 @@ void ScalarExprEmitter::EmitBinOpCheck(
   SanitizerHandler Check;
   SmallVector<llvm::Constant *, 4> StaticData;
   SmallVector<llvm::Value *, 2> DynamicData;
-  std::unique_ptr<RuntimeTrapDiagnosticBuilder> RTDB = nullptr;
   TrapReason TR;
 
   BinaryOperatorKind Opcode = Info.Opcode;
