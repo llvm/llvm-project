@@ -61,6 +61,10 @@ Deprecations and Removals
 Potentially breaking changes
 ----------------------------
 
+- The algorithm for ``multi{map,set}::find`` has been modified, which doesn't guarantee that the first element is
+  returned. If code relies on the first element being returned from ``find`` it may be broken. To fix it use
+  ``lower_bound`` or ``equal_range`` instead.
+
 Announcements About Future Releases
 -----------------------------------
 
