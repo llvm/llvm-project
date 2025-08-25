@@ -36,11 +36,21 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     container:
       image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
+    defaults:
+      run:
+        # The run step defaults to using sh as the shell when running in a
+        # container, so make bash the default to ensure consistency between
+        # container and non-container jobs.
+        shell: bash
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
+
+      - name: HACK - Remove SCCACHE
+        run: |
+          rm -Rf /usr/local/bin/sccache
 
       - name: Setup sccache
         uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
@@ -51,10 +61,6 @@ jobs:
           variant: sccache
 
       - name: Build and Test
-        # The run step defaults to using sh as the shell when running in a
-        # container, so make bash the default to ensure consistency between
-        # container and non-container jobs.
-        shell: bash
         run: |
           git config --global --add safe.directory '*'
 
