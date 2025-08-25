@@ -5,7 +5,7 @@ set(ORC_RT_HEADERS
     orc-rt/BitmaskEnum.h
     orc-rt/Compiler.h
     orc-rt/Error.h
-    orc-rt/ExecutorAddr.h
+    orc-rt/ExecutorAddress.h
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
     orc-rt/Math.h
