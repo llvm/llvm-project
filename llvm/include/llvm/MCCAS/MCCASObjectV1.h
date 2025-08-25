@@ -392,7 +392,7 @@ protected:
   public:                                                                      \
     static constexpr StringLiteral KindString = #MCEnumIdentifier;             \
     static Expected<MCFragmentName##Ref>                                       \
-    create(MCCASBuilder &MB, const MCFragmentName &Fragment,                   \
+    create(MCCASBuilder &MB, const MCFragment &Fragment,                       \
            unsigned FragmentSize, ArrayRef<char> FragmentContents);            \
     static Expected<MCFragmentName##Ref> get(Expected<MCObjectProxy> Ref) {    \
       auto Specific = SpecificRefT::getSpecific(std::move(Ref));               \
@@ -404,7 +404,7 @@ protected:
                                              cas::ObjectRef ID) {              \
       return get(Schema.get(ID));                                              \
     }                                                                          \
-    static std::optional<MCFragmentName##Ref> Cast(MCObjectProxy Ref) {             \
+    static std::optional<MCFragmentName##Ref> Cast(MCObjectProxy Ref) {        \
       auto Specific = SpecificRefT::Cast(Ref);                                 \
       if (!Specific)                                                           \
         return std::nullopt;                                                   \

@@ -1,10 +1,3 @@
-if (LLVM_ENABLE_MCCAS)
-  add_definitions(-DLLVM_ENABLE_MCCAS=1)
-  set(LLVM_LINK_MCCAS
-    MCCAS
-  )
-endif()
-
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsDescs
@@ -12,7 +5,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   CAS
   MC
-  ${LLVM_LINK_MCCAS}
+  MCCAS
   MCParser
   Support
   TargetParser

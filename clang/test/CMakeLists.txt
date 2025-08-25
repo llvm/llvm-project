@@ -149,13 +149,6 @@ if(LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
     )
 endif()    
 
-if (LLVM_ENABLE_MCCAS)
-  set(MCCAS_DEPS
-    llvm-cas-object-format
-    llvm-cas-dump
-  )
-endif()
-
 if( NOT CLANG_BUILT_STANDALONE )
   list(APPEND CLANG_TEST_DEPS
     llvm-config
@@ -166,7 +159,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-as
     llvm-bcanalyzer
     llvm-cas
-    ${MCCAS_DEPS}
+    llvm-cas-dump
     llvm-cat
     llvm-cxxfilt
     llvm-dis

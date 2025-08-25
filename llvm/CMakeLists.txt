@@ -905,7 +905,6 @@ option(LLVM_CAS_ENABLE_REMOTE_CACHE "Build remote CAS service" OFF)
 if(LLVM_CAS_ENABLE_REMOTE_CACHE)
   include(FindGRPC)
 endif()
-option(LLVM_ENABLE_MCCAS "Build MCCAS backend" OFF)
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")

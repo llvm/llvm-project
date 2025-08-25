@@ -1,10 +1,3 @@
-if (LLVM_ENABLE_MCCAS)
-  add_definitions(-DLLVM_ENABLE_MCCAS=1)
-  set(MCCAS_DEPS
-    MCCAS
-  )
-endif()
-
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
@@ -286,7 +279,7 @@ add_llvm_component_library(LLVMCodeGen
   Core
   MC
   ObjCARC
-  ${MCCAS_DEPS}
+  MCCAS
   ProfileData
   Scalar
   Support

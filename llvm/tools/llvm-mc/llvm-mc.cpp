@@ -31,9 +31,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
-#if LLVM_ENABLE_MCCAS
 #include "llvm/MCCAS/MCCASObjectV1.h"
-#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
@@ -681,7 +679,6 @@ int main(int argc, char **argv) {
     MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, Ctx);
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
 
-#if LLVM_ENABLE_MCCAS
     // BEGIN MCCAS
     std::unique_ptr<MCObjectWriter> CASBackendWriter;
     bool UseCASBackend = UseMCCASBackend ||
@@ -712,10 +709,6 @@ int main(int argc, char **argv) {
           CasIDOS ? &CasIDOS->os() : nullptr);
     }
     // END MCCAS
-#else
-    bool UseCASBackend = false;
-    std::unique_ptr<MCObjectWriter> CASBackendWriter;
-#endif
     Str.reset(TheTarget->createMCObjectStreamer(
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
         UseCASBackend ? std::move(CASBackendWriter) // MCCAS
