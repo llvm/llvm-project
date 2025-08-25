@@ -3,7 +3,7 @@
 //    2. Removing all occurrences of the string "DISABLED-" in this file.
 //    3. Deleting this message.
 
-// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -std=c23
+// RUN: %check_clang_tidy -std=c23-or-later %s readability-uppercase-literal-suffix %t
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t.c
 // RUN: clang-tidy %t.c -checks='-*,readability-uppercase-literal-suffix' -fix -- -std=c23
 // RUN: clang-tidy %t.c -checks='-*,readability-uppercase-literal-suffix' -warnings-as-errors='-*,readability-uppercase-literal-suffix' -- -std=c23

@@ -4,7 +4,7 @@
 //    3. Deleting this message.
 // These suffixes may be relevant to C too: https://github.com/llvm/llvm-project/issues/97335
 
-// RUN: %check_clang_tidy -std=c++23 %s readability-uppercase-literal-suffix %t -- -- -target aarch64-linux-gnu -I %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++23-or-later %s readability-uppercase-literal-suffix %t -- -- -target aarch64-linux-gnu -I %clang_tidy_headers
 
 #include "integral_constant.h"
 #if 0
@@ -245,4 +245,85 @@ void hexadecimal_literals() {
   static_assert(v10 == 0xfp0F128, "");
 #endif
 
+}
+
+void size_t_suffix() {
+  // Signed
+
+  static constexpr auto v29 = 1z;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'z', which is not uppercase
+  // CHECK-MESSAGES-NEXT: static constexpr auto v29 = 1z;
+  // CHECK-MESSAGES-NEXT: ^~
+  // CHECK-MESSAGES-NEXT: Z{{$}}
+  // CHECK-FIXES: static constexpr auto v29 = 1Z;
+  static_assert(v29 == 1Z, "");
+
+  static constexpr auto v30 = 1Z; // OK.
+  static_assert(v30 == 1Z, "");
+
+  // size_t Unsigned
+
+  static constexpr auto v31 = 1zu;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'zu', which is not uppercase
+  // CHECK-MESSAGES-NEXT: static constexpr auto v31 = 1zu;
+  // CHECK-MESSAGES-NEXT: ^~~
+  // CHECK-MESSAGES-NEXT: ZU{{$}}
+  // CHECK-FIXES: static constexpr auto v31 = 1ZU;
+  static_assert(is_same<decltype(v31), const size_t>::value, "");
+  static_assert(v31 == 1ZU, "");
+
+  static constexpr auto v32 = 1Zu;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'Zu', which is not uppercase
+  // CHECK-MESSAGES-NEXT: static constexpr auto v32 = 1Zu;
+  // CHECK-MESSAGES-NEXT: ^~~
+  // CHECK-MESSAGES-NEXT: ZU{{$}}
+  // CHECK-FIXES: static constexpr auto v32 = 1ZU;
+  static_assert(is_same<decltype(v32), const size_t>::value, "");
+  static_assert(v32 == 1ZU, "");
+
+  static constexpr auto v33 = 1zU;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'zU', which is not uppercase
+  // CHECK-MESSAGES-NEXT: static constexpr auto v33 = 1zU;
+  // CHECK-MESSAGES-NEXT: ^~~
+  // CHECK-MESSAGES-NEXT: ZU{{$}}
+  // CHECK-FIXES: static constexpr auto v33 = 1ZU;
+  static_assert(is_same<decltype(v33), const size_t>::value, "");
+  static_assert(v33 == 1ZU, "");
+
+  static constexpr auto v34 = 1ZU; // OK.
+  static_assert(is_same<decltype(v34), const size_t>::value, "");
+  static_assert(v34 == 1ZU, "");
+
+  // Unsigned size_t
+
+  static constexpr auto v35 = 1uz;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'uz', which is not uppercase
+  // CHECK-MESSAGES-NEXT: static constexpr auto v35 = 1uz;
+  // CHECK-MESSAGES-NEXT: ^~~
+  // CHECK-MESSAGES-NEXT: UZ{{$}}
+  // CHECK-FIXES: static constexpr auto v35 = 1UZ;
+  static_assert(is_same<decltype(v35), const size_t>::value, "");
+  static_assert(v35 == 1UZ);
+
+  static constexpr auto v36 = 1uZ;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'uZ', which is not uppercase
+  // CHECK-MESSAGES-NEXT: static constexpr auto v36 = 1uZ;
+  // CHECK-MESSAGES-NEXT: ^~~
+  // CHECK-MESSAGES-NEXT: UZ{{$}}
+  // CHECK-FIXES: static constexpr auto v36 = 1UZ;
+  static_assert(is_same<decltype(v36), const size_t>::value, "");
+  static_assert(v36 == 1UZ);
+
+  static constexpr auto v37 = 1Uz;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'Uz', which is not uppercase
+  // CHECK-MESSAGES-NEXT: static constexpr auto v37 = 1Uz;
+  // CHECK-MESSAGES-NEXT: ^~~
+  // CHECK-MESSAGES-NEXT: UZ{{$}}
+  // CHECK-FIXES: static constexpr auto v37 = 1UZ;
+  static_assert(is_same<decltype(v37), const size_t>::value, "");
+  static_assert(v37 == 1UZ);
+
+  static constexpr auto v38 = 1UZ; // OK.
+  static_assert(is_same<decltype(v38), const size_t>::value, "");
+  static_assert(v38 == 1UZ);
 }
