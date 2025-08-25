@@ -2,6 +2,7 @@
 UNSUPPORTED: target={{.*windows.*}}
 # FIXME: See coverage.test.  Using UNSUPPORTED here due to random failures.
 UNSUPPORTED: target=s390x{{.*}}
+RUN: mkdir -p %t.dir && cd %t.dir
 RUN: %cpp_compiler %S/DSO1.cpp -fPIC %ld_flags_rpath_so1 -O0 -shared -o %dynamiclib1
 RUN: %cpp_compiler %S/DSO2.cpp -fPIC %ld_flags_rpath_so2 -O0 -shared -o %dynamiclib2
 RUN: %cpp_compiler %S/DSOTestMain.cpp %S/DSOTestExtra.cpp %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t-DSOTest

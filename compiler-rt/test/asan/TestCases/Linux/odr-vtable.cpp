@@ -4,6 +4,7 @@
 // REQUIRES: shared_cxxabi
 
 /// Not using private alias or enabling ODR indicator can detect ODR issues.
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -fno-rtti -DBUILD_SO1 -fPIC -shared -mllvm -asan-use-private-alias=0 %s -o %dynamiclib1
 // RUN: %clangxx_asan -fno-rtti -DBUILD_SO2 -fPIC -shared -mllvm -asan-use-private-alias=0 %s -o %dynamiclib2
 // RUN: %clangxx_asan -fno-rtti %s %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t
