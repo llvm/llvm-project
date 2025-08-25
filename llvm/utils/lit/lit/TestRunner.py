@@ -13,6 +13,7 @@ import shutil
 import tempfile
 import threading
 import typing
+import traceback
 from typing import Optional, Tuple
 
 import io
@@ -41,6 +42,16 @@ class ScriptFatal(Exception):
     A script had a fatal error such that there's no point in retrying.  The
     message has not been emitted on stdout or stderr but is instead included in
     this exception.
+    """
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class TestUpdaterException(Exception):
+    """
+    There was an error not during test execution, but while invoking a function
+    in test_updaters on a failing RUN line.
     """
 
     def __init__(self, message):
@@ -1192,13 +1203,23 @@ def executeScriptInternal(
                 str(result.timeoutReached),
             )
 
-        if litConfig.update_tests:
+        if (
+            litConfig.update_tests
+            and result.exitCode != 0
+            and not timeoutInfo
+            # In theory tests marked XFAIL can fail in the form of XPASS, but the
+            # test updaters are not expected to be able to fix that, so always skip for XFAIL
+            and not test.isExpectedToFail()
+        ):
             for test_updater in litConfig.test_updaters:
                 try:
                     update_output = test_updater(result, test)
                 except Exception as e:
-                    out += f"Exception occurred in test updater: {e}"
-                    continue
+                    output = out
+                    output += err
+                    output += "Exception occurred in test updater:\n"
+                    output += traceback.format_exc()
+                    raise TestUpdaterException(output)
                 if update_output:
                     for line in update_output.splitlines():
                         out += f"# {line}\n"
