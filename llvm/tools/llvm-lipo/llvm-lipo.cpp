@@ -425,6 +425,11 @@ static void printBinaryArchs(LLVMContext &LLVMCtx, const Binary *Binary,
     return;
   }
 
+  if (const auto *A = dyn_cast<Archive>(Binary)) {
+    OS << createSliceFromArchive(LLVMCtx, *A).getArchString() << "\n";
+    return;
+  }
+
   // This should be always the case, as this is tested in readInputBinaries
   const auto *IR = cast<IRObjectFile>(Binary);
   Expected<Slice> SliceOrErr = createSliceFromIR(*IR, 0);
@@ -455,7 +460,8 @@ printInfo(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries) {
   for (auto &IB : InputBinaries) {
     const Binary *Binary = IB.getBinary();
     if (!Binary->isMachOUniversalBinary()) {
-      assert(Binary->isMachO() && "expected MachO binary");
+      assert(Binary->isMachO() ||
+             Binary->isArchive() && "expected MachO binary");
       outs() << "Non-fat file: " << Binary->getFileName()
              << " is architecture: ";
       printBinaryArchs(LLVMCtx, Binary, outs());

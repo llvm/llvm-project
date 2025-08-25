@@ -10,11 +10,12 @@
 # RUN: llvm-ar cr %t.different_architectures.a %t-i386.o %t-x86_64.o
 # RUN: not llvm-lipo %t.different_architectures.a -create -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-DIFFERENT-ARCHS %s
 
-# RUN: llvm-ar cr %t.contains_fat_binary.a %t-universal.o 
+# RUN: llvm-ar cr %t.contains_fat_binary.a %t-universal.o
 # RUN: not llvm-lipo %t.contains_fat_binary.a -create -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-FAT-BINARY %s
 
 # RUN: llvm-ar cr %t-i386-lib.a %t-i386.o
 # RUN: llvm-lipo %t-i386-lib.a %t-x86_64.o -create -output %t-i386-x86_64-universal.o
+# RUN: llvm-lipo %t-i386-lib.a -info | FileCheck --check-prefix=INFO-i386 %s
 # RUN: llvm-lipo %t-i386-x86_64-universal.o -info | FileCheck --check-prefix=INFO-i386-x86_64 %s
 # RUN: llvm-lipo %t-i386-x86_64-universal.o -thin i386 -output %t-extracted-i386-lib.a
 # RUN: cmp %t-extracted-i386-lib.a %t-i386-lib.a
@@ -51,4 +52,5 @@
 # ARCHIVE-WITH-DIFFERENT-ARCHS: all members must match
 # ARCHIVE-WITH-FAT-BINARY: fat file (not allowed in an archive)
 #
+# INFO-i386: i386
 # INFO-i386-x86_64: i386 x86_64
