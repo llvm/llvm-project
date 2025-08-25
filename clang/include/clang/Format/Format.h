@@ -62,57 +62,6 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
-  /// Force break after the left bracket of a braced initializer list (when
-  /// ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
-  /// limit.
-  /// \code
-  ///   true:                             false:
-  ///   vector<int> x {         vs.       vector<int> x {1,
-  ///      1, 2, 3}                            2, 3}
-  /// \endcode
-  /// \version 22
-  bool BreakAfterOpenBracketBracedList;
-
-  /// Force break after the left parenthesis of a function (declaration,
-  /// definition, call) when the parameters exceed the column limit.
-  /// \code
-  ///   true:                             false:
-  ///   foo (                   vs.       foo (a ||
-  ///      a || b)                             b)
-  /// \endcode
-  /// \version 22
-  bool BreakAfterOpenBracketFunction;
-
-  /// Force break after the left parenthesis of an if control statement
-  /// when the expression exceeds the column limit.
-  /// \code
-  ///   true:                             false:
-  ///   if constexpr (          vs.       if constexpr (a ||
-  ///      a || b)                                      b)
-  /// \endcode
-  /// \version 22
-  bool BreakAfterOpenBracketIf;
-
-  /// Force break after the left parenthesis of a loop control statement
-  /// when the expression exceeds the column limit.
-  /// \code
-  ///   true:                             false:
-  ///   while (                  vs.      while (a &&
-  ///      a && b) {                             b) {
-  /// \endcode
-  /// \version 22
-  bool BreakAfterOpenBracketLoop;
-
-  /// Force break after the left parenthesis of a switch control statement
-  /// when the expression exceeds the column limit.
-  /// \code
-  ///   true:                             false:
-  ///   switch (                 vs.      switch (a &&
-  ///      a && b) {                              b) {
-  /// \endcode
-  /// \version 22
-  bool BreakAfterOpenBracketSwitch;
-
   /// Different styles for aligning after open brackets.
   enum BracketAlignmentStyle : int8_t {
     /// Align parameters on the open bracket, e.g.:
@@ -1743,6 +1692,57 @@ struct FormatStyle {
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
 
+  /// Force break after the left bracket of a braced initializer list (when
+  /// ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  /// limit.
+  /// \code
+  ///   true:                             false:
+  ///   vector<int> x {         vs.       vector<int> x {1,
+  ///      1, 2, 3}                            2, 3}
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketBracedList;
+
+  /// Force break after the left parenthesis of a function (declaration,
+  /// definition, call) when the parameters exceed the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   foo (                   vs.       foo (a,
+  ///      a , b)                              b)
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketFunction;
+
+  /// Force break after the left parenthesis of an if control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   if constexpr (          vs.       if constexpr (a ||
+  ///      a || b)                                      b)
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketIf;
+
+  /// Force break after the left parenthesis of a loop control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   while (                  vs.      while (a &&
+  ///      a && b) {                             b) {
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketLoop;
+
+  /// Force break after the left parenthesis of a switch control statement
+  /// when the expression exceeds the column limit.
+  /// \code
+  ///   true:                             false:
+  ///   switch (                 vs.      switch (a +
+  ///      a + b) {                               b) {
+  /// \endcode
+  /// \version 22
+  bool BreakAfterOpenBracketSwitch;
+
   /// The function declaration return type breaking style to use.
   /// \version 19
   ReturnTypeBreakingStyle BreakAfterReturnType;
@@ -2274,7 +2274,7 @@ struct FormatStyle {
   /// \code
   ///   true:                             false:
   ///   foo (                   vs.       foo (
-  ///      a || b                            a || b)
+  ///      a , b                             a , b)
   ///   )
   /// \endcode
   /// \version 22
@@ -2313,7 +2313,7 @@ struct FormatStyle {
   /// \code
   ///   true:                             false:
   ///   switch (                 vs.      switch (
-  ///      a && b                            a && b) {
+  ///      a + b                             a + b) {
   ///   ) {
   /// \endcode
   /// \version 22
