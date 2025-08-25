@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_CONVERSION_XEGPUTOXEVM_XEGPUTOXEVMPASS_H_
-#define MLIR_CONVERSION_XEGPUTOXEVM_XEGPUTOXEVMPASS_H_
+#ifndef MLIR_CONVERSION_XEGPUTOXEVM_XEGPUTOXEVM_H_
+#define MLIR_CONVERSION_XEGPUTOXEVM_XEGPUTOXEVM_H_
 
 #include <memory>
 
@@ -20,8 +20,8 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 void populateXeGPUToXeVMConversionPatterns(
-    mlir::RewritePatternSet &patterns, mlir::LLVMTypeConverter &typeConverter);
+    const LLVMTypeConverter &typeConverter, RewritePatternSet &patterns);
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_XEGPUTOXEVM_XEGPUTOXEVMPASS_H_
+#endif // MLIR_CONVERSION_XEGPUTOXEVM_XEGPUTOXEVM_H_

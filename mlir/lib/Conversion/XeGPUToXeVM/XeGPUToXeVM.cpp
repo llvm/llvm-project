@@ -57,7 +57,8 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   llvm_unreachable("Unknown XeGPU memory space.");
 }
 
-VectorType encodeVectorTypeTo(VectorType currentVecType, Type toElemType) {
+static VectorType encodeVectorTypeTo(VectorType currentVecType,
+                                     Type toElemType) {
   auto elemType = currentVecType.getElementType();
   auto currentBitWidth = elemType.getIntOrFloatBitWidth();
   auto newBitWidth = toElemType.getIntOrFloatBitWidth();
@@ -66,13 +67,11 @@ VectorType encodeVectorTypeTo(VectorType currentVecType, Type toElemType) {
   return VectorType::get(size, toElemType);
 }
 
-xevm::LoadCacheControl
+static xevm::LoadCacheControl
 translateLoadXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
                             std::optional<xegpu::CachePolicy> L3hint) {
-  auto L1hintVal =
-      L1hint.has_value() ? L1hint.value() : xegpu::CachePolicy::UNCACHED;
-  auto L3hintVal =
-      L3hint.has_value() ? L3hint.value() : xegpu::CachePolicy::UNCACHED;
+  auto L1hintVal = L1hint.value_or(xegpu::CachePolicy::UNCACHED);
+  auto L3hintVal = L3hint.value_or(xegpu::CachePolicy::UNCACHED);
   switch (L1hintVal) {
   case xegpu::CachePolicy::CACHED:
     if (L3hintVal == xegpu::CachePolicy::CACHED)
@@ -102,13 +101,11 @@ translateLoadXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
   }
 }
 
-xevm::StoreCacheControl
+static xevm::StoreCacheControl
 translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
                              std::optional<xegpu::CachePolicy> L3hint) {
-  auto L1hintVal =
-      L1hint.has_value() ? L1hint.value() : xegpu::CachePolicy::UNCACHED;
-  auto L3hintVal =
-      L3hint.has_value() ? L3hint.value() : xegpu::CachePolicy::UNCACHED;
+  auto L1hintVal = L1hint.value_or(xegpu::CachePolicy::UNCACHED);
+  auto L3hintVal = L3hint.value_or(xegpu::CachePolicy::UNCACHED);
   switch (L1hintVal) {
   case xegpu::CachePolicy::UNCACHED:
     if (L3hintVal == xegpu::CachePolicy::UNCACHED)
@@ -152,10 +149,14 @@ class CreateNdDescToXeVMPattern
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto source = op.getSource();
+    // Op is lowered to a code sequence that populates payload.
+    // payload is a 8xi32 vector.
     Type payloadElemTy = rewriter.getI32Type();
     Type i64Ty = rewriter.getI64Type();
     VectorType payloadTy = VectorType::get(8, payloadElemTy);
+    // 4xi64 view is used for inserting the base pointer.
     VectorType payloadI64Ty = VectorType::get(4, i64Ty);
+    // Initialize payload to zero.
     Value payload = arith::ConstantOp::create(
         rewriter, loc,
         DenseElementsAttr::get(payloadTy, IntegerAttr::get(payloadElemTy, 0)));
@@ -166,73 +167,56 @@ class CreateNdDescToXeVMPattern
     Value offsetW;
     Value offsetH;
 
-    bool sourceIsMemref = false;
+    // Source can be a memref or a pointer (ui64, ui32, i64 or i32).
+    SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
+    SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
+    // Descriptor shape is expected to be 2D.
+    int64_t rank = mixedSizes.size();
+    if (rank != 2)
+      return rewriter.notifyMatchFailure(op, "Expected 2D shape.");
     auto sourceTy = source.getType();
-    int64_t rank;
-    if (isa<MemRefType>(sourceTy)) {
-      sourceIsMemref = true;
+    auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
+    // If source is a memref, we need to extract the aligned pointer as index.
+    // pointer type is passed as i32 or i64 by type converter.
+    if (sourceMemrefTy) {
       baseAddr =
           memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
-      auto sourceMemrefTy = cast<MemRefType>(sourceTy);
       if (!sourceMemrefTy.hasStaticShape()) {
         op.emitError() << "Expected static memref shape.";
         return failure();
       }
-      rank = sourceMemrefTy.getRank();
-      if (rank != 2) {
-        op.emitError() << "Expected a 2D memref.";
-        return failure();
-      }
-    } else if (sourceTy == rewriter.getIntegerType(64, false)) {
-      rank = op.getMixedSizes().size();
     } else {
-      op.emitError() << "Expected source to be a 2D memref or ui64.";
-      return failure();
-    }
-    auto createOffset = [&](unsigned idx) -> Value {
-      Value val;
-      OpFoldResult ofr = op.getMixedOffsets()[idx];
-      if (auto v = llvm::dyn_cast_if_present<Value>(ofr)) {
-        val = arith::IndexCastOp::create(rewriter, loc, i64Ty, v);
-        val = arith::TruncIOp::create(rewriter, loc, payloadElemTy, val);
-      } else {
-        int32_t off = llvm::cast<IntegerAttr>(cast<Attribute>(ofr)).getInt();
-        val = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, off);
-      }
-      return val;
-    };
-    auto offsets = op.getMixedOffsets();
-    if (offsets.size() == 2) {
-      offsetW = createOffset(rank - 1);
-      offsetH = createOffset(rank - 2);
-    } else {
-      offsetW = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
-      offsetH = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
-    }
-    auto createShape = [&](unsigned idx) -> Value {
-      Value val;
-      OpFoldResult ofr = op.getMixedSizes()[idx];
-      if (auto v = llvm::dyn_cast_if_present<Value>(ofr)) {
-        val = arith::IndexCastOp::create(rewriter, loc, i64Ty, v);
-        val = arith::TruncIOp::create(rewriter, loc, payloadElemTy, val);
-      } else {
-        int32_t off = llvm::cast<IntegerAttr>(cast<Attribute>(ofr)).getInt();
-        val = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, off);
-      }
-      return val;
-    };
-    if (sourceIsMemref) {
-      auto sourceMemrefTy = cast<MemRefType>(sourceTy);
-      baseShapeW = arith::ConstantIntOp::create(
-          rewriter, loc, payloadElemTy, sourceMemrefTy.getDimSize(rank - 1));
-      baseShapeH = arith::ConstantIntOp::create(
-          rewriter, loc, payloadElemTy, sourceMemrefTy.getDimSize(rank - 2));
-      baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
-    } else {
-      baseShapeW = createShape(rank - 1);
-      baseShapeH = createShape(rank - 2);
       baseAddr = adaptor.getSource();
     }
+    // utility for creating offset values from op fold result.
+    auto createOffset = [&](SmallVector<OpFoldResult> &ofrVec,
+                            unsigned idx) -> Value {
+      Value val = getValueOrCreateConstantIntOp(rewriter, loc, ofrVec[idx]);
+      val = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy, val);
+      return val;
+    };
+    // Offsets can be either 2D or not provided (0 is used).
+    if (mixedOffsets.size() == 2) {
+      offsetW = createOffset(mixedOffsets, rank - 1);
+      offsetH = createOffset(mixedOffsets, rank - 2);
+    } else if (mixedOffsets.size() == 0) {
+      offsetW = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
+      offsetH = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
+    } else {
+      return rewriter.notifyMatchFailure(op,
+                                         "Expected 2D offsets or no offsets.");
+    }
+    // Get shape values from op fold results.
+    baseShapeW = createOffset(mixedSizes, rank - 1);
+    baseShapeH = createOffset(mixedSizes, rank - 2);
+    if (sourceMemrefTy) {
+      // cast index to i64.
+      baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
+    } else if (baseAddr.getType() != i64Ty) {
+      // pointer type may be i32. Cast to i64 if needed.
+      baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
+    }
+    // Populate payload.
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
     payLoadAsI64 =
@@ -429,9 +413,9 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
 
 // Add a builder that creates
 // offset * elemByteSize + baseAddr
-auto addOffset = [](ConversionPatternRewriter &rewriter, Location loc,
-                    Value baseAddr, Value offset,
-                    int64_t elemByteSize) -> Value {
+static auto addOffset = [](ConversionPatternRewriter &rewriter, Location loc,
+                           Value baseAddr, Value offset,
+                           int64_t elemByteSize) -> Value {
   Value byteSize = arith::ConstantIntOp::create(
       rewriter, loc, rewriter.getI64Type(), elemByteSize);
   Value byteOffset = arith::MulIOp::create(rewriter, loc, offset, byteSize);
@@ -701,6 +685,7 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
     return success();
   }
 };
+
 class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -1007,7 +992,7 @@ struct ConvertXeGPUToXeVMPass
     target.addIllegalDialect<xegpu::XeGPUDialect>();
 
     RewritePatternSet patterns(&getContext());
-    populateXeGPUToXeVMConversionPatterns(patterns, typeConverter);
+    populateXeGPUToXeVMConversionPatterns(typeConverter, patterns);
     scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
                                                          patterns, target);
     if (failed(applyPartialConversion(getOperation(), target,
@@ -1021,7 +1006,7 @@ struct ConvertXeGPUToXeVMPass
 // Pattern Population
 //===----------------------------------------------------------------------===//
 void mlir::populateXeGPUToXeVMConversionPatterns(
-    RewritePatternSet &patterns, LLVMTypeConverter &typeConverter) {
+    const LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<CreateNdDescToXeVMPattern, UpdateNdOffsetToXeVMPattern,
                LoadStorePrefetchNdToXeVMPattern<xegpu::LoadNdOp>,
                LoadStorePrefetchNdToXeVMPattern<xegpu::StoreNdOp>,

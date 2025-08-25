@@ -11,10 +11,8 @@ gpu.module @create_nd_tdesc {
         // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<8xi32>
         // CHECK: %[[C0_I32:.*]] = arith.constant 0 : i32
         // CHECK: %[[C0_I32_0:.*]] = arith.constant 0 : i32
-        // CHECK: %[[VAR2:.*]] = arith.index_cast %[[ARG3]] : index to i64
-        // CHECK: %[[VAR3:.*]] = arith.trunci %[[VAR2]] : i64 to i32
-        // CHECK: %[[VAR4:.*]] = arith.index_cast %[[ARG2]] : index to i64
-        // CHECK: %[[VAR5:.*]] = arith.trunci %[[VAR4]] : i64 to i32
+        // CHECK: %[[VAR3:.*]] = arith.index_cast %[[ARG3]] : index to i32
+        // CHECK: %[[VAR5:.*]] = arith.index_cast %[[ARG2]] : index to i32
         // CHECK: %[[VAR6:.*]] = vector.bitcast %[[CST]] : vector<8xi32> to vector<4xi64>
         // CHECK: %[[VAR7:.*]] = vector.insert %[[VAR1]], %[[VAR6]] [0] : i64 into vector<4xi64>
         // CHECK: %[[VAR8:.*]] = vector.bitcast %[[VAR7]] : vector<4xi64> to vector<8xi32>
@@ -32,8 +30,10 @@ gpu.module @create_nd_tdesc {
         // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[MEMSPACECAST]] : memref<8x16xf32> -> index
         // CHECK: %[[C0_I32_2:.*]] = arith.constant 0 : i32
         // CHECK: %[[C0_I32_3:.*]] = arith.constant 0 : i32
-        // CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
-        // CHECK: %[[C8_I32:.*]] = arith.constant 8 : i32
+        // CHECK: %[[C16_I64:.*]] = arith.constant 16 : i64
+        // CHECK: %[[C16_I32:.*]] = arith.trunci %c16_i64 : i64 to i32
+        // CHECK: %[[C8_I64:.*]] = arith.constant 8 : i64
+        // CHECK: %[[C8_I32:.*]] = arith.trunci %c8_i64 : i64 to i32
         // CHECK: %[[VAR13:.*]] = arith.index_castui %[[INTPTR]] : index to i64
         // CHECK: %[[VAR14:.*]] = vector.bitcast %[[CST_1]] : vector<8xi32> to vector<4xi64>
         // CHECK: %[[VAR15:.*]] = vector.insert %[[VAR13]], %[[VAR14]] [0] : i64 into vector<4xi64>
