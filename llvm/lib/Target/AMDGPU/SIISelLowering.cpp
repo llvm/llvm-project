@@ -5309,6 +5309,14 @@ static uint64_t getIdentityValueFor64BitWaveReduction(unsigned Opc) {
   }
 }
 
+static bool is32bitWaveReduceOperation(unsigned Opc) {
+  return Opc == AMDGPU::S_MIN_U32 || Opc == AMDGPU::S_MIN_I32 ||
+         Opc == AMDGPU::S_MAX_U32 || Opc == AMDGPU::S_MAX_I32 ||
+         Opc == AMDGPU::S_ADD_I32 || Opc == AMDGPU::S_SUB_I32 ||
+         Opc == AMDGPU::S_AND_B32 || Opc == AMDGPU::S_OR_B32 ||
+         Opc == AMDGPU::S_XOR_B32;
+}
+
 static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                                           MachineBasicBlock &BB,
                                           const GCNSubtarget &ST,
@@ -5417,11 +5425,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     // so that we will get the next active lane for next iteration.
     MachineBasicBlock::iterator I = BB.end();
     Register SrcReg = MI.getOperand(1).getReg();
-    bool is32BitOpc = (Opc == AMDGPU::S_MIN_U32 || Opc == AMDGPU::S_MIN_I32 ||
-                       Opc == AMDGPU::S_MAX_U32 || Opc == AMDGPU::S_MAX_I32 ||
-                       Opc == AMDGPU::S_ADD_I32 || Opc == AMDGPU::S_SUB_I32 ||
-                       Opc == AMDGPU::S_AND_B32 || Opc == AMDGPU::S_OR_B32 ||
-                       Opc == AMDGPU::S_XOR_B32);
+    bool is32BitOpc = is32bitWaveReduceOperation(Opc);
 
     // Create Control flow for loop
     // Split MI's Machine Basic block into For loop
