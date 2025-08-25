@@ -2229,13 +2229,24 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   if (BrTarget == AddrDisc)
     report_fatal_error("Branch target is signed with its own value");
 
-  // If we are printing BLRA pseudo instruction, then x16 and x17 are
-  // implicit-def'ed by the MI and AddrDisc is not used as any other input, so
-  // try to save one MOV by setting MayUseAddrAsScratch.
+  // If we are printing BLRA pseudo, try to save one MOV by making use of the
+  // fact that x16 and x17 are described as clobbered by the MI instruction and
+  // AddrDisc is not used as any other input.
+  //
+  // Back in the day, emitPtrauthDiscriminator was restricted to only returning
+  // either x16 or x17, meaning the returned register is always among the
+  // implicit-def'ed registers of BLRA pseudo. Now this property can be violated
+  // if isX16X17Safer predicate is false, thus manually check if AddrDisc is
+  // among x16 and x17 to prevent clobbering unexpected registers.
+  //
   // Unlike BLRA, BRA pseudo is used to perform computed goto, and thus not
   // declared as clobbering x16/x17.
+  //
+  // FIXME: Make use of `killed` flags and register masks instead.
+  bool AddrDiscIsImplicitDef =
+      IsCall && (AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17);
   Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17,
-                                              /*MayUseAddrAsScratch=*/IsCall);
+                                              AddrDiscIsImplicitDef);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 
   unsigned Opc;
@@ -2968,8 +2979,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // See the comments in emitPtrauthBranch.
     if (Callee == AddrDisc)
       report_fatal_error("Call target is signed with its own value");
+
+    // After isX16X17Safer predicate was introduced, emitPtrauthDiscriminator is
+    // no longer restricted to only reusing AddrDisc when it is X16 or X17
+    // (which are implicit-def'ed by AUTH_TCRETURN pseudos), thus impose this
+    // restriction manually not to clobber an unexpected register.
+    bool AddrDiscIsImplicitDef =
+        AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17;
     Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg,
-                                                /*MayUseAddrAsScratch=*/true);
+                                                AddrDiscIsImplicitDef);
 
     const bool IsZero = DiscReg == AArch64::XZR;
     const unsigned Opcodes[2][2] = {{AArch64::BRAA, AArch64::BRAAZ},
