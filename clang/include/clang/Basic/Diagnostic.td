@@ -145,7 +145,7 @@ class Extension<string str> : Diagnostic<str, CLASS_EXTENSION, SEV_Ignored>;
 class ExtWarn<string str>   : Diagnostic<str, CLASS_EXTENSION, SEV_Warning>;
 // Notes can provide supplementary information on errors, warnings, and remarks.
 class Note<string str>      : Diagnostic<str, CLASS_NOTE, SEV_Fatal/*ignored*/>;
-// Traps messages attached to traps in debug info
+// Traps messages attached to traps in debug info.
 class Trap<string str>      : Diagnostic<str, CLASS_TRAP, SEV_Fatal/*ignored*/>;
 
 class DefaultIgnore { Severity DefaultSeverity = SEV_Ignored; }
