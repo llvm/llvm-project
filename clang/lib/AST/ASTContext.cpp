@@ -990,6 +990,8 @@ ASTContext::getFeatureAvailInfo(Decl *D) const {
   auto *Attr = VD->getAttr<AvailabilityDomainAttr>();
   if (!Attr)
     return {};
+  if (!VD->getInit())
+    return {};
   StringRef Name = Attr->getName()->getName();
   auto *Init = cast<InitListExpr>(VD->getInit());
   Expr::EvalResult Result;

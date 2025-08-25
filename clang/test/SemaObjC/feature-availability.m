@@ -1,15 +1,14 @@
 // RUN: %clang_cc1 -fblocks -ffeature-availability=feature1:ON -ffeature-availability=feature2:OFF -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -DUSE_DOMAIN %s
 
-#include <feature-availability.h>
+#include <availability_domain.h>
 
 #define AVAIL 0
 #define UNAVAIL 1
 
 #ifdef USE_DOMAIN
-int pred1(void);
-static struct __AvailabilityDomain feature1 __attribute__((availability_domain(feature1))) = {__AVAILABILITY_DOMAIN_ENABLED, 0};
-static struct __AvailabilityDomain feature2 __attribute__((availability_domain(feature2))) = {__AVAILABILITY_DOMAIN_DISABLED, 0};
+CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
+CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
 #endif
 
 __attribute__((availability(domain:feature1, AVAIL))) int func1(void);
