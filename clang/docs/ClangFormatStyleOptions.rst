@@ -197,25 +197,48 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlignAfterOpenBracket:
 
-**AlignAfterOpenBracket** (``Boolean``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlignAfterOpenBracket>`
+**AlignAfterOpenBracket** (``BracketAlignmentStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlignAfterOpenBracket>`
   If ``true``, horizontally aligns arguments after an open bracket.
-
-
-  .. code-block:: c++
-
-    true:                               false:
-    someLongFunction(argument1,   vs.   someLongFunction(argument1,
-                     argument2);            argument2);
-
-  The values ``BAS_Align`` (configuration: ``Align``), ``BAS_DontAlign``
-  (configuration ``DontAlign``), ``BAS_Always`` (configuration:
-  ``Always``), and ``BAS_BlockIndent`` (configuration: ``BlockIndent``)
-  are *deprecated*. Individual control over breaking after open brackets
-  and before close brackets are provided by separate style options, e.g.,
-  ``BreakAfterOpenBracketFunction``, ``BreakBeforeCloseBracketFunction``.
 
   This applies to round brackets (parentheses), angle brackets and square
   brackets.
+
+  Possible values:
+
+  * ``BAS_Align`` (in configuration: ``Align``)
+    Align parameters on the open bracket, e.g.:
+
+    .. code-block:: c++
+
+      someLongFunction(argument1,
+                       argument2);
+
+  * ``BAS_DontAlign`` (in configuration: ``DontAlign``)
+    Don't align, instead use ``ContinuationIndentWidth``, e.g.:
+
+    .. code-block:: c++
+
+      someLongFunction(argument1,
+          argument2);
+
+  * ``BAS_ABDeprecated`` (in configuration: ``ABDeprecated``)
+    ``BAS_AlwaysBreak``
+    This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+    For backward compatibility. Do not use.
+
+  * ``BAS_BIDeprecated`` (in configuration: ``BIDeprecated``)
+    ``BAS_BlockIndent``
+    This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+    in combination with ``BreakBeforeCloseBracketBracedList``,
+    ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
+    ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
+    For backward compatibility. Do not use.
+
+
 
 .. _AlignArrayOfStructures:
 
