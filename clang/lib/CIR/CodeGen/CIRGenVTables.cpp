@@ -152,12 +152,11 @@ void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
     size_t vtableStart = layout.getVTableOffset(vtableIndex);
     size_t vtableEnd = vtableStart + layout.getVTableSize(vtableIndex);
     llvm::SmallVector<mlir::Attribute> components;
-    for (size_t componentIndex = vtableStart; componentIndex < vtableEnd;
-         ++componentIndex) {
+    components.reserve(vtableEnd - vtableStart);
+    for (size_t componentIndex : llvm::seq(vtableStart, vtableEnd))
       components.push_back(
           getVTableComponent(layout, componentIndex, rtti, nextVTableThunkIndex,
                              addressPoint, vtableHasLocalLinkage));
-    }
     // Create a ConstArrayAttr to hold the components.
     auto arr = cir::ConstArrayAttr::get(
         cir::ArrayType::get(componentType, components.size()),
