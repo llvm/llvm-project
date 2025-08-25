@@ -961,12 +961,10 @@ public:
       TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
       ArrayRef<Value *> VL = {}) const;
 
-  /// Estimate the overhead of scalarizing an instructions unique
-  /// non-constant operands. The (potentially vector) types to use for each of
-  /// argument are passes via Tys.
+  /// Estimate the overhead of scalarizing operands with the given types. The
+  /// (potentially vector) types to use for each of argument are passes via Tys.
   LLVM_ABI InstructionCost getOperandsScalarizationOverhead(
-      ArrayRef<const Value *> Args, ArrayRef<Type *> Tys,
-      TTI::TargetCostKind CostKind) const;
+      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind) const;
 
   /// If target has efficient vector element load/store instructions, it can
   /// return true here so that insertion/extraction costs are not added to
@@ -1511,6 +1509,14 @@ public:
   LLVM_ABI InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                               TTI::TargetCostKind CostKind,
                                               unsigned Index = -1) const;
+
+  /// \return The expected cost of inserting or extracting a lane that is \p
+  /// Index elements from the end of a vector, i.e. the mathematical expression
+  /// for the lane is (VF - 1 - Index). This is required for scalable vectors
+  /// where the exact lane index is unknown at compile time.
+  LLVM_ABI InstructionCost getIndexedVectorInstrCostFromEnd(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+      unsigned Index) const;
 
   /// \return The expected cost of aggregate inserts and extracts. This is
   /// used when the instruction is not available; a typical use case is to

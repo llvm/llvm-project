@@ -2986,7 +2986,8 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) {
   if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
-      !Args.hasArg(options::OPT_nostdlib) &&
+      (!Args.hasArg(options::OPT_nostdlib) ||
+       TC.getTriple().isKnownWindowsMSVCEnvironment()) &&
       !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
   } else {
@@ -3125,6 +3126,8 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
       else if (CM == "medany")
         CM = "large";
       Ok = CM == "small" || CM == "medium" || CM == "large";
+    } else if (Triple.getArch() == llvm::Triple::lanai) {
+      Ok = llvm::is_contained({"small", "medium", "large"}, CM);
     }
     if (Ok) {
       CmdArgs.push_back(Args.MakeArgString("-mcmodel=" + CM));

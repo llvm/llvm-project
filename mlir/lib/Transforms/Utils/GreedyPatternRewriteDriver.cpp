@@ -15,6 +15,8 @@
 #include "mlir/Config/mlir-config.h"
 #include "mlir/IR/Action.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
@@ -23,7 +25,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -178,9 +180,8 @@ static Operation *getDumpRootOp(Operation *op) {
   return op;
 }
 static void logSuccessfulFolding(Operation *op) {
-  llvm::dbgs() << "// *** IR Dump After Successful Folding ***\n";
-  op->dump();
-  llvm::dbgs() << "\n\n";
+  LDBG() << "// *** IR Dump After Successful Folding ***\n"
+         << OpWithFlags(op, OpPrintingFlags().elideLargeElementsAttrs());
 }
 #endif // NDEBUG
 
@@ -394,8 +395,12 @@ private:
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
 #ifndef NDEBUG
+  /// A raw output stream used to prefix the debug log.
+
+  llvm::impl::raw_ldbg_ostream os{(Twine("[") + DEBUG_TYPE + ":1] ").str(),
+                                  llvm::dbgs()};
   /// A logger used to emit information during the application process.
-  llvm::ScopedPrinter logger{llvm::dbgs()};
+  llvm::ScopedPrinter logger{os};
 #endif
 
   /// The low-level pattern applicator.
@@ -928,10 +933,9 @@ mlir::applyPatternsGreedily(Region &region,
   RegionPatternRewriteDriver driver(region.getContext(), patterns, config,
                                     region);
   LogicalResult converged = std::move(driver).simplify(changed);
-  LLVM_DEBUG(if (failed(converged)) {
-    llvm::dbgs() << "The pattern rewrite did not converge after scanning "
-                 << config.getMaxIterations() << " times\n";
-  });
+  if (failed(converged))
+    LDBG() << "The pattern rewrite did not converge after scanning "
+           << config.getMaxIterations() << " times";
   return converged;
 }
 
@@ -1063,9 +1067,8 @@ LogicalResult mlir::applyOpPatternsGreedily(
   LogicalResult converged = std::move(driver).simplify(ops, changed);
   if (allErased)
     *allErased = surviving.empty();
-  LLVM_DEBUG(if (failed(converged)) {
-    llvm::dbgs() << "The pattern rewrite did not converge after "
-                 << config.getMaxNumRewrites() << " rewrites";
-  });
+  if (failed(converged))
+    LDBG() << "The pattern rewrite did not converge after "
+           << config.getMaxNumRewrites() << " rewrites";
   return converged;
 }
