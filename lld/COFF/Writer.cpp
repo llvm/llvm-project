@@ -1434,10 +1434,6 @@ void Writer::layoutSections() {
             itB != ctx.config.sectionOrder.end())
           return itA->second < itB->second;
 
-        if (itA == ctx.config.sectionOrder.end() &&
-            itB == ctx.config.sectionOrder.end())
-          return originalOrder[a] < originalOrder[b];
-
         // Not found in layout file; respect the original order
         return originalOrder[a] < originalOrder[b];
       });
