@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryResolver.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryScanner.h"
 
 #include "llvm/ObjectYAML/MachOYAML.h"
@@ -665,7 +665,7 @@ TEST_F(LibraryResolverIT, LoaderPathSubstitutionAndResolve) {
   EXPECT_FALSE(ec) << "Expected no error resolving substituted dylib";
 }
 
-TEST_F(LibraryResolverIT, LoaderPathSubstitutionAndResolve2) {
+TEST_F(LibraryResolverIT, ResolveFromUsrOrSystemPaths) {
   auto cache = std::make_shared<LibraryPathCache>();
   auto presolver = std::make_shared<PathResolver>(cache);
 
@@ -677,7 +677,7 @@ TEST_F(LibraryResolverIT, LoaderPathSubstitutionAndResolve2) {
   SmallVector<StringRef> P(Paths.begin(), Paths.end());
 
   DylibResolver Resolver(validator);
-  Resolver.configure("", {}, {}, P);
+  Resolver.configure("", {{P, SearchPathType::UsrOrSys}});
 
   // Check "C"
   auto valOptC = Resolver.resolve("C", true);
@@ -716,5 +716,48 @@ TEST_F(LibraryResolverIT, LoaderPathSubstitutionAndResolve2) {
   EXPECT_EQ(*valOptZdylib, lib("Z"));
 }
 
+TEST_F(LibraryResolverIT, ResolveViaLoaderPathAndRPathSubstitution) {
+  auto cache = std::make_shared<LibraryPathCache>();
+  auto presolver = std::make_shared<PathResolver>(cache);
+
+  DylibPathValidator validator(*presolver);
+
+  std::vector<std::string> Paths = {"@loader_path/../A", "@loader_path/../B",
+                                    "@loader_path/../D", "@loader_path/../Z"};
+
+  SmallVector<StringRef> P(Paths.begin(), Paths.end());
+
+  DylibResolver Resolver(validator);
+
+  // Use only RPath config
+  Resolver.configure(lib("C"), {{P, SearchPathType::RPath}});
+
+  // --- Check A ---
+  auto valOptA = Resolver.resolve("@rpath/A", true);
+  EXPECT_TRUE(valOptA.has_value());
+  EXPECT_EQ(*valOptA, lib("A"));
+
+  auto valOptAdylib = Resolver.resolve(withext("@rpath/A"));
+  EXPECT_TRUE(valOptAdylib.has_value());
+  EXPECT_EQ(*valOptAdylib, lib("A"));
+
+  // --- Check B ---
+  auto valOptB = Resolver.resolve("@rpath/B", true);
+  EXPECT_TRUE(valOptB.has_value());
+  EXPECT_EQ(*valOptB, lib("B"));
+
+  auto valOptBdylib = Resolver.resolve(withext("@rpath/B"));
+  EXPECT_TRUE(valOptBdylib.has_value());
+  EXPECT_EQ(*valOptBdylib, lib("B"));
+
+  // --- Check Z ---
+  auto valOptZ = Resolver.resolve("@rpath/Z", true);
+  EXPECT_TRUE(valOptZ.has_value());
+  EXPECT_EQ(*valOptZ, lib("Z"));
+
+  auto valOptZdylib = Resolver.resolve(withext("@rpath/Z"));
+  EXPECT_TRUE(valOptZdylib.has_value());
+  EXPECT_EQ(*valOptZdylib, lib("Z"));
+}
 } // namespace
 #endif // defined(__APPLE__)
