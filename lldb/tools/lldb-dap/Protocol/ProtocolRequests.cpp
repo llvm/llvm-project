@@ -329,6 +329,17 @@ json::Value toJSON(const ContinueResponseBody &CRB) {
   return std::move(Body);
 }
 
+bool fromJSON(const json::Value &Params, CompletionsArguments &CA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("text", CA.text) && O.map("column", CA.column) &&
+         O.mapOptional("frameId", CA.frameId) && O.mapOptional("line", CA.line);
+}
+
+json::Value toJSON(const CompletionsResponseBody &CRB) {
+  return json::Object{{"targets", CRB.targets}};
+}
+
 bool fromJSON(const json::Value &Params, SetVariableArguments &SVA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -595,6 +606,21 @@ json::Value toJSON(const WriteMemoryResponseBody &WMR) {
 
   if (WMR.bytesWritten != 0)
     result.insert({"bytesWritten", WMR.bytesWritten});
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, ModuleSymbolsArguments &Args,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("moduleId", Args.moduleId) &&
+         O.map("moduleName", Args.moduleName) &&
+         O.mapOptional("startIndex", Args.startIndex) &&
+         O.mapOptional("count", Args.count);
+}
+
+llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
+  json::Object result;
+  result.insert({"symbols", DGMSR.symbols});
   return result;
 }
 
