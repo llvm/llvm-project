@@ -34,13 +34,6 @@ template <typename KeyT, typename ValueT,
           typename MapType = DenseMap<KeyT, unsigned>,
           typename VectorType = SmallVector<std::pair<KeyT, ValueT>, 0>>
 class MapVector {
-  MapType Map;
-  VectorType Vector;
-
-  static_assert(
-      std::is_integral_v<typename MapType::mapped_type>,
-      "The mapped_type of the specified Map must be an integral type");
-
 public:
   using key_type = KeyT;
   using value_type = typename VectorType::value_type;
@@ -51,6 +44,28 @@ public:
   using reverse_iterator = typename VectorType::reverse_iterator;
   using const_reverse_iterator = typename VectorType::const_reverse_iterator;
 
+private:
+  MapType Map;
+  VectorType Vector;
+
+  static_assert(
+      std::is_integral_v<typename MapType::mapped_type>,
+      "The mapped_type of the specified Map must be an integral type");
+
+  template <typename KeyArgT, typename... Ts>
+  std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
+    auto Result = Map.try_emplace(Key);
+    if (Result.second) {
+      Result.first->second = Vector.size();
+      Vector.emplace_back(std::piecewise_construct,
+                          std::forward_as_tuple(std::forward<KeyArgT>(Key)),
+                          std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return {std::prev(end()), true};
+    }
+    return {begin() + Result.first->second, false};
+  }
+
+public:
   /// Clear the MapVector and return the underlying vector.
   VectorType takeVector() {
     Map.clear();
@@ -99,13 +114,7 @@ public:
   }
 
   ValueT &operator[](const KeyT &Key) {
-    std::pair<typename MapType::iterator, bool> Result = Map.try_emplace(Key);
-    auto &I = Result.first->second;
-    if (Result.second) {
-      Vector.push_back(std::make_pair(Key, ValueT()));
-      I = Vector.size() - 1;
-    }
-    return Vector[I].second;
+    return try_emplace_impl(Key).first->second;
   }
 
   // Returns a copy of the value.  Only allowed if ValueT is copyable.
@@ -118,33 +127,18 @@ public:
 
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&...Args) {
-    auto [It, Inserted] = Map.try_emplace(Key);
-    if (Inserted) {
-      It->second = Vector.size();
-      Vector.emplace_back(std::piecewise_construct, std::forward_as_tuple(Key),
-                          std::forward_as_tuple(std::forward<Ts>(Args)...));
-      return {std::prev(end()), true};
-    }
-    return {begin() + It->second, false};
+    return try_emplace_impl(Key, std::forward<Ts>(Args)...);
   }
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
-    auto [It, Inserted] = Map.try_emplace(Key);
-    if (Inserted) {
-      It->second = Vector.size();
-      Vector.emplace_back(std::piecewise_construct,
-                          std::forward_as_tuple(std::move(Key)),
-                          std::forward_as_tuple(std::forward<Ts>(Args)...));
-      return {std::prev(end()), true};
-    }
-    return {begin() + It->second, false};
+    return try_emplace_impl(std::move(Key), std::forward<Ts>(Args)...);
   }
 
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
-    return try_emplace(KV.first, KV.second);
+    return try_emplace_impl(KV.first, KV.second);
   }
   std::pair<iterator, bool> insert(std::pair<KeyT, ValueT> &&KV) {
-    return try_emplace(std::move(KV.first), std::move(KV.second));
+    return try_emplace_impl(std::move(KV.first), std::move(KV.second));
   }
 
   template <typename V>
