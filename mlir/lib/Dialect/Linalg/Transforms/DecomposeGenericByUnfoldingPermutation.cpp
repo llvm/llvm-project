@@ -124,9 +124,10 @@ computeTransposeBroadcast(AffineMap &map) {
     // refering to d3, d4. Therefore, re-base the transpose dimensions so
     // that they start from d0.
     permutation.resize(minorSize);
-    llvm::DenseMap<int64_t, int64_t> minorMap;
+    SmallVector<int64_t> minorMap;
+    minorMap.resize(minorSize);
     for (int64_t i = 0; i < minorSize; ++i)
-      minorMap.insert({sortedResMap[i], i});
+      minorMap[sortedResMap[i]] = i;
 
     // Re-map the dimensions.
     SmallVector<int64_t> remappedResult(minorSize);
