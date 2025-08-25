@@ -281,6 +281,7 @@ struct Config {
   LLVM_ABI Error addSaveTemps(std::string OutputFileName,
                               bool UseInputModulePath = false,
                               const DenseSet<StringRef> &SaveTempsArgs = {});
+  mutable uint8_t Dtlto = 0;
 };
 
 struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {
