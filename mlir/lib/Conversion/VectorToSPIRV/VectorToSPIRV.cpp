@@ -743,6 +743,23 @@ struct VectorLoadOpConverter final
 
     auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
+    auto alignment = loadOp.getAlignment();
+    if (alignment.has_value() &&
+        alignment > std::numeric_limits<uint32_t>::max()) {
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "invalid alignment requirement");
+    }
+
+    auto memoryAccess = spirv::MemoryAccess::None;
+    auto memoryAccessAttr = spirv::MemoryAccessAttr{};
+    IntegerAttr alignmentAttr = nullptr;
+    if (alignment.has_value()) {
+      memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+      memoryAccessAttr =
+          spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
+      alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
+    }
+
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer
     // to a scalar.
@@ -753,7 +770,8 @@ struct VectorLoadOpConverter final
                                        accessChain);
 
     rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, spirvVectorType,
-                                               castedAccessChain);
+                                               castedAccessChain,
+                                               memoryAccessAttr, alignmentAttr);
 
     return success();
   }
@@ -782,6 +800,12 @@ struct VectorStoreOpConverter final
       return rewriter.notifyMatchFailure(
           storeOp, "failed to get memref element pointer");
 
+    auto alignment = storeOp.getAlignment();
+    if (alignment && alignment > std::numeric_limits<uint32_t>::max()) {
+      return rewriter.notifyMatchFailure(storeOp,
+                                         "invalid alignment requirement");
+    }
+
     spirv::StorageClass storageClass = attr.getValue();
     auto vectorType = storeOp.getVectorType();
     auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
@@ -795,8 +819,19 @@ struct VectorStoreOpConverter final
             : spirv::BitcastOp::create(rewriter, loc, vectorPtrType,
                                        accessChain);
 
-    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, castedAccessChain,
-                                                adaptor.getValueToStore());
+    auto memoryAccess = spirv::MemoryAccess::None;
+    auto memoryAccessAttr = spirv::MemoryAccessAttr{};
+    IntegerAttr alignmentAttr = nullptr;
+    if (alignment.has_value()) {
+      memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+      memoryAccessAttr =
+          spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
+      alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
+    }
+
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(
+        storeOp, castedAccessChain, adaptor.getValueToStore(), memoryAccessAttr,
+        alignmentAttr);
 
     return success();
   }
