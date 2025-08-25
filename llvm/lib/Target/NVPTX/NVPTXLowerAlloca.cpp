@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Change the Module's DataLayout to have the local address space for alloca's.
 // Change the address space of each alloca to local and add an addrspacecast to
 // generic address space. For example,
 //
@@ -42,14 +41,13 @@ using namespace llvm;
 using namespace NVPTXAS;
 
 namespace {
-class NVPTXLowerAlloca : public ModulePass {
-  bool changeDataLayout(Module &M);
+class NVPTXLowerAlloca : public FunctionPass {
   bool lowerFunctionAllocas(Function &F);
 
 public:
   static char ID;
-  NVPTXLowerAlloca() : ModulePass(ID) {}
-  bool runOnModule(Module &M) override;
+  NVPTXLowerAlloca() : FunctionPass(ID) {}
+  bool runOnFunction(Function &F) override;
   StringRef getPassName() const override {
     return "convert address space of alloca'ed memory to local";
   }
@@ -61,14 +59,7 @@ char NVPTXLowerAlloca::ID = 1;
 INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca", "Lower Alloca", false,
                 false)
 
-bool NVPTXLowerAlloca::runOnModule(Module &M) {
-  bool Changed = changeDataLayout(M);
-  for (auto &F : M)
-    Changed |= lowerFunctionAllocas(F);
-  return Changed;
-}
-
-bool NVPTXLowerAlloca::lowerFunctionAllocas(Function &F) {
+bool NVPTXLowerAlloca::runOnFunction(Function &F) {
   SmallVector<AllocaInst *, 16> Allocas;
   for (auto &I : instructions(F))
     if (auto *Alloca = dyn_cast<AllocaInst>(&I))
@@ -111,19 +102,6 @@ bool NVPTXLowerAlloca::lowerFunctionAllocas(Function &F) {
   return true;
 }
 
-bool NVPTXLowerAlloca::changeDataLayout(Module &M) {
-  const auto &DL = M.getDataLayout();
-  if (DL.getAllocaAddrSpace() == ADDRESS_SPACE_LOCAL)
-    return false;
-  auto DLStr = DL.getStringRepresentation();
-
-  auto AddrSpaceStr = "A" + std::to_string(ADDRESS_SPACE_LOCAL);
-  if (StringRef(DLStr).contains("A"))
-    report_fatal_error("DataLayout should not contain A");
-  M.setDataLayout(DLStr.empty() ? AddrSpaceStr : DLStr + "-" + AddrSpaceStr);
-  return true;
-}
-
-ModulePass *llvm::createNVPTXLowerAllocaPass() {
+FunctionPass *llvm::createNVPTXLowerAllocaPass() {
   return new NVPTXLowerAlloca();
 }

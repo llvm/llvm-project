@@ -1444,16 +1444,15 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
 
   // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's
   // DataLayout.
-  if (AsmHelper.TM)
-    if (!AsmHelper.TM->isCompatibleDataLayout(M->getDataLayout()) ||
-        !AsmHelper.TM->isCompatibleDataLayout(DataLayout(TDesc))) {
-      std::string DLDesc = M->getDataLayout().getStringRepresentation();
+  if (AsmHelper.TM) {
+    std::string DLDesc = M->getDataLayout().getStringRepresentation();
+    if (DLDesc != TDesc) {
       unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "backend data layout '%0' is not compatible with "
-          "expected target description '%1'");
+          DiagnosticsEngine::Error, "backend data layout '%0' does not match "
+                                    "expected target description '%1'");
       Diags.Report(DiagID) << DLDesc << TDesc;
     }
+  }
 }
 
 // With -fembed-bitcode, save a copy of the llvm IR as data in the

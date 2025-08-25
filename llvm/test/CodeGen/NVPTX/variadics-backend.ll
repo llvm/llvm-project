@@ -110,12 +110,12 @@ define dso_local i32 @foo() {
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    mov.b64 %SPL, __local_depot1;
 ; CHECK-PTX-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-PTX-NEXT:    add.u64 %rd1, %SP, 0;
 ; CHECK-PTX-NEXT:    st.local.b64 [%SPL], 4294967297;
 ; CHECK-PTX-NEXT:    st.local.b32 [%SPL+8], 1;
 ; CHECK-PTX-NEXT:    st.local.b64 [%SPL+16], 1;
 ; CHECK-PTX-NEXT:    st.local.b64 [%SPL+24], 4607182418800017408;
 ; CHECK-PTX-NEXT:    st.local.b64 [%SPL+32], 4607182418800017408;
-; CHECK-PTX-NEXT:    add.u64 %rd1, %SP, 0;
 ; CHECK-PTX-NEXT:    { // callseq 0, 0
 ; CHECK-PTX-NEXT:    .param .b32 param0;
 ; CHECK-PTX-NEXT:    .param .b64 param1;
@@ -208,6 +208,7 @@ define dso_local i32 @bar() {
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    mov.b64 %SPL, __local_depot3;
 ; CHECK-PTX-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-PTX-NEXT:    add.u64 %rd1, %SP, 8;
 ; CHECK-PTX-NEXT:    ld.global.nc.b8 %rs1, [__const_$_bar_$_s1+7];
 ; CHECK-PTX-NEXT:    st.local.b8 [%SPL+2], %rs1;
 ; CHECK-PTX-NEXT:    ld.global.nc.b8 %rs2, [__const_$_bar_$_s1+6];
@@ -218,7 +219,6 @@ define dso_local i32 @bar() {
 ; CHECK-PTX-NEXT:    st.local.b32 [%SPL+8], 1;
 ; CHECK-PTX-NEXT:    st.local.b8 [%SPL+12], 1;
 ; CHECK-PTX-NEXT:    st.local.b64 [%SPL+16], 1;
-; CHECK-PTX-NEXT:    add.u64 %rd1, %SP, 8;
 ; CHECK-PTX-NEXT:    { // callseq 1, 0
 ; CHECK-PTX-NEXT:    .param .b32 param0;
 ; CHECK-PTX-NEXT:    .param .b64 param1;
@@ -288,8 +288,8 @@ define dso_local i32 @baz() {
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    mov.b64 %SPL, __local_depot5;
 ; CHECK-PTX-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-PTX-NEXT:    st.local.v4.b32 [%SPL], {1, 1, 1, 1};
 ; CHECK-PTX-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-PTX-NEXT:    st.local.v4.b32 [%SPL], {1, 1, 1, 1};
 ; CHECK-PTX-NEXT:    { // callseq 2, 0
 ; CHECK-PTX-NEXT:    .param .b32 param0;
 ; CHECK-PTX-NEXT:    .param .b64 param1;
@@ -353,19 +353,19 @@ define dso_local void @qux() {
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    mov.b64 %SPL, __local_depot7;
 ; CHECK-PTX-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-PTX-NEXT:    ld.global.nc.b64 %rd1, [__const_$_qux_$_s+8];
-; CHECK-PTX-NEXT:    st.local.b64 [%SPL+8], %rd1;
-; CHECK-PTX-NEXT:    ld.global.nc.b64 %rd2, [__const_$_qux_$_s];
-; CHECK-PTX-NEXT:    st.local.b64 [%SPL], %rd2;
+; CHECK-PTX-NEXT:    add.u64 %rd1, %SP, 16;
+; CHECK-PTX-NEXT:    ld.global.nc.b64 %rd2, [__const_$_qux_$_s+8];
+; CHECK-PTX-NEXT:    st.local.b64 [%SPL+8], %rd2;
+; CHECK-PTX-NEXT:    ld.global.nc.b64 %rd3, [__const_$_qux_$_s];
+; CHECK-PTX-NEXT:    st.local.b64 [%SPL], %rd3;
 ; CHECK-PTX-NEXT:    st.local.b64 [%SPL+16], 1;
-; CHECK-PTX-NEXT:    add.u64 %rd3, %SP, 16;
 ; CHECK-PTX-NEXT:    { // callseq 3, 0
 ; CHECK-PTX-NEXT:    .param .align 8 .b8 param0[16];
 ; CHECK-PTX-NEXT:    .param .b64 param1;
 ; CHECK-PTX-NEXT:    .param .b32 retval0;
-; CHECK-PTX-NEXT:    st.param.b64 [param1], %rd3;
-; CHECK-PTX-NEXT:    st.param.b64 [param0+8], %rd1;
-; CHECK-PTX-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-PTX-NEXT:    st.param.b64 [param1], %rd1;
+; CHECK-PTX-NEXT:    st.param.b64 [param0+8], %rd2;
+; CHECK-PTX-NEXT:    st.param.b64 [param0], %rd3;
 ; CHECK-PTX-NEXT:    call.uni (retval0), variadics4, (param0, param1);
 ; CHECK-PTX-NEXT:    } // callseq 3
 ; CHECK-PTX-NEXT:    ret;

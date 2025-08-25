@@ -1080,7 +1080,7 @@ MachinePointerInfo MachinePointerInfo::getStack(MachineFunction &MF,
 }
 
 MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
-  return MachinePointerInfo(MF.getDataLayout().getAllocaAddrSpace());
+  return MachinePointerInfo(MF.getPSVManager().getStack()->getAddressSpace());
 }
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,

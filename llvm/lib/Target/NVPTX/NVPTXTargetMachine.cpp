@@ -354,6 +354,7 @@ void NVPTXPassConfig::addIRPasses() {
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
   addPass(createNVPTXLowerArgsPass());
+  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
 
   if (getOptLevel() != CodeGenOptLevel::None)
     // NVPTXLowerArgs may emit alloca for byval parameters which can often
@@ -369,7 +370,6 @@ void NVPTXPassConfig::addIRPasses() {
   }
 
   addPass(createAtomicExpandLegacyPass());
-  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
   addPass(createNVPTXCtorDtorLoweringLegacyPass());
 
   // === LSR and other generic IR passes ===
@@ -498,25 +498,10 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
   printAndVerify("After codegen peephole optimization pass");
 }
 
-bool NVPTXTargetMachine::isCompatibleDataLayout(
-    const DataLayout &Candidate) const {
-  // XXX: Should we enforce that the Candidate DataLayout has the same address
-  // space for allocas?
-  if (DL == Candidate)
-    return true;
-
-  auto DLStr = DL.getStringRepresentation();
-  if (!StringRef(DLStr).contains("A"))
-    DLStr = DLStr.empty() ? "A" + std::to_string(ADDRESS_SPACE_LOCAL)
-                          : DLStr + "-A" + std::to_string(ADDRESS_SPACE_LOCAL);
-  auto NewDL = DataLayout(DLStr);
-
-  return NewDL == Candidate;
-}
-
 unsigned
 NVPTXTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
-  if (Kind == PseudoSourceValue::FixedStack) {
+  if (Kind == PseudoSourceValue::FixedStack ||
+      Kind == PseudoSourceValue::Stack) {
     return ADDRESS_SPACE_LOCAL;
   }
   return CodeGenTargetMachineImpl::getAddressSpaceForPseudoSourceKind(Kind);
