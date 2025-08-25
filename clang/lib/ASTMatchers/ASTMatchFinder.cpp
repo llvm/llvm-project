@@ -1237,7 +1237,8 @@ private:
           // Make sure we do not visit the same node twice.
           // Otherwise, we'll visit the common ancestors as often as there
           // are splits on the way down.
-          if (Visited.insert(Parent.getMemoizationData()).second)
+          auto Key = Parent.getMemoizationData();
+          if (Key == nullptr || Visited.insert(Key).second)
             Queue.push_back(Parent);
         }
         Queue.pop_front();
