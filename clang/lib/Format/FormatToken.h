@@ -651,9 +651,9 @@ public:
   }
 
   bool isLoop(const FormatStyle &Style) const {
-    return this->isOneOf(tok::kw_for, tok::kw_while) ||
-           (Style.isJavaScript() && this->isNot(tok::l_paren) &&
-            this->Previous && this->Previous->is(tok::kw_for));
+    return isOneOf(tok::kw_for, tok::kw_while) ||
+           (Style.isJavaScript() && isNot(tok::l_paren) && Previous &&
+            Previous->is(tok::kw_for));
   }
 
   bool closesScopeAfterBlock() const {
