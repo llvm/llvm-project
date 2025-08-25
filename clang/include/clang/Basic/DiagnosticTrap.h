@@ -5,13 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file contains the necessary definitions of trap diagnostics to be used
-/// with `TrapReasonBuilder`.
-///
-//===----------------------------------------------------------------------===//
-
 #ifndef LLVM_CLANG_BASIC_DIAGNOSTICTRAP_H
 #define LLVM_CLANG_BASIC_DIAGNOSTICTRAP_H
 
