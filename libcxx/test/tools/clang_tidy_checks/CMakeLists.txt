@@ -103,6 +103,7 @@ set(SOURCES
    )
 
 add_library(cxx-tidy MODULE ${SOURCES})
+target_compile_options(cxx-tidy PUBLIC -stdlib=libc++)
 target_link_libraries(cxx-tidy clangTidy)
 
 set_target_properties(cxx-tidy PROPERTIES
