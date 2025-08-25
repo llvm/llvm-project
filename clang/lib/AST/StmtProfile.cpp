@@ -958,7 +958,7 @@ void OMPClauseProfiler::VisitOMPXDynCGroupMemClause(
 }
 void OMPClauseProfiler::VisitOMPDynGroupprivateClause(
     const OMPDynGroupprivateClause *C) {
-  VistOMPClauseWithPreInit(C);
+  VisitOMPClauseWithPreInit(C);
   if (auto *Size = C->getSize())
     Profiler->VisitStmt(Size);
 }
