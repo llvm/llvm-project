@@ -7524,6 +7524,9 @@ private:
     // types below. The generated information is expressed in this order:
     // base pointer, section pointer, size, flags
     // (to add to the ones that come from the map type and modifier).
+    // Entries annotated with (+) are only generated for "target" constructs,
+    // and only if the variable at the beginning of the expression is used in
+    // the region.
     //
     // double d;
     // int i[100];
@@ -7539,6 +7542,7 @@ private:
     //   float f[50];
     //   S1 s;
     //   double *p;
+    //   double *&pref;
     //   struct S2 *ps;
     //   int &ref;
     // }
@@ -7558,22 +7562,36 @@ private:
     // &p, &p, sizeof(float*), TARGET_PARAM | TO | FROM
     //
     // map(p[1:24])
-    // p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM
-    // &p, &p[1], sizeof(p), ATTACH
+    // p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM // map pointee
+    // &p, &p[1], sizeof(void*), ATTACH // attach pointer/pointee, if both
+    //                                  // are present, and either is new
     //
     // map((22])p)
     // p, p, 22*sizeof(float), TARGET_PARAM | TO | FROM
-    // &p, p, sizeof(float*), ATTACH
+    // &p, p, sizeof(void*), ATTACH
     //
     // map((*a)[0:3])
-    // &(*a), &(*a), sizeof(pointer), TARGET_PARAM | TO | FROM
-    // &(*a), &(*a)[0], 3*sizeof(int), PTR_AND_OBJ | TO | FROM
+    // a, a, 0, TARGET_PARAM | IMPLICIT // (+)
+    // &a, a, sizeof(void*), ATTACH     // (+)
+    // (*a)[0], &(*a)[0], 3 * sizeof(int), TO | FROM
+    // &(*a), &(*a)[0], sizeof(void*), ATTACH
+    // (+) Only on target, if a is used in the region
+    // Note: Since the attach base-pointer is `*a`, which is not a scalar
+    // variable, it doesn't determine the clause on `a`. `a` is mapped using
+    // a zero-length-array-section map by generateDefaultMapInfo, if it is
+    // referenced in the target region, because it is a pointer.
     //
     // map(**a)
-    // &(*a), &(*a), sizeof(pointer), TARGET_PARAM | TO | FROM
-    // &(*a), &(**a), sizeof(int), PTR_AND_OBJ | TO | FROM
+    // a, a, 0, TARGET_PARAM | IMPLICIT // (+)
+    // &a, a, sizeof(void*), ATTACH     // (+)
+    // &(*a)[0], &(*a)[0], sizeof(int), TO | FROM
+    // &(*a), &(*a)[0], sizeof(void*), ATTACH
+    // (+) Only on target, if a is used in the region
     //
     // map(s)
+    // FIXME: This needs to also imply map(ref_ptr_ptee: s.ref), since the
+    // effect is supposed to be same as if the user had a map for every element
+    // of the struct. We currently do a shallow-map of s.
     // &s, &s, sizeof(S2), TARGET_PARAM | TO | FROM
     //
     // map(s.i)
@@ -7586,54 +7604,60 @@ private:
     // &s, &(s.p), sizeof(double*), TARGET_PARAM | TO | FROM
     //
     // map(to: s.p[:22])
-    // &s, &(s.p), sizeof(double*), TARGET_PARAM (*)
-    // &s, &(s.p), sizeof(double*), MEMBER_OF(1) (**)
-    // &(s.p), &(s.p[0]), 22*sizeof(double),
-    //   MEMBER_OF(1) | PTR_AND_OBJ | TO (***)
-    // (*) alloc space for struct members, only this is a target parameter
-    // (**) map the pointer (nothing to be mapped in this example) (the compiler
-    //      optimizes this entry out, same in the examples below)
-    // (***) map the pointee (map: to)
+    // &s, &(s.p), sizeof(double*), TARGET_PARAM | IMPLICIT // (+)
+    // &(s.p[0]), &(s.p[0]), 22 * sizeof(double*), TO | FROM
+    // &(s.p), &(s.p[0]), sizeof(void*), ATTACH
     //
     // map(to: s.ref)
-    // &s, &(s.ref), sizeof(int*), TARGET_PARAM (*)
-    // &s, &(s.ref), sizeof(int), MEMBER_OF(1) | PTR_AND_OBJ | TO (***)
-    // (*) alloc space for struct members, only this is a target parameter
+    // &s, &(ptr(s.ref)), sizeof(int*), TARGET_PARAM (*)
+    // &s, &(ptee(s.ref)), sizeof(int), MEMBER_OF(1) | PTR_AND_OBJ | TO (***)
+    // (*) alloc space for struct members, only this is a target parameter.
     // (**) map the pointer (nothing to be mapped in this example) (the compiler
     //      optimizes this entry out, same in the examples below)
     // (***) map the pointee (map: to)
+    // Note: ptr(s.ref) represents the referring pointer of s.ref
+    //       ptee(s.ref) represents the referenced pointee of s.ref
+    //
+    // map(to: s.pref)
+    // &s, &(ptr(s.pref)), sizeof(double**), TARGET_PARAM
+    // &s, &(ptee(s.pref)), sizeof(double*), MEMBER_OF(1) | PTR_AND_OBJ | TO
+    //
+    // map(to: s.pref[:22])
+    // &s, &(ptr(s.pref)), sizeof(double**), TARGET_PARAM | IMPLICIT // (+)
+    // &s, &(ptee(s.pref)), sizeof(double*), MEMBER_OF(1) | PTR_AND_OBJ | TO |
+    //                                       FROM | IMPLICIT // (+)
+    // &(ptee(s.pref)[0]), &(ptee(s.pref)[0]), 22 * sizeof(double), TO
+    // &(ptee(s.pref)), &(ptee(s.pref)[0]), sizeof(void*), ATTACH
     //
     // map(s.ps)
     // &s, &(s.ps), sizeof(S2*), TARGET_PARAM | TO | FROM
     //
     // map(from: s.ps->s.i)
-    // &s, &(s.ps), sizeof(S2*), TARGET_PARAM
-    // &s, &(s.ps), sizeof(S2*), MEMBER_OF(1)
-    // &(s.ps), &(s.ps->s.i), sizeof(int), MEMBER_OF(1) | PTR_AND_OBJ  | FROM
+    // &s, &(s.ps), sizeof(S2*), TARGET_PARAM | TO | FROM | IMPLICIT // (+)
+    // &(s.ps[0]), &(s.ps->s.i), sizeof(int), FROM
+    // &(s.ps), &(s.ps->s.i), sizeof(void*), ATTACH
     //
     // map(to: s.ps->ps)
-    // &s, &(s.ps), sizeof(S2*), TARGET_PARAM
-    // &s, &(s.ps), sizeof(S2*), MEMBER_OF(1)
-    // &(s.ps), &(s.ps->ps), sizeof(S2*), MEMBER_OF(1) | PTR_AND_OBJ  | TO
+    // &s, &(s.ps), sizeof(S2*), TARGET_PARAM | TO | FROM | IMPLICIT // (+)
+    // &(s.ps[0]), &(s.ps->ps), sizeof(S2*), TO
+    // &(s.ps), &(s.ps->ps), sizeof(void*), ATTACH
     //
     // map(s.ps->ps->ps)
-    // &s, &(s.ps), sizeof(S2*), TARGET_PARAM
-    // &s, &(s.ps), sizeof(S2*), MEMBER_OF(1)
-    // &(s.ps), &(s.ps->ps), sizeof(S2*), MEMBER_OF(1) | PTR_AND_OBJ
-    // &(s.ps->ps), &(s.ps->ps->ps), sizeof(S2*), PTR_AND_OBJ | TO | FROM
+    // &s, &(s.ps), sizeof(S2*), TARGET_PARAM | TO | FROM | IMPLICIT // (+)
+    // &(s.ps->ps[0]), &(s.ps->ps->ps), sizeof(S2*), TO
+    // &(s.ps->ps), &(s.ps->ps->ps), sizeof(void*), ATTACH
     //
     // map(to: s.ps->ps->s.f[:22])
-    // &s, &(s.ps), sizeof(S2*), TARGET_PARAM
-    // &s, &(s.ps), sizeof(S2*), MEMBER_OF(1)
-    // &(s.ps), &(s.ps->ps), sizeof(S2*), MEMBER_OF(1) | PTR_AND_OBJ
-    // &(s.ps->ps), &(s.ps->ps->s.f[0]), 22*sizeof(float), PTR_AND_OBJ | TO
+    // &s, &(s.ps), sizeof(S2*), TARGET_PARAM | TO | FROM | IMPLICIT // (+)
+    // &(s.ps->ps[0]), &(s.ps->ps->s.f[0]), 22*sizeof(float), TO
+    // &(s.ps->ps), &(s.ps->ps->s.f[0]), sizeof(void*), ATTACH
     //
     // map(ps)
     // &ps, &ps, sizeof(S2*), TARGET_PARAM | TO | FROM
     //
     // map(ps->i)
     // ps, &(ps->i), sizeof(int), TARGET_PARAM | TO | FROM
-    // &ps, &(ps->i), sizeof(ps), ATTACH
+    // &ps, &(ps->i), sizeof(void*), ATTACH
     //
     // map(ps->s.f)
     // ps, &(ps->s.f[0]), 50*sizeof(float), TARGET_PARAM | TO | FROM
@@ -7644,68 +7668,76 @@ private:
     // &ps, &(ps->p), sizeof(ps), ATTACH
     //
     // map(to: ps->p[:22])
-    // ps, &(ps->p), sizeof(double*), TARGET_PARAM
-    // ps, &(ps->p), sizeof(double*), MEMBER_OF(1)
-    // &(ps->p), &(ps->p[0]), 22*sizeof(double), MEMBER_OF(1) | PTR_AND_OBJ | TO
+    // ps, &(ps[0]), 0, TARGET_PARAM | IMPLICIT // (+)
+    // &ps, &(ps[0]), sizeof(void*), ATTACH     // (+)
+    // &(ps->p[0]), &(ps->p[0]), 22*sizeof(double), TO
+    // &(ps->p), &(ps->p[0]), sizeof(void*), ATTACH
     //
     // map(ps->ps)
     // ps, &(ps->ps), sizeof(S2*), TARGET_PARAM | TO | FROM
     // &ps, &(ps->ps), sizeof(ps), ATTACH
     //
     // map(from: ps->ps->s.i)
-    // ps, &(ps->ps), sizeof(S2*), TARGET_PARAM
-    // ps, &(ps->ps), sizeof(S2*), MEMBER_OF(1)
-    // &(ps->ps), &(ps->ps->s.i), sizeof(int), MEMBER_OF(1) | PTR_AND_OBJ | FROM
+    // ps, &(ps[0]), 0, TARGET_PARAM | IMPLICIT // (+)
+    // &ps, &(ps[0]), sizeof(void*), ATTACH     // (+)
+    // &(ps->ps[0]), &(ps->ps->s.i), sizeof(int), FROM
+    // &(ps->ps), &(ps->ps->s.i), sizeof(void*), ATTACH
     //
     // map(from: ps->ps->ps)
-    // ps, &(ps->ps), sizeof(S2*), TARGET_PARAM
-    // ps, &(ps->ps), sizeof(S2*), MEMBER_OF(1)
-    // &(ps->ps), &(ps->ps->ps), sizeof(S2*), MEMBER_OF(1) | PTR_AND_OBJ | FROM
+    // ps, &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
+    // &ps, &(ps[0]), sizeof(void*), ATTACH     // (+)
+    // &(ps->ps[0]), &(ps->ps->ps), sizeof(S2*), FROM
+    // &(ps->ps), &(ps->ps->ps), sizeof(void*), ATTACH
     //
     // map(ps->ps->ps->ps)
-    // ps, &(ps->ps), sizeof(S2*), TARGET_PARAM
-    // ps, &(ps->ps), sizeof(S2*), MEMBER_OF(1)
-    // &(ps->ps), &(ps->ps->ps), sizeof(S2*), MEMBER_OF(1) | PTR_AND_OBJ
-    // &(ps->ps->ps), &(ps->ps->ps->ps), sizeof(S2*), PTR_AND_OBJ | TO | FROM
+    // ps, &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
+    // &ps, &(ps[0]), sizeof(void*), ATTACH   // (+)
+    // &(ps->ps->ps[0]), &(ps->ps->ps->ps), sizeof(S2*), FROM
+    // &(ps->ps->ps), &(ps->ps->ps->ps), sizeof(void*), ATTACH
     //
     // map(to: ps->ps->ps->s.f[:22])
-    // ps, &(ps->ps), sizeof(S2*), TARGET_PARAM
-    // ps, &(ps->ps), sizeof(S2*), MEMBER_OF(1)
-    // &(ps->ps), &(ps->ps->ps), sizeof(S2*), MEMBER_OF(1) | PTR_AND_OBJ
-    // &(ps->ps->ps), &(ps->ps->ps->s.f[0]), 22*sizeof(float), PTR_AND_OBJ | TO
+    // ps, &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
+    // &ps, &(ps[0]), sizeof(void*), ATTACH   // (+)
+    // &(ps->ps->ps[0]), &(ps->ps->ps->s.f[0]), 22*sizeof(float), TO
+    // &(ps->ps->ps), &(ps->ps->ps->s.f[0]), sizeof(void*), ATTACH
     //
     // map(to: s.f[:22]) map(from: s.p[:33])
+    // On target, and if s is used in the region:
+    //
     // &s, &(s.f[0]), 50*sizeof(float) + sizeof(struct S1) +
     //     sizeof(double*) (**), TARGET_PARAM
     // &s, &(s.f[0]), 22*sizeof(float), MEMBER_OF(1) | TO
-    // &s, &(s.p), sizeof(double*), MEMBER_OF(1)
-    // &(s.p), &(s.p[0]), 33*sizeof(double), MEMBER_OF(1) | PTR_AND_OBJ | FROM
+    // &s, &(s.p), sizeof(double*), MEMBER_OF(1) | TO | FROM | IMPLICIT
+    // &(s.p[0]), &(s.p[0]), 33*sizeof(double), FROM
+    // &(s.p), &(s.p[0]), sizeof(void*), ATTACH
     // (*) allocate contiguous space needed to fit all mapped members even if
     //     we allocate space for members not mapped (in this example,
     //     s.f[22..49] and s.s are not mapped, yet we must allocate space for
     //     them as well because they fall between &s.f[0] and &s.p)
     //
+    // On other constructs, and, if s is not used in the region, on target:
+    // &s, &(s.f[0]), 22*sizeof(float), TO
+    // &(s.p[0]), &(s.p[0]), 33*sizeof(double), FROM
+    // &(s.p), &(s.p[0]), sizeof(void*), ATTACH
+    //
     // map(from: s.f[:22]) map(to: ps->p[:33])
     // &s, &(s.f[0]), 22*sizeof(float), TARGET_PARAM | FROM
-    // ps, &(ps->p), sizeof(S2*), TARGET_PARAM
-    // ps, &(ps->p), sizeof(double*), MEMBER_OF(2) (*)
-    // &(ps->p), &(ps->p[0]), 33*sizeof(double), MEMBER_OF(2) | PTR_AND_OBJ | TO
-    // (*) the struct this entry pertains to is the 2nd element in the list of
-    //     arguments, hence MEMBER_OF(2)
+    // &ps[0], &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
+    // &(ps->p[0]), &(ps->p[0]), 33*sizeof(double), TO
+    // &(ps->p), &(ps->p[0]), sizeof(void*), ATTACH
     //
     // map(from: s.f[:22], s.s) map(to: ps->p[:33])
     // &s, &(s.f[0]), 50*sizeof(float) + sizeof(struct S1), TARGET_PARAM
     // &s, &(s.f[0]), 22*sizeof(float), MEMBER_OF(1) | FROM
     // &s, &(s.s), sizeof(struct S1), MEMBER_OF(1) | FROM
-    // ps, &(ps->p), sizeof(S2*), TARGET_PARAM
-    // ps, &(ps->p), sizeof(double*), MEMBER_OF(4) (*)
-    // &(ps->p), &(ps->p[0]), 33*sizeof(double), MEMBER_OF(4) | PTR_AND_OBJ | TO
-    // (*) the struct this entry pertains to is the 4th element in the list
-    //     of arguments, hence MEMBER_OF(4)
+    // ps, &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
+    // &ps, &(ps[0]), sizeof(void*), ATTACH   // (+)
+    // &(ps->p[0]), &(ps->p[0]), 33*sizeof(double), TO
+    // &(ps->p), &(ps->p[0]), sizeof(void*), ATTACH
     //
-    // map(p, p[:100])
+    // map(p[:100], p)
     // &p, &p, sizeof(float*), TARGET_PARAM | TO | FROM
-    // &p[0], &p[0], 100*sizeof(float), TO | FROM
+    // p, &p[0], 100*sizeof(float), TO | FROM
     // &p, &p[0], sizeof(float*), ATTACH
 
     // Track if the map information being generated is the first for a capture.
