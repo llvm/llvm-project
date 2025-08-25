@@ -239,6 +239,10 @@ Improvements to Clang's diagnostics
   specializations in th same way as it already did for other declarators.
   (#GH147333)
 
+- A new warning ``-Walloc-size`` has been added to detect calls to functions
+  decorated with the ``alloc_size`` attribute don't allocate enough space for
+  the target pointer type.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
