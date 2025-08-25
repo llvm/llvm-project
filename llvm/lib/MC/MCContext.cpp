@@ -42,7 +42,6 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -327,7 +326,6 @@ MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
 
   // Ensure the original symbol is not emitted to the symbol table.
   Sym.IsTemporary = true;
-  Sym.setExternal(false);
   return NewSym;
 }
 

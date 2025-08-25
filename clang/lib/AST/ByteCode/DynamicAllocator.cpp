@@ -24,14 +24,14 @@ void DynamicAllocator::cleanup() {
     auto &AllocSite = Iter.second;
     for (auto &Alloc : AllocSite.Allocations) {
       Block *B = Alloc.block();
-      assert(!B->IsDead);
+      assert(!B->isDead());
       assert(B->isInitialized());
       B->invokeDtor();
 
       if (B->hasPointers()) {
         while (B->Pointers) {
           Pointer *Next = B->Pointers->asBlockPointer().Next;
-          B->Pointers->PointeeStorage.BS.Pointee = nullptr;
+          B->Pointers->BS.Pointee = nullptr;
           B->Pointers = Next;
         }
         B->Pointers = nullptr;
@@ -101,13 +101,17 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
     ID->LifeState =
         AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
 
-  B->IsDynamic = true;
-
-  if (auto It = AllocationSites.find(D->asExpr()); It != AllocationSites.end())
+  if (auto It = AllocationSites.find(D->asExpr());
+      It != AllocationSites.end()) {
     It->second.Allocations.emplace_back(std::move(Memory));
-  else
+    B->setDynAllocId(It->second.NumAllocs);
+    ++It->second.NumAllocs;
+  } else {
     AllocationSites.insert(
         {D->asExpr(), AllocationSite(std::move(Memory), AllocForm)});
+    B->setDynAllocId(0);
+  }
+  assert(B->isDynamic());
   return B;
 }
 
@@ -121,7 +125,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   assert(!Site.empty());
 
   // Find the Block to delete.
-  auto AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
+  auto *AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
     return BlockToDelete == A.block();
   });
 
@@ -129,7 +133,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
 
   Block *B = AllocIt->block();
   assert(B->isInitialized());
-  assert(!B->IsDead);
+  assert(!B->isDead());
   B->invokeDtor();
 
   // Almost all our dynamic allocations have a pointer pointing to them
@@ -139,7 +143,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   // over to a DeadBlock and simply keep the block in a separate DeadAllocations
   // list.
   if (B->hasPointers()) {
-    B->IsDead = true;
+    B->AccessFlags |= Block::DeadFlag;
     DeadAllocations.push_back(std::move(*AllocIt));
     Site.Allocations.erase(AllocIt);
 

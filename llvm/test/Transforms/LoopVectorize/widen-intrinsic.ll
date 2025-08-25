@@ -5,7 +5,7 @@
 define void @powi_only_first_lane_used_of_second_arg(ptr %p, i32 %pow) {
 ; CHECK-LABEL: define void @powi_only_first_lane_used_of_second_arg(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[POW:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -21,10 +21,9 @@ define void @powi_only_first_lane_used_of_second_arg(ptr %p, i32 %pow) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P_GEP:%.*]] = getelementptr float, ptr [[P]], i32 [[IV]]
 ; CHECK-NEXT:    [[X:%.*]] = load float, ptr [[P_GEP]], align 4
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.powi.f32.i32(float [[X]], i32 [[POW]])

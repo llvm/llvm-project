@@ -367,7 +367,7 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
 Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
     : Source(D), ElemSize(1), Size(1), MDSize(MD.value_or(0)),
       AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
-      IsTemporary(false), IsDummy(true) {
+      IsTemporary(false) {
   assert(Source && "Missing source");
 }
 
@@ -377,12 +377,14 @@ QualType Descriptor::getType() const {
   if (const auto *D = asValueDecl())
     return D->getType();
   if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))
-    return QualType(T->getTypeForDecl(), 0);
+    return T->getASTContext().getTypeDeclType(T);
 
   // The Source sometimes has a different type than the once
   // we really save. Try to consult the Record first.
-  if (isRecord())
-    return QualType(ElemRecord->getDecl()->getTypeForDecl(), 0);
+  if (isRecord()) {
+    const RecordDecl *RD = ElemRecord->getDecl();
+    return RD->getASTContext().getCanonicalTagType(RD);
+  }
   if (const auto *E = asExpr())
     return E->getType();
   llvm_unreachable("Invalid descriptor type");
@@ -453,7 +455,7 @@ SourceInfo Descriptor::getLoc() const {
 }
 
 bool Descriptor::hasTrivialDtor() const {
-  if (isPrimitive() || isPrimitiveArray() || isDummy())
+  if (isPrimitive() || isPrimitiveArray())
     return true;
 
   if (isRecord()) {
@@ -462,17 +464,16 @@ bool Descriptor::hasTrivialDtor() const {
     return !Dtor || Dtor->isTrivial();
   }
 
+  if (!ElemDesc)
+    return true;
   // Composite arrays.
-  assert(ElemDesc);
   return ElemDesc->hasTrivialDtor();
 }
 
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
 
 InitMap::InitMap(unsigned N)
-    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {
-  std::fill_n(data(), numFields(N), 0);
-}
+    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {}
 
 bool InitMap::initializeElement(unsigned I) {
   unsigned Bucket = I / PER_FIELD;

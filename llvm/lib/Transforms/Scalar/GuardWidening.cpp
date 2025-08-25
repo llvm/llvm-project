@@ -642,9 +642,9 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig,
     return FI;
   }
 
-  SmallSet<Value *, 16> Visited;
+  SmallPtrSet<Value *, 16> Visited;
   SmallVector<Value *, 16> Worklist;
-  SmallSet<Instruction *, 16> DropPoisonFlags;
+  SmallPtrSet<Instruction *, 16> DropPoisonFlags;
   SmallVector<Value *, 16> NeedFreeze;
   DenseMap<Value *, FreezeInst *> CacheOfFreezes;
 

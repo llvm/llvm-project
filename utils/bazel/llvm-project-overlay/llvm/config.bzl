@@ -113,7 +113,6 @@ llvm_config_defines = os_defines + builtin_thread_pointer + select({
     "LLVM_VERSION_PATCH={}".format(LLVM_VERSION_PATCH),
     r'LLVM_VERSION_STRING=\"{}\"'.format(PACKAGE_VERSION),
     # Set globally in HandleLLVMOptions.cmake
-    "EXPERIMENTAL_KEY_INSTRUCTIONS",
     # These shouldn't be needed by the C++11 standard, but are for some
     # platforms (e.g. glibc < 2.18. See
     # https://sourceware.org/bugzilla/show_bug.cgi?id=15366). These are also

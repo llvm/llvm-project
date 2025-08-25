@@ -30,18 +30,26 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
+#include <variant>
 
 namespace Fortran {
 namespace lower {
 namespace omp {
 bool DataSharingProcessor::OMPConstructSymbolVisitor::isSymbolDefineBy(
     const semantics::Symbol *symbol, lower::pft::Evaluation &eval) const {
-  return eval.visit(
-      common::visitors{[&](const parser::OpenMPConstruct &functionParserNode) {
-                         return symDefMap.count(symbol) &&
-                                symDefMap.at(symbol) == &functionParserNode;
-                       },
-                       [](const auto &functionParserNode) { return false; }});
+  return eval.visit(common::visitors{
+      [&](const parser::OpenMPConstruct &functionParserNode) {
+        return symDefMap.count(symbol) &&
+               symDefMap.at(symbol) == ConstructPtr(&functionParserNode);
+      },
+      [](const auto &functionParserNode) { return false; }});
+}
+
+bool DataSharingProcessor::OMPConstructSymbolVisitor::
+    isSymbolDefineByNestedDeclaration(const semantics::Symbol *symbol) const {
+  return symDefMap.count(symbol) &&
+         std::holds_alternative<const parser::DeclarationConstruct *>(
+             symDefMap.at(symbol));
 }
 
 static bool isConstructWithTopLevelTarget(lower::pft::Evaluation &eval) {
@@ -550,11 +558,23 @@ void DataSharingProcessor::collectSymbols(
         return false;
       }
 
-      return sym->test(semantics::Symbol::Flag::OmpImplicit);
+      // Collect implicit symbols only if they are not defined by a nested
+      // `DeclarationConstruct`. If `sym` is not defined by the current OpenMP
+      // evaluation then it is defined by a block nested within the OpenMP
+      // construct. This, in turn, means that the private allocation for the
+      // symbol will be emitted as part of the nested block and there is no need
+      // to privatize it within the OpenMP construct.
+      return !visitor.isSymbolDefineByNestedDeclaration(sym) &&
+             sym->test(semantics::Symbol::Flag::OmpImplicit);
     }
 
-    if (collectPreDetermined)
-      return sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+    if (collectPreDetermined) {
+      // Similar to implicit symbols, collect pre-determined symbols only if
+      // they are not defined by a nested `DeclarationConstruct`
+      return visitor.isSymbolDefineBy(sym, eval) &&
+             !visitor.isSymbolDefineByNestedDeclaration(sym) &&
+             sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+    }
 
     return !sym->test(semantics::Symbol::Flag::OmpImplicit) &&
            !sym->test(semantics::Symbol::Flag::OmpPreDetermined);

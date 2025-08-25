@@ -54,6 +54,9 @@ private:
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
 
+  // When appropriate, add a _dvgpr$ symbol.
+  void emitDVgprSymbol(MachineFunction &MF);
+
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(AMDGPU::AMDGPUMCKernelCodeT &Out,
                         const SIProgramInfo &KernelInfo,

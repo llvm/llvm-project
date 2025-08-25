@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-c++20-extensions
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
@@ -130,7 +130,7 @@ namespace PR9226 {
 
   template<typename T, typename U>
   struct Y {
-    typedef typename T::template f<U> type; // expected-error{{template name refers to non-type template 'X::template f'}}
+    typedef typename T::template f<U> type; // expected-error{{template name refers to non-type template 'PR9226::X::template f'}}
   };
 
   Y<X, int> yxi; // expected-note{{in instantiation of template class 'PR9226::Y<PR9226::X, int>' requested here}}
@@ -154,3 +154,30 @@ namespace sugared_template_instantiation {
   struct B { typedef int type1; };
   typedef A<const B> type2;
 } // namespace sugated_template_instantiation
+
+namespace unresolved_using {
+  template <class> struct A {
+    struct B {
+      typedef int X;
+    };
+  };
+  template <class T> struct C : A<T> {
+    using typename A<T>::B;
+    typedef typename B::X Y;
+  };
+  template struct C<int>;
+} // namespace unresolved_using
+
+#if __cplusplus >= 201703L
+namespace SubstTemplateTypeParmPackType {
+  template <int...> struct A {};
+
+  template <class... Ts> void f() {
+    []<int ... Is>(A<Is...>) { (Ts::g(Is) && ...); }(A<0>{});
+  };
+
+  struct B { static void g(int); };
+
+  template void f<B>();
+} // namespace SubstTemplateTypeParmPackType
+#endif
