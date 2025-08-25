@@ -7,9 +7,9 @@
 
 int main() {
   char *p = strdup("memccpy");
-  char *d = (char *)malloc(4);
+  char *d = (char *)malloc(5);
   void *r = memccpy(d, p, 'c', 8);
-  int cmp = memcmp(r, "mem", 3);
+  int cmp = memcmp(r, "memc", 4);
   free(d);
   free(p);
   return cmp;

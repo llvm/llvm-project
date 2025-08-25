@@ -53,8 +53,11 @@ void *internal_memccpy(void *dest, const void *src, int c, uptr n) {
   char *d = (char *)dest;
   const char *s = (const char *)src;
   uptr i = 0;
-  for (; i < n && s[i] != c; ++i) d[i] = s[i];
-  if (n > 0 && i < n - 1)
+  for (; i < n; ++i) {
+    d[i] = s[i];
+    if (s[i] == c) break;
+  }
+  if (n > 0 && i < n)
     return d + i + 1;
   return nullptr;
 }
