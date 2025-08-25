@@ -39,7 +39,8 @@ public:
   Socket *GetSocket() const override { return m_listener.get(); }
 
 protected:
-  // Overridable by the unit tests.
+  // This adds tools and resource providers that
+  // are specific to this server. Overridable by the unit tests.
   virtual void Extend(lldb_protocol::mcp::Server &server) const;
 
 private:

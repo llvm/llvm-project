@@ -236,7 +236,7 @@ llvm::Expected<Response> Server::ResourcesReadHandler(const Request &request) {
       MCPError::kResourceNotFound);
 }
 
-lldb_protocol::mcp::Capabilities Server::GetCapabilities() {
+Capabilities Server::GetCapabilities() {
   lldb_protocol::mcp::Capabilities capabilities;
   capabilities.tools.listChanged = true;
   // FIXME: Support sending notifications when a debugger/target are
