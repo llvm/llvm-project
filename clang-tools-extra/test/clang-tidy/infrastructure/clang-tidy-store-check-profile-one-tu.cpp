@@ -1,9 +1,9 @@
-// RUN: rm -rf %T/out
-// RUN: clang-tidy -enable-check-profile -checks='-*,readability-function-size' -store-check-profile=%T/out %s -- 2>&1 | not FileCheck --match-full-lines -implicit-check-not='{{warning:|error:}}' -check-prefix=CHECK-CONSOLE %s
-// RUN: cat %T/out/*-clang-tidy-store-check-profile-one-tu.cpp.json | FileCheck --match-full-lines -implicit-check-not='{{warning:|error:}}' -check-prefix=CHECK-FILE %s
-// RUN: rm -rf %T/out
-// RUN: clang-tidy -enable-check-profile -checks='-*,readability-function-size' -store-check-profile=%T/out %s -- 2>&1
-// RUN: cat %T/out/*-clang-tidy-store-check-profile-one-tu.cpp.json | FileCheck --match-full-lines -implicit-check-not='{{warning:|error:}}' -check-prefix=CHECK-FILE %s
+// RUN: rm -rf %t.dir/out
+// RUN: clang-tidy -enable-check-profile -checks='-*,readability-function-size' -store-check-profile=%t.dir/out %s -- 2>&1 | not FileCheck --match-full-lines -implicit-check-not='{{warning:|error:}}' -check-prefix=CHECK-CONSOLE %s
+// RUN: cat %t.dir/out/*-clang-tidy-store-check-profile-one-tu.cpp.json | FileCheck --match-full-lines -implicit-check-not='{{warning:|error:}}' -check-prefix=CHECK-FILE %s
+// RUN: rm -rf %t.dir/out
+// RUN: clang-tidy -enable-check-profile -checks='-*,readability-function-size' -store-check-profile=%t.dir/out %s -- 2>&1
+// RUN: cat %t.dir/out/*-clang-tidy-store-check-profile-one-tu.cpp.json | FileCheck --match-full-lines -implicit-check-not='{{warning:|error:}}' -check-prefix=CHECK-FILE %s
 
 // CHECK-CONSOLE-NOT: ===-------------------------------------------------------------------------===
 // CHECK-CONSOLE-NOT: {{.*}}  --- Name ---

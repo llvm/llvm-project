@@ -174,6 +174,7 @@ class EltDeps<bit vl, bit mask> {
 
 def EltDepsNone      : EltDeps<vl=0, mask=0>;
 def EltDepsVL        : EltDeps<vl=1, mask=0>;
+def EltDepsMask      : EltDeps<vl=0, mask=1>;
 def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
 
 class EEW <bits<2> val> {
@@ -193,7 +194,9 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
   let Pattern = pattern;
 
-  let TSFlags{4-0} = format.Value;
+  InstFormat Format = format;
+
+  let TSFlags{4-0} = Format.Value;
 
   // Defaults
   RISCVVConstraint RVVConstraint = NoConstraint;
@@ -258,17 +261,18 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // Indicates the EEW of a vector instruction's destination operand.
   EEW DestEEW = EEWSEWx1;
   let TSFlags{25-24} = DestEEW.Value;
+
+  // Some vector instructions like vslidedown/vrgather will read elements past
+  // VL, and should be marked to make sure RISCVVLOptimizer doesn't reduce its
+  // operands' VLs.
+  bit ReadsPastVL = 0;
+  let TSFlags{26} = ReadsPastVL;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
              list<dag> pattern, InstFormat format>
     : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<32> Inst;
-  // SoftFail is a field the disassembler can use to provide a way for
-  // instructions to not match without killing the whole decode process. It is
-  // mainly used for ARM, but Tablegen expects this field to exist or it fails
-  // to build the decode table.
-  field bits<32> SoftFail = 0;
   let Size = 4;
 }
 
@@ -276,7 +280,6 @@ class RVInst48<dag outs, dag ins, string opcodestr, string argstr,
                list<dag> pattern, InstFormat format>
     : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
   let Size = 6;
 }
 
@@ -284,7 +287,6 @@ class RVInst64<dag outs, dag ins, string opcodestr, string argstr,
                list<dag> pattern, InstFormat format>
     : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<64> Inst;
-  field bits<64> SoftFail = 0;
   let Size = 8;
 }
 

@@ -684,13 +684,13 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   return Error::success();
 }
 
-uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) const {
   // Given a runtime address, look up the hash value in the interval map, and
   // fallback to value 0 if a hash value is not found.
   return VTableAddrMap.lookup(Address, 0);
 }
 
-uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) const {
   finalizeSymtab();
   auto It = partition_point(AddrToMD5Map, [=](std::pair<uint64_t, uint64_t> A) {
     return A.first < Address;
@@ -1160,8 +1160,7 @@ void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
-  ValueProfData *VD =
-      (ValueProfData *)(new (::operator new(TotalSizeInBytes)) ValueProfData());
+  ValueProfData *VD = new (::operator new(TotalSizeInBytes)) ValueProfData();
   memset(VD, 0, TotalSizeInBytes);
   return VD;
 }
@@ -1608,7 +1607,7 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
   const char *EntryName =
       (Level == ProgramLevel ? "functions" : "edge counters");
   if (Level == ProgramLevel) {
-    OS << "Profile overlap infomation for base_profile: " << *BaseFilename
+    OS << "Profile overlap information for base_profile: " << *BaseFilename
        << " and test_profile: " << *TestFilename << "\nProgram level:\n";
   } else {
     OS << "Function level:\n"

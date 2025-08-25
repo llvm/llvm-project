@@ -1298,8 +1298,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
         Name += "<unnamed-type-";
         Name += TND->getName();
       } else if (isa<EnumDecl>(TD) &&
-                 cast<EnumDecl>(TD)->enumerator_begin() !=
-                     cast<EnumDecl>(TD)->enumerator_end()) {
+                 !cast<EnumDecl>(TD)->enumerators().empty()) {
         // Anonymous non-empty enums mangle in the first enumerator.
         auto *ED = cast<EnumDecl>(TD);
         Name += "<unnamed-enum-";
@@ -1806,17 +1805,16 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
   case TemplateArgument::Declaration: {
     const NamedDecl *ND = TA.getAsDecl();
     if (isa<FieldDecl>(ND) || isa<IndirectFieldDecl>(ND)) {
-      mangleMemberDataPointer(cast<CXXRecordDecl>(ND->getDeclContext())
-                                  ->getMostRecentNonInjectedDecl(),
-                              cast<ValueDecl>(ND),
-                              cast<NonTypeTemplateParmDecl>(Parm),
-                              TA.getParamTypeForDecl());
+      mangleMemberDataPointer(
+          cast<CXXRecordDecl>(ND->getDeclContext())->getMostRecentDecl(),
+          cast<ValueDecl>(ND), cast<NonTypeTemplateParmDecl>(Parm),
+          TA.getParamTypeForDecl());
     } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
       if (MD && MD->isInstance()) {
-        mangleMemberFunctionPointer(
-            MD->getParent()->getMostRecentNonInjectedDecl(), MD,
-            cast<NonTypeTemplateParmDecl>(Parm), TA.getParamTypeForDecl());
+        mangleMemberFunctionPointer(MD->getParent()->getMostRecentDecl(), MD,
+                                    cast<NonTypeTemplateParmDecl>(Parm),
+                                    TA.getParamTypeForDecl());
       } else {
         mangleFunctionPointer(FD, cast<NonTypeTemplateParmDecl>(Parm),
                               TA.getParamTypeForDecl());
@@ -2022,7 +2020,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
             if (RD->isAnonymousStructOrUnion())
               continue;
         } else {
-          ET = getASTContext().getRecordType(cast<CXXRecordDecl>(D));
+          ET = getASTContext().getCanonicalTagType(cast<CXXRecordDecl>(D));
           // Bug in MSVC: fully qualified name of base class should be used for
           // mangling to prevent collisions e.g. on base classes with same names
           // in different namespaces.
@@ -3248,11 +3246,11 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
 }
 void MicrosoftCXXNameMangler::mangleType(const EnumType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getDecl());
+  mangleType(cast<TagType>(T)->getOriginalDecl()->getDefinitionOrSelf());
 }
 void MicrosoftCXXNameMangler::mangleType(const RecordType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getDecl());
+  mangleType(cast<TagType>(T)->getOriginalDecl()->getDefinitionOrSelf());
 }
 void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
   mangleTagTypeKind(TD->getTagKind());
@@ -3383,6 +3381,11 @@ void MicrosoftCXXNameMangler::mangleType(const TemplateTypeParmType *T,
 void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,
                                          Qualifiers, SourceRange Range) {
   Error(Range.getBegin(), "substituted parameter pack") << Range;
+}
+
+void MicrosoftCXXNameMangler::mangleType(const SubstBuiltinTemplatePackType *T,
+                                         Qualifiers, SourceRange Range) {
+  Error(Range.getBegin(), "substituted builtin template pack") << Range;
 }
 
 // <type> ::= <pointer-type>

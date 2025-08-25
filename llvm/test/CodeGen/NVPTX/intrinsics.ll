@@ -267,6 +267,23 @@ define i64 @test_globaltimer() {
   ret i64 %ret
 }
 
+define i32 @test_globaltimer_lo(){
+; CHECK-LABEL: test_globaltimer_lo(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.u32 %r1, %globaltimer_lo;
+; CHECK-NEXT:    mov.u32 %r2, %globaltimer_lo;
+; CHECK-NEXT:    add.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %a = tail call i32 @llvm.nvvm.read.ptx.sreg.globaltimer.lo()
+  %b = tail call i32 @llvm.nvvm.read.ptx.sreg.globaltimer.lo()
+  %ret = add i32 %a, %b
+  ret i32 %ret
+}
+
 define i64 @test_cyclecounter() {
 ; CHECK-LABEL: test_cyclecounter(
 ; CHECK:       {

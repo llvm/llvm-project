@@ -706,7 +706,7 @@ define i32 @test_ugtsmax_sub_add_i32(i32 %x0, i32 %x1) {
 ; CHECK-NEXT:    add w9, w0, w1
 ; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    add w8, w9, w8
-; CHECK-NEXT:    csel w0, wzr, w8, lt
+; CHECK-NEXT:    csel w0, wzr, w8, mi
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt i32 %x1, 2147483647
   %add = add i32 %x0, %x1

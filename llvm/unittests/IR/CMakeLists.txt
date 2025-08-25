@@ -43,6 +43,7 @@ add_llvm_unittest(IRTests
   PatternMatch.cpp
   ShuffleVectorInstTest.cpp
   StructuralHashTest.cpp
+  RuntimeLibcallsTest.cpp
   TimePassesTest.cpp
   TypesTest.cpp
   UseTest.cpp

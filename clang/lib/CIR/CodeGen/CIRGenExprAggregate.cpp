@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include <cstdint>
 
@@ -68,6 +69,12 @@ public:
   void Visit(Expr *e) { StmtVisitor<AggExprEmitter>::Visit(e); }
 
   void VisitCallExpr(const CallExpr *e);
+  void VisitStmtExpr(const StmtExpr *e) {
+    CIRGenFunction::StmtExprEvaluation eval(cgf);
+    Address retAlloca =
+        cgf.createMemTemp(e->getType(), cgf.getLoc(e->getSourceRange()));
+    (void)cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca, dest);
+  }
 
   void VisitDeclRefExpr(DeclRefExpr *e) { emitAggLoadOfLValue(e); }
 
@@ -123,8 +130,8 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const QualType elementType =
       cgf.getContext().getAsArrayType(arrayQTy)->getElementType();
 
-  if (elementType.isDestructedType()) {
-    cgf.cgm.errorNYI(loc, "dtorKind NYI");
+  if (elementType.isDestructedType() && cgf.cgm.getLangOpts().Exceptions) {
+    cgf.cgm.errorNYI(loc, "initialized array requires destruction");
     return;
   }
 
@@ -134,9 +141,9 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const cir::PointerType cirElementPtrType =
       builder.getPointerTo(cirElementType);
 
-  auto begin = builder.create<cir::CastOp>(loc, cirElementPtrType,
-                                           cir::CastKind::array_to_ptrdecay,
-                                           destPtr.getPointer());
+  auto begin = cir::CastOp::create(builder, loc, cirElementPtrType,
+                                   cir::CastKind::array_to_ptrdecay,
+                                   destPtr.getPointer());
 
   const CharUnits elementSize =
       cgf.getContext().getTypeSizeInChars(elementType);
@@ -181,8 +188,8 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     // Advance to the start of the rest of the array.
     if (numInitElements) {
       one = builder.getConstantInt(loc, cgf.PtrDiffTy, 1);
-      element = builder.create<cir::PtrStrideOp>(loc, cirElementPtrType,
-                                                 element, one);
+      element = cir::PtrStrideOp::create(builder, loc, cirElementPtrType,
+                                         element, one);
     }
 
     // Allocate the temporary variable
@@ -192,25 +199,52 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     LValue tmpLV = cgf.makeAddrLValue(tmpAddr, elementPtrType);
     cgf.emitStoreThroughLValue(RValue::get(element), tmpLV);
 
-    // TODO(CIR): Replace this part later with cir::DoWhileOp
-    for (unsigned i = numInitElements; i != numArrayElements; ++i) {
-      cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
+    // Compute the end of array
+    cir::ConstantOp numArrayElementsConst = builder.getConstInt(
+        loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), numArrayElements);
+    mlir::Value end = cir::PtrStrideOp::create(builder, loc, cirElementPtrType,
+                                               begin, numArrayElementsConst);
 
-      // Emit the actual filler expression.
-      const LValue elementLV = cgf.makeAddrLValue(
-          Address(currentElement, cirElementType, elementAlign), elementType);
+    builder.createDoWhile(
+        loc,
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
+          mlir::Type boolTy = cgf.convertType(cgf.getContext().BoolTy);
+          cir::CmpOp cmp = cir::CmpOp::create(
+              builder, loc, boolTy, cir::CmpOpKind::ne, currentElement, end);
+          builder.createCondition(cmp);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
 
-      if (arrayFiller)
-        emitInitializationToLValue(arrayFiller, elementLV);
-      else
-        emitNullInitializationToLValue(loc, elementLV);
+          assert(!cir::MissingFeatures::requiresCleanups());
 
-      // Advance pointer and store them to temporary variable
-      one = builder.getConstantInt(loc, cgf.PtrDiffTy, 1);
-      cir::PtrStrideOp nextElement =
-          builder.createPtrStride(loc, currentElement, one);
-      cgf.emitStoreThroughLValue(RValue::get(nextElement), tmpLV);
-    }
+          // Emit the actual filler expression.
+          LValue elementLV = cgf.makeAddrLValue(
+              Address(currentElement, cirElementType, elementAlign),
+              elementType);
+          if (arrayFiller)
+            emitInitializationToLValue(arrayFiller, elementLV);
+          else
+            emitNullInitializationToLValue(loc, elementLV);
+
+          // Tell the EH cleanup that we finished with the last element.
+          if (cgf.cgm.getLangOpts().Exceptions) {
+            cgf.cgm.errorNYI(loc, "update destructed array element for EH");
+            return;
+          }
+
+          // Advance pointer and store them to temporary variable
+          cir::ConstantOp one = builder.getConstInt(
+              loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), 1);
+          auto nextElement = cir::PtrStrideOp::create(
+              builder, loc, cirElementPtrType, currentElement, one);
+          cgf.emitStoreThroughLValue(RValue::get(nextElement), tmpLV);
+
+          builder.createYield(loc);
+        });
   }
 }
 
@@ -356,10 +390,122 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     emitArrayInit(dest.getAddress(), arrayTy, e->getType(), e, args,
                   arrayFiller);
     return;
+  } else if (e->getType()->isVariableArrayType()) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "visitCXXParenListOrInitListExpr variable array type");
+    return;
   }
 
-  cgf.cgm.errorNYI(
-      "visitCXXParenListOrInitListExpr Record or VariableSizeArray type");
+  if (e->getType()->isArrayType()) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "visitCXXParenListOrInitListExpr array type");
+    return;
+  }
+
+  assert(e->getType()->isRecordType() && "Only support structs/unions here!");
+
+  // Do struct initialization; this code just sets each individual member
+  // to the approprate value.  This makes bitfield support automatic;
+  // the disadvantage is that the generated code is more difficult for
+  // the optimizer, especially with bitfields.
+  unsigned numInitElements = args.size();
+  RecordDecl *record = e->getType()
+                           ->castAs<RecordType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
+
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception.
+  assert(!cir::MissingFeatures::requiresCleanups());
+
+  unsigned curInitIndex = 0;
+
+  // Emit initialization of base classes.
+  if (auto *cxxrd = dyn_cast<CXXRecordDecl>(record)) {
+    assert(numInitElements >= cxxrd->getNumBases() &&
+           "missing initializer for base class");
+    if (cxxrd->getNumBases() > 0) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "visitCXXParenListOrInitListExpr base class init");
+      return;
+    }
+  }
+
+  LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+
+  if (record->isUnion()) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "visitCXXParenListOrInitListExpr union type");
+    return;
+  }
+
+  // Here we iterate over the fields; this makes it simpler to both
+  // default-initialize fields and skip over unnamed fields.
+  for (const FieldDecl *field : record->fields()) {
+    // We're done once we hit the flexible array member.
+    if (field->getType()->isIncompleteArrayType())
+      break;
+
+    // Always skip anonymous bitfields.
+    if (field->isUnnamedBitField())
+      continue;
+
+    // We're done if we reach the end of the explicit initializers, we
+    // have a zeroed object, and the rest of the fields are
+    // zero-initializable.
+    if (curInitIndex == numInitElements && dest.isZeroed() &&
+        cgf.getTypes().isZeroInitializable(e->getType()))
+      break;
+    LValue lv =
+        cgf.emitLValueForFieldInitialization(destLV, field, field->getName());
+    // We never generate write-barriers for initialized fields.
+    assert(!cir::MissingFeatures::setNonGC());
+
+    if (curInitIndex < numInitElements) {
+      // Store the initializer into the field.
+      CIRGenFunction::SourceLocRAIIObject loc{
+          cgf, cgf.getLoc(record->getSourceRange())};
+      emitInitializationToLValue(args[curInitIndex++], lv);
+    } else {
+      // We're out of initializers; default-initialize to null
+      emitNullInitializationToLValue(cgf.getLoc(e->getSourceRange()), lv);
+    }
+
+    // Push a destructor if necessary.
+    // FIXME: if we have an array of structures, all explicitly
+    // initialized, we can end up pushing a linear number of cleanups.
+    if (field->getType().isDestructedType()) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "visitCXXParenListOrInitListExpr destructor");
+      return;
+    }
+
+    // From classic codegen, maybe not useful for CIR:
+    // If the GEP didn't get used because of a dead zero init or something
+    // else, clean it up for -O0 builds and general tidiness.
+  }
+}
+
+// TODO(cir): This could be shared with classic codegen.
+AggValueSlot::Overlap_t CIRGenFunction::getOverlapForBaseInit(
+    const CXXRecordDecl *rd, const CXXRecordDecl *baseRD, bool isVirtual) {
+  // If the most-derived object is a field declared with [[no_unique_address]],
+  // the tail padding of any virtual base could be reused for other subobjects
+  // of that field's class.
+  if (isVirtual)
+    return AggValueSlot::MayOverlap;
+
+  // If the base class is laid out entirely within the nvsize of the derived
+  // class, its tail padding cannot yet be initialized, so we can issue
+  // stores at the full width of the base class.
+  const ASTRecordLayout &layout = getContext().getASTRecordLayout(rd);
+  if (layout.getBaseClassOffset(baseRD) +
+          getContext().getASTRecordLayout(baseRD).getSize() <=
+      layout.getNonVirtualSize())
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
 }
 
 void CIRGenFunction::emitAggExpr(const Expr *e, AggValueSlot slot) {

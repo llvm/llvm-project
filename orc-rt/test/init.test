@@ -1,0 +1,1 @@
+RUN: orc-executor %s %s

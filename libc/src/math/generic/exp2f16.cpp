@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/exp2f16.h"
-#include "expxf16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -18,6 +17,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/expxf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -34,6 +34,7 @@ static constexpr fputil::ExceptValues<float16, 3> EXP2F16_EXCEPTS = {{
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, exp2f16, (float16 x)) {
+  using namespace math::expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 

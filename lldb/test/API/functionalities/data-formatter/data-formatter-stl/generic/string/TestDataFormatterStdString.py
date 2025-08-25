@@ -217,9 +217,6 @@ class StdStringDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test_summary_unavailable()
 
-    @expectedFailureAll(
-        bugnumber="libstdc++ std::string summary provider doesn't output a user-friendly message for invalid strings."
-    )
     @add_test_categories(["libstdcxx"])
     def test_unavailable_summary_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
