@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import collections
 import lldb
-import json
 
 
 def __lldb_init_module(debugger, internal_dict):
@@ -192,28 +191,19 @@ def SmallStringSummaryProvider(valobj, internal_dict):
 
 
 def StringRefSummaryProvider(valobj, internal_dict):
-    if valobj.GetNumChildren() == 2:
-        # StringRef's are also used to point at binary blobs in memory,
-        # so filter out suspiciously long strings.
-        max_length = 1024
-        actual_length = valobj.GetChildAtIndex(1).GetValueAsUnsigned()
-        truncate = actual_length > max_length
-        length = min(max_length, actual_length)
-        if length == 0:
-            return '""'
+    data_pointer = valobj.GetChildMemberWithName("Data")
+    length = valobj.GetChildMemberWithName("Length").unsigned
+    if data_pointer.unsigned == 0 or length == 0:
+        return '""'
 
-        data = valobj.GetChildAtIndex(0).GetPointeeData(item_count=length)
-        error = lldb.SBError()
-        string = data.ReadRawData(error, 0, data.GetByteSize()).decode()
-        if error.Fail():
-            return "<error: %s>" % error.description
-
-        # json.dumps conveniently escapes the string for us.
-        string = json.dumps(string)
-        if truncate:
-            string += "..."
-        return string
-    return None
+    data = data_pointer.deref
+    # Get a char[N] type, from the underlying char type.
+    array_type = data.type.GetArrayType(length)
+    # Cast the char* string data to a char[N] array.
+    char_array = data.Cast(array_type)
+    # Use the builtin summary for its support of max-string-summary-length and
+    # display of non-printable bytes.
+    return char_array.summary
 
 
 def ConstStringSummaryProvider(valobj, internal_dict):

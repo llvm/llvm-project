@@ -7,17 +7,17 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define <16 x float> @test_v16f32(<16 x float> %a) {
 ; CHECK-LABEL: test_v16f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<9>;
+; CHECK-NEXT:    .reg .b32 %r<17>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_v16f32_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [test_v16f32_param_0+16];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd5, %rd6}, [test_v16f32_param_0+32];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd7, %rd8}, [test_v16f32_param_0+48];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+48], {%rd7, %rd8};
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+32], {%rd5, %rd6};
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd3, %rd4};
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [test_v16f32_param_0];
+; CHECK-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [test_v16f32_param_0+16];
+; CHECK-NEXT:    ld.param.v4.b32 {%r9, %r10, %r11, %r12}, [test_v16f32_param_0+32];
+; CHECK-NEXT:    ld.param.v4.b32 {%r13, %r14, %r15, %r16}, [test_v16f32_param_0+48];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0+48], {%r13, %r14, %r15, %r16};
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0+32], {%r9, %r10, %r11, %r12};
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0+16], {%r5, %r6, %r7, %r8};
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   ret <16 x float> %a
 }
@@ -25,13 +25,13 @@ define <16 x float> @test_v16f32(<16 x float> %a) {
 define <8 x float> @test_v8f32(<8 x float> %a) {
 ; CHECK-LABEL: test_v8f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_v8f32_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [test_v8f32_param_0+16];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd3, %rd4};
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [test_v8f32_param_0];
+; CHECK-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [test_v8f32_param_0+16];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0+16], {%r5, %r6, %r7, %r8};
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   ret <8 x float> %a
 }
@@ -39,11 +39,11 @@ define <8 x float> @test_v8f32(<8 x float> %a) {
 define <4 x float> @test_v4f32(<4 x float> %a) {
 ; CHECK-LABEL: test_v4f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_v4f32_param_0];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [test_v4f32_param_0];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   ret <4 x float> %a
 }
@@ -51,11 +51,11 @@ define <4 x float> @test_v4f32(<4 x float> %a) {
 define <2 x float> @test_v2f32(<2 x float> %a) {
 ; CHECK-LABEL: test_v2f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_v2f32_param_0];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_v2f32_param_0];
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r1, %r2};
 ; CHECK-NEXT:    ret;
   ret <2 x float> %a
 }
@@ -64,14 +64,13 @@ define <2 x float> @test_v2f32(<2 x float> %a) {
 define <3 x float> @test_v3f32(<3 x float> %a) {
 ; CHECK-LABEL: test_v3f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_v3f32_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_v3f32_param_0+8];
-; CHECK-NEXT:    st.param.b32 [func_retval0+8], %r1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_v3f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r3, [test_v3f32_param_0+8];
+; CHECK-NEXT:    st.param.b32 [func_retval0+8], %r3;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r1, %r2};
 ; CHECK-NEXT:    ret;
   ret <3 x float> %a
 }
