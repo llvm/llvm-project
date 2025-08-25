@@ -441,9 +441,9 @@ entry:
 ; SI: buffer_load_dword
 
 define amdgpu_kernel void @v16i32_stack(ptr addrspace(1) %out, i32 %a) {
-  %alloca = alloca [3 x <16 x i32>], addrspace(5)
-  %tmp0 = getelementptr [3 x <16 x i32>], ptr addrspace(5) %alloca, i32 0, i32 %a
-  %tmp5 = load <16 x i32>, ptr addrspace(5) %tmp0
+  %alloca = alloca [2 x <16 x i32>], addrspace(5)
+  %tmp0 = getelementptr [2 x <16 x i32>], ptr addrspace(5) %alloca, i32 0, i32 %a
+  %tmp5 = load volatile <16 x i32>, ptr addrspace(5) %tmp0
   store <16 x i32> %tmp5, ptr addrspace(1) %out
   ret void
 }
@@ -485,9 +485,9 @@ define amdgpu_kernel void @v16i32_stack(ptr addrspace(1) %out, i32 %a) {
 ; SI: buffer_load_dword
 
 define amdgpu_kernel void @v16float_stack(ptr addrspace(1) %out, i32 %a) {
-  %alloca = alloca [3 x <16 x float>], addrspace(5)
-  %tmp0 = getelementptr [3 x <16 x float>], ptr addrspace(5) %alloca, i32 0, i32 %a
-  %tmp5 = load <16 x float>, ptr addrspace(5) %tmp0
+  %alloca = alloca [2 x <16 x float>], addrspace(5)
+  %tmp0 = getelementptr [2 x <16 x float>], ptr addrspace(5) %alloca, i32 0, i32 %a
+  %tmp5 = load volatile <16 x float>, ptr addrspace(5) %tmp0
   store <16 x float> %tmp5, ptr addrspace(1) %out
   ret void
 }
@@ -501,9 +501,9 @@ define amdgpu_kernel void @v16float_stack(ptr addrspace(1) %out, i32 %a) {
 ; SI: buffer_load_dword
 
 define amdgpu_kernel void @v2float_stack(ptr addrspace(1) %out, i32 %a) {
-  %alloca = alloca [17 x <2 x float>], addrspace(5)
-  %tmp0 = getelementptr [17 x <2 x float>], ptr addrspace(5) %alloca, i32 0, i32 %a
-  %tmp5 = load <2 x float>, ptr addrspace(5) %tmp0
+  %alloca = alloca [16 x <2 x float>], addrspace(5)
+  %tmp0 = getelementptr [16 x <2 x float>], ptr addrspace(5) %alloca, i32 0, i32 %a
+  %tmp5 = load volatile <2 x float>, ptr addrspace(5) %tmp0
   store <2 x float> %tmp5, ptr addrspace(1) %out
   ret void
 }

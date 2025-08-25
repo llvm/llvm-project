@@ -31,11 +31,12 @@ define amdgpu_cs void @with_calls() #0 {
   ret void
 }
 
-define amdgpu_cs void @realign_stack(<33 x i32> %x) #0 {
+define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
 ; CHECK-LABEL: {{^}}name: realign_stack
 ; CHECK: scratchReservedForDynamicVGPRs: 512
-  %v = alloca <33 x i32>, align 128, addrspace(5)
-  store <33 x i32> %x, ptr addrspace(5) %v
+  %v = alloca <32 x i32>, align 128, addrspace(5)
+  ; use volatile store to avoid promotion of alloca to registers
+  store volatile <32 x i32> %x, ptr addrspace(5) %v
   call amdgpu_gfx void @callee(i32 71)
   ret void
 }
