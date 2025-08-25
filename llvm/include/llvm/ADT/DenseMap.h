@@ -240,14 +240,14 @@ public:
   // If the key is already in the map, it returns false and doesn't update the
   // value.
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
-    return try_emplace(KV.first, KV.second);
+    return try_emplace_impl(KV.first, KV.second);
   }
 
   // Inserts key,value pair into the map if the key isn't already in the map.
   // If the key is already in the map, it returns false and doesn't update the
   // value.
   std::pair<iterator, bool> insert(std::pair<KeyT, ValueT> &&KV) {
-    return try_emplace(std::move(KV.first), std::move(KV.second));
+    return try_emplace_impl(std::move(KV.first), std::move(KV.second));
   }
 
   // Inserts key,value pair into the map if the key isn't already in the map.
@@ -255,14 +255,7 @@ public:
   // it is not moved.
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return {makeInsertIterator(TheBucket), false}; // Already in map.
-
-    // Otherwise, insert the new element.
-    TheBucket =
-        InsertIntoBucket(TheBucket, std::move(Key), std::forward<Ts>(Args)...);
-    return {makeInsertIterator(TheBucket), true};
+    return try_emplace_impl(std::move(Key), std::forward<Ts>(Args)...);
   }
 
   // Inserts key,value pair into the map if the key isn't already in the map.
@@ -270,13 +263,7 @@ public:
   // it is not moved.
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&...Args) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return {makeInsertIterator(TheBucket), false}; // Already in map.
-
-    // Otherwise, insert the new element.
-    TheBucket = InsertIntoBucket(TheBucket, Key, std::forward<Ts>(Args)...);
-    return {makeInsertIterator(TheBucket), true};
+    return try_emplace_impl(Key, std::forward<Ts>(Args)...);
   }
 
   /// Alternate version of insert() which allows a different, and possibly
@@ -360,19 +347,11 @@ public:
   }
 
   ValueT &operator[](const KeyT &Key) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return TheBucket->second;
-
-    return InsertIntoBucket(TheBucket, Key)->second;
+    return try_emplace_impl(Key).first->second;
   }
 
   ValueT &operator[](KeyT &&Key) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return TheBucket->second;
-
-    return InsertIntoBucket(TheBucket, std::move(Key))->second;
+    return try_emplace_impl(std::move(Key)).first->second;
   }
 
   /// isPointerIntoBucketsArray - Return true if the specified pointer points
@@ -496,6 +475,18 @@ protected:
   static const KeyT getTombstoneKey() { return KeyInfoT::getTombstoneKey(); }
 
 private:
+  template <typename KeyArgT, typename... Ts>
+  std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
+    BucketT *TheBucket = nullptr;
+    if (LookupBucketFor(Key, TheBucket))
+      return {makeInsertIterator(TheBucket), false}; // Already in the map.
+
+    // Otherwise, insert the new element.
+    TheBucket = InsertIntoBucket(TheBucket, std::forward<KeyArgT>(Key),
+                                 std::forward<Ts>(Args)...);
+    return {makeInsertIterator(TheBucket), true};
+  }
+
   iterator makeIterator(BucketT *P, BucketT *E, DebugEpochBase &Epoch,
                         bool NoAdvance = false) {
     if (shouldReverseIterate<KeyT>()) {
