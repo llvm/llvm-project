@@ -548,10 +548,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BAS_Align);
   CHECK_PARSE("AlignAfterOpenBracket: DontAlign", AlignAfterOpenBracket,
               FormatStyle::BAS_DontAlign);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
   // For backward compatibility:
+  CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracket,
+              FormatStyle::BAS_Align);
   CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket,
               FormatStyle::BAS_DontAlign);
+  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
+              FormatStyle::BAS_Align);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
   CHECK_PARSE("AlignAfterOpenBracket: true", AlignAfterOpenBracket,
               FormatStyle::BAS_Align);
 
