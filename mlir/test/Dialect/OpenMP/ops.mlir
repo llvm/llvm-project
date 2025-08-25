@@ -3238,3 +3238,15 @@ func.func @omp_allocate_dir(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
   return
 }
 
+// CHECK-LABEL: func.func @omp_workdistribute
+func.func @omp_workdistribute() {
+  // CHECK: omp.teams
+  omp.teams {
+  // CHECK: omp.workdistribute
+  omp.workdistribute {
+    omp.terminator
+  }
+  omp.terminator
+  }
+  return
+}
