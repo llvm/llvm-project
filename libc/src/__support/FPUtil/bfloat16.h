@@ -46,6 +46,8 @@ struct BFloat16 {
           xd(sign, 0, value);
       bits = xd.template as<bfloat16, /*ShouldSignalExceptions=*/true>().bits;
 
+    } else if constexpr (cpp::is_convertible_v<T, BFloat16>) {
+      bits = value.operator BFloat16().bits;
     } else {
       bits = fputil::cast<bfloat16>(static_cast<float>(value)).bits;
     }
