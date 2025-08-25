@@ -2266,6 +2266,85 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
+                                   unsigned Pos) {
+  QualType MaskTy = MaskArg->getType();
+  if (!MaskTy->isExtVectorBoolType())
+    return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+           << 1 << /* vector of */ 4 << /* booleans */ 6 << /* no fp */ 0
+           << MaskTy;
+
+  QualType PtrTy = PtrArg->getType();
+  if (!PtrTy->isPointerType() || !PtrTy->getPointeeType()->isVectorType())
+    return S.Diag(PtrArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
+           << Pos << "pointer to vector";
+  return false;
+}
+
+static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 2))
+    return ExprError();
+
+  Expr *MaskArg = TheCall->getArg(0);
+  Expr *PtrArg = TheCall->getArg(1);
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 2))
+    return ExprError();
+
+  QualType MaskTy = MaskArg->getType();
+  QualType PtrTy = PtrArg->getType();
+  QualType PointeeTy = PtrTy->getPointeeType();
+  const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
+  const VectorType *DataVecTy = PointeeTy->getAs<VectorType>();
+  if (MaskVecTy->getNumElements() != DataVecTy->getNumElements())
+    return ExprError(
+        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
+        << "__builtin_masked_load" << MaskTy << PointeeTy);
+
+  TheCall->setType(PointeeTy);
+  return TheCall;
+}
+
+static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 3))
+    return ExprError();
+
+  Expr *MaskArg = TheCall->getArg(0);
+  Expr *ValArg = TheCall->getArg(1);
+  Expr *PtrArg = TheCall->getArg(2);
+
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3))
+    return ExprError();
+
+  QualType MaskTy = MaskArg->getType();
+  QualType PtrTy = PtrArg->getType();
+  QualType ValTy = ValArg->getType();
+  if (!ValTy->isVectorType())
+    return ExprError(
+        S.Diag(ValArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
+        << 2 << "vector");
+
+  QualType PointeeTy = PtrTy->getPointeeType();
+  const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
+  const VectorType *ValVecTy = ValTy->getAs<VectorType>();
+  const VectorType *PtrVecTy = PointeeTy->getAs<VectorType>();
+
+  if (MaskVecTy->getNumElements() != ValVecTy->getNumElements() ||
+      MaskVecTy->getNumElements() != PtrVecTy->getNumElements())
+    return ExprError(
+        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
+        << "__builtin_masked_store" << MaskTy << PointeeTy);
+
+  if (!S.Context.hasSameType(ValTy, PointeeTy))
+    return ExprError(S.Diag(TheCall->getBeginLoc(),
+                            diag::err_vec_builtin_incompatible_vector)
+                     << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ 2
+                     << SourceRange(TheCall->getArg(1)->getBeginLoc(),
+                                    TheCall->getArg(1)->getEndLoc()));
+
+  TheCall->setType(S.Context.VoidTy);
+  return TheCall;
+}
+
 static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
   SourceLocation Loc = TheCall->getBeginLoc();
   MutableArrayRef Args(TheCall->getArgs(), TheCall->getNumArgs());
@@ -2518,6 +2597,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinShuffleVector(TheCall);
     // TheCall will be freed by the smart pointer here, but that's fine, since
     // BuiltinShuffleVector guts it, but then doesn't release it.
+  case Builtin::BI__builtin_masked_load:
+    return BuiltinMaskedLoad(*this, TheCall);
+  case Builtin::BI__builtin_masked_store:
+    return BuiltinMaskedStore(*this, TheCall);
   case Builtin::BI__builtin_invoke:
     return BuiltinInvoke(*this, TheCall);
   case Builtin::BI__builtin_prefetch:
@@ -3080,6 +3163,19 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     TheCall->setType(Magnitude.get()->getType());
     break;
   }
+  case Builtin::BI__builtin_elementwise_ctlz:
+  case Builtin::BI__builtin_elementwise_cttz:
+    // These builtins can be unary or binary. Note for empty calls we call the
+    // unary checker in order to not emit an error that says the function
+    // expects 2 arguments, which would be misleading.
+    if (TheCall->getNumArgs() <= 1) {
+      if (PrepareBuiltinElementwiseMathOneArgCall(
+              TheCall, EltwiseBuiltinArgTyRestriction::IntegerTy))
+        return ExprError();
+    } else if (BuiltinElementwiseMath(
+                   TheCall, EltwiseBuiltinArgTyRestriction::IntegerTy))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_reduce_max:
   case Builtin::BI__builtin_reduce_min: {
     if (PrepareBuiltinReduceMathOneArgCall(TheCall))
@@ -5505,8 +5601,10 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
                                       TheCall->getArg(1)->getEndLoc()));
     } else if (numElements != numResElements) {
       QualType eltType = LHSType->castAs<VectorType>()->getElementType();
-      resType =
-          Context.getVectorType(eltType, numResElements, VectorKind::Generic);
+      resType = resType->isExtVectorType()
+                    ? Context.getExtVectorType(eltType, numResElements)
+                    : Context.getVectorType(eltType, numResElements,
+                                            VectorKind::Generic);
     }
   }
 
@@ -15857,6 +15955,7 @@ bool Sema::BuiltinElementwiseTernaryMath(
       return true;
   }
 
+  TheCall->setArg(0, Args[0]);
   for (int I = 1; I < 3; ++I) {
     if (Args[0]->getType().getCanonicalType() !=
         Args[I]->getType().getCanonicalType()) {

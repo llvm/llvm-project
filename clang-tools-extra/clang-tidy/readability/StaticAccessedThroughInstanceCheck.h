@@ -24,6 +24,9 @@ public:
       : ClangTidyCheck(Name, Context),
         NameSpecifierNestingThreshold(
             Options.get("NameSpecifierNestingThreshold", 3U)) {}
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
