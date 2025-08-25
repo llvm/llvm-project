@@ -90,6 +90,8 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.and
+; W32-NEXT:    i32.const 0
+; W32-NEXT:    i32.or
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_null_ptr:
@@ -103,6 +105,8 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; W64-NEXT:    i64.sub
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i64.and
+; W64-NEXT:    i64.const 0
+; W64-NEXT:    i64.or
 ; W64-NEXT:    # fallthrough-return
   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %ptr, ptr null)
   ret ptr %result

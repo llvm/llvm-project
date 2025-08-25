@@ -12,6 +12,8 @@ define i32 @test_ctselect_smin_zero(i32 %x) {
 ; W32-NEXT:    i32.shr_s
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.and
+; W32-NEXT:    i32.const 0
+; W32-NEXT:    i32.or
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_smin_zero:
@@ -22,6 +24,8 @@ define i32 @test_ctselect_smin_zero(i32 %x) {
 ; W64-NEXT:    i32.shr_s
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.and
+; W64-NEXT:    i32.const 0
+; W64-NEXT:    i32.or
 ; W64-NEXT:    # fallthrough-return
   %cmp = icmp slt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 0)
@@ -41,6 +45,8 @@ define i32 @test_ctselect_smax_zero(i32 %x) {
 ; W32-NEXT:    i32.select
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.and
+; W32-NEXT:    i32.const 0
+; W32-NEXT:    i32.or
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_smax_zero:
@@ -54,6 +60,8 @@ define i32 @test_ctselect_smax_zero(i32 %x) {
 ; W64-NEXT:    i32.select
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.and
+; W64-NEXT:    i32.const 0
+; W64-NEXT:    i32.or
 ; W64-NEXT:    # fallthrough-return
   %cmp = icmp sgt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 0)
@@ -354,6 +362,8 @@ define i32 @test_ctselect_sign_extend(i32 %x) {
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 31
 ; W32-NEXT:    i32.shr_s
+; W32-NEXT:    i32.const 0
+; W32-NEXT:    i32.or
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_sign_extend:
@@ -362,6 +372,8 @@ define i32 @test_ctselect_sign_extend(i32 %x) {
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.const 31
 ; W64-NEXT:    i32.shr_s
+; W64-NEXT:    i32.const 0
+; W64-NEXT:    i32.or
 ; W64-NEXT:    # fallthrough-return
   %cmp = icmp slt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 -1, i32 0)
@@ -379,6 +391,8 @@ define i32 @test_ctselect_zero_extend(i32 %x) {
 ; W32-NEXT:    i32.select
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
+; W32-NEXT:    i32.const 0
+; W32-NEXT:    i32.or
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_zero_extend:
@@ -390,6 +404,8 @@ define i32 @test_ctselect_zero_extend(i32 %x) {
 ; W64-NEXT:    i32.select
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
+; W64-NEXT:    i32.const 0
+; W64-NEXT:    i32.or
 ; W64-NEXT:    # fallthrough-return
   %cmp = icmp ne i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 1, i32 0)
@@ -402,12 +418,16 @@ define i32 @test_ctselect_constant_folding_true(i32 %a, i32 %b) {
 ; W32:         .functype test_ctselect_constant_folding_true (i32, i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
 ; W32-NEXT:    local.get 0
+; W32-NEXT:    i32.const 0
+; W32-NEXT:    i32.or
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_constant_folding_true:
 ; W64:         .functype test_ctselect_constant_folding_true (i32, i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
 ; W64-NEXT:    local.get 0
+; W64-NEXT:    i32.const 0
+; W64-NEXT:    i32.or
 ; W64-NEXT:    # fallthrough-return
   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
   ret i32 %result
@@ -417,13 +437,17 @@ define i32 @test_ctselect_constant_folding_false(i32 %a, i32 %b) {
 ; W32-LABEL: test_ctselect_constant_folding_false:
 ; W32:         .functype test_ctselect_constant_folding_false (i32, i32) -> (i32)
 ; W32-NEXT:  # %bb.0:
+; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 1
+; W32-NEXT:    i32.or
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_constant_folding_false:
 ; W64:         .functype test_ctselect_constant_folding_false (i32, i32) -> (i32)
 ; W64-NEXT:  # %bb.0:
+; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 1
+; W64-NEXT:    i32.or
 ; W64-NEXT:    # fallthrough-return
   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
   ret i32 %result
@@ -626,6 +650,8 @@ define i64 @test_ctselect_i64_smin_zero(i64 %x) {
 ; W32-NEXT:    i64.shr_s
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i64.and
+; W32-NEXT:    i64.const 0
+; W32-NEXT:    i64.or
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_i64_smin_zero:
@@ -636,6 +662,8 @@ define i64 @test_ctselect_i64_smin_zero(i64 %x) {
 ; W64-NEXT:    i64.shr_s
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i64.and
+; W64-NEXT:    i64.const 0
+; W64-NEXT:    i64.or
 ; W64-NEXT:    # fallthrough-return
   %cmp = icmp slt i64 %x, 0
   %result = call i64 @llvm.ct.select.i64(i1 %cmp, i64 %x, i64 0)
