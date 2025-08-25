@@ -47,9 +47,46 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
 static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
                     DIDumpOptions DumpOpts, const DWARFExpression *Expr,
                     DWARFUnit *U) {
-  if (Op->isError() && !DumpOpts.PrintRegisterOnly) {
-    OS << "<decoding error>";
+  if (Op->isError()) {
+    if (!DumpOpts.PrintRegisterOnly)
+      OS << "<decoding error>";
     return false;
+  }
+
+  // In "register-only" mode, still show simple constant-valued locations.
+  // This lets clients print annotations like "i = 0" when the location is
+  // a constant (e.g. DW_OP_constu/consts ... DW_OP_stack_value).
+  // We continue to suppress all other non-register ops in this mode.
+  if (DumpOpts.PrintRegisterOnly) {
+    // First, try pretty-printing registers (existing behavior below also does
+    // this, but we need to short-circuit here to avoid printing opcode names).
+    if ((Op->getCode() >= DW_OP_breg0 && Op->getCode() <= DW_OP_breg31) ||
+        (Op->getCode() >= DW_OP_reg0 && Op->getCode() <= DW_OP_reg31) ||
+        Op->getCode() == DW_OP_bregx || Op->getCode() == DW_OP_regx ||
+        Op->getCode() == DW_OP_regval_type) {
+      if (prettyPrintRegisterOp(U, OS, DumpOpts, Op->getCode(),
+                                Op->getRawOperands()))
+        return true;
+      // If we couldn't pretty-print, fall through and suppress.
+    }
+
+    // Show constants (decimal), suppress everything else.
+    if (Op->getCode() == DW_OP_constu) {
+      OS << (uint64_t)Op->getRawOperand(0);
+      return true;
+    }
+    if (Op->getCode() == DW_OP_consts) {
+      OS << (int64_t)Op->getRawOperand(0);
+      return true;
+    }
+    if (Op->getCode() >= DW_OP_lit0 && Op->getCode() <= DW_OP_lit31) {
+      OS << (unsigned)(Op->getCode() - DW_OP_lit0);
+      return true;
+    }
+    if (Op->getCode() == DW_OP_stack_value)
+      return true; // metadata; don't print a token
+
+    return true; // suppress other opcodes silently in register-only mode
   }
 
   if (!DumpOpts.PrintRegisterOnly) {
