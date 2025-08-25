@@ -15,6 +15,7 @@
 #include "CompilationManager.h"
 #include "../Detection/UnitDetector.h"
 #include "../Utils/FileManager.h"
+#include "../Utils/UnitMetadata.h"
 #include "CommandAnalyzer.h"
 #include "DataExtractor.h"
 #include "llvm/ADT/DenseSet.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/Path.h"
 #include <chrono>
 #include <cstdlib>
+#include <ctime>
 #include <unordered_set>
 
 namespace llvm {
@@ -58,6 +60,23 @@ CompilationManager::CompilationManager(const AdvisorConfig &config)
 
   if (config_.getVerbose()) {
     llvm::outs() << "Using temporary directory: " << tempDir_ << "\n";
+  }
+
+  // Initialize unit metadata tracking
+  llvm::SmallString<256> outputDirPath;
+  if (llvm::sys::path::is_absolute(config_.getOutputDir())) {
+    outputDirPath = config_.getOutputDir();
+  } else {
+    outputDirPath = initialWorkingDir_;
+    llvm::sys::path::append(outputDirPath, config_.getOutputDir());
+  }
+
+  unitMetadata_ = std::make_unique<utils::UnitMetadata>(outputDirPath.str());
+  if (auto Err = unitMetadata_->loadMetadata()) {
+    if (config_.getVerbose()) {
+      llvm::errs() << "Failed to load metadata: "
+                   << llvm::toString(std::move(Err)) << "\n";
+    }
   }
 }
 
@@ -95,6 +114,9 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
   llvm::SmallVector<std::unique_ptr<CompilationUnit>, 4> units;
   for (auto &unitInfo : *detectedUnits) {
     units.push_back(std::make_unique<CompilationUnit>(unitInfo, tempDir_));
+
+    // Register unit in metadata tracker
+    unitMetadata_->registerUnit(unitInfo.name);
   }
 
   // Scan existing files before compilation
@@ -119,6 +141,17 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
         llvm::errs() << "Data extraction failed: "
                      << llvm::toString(std::move(Err)) << "\n";
       }
+      // Mark unit as failed if data extraction fails
+      unitMetadata_->updateUnitStatus(unit->getName(), "failed");
+    } else {
+      // Update unit metadata with file counts and artifact types
+      const auto &generatedFiles = unit->getAllGeneratedFiles();
+      size_t totalFiles = 0;
+      for (const auto &category : generatedFiles) {
+        totalFiles += category.second.size();
+        unitMetadata_->addArtifactType(unit->getName(), category.first);
+      }
+      unitMetadata_->updateUnitFileCount(unit->getName(), totalFiles);
     }
   }
 
@@ -126,6 +159,23 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
   if (auto Err = organizeOutput(units)) {
     if (config_.getVerbose()) {
       llvm::errs() << "Output organization failed: "
+                   << llvm::toString(std::move(Err)) << "\n";
+    }
+    // Mark units as failed if output organization fails
+    for (auto &unit : units) {
+      unitMetadata_->updateUnitStatus(unit->getName(), "failed");
+    }
+  } else {
+    // Mark units as completed on successful organization
+    for (auto &unit : units) {
+      unitMetadata_->updateUnitStatus(unit->getName(), "completed");
+    }
+  }
+
+  // Save metadata to disk
+  if (auto Err = unitMetadata_->saveMetadata()) {
+    if (config_.getVerbose()) {
+      llvm::errs() << "Failed to save metadata: "
                    << llvm::toString(std::move(Err)) << "\n";
     }
   }
@@ -208,22 +258,34 @@ llvm::Error CompilationManager::organizeOutput(
     llvm::outs() << "Output directory: " << outputDir << "\n";
   }
 
+  // Generate timestamp for this compilation run
+  auto now = std::chrono::system_clock::now();
+  auto time_t = std::chrono::system_clock::to_time_t(now);
+  auto tm = *std::localtime(&time_t);
+
+  char timestampStr[20];
+  std::strftime(timestampStr, sizeof(timestampStr), "%Y%m%d_%H%M%S", &tm);
+
   // Move collected files to organized structure
   for (const auto &unit : units) {
-    std::string unitDir = outputDir + "/" + unit->getName();
+    // Create base unit directory if it doesn't exist
+    std::string baseUnitDir = outputDir + "/" + unit->getName();
+    llvm::sys::fs::create_directories(baseUnitDir);
 
-    // Remove existing unit directory if it exists
-    if (llvm::sys::fs::exists(unitDir)) {
-      if (auto EC = llvm::sys::fs::remove_directories(unitDir)) {
-        if (config_.getVerbose()) {
-          llvm::errs() << "Warning: Could not remove existing unit directory: "
-                       << unitDir << "\n";
-        }
-      }
+    // Create timestamped run directory
+    std::string runDirName = unit->getName() + "_" + std::string(timestampStr);
+    std::string unitDir = baseUnitDir + "/" + runDirName;
+
+    if (config_.getVerbose()) {
+      llvm::outs() << "Creating run directory: " << unitDir << "\n";
     }
 
-    // Create fresh unit directory
+    // Create timestamped run directory
     if (auto EC = llvm::sys::fs::create_directories(unitDir)) {
+      if (config_.getVerbose()) {
+        llvm::errs() << "Warning: Could not create run directory: " << unitDir
+                     << "\n";
+      }
       continue; // Skip if we can't create the directory
     }
 

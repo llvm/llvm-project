@@ -16,6 +16,7 @@
 
 #include "../Config/AdvisorConfig.h"
 #include "../Utils/FileClassifier.h"
+#include "../Utils/UnitMetadata.h"
 #include "BuildExecutor.h"
 #include "CompilationUnit.h"
 #include "llvm/ADT/DenseSet.h"
@@ -54,6 +55,7 @@ private:
   BuildExecutor buildExecutor_;
   std::string tempDir_;
   std::string initialWorkingDir_;
+  std::unique_ptr<utils::UnitMetadata> unitMetadata_;
 };
 
 } // namespace advisor
