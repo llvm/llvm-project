@@ -1470,6 +1470,7 @@ module {
 // CHECK:         %[[POISON:.+]] = ub.poison : f32
 // CHECK:         %[[PADDED:.+]] = tensor.pad %arg1
 // CHECK:           tensor.yield %[[POISON]] : f32
+// CHECK:         } : tensor<?x5x3x128xf32> to tensor<?x5x3x128xf32>
 // CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<128x5x128xbf16>
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
 // CHECK-SAME:    ins(%[[ARG0]], %[[PADDED]]   
@@ -1531,9 +1532,11 @@ func.func @push_redcutionextract_through_generic_withoutsused_2(%arg0: tensor<12
 // CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[ARG0]][%[[ARG2]], %[[ARG2]]] [%[[ARG2]], %[[ARG2]]] [1, 1] : tensor<128x128xf32> to tensor<?x?xf32>
 // CHECK:         %[[PADDED:.+]] = tensor.pad %[[EXTRACT]]
 // CHECK:           tensor.yield %[[POISON_F32]] : f32
+// CHECK:         } : tensor<?x?xf32> to tensor<?x?xf32>
 // CHECK:         %[[APPLY2:.+]] = affine.apply #map()[%[[ARG2]]]
 // CHECK:         %[[PADDED1:.+]] = tensor.pad %[[ARG1]] low[%[[ARG2]]] high[%[[APPLY2]]]
 // CHECK:           tensor.yield %[[POISON_BF16]] : bf16
+// CHECK:         } : tensor<?xbf16> to tensor<?xbf16>
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
 // CHECK-SAME:    ins(%[[PADDED]]
 // CHECK-SAME:    outs(%[[PADDED1]]
