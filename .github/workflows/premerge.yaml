@@ -35,7 +35,7 @@ jobs:
           - llvm-premerge-linux-runners
     runs-on: ${{ matrix.runs-on }}
     container:
-      image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm-16') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
+      image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
     defaults:
       run:
         # The run step defaults to using sh as the shell when running in a
