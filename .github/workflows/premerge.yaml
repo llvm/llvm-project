@@ -28,10 +28,11 @@ jobs:
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
-    matrix:
-      runs-on:
-        - llvm-premerge-linux-runners
-        - depot-ubuntu-24.04-arm-64
+    strategy:
+      matrix:
+        runs-on:
+          - llvm-premerge-linux-runners
+          - depot-ubuntu-24.04-arm-64
     runs-on: ${{ matrix.runs-on }}
     container:
       image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && "ghcr.io/$GITHUB_REPOSITORY_OWNER/arm64v8/ci-ubuntu-24.04-agent" ) || null }}
