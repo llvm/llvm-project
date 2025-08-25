@@ -78,6 +78,7 @@ jobs:
 
           if ! [[ "${{ matrix.runs-on }}" =~ "^depot" ]]; then
 
+            echo "STARTING SCCACHE"
             # This environment variable is passes into the container through the
             # runner pod definition. This differs between our two clusters which
             # why we do not hardcode it.
