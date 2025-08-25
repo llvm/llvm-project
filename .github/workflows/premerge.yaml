@@ -31,7 +31,6 @@ jobs:
     strategy:
       matrix:
         runs-on:
-          - llvm-premerge-linux-runners
           - ubuntu-24.04-arm
           - depot-ubuntu-24.04-arm-4
     runs-on: ${{ matrix.runs-on }}
