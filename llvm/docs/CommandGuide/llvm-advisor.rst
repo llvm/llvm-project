@@ -309,6 +309,4 @@ exit status.
 SEE ALSO
 --------
 
-:doc:`clang <clang>`, :doc:`opt`, :doc:`llc`
-
-```
+:manpage:`clang(1)`, :manpage:`opt(1)`, :manpage:`llc(1)`
