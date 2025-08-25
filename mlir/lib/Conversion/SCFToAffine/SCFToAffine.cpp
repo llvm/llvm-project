@@ -17,6 +17,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_RAISESCFTOAFFINEPASS
@@ -45,8 +46,9 @@ struct ForOpRewrite : public OpRewritePattern<scf::ForOp> {
 
   std::pair<affine::AffineForOp, Value>
   createAffineFor(scf::ForOp op, PatternRewriter &rewriter) const {
-    if (auto constantStep = op.getStep().getDefiningOp<arith::ConstantOp>()) {
-      int64_t step = cast<IntegerAttr>(constantStep.getValue()).getInt();
+    IntegerAttr constAttr;
+    if (matchPattern(op.getStep(), m_Constant(&constAttr))) {
+      int64_t step = constAttr.getInt();
       if (step > 0)
         return positiveConstantStep(op, step, rewriter);
     }
@@ -92,8 +94,7 @@ struct ForOpRewrite : public OpRewritePattern<scf::ForOp> {
   LogicalResult matchAndRewrite(scf::ForOp op,
                                 PatternRewriter &rewriter) const override {
     if (!canRaiseToAffine(op)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "[affine] Cannot raise scf op: " << op << "\n");
+      LDBG() << "[affine] Cannot raise scf op: " << op << "\n";
       return failure();
     }
 
