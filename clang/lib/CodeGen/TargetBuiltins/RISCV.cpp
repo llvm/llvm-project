@@ -426,7 +426,7 @@ static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVUnitStridedSegLoadFFTupleBuiltin(
   Builder.CreateStore(V, Address(NewVL, V->getType(), Align));
   if (ReturnValue.isNull())
     return ReturnTuple;
-    return Builder.CreateStore(ReturnTuple, ReturnValue.getValue());
+  return Builder.CreateStore(ReturnTuple, ReturnValue.getValue());
 }
 
 static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVStridedSegLoadTupleBuiltin(
@@ -457,7 +457,7 @@ static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVStridedSegLoadTupleBuiltin(
   llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
   if (ReturnValue.isNull())
     return LoadValue;
-    return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+  return Builder.CreateStore(LoadValue, ReturnValue.getValue());
 }
 
 static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVStridedSegStoreTupleBuiltin(
@@ -654,7 +654,7 @@ static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVIndexedSegLoadTupleBuiltin(
 
   if (ReturnValue.isNull())
     return LoadValue;
-    return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+  return Builder.CreateStore(LoadValue, ReturnValue.getValue());
 }
 
 static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVIndexedSegStoreTupleBuiltin(
