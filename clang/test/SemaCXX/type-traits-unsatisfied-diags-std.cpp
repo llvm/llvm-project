@@ -50,6 +50,14 @@ struct is_constructible {
 
 template <typename... Args>
 constexpr bool is_constructible_v = __is_constructible(Args...);
+
+template <typename T>
+struct is_final {
+    static constexpr bool value = __is_final(T);
+};
+template <typename T>
+constexpr bool is_final_v = __is_final(T);
+
 #endif
 
 #ifdef STD2
@@ -116,6 +124,16 @@ using is_constructible  = __details_is_constructible<Args...>;
 
 template <typename... Args>
 constexpr bool is_constructible_v = __is_constructible(Args...);
+
+template <typename T>
+struct __details_is_final {
+    static constexpr bool value = __is_final(T);
+};
+template <typename T>
+using is_final = __details_is_final<T>;
+template <typename T>
+constexpr bool is_final_v = __is_final(T);
+
 #endif
 
 
@@ -177,6 +195,14 @@ using is_constructible  = __details_is_constructible<Args...>;
 
 template <typename... Args>
 constexpr bool is_constructible_v = is_constructible<Args...>::value;
+
+template <typename T>
+struct __details_is_final : bool_constant<__is_final(T)> {};
+template <typename T>
+using is_final = __details_is_final<T>;
+template <typename T>
+constexpr bool is_final_v = is_final<T>::value;
+
 #endif
 
 }
@@ -248,6 +274,31 @@ static_assert(std::is_constructible_v<void>);
 // expected-error@-1 {{static assertion failed due to requirement 'std::is_constructible_v<void>'}} \
 // expected-note@-1 {{because it is a cv void type}}
 
+static_assert(!std::is_final<int>::value);
+
+static_assert(std::is_final<int&>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_final<int &>::value'}} \
+// expected-note@-1 {{'int &' is not final}} \
+// expected-note@-1 {{because it is a reference type}} \
+// expected-note@-1 {{because it is not a class or union type}}
+
+static_assert(std::is_final_v<int&>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_final_v<int &>'}} \
+// expected-note@-1 {{'int &' is not final}} \
+// expected-note@-1 {{because it is a reference type}} \
+// expected-note@-1 {{because it is not a class or union type}}
+
+using Arr = int[3];
+static_assert(std::is_final<Arr>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_final<int[3]>::value'}} \
+// expected-note@-1 {{'Arr' (aka 'int[3]') is not final}} \
+// expected-note@-1 {{because it is not a class or union type}}
+
+static_assert(std::is_final_v<Arr>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_final_v<int[3]>'}} \
+// expected-note@-1 {{'int[3]' is not final}} \
+// expected-note@-1 {{because it is not a class or union type}}
+
 namespace test_namespace {
     using namespace std;
     static_assert(is_trivially_relocatable<int&>::value);
@@ -300,6 +351,31 @@ namespace test_namespace {
     static_assert(is_constructible_v<void>);
     // expected-error@-1 {{static assertion failed due to requirement 'is_constructible_v<void>'}} \
     // expected-note@-1 {{because it is a cv void type}}
+
+    static_assert(is_final<int&>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_final<int &>::value'}} \
+    // expected-note@-1 {{'int &' is not final}} \
+    // expected-note@-1 {{because it is a reference type}} \
+    // expected-note@-1 {{because it is not a class or union type}}
+
+    static_assert(is_final_v<int&>);
+    // expected-error@-1 {{static assertion failed due to requirement 'is_final_v<int &>'}} \
+    // expected-note@-1 {{'int &' is not final}} \
+    // expected-note@-1 {{because it is a reference type}} \
+    // expected-note@-1 {{because it is not a class or union type}}
+
+    using A = int[2];
+    static_assert(is_final<A>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_final<int[2]>::value'}} \
+    // expected-note@-1 {{'A' (aka 'int[2]') is not final}} \
+    // expected-note@-1 {{because it is not a class or union type}}
+
+    using Fn = void();
+    static_assert(is_final<Fn>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_final<void ()>::value'}} \
+    // expected-note@-1 {{'Fn' (aka 'void ()') is not final}} \
+    // expected-note@-1 {{because it is a function type}} \
+    // expected-note@-1 {{because it is not a class or union type}}
 }
 
 

@@ -93,7 +93,8 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const dxil::ResourceClass &Type) {
   OS << dxil::getResourceClassName(Type);
   return OS;
 }
@@ -152,8 +153,7 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const RootDescriptor &Descriptor) {
-  ClauseType Type = ClauseType(llvm::to_underlying(Descriptor.Type));
-  OS << "Root" << Type << "(" << Descriptor.Reg
+  OS << "Root" << Descriptor.Type << "(" << Descriptor.Reg
      << ", space = " << Descriptor.Space
      << ", visibility = " << Descriptor.Visibility
      << ", flags = " << Descriptor.Flags << ")";
