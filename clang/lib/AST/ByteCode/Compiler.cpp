@@ -2248,7 +2248,9 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     assert(VAT);
     if (VAT->getElementType()->isArrayType()) {
       std::optional<APSInt> Res =
-          VAT->getSizeExpr()->getIntegerConstantExpr(ASTCtx);
+          VAT->getSizeExpr()
+              ? VAT->getSizeExpr()->getIntegerConstantExpr(ASTCtx)
+              : std::nullopt;
       if (Res) {
         if (DiscardResult)
           return true;
