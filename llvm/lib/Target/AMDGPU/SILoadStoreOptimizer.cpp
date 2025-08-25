@@ -878,8 +878,12 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     Offset = I->getOperand(OffsetIdx).getImm();
   }
 
-  if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE)
+  if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
     Format = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::format)->getImm();
+    const AMDGPU::GcnBufferFormatInfo *Info =
+        AMDGPU::getGcnBufferFormatInfo(Format, *LSO.STM);
+    EltSize = Info->BitsPerComp / 8;
+  }
 
   Width = getOpcodeWidth(*I, *LSO.TII);
 
@@ -1087,24 +1091,44 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
 
     const llvm::AMDGPU::GcnBufferFormatInfo *Info0 =
         llvm::AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
-    if (!Info0)
-      return false;
     const llvm::AMDGPU::GcnBufferFormatInfo *Info1 =
         llvm::AMDGPU::getGcnBufferFormatInfo(Paired.Format, STI);
-    if (!Info1)
-      return false;
 
     if (Info0->BitsPerComp != Info1->BitsPerComp ||
         Info0->NumFormat != Info1->NumFormat)
       return false;
 
-    // TODO: Should be possible to support more formats, but if format loads
-    // are not dword-aligned, the merged load might not be valid.
-    if (Info0->BitsPerComp != 32)
+    // For 8-bit or 16-bit formats there is no 3-component variant.
+    // If NumCombinedComponents is 3, try the 4-component format and use XYZ.
+    // Example:
+    //   tbuffer_load_format_x + tbuffer_load_format_x + tbuffer_load_format_x
+    //   ==> tbuffer_load_format_xyz with format:[BUF_FMT_16_16_16_16_SNORM]
+    unsigned NumCombinedComponents = CI.Width + Paired.Width;
+    if (NumCombinedComponents == 3 && CI.EltSize <= 2)
+      NumCombinedComponents = 4;
+
+    if (getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, STI) ==
+        0)
       return false;
 
-    if (getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, STI) == 0)
+    // Merge only when the two access ranges are strictly back-to-back,
+    // any gap or overlap can over-write data or leave holes.
+    unsigned ElemIndex0 = CI.Offset / CI.EltSize;
+    unsigned ElemIndex1 = Paired.Offset / Paired.EltSize;
+    if (ElemIndex0 + CI.Width != ElemIndex1 &&
+        ElemIndex1 + Paired.Width != ElemIndex0)
       return false;
+
+    // 1-byte formats require 1-byte alignment.
+    // 2-byte formats require 2-byte alignment.
+    // 4-byte and larger formats require 4-byte alignment.
+    unsigned MergedBytes = CI.EltSize * NumCombinedComponents;
+    unsigned RequiredAlign = std::min(MergedBytes, 4u);
+    unsigned MinOff = std::min(CI.Offset, Paired.Offset);
+    if (MinOff % RequiredAlign != 0)
+      return false;
+
+    return true;
   }
 
   uint32_t EltOffset0 = CI.Offset / CI.EltSize;
@@ -1634,8 +1658,14 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
   if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
+  // For 8-bit or 16-bit tbuffer formats there is no 3-component encoding.
+  // If the combined count is 3 (e.g. X+X+X or XY+X), promote to 4 components
+  // and use XYZ of XYZW to enable the merge.
+  unsigned NumCombinedComponents = CI.Width + Paired.Width;
+  if (NumCombinedComponents == 3 && CI.EltSize <= 2)
+    NumCombinedComponents = 4;
   unsigned JoinedFormat =
-      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STM);
+      getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, *STM);
 
   // It shouldn't be possible to get this far if the two instructions
   // don't have a single memoperand, because MachineInstr::mayAlias()
@@ -1677,8 +1707,14 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
   if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
+  // For 8-bit or 16-bit tbuffer formats there is no 3-component encoding.
+  // If the combined count is 3 (e.g. X+X+X or XY+X), promote to 4 components
+  // and use XYZ of XYZW to enable the merge.
+  unsigned NumCombinedComponents = CI.Width + Paired.Width;
+  if (NumCombinedComponents == 3 && CI.EltSize <= 2)
+    NumCombinedComponents = 4;
   unsigned JoinedFormat =
-      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STM);
+      getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, *STM);
 
   // It shouldn't be possible to get this far if the two instructions
   // don't have a single memoperand, because MachineInstr::mayAlias()
@@ -2412,6 +2448,15 @@ SILoadStoreOptimizer::collectMergeableInsts(
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::swz);
     if (Swizzled != -1 && MI.getOperand(Swizzled).getImm())
       continue;
+
+    if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
+      const MachineOperand *Fmt =
+          TII->getNamedOperand(MI, AMDGPU::OpName::format);
+      if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {
+        LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
+        continue;
+      }
+    }
 
     CombineInfo CI;
     CI.setMI(MI, *this);
