@@ -2660,6 +2660,11 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
         << diag::TraitNotSatisfiedReason::InheritedCtr;
   }
 
+  if (D->isPolymorphic())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PolymorphicType
+        << D->getSourceRange();
+
   for (const CXXBaseSpecifier &B : D->bases()) {
     if (B.isVirtual()) {
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
@@ -2680,6 +2685,14 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
     }
   }
 
+  for (const CXXMethodDecl *Method : D->methods()) {
+    if (Method->isVirtual()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << Method
+          << Method->getSourceRange();
+    }
+  }
+
   for (const FieldDecl *Field : D->fields()) {
     auto AccessSpecifier = Field->getAccess();
     switch (AccessSpecifier) {
@@ -2691,19 +2704,6 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
       break;
     default:
       break;
-    }
-  }
-
-  if (D->isPolymorphic())
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::PolymorphicType
-        << D->getSourceRange();
-
-  for (const CXXMethodDecl *Method : D->methods()) {
-    if (Method->isVirtual()) {
-      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::VirtualFunction << Method
-          << Method->getSourceRange();
     }
   }
 
