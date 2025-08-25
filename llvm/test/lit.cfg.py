@@ -321,56 +321,56 @@ def ptxas_add_isa_features(major_version, minor_version):
     if supported_isa_versions:
         for major_version, minor_version in supported_isa_versions:
             config.available_features.add(
-                "ptxas(isa-{}.{})".format(major_version, minor_version)
+                "ptxas-isa-{}.{}".format(major_version, minor_version)
             )
         return
     if major_version >= 13:
         raise RuntimeError("ptxas {} does not support ISA version listing".format(ptxas_executable))
     # Use a more pythonic approach: define a list of (major, minor, feature) tuples and iterate.
     isa_features = [
-        (12, 9, "ptxas(isa-8.8)"),
-        (12, 8, "ptxas(isa-8.7)"),
-        (12, 7, "ptxas(isa-8.6)"),
-        (12, 6, "ptxas(isa-8.5)"),
-        (12, 5, "ptxas(isa-8.5)"),
-        (12, 4, "ptxas(isa-8.4)"),
-        (12, 3, "ptxas(isa-8.3)"),
-        (12, 2, "ptxas(isa-8.2)"),
-        (12, 1, "ptxas(isa-8.1)"),
-        (12, 0, "ptxas(isa-8.0)"),
-        (11, 8, "ptxas(isa-7.8)"),
-        (11, 7, "ptxas(isa-7.7)"),
-        (11, 6, "ptxas(isa-7.6)"),
-        (11, 5, "ptxas(isa-7.5)"),
-        (11, 4, "ptxas(isa-7.4)"),
-        (11, 3, "ptxas(isa-7.3)"),
-        (11, 2, "ptxas(isa-7.2)"),
-        (11, 1, "ptxas(isa-7.1)"),
-        (11, 0, "ptxas(isa-7.0)"),
-        (10, 2, "ptxas(isa-6.5)"),
-        (10, 1, "ptxas(isa-6.4)"),
-        (10, 0, "ptxas(isa-6.3)"),
-        (9, 2, "ptxas(isa-6.2)"),
-        (9, 1, "ptxas(isa-6.1)"),
-        (9, 0, "ptxas(isa-6.0)"),
-        (8, 0, "ptxas(isa-5.0)"),
-        (7, 5, "ptxas(isa-4.3)"),
-        (7, 0, "ptxas(isa-4.2)"),
-        (6, 5, "ptxas(isa-4.1)"),
-        (6, 0, "ptxas(isa-4.0)"),
-        (5, 5, "ptxas(isa-3.2)"),
-        (5, 0, "ptxas(isa-3.1)"),
-        (4, 1, "ptxas(isa-3.0)"),
-        (4, 0, "ptxas(isa-2.3)"),
-        (3, 2, "ptxas(isa-2.2)"),
-        (3, 1, "ptxas(isa-2.1)"),
-        (3, 0, "ptxas(isa-2.0)"),
-        (3, 0, "ptxas(isa-1.5)"),
-        (2, 2, "ptxas(isa-1.4)"),
-        (2, 1, "ptxas(isa-1.3)"),
-        (2, 0, "ptxas(isa-1.2)"),
-        (1, 1, "ptxas(isa-1.1)"),
-        (1, 0, "ptxas(isa-1.0)"),
+        (12, 9, "ptxas-isa-8.8"),
+        (12, 8, "ptxas-isa-8.7"),
+        (12, 7, "ptxas-isa-8.6"),
+        (12, 6, "ptxas-isa-8.5"),
+        (12, 5, "ptxas-isa-8.5"),
+        (12, 4, "ptxas-isa-8.4"),
+        (12, 3, "ptxas-isa-8.3"),
+        (12, 2, "ptxas-isa-8.2"),
+        (12, 1, "ptxas-isa-8.1"),
+        (12, 0, "ptxas-isa-8.0"),
+        (11, 8, "ptxas-isa-7.8"),
+        (11, 7, "ptxas-isa-7.7"),
+        (11, 6, "ptxas-isa-7.6"),
+        (11, 5, "ptxas-isa-7.5"),
+        (11, 4, "ptxas-isa-7.4"),
+        (11, 3, "ptxas-isa-7.3"),
+        (11, 2, "ptxas-isa-7.2"),
+        (11, 1, "ptxas-isa-7.1"),
+        (11, 0, "ptxas-isa-7.0"),
+        (10, 2, "ptxas-isa-6.5"),
+        (10, 1, "ptxas-isa-6.4"),
+        (10, 0, "ptxas-isa-6.3"),
+        (9, 2, "ptxas-isa-6.2"),
+        (9, 1, "ptxas-isa-6.1"),
+        (9, 0, "ptxas-isa-6.0"),
+        (8, 0, "ptxas-isa-5.0"),
+        (7, 5, "ptxas-isa-4.3"),
+        (7, 0, "ptxas-isa-4.2"),
+        (6, 5, "ptxas-isa-4.1"),
+        (6, 0, "ptxas-isa-4.0"),
+        (5, 5, "ptxas-isa-3.2"),
+        (5, 0, "ptxas-isa-3.1"),
+        (4, 1, "ptxas-isa-3.0"),
+        (4, 0, "ptxas-isa-2.3"),
+        (3, 2, "ptxas-isa-2.2"),
+        (3, 1, "ptxas-isa-2.1"),
+        (3, 0, "ptxas-isa-2.0"),
+        (3, 0, "ptxas-isa-1.5"),
+        (2, 2, "ptxas-isa-1.4"),
+        (2, 1, "ptxas-isa-1.3"),
+        (2, 0, "ptxas-isa-1.2"),
+        (1, 1, "ptxas-isa-1.1"),
+        (1, 0, "ptxas-isa-1.0"),
     ]
     for major, minor, feature in isa_features:
         if major_version >= major and minor_version >= minor:
@@ -419,10 +419,10 @@ def enable_ptxas(ptxas_executable):
     ptxas_add_isa_features(major_version, minor_version)
 
     for sm in ptxas_supported_sms(ptxas_executable):
-        config.available_features.add("ptxas(sm_{})".format(sm))
+        config.available_features.add("ptxas-sm_{}".format(sm))
 
     if ptxas_supports_address_size_32(ptxas_executable):
-        config.available_features.add("ptxas(ptr32)")
+        config.available_features.add("ptxas-ptr32")
 
 
 ptxas_executable = (
