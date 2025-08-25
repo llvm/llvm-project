@@ -113,7 +113,6 @@ define i7 @test_cttz_select_i7(i7 %0) {
   %4 = select i1 %3, i7 0, i7 %2
   ret i7 %4
 }
-declare i7 @llvm.cttz.i7(i7, i1 immarg)
 
 define i10 @test_ctlz_select_i10(i10 %0) {
 ; RV32-LABEL: test_ctlz_select_i10:
@@ -238,7 +237,6 @@ define i10 @test_ctlz_select_i10(i10 %0) {
   %4 = select i1 %3, i10 0, i10 %2
   ret i10 %4
 }
-declare i10 @llvm.ctlz.i10(i10, i1 immarg)
 
 define i16 @test_ctlz_select_i16(i16 %0) {
 ; RV32-LABEL: test_ctlz_select_i16:
@@ -329,7 +327,6 @@ define i16 @test_ctlz_select_i16(i16 %0) {
   %4 = select i1 %3, i16 0, i16 %2
   ret i16 %4
 }
-declare i16 @llvm.cttz.i16(i16, i1 immarg)
 
 define i32 @test_ctlz_select_i32(i32 %0) {
 ; RV32-LABEL: test_ctlz_select_i32:
@@ -439,4 +436,4 @@ define i32 @test_ctlz_select_i32(i32 %0) {
   %4 = select i1 %3, i32 0, i32 %2
   ret i32 %4
 }
-declare i32 @llvm.ctlz.i32(i32, i1 immarg)
+
