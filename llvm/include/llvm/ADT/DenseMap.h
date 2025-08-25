@@ -477,9 +477,9 @@ protected:
 private:
   template <typename KeyArgT, typename... Ts>
   std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
-    BucketT *TheBucket;
+    BucketT *TheBucket = nullptr;
     if (LookupBucketFor(Key, TheBucket))
-      return {makeInsertIterator(TheBucket), false}; // Already in map.
+      return {makeInsertIterator(TheBucket), false}; // Already in the map.
 
     // Otherwise, insert the new element.
     TheBucket = InsertIntoBucket(TheBucket, std::forward<KeyArgT>(Key),
