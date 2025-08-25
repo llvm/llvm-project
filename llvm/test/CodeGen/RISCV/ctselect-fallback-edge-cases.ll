@@ -59,6 +59,7 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    or a0, a0, zero
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_null_ptr:
@@ -66,6 +67,7 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %ptr, ptr null)
   ret ptr %result
@@ -351,23 +353,23 @@ define void @cmovznz4_builtin_ctselect(i64 %cin, ptr %x, ptr %y, ptr %r) {
 ; RV64-NEXT:    and a5, a6, a5
 ; RV64-NEXT:    or a4, a4, a5
 ; RV64-NEXT:    sd a4, 0(a3)
-; RV64-NEXT:    ld a4, 8(a2)
-; RV64-NEXT:    ld a5, 8(a1)
-; RV64-NEXT:    and a4, a6, a4
-; RV64-NEXT:    and a5, a0, a5
-; RV64-NEXT:    or a4, a5, a4
+; RV64-NEXT:    ld a4, 8(a1)
+; RV64-NEXT:    ld a5, 8(a2)
+; RV64-NEXT:    and a4, a0, a4
+; RV64-NEXT:    and a5, a6, a5
+; RV64-NEXT:    or a4, a4, a5
 ; RV64-NEXT:    sd a4, 8(a3)
-; RV64-NEXT:    ld a4, 16(a2)
-; RV64-NEXT:    ld a5, 16(a1)
-; RV64-NEXT:    and a4, a6, a4
-; RV64-NEXT:    and a5, a0, a5
-; RV64-NEXT:    or a4, a5, a4
+; RV64-NEXT:    ld a4, 16(a1)
+; RV64-NEXT:    ld a5, 16(a2)
+; RV64-NEXT:    and a4, a0, a4
+; RV64-NEXT:    and a5, a6, a5
+; RV64-NEXT:    or a4, a4, a5
 ; RV64-NEXT:    sd a4, 16(a3)
-; RV64-NEXT:    ld a2, 24(a2)
 ; RV64-NEXT:    ld a1, 24(a1)
-; RV64-NEXT:    and a2, a6, a2
+; RV64-NEXT:    ld a2, 24(a2)
 ; RV64-NEXT:    and a0, a0, a1
-; RV64-NEXT:    or a0, a0, a2
+; RV64-NEXT:    and a1, a6, a2
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    sd a0, 24(a3)
 ; RV64-NEXT:    ret
 ;

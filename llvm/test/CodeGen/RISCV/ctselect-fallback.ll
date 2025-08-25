@@ -134,6 +134,7 @@ define i32 @test_ctselect_const_true(i32 %a, i32 %b) {
 ;
 ; RV32-LABEL: test_ctselect_const_true:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
   ret i32 %result
@@ -147,7 +148,7 @@ define i32 @test_ctselect_const_false(i32 %a, i32 %b) {
 ;
 ; RV32-LABEL: test_ctselect_const_false:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    or a0, zero, a1
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
   ret i32 %result

@@ -6461,6 +6461,9 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
   SDValue WorkingF = F;
   EVT WorkingVT = VT;
 
+  SDValue Chain = DAG.getEntryNode();
+  MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo(); 
+
   if (VT.isVector() && !Cond.getValueType().isVector()) {
     ElementCount NumElems = VT.getVectorElementCount();
     EVT CondVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElems);
@@ -6507,6 +6510,33 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
   // (or (and WorkingT, Mask), (and F, ~Mask))
   SDValue TM = DAG.getNode(ISD::AND, DL, WorkingVT, Mask, WorkingT, ProtectedFlag);
   SDValue FM = DAG.getNode(ISD::AND, DL, WorkingVT, Invert, WorkingF, ProtectedFlag);
+
+  // Only apply chaining for non-scalable types or when we can get a register class
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  bool CanUseChaining = false;
+  
+  if (!WorkingVT.isScalableVector()) {
+    // For fixed-size vectors and scalars, we can safely use register classes
+    CanUseChaining = TLI.isTypeLegal(WorkingVT.getSimpleVT());
+  } else {
+    // For scalable vectors, check if the target has register class support
+    // This is target-specific - RISC-V might not support this directly
+    CanUseChaining = false;  // Conservative: disable for scalable vectors
+  }
+
+  if (CanUseChaining) {
+    // Apply chaining through registers for additional protection
+    const TargetRegisterClass *RC = TLI.getRegClassFor(WorkingVT.getSimpleVT());
+    
+    Register TMReg = MRI.createVirtualRegister(RC);
+    Chain = DAG.getCopyToReg(Chain, DL, TMReg, TM);
+    TM = DAG.getCopyFromReg(Chain, DL, TMReg, WorkingVT);
+
+    Register FMReg = MRI.createVirtualRegister(RC);
+    Chain = DAG.getCopyToReg(Chain, DL, FMReg, FM);
+    FM = DAG.getCopyFromReg(Chain, DL, FMReg, WorkingVT);
+  }
+
   SDValue Result = DAG.getNode(ISD::OR, DL, WorkingVT, TM, FM, ProtectedFlag);
 
   // Convert back if needed
