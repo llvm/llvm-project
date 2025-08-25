@@ -20,13 +20,8 @@ namespace mlir {
 
 using namespace mlir;
 
-// Treats primitive scalars and 0-D tensors as "scalar-like" for broadcasting.
 static inline bool isScalarLike(Type t) {
-  if (llvm::isa<IntegerType, FloatType, IndexType, ComplexType>(t))
-    return true;
-  if (auto rt = dyn_cast<RankedTensorType>(t))
-    return rt.getRank() == 0; // 0-D tensors are scalar-like
-  return false;
+  return isa<IntegerType, FloatType, IndexType, ComplexType>(t);
 }
 
 static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
@@ -36,18 +31,12 @@ static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
   auto types = op->getOperandTypes();
 
   // We want at least one ranked tensor.
-  bool anyRankedTensor = llvm::any_of(
-      types, [](Type type) { return isa<RankedTensorType>(type); });
+  bool anyRankedTensor = llvm::any_of(types, llvm::IsaPred<RankedTensorType>);
 
   // No invalid operands (i.e., every operand is a ranked tensor or
   // scalar-like).
   bool noneInvalid = llvm::none_of(types, [](Type t) {
-    // Invalid if neither ranked tensor nor scalar-like.
-    if (llvm::isa<RankedTensorType>(t))
-      return false;
-    if (isScalarLike(t))
-      return false;
-    return true; // Could be a memref, unranked tensor, vector, etc.
+    return !(isa<RankedTensorType>(t) || isScalarLike(t));
   });
 
   return anyRankedTensor && noneInvalid;
@@ -108,35 +97,37 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
     auto resTy = cast<RankedTensorType>(op->getResult(0).getType());
     auto rank = resTy.getRank();
 
-    // Maps: identity for tensors (rank > 0), scalar map for scalars/rank-0.
+    // Maps: identity for tensors (rank > 0), scalar map for scalars.
     AffineMap scalarMap = AffineMap::get(/*dimCount=*/rank, /*symbolCount=*/0,
                                          /*results=*/{}, rewriter.getContext());
     AffineMap idMap = rewriter.getMultiDimIdentityMap(rank);
 
-    // Create indexing maps: one per operand, one per result.
-    SmallVector<AffineMap, 6> indexingMaps;
-    indexingMaps.reserve(op->getNumOperands() + op->getNumResults());
-
-    for (Value v : op->getOperands()) {
-      Type ty = v.getType();
+    // Match phase.
+    SmallVector<bool> isScalarOperand;
+    isScalarOperand.reserve(op->getNumOperands());
+    for (Type ty : op->getOperandTypes()) {
       if (isScalarLike(ty))
-        indexingMaps.push_back(scalarMap);
-      else if (auto rt = dyn_cast<RankedTensorType>(ty)) {
-        indexingMaps.push_back(idMap);
-      } else
+        isScalarOperand.push_back(true);
+      else if (auto rt = dyn_cast<RankedTensorType>(ty))
+        isScalarOperand.push_back(false);
+      else
         return rewriter.notifyMatchFailure(
             op,
             "unsupported operand type (expected scalar-like or ranked tensor)");
     }
 
-    for (Value r : op->getResults()) {
-      (void)r;
-      indexingMaps.push_back(idMap); // results use identity map.
-    }
+    // Create indexing maps.
+    SmallVector<AffineMap> indexingMaps;
+    indexingMaps.reserve(op->getNumOperands() + op->getNumResults());
 
-    SmallVector<utils::IteratorType, 4> iteratorTypes(
+    for (bool isScalar : isScalarOperand)
+      indexingMaps.push_back(isScalar ? scalarMap : idMap);
+
+    indexingMaps.append(op->getNumResults(), idMap);
+
+    SmallVector<utils::IteratorType> iteratorTypes(
         rank, utils::IteratorType::parallel);
-    SmallVector<Value, 2> outputs =
+    SmallVector<Value> outputs =
         getOrCreateOperandsMatchingResultTypes(rewriter, op);
     rewriter.replaceOpWithNewOp<linalg::GenericOp>(
         op, /*resultTensorTypes=*/op->getResultTypes(),
