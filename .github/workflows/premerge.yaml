@@ -76,7 +76,7 @@ jobs:
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
 
-          if ! [[ "${{ matrix.runs_on }}" =~ "^depot" ]; then
+          if ! [[ "${{ matrix.runs_on }}" =~ "^depot" ]]; then
 
             # This environment variable is passes into the container through the
             # runner pod definition. This differs between our two clusters which
