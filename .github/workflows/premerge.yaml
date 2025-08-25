@@ -50,9 +50,6 @@ jobs:
           python3 .ci/compute_projects.py
       - name: Debug2
         run: |
-          source <$(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
-      - name: Debug2
-        run: |
           source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
       - name: Build and Test
         run: |
