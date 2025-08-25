@@ -213,4 +213,50 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
 }
 
+def fir_FortranVariableStorageOpInterface
+    : OpInterface<"FortranVariableStorageOpInterface",
+                  [fir_FortranVariableOpInterface]> {
+  let description = [{
+    An extension of FortranVariableOpInterface for operations that provide
+    information about the physical storage layout of the variable.
+    The operations provide the raw address of the physical storage
+    and the byte offset where the variable begins within the physical
+    storage.
+    The storage is a reference to an array of known size consisting
+    of i8 elements. This is how Flang represents COMMON and EQUIVALENCE
+    storage blocks with the member variables located within the storage
+    at different offsets. The storage offset for a variable must not
+    exceed the storage size. Note that the zero-sized variables
+    may start at the offset that is after the final byte of the storage.
+  }];
+
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/"Returns the raw address of the physical storage",
+           /*retTy=*/"mlir::Value",
+           /*methodName=*/"getStorage",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
+        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        return op.getStorage();
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Returns the byte offset where the variable begins "
+                    "within the physical storage",
+           /*retTy=*/"std::uint64_t",
+           /*methodName=*/"getStorageOffset",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
+        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        return op.getStorageOffset();
+      }]>,
+  ];
+
+  let cppNamespace = "fir";
+  let verify =
+      [{ return detail::verifyFortranVariableStorageOpInterface($_op); }];
+}
+
 #endif  // FORTRANVARIABLEINTERFACE

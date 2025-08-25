@@ -305,6 +305,8 @@ public:
     auto firDeclareOp = fir::DeclareOp::create(
         rewriter, loc, memref.getType(), memref, declareOp.getShape(),
         declareOp.getTypeparams(), declareOp.getDummyScope(),
+        /*storage=*/declareOp.getStorage(),
+        /*storage_offset=*/declareOp.getStorageOffset(),
         declareOp.getUniqName(), fortranAttrs, dataAttr);
 
     // Propagate other attributes from hlfir.declare to fir.declare.

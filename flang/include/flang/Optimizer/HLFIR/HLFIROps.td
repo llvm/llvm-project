@@ -35,9 +35,11 @@ class hlfir_Op<string mnemonic, list<Trait> traits>
 // removed by dead code elimination if the value result is unused. Information
 // from the declare operation can be used to generate debug information so we
 // don't want to remove it as dead code
-def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc<DebuggingResource>]>,
-    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+def hlfir_DeclareOp
+    : hlfir_Op<"declare", [AttrSizedOperandSegments,
+                           MemoryEffects<[MemAlloc<DebuggingResource>]>,
+                           DeclareOpInterfaceMethods<
+                               fir_FortranVariableStorageOpInterface>]> {
   let summary = "declare a variable and produce an SSA value that can be used as a variable in HLFIR operations";
 
   let description = [{
@@ -84,21 +86,22 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
    ```
   }];
 
-  let arguments = (ins
-    AnyRefOrBox:$memref,
-    Optional<AnyShapeOrShiftType>:$shape,
-    Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_DummyScopeType>:$dummy_scope,
-    Builtin_StringAttr:$uniq_name,
-    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
-  );
+  let arguments = (ins AnyRefOrBox:$memref,
+      Optional<AnyShapeOrShiftType>:$shape,
+      Variadic<AnyIntegerType>:$typeparams,
+      Optional<fir_DummyScopeType>:$dummy_scope,
+      Optional<AnyReferenceLike>:$storage,
+      DefaultValuedAttr<UI64Attr, "0">:$storage_offset,
+      Builtin_StringAttr:$uniq_name,
+      OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr);
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
     (`dummy_scope` $dummy_scope^)?
+    (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 
