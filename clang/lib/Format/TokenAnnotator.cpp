@@ -6222,12 +6222,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     if (Previous->isIf())
       return Style.BreakBeforeCloseBracketIf;
-    auto IsLoopConditional = [&](const FormatToken &Tok) {
-      return Tok.isOneOf(tok::kw_for, tok::kw_while) ||
-             (Style.isJavaScript() && Tok.is(Keywords.kw_await) &&
-              Tok.Previous && Tok.Previous->is(tok::kw_for));
-    };
-    if (IsLoopConditional(*Previous))
+    if (Previous->isLoop(Style))
       return Style.BreakBeforeCloseBracketLoop;
     if (Previous->is(tok::kw_switch))
       return Style.BreakBeforeCloseBracketSwitch;

@@ -830,11 +830,6 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // parenthesis by disallowing any further line breaks if there is no line
   // break after the opening parenthesis. Don't break if it doesn't conserve
   // columns.
-  auto IsLoopConditional = [&](const FormatToken &Tok) {
-    return Tok.isOneOf(tok::kw_for, tok::kw_while) ||
-           (Style.isJavaScript() && Tok.is(Keywords.kw_await) && Tok.Previous &&
-            Tok.Previous->is(tok::kw_for));
-  };
   auto IsOpeningBracket = [&](const FormatToken &Tok) {
     auto IsStartOfBracedList = [&]() {
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
@@ -848,7 +843,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return true;
     if (Tok.Previous->isIf())
       return Style.BreakAfterOpenBracketIf;
-    if (IsLoopConditional(*Tok.Previous))
+    if (Tok.Previous->isLoop(Style))
       return Style.BreakAfterOpenBracketLoop;
     if (Tok.Previous->is(tok::kw_switch))
       return Style.BreakAfterOpenBracketSwitch;
@@ -896,7 +891,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     const auto *Previous = TokAfterLParen.Previous;
     assert(Previous); // IsOpeningBracket(Previous)
     if (Previous->Previous &&
-        (Previous->Previous->isIf() || IsLoopConditional(*Previous->Previous) ||
+        (Previous->Previous->isIf() || Previous->Previous->isLoop(Style) ||
          Previous->Previous->is(tok::kw_switch))) {
       return false;
     }
@@ -1281,15 +1276,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     auto Previous = PreviousNonComment->Previous;
     if (Previous) {
 
-      auto IsLoopConditional = [&](const FormatToken &Tok) {
-        return Tok.isOneOf(tok::kw_for, tok::kw_while) ||
-               (Style.isJavaScript() && Tok.is(Keywords.kw_await) &&
-                Tok.Previous && Tok.Previous->is(tok::kw_for));
-      };
-
       if (Previous->isIf()) {
         CurrentState.BreakBeforeClosingParen = Style.BreakBeforeCloseBracketIf;
-      } else if (IsLoopConditional(*Previous)) {
+      } else if (Previous->isLoop(Style)) {
         CurrentState.BreakBeforeClosingParen =
             Style.BreakBeforeCloseBracketLoop;
       } else if (Previous->is(tok::kw_switch)) {
