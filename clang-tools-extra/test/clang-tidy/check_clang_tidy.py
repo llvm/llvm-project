@@ -146,6 +146,8 @@ class CheckRunner:
             self.clang_extra_args.append("-resource-dir=%s" % self.resource_dir)
 
     def read_input(self) -> None:
+        # Use a "\\?\" prefix on Windows to handle long file paths transparently:
+        # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
         file_name = self.input_file_name
         if platform.system() == "Windows":
             file_name = "\\\\?\\" + os.path.abspath(file_name)
