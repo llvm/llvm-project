@@ -39,20 +39,12 @@ using testing::_;
 namespace {
 class TestProtocolServerMCP : public lldb_private::mcp::ProtocolServerMCP {
 public:
+  using ProtocolServerMCP::AddNotificationHandler;
+  using ProtocolServerMCP::AddRequestHandler;
+  using ProtocolServerMCP::AddResourceProvider;
+  using ProtocolServerMCP::AddTool;
   using ProtocolServerMCP::GetSocket;
   using ProtocolServerMCP::ProtocolServerMCP;
-
-  using ExtendCallback =
-      std::function<void(lldb_protocol::mcp::Server &server)>;
-
-  virtual void Extend(lldb_protocol::mcp::Server &server) const override {
-    if (m_extend_callback)
-      m_extend_callback(server);
-  };
-
-  void Extend(ExtendCallback callback) { m_extend_callback = callback; }
-
-  ExtendCallback m_extend_callback;
 };
 
 using Message = typename Transport<Request, Response, Notification>::Message;
@@ -191,10 +183,8 @@ public:
     connection.protocol = Socket::SocketProtocol::ProtocolTcp;
     connection.name = llvm::formatv("{0}:0", k_localhost).str();
     m_server_up = std::make_unique<TestProtocolServerMCP>();
-    m_server_up->Extend([&](auto &server) {
-      server.AddTool(std::make_unique<TestTool>("test", "test tool"));
-      server.AddResourceProvider(std::make_unique<TestResourceProvider>());
-    });
+    m_server_up->AddTool(std::make_unique<TestTool>("test", "test tool"));
+    m_server_up->AddResourceProvider(std::make_unique<TestResourceProvider>());
     ASSERT_THAT_ERROR(m_server_up->Start(connection), llvm::Succeeded());
 
     // Connect to the server over a TCP socket.
@@ -243,10 +233,20 @@ TEST_F(ProtocolServerMCPTest, ToolsList) {
   test_tool.description = "test tool";
   test_tool.inputSchema = json::Object{{"type", "object"}};
 
+  ToolDefinition lldb_command_tool;
+  lldb_command_tool.description = "Run an lldb command.";
+  lldb_command_tool.name = "lldb_command";
+  lldb_command_tool.inputSchema = json::Object{
+      {"type", "object"},
+      {"properties",
+       json::Object{{"arguments", json::Object{{"type", "string"}}},
+                    {"debugger_id", json::Object{{"type", "number"}}}}},
+      {"required", json::Array{"debugger_id"}}};
   Response response;
   response.id = "one";
   response.result = json::Object{
-      {"tools", json::Array{std::move(test_tool)}},
+      {"tools",
+       json::Array{std::move(test_tool), std::move(lldb_command_tool)}},
   };
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
@@ -281,9 +281,7 @@ TEST_F(ProtocolServerMCPTest, ToolsCall) {
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCallError) {
-  m_server_up->Extend([&](auto &server) {
-    server.AddTool(std::make_unique<ErrorTool>("error", "error tool"));
-  });
+  m_server_up->AddTool(std::make_unique<ErrorTool>("error", "error tool"));
 
   llvm::StringLiteral request =
       R"json({"method":"tools/call","params":{"name":"error","arguments":{"arguments":"foo","debugger_id":0}},"jsonrpc":"2.0","id":11})json";
@@ -298,9 +296,7 @@ TEST_F(ProtocolServerMCPTest, ToolsCallError) {
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCallFail) {
-  m_server_up->Extend([&](auto &server) {
-    server.AddTool(std::make_unique<FailTool>("fail", "fail tool"));
-  });
+  m_server_up->AddTool(std::make_unique<FailTool>("fail", "fail tool"));
 
   llvm::StringLiteral request =
       R"json({"method":"tools/call","params":{"name":"fail","arguments":{"arguments":"foo","debugger_id":0}},"jsonrpc":"2.0","id":11})json";
@@ -319,16 +315,14 @@ TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
   std::condition_variable cv;
   std::mutex mutex;
 
-  m_server_up->Extend([&](auto &server) {
-    server.AddNotificationHandler("notifications/initialized",
-                                  [&](const Notification &notification) {
-                                    {
-                                      std::lock_guard<std::mutex> lock(mutex);
-                                      handler_called = true;
-                                    }
-                                    cv.notify_all();
-                                  });
-  });
+  m_server_up->AddNotificationHandler(
+      "notifications/initialized", [&](const Notification &notification) {
+        {
+          std::lock_guard<std::mutex> lock(mutex);
+          handler_called = true;
+        }
+        cv.notify_all();
+      });
   llvm::StringLiteral request =
       R"json({"method":"notifications/initialized","jsonrpc":"2.0"})json";
 
