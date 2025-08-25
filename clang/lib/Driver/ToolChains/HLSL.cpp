@@ -489,12 +489,13 @@ bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
 
 bool HLSLToolChain::isLastJob(DerivedArgList &Args,
                               Action::ActionClass AC) const {
-  if (requiresObjcopy(Args))
-    return AC == Action::Action::ObjcopyJobClass;
+  // Note: we check in the reverse order of execution
   if (requiresBinaryTranslation(Args))
     return AC == Action::Action::BinaryTranslatorJobClass;
   if (requiresValidation(Args))
     return AC == Action::Action::BinaryAnalyzeJobClass;
+  if (requiresObjcopy(Args))
+    return AC == Action::Action::ObjcopyJobClass;
 
   // No translation, validation, or objcopy are required, so this action must
   // output to the result file.

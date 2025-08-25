@@ -4646,14 +4646,14 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
     const auto &TC =
         static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
 
-    // Call objcopy for manipulation of the DXContainer when an option in Args
-    // requires it.
+    // Call objcopy for manipulation of the unvalidated DXContainer when an
+    // option in Args requires it.
     if (TC.requiresObjcopy(Args)) {
       Action *LastAction = Actions.back();
       // llvm-objcopy expects an unvalidated DXIL container (TY_OBJECT).
       if (LastAction->getType() == types::TY_Object)
         Actions.push_back(
-            C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_DX_CONTAINER));
+            C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_Object));
     }
 
     // Call validator for dxil when -Vd not in Args.
