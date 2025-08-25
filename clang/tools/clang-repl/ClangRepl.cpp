@@ -92,7 +92,7 @@ static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
 static llvm::Error sanitizeOopArguments(const char *ArgV0,
-                                        std::string CompilerRTPath) {
+                                        std::string _OrcRuntimePath) {
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OOPExecutor.getNumOccurrences() &&
       !!OOPExecutorConnect.getNumOccurrences())
@@ -128,17 +128,11 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0,
   // Out-of-process executors require the ORC runtime.
   if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
                                  OOPExecutorConnect.getNumOccurrences())) {
-    if (llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt.a")) {
-      OrcRuntimePath = CompilerRTPath + "/liborc_rt.a";
-    } else if (llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt_osx.a")) {
-      OrcRuntimePath = CompilerRTPath + "/liborc_rt_osx.a";
-    } else if (llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt-x86_64.a")) {
-      OrcRuntimePath = CompilerRTPath + "/liborc_rt-x86_64.a";
-    } else {
+    if(!llvm::sys::fs::exists(_OrcRuntimePath))
       return llvm::make_error<llvm::StringError>(
-          "ORC runtime not found in " + CompilerRTPath,
+          "The ORC runtime is required for out-of-process execution",
           llvm::inconvertibleErrorCode());
-    }
+    OrcRuntimePath = _OrcRuntimePath;
   }
 
   // If -oop-executor was used but no value was specified then use a sensible
@@ -290,7 +284,7 @@ int main(int argc, const char **argv) {
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
 
-  std::string CompilerRTPath;
+  std::string _OrcRuntimePath;
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
@@ -298,10 +292,10 @@ int main(int argc, const char **argv) {
   if (CudaEnabled) {
     CI = ExitOnErr(CB.CreateCudaHost());
   } else {
-    CI = ExitOnErr(CB.CreateCpp(&CompilerRTPath));
+    CI = ExitOnErr(CB.CreateCpp(&_OrcRuntimePath));
   }
 
-  ExitOnErr(sanitizeOopArguments(argv[0], CompilerRTPath));
+  ExitOnErr(sanitizeOopArguments(argv[0], _OrcRuntimePath));
 
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
   if (OOPExecutor.getNumOccurrences()) {

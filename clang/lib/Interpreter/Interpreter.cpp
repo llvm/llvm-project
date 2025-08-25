@@ -150,7 +150,7 @@ namespace clang {
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::create(std::string TT,
                                    std::vector<const char *> &ClangArgv,
-                                   std::string *CompilerRTPath) {
+                                   std::string *OrcRuntimePath) {
 
   // If we don't know ClangArgv0 or the address of main() at this point, try
   // to guess it anyway (it's possible on some platforms).
@@ -193,15 +193,21 @@ IncrementalCompilerBuilder::create(std::string TT,
 
   const driver::ToolChain &TC = Compilation->getDefaultToolChain();
   std::optional<std::string> Path = TC.getCompilerRTPath();
-  if (Path && CompilerRTPath) {
-    *CompilerRTPath = *Path;
+  if (Path && OrcRuntimePath) {
+    *OrcRuntimePath = *Path;
+    if(llvm::sys::fs::exists(*OrcRuntimePath + "/liborc_rt.a"))
+      *OrcRuntimePath = *OrcRuntimePath + "/liborc_rt.a";
+    else if (llvm::sys::fs::exists(*OrcRuntimePath + "/liborc_rt_osx.a"))
+      *OrcRuntimePath = *OrcRuntimePath + "/liborc_rt_osx.a";
+    else if (llvm::sys::fs::exists(*OrcRuntimePath + "/liborc_rt-x86_64.a"))
+      *OrcRuntimePath = *OrcRuntimePath + "/liborc_rt-x86_64.a";
   }
 
   return CreateCI(**ErrOrCC1Args);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCpp(std::string *CompilerRTPath) {
+IncrementalCompilerBuilder::CreateCpp(std::string *OrcRuntimePath) {
   std::vector<const char *> Argv;
   Argv.reserve(5 + 1 + UserArgs.size());
   Argv.push_back("-xc++");
@@ -213,7 +219,7 @@ IncrementalCompilerBuilder::CreateCpp(std::string *CompilerRTPath) {
   llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
-  return IncrementalCompilerBuilder::create(TT, Argv, CompilerRTPath);
+  return IncrementalCompilerBuilder::create(TT, Argv, OrcRuntimePath);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>

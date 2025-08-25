@@ -57,7 +57,7 @@ public:
 
   // General C++
   llvm::Expected<std::unique_ptr<CompilerInstance>>
-  CreateCpp(std::string *CompilerRTPath = nullptr);
+  CreateCpp(std::string *OrcRuntimePath = nullptr);
 
   // Offload options
   void SetOffloadArch(llvm::StringRef Arch) { OffloadArch = Arch; };
@@ -71,7 +71,7 @@ public:
 private:
   static llvm::Expected<std::unique_ptr<CompilerInstance>>
   create(std::string TT, std::vector<const char *> &ClangArgv,
-         std::string *CompilerRTPath = nullptr);
+         std::string *OrcRuntimePath = nullptr);
 
   llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
 
