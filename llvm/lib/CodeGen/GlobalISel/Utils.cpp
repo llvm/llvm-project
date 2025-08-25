@@ -468,9 +468,10 @@ llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   Register DefSrcReg = Reg;
   // This assumes that the code is in SSA form, so there should only be one
   // definition.
-  if (MRI.def_empty(Reg))
-    return std::nullopt;
-  MachineOperand &DefOpnd = *MRI.def_begin(Reg);
+  auto DefIt = MRI.def_begin(Reg);
+  if (DefIt == MRI.def_end())
+    return {};
+  MachineOperand &DefOpnd = *DefIt;
   MachineInstr *DefMI = DefOpnd.getParent();
   auto DstTy = MRI.getType(DefOpnd.getReg());
   if (!DstTy.isValid())
