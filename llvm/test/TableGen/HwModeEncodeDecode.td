@@ -70,10 +70,10 @@ def baz : Instruction {
 }
 }
 
-// DECODER-LABEL: DecoderTable_ModeA32[] =
+// DECODER-LABEL: DecoderTable_ModeA32[22] =
 // DECODER-DAG: Opcode: fooTypeEncA:foo
 // DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable_ModeB32[] =
+// DECODER-LABEL: DecoderTable_ModeB32[30] =
 // DECODER-DAG: Opcode: fooTypeEncB:foo
 // DECODER-DAG: Opcode: fooTypeEncA:baz
 // DECODER-DAG: Opcode: bar

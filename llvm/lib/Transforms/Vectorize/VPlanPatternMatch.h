@@ -397,16 +397,24 @@ m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Binary<Instruction::Or, Op0_t, Op1_t>(Op0, Op1);
 }
 
-/// ICmp_match is a variant of BinaryRecipe_match that also binds the comparison
-/// predicate.
-template <typename Op0_t, typename Op1_t> struct ICmp_match {
+/// Cmp_match is a variant of BinaryRecipe_match that also binds the comparison
+/// predicate. Opcodes must either be Instruction::ICmp or Instruction::FCmp, or
+/// both.
+template <typename Op0_t, typename Op1_t, unsigned... Opcodes>
+struct Cmp_match {
+  static_assert((sizeof...(Opcodes) == 1 || sizeof...(Opcodes) == 2) &&
+                "Expected one or two opcodes");
+  static_assert(
+      ((Opcodes == Instruction::ICmp || Opcodes == Instruction::FCmp) && ...) &&
+      "Expected a compare instruction opcode");
+
   CmpPredicate *Predicate = nullptr;
   Op0_t Op0;
   Op1_t Op1;
 
-  ICmp_match(CmpPredicate &Pred, const Op0_t &Op0, const Op1_t &Op1)
+  Cmp_match(CmpPredicate &Pred, const Op0_t &Op0, const Op1_t &Op1)
       : Predicate(&Pred), Op0(Op0), Op1(Op1) {}
-  ICmp_match(const Op0_t &Op0, const Op1_t &Op1) : Op0(Op0), Op1(Op1) {}
+  Cmp_match(const Op0_t &Op0, const Op1_t &Op1) : Op0(Op0), Op1(Op1) {}
 
   bool match(const VPValue *V) const {
     auto *DefR = V->getDefiningRecipe();
@@ -414,7 +422,7 @@ template <typename Op0_t, typename Op1_t> struct ICmp_match {
   }
 
   bool match(const VPRecipeBase *V) const {
-    if (m_Binary<Instruction::ICmp>(Op0, Op1).match(V)) {
+    if ((m_Binary<Opcodes>(Op0, Op1).match(V) || ...)) {
       if (Predicate)
         *Predicate = cast<VPRecipeWithIRFlags>(V)->getPredicate();
       return true;
@@ -423,38 +431,63 @@ template <typename Op0_t, typename Op1_t> struct ICmp_match {
   }
 };
 
-/// SpecificICmp_match is a variant of ICmp_match that matches the comparison
+/// SpecificCmp_match is a variant of Cmp_match that matches the comparison
 /// predicate, instead of binding it.
-template <typename Op0_t, typename Op1_t> struct SpecificICmp_match {
+template <typename Op0_t, typename Op1_t, unsigned... Opcodes>
+struct SpecificCmp_match {
   const CmpPredicate Predicate;
   Op0_t Op0;
   Op1_t Op1;
 
-  SpecificICmp_match(CmpPredicate Pred, const Op0_t &LHS, const Op1_t &RHS)
+  SpecificCmp_match(CmpPredicate Pred, const Op0_t &LHS, const Op1_t &RHS)
       : Predicate(Pred), Op0(LHS), Op1(RHS) {}
 
   bool match(const VPValue *V) const {
     CmpPredicate CurrentPred;
-    return ICmp_match<Op0_t, Op1_t>(CurrentPred, Op0, Op1).match(V) &&
+    return Cmp_match<Op0_t, Op1_t, Opcodes...>(CurrentPred, Op0, Op1)
+               .match(V) &&
            CmpPredicate::getMatching(CurrentPred, Predicate);
   }
 };
 
 template <typename Op0_t, typename Op1_t>
-inline ICmp_match<Op0_t, Op1_t> m_ICmp(const Op0_t &Op0, const Op1_t &Op1) {
-  return ICmp_match<Op0_t, Op1_t>(Op0, Op1);
+inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp> m_ICmp(const Op0_t &Op0,
+                                                         const Op1_t &Op1) {
+  return Cmp_match<Op0_t, Op1_t, Instruction::ICmp>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline ICmp_match<Op0_t, Op1_t> m_ICmp(CmpPredicate &Pred, const Op0_t &Op0,
-                                       const Op1_t &Op1) {
-  return ICmp_match<Op0_t, Op1_t>(Pred, Op0, Op1);
+inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp>
+m_ICmp(CmpPredicate &Pred, const Op0_t &Op0, const Op1_t &Op1) {
+  return Cmp_match<Op0_t, Op1_t, Instruction::ICmp>(Pred, Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline SpecificICmp_match<Op0_t, Op1_t>
+inline SpecificCmp_match<Op0_t, Op1_t, Instruction::ICmp>
 m_SpecificICmp(CmpPredicate MatchPred, const Op0_t &Op0, const Op1_t &Op1) {
-  return SpecificICmp_match<Op0_t, Op1_t>(MatchPred, Op0, Op1);
+  return SpecificCmp_match<Op0_t, Op1_t, Instruction::ICmp>(MatchPred, Op0,
+                                                            Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>
+m_Cmp(const Op0_t &Op0, const Op1_t &Op1) {
+  return Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>(Op0,
+                                                                       Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>
+m_Cmp(CmpPredicate &Pred, const Op0_t &Op0, const Op1_t &Op1) {
+  return Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>(
+      Pred, Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SpecificCmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>
+m_SpecificCmp(CmpPredicate MatchPred, const Op0_t &Op0, const Op1_t &Op1) {
+  return SpecificCmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>(
+      MatchPred, Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

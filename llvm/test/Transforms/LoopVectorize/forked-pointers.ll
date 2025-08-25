@@ -17,21 +17,22 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
 ; CHECK-LABEL: @forked_ptrs_different_base_same_offset(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BASE1:%.*]] = freeze ptr [[BASE3:%.*]]
+; CHECK-NEXT:    [[BASE2:%.*]] = freeze ptr [[BASE4:%.*]]
+; CHECK-NEXT:    [[DEST:%.*]] = freeze ptr [[DEST2:%.*]]
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoint ptr [[DEST:%.*]] to i64
+; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoint ptr [[DEST]] to i64
 ; CHECK-NEXT:    [[PREDS2:%.*]] = ptrtoint ptr [[PREDS:%.*]] to i64
-; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoint ptr [[BASE2:%.*]] to i64
-; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoint ptr [[BASE1:%.*]] to i64
+; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoint ptr [[BASE2]] to i64
+; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoint ptr [[BASE1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DEST1]], [[PREDS2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DEST1]], [[BASE23]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i64 [[TMP1]]
-; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[DOTFR]], 16
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 16
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DEST1]], [[BASE15]]
-; CHECK-NEXT:    [[DOTFR10:%.*]] = freeze i64 [[TMP2]]
-; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[DOTFR10]], 16
+; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP2]], 16
 ; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK6]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX7]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

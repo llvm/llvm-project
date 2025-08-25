@@ -228,7 +228,7 @@ SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
         SPIRV::OperandCategory::OperandCategory::ExtensionOperand,
         ExtensionEnum);
 
-    if (std::count(AllowedEnv.begin(), AllowedEnv.end(), CurrentEnvironment))
+    if (llvm::is_contained(AllowedEnv, CurrentEnvironment))
       R.insert(ExtensionEnum);
   }
 

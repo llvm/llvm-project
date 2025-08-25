@@ -38,7 +38,8 @@ static void populateDialectSparseTensorSubmodule(const nb::module_ &m) {
                           mlirAttributeIsASparseTensorEncodingAttr)
       .def_classmethod(
           "get",
-          [](nb::object cls, std::vector<MlirSparseTensorLevelType> lvlTypes,
+          [](const nb::object &cls,
+             std::vector<MlirSparseTensorLevelType> lvlTypes,
              std::optional<MlirAffineMap> dimToLvl,
              std::optional<MlirAffineMap> lvlToDim, int posWidth, int crdWidth,
              std::optional<MlirAttribute> explicitVal,
@@ -58,7 +59,7 @@ static void populateDialectSparseTensorSubmodule(const nb::module_ &m) {
           "Gets a sparse_tensor.encoding from parameters.")
       .def_classmethod(
           "build_level_type",
-          [](nb::object cls, MlirSparseTensorLevelFormat lvlFmt,
+          [](const nb::object &cls, MlirSparseTensorLevelFormat lvlFmt,
              const std::vector<MlirSparseTensorLevelPropertyNondefault>
                  &properties,
              unsigned n, unsigned m) {
