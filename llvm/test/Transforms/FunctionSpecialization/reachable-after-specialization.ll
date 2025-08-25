@@ -27,15 +27,15 @@ if.then:                                         ; preds = %entry
   ret i32 %unreachable_call
 }
 
-define internal i32 @callee(i32 %ac) {
+define internal i32 @callee(i32 %arg) {
 entry:
-  br label %ai
+  br label %loop
 
-ai:                                               ; preds = %ai, %entry
+loop:                                               ; preds = %ai, %entry
   %add = or i32 0, 0
-  %cond = icmp eq i32 %ac, 1
-  br i1 %cond, label %aj, label %ai
+  %cond = icmp eq i32 %arg, 1
+  br i1 %cond, label %exit, label %loop
 
-aj:                                               ; preds = %ai
+exit:                                               ; preds = %ai
   ret i32 0
 }
