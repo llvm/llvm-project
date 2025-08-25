@@ -8,7 +8,7 @@ subroutine teams_workdistribute()
   real(kind=real32) :: a
   real(kind=real32), dimension(10) :: x
   real(kind=real32), dimension(10) :: y
-  !ERROR: WORKDISTRIBUTE construct is only supported from openMP 6.0
+  !ERROR: WORKDISTRIBUTE construct is not allowed in OpenMP v5.0, try -fopenmp-version=60
   !$omp teams workdistribute
   y = a * x + y
   !$omp end teams workdistribute

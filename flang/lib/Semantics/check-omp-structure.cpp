@@ -4624,9 +4624,11 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
 void OmpStructureChecker::CheckWorkdistributeBlockStmts(
     const parser::Block &block, parser::CharBlock source) {
   unsigned version{context_.langOptions().OpenMPVersion};
-  if (version < 60)
+  unsigned since{60};
+  if (version < since)
     context_.Say(source,
-        "WORKDISTRIBUTE construct is only supported from openMP 6.0"_err_en_US);
+        "WORKDISTRIBUTE construct is not allowed in %s, %s"_err_en_US,
+        ThisVersion(version), TryVersion(since));
 
   OmpWorkdistributeBlockChecker ompWorkdistributeBlockChecker{context_, source};
 
