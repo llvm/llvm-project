@@ -1117,6 +1117,10 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
       isa<VectorType>(Base)) {
     return true;
   }
+  if (CGM.getTarget().getTriple().isX86() &&
+      CGM.getABIInfo().isHomogeneousAggregate(Ty, Base, NumElts)) {
+    return true;
+  }
 
   // We use the C++14 definition of an aggregate, so we also
   // check for:
