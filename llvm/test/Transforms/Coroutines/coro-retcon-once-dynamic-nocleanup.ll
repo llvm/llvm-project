@@ -57,7 +57,7 @@ unwind:
   br label %coro.end
 
 coro.end:
-  call void @llvm.coro.end(ptr %handle, i1 false, token none)
+  %8 = call i1 @llvm.coro.end(ptr %handle, i1 false, token none)
   unreachable
 }
 
