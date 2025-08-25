@@ -12,8 +12,7 @@ define i8 @load_global(i64 %idx) {
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @g, i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
@@ -30,8 +29,7 @@ define i1 @store_global(i64 %idx) {
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @g, i64 [[IDX]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %gep = getelementptr inbounds i8, ptr @g, i64 %idx
   store i8 0, ptr %gep
@@ -44,8 +42,7 @@ define i8 @load_byval(ptr byval([5 x i8]) %p, i64 %idx) {
 ; CHECK-SAME: ptr byval([5 x i8]) [[P:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
@@ -64,8 +61,7 @@ define i8 @load_alloca(i64 %idx) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ALLOC]], ptr @g, i64 5, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[ALLOC]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
@@ -86,8 +82,7 @@ define i8 @load_malloc(i64 %idx) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ALLOC]], ptr @g, i64 5, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[ALLOC]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    call void @free(ptr [[ALLOC]])
 ; CHECK-NEXT:    ret i8 [[ADD]]
@@ -108,8 +103,7 @@ define i32 @load_byval_i32(ptr byval([10 x i8]) %p, i64 %idx) {
 ; CHECK-SAME: ptr byval([10 x i8]) [[P:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 7
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -130,8 +124,7 @@ define i8 @load_global_may_noreturn_dom_bb(i64 %idx) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    br label %[[NEXT:.*]]
 ; CHECK:       [[NEXT]]:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IDX]], 5
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP2]] to i8
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
