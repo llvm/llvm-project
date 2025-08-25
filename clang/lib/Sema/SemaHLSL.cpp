@@ -854,6 +854,8 @@ void SemaHLSL::CheckSemanticAnnotation(
     DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Compute});
     break;
   case attr::HLSLSV_Position:
+    // TODO(#143523): allow use on other shader types & output once the overall
+    // semantic logic is implemented.
     if (ST == llvm::Triple::Pixel)
       return;
     DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Pixel});
@@ -1534,26 +1536,25 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
     }
   }
 
-#define CHECK_OUTPUT_FORBIDDEN(AL)                                             \
-  if (IsOutput) {                                                              \
-    Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;     \
-  }
-
   Attr *Attribute = nullptr;
   if (SemanticName == "SV_DISPATCHTHREADID") {
     diagnoseInputIDType(ValueType, AL);
-    CHECK_OUTPUT_FORBIDDEN(AL);
+    if (IsOutput)
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
     Attribute = createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(AL, Index);
   } else if (SemanticName == "SV_GROUPINDEX") {
-    CHECK_OUTPUT_FORBIDDEN(AL);
+    if (IsOutput)
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
     Attribute = createSemanticAttr<HLSLSV_GroupIndexAttr>(AL, Index);
   } else if (SemanticName == "SV_GROUPTHREADID") {
     diagnoseInputIDType(ValueType, AL);
-    CHECK_OUTPUT_FORBIDDEN(AL);
+    if (IsOutput)
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
     Attribute = createSemanticAttr<HLSLSV_GroupThreadIDAttr>(AL, Index);
   } else if (SemanticName == "SV_GROUPID") {
     diagnoseInputIDType(ValueType, AL);
-    CHECK_OUTPUT_FORBIDDEN(AL);
+    if (IsOutput)
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
     Attribute = createSemanticAttr<HLSLSV_GroupIDAttr>(AL, Index);
   } else if (SemanticName == "SV_POSITION") {
     const auto *VT = ValueType->getAs<VectorType>();

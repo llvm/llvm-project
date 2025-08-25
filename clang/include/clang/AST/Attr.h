@@ -233,7 +233,7 @@ public:
 };
 
 class HLSLSemanticAttr : public HLSLAnnotationAttr {
-  unsigned SemanticIndex : 30;
+  unsigned SemanticIndex = 0;
   LLVM_PREFERRED_TYPE(bool)
   unsigned SemanticIndexable : 1;
   LLVM_PREFERRED_TYPE(bool)
@@ -246,8 +246,7 @@ protected:
       : HLSLAnnotationAttr(Context, CommonInfo, AK, IsLateParsed,
                            InheritEvenIfAlreadyPresent) {
     this->SemanticIndexable = SemanticIndexable;
-    this->SemanticIndex = 0;
-    this->SemanticExplicitIndex = 0;
+    this->SemanticExplicitIndex = false;
   }
 
 public:

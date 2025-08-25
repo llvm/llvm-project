@@ -31,7 +31,6 @@
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 
 #include <optional>
-#include <unordered_set>
 #include <vector>
 
 // A function generator macro for picking the right intrinsic
@@ -193,9 +192,6 @@ private:
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
-
-  std::unordered_set<std::string> ActiveInputSemantics;
-  std::unordered_set<std::string> ActiveOutputSemantics;
 };
 
 } // namespace CodeGen

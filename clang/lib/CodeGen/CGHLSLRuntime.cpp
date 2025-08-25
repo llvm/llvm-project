@@ -476,13 +476,13 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
                                               Fn->getAttributes().getFnAttrs());
   EntryFn->setAttributes(NewAttrs);
   setHLSLEntryAttributes(FD, EntryFn);
-  llvm::SmallVector<Value *> Args;
 
   // Set the called function as internal linkage.
   Fn->setLinkage(GlobalValue::InternalLinkage);
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", EntryFn);
   IRBuilder<> B(BB);
+  llvm::SmallVector<Value *> Args;
 
   SmallVector<OperandBundleDef, 1> OB;
   if (CGM.shouldEmitConvergenceTokens()) {
@@ -495,7 +495,6 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   // FIXME: support struct parameters where semantics are on members.
   // See: https://github.com/llvm/llvm-project/issues/57874
-
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
     if (Param.hasStructRetAttr()) {
@@ -515,7 +514,6 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   CI->setCallingConv(Fn->getCallingConv());
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
-
   B.CreateRetVoid();
 
   // Add and identify root signature to function, if applicable

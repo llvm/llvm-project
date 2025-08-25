@@ -396,7 +396,7 @@ class ClangGCC<string name, bit allowInC = 1, int version = 1>
 }
 
 // HLSL Annotation spellings
-class HLSLAnnotation<string name> : Spelling<name, "HLSLAnnotation"> {}
+class HLSLAnnotation<string name> : Spelling<name, "HLSLAnnotation">;
 
 class Accessor<string name, list<Spelling> spellings> {
   string Name = name;
