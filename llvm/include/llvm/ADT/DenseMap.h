@@ -279,8 +279,9 @@ public:
       return {makeInsertIterator(TheBucket), false}; // Already in map.
 
     // Otherwise, insert the new element.
-    TheBucket = InsertIntoBucketWithLookup(TheBucket, std::move(KV.first),
-                                           std::move(KV.second), Val);
+    TheBucket = findBucketForInsertion(Val, TheBucket);
+    TheBucket->getFirst() = std::move(KV.first);
+    ::new (&TheBucket->getSecond()) ValueT(std::move(KV.second));
     return {makeInsertIterator(TheBucket), true};
   }
 
@@ -482,8 +483,9 @@ private:
       return {makeInsertIterator(TheBucket), false}; // Already in the map.
 
     // Otherwise, insert the new element.
-    TheBucket = InsertIntoBucket(TheBucket, std::forward<KeyArgT>(Key),
-                                 std::forward<Ts>(Args)...);
+    TheBucket = findBucketForInsertion(Key, TheBucket);
+    TheBucket->getFirst() = std::forward<KeyArgT>(Key);
+    ::new (&TheBucket->getSecond()) ValueT(std::forward<Ts>(Args)...);
     return {makeInsertIterator(TheBucket), true};
   }
 
@@ -561,28 +563,9 @@ private:
 
   void shrink_and_clear() { static_cast<DerivedT *>(this)->shrink_and_clear(); }
 
-  template <typename KeyArg, typename... ValueArgs>
-  BucketT *InsertIntoBucket(BucketT *TheBucket, KeyArg &&Key,
-                            ValueArgs &&...Values) {
-    TheBucket = InsertIntoBucketImpl(Key, TheBucket);
-
-    TheBucket->getFirst() = std::forward<KeyArg>(Key);
-    ::new (&TheBucket->getSecond()) ValueT(std::forward<ValueArgs>(Values)...);
-    return TheBucket;
-  }
-
   template <typename LookupKeyT>
-  BucketT *InsertIntoBucketWithLookup(BucketT *TheBucket, KeyT &&Key,
-                                      ValueT &&Value, LookupKeyT &Lookup) {
-    TheBucket = InsertIntoBucketImpl(Lookup, TheBucket);
-
-    TheBucket->getFirst() = std::move(Key);
-    ::new (&TheBucket->getSecond()) ValueT(std::move(Value));
-    return TheBucket;
-  }
-
-  template <typename LookupKeyT>
-  BucketT *InsertIntoBucketImpl(const LookupKeyT &Lookup, BucketT *TheBucket) {
+  BucketT *findBucketForInsertion(const LookupKeyT &Lookup,
+                                  BucketT *TheBucket) {
     incrementEpoch();
 
     // If the load of the hash table is more than 3/4, or if fewer than 1/8 of
