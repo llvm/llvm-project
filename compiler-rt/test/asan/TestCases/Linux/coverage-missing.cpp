@@ -1,19 +1,17 @@
 // Test for "sancov.py missing ...".
 
 // First case: coverage from executable. main() is called on every code path.
+// RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s -o %t -DFOOBAR -DMAIN
-// RUN: rm -rf %t-dir
-// RUN: mkdir -p %t-dir
-// RUN: cd %t-dir
-// RUN: %env_asan_opts=coverage=1:coverage_dir=%t-dir %run %t
+// RUN: %env_asan_opts=coverage=1:coverage_dir=%t.dir %run %t
 // RUN: %sancov print *.sancov > main.txt
 // RUN: rm *.sancov
 // RUN: count 1 < main.txt
-// RUN: %env_asan_opts=coverage=1:coverage_dir=%t-dir %run %t x
+// RUN: %env_asan_opts=coverage=1:coverage_dir=%t.dir %run %t x
 // RUN: %sancov print *.sancov > foo.txt
 // RUN: rm *.sancov
 // RUN: count 3 < foo.txt
-// RUN: %env_asan_opts=coverage=1:coverage_dir=%t-dir %run %t x x
+// RUN: %env_asan_opts=coverage=1:coverage_dir=%t.dir %run %t x x
 // RUN: %sancov print *.sancov > bar.txt
 // RUN: rm *.sancov
 // RUN: count 4 < bar.txt
@@ -26,18 +24,15 @@
 // RUN: not grep "^<" %t.log
 
 // Second case: coverage from DSO.
-// cd %t-dir
+// RUN: cd ..
+// RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s -o %dynamiclib -DFOOBAR -shared -fPIC
 // RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s %dynamiclib -o %t -DMAIN
-// RUN: cd ..
-// RUN: rm -rf %t-dir
-// RUN: mkdir -p %t-dir
-// RUN: cd %t-dir
-// RUN: %env_asan_opts=coverage=1:coverage_dir=%t-dir %run %t x
+// RUN: %env_asan_opts=coverage=1:coverage_dir=%t.dir %run %t x
 // RUN: %sancov print %xdynamiclib_filename.*.sancov > foo.txt
 // RUN: rm *.sancov
 // RUN: count 2 < foo.txt
-// RUN: %env_asan_opts=coverage=1:coverage_dir=%t-dir %run %t x x
+// RUN: %env_asan_opts=coverage=1:coverage_dir=%t.dir %run %t x x
 // RUN: %sancov print %xdynamiclib_filename.*.sancov > bar.txt
 // RUN: rm *.sancov
 // RUN: count 3 < bar.txt

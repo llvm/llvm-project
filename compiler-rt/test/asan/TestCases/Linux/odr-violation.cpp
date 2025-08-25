@@ -10,6 +10,7 @@
 // -fno-sanitize-address-use-odr-indicator turns off both.
 //
 // Different size: detect a bug if detect_odr_violation>=1
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -g -DBUILD_SO=1 -fPIC -shared -fno-sanitize-address-use-odr-indicator %s -o %dynamiclib
 // RUN: %clangxx_asan -g -fno-sanitize-address-use-odr-indicator %s %ld_flags_rpath_exe -o %t-ODR-EXE
 // RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=1 not %run %t-ODR-EXE 2>&1 | FileCheck %s
