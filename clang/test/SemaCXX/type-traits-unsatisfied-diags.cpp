@@ -959,6 +959,7 @@ namespace is_aggregate {
   // expected-note@-1 {{because it has a virtual function 'foo'}} \
   // expected-note@-1 {{because it has a virtual base}} \
   // expected-note@-1 {{'S7' is not aggregate}} \
+  // expected-note@-1 {{because it is a polymorphic type}} \
   // expected-note@#ag-S7 {{'S7' defined here}}
 
   static_assert(__is_aggregate(S7[10]));

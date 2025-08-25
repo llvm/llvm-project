@@ -2694,6 +2694,11 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
     }
   }
 
+  if (D->isPolymorphic())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PolymorphicType
+        << D->getSourceRange();
+
   for (const CXXMethodDecl *Method : D->methods()) {
     if (Method->isVirtual()) {
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
