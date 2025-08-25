@@ -3879,6 +3879,8 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitRequiresExpr(const RequiresExpr *E) {
   assert(classifyPrim(E->getType()) == PT_Bool);
+  if (E->isValueDependent())
+    return false;
   if (DiscardResult)
     return true;
   return this->emitConstBool(E->isSatisfied(), E);
