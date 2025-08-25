@@ -121,6 +121,7 @@ Instrumentation/AddressSanitizer/byref-args.ll
 Instrumentation/AddressSanitizer/byval-args.ll
 Instrumentation/AddressSanitizer/calls-only.ll
 Instrumentation/AddressSanitizer/calls-only-smallfn.ll
+Instrumentation/AddressSanitizer/coro-byval-param.ll
 Instrumentation/AddressSanitizer/debug-info-alloca.ll
 Instrumentation/AddressSanitizer/debug-info-global-var.ll
 Instrumentation/AddressSanitizer/debug_info.ll
@@ -255,6 +256,7 @@ Instrumentation/HWAddressSanitizer/alloca-with-calls.ll
 Instrumentation/HWAddressSanitizer/atomic.ll
 Instrumentation/HWAddressSanitizer/basic-compat.ll
 Instrumentation/HWAddressSanitizer/basic.ll
+Instrumentation/HWAddressSanitizer/coro-byval-param.ll
 Instrumentation/HWAddressSanitizer/dbg-assign-tag-offset.ll
 Instrumentation/HWAddressSanitizer/dbg-declare-tag-offset.ll
 Instrumentation/HWAddressSanitizer/dbg-value-tag-offset.ll
