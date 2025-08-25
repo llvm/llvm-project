@@ -40,6 +40,7 @@
 #include <optional>
 
 namespace clang {
+  class AllocSizeAttr;
   class APValue;
   class ASTContext;
   class BlockDecl;
@@ -3260,6 +3261,14 @@ public:
   void markDependentForPostponedNameLookup() {
     setDependence(getDependence() | ExprDependence::TypeValueInstantiation);
   }
+
+  /// Try to get the alloc_size attribute of the callee. May return null.
+  const AllocSizeAttr *getCalleeAllocSizeAttr() const;
+
+  /// Get the total size in bytes allocated by calling a function decorated with
+  /// alloc_size. Returns std::nullopt if the the result cannot be evaluated.
+  std::optional<llvm::APInt>
+  getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const;
 
   bool isCallToStdMove() const;
 

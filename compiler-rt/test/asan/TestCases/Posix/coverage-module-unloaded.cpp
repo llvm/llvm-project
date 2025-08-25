@@ -1,5 +1,6 @@
 // Check that unloading a module doesn't break coverage dumping for remaining
 // modules.
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard -DSHARED %s -shared -o %dynamiclib1 -fPIC
 // RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard -DSHARED %s -shared -o %dynamiclib2 -fPIC
 // RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s %libdl -o %t.exe
