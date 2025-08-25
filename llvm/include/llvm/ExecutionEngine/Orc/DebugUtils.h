@@ -87,6 +87,14 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const SymbolLookupSet &LookupSet);
 
+/// Render a NonOwningSymbolLookupSet entry.
+raw_ostream &operator<<(raw_ostream &OS,
+                        const NonOwningSymbolLookupSet::value_type &KV);
+
+/// Render a NonOwningSymbolLookupSet.
+raw_ostream &operator<<(raw_ostream &OS,
+                        const NonOwningSymbolLookupSet &LookupSet);
+
 /// Render a JITDylibSearchOrder.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const JITDylibSearchOrder &SearchOrder);
