@@ -13,7 +13,6 @@
 
 #if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
 
-#  include <__stacktrace/alloc_helpers.h>
 #  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <cctype>
@@ -22,6 +21,7 @@
 #  include <cstddef>
 #  include <cstdlib>
 #  include <memory>
+#  include <optional>
 #  include <spawn.h>
 #  include <sys/fcntl.h>
 #  include <sys/types.h>
@@ -37,8 +37,8 @@ struct tool_base {
   constexpr static size_t k_max_argv_ = base::__absolute_max_depth + 10;
   base& base_;
   char const* tool_prog_;
-  str argvs_[k_max_argv_]{};         // holds, owns generated arg strings
-  char* argv_[k_max_argv_]{nullptr}; // char arrays from the strings in `argvs_`
+  optional<str> argvs_[k_max_argv_]; // holds, owns arg strings
+  char* argv_[k_max_argv_]{nullptr}; // char arrays from the above strings
   size_t argc_{0};                   // number of args.  Note: argv_[argc_] is nullptr
 
   _LIBCPP_HIDE_FROM_ABI tool_base(base& base, char const* tool_prog) : base_(base), tool_prog_(tool_prog) {
@@ -46,9 +46,9 @@ struct tool_base {
   }
 
   _LIBCPP_HIDE_FROM_ABI void push_arg(str&& arg) {
-    _LIBCPP_ASSERT(arg.size(), "empty str not allowed in args");
+    _LIBCPP_ASSERT(!arg.empty(), "empty str not allowed in args");
     argvs_[argc_]  = std::move(arg);
-    argv_[argc_]   = const_cast<char*>(argvs_[argc_].data());
+    argv_[argc_]   = const_cast<char*>(argvs_[argc_]->data());
     argv_[++argc_] = nullptr; // ensure there's always trailing null after last arg
   }
 
@@ -69,7 +69,7 @@ struct tool_base {
     auto sz           = snprintf(nullptr, 0, format, args...);
     auto arg          = base_.__strings_.create();
     auto overwrite_cb = [&](char* buf, size_t) -> size_t { return snprintf(buf, sz + 1, format, args...); };
-    arg.overwrite(sz + 1, overwrite_cb);
+    arg.resize_and_overwrite(sz + 1, overwrite_cb);
     push_arg(std::move(arg));
     _LIBCPP_DIAGNOSTIC_PUSH
   }

@@ -21,21 +21,24 @@
 #include <stacktrace>
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current_with_skip_depth() {
-  // current stack is: [this function, main, (possibly something else, e.g. `_start` from libc)]
+  // current stack is: [this function, main, (possibly something else, such as libc _start)]
   // so it's probably 3 functions deep -- but certainly at least 2 deep.
-  auto st = std::stacktrace::current(0);
-  std::cout << st << '\n';
-  assert(st.size() >= 2);
-  auto it = st.begin();
-  ++it;
-  auto entry = *it; // represents our caller, `main`
+  std::stacktrace_entry entry;
+  {
+    auto st1 = std::stacktrace::current(0);
+    std::cout << st1 << '\n';
+    assert(st1.size() >= 2);
+    auto it1 = st1.begin();
+    ++it1;
+    entry = *it1; // represents our caller, `main`
+  }
 
   // get current trace again, but skip the 1st
-  st = std::stacktrace::current(1);
-  std::cout << st << '\n';
-  assert(st.size() >= 1);
-  it = st.begin();
-  assert(*it == entry);
+  auto st2 = std::stacktrace::current(1);
+  std::cout << st2 << '\n';
+  assert(st2.size() >= 1);
+  auto it2 = st2.begin();
+  assert(*it2 == entry);
 }
 
 _LIBCPP_NO_TAIL_CALLS

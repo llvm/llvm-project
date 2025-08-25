@@ -68,8 +68,8 @@ int add_image(dl_phdr_info* info, size_t, void* images_v) {
   strncpy(image.name_, info->dlpi_name, sizeof(image.name_));
   // `dl_iterate_phdr` gives us the main program image first
   image.is_main_prog_ = is_first;
-  if (image.name_.empty() && is_first) {
-    char buf[entry_base::__max_file_len];
+  if (!image.name_[0] && is_first) {
+    char buf[entry_base::__max_file_len]{0};
     if (readlink("/proc/self/exe", buf, sizeof(buf)) != -1) { // Ignores errno if error
       strncpy(image.name_, buf, sizeof(image.name_));
     }

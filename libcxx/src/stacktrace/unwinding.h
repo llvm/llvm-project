@@ -72,12 +72,12 @@ struct unwind_backtrace {
       return _Unwind_Reason_Code::_URC_NORMAL_STOP;
     }
     --maxDepth_;
-    int ipBefore;
+    int ipBefore{0};
     auto ip = _Unwind_GetIPInfo(ucx, &ipBefore);
     if (!ip) {
       return _Unwind_Reason_Code::_URC_NORMAL_STOP;
     }
-    auto& entry = base_.__entries_.append();
+    auto& entry = base_.__entry_append_();
     auto& eb    = (entry_base&)entry;
     eb.__addr_  = (ipBefore ? ip : ip - 1);
     return _Unwind_Reason_Code::_URC_NO_REASON;

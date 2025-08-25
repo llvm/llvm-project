@@ -212,9 +212,8 @@ base::current_impl(size_t skip, size_t max_depth) {
   // Symbols longer than this will be truncated.
   static constexpr size_t kMaxSymName = 256;
 
-  for (auto& entry : base_.__entry_iters_()) {    
+  for (auto& entry : __entry_iters_()) {    
 #if defined(_M_ARM64) || defined(_M_AMD64)
-    auto& entry = *it++;
     char space[sizeof(IMAGEHLP_SYMBOL64) + kMaxSymName + 1];
     auto* sym          = (IMAGEHLP_SYMBOL64*)space;
     sym->SizeOfStruct  = sizeof(IMAGEHLP_SYMBOL64);

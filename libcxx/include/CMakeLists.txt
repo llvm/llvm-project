@@ -740,7 +740,6 @@ set(files
   __ranges/zip_transform_view.h
   __ranges/zip_view.h
   __split_buffer
-  __stacktrace/alloc_helpers.h
   __stacktrace/basic_stacktrace.h
   __stacktrace/stacktrace_entry.h
   __std_mbstate_t.h
