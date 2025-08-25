@@ -1132,6 +1132,11 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   IRRewriter notifyingRewriter;
 
 #ifndef NDEBUG
+  /// A set of replaced block arguments. This set is for debugging purposes
+  /// only and it is maintained only if `allowPatternRollback` is set to
+  /// "true".
+  DenseSet<BlockArgument> replacedArgs;
+
   /// A set of operations that have pending updates. This tracking isn't
   /// strictly necessary, and is thus only active during debug builds for extra
   /// verification.
@@ -1891,6 +1896,19 @@ void ConversionPatternRewriterImpl::replaceUsesOfBlockArgument(
     performReplaceBlockArg(r, from, repl);
     return;
   }
+
+#ifndef NDEBUG
+  // Make sure that a block argument is not replaced multiple times. In
+  // rollback mode, `replaceUsesOfBlockArgument` replaces not only all current
+  // uses of the given block argument, but also all future uses that may be
+  // introduced by future pattern applications. Therefore, it does not make
+  // sense to call `replaceUsesOfBlockArgument` multiple times with the same
+  // block argument. Doing so would overwrite the mapping and mess with the
+  // internal state of the dialect conversion driver.
+  assert(!replacedArgs.contains(from) &&
+         "attempting to replace a block argument that was already replaced");
+  replacedArgs.insert(from);
+#endif // NDEBUG
 
   appendRewrite<ReplaceBlockArgRewrite>(from.getOwner(), from, converter);
   mapping.map(from, to);
