@@ -29,8 +29,7 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
-VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
-                                                ScalarEvolution &SE) {
+VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (auto *Expanded = Plan.getSCEVExpansion(Expr))
     return Expanded;
   VPValue *Expanded = nullptr;
@@ -45,7 +44,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
     if (U && !isa<Instruction>(U->getValue())) {
       Expanded = Plan.getOrAddLiveIn(U->getValue());
     } else {
-      Expanded = new VPExpandSCEVRecipe(Expr, SE);
+      Expanded = new VPExpandSCEVRecipe(Expr);
       Plan.getEntry()->appendRecipe(Expanded->getDefiningRecipe());
     }
   }

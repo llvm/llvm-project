@@ -3320,20 +3320,18 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     Type *NewCmpTy = V->getType();
     unsigned NewCmpBW = NewCmpTy->getScalarSizeInBits();
     if (shouldChangeType(Ty, NewCmpTy)) {
-      if (CR.getActiveBits() <= NewCmpBW) {
-        ConstantRange SrcCR = CR.truncate(NewCmpBW);
-        CmpInst::Predicate EquivPred;
-        APInt EquivInt;
-        APInt EquivOffset;
+      ConstantRange SrcCR = CR.truncate(NewCmpBW, TruncInst::NoUnsignedWrap);
+      CmpInst::Predicate EquivPred;
+      APInt EquivInt;
+      APInt EquivOffset;
 
-        SrcCR.getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
-        return new ICmpInst(
-            EquivPred,
-            EquivOffset.isZero()
-                ? V
-                : Builder.CreateAdd(V, ConstantInt::get(NewCmpTy, EquivOffset)),
-            ConstantInt::get(NewCmpTy, EquivInt));
-      }
+      SrcCR.getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
+      return new ICmpInst(
+          EquivPred,
+          EquivOffset.isZero()
+              ? V
+              : Builder.CreateAdd(V, ConstantInt::get(NewCmpTy, EquivOffset)),
+          ConstantInt::get(NewCmpTy, EquivInt));
     }
   }
 
