@@ -35,6 +35,8 @@ jobs:
           - ubuntu-24.04-arm
           - depot-ubuntu-24.04-arm-4
     runs-on: ${{ matrix.runs-on }}
+    container:
+      image: format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner)
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
