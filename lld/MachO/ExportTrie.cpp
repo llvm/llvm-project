@@ -343,7 +343,7 @@ void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString,
     offset = decodeULEB128(buf, &ulebSize);
     buf += ulebSize;
     if (visited.find(offset) != visited.end())
-      fatal(fileName + ": export trie child node loop");
+      fatal(fileName + ": export trie child node infinite loop");
     parse(start + offset, cumulativeString + substring, visited);
   }
 
