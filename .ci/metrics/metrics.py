@@ -346,7 +346,9 @@ def github_get_metrics(
                 elif job.name.find("stage3") != -1:
                     job_key = "stage3"
                 if job_key:
-                    ag_name = name_prefix + "_" + GITHUB_JOB_TO_TRACK[name_prefix][job_key]
+                    ag_name = (
+                        name_prefix + "_" + GITHUB_JOB_TO_TRACK[name_prefix][job_key]
+                    )
 
 
             if task.status != "completed":
@@ -502,23 +504,11 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
         logging.info(f"Failed to submit data to Grafana: {response.status_code}")
 
 
-def dump_local(gh_metrics):
-    full_datetime = datetime.datetime.now()
-    dt_str = full_datetime.strftime("%Y-%m-%d_%H:%M:%S")
-    dir_name = "/usr/local/google/home/cmtice/libcxx-metrics-work"
-    filename = "gh_metrics." + dt_str + ".log"
-    full_filename = os.path.join(dir_name, filename)
-
-    with  open(full_filename, 'w') as fp:
-        for entry in gh_metrics:
-            fp.write("  %s\n" % repr(entry))
-
-
 def main():
     # Authenticate with Github
     github_auth = Auth.Token(os.environ["GITHUB_TOKEN"])
-#    grafana_api_key = os.environ["GRAFANA_API_KEY"]
-#    grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
+   grafana_api_key = os.environ["GRAFANA_API_KEY"]
+   grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
 
     # The last workflow this script processed.
     # Because the Github queries are broken, we'll simply log a 'processed'
@@ -535,10 +525,9 @@ def main():
             github_repo, gh_last_workflows_seen_as_completed
         )
 
-#        upload_metrics(gh_metrics, grafana_metrics_userid, grafana_api_key)
-#        logging.info(f"Uploaded {len(gh_metrics)} metrics")
+        upload_metrics(gh_metrics, grafana_metrics_userid, grafana_api_key)
+        logging.info(f"Uploaded {len(gh_metrics)} metrics")
 
-        dump_local(gh_metrics) ## CAROLINE!!
         time.sleep(SCRAPE_INTERVAL_SECONDS)
 
 
