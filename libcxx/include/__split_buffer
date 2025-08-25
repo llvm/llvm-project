@@ -268,7 +268,6 @@ public:
   __set_valid_range(pointer __new_begin, pointer __new_end) _NOEXCEPT {
     // Size-based __split_buffers track their size directly: we need to explicitly update the size
     // when the front is adjusted.
-    __size_ -= __new_begin - __begin_;
     __begin_ = __new_begin;
     __set_sentinel(__new_end);
   }
@@ -277,7 +276,6 @@ public:
   __set_valid_range(pointer __new_begin, size_type __new_size) _NOEXCEPT {
     // Size-based __split_buffers track their size directly: we need to explicitly update the size
     // when the front is adjusted.
-    __size_ -= __new_begin - __begin_;
     __begin_ = __new_begin;
     __set_sentinel(__new_size);
   }
@@ -316,9 +314,9 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(
-      __split_buffer_pointer_layout<__split_buffer<value_type, __alloc_rr&, __split_buffer_pointer_layout>,
-                                    value_type,
-                                    __alloc_rr&>& __other) _NOEXCEPT {
+      __split_buffer_size_layout<__split_buffer<value_type, __alloc_rr&, __split_buffer_size_layout>,
+                                 value_type,
+                                 __alloc_rr&>& __other) _NOEXCEPT {
     std::swap(__front_cap_, __other.__front_cap_);
     std::swap(__begin_, __other.__begin_);
     std::swap(__cap_, __other.__cap_);
