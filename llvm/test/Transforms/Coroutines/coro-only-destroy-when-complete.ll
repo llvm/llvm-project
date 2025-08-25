@@ -90,7 +90,7 @@ coro.free:                                        ; preds = %cleanup62
   br label %coro.ret
 
 coro.ret:                                         ; preds = %coro.free, %cleanup62, %final.suspend, %await2.suspend, %await.suspend, %init.suspend
-  call void @llvm.coro.end(ptr null, i1 false, token none) #12
+  %19 = call i1 @llvm.coro.end(ptr null, i1 false, token none) #12
   ret ptr %__promise
 }
 
@@ -106,7 +106,7 @@ declare i8 @llvm.coro.suspend(token, i1) #3
 declare ptr @_Z5Innerv() local_unnamed_addr
 declare dso_local void @_ZdlPv(ptr noundef) local_unnamed_addr #8
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #2
-declare void @llvm.coro.end(ptr, i1, token) #3
+declare i1 @llvm.coro.end(ptr, i1, token) #3
 declare void @exit(i32 noundef)
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #10
 declare void @dtor1()

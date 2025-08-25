@@ -53,7 +53,6 @@ enum class ABI {
 struct Shape {
   CoroBeginInst *CoroBegin = nullptr;
   SmallVector<AnyCoroEndInst *, 4> CoroEnds;
-  SmallVector<CoroIsInRampInst *, 2> CoroIsInRampInsts;
   SmallVector<CoroSizeInst *, 2> CoroSizes;
   SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
@@ -66,7 +65,6 @@ struct Shape {
   void clear() {
     CoroBegin = nullptr;
     CoroEnds.clear();
-    CoroIsInRampInsts.clear();
     CoroSizes.clear();
     CoroAligns.clear();
     CoroSuspends.clear();
