@@ -69,10 +69,10 @@ coro_Cleanup:                                     ; preds = %sw.epilog, %sw.bb1
   br label %coro_Suspend, !dbg !24
 
 coro_Suspend:                                     ; preds = %coro_Cleanup, %sw.default
-  call void @llvm.coro.end(ptr null, i1 false, token none) #7, !dbg !24
-  %7 = load ptr, ptr %coro_hdl, align 8, !dbg !24
+  %7 = call i1 @llvm.coro.end(ptr null, i1 false, token none) #7, !dbg !24
+  %8 = load ptr, ptr %coro_hdl, align 8, !dbg !24
   store i32 0, ptr %late_local, !dbg !24
-  ret ptr %7, !dbg !24
+  ret ptr %8, !dbg !24
 
 ehcleanup:
   %ex = landingpad { ptr, i32 }
@@ -110,7 +110,7 @@ declare void @free(ptr) #3
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.coro.end(ptr, i1, token) #5
+declare i1 @llvm.coro.end(ptr, i1, token) #5
 
 ; Function Attrs: argmemonly nounwind readonly
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #2

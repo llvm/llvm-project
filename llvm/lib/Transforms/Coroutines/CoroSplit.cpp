@@ -213,7 +213,7 @@ static bool replaceCoroEndAsync(AnyCoroEndInst *End) {
 /// Replace a non-unwind call to llvm.coro.end.
 static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
                                       const coro::Shape &Shape, Value *FramePtr,
-                                      bool InRamp, CallGraph *CG) {
+                                      bool InResume, CallGraph *CG) {
   // Start inserting right before the coro.end.
   IRBuilder<> Builder(End);
 
@@ -225,7 +225,7 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
            "switch coroutine should not return any values");
     // coro.end doesn't immediately end the coroutine in the main function
     // in this lowering, because we need to deallocate the coroutine.
-    if (InRamp)
+    if (!InResume)
       return;
     Builder.CreateRetVoid();
     break;
@@ -345,7 +345,8 @@ static void markCoroutineAsDone(IRBuilder<> &Builder, const coro::Shape &Shape,
 
 /// Replace an unwind call to llvm.coro.end.
 static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
-                                 Value *FramePtr, bool InRamp, CallGraph *CG) {
+                                 Value *FramePtr, bool InResume,
+                                 CallGraph *CG) {
   IRBuilder<> Builder(End);
 
   switch (Shape.ABI) {
@@ -358,7 +359,7 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
     // FIXME: We should refactor this once there is other language
     // which uses Switch-Resumed style other than C++.
     markCoroutineAsDone(Builder, Shape, FramePtr);
-    if (InRamp)
+    if (!InResume)
       return;
     break;
   }
@@ -382,11 +383,15 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
 }
 
 static void replaceCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
-                           Value *FramePtr, bool InRamp, CallGraph *CG) {
+                           Value *FramePtr, bool InResume, CallGraph *CG) {
   if (End->isUnwind())
-    replaceUnwindCoroEnd(End, Shape, FramePtr, InRamp, CG);
+    replaceUnwindCoroEnd(End, Shape, FramePtr, InResume, CG);
   else
-    replaceFallthroughCoroEnd(End, Shape, FramePtr, InRamp, CG);
+    replaceFallthroughCoroEnd(End, Shape, FramePtr, InResume, CG);
+
+  auto &Context = End->getContext();
+  End->replaceAllUsesWith(InResume ? ConstantInt::getTrue(Context)
+                                   : ConstantInt::getFalse(Context));
   End->eraseFromParent();
 }
 
@@ -553,16 +558,7 @@ void coro::BaseCloner::replaceCoroEnds() {
     // We use a null call graph because there's no call graph node for
     // the cloned function yet.  We'll just be rebuilding that later.
     auto *NewCE = cast<AnyCoroEndInst>(VMap[CE]);
-    replaceCoroEnd(NewCE, Shape, NewFramePtr, /*in ramp*/ false, nullptr);
-  }
-}
-
-void coro::BaseCloner::replaceCoroIsInRamp() {
-  auto &Ctx = OrigF.getContext();
-  for (auto *II : Shape.CoroIsInRampInsts) {
-    auto *NewII = cast<CoroIsInRampInst>(VMap[II]);
-    NewII->replaceAllUsesWith(ConstantInt::getFalse(Ctx));
-    NewII->eraseFromParent();
+    replaceCoroEnd(NewCE, Shape, NewFramePtr, /*in resume*/ true, nullptr);
   }
 }
 
@@ -1080,8 +1076,6 @@ void coro::BaseCloner::create() {
 
   // Remove coro.end intrinsics.
   replaceCoroEnds();
-
-  replaceCoroIsInRamp();
 
   // Salvage debug info that points into the coroutine frame.
   salvageDebugInfo();
@@ -1954,19 +1948,14 @@ public:
 static void removeCoroEndsFromRampFunction(const coro::Shape &Shape) {
   if (Shape.ABI != coro::ABI::Switch) {
     for (auto *End : Shape.CoroEnds) {
-      replaceCoroEnd(End, Shape, Shape.FramePtr, /*in ramp*/ true, nullptr);
+      replaceCoroEnd(End, Shape, Shape.FramePtr, /*in resume*/ false, nullptr);
     }
   } else {
-    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds)
+    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds) {
+      auto &Context = End->getContext();
+      End->replaceAllUsesWith(ConstantInt::getFalse(Context));
       End->eraseFromParent();
-  }
-}
-
-static void removeCoroIsInRampFromRampFunction(const coro::Shape &Shape) {
-  for (auto *II : Shape.CoroIsInRampInsts) {
-    auto &Ctx = II->getContext();
-    II->replaceAllUsesWith(ConstantInt::getTrue(Ctx));
-    II->eraseFromParent();
+    }
   }
 }
 
@@ -2031,7 +2020,6 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
     coro::salvageDebugInfo(ArgToAllocaMap, *DVR, false /*UseEntryValue*/);
 
   removeCoroEndsFromRampFunction(Shape);
-  removeCoroIsInRampFromRampFunction(Shape);
 
   if (shouldCreateNoAllocVariant)
     SwitchCoroutineSplitter::createNoAllocVariant(F, Shape, Clones);

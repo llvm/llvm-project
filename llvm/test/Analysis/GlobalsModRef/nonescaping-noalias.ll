@@ -62,7 +62,7 @@ define ptr @test1_tls_noopt(ptr %coro, ptr %param) presplitcoroutine {
 ; CHECK-NEXT:    store i32 [[V]], ptr [[PARAM]], align 4
 ; CHECK-NEXT:    ret ptr [[CORO]]
 ; CHECK:       suspend:
-; CHECK-NEXT:    call void @llvm.coro.end(ptr [[CORO]], i1 false, token none)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.coro.end(ptr [[CORO]], i1 false, token none)
 ; CHECK-NEXT:    ret ptr [[CORO]]
 ;
 entry:
@@ -79,7 +79,7 @@ resume:
   ret ptr %coro
 
 suspend:
-  call void @llvm.coro.end(ptr %coro, i1 0, token none)
+  call i1 @llvm.coro.end(ptr %coro, i1 0, token none)
   ret ptr %coro
 }
 

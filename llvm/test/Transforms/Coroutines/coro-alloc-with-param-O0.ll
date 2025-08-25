@@ -24,7 +24,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
@@ -54,7 +54,7 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare void @llvm.coro.end(ptr, i1, token)
+declare i1 @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @myAlloc(i64, i32)
 declare double @print(double)
