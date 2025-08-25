@@ -4964,7 +4964,7 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // poison as far as possible. If an operand of freeze does not produce poison
   // then push the freeze through to the operands that are not guaranteed
   // non-poison. The actual transform is as follows.
-  //   Op1 = ...                        ; Op1 can be posion
+  //   Op1 = ...                        ; Op1 can be poison
   //   Op0 = Inst(Op1, NonPoisonOps...)
   //   ... = Freeze(Op0)
   // =>
