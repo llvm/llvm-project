@@ -64,7 +64,8 @@ struct RootParametersContainer {
   }
 
   void addParameter(dxbc::RootParameterType Type,
-                    dxbc::ShaderVisibility Visibility, RootConstants Constant) {
+                    dxbc::ShaderVisibility Visibility,
+                    RootConstants Constant) {
     addInfo(Type, Visibility, Constants.size());
     Constants.push_back(Constant);
   }

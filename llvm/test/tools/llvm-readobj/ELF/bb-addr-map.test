@@ -49,7 +49,7 @@
 # CHECK-NEXT:           {
 # CHECK-NEXT:             ID: 2
 # CHECK-NEXT:             Offset: 0x3
-# CHECK-NEXT:             Callsite Offsets: [1, 3]
+# CHECK-NEXT:             Callsite End Offsets: [1, 3]
 # CHECK-NEXT:             Size: 0x7
 # CHECK-NEXT:             HasReturn: Yes
 # CHECK-NEXT:             HasTailCall: No
@@ -159,7 +159,7 @@ Sections:
                 AddressOffset: 0x3
                 Size:          0x4
                 Metadata:      0x15
-                CallsiteOffsets: [ 0x1 , 0x2 ]
+                CallsiteEndOffsets: [ 0x1 , 0x2 ]
       - Version: 2
         BBRanges:
           - BaseAddress: 0x22222

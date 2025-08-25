@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -40,7 +41,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(tdescTy.getLayout());
   // It only works for subgroup level layout, which only has lane_layout
   // and lane_data, and is to distribute a SIMD code into SIMT code.
-  if (!layout || !layout.isSgLayout())
+  if (!layout || !layout.isForSubgroup())
     return failure();
 
   SmallVector<int64_t> laneData(layout.getLaneData().asArrayRef());
@@ -423,4 +424,32 @@ std::optional<std::string> xegpu::getChipStr(Operation *op) {
   }
 
   return std::nullopt;
+}
+
+/// Generates element-wise addition ops of two arrays with automatic alignment.
+/// When the input arrays have different sizes, the shorter array is
+/// right-aligned with the longer array, and the unmatched leading elements from
+/// the longer array are preserved unchanged. This is commonly used for offset
+/// computation where higher-dimensional offsets need to be added to
+/// lower-dimensional adjustments.
+///
+/// Example:
+///   lhs = [l1, l2, l3], rhs = [r1, r2]
+///   Result: [11, l2+r1, l3+r2]
+SmallVector<OpFoldResult>
+xegpu::addWithRightAligned(OpBuilder &builder, Location loc,
+                           ArrayRef<OpFoldResult> lhs,
+                           ArrayRef<OpFoldResult> rhs) {
+  // ensure a is longer than b
+  ArrayRef<OpFoldResult> a = lhs.size() >= rhs.size() ? lhs : rhs;
+  ArrayRef<OpFoldResult> b = lhs.size() >= rhs.size() ? rhs : lhs;
+  SmallVector<OpFoldResult> results(a.take_front(a.size() - b.size()));
+  a = a.slice(a.size() - b.size());
+  for (auto [l, r] : llvm::zip(a, b)) {
+    auto lval = getValueOrCreateConstantIndexOp(builder, loc, l);
+    auto rval = getValueOrCreateConstantIndexOp(builder, loc, r);
+    results.push_back(builder.createOrFold<index::AddOp>(loc, lval, rval));
+  }
+  return results;
+  return {};
 }

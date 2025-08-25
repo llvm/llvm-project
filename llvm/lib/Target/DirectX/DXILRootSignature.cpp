@@ -24,6 +24,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -172,7 +173,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
        << "RootParametersOffset: " << RS.RootParameterOffset << "\n"
        << "NumParameters: " << RS.ParametersContainer.size() << "\n";
     for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
-      const auto &Info = RS.ParametersContainer.getInfo(I);
+      const mcdxbc::RootParameterInfo &Info = RS.ParametersContainer.getInfo(I);
 
       OS << "- Parameter Type: "
          << enumToStringRef(Info.Type, dxbc::getRootParameterTypes()) << "\n"
@@ -202,7 +203,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       }
       case dxbc::RootParameterType::DescriptorTable: {
         const mcdxbc::DescriptorTable &Table =
-            RS.ParametersContainer.getDescriptorTable(Loc);
+            RS.ParametersContainer.getDescriptorTable(Info.Location);
         OS << "  NumRanges: " << Table.Ranges.size() << "\n";
 
         for (const dxbc::RTS0::v2::DescriptorRange Range : Table) {
