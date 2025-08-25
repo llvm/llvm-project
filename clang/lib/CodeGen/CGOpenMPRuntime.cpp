@@ -6766,7 +6766,7 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
 namespace {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-// Utility to safely compare expression locations for deterministic ordering.
+// Utility to compare expression locations for deterministic ordering.
 // This function asserts that both expressions have valid source locations.
 static bool compareExprLocs(const Expr *LHS, const Expr *RHS) {
   // Assert that neither LHS nor RHS can be null
@@ -6861,6 +6861,8 @@ public:
     // Helper function to compare attach-pointer expressions semantically.
     // This function handles various expression types that can be part of an
     // attach-pointer.
+    // TODO: Not urgent, but we should ideally return true when comparing
+    // `p[10]`, `*(p + 10)`,  `*(p + 5 + 5)`, `p[10:1]` etc.
     bool areSemanticallyEqual(const Expr *LHS, const Expr *RHS) const {
       if (LHS == RHS)
         return true;
@@ -7200,6 +7202,10 @@ private:
   /// Map from attach pointer expressions to their component depth.
   /// nullptr key has std::nullopt depth. This can be used to order attach-ptr
   /// expressions with increasing/decreasing depth.
+  /// TODO: Not urgent, but we should ideally use the number of pointer
+  /// dereferences in an expr as an indicator of its complexity, instead of the
+  /// component-depth. That would be needed for us to treat `p[1]`,
+  /// `*(p + 10)`, `*(p + 5 + 5)` together.
   mutable llvm::DenseMap<const Expr *, std::optional<size_t>>
       AttachPtrComponentDepthMap;
 
@@ -7685,7 +7691,7 @@ private:
     //
     // map(from: ps->ps->ps)
     // ps, &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
-    // &ps, &(ps[0]), sizeof(void*), ATTACH     // (+)
+    // &ps, &(ps[0]), sizeof(void*), ATTACH   // (+)
     // &(ps->ps[0]), &(ps->ps->ps), sizeof(S2*), FROM
     // &(ps->ps), &(ps->ps->ps), sizeof(void*), ATTACH
     //
@@ -7723,6 +7729,7 @@ private:
     // map(from: s.f[:22]) map(to: ps->p[:33])
     // &s, &(s.f[0]), 22*sizeof(float), TARGET_PARAM | FROM
     // &ps[0], &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
+    // &ps, &(ps[0]), sizeof(void*), ATTACH       // (+)
     // &(ps->p[0]), &(ps->p[0]), 33*sizeof(double), TO
     // &(ps->p), &(ps->p[0]), sizeof(void*), ATTACH
     //
@@ -7911,7 +7918,7 @@ private:
       }
     }
 
-    bool SeemFirstNonBinOpExprAfterAttachPtr = false;
+    bool SeenFirstNonBinOpExprAfterAttachPtr = false;
     for (; I != CE; ++I) {
       // If we have a valid attach-ptr, we skip processing all components until
       // after the attach-ptr.
@@ -7923,13 +7930,13 @@ private:
       // After finding the attach pointer, skip binary-ops, to skip past
       // expressions like (p + 10), for a map like map(*(p + 10)), where p is
       // the attach-ptr.
-      if (HasAttachPtr && !SeemFirstNonBinOpExprAfterAttachPtr) {
+      if (HasAttachPtr && !SeenFirstNonBinOpExprAfterAttachPtr) {
         const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
         if (BO)
           continue;
 
         // Found the first non-binary-operator component after attach
-        SeemFirstNonBinOpExprAfterAttachPtr = true;
+        SeenFirstNonBinOpExprAfterAttachPtr = true;
         BP = AttachPteeBaseAddr;
       }
 
