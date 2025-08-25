@@ -1247,61 +1247,55 @@ struct SliceDimInfo {
 
 /// Return the first input extract slice operand, if present, for the current
 /// generic op.
-static FailureOr<std::tuple<OpOperand *, unsigned>>
-getSliceOperandAndIndex(GenericOp genericOp) {
+static FailureOr<OpOperand *> getSliceOperand(GenericOp genericOp) {
   OpOperand *sliceOperand = nullptr;
-  unsigned operandIndex;
-  for (auto [idx, operand] : llvm::enumerate(genericOp.getDpsInputOperands())) {
+  for (auto operand : genericOp.getDpsInputOperands()) {
     auto extractOp = operand->get().getDefiningOp<tensor::ExtractSliceOp>();
     if (!extractOp)
       continue;
     sliceOperand = operand;
-    operandIndex = idx;
     break;
   }
   if (!sliceOperand) {
     return failure();
   }
-  return std::make_tuple(sliceOperand, operandIndex);
+  return sliceOperand;
 }
 
-// Return a map of dims that have non full slices on them so that other operands
+// Return a map of dims that have partial slices on them so that other operands
 // can use this information. Also return a bool mentioning if a reduction dim
 // has a non full slice as that can be used to fold the original extract slice.
-static FailureOr<std::tuple<llvm::DenseMap<int64_t, SliceDimInfo>, bool>>
-getNonFullSliceDimInfo(GenericOp genericOp, OpOperand *sliceOperand,
-                       tensor::ExtractSliceOp producerSliceOp) {
-  llvm::DenseMap<int64_t, SliceDimInfo> nonZeroSliceDimMap;
-  bool hasNonZeroReductionDimSlice = false;
-  SmallVector<utils::IteratorType> iterators =
-      genericOp.getIteratorTypesArray();
+static FailureOr<llvm::DenseMap<int64_t, SliceDimInfo>>
+getPartialSliceDimInfo(GenericOp genericOp, OpOperand *sliceOperand) {
+  tensor::ExtractSliceOp producerSliceOp =
+      sliceOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
+  assert(producerSliceOp && "expect a valid ExtractSliceOp");
+  llvm::DenseMap<int64_t, SliceDimInfo> partialSliceDimMap;
   SmallVector<OpFoldResult> offsets = producerSliceOp.getMixedOffsets();
   SmallVector<OpFoldResult> sizes = producerSliceOp.getMixedSizes();
 
-  SmallVector<OpFoldResult> shape = llvm::map_to_vector(
-      producerSliceOp.getSourceType().getShape(),
-      [&](int64_t sz) -> OpFoldResult {
-        return getAsIndexOpFoldResult(genericOp.getContext(), sz);
-      });
+  SmallVector<OpFoldResult> shape = getAsIndexOpFoldResult(
+      genericOp.getContext(), producerSliceOp.getSourceType().getShape());
 
   for (auto [idx, expr] : llvm::enumerate(
            genericOp.getMatchingIndexingMap(sliceOperand).getResults())) {
+    // If we have a full slice in a dimension then we dont need to add it to
+    // the partial slice map.
     if (isConstantIntValue(offsets[idx], 0) &&
         isEqualConstantIntOrValue(sizes[idx], shape[idx])) {
       continue;
     }
+    // We only support partial slices of AffineDimExprs so bail-out if thats not
+    // the case.
     if (!isa<AffineDimExpr>(expr)) {
       return failure();
     }
     SliceDimInfo sliceDimInfo{offsets[idx], sizes[idx], shape[idx]};
     int64_t dimPos = cast<AffineDimExpr>(expr).getPosition();
-    nonZeroSliceDimMap[dimPos] = sliceDimInfo;
-    if (iterators[dimPos] == utils::IteratorType::reduction) {
-      hasNonZeroReductionDimSlice = true;
-    }
+    partialSliceDimMap[dimPos] = sliceDimInfo;
   }
-  // Next check if the dims with non zero slice info are used as non
-  // AffineDimExpr and if they are then bail-out.
+  // Next check if the dims with partial slice info are used in non
+  // AffineDimExpr in other operands and if they are then bail-out.
   for (OpOperand &operand : genericOp->getOpOperands()) {
     if (operand == *sliceOperand) {
       continue;
@@ -1313,7 +1307,7 @@ getNonFullSliceDimInfo(GenericOp genericOp, OpOperand *sliceOperand,
           }
           WalkResult status = expr.walk([&](AffineExpr expr) {
             if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
-              if (nonZeroSliceDimMap.count(dimExpr.getPosition()) != 0) {
+              if (partialSliceDimMap.contains(dimExpr.getPosition())) {
                 return WalkResult::interrupt();
               }
             }
@@ -1327,7 +1321,7 @@ getNonFullSliceDimInfo(GenericOp genericOp, OpOperand *sliceOperand,
       return failure();
     }
   }
-  return std::make_tuple(nonZeroSliceDimMap, hasNonZeroReductionDimSlice);
+  return partialSliceDimMap;
 }
 
 static FailureOr<std::tuple<GenericOp, Value>>
@@ -1335,47 +1329,57 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
                                        GenericOp genericOp,
                                        ControlPropagationFn controlFn) {
   if (genericOp.getNumResults() != 1)
-    return failure();
+    return rewriter.notifyMatchFailure(
+        genericOp, "propagation through multi-result generic is unsupported.");
   if (hasGatherSemantics(genericOp))
+    return rewriter.notifyMatchFailure(
+        genericOp,
+        "propagation through generic with gather semantics is unsupported.");
+  // Collect the sliced operand, if present.
+  auto maybeSliceOperand = getSliceOperand(genericOp);
+  if (failed(maybeSliceOperand))
     return failure();
-  // Collect the unPacked operand, if present.
-  auto maybeSliceOperandAndIndex = getSliceOperandAndIndex(genericOp);
-  if (failed(maybeSliceOperandAndIndex))
-    return failure();
-  OpOperand *sliceOperand = std::get<0>(*maybeSliceOperandAndIndex);
-  unsigned OperandIndex = std::get<1>(*maybeSliceOperandAndIndex);
+  OpOperand *sliceOperand = *maybeSliceOperand;
+  unsigned OperandIndex = sliceOperand->getOperandNumber();
 
   if (!controlFn(sliceOperand))
     return failure();
 
   tensor::ExtractSliceOp producerSliceOp =
       sliceOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
-  assert(producerSliceOp && "expect a valid UnPackOp");
+  assert(producerSliceOp && "expect a valid ExtractSliceOp");
 
   if (producerSliceOp.getSource().getType().getRank() !=
       producerSliceOp.getResult().getType().getRank()) {
-    return failure();
+    return rewriter.notifyMatchFailure(
+        genericOp,
+        "propagation of rank-reducing extract slice is unsupported.");
   }
 
   SmallVector<OpFoldResult> strides = producerSliceOp.getMixedStrides();
   if (!areAllConstantIntValue(strides, 1))
-    return failure();
-
-  SmallVector<OpFoldResult> offsets = producerSliceOp.getMixedOffsets();
-  SmallVector<OpFoldResult> sizes = producerSliceOp.getMixedSizes();
+    return rewriter.notifyMatchFailure(
+        genericOp, "propagation of strided extract slice is unsupported.");
 
   // check if we can support the propagation of this extractSlice
   // through the generic op and if so return the dimensions that
 
-  auto maybeNonZeroSliceDimMap =
-      getNonFullSliceDimInfo(genericOp, sliceOperand, producerSliceOp);
+  auto maybePartialSliceDimMap =
+      getPartialSliceDimInfo(genericOp, sliceOperand);
 
-  if (failed(maybeNonZeroSliceDimMap)) {
+  if (failed(maybePartialSliceDimMap)) {
     return failure();
   }
 
-  auto nonZeroSliceDimMap = std::get<0>(*maybeNonZeroSliceDimMap);
-  bool hasNonZeroReductionDimSlice = std::get<1>(*maybeNonZeroSliceDimMap);
+  auto partialSliceDimMap = *maybePartialSliceDimMap;
+
+  SmallVector<utils::IteratorType> iterators =
+      genericOp.getIteratorTypesArray();
+  bool hasPartialReductionDimSlice =
+      llvm::any_of(partialSliceDimMap, [&](const auto &slice) {
+        int64_t sliceDim = slice.first;
+        return iterators[sliceDim] == utils::IteratorType::reduction;
+      });
 
   // Store the padding information as (dimPos, lowPad, highPad, PaddedShape).
   Location loc = genericOp->getLoc();
@@ -1390,7 +1394,7 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
   MLIRContext *ctx = genericOp.getContext();
   SmallVector<Value> paddedInputs;
   for (auto [idx, operand] : llvm::enumerate(genericOp.getDpsInputOperands())) {
-    if (idx == OperandIndex && !hasNonZeroReductionDimSlice) {
+    if (idx == OperandIndex && !hasPartialReductionDimSlice) {
       paddedInputs.push_back(producerSliceOp.getSource());
       continue;
     }
@@ -1404,13 +1408,14 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
         continue;
       }
       AffineDimExpr dimExpr = cast<AffineDimExpr>(expr);
-      if (nonZeroSliceDimMap.contains(dimExpr.getPosition())) {
-        SliceDimInfo sliceDimInfo = nonZeroSliceDimMap[dimExpr.getPosition()];
-        operandLowPads[idx] = sliceDimInfo.offset;
-        operandHighPads[idx] =
-            sub(sub(sliceDimInfo.outputSize, sliceDimInfo.offset),
-                sliceDimInfo.sliceSize);
+      if (!partialSliceDimMap.contains(dimExpr.getPosition())) {
+        continue;
       }
+      SliceDimInfo sliceDimInfo = partialSliceDimMap[dimExpr.getPosition()];
+      operandLowPads[idx] = sliceDimInfo.offset;
+      operandHighPads[idx] =
+          sub(sub(sliceDimInfo.outputSize, sliceDimInfo.offset),
+              sliceDimInfo.sliceSize);
     }
     auto paddingValue = ub::PoisonOp::create(
         rewriter, loc, getElementTypeOrSelf(operand->get().getType()));
@@ -1439,15 +1444,15 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
       continue;
     }
     AffineDimExpr dimExpr = cast<AffineDimExpr>(expr);
-    if (nonZeroSliceDimMap.contains(dimExpr.getPosition())) {
-      SliceDimInfo sliceDimInfo = nonZeroSliceDimMap[dimExpr.getPosition()];
-      outputLowPads[idx] = sliceDimInfo.offset;
-      outputHighPads[idx] =
-          sub(sub(sliceDimInfo.outputSize, sliceDimInfo.offset),
-              sliceDimInfo.sliceSize);
-      OutputShape[idx] = sliceDimInfo.outputSize;
-      newSizes[idx] = sliceDimInfo.sliceSize;
+    if (!partialSliceDimMap.contains(dimExpr.getPosition())) {
+      continue;
     }
+    SliceDimInfo sliceDimInfo = partialSliceDimMap[dimExpr.getPosition()];
+    outputLowPads[idx] = sliceDimInfo.offset;
+    outputHighPads[idx] = sub(sub(sliceDimInfo.outputSize, sliceDimInfo.offset),
+                              sliceDimInfo.sliceSize);
+    OutputShape[idx] = sliceDimInfo.outputSize;
+    newSizes[idx] = sliceDimInfo.sliceSize;
   }
   Value newPadOutput;
   auto outputElType =
@@ -1455,9 +1460,7 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
   if (isGenericOutsNotUsed(genericOp)) {
     newPadOutput =
         tensor::EmptyOp::create(rewriter, loc, OutputShape, outputElType);
-
   } else {
-
     auto paddingValue = ub::PoisonOp::create(rewriter, loc, outputElType);
     newPadOutput = tensor::PadOp::create(
         rewriter, loc, Type(), genericOp.getDpsInits()[0], outputLowPads,
