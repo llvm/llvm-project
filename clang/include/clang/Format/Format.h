@@ -80,6 +80,8 @@ struct FormatStyle {
     /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
     /// BAS_AlwaysBreak,
+    /// For backward compatibility. Do not use.
+    BAS_ABDeprecated,
     /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
     /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
@@ -87,6 +89,8 @@ struct FormatStyle {
     /// ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
     /// ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
     /// BAS_BlockIndent,
+    /// For backward compatibility. Do not use.
+    BAS_BIDeprecated,
   };
 
   /// If ``true``, horizontally aligns arguments after an open bracket.

@@ -212,6 +212,8 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
     // For backward compatibility.
     IO.enumCase(Value, "true", FormatStyle::BAS_Align);
     IO.enumCase(Value, "false", FormatStyle::BAS_DontAlign);
+    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BAS_ABDeprecated);
+    IO.enumCase(Value, "BlockIndent", FormatStyle::BAS_BIDeprecated);
   }
 };
 
@@ -1274,6 +1276,39 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
     IO.mapOptional("WrapNamespaceBodyWithEmptyLines",
                    Style.WrapNamespaceBodyWithEmptyLines);
+
+    // If AlwaysBreak or BlockIndent were specified but individual
+    // options for BreakAfterOpenBracket* (CloseAfterOpenBracket*),
+    // initialize the latter to preserve backwards compatibility.
+    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_ABDeprecated) {
+      if (!Style.BreakAfterOpenBracketBracedList &&
+          !Style.BreakAfterOpenBracketFunction &&
+          !Style.BreakAfterOpenBracketIf && !Style.BreakAfterOpenBracketLoop &&
+          !Style.BreakAfterOpenBracketSwitch) {
+        Style.BreakAfterOpenBracketBracedList = true;
+        Style.BreakAfterOpenBracketFunction = true;
+        Style.BreakAfterOpenBracketIf = true;
+      }
+      Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+    } else if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BIDeprecated) {
+      if (!Style.BreakAfterOpenBracketBracedList &&
+          !Style.BreakAfterOpenBracketFunction &&
+          !Style.BreakAfterOpenBracketIf && !Style.BreakAfterOpenBracketLoop &&
+          !Style.BreakAfterOpenBracketSwitch &&
+          !Style.BreakBeforeCloseBracketBracedList &&
+          !Style.BreakBeforeCloseBracketFunction &&
+          !Style.BreakBeforeCloseBracketIf &&
+          !Style.BreakBeforeCloseBracketLoop &&
+          !Style.BreakBeforeCloseBracketSwitch) {
+        Style.BreakAfterOpenBracketBracedList = true;
+        Style.BreakAfterOpenBracketFunction = true;
+        Style.BreakAfterOpenBracketIf = true;
+        Style.BreakBeforeCloseBracketBracedList = true;
+        Style.BreakBeforeCloseBracketFunction = true;
+        Style.BreakBeforeCloseBracketIf = true;
+      }
+      Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+    }
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // BreakAfterReturnType was not, initialize the latter from the former for
