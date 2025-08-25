@@ -8,8 +8,9 @@
 # RUN: llvm-readobj -r %t.r | FileCheck %s --check-prefixes=RELOC,RELAX-RELOC
 
 .text
-break 0
-# INSTR: break 0
+call36 foo
+# INSTR:      pcaddu18i $ra, 0
+# INSTR-NEXT: jirl $ra, $ra, 0
 
 ## Not emit R_LARCH_ALIGN if alignment directive is less than or equal to
 ## minimum code alignment(a.k.a 4).
@@ -24,8 +25,8 @@ break 0
 ## The behavior is the same as GNU assembler.
 break 1
 .p2align 4, 1
-# INSTR-NEXT:    break 1
-# INSTR-COUNT-2: 01 01 01 01
+# INSTR-NEXT: break 1
+# INSTR-NEXT: 01 01 01 01
 
 break 2
 .p2align 4, 1, 12
@@ -62,20 +63,25 @@ ret
 
 ## Test the symbol index is different from .text.
 .section .text2, "ax"
+call36 foo
 .p2align 4
 .p2align 4, , 4
 break 7
 
 # RELOC:            Relocations [
-# RELAX-RELOC-NEXT:   Section ({{.*}}) .rela.text {
+# RELOC-NEXT:         Section ({{.*}}) .rela.text {
+# RELOC-NEXT:           0x0 R_LARCH_CALL36 foo 0x0
+# RELAX-RELOC-NEXT:     0x0 R_LARCH_RELAX - 0x0
 # RELAX-RELOC-NEXT:     0x24 R_LARCH_ALIGN - 0xC
 # RELAX-RELOC-NEXT:     0x34 R_LARCH_ALIGN - 0x1C
 # RELAX-RELOC-NEXT:     0x50 R_LARCH_ALIGN - 0xC
 # RELAX-RELOC-NEXT:     0x60 R_LARCH_ALIGN .Lla-relax-align0 0xB04
 # RELAX-RELOC-NEXT:     0x70 R_LARCH_ALIGN - 0xC
-# RELAX-RELOC-NEXT:   }
-# RELAX-RELOC-NEXT:   Section ({{.*}}) .rela.text2 {
-# RELAX-RELOC-NEXT:     0x0 R_LARCH_ALIGN - 0xC
-# RELAX-RELOC-NEXT:     0xC R_LARCH_ALIGN .Lla-relax-align1 0x404
-# RELAX-RELOC-NEXT:   }
+# RELOC-NEXT:         }
+# RELOC-NEXT:         Section ({{.*}}) .rela.text2 {
+# RELOC-NEXT:           0x0 R_LARCH_CALL36 foo 0x0
+# RELAX-RELOC-NEXT:     0x0 R_LARCH_RELAX - 0x0
+# RELAX-RELOC-NEXT:     0x8 R_LARCH_ALIGN - 0xC
+# RELAX-RELOC-NEXT:     0x14 R_LARCH_ALIGN .Lla-relax-align1 0x404
+# RELOC-NEXT:         }
 # RELOC-NEXT:       ]
