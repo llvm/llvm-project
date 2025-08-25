@@ -875,16 +875,21 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // mistaking LLVMLoopEstimatedTripCount metadata to be for an outer loop when
   // it was created for an inner loop.  The problem is that loop metadata is
   // attached to the branch instruction in the loop latch block, but that can be
-  // shared by the loops.  The solution is to attach loop metadata to loop
-  // headers instead, but that would be a large change to LLVM.
+  // shared by the loops.  A solution is to attach loop metadata to loop headers
+  // instead, but that would be a large change to LLVM.
   //
   // Until that happens, we work around the problem as follows.
   // getExpectedExitLoopLatchBranch (which also guards
-  // setLoopEstimatedTripCount) will not recognize the same latch for both loops
-  // unless the latch exits both loops and has only two successors.  However, to
-  // exit both loops, the latch must have at least three successors: the inner
-  // loop header, the outer loop header (exit for the inner loop), and an exit
-  // for the outer loop.
+  // setLoopEstimatedTripCount) returns nullptr for a loop unless the loop has
+  // one latch and that latch has exactly two successors one of which is an exit
+  // from the loop.  If the latch is shared by nested loops, then that condition
+  // might hold for the inner loop but cannot hold for the outer loop:
+  // - Because the latch is shared, it must have at least two successors: the
+  //   inner loop header and the outer loop header, which is also an exit for
+  //   the inner loop.  That satisifies the condition for the inner loop.
+  // - To satsify the condition for the outer loop, the latch must have a third
+  //   successor that is an exit for the outer loop.  But that violates the
+  //   condition for both loops.
   BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L);
   if (!ExitingBranch)
     return std::nullopt;
