@@ -1720,8 +1720,7 @@ def Vector_LoadOp : Vector_Op<"load", [
       [MemRead]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
     OpBuilder<(ins "VectorType":$resultType,
@@ -1837,8 +1836,7 @@ def Vector_StoreOp : Vector_Op<"store", [
       [MemWrite]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
     OpBuilder<(ins "Value":$valueToStore,
@@ -1875,8 +1873,7 @@ def Vector_MaskedLoadOp :
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
@@ -1968,8 +1965,7 @@ def Vector_MaskedStoreOp :
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
@@ -2051,8 +2047,7 @@ def Vector_GatherOp :
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = [{
@@ -2154,8 +2149,7 @@ def Vector_ScatterOp :
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
   let summary = [{
     scatters elements from a vector into memory as defined by an index vector
@@ -2239,8 +2233,7 @@ def Vector_ExpandLoadOp :
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "reads elements from memory and spreads them into a vector as defined by a mask";
@@ -2328,8 +2321,7 @@ def Vector_CompressStoreOp :
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
 
