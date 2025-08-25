@@ -24,7 +24,7 @@ declare void @llvm.assume(i1 noundef)
 declare i64 @llvm.coro.align.i64()
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare token @llvm.coro.save(ptr)
@@ -162,7 +162,7 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
 
 61:                                               ; preds = %60, %57, %54, %47, %12
   %62 = getelementptr inbounds i8, ptr %3, i64 -16
-  %63 = call i1 @llvm.coro.end(ptr null, i1 false, token none) #28
+  call void @llvm.coro.end(ptr null, i1 false, token none) #28
   ret ptr %62
 }
 

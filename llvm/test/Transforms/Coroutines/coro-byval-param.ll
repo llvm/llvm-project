@@ -52,7 +52,7 @@ coro.free:                                        ; preds = %cleanup33
   br label %coro.ret
 
 coro.ret:                                         ; preds = %coro.free, %cleanup33, %init.ready, %coro.init
-  %10 = call i1 @llvm.coro.end(ptr null, i1 false, token none) #10
+  call void @llvm.coro.end(ptr null, i1 false, token none) #10
   ret ptr %call2
 }
 
@@ -102,7 +102,7 @@ declare i8 @llvm.coro.suspend(token, i1) #2
 declare void @_ZN4task12promise_type13final_suspendEv(ptr nonnull dereferenceable(1)) local_unnamed_addr #7 align 2
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(ptr, i1, token) #2
+declare void @llvm.coro.end(ptr, i1, token) #2
 
 ; Function Attrs: nobuiltin nounwind
 declare void @_ZdlPv(ptr) local_unnamed_addr #8
