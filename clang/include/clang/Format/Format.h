@@ -79,14 +79,14 @@ struct FormatStyle {
     /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
     /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
-    BAS_AlwaysBreak,
+    /// BAS_AlwaysBreak,
     /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
     /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
     /// in combination with ``BreakBeforeCloseBracketBracedList``,
     /// ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
     /// ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
-    BAS_BlockIndent,
+    /// BAS_BlockIndent,
   };
 
   /// If ``true``, horizontally aligns arguments after an open bracket.
