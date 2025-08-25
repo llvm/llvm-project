@@ -24,6 +24,7 @@ function at-exit {
   retcode=$?
 
   mkdir -p artifacts
+  sccache --show-stats
   sccache --show-stats >> artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
   cp "${MONOREPO_ROOT}"/*.log artifacts/ || :

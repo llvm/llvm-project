@@ -22,7 +22,7 @@ class Block;
 class DeadBlock;
 class InterpState;
 class Pointer;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 /// A memory block, either on the stack or in the heap.
 ///
@@ -50,9 +50,9 @@ private:
 
 public:
   /// Creates a new block.
-  Block(unsigned EvalID, const std::optional<unsigned> &DeclID,
-        const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false,
-        bool IsWeak = false, bool IsDummy = false)
+  Block(unsigned EvalID, UnsignedOrNone DeclID, const Descriptor *Desc,
+        bool IsStatic = false, bool IsExtern = false, bool IsWeak = false,
+        bool IsDummy = false)
       : Desc(Desc), DeclID(DeclID), EvalID(EvalID), IsStatic(IsStatic) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
@@ -62,8 +62,7 @@ public:
 
   Block(unsigned EvalID, const Descriptor *Desc, bool IsStatic = false,
         bool IsExtern = false, bool IsWeak = false, bool IsDummy = false)
-      : Desc(Desc), DeclID((unsigned)-1), EvalID(EvalID), IsStatic(IsStatic),
-        IsDynamic(false) {
+      : Desc(Desc), EvalID(EvalID), IsStatic(IsStatic) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (WeakFlag * IsWeak);
@@ -81,13 +80,13 @@ public:
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
   bool isWeak() const { return AccessFlags & WeakFlag; }
-  bool isDynamic() const { return IsDynamic; }
+  bool isDynamic() const { return (DynAllocId != std::nullopt); }
   bool isDummy() const { return AccessFlags & DummyFlag; }
   bool isDead() const { return AccessFlags & DeadFlag; }
   /// Returns the size of the block.
   unsigned getSize() const { return Desc->getAllocSize(); }
   /// Returns the declaration ID.
-  std::optional<unsigned> getDeclID() const { return DeclID; }
+  UnsignedOrNone getDeclID() const { return DeclID; }
   /// Returns whether the data of this block has been initialized via
   /// invoking the Ctor func.
   bool isInitialized() const { return IsInitialized; }
@@ -150,6 +149,7 @@ private:
   friend class DeadBlock;
   friend class InterpState;
   friend class DynamicAllocator;
+  friend class Program;
 
   Block(unsigned EvalID, const Descriptor *Desc, bool IsExtern, bool IsStatic,
         bool IsWeak, bool IsDummy, bool IsDead)
@@ -160,6 +160,9 @@ private:
     AccessFlags |= (WeakFlag * IsWeak);
     AccessFlags |= (DummyFlag * IsDummy);
   }
+
+  /// To be called by DynamicAllocator.
+  void setDynAllocId(unsigned ID) { DynAllocId = ID; }
 
   /// Deletes a dead block at the end of its lifetime.
   void cleanup();
@@ -177,16 +180,15 @@ private:
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;
   /// Unique identifier of the declaration.
-  std::optional<unsigned> DeclID;
+  UnsignedOrNone DeclID = std::nullopt;
   const unsigned EvalID = ~0u;
   /// Flag indicating if the block has static storage duration.
   bool IsStatic = false;
   /// Flag indicating if the block contents have been initialized
   /// via invokeCtor.
   bool IsInitialized = false;
-  /// Flag indicating if this block has been allocated via dynamic
-  /// memory allocation (e.g. malloc).
-  bool IsDynamic = false;
+  /// Allocation ID for this dynamic allocation, if it is one.
+  UnsignedOrNone DynAllocId = std::nullopt;
   /// AccessFlags containing IsExtern, IsDead, IsWeak, and IsDummy bits.
   uint8_t AccessFlags = 0;
 };
