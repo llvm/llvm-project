@@ -97,7 +97,7 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base& base
 
   auto iter = base.__entry_iters_().begin() - 1;  // "before first" entry
   while (spawner.stream_.good()) {                // loop until we get EOF from tool stdout
-    line.getline(spawner.stream_);                // consume a line from stdout
+    std::getline(spawner.stream_, line);          // consume a line from stdout
     auto view = tool_base::rstrip(line.view());   // remove trailing (but not leading) whitespace
     if (tool_base::rstrip(view).empty()) { continue; }  // skip if line had nothing, or _only_ whitespace
     tool.parse(&iter, view);                      // send to parser (who might update iter)

@@ -39,7 +39,6 @@ _LIBCPP_PUSH_MACROS
 #  include <string>
 #  include <utility>
 
-#  include <__stacktrace/alloc_helpers.h>
 #  include <__stacktrace/stacktrace_entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -61,11 +60,18 @@ struct base {
   constexpr static size_t __default_max_depth  = 64;
   constexpr static size_t __absolute_max_depth = 256;
 
-  string_table_base& __strings_;
+  str_heap __strings_;
 
-  using _EntryIters = iters<stacktrace_entry, entry_base>;
+  using _EntryIters _LIBCPP_NODEBUG = iters<stacktrace_entry, entry_base>;
   function<_EntryIters()> __entry_iters_;
   function<entry_base&()> __entry_append_;
+
+  template <class _Allocator>
+  _LIBCPP_HIDE_FROM_ABI
+  base(_Allocator const& __alloc, function<_EntryIters()> __entry_iters, function<entry_base&()> __entry_append)
+      : __strings_(std::move(str_heap::create(__alloc))),
+        __entry_iters_(__entry_iters),
+        __entry_append_(__entry_append) {}
 
   _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI void current_impl(size_t __skip, size_t __max_depth);
 
@@ -100,14 +106,15 @@ class basic_stacktrace : private __stacktrace::base {
   _Allocator __alloc_;
 
   vector<stacktrace_entry, _Allocator> __entries_;
-  function<_EntryIters()> entry_iters_fn() {
-    return [this] -> _EntryIters { return {__entries_.data(), __entries_.size()}; };
-  }
-  function<__stacktrace::entry_base&()> entry_append_fn() {
-    return [this] -> __stacktrace::entry_base& { return (__stacktrace::entry_base&)__entries_.emplace_back(); };
-  }
+  _EntryIters entry_iters() { return {__entries_.data(), __entries_.size()}; }
+  __stacktrace::entry_base& entry_append() { return (__stacktrace::entry_base&)__entries_.emplace_back(); }
 
-  __stacktrace::string_table<_Allocator> __strings_;
+  auto entry_iters_fn() {
+    return [this] -> _EntryIters { return entry_iters(); };
+  }
+  auto entry_append_fn() {
+    return [this] -> __stacktrace::entry_base& { return entry_append(); };
+  }
 
 public:
   // (19.6.4.1)
@@ -168,22 +175,15 @@ public:
   static_assert(sizeof(__stacktrace::entry_base) == sizeof(stacktrace_entry));
 
   _LIBCPP_EXPORTED_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc)
-      : base(__strings_, entry_iters_fn(), entry_append_fn()),
-        __alloc_(__alloc),
-        __entries_(__alloc_),
-        __strings_(__alloc_) {}
+      : base(__alloc, entry_iters_fn(), entry_append_fn()), __alloc_(__alloc), __entries_(__alloc_) {}
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace const& __other, allocator_type const& __alloc)
-      : base(__strings_, entry_iters_fn(), entry_append_fn()),
-        __alloc_(__alloc),
-        __entries_(__other.__entries_),
-        __strings_(__other.__strings_) {}
+      : base(__alloc, entry_iters_fn(), entry_append_fn()), __alloc_(__alloc), __entries_(__other.__entries_) {}
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, allocator_type const& __alloc)
-      : base(__strings_, entry_iters_fn(), entry_append_fn()),
+      : base(__alloc, entry_iters_fn(), entry_append_fn()),
         __alloc_(__alloc),
-        __entries_(std::move(__other.__entries_)),
-        __strings_(std::move(__other.__strings_)) {}
+        __entries_(std::move(__other.__entries_)) {}
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace() noexcept(is_nothrow_default_constructible_v<allocator_type>)
       : basic_stacktrace(allocator_type()) {}

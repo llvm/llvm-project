@@ -926,7 +926,6 @@ stack limits
 stack stdexcept
 stack tuple
 stack version
-stacktrace array
 stacktrace cctype
 stacktrace climits
 stacktrace compare
@@ -936,18 +935,16 @@ stacktrace cstdio
 stacktrace cstring
 stacktrace cwchar
 stacktrace cwctype
-stacktrace functional
 stacktrace initializer_list
 stacktrace iosfwd
 stacktrace limits
+stacktrace memory
 stacktrace optional
 stacktrace stdexcept
 stacktrace string
 stacktrace string_view
 stacktrace tuple
-stacktrace type_traits
 stacktrace typeinfo
-stacktrace unordered_map
 stacktrace utility
 stacktrace version
 stop_token atomic

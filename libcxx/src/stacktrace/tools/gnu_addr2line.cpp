@@ -35,7 +35,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 bool addr2line::build_argv() {
-  auto* main_image = images().main_prog_image();
+  images imgs;
+  auto* main_image = imgs.main_prog_image();
   _LIBCPP_ASSERT(main_image, "could not determine main program image");
   _LIBCPP_ASSERT(main_image->name_[0], "could not determine main program image name");
   if (!(main_image && main_image->name_[0])) {
@@ -79,9 +80,7 @@ use_available_progs.pass.cpp:84
 void addr2line::parse_sym(__stacktrace::entry_base& entry, std::string_view view) const {
   if (!view.starts_with("??")) {
     // XXX should check for "_Z" prefix (mangled symbol) and use cxxabi.h / demangle?
-    auto desc = base_.__strings_.create();
-    desc.assign(view);
-    entry.assign_desc(std::move(desc));
+    entry.assign_desc(base_.__strings_.create()).assign(view);
   }
 }
 
@@ -111,12 +110,12 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<addr2line>(base& base) {
   while (spawner.stream_.good()) {                  // loop until we get EOF from tool stdout
     std::string_view view;
 
-    line.getline(spawner.stream_);                  // consume one line
+    std::getline(spawner.stream_, line);            // consume one line
     view = tool_base::strip(line.view());           // remove trailing and leading whitespace
     if (view.empty()) { continue; }                 // blank line: restart loop, checking for EOF
     tool.parse_sym(*entry_iter, view);              // expecting symbol name
 
-    line.getline(spawner.stream_);                  // consume one line
+    std::getline(spawner.stream_, line);            // consume one line
     view = tool_base::strip(line.view());           // remove trailing and leading whitespace
     if (view.empty()) { continue; }                 // blank line: restart loop, checking for EOF
     tool.parse_loc(*entry_iter, view);              // expecting "/path/to/sourcefile.cpp:42"

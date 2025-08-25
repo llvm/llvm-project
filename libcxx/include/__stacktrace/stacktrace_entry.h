@@ -28,15 +28,72 @@ _LIBCPP_PUSH_MACROS
 #  include <__type_traits/is_base_of.h>
 #  include <cstddef>
 #  include <cstdint>
+#  include <memory>
+#  include <optional>
 #  include <string>
-
-#  include <__stacktrace/alloc_helpers.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 class stacktrace_entry;
 
 namespace __stacktrace {
+
+struct str;
+
+struct str_heap {
+  // Lambdas wrap the caller's allocator (re-bound to allocate `chars`).
+  function<char*(size_t)> __alloc_;
+  function<void(char*, size_t)> __dealloc_;
+
+  template <class _A, // some allocator; can be of any type
+            class _AT = allocator_traits<_A>,
+            class _CA = typename _AT::template rebind_alloc<char>>
+    requires __is_allocator<_A>::value
+
+  _LIBCPP_HIDE_FROM_ABI static str_heap create(_A const& __a) {
+    auto __ca      = _CA(__a);
+    auto __alloc   = [__ca](size_t __n) mutable -> char* { return __ca.allocate(__n); };
+    auto __dealloc = [__ca](char* __p, size_t __n) mutable { __ca.deallocate(__p, __n); };
+    return {__alloc, __dealloc};
+  }
+
+  _LIBCPP_EXPORTED_FROM_ABI str create();
+};
+
+template <class _Tp>
+struct str_alloc {
+  // These are copied from the `str_heap` passed to constructor, since the str_heap
+  // itself may be destroyed before the string using this allocator.
+  function<char*(size_t)> __alloc_;
+  function<void(char*, size_t)> __dealloc_;
+
+  // This only works with chars
+  static_assert(sizeof(_Tp) == 1);
+
+  using value_type = _Tp;
+  using pointer    = _Tp*;
+
+  template <class _Tp2>
+  struct rebind {
+    using other = str_alloc<_Tp2>;
+  };
+
+  str_alloc(const str_alloc&)            = default;
+  str_alloc(str_alloc&&)                 = default;
+  str_alloc& operator=(const str_alloc&) = default;
+  str_alloc& operator=(str_alloc&&)      = default;
+  explicit str_alloc(str_heap& __heap) : __alloc_(__heap.__alloc_), __dealloc_(__heap.__dealloc_) {}
+
+  _Tp* allocate(size_t __n) { return __alloc_(__n); }
+  void deallocate(_Tp* __p, size_t __n) { __dealloc_(__p, __n); }
+  bool operator==(str_alloc<_Tp> const& __rhs) const { return std::addressof(__rhs) == this; }
+};
+
+struct str : basic_string<char, char_traits<char>, str_alloc<char>> {
+  using base = basic_string<char, char_traits<char>, str_alloc<char>>;
+  _LIBCPP_HIDE_FROM_ABI str(str_alloc<char> const& __alloc) : base(__alloc) {}
+  _LIBCPP_HIDE_FROM_ABI string_view view() const { return {this->data(), this->size()}; }
+};
 
 struct image;
 
@@ -51,35 +108,26 @@ struct entry_base {
 #  endif
 
   uintptr_t __addr_{};
-  str __desc_{};
-  str __file_{};
+  optional<str> __desc_{};
+  optional<str> __file_{};
   uint_least32_t __line_{};
   image const* __image_{};
 
-  str& assign_desc(str&& __s) {
-    _LIBCPP_ASSERT_NON_NULL(__s.__str_ptr_, "null string");
-    __desc_ = std::move(__s);
-    return __desc_;
-  }
-
-  str& assign_file(str&& __s) {
-    _LIBCPP_ASSERT_NON_NULL(__s.__str_ptr_, "null string");
-    __file_ = std::move(__s);
-    return __file_;
-  }
+  _LIBCPP_HIDE_FROM_ABI str& assign_desc(str&& __s) { return *(__desc_ = std::move(__s)); }
+  _LIBCPP_HIDE_FROM_ABI str& assign_file(str&& __s) { return *(__file_ = std::move(__s)); }
 
   _LIBCPP_EXPORTED_FROM_ABI std::ostream& write_to(std::ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
   _LIBCPP_EXPORTED_FROM_ABI uintptr_t adjusted_addr() const;
 
-  constexpr static entry_base* of(auto& __s) { return static_cast<entry_base*>(__s); }
+  _LIBCPP_HIDE_FROM_ABI constexpr static entry_base* of(auto& __s) { return static_cast<entry_base*>(__s); }
 
-  ~entry_base()                                      = default;
-  constexpr entry_base()                             = default;
-  constexpr entry_base(const entry_base&)            = default;
-  constexpr entry_base& operator=(const entry_base&) = default;
-  constexpr entry_base(entry_base&&)                 = default;
-  constexpr entry_base& operator=(entry_base&&)      = default;
+  _LIBCPP_HIDE_FROM_ABI ~entry_base()                                      = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr entry_base()                             = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr entry_base(const entry_base&)            = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr entry_base& operator=(const entry_base&) = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr entry_base(entry_base&&)                 = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr entry_base& operator=(entry_base&&)      = default;
 };
 
 } // namespace __stacktrace
@@ -109,8 +157,12 @@ public:
   }
 
   // (19.6.3.4) [stacktrace.entry.query], query
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const { return string(__base_.__desc_.view()); }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const { return string(__base_.__file_.view()); }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const {
+    return __base_.__desc_ ? string(*__base_.__desc_) : string();
+  }
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const {
+    return __base_.__file_ ? string(*__base_.__file_) : string();
+  }
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
 
   // (19.6.3.5) [stacktrace.entry.cmp], comparison

@@ -929,7 +929,6 @@ stacktrace stdexcept
 stacktrace string
 stacktrace string_view
 stacktrace tuple
-stacktrace type_traits
 stacktrace typeinfo
 stacktrace utility
 stacktrace version

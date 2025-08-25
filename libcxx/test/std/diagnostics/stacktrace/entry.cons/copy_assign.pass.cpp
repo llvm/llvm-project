@@ -26,7 +26,7 @@ _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
   static_assert(std::is_nothrow_copy_assignable_v<std::stacktrace_entry>);
 
-  auto& e1 = std::stacktrace::current()[0];
+  auto e1 = std::stacktrace::current()[0];
   std::stacktrace_entry e2;
   static_assert(noexcept(e2 = e1));
   e2 = e1;

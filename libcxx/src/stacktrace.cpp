@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#include <__stacktrace/alloc_helpers.h>
 #include <__stacktrace/basic_stacktrace.h>
 #include <__stacktrace/stacktrace_entry.h>
 #include <iomanip>
@@ -21,16 +20,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __stacktrace {
 
+str str_heap::create() { return str{str_alloc<char>{*this}}; }
+
 ostream& entry_base::write_to(ostream& __os) const {
   // Although 64-bit addresses are 16 nibbles long, they're often <= 0x7fff_ffff_ffff
   constexpr static int __k_addr_width = (sizeof(void*) > 4) ? 12 : 8;
 
   __os << "0x" << std::hex << std::setfill('0') << std::setw(__k_addr_width) << __addr_;
-  if (__desc_.size()) {
-    __os << ": " << __desc_.view();
+  if (__desc_) {
+    __os << ": " << __desc_->view();
   }
-  if (__file_.size()) {
-    __os << ": " << __file_.view();
+  if (__file_) {
+    __os << ": " << __file_->view();
   }
   if (__line_) {
     __os << ":" << std::dec << __line_;

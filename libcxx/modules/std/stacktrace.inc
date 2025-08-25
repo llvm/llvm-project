@@ -34,7 +34,9 @@ export namespace std {
   using std::hash;
 
   // [stacktrace.format], formatting support
-  using std::formatter;
+  // (Excluded for now; issue #105257 will implement
+  // P2693R1, "Formatting thread::id and stacktrace")
+  // using std::formatter;
 
 #endif // _LIBCPP_STD_VER >= 23
 } // namespace std
