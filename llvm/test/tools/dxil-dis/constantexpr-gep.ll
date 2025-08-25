@@ -23,4 +23,13 @@ define i32 @fn2() #0 {
   ret i32 %ld
 }
 
+define i32 @fn3() #0 {
+; CHECK-LABEL:  define i32 @fn3()
+; CHECK-NEXT:   [[LOAD:%.*]] = load i32, i32 addrspace(3)* getelementptr inbounds ([10 x i32], [10 x i32] addrspace(3)* [[GLOBAL]], i32 0, i32 3), align 4
+; CHECK-NEXT:   ret i32 [[LOAD]]
+;
+  %ld = load i32, ptr addrspace(3) getelementptr (i8, ptr addrspace(3) @g, i32 12), align 4
+  ret i32 %ld
+}
+
 attributes #0 = { "hlsl.export" }
