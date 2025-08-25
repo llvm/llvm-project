@@ -24,10 +24,11 @@ template <typename T>
 concept HasSize = requires(const T t) { t.size(); };
 
 struct CheckForSize {
-  template <class T>
+  template <class IntegerLikeT>
   constexpr void operator()() {
-    static_assert(HasSize<std::ranges::iota_view<T, int>>);
-    static_assert(HasSize<std::ranges::iota_view<T, T>>);
+    types::for_each(types::integer_types{}, []<typename BoundT>() {
+      static_assert(HasSize<std::ranges::iota_view<IntegerLikeT, BoundT>>);
+    });
   }
 };
 
