@@ -14,10 +14,10 @@
 
 #include "FileManager.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-
-#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 namespace advisor {

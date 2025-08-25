@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FileClassifier.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
 namespace llvm {

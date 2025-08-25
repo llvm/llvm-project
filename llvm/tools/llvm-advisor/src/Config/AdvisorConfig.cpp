@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the AdvisorConfig code generator driver. It provides a convenient
-// command-line interface for generating an assembly file or a relocatable file,
-// given LLVM bitcode.
+// This file implements the AdvisorConfig class.
 //
 //===----------------------------------------------------------------------===//
 
 #include "AdvisorConfig.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -21,10 +20,7 @@
 namespace llvm {
 namespace advisor {
 
-AdvisorConfig::AdvisorConfig() {
-  // Use relative path as default, will be resolved by CompilationManager
-  OutputDir_ = ".llvm-advisor";
-}
+AdvisorConfig::AdvisorConfig() { OutputDir_ = ".llvm-advisor"; }
 
 Expected<bool> AdvisorConfig::loadFromFile(llvm::StringRef path) {
   auto BufferOrError = MemoryBuffer::getFile(path);
@@ -70,7 +66,6 @@ Expected<bool> AdvisorConfig::loadFromFile(llvm::StringRef path) {
 }
 
 std::string AdvisorConfig::getToolPath(llvm::StringRef tool) const {
-  // For now, just return the tool name and rely on PATH
   return tool.str();
 }
 
