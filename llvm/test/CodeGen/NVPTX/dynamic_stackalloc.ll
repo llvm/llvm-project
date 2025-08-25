@@ -12,7 +12,7 @@
 define i32 @test_dynamic_stackalloc(i64 %n) {
 ; CHECK-32-LABEL: test_dynamic_stackalloc(
 ; CHECK-32:       {
-; CHECK-32-NEXT:    .reg .b32 %r<8>;
+; CHECK-32-NEXT:    .reg .b32 %r<7>;
 ; CHECK-32-EMPTY:
 ; CHECK-32-NEXT:  // %bb.0:
 ; CHECK-32-NEXT:    ld.param.b32 %r1, [test_dynamic_stackalloc_param_0];
@@ -32,7 +32,7 @@ define i32 @test_dynamic_stackalloc(i64 %n) {
 ;
 ; CHECK-64-LABEL: test_dynamic_stackalloc(
 ; CHECK-64:       {
-; CHECK-64-NEXT:    .reg .b32 %r<3>;
+; CHECK-64-NEXT:    .reg .b32 %r<2>;
 ; CHECK-64-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-64-EMPTY:
 ; CHECK-64-NEXT:  // %bb.0:

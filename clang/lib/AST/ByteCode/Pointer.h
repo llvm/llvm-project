@@ -28,8 +28,6 @@ class Block;
 class DeadBlock;
 class Pointer;
 class Context;
-template <unsigned A, bool B> class Integral;
-enum PrimType : unsigned;
 
 class Pointer;
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P);
@@ -95,31 +93,21 @@ private:
   static constexpr unsigned RootPtrMark = ~0u;
 
 public:
-  Pointer() {
-    StorageKind = Storage::Int;
-    PointeeStorage.Int.Value = 0;
-    PointeeStorage.Int.Desc = nullptr;
-  }
-  Pointer(IntPointer &&IntPtr) : StorageKind(Storage::Int) {
-    PointeeStorage.Int = std::move(IntPtr);
-  }
+  Pointer() : StorageKind(Storage::Int), Int{nullptr, 0} {}
+  Pointer(IntPointer &&IntPtr)
+      : StorageKind(Storage::Int), Int(std::move(IntPtr)) {}
   Pointer(Block *B);
   Pointer(Block *B, uint64_t BaseAndOffset);
   Pointer(const Pointer &P);
   Pointer(Pointer &&P);
   Pointer(uint64_t Address, const Descriptor *Desc, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Int) {
-    PointeeStorage.Int.Value = Address;
-    PointeeStorage.Int.Desc = Desc;
-  }
+      : Offset(Offset), StorageKind(Storage::Int), Int{Desc, Address} {}
   Pointer(const Function *F, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Fn) {
-    PointeeStorage.Fn = FunctionPointer(F);
-  }
+      : Offset(Offset), StorageKind(Storage::Fn), Fn(F) {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Typeid) {
-    PointeeStorage.Typeid.TypePtr = TypePtr;
-    PointeeStorage.Typeid.TypeInfoType = TypeInfoType;
+    Typeid.TypePtr = TypePtr;
+    Typeid.TypeInfoType = TypeInfoType;
   }
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   ~Pointer();
@@ -350,7 +338,9 @@ public:
   /// Returns the type of the innermost field.
   QualType getType() const {
     if (isTypeidPointer())
-      return QualType(PointeeStorage.Typeid.TypeInfoType, 0);
+      return QualType(Typeid.TypeInfoType, 0);
+    if (isFunctionPointer())
+      return asFunctionPointer().getFunction()->getDecl()->getType();
 
     if (inPrimitiveArray() && Offset != asBlockPointer().Base) {
       // Unfortunately, complex and vector types are not array types in clang,
@@ -468,19 +458,19 @@ public:
 
   [[nodiscard]] const BlockPointer &asBlockPointer() const {
     assert(isBlockPointer());
-    return PointeeStorage.BS;
+    return BS;
   }
   [[nodiscard]] const IntPointer &asIntPointer() const {
     assert(isIntegralPointer());
-    return PointeeStorage.Int;
+    return Int;
   }
   [[nodiscard]] const FunctionPointer &asFunctionPointer() const {
     assert(isFunctionPointer());
-    return PointeeStorage.Fn;
+    return Fn;
   }
   [[nodiscard]] const TypeidPointer &asTypeidPointer() const {
     assert(isTypeidPointer());
-    return PointeeStorage.Typeid;
+    return Typeid;
   }
 
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
@@ -593,7 +583,7 @@ public:
   }
 
   /// Returns the declaration ID.
-  std::optional<unsigned> getDeclID() const {
+  UnsignedOrNone getDeclID() const {
     if (isBlockPointer()) {
       assert(asBlockPointer().Pointee);
       return asBlockPointer().Pointee->getDeclID();
@@ -657,7 +647,7 @@ public:
     if (isUnknownSizeArray())
       return false;
 
-    return isPastEnd() || (getSize() == getOffset() && !isZeroSizeArray());
+    return isPastEnd() || (getSize() == getOffset());
   }
 
   /// Checks if the pointer points past the end of the object.
@@ -665,7 +655,7 @@ public:
     if (isIntegralPointer())
       return false;
 
-    return !isZero() && Offset > PointeeStorage.BS.Pointee->getSize();
+    return !isZero() && Offset > BS.Pointee->getSize();
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
@@ -804,6 +794,7 @@ private:
   friend class InterpState;
   friend struct InitMap;
   friend class DynamicAllocator;
+  friend class Program;
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
@@ -841,7 +832,7 @@ private:
     BlockPointer BS;
     FunctionPointer Fn;
     TypeidPointer Typeid;
-  } PointeeStorage;
+  };
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {

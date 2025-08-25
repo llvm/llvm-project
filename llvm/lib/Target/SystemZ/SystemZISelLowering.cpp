@@ -1941,7 +1941,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  SystemZCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_SystemZ);
   FuncInfo->setSizeOfFnParams(CCInfo.getStackSize());
 
@@ -2251,7 +2251,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  SystemZCCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
+  CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
   ArgCCInfo.AnalyzeCallOperands(Outs, CC_SystemZ);
 
   // We don't support GuaranteedTailCallOpt, only automatically-detected

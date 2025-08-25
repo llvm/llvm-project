@@ -42,6 +42,11 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   return fi;
 }
 
+cir::FuncType CIRGenTypes::getFunctionType(GlobalDecl gd) {
+  const CIRGenFunctionInfo &fi = arrangeGlobalDeclaration(gd);
+  return getFunctionType(fi);
+}
+
 cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
   mlir::Type resultType = convertType(info.getReturnType());
   SmallVector<mlir::Type, 8> argTypes;
@@ -55,8 +60,23 @@ cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
                             info.isVariadic());
 }
 
+cir::FuncType CIRGenTypes::getFunctionTypeForVTable(GlobalDecl gd) {
+  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
+  const FunctionProtoType *fpt = md->getType()->getAs<FunctionProtoType>();
+
+  if (!isFuncTypeConvertible(fpt))
+    cgm.errorNYI("getFunctionTypeForVTable: non-convertible function type");
+
+  return getFunctionType(gd);
+}
+
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
-  assert(!cir::MissingFeatures::opCallVirtual());
+  if (isVirtual()) {
+    const CallExpr *ce = getVirtualCallExpr();
+    return cgf.cgm.getCXXABI().getVirtualFunctionPointer(
+        cgf, getVirtualMethodDecl(), getThisAddress(), getVirtualFunctionType(),
+        ce ? ce->getBeginLoc() : SourceLocation());
+  }
   return *this;
 }
 

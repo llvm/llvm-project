@@ -978,7 +978,7 @@ static bool IsValueFullyAvailableInBlock(
   unsigned NumNewNewSpeculativelyAvailableBBs = 0;
 
 #ifndef NDEBUG
-  SmallSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
+  SmallPtrSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
   SmallVector<BasicBlock *, 32> AvailableBBs;
 #endif
 
@@ -1222,7 +1222,7 @@ static bool liesBetween(const Instruction *From, Instruction *Between,
                         const Instruction *To, const DominatorTree *DT) {
   if (From->getParent() == Between->getParent())
     return DT->dominates(From, Between);
-  SmallSet<BasicBlock *, 1> Exclusion;
+  SmallPtrSet<BasicBlock *, 1> Exclusion;
   Exclusion.insert(Between->getParent());
   return !isPotentiallyReachable(From, To, &Exclusion, DT);
 }

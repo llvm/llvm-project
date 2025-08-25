@@ -17,7 +17,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -3573,7 +3572,7 @@ void SelectionDAGBuilder::visitIndirectBr(const IndirectBrInst &I) {
   MachineBasicBlock *IndirectBrMBB = FuncInfo.MBB;
 
   // Update machine-CFG edges with unique successors.
-  SmallSet<BasicBlock*, 32> Done;
+  SmallPtrSet<BasicBlock *, 32> Done;
   for (unsigned i = 0, e = I.getNumSuccessors(); i != e; ++i) {
     BasicBlock *BB = I.getSuccessor(i);
     bool Inserted = Done.insert(BB).second;

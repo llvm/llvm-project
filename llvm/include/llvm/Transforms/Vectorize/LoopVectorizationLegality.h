@@ -493,6 +493,9 @@ private:
   /// and we only need to check individual instructions.
   bool canVectorizeInstrs();
 
+  /// Check if an individual instruction is vectorizable.
+  bool canVectorizeInstr(Instruction &I);
+
   /// When we vectorize loops we may change the order in which
   /// we read and write from memory. This method checks if it is
   /// legal to vectorize the code, considering only memory constrains.
