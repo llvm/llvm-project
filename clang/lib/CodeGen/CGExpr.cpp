@@ -1750,9 +1750,17 @@ static Address emitPointerArithmetic(CodeGenFunction &CGF,
     std::swap(pointerOperand, indexOperand);
     index = CGF.EmitScalarExpr(indexOperand);
     BaseAddr = CGF.EmitPointerWithAlignment(pointerOperand, BaseInfo, TBAAInfo,
+                                            /* TO_UPSTREAM(BoundsSafety) ON*/
+                                            /*UpperPointer=*/nullptr,
+                                            /*LowerPointer=*/nullptr,
+                                            /* TO_UPSTREAM(BoundsSafety) OFF*/
                                             NotKnownNonNull);
   } else {
     BaseAddr = CGF.EmitPointerWithAlignment(pointerOperand, BaseInfo, TBAAInfo,
+                                            /* TO_UPSTREAM(BoundsSafety) ON*/
+                                            /*UpperPointer=*/nullptr,
+                                            /*LowerPointer=*/nullptr,
+                                            /* TO_UPSTREAM(BoundsSafety) OFF*/
                                             NotKnownNonNull);
     index = CGF.EmitScalarExpr(indexOperand);
   }
