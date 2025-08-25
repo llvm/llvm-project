@@ -127,8 +127,8 @@ public:
     test_one_input(func, FloatType(-1.0), IntType(-1), false);
     test_one_input(func, FloatType(10.0), IntType(10), false);
     test_one_input(func, FloatType(-10.0), IntType(-10), false);
-    test_one_input(func, FloatType(1234.0), IntType(1234), false);
-    test_one_input(func, FloatType(-1234.0), IntType(-1234), false);
+    test_one_input(func, FloatType(1232.0), IntType(1232), false);
+    test_one_input(func, FloatType(-1232.0), IntType(-1232), false);
 
     // The rest of this function compares with an equivalent MPFR function
     // which rounds floating point numbers to long values. There is no MPFR

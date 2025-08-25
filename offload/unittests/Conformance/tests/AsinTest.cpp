@@ -50,7 +50,9 @@ int main(int argc, const char **argv) {
 
   uint64_t Seed = 42;
   uint64_t Size = 1ULL << 32;
-  IndexedRange<double> Range;
+  IndexedRange<double> Range(/*Begin=*/-1.0,
+                             /*End=*/1.0,
+                             /*Inclusive=*/true);
   RandomGenerator<double> Generator(SeedTy{Seed}, Size, Range);
 
   const auto Configs = cl::getTestConfigs();

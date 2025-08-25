@@ -528,8 +528,12 @@ void WasmObjectWriter::recordRelocation(const MCFragment &F,
   // be negative and don't wrap.
   FixedValue = 0;
 
-  unsigned Type =
-      TargetObjectWriter->getRelocType(Target, Fixup, FixupSection, IsLocRel);
+  unsigned Type;
+  if (mc::isRelocRelocation(Fixup.getKind()))
+    Type = Fixup.getKind() - FirstLiteralRelocationKind;
+  else
+    Type =
+        TargetObjectWriter->getRelocType(Target, Fixup, FixupSection, IsLocRel);
 
   // Absolute offset within a section or a function.
   // Currently only supported for metadata sections.

@@ -51,7 +51,7 @@ int main(int argc, const char **argv) {
 
   uint64_t Seed = 42;
   uint64_t Size = 1ULL << 32;
-  IndexedRange<double> Range(/*Begin=*/0.0,
+  IndexedRange<double> Range(/*Begin=*/-1.0,
                              /*End=*/std::numeric_limits<double>::infinity(),
                              /*Inclusive=*/true);
   RandomGenerator<double> Generator(SeedTy{Seed}, Size, Range);

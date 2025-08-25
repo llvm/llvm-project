@@ -93,26 +93,26 @@ let OutOperandList = (outs) in {
   }
 }
 
-// DECODER-LABEL: DecoderTable_ModeA32[] =
+// DECODER-LABEL: DecoderTable_ModeA32[22] =
 // DECODER-DAG: Opcode: fooTypeEncA:foo
 // DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable_ModeB32[] =
+// DECODER-LABEL: DecoderTable_ModeB32[30] =
 // DECODER-DAG: Opcode: fooTypeEncB:foo
 // DECODER-DAG: Opcode: fooTypeEncA:baz
 // DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTableAlt_ModeA32[] =
+// DECODER-LABEL: DecoderTableAlt_ModeA32[9] =
 // DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeB32[] =
+// DECODER-LABEL: DecoderTableAlt_ModeB32[9] =
 // DECODER-DAG: Opcode: unrelated
 
-// DECODER-SUPPRESS-LABEL: DecoderTable32[] =
+// DECODER-SUPPRESS-LABEL: DecoderTable32[9] =
 // DECODER-SUPPRESS-DAG: Opcode: bar
-// DECODER-SUPPRESS-LABEL: DecoderTable_ModeA32[] =
+// DECODER-SUPPRESS-LABEL: DecoderTable_ModeA32[9] =
 // DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:foo
 // DECODER-SUPPRESS-NOT: Opcode: bar
-// DECODER-SUPPRESS-LABEL: DecoderTable_ModeB32[] =
+// DECODER-SUPPRESS-LABEL: DecoderTable_ModeB32[22] =
 // DECODER-SUPPRESS-DAG: Opcode: fooTypeEncB:foo
 // DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:baz
 // DECODER-SUPPRESS-NOT: Opcode: bar
-// DECODER-SUPPRESS-LABEL: DecoderTableAlt32[] =
+// DECODER-SUPPRESS-LABEL: DecoderTableAlt32[9] =
 // DECODER-SUPPRESS-DAG: Opcode: unrelated
