@@ -219,8 +219,11 @@ public:
     setAddressSpaceMap(
         /*DefaultIsGeneric=*/Opts.SYCLIsDevice ||
         // The address mapping from HIP/CUDA language for device code is only
-        // defined for SPIR-V.
-        (getTriple().isSPIRV() && Opts.CUDAIsDevice));
+        // defined for SPIR-V, and all Intel SPIR-V code should have the default
+        // AS as generic.
+        (getTriple().isSPIRV() &&
+         (Opts.CUDAIsDevice ||
+          getTriple().getVendor() == llvm::Triple::Intel)));
   }
 
   void setSupportedOpenCLOpts() override {
