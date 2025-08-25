@@ -248,27 +248,26 @@ class UpdateNdOffsetToXeVMPattern
                   xegpu::UpdateNdOffsetOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    auto offsets = op.getOffsets();
+    auto mixedOffsets = op.getMixedOffsets();
+    if (mixedOffsets.size() != 2)
+      return rewriter.notifyMatchFailure(op, "Expected 2D offsets.");
     auto tdesc = adaptor.getTensorDesc();
-    for (size_t offsetDim = 0; offsetDim < offsets.size(); offsetDim++) {
-      auto offset = offsets[offsetDim];
-      if (auto cst =
-              dyn_cast_if_present<arith::ConstantOp>(offset.getDefiningOp()))
-        if (auto attr = dyn_cast_if_present<IntegerAttr>(cst.getValue());
-            attr && !attr.getInt())
-          continue;
-      const int offsetPos =
-          static_cast<int>(offsetDim ? NdDescI32Layout::TensorOffsetW
-                                     : NdDescI32Layout::TensorOffsetH);
-      auto oldOffset =
-          vector::ExtractOp::create(rewriter, loc, tdesc, offsetPos);
-      offset = arith::IndexCastUIOp::create(rewriter, loc,
-                                            rewriter.getI32Type(), offset);
-      auto newOffset = arith::AddIOp::create(rewriter, loc, oldOffset, offset);
-      tdesc =
-          vector::InsertOp::create(rewriter, loc, newOffset, tdesc, offsetPos);
-    }
-    rewriter.replaceOp(op, tdesc);
+    // utility for updating payload offset values from op fold result.
+    auto updateOffset = [&](unsigned idx, int payloadPos) -> Value {
+      Value offset =
+          getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[idx]);
+      offset = getValueOrCreateCastToIndexLike(rewriter, loc,
+                                               rewriter.getI32Type(), offset);
+      Value oldOffset =
+          vector::ExtractOp::create(rewriter, loc, tdesc, payloadPos);
+      Value newOffset = arith::AddIOp::create(rewriter, loc, oldOffset, offset);
+      return vector::InsertOp::create(rewriter, loc, newOffset, tdesc,
+                                      payloadPos);
+    };
+    auto val =
+        updateOffset(0, static_cast<int>(NdDescI32Layout::TensorOffsetH));
+    val = updateOffset(1, static_cast<int>(NdDescI32Layout::TensorOffsetW));
+    rewriter.replaceOp(op, val);
     return success();
   }
 };
