@@ -1149,7 +1149,7 @@ void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
   auto &DL = BB.getDataLayout();
 
-  // True as long as long as the current instruction is guaranteed to execute.
+  // True as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
   for (Instruction &I : BB) {
