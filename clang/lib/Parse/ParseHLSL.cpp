@@ -131,7 +131,7 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   if (Invalid) {
     // FIXME: fix error message.
     Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
-    return {/* Name= */ "", /* Location= */ 0, /* Explicit= */ false};
+    return {};
   }
 
   unsigned I = 0;
@@ -142,7 +142,7 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   if (SemanticName.size() == 0) {
     // FIXME: fix error message.
     Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
-    return {/* Name= */ "", /* Location= */ 0, /* Explicit= */ false};
+    return {};
   }
 
   unsigned Index = 0;
@@ -154,7 +154,7 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   if (I != Identifier.size()) {
     // FIXME: fix error message.
     Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
-    return {/* Name= */ "", /* Location= */ 0, /* Explicit= */ false};
+    return {};
   }
 
   return {SemanticName, Index, Explicit};

@@ -5189,9 +5189,9 @@ private:
   }
 
   struct ParsedSemantic {
-    StringRef Name;
-    unsigned Index;
-    bool Explicit;
+    StringRef Name = "";
+    unsigned Index = 0;
+    bool Explicit = false;
   };
 
   ParsedSemantic ParseHLSLSemantic();
