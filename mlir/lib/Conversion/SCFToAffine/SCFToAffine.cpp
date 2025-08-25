@@ -23,6 +23,8 @@ namespace mlir {
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
+#define DEBUG_TYPE "raise-scf-to-affine"
+
 using namespace mlir;
 
 namespace {
@@ -89,8 +91,11 @@ struct ForOpRewrite : public OpRewritePattern<scf::ForOp> {
 
   LogicalResult matchAndRewrite(scf::ForOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!canRaiseToAffine(op))
+    if (!canRaiseToAffine(op)) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "[affine] Cannot raise scf op: " << op << "\n");
       return failure();
+    }
 
     auto [affineFor, actualIndex] = createAffineFor(op, rewriter);
     Block *affineBody = affineFor.getBody();
