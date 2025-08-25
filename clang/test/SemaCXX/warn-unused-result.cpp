@@ -456,6 +456,34 @@ WarnUnusedResult (*(*pp_return_warnunusedresult)())();
 template <class T> T from_a_template();
 template <class T> [[clang::candiscard]] T from_a_template_ignored();
 
+struct A {
+  using NoDInt [[clang::warn_unused_result]] = int;
+  struct [[nodiscard]] NoDClass {};
+  template <class T> using NoDTemplate [[clang::warn_unused_result]] = T;
+};
+
+template <class T>
+struct B {
+  using NoDInt = typename T::NoDInt;
+  using NoDIntIgnored [[clang::candiscard]] = typename T::NoDInt;
+  using NoDClass = typename T::NoDClass;
+  using NoDClassIgnored [[clang::candiscard]] = typename T::NoDClass;
+  template <class U> using NoDInt2 = typename U::NoDInt;
+  template <class U> using NoDIntIgnored2 [[clang::candiscard]] = typename U::NoDInt;
+  template <class U> using NoDClass2 = typename U::NoDClass;
+  template <class U> using NoDClassIgnored2 [[clang::candiscard]] = typename U::NoDClass;
+};
+
+A::NoDTemplate<int> return_nodtemplate();
+B<A>::NoDInt return_nodint();
+B<A>::NoDIntIgnored return_nodint_ignored();
+B<A>::NoDClass return_nodclass();
+B<A>::NoDClassIgnored return_nodclass_ignored();
+B<A>::NoDInt2<A> return_nodint2();
+B<A>::NoDIntIgnored2<A> return_nodint_ignored2();
+B<A>::NoDClass2<A> return_nodclass2();
+B<A>::NoDClassIgnored2<A> return_nodclass_ignored2();
+
 void test() {
   // Unused but named variables
   NoDiscard unused_variable1(1);         // no warning
@@ -528,6 +556,22 @@ void test() {
   from_a_template_ignored<NoDiscard>();        // no warning
   from_a_template_ignored<WarnUnused>();       // no warning
   from_a_template_ignored<WarnUnusedResult>(); // no warning
+
+  return_nodint();            // expected-warning {{ignoring return value of type 'NoDInt' declared with 'clang::warn_unused_result' attribute}}
+  return_nodint_ignored();    // no warning
+  return_nodclass();          // expected-warning {{ignoring return value of type 'NoDClass' declared with 'nodiscard' attribute}}
+  return_nodclass_ignored();  // no warning
+
+  // In an alias template the information about the typedef is lost,
+  // so the diagnostic is not issued. GH#68456
+  return_nodtemplate();
+
+  // In an alias template the information about the typedef is lost,
+  // so the diagnostic is not suppressed. GH#68456
+  return_nodint2();           // expected-warning {{ignoring return value of type 'NoDInt' declared with 'clang::warn_unused_result' attribute}}
+  return_nodint_ignored2();   // expected-warning {{ignoring return value of type 'NoDInt' declared with 'clang::warn_unused_result' attribute}}
+  return_nodclass2();         // expected-warning {{ignoring return value of type 'NoDClass' declared with 'nodiscard' attribute}}
+  return_nodclass_ignored2(); // expected-warning {{ignoring return value of type 'NoDClass' declared with 'nodiscard' attribute}}
 }
 
 } // namespace candiscard

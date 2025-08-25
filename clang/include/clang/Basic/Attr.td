@@ -3647,8 +3647,7 @@ def Unavailable : InheritableAttr {
 }
 
 def CanDiscard : InheritableAttr {
-  let Spellings = [CXX11<"clang", "candiscard">,
-                   GCC<"candiscard">];
+  let Spellings = [Clang<"candiscard">];
   let Subjects = SubjectList<[ObjCMethod, FunctionLike, TypedefName]>;
   let Documentation = [CanDiscardDocs];
   let SimpleHandler = 1;
