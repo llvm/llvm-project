@@ -738,7 +738,7 @@ define amdgpu_kernel void @v_usubo_i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_u16 v1, v0, s[4:5]
+; GFX11-NEXT:    global_load_d16_b16 v1, v0, s[4:5]
 ; GFX11-NEXT:    global_load_u16 v2, v0, s[6:7]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v2, v1, v2
