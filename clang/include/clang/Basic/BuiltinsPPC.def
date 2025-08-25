@@ -1100,6 +1100,10 @@ UNALIASED_CUSTOM_BUILTIN(mma_dmmr, "vW1024*W1024*", false,
                          "mma,isa-future-instructions")
 UNALIASED_CUSTOM_BUILTIN(mma_dmxor, "vW1024*W1024*", true,
                          "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_disassemble_dmr, "vv*W1024*", false,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_build_dmr, "vW1024*VVVVVVVV", false,
+                         "mma,isa-future-instructions")
 
 // MMA builtins with positive/negative multiply/accumulate.
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf16ger2, "vW512*VV",
