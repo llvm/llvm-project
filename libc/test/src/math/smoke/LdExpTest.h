@@ -10,7 +10,8 @@
 #define LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 
 #include "hdr/stdint_proxy.h"
-#include "src/__support/CPP/limits.h" // INT_MAX
+#include "src/__support/CPP/algorithm.h" // cpp::min
+#include "src/__support/CPP/limits.h"    // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/NormalFloat.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -135,8 +136,8 @@ public:
     // Normal which trigger mantissa overflow.
     T x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS + 1,
                       StorageType(2) * NormalFloat::ONE - StorageType(1));
-    ASSERT_FP_EQ(func(x, -1), x / 2);
-    ASSERT_FP_EQ(func(-x, -1), -x / 2);
+    ASSERT_FP_EQ(func(x, -1), T(x / 2));
+    ASSERT_FP_EQ(func(-x, -1), -T(x / 2));
 
     // Start with a normal number high exponent but pass a very low number for
     // exp. The result should be a subnormal number.
@@ -154,7 +155,9 @@ public:
 
     // Start with a subnormal number but pass a very high number for exponent.
     // The result should not be infinity.
-    x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS + 1, NormalFloat::ONE >> 10);
+    x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS + 1,
+                    NormalFloat::ONE >>
+                        LIBC_NAMESPACE::cpp::min(FPBits::FRACTION_LEN, 10));
     exp = FPBits::MAX_BIASED_EXPONENT + 5;
     ASSERT_FALSE(FPBits(func(x, exp)).is_inf());
     // But if the exp is large enough to oversome than the normalization shift,
