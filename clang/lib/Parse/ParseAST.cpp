@@ -15,6 +15,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/IPC2978/IPCManagerBS.hpp"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -181,6 +184,19 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
     Consumer->HandleTopLevelDecl(DeclGroupRef(D));
 
   Consumer->HandleTranslationUnit(S.getASTContext());
+
+  if (N2978::managerCompiler) {
+    N2978::CTBLastMessage Last;
+    if (S.getCurrentModule() &&
+        S.getCurrentModule()->Kind != Module::ModuleHeaderUnit)
+      Last.logicalName = S.getCurrentModule()->Name;
+
+    Last.errorOccurred = S.getDiagnostics().hasErrorOccurred();
+    if (const auto &r =
+            N2978::managerCompiler->sendCTBLastMessage(std::move(Last));
+        r) {
+    }
+  }
 
   // Finalize the template instantiation observer chain.
   // FIXME: This (and init.) should be done in the Sema class, but because

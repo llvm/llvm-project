@@ -9492,3 +9492,7 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
   Group<m_Group>,
   HelpText<"Enable the wasm-opt optimizer (default)">,
   MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
+
+def no_scan_ipc : Flag<["-"], "noScanIPC">,
+                  Visibility<[ClangOption, CC1Option]>,
+                  HelpText<"Enable No scan IPC approach">;
