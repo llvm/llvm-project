@@ -286,8 +286,11 @@ func.func @assign_global(%arg0 : i32) {
 
 func.func @member_access(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1: !emitc.lvalue<!emitc.opaque<"mystruct_ptr">>, %arg2: !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) {
   %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
-  %1 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.lvalue<i32>
-  %2 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  %1 = "emitc.member" (%arg0) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
+  %2 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.lvalue<i32>
+  %3 = "emitc.member_of_ptr" (%arg1) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.array<2xi32>
+  %4 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  %5 = "emitc.member_of_ptr" (%arg2) {member = "b"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
   return
 }
 
