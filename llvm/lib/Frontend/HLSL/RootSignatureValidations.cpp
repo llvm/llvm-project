@@ -180,48 +180,33 @@ bool verifyBorderColor(uint32_t BorderColor) {
 
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
 
-/** This validation logic was extracted from the DXC codebase
- *   https://github.com/microsoft/DirectXShaderCompiler/blob/7a1b1df9b50a8350a63756720e85196e0285e664/lib/DxilRootSignature/DxilRootSignatureValidator.cpp#L205
- *
- *   It checks if the registers in a descriptor table are overflowing, meaning,
- *   they are trying to bind a register larger than MAX_UINT.
- *   This will usually happen when the descriptor table appends a resource
- *   after an unbounded range.
- **/
-bool verifyOffsetOverflowing(uint64_t &AppendingRegister,
-                             uint32_t OffsetInDescriptorsFromTableStart,
-                             uint32_t BaseRegister, uint32_t Space,
-                             uint32_t NumDescriptors) {
-  uint64_t Register = AppendingRegister;
+bool verifyOffsetOverflow(uint32_t Offset, uint64_t Register) {
+  if (Offset != ~0U)
+    Register = Offset;
 
-  // Checks if the current register should be appended to the previous range.
-  if (OffsetInDescriptorsFromTableStart != ~0U)
-    Register = OffsetInDescriptorsFromTableStart;
-
-  // Check for overflow in the register value.
   if (Register > ~0U)
     return true;
-  // Is the current range unbounded?
-  if (NumDescriptors == ~0U) {
-    // No ranges should be appended to an unbounded range.
-    AppendingRegister = (uint64_t)~0U + (uint64_t)1ULL;
-  } else {
-    // Is the defined range, overflowing?
-    uint64_t UpperBound =
-        (uint64_t)BaseRegister + (uint64_t)NumDescriptors - (uint64_t)1U;
-    if (UpperBound > ~0U)
-      return true;
-
-    // If we append this range, will it overflow?
-    uint64_t AppendingUpperBound =
-        (uint64_t)Register + (uint64_t)NumDescriptors - (uint64_t)1U;
-    if (AppendingUpperBound > ~0U)
-      return true;
-    AppendingRegister = Register + NumDescriptors;
-  }
   return false;
 }
 
+bool verifyRegisterOverflow(uint64_t Register, uint32_t NumDescriptors) {
+  if (NumDescriptors == ~0U)
+    return false;
+
+  uint64_t UpperBound =
+      (uint64_t)Register + (uint64_t)NumDescriptors - (uint64_t)1U;
+  if (UpperBound > ~0U)
+    return true;
+
+  return false;
+}
+
+uint64_t updateAppendingRegister(uint64_t AppendingRegisterRegister,
+                                 uint32_t NumDescriptors) {
+  if (NumDescriptors == ~0U)
+    return (uint64_t)~0U + (uint64_t)1ULL;
+  return AppendingRegisterRegister + NumDescriptors;
+}
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

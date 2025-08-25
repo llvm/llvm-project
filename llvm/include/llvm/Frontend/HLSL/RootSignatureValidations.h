@@ -17,6 +17,7 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/Compiler.h"
+#include <cstdint>
 
 namespace llvm {
 namespace hlsl {
@@ -40,9 +41,11 @@ LLVM_ABI bool verifyMaxAnisotropy(uint32_t MaxAnisotropy);
 LLVM_ABI bool verifyComparisonFunc(uint32_t ComparisonFunc);
 LLVM_ABI bool verifyBorderColor(uint32_t BorderColor);
 LLVM_ABI bool verifyLOD(float LOD);
-LLVM_ABI bool verifyOffsetOverflowing(
-    uint64_t &AppendingRegister, uint32_t OffsetInDescriptorsFromTableStart,
-    uint32_t BaseRegister, uint32_t Space, uint32_t NumDescriptors);
+LLVM_ABI bool verifyRegisterOverflow(uint64_t Register,
+                                     uint32_t NumDescriptors);
+LLVM_ABI uint64_t updateAppendingRegister(uint64_t Register,
+                                          uint32_t NumDescriptors);
+LLVM_ABI bool verifyOffsetOverflow(uint32_t Offset, uint64_t Register);
 
 } // namespace rootsig
 } // namespace hlsl
