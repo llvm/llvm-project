@@ -1163,7 +1163,7 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 163840;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
-  return 0;
+  return 32768;
 }
 
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {

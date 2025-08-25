@@ -391,6 +391,9 @@ public:
     GetContext().withinConstruct = true;
   }
 
+  bool Pre(const parser::OpenMPGroupprivate &);
+  void Post(const parser::OpenMPGroupprivate &) { PopContext(); }
+
   bool Pre(const parser::OpenMPStandaloneConstruct &x) {
     common::visit(
         [&](auto &&s) {
@@ -842,7 +845,8 @@ private:
 
   Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
       Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
-      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction};
+      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction,
+      Symbol::Flag::OmpGroupPrivate};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -2116,6 +2120,18 @@ void OmpAttributeVisitor::CheckAssocLoopLevel(
         " not be larger than the number of nested loops"
         " following the construct."_err_en_US);
   }
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OpenMPGroupprivate &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_groupprivate);
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
+      if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
+        ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
+      }
+    }
+  }
+  return true;
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
