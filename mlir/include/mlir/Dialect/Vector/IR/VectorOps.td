@@ -1712,8 +1712,8 @@ def Vector_LoadOp : Vector_Op<"load", [
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
@@ -1827,8 +1827,8 @@ def Vector_StoreOp : Vector_Op<"store", [
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
 
   let arguments = (ins
@@ -1915,8 +1915,8 @@ def Vector_MaskedLoadOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2007,8 +2007,8 @@ def Vector_MaskedStoreOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2100,8 +2100,8 @@ def Vector_GatherOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     gather operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
 
     Examples:
 
@@ -2191,8 +2191,8 @@ def Vector_ScatterOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     scatter operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
 
     Examples:
 
@@ -2274,8 +2274,8 @@ def Vector_ExpandLoadOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
 
     Note, at the moment this Op is only available for fixed-width vectors.
 
@@ -2362,8 +2362,8 @@ def Vector_CompressStoreOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
 
     Note, at the moment this Op is only available for fixed-width vectors.
 
