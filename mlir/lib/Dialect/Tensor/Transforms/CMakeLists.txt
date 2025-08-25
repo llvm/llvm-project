@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   EmptyOpPatterns.cpp
   ExtractSliceFromReshapeUtils.cpp
   FoldTensorSubsetOps.cpp
+  GatherOpPatterns.cpp
   IndependenceTransforms.cpp
   MergeConsecutiveInsertExtractSlicePatterns.cpp
   ReshapePatterns.cpp
