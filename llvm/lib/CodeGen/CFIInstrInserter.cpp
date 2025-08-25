@@ -83,9 +83,11 @@ class CFIInstrInserter : public MachineFunctionPass {
      int64_t Offset;
      bool isValid() const { return K != Kind::INVALID; }
      bool operator==(const CSRSavedLocation &RHS) const {
+       if (K != RHS.K)
+         return false;
        switch (K) {
        case Kind::INVALID:
-         return !RHS.isValid();
+         return true;
        case Kind::REGISTER:
          return Reg == RHS.Reg;
        case Kind::CFA_OFFSET:
@@ -323,6 +325,10 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpLabel:
       case MCCFIInstruction::OpValOffset:
         break;
+      case MCCFIInstruction::OpLLVMDefCfaRegScalableOffset:
+      case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromCfa:
+      case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromReg:
+        llvm_unreachable("not implemented");
       }
     }
   }

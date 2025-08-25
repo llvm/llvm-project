@@ -1543,6 +1543,10 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     }
     return;
   }
+  case MCCFIInstruction::OpLLVMDefCfaRegScalableOffset:
+  case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromCfa:
+  case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromReg:
+    llvm_unreachable("Can't emit target-dependent cfi instruction here");
   }
   llvm_unreachable("Unhandled case in switch");
 }
