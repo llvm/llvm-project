@@ -116,46 +116,46 @@ def unrelated: Instruction {
 // significant duplication of DecoderTables. The four tables ‘DecoderTableAlt32’,
 // ‘DecoderTableAlt_ModeA32’, ‘DecoderTableAlt_ModeB32’ and 'DecoderTable_ModeC32' are
 // exact duplicates and could effectively be merged into one.
-// DECODER-LABEL: DecoderTable32[9] =
+// DECODER-LABEL: DecoderTable32
 // DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable64[9] =
+// DECODER-LABEL: DecoderTable64
 // DECODER-DAG: Opcode: fooTypeEncDefault:foo
-// DECODER-LABEL: DecoderTable_ModeA32[22] =
+// DECODER-LABEL: DecoderTable_ModeA32
 // DECODER-DAG: Opcode: fooTypeEncA:foo
 // DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable_ModeB32[30] =
+// DECODER-LABEL: DecoderTable_ModeB32
 // DECODER-DAG: Opcode: fooTypeEncB:foo
 // DECODER-DAG: Opcode: fooTypeEncA:baz
 // DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable_ModeC32[22] =
+// DECODER-LABEL: DecoderTable_ModeC32
 // DECODER-DAG: Opcode: fooTypeEncC:foo
 // DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTableAlt32[9] =
+// DECODER-LABEL: DecoderTableAlt32
 // DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeA32[9] =
+// DECODER-LABEL: DecoderTableAlt_ModeA32
 // DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeB32[9] =
+// DECODER-LABEL: DecoderTableAlt_ModeB32
 // DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeC32[9] =
+// DECODER-LABEL: DecoderTableAlt_ModeC32
 // DECODER-DAG: Opcode: unrelated
 
 // Under the 'O1' optimization level, unnecessary duplicate tables will be eliminated,
 // reducing the four ‘Alt’ tables down to just one.
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable32[9] =
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable32
 // DECODER-SUPPRESS-O1-DAG: Opcode: bar
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable64[9] =
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable64
 // DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncDefault:foo
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeA32[22] =
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeA32
 // DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncA:foo
 // DECODER-SUPPRESS-O1-DAG: Opcode: bar
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeB32[30] =
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeB32
 // DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncB:foo
 // DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncA:baz
 // DECODER-SUPPRESS-O1-DAG: Opcode: bar
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeC32[22] =
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeC32
 // DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncC:foo
 // DECODER-SUPPRESS-O1-DAG: Opcode: bar
-// DECODER-SUPPRESS-O1-LABEL: DecoderTableAlt32[9] =
+// DECODER-SUPPRESS-O1-LABEL: DecoderTableAlt32
 // DECODER-SUPPRESS-O1-DAG: Opcode: unrelated
 
 // Under the 'O2' optimization condition, instructions possessing the 'EncodingByHwMode'
@@ -164,22 +164,22 @@ def unrelated: Instruction {
 // attribute but are within the same DecoderNamespace will be stored in the 'Default' table. This
 // approach will significantly reduce instruction redundancy, but it necessitates users to thoroughly
 // consider the interplay between HwMode and DecoderNamespace for their instructions.
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable32[9] =
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable32
 // DECODER-SUPPRESS-O2-DAG: Opcode: bar
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable64[9] =
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable64
 // DECODER-SUPPRESS-O2-NOT: Opcode: bar
 // DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncDefault:foo
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeA32[9] =
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeA32
 // DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncA:foo
 // DECODER-SUPPRESS-O2-NOT: Opcode: bar
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeB32[22] =
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeB32
 // DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncB:foo
 // DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncA:baz
 // DECODER-SUPPRESS-O2-NOT: Opcode: bar
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeC32[13] =
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeC32
 // DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncC:foo
 // DECODER-SUPPRESS-O2-NOT: Opcode: bar
-// DECODER-SUPPRESS-O2-LABEL: DecoderTableAlt32[9] =
+// DECODER-SUPPRESS-O2-LABEL: DecoderTableAlt32
 // DECODER-SUPPRESS-O2-DAG: Opcode: unrelated
 
 // For 'bar' and 'unrelated', we didn't assign any HwModes for them,

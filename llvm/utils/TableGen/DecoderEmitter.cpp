@@ -312,7 +312,7 @@ struct DecoderTableInfo {
   PredicateSet Predicates;
   DecoderSet Decoders;
 
-  bool isOutermostScope() const { return FixupStack.size() == 1; }
+  bool isOutermostScope() const { return FixupStack.empty(); }
 
   void pushScope() { FixupStack.emplace_back(); }
 
@@ -766,8 +766,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
     uint32_t Index = ((I - Table.begin()) + NumToSkip);
     OS << (InComment ? ", " : "// ");
     OS << "Skip to: " << Index;
-    if (*(I + NumToSkip) == MCD::OPC_Fail)
-      OS << " (Fail)";
   };
 
   unsigned OpcodeMask = 0;
@@ -906,9 +904,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       OS << '\n';
       break;
     }
-    case MCD::OPC_Fail:
-      OS << "  MCD::OPC_Fail,\n";
-      break;
     }
   }
   OS << "};\n\n";
@@ -2322,10 +2317,6 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     })";
   }
   OS << R"(
-    case MCD::OPC_Fail: {
-      LLVM_DEBUG(dbgs() << Loc << ": OPC_Fail\n");
-      return MCDisassembler::Fail;
-    }
     }
   }
   llvm_unreachable("bogosity detected in disassembler state machine!");
@@ -2559,14 +2550,8 @@ namespace {
     // predicates and decoders themselves, however, are shared across all
     // decoders to give more opportunities for uniqueing.
     TableInfo.Table.clear();
-    TableInfo.pushScope();
     FC.emitTableEntries(TableInfo);
-    // Any NumToSkip fixups in the top level scope can resolve to the
-    // OPC_Fail at the end of the table.
     assert(TableInfo.isOutermostScope() && "fixup stack phasing error!");
-    TableInfo.popScope();
-
-    TableInfo.Table.insertOpcode(MCD::OPC_Fail);
 
     // Print the table to the output stream.
     OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
