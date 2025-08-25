@@ -643,7 +643,7 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
   // Honor OMP_TEAMS_THREAD_LIMIT environment variable and
   // num_threads/thread_limit clause for NoLoop kernel types.
   int32_t TeamsThreadLimitEnvVar = GenericDevice.getOMPTeamsThreadLimit();
-  uint16_t ConstWGSize = GenericDevice.getDefaultNumThreads();
+  uint16_t ConstWGSize = PreferredNumThreads;
   if (isNoLoopMode()) {
     if (TeamsThreadLimitEnvVar > 0)
       return std::min(static_cast<int32_t>(ConstWGSize),
