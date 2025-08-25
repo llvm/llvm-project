@@ -4,6 +4,7 @@
 // false positive global-buffer-overflow due to sanitized library poisons
 // globals from non-sanitized one.
 //
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -DBUILD_INSTRUMENTED_DSO=1 -fPIC -shared -mllvm -asan-use-private-alias %s -o %dynamiclib1
 // RUN: %clangxx -DBUILD_UNINSTRUMENTED_DSO=1 -fPIC -shared %s -o %dynamiclib2
 // RUN: %clangxx %s -c -mllvm -asan-use-private-alias -o %t.o
