@@ -1423,6 +1423,7 @@ Transforms/LoopVectorize/single-early-exit-cond-poison.ll
 Transforms/LoopVectorize/single-early-exit-deref-assumptions.ll
 Transforms/LoopVectorize/single-early-exit-interleave-hint.ll
 Transforms/LoopVectorize/single-early-exit-interleave.ll
+Transforms/LoopVectorize/single-early-exit-interleave-only.ll
 Transforms/LoopVectorize/single_early_exit_live_outs.ll
 Transforms/LoopVectorize/single_early_exit.ll
 Transforms/LoopVectorize/single_early_exit_with_outer_loop.ll
