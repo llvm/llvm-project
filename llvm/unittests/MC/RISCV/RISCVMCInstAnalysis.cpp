@@ -7,16 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCSubTargetInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSubTargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 #include <cstdint>
 #include <memory>
@@ -49,7 +49,8 @@ struct TestContext {
     MIA.reset(TheTarget->createMCInstrAnalysis(MII.get()));
     MCTargetOptions MCOptions;
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
-    Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(), /*MSTI=*/nullptr);
+    Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
+                                      /*MSTI=*/nullptr);
     const char *MCPU = "generic";
     std::string Features = ""; // No extensions, just RV32I
     STI.reset(TheTarget->createMCSubtargetInfo(TripleName, MCPU, Features));
@@ -83,7 +84,7 @@ TEST(RISCVMCInstrAnalysis, FindTargetAddressWithRegisterState) {
 
   // Set up variables.
   uint64_t Addr = 0x2, Target;
-  uint32_t mask = ~(0); // All bits set to 1.
+  uint32_t mask = ~(0);      // All bits set to 1.
   uint64_t lowerImm = 0xfff; // Lower 12 bits set to 1.
   bool found;
 
@@ -92,20 +93,24 @@ TEST(RISCVMCInstrAnalysis, FindTargetAddressWithRegisterState) {
   // switch case in RISCVTargetDesc.cpp) is involved in an instruction sequence.
   // ADDI only retains the bottom XLEN bits, making it dependent on the target.
   // This masking is especially apparent in 32-bit targets as overflow must
-  // correctly be discarded
+  // correctly be discarded.
   uint64_t upperImm1 = 0 | mask;
   upperImm1 >>= 12; // Bottom 20 bits set to 1.
 
   // 1. AUIPC x5, 0xFFFFF.
-  MCInst auipc = makeInst(/*AUIPC=*/23, {MCOperand::createReg(5), MCOperand::createImm(upperImm1)});
+  MCInst auipc = makeInst(
+      /*AUIPC=*/23, {MCOperand::createReg(5), MCOperand::createImm(upperImm1)});
   // 2. ADDI x5, x5, 0xFFF.
-  MCInst addi = makeInst(/*ADDI=*/13, {MCOperand::createReg(5), MCOperand::createReg(5), MCOperand::createImm(lowerImm)});
+  MCInst addi =
+      makeInst(/*ADDI=*/13, {MCOperand::createReg(5), MCOperand::createReg(5),
+                             MCOperand::createImm(lowerImm)});
 
   MIA.updateState(auipc, Addr);
   found = MIA.findTargetAddress(addi, Addr, 4, Target, nullptr);
   EXPECT_TRUE(found);
 
-  uint64_t expected1 = ((upperImm1 << 12) + lowerImm + Addr) & maskTrailingOnes<uint64_t>(32);
+  uint64_t expected1 =
+      ((upperImm1 << 12) + lowerImm + Addr) & maskTrailingOnes<uint64_t>(32);
   EXPECT_EQ(Target, expected1);
   MIA.resetState();
 
@@ -119,9 +124,12 @@ TEST(RISCVMCInstrAnalysis, FindTargetAddressWithRegisterState) {
   upper_bits2 >>= 12; // Bottom 19 bits set to 1.
 
   // 1. AUIPC x6, 0x7FFFF.
-  MCInst auipc2 = makeInst(/*AUIPC=*/23, {MCOperand::createReg(6), MCOperand::createImm(upper_bits2)});
+  MCInst auipc2 = makeInst(/*AUIPC=*/23, {MCOperand::createReg(6),
+                                          MCOperand::createImm(upper_bits2)});
   // 2. ADDIW x6, x6, 0xFFF.
-  MCInst addiw = makeInst(/*ADDIW=*/15, {MCOperand::createReg(6), MCOperand::createReg(6), MCOperand::createImm(lowerImm)});
+  MCInst addiw =
+      makeInst(/*ADDIW=*/15, {MCOperand::createReg(6), MCOperand::createReg(6),
+                              MCOperand::createImm(lowerImm)});
 
   MIA.updateState(auipc2, Addr);
   found = MIA.findTargetAddress(addiw, Addr, 4, Target, nullptr);
