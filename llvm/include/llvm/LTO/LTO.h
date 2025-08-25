@@ -33,6 +33,23 @@
 #include "llvm/Transforms/IPO/FunctionImport.h"
 
 namespace llvm {
+namespace lto {
+class LTO;
+}
+} // namespace llvm
+
+namespace dtlto {
+class TempFilesRemover {
+  llvm::lto::LTO *Lto = nullptr;
+
+public:
+  TempFilesRemover(llvm::lto::LTO *LtoObj) : Lto{LtoObj} {}
+  ~TempFilesRemover();
+};
+
+} // namespace dtlto
+
+namespace llvm {
 
 class Error;
 class IRMover;
@@ -135,6 +152,12 @@ private:
   std::vector<StringRef> DependentLibraries;
   std::vector<std::pair<StringRef, Comdat::SelectionKind>> ComdatTable;
 
+  MemoryBufferRef MbRef;
+  bool IsMemberOfArchive = false;
+  bool IsThinLTO = false;
+  StringRef ArchivePath;
+  StringRef MemberName;
+
 public:
   LLVM_ABI ~InputFile();
 
@@ -193,6 +216,20 @@ public:
 
   // Returns the only BitcodeModule from InputFile.
   LLVM_ABI BitcodeModule &getSingleBitcodeModule();
+  // Returns the memory buffer reference for this input file.
+  MemoryBufferRef getFileBuffer() const { return MbRef; }
+  // Returns true if this input file is a member of an archive.
+  bool isMemberOfArchive() const { return IsMemberOfArchive; }
+  // Mark this input file as a member of archive.
+  void memberOfArchive(bool MA) { IsMemberOfArchive = MA; }
+
+  // Returns true if bitcode is ThinLTO.
+  bool isThinLTO() const { return IsThinLTO; }
+
+  // Store an archive path and a member name.
+  void setArchivePathAndName(StringRef Path, StringRef Name) { ArchivePath = Path; MemberName = Name; }
+  StringRef getArchivePath() const  { return ArchivePath; }
+  StringRef getMemberName() const  { return MemberName; }
 
 private:
   ArrayRef<Symbol> module_symbols(unsigned I) const {
@@ -580,6 +617,17 @@ private:
 
   // Diagnostic optimization remarks file
   std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
+
+public:
+  /// DTLTO mode.
+  bool Dtlto = false;
+
+  BumpPtrAllocator PtrAlloc;
+  StringSaver Saver{PtrAlloc};
+
+  // Array of input bitcode files for LTO.
+  std::vector<std::unique_ptr<llvm::lto::InputFile>> InputFiles;
+  std::unique_ptr<dtlto::TempFilesRemover> TempsRemover;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for
