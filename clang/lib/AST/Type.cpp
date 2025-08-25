@@ -3195,7 +3195,7 @@ bool QualType::isCXX11PODType(const ASTContext &Context) const {
   if (BaseTy->isIncompleteType())
     return false;
 
-  // Any type that is, or contains, address discriminated data is non-POD
+  // Any type that is, or contains, address discriminated data is non-POD.
   if (Context.containsAddressDiscriminatedPointerAuth(*this))
     return false;
 
