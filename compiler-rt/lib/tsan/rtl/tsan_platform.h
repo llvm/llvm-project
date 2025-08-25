@@ -681,6 +681,32 @@ struct MappingGoMips64_47 {
   static const uptr kShadowAdd = 0x200000000000ull;
 };
 
+/* Go on linux/riscv64 (39-bit VMA)
+0000 0001 0000 - 000f 0000 0000: executable and heap (60 GiB)
+000f 0000 0000 - 0010 0000 0000: -
+0010 0000 0000 - 0030 0000 0000: shadow - 128 GiB ( ~ 2 * app)
+0030 0000 0000 - 0038 0000 0000: metainfo - 32 GiB ( ~ 0.5 * app)
+0038 0000 0000 - 0040 0000 0000: -
+*/
+struct MappingGoRiscv64_39 {
+  static const uptr kMetaShadowBeg = 0x003000000000ull;
+  static const uptr kMetaShadowEnd = 0x003800000000ull;
+  static const uptr kShadowBeg = 0x001000000000ull;
+  static const uptr kShadowEnd = 0x003000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000010000ull;
+  static const uptr kLoAppMemEnd = 0x000f00000000ull;
+  static const uptr kMidAppMemBeg = 0;
+  static const uptr kMidAppMemEnd = 0;
+  static const uptr kHiAppMemBeg = 0;
+  static const uptr kHiAppMemEnd = 0;
+  static const uptr kHeapMemBeg = 0;
+  static const uptr kHeapMemEnd = 0;
+  static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x001000000000ull;
+};
+
 /* Go on linux/riscv64 (48-bit VMA)
 0000 0001 0000 - 00e0 0000 0000: executable and heap (896 GiB)
 00e0 0000 0000 - 2000 0000 0000: -
@@ -689,7 +715,7 @@ struct MappingGoMips64_47 {
 3000 0000 0000 - 3100 0000 0000: metainfo - 1 TiB ( ~ 1 * app)
 3100 0000 0000 - 8000 0000 0000: -
 */
-struct MappingGoRiscv64 {
+struct MappingGoRiscv64_48 {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
   static const uptr kMetaShadowEnd = 0x310000000000ull;
   static const uptr kShadowBeg = 0x200000000000ull;
@@ -756,7 +782,12 @@ ALWAYS_INLINE auto SelectMapping(Arg arg) {
 #  elif defined(__loongarch_lp64)
   return Func::template Apply<MappingGoLoongArch64_47>(arg);
 #  elif SANITIZER_RISCV64
-  return Func::template Apply<MappingGoRiscv64>(arg);
+  switch (vmaSize) {
+    case 39:
+      return Func::template Apply<MappingGoRiscv64_39>(arg);
+    case 48:
+      return Func::template Apply<MappingGoRiscv64_48>(arg);
+  }
 #  elif SANITIZER_WINDOWS
   return Func::template Apply<MappingGoWindows>(arg);
 #  else
@@ -827,7 +858,8 @@ void ForEachMapping() {
   Func::template Apply<MappingGoAarch64>();
   Func::template Apply<MappingGoLoongArch64_47>();
   Func::template Apply<MappingGoMips64_47>();
-  Func::template Apply<MappingGoRiscv64>();
+  Func::template Apply<MappingGoRiscv64_39>();
+  Func::template Apply<MappingGoRiscv64_48>();
   Func::template Apply<MappingGoS390x>();
 }
 
