@@ -61,7 +61,7 @@ private:
 /// `DiagnosticTrapKinds.td`).
 /// * The `RuntimeTrapDiagnosticBuilder` does not emit diagnostics to the normal
 ///   diagnostics consumers on destruction like normal Diagnostic builders.
-///   Instead on destruction it assigns to the TrapReason object passed in to
+///   Instead on destruction it assigns to the TrapReason object passed into
 ///   the constructor.
 ///
 /// Given that this class inherits from `DiagnosticBuilder` it inherits all of

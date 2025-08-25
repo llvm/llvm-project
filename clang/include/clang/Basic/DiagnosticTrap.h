@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the necessary includes for using
-/// `RuntimeTrapDiagnosticBuilder`.
+/// This file contains the necessary definitions of trap diagnostics to be used
+/// with `TrapReasonBuilder`.
 ///
 //===----------------------------------------------------------------------===//
 
