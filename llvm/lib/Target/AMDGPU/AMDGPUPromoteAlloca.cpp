@@ -287,8 +287,12 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
 
 void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
   // Load per function limits, overriding with global options where appropriate.
+  // R600 register tuples/aliasing are fragile with large vector promotions so
+  // apply architecture specific limit here.
+  const int R600MaxVectorRegs = 16;
   MaxVectorRegs = F.getFnAttributeAsParsedInteger(
-      "amdgpu-promote-alloca-to-vector-max-regs", PromoteAllocaToVectorMaxRegs);
+      "amdgpu-promote-alloca-to-vector-max-regs",
+      IsAMDGCN ? PromoteAllocaToVectorMaxRegs : R600MaxVectorRegs);
   if (PromoteAllocaToVectorMaxRegs.getNumOccurrences())
     MaxVectorRegs = PromoteAllocaToVectorMaxRegs;
   VGPRBudgetRatio = F.getFnAttributeAsParsedInteger(
