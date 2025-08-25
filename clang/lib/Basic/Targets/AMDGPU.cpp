@@ -201,8 +201,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeatureVec))
     return false;
 
-  // TODO: Should move this logic into TargetParser
-  auto HasError = insertWaveSizeFeature(CPU, getTriple(), Features);
+  auto HasError = fillAMDGPUFeatureMap(CPU, getTriple(), Features);
   switch (HasError.first) {
   default:
     break;
