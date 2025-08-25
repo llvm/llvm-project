@@ -22,6 +22,10 @@ module test
       !DIR$ IGNORE_TKR (tkrcdm) buf
       type(*) :: buf
     end subroutine
+    subroutine pass_intent_out(buf)
+      implicit none
+      integer, intent(out) :: buf(5)
+    end subroutine
   end interface
 contains
   subroutine s1(buf)
@@ -59,5 +63,20 @@ contains
     real, intent(inout) :: buf(:)
     ! Don't create temp here
     call pass_ignore_tkr_c_2(buf)
+  end subroutine
+  subroutine s5()
+  ! TODO: pass_intent_out() has intent(out) dummy argument, so as such it
+  ! should have copy-out, but not copy-in. Unfortunately, at the moment flang
+  ! can only do copy-in/copy-out together. When this is fixed, this test should
+  ! change from 'CHECK' for hlfir.copy_in to 'CHECK-NOT' for hlfir.copy_in
+!CHECK-LABEL: func.func @_QMtestPs5
+!CHECK: hlfir.copy_in
+!CHECK: fir.call @_QPpass_intent_out
+!CHECK: hlfir.copy_out
+    implicit none
+    integer, target :: x(10)
+    integer, pointer :: p(:)
+    p => x(::2) ! pointer to non-contiguous array section
+    call pass_intent_out(p)
   end subroutine
 end module
