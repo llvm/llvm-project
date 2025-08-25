@@ -7,6 +7,7 @@
 // RUN: %check_clang_tidy -std=c++23-or-later %s readability-uppercase-literal-suffix %t -- -- -target aarch64-linux-gnu -I %clang_tidy_headers
 
 #include "integral_constant.h"
+#include <cstddef>
 #if 0
 #include <stdfloat>
 #endif
