@@ -1370,6 +1370,12 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       preparedDummy.pushExprAssociateCleanUp(associate);
     } else if (mustDoCopyIn || mustDoCopyOut) {
       // Copy-in non contiguous variables.
+      //
+      // TODO: copy-in and copy-out are now determined separately, in order
+      // to allow more fine grained copying. While currently both copy-in
+      // and copy-out are must be done together, these copy operations could
+      // be separated in the future. (This is related to TODO comment below.)
+      //
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
       // we may avoid doing the copy and only allocate the temporary.
