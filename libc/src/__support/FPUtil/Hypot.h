@@ -12,6 +12,7 @@
 #include "BasicOperations.h"
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "cast.h"
 #include "rounding_mode.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
@@ -133,8 +134,18 @@ LIBC_INLINE T hypot(T x, T y) {
   uint16_t a_exp = a_bits.get_biased_exponent();
   uint16_t b_exp = b_bits.get_biased_exponent();
 
-  if ((a_exp - b_exp >= FPBits_t::FRACTION_LEN + 2) || (x == 0) || (y == 0))
-    return x_abs.get_val() + y_abs.get_val();
+  if ((a_exp - b_exp >= FPBits_t::FRACTION_LEN + 2) || (x == 0) || (y == 0)) {
+#ifdef LIBC_TYPES_HAS_FLOAT16
+    if constexpr (cpp::is_same_v<T, float16>) {
+      // Compiler runtime for basic operations of float16 might not be correctly
+      // rounded for all rounding modes.
+      float af = fputil::cast<float>(x_abs.get_val());
+      float bf = fputil::cast<float>(y_abs.get_val());
+      return fputil::cast<float16>(af + bf);
+    } else
+#endif // LIBC_TYPES_HAS_FLOAT16
+      return x_abs.get_val() + y_abs.get_val();
+  }
 
   uint64_t out_exp = a_exp;
   StorageType a_mant = a_bits.get_mantissa();
