@@ -103,9 +103,7 @@ public:
   Pointer(uint64_t Address, const Descriptor *Desc, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Int), Int{Desc, Address} {}
   Pointer(const Function *F, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Fn), Fn(F) {
-    Fn = FunctionPointer(F);
-  }
+      : Offset(Offset), StorageKind(Storage::Fn), Fn(F) {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Typeid) {
     Typeid.TypePtr = TypePtr;
@@ -696,15 +694,20 @@ public:
     assert(asBlockPointer().Pointee);
     assert(isDereferencable());
     assert(getFieldDesc()->isPrimitiveArray());
+    assert(I < getFieldDesc()->getNumElems());
 
     unsigned ElemByteOffset = I * getFieldDesc()->getElemSize();
-    if (isArrayRoot())
-      return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() +
-                                    asBlockPointer().Base + sizeof(InitMapPtr) +
-                                    ElemByteOffset);
+    if (isArrayRoot()) {
+      unsigned ReadOffset = BS.Base + sizeof(InitMapPtr) + ElemByteOffset;
+      assert(ReadOffset + sizeof(T) <=
+             BS.Pointee->getDescriptor()->getAllocSize());
+      return *reinterpret_cast<T *>(BS.Pointee->rawData() + ReadOffset);
+    }
 
-    return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset +
-                                  ElemByteOffset);
+    unsigned ReadOffset = BS.Base + ElemByteOffset;
+    assert(ReadOffset + sizeof(T) <=
+           BS.Pointee->getDescriptor()->getAllocSize());
+    return *reinterpret_cast<T *>(BS.Pointee->rawData() + ReadOffset);
   }
 
   /// Whether this block can be read from at all. This is only true for
