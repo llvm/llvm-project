@@ -12,7 +12,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -110,7 +109,7 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
   Error Err = DA.preprocessProfile(*BC);
 
   // Ignore errors from perf2bolt when parsing memory events later on.
-  ASSERT_THAT_ERROR(std::move(Err), Succeeded());
+  ASSERT_FALSE(!!Err) << "Expected success";
 
   auto &BinaryMMapInfo = DA.getBinaryMMapInfo();
   auto El = BinaryMMapInfo.find(Pid);
