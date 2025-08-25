@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_TRAP_H
-#define LLVM_CLANG_BASIC_TRAP_H
+#ifndef LLVM_CLANG_BASIC_DIAGNOSTICTRAP_H
+#define LLVM_CLANG_BASIC_DIAGNOSTICTRAP_H
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticTrapInterface.inc"
