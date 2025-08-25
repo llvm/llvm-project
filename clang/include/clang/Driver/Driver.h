@@ -512,9 +512,6 @@ public:
 
   /// BuildActions - Construct the list of actions to perform for the
   /// given arguments, which are only done for a single architecture.
-  /// If the compilation is an explicit module build, delegates to
-  /// BuildDriverManagedModuleBuildActions. Otherwise, BuildDefaultActions is
-  /// used.
   ///
   /// \param C - The compilation that is being built.
   /// \param Args - The input arguments.
@@ -799,27 +796,6 @@ private:
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);
 
-  /// BuildDefaultActions - Constructs the list of actions to perform
-  /// for the provided arguments, which are only done for a single architecture.
-  ///
-  /// \param C - The compilation that is being built.
-  /// \param Args - The input arguments.
-  /// \param Actions - The list to store the resulting actions onto.
-  void BuildDefaultActions(Compilation &C, llvm::opt::DerivedArgList &Args,
-                           const InputList &Inputs, ActionList &Actions) const;
-
-  /// BuildDriverManagedModuleBuildActions - Performs a dependency
-  /// scan and constructs the list of actions to perform for dependency order
-  /// and the provided arguments. This is only done for a single a architecture.
-  ///
-  /// \param C - The compilation that is being built.
-  /// \param Args - The input arguments.
-  /// \param Actions - The list to store the resulting actions onto.
-  void BuildDriverManagedModuleBuildActions(Compilation &C,
-                                            llvm::opt::DerivedArgList &Args,
-                                            const InputList &Inputs,
-                                            ActionList &Actions) const;
-
   /// Scans the leading lines of the C++ source inputs to detect C++20 module
   /// usage.
   ///
@@ -827,7 +803,6 @@ private:
   /// read failure.
   llvm::ErrorOr<bool>
   ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const;
-
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them
