@@ -4532,6 +4532,139 @@ TEST(CompletionTest, MemberAccessInExplicitObjMemfn) {
     EXPECT_THAT(Result.Completions, ElementsAre());
   }
 }
+
+TEST(CompletionTest, ListExplicitObjectOverloads) {
+  Annotations Code(R"cpp(
+    struct S {
+      void foo1(int a);
+      void foo2(int a) const;
+      void foo2(this const S& self, float a);
+      void foo3(this const S& self, int a);
+      void foo4(this S& self, int a);
+    };
+
+    void S::foo1(int a) {
+      this->$c1^;
+    }
+
+    void S::foo2(int a) const {
+      this->$c2^;
+    }
+
+    void S::foo3(this const S& self, int a) {
+      self.$c3^;
+    }
+
+    void S::foo4(this S& self, int a) {
+      self.$c4^;
+    }
+
+    void test1(S s) {
+      s.$c5^;
+    }
+
+    void test2(const S s) {
+      s.$c6^;
+    }
+  )cpp");
+
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs = {"-std=c++23"};
+
+  auto Preamble = TU.preamble();
+  ASSERT_TRUE(Preamble);
+
+  CodeCompleteOptions Opts{};
+
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c1"),
+                               Preamble.get(), Inputs, Opts);
+    EXPECT_THAT(
+        Result.Completions,
+        UnorderedElementsAre(AllOf(named("foo1"), signature("(int a)"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
+                             AllOf(named("foo3"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo4"), signature("(int a)"),
+                                   snippetSuffix("(${1:int a})"))));
+  }
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c2"),
+                               Preamble.get(), Inputs, Opts);
+    EXPECT_THAT(
+        Result.Completions,
+        UnorderedElementsAre(AllOf(named("foo2"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
+                             AllOf(named("foo3"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})"))));
+  }
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c3"),
+                               Preamble.get(), Inputs, Opts);
+    EXPECT_THAT(
+        Result.Completions,
+        UnorderedElementsAre(AllOf(named("foo2"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
+                             AllOf(named("foo3"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})"))));
+  }
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c4"),
+                               Preamble.get(), Inputs, Opts);
+    EXPECT_THAT(
+        Result.Completions,
+        UnorderedElementsAre(AllOf(named("foo1"), signature("(int a)"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
+                             AllOf(named("foo3"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo4"), signature("(int a)"),
+                                   snippetSuffix("(${1:int a})"))));
+  }
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c5"),
+                               Preamble.get(), Inputs, Opts);
+    EXPECT_THAT(
+        Result.Completions,
+        UnorderedElementsAre(AllOf(named("foo1"), signature("(int a)"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
+                             AllOf(named("foo3"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo4"), signature("(int a)"),
+                                   snippetSuffix("(${1:int a})"))));
+  }
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c6"),
+                               Preamble.get(), Inputs, Opts);
+    EXPECT_THAT(
+        Result.Completions,
+        UnorderedElementsAre(AllOf(named("foo2"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})")),
+                             AllOf(named("foo2"), signature("(float a) const"),
+                                   snippetSuffix("(${1:float a})")),
+                             AllOf(named("foo3"), signature("(int a) const"),
+                                   snippetSuffix("(${1:int a})"))));
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

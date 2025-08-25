@@ -244,6 +244,14 @@ ABIInfo::getOptimalVectorMemoryType(llvm::FixedVectorType *T,
   return T;
 }
 
+llvm::Value *ABIInfo::createCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
+                                        CodeGenFunction &CGF) const {
+  return nullptr;
+}
+
+void ABIInfo::createCoercedStore(llvm::Value *Val, Address DstAddr,
+                                 const ABIArgInfo &AI, bool DestIsVolatile,
+                                 CodeGenFunction &CGF) const {}
 // Pin the vtable to this file.
 SwiftABIInfo::~SwiftABIInfo() = default;
 
