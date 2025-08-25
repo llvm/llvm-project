@@ -943,8 +943,6 @@ bool llvm::setLoopEstimatedTripCount(
   // here at all.
   if (!EstimatedloopInvocationWeight)
     return true;
-  if (!LatchBranch)
-    return false;
 
   // Calculate taken and exit weights.
   unsigned LatchExitWeight = 0;
