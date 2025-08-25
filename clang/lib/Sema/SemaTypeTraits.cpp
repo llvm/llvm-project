@@ -2660,20 +2660,6 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
         << diag::TraitNotSatisfiedReason::InheritedCtr;
   }
 
-  for (const FieldDecl *Field : D->fields()) {
-    auto AccessSpecifier = Field->getAccess();
-    switch (AccessSpecifier) {
-    case AS_private:
-    case AS_protected:
-      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::PrivateProtectedDirectDataMember
-          << (AccessSpecifier == AS_protected);
-      break;
-    default:
-      break;
-    }
-  }
-
   for (const CXXBaseSpecifier &B : D->bases()) {
     if (B.isVirtual()) {
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
@@ -2687,6 +2673,20 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
     case AS_protected:
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
           << diag::TraitNotSatisfiedReason::PrivateProtectedDirectBase
+          << (AccessSpecifier == AS_protected);
+      break;
+    default:
+      break;
+    }
+  }
+
+  for (const FieldDecl *Field : D->fields()) {
+    auto AccessSpecifier = Field->getAccess();
+    switch (AccessSpecifier) {
+    case AS_private:
+    case AS_protected:
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::PrivateProtectedDirectDataMember
           << (AccessSpecifier == AS_protected);
       break;
     default:
