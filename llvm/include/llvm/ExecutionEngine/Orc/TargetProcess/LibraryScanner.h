@@ -19,9 +19,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Error.h"
-
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
 
 #include <atomic>
@@ -218,21 +217,34 @@ private:
   PathResolver &m_pathResolver;
 };
 
+enum class SearchPathType {
+  RPath,
+  UsrOrSys,
+  RunPath,
+};
+
+struct SearchPathConfig {
+  ArrayRef<StringRef> Paths;
+  SearchPathType type;
+};
+
 class SearchPathResolver {
 public:
-  SearchPathResolver(ArrayRef<StringRef> searchPaths,
-                     StringRef placeholderPrefix = "@rpath")
-      : placeholderPrefix(placeholderPrefix) {
-    for (auto &path : searchPaths)
+  SearchPathResolver(const SearchPathConfig &Cfg,
+                     StringRef placeholderPrefix = "")
+      : Kind(Cfg.type), placeholderPrefix(placeholderPrefix) {
+    for (auto &path : Cfg.Paths)
       paths.emplace_back(path.str());
   }
 
   std::optional<std::string> resolve(StringRef stem,
                                      const DylibSubstitutor &subst,
                                      DylibPathValidator &validator) const;
+  SearchPathType searchPathType() const { return Kind; }
 
 private:
   std::vector<std::string> paths;
+  SearchPathType Kind;
   std::string placeholderPrefix;
 };
 
@@ -258,18 +270,16 @@ class DylibResolver {
 public:
   DylibResolver(DylibPathValidator &validator) : validator(validator) {}
 
-  void configure(StringRef loaderPath, ArrayRef<StringRef> rpaths,
-                 ArrayRef<StringRef> runpaths, ArrayRef<StringRef> extra = {}) {
+  void configure(StringRef loaderPath,
+                 ArrayRef<SearchPathConfig> SearchPathCfg) {
     DylibSubstitutor substitutor;
     substitutor.configure(loaderPath);
 
     std::vector<SearchPathResolver> resolvers;
-    if (!rpaths.empty())
-      resolvers.emplace_back(rpaths, "@rpath");
-    if (!runpaths.empty())
-      resolvers.emplace_back(runpaths, "@rpath");
-    if (!extra.empty())
-      resolvers.emplace_back(extra, "@rpath");
+    for (const auto &cfg : SearchPathCfg) {
+      resolvers.emplace_back(cfg,
+                             cfg.type == SearchPathType::RPath ? "@rpath" : "");
+    }
 
     impl_ = std::make_unique<DylibResolverImpl>(
         std::move(substitutor), validator, std::move(resolvers));

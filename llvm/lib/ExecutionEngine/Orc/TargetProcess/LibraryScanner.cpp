@@ -11,10 +11,6 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryResolver.h"
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
-
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -23,7 +19,10 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -308,7 +307,7 @@ SearchPathResolver::resolve(StringRef stem, const DylibSubstitutor &subst,
     std::string base = subst.substitute(searchPath);
 
     SmallString<512> fullPath(base);
-    if (stem.starts_with(placeholderPrefix))
+    if (!placeholderPrefix.empty() && stem.starts_with(placeholderPrefix))
       fullPath.append(stem.drop_front(placeholderPrefix.size()));
     else
       sys::path::append(fullPath, stem);
@@ -1071,7 +1070,9 @@ void LibraryScanner::handleLibrary(StringRef filePath, PathType K, int level) {
 
   DylibPathValidator validator(m_helper.getPathResolver());
   DylibResolver m_libResolver(validator);
-  m_libResolver.configure(CanonicalPath, Deps.rpath, Deps.runPath);
+  m_libResolver.configure(CanonicalPath,
+                          {{Deps.rpath, SearchPathType::RPath},
+                           {Deps.runPath, SearchPathType::RunPath}});
   for (StringRef dep : Deps.deps) {
     LLVM_DEBUG(dbgs() << "  Resolving dep: " << dep << "\n";);
     auto dep_fullopt = m_libResolver.resolve(dep);
