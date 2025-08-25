@@ -3339,7 +3339,7 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
   // Lower store of any other vector type, including v2f32 as we want to break
   // it apart since this is not a widely-supported type.
-  return LowerSTOREVector(Op, DAG);
+  return lowerSTOREVector(Op, DAG, STI);
 }
 
 // st i1 v, addr
