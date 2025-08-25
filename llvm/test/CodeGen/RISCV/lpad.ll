@@ -143,9 +143,9 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_remember_state
-; RV32-NEXT:  .Ltmp0:
+; RV32-NEXT:  .Ltmp0: # EH_LABEL
 ; RV32-NEXT:    jalr a0
-; RV32-NEXT:  .Ltmp1:
+; RV32-NEXT:  .Ltmp1: # EH_LABEL
 ; RV32-NEXT:  .LBB2_1: # %try.cont
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
@@ -154,7 +154,7 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB2_2: # %lpad
 ; RV32-NEXT:    .cfi_restore_state
-; RV32-NEXT:  .Ltmp2:
+; RV32-NEXT:  .Ltmp2: # EH_LABEL
 ; RV32-NEXT:    j .LBB2_1
 ;
 ; RV64-LABEL: invoke:
@@ -165,9 +165,9 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_remember_state
-; RV64-NEXT:  .Ltmp0:
+; RV64-NEXT:  .Ltmp0: # EH_LABEL
 ; RV64-NEXT:    jalr a0
-; RV64-NEXT:  .Ltmp1:
+; RV64-NEXT:  .Ltmp1: # EH_LABEL
 ; RV64-NEXT:  .LBB2_1: # %try.cont
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
@@ -176,7 +176,7 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB2_2: # %lpad
 ; RV64-NEXT:    .cfi_restore_state
-; RV64-NEXT:  .Ltmp2:
+; RV64-NEXT:  .Ltmp2: # EH_LABEL
 ; RV64-NEXT:    j .LBB2_1
 ;
 ; FIXED-ONE-RV32-LABEL: invoke:
@@ -187,10 +187,10 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; FIXED-ONE-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; FIXED-ONE-RV32-NEXT:    .cfi_offset ra, -4
 ; FIXED-ONE-RV32-NEXT:    .cfi_remember_state
-; FIXED-ONE-RV32-NEXT:  .Ltmp0:
+; FIXED-ONE-RV32-NEXT:  .Ltmp0: # EH_LABEL
 ; FIXED-ONE-RV32-NEXT:    lui t2, 1
 ; FIXED-ONE-RV32-NEXT:    jalr a0
-; FIXED-ONE-RV32-NEXT:  .Ltmp1:
+; FIXED-ONE-RV32-NEXT:  .Ltmp1: # EH_LABEL
 ; FIXED-ONE-RV32-NEXT:  .LBB2_1: # %try.cont
 ; FIXED-ONE-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; FIXED-ONE-RV32-NEXT:    .cfi_restore ra
@@ -199,7 +199,7 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; FIXED-ONE-RV32-NEXT:    ret
 ; FIXED-ONE-RV32-NEXT:  .LBB2_2: # %lpad
 ; FIXED-ONE-RV32-NEXT:    .cfi_restore_state
-; FIXED-ONE-RV32-NEXT:  .Ltmp2:
+; FIXED-ONE-RV32-NEXT:  .Ltmp2: # EH_LABEL
 ; FIXED-ONE-RV32-NEXT:    j .LBB2_1
 ;
 ; FIXED-ONE-RV64-LABEL: invoke:
@@ -210,10 +210,10 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; FIXED-ONE-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; FIXED-ONE-RV64-NEXT:    .cfi_offset ra, -8
 ; FIXED-ONE-RV64-NEXT:    .cfi_remember_state
-; FIXED-ONE-RV64-NEXT:  .Ltmp0:
+; FIXED-ONE-RV64-NEXT:  .Ltmp0: # EH_LABEL
 ; FIXED-ONE-RV64-NEXT:    lui t2, 1
 ; FIXED-ONE-RV64-NEXT:    jalr a0
-; FIXED-ONE-RV64-NEXT:  .Ltmp1:
+; FIXED-ONE-RV64-NEXT:  .Ltmp1: # EH_LABEL
 ; FIXED-ONE-RV64-NEXT:  .LBB2_1: # %try.cont
 ; FIXED-ONE-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; FIXED-ONE-RV64-NEXT:    .cfi_restore ra
@@ -222,7 +222,7 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; FIXED-ONE-RV64-NEXT:    ret
 ; FIXED-ONE-RV64-NEXT:  .LBB2_2: # %lpad
 ; FIXED-ONE-RV64-NEXT:    .cfi_restore_state
-; FIXED-ONE-RV64-NEXT:  .Ltmp2:
+; FIXED-ONE-RV64-NEXT:  .Ltmp2: # EH_LABEL
 ; FIXED-ONE-RV64-NEXT:    j .LBB2_1
 entry:
   invoke void %f() to label %try.cont unwind label %lpad
