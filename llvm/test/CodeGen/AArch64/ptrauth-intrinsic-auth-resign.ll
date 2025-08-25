@@ -770,12 +770,14 @@ define ptr @auth_speculation(i64 %signed, i1 %cond) {
 ; UNCHECKED-DARWIN-NEXT:        autdzb  x16
 ; UNCHECKED-DARWIN-NEXT:      [[BB_RETURN]]:
 ; UNCHECKED-DARWIN-NEXT:        ldr     x8, [x16]
-; UNCHECKED-ELF-NEXT:           mov     x8, x0
+; UNCHECKED-ELF-NEXT:           tbz     w1, #0, [[BB_ELSE:[A-Za-z0-9_.]+]]
+; UNCHECKED-ELF-NEXT:         %bb.1:
 ; UNCHECKED-ELF-NEXT:           autdza  x0
-; UNCHECKED-ELF-NEXT:           autdzb  x8
-; UNCHECKED-ELF-NEXT:           tst     w1, #0x1
-; UNCHECKED-ELF-NEXT:           csel    x8, x8, x0, eq
-; UNCHECKED-ELF-NEXT:           ldr     x8, [x8]
+; UNCHECKED-ELF-NEXT:           b       [[BB_RETURN:[A-Za-z0-9_.]+]]
+; UNCHECKED-ELF-NEXT:         [[BB_ELSE]]:
+; UNCHECKED-ELF-NEXT:           autdzb  x0
+; UNCHECKED-ELF-NEXT:         [[BB_RETURN]]:
+; UNCHECKED-ELF-NEXT:           ldr     x8, [x0]
 ; UNCHECKED-NEXT:               ldr     x8, [x8]
 ; UNCHECKED-NEXT:               ldr     x8, [x8]
 ; UNCHECKED-NEXT:               ldr     x0, [x8]
@@ -792,12 +794,14 @@ define ptr @auth_speculation(i64 %signed, i1 %cond) {
 ; CHECKED-DARWIN-NEXT:        autdzb  x16
 ; CHECKED-DARWIN-NEXT:      [[BB_RETURN]]:
 ; CHECKED-DARWIN-NEXT:        ldr     x8, [x16]
-; CHECKED-ELF-NEXT:           mov     x8, x0
+; CHECKED-ELF-NEXT:           tbz     w1, #0, [[BB_ELSE:[A-Za-z0-9_.]+]]
+; CHECKED-ELF-NEXT:         %bb.1:
 ; CHECKED-ELF-NEXT:           autdza  x0
-; CHECKED-ELF-NEXT:           autdzb  x8
-; CHECKED-ELF-NEXT:           tst     w1, #0x1
-; CHECKED-ELF-NEXT:           csel    x8, x8, x0, eq
-; CHECKED-ELF-NEXT:           ldr     x8, [x8]
+; CHECKED-ELF-NEXT:           b       [[BB_RETURN:[A-Za-z0-9_.]+]]
+; CHECKED-ELF-NEXT:         [[BB_ELSE]]:
+; CHECKED-ELF-NEXT:           autdzb  x0
+; CHECKED-ELF-NEXT:         [[BB_RETURN]]:
+; CHECKED-ELF-NEXT:           ldr     x8, [x0]
 ; CHECKED-NEXT:               ldr     x8, [x8]
 ; CHECKED-NEXT:               ldr     x8, [x8]
 ; CHECKED-NEXT:               ldr     x0, [x8]
@@ -826,24 +830,26 @@ define ptr @auth_speculation(i64 %signed, i1 %cond) {
 ; TRAP-DARWIN-NEXT:      [[L]]auth_success_19:
 ; TRAP-DARWIN-NEXT:      [[BB_RETURN]]:
 ; TRAP-DARWIN-NEXT:        ldr     x8, [x16]
-; TRAP-ELF-NEXT:           mov     x8, x0
+; TRAP-ELF-NEXT:           tbz     w1, #0, [[BB_ELSE:[A-Za-z0-9_.]+]]
+; TRAP-ELF-NEXT:         %bb.1:
 ; TRAP-ELF-NEXT:           autdza  x0
-; TRAP-ELF-NEXT:           mov     x9, x0
-; TRAP-ELF-NEXT:           xpacd   x9
-; TRAP-ELF-NEXT:           cmp     x0, x9
+; TRAP-ELF-NEXT:           mov     x8, x0
+; TRAP-ELF-NEXT:           xpacd   x8
+; TRAP-ELF-NEXT:           cmp     x0, x8
 ; TRAP-ELF-NEXT:           b.eq    [[L]]auth_success_18
 ; TRAP-ELF-NEXT:           brk     #0xc472
 ; TRAP-ELF-NEXT:         [[L]]auth_success_18:
-; TRAP-ELF-NEXT:           autdzb  x8
-; TRAP-ELF-NEXT:           mov     x9, x8
-; TRAP-ELF-NEXT:           xpacd   x9
-; TRAP-ELF-NEXT:           cmp     x8, x9
+; TRAP-ELF-NEXT:           b       [[BB_RETURN:[A-Za-z0-9_.]+]]
+; TRAP-ELF-NEXT:         [[BB_ELSE]]:
+; TRAP-ELF-NEXT:           autdzb  x0
+; TRAP-ELF-NEXT:           mov     x8, x0
+; TRAP-ELF-NEXT:           xpacd   x8
+; TRAP-ELF-NEXT:           cmp     x0, x8
 ; TRAP-ELF-NEXT:           b.eq    [[L]]auth_success_19
 ; TRAP-ELF-NEXT:           brk     #0xc473
 ; TRAP-ELF-NEXT:         [[L]]auth_success_19:
-; TRAP-ELF-NEXT:           tst     w1, #0x1
-; TRAP-ELF-NEXT:           csel    x8, x8, x0, eq
-; TRAP-ELF-NEXT:           ldr     x8, [x8]
+; TRAP-ELF-NEXT:         [[BB_RETURN]]:
+; TRAP-ELF-NEXT:           ldr     x8, [x0]
 ; TRAP-NEXT:               ldr     x8, [x8]
 ; TRAP-NEXT:               ldr     x8, [x8]
 ; TRAP-NEXT:               ldr     x0, [x8]
