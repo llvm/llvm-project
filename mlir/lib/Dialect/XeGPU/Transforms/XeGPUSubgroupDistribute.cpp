@@ -817,14 +817,14 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
     auto storeScatterOp = dyn_cast_or_null<xegpu::StoreScatterOp>(lastNode);
     if (!storeScatterOp)
       return failure();
-    else if (!storeScatterOp.getOffsets())
+    if (!storeScatterOp.getOffsets())
       return rewriter.notifyMatchFailure(storeScatterOp,
                                          "Store op must have offsets argument");
-    else if (cast<VectorType>(storeScatterOp.getOffsets().getType())
-                 .getRank() != 1)
+    VectorType offsetsTy =
+        cast<VectorType>(storeScatterOp.getOffsets().getType());
+    if (offsetsTy.getRank() != 1)
       return rewriter.notifyMatchFailure(storeScatterOp,
                                          "Expected 1D offsets vector");
-
     VectorType storeVecTy =
         cast<VectorType>(storeScatterOp.getValue().getType());
     assert(storeVecTy.getRank() <= 2 &&
@@ -836,33 +836,22 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
       distStoreVecTy = VectorType::Builder(storeVecTy).setDim(0, 1);
 
     SmallVector<size_t> newRetIndices;
-    SmallVector<Value> operands =
-        llvm::to_vector_of<Value>(storeScatterOp->getOperands());
+    SmallVector<Value> operands = storeScatterOp->getOperands();
     SmallVector<Type> operandTypes =
         llvm::to_vector_of<Type>(storeScatterOp->getOperandTypes());
     operandTypes[0] = distStoreVecTy;
+    // Assume offset and mask pproducers will be distributed as well.
+    operandTypes[2] = VectorType::get({1}, getElementTypeOrSelf(offsetsTy));
+    operandTypes[3] = VectorType::get(
+        {1}, getElementTypeOrSelf(storeScatterOp.getMask().getType()));
 
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypes, newRetIndices);
     SmallVector<Value> newStoreScatterOpOperands = llvm::map_to_vector(
         newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
 
-    Value offsetsVec = newStoreScatterOpOperands[2];
-    Value maskVec = newStoreScatterOpOperands[3];
-
     auto loc = newWarpOp.getLoc();
-    Value laneId = warpOp.getLaneid();
     rewriter.setInsertionPointAfter(newWarpOp);
-    Value laneOffset =
-        vector::ExtractOp::create(rewriter, loc, offsetsVec, laneId);
-    laneOffset = vector::BroadcastOp::create(
-        rewriter, loc, VectorType::get({1}, laneOffset.getType()), laneOffset);
-    Value laneMask = vector::ExtractOp::create(rewriter, loc, maskVec, laneId);
-    laneMask = vector::BroadcastOp::create(
-        rewriter, loc, VectorType::get({1}, laneMask.getType()), laneMask);
-    newStoreScatterOpOperands[2] = laneOffset;
-    newStoreScatterOpOperands[3] = laneMask;
-
     xegpu::StoreScatterOp newOp = xegpu::StoreScatterOp::create(
         rewriter, loc, TypeRange{}, newStoreScatterOpOperands,
         storeScatterOp->getAttrs());
@@ -892,16 +881,20 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
     if (!loadGatherOp.getOffsets())
       return rewriter.notifyMatchFailure(loadGatherOp,
                                          "Load op must have offsets argument");
-    else if (cast<VectorType>(loadGatherOp.getOffsets().getType()).getRank() !=
-             1)
+    VectorType offsetsTy =
+        cast<VectorType>(loadGatherOp.getOffsets().getType());
+    if (offsetsTy.getRank() != 1)
       return rewriter.notifyMatchFailure(loadGatherOp,
                                          "Expected 1D offsets vector");
 
     SmallVector<size_t> newRetIndices;
-    SmallVector<Value> operands =
-        llvm::to_vector_of<Value>(loadGatherOp->getOperands());
+    SmallVector<Value> operands = loadGatherOp->getOperands();
     SmallVector<Type> operandTypes =
         llvm::to_vector_of<Type>(loadGatherOp->getOperandTypes());
+    // Assume offset and mask pproducers will be distributed as well.
+    operandTypes[1] = VectorType::get({1}, getElementTypeOrSelf(offsetsTy));
+    operandTypes[2] = VectorType::get(
+        {1}, getElementTypeOrSelf(loadGatherOp.getMask().getType()));
 
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypes, newRetIndices);
@@ -914,21 +907,8 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     assert(loadVecTy.getRank() == 1 && "Expected a distributed vector");
 
-    Value offsetsVec = newLoadGatherOperands[1];
-    Value maskVec = newLoadGatherOperands[2];
     auto loc = newWarpOp.getLoc();
-    Value laneId = warpOp.getLaneid();
     rewriter.setInsertionPointAfter(newWarpOp);
-    Value laneOffset =
-        vector::ExtractOp::create(rewriter, loc, offsetsVec, laneId);
-    laneOffset = vector::BroadcastOp::create(
-        rewriter, loc, VectorType::get({1}, laneOffset.getType()), laneOffset);
-    Value laneMask = vector::ExtractOp::create(rewriter, loc, maskVec, laneId);
-    laneMask = vector::BroadcastOp::create(
-        rewriter, loc, VectorType::get({1}, laneMask.getType()), laneMask);
-    newLoadGatherOperands[1] = laneOffset;
-    newLoadGatherOperands[2] = laneMask;
-
     xegpu::LoadGatherOp newOp = rewriter.create<xegpu::LoadGatherOp>(
         loc, loadVecTy, newLoadGatherOperands, loadGatherOp->getAttrs());
     Value distributedVal = newWarpOp.getResult(operandIdx);
