@@ -134,9 +134,9 @@ struct DynamicThisUseChecker
     : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
   using super = ConstEvaluatedExprVisitor<DynamicThisUseChecker>;
 
-  bool usesThis;
+  bool usesThis = false;
 
-  DynamicThisUseChecker(const ASTContext &c) : super(c), usesThis(false) {}
+  DynamicThisUseChecker(const ASTContext &c) : super(c) {}
 
   // Black-list all explicit and implicit references to 'this'.
   //
