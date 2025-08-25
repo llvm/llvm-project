@@ -26,6 +26,7 @@
 
 #include "NVPTX.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -99,6 +100,10 @@ bool NVPTXLowerAlloca::lowerFunctionAllocas(Function &F) {
                               {NewAlloca});
       II->eraseFromParent();
     }
+    SmallVector<DbgVariableRecord *, 4> DbgVariableUses;
+    findDbgValues(Alloca, DbgVariableUses);
+    for (auto *Dbg : DbgVariableUses)
+      Dbg->replaceVariableLocationOp(Alloca, NewAlloca);
 
     Alloca->replaceAllUsesWith(Cast);
     Alloca->eraseFromParent();
