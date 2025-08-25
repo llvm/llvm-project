@@ -3887,7 +3887,6 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
     // TODO: Also manage existing metadata using VPIRMetadata.
     Group->addMetadata(NewLoad);
 
-    ArrayRef<VPValue *> VPDefs = definedValues();
     // Scalable vectors cannot use arbitrary shufflevectors (only splats),
     // so must use intrinsics to deinterleave.
     NewLoad = State.Builder.CreateIntrinsic(
@@ -3910,7 +3909,7 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
             createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
       }
 
-      State.set(VPDefs[J], StridedVec);
+      State.set(getVPValue(J), StridedVec);
       ++J;
     }
     return;
