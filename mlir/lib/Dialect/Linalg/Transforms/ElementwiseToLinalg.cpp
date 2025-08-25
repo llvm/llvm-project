@@ -20,13 +20,26 @@ namespace mlir {
 
 using namespace mlir;
 
+static inline bool isScalarLike(Type t) {
+  return isa<IntegerType, FloatType, IndexType, ComplexType>(t);
+}
+
 static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
   if (!OpTrait::hasElementwiseMappableTraits(op))
     return false;
 
-  // TODO: The conversion pattern can be made to work for `any_of` here, but
-  // it's more complex as it requires tracking which operands are scalars.
-  return llvm::all_of(op->getOperandTypes(), llvm::IsaPred<RankedTensorType>);
+  auto types = op->getOperandTypes();
+
+  // We want at least one ranked tensor.
+  bool anyRankedTensor = llvm::any_of(types, llvm::IsaPred<RankedTensorType>);
+
+  // No invalid operands (i.e., every operand is a ranked tensor or
+  // scalar-like).
+  bool noneInvalid = llvm::none_of(types, [](Type t) {
+    return !(isa<RankedTensorType>(t) || isScalarLike(t));
+  });
+
+  return anyRankedTensor && noneInvalid;
 }
 
 /// Given `op` assumed `isElementwiseMappableOpOnRankedTensors`, iterate over
@@ -81,13 +94,41 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
       return rewriter.notifyMatchFailure(
           op, "requires elementwise op on ranked tensors");
 
-    auto rank = cast<RankedTensorType>(op->getResult(0).getType()).getRank();
-    SmallVector<AffineMap, 3> indexingMaps(
-        op->getNumResults() + op->getNumOperands(),
-        rewriter.getMultiDimIdentityMap(rank));
-    SmallVector<utils::IteratorType, 6> iteratorTypes(
+    auto resTy = cast<RankedTensorType>(op->getResult(0).getType());
+    auto rank = resTy.getRank();
+
+    // Maps: identity for tensors (rank > 0), scalar map for scalars.
+    AffineMap scalarMap = AffineMap::get(/*dimCount=*/rank, /*symbolCount=*/0,
+                                         /*results=*/{}, rewriter.getContext());
+    AffineMap idMap = rewriter.getMultiDimIdentityMap(rank);
+
+    // Match phase.
+    SmallVector<bool> isScalarOperand;
+    isScalarOperand.reserve(op->getNumOperands());
+    for (Type ty : op->getOperandTypes()) {
+      if (isScalarLike(ty))
+        isScalarOperand.push_back(true);
+      else if (auto rt = dyn_cast<RankedTensorType>(ty))
+        isScalarOperand.push_back(false);
+      else
+        return rewriter.notifyMatchFailure(
+            op,
+            "unsupported operand type (expected scalar-like or ranked tensor)");
+    }
+
+    // Create indexing maps.
+    SmallVector<AffineMap> indexingMaps;
+    indexingMaps.reserve(op->getNumOperands() + op->getNumResults());
+
+    for (bool isScalar : isScalarOperand)
+      indexingMaps.push_back(isScalar ? scalarMap : idMap);
+
+    indexingMaps.append(op->getNumResults(), idMap);
+
+    SmallVector<utils::IteratorType> iteratorTypes(
         rank, utils::IteratorType::parallel);
-    auto outputs = getOrCreateOperandsMatchingResultTypes(rewriter, op);
+    SmallVector<Value> outputs =
+        getOrCreateOperandsMatchingResultTypes(rewriter, op);
     rewriter.replaceOpWithNewOp<linalg::GenericOp>(
         op, /*resultTensorTypes=*/op->getResultTypes(),
         /*inputs=*/op->getOperands(),
@@ -96,14 +137,14 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
         /*iteratorTypes=*/iteratorTypes,
         /*bodyBuilder=*/
         [&](OpBuilder &builder, Location loc, ValueRange regionArgs) {
-          auto resultTypes = llvm::to_vector<6>(
+          SmallVector<Type> resultEltTys = llvm::to_vector<6>(
               llvm::map_range(op->getResultTypes(), [](Type type) {
                 return cast<TensorType>(type).getElementType();
               }));
-          auto *scalarOp =
+          Operation *scalarOp =
               builder.create(loc, op->getName().getIdentifier(),
                              regionArgs.take_front(op->getNumOperands()),
-                             resultTypes, op->getAttrs());
+                             resultEltTys, op->getAttrs());
           linalg::YieldOp::create(builder, loc, scalarOp->getResults());
         });
     return success();
