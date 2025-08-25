@@ -21,6 +21,7 @@
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
+#include "TrapReasonBuilder.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
@@ -1867,7 +1868,7 @@ void ScalarExprEmitter::EmitBinOpCheck(
               SanitizerKind::SignedIntegerOverflow)) {
         // Only pay the cost for constructing the trap diagnostic if they are
         // going to be used.
-        CGF.CGM.RuntimeDiag(diag::trap_ubsan_arith_overflow, TR)
+        CGF.CGM.BuildTrapReason(diag::trap_ubsan_arith_overflow, TR)
             << Info.Ty->isSignedIntegerOrEnumerationType() << ArithOverflowKind
             << Info.E;
       }
@@ -1876,7 +1877,7 @@ void ScalarExprEmitter::EmitBinOpCheck(
     DynamicData.push_back(Info.RHS);
   }
 
-  CGF.EmitCheck(Checks, Check, StaticData, DynamicData, TR.getPtr());
+  CGF.EmitCheck(Checks, Check, StaticData, DynamicData, &TR);
 }
 
 //===----------------------------------------------------------------------===//

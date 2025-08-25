@@ -17,6 +17,7 @@
 #include "CodeGenTypeCache.h"
 #include "CodeGenTypes.h"
 #include "SanitizerMetadata.h"
+#include "TrapReasonBuilder.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -1825,9 +1826,9 @@ public:
     return PAlign;
   }
 
-  /// Helper function to construct a RuntimeTrapDiagnosticBuilder
-  RuntimeTrapDiagnosticBuilder RuntimeDiag(unsigned DiagID, TrapReason &TR) {
-    return RuntimeTrapDiagnosticBuilder(&getDiags(), DiagID, TR);
+  /// Helper function to construct a TrapReasonBuilder
+  TrapReasonBuilder BuildTrapReason(unsigned DiagID, TrapReason &TR) {
+    return TrapReasonBuilder(&getDiags(), DiagID, TR);
   }
 
 private:

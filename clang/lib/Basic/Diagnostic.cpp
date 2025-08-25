@@ -795,36 +795,6 @@ DiagnosticBuilder::DiagnosticBuilder(const DiagnosticBuilder &D)
   D.Clear();
 }
 
-RuntimeTrapDiagnosticBuilder::RuntimeTrapDiagnosticBuilder(
-    DiagnosticsEngine *DiagObj, unsigned DiagID, TrapReason &TR)
-    : DiagnosticBuilder(DiagObj, SourceLocation(), DiagID), TR(TR) {
-  assert(DiagObj->getDiagnosticIDs()->isTrapDiag(DiagID));
-}
-
-RuntimeTrapDiagnosticBuilder::~RuntimeTrapDiagnosticBuilder() {
-  // Store the trap message and category into the TrapReason object.
-  getMessage(TR.Message);
-  TR.Category = getCategory();
-
-  // Make sure that when `DiagnosticBuilder::~DiagnosticBuilder()`
-  // calls `Emit()` that it does nothing.
-  Clear();
-}
-
-void RuntimeTrapDiagnosticBuilder::getMessage(SmallVectorImpl<char> &Storage) {
-  // Render the Diagnostic
-  Diagnostic Info(DiagObj, *this);
-  Info.FormatDiagnostic(Storage);
-}
-
-StringRef RuntimeTrapDiagnosticBuilder::getCategory() {
-  auto CategoryID =
-      DiagObj->getDiagnosticIDs()->getCategoryNumberForDiag(DiagID);
-  if (CategoryID == 0)
-    return "";
-  return DiagObj->getDiagnosticIDs()->getCategoryNameFromID(CategoryID);
-}
-
 Diagnostic::Diagnostic(const DiagnosticsEngine *DO,
                        const DiagnosticBuilder &DiagBuilder)
     : DiagObj(DO), DiagLoc(DiagBuilder.DiagLoc), DiagID(DiagBuilder.DiagID),

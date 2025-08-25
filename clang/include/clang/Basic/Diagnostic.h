@@ -1234,7 +1234,6 @@ class DiagnosticBuilder : public StreamingDiagnostic {
   friend class DiagnosticsEngine;
   friend class PartialDiagnostic;
   friend class Diagnostic;
-  friend class RuntimeTrapDiagnosticBuilder;
 
   mutable DiagnosticsEngine *DiagObj = nullptr;
 
@@ -1261,10 +1260,13 @@ class DiagnosticBuilder : public StreamingDiagnostic {
 
   DiagnosticBuilder() = default;
 
+protected:
   DiagnosticBuilder(DiagnosticsEngine *DiagObj, SourceLocation DiagLoc,
                     unsigned DiagID);
 
-protected:
+  DiagnosticsEngine *getDiagnosticsEngine() const { return DiagObj; }
+  unsigned getDiagID() const { return DiagID; }
+
   /// Clear out the current diagnostic.
   void Clear() const {
     DiagObj = nullptr;
@@ -1540,98 +1542,7 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
 // RuntimeTrapDiagnosticBuilder and helper classes
 //===----------------------------------------------------------------------===//
 
-/// Helper class for \class RuntimeTrapDiagnosticBuilder. This class stores the
-/// "trap reason" built by \class RuntimeTrapDiagnosticBuilder. This consists of
-/// a trap message and trap category.
-///
-/// It is intended that this object be allocated on the stack.
-class TrapReason {
-public:
-  TrapReason() {}
-  /// \return The trap message. Note the lifetime of the underlying storage for
-  /// the returned StringRef lives in this class which means the returned
-  /// StringRef should not be used after this class is destroyed.
-  StringRef getMessage() const { return Message; }
 
-  /// \return the trap category (e.g. "Undefined Behavior Sanitizer")
-  StringRef getCategory() const { return Category; }
-
-  bool isEmpty() const { return Message.size() == 0 && Category.size() == 0; }
-
-  /// \return a pointer to this object if it contains a non-empty trap reason,
-  /// otherwise return `nullptr`. This is a convenient helper for passing
-  /// TrapReason objects to function calls that have a `TrapReason*` parameter.
-  TrapReason *getPtr() {
-    if (isEmpty())
-      return nullptr;
-    return this;
-  }
-
-private:
-  llvm::SmallString<64> Message;
-  // The Category doesn't need its own storage because the StringRef points
-  // to a global constant string.
-  StringRef Category;
-
-  // Only this class can set the private fields.
-  friend class RuntimeTrapDiagnosticBuilder;
-};
-
-/// Class to make it convenient to initialize TrapReason objects which can be
-/// used to attach the "trap reason" to trap instructions.
-///
-/// Although this class inherits from \class DiagnosticBuilder it has slightly
-/// different semantics.
-///
-/// * This class should only be used with trap diagnostics (declared in
-/// `DiagnosticTrapKinds.td`).
-/// * The `RuntimeTrapDiagnosticBuilder` does not emit diagnostics to the normal
-///   diagnostics consumers on destruction like normal Diagnostic builders.
-///   Instead on destruction it assigns to the TrapReason object passed in to
-///   the constructor.
-///
-/// Given that this class inherits from `DiagnosticBuilder` it inherits all of
-/// its abilities to format diagnostic messages and consume various types in
-/// class (e.g. Type, Exprs, etc.). This makes it particularly suited to
-/// printing types and expressions from the AST while codegen-ing runtime
-/// checks.
-///
-///
-/// Example use via the `CodeGenModule::RuntimeDiag` helper.
-///
-/// \code
-/// {
-///   TrapReason TR;
-///   CGM.RuntimeDiag(diag::trap_diagnostic, TR) << 0 << SomeExpr << SomeType;
-///   consume(TR.getPtr());
-/// }
-/// \endcode
-///
-///
-class RuntimeTrapDiagnosticBuilder : public DiagnosticBuilder {
-public:
-  RuntimeTrapDiagnosticBuilder(DiagnosticsEngine *DiagObj, unsigned DiagID,
-                               TrapReason &TR);
-  ~RuntimeTrapDiagnosticBuilder();
-
-  // Prevent accidentally copying or assigning
-  RuntimeTrapDiagnosticBuilder &
-  operator=(const RuntimeTrapDiagnosticBuilder &) = delete;
-  RuntimeTrapDiagnosticBuilder &
-  operator=(const RuntimeTrapDiagnosticBuilder &&) = delete;
-  RuntimeTrapDiagnosticBuilder(const RuntimeTrapDiagnosticBuilder &) = delete;
-  RuntimeTrapDiagnosticBuilder(const RuntimeTrapDiagnosticBuilder &&) = delete;
-
-  /// \return Format the trap message into `Storage`.
-  void getMessage(SmallVectorImpl<char> &Storage);
-
-  /// \return Return the trap category. These are the `CategoryName` property
-  /// of `trap` diagnostics declared in `DiagnosticTrapKinds.td`.
-  StringRef getCategory();
-
-private:
-  TrapReason &TR;
-};
 
 //===----------------------------------------------------------------------===//
 // Diagnostic
