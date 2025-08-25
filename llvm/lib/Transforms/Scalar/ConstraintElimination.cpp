@@ -1126,6 +1126,8 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
     return false;
 
   ObjectSizeOpts Opts;
+  // Workaround for gep inbounds, ptr null, idx.
+  Opts.NullIsUnknownSize = true;
   ObjectSizeOffsetVisitor Visitor(DL, &TLI, GEP.getContext(), Opts);
   SizeOffsetAPInt Data = Visitor.compute(Offset.BasePtr);
   if (!Data.bothKnown() || !Data.Offset.isZero())
