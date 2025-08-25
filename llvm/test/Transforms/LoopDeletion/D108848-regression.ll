@@ -12,10 +12,10 @@ define i32 @main() {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[DOTB:%.*]] = load i1, ptr @a, align 4
 ; CHECK-NEXT:    [[CONV1:%.*]] = select i1 [[DOTB]], i32 -128, i32 1
-; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp ugt i32 [[CONV1]], [[D_015]]
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp ugt i32 [[CONV1]], 0
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[CLEANUP:%.*]], label [[FOR_INC8:%.*]]
 ; CHECK:       for.inc8:
-; CHECK-NEXT:    [[INC9:%.*]] = add nuw nsw i32 [[D_015]], 1
+; CHECK-NEXT:    [[INC9:%.*]] = add nuw nsw i32 0, 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC9]], 19
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
