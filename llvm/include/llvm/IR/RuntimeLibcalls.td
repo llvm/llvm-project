@@ -21,12 +21,19 @@ def isOSOpenBSD : RuntimeLibcallPredicate<"TT.isOSOpenBSD()">;
 def isNotOSOpenBSD : RuntimeLibcallPredicate<"!TT.isOSOpenBSD()">;
 def isOSWindows : RuntimeLibcallPredicate<"TT.isOSWindows()">;
 def isNotOSWindows : RuntimeLibcallPredicate<"!TT.isOSWindows()">;
+def isNotOSLinux : RuntimeLibcallPredicate<[{!TT.isOSLinux()}]>;
 def isNotOSMSVCRT : RuntimeLibcallPredicate<"!TT.isOSMSVCRT()">;
 def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
 def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment()}]>;
+
+def isNotOSLinuxAndNotOSOpenBSD : RuntimeLibcallPredicate<
+  [{!TT.isOSLinux() && !TT.isOSOpenBSD()}]>;
+
+def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
+  [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
 
 def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
@@ -470,6 +477,16 @@ def OBJC_UNRETAINEDPOINTER : RuntimeLibcall;
 def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall;
 def OBJC_SYNC_ENTER : RuntimeLibcall;
 def OBJC_SYNC_EXIT : RuntimeLibcall;
+
+//--------------------------------------------------------------------
+// Global variable references
+//--------------------------------------------------------------------
+//
+// TODO: These are not libcalls and probably should be distinguished
+// in some way from callable functions.
+// --------------------------------------------------------------------
+
+def STACK_CHECK_GUARD : RuntimeLibcall;
 
 //--------------------------------------------------------------------
 // Define implementation default libcalls
@@ -1103,6 +1120,21 @@ defset list<RuntimeLibcallImpl> LibmF128FiniteLibcalls = {
   def __powf128_finite : RuntimeLibcallImpl<POW_FINITE_F128>;
 }
 
+//--------------------------------------------------------------------
+// Global variable references
+//--------------------------------------------------------------------
+
+def __stack_chk_guard : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
+
+// Name used on OpenBSD
+def __guard_local : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
+
+// Name used with Windows MSVC
+def __security_cookie : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
+
+// Name used on AIX
+def __ssp_canary_word : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
+
 //===----------------------------------------------------------------------===//
 // Common Libcall Sets
 //===----------------------------------------------------------------------===//
@@ -1159,7 +1191,8 @@ defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret),
 defvar DarwinExp10 = LibcallImpls<(add __exp10f, __exp10), darwinHasExp10>;
 
 defvar SecurityCheckCookieIfWinMSVC =
-    LibcallImpls<(add __security_check_cookie), isWindowsMSVCEnvironment>;
+    LibcallImpls<(add __security_check_cookie, __security_cookie),
+                 isWindowsMSVCOrItaniumEnvironment>;
 
 defvar LibmHasSinCosF32 = LibcallImpls<(add sincosf), hasSinCos>;
 defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
@@ -1205,10 +1238,13 @@ defvar LibmHasFrexpF128 = LibcallImpls<(add frexp_f128), isNotOSWindowsOrIsCygwi
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
 
 defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), isNotOSOpenBSD>;
+defvar has__stack_chk_guard =
+    LibcallImpls<(add __stack_chk_guard), isNotOSOpenBSD>;
 defvar has__stack_smash_handler = LibcallImpls<(add __stack_smash_handler), isOSOpenBSD>;
+defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 
-defvar DefaultStackProtector = (add has__stack_chk_fail,
-                                    has__stack_smash_handler);
+defvar DefaultStackProtector = (add has__stack_chk_fail, has__stack_chk_guard,
+    has__stack_smash_handler, has___guard_local);
 
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
@@ -1357,7 +1393,9 @@ def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
                            (add WinArm64ECDefaultRuntimeLibcallImpls,
                                 arm64ec___stack_chk_fail,
-                                LibcallImpls<(add __security_check_cookie_arm64ec),
+                                __stack_chk_guard,
+                                LibcallImpls<(add __security_check_cookie_arm64ec,
+                                                  __security_cookie),
                                               isWindowsMSVCEnvironment>,
                                 ExceptionModelCallsArm64EC)>;
 
@@ -1848,7 +1886,7 @@ def HexagonSystemLibrary
     __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
     __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-    exp10f, exp10, exp10l_f128, __stack_chk_fail)>;
+    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
@@ -1859,7 +1897,7 @@ def isLanai : RuntimeLibcallPredicate<"TT.getArch() == Triple::lanai">;
 // Use fast calling convention for library functions.
 def LanaiSystemLibrary
     : SystemRuntimeLibrary<isLanai, (add DefaultRuntimeLibcallImpls,
-                                         __stack_chk_fail)> {
+                                        __stack_chk_fail, __stack_chk_guard)> {
   let DefaultLibcallCallingConv = FASTCC;
 }
 
@@ -2157,7 +2195,8 @@ def MSP430SystemLibrary
       __mspabi_slll,
       // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
 
-      __stack_chk_fail
+      __stack_chk_fail,
+      __stack_chk_guard
   )
 >;
 
@@ -2251,7 +2290,11 @@ def PPCSystemLibrary
            LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>,
-           DefaultStackProtector)>;
+           has__stack_chk_fail,
+           has__stack_smash_handler,
+           has___guard_local,
+           AvailableIf<__ssp_canary_word, isAIX>,
+           AvailableIf<__stack_chk_guard, isNotAIX>)>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
@@ -2334,7 +2377,10 @@ def SPARCSystemLibrary
        LibcallImpls<(add _Q_qtoll, _Q_qtoull, _Q_lltoq, _Q_ulltoq), isSPARC32>,
        LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       DefaultStackProtector)
+       has__stack_chk_fail,
+       has__stack_smash_handler,
+       has___guard_local,
+       AvailableIf<__stack_chk_guard, isNotOSLinuxAndNotOSOpenBSD>)
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2544,7 +2590,7 @@ def WasmSystemLibrary
            exp10f, exp10,
            _Unwind_CallPersonality,
            emscripten_return_address,
-           __stack_chk_fail)>;
+           __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
 // Legacy Default Runtime Libcalls

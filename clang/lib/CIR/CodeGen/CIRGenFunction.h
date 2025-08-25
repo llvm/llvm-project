@@ -1379,6 +1379,8 @@ public:
 
   LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
 
+  mlir::Value emitUnPromotedValue(mlir::Value result, QualType unPromotionType);
+
   /// Emit a reached-unreachable diagnostic if \p loc is valid and runtime
   /// checking is enabled. Otherwise, just emit an unreachable instruction.
   /// \p createNewBlock indicates whether to create a new block for the IR

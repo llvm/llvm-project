@@ -8065,8 +8065,8 @@ public:
                                         ExprResult &RHS);
 
   QualType CheckMultiplyDivideOperands( // C99 6.5.5
-      ExprResult &LHS, ExprResult &RHS, SourceLocation Loc, bool IsCompAssign,
-      bool IsDivide);
+      ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
+      BinaryOperatorKind Opc);
   QualType CheckRemainderOperands( // C99 6.5.5
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
       bool IsCompAssign = false);
@@ -8075,7 +8075,7 @@ public:
       BinaryOperatorKind Opc, QualType *CompLHSTy = nullptr);
   QualType CheckSubtractionOperands( // C99 6.5.6
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
-      QualType *CompLHSTy = nullptr);
+      BinaryOperatorKind Opc, QualType *CompLHSTy = nullptr);
   QualType CheckShiftOperands( // C99 6.5.7
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
       BinaryOperatorKind Opc, bool IsCompAssign = false);

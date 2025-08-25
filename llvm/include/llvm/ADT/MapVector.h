@@ -123,9 +123,9 @@ public:
       It->second = Vector.size();
       Vector.emplace_back(std::piecewise_construct, std::forward_as_tuple(Key),
                           std::forward_as_tuple(std::forward<Ts>(Args)...));
-      return std::make_pair(std::prev(end()), true);
+      return {std::prev(end()), true};
     }
-    return std::make_pair(begin() + It->second, false);
+    return {begin() + It->second, false};
   }
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
@@ -135,9 +135,9 @@ public:
       Vector.emplace_back(std::piecewise_construct,
                           std::forward_as_tuple(std::move(Key)),
                           std::forward_as_tuple(std::forward<Ts>(Args)...));
-      return std::make_pair(std::prev(end()), true);
+      return {std::prev(end()), true};
     }
-    return std::make_pair(begin() + It->second, false);
+    return {begin() + It->second, false};
   }
 
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {

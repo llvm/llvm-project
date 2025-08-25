@@ -29,7 +29,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -157,8 +156,6 @@ STATISTIC(NumDynamicAllocaProbed, "Number of dynamic stack allocation probed");
 static bool isNByteElemShuffleMask(ShuffleVectorSDNode *, unsigned, int);
 
 static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl);
-
-static const char AIXSSPCanaryWordName[] = "__ssp_canary_word";
 
 // A faster local-[exec|dynamic] TLS access sequence (enabled with the
 // -maix-small-local-[exec|dynamic]-tls option) can be produced for TLS
@@ -18654,24 +18651,6 @@ bool PPCTargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (M.getStackProtectorGuard() == "tls" || Subtarget.isTargetLinux())
     return true;
   return TargetLowering::useLoadStackGuardNode(M);
-}
-
-// Override to disable global variable loading on Linux and insert AIX canary
-// word declaration.
-void PPCTargetLowering::insertSSPDeclarations(Module &M) const {
-  if (Subtarget.isAIXABI()) {
-    M.getOrInsertGlobal(AIXSSPCanaryWordName,
-                        PointerType::getUnqual(M.getContext()));
-    return;
-  }
-  if (!Subtarget.isTargetLinux())
-    return TargetLowering::insertSSPDeclarations(M);
-}
-
-Value *PPCTargetLowering::getSDagStackGuard(const Module &M) const {
-  if (Subtarget.isAIXABI())
-    return M.getGlobalVariable(AIXSSPCanaryWordName);
-  return TargetLowering::getSDagStackGuard(M);
 }
 
 bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
