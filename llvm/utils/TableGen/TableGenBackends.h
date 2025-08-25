@@ -64,8 +64,7 @@ class RecordKeeper;
 void EmitMapTable(const RecordKeeper &RK, raw_ostream &OS);
 
 // Defined in DecoderEmitter.cpp
-void EmitDecoder(const RecordKeeper &RK, raw_ostream &OS,
-                 StringRef PredicateNamespace);
+void EmitDecoder(const RecordKeeper &RK, raw_ostream &OS);
 
 } // namespace llvm
 
