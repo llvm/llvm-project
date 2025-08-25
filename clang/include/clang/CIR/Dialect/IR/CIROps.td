@@ -1915,11 +1915,11 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
 ]> {
   let summary = "Get the VTT address point";
   let description = [{
-    The `vtt.address_point` operation retrieves an element from the VTT,
-    which is the address point of a C++ vtable. In virtual inheritance,
-    a set of internal `__vptr` members for an object are initialized by this
-    operation, which assigns an element from the VTT. The initialization order
-    is as follows:
+    The `vtt.address_point` operation retrieves an element from the virtual
+    table table (VTT), which is the address point of a C++ vtable. In virtual
+    inheritance, a set of internal `__vptr` members for an object are
+    initialized by this operation, which assigns an element from the VTT. The
+    initialization order is as follows:
 
     The complete object constructors and destructors find the VTT,
     via the mangled name of the VTT global variable. They pass the address of
