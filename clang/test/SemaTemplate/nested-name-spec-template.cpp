@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-c++20-extensions
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-c++11-extensions -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 namespace N {
@@ -24,14 +24,7 @@ namespace N {
 
   M::Promote<int>::type *ret_intptr3(int* ip) { return ip; }
   M::template Promote<int>::type *ret_intptr4(int* ip) { return ip; }
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{'template' keyword outside of a template}}
-#endif
-
   M::template Promote<int> pi;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{'template' keyword outside of a template}}
-#endif
 }
 
 N::M::Promote<int>::type *ret_intptr5(int* ip) { return ip; }
@@ -181,3 +174,15 @@ namespace SubstTemplateTypeParmPackType {
   template void f<B>();
 } // namespace SubstTemplateTypeParmPackType
 #endif
+
+namespace DependentUnaryTransform {
+  template <class T> using decay_t = __decay(T);
+  template <class, class> struct A;
+  template <class T> struct A<T, typename decay_t<T>::X>;
+} // namespace DependentUnaryTransform
+
+namespace DependentSizedArray {
+  template <int V> using Z = int[V];
+  template <class, class> struct A;
+  template <class T> struct A<T, typename Z<T(0)>::X>;
+} // namespace DependentUnaryTransform
