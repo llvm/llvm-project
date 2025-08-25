@@ -4933,7 +4933,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     int RegClass = Desc.operands()[i].RegClass;
 
-    switch (Desc.operands()[i].OperandType) {
+    const MCOperandInfo &OpInfo = Desc.operands()[i];
+    switch (OpInfo.OperandType) {
     case MCOI::OPERAND_REGISTER:
       if (MI.getOperand(i).isImm() || MI.getOperand(i).isGlobal()) {
         ErrInfo = "Illegal immediate value for operand.";
@@ -4941,15 +4942,31 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
       break;
     case AMDGPU::OPERAND_REG_IMM_INT32:
+    case AMDGPU::OPERAND_REG_IMM_INT64:
+    case AMDGPU::OPERAND_REG_IMM_INT16:
     case AMDGPU::OPERAND_REG_IMM_FP32:
     case AMDGPU::OPERAND_REG_IMM_V2FP32:
+    case AMDGPU::OPERAND_REG_IMM_BF16:
+    case AMDGPU::OPERAND_REG_IMM_FP16:
+    case AMDGPU::OPERAND_REG_IMM_FP64:
+    case AMDGPU::OPERAND_REG_IMM_V2FP16:
+    case AMDGPU::OPERAND_REG_IMM_V2INT16:
+    case AMDGPU::OPERAND_REG_IMM_V2INT32:
+    case AMDGPU::OPERAND_REG_IMM_V2BF16:
       break;
-    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
-    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
-    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+      break;
+      break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+    case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+    case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
+    case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64: {
@@ -4965,6 +4982,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         return false;
       }
       break;
+    case AMDGPU::OPERAND_INPUT_MODS:
+    case AMDGPU::OPERAND_SDWA_VOPC_DST:
+    case AMDGPU::OPERAND_KIMM16:
+      break;
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_KIMM32:
     case AMDGPU::OPERAND_KIMM64:
@@ -4976,9 +4997,15 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Expected immediate, but got non-immediate";
         return false;
       }
-      [[fallthrough]];
+      break;
+    case MCOI::OPERAND_UNKNOWN:
+    case MCOI::OPERAND_MEMORY:
+    case MCOI::OPERAND_PCREL:
+      break;
     default:
-      continue;
+      if (OpInfo.isGenericType())
+        continue;
+      break;
     }
 
     if (!MO.isReg())
