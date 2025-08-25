@@ -20,7 +20,9 @@ int main() {
 
   float *A_dev = NULL;
 #pragma omp target data use_device_ptr(A)
-  { A_dev = A; }
+  {
+    A_dev = A;
+  }
 #pragma omp target exit data map(delete : A[FROM : LENGTH])
 
   // CHECK: Success
