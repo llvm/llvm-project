@@ -9,7 +9,6 @@
 #include "llvm/Transforms/Scalar/JumpTableToSwitch.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
@@ -159,6 +158,10 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
     DTUpdates.push_back({DominatorTree::Insert, B, Tail});
 
     CallBase *Call = cast<CallBase>(CB->clone());
+    // The MD_prof metadata (VP kind), if it existed, can be dropped, it doesn't
+    // make sense on a direct call. Note that the values are used for the branch
+    // weights of the switch.
+    Call->setMetadata(LLVMContext::MD_prof, nullptr);
     Call->setCalledFunction(Func);
     Call->insertInto(B, B->end());
     Switch->addCase(
@@ -180,14 +183,8 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
   if (HadProfile && !ProfcheckDisableMetadataFixes) {
     // At least one of the targets must've been taken.
     assert(llvm::any_of(BranchWeights, [](uint64_t V) { return V != 0; }));
-    // FIXME: this duplicates logic in instrumentation. Note: since there's at
-    // least a nonzero and these are unsigned values, it follows MaxBW != 0.
-    uint64_t MaxBW = *llvm::max_element(BranchWeights);
-    SmallVector<uint32_t> ScaledBranchWeights(
-        llvm::map_range(BranchWeights, [MaxBW](uint64_t V) {
-          return static_cast<uint32_t>(V / MaxBW);
-        }));
-    setBranchWeights(*Switch, ScaledBranchWeights, /*IsExpected=*/false);
+    setBranchWeights(*Switch, downscaleWeights(BranchWeights),
+                     /*IsExpected=*/false);
   } else
     setExplicitlyUnknownBranchWeights(*Switch);
   if (PHI)
