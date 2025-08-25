@@ -52,14 +52,14 @@ def FOO32 : MyVarInst<MemOp32> {
 // CHECK-SMALL-NEXT: /* 7 */       MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0, // Opcode: FOO16
 // CHECK-SMALL-NEXT: /* 11 */      MCD::OPC_FilterValueOrFail, 9,
 // CHECK-SMALL-NEXT: /* 13 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
-// CHECK-SMALL-NEXT: /* 17 */      MCD::OPC_Fail,
+// CHECK-SMALL-NEXT: };
 
 // CHECK-LARGE:      /* 0 */       MCD::OPC_ExtractField, 3, 5,  // Inst{7-3} ...
 // CHECK-LARGE-NEXT: /* 3 */       MCD::OPC_FilterValue, 8, 4, 0, 0, // Skip to: 12
 // CHECK-LARGE-NEXT: /* 8 */       MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0, // Opcode: FOO16
 // CHECK-LARGE-NEXT: /* 12 */      MCD::OPC_FilterValueOrFail, 9,
 // CHECK-LARGE-NEXT: /* 14 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
-// CHECK-LARGE-NEXT: /* 18 */      MCD::OPC_Fail,
+// CHECK-LARGE-NEXT: };
 
 // Instruction length table
 // CHECK: 27,
