@@ -1446,116 +1446,183 @@ std::optional<parser::Message> CheckStatementFunction(
   return StmtFunctionChecker{sf, context}(expr);
 }
 
-// Copy-in determination for implicit interface
-static bool MayNeedCopyIn(FoldingContext &fc, const ActualArgument &actual) {
+// Helper class for cheching differences between actual and dummy arguments
+class CopyInOutExplicitInterface {
+public:
+  explicit CopyInOutExplicitInterface(FoldingContext &fc,
+      const ActualArgument &actual,
+      const characteristics::DummyDataObject &dummyObj)
+      : fc_{fc}, actual_{actual}, dummyObj_{dummyObj} {}
+
+  // Returns true, if actual and dummy have different contiguity requirements
+  bool HaveContiguityDifferences() const {
+    // Check actual contiguity, unless dummy doesn't care
+    bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
+    bool actualTreatAsContiguous{
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
+        IsSimplyContiguous(actual_, fc_)};
+    bool dummyIsExplicitShape{dummyObj_.type.IsExplicitShape()};
+    bool dummyIsAssumedSize{dummyObj_.type.attrs().test(
+        characteristics::TypeAndShape::Attr::AssumedSize)};
+    bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
+    // type(*) with IGNORE_TKR(tkr) is often used to interface with C "void*".
+    // Since the other languages don't know about Fortran's discontiguity
+    // handling, such cases should require contiguity.
+    bool dummyIsVoidStar{dummyObj_.type.type().IsAssumedType() &&
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type) &&
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank) &&
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Kind)};
+    // Explicit shape and assumed size arrays must be contiguous
+    bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
+        (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
+        dummyObj_.attrs.test(
+            characteristics::DummyDataObject::Attr::Contiguous)};
+    if (!actualTreatAsContiguous && dummyNeedsContiguity) {
+      return true;
+    }
+    return false;
+  }
+
+  // Returns true, if actual and dummy have polymorphic differences
+  bool HavePolymorphicDifferences() const {
+    bool dummyIsAssumedRank{dummyObj_.type.attrs().test(
+        characteristics::TypeAndShape::Attr::AssumedRank)};
+    bool actualIsAssumedRank{semantics::IsAssumedRank(actual_)};
+    bool dummyIsAssumedShape{dummyObj_.type.attrs().test(
+        characteristics::TypeAndShape::Attr::AssumedShape)};
+    bool actualIsAssumedShape{semantics::IsAssumedShape(actual_)};
+    if ((actualIsAssumedRank && dummyIsAssumedRank) ||
+        (actualIsAssumedShape && dummyIsAssumedShape)) {
+      // Assumed-rank and assumed-shape arrays are represented by descriptors,
+      // so don't need to do polymorphic check.
+    } else if (!dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
+      // flang supports limited cases of passing polymorphic to non-polimorphic.
+      // These cases require temporary of non-polymorphic type. (For example,
+      // the actual argument could be polymorphic array of child type,
+      // while the dummy argument could be non-polymorphic array of parent
+      // type.)
+      bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
+      auto actualType{
+          characteristics::TypeAndShape::Characterize(actual_, fc_)};
+      bool actualIsPolymorphic{
+          actualType && actualType->type().IsPolymorphic()};
+      if (actualIsPolymorphic && !dummyIsPolymorphic) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool HaveArrayArgs() const {
+    bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
+    return actual_.IsArray() && (dummyObj_.IsArray() || dummyTreatAsArray);
+  }
+
+  bool PassByValue() const {
+    return dummyObj_.attrs.test(characteristics::DummyDataObject::Attr::Value);
+  }
+
+  bool HaveCoarrayDifferences() const {
+    return ExtractCoarrayRef(actual_) && dummyObj_.type.corank() == 0;
+  }
+
+  bool HasIntentOut() const { return dummyObj_.intent == common::Intent::Out; }
+
+  bool HasIntentIn() const { return dummyObj_.intent == common::Intent::In; }
+
+private:
+  FoldingContext &fc_;
+  const ActualArgument &actual_;
+  const characteristics::DummyDataObject &dummyObj_;
+};
+
+static bool MayNeedCopyIn(FoldingContext &fc, const ActualArgument &actual,
+    const characteristics::DummyDataObject *dummyObj) {
   if (!evaluate::IsVariable(actual)) {
     // Actual argument expressions that aren’t variables are copy-in, but
     // not copy-out.
     return true;
   }
-  if (!IsSimplyContiguous(actual, fc)) {
-    // Actual arguments that are variables are copy-in when non-contiguous.
-    return true;
-  }
-  // For everything else assume no copy-in
-  return false;
-}
-
-// Copy-in determination for explicit interface
-static bool MayNeedCopyIn(FoldingContext &fc, const ActualArgument &actual,
-    const characteristics::DummyDataObject &dummyObj) {
-  if (dummyObj.intent == common::Intent::Out) {
-    // INTENT(OUT) dummy args never need copy-in
-    return false;
-  }
-  if (dummyObj.attrs.test(characteristics::DummyDataObject::Attr::Value)) {
-    // Pass by value, always copy-in, never copy-out
-    return true;
-  }
-  // Note: checks below deal with array arguments
-  bool dummyTreatAsArray{dummyObj.ignoreTKR.test(common::IgnoreTKR::Rank)};
-  if (!actual.IsArray() || !(dummyObj.IsArray() || dummyTreatAsArray)) {
-    return false;
-  }
-  // Check actual contiguity, unless dummy doesn't care
-  bool actualTreatAsContiguous{
-      dummyObj.ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
-      IsSimplyContiguous(actual, fc)};
-  bool dummyIsExplicitShape{dummyObj.type.IsExplicitShape()};
-  bool dummyIsAssumedSize{dummyObj.type.attrs().test(
-      characteristics::TypeAndShape::Attr::AssumedSize)};
-  bool dummyIsPolymorphic{dummyObj.type.type().IsPolymorphic()};
-  // type(*) with IGNORE_TKR(tkr) is often used to interface with C "void*".
-  // Since the other languages don't know about Fortran's discontiguity
-  // handling, such cases should require contiguity.
-  bool dummyIsVoidStar{dummyObj.type.type().IsAssumedType() &&
-      dummyObj.ignoreTKR.test(common::IgnoreTKR::Type) &&
-      dummyObj.ignoreTKR.test(common::IgnoreTKR::Rank) &&
-      dummyObj.ignoreTKR.test(common::IgnoreTKR::Kind)};
-  // Explicit shape and assumed size arrays must be contiguous
-  bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
-      (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
-      dummyObj.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
-  if (!actualTreatAsContiguous && dummyNeedsContiguity) {
-    return true;
-  }
-  bool dummyIsAssumedRank{dummyObj.type.attrs().test(
-      characteristics::TypeAndShape::Attr::AssumedRank)};
-  bool actualIsAssumedRank{semantics::IsAssumedRank(actual)};
-  bool dummyIsAssumedShape{dummyObj.type.attrs().test(
-      characteristics::TypeAndShape::Attr::AssumedShape)};
-  bool actualIsAssumedShape{semantics::IsAssumedShape(actual)};
-  if ((actualIsAssumedRank && dummyIsAssumedRank) ||
-      (actualIsAssumedShape && dummyIsAssumedShape)) {
-    // Assumed-rank and assumed-shape arrays are represented by descriptors,
-    // so don't need to do polymorphic check.
-  } else if (!dummyObj.ignoreTKR.test(common::IgnoreTKR::Type)) {
-    // flang supports limited cases of passing polymorphic to non-polimorphic.
-    // These cases require temporary of non-polymorphic type. (For example,
-    // the actual argument could be polymorphic array of child type,
-    // while the dummy argument could be non-polymorphic array of parent type.)
-    auto actualType{characteristics::TypeAndShape::Characterize(actual, fc)};
-    bool actualIsPolymorphic{actualType && actualType->type().IsPolymorphic()};
-    if (actualIsPolymorphic && !dummyIsPolymorphic) {
+  if (dummyObj) { // Explicit interface
+    CopyInOutExplicitInterface check{fc, actual, *dummyObj};
+    if (check.HasIntentOut()) {
+      // INTENT(OUT) dummy args never need copy-in
+      return false;
+    }
+    if (check.PassByValue()) {
+      // Pass by value, always copy-in, never copy-out
+      return true;
+    }
+    if (check.HaveCoarrayDifferences()) {
+      return true;
+    }
+    // Note: contiguity and polymorphic checks deal with array arguments
+    if (!check.HaveArrayArgs()) {
+      return false;
+    }
+    if (check.HaveContiguityDifferences()) {
+      return true;
+    }
+    if (check.HavePolymorphicDifferences()) {
+      return true;
+    }
+  } else { // Implicit interface
+    if (ExtractCoarrayRef(actual)) {
+      // Coindexed actual args may need copy-in and copy-out with implicit
+      // interface
+      return true;
+    }
+    if (!IsSimplyContiguous(actual, fc)) {
+      // Actual arguments that are variables are copy-in when non-contiguous.
       return true;
     }
   }
-  if (ExtractCoarrayRef(actual) && dummyObj.type.corank() == 0) {
-    // Actual is a corray variable, dummy is not, should copy-in
-    return true;
-  }
   // For everything else assume no copy-in
   return false;
 }
 
-// Copy-out determination for both implicit and explicit interfaces
 static bool MayNeedCopyOut(FoldingContext &fc, const ActualArgument &actual,
-    const characteristics::DummyDataObject *dummyObj = nullptr) {
-  if (dummyObj) { // Explict interface
-    if (dummyObj->intent == common::Intent::In) {
-      // INTENT(IN) dummy args never need copy-out
-      return false;
-    }
-    if (dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Value)) {
-      // Pass by value, never copy-out
-      return false;
-    }
-    if (ExtractCoarrayRef(actual) && dummyObj->type.corank() > 0) {
-      return false;
-    }
-  }
-  // Both implict and explict interface
+    const characteristics::DummyDataObject *dummyObj) {
   if (!evaluate::IsVariable(actual)) {
     // Expressions are never copy-out
     return false;
   }
-  if (HasVectorSubscript(actual)) {
-    // Vector subscripts could refer to duplicate elements, can't copy out
-    return false;
+  if (dummyObj) { // Explict interface
+    CopyInOutExplicitInterface check{fc, actual, *dummyObj};
+    if (check.HasIntentIn()) {
+      // INTENT(IN) dummy args never need copy-out
+      return false;
+    }
+    if (check.PassByValue()) {
+      // Pass by value is never copy-out
+      return false;
+    }
+    if (check.HaveCoarrayDifferences()) {
+      return true;
+    }
+    // Note: contiguity and polymorphic checks deal with array arguments
+    if (!check.HaveArrayArgs()) {
+      return false;
+    }
+    if (check.HaveContiguityDifferences()) {
+      return true;
+    }
+    if (check.HavePolymorphicDifferences()) {
+      return true;
+    }
+  } else { // Implicit interface
+    if (ExtractCoarrayRef(actual)) {
+      // Coindexed actual args may need copy-in and copy-out with implicit
+      // interface
+      return true;
+    }
+    if (!IsSimplyContiguous(actual, fc)) {
+      // Vector subscripts could refer to duplicate elements, can't copy out
+      return !HasVectorSubscript(actual);
+    }
   }
-  // For all other cases may need to copy-out. The final determination of
-  // whether to copy-out should be made together witih copy-in.
-  return true;
+  // For everything else assume no copy-out
+  return false;
 }
 
 // If forCopyOut is false, returns if a particular actual/dummy argument
@@ -1564,8 +1631,10 @@ static bool MayNeedCopyOut(FoldingContext &fc, const ActualArgument &actual,
 // procedures with explicit interface, it's expected that "dummy" is not null.
 // For procedures with implicit interface dummy may be null.
 //
-// Note that ultimate decisions about whether copy-out is necessary may
-// depend on whether copy-in was necessary.
+// Note that these copy-in and copy-out checks are done from the caller's
+// perspective, meaning that for copy-in the caller need to do the copy
+// before calling the callee. Similarly, for copy-out the caller is expected
+// to do the copy after the callee returns.
 bool MayNeedCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
@@ -1575,29 +1644,13 @@ bool MayNeedCopy(const ActualArgument *actual,
   if (actual->isAlternateReturn()) {
     return false;
   }
-  if (!dummy) { // Implicit interface
-    if (ExtractCoarrayRef(actual)) {
-      // Coindexed actual args may need copy-in and copy-out with implicit
-      // interface
-      return true;
-    }
-    if (forCopyOut) {
-      return MayNeedCopyOut(fc, *actual);
-    } else {
-      return MayNeedCopyIn(fc, *actual);
-    }
-  } else { // Explicit interface
-    const auto *dummyObj{
-        std::get_if<characteristics::DummyDataObject>(&dummy->u)};
-    if (!dummyObj) {
-      // Only DummyDataObject has the information we need
-      return false;
-    }
-    if (forCopyOut) {
-      return MayNeedCopyOut(fc, *actual, dummyObj);
-    } else {
-      return MayNeedCopyIn(fc, *actual, *dummyObj);
-    }
+  const auto *dummyObj{dummy
+          ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
+          : nullptr};
+  if (forCopyOut) {
+    return MayNeedCopyOut(fc, *actual, dummyObj);
+  } else {
+    return MayNeedCopyIn(fc, *actual, dummyObj);
   }
 }
 

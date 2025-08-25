@@ -1251,12 +1251,13 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   if (callContext.doCopyIn) {
     Fortran::evaluate::FoldingContext &foldingContext{
         callContext.converter.getFoldingContext()};
+
     bool suggestCopyIn = Fortran::evaluate::MayNeedCopy(
         arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/false);
     bool suggestCopyOut = Fortran::evaluate::MayNeedCopy(
         arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
-    mustDoCopyOut = mustDoCopyIn && suggestCopyOut;
+    mustDoCopyOut = actual.isArray() && suggestCopyOut;
   }
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
@@ -1367,8 +1368,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.pushExprAssociateCleanUp(associate);
-    } else if (mustDoCopyIn) {
+    } else if (mustDoCopyIn || mustDoCopyOut) {
       // Copy-in non contiguous variables.
+      //
+      // TODO: copy-in and copy-out are now determined separately, in order
+      // to allow more fine grained copying. While currently both copy-in
+      // and copy-out are must be done together, these copy operations could
+      // be separated in the future. (This is related to TODO comment below.)
+      //
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
       // we may avoid doing the copy and only allocate the temporary.
