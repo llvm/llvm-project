@@ -234,15 +234,15 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
-    Descriptor.Type = DescriptorType::CBuffer;
+    Descriptor.Type = ResourceClass::CBuffer;
     ExpectedReg = TokenKind::bReg;
     break;
   case TokenKind::kw_SRV:
-    Descriptor.Type = DescriptorType::SRV;
+    Descriptor.Type = ResourceClass::SRV;
     ExpectedReg = TokenKind::tReg;
     break;
   case TokenKind::kw_UAV:
-    Descriptor.Type = DescriptorType::UAV;
+    Descriptor.Type = ResourceClass::UAV;
     ExpectedReg = TokenKind::uReg;
     break;
   }
@@ -360,19 +360,19 @@ RootSignatureParser::parseDescriptorTableClause() {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
-    Clause.Type = ClauseType::CBuffer;
+    Clause.Type = ResourceClass::CBuffer;
     ExpectedReg = TokenKind::bReg;
     break;
   case TokenKind::kw_SRV:
-    Clause.Type = ClauseType::SRV;
+    Clause.Type = ResourceClass::SRV;
     ExpectedReg = TokenKind::tReg;
     break;
   case TokenKind::kw_UAV:
-    Clause.Type = ClauseType::UAV;
+    Clause.Type = ResourceClass::UAV;
     ExpectedReg = TokenKind::uReg;
     break;
   case TokenKind::kw_Sampler:
-    Clause.Type = ClauseType::Sampler;
+    Clause.Type = ResourceClass::Sampler;
     ExpectedReg = TokenKind::sReg;
     break;
   }

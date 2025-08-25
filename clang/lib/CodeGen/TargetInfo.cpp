@@ -63,6 +63,13 @@ LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
     OS << "CoerceAndExpand Type=";
     getCoerceAndExpandType()->print(OS);
     break;
+  case TargetSpecific:
+    OS << "TargetSpecific Type=";
+    if (llvm::Type *Ty = getCoerceToType())
+      Ty->print(OS);
+    else
+      OS << "null";
+    break;
   }
   OS << ")\n";
 }

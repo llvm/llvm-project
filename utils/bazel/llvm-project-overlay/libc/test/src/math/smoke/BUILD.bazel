@@ -1174,26 +1174,31 @@ math_test(
 math_test(
     name = "nextafter",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(
     name = "nextafterf",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(
     name = "nextafterl",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(
     name = "nextafterf128",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(
     name = "nextafterf16",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(

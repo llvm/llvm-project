@@ -327,7 +327,7 @@ struct LowerGpuOpsToROCDLOpsPass final
     {
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
-      populateGpuPromoteShuffleToAMDGPUPatterns(patterns);
+      populateGpuPromoteShuffleToAMDGPUPatterns(patterns, maybeChipset);
       (void)applyPatternsGreedily(m, std::move(patterns));
     }
 
