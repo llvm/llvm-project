@@ -26,10 +26,24 @@ using namespace llvm;
 
 LLDB_PLUGIN_DEFINE(ProtocolServerMCP)
 
+static constexpr size_t kChunkSize = 1024;
 static constexpr llvm::StringLiteral kName = "lldb-mcp";
 static constexpr llvm::StringLiteral kVersion = "0.1.0";
 
-ProtocolServerMCP::ProtocolServerMCP() : ProtocolServer() {}
+ProtocolServerMCP::ProtocolServerMCP()
+    : ProtocolServer(),
+      lldb_protocol::mcp::Server(std::string(kName), std::string(kVersion)) {
+  AddNotificationHandler("notifications/initialized",
+                         [](const lldb_protocol::mcp::Notification &) {
+                           LLDB_LOG(GetLog(LLDBLog::Host),
+                                    "MCP initialization complete");
+                         });
+
+  AddTool(
+      std::make_unique<CommandTool>("lldb_command", "Run an lldb command."));
+
+  AddResourceProvider(std::make_unique<DebuggerResourceProvider>());
+}
 
 ProtocolServerMCP::~ProtocolServerMCP() { llvm::consumeError(Stop()); }
 
@@ -50,37 +64,57 @@ llvm::StringRef ProtocolServerMCP::GetPluginDescriptionStatic() {
   return "MCP Server.";
 }
 
-void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) const {
-  server.AddNotificationHandler("notifications/initialized",
-                                [](const lldb_protocol::mcp::Notification &) {
-                                  LLDB_LOG(GetLog(LLDBLog::Host),
-                                           "MCP initialization complete");
-                                });
-  server.AddTool(
-      std::make_unique<CommandTool>("lldb_command", "Run an lldb command."));
-  server.AddResourceProvider(std::make_unique<DebuggerResourceProvider>());
-}
-
 void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
-  Log *log = GetLog(LLDBLog::Host);
-  std::string client_name = llvm::formatv("client_{0}", m_instances.size() + 1);
-  LLDB_LOG(log, "New MCP client connected: {0}", client_name);
+  LLDB_LOG(GetLog(LLDBLog::Host), "New MCP client ({0}) connected",
+           m_clients.size() + 1);
 
   lldb::IOObjectSP io_sp = std::move(socket);
-  auto transport_up = std::make_unique<lldb_protocol::mcp::MCPTransport>(
-      io_sp, io_sp, std::move(client_name), [&](llvm::StringRef message) {
-        LLDB_LOG(GetLog(LLDBLog::Host), "{0}", message);
-      });
-  auto instance_up = std::make_unique<lldb_protocol::mcp::Server>(
-      std::string(kName), std::string(kVersion), std::move(transport_up),
-      m_loop);
-  Extend(*instance_up);
-  llvm::Error error = instance_up->Run();
-  if (error) {
-    LLDB_LOG_ERROR(log, std::move(error), "Failed to run MCP server: {0}");
+  auto client_up = std::make_unique<Client>();
+  client_up->io_sp = io_sp;
+  Client *client = client_up.get();
+
+  Status status;
+  auto read_handle_up = m_loop.RegisterReadObject(
+      io_sp,
+      [this, client](MainLoopBase &loop) {
+        if (llvm::Error error = ReadCallback(*client)) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(error), "{0}");
+          client->read_handle_up.reset();
+        }
+      },
+      status);
+  if (status.Fail())
     return;
+
+  client_up->read_handle_up = std::move(read_handle_up);
+  m_clients.emplace_back(std::move(client_up));
+}
+
+llvm::Error ProtocolServerMCP::ReadCallback(Client &client) {
+  char chunk[kChunkSize];
+  size_t bytes_read = sizeof(chunk);
+  if (Status status = client.io_sp->Read(chunk, bytes_read); status.Fail())
+    return status.takeError();
+  client.buffer.append(chunk, bytes_read);
+
+  for (std::string::size_type pos;
+       (pos = client.buffer.find('\n')) != std::string::npos;) {
+    llvm::Expected<std::optional<lldb_protocol::mcp::Message>> message =
+        HandleData(StringRef(client.buffer.data(), pos));
+    client.buffer = client.buffer.erase(0, pos + 1);
+    if (!message)
+      return message.takeError();
+
+    if (*message) {
+      std::string Output;
+      llvm::raw_string_ostream OS(Output);
+      OS << llvm::formatv("{0}", toJSON(**message)) << '\n';
+      size_t num_bytes = Output.size();
+      return client.io_sp->Write(Output.data(), num_bytes).takeError();
+    }
   }
-  m_instances.push_back(std::move(instance_up));
+
+  return llvm::Error::success();
 }
 
 llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
@@ -124,11 +158,27 @@ llvm::Error ProtocolServerMCP::Stop() {
 
   // Stop the main loop.
   m_loop.AddPendingCallback(
-      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+      [](MainLoopBase &loop) { loop.RequestTermination(); });
 
   // Wait for the main loop to exit.
   if (m_loop_thread.joinable())
     m_loop_thread.join();
 
+  {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    m_listener.reset();
+    m_listen_handlers.clear();
+    m_clients.clear();
+  }
+
   return llvm::Error::success();
+}
+
+lldb_protocol::mcp::Capabilities ProtocolServerMCP::GetCapabilities() {
+  lldb_protocol::mcp::Capabilities capabilities;
+  capabilities.tools.listChanged = true;
+  // FIXME: Support sending notifications when a debugger/target are
+  // added/removed.
+  capabilities.resources.listChanged = false;
+  return capabilities;
 }
