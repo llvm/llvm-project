@@ -44,7 +44,7 @@ entry:
   br label %coro.end
 
 coro.end:                                         ; preds = %10, %11
-  %12 = call i1 @llvm.coro.end(ptr %3, i1 false, token none)
+  call void @llvm.coro.end(ptr %3, i1 false, token none)
   unreachable
 }
 
