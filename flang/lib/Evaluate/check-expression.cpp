@@ -1532,9 +1532,11 @@ public:
     return semantics::IsAssumedRank(actual) || actual.Rank() > 0;
   }
 
-  static bool IsArrayOrAssumedRank(const characteristics::DummyDataObject &dummy) {
-    return dummy.type.attrs().test(characteristics::TypeAndShape::Attr::AssumedRank) ||
-      dummy.type.Rank() > 0;
+  static bool IsArrayOrAssumedRank(
+      const characteristics::DummyDataObject &dummy) {
+    return dummy.type.attrs().test(
+               characteristics::TypeAndShape::Attr::AssumedRank) ||
+        dummy.type.Rank() > 0;
   }
 
 private:
