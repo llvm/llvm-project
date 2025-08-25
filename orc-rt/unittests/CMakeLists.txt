@@ -20,6 +20,7 @@ add_orc_rt_unittest(CoreTests
   MathTest.cpp
   RTTITest.cpp
   WrapperFunctionResultTest.cpp
+  bit-test.cpp
   move_only_function-test.cpp
   span-test.cpp
   DISABLE_LLVM_LINK_LLVM_DYLIB
