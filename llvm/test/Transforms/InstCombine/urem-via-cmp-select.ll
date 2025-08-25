@@ -96,10 +96,11 @@ define i8 @urem_assume_with_unexpected_const(i8 %x, i8 %n) {
 define i8 @urem_without_assume(i8 %arg, i8 %arg2) {
 ; CHECK-LABEL: define i8 @urem_without_assume(
 ; CHECK-SAME: i8 [[ARG:%.*]], i8 [[ARG2:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = urem i8 [[ARG]], [[ARG2]]
-; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    [[ARG2_FR:%.*]] = freeze i8 [[ARG2]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i8 [[ARG]]
+; CHECK-NEXT:    [[X_FR:%.*]] = urem i8 [[ARG_FR]], [[ARG2_FR]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X_FR]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[ADD]], [[ARG2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[ADD]], [[ARG2_FR]]
 ; CHECK-NEXT:    [[OUT:%.*]] = select i1 [[TMP1]], i8 0, i8 [[ADD]]
 ; CHECK-NEXT:    ret i8 [[OUT]]
 ;
