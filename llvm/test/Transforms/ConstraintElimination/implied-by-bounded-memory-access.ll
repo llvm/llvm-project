@@ -252,3 +252,21 @@ define i8 @load_global_vscale(i64 %idx) {
   %add = add i8 %ext, %zext
   ret i8 %add
 }
+
+define i8 @load_from_null(i64 %idx) {
+; CHECK-LABEL: define i8 @load_from_null(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %gep = getelementptr inbounds i8, ptr null, i64 %idx
+  %load = load i8, ptr %gep
+  %cmp = icmp ult i64 %idx, 5
+  %zext = zext i1 %cmp to i8
+  %add = add i8 %load, %zext
+  ret i8 %add
+}
