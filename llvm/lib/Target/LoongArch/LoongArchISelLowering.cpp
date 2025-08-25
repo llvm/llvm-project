@@ -7187,6 +7187,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     llvm_unreachable("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::PreserveMost:
     break;
   case CallingConv::GHC:
     if (!MF.getSubtarget().hasFeature(LoongArch::FeatureBasicF) ||
