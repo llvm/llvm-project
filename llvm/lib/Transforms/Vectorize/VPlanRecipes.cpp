@@ -3875,7 +3875,6 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
         State.Builder.CreateVectorSplat(WideVF, State.Builder.getTrue());
   }
 
-  const DataLayout &DL = Instr->getDataLayout();
   // Vectorize the interleaved load group.
   if (isa<LoadInst>(Instr)) {
     CallInst *NewLoad = State.Builder.CreateIntrinsic(
@@ -3896,6 +3895,7 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
         NewLoad->getType(), NewLoad,
         /*FMFSource=*/nullptr, "strided.vec");
 
+    const DataLayout &DL = Instr->getDataLayout();
     for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
       Instruction *Member = Group->getMember(I);
       // Skip the gaps in the group.
@@ -3922,6 +3922,7 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   ArrayRef<VPValue *> StoredValues = getStoredValues();
   // Collect the stored vector from each member.
   SmallVector<Value *, 4> StoredVecs;
+  const DataLayout &DL = Instr->getDataLayout();
   for (unsigned I = 0, StoredIdx = 0; I < InterleaveFactor; I++) {
     Instruction *Member = Group->getMember(I);
     // Skip the gaps in the group.
