@@ -5202,9 +5202,8 @@ Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
         return Align(1);
       return AlignAA->getKnownAlign();
     }
-    if (AlignAA) {
+    if (AlignAA)
       return AlignAA->getKnownAlign();
-    }
     break;
   }
   default:
@@ -5224,13 +5223,11 @@ Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
     const auto *AlignAA =
         A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II.getOperand(0))),
                             DepClassTy::REQUIRED);
-    if (ConstVals && ConstVals->isValidState()) {
+    if (ConstVals && ConstVals->isValidState())
       Alignment = Align(1 << ConstVals->getAssumedMinTrailingZeros());
-    }
-    if (AlignAA && AlignAA->isValidState()) {
-      if (Alignment < AlignAA->getAssumedAlign())
-        Alignment = AlignAA->getAssumedAlign();
-    }
+    if (AlignAA && AlignAA->isValidState() &&
+        Alignment < AlignAA->getAssumedAlign())
+      Alignment = AlignAA->getAssumedAlign();
 
     return std::min(QueryingAA.getAssumedAlign(), Alignment);
   }
