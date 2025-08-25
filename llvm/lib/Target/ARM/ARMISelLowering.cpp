@@ -587,167 +587,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     }
   }
 
-  // RTLIB
-  if (TM.isAAPCS_ABI() && (TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
-                           TT.isTargetMuslAEABI() || TT.isAndroid())) {
-    // FIXME: This does not depend on the subtarget and should go directly into
-    // RuntimeLibcalls. This is only here because of missing support for setting
-    // the calling convention of an implementation.
-    // clang-format off
-    static const struct {
-      const RTLIB::Libcall Op;
-      const RTLIB::LibcallImpl Impl;
-    } LibraryCalls[] = {
-      // Double-precision floating-point arithmetic helper functions
-      // RTABI chapter 4.1.2, Table 2
-      { RTLIB::ADD_F64, RTLIB::__aeabi_dadd },
-      { RTLIB::DIV_F64, RTLIB::__aeabi_ddiv },
-      { RTLIB::MUL_F64, RTLIB::__aeabi_dmul },
-      { RTLIB::SUB_F64, RTLIB::__aeabi_dsub },
-
-      // Double-precision floating-point comparison helper functions
-      // RTABI chapter 4.1.2, Table 3
-      { RTLIB::OEQ_F64, RTLIB::__aeabi_dcmpeq__oeq },
-      { RTLIB::UNE_F64, RTLIB::__aeabi_dcmpeq__une },
-      { RTLIB::OLT_F64, RTLIB::__aeabi_dcmplt },
-      { RTLIB::OLE_F64, RTLIB::__aeabi_dcmple },
-      { RTLIB::OGE_F64, RTLIB::__aeabi_dcmpge },
-      { RTLIB::OGT_F64, RTLIB::__aeabi_dcmpgt },
-      { RTLIB::UO_F64,  RTLIB::__aeabi_dcmpun },
-
-      // Single-precision floating-point arithmetic helper functions
-      // RTABI chapter 4.1.2, Table 4
-      { RTLIB::ADD_F32, RTLIB::__aeabi_fadd },
-      { RTLIB::DIV_F32, RTLIB::__aeabi_fdiv },
-      { RTLIB::MUL_F32, RTLIB::__aeabi_fmul },
-      { RTLIB::SUB_F32, RTLIB::__aeabi_fsub },
-
-      // Single-precision floating-point comparison helper functions
-      // RTABI chapter 4.1.2, Table 5
-      { RTLIB::OEQ_F32, RTLIB::__aeabi_fcmpeq__oeq },
-      { RTLIB::UNE_F32, RTLIB::__aeabi_fcmpeq__une },
-      { RTLIB::OLT_F32, RTLIB::__aeabi_fcmplt},
-      { RTLIB::OLE_F32, RTLIB::__aeabi_fcmple },
-      { RTLIB::OGE_F32, RTLIB::__aeabi_fcmpge },
-      { RTLIB::OGT_F32, RTLIB::__aeabi_fcmpgt },
-      { RTLIB::UO_F32,  RTLIB::__aeabi_fcmpun },
-
-      // Floating-point to integer conversions.
-      // RTABI chapter 4.1.2, Table 6
-      { RTLIB::FPTOSINT_F64_I32, RTLIB::__aeabi_d2iz },
-      { RTLIB::FPTOUINT_F64_I32, RTLIB::__aeabi_d2uiz },
-      { RTLIB::FPTOSINT_F64_I64, RTLIB::__aeabi_d2lz },
-      { RTLIB::FPTOUINT_F64_I64, RTLIB::__aeabi_d2ulz },
-      { RTLIB::FPTOSINT_F32_I32, RTLIB::__aeabi_f2iz },
-      { RTLIB::FPTOUINT_F32_I32, RTLIB::__aeabi_f2uiz },
-      { RTLIB::FPTOSINT_F32_I64, RTLIB::__aeabi_f2lz },
-      { RTLIB::FPTOUINT_F32_I64, RTLIB::__aeabi_f2ulz },
-
-      // Conversions between floating types.
-      // RTABI chapter 4.1.2, Table 7
-      { RTLIB::FPROUND_F64_F32, RTLIB::__aeabi_d2f },
-      { RTLIB::FPROUND_F64_F16, RTLIB::__aeabi_d2h },
-      { RTLIB::FPEXT_F32_F64,   RTLIB::__aeabi_f2d },
-
-      // Integer to floating-point conversions.
-      // RTABI chapter 4.1.2, Table 8
-      { RTLIB::SINTTOFP_I32_F64, RTLIB::__aeabi_i2d },
-      { RTLIB::UINTTOFP_I32_F64, RTLIB::__aeabi_ui2d },
-      { RTLIB::SINTTOFP_I64_F64, RTLIB::__aeabi_l2d },
-      { RTLIB::UINTTOFP_I64_F64, RTLIB::__aeabi_ul2d },
-      { RTLIB::SINTTOFP_I32_F32, RTLIB::__aeabi_i2f },
-      { RTLIB::UINTTOFP_I32_F32, RTLIB::__aeabi_ui2f },
-      { RTLIB::SINTTOFP_I64_F32, RTLIB::__aeabi_l2f },
-      { RTLIB::UINTTOFP_I64_F32, RTLIB::__aeabi_ul2f },
-
-      // Long long helper functions
-      // RTABI chapter 4.2, Table 9
-      { RTLIB::MUL_I64, RTLIB::__aeabi_lmul },
-      { RTLIB::SHL_I64, RTLIB::__aeabi_llsl },
-      { RTLIB::SRL_I64, RTLIB::__aeabi_llsr },
-      { RTLIB::SRA_I64, RTLIB::__aeabi_lasr },
-
-      // Integer division functions
-      // RTABI chapter 4.3.1
-      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv },
-      { RTLIB::SDIV_I64, RTLIB::__aeabi_ldivmod },
-      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv },
-      { RTLIB::UDIV_I64, RTLIB::__aeabi_uldivmod },
-    };
-    // clang-format on
-
-    for (const auto &LC : LibraryCalls)
-      setLibcallImpl(LC.Op, LC.Impl);
-
-    // EABI dependent RTLIB
-    if (TM.Options.EABIVersion == EABI::EABI4 ||
-        TM.Options.EABIVersion == EABI::EABI5) {
-      static const struct {
-        const RTLIB::Libcall Op;
-        const RTLIB::LibcallImpl Impl;
-      } MemOpsLibraryCalls[] = {
-          // Memory operations
-          // RTABI chapter 4.3.4
-          {RTLIB::MEMCPY, RTLIB::__aeabi_memcpy},
-          {RTLIB::MEMMOVE, RTLIB::__aeabi_memmove},
-          {RTLIB::MEMSET, RTLIB::__aeabi_memset},
-          {RTLIB::AEABI_MEMCPY4, RTLIB::__aeabi_memcpy4},
-          {RTLIB::AEABI_MEMCPY8, RTLIB::__aeabi_memcpy8},
-          {RTLIB::AEABI_MEMMOVE4, RTLIB::__aeabi_memmove4},
-          {RTLIB::AEABI_MEMMOVE8, RTLIB::__aeabi_memmove8},
-          {RTLIB::AEABI_MEMSET4, RTLIB::__aeabi_memset4},
-          {RTLIB::AEABI_MEMSET8, RTLIB::__aeabi_memset8},
-          {RTLIB::AEABI_MEMCLR, RTLIB::__aeabi_memclr},
-          {RTLIB::AEABI_MEMCLR4, RTLIB::__aeabi_memclr4},
-          {RTLIB::AEABI_MEMCLR8, RTLIB::__aeabi_memclr8},
-      };
-
-      for (const auto &LC : MemOpsLibraryCalls)
-        setLibcallImpl(LC.Op, LC.Impl);
-    }
-  }
-
-  // The half <-> float conversion functions are always soft-float on
-  // non-watchos platforms, but are needed for some targets which use a
-  // hard-float calling convention by default.
-  if (!TT.isWatchABI()) {
-    if (TM.isAAPCS_ABI()) {
-      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_AAPCS);
-      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_AAPCS);
-      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_AAPCS);
-      setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee, CallingConv::ARM_AAPCS);
-      setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee, CallingConv::ARM_AAPCS);
-    } else {
-      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_APCS);
-      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_APCS);
-      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_APCS);
-      setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee, CallingConv::ARM_APCS);
-      setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee, CallingConv::ARM_APCS);
-    }
-  }
-
-  // In EABI, these functions have an __aeabi_ prefix, but in GNUEABI they have
-  // a __gnu_ prefix (which is the default).
-  if (TT.isTargetAEABI()) {
-    // FIXME: This does not depend on the subtarget and should go directly into
-    // RuntimeLibcalls. This is only here because of missing support for setting
-    // the calling convention of an implementation.
-    static const struct {
-      const RTLIB::Libcall Op;
-      const RTLIB::LibcallImpl Impl;
-    } LibraryCalls[] = {
-        {RTLIB::FPROUND_F32_F16, RTLIB::__aeabi_f2h},
-        {RTLIB::FPEXT_F16_F32, RTLIB::__aeabi_h2f},
-    };
-
-    for (const auto &LC : LibraryCalls) {
-      setLibcallImpl(LC.Op, LC.Impl);
-    }
-  } else if (!TT.isOSBinFormatMachO()) {
-    setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__gnu_f2h_ieee);
-    setLibcallImpl(RTLIB::FPEXT_F16_F32, RTLIB::__gnu_h2f_ieee);
-  }
-
   if (Subtarget->isThumb1Only())
     addRegisterClass(MVT::i32, &ARM::tGPRRegClass);
   else
@@ -3564,7 +3403,7 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
   // position-independent addressing modes.
   if (Subtarget->genExecuteOnly()) {
     auto AFI = DAG.getMachineFunction().getInfo<ARMFunctionInfo>();
-    auto T = const_cast<Type*>(CP->getType());
+    auto *T = CP->getType();
     auto C = const_cast<Constant*>(CP->getConstVal());
     auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
@@ -3779,10 +3618,7 @@ ARMTargetLowering::LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
 
   // call __tls_get_addr.
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Argument;
-  Entry.Ty = (Type *) Type::getInt32Ty(*DAG.getContext());
-  Args.push_back(Entry);
+  Args.emplace_back(Argument, Type::getInt32Ty(*DAG.getContext()));
 
   // FIXME: is there useful debug info available here?
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -7406,7 +7242,7 @@ static bool isVTRNMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
     return false;
 
   unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
     return false;
 
   // If the mask is twice as long as the input vector then we need to check the
@@ -7438,7 +7274,7 @@ static bool isVTRN_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult){
     return false;
 
   unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
     return false;
 
   for (unsigned i = 0; i < M.size(); i += NumElts) {
@@ -7541,7 +7377,7 @@ static bool isVZIPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
     return false;
 
   unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
     return false;
 
   for (unsigned i = 0; i < M.size(); i += NumElts) {
@@ -7574,7 +7410,7 @@ static bool isVZIP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult){
     return false;
 
   unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
     return false;
 
   for (unsigned i = 0; i < M.size(); i += NumElts) {
@@ -10001,9 +9837,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
     int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
     SRet = DAG.getFrameIndex(FrameIdx, getPointerTy(DL));
 
-    ArgListEntry Entry;
-    Entry.Node = SRet;
-    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
+    ArgListEntry Entry(SRet, PointerType::getUnqual(RetTy->getContext()));
     Entry.IsSExt = false;
     Entry.IsZExt = false;
     Entry.IsSRet = true;
@@ -10011,12 +9845,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
     RetTy = Type::getVoidTy(*DAG.getContext());
   }
 
-  ArgListEntry Entry;
-  Entry.Node = Arg;
-  Entry.Ty = ArgTy;
-  Entry.IsSExt = false;
-  Entry.IsZExt = false;
-  Args.push_back(Entry);
+  Args.emplace_back(Arg, ArgTy);
 
   RTLIB::Libcall LC =
       (ArgVT == MVT::f64) ? RTLIB::SINCOS_STRET_F64 : RTLIB::SINCOS_STRET_F32;
@@ -10069,10 +9898,9 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   ARMTargetLowering::ArgListTy Args;
 
   for (auto AI : {1, 0}) {
-    ArgListEntry Arg;
-    Arg.Node = Op.getOperand(AI);
-    Arg.Ty = Arg.Node.getValueType().getTypeForEVT(*DAG.getContext());
-    Args.push_back(Arg);
+    SDValue Operand = Op.getOperand(AI);
+    Args.emplace_back(Operand,
+                      Operand.getValueType().getTypeForEVT(*DAG.getContext()));
   }
 
   CallLoweringInfo CLI(DAG);
@@ -20767,12 +20595,10 @@ static TargetLowering::ArgListTy getDivRemArgList(
   bool isSigned = N->getOpcode() == ISD::SDIVREM ||
                   N->getOpcode() == ISD::SREM;
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
     EVT ArgVT = N->getOperand(i).getValueType();
     Type *ArgTy = ArgVT.getTypeForEVT(*Context);
-    Entry.Node = N->getOperand(i);
-    Entry.Ty = ArgTy;
+    TargetLowering::ArgListEntry Entry(N->getOperand(i), ArgTy);
     Entry.IsSExt = isSigned;
     Entry.IsZExt = !isSigned;
     Args.push_back(Entry);
@@ -21515,20 +21341,6 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
     F->addParamAttr(0, Attribute::AttrKind::InReg);
 }
 
-Value *ARMTargetLowering::getSDagStackGuard(const Module &M) const {
-  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
-    // MSVC CRT has a global variable holding security cookie.
-    //
-    // FIXME: We have a libcall entry for the correlated check function, but not
-    // the global name.
-    return M.getGlobalVariable("__security_cookie");
-  }
-
-  return TargetLowering::getSDagStackGuard(M);
-}
-
 Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
   // MSVC CRT has a function to validate security cookie.
   RTLIB::LibcallImpl SecurityCheckCookie =
@@ -21568,11 +21380,11 @@ bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
 }
 
 bool ARMTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  return Subtarget->hasV6T2Ops();
+  return Subtarget->hasV5TOps() && !Subtarget->isThumb1Only();
 }
 
 bool ARMTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget->hasV6T2Ops();
+  return Subtarget->hasV5TOps() && !Subtarget->isThumb1Only();
 }
 
 bool ARMTargetLowering::isMaskAndCmp0FoldingBeneficial(
@@ -21745,7 +21557,7 @@ unsigned ARMTargetLowering::getMaxSupportedInterleaveFactor() const {
 ///        %vec1 = extractelement { <4 x i32>, <4 x i32> } %vld2, i32 1
 bool ARMTargetLowering::lowerInterleavedLoad(
     Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
-    ArrayRef<unsigned> Indices, unsigned Factor) const {
+    ArrayRef<unsigned> Indices, unsigned Factor, const APInt &GapMask) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   assert(!Shuffles.empty() && "Empty shufflevector input");
@@ -21755,7 +21567,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   auto *LI = dyn_cast<LoadInst>(Load);
   if (!LI)
     return false;
-  assert(!Mask && "Unexpected mask on a load");
+  assert(!Mask && GapMask.popcount() == Factor && "Unexpected mask on a load");
 
   auto *VecTy = cast<FixedVectorType>(Shuffles[0]->getType());
   Type *EltTy = VecTy->getElementType();

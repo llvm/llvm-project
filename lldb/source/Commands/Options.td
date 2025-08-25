@@ -56,6 +56,11 @@ let Command = "settings clear" in {
     Desc<"Clear all settings.">;
 }
 
+let Command = "settings show" in {
+  def setshow_defaults : Option<"defaults", "d">,
+    Desc<"Include default values if defined.">;
+}
+
 let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
@@ -205,7 +210,7 @@ let Command = "breakpoint set" in {
     "identifiers). If not set the target.language setting is used.">;
   def breakpoint_set_skip_prologue : Option<"skip-prologue", "K">,
     Arg<"Boolean">, Groups<[1,3,4,5,6,7,8,12]>,
-    Desc<"sKip the prologue if the breakpoint is at the beginning of a "
+    Desc<"Skip the prologue if the breakpoint is at the beginning of a "
     "function. If not set the target.skip-prologue setting is used.">;
   def breakpoint_set_breakpoint_name : Option<"breakpoint-name", "N">,
     Arg<"BreakpointName">,

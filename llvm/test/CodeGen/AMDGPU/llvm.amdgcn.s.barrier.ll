@@ -98,7 +98,6 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT4-NEXT:    s_wait_kmcnt 0x0
 ; VARIANT4-NEXT:    v_xad_u32 v0, v2, -1, s2
 ; VARIANT4-NEXT:    global_store_b32 v3, v2, s[0:1]
-; VARIANT4-NEXT:    s_wait_storecnt 0x0
 ; VARIANT4-NEXT:    s_barrier_signal -1
 ; VARIANT4-NEXT:    s_barrier_wait -1
 ; VARIANT4-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -145,7 +144,6 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT6-NEXT:    v_sub_nc_u32_e32 v0, s2, v4
 ; VARIANT6-NEXT:    global_store_b32 v5, v4, s[0:1]
 ; VARIANT6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; VARIANT6-NEXT:    s_wait_storecnt 0x0
 ; VARIANT6-NEXT:    s_barrier_signal -1
 ; VARIANT6-NEXT:    s_barrier_wait -1
 ; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)

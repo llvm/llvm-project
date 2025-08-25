@@ -165,10 +165,8 @@ private:   // Intermediate data structures
   MachineInstr *FindLastRefOrPartRef(Register Reg);
 
   /// FindLastPartialDef - Return the last partial def of the specified
-  /// register. Also returns the sub-registers that're defined by the
-  /// instruction.
-  MachineInstr *FindLastPartialDef(Register Reg,
-                                   SmallSet<Register, 4> &PartDefRegs);
+  /// register.
+  MachineInstr *FindLastPartialDef(Register Reg);
 
   /// analyzePHINodes - Gather information about the PHI nodes in here. In
   /// particular, we want to map the variable information of a virtual

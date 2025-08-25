@@ -62,6 +62,8 @@ cuf::DataAttributeAttr
 translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
                                 const Fortran::semantics::Symbol &sym);
 
+bool isTransferWithConversion(mlir::Value rhs);
+
 } // end namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CUDA_H

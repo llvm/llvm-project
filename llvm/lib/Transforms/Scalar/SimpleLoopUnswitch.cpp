@@ -2144,23 +2144,9 @@ void visitDomSubTree(DominatorTree &DT, BasicBlock *BB, CallableT Callable) {
 void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
                   bool CurrentLoopValid, bool PartiallyInvariant,
                   bool InjectedCondition, ArrayRef<Loop *> NewLoops) {
-  auto RecordLoopAsUnswitched = [&](Loop *TargetLoop, StringRef Tag,
-                                    StringRef DisableTag) {
-    auto &Ctx = TargetLoop->getHeader()->getContext();
-    MDNode *DisableMD = MDNode::get(Ctx, MDString::get(Ctx, DisableTag));
-    MDNode *NewLoopID = makePostTransformationMetadata(
-        Ctx, TargetLoop->getLoopID(), {Tag}, {DisableMD});
-    TargetLoop->setLoopID(NewLoopID);
-  };
-
-  // If we performed a non-trivial unswitch, we have added new cloned loops.
-  // Mark such newly-created loops as visited.
-  if (!NewLoops.empty()) {
-    for (Loop *NL : NewLoops)
-      RecordLoopAsUnswitched(NL, "llvm.loop.unswitch.nontrivial",
-                             "llvm.loop.unswitch.nontrivial.disable");
+  // If we did a non-trivial unswitch, we have added new (cloned) loops.
+  if (!NewLoops.empty())
     U.addSiblingLoops(NewLoops);
-  }
 
   // If the current loop remains valid, we should revisit it to catch any
   // other unswitch opportunities. Otherwise, we need to mark it as deleted.
@@ -2168,12 +2154,24 @@ void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
     if (PartiallyInvariant) {
       // Mark the new loop as partially unswitched, to avoid unswitching on
       // the same condition again.
-      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.partial",
-                             "llvm.loop.unswitch.partial.disable");
+      auto &Context = L.getHeader()->getContext();
+      MDNode *DisableUnswitchMD = MDNode::get(
+          Context,
+          MDString::get(Context, "llvm.loop.unswitch.partial.disable"));
+      MDNode *NewLoopID = makePostTransformationMetadata(
+          Context, L.getLoopID(), {"llvm.loop.unswitch.partial"},
+          {DisableUnswitchMD});
+      L.setLoopID(NewLoopID);
     } else if (InjectedCondition) {
       // Do the same for injection of invariant conditions.
-      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.injection",
-                             "llvm.loop.unswitch.injection.disable");
+      auto &Context = L.getHeader()->getContext();
+      MDNode *DisableUnswitchMD = MDNode::get(
+          Context,
+          MDString::get(Context, "llvm.loop.unswitch.injection.disable"));
+      MDNode *NewLoopID = makePostTransformationMetadata(
+          Context, L.getLoopID(), {"llvm.loop.unswitch.injection"},
+          {DisableUnswitchMD});
+      L.setLoopID(NewLoopID);
     } else
       U.revisitCurrentLoop();
   } else
@@ -2811,9 +2809,9 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
 }
 
 /// Cost multiplier is a way to limit potentially exponential behavior
-/// of loop-unswitch. Cost is multiplied in proportion of 2^number of unswitch
-/// candidates available. Also consider the number of "sibling" loops with
-/// the idea of accounting for previous unswitches that already happened on this
+/// of loop-unswitch. Cost is multipied in proportion of 2^number of unswitch
+/// candidates available. Also accounting for the number of "sibling" loops with
+/// the idea to account for previous unswitches that already happened on this
 /// cluster of loops. There was an attempt to keep this formula simple,
 /// just enough to limit the worst case behavior. Even if it is not that simple
 /// now it is still not an attempt to provide a detailed heuristic size
@@ -3509,9 +3507,8 @@ static bool unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
   SmallVector<NonTrivialUnswitchCandidate, 4> UnswitchCandidates;
   IVConditionInfo PartialIVInfo;
   Instruction *PartialIVCondBranch = nullptr;
-  if (!findOptionMDForLoop(&L, "llvm.loop.unswitch.nontrivial.disable"))
-    collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
-                              PartialIVCondBranch, L, LI, AA, MSSAU);
+  collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
+                            PartialIVCondBranch, L, LI, AA, MSSAU);
   if (!findOptionMDForLoop(&L, "llvm.loop.unswitch.injection.disable"))
     collectUnswitchCandidatesWithInjections(UnswitchCandidates, PartialIVInfo,
                                             PartialIVCondBranch, L, DT, LI, AA,
