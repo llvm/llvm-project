@@ -4408,8 +4408,10 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
 
   if (Left.is(tok::l_paren) && Style.PenaltyBreakOpenParenthesis != 0)
     return Style.PenaltyBreakOpenParenthesis;
-  if (Left.is(tok::l_paren) && InFunctionDecl && Style.AlignAfterOpenBracket)
+  if (Left.is(tok::l_paren) && InFunctionDecl &&
+      Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign) {
     return 100;
+  }
   if (Left.is(tok::l_paren) && Left.Previous &&
       (Left.Previous->isOneOf(tok::kw_for, tok::kw__Generic) ||
        Left.Previous->isIf())) {
@@ -4425,7 +4427,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     // If we aren't aligning after opening parens/braces we can always break
     // here unless the style does not want us to place all arguments on the
     // next line.
-    if (!Style.AlignAfterOpenBracket &&
+    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign &&
         (Left.ParameterCount <= 1 || Style.AllowAllArgumentsOnNextLine)) {
       return 0;
     }
