@@ -7534,8 +7534,8 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
             getContext().getCanonicalTagType(cast<EnumDecl>(D)));
     break;
 
-    // Will be handled by attached function
   case Decl::HLSLRootSignature:
+    // Will be handled by attached function
     break;
   case Decl::HLSLBuffer:
     getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));
