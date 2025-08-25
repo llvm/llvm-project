@@ -543,15 +543,12 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("EnumTrailingComma: Remove", EnumTrailingComma,
               FormatStyle::ETC_Remove);
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
   CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket,
               FormatStyle::BAS_Align);
   CHECK_PARSE("AlignAfterOpenBracket: DontAlign", AlignAfterOpenBracket,
               FormatStyle::BAS_DontAlign);
-  CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracket,
-              FormatStyle::BAS_AlwaysBreak);
-  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
-              FormatStyle::BAS_BlockIndent);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
   // For backward compatibility:
   CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket,
               FormatStyle::BAS_DontAlign);
