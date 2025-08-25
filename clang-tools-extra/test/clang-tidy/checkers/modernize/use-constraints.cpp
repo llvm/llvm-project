@@ -756,3 +756,33 @@ abs(const number<T, ExpressionTemplates> &v) {
 }
 
 }
+
+// NOLINTBEGIN
+namespace custom {
+template <bool B, class T = void> struct enable_if { };
+
+template <class T> struct enable_if<true, T> { typedef T type; };
+
+template <bool B, class T = void>
+using enable_if_t = typename enable_if<B, T>::type;
+
+} // namespace custom
+// NOLINTEND
+
+namespace use_custom {
+// We cannot assume anything about the behavior of templates that happen to be
+// named `enable_if` or `enable_if_t` if they are not declared in the namespace
+// `std`. (E.g. the first template parameter of `boost::enable_if` is a class
+// and not a boolean and `boost::enable_if<Cond, T>` is equivalent to
+// `std::enable_if<Cond::value, T>`.)
+
+template <typename T>
+typename custom::enable_if<T::some_value, Obj>::type custom_basic() {
+  return Obj{};
+}
+
+template <typename T>
+custom::enable_if_t<T::some_value, Obj> custom_basic_t() {
+  return Obj{};
+}
+}

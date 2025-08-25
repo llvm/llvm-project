@@ -77,7 +77,7 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
 
     const TemplateDecl *TD =
         Specialization->getTemplateName().getAsTemplateDecl();
-    if (!TD || TD->getName() != "enable_if")
+    if (!TD || TD->getName() != "enable_if" || !TD->isInStdNamespace())
       return std::nullopt;
 
     int NumArgs = SpecializationLoc.getNumArgs();
@@ -101,7 +101,7 @@ matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
 
     const TemplateDecl *TD =
         Specialization->getTemplateName().getAsTemplateDecl();
-    if (!TD || TD->getName() != "enable_if_t")
+    if (!TD || TD->getName() != "enable_if_t" || !TD->isInStdNamespace())
       return std::nullopt;
 
     if (!Specialization->isTypeAlias())
