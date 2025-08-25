@@ -12,8 +12,11 @@
 using namespace lldb_protocol::mcp;
 using namespace llvm;
 
-Server::Server(std::string name, std::string version)
-    : m_name(std::move(name)), m_version(std::move(version)) {
+Server::Server(std::string name, std::string version,
+               std::unique_ptr<MCPTransport> transport_up,
+               lldb_private::MainLoop &loop)
+    : m_name(std::move(name)), m_version(std::move(version)),
+      m_transport_up(std::move(transport_up)), m_loop(loop) {
   AddRequestHandlers();
 }
 
@@ -231,4 +234,72 @@ llvm::Expected<Response> Server::ResourcesReadHandler(const Request &request) {
   return make_error<MCPError>(
       llvm::formatv("no resource handler for uri: {0}", uri_str).str(),
       MCPError::kResourceNotFound);
+}
+
+Capabilities Server::GetCapabilities() {
+  lldb_protocol::mcp::Capabilities capabilities;
+  capabilities.tools.listChanged = true;
+  // FIXME: Support sending notifications when a debugger/target are
+  // added/removed.
+  capabilities.resources.listChanged = false;
+  return capabilities;
+}
+
+llvm::Error Server::Run() {
+  auto handle = m_transport_up->RegisterMessageHandler(m_loop, *this);
+  if (!handle)
+    return handle.takeError();
+
+  lldb_private::Status status = m_loop.Run();
+  if (status.Fail())
+    return status.takeError();
+
+  return llvm::Error::success();
+}
+
+void Server::Received(const Request &request) {
+  auto SendResponse = [this](const Response &response) {
+    if (llvm::Error error = m_transport_up->Send(response))
+      m_transport_up->Log(llvm::toString(std::move(error)));
+  };
+
+  llvm::Expected<Response> response = Handle(request);
+  if (response)
+    return SendResponse(*response);
+
+  lldb_protocol::mcp::Error protocol_error;
+  llvm::handleAllErrors(
+      response.takeError(),
+      [&](const MCPError &err) { protocol_error = err.toProtocolError(); },
+      [&](const llvm::ErrorInfoBase &err) {
+        protocol_error.code = MCPError::kInternalError;
+        protocol_error.message = err.message();
+      });
+  Response error_response;
+  error_response.id = request.id;
+  error_response.result = std::move(protocol_error);
+  SendResponse(error_response);
+}
+
+void Server::Received(const Response &response) {
+  m_transport_up->Log("unexpected MCP message: response");
+}
+
+void Server::Received(const Notification &notification) {
+  Handle(notification);
+}
+
+void Server::OnError(llvm::Error error) {
+  m_transport_up->Log(llvm::toString(std::move(error)));
+  TerminateLoop();
+}
+
+void Server::OnClosed() {
+  m_transport_up->Log("EOF");
+  TerminateLoop();
+}
+
+void Server::TerminateLoop() {
+  m_loop.AddPendingCallback(
+      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
 }

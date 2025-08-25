@@ -62,7 +62,9 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD2]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP15:%.*]] = freeze <4 x i1> [[TMP3]]
+; CHECK-NEXT:    [[TMP18:%.*]] = freeze <4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP15]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
