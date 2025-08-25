@@ -1032,7 +1032,23 @@ def ReconcileUnrealizedCastsPass : Pass<"reconcile-unrealized-casts"> {
 //===----------------------------------------------------------------------===//
 
 def RaiseSCFToAffinePass : Pass<"raise-scf-to-affine"> {
-  let summary = "Raise SCF to affine ops";
+  let summary = "Raise SCF operations to affine operations where possible";
+  let description = [{
+    This pass raises SCF operations to affine operations where possible.
+
+    Specifically:
+      - `scf.for` loops with affine-compatible bounds and steps are
+        converted to `affine.for`.
+
+    Converting SCF to affine enables affine-specific optimizations such as
+    loop tiling, unrolling, vectorization, and memory access analysis.
+
+    Note:
+      - Only loops that are statically affine can be converted;
+        non-affine loops remain in SCF form.
+      - This pass does not modify memory accesses; consider using
+        --affine-raise-from-memref for converting `memref.load`/`store`.
+  }];
   let dependentDialects = [
     "affine::AffineDialect",
     "scf::SCFDialect",
