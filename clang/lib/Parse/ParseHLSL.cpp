@@ -121,40 +121,39 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
 Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   assert(Tok.is(tok::identifier) && "Not a HLSL Annotation");
 
-  // Semantic pattern: [A-Za-z_]+[0-9]*
+  // Semantic pattern: [A-Za-z_]([A-Za-z_0-9]*[A-Za-z_])?[0-9]*
   // The first part is the semantic name, the second is the optional
-  // semantic index.
+  // semantic index. The semantic index is the number at the end of
+  // the semantic, including leading zeroes. Digits located before
+  // the last letter are part of the semantic name.
   bool Invalid = false;
   SmallString<256> Buffer;
   Buffer.resize(Tok.getLength() + 1);
   StringRef Identifier = PP.getSpelling(Tok, Buffer);
   if (Invalid) {
-    // FIXME: fix error message.
     Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
     return {};
   }
 
-  unsigned I = 0;
-  for (; I < Identifier.size() && !isDigit(Identifier[I]); ++I)
+  assert(Identifier.size() > 0);
+  unsigned I = Identifier.size();
+  for (; I > 0 && isDigit(Identifier[I - 1]); --I)
     continue;
-  StringRef SemanticName = Identifier.take_front(I);
 
-  if (SemanticName.size() == 0) {
-    // FIXME: fix error message.
-    Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
-    return {};
-  }
+  // ParseHLSLSemantic being called on an indentifier, the first
+  // character cannot be a digit. This error should be handled by
+  // the caller. We can assert here.
+  StringRef SemanticName = Identifier.take_front(I);
+  assert(SemanticName.size() > 0);
 
   unsigned Index = 0;
-  bool Explicit = I < Identifier.size();
-  for (; I < Identifier.size() && isDigit(Identifier[I]); ++I)
-    Index = Index * 10 + Identifier[I] - '0';
-
-  // The attribute has letters after the index.
+  bool Explicit = false;
   if (I != Identifier.size()) {
-    // FIXME: fix error message.
-    Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
-    return {};
+    Explicit = true;
+    [[maybe_unused]] bool Failure =
+        Identifier.substr(I).getAsInteger(10, Index);
+    // Given the logic above, this should never fail.
+    assert(!Failure);
   }
 
   return {SemanticName, Index, Explicit};
