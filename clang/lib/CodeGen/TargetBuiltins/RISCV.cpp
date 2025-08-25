@@ -1131,7 +1131,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   unsigned SegInstSEW = 8;
 
   // Required for overloaded intrinsics.
-  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
+  llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;
   switch (BuiltinID) {
   default: llvm_unreachable("unexpected builtin ID");
   case RISCV::BI__builtin_riscv_orc_b_32:
