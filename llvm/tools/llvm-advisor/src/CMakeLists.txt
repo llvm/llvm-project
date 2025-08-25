@@ -23,9 +23,9 @@ target_include_directories(llvm-advisor PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Install the Python view module alongside the binary
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../view/
-  DESTINATION ${CMAKE_INSTALL_BINDIR}/view
+# Install the Python webview module alongside the binary
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../tools/
+  DESTINATION share/llvm-advisor/tools
   FILES_MATCHING
   PATTERN "*.py"
   PATTERN "*.html"
