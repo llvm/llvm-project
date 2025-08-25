@@ -29,7 +29,6 @@
 #include "llvm/Support/Debug.h"
 #include <list>
 #include <map>
-#include <sstream>
 
 template <typename T>
 static Fortran::semantics::Scope *GetScope(
@@ -61,6 +60,14 @@ protected:
         parser::OmpDefaultmapClause::ImplicitBehavior>
         defaultMap;
 
+    std::optional<Symbol::Flag> FindSymbolWithDSA(const Symbol &symbol) {
+      auto it{objectWithDSA.find(&symbol)};
+      if (it != objectWithDSA.end()) {
+        return std::make_optional(it->second);
+      }
+      return std::nullopt;
+    }
+
     bool withinConstruct{false};
     std::int64_t associatedLoopLevel{0};
   };
@@ -75,10 +82,20 @@ protected:
         : std::make_optional<DirContext>(dirContext_.back());
   }
   void PushContext(const parser::CharBlock &source, T dir, Scope &scope) {
-    dirContext_.emplace_back(source, dir, scope);
+    if constexpr (std::is_same_v<T, llvm::acc::Directive>) {
+      bool wasEmpty{dirContext_.empty()};
+      dirContext_.emplace_back(source, dir, scope);
+      if (!wasEmpty) {
+        std::size_t lastIndex{dirContext_.size() - 1};
+        dirContext_[lastIndex].defaultDSA =
+            dirContext_[lastIndex - 1].defaultDSA;
+      }
+    } else {
+      dirContext_.emplace_back(source, dir, scope);
+    }
   }
   void PushContext(const parser::CharBlock &source, T dir) {
-    dirContext_.emplace_back(source, dir, context_.FindScope(source));
+    PushContext(source, dir, context_.FindScope(source));
   }
   void PopContext() { dirContext_.pop_back(); }
   void SetContextDirectiveSource(parser::CharBlock &dir) {
@@ -100,9 +117,21 @@ protected:
     AddToContextObjectWithDSA(symbol, flag, GetContext());
   }
   bool IsObjectWithDSA(const Symbol &symbol) {
-    auto it{GetContext().objectWithDSA.find(&symbol)};
-    return it != GetContext().objectWithDSA.end();
+    return GetContext().FindSymbolWithDSA(symbol).has_value();
   }
+  bool IsObjectWithVisibleDSA(const Symbol &symbol) {
+    for (std::size_t i{dirContext_.size()}; i != 0; i--) {
+      if (dirContext_[i - 1].FindSymbolWithDSA(symbol).has_value()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool WithinContstruct() {
+    return !dirContext_.empty() && GetContext().withinConstruct;
+  }
+
   void SetContextAssociatedLoopLevel(std::int64_t level) {
     GetContext().associatedLoopLevel = level;
   }
@@ -1573,10 +1602,10 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
 // and adjust the symbol for each Name if necessary
 void AccAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
-  if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
+  if (symbol && WithinContstruct()) {
     symbol = &symbol->GetUltimate();
     if (!symbol->owner().IsDerivedType() && !symbol->has<ProcEntityDetails>() &&
-        !symbol->has<SubprogramDetails>() && !IsObjectWithDSA(*symbol)) {
+        !symbol->has<SubprogramDetails>() && !IsObjectWithVisibleDSA(*symbol)) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
@@ -1959,7 +1988,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
 // till OpenMP-5.0 standard.
 // In above both cases we skip the privatization of iteration variables.
 bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
-  if (!dirContext_.empty() && GetContext().withinConstruct) {
+  if (WithinContstruct()) {
     llvm::SmallVector<const parser::Name *> ivs;
     if (x.IsDoNormal()) {
       const parser::Name *iv{GetLoopIndex(x)};
@@ -2685,7 +2714,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
 
-  if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
+  if (symbol && WithinContstruct()) {
     if (IsPrivatizable(symbol) && !IsObjectWithDSA(*symbol)) {
       // TODO: create a separate function to go through the rules for
       //       predetermined, explicitly determined, and implicitly
