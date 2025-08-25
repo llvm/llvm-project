@@ -21380,11 +21380,11 @@ bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
 }
 
 bool ARMTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  return Subtarget->hasV6T2Ops();
+  return Subtarget->hasV5TOps() && !Subtarget->isThumb1Only();
 }
 
 bool ARMTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget->hasV6T2Ops();
+  return Subtarget->hasV5TOps() && !Subtarget->isThumb1Only();
 }
 
 bool ARMTargetLowering::isMaskAndCmp0FoldingBeneficial(
