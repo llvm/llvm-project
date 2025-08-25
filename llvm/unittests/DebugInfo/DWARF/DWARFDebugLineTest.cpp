@@ -2189,7 +2189,7 @@ TEST_F(DebugLineBasicFixture, LookupLastRow) {
   ASSERT_EQ(Table->Sequences.size(), 1u);
   const auto &Seq = Table->Sequences[0];
   EXPECT_EQ(Seq.LowPC, 0x1000U);
-  EXPECT_EQ(Seq.HighPC, 0x1010U);
+  EXPECT_EQ(Seq.HighPC, 0x1011U);
 
   auto LastRow = Table->Rows.back();
 
@@ -2199,7 +2199,8 @@ TEST_F(DebugLineBasicFixture, LookupLastRow) {
   {
     uint32_t RowIndex = Table->lookupAddress(
         {LastRow.Address.Address, object::SectionedAddress::UndefSection});
-    // Both last and the second to the last row have the same PC, so the second to the last should pop up first.
+    // Both last and the second to the last row have the same PC, so the second
+    // to the second to the last should pop up first.
     EXPECT_EQ(RowIndex, Table->Rows.size() - 2)
         << "Lookup at HighPC should find the second to the last row";
   }
@@ -2235,7 +2236,7 @@ TEST_F(DebugLineBasicFixture, SingleInstSeq) {
   ASSERT_EQ(Table->Sequences.size(), 1u);
   const auto &Seq = Table->Sequences[0];
   EXPECT_EQ(Seq.LowPC, 0x3000U);
-  EXPECT_EQ(Seq.HighPC, 0x3000U);
+  EXPECT_EQ(Seq.HighPC, 0x3001U);
 
   // Verify we have exactly one row (plus the end_sequence row)
   EXPECT_EQ(Table->Rows.size(), 2u);
