@@ -20,8 +20,10 @@ gpu.module @fence_check {
         //CHECK: %[[PREF_INTPTR:.*]] = vector.extract %[[LD_DESC_I64]][0] : i64 from vector<4xi64>
         //CHECK: %[[PREF_BASE_W:.*]] = vector.extract %[[LD_DESC]][2] : i32 from vector<8xi32>
         //CHECK: %[[PREF_BASE_H:.*]] = vector.extract %[[LD_DESC]][3] : i32 from vector<8xi32>
-        //CHECK: %[[PREF_TILE_W:.*]] = arith.constant 0 : i32
-        //CHECK: %[[PREF_TILE_H:.*]] = arith.constant 0 : i32
+        //CHECK: %[[PREF_TILE_W64:.*]] = arith.constant 0 : i64
+        //CHECK: %[[PREF_TILE_W:.*]] = arith.trunci %[[PREF_TILE_W64]] : i64 to i32
+        //CHECK: %[[PREF_TILE_H64:.*]] = arith.constant 0 : i64
+        //CHECK: %[[PREF_TILE_H:.*]] = arith.trunci %[[PREF_TILE_H64]] : i64 to i32
         //CHECK: %[[PREF_LLVMPTR:.*]] = llvm.inttoptr %[[PREF_INTPTR]] : i64 to !llvm.ptr<1>
         //CHECK: %[[PREF_SIZEOF_F32:.*]] = arith.constant 4 : i32
         //CHECK: %[[PREF_BASE_ROW_IN_BYTES:.*]] = arith.muli %[[PREF_BASE_W]], %[[PREF_SIZEOF_F32]] : i32

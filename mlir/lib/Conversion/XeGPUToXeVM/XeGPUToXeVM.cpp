@@ -39,12 +39,13 @@ using namespace mlir;
 
 namespace {
 
-enum class NdDescI32Layout : uint32_t {
-  BasePtr = 0,
-  BaseShapeW = 2,
-  BaseShapeH = 3,
-  TensorOffsetW = 4,
-  TensorOffsetH = 5
+// Offsets to individual fields of the 8xi32 layout nd tensor descriptor.
+enum class NdTdescOffset : uint32_t {
+  BasePtr = 0,       // Base pointer (i64)
+  BaseShapeW = 2,    // Base shape width (i32)
+  BaseShapeH = 3,    // Base shape height (i32)
+  TensorOffsetW = 4, // Tensor offset W (i32)
+  TensorOffsetH = 5  // Tensor offset H (i32)
 };
 
 static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
@@ -57,6 +58,7 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   llvm_unreachable("Unknown XeGPU memory space.");
 }
 
+// Get same bitwidth flat vector type of new element type.
 static VectorType encodeVectorTypeTo(VectorType currentVecType,
                                      Type toElemType) {
   auto elemType = currentVecType.getElementType();
@@ -221,20 +223,20 @@ class CreateNdDescToXeVMPattern
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
     payLoadAsI64 =
         vector::InsertOp::create(rewriter, loc, baseAddr, payLoadAsI64,
-                                 static_cast<int>(NdDescI32Layout::BasePtr));
+                                 static_cast<int>(NdTdescOffset::BasePtr));
     payload = vector::BitCastOp::create(rewriter, loc, payloadTy, payLoadAsI64);
     payload =
         vector::InsertOp::create(rewriter, loc, baseShapeW, payload,
-                                 static_cast<int>(NdDescI32Layout::BaseShapeW));
+                                 static_cast<int>(NdTdescOffset::BaseShapeW));
     payload =
         vector::InsertOp::create(rewriter, loc, baseShapeH, payload,
-                                 static_cast<int>(NdDescI32Layout::BaseShapeH));
+                                 static_cast<int>(NdTdescOffset::BaseShapeH));
     payload = vector::InsertOp::create(
         rewriter, loc, offsetW, payload,
-        static_cast<int>(NdDescI32Layout::TensorOffsetW));
+        static_cast<int>(NdTdescOffset::TensorOffsetW));
     payload = vector::InsertOp::create(
         rewriter, loc, offsetH, payload,
-        static_cast<int>(NdDescI32Layout::TensorOffsetH));
+        static_cast<int>(NdTdescOffset::TensorOffsetH));
     rewriter.replaceOp(op, payload);
     return success();
   }
@@ -249,6 +251,7 @@ class UpdateNdOffsetToXeVMPattern
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto mixedOffsets = op.getMixedOffsets();
+    // Only 2D offsets are supported for now.
     if (mixedOffsets.size() != 2)
       return rewriter.notifyMatchFailure(op, "Expected 2D offsets.");
     auto tdesc = adaptor.getTensorDesc();
@@ -264,9 +267,9 @@ class UpdateNdOffsetToXeVMPattern
       return vector::InsertOp::create(rewriter, loc, newOffset, tdesc,
                                       payloadPos);
     };
-    auto val =
-        updateOffset(0, static_cast<int>(NdDescI32Layout::TensorOffsetH));
-    val = updateOffset(1, static_cast<int>(NdDescI32Layout::TensorOffsetW));
+    // Update offsets in the payload.
+    auto val = updateOffset(0, static_cast<int>(NdTdescOffset::TensorOffsetH));
+    val = updateOffset(1, static_cast<int>(NdTdescOffset::TensorOffsetW));
     rewriter.replaceOp(op, val);
     return success();
   }
@@ -293,62 +296,46 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     VectorType payloadI64Ty = VectorType::get(4, rewriter.getI64Type());
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, tdesc);
-    Value basePtr =
-        vector::ExtractOp::create(rewriter, loc, payLoadAsI64,
-                                  static_cast<int>(NdDescI32Layout::BasePtr));
+    Value basePtr = vector::ExtractOp::create(
+        rewriter, loc, payLoadAsI64, static_cast<int>(NdTdescOffset::BasePtr));
     Value baseShapeW = vector::ExtractOp::create(
-        rewriter, loc, tdesc, static_cast<int>(NdDescI32Layout::BaseShapeW));
+        rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeW));
     Value baseShapeH = vector::ExtractOp::create(
-        rewriter, loc, tdesc, static_cast<int>(NdDescI32Layout::BaseShapeH));
-    // Offsets can come from three sources:
-    // 1. Constant offsets, which are provided by the op.
-    // 2. Offsets as operands, which are provided by the op.
-    // 3. Offsets extracted from the tensor descriptor.
+        rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeH));
+    // Offsets provided in two ways:
+    // 1. Offsets are extracted from the tensor descriptor.
+    // 2. (Mixed) offsets which are provided by the op.
     Value offsetW;
     Value offsetH;
-    auto cOffsets = op.getConstOffsets();
-    auto offsets = op.getOffsets();
-    if (cOffsets) {
-      offsetW = arith::ConstantIntOp::create(
-          rewriter, loc, rewriter.getI32Type(), (*cOffsets)[0]);
-      offsetH = arith::ConstantIntOp::create(
-          rewriter, loc, rewriter.getI32Type(), (*cOffsets)[1]);
-    } else if (offsets.size() != 0) {
-      // offsets are provided as operands
-      if (offsets[0].getType() != rewriter.getI32Type()) {
-        if (offsets[0].getType() != rewriter.getIndexType()) {
-          return rewriter.notifyMatchFailure(
-              op, "Expected offsets to be of type i32 or index.");
-        }
-        offsetW = arith::IndexCastUIOp::create(
-            rewriter, loc, rewriter.getI32Type(), offsets[0]);
-      } else {
-        offsetW = offsets[0];
-      }
-      if (offsets[1].getType() != rewriter.getI32Type()) {
-        if (offsets[1].getType() != rewriter.getIndexType()) {
-          return rewriter.notifyMatchFailure(
-              op, "Expected offsets to be of type i32 or index.");
-        }
-        offsetH = arith::IndexCastUIOp::create(
-            rewriter, loc, rewriter.getI32Type(), offsets[1]);
-      } else {
-        offsetH = offsets[1];
-      }
+    auto mixedOffsets = op.getMixedOffsets();
+    int64_t opOffsetsSize = mixedOffsets.size();
+    if (opOffsetsSize != 0 && opOffsetsSize != 2) {
+      return rewriter.notifyMatchFailure(op,
+                                         "Expected 2D offsets or no offsets.");
+    }
+    if (opOffsetsSize) {
+      // If mixed offsets are provided by the op convert them to i32.
+      offsetW = getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
+      offsetW = getValueOrCreateCastToIndexLike(rewriter, loc,
+                                                rewriter.getI32Type(), offsetW);
+      offsetH = getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
+      offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
+                                                rewriter.getI32Type(), offsetH);
     } else {
       // If offsets are not available, we need to extract them from the tensor
       // descriptor.
       offsetW = vector::ExtractOp::create(
-          rewriter, loc, tdesc,
-          static_cast<int>(NdDescI32Layout::TensorOffsetW));
+          rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::TensorOffsetW));
       offsetH = vector::ExtractOp::create(
-          rewriter, loc, tdesc,
-          static_cast<int>(NdDescI32Layout::TensorOffsetH));
+          rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::TensorOffsetH));
     }
+    // Get address space from tensor descriptor memory space.
     auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
+    // Convert base pointer (i64) to LLVM pointer type.
     Value basePtrLLVM =
         LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
+    // Compute element byte size and surface width in bytes.
     auto elemType = tdescTy.getElementType();
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
     Value elemByteSize = arith::ConstantIntOp::create(
@@ -356,23 +343,27 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     Value surfaceW =
         arith::MulIOp::create(rewriter, loc, baseShapeW, elemByteSize);
 
+    // Get tile sizes and vblocks from the tensor descriptor type.
     auto tileW = tdescTy.getDimSize(1);
     auto tileH = tdescTy.getDimSize(0);
     int32_t vblocks = tdescTy.getArrayLength();
     if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
-      VectorType srcVecTy = cast<VectorType>(op.getValue().getType());
+      VectorType srcVecTy = dyn_cast<VectorType>(adaptor.getValue().getType());
+      if (!srcVecTy) {
+        return rewriter.notifyMatchFailure(
+            op, "Expected store value to be a vector type.");
+      }
       auto storeCacheControl =
           translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
-      VectorType srcFlatVecTy =
-          VectorType::get(srcVecTy.getNumElements(), srcVecTy.getElementType());
-      Value srcFlatVec = op.getValue();
-      srcFlatVecTy = encodeVectorTypeTo(srcFlatVecTy,
-                                        rewriter.getIntegerType(elemBitSize));
-      srcFlatVec =
-          vector::BitCastOp::create(rewriter, loc, srcFlatVecTy, srcFlatVec);
+      Value src = adaptor.getValue();
+      // Get flat vector type of integer type with matching element bit size.
+      VectorType newSrcVecTy =
+          encodeVectorTypeTo(srcVecTy, rewriter.getIntegerType(elemBitSize));
+      if (srcVecTy != newSrcVecTy)
+        src = vector::BitCastOp::create(rewriter, loc, newSrcVecTy, src);
       xevm::BlockStore2dOp::create(
           rewriter, loc, basePtrLLVM, surfaceW, baseShapeH, surfaceW, offsetW,
-          offsetH, elemBitSize, tileW, tileH, srcFlatVec,
+          offsetH, elemBitSize, tileW, tileH, src,
           xevm::StoreCacheControlAttr::get(ctxt, storeCacheControl));
       rewriter.eraseOp(op);
     } else {
@@ -412,15 +403,14 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
 
 // Add a builder that creates
 // offset * elemByteSize + baseAddr
-static auto addOffset = [](ConversionPatternRewriter &rewriter, Location loc,
-                           Value baseAddr, Value offset,
-                           int64_t elemByteSize) -> Value {
+static Value addOffset(ConversionPatternRewriter &rewriter, Location loc,
+                       Value baseAddr, Value offset, int64_t elemByteSize) {
   Value byteSize = arith::ConstantIntOp::create(
       rewriter, loc, rewriter.getI64Type(), elemByteSize);
   Value byteOffset = arith::MulIOp::create(rewriter, loc, offset, byteSize);
   Value newAddr = arith::AddIOp::create(rewriter, loc, baseAddr, byteOffset);
   return newAddr;
-};
+}
 
 class CreateDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateDescOp> {
@@ -908,6 +898,10 @@ struct ConvertXeGPUToXeVMPass
       return IntegerType::get(&getContext(), 64);
     });
 
+    // LLVM type converter puts unrealized casts for the following cases:
+    // add materialization casts to handle them.
+
+    // Materialization to convert memref to i64
     auto memrefMaterializationCast = [](OpBuilder &builder, Type type,
                                         ValueRange inputs,
                                         Location loc) -> Value {
@@ -924,6 +918,7 @@ struct ConvertXeGPUToXeVMPass
       return {};
     };
 
+    // Materialization to convert ui64 to i64
     auto ui64MaterializationCast = [](OpBuilder &builder, Type type,
                                       ValueRange inputs,
                                       Location loc) -> Value {
@@ -940,6 +935,7 @@ struct ConvertXeGPUToXeVMPass
       return {};
     };
 
+    // Materialization to convert ui32 to i32
     auto ui32MaterializationCast = [](OpBuilder &builder, Type type,
                                       ValueRange inputs,
                                       Location loc) -> Value {
@@ -956,9 +952,13 @@ struct ConvertXeGPUToXeVMPass
       return {};
     };
 
-    auto vector1DMaterializationCast = [](OpBuilder &builder, Type type,
-                                          ValueRange inputs,
-                                          Location loc) -> Value {
+    // Materialization to convert
+    //   - single element 1D vector to scalar
+    //   - bitcast vector of same rank
+    //   - shape vector of different rank but same element type
+    auto vectorMaterializationCast = [](OpBuilder &builder, Type type,
+                                        ValueRange inputs,
+                                        Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
@@ -971,6 +971,18 @@ struct ConvertXeGPUToXeVMPass
             cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
                        .getResult();
           return cast;
+        } else if (auto targetVecTy = dyn_cast<VectorType>(type)) {
+          // If the target type is a vector of same rank,
+          //   bitcast to the target type.
+          if (targetVecTy.getRank() == vecTy.getRank())
+            return vector::BitCastOp::create(builder, loc, targetVecTy, input)
+                .getResult();
+          else if (targetVecTy.getElementType() == vecTy.getElementType()) {
+            // If the target type is a vector of different rank but same element
+            // type, reshape to the target type.
+            return vector::ShapeCastOp::create(builder, loc, targetVecTy, input)
+                .getResult();
+          }
         }
       }
       return {};
@@ -978,11 +990,11 @@ struct ConvertXeGPUToXeVMPass
     typeConverter.addSourceMaterialization(memrefMaterializationCast);
     typeConverter.addSourceMaterialization(ui64MaterializationCast);
     typeConverter.addSourceMaterialization(ui32MaterializationCast);
-    typeConverter.addSourceMaterialization(vector1DMaterializationCast);
+    typeConverter.addSourceMaterialization(vectorMaterializationCast);
     typeConverter.addTargetMaterialization(memrefMaterializationCast);
     typeConverter.addTargetMaterialization(ui32MaterializationCast);
     typeConverter.addTargetMaterialization(ui64MaterializationCast);
-    typeConverter.addTargetMaterialization(vector1DMaterializationCast);
+    typeConverter.addTargetMaterialization(vectorMaterializationCast);
     ConversionTarget target(getContext());
     target.addLegalDialect<xevm::XeVMDialect, LLVM::LLVMDialect,
                            vector::VectorDialect, arith::ArithDialect,

@@ -66,7 +66,7 @@ gpu.module @materializecast {
     %mask = arith.constant dense<1>: vector<1xi1>
     %offset = arith.constant dense<0> : vector<1xindex>
     %0 = xegpu.load %src[%offset], %mask <{chunk_size=8, l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
-      : memref<128xf32>, vector<1xindex>, vector<1xi1> -> vector<1x8xf32>
+      : memref<128xf32>, vector<1xindex>, vector<1xi1> -> vector<8xf32>
     gpu.return
   }
 }
