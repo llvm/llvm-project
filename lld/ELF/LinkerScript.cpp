@@ -411,7 +411,17 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   cmd->sym->type = v.type;
 }
 
-bool InputSectionDescription::matchesFile(const InputFile &file) const {
+// Convert an absolute address to a filename
+static inline StringRef getExtractFilename(StringRef filename) {
+  size_t pos = filename.rfind("/");
+  if (pos != std::string::npos) {
+    return filename.substr(pos + 1);
+  }
+  return filename;
+}
+
+bool InputSectionDescription::matchesFile(const InputFile &file,
+                                          bool ExtractFlag) const {
   if (filePat.isTrivialMatchAll())
     return true;
 
@@ -419,10 +429,17 @@ bool InputSectionDescription::matchesFile(const InputFile &file) const {
     if (matchType == MatchType::WholeArchive) {
       matchesFileCache.emplace(&file, filePat.match(file.archiveName));
     } else {
-      if (matchType == MatchType::ArchivesExcluded && !file.archiveName.empty())
+      if (matchType == MatchType::ArchivesExcluded && !file.archiveName.empty()){
         matchesFileCache.emplace(&file, false);
-      else
-        matchesFileCache.emplace(&file, filePat.match(file.getNameForScript()));
+      } else {
+        bool MatchFilename = filePat.match(file.getNameForScript());
+        StringRef ExtractFilename = getExtractFilename(file.getNameForScript());
+        // only use for computeInputSections
+        if (ExtractFlag) {
+          MatchFilename = MatchFilename || filePat.match(ExtractFilename);
+        }
+        matchesFileCache.emplace(&file, MatchFilename);
+      }
     }
   }
 
@@ -442,7 +459,7 @@ bool SectionPattern::excludesFile(const InputFile &file) const {
 
 bool LinkerScript::shouldKeep(InputSectionBase *s) {
   for (InputSectionDescription *id : keptSections)
-    if (id->matchesFile(*s->file))
+    if (id->matchesFile(*s->file, false))
       for (SectionPattern &p : id->sectionPatterns)
         if (p.sectionPat.match(s->name) &&
             (s->flags & id->withFlags) == id->withFlags &&
@@ -571,8 +588,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
         if (!pat.sectionPat.match(sec->name))
           continue;
 
-        if (!cmd->matchesFile(*sec->file) || pat.excludesFile(*sec->file) ||
-            !flagsMatch(sec))
+        if (!cmd->matchesFile(*sec->file, true) ||
+            pat.excludesFile(*sec->file) || !flagsMatch(sec))
           continue;
 
         if (sec->parent) {
