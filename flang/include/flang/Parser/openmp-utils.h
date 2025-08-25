@@ -38,7 +38,6 @@ struct ConstructId {
     static constexpr llvm::omp::Directive id{Id}; \
   }
 
-MAKE_CONSTR_ID(OmpAssumeDirective, D::OMPD_assume);
 MAKE_CONSTR_ID(OmpCriticalDirective, D::OMPD_critical);
 MAKE_CONSTR_ID(OmpDeclareVariantDirective, D::OMPD_declare_variant);
 MAKE_CONSTR_ID(OmpErrorDirective, D::OMPD_error);
@@ -104,8 +103,7 @@ struct DirectiveNameScope {
     } else if constexpr (TupleTrait<T>) {
       if constexpr (std::is_base_of_v<OmpBlockConstruct, T>) {
         return std::get<OmpBeginDirective>(x.t).DirName();
-      } else if constexpr (std::is_same_v<T, OmpAssumeDirective> ||
-          std::is_same_v<T, OmpCriticalDirective> ||
+      } else if constexpr (std::is_same_v<T, OmpCriticalDirective> ||
           std::is_same_v<T, OmpDeclareVariantDirective> ||
           std::is_same_v<T, OmpErrorDirective> ||
           std::is_same_v<T, OmpMetadirectiveDirective> ||
