@@ -157,8 +157,13 @@ class InstructionEncoding {
   /// The name of this encoding (for debugging purposes).
   std::string Name;
 
-  /// The size of this encoding, in bits.
-  unsigned BitWidth;
+  /// Known bits of this encoding. This is the value of the `Inst` field
+  /// with any variable references replaced with '?'.
+  KnownBits InstBits;
+
+  /// Mask of bits that should be considered unknown during decoding.
+  /// This is the value of the `SoftFail` field.
+  APInt SoftFailBits;
 
   /// The name of the function to use for decoding. May be an empty string,
   /// meaning the decoder is generated.
@@ -186,7 +191,24 @@ public:
   StringRef getName() const { return Name; }
 
   /// Returns the size of this encoding, in bits.
-  unsigned getBitWidth() const { return BitWidth; }
+  unsigned getBitWidth() const { return InstBits.getBitWidth(); }
+
+  /// Returns the known bits of this encoding.
+  const KnownBits &getInstBits() const { return InstBits; }
+
+  /// Returns a mask of bits that should be considered unknown during decoding.
+  const APInt &getSoftFailBits() const { return SoftFailBits; }
+
+  /// Returns the known bits of this encoding that must match for
+  /// successful decoding.
+  KnownBits getMandatoryBits() const {
+    KnownBits EncodingBits = InstBits;
+    // Mark all bits that are allowed to change according to SoftFail mask
+    // as unknown.
+    EncodingBits.Zero &= ~SoftFailBits;
+    EncodingBits.One &= ~SoftFailBits;
+    return EncodingBits;
+  }
 
   /// Returns the name of the function to use for decoding, or an empty string
   /// if the decoder is generated.
@@ -200,8 +222,24 @@ public:
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
 
 private:
+  void parseVarLenEncoding(const VarLenInst &VLI);
+  void parseFixedLenEncoding(const BitsInit &RecordInstBits);
+
   void parseVarLenOperands(const VarLenInst &VLI);
   void parseFixedLenOperands(const BitsInit &Bits);
+};
+
+/// Sorting predicate to sort encoding IDs by encoding width.
+class LessEncodingIDByWidth {
+  ArrayRef<InstructionEncoding> Encodings;
+
+public:
+  explicit LessEncodingIDByWidth(ArrayRef<InstructionEncoding> Encodings)
+      : Encodings(Encodings) {}
+
+  bool operator()(unsigned ID1, unsigned ID2) const {
+    return Encodings[ID1].getBitWidth() < Encodings[ID2].getBitWidth();
+  }
 };
 
 typedef std::vector<uint32_t> FixupList;
@@ -214,7 +252,6 @@ public:
   DecoderTable() { Data.reserve(16384); }
 
   void clear() { Data.clear(); }
-  void push_back(uint8_t Item) { Data.push_back(Item); }
   size_t size() const { return Data.size(); }
   const uint8_t *data() const { return Data.data(); }
 
@@ -222,7 +259,16 @@ public:
   const_iterator begin() const { return Data.begin(); }
   const_iterator end() const { return Data.end(); }
 
-  // Insert a ULEB128 encoded value into the table.
+  /// Inserts a state machine opcode into the table.
+  void insertOpcode(MCD::DecoderOps Opcode) { Data.push_back(Opcode); }
+
+  /// Inserts a uint8 encoded value into the table.
+  void insertUInt8(unsigned Value) {
+    assert(isUInt<8>(Value));
+    Data.push_back(Value);
+  }
+
+  /// Inserts a ULEB128 encoded value into the table.
   void insertULEB128(uint64_t Value) {
     // Encode and emit the value to filter against.
     uint8_t Buffer[16];
@@ -266,7 +312,7 @@ struct DecoderTableInfo {
   PredicateSet Predicates;
   DecoderSet Decoders;
 
-  bool isOutermostScope() const { return FixupStack.size() == 1; }
+  bool isOutermostScope() const { return FixupStack.empty(); }
 
   void pushScope() { FixupStack.emplace_back(); }
 
@@ -294,7 +340,7 @@ class DecoderEmitter {
   SmallDenseMap<unsigned, std::vector<unsigned>> EncodingIDsByHwMode;
 
 public:
-  DecoderEmitter(const RecordKeeper &RK, StringRef PredicateNamespace);
+  explicit DecoderEmitter(const RecordKeeper &RK);
 
   const CodeGenTarget &getTarget() const { return Target; }
 
@@ -324,37 +370,11 @@ private:
                                   NamespacesHwModesMap &NamespacesWithHwModes);
 
   void parseInstructionEncodings();
-
-public:
-  StringRef PredicateNamespace;
 };
 
 } // end anonymous namespace
 
-static const BitsInit &getBitsField(const Record &Def, StringRef FieldName) {
-  const RecordVal *RV = Def.getValue(FieldName);
-  if (const BitsInit *Bits = dyn_cast<BitsInit>(RV->getValue()))
-    return *Bits;
-
-  // Handle variable length instructions.
-  VarLenInst VLI(cast<DagInit>(RV->getValue()), RV);
-  SmallVector<const Init *, 16> Bits;
-
-  for (const auto &SI : VLI) {
-    if (const BitsInit *BI = dyn_cast<BitsInit>(SI.Value))
-      llvm::append_range(Bits, BI->getBits());
-    else if (const BitInit *BI = dyn_cast<BitInit>(SI.Value))
-      Bits.push_back(BI);
-    else
-      Bits.append(SI.BitWidth, UnsetInit::get(Def.getRecords()));
-  }
-
-  return *BitsInit::get(Def.getRecords(), Bits);
-}
-
 namespace {
-
-class FilterChooser;
 
 /// Filter - Filter works with FilterChooser to produce the decoding tree for
 /// the ISA.
@@ -392,9 +412,7 @@ class FilterChooser;
 /// decoder could try to decode the even/odd register numbering and assign to
 /// VST4q8a or VST4q8b, but for the time being, the decoder chooses the "a"
 /// version and return the Opcode since the two have the same Asm format string.
-class Filter {
-protected:
-  const FilterChooser &Owner; // FilterChooser who owns this filter
+struct Filter {
   unsigned StartBit; // the starting bit position
   unsigned NumBits;  // number of bits to filter
 
@@ -404,46 +422,17 @@ protected:
   // Set of uid's with non-constant segment values.
   std::vector<unsigned> VariableIDs;
 
-  // Map of well-known segment value to its delegate.
-  std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
+  Filter(ArrayRef<InstructionEncoding> Encodings,
+         ArrayRef<unsigned> EncodingIDs, unsigned StartBit, unsigned NumBits);
 
-  // A filter chooser for encodings that contain some '?' in the filtered range.
-  std::unique_ptr<const FilterChooser> VariableFC;
-
-  // Number of instructions which fall under FilteredInstructions category.
-  unsigned NumFiltered;
-
-public:
-  Filter(Filter &&f);
-  Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits);
-
-  ~Filter() = default;
-
-  unsigned getNumFiltered() const { return NumFiltered; }
+  bool hasSingleFilteredID() const {
+    return FilteredIDs.size() == 1 && FilteredIDs.begin()->second.size() == 1;
+  }
 
   unsigned getSingletonEncodingID() const {
-    assert(NumFiltered == 1);
+    assert(hasSingleFilteredID());
     return FilteredIDs.begin()->second.front();
   }
-
-  // Return the filter chooser for the group of instructions without constant
-  // segment values.
-  const FilterChooser &getVariableFC() const {
-    assert(NumFiltered == 1 && FilterChooserMap.empty());
-    return *VariableFC;
-  }
-
-  // Divides the decoding task into sub tasks and delegates them to the
-  // inferior FilterChooser's.
-  //
-  // A special case arises when there's only one entry in the filtered
-  // instructions.  In order to unambiguously decode the singleton, we need to
-  // match the remaining undecoded encoding bits against the singleton.
-  void recurse();
-
-  // Emit table entries to decode instructions given a segment or segments of
-  // bits.
-  void emitTableEntry(DecoderTableInfo &TableInfo) const;
 
   // Returns the number of fanout produced by the filter.  More fanout implies
   // the filter distinguishes more categories of instructions.
@@ -477,17 +466,12 @@ enum bitAttr_t {
 /// decide what further remaining bits to look at.
 
 class FilterChooser {
-protected:
-  friend class Filter;
-
   // Vector of encodings to choose our filter.
   ArrayRef<InstructionEncoding> Encodings;
 
-  // Vector of encoding IDs for this filter chooser to work on.
-  ArrayRef<unsigned> EncodingIDs;
-
-  // The selected filter, if any.
-  std::unique_ptr<Filter> BestFilter;
+  /// Encoding IDs for this filter chooser to work on.
+  /// Sorted by non-decreasing encoding width.
+  SmallVector<unsigned, 0> EncodingIDs;
 
   // Array of bit values passed down from our parent.
   // Set to all unknown for Parent == nullptr.
@@ -496,11 +480,35 @@ protected:
   // Links to the FilterChooser above us in the decoding tree.
   const FilterChooser *Parent;
 
-  // Width of instructions
-  unsigned BitWidth;
+  /// Some targets (ARM) specify more encoding bits in Inst that Size allows.
+  /// This field allows us to ignore the extra bits.
+  unsigned MaxFilterWidth;
 
-  // Parent emitter
-  const DecoderEmitter *Emitter;
+  const CodeGenTarget &Target;
+
+  /// If the selected filter matches multiple encodings, then this is the
+  /// starting position and the width of the filtered range.
+  unsigned StartBit;
+  unsigned NumBits;
+
+  /// If the selected filter matches multiple encodings, and there is
+  /// *exactly one* encoding in which all bits are known in the filtered range,
+  /// then this is the ID of that encoding.
+  /// Also used when there is only one encoding.
+  std::optional<unsigned> SingletonEncodingID;
+
+  /// If the selected filter matches multiple encodings, and there is
+  /// *at least one* encoding in which all bits are known in the filtered range,
+  /// then this is the FilterChooser created for the subset of encodings that
+  /// contain some unknown bits in the filtered range.
+  std::unique_ptr<const FilterChooser> VariableFC;
+
+  /// If the selected filter matches multiple encodings, and there is
+  /// *more than one* encoding in which all bits are known in the filtered
+  /// range, then this is a map of field values to FilterChoosers created for
+  /// the subset of encodings sharing that field value.
+  /// The "field value" here refers to the encoding bits in the filtered range.
+  std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
   struct Island {
     unsigned StartBit;
@@ -509,60 +517,56 @@ protected:
   };
 
 public:
+  /// Constructs a top-level filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
-                ArrayRef<unsigned> EncodingIDs, unsigned BW,
-                const DecoderEmitter *E)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), FilterBits(BW),
-        Parent(nullptr), BitWidth(BW), Emitter(E) {
+                ArrayRef<unsigned> EncodingIDs, unsigned MaxFilterWidth,
+                const CodeGenTarget &Target)
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr),
+        MaxFilterWidth(MaxFilterWidth), Target(Target) {
+    // Sort encoding IDs once.
+    stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings));
+    // Filter width is the width of the smallest encoding.
+    unsigned FilterWidth = Encodings[this->EncodingIDs.front()].getBitWidth();
+    // Cap it as necessary.
+    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
+    FilterBits = KnownBits(FilterWidth);
     doFilter();
   }
 
+  /// Constructs an inferior filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
-                ArrayRef<unsigned> EncodingIDs,
-                const KnownBits &ParentFilterBits, const FilterChooser &parent)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs),
-        FilterBits(ParentFilterBits), Parent(&parent),
-        BitWidth(parent.BitWidth), Emitter(parent.Emitter) {
+                ArrayRef<unsigned> EncodingIDs, const KnownBits &FilterBits,
+                const FilterChooser &Parent)
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent),
+        MaxFilterWidth(Parent.MaxFilterWidth), Target(Parent.Target) {
+    // Inferior filter choosers are created from sorted array of encoding IDs.
+    assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings)));
     assert(!FilterBits.hasConflict() && "Broken filter");
+    // Filter width is the width of the smallest encoding.
+    unsigned FilterWidth = Encodings[EncodingIDs.front()].getBitWidth();
+    // Cap it as necessary.
+    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
+    this->FilterBits = FilterBits.anyext(FilterWidth);
     doFilter();
   }
 
   FilterChooser(const FilterChooser &) = delete;
   void operator=(const FilterChooser &) = delete;
 
-  unsigned getBitWidth() const { return BitWidth; }
-
-protected:
-  KnownBits getMandatoryEncodingBits(unsigned EncodingID) const {
-    const Record *EncodingDef = Encodings[EncodingID].getRecord();
-    const BitsInit &Bits = getBitsField(*EncodingDef, "Inst");
-    KnownBits Insn(std::max(BitWidth, Bits.getNumBits()));
-    // We may have a SoftFail bitmask, which specifies a mask where an encoding
-    // may differ from the value in "Inst" and yet still be valid, but the
-    // disassembler should return SoftFail instead of Success.
-    //
-    // This is used for marking UNPREDICTABLE instructions in the ARM world.
-    const RecordVal *RV = EncodingDef->getValue("SoftFail");
-    const BitsInit *SFBits = RV ? dyn_cast<BitsInit>(RV->getValue()) : nullptr;
-    for (unsigned i = 0; i < Bits.getNumBits(); ++i) {
-      if (SFBits) {
-        const auto *B = dyn_cast<BitInit>(SFBits->getBit(i));
-        if (B && B->getValue())
-          continue;
-      }
-      if (const auto *B = dyn_cast<BitInit>(Bits.getBit(i))) {
-        if (B->getValue())
-          Insn.One.setBit(i);
-        else
-          Insn.Zero.setBit(i);
-      }
-    }
-    return Insn;
+  /// Returns the width of the largest encoding.
+  unsigned getMaxEncodingWidth() const {
+    // The last encoding ID is the ID of an encoding with the largest width.
+    return Encodings[EncodingIDs.back()].getBitWidth();
   }
+
+private:
+  /// Applies the given filter to the set of encodings this FilterChooser
+  /// works with, creating inferior FilterChoosers as necessary.
+  void applyFilter(const Filter &F);
 
   /// dumpStack - dumpStack traverses the filter chooser chain and calls
   /// dumpFilterArray on each filter chooser up to the top level one.
-  void dumpStack(raw_ostream &OS, indent Indent) const;
+  void dumpStack(raw_ostream &OS, indent Indent, unsigned PadToWidth) const;
 
   bool isPositionFiltered(unsigned Idx) const {
     return FilterBits.Zero[Idx] || FilterBits.One[Idx];
@@ -592,29 +596,25 @@ protected:
   void emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                unsigned EncodingID) const;
 
-  // Emits code to decode the singleton, and then to decode the rest.
-  void emitSingletonTableEntry(DecoderTableInfo &TableInfo,
-                               const Filter &Best) const;
-
   void emitBinaryParser(raw_ostream &OS, indent Indent,
                         const OperandInfo &OpInfo) const;
 
   void emitDecoder(raw_ostream &OS, indent Indent, unsigned EncodingID) const;
   unsigned getDecoderIndex(DecoderSet &Decoders, unsigned EncodingID) const;
 
-  // Assign a single filter and run with it.
-  void runSingleFilter(unsigned startBit, unsigned numBit);
-
   // reportRegion is a helper function for filterProcessor to mark a region as
   // eligible for use as a filter region.
   void reportRegion(std::vector<std::unique_ptr<Filter>> &Filters, bitAttr_t RA,
-                    unsigned StartBit, unsigned BitIndex, bool AllowMixed);
+                    unsigned StartBit, unsigned BitIndex,
+                    bool AllowMixed) const;
 
-  // FilterProcessor scans the well-known encoding bits of the instructions and
-  // builds up a list of candidate filters.  It chooses the best filter and
-  // recursively descends down the decoding tree.
-  bool filterProcessor(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
-                       bool Greedy = true);
+  /// Scans the well-known encoding bits of the encodings and, builds up a list
+  /// of candidate filters, and then returns the best one, if any.
+  std::unique_ptr<Filter> findBestFilter(ArrayRef<bitAttr_t> BitAttrs,
+                                         bool AllowMixed,
+                                         bool Greedy = true) const;
+
+  std::unique_ptr<Filter> findBestFilter() const;
 
   // Decides on the best configuration of filter(s) to use in order to decode
   // the instructions.  A conflict of instructions may occur, in which case we
@@ -622,9 +622,10 @@ protected:
   void doFilter();
 
 public:
-  // emitTableEntries - Emit state machine entries to decode our share of
-  // instructions.
+  /// Emits state machine entries to decode our share of instructions.
   void emitTableEntries(DecoderTableInfo &TableInfo) const;
+
+  void dump() const;
 };
 
 } // end anonymous namespace
@@ -635,22 +636,13 @@ public:
 //                       //
 ///////////////////////////
 
-Filter::Filter(Filter &&f)
-    : Owner(f.Owner), StartBit(f.StartBit), NumBits(f.NumBits),
-      FilteredIDs(std::move(f.FilteredIDs)),
-      VariableIDs(std::move(f.VariableIDs)),
-      FilterChooserMap(std::move(f.FilterChooserMap)),
-      VariableFC(std::move(f.VariableFC)), NumFiltered(f.NumFiltered) {}
-
-Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
-    : Owner(owner), StartBit(startBit), NumBits(numBits) {
-  assert(StartBit + NumBits - 1 < Owner.BitWidth);
-
-  NumFiltered = 0;
-
-  for (unsigned EncodingID : Owner.EncodingIDs) {
-    // Populates the insn given the uid.
-    KnownBits EncodingBits = Owner.getMandatoryEncodingBits(EncodingID);
+Filter::Filter(ArrayRef<InstructionEncoding> Encodings,
+               ArrayRef<unsigned> EncodingIDs, unsigned StartBit,
+               unsigned NumBits)
+    : StartBit(StartBit), NumBits(NumBits) {
+  for (unsigned EncodingID : EncodingIDs) {
+    const InstructionEncoding &Encoding = Encodings[EncodingID];
+    KnownBits EncodingBits = Encoding.getMandatoryBits();
 
     // Scans the segment for possibly well-specified encoding bits.
     KnownBits FieldBits = EncodingBits.extractBits(NumBits, StartBit);
@@ -659,7 +651,6 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
       // The encoding bits are well-known.  Lets add the uid of the
       // instruction into the bucket keyed off the constant field value.
       FilteredIDs[FieldBits.getConstant().getZExtValue()].push_back(EncodingID);
-      ++NumFiltered;
     } else {
       // Some of the encoding bit(s) are unspecified.  This contributes to
       // one additional member of "Variable" instructions.
@@ -671,107 +662,39 @@ Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits)
          "Filter returns no instruction categories");
 }
 
-// Divides the decoding task into sub tasks and delegates them to the
-// inferior FilterChooser's.
-//
-// A special case arises when there's only one entry in the filtered
-// instructions.  In order to unambiguously decode the singleton, we need to
-// match the remaining undecoded encoding bits against the singleton.
-void Filter::recurse() {
-  // Starts by inheriting our parent filter chooser's filter bit values.
-  KnownBits FilterBits = Owner.FilterBits;
+void FilterChooser::applyFilter(const Filter &F) {
+  StartBit = F.StartBit;
+  NumBits = F.NumBits;
   assert(FilterBits.extractBits(NumBits, StartBit).isUnknown());
 
-  if (!VariableIDs.empty()) {
+  if (!F.VariableIDs.empty()) {
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
-    VariableFC = std::make_unique<FilterChooser>(Owner.Encodings, VariableIDs,
-                                                 FilterBits, Owner);
+    VariableFC = std::make_unique<FilterChooser>(Encodings, F.VariableIDs,
+                                                 FilterBits, *this);
   }
 
   // No need to recurse for a singleton filtered instruction.
   // See also Filter::emit*().
-  if (getNumFiltered() == 1) {
+  if (F.hasSingleFilteredID()) {
+    SingletonEncodingID = F.getSingletonEncodingID();
     assert(VariableFC && "Shouldn't have created a filter for one encoding!");
     return;
   }
 
   // Otherwise, create sub choosers.
-  for (const auto &[FilterVal, EncodingIDs] : FilteredIDs) {
+  for (const auto &[FilterVal, InferiorEncodingIDs] : F.FilteredIDs) {
     // Create a new filter by inserting the field bits into the parent filter.
     APInt FieldBits(NumBits, FilterVal);
-    FilterBits.insertBits(KnownBits::makeConstant(FieldBits), StartBit);
+    KnownBits InferiorFilterBits = FilterBits;
+    InferiorFilterBits.insertBits(KnownBits::makeConstant(FieldBits), StartBit);
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.try_emplace(
-        FilterVal, std::make_unique<FilterChooser>(Owner.Encodings, EncodingIDs,
-                                                   FilterBits, Owner));
+    FilterChooserMap.try_emplace(FilterVal, std::make_unique<FilterChooser>(
+                                                Encodings, InferiorEncodingIDs,
+                                                InferiorFilterBits, *this));
   }
-}
-
-// Emit table entries to decode instructions given a segment or segments
-// of bits.
-void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
-  assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
-  TableInfo.Table.push_back(MCD::OPC_ExtractField);
-
-  TableInfo.Table.insertULEB128(StartBit);
-  TableInfo.Table.push_back(NumBits);
-
-  // If VariableFC is present, we need to add a new scope for this filter.
-  // Otherwise, we can skip adding a new scope and any patching added will
-  // automatically be added to the enclosing scope.
-  const uint64_t LastFilter = FilterChooserMap.rbegin()->first;
-  if (VariableFC)
-    TableInfo.FixupStack.emplace_back();
-
-  DecoderTable &Table = TableInfo.Table;
-
-  size_t PrevFilter = 0;
-  for (const auto &[FilterVal, Delegate] : FilterChooserMap) {
-    // The last filtervalue emitted can be OPC_FilterValue if we are at
-    // outermost scope.
-    const uint8_t DecoderOp =
-        FilterVal == LastFilter && TableInfo.isOutermostScope()
-            ? MCD::OPC_FilterValueOrFail
-            : MCD::OPC_FilterValue;
-    Table.push_back(DecoderOp);
-    Table.insertULEB128(FilterVal);
-    if (DecoderOp == MCD::OPC_FilterValue) {
-      // Reserve space for the NumToSkip entry. We'll backpatch the value later.
-      PrevFilter = Table.insertNumToSkip();
-    } else {
-      PrevFilter = 0;
-    }
-
-    // We arrive at a category of instructions with the same segment value.
-    // Now delegate to the sub filter chooser for further decodings.
-    // The case may fallthrough, which happens if the remaining well-known
-    // encoding bits do not match exactly.
-    Delegate->emitTableEntries(TableInfo);
-
-    // Now that we've emitted the body of the handler, update the NumToSkip
-    // of the filter itself to be able to skip forward when false.
-    if (PrevFilter)
-      Table.patchNumToSkip(PrevFilter, Table.size());
-  }
-
-  if (VariableFC) {
-    // Each scope should always have at least one filter value to check for.
-    assert(PrevFilter != 0 && "empty filter set!");
-    TableInfo.popScope();
-    PrevFilter = 0; // Don't re-process the filter's fallthrough.
-
-    // Delegate to the sub filter chooser for further decoding.
-    VariableFC->emitTableEntries(TableInfo);
-  }
-
-  // If there is no fallthrough and the final filter was not in the outermost
-  // scope, then it must be fixed up according to the enclosing scope rather
-  // than the current position.
-  if (PrevFilter)
-    TableInfo.FixupStack.back().push_back(PrevFilter);
 }
 
 // Returns the number of fanout produced by the filter.  More fanout implies
@@ -805,7 +728,7 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
   OS << "static const uint8_t DecoderTable" << Namespace;
   if (HwModeID != DefaultMode)
     OS << '_' << Target.getHwModes().getModeName(HwModeID);
-  OS << BitWidth << "[] = {\n";
+  OS << BitWidth << "[" << Table.size() << "] = {\n";
 
   // Emit ULEB128 encoded value to OS, returning the number of bytes emitted.
   auto emitULEB128 = [](DecoderTable::const_iterator &I,
@@ -843,8 +766,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
     uint32_t Index = ((I - Table.begin()) + NumToSkip);
     OS << (InComment ? ", " : "// ");
     OS << "Skip to: " << Index;
-    if (*(I + NumToSkip) == MCD::OPC_Fail)
-      OS << " (Fail)";
   };
 
   unsigned OpcodeMask = 0;
@@ -983,12 +904,8 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       OS << '\n';
       break;
     }
-    case MCD::OPC_Fail:
-      OS << "  MCD::OPC_Fail,\n";
-      break;
     }
   }
-  OS << "  0\n";
   OS << "};\n\n";
 
   return OpcodeMask;
@@ -1084,10 +1001,12 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
 
 /// dumpStack - dumpStack traverses the filter chooser chain and calls
 /// dumpFilterArray on each filter chooser up to the top level one.
-void FilterChooser::dumpStack(raw_ostream &OS, indent Indent) const {
+void FilterChooser::dumpStack(raw_ostream &OS, indent Indent,
+                              unsigned PadToWidth) const {
   if (Parent)
-    Parent->dumpStack(OS, Indent);
-  OS << Indent;
+    Parent->dumpStack(OS, Indent, PadToWidth);
+  assert(PadToWidth >= FilterBits.getBitWidth());
+  OS << Indent << indent(PadToWidth - FilterBits.getBitWidth());
   printKnownBits(OS, FilterBits, '.');
   OS << '\n';
 }
@@ -1107,7 +1026,8 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
   // 2: Island (well-known bit value needed for decoding)
   unsigned State = 0;
 
-  for (unsigned i = 0; i < BitWidth; ++i) {
+  unsigned FilterWidth = FilterBits.getBitWidth();
+  for (unsigned i = 0; i != FilterWidth; ++i) {
     bool IsKnown = EncodingBits.Zero[i] || EncodingBits.One[i];
     bool Filtered = isPositionFiltered(i);
     switch (State) {
@@ -1137,7 +1057,7 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
   }
   // If we are still in Island after the loop, do some housekeeping.
   if (State == 2)
-    Islands.push_back({StartBit, BitWidth - StartBit, FieldVal});
+    Islands.push_back({StartBit, FilterWidth - StartBit, FieldVal});
 
   return Islands;
 }
@@ -1226,8 +1146,7 @@ bool FilterChooser::emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
   if (const auto *D = dyn_cast<DefInit>(&Val)) {
     if (!D->getDef()->isSubClassOf("SubtargetFeature"))
       return true;
-    OS << "Bits[" << Emitter->PredicateNamespace << "::" << D->getAsString()
-       << "]";
+    OS << "Bits[" << Target.getName() << "::" << D->getAsString() << "]";
     return false;
   }
   if (const auto *D = dyn_cast<DagInit>(&Val)) {
@@ -1322,10 +1241,10 @@ void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
   // computed.
   unsigned PIdx = getPredicateIndex(TableInfo, PS.str());
 
-  const uint8_t DecoderOp = TableInfo.isOutermostScope()
-                                ? MCD::OPC_CheckPredicateOrFail
-                                : MCD::OPC_CheckPredicate;
-  TableInfo.Table.push_back(DecoderOp);
+  const MCD::DecoderOps DecoderOp = TableInfo.isOutermostScope()
+                                        ? MCD::OPC_CheckPredicateOrFail
+                                        : MCD::OPC_CheckPredicate;
+  TableInfo.Table.insertOpcode(DecoderOp);
   TableInfo.Table.insertULEB128(PIdx);
 
   if (DecoderOp == MCD::OPC_CheckPredicate) {
@@ -1336,36 +1255,24 @@ void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
 
 void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
                                            unsigned EncodingID) const {
-  const Record *EncodingDef = Encodings[EncodingID].getRecord();
-  const RecordVal *RV = EncodingDef->getValue("SoftFail");
-  const BitsInit *SFBits = RV ? dyn_cast<BitsInit>(RV->getValue()) : nullptr;
+  const InstructionEncoding &Encoding = Encodings[EncodingID];
+  const KnownBits &InstBits = Encoding.getInstBits();
+  const APInt &SFBits = Encoding.getSoftFailBits();
 
-  if (!SFBits)
+  if (SFBits.isZero())
     return;
-  const BitsInit *InstBits = EncodingDef->getValueAsBitsInit("Inst");
 
-  APInt PositiveMask(BitWidth, 0ULL);
-  APInt NegativeMask(BitWidth, 0ULL);
-  for (unsigned i = 0; i < BitWidth; ++i) {
-    if (!isa<BitInit>(SFBits->getBit(i)) ||
-        !cast<BitInit>(SFBits->getBit(i))->getValue())
+  unsigned EncodingWidth = InstBits.getBitWidth();
+  APInt PositiveMask(EncodingWidth, 0);
+  APInt NegativeMask(EncodingWidth, 0);
+  for (unsigned i = 0; i != EncodingWidth; ++i) {
+    if (!SFBits[i])
       continue;
 
-    if (!isa<BitInit>(InstBits->getBit(i))) {
-      // The bit is not set; this must be an error!
-      errs() << "SoftFail Conflict: bit SoftFail{" << i << "} in "
-             << Encodings[EncodingID].getName() << " is set but Inst{" << i
-             << "} is unset!\n"
-             << "  - You can only mark a bit as SoftFail if it is fully defined"
-             << " (1/0 - not '?') in Inst\n";
-      return;
-    }
-
-    bool IB = cast<BitInit>(InstBits->getBit(i))->getValue();
-    if (!IB) {
+    if (InstBits.Zero[i]) {
       // The bit is meant to be false, so emit a check to see if it is true.
       PositiveMask.setBit(i);
-    } else {
+    } else if (InstBits.One[i]) {
       // The bit is meant to be true, so emit a check to see if it is false.
       NegativeMask.setBit(i);
     }
@@ -1377,7 +1284,7 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
   if (!NeedPositiveMask && !NeedNegativeMask)
     return;
 
-  TableInfo.Table.push_back(MCD::OPC_SoftFail);
+  TableInfo.Table.insertOpcode(MCD::OPC_SoftFail);
   TableInfo.Table.insertULEB128(PositiveMask.getZExtValue());
   TableInfo.Table.insertULEB128(NegativeMask.getZExtValue());
 }
@@ -1385,7 +1292,8 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
 // Emits table entries to decode the singleton.
 void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                             unsigned EncodingID) const {
-  KnownBits EncodingBits = getMandatoryEncodingBits(EncodingID);
+  const InstructionEncoding &Encoding = Encodings[EncodingID];
+  KnownBits EncodingBits = Encoding.getMandatoryBits();
 
   // Look for islands of undecoded bits of the singleton.
   std::vector<Island> Islands = getIslands(EncodingBits);
@@ -1395,15 +1303,12 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
 
   // Check any additional encoding fields needed.
   for (const Island &Ilnd : reverse(Islands)) {
-    unsigned NumBits = Ilnd.NumBits;
-    assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
-    const uint8_t DecoderOp = TableInfo.isOutermostScope()
-                                  ? MCD::OPC_CheckFieldOrFail
-                                  : MCD::OPC_CheckField;
-    TableInfo.Table.push_back(DecoderOp);
-
+    const MCD::DecoderOps DecoderOp = TableInfo.isOutermostScope()
+                                          ? MCD::OPC_CheckFieldOrFail
+                                          : MCD::OPC_CheckField;
+    TableInfo.Table.insertOpcode(DecoderOp);
     TableInfo.Table.insertULEB128(Ilnd.StartBit);
-    TableInfo.Table.push_back(NumBits);
+    TableInfo.Table.insertUInt8(Ilnd.NumBits);
     TableInfo.Table.insertULEB128(Ilnd.FieldVal);
 
     if (DecoderOp == MCD::OPC_CheckField) {
@@ -1429,15 +1334,13 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   // decoder method indicates that additional processing should be done to see
   // if there is any other instruction that also matches the bitpattern and
   // can decode it.
-  const InstructionEncoding &Encoding = Encodings[EncodingID];
-  const uint8_t DecoderOp =
-      Encoding.hasCompleteDecoder()
-          ? MCD::OPC_Decode
-          : (TableInfo.isOutermostScope() ? MCD::OPC_TryDecodeOrFail
-                                          : MCD::OPC_TryDecode);
-  TableInfo.Table.push_back(DecoderOp);
+  const MCD::DecoderOps DecoderOp =
+      Encoding.hasCompleteDecoder()  ? MCD::OPC_Decode
+      : TableInfo.isOutermostScope() ? MCD::OPC_TryDecodeOrFail
+                                     : MCD::OPC_TryDecode;
+  TableInfo.Table.insertOpcode(DecoderOp);
   const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
-  TableInfo.Table.insertULEB128(Emitter->getTarget().getInstrIntValue(InstDef));
+  TableInfo.Table.insertULEB128(Target.getInstrIntValue(InstDef));
   TableInfo.Table.insertULEB128(DIdx);
 
   if (DecoderOp == MCD::OPC_TryDecode) {
@@ -1446,40 +1349,19 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   }
 }
 
-// Emits table entries to decode the singleton, and then to decode the rest.
-void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
-                                            const Filter &Best) const {
-  // complex singletons need predicate checks from the first singleton
-  // to refer forward to the variable filterchooser that follows.
-  TableInfo.pushScope();
-  emitSingletonTableEntry(TableInfo, Best.getSingletonEncodingID());
-  TableInfo.popScope();
-
-  Best.getVariableFC().emitTableEntries(TableInfo);
-}
-
-// Assign a single filter and run with it.  Top level API client can initialize
-// with a single filter to start the filtering process.
-void FilterChooser::runSingleFilter(unsigned startBit, unsigned numBit) {
-  BestFilter = std::make_unique<Filter>(*this, startBit, numBit);
-  BestFilter->recurse();
-}
-
 // reportRegion is a helper function for filterProcessor to mark a region as
 // eligible for use as a filter region.
 void FilterChooser::reportRegion(std::vector<std::unique_ptr<Filter>> &Filters,
                                  bitAttr_t RA, unsigned StartBit,
-                                 unsigned BitIndex, bool AllowMixed) {
+                                 unsigned BitIndex, bool AllowMixed) const {
   if (AllowMixed ? RA == ATTR_MIXED : RA == ATTR_ALL_SET)
-    Filters.push_back(
-        std::make_unique<Filter>(*this, StartBit, BitIndex - StartBit));
+    Filters.push_back(std::make_unique<Filter>(Encodings, EncodingIDs, StartBit,
+                                               BitIndex - StartBit));
 }
 
-// FilterProcessor scans the well-known encoding bits of the instructions and
-// builds up a list of candidate filters.  It chooses the best filter and
-// recursively descends down the decoding tree.
-bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
-                                    bool AllowMixed, bool Greedy) {
+std::unique_ptr<Filter>
+FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
+                              bool Greedy) const {
   assert(EncodingIDs.size() >= 2 && "Nothing to filter");
 
   // Heuristics.  See also doFilter()'s "Heuristics" comment when num of
@@ -1488,14 +1370,15 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
     assert(EncodingIDs.size() == 3);
 
     for (unsigned EncodingID : EncodingIDs) {
-      KnownBits EncodingBits = getMandatoryEncodingBits(EncodingID);
+      const InstructionEncoding &Encoding = Encodings[EncodingID];
+      KnownBits EncodingBits = Encoding.getMandatoryBits();
 
       // Look for islands of undecoded bits of any instruction.
       std::vector<Island> Islands = getIslands(EncodingBits);
       if (!Islands.empty()) {
         // Found an instruction with island(s).  Now just assign a filter.
-        runSingleFilter(Islands[0].StartBit, Islands[0].NumBits);
-        return true;
+        return std::make_unique<Filter>(
+            Encodings, EncodingIDs, Islands[0].StartBit, Islands[0].NumBits);
       }
     }
   }
@@ -1524,7 +1407,8 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
   unsigned StartBit = 0;
 
   std::vector<std::unique_ptr<Filter>> Filters;
-  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+  unsigned FilterWidth = FilterBits.getBitWidth();
+  for (unsigned BitIndex = 0; BitIndex != FilterWidth; ++BitIndex) {
     bitAttr_t bitAttr = BitAttrs[BitIndex];
 
     assert(bitAttr != ATTR_NONE && "Bit without attributes");
@@ -1605,12 +1489,12 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
   case ATTR_FILTERED:
     break;
   case ATTR_ALL_SET:
-    reportRegion(Filters, RA, StartBit, BitWidth, AllowMixed);
+    reportRegion(Filters, RA, StartBit, FilterWidth, AllowMixed);
     break;
   case ATTR_ALL_UNSET:
     break;
   case ATTR_MIXED:
-    reportRegion(Filters, RA, StartBit, BitWidth, AllowMixed);
+    reportRegion(Filters, RA, StartBit, FilterWidth, AllowMixed);
     break;
   }
 
@@ -1633,24 +1517,12 @@ bool FilterChooser::filterProcessor(ArrayRef<bitAttr_t> BitAttrs,
   }
 
   if (AllUseless)
-    return false;
+    return nullptr;
 
-  BestFilter = std::move(Filters[BestIndex]);
-  BestFilter->recurse();
-  return true;
+  return std::move(Filters[BestIndex]);
+}
 
-} // end of FilterChooser::filterProcessor(bool)
-
-// Decides on the best configuration of filter(s) to use in order to decode
-// the instructions.  A conflict of instructions may occur, in which case we
-// dump the conflict set to the standard error.
-void FilterChooser::doFilter() {
-  assert(!EncodingIDs.empty() && "FilterChooser created with no instructions");
-
-  // No filter needed.
-  if (EncodingIDs.size() < 2)
-    return;
-
+std::unique_ptr<Filter> FilterChooser::findBestFilter() const {
   // We maintain BIT_WIDTH copies of the bitAttrs automaton.
   // The automaton consumes the corresponding bit from each
   // instruction.
@@ -1668,18 +1540,20 @@ void FilterChooser::doFilter() {
   // (MIXED) ------ . ----> (MIXED)
   // (FILTERED)---- . ----> (FILTERED)
 
-  SmallVector<bitAttr_t, 128> BitAttrs(BitWidth, ATTR_NONE);
+  unsigned FilterWidth = FilterBits.getBitWidth();
+  SmallVector<bitAttr_t, 128> BitAttrs(FilterWidth, ATTR_NONE);
 
   // FILTERED bit positions provide no entropy and are not worthy of pursuing.
   // Filter::recurse() set either 1 or 0 for each position.
-  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
+  for (unsigned BitIndex = 0; BitIndex != FilterWidth; ++BitIndex)
     if (isPositionFiltered(BitIndex))
       BitAttrs[BitIndex] = ATTR_FILTERED;
 
   for (unsigned EncodingID : EncodingIDs) {
-    KnownBits EncodingBits = getMandatoryEncodingBits(EncodingID);
+    const InstructionEncoding &Encoding = Encodings[EncodingID];
+    KnownBits EncodingBits = Encoding.getMandatoryBits();
 
-    for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+    for (unsigned BitIndex = 0; BitIndex != FilterWidth; ++BitIndex) {
       bool IsKnown = EncodingBits.Zero[BitIndex] || EncodingBits.One[BitIndex];
       switch (BitAttrs[BitIndex]) {
       case ATTR_NONE:
@@ -1704,58 +1578,119 @@ void FilterChooser::doFilter() {
   }
 
   // Try regions of consecutive known bit values first.
-  if (filterProcessor(BitAttrs, /*AllowMixed=*/false))
-    return;
+  if (std::unique_ptr<Filter> F =
+          findBestFilter(BitAttrs, /*AllowMixed=*/false))
+    return F;
 
   // Then regions of mixed bits (both known and unitialized bit values allowed).
-  if (filterProcessor(BitAttrs, /*AllowMixed=*/true))
-    return;
+  if (std::unique_ptr<Filter> F = findBestFilter(BitAttrs, /*AllowMixed=*/true))
+    return F;
 
   // Heuristics to cope with conflict set {t2CMPrs, t2SUBSrr, t2SUBSrs} where
   // no single instruction for the maximum ATTR_MIXED region Inst{14-4} has a
   // well-known encoding pattern.  In such case, we backtrack and scan for the
   // the very first consecutive ATTR_ALL_SET region and assign a filter to it.
-  if (EncodingIDs.size() == 3 &&
-      filterProcessor(BitAttrs, /*AllowMixed=*/true, /*Greedy=*/false))
-    return;
+  if (EncodingIDs.size() == 3) {
+    if (std::unique_ptr<Filter> F =
+            findBestFilter(BitAttrs, /*AllowMixed=*/true, /*Greedy=*/false))
+      return F;
+  }
 
-  // We don't know how to decode these instructions! Dump the
-  // conflict set and bail.
-  assert(!BestFilter);
+  // There is a conflict we could not resolve.
+  return nullptr;
+}
+
+// Decides on the best configuration of filter(s) to use in order to decode
+// the instructions.  A conflict of instructions may occur, in which case we
+// dump the conflict set to the standard error.
+void FilterChooser::doFilter() {
+  assert(!EncodingIDs.empty() && "FilterChooser created with no instructions");
+
+  // No filter needed.
+  if (EncodingIDs.size() == 1) {
+    SingletonEncodingID = EncodingIDs.front();
+    return;
+  }
+
+  std::unique_ptr<Filter> BestFilter = findBestFilter();
+  if (BestFilter) {
+    applyFilter(*BestFilter);
+    return;
+  }
 
   // Print out useful conflict information for postmortem analysis.
   errs() << "Decoding Conflict:\n";
-
-  // Dump filters.
-  indent Indent(4);
-  dumpStack(errs(), Indent);
-
-  // Dump encodings.
-  for (unsigned EncodingID : EncodingIDs) {
-    const InstructionEncoding &Enc = Encodings[EncodingID];
-    errs() << Indent;
-    printKnownBits(errs(), getMandatoryEncodingBits(EncodingID), '_');
-    errs() << "  " << Enc.getName() << '\n';
-  }
+  dump();
   PrintFatalError("Decoding conflict encountered");
 }
 
-// emitTableEntries - Emit state machine entries to decode our share of
-// instructions.
+void FilterChooser::dump() const {
+  indent Indent(4);
+  // Helps to keep the output right-justified.
+  unsigned PadToWidth = getMaxEncodingWidth();
+
+  // Dump filter stack.
+  dumpStack(errs(), Indent, PadToWidth);
+
+  // Dump encodings.
+  for (unsigned EncodingID : EncodingIDs) {
+    const InstructionEncoding &Encoding = Encodings[EncodingID];
+    errs() << Indent << indent(PadToWidth - Encoding.getBitWidth());
+    printKnownBits(errs(), Encoding.getMandatoryBits(), '_');
+    errs() << "  " << Encoding.getName() << '\n';
+  }
+}
+
 void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
-  if (EncodingIDs.size() == 1) {
-    // There is only one instruction in the set, which is great!
-    // Call emitSingletonDecoder() to see whether there are any remaining
-    // encodings bits.
-    emitSingletonTableEntry(TableInfo, EncodingIDs[0]);
-    return;
+  // If there are other encodings that could match if those with all bits
+  // known don't, enter a scope so that they have a chance.
+  if (VariableFC)
+    TableInfo.pushScope();
+
+  if (SingletonEncodingID) {
+    assert(FilterChooserMap.empty());
+    // There is only one encoding in which all bits in the filtered range are
+    // fully defined, but we still need to check if the remaining (unfiltered)
+    // bits are valid for this encoding. We also need to check predicates etc.
+    emitSingletonTableEntry(TableInfo, *SingletonEncodingID);
+  } else {
+    // The general case: emit a switch over the field value.
+    DecoderTable &Table = TableInfo.Table;
+    Table.insertOpcode(MCD::OPC_ExtractField);
+    Table.insertULEB128(StartBit);
+    Table.insertUInt8(NumBits);
+
+    // Emit switch cases for all but the last element.
+    for (const auto &[FilterVal, Delegate] : drop_end(FilterChooserMap)) {
+      Table.insertOpcode(MCD::OPC_FilterValue);
+      Table.insertULEB128(FilterVal);
+      size_t FixupPos = Table.insertNumToSkip();
+
+      // Emit table entries for this case.
+      Delegate->emitTableEntries(TableInfo);
+
+      // Patch the previous OPC_FilterValue to fall through to the next case.
+      Table.patchNumToSkip(FixupPos, Table.size());
+    }
+
+    // Emit a switch case for the last element. It never falls through;
+    // if it doesn't match, we leave the current scope.
+    const auto &[FilterVal, Delegate] = *FilterChooserMap.rbegin();
+    Table.insertOpcode(!TableInfo.isOutermostScope()
+                           ? MCD::OPC_FilterValue
+                           : MCD::OPC_FilterValueOrFail);
+    Table.insertULEB128(FilterVal);
+    if (!TableInfo.isOutermostScope())
+      TableInfo.FixupStack.back().push_back(Table.insertNumToSkip());
+
+    // Emit table entries for the last case.
+    Delegate->emitTableEntries(TableInfo);
   }
 
-  // Use the best filter to do the decoding!
-  if (BestFilter->getNumFiltered() == 1)
-    emitSingletonTableEntry(TableInfo, *BestFilter);
-  else
-    BestFilter->emitTableEntry(TableInfo);
+  if (VariableFC) {
+    TableInfo.popScope();
+    VariableFC->emitTableEntries(TableInfo);
+  }
 }
 
 static std::string findOperandDecoderMethod(const Record *Record) {
@@ -1795,6 +1730,124 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
       HasCompleteDecoderBit ? HasCompleteDecoderBit->getValue() : true;
 
   return OperandInfo(findOperandDecoderMethod(TypeRecord), HasCompleteDecoder);
+}
+
+void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
+  InstBits = KnownBits(VLI.size());
+  SoftFailBits = APInt(VLI.size(), 0);
+
+  // Parse Inst field.
+  unsigned I = 0;
+  for (const EncodingSegment &S : VLI) {
+    if (const auto *SegmentBits = dyn_cast<BitsInit>(S.Value)) {
+      for (const Init *V : SegmentBits->getBits()) {
+        if (const auto *B = dyn_cast<BitInit>(V)) {
+          if (B->getValue())
+            InstBits.One.setBit(I);
+          else
+            InstBits.Zero.setBit(I);
+        }
+        ++I;
+      }
+    } else if (const auto *B = dyn_cast<BitInit>(S.Value)) {
+      if (B->getValue())
+        InstBits.One.setBit(I);
+      else
+        InstBits.Zero.setBit(I);
+      ++I;
+    } else {
+      I += S.BitWidth;
+    }
+  }
+  assert(I == VLI.size());
+}
+
+void InstructionEncoding::parseFixedLenEncoding(
+    const BitsInit &RecordInstBits) {
+  // For fixed length instructions, sometimes the `Inst` field specifies more
+  // bits than the actual size of the instruction, which is specified in `Size`.
+  // In such cases, we do some basic validation and drop the upper bits.
+  unsigned BitWidth = EncodingDef->getValueAsInt("Size") * 8;
+  unsigned InstNumBits = RecordInstBits.getNumBits();
+
+  // Returns true if all bits in `Bits` are zero or unset.
+  auto CheckAllZeroOrUnset = [&](ArrayRef<const Init *> Bits,
+                                 const RecordVal *Field) {
+    bool AllZeroOrUnset = llvm::all_of(Bits, [](const Init *Bit) {
+      if (const auto *BI = dyn_cast<BitInit>(Bit))
+        return !BI->getValue();
+      return isa<UnsetInit>(Bit);
+    });
+    if (AllZeroOrUnset)
+      return;
+    PrintNote([Field](raw_ostream &OS) { Field->print(OS); });
+    PrintFatalError(EncodingDef, Twine(Name) + ": Size is " + Twine(BitWidth) +
+                                     " bits, but " + Field->getName() +
+                                     " bits beyond that are    not zero/unset");
+  };
+
+  if (InstNumBits < BitWidth)
+    PrintFatalError(EncodingDef, Twine(Name) + ": Size is " + Twine(BitWidth) +
+                                     " bits, but Inst specifies only " +
+                                     Twine(InstNumBits) + " bits");
+
+  if (InstNumBits > BitWidth) {
+    // Ensure that all the bits beyond 'Size' are 0 or unset (i.e., carry no
+    // actual encoding).
+    ArrayRef<const Init *> UpperBits =
+        RecordInstBits.getBits().drop_front(BitWidth);
+    const RecordVal *InstField = EncodingDef->getValue("Inst");
+    CheckAllZeroOrUnset(UpperBits, InstField);
+  }
+
+  ArrayRef<const Init *> ActiveInstBits =
+      RecordInstBits.getBits().take_front(BitWidth);
+  InstBits = KnownBits(BitWidth);
+  SoftFailBits = APInt(BitWidth, 0);
+
+  // Parse Inst field.
+  for (auto [I, V] : enumerate(ActiveInstBits)) {
+    if (const auto *B = dyn_cast<BitInit>(V)) {
+      if (B->getValue())
+        InstBits.One.setBit(I);
+      else
+        InstBits.Zero.setBit(I);
+    }
+  }
+
+  // Parse SoftFail field.
+  const RecordVal *SoftFailField = EncodingDef->getValue("SoftFail");
+  if (!SoftFailField)
+    return;
+
+  const auto *SFBits = dyn_cast<BitsInit>(SoftFailField->getValue());
+  if (!SFBits || SFBits->getNumBits() != InstNumBits) {
+    PrintNote(EncodingDef->getLoc(), "in record");
+    PrintFatalError(SoftFailField,
+                    formatv("SoftFail field, if defined, must be "
+                            "of the same type as Inst, which is bits<{}>",
+                            InstNumBits));
+  }
+
+  if (InstNumBits > BitWidth) {
+    // Ensure that all upper bits of `SoftFail` are 0 or unset.
+    ArrayRef<const Init *> UpperBits = SFBits->getBits().drop_front(BitWidth);
+    CheckAllZeroOrUnset(UpperBits, SoftFailField);
+  }
+
+  ArrayRef<const Init *> ActiveSFBits = SFBits->getBits().take_front(BitWidth);
+  for (auto [I, V] : enumerate(ActiveSFBits)) {
+    if (const auto *B = dyn_cast<BitInit>(V); B && B->getValue()) {
+      if (!InstBits.Zero[I] && !InstBits.One[I]) {
+        PrintNote(EncodingDef->getLoc(), "in record");
+        PrintError(SoftFailField,
+                   formatv("SoftFail{{{0}} = 1 requires Inst{{{0}} "
+                           "to be fully defined (0 or 1, not '?')",
+                           I));
+      }
+      SoftFailBits.setBit(I);
+    }
+  }
 }
 
 void InstructionEncoding::parseVarLenOperands(const VarLenInst &VLI) {
@@ -2025,13 +2078,13 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
   const RecordVal *InstField = EncodingDef->getValue("Inst");
   if (const auto *DI = dyn_cast<DagInit>(InstField->getValue())) {
     VarLenInst VLI(DI, InstField);
-    BitWidth = VLI.size();
+    parseVarLenEncoding(VLI);
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())
       parseVarLenOperands(VLI);
   } else {
     const auto *BI = cast<BitsInit>(InstField->getValue());
-    BitWidth = BI->getNumBits();
+    parseFixedLenEncoding(*BI);
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())
       parseFixedLenOperands(*BI);
@@ -2081,7 +2134,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   OS << ") {\n";
   if (HasCheckPredicate)
     OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
-  OS << "   using namespace llvm::MCD;\n";
+  OS << "  using namespace llvm::MCD;\n";
 
   OS << R"(
   const uint8_t *Ptr = DecodeTable;
@@ -2252,22 +2305,18 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   }
   if (HasSoftFail) {
     OS << R"(
-      case MCD::OPC_SoftFail: {
-        // Decode the mask values.
-        uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
-        uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
-        bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
-        if (Failed)
-          S = MCDisassembler::SoftFail;
-        LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
-        break;
-  })";
+    case MCD::OPC_SoftFail: {
+      // Decode the mask values.
+      uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
+      uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
+      bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
+      if (Failed)
+        S = MCDisassembler::SoftFail;
+      LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
+      break;
+    })";
   }
   OS << R"(
-    case MCD::OPC_Fail: {
-      LLVM_DEBUG(dbgs() << Loc << ": OPC_Fail\n");
-      return MCDisassembler::Fail;
-    }
     }
   }
   llvm_unreachable("bogosity detected in disassembler state machine!");
@@ -2346,6 +2395,7 @@ static bool isValidEncoding(const Record *EncodingDef) {
       return false;
 
     // At least one of the encoding bits must be complete (not '?').
+    // FIXME: This should take SoftFail field into account.
     return !InstInit->allInComplete();
   }
 
@@ -2427,7 +2477,9 @@ void DecoderEmitter::parseInstructionEncodings() {
       ++NumEncodingsOmitted;
       continue;
     }
+    unsigned EncodingID = Encodings.size();
     Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
+    EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
   }
 
   // Do some statistics.
@@ -2436,10 +2488,8 @@ void DecoderEmitter::parseInstructionEncodings() {
   NumEncodings = NumEncodingsSupported + NumEncodingsOmitted;
 }
 
-DecoderEmitter::DecoderEmitter(const RecordKeeper &RK,
-                               StringRef PredicateNamespace)
-    : RK(RK), Target(RK), CGH(Target.getHwModes()),
-      PredicateNamespace(PredicateNamespace) {
+DecoderEmitter::DecoderEmitter(const RecordKeeper &RK)
+    : RK(RK), Target(RK), CGH(Target.getHwModes()) {
   Target.reverseBitsForLittleEndianEncoding();
   parseInstructionEncodings();
 }
@@ -2494,20 +2544,14 @@ namespace {
     auto [DecoderNamespace, HwModeID, Size] = Key;
     const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
     // Emit the decoder for this (namespace, hwmode, width) combination.
-    FilterChooser FC(Encodings, EncodingIDs, BitWidth, this);
+    FilterChooser FC(Encodings, EncodingIDs, BitWidth, Target);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all
     // decoders to give more opportunities for uniqueing.
     TableInfo.Table.clear();
-    TableInfo.pushScope();
     FC.emitTableEntries(TableInfo);
-    // Any NumToSkip fixups in the top level scope can resolve to the
-    // OPC_Fail at the end of the table.
     assert(TableInfo.isOutermostScope() && "fixup stack phasing error!");
-    TableInfo.popScope();
-
-    TableInfo.Table.push_back(MCD::OPC_Fail);
 
     // Print the table to the output stream.
     OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
@@ -2537,7 +2581,6 @@ namespace {
   OS << "\n} // namespace\n";
 }
 
-void llvm::EmitDecoder(const RecordKeeper &RK, raw_ostream &OS,
-                       StringRef PredicateNamespace) {
-  DecoderEmitter(RK, PredicateNamespace).run(OS);
+void llvm::EmitDecoder(const RecordKeeper &RK, raw_ostream &OS) {
+  DecoderEmitter(RK).run(OS);
 }

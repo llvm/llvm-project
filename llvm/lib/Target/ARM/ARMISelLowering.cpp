@@ -3403,7 +3403,7 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
   // position-independent addressing modes.
   if (Subtarget->genExecuteOnly()) {
     auto AFI = DAG.getMachineFunction().getInfo<ARMFunctionInfo>();
-    auto T = const_cast<Type*>(CP->getType());
+    auto *T = CP->getType();
     auto C = const_cast<Constant*>(CP->getConstVal());
     auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
@@ -21339,20 +21339,6 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
       Type::getVoidTy(M.getContext()), PointerType::getUnqual(M.getContext()));
   if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
     F->addParamAttr(0, Attribute::AttrKind::InReg);
-}
-
-Value *ARMTargetLowering::getSDagStackGuard(const Module &M) const {
-  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
-    // MSVC CRT has a global variable holding security cookie.
-    //
-    // FIXME: We have a libcall entry for the correlated check function, but not
-    // the global name.
-    return M.getGlobalVariable("__security_cookie");
-  }
-
-  return TargetLowering::getSDagStackGuard(M);
 }
 
 Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {

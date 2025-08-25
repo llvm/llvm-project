@@ -937,6 +937,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lroundbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lroundbf16_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.lroundbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   llround_test
   SUITE
     libc-math-smoke-tests
@@ -1017,6 +1034,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  llroundbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llroundbf16_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.llroundbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   rint_test
   SUITE
     libc-math-smoke-tests
@@ -1082,6 +1116,21 @@ add_fp_unittest(
     RIntTest.h
   DEPENDS
     libc.src.math.rintf128
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  rintbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rintbf16_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.src.math.rintbf16
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1167,6 +1216,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lrintbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lrintbf16_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.lrintbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   llrint_test
   SUITE
     libc-math-smoke-tests
@@ -1242,6 +1308,23 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.llrintf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llrintbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llrintbf16_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.llrintbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1534,6 +1617,19 @@ add_fp_unittest(
     FrexpTest.h
   DEPENDS
     libc.src.math.frexpf128
+)
+
+add_fp_unittest(
+  frexpbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexpbf16_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -1905,6 +2001,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ilogbbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogbbf16_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   issignaling_test
   SUITE
     libc-math-smoke-tests
@@ -2040,6 +2152,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  llogbbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogbbf16_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogbbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   ldexp_test
   SUITE
     libc-math-smoke-tests
@@ -2049,6 +2177,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexp
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2064,6 +2193,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2079,6 +2209,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpl
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2094,6 +2225,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2109,7 +2241,25 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  ldexpbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ldexpbf16_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -2181,6 +2331,21 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.logbf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  logbbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logbbf16_test.cpp
+  HDRS
+    LogbTest.h
+  DEPENDS
+    libc.src.math.logbbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -3516,6 +3681,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nanbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanbf16_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.src.math.nanbf16
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
   nearbyint_test
   SUITE
     libc-math-smoke-tests
@@ -3578,6 +3759,20 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.fenv_macros
     libc.src.math.nearbyintf128
+)
+
+add_fp_unittest(
+  nearbyintbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintbf16_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -3660,6 +3855,23 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  nextafterbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterbf16_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nextafterbf16
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
 # FIXME: These tests are currently spurious for the GPU.
 if(NOT LIBC_TARGET_OS_IS_GPU)
   add_fp_unittest(
@@ -3728,6 +3940,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nexttowardbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nexttowardbf16_test.cpp
+  HDRS
+    NextTowardTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nexttowardbf16
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   nextdown_test
   SUITE
     libc-math-smoke-tests
@@ -3788,6 +4017,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nextdownbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownbf16_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.src.math.nextdownbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   nextup_test
   SUITE
     libc-math-smoke-tests
@@ -3845,6 +4087,19 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextupf128
+)
+
+add_fp_unittest(
+  nextupbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupbf16_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.src.math.nextupbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 # TODO(lntue): The current implementation of fputil::general::fma<float> is only
@@ -4814,6 +5069,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  getpayloadbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    getpayloadbf16_test.cpp
+  HDRS
+    GetPayloadTest.h
+  DEPENDS
+    libc.src.math.getpayloadbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   setpayload_test
   SUITE
     libc-math-smoke-tests
@@ -4871,6 +5139,19 @@ add_fp_unittest(
     SetPayloadTest.h
   DEPENDS
     libc.src.math.setpayloadf128
+)
+
+add_fp_unittest(
+  setpayloadbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    setpayloadbf16_test.cpp
+  HDRS
+    SetPayloadTest.h
+  DEPENDS
+    libc.src.math.setpayloadbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -4933,6 +5214,18 @@ add_fp_unittest(
     libc.src.math.setpayloadsigf128
 )
 
+add_fp_unittest(
+  setpayloadsigbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    setpayloadsigbf16_test.cpp
+  HDRS
+    SetPayloadTest.h
+  DEPENDS
+    libc.src.math.setpayloadsigbf16
+    libc.src.__support.FPUtil.bfloat16
+)
 
 add_fp_unittest(
   f16add_test
