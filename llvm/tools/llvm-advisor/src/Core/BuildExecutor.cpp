@@ -133,6 +133,19 @@ llvm::SmallVector<std::string, 16> BuildExecutor::instrumentCompilerArgs(
     result.push_back("-Rpass=analysis");
   }
 
+  // Add diagnostic output format for better parsing
+  bool hasDiagFormat = false;
+  for (const auto &arg : result) {
+    if (llvm::StringRef(arg).contains("-fdiagnostics-format")) {
+      hasDiagFormat = true;
+      break;
+    }
+  }
+  if (!hasDiagFormat) {
+    result.push_back("-fdiagnostics-parseable-fixits");
+    result.push_back("-fdiagnostics-absolute-paths");
+  }
+
   return result;
 }
 
