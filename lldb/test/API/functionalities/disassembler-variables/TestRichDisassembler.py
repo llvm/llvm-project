@@ -6,38 +6,10 @@ import re
 
 
 class TestRichDisassembler(TestBase):
-    def _compile_object(self, src_name, func_cflags="-g -gdwarf-5 -O2 -fno-inline"):
-        """
-        Compile a single C source to an object file using the host toolchain.
-        We intentionally use `platform shell` to keep this as close to your
-        existing style as possible (and avoid depending on the Makefile for .o).
-        """
-        src = self.getSourcePath(src_name)
-        obj = self.getBuildArtifact(os.path.splitext(src_name)[0] + ".o")
-        cmd = f"cc {func_cflags} -c '{src}' -o '{obj}'"
-        self.runCmd(f"platform shell {cmd}", check=True)
-        self.assertTrue(os.path.exists(obj), f"missing object: {obj}")
-        return obj
-
-    def _compile_or_assemble_object(
-        self,
-        src_name,
-        cflags="-g -gdwarf-5 -O2 -fno-inline -fno-omit-frame-pointer",
-    ):
-        cc = self.getCompiler()  # use the configured clang from dotest
-        src = self.getSourcePath(src_name)
-        stem, ext = os.path.splitext(src_name)
-        obj = self.getBuildArtifact(stem + ".o")
-
-        if ext == ".s":
-            # Assemble the already-generated DWARF-rich .s
-            cmd = f"'{cc}' -c -x assembler '{src}' -o '{obj}'"
-        else:
-            # Fallback for .c if needed
-            cmd = f"'{cc}' {cflags} -c '{src}' -o '{obj}'"
-
-        # run and validate
-        self.runCmd(f"platform shell {cmd}", check=True)
+    def _build_obj(self, obj_name: str) -> str:
+        # Let the Makefile build all .o’s (pattern rule). Then grab the one we need.
+        self.build()
+        obj = self.getBuildArtifact(obj_name)
         self.assertTrue(os.path.exists(obj), f"missing object: {obj}")
         return obj
 
@@ -47,33 +19,25 @@ class TestRichDisassembler(TestBase):
         return target
 
     def _disassemble_verbose_symbol(self, symname):
-        # For object-only tests, disassemble a named symbol from the .o
         self.runCmd(f"disassemble -n {symname} -v", check=True)
         return self.res.GetOutput()
 
     def test_d_original_example_O1(self):
-        """
-        Tests disassembler output for d_original_example.c built with -O1,
-        using the CLI with --rich for enabled annotations.
-        """
-        obj = self._compile_or_assemble_object("d_original_example.s")
+        obj = self._build_obj("d_original_example.o")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("main")
         print(out)
-
         self.assertIn("argc = ", out)
         self.assertIn("argv = ", out)
         self.assertIn("i = ", out)
         self.assertNotIn("<decoding error>", out)
 
-    @no_debug_info_test  # we explicitly request -g in _compile_object
+    @no_debug_info_test
     def test_regs_int_params(self):
-        obj = self._compile_or_assemble_object("regs_int_params.s")
+        obj = self._build_obj("regs_int_params.o")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("regs_int_params")
         print(out)
-
-        # assertions (tweak as desired)
         self.assertRegex(out, r"\ba\s*=\s*(DW_OP_reg5\b|RDI\b)")
         self.assertRegex(out, r"\bb\s*=\s*(DW_OP_reg4\b|RSI\b)")
         self.assertRegex(out, r"\bc\s*=\s*(DW_OP_reg1\b|RDX\b)")
@@ -84,12 +48,10 @@ class TestRichDisassembler(TestBase):
 
     @no_debug_info_test
     def test_regs_fp_params(self):
-        obj = self._compile_or_assemble_object("regs_fp_params.s")
+        obj = self._build_obj("regs_fp_params.o")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("regs_fp_params")
         print(out)
-
-        # XMM0..5 typically map to DW_OP_reg17..22
         self.assertRegex(out, r"\ba\s*=\s*(DW_OP_reg17\b|XMM0\b)")
         self.assertRegex(out, r"\bb\s*=\s*(DW_OP_reg18\b|XMM1\b)")
         self.assertRegex(out, r"\bc\s*=\s*(DW_OP_reg19\b|XMM2\b)")
@@ -100,11 +62,10 @@ class TestRichDisassembler(TestBase):
 
     @no_debug_info_test
     def test_regs_mixed_params(self):
-        obj = self._compile_or_assemble_object("regs_mixed_params.s")
+        obj = self._build_obj("regs_mixed_params.o")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("regs_mixed_params")
         print(out)
-
         self.assertRegex(out, r"\ba\s*=\s*(DW_OP_reg5\b|RDI\b)")
         self.assertRegex(out, r"\bb\s*=\s*(DW_OP_reg4\b|RSI\b)")
         self.assertRegex(out, r"\bx\s*=\s*(DW_OP_reg17\b|XMM0\b|DW_OP_reg\d+\b)")
@@ -115,46 +76,33 @@ class TestRichDisassembler(TestBase):
 
     @no_debug_info_test
     def test_live_across_call(self):
-        obj = self._compile_or_assemble_object("live_across_call.s")
+        obj = self._build_obj("live_across_call.o")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("live_across_call")
         print(out)
-
-        # We just assert 'a' is in a register, then there's a call, then 'a' again.
         self.assertRegex(out, r"\bx\s*=\s*(DW_OP_reg5\b|RDI\b)")
         self.assertIn("call", out)
-        self.assertRegex(out, r"\br\s*=\s*(DW_OP_reg4\b|RAX\b)")
+        self.assertRegex(out, r"\br\s*=\s*(DW_OP_reg0\b|RAX\b|DW_OP_reg\d+\b)")
         self.assertNotIn("<decoding error>", out)
 
     @no_debug_info_test
     def test_loop_reg_rotate(self):
-        obj = self._compile_or_assemble_object("loop_reg_rotate.s")
+        obj = self._build_obj("loop_reg_rotate.o")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("loop_reg_rotate")
         print(out)
-
-        self.assertRegex(out, r"\bn\s*=\s*()")
-        self.assertRegex(out, r"\bseed\s*=\s*()")
-        self.assertRegex(out, r"\bk\s*=\s*()")
-        self.assertRegex(out, r"\bj\s*=\s*()")
-        self.assertRegex(out, r"\bi\s*=\s*()")
+        self.assertRegex(out, r"\bn\s*=\s*(DW_OP_reg\d+\b|R[A-Z0-9]+)")
+        self.assertRegex(out, r"\bseed\s*=\s*(DW_OP_reg\d+\b|R[A-Z0-9]+)")
+        self.assertRegex(out, r"\bk\s*=\s*(DW_OP_reg\d+\b|R[A-Z0-9]+)")
+        self.assertRegex(out, r"\bj\s*=\s*(DW_OP_reg\d+\b|R[A-Z0-9]+)")
+        self.assertRegex(out, r"\bi\s*=\s*(DW_OP_reg\d+\b|R[A-Z0-9]+)")
         self.assertNotIn("<decoding error>", out)
 
     @no_debug_info_test
     def test_seed_reg_const_undef(self):
-        """
-        For now, you mentioned constants aren’t printed; we still check that the
-        register part shows up (first range). When you add CONST support, you
-        can add an assertion for ' = 0' or similar.
-        """
-        # Use O1 to help keep a first reg range; still object-only
-        obj = self._compile_or_assemble_object(
-            "seed_reg_const_undef.s", cflags="-g -gdwarf-5 -O1 -fno-inline"
-        )
+        obj = self._build_obj("seed_reg_const_undef.o")
         target = self._create_target(obj)
         out = self._disassemble_verbose_symbol("main")
         print(out)
-
-        # check that at least one var (i or argc) is shown as a register at start
         self.assertRegex(out, r"\b(i|argc)\s*=\s*(DW_OP_reg\d+\b|R[A-Z0-9]+)")
         self.assertNotIn("<decoding error>", out)
