@@ -20,6 +20,7 @@ https://llvm.org/docs/CodingStandards.html
 import argparse
 import os
 import subprocess
+import sys
 from typing import List, Optional
 
 
@@ -325,5 +326,4 @@ if __name__ == "__main__":
 
     if not success:
         print("error: some linters failed: clang-tidy")
-        # Do not fail job for as it may be unstable
-        # sys.exit(1)
+        sys.exit(1)
