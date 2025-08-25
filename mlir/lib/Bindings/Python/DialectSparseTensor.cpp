@@ -12,8 +12,8 @@
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/Dialect/SparseTensor.h"
 #include "mlir-c/IR.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 using namespace llvm;
@@ -38,7 +38,8 @@ static void populateDialectSparseTensorSubmodule(const nb::module_ &m) {
                           mlirAttributeIsASparseTensorEncodingAttr)
       .def_classmethod(
           "get",
-          [](nb::object cls, std::vector<MlirSparseTensorLevelType> lvlTypes,
+          [](const nb::object &cls,
+             std::vector<MlirSparseTensorLevelType> lvlTypes,
              std::optional<MlirAffineMap> dimToLvl,
              std::optional<MlirAffineMap> lvlToDim, int posWidth, int crdWidth,
              std::optional<MlirAttribute> explicitVal,
@@ -58,7 +59,7 @@ static void populateDialectSparseTensorSubmodule(const nb::module_ &m) {
           "Gets a sparse_tensor.encoding from parameters.")
       .def_classmethod(
           "build_level_type",
-          [](nb::object cls, MlirSparseTensorLevelFormat lvlFmt,
+          [](const nb::object &cls, MlirSparseTensorLevelFormat lvlFmt,
              const std::vector<MlirSparseTensorLevelPropertyNondefault>
                  &properties,
              unsigned n, unsigned m) {

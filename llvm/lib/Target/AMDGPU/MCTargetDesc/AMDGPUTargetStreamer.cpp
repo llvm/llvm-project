@@ -396,9 +396,17 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   EmitMCExpr(KD.kernarg_size);
   OS << '\n';
 
-  PrintField(
-      KD.compute_pgm_rsrc2, amdhsa::COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_SHIFT,
-      amdhsa::COMPUTE_PGM_RSRC2_USER_SGPR_COUNT, ".amdhsa_user_sgpr_count");
+  if (isGFX1250(STI)) {
+    PrintField(KD.compute_pgm_rsrc2,
+               amdhsa::COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
+               amdhsa::COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT,
+               ".amdhsa_user_sgpr_count");
+  } else {
+    PrintField(KD.compute_pgm_rsrc2,
+               amdhsa::COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_SHIFT,
+               amdhsa::COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT,
+               ".amdhsa_user_sgpr_count");
+  }
 
   if (!hasArchitectedFlatScratch(STI))
     PrintField(
@@ -506,6 +514,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     printAMDGPUMCExpr(New, OS, MAI);
     OS << '\n';
   }
+
+  if (AMDGPU::isGFX1250(STI))
+    PrintField(KD.compute_pgm_rsrc3,
+               amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
+               amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+               ".amdhsa_named_barrier_count");
 
   OS << "\t\t.amdhsa_reserve_vcc ";
   EmitMCExpr(ReserveVCC);

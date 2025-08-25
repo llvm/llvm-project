@@ -1,0 +1,12 @@
+// RUN: cir-opt %s -split-input-file -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+// Should parse and print C source language attribute.
+module attributes {cir.lang = #cir.lang<c>} { }
+// CHECK: module attributes {cir.lang = #cir.lang<c>}
+
+// -----
+
+// Should parse and print C++ source language attribute.
+module attributes {cir.lang = #cir.lang<cxx>} { }
+// CHECK: module attributes {cir.lang = #cir.lang<cxx>}
