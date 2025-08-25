@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -verify %s \
-// RUN:   -analyzer-checker=core,unix.Malloc,alpha.core.CastSize
+// RUN:   -Wno-alloc-size -analyzer-checker=core,unix.Malloc,alpha.core.CastSize
 
 typedef typeof(sizeof(int)) size_t;
 void *malloc(size_t);
