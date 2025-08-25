@@ -104,7 +104,7 @@ negative:
   br label %cleanup
 
 cleanup:
-  call void @llvm.coro.end(ptr %handle, i1 0, token none)
+  call i1 @llvm.coro.end(ptr %handle, i1 0, token none)
   unreachable
 }
 
@@ -153,7 +153,7 @@ define swiftcorocc { ptr, ptr } @big_types(ptr noalias %frame, ptr swiftcoro %al
   %vec_modified = insertelement <32 x i8> %vec_original_3, i8 %element_modified, i32 %index32
   store <32 x i8> %vec_modified, ptr %vec_addr, align 32
   call void @llvm.lifetime.end.p0(ptr nonnull %element_addr)
-  call void @llvm.coro.end(ptr %handle, i1 false, token none)
+  call i1 @llvm.coro.end(ptr %handle, i1 false, token none)
   unreachable
 }
 

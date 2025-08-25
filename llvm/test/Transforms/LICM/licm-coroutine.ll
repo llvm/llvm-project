@@ -37,7 +37,7 @@ define ptr @f(i32 %n) presplitcoroutine {
 ; CHECK:       [[SUSPEND_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[SUSPEND]]
 ; CHECK:       [[SUSPEND]]:
-; CHECK-NEXT:    call void @llvm.coro.end(ptr [[HDL]], i1 false, token none)
+; CHECK-NEXT:    [[UNUSED:%.*]] = call i1 @llvm.coro.end(ptr [[HDL]], i1 false, token none)
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
@@ -68,7 +68,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
+  %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret ptr %hdl
 }
 

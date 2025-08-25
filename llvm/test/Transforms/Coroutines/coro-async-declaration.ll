@@ -43,7 +43,7 @@ entry:
   %15 = getelementptr inbounds <{ ptr, ptr }>, ptr %14, i32 0, i32 1, !dbg !11
   %16 = load ptr, ptr %15, align 8, !dbg !11
   %17 = load ptr, ptr %1, align 8, !dbg !11
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %3, i1 false, ptr @"$s3foo3FooO3baryyYaF.0.1", ptr %16, ptr %17), !dbg !11
+  %18 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %3, i1 false, ptr @"$s3foo3FooO3baryyYaF.0.1", ptr %16, ptr %17), !dbg !11
   unreachable, !dbg !11
 }
 
@@ -89,7 +89,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.coro.end.async(ptr, i1, ...) #0
+declare i1 @llvm.coro.end.async(ptr, i1, ...) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nomerge nounwind }
