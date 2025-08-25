@@ -86,12 +86,12 @@ llvm.func @kernel_func_unsafe_fp_atomics()
 }
 
 llvm.func @rocdl.lane_id() -> i32 {
-  // CHECK: [[mbcntlo:%.+]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-  // CHECK-NEXT: call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[mbcntlo]])
+  // CHECK: [[mbcntlo:%.+]] = call noundef range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  // CHECK-NEXT: call noundef range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[mbcntlo]])
   %0 = llvm.mlir.constant(-1 : i32) : i32
   %1 = llvm.mlir.constant(0 : i32) : i32
-  %2 = rocdl.mbcnt.lo %0, %1 : (i32, i32) -> i32
-  %3 = rocdl.mbcnt.hi %0, %2 : (i32, i32) -> i32
+  %2 = rocdl.mbcnt.lo %0, %1 {res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 32>}]} : (i32, i32) -> i32
+  %3 = rocdl.mbcnt.hi %0, %2 {res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 64>}]} : (i32, i32) -> i32
   llvm.return %3 : i32
 }
 
@@ -123,6 +123,23 @@ llvm.func @rocdl.ballot64(%pred : i1) -> i64 {
   // CHECK: call i64 @llvm.amdgcn.ballot
   %0 = rocdl.ballot %pred : i64
   llvm.return %0 : i64
+}
+
+llvm.func @rocdl.readfirstlane(%src0 : f32, %src1: f64, %src2: i32, %src3: vector<2 x f32>) -> f32 {
+  // CHECK-LABEL: rocdl.readfirstlane
+  // CHECK: call float @llvm.amdgcn.readfirstlane.f32(float %{{.*}})
+  %0 = rocdl.readfirstlane %src0 : f32
+
+  // CHECK: call double @llvm.amdgcn.readfirstlane.f64(double %{{.*}})
+  %1 = rocdl.readfirstlane %src1 : f64
+
+  // CHECK: call i32 @llvm.amdgcn.readfirstlane.i32(i32 %{{.*}})
+  %2 = rocdl.readfirstlane %src2 : i32
+
+  // CHECK: call <2 x float> @llvm.amdgcn.readfirstlane.v2f32(<2 x float> %{{.*}})
+  %3 = rocdl.readfirstlane %src3 : vector<2 x f32>
+
+  llvm.return %0 : f32
 }
 
 llvm.func @rocdl.readlane(%src0 : f32, %src1: f64, %src2: i32, %src3: vector<2 x f32>) -> f32 {
@@ -193,6 +210,27 @@ llvm.func @rocdl.s.wait.dscnt() {
   // CHECK-LABEL: rocdl.s.wait.dscnt
   // CHECK-NEXT: call void @llvm.amdgcn.s.wait.dscnt(i16 0)
   rocdl.s.wait.dscnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.loadcnt() {
+  // CHECK-LABEL: rocdl.s.wait.loadcnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.loadcnt(i16 0)
+  rocdl.s.wait.loadcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.storecnt() {
+  // CHECK-LABEL: rocdl.s.wait.storecnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.storecnt(i16 0)
+  rocdl.s.wait.storecnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.expcnt() {
+  // CHECK-LABEL: rocdl.s.wait.expcnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.expcnt(i16 0)
+  rocdl.s.wait.expcnt 0
   llvm.return
 }
 
@@ -901,6 +939,20 @@ llvm.func @rocdl.permlanex16(%src0 : f32, %src1 : i32, %src2 : vector<2 x f32>, 
   // CHECK: call <2 x i32> @llvm.amdgcn.permlanex16.v2i32(<2 x i32> %{{.*}}, <2 x i32> %{{.*}}, i32 -1, i32 -1, i1 false, i1 true)
   %ret3 = rocdl.permlanex16 %src3, %src3, %cst0, %cst0, 0, -1 : vector<2 x i32>, i32
   llvm.return %ret0 : f32
+}
+
+llvm.func @rocdl.permlane16.swap(%src : i32) -> !llvm.struct<(i32, i32)> {
+  // CHECK-LABEL: rocdl.permlane16.swap
+  // CHECK: call { i32, i32 } @llvm.amdgcn.permlane16.swap(i32 %{{.*}}, i32 %{{.*}}, i1 false, i1 true)
+  %ret = rocdl.permlane16.swap %src, %src, 0, -1  : (i32, i32) -> !llvm.struct<(i32, i32)>
+  llvm.return %ret : !llvm.struct<(i32, i32)>
+}
+
+llvm.func @rocdl.permlane32.swap(%src : i32) -> !llvm.struct<(i32, i32)> {
+  // CHECK-LABEL: rocdl.permlane32.swap
+  // CHECK: call { i32, i32 } @llvm.amdgcn.permlane32.swap(i32 %{{.*}}, i32 %{{.*}}, i1 false, i1 true)
+  %ret = rocdl.permlane32.swap %src, %src, 0, -1  : (i32, i32) -> !llvm.struct<(i32, i32)>
+  llvm.return %ret : !llvm.struct<(i32, i32)>
 }
 
 llvm.func @rocdl.wmma.fp8(%arg0 : vector<2 x i32>, %arg1 : vector<8xf32>) -> vector<8xf32> {

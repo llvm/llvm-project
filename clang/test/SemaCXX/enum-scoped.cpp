@@ -35,7 +35,7 @@ int a1[Val2];
 int a2[E1::Val1];
 
 #if __cplusplus >= 201703L
-// expected-error@-3 {{type 'E1' is not implicitly convertible to 'unsigned long'}}
+// expected-error@-3 {{type 'E1' is not implicitly convertible to '__size_t' (aka 'unsigned long')}}
 #else
 // expected-error@-5 {{size of array has non-integer type}}
 #endif
@@ -44,7 +44,7 @@ int* p1 = new int[Val2];
 int* p2 = new int[E1::Val1];
 
 #if __cplusplus >= 201703L
-// expected-error@-3 {{converting 'E1' to incompatible type 'unsigned long'}}
+// expected-error@-3 {{converting 'E1' to incompatible type '__size_t'}}
 #else
 // expected-error@-5 {{array size expression must have integral or unscoped enumeration type, not 'E1'}}
 #endif
@@ -334,7 +334,7 @@ namespace test11 {
   typedef E E2;
   E2 f1() { return E::a; }
 
-  bool f() { return !f1(); } // expected-error {{invalid argument type 'E2' (aka 'test11::E') to unary expression}}
+  bool f() { return !f1(); } // expected-error {{invalid argument type 'E2' (aka 'E') to unary expression}}
 }
 
 namespace PR35586 {

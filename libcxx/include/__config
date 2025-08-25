@@ -28,7 +28,7 @@
 // _LIBCPP_VERSION represents the version of libc++, which matches the version of LLVM.
 // Given a LLVM release LLVM XX.YY.ZZ (e.g. LLVM 17.0.1 == 17.00.01), _LIBCPP_VERSION is
 // defined to XXYYZZ.
-#  define _LIBCPP_VERSION 210000
+#  define _LIBCPP_VERSION 220000
 
 #  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y
 #  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
@@ -38,11 +38,47 @@
 #    define _LIBCPP_FREESTANDING
 #  endif
 
+// NOLINTNEXTLINE(libcpp-cpp-version-check)
+#  if __cplusplus < 201103L
+#    define _LIBCPP_CXX03_LANG
+#  endif
+
+#  if __has_feature(experimental_library)
+#    ifndef _LIBCPP_ENABLE_EXPERIMENTAL
+#      define _LIBCPP_ENABLE_EXPERIMENTAL
+#    endif
+#  endif
+
+// Incomplete features get their own specific disabling flags. This makes it
+// easier to grep for target specific flags once the feature is complete.
+#  if defined(_LIBCPP_ENABLE_EXPERIMENTAL) || defined(_LIBCPP_BUILDING_LIBRARY)
+#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 1
+#  else
+#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 0
+#  endif
+
+#  define _LIBCPP_HAS_EXPERIMENTAL_PSTL _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#  define _LIBCPP_HAS_EXPERIMENTAL_TZDB _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#  define _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#  define _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+
 // HARDENING {
 
-// TODO: Remove in LLVM 21. We're making this an error to catch folks who might not have migrated.
-#  ifdef _LIBCPP_ENABLE_ASSERTIONS
-#    error "_LIBCPP_ENABLE_ASSERTIONS has been removed, please use _LIBCPP_HARDENING_MODE instead"
+// TODO(LLVM 23): Remove this. We're making these an error to catch folks who might not have migrated.
+//       Since hardening went through several changes (many of which impacted user-facing macros),
+//       we're keeping these checks around for a bit longer than usual. Failure to properly configure
+//       hardening results in checks being dropped silently, which is a pretty big deal.
+#  if defined(_LIBCPP_ENABLE_ASSERTIONS)
+#    error "_LIBCPP_ENABLE_ASSERTIONS has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
+#  if defined(_LIBCPP_ENABLE_HARDENED_MODE)
+#    error "_LIBCPP_ENABLE_HARDENED_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
+#  if defined(_LIBCPP_ENABLE_SAFE_MODE)
+#    error "_LIBCPP_ENABLE_SAFE_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
+#  if defined(_LIBCPP_ENABLE_DEBUG_MODE)
+#    error "_LIBCPP_ENABLE_DEBUG_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
 #  endif
 
 // The library provides the macro `_LIBCPP_HARDENING_MODE` which can be set to one of the following values:
@@ -147,15 +183,52 @@ _LIBCPP_HARDENING_MODE_EXTENSIVE, \
 _LIBCPP_HARDENING_MODE_DEBUG
 #  endif
 
+// Hardening assertion semantics generally mirror the evaluation semantics of C++26 Contracts:
+// - `ignore` evaluates the assertion but doesn't do anything if it fails (note that it differs from the Contracts
+//   `ignore` semantic which wouldn't evaluate the assertion at all);
+// - `observe` logs an error (indicating, if possible, that the error is fatal) and continues execution;
+// - `quick-enforce` terminates the program as fast as possible (via trapping);
+// - `enforce` logs an error and then terminates the program.
+//
+// Notes:
+// - Continuing execution after a hardening check fails results in undefined behavior; the `observe` semantic is meant
+//   to make adopting hardening easier but should not be used outside of this scenario;
+// - C++26 wording for Library Hardening precludes a conforming Hardened implementation from using the Contracts
+//   `ignore` semantic when evaluating hardened preconditions in the Library. Libc++ allows using this semantic for
+//   hardened preconditions, however, be aware that using `ignore` does not produce a conforming "Hardened"
+//   implementation, unlike the other semantics above.
+// clang-format off
+#  define _LIBCPP_ASSERTION_SEMANTIC_IGNORE        (1 << 1)
+#  define _LIBCPP_ASSERTION_SEMANTIC_OBSERVE       (1 << 2)
+#  define _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE (1 << 3)
+#  define _LIBCPP_ASSERTION_SEMANTIC_ENFORCE       (1 << 4)
+// clang-format on
+
+// Allow users to define an arbitrary assertion semantic; otherwise, use the default mapping from modes to semantics.
+// The default is for production-capable modes to use `quick-enforce` (i.e., trap) and for the `debug` mode to use
+// `enforce` (i.e., log and abort).
+#  ifndef _LIBCPP_ASSERTION_SEMANTIC
+
+#    if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#      define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+#    else
+#      define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
+#    endif
+
+#  else
+#    if !_LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#      error "Assertion semantics are an experimental feature."
+#    endif
+#    if defined(_LIBCPP_CXX03_LANG)
+#      error "Assertion semantics are not available in the C++03 mode."
+#    endif
+
+#  endif // _LIBCPP_ASSERTION_SEMANTIC
+
 // } HARDENING
 
 #  define _LIBCPP_TOSTRING2(x) #x
 #  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
-
-// NOLINTNEXTLINE(libcpp-cpp-version-check)
-#  if __cplusplus < 201103L
-#    define _LIBCPP_CXX03_LANG
-#  endif
 
 #  ifndef __has_constexpr_builtin
 #    define __has_constexpr_builtin(x) 0
@@ -189,24 +262,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #  if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
 #    define _LIBCPP_ABI_VCRUNTIME
 #  endif
-
-#  if __has_feature(experimental_library)
-#    ifndef _LIBCPP_ENABLE_EXPERIMENTAL
-#      define _LIBCPP_ENABLE_EXPERIMENTAL
-#    endif
-#  endif
-
-// Incomplete features get their own specific disabling flags. This makes it
-// easier to grep for target specific flags once the feature is complete.
-#  if defined(_LIBCPP_ENABLE_EXPERIMENTAL) || defined(_LIBCPP_BUILDING_LIBRARY)
-#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 1
-#  else
-#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 0
-#  endif
-
-#  define _LIBCPP_HAS_EXPERIMENTAL_PSTL _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
-#  define _LIBCPP_HAS_EXPERIMENTAL_TZDB _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
-#  define _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
 
 #  if defined(__MVS__)
 #    include <features.h> // for __NATIVE_ASCII_F
@@ -265,13 +320,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 //      When this option is used, the token passed to `std::random_device`'s
 //      constructor *must* be "/dev/urandom" -- anything else is an error.
 //
-// _LIBCPP_USING_NACL_RANDOM
-//      NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
-//      including accesses to the special files under `/dev`. This implementation
-//      uses the NaCL syscall `nacl_secure_random_init()` to get entropy.
-//      When this option is used, the token passed to `std::random_device`'s
-//      constructor *must* be "/dev/urandom" -- anything else is an error.
-//
 // _LIBCPP_USING_WIN32_RANDOM
 //      Use rand_s(), for use on Windows.
 //      When this option is used, the token passed to `std::random_device`'s
@@ -283,8 +331,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_USING_GETENTROPY
 #  elif defined(__Fuchsia__)
 #    define _LIBCPP_USING_FUCHSIA_CPRNG
-#  elif defined(__native_client__)
-#    define _LIBCPP_USING_NACL_RANDOM
 #  elif defined(_LIBCPP_WIN32API)
 #    define _LIBCPP_USING_WIN32_RANDOM
 #  else
@@ -415,6 +461,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
 #    define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
 #  endif
+
+// Macros to enter and leave a state where deprecation warnings are suppressed.
+#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH                                                                             \
+    _LIBCPP_DIAGNOSTIC_PUSH _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")                                           \
+        _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+#  define _LIBCPP_SUPPRESS_DEPRECATED_POP _LIBCPP_DIAGNOSTIC_POP
 
 #  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 #    define _LIBCPP_HARDENING_SIG f
@@ -711,17 +763,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
 #  else
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T
-#  endif
-
-// Macros to enter and leave a state where deprecation warnings are suppressed.
-#  if defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_SUPPRESS_DEPRECATED_PUSH                                                                           \
-      _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated\"")                                \
-          _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#    define _LIBCPP_SUPPRESS_DEPRECATED_POP _Pragma("GCC diagnostic pop")
-#  else
-#    define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-#    define _LIBCPP_SUPPRESS_DEPRECATED_POP
 #  endif
 
 #  if _LIBCPP_STD_VER <= 11
@@ -1094,6 +1135,20 @@ typedef __char32_t char32_t;
 #  else
 #    define _LIBCPP_DIAGNOSE_WARNING(...)
 #  endif
+
+#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_APPLE_CLANG_VER) &&                                         \
+      (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2001)
+#    define _LIBCPP_DIAGNOSE_IF(...) __attribute__((__diagnose_if__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_DIAGNOSE_IF(...)
+#  endif
+
+#  define _LIBCPP_DIAGNOSE_NULLPTR_IF(condition, condition_description)                                                \
+    _LIBCPP_DIAGNOSE_IF(                                                                                               \
+        condition,                                                                                                     \
+        "null passed to callee that requires a non-null argument" condition_description,                               \
+        "warning",                                                                                                     \
+        "nonnull")
 
 #  if __has_cpp_attribute(_Clang::__lifetimebound__)
 #    define _LIBCPP_LIFETIMEBOUND [[_Clang::__lifetimebound__]]

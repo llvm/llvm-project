@@ -375,7 +375,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v16f64, MVT::v16bf16, Expand);
   setTruncStoreAction(MVT::v16f64, MVT::v16f16, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i16, Expand);
-  setTruncStoreAction(MVT::v16i64, MVT::v16i16, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i8, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i8, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i1, Expand);
@@ -392,8 +391,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // Library functions.  These default to Expand, but we have instructions
   // for them.
   setOperationAction({ISD::FCEIL, ISD::FPOW, ISD::FABS, ISD::FFLOOR,
-                      ISD::FROUNDEVEN, ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM},
-                     MVT::f32, Legal);
+                      ISD::FROUNDEVEN, ISD::FTRUNC},
+                     {MVT::f16, MVT::f32}, Legal);
+  setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, MVT::f32, Legal);
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
   setOperationAction(ISD::FROUND, {MVT::f32, MVT::f64}, Custom);
@@ -413,9 +413,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
-  if (Subtarget->has16BitInsts())
+  if (Subtarget->has16BitInsts()) {
     setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
-  else {
+    setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Legal);
+  } else {
     setOperationAction(ISD::IS_FPCLASS, {MVT::f32, MVT::f64}, Legal);
     setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Custom);
   }
@@ -587,14 +588,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setSchedulingPreference(Sched::RegPressure);
   setJumpIsExpensive(true);
-
-  // FIXME: This is only partially true. If we have to do vector compares, any
-  // SGPR pair can be a condition register. If we have a uniform condition, we
-  // are better off doing SALU operations, where there is only one SCC. For now,
-  // we don't have a way of knowing during instruction selection if a condition
-  // will be uniform and we always use vector compares. Assume we are using
-  // vector compares until that is fixed.
-  setHasMultipleConditionRegisters(true);
 
   setMinCmpXchgSizeInBits(32);
   setSupportsUnalignedAtomics(false);
@@ -1143,6 +1136,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Cold:
     return CC_AMDGPU_Func;
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return CC_SI_Gfx;
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
@@ -1168,6 +1162,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
   case CallingConv::AMDGPU_LS:
     return RetCC_SI_Shader;
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return RetCC_SI_Gfx;
   case CallingConv::C:
   case CallingConv::Fast:
@@ -1517,9 +1512,16 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   const GlobalValue *GV = G->getGlobal();
 
   if (!MFI->isModuleEntryFunction()) {
+    auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+      if (IsNamedBarrier) {
+        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        MFI->recordNumNamedBarriers(Address.value(), BarCnt);
+      }
       return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
+    } else if (IsNamedBarrier) {
+      llvm_unreachable("named barrier should have an assigned address");
     }
   }
 
@@ -1807,16 +1809,36 @@ std::pair<SDValue, SDValue>
 AMDGPUTargetLowering::splitVector(const SDValue &N, const SDLoc &DL,
                                   const EVT &LoVT, const EVT &HiVT,
                                   SelectionDAG &DAG) const {
+  EVT VT = N.getValueType();
   assert(LoVT.getVectorNumElements() +
                  (HiVT.isVector() ? HiVT.getVectorNumElements() : 1) <=
-             N.getValueType().getVectorNumElements() &&
+             VT.getVectorNumElements() &&
          "More vector elements requested than available!");
   SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, N,
                            DAG.getVectorIdxConstant(0, DL));
-  SDValue Hi = DAG.getNode(
-      HiVT.isVector() ? ISD::EXTRACT_SUBVECTOR : ISD::EXTRACT_VECTOR_ELT, DL,
-      HiVT, N, DAG.getVectorIdxConstant(LoVT.getVectorNumElements(), DL));
-  return std::pair(Lo, Hi);
+
+  unsigned LoNumElts = LoVT.getVectorNumElements();
+
+  if (HiVT.isVector()) {
+    unsigned HiNumElts = HiVT.getVectorNumElements();
+    if ((VT.getVectorNumElements() % HiNumElts) == 0) {
+      // Avoid creating an extract_subvector with an index that isn't a multiple
+      // of the result type.
+      SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, N,
+                               DAG.getConstant(LoNumElts, DL, MVT::i32));
+      return {Lo, Hi};
+    }
+
+    SmallVector<SDValue, 8> Elts;
+    DAG.ExtractVectorElements(N, Elts, /*Start=*/LoNumElts,
+                              /*Count=*/HiNumElts);
+    SDValue Hi = DAG.getBuildVector(HiVT, DL, Elts);
+    return {Lo, Hi};
+  }
+
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, HiVT, N,
+                           DAG.getVectorIdxConstant(LoNumElts, DL));
+  return {Lo, Hi};
 }
 
 SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
@@ -2631,7 +2653,7 @@ bool AMDGPUTargetLowering::allowApproxFunc(const SelectionDAG &DAG,
   if (Flags.hasApproximateFuncs())
     return true;
   auto &Options = DAG.getTarget().Options;
-  return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
+  return Options.ApproxFuncFPMath;
 }
 
 bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
@@ -2754,7 +2776,7 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
 
   const auto &Options = getTargetMachine().Options;
   if (VT == MVT::f16 || Flags.hasApproximateFuncs() ||
-      Options.ApproxFuncFPMath || Options.UnsafeFPMath) {
+      Options.ApproxFuncFPMath) {
 
     if (VT == MVT::f16 && !Subtarget->has16BitInsts()) {
       // Log and multiply in f32 is good enough for f16.
@@ -3582,7 +3604,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) con
   if (N0.getValueType() == MVT::f32)
     return DAG.getNode(AMDGPUISD::FP_TO_FP16, DL, Op.getValueType(), N0);
 
-  if (getTargetMachine().Options.UnsafeFPMath) {
+  if (Op->getFlags().hasApproximateFuncs()) {
     // There is a generic expand for FP_TO_FP16 with unsafe fast math.
     return SDValue();
   }
@@ -4006,7 +4028,9 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
-  case Intrinsic::amdgcn_rsq_clamp: {
+  case Intrinsic::amdgcn_rsq_clamp:
+  case Intrinsic::amdgcn_tanh:
+  case Intrinsic::amdgcn_prng_b32: {
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
     return Src.isUndef() ? Src : SDValue();
@@ -5733,6 +5757,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUILD_VERTICAL_VECTOR)
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
+  NODE_NAME_CASE(PC_ADD_REL_OFFSET64)
   NODE_NAME_CASE(LDS)
   NODE_NAME_CASE(DUMMY_CHAIN)
   NODE_NAME_CASE(LOAD_D16_HI)
@@ -5790,6 +5815,8 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUFFER_ATOMIC_FMIN)
   NODE_NAME_CASE(BUFFER_ATOMIC_FMAX)
   NODE_NAME_CASE(BUFFER_ATOMIC_COND_SUB_U32)
+  NODE_NAME_CASE(WHOLE_WAVE_SETUP)
+  NODE_NAME_CASE(WHOLE_WAVE_RETURN)
   }
   return nullptr;
 }
@@ -6108,6 +6135,19 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
   }
 }
 
+bool AMDGPUTargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case AMDGPUISD::BFE_I32:
+  case AMDGPUISD::BFE_U32:
+    return false;
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
+}
+
 bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG, bool SNaN,
     unsigned Depth) const {
@@ -6196,7 +6236,8 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
-    case Intrinsic::amdgcn_rsq_clamp: {
+    case Intrinsic::amdgcn_rsq_clamp:
+    case Intrinsic::amdgcn_tanh: {
       if (SNaN)
         return true;
 

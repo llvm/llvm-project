@@ -307,7 +307,8 @@ static UnsignedOrNone EvaluateFoldExpandedConstraintSize(
   UnsignedOrNone NumExpansions = FE->getNumExpansions();
   if (S.CheckParameterPacksForExpansion(
           FE->getEllipsisLoc(), Pattern->getSourceRange(), Unexpanded, MLTAL,
-          Expand, RetainExpansion, NumExpansions) ||
+          /*FailOnPackProducingTemplates=*/true, Expand, RetainExpansion,
+          NumExpansions) ||
       !Expand || RetainExpansion)
     return std::nullopt;
 
@@ -588,6 +589,9 @@ static bool CheckConstraintSatisfaction(
     return true;
 
   for (const AssociatedConstraint &AC : AssociatedConstraints) {
+    if (AC.isNull())
+      return true;
+
     Sema::ArgPackSubstIndexRAII _(S, AC.ArgPackSubstIndex);
     ExprResult Res = calculateConstraintSatisfaction(
         S, Template, TemplateIDRange.getBegin(), TemplateArgsLists,
@@ -925,7 +929,12 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
       ND && ND->isFunctionOrFunctionTemplate()) {
     ScopeForParameters.emplace(S, /*CombineWithOuterScope=*/true);
     const FunctionDecl *FD = ND->getAsFunction();
+    if (FunctionTemplateDecl *Template = FD->getDescribedFunctionTemplate();
+        Template && Template->getInstantiatedFromMemberTemplate())
+      FD = Template->getInstantiatedFromMemberTemplate()->getTemplatedDecl();
     for (auto *PVD : FD->parameters()) {
+      if (ScopeForParameters->getInstantiationOfIfExists(PVD))
+        continue;
       if (!PVD->isParameterPack()) {
         ScopeForParameters->InstantiatedLocal(PVD, PVD);
         continue;
@@ -1097,10 +1106,6 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
   }
 
   Sema::ContextRAII SavedContext(SemaRef, FD);
-  std::optional<Sema::CXXThisScopeRAII> ThisScope;
-  if (auto *Method = dyn_cast<CXXMethodDecl>(FD))
-    ThisScope.emplace(SemaRef, /*Record=*/Method->getParent(),
-                      /*ThisQuals=*/Method->getMethodQualifiers());
   return SemaRef.CheckConstraintSatisfaction(
       Template, TemplateAC, MLTAL, PointOfInstantiation, Satisfaction);
 }
@@ -1692,11 +1697,13 @@ bool FoldExpandedConstraint::AreCompatibleForSubsumption(
   Sema::collectUnexpandedParameterPacks(const_cast<Expr *>(B.Pattern), BPacks);
 
   for (const UnexpandedParameterPack &APack : APacks) {
-    std::pair<unsigned, unsigned> DepthAndIndex = getDepthAndIndex(APack);
-    auto it = llvm::find_if(BPacks, [&](const UnexpandedParameterPack &BPack) {
-      return getDepthAndIndex(BPack) == DepthAndIndex;
+    auto ADI = getDepthAndIndex(APack);
+    if (!ADI)
+      continue;
+    auto It = llvm::find_if(BPacks, [&](const UnexpandedParameterPack &BPack) {
+      return getDepthAndIndex(BPack) == ADI;
     });
-    if (it != BPacks.end())
+    if (It != BPacks.end())
       return true;
   }
   return false;

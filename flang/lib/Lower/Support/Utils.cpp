@@ -654,7 +654,7 @@ void privatizeSymbol(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
@@ -702,9 +702,10 @@ void privatizeSymbol(
     // Boxes should be passed by reference into nested regions:
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-    auto alloca = firOpBuilder.create<fir::AllocaOp>(symLoc, privVal.getType());
+    auto alloca =
+        fir::AllocaOp::create(firOpBuilder, symLoc, privVal.getType());
     firOpBuilder.restoreInsertionPoint(oldIP);
-    firOpBuilder.create<fir::StoreOp>(symLoc, privVal, alloca);
+    fir::StoreOp::create(firOpBuilder, symLoc, privVal, alloca);
     privVal = alloca;
   }
 
@@ -726,15 +727,15 @@ void privatizeSymbol(
     OpType result;
 
     if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
-      result = firOpBuilder.create<OpType>(
-          symLoc, uniquePrivatizerName, allocType,
+      result = OpType::create(
+          firOpBuilder, symLoc, uniquePrivatizerName, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
-      result = firOpBuilder.create<OpType>(
-          symLoc, uniquePrivatizerName, allocType,
-          emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
-                         : fir::LocalitySpecifierType::Local);
+      result =
+          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+                         emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
+                                        : fir::LocalitySpecifierType::Local);
     }
 
     fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
@@ -815,12 +816,12 @@ void privatizeSymbol(
       copyFirstPrivateSymbol(converter, symToPrivatize, &ip);
 
       if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
-        firOpBuilder.create<mlir::omp::YieldOp>(
-            hsb.getAddr().getLoc(),
+        mlir::omp::YieldOp::create(
+            firOpBuilder, hsb.getAddr().getLoc(),
             symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
       } else {
-        firOpBuilder.create<fir::YieldOp>(
-            hsb.getAddr().getLoc(),
+        fir::YieldOp::create(
+            firOpBuilder, hsb.getAddr().getLoc(),
             symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
       }
     }
@@ -845,7 +846,7 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps);
 
@@ -854,7 +855,7 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     fir::LocalitySpecifierOperands *clauseOps);
 
