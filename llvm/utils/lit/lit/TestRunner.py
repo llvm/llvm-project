@@ -1207,8 +1207,8 @@ def executeScriptInternal(
             litConfig.update_tests
             and result.exitCode != 0
             and not timeoutInfo
-            # Don't run test updaters on XPASS failures -
-            # they are not expected to be able to fix them
+            # In theory tests marked XFAIL can fail in the form of XPASS, but the
+            # test updaters are not expected to be able to fix that, so always skip for XFAIL
             and not test.isExpectedToFail()
         ):
             for test_updater in litConfig.test_updaters:
