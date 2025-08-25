@@ -15,8 +15,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_RAISESCFTOAFFINEPASS
@@ -124,13 +124,5 @@ void SCFToAffinePass::runOnOperation() {
   MLIRContext &ctx = getContext();
   RewritePatternSet patterns(&ctx);
   populateSCFToAffineConversionPatterns(patterns);
-
-  // Configure conversion to raise SCF operations.
-  ConversionTarget target(ctx);
-  target.addDynamicallyLegalOp<scf::ForOp>(
-      [](scf::ForOp op) { return !canRaiseToAffine(op); });
-  target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
-  if (failed(
-          applyPartialConversion(getOperation(), target, std::move(patterns))))
-    signalPassFailure();
+  walkAndApplyPatterns(getOperation(), std::move(patterns));
 }
