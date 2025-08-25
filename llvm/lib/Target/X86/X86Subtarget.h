@@ -422,6 +422,8 @@ public:
 
   bool enableEarlyIfConversion() const override;
 
+  bool enableSpillageCopyElimination() const override { return true; }
+
   void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
                               &Mutations) const override;
 
