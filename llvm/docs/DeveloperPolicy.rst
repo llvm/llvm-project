@@ -316,8 +316,9 @@ We encourage non-extractive contributions that help sustain the project. We want
 the LLVM project to be welcoming and open to aspiring compiler engineers who are
 willing to invest time and effort to learn and grow, because growing our
 contributor base and recruiting new maintainers helps sustain the project over
-the long term. We therefore label pull requests from new contributors and
-encourage maintainers to spend their time to help new contributors learn.
+the long term. We therefore automatically post a greeting comment to pull
+requests from new contributors and encourage maintainers to spend their time to
+help new contributors learn.
 
 However, we expect to see a growth pattern in the quality of a contributor's
 work over time. Maintainers are empowered to push back against *extractive*
