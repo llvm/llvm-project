@@ -64,7 +64,7 @@ coro_Cleanup:                                     ; preds = %for.cond
   br label %coro_Suspend, !dbg !37
 
 coro_Suspend:                                     ; preds = %for.cond, %if.then, %coro_Cleanup
-  tail call void @llvm.coro.end(ptr null, i1 false, token none) #3, !dbg !40
+  tail call i1 @llvm.coro.end(ptr null, i1 false, token none) #3, !dbg !40
   ret ptr %2, !dbg !41
 }
 
@@ -115,7 +115,7 @@ declare token @llvm.coro.save(ptr) #0
 declare i8 @llvm.coro.suspend(token, i1) #0
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #4
 declare void @free(ptr nocapture) local_unnamed_addr #0
-declare void @llvm.coro.end(ptr, i1, token) #0
+declare i1 @llvm.coro.end(ptr, i1, token) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

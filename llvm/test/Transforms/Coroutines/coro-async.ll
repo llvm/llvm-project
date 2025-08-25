@@ -101,7 +101,7 @@ entry:
   call void @some_user(i64 %val.2)
   store <4 x double> %vector_spill, ptr %vector, align 16
   tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
+  call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 }
 
@@ -212,7 +212,7 @@ entry:
   %continuation_actor_arg = extractvalue {ptr, ptr, ptr} %res.2, 1
 
   tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %continuation_actor_arg)
-  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -298,7 +298,7 @@ entry:
   call void @llvm.coro.async.context.dealloc(ptr %callee_context)
   %continuation_task_arg = extractvalue {ptr, ptr, ptr} %res, 1
   tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
+  call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 }
 
@@ -340,11 +340,11 @@ entry:
 
 is_equal:
   tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
+  call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 
 is_not_equal:
-  call void (ptr, i1, ...) @llvm.coro.end.async(
+  call i1 (ptr, i1, ...) @llvm.coro.end.async(
                            ptr %hdl, i1 0,
                            ptr @must_tail_call_return,
                            ptr %async.ctxt, ptr %continuation_task_arg, ptr null)
@@ -407,7 +407,7 @@ entry:
   call void @some_user(i64 %val.2)
 
   tail call swiftcc void @asyncReturn(ptr %async.ctxt, ptr %continuation_task_arg, ptr %actor)
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
+  call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 }
 
@@ -432,7 +432,7 @@ entry:
           ptr @no_coro_suspend_fp)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   call void @some_may_write(ptr %some_alloca)
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
+  call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 }
 
@@ -460,7 +460,7 @@ entry:
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   store ptr null, ptr %some_alloca, align 8
   call void @do_with_swifterror(ptr swifterror %some_alloca)
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
+  call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 0)
   unreachable
 }
 
@@ -489,7 +489,7 @@ entry:
   %undefined_resume_pointer = call ptr @llvm.coro.async.resume()
   call void @use(ptr %undefined_resume_pointer)
   call void @crash()
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 false)
+  %unused = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 false)
   unreachable
 }
 ; CHECK-LABEL: define swiftcc void @undefined_coro_async_resume
@@ -511,7 +511,7 @@ entry:
   %5 = getelementptr inbounds <{ ptr, ptr }>, ptr %4, i32 0, i32 1
   %6 = load ptr, ptr %5, align 8
   %7 = load ptr, ptr %1, align 8
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %3, i1 false, ptr @simpleFunc.0, ptr %6, ptr %7)
+  %8 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %3, i1 false, ptr @simpleFunc.0, ptr %6, ptr %7)
   unreachable
 }
 
@@ -530,8 +530,8 @@ declare { ptr, ptr, ptr, ptr } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32
 declare ptr @llvm.coro.prepare.async(ptr)
 declare token @llvm.coro.id.async(i32, i32, i32, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
-declare void @llvm.coro.end.async(ptr, i1, ...)
-declare void @llvm.coro.end(ptr, i1, token)
+declare i1 @llvm.coro.end.async(ptr, i1, ...)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare {ptr, ptr, ptr} @llvm.coro.suspend.async(i32, ptr, ptr, ...)
 declare ptr @llvm.coro.async.context.alloc(ptr, ptr)
 declare void @llvm.coro.async.context.dealloc(ptr)

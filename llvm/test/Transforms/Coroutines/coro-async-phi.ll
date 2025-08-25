@@ -83,7 +83,7 @@ bb68:                                             ; preds = %bb30
   br label %bb126
 
 bb126:
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %i12, i1 false, ptr @__swift_suspend_dispatch_2, ptr @doIt, ptr null, ptr null)
+  %i162 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %i12, i1 false, ptr @__swift_suspend_dispatch_2, ptr @doIt, ptr null, ptr null)
   unreachable
 }
 
@@ -119,7 +119,7 @@ entry:
 declare { ptr } @llvm.coro.suspend.async.sl_p0i8s(i32, ptr, ptr, ...) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.coro.end.async(ptr, i1, ...) #1
+declare i1 @llvm.coro.end.async(ptr, i1, ...) #1
 
 ; Function Attrs: argmemonly nounwind
 declare extern_weak swiftcc ptr @swift_task_alloc(i64) #5

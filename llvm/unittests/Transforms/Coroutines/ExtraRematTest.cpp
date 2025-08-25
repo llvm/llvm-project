@@ -97,7 +97,7 @@ StringRef Text = R"(
       call void @free(ptr %mem)
       br label %suspend
     suspend:
-      call void @llvm.coro.end(ptr %hdl, i1 0)
+      call i1 @llvm.coro.end(ptr %hdl, i1 0)
       ret ptr %hdl
     }
 
@@ -110,7 +110,7 @@ StringRef Text = R"(
     declare token @llvm.coro.id(i32, ptr, ptr, ptr)
     declare i1 @llvm.coro.alloc(token)
     declare ptr @llvm.coro.begin(token, ptr)
-    declare void @llvm.coro.end(ptr, i1)
+    declare i1 @llvm.coro.end(ptr, i1)
 
     declare i32 @should.remat(i32)
 
@@ -212,7 +212,7 @@ StringRef TextCoroBeginCustomABI = R"(
       call void @free(ptr %mem)
       br label %suspend
     suspend:
-      call void @llvm.coro.end(ptr %hdl, i1 0)
+      call i1 @llvm.coro.end(ptr %hdl, i1 0)
       ret ptr %hdl
     }
 
@@ -225,7 +225,7 @@ StringRef TextCoroBeginCustomABI = R"(
     declare token @llvm.coro.id(i32, ptr, ptr, ptr)
     declare i1 @llvm.coro.alloc(token)
     declare ptr @llvm.coro.begin.custom.abi(token, ptr, i32)
-    declare void @llvm.coro.end(ptr, i1)
+    declare i1 @llvm.coro.end(ptr, i1)
 
     declare i32 @should.remat(i32)
 
