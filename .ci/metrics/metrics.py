@@ -507,8 +507,8 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
 def main():
     # Authenticate with Github
     github_auth = Auth.Token(os.environ["GITHUB_TOKEN"])
-   grafana_api_key = os.environ["GRAFANA_API_KEY"]
-   grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
+    grafana_api_key = os.environ["GRAFANA_API_KEY"]
+    grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
 
     # The last workflow this script processed.
     # Because the Github queries are broken, we'll simply log a 'processed'
