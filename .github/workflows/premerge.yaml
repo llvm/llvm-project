@@ -47,22 +47,8 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
-      - name: Debug
-        run: |
-          ls -ltr /usr/bin/sh
-      - name: Debug
-        run: |
-          git diff --name-only HEAD~1...HEAD
-          python3 .ci/compute_projects.py
-      - name: Interpreter
-        run: |
-          ps -p $$ | awk '$1 != "PID" {print $(NF)}'
-      - name: Debug2
-        run: |
-          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
       - name: Build and Test
         run: |
-          cat $0
           git config --global --add safe.directory '*'
 
           source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
