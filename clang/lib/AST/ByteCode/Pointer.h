@@ -103,9 +103,7 @@ public:
   Pointer(uint64_t Address, const Descriptor *Desc, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Int), Int{Desc, Address} {}
   Pointer(const Function *F, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Fn), Fn(F) {
-    Fn = FunctionPointer(F);
-  }
+      : Offset(Offset), StorageKind(Storage::Fn), Fn(F) {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Typeid) {
     Typeid.TypePtr = TypePtr;
@@ -341,6 +339,8 @@ public:
   QualType getType() const {
     if (isTypeidPointer())
       return QualType(Typeid.TypeInfoType, 0);
+    if (isFunctionPointer())
+      return asFunctionPointer().getFunction()->getDecl()->getType();
 
     if (inPrimitiveArray() && Offset != asBlockPointer().Base) {
       // Unfortunately, complex and vector types are not array types in clang,
