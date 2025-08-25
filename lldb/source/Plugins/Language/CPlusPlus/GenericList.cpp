@@ -339,11 +339,18 @@ lldb::ChildCacheState LibCxxForwardListFrontEnd::Update() {
   if (err.Fail() || !backend_addr)
     return lldb::ChildCacheState::eRefetch;
 
-  ValueObjectSP impl_sp(m_backend.GetChildMemberWithName("__before_begin_"));
+  auto list_base_sp = m_backend.GetChildAtIndex(0);
+  if (!list_base_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  // Anonymous strucutre index is in base class at index 0.
+  auto [impl_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*list_base_sp, /*anon_struct_idx=*/0,
+                                  "__before_begin_", "__before_begin_");
   if (!impl_sp)
     return ChildCacheState::eRefetch;
 
-  if (isOldCompressedPairLayout(*impl_sp))
+  if (is_compressed_pair)
     impl_sp = GetFirstValueOfLibCXXCompressedPair(*impl_sp);
 
   if (!impl_sp)
@@ -366,17 +373,10 @@ llvm::Expected<uint32_t> LibCxxListFrontEnd::CalculateNumChildren() {
   if (!m_head || !m_tail || m_node_address == 0)
     return 0;
 
-  ValueObjectSP size_node_sp(m_backend.GetChildMemberWithName("__size_"));
-  if (!size_node_sp) {
-    size_node_sp = m_backend.GetChildMemberWithName(
-        "__size_alloc_"); // pre-compressed_pair rework
-
-    if (!isOldCompressedPairLayout(*size_node_sp))
-      return llvm::createStringError("Unexpected std::list layout: expected "
-                                     "old __compressed_pair layout.");
-
+  auto [size_node_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
+      m_backend, /*anon_struct_idx=*/1, "__size_", "__size_alloc_");
+  if (is_compressed_pair)
     size_node_sp = GetFirstValueOfLibCXXCompressedPair(*size_node_sp);
-  }
 
   if (size_node_sp)
     m_count = size_node_sp->GetValueAsUnsigned(UINT32_MAX);

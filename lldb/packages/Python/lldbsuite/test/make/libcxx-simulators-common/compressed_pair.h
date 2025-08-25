@@ -8,7 +8,9 @@
 // 0 -> Post-c88580c layout
 // 1 -> Post-27c83382d83dc layout
 // 2 -> Post-769c42f4a552a layout
-// 3 -> padding-less no_unique_address-based layout (introduced in 27c83382d83dc)
+// 3 -> Post-f5e687d7bf49c layout
+// 4 -> padding-less no_unique_address-based layout (introduced in
+// 27c83382d83dc)
 
 namespace std {
 namespace __lldb {
@@ -42,7 +44,7 @@ template <class _ToPad> class __compressed_pair_padding {
                       ? 0
                       : sizeof(_ToPad) - __datasizeof_v<_ToPad>];
 };
-#elif COMPRESSED_PAIR_REV > 1 && COMPRESSED_PAIR_REV < 3
+#elif COMPRESSED_PAIR_REV > 1 && COMPRESSED_PAIR_REV < 4
 template <class _ToPad>
 inline const bool __is_reference_or_unpadded_object =
     (std::is_empty<_ToPad>::value && !__lldb_is_final<_ToPad>::value) ||
@@ -125,6 +127,27 @@ public:
   _LLDB_NO_UNIQUE_ADDRESS T3 Initializer3;                                     \
   _LLDB_NO_UNIQUE_ADDRESS __compressed_pair_padding<T3> __padding3_;
 #elif COMPRESSED_PAIR_REV == 3
+#define _LLDB_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)              \
+  struct {                                                                     \
+    [[__gnu__::__aligned__(                                                    \
+        alignof(T2))]] _LLDB_NO_UNIQUE_ADDRESS T1 Initializer1;                \
+    _LLDB_NO_UNIQUE_ADDRESS __compressed_pair_padding<T1> __padding1_;         \
+    _LLDB_NO_UNIQUE_ADDRESS T2 Initializer2;                                   \
+    _LLDB_NO_UNIQUE_ADDRESS __compressed_pair_padding<T2> __padding2_;         \
+  }
+
+#define _LLDB_COMPRESSED_TRIPLE(T1, Initializer1, T2, Initializer2, T3,        \
+                                Initializer3)                                  \
+  struct {                                                                     \
+    [[using __gnu__: __aligned__(alignof(T2)),                                 \
+      __aligned__(alignof(T3))]] _LLDB_NO_UNIQUE_ADDRESS T1 Initializer1;      \
+    _LLDB_NO_UNIQUE_ADDRESS __compressed_pair_padding<T1> __padding1_;         \
+    _LLDB_NO_UNIQUE_ADDRESS T2 Initializer2;                                   \
+    _LLDB_NO_UNIQUE_ADDRESS __compressed_pair_padding<T2> __padding2_;         \
+    _LLDB_NO_UNIQUE_ADDRESS T3 Initializer3;                                   \
+    _LLDB_NO_UNIQUE_ADDRESS __compressed_pair_padding<T3> __padding3_;         \
+  }
+#elif COMPRESSED_PAIR_REV == 4
 #define _LLDB_COMPRESSED_PAIR(T1, Name1, T2, Name2)                            \
   _LLDB_NO_UNIQUE_ADDRESS T1 Name1;                                            \
   _LLDB_NO_UNIQUE_ADDRESS T2 Name2
