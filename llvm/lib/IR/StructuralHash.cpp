@@ -14,8 +14,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 
-// This comment is going to be way too long for its own good and blow past the 80 characters per line limit causing a reformat.
-
 using namespace llvm;
 
 namespace {

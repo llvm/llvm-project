@@ -185,7 +185,7 @@ class ClangFormatHelper(FormatHelper):
         cf_cmd = [self.clang_fmt_path, "--diff"]
 
         if diff_expression:
-          cf_cmd.extend(diff_expression)
+            cf_cmd.extend(diff_expression)
 
         # Gather the extension of all modified files and pass them explicitly to git-clang-format.
         # This prevents git-clang-format from applying its own filtering rules on top of ours.
