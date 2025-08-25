@@ -16571,6 +16571,62 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     }
   }
 
+  // Eliminate setcc by using carryout from add/sub instruction
+
+  // X = ADD i64 Y, Z          Xlo = UADDO       i32 Ylo, Zlo
+  // setcc X ult Y     ->      XHi = UADDO_CARRY i32 Yhi, Zhi
+  // similarly for subtraction
+
+  // X = ADD i64 Y, 1          Xlo = UADDO       i32 Ylo, 1
+  // setcc X eq 0      ->      XHi = UADDO_CARRY i32 Yhi, 0
+
+  // Don't split a 64-bit add/sub into two 32-bit add/sub instructions for
+  // non-divergent operations.  This can result in lo/hi 32-bit operations
+  // being done in SGPR and VGPR with additional operations being needed
+  // to move operands and/or generate the intermediate carry.
+  if (VT == MVT::i64 && N->isDivergent() &&
+      ((((LHS.getOpcode() == ISD::ADD && CC == ISD::SETULT) ||
+         (LHS.getOpcode() == ISD::SUB && CC == ISD::SETUGT)) &&
+        LHS.getOperand(0) == RHS) ||
+       (LHS.getOpcode() == ISD::ADD && CC == ISD::SETEQ && CRHS &&
+        CRHS->isZero() && dyn_cast<ConstantSDNode>(LHS.getOperand(1)) &&
+        dyn_cast<ConstantSDNode>(LHS.getOperand(1))->isOne()))) {
+    EVT TargetType = MVT::i32;
+    EVT CarryVT = MVT::i1;
+    const SDValue One = DAG.getConstant(1, SL, TargetType);
+    bool IsAdd = LHS.getOpcode() == ISD::ADD;
+
+    SDValue Op0 = LHS.getOperand(0);
+    SDValue Op1 = LHS.getOperand(1);
+
+    SDValue Op0Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, Op0);
+    SDValue Op1Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, Op1);
+
+    SDValue Op0Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, SL, TargetType, Op0, One);
+    SDValue Op1Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, SL, TargetType, Op1, One);
+
+    SDValue NodeLo =
+        DAG.getNode(IsAdd ? ISD::UADDO : ISD::USUBO, SL,
+                    DAG.getVTList(TargetType, CarryVT), {Op0Lo, Op1Lo});
+
+    SDValue CarryInHi = SDValue(NodeLo.getNode(), 1);
+    SDValue NodeHi = DAG.getNode(IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY,
+                                 SL, DAG.getVTList(TargetType, CarryVT),
+                                 {Op0Hi, Op1Hi, CarryInHi});
+
+    SDValue ResultLo = SDValue(NodeLo.getNode(), 0);
+    SDValue ResultHi = SDValue(NodeHi.getNode(), 0);
+
+    EVT ConcatType = EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
+    SDValue JoinedResult =
+        DAG.getBuildVector(ConcatType, SL, {ResultLo, ResultHi});
+
+    SDValue Result = DAG.getNode(ISD::BITCAST, SL, VT, JoinedResult);
+    SDValue Overflow = SDValue(NodeHi.getNode(), 1);
+    DCI.CombineTo(LHS.getNode(), Result);
+    return Overflow;
+  }
+
   if (VT != MVT::f32 && VT != MVT::f64 &&
       (!Subtarget->has16BitInsts() || VT != MVT::f16))
     return SDValue();
