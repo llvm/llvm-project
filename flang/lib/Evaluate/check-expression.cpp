@@ -1712,7 +1712,56 @@ bool MayNeedCopy(const ActualArgument *actual,
   const auto *dummyObj{dummy
           ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
           : nullptr};
-  return MayNeedCopy(fc, *actual, dummyObj, forCopyOut);
+  const bool forCopyIn = !forCopyOut;
+  if (!evaluate::IsVariable(*actual)) {
+    // Actual argument expressions that aren’t variables are copy-in, but
+    // not copy-out.
+    return forCopyIn;
+  }
+  if (dummyObj) { // Explict interface
+    CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
+    if (forCopyOut && check.HasIntentIn()) {
+      // INTENT(IN) dummy args never need copy-out
+      return false;
+    }
+    if (forCopyIn && check.HasIntentOut()) {
+      // INTENT(OUT) dummy args never need copy-in
+      return false;
+    }
+    if (check.PassByValue()) {
+      // Pass by value, always copy-in, never copy-out
+      return forCopyIn;
+    }
+    if (check.HaveCoarrayDifferences()) {
+      return true;
+    }
+    // Note: contiguity and polymorphic checks deal with array or assumed rank
+    // arguments
+    if (!check.HaveArrayOrAssumedRankArgs()) {
+      return false;
+    }
+    if (check.HaveContiguityDifferences()) {
+      return true;
+    }
+    if (check.HavePolymorphicDifferences()) {
+      return true;
+    }
+  } else { // Implicit interface
+    if (ExtractCoarrayRef(*actual)) {
+      // Coindexed actual args may need copy-in and copy-out with implicit
+      // interface
+      return true;
+    }
+    if (!IsSimplyContiguous(*actual, fc)) {
+      // Copy-in:  actual arguments that are variables are copy-in when
+      //           non-contiguous.
+      // Copy-out: vector subscripts could refer to duplicate elements, can't
+      //           copy out.
+      return forCopyOut ? !HasVectorSubscript(*actual) : true;
+    }
+  }
+  // For everything else, no copy-in or copy-out
+  return false;
 }
 
 } // namespace Fortran::evaluate
