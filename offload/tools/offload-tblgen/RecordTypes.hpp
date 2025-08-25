@@ -16,25 +16,30 @@ namespace llvm {
 namespace offload {
 namespace tblgen {
 
-class HandleRec {
+class APIObject {
 public:
-  explicit HandleRec(const Record *rec) : rec(rec) {}
-  StringRef getName() const { return rec->getValueAsString("name"); }
+  StringRef getName() const { return rec->getName(); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
 
-private:
+protected:
+  APIObject(const Record *rec) : rec(rec) {}
   const Record *rec;
 };
 
-class MacroRec {
+class HandleRec : public APIObject {
 public:
-  explicit MacroRec(const Record *rec) : rec(rec) {
-    auto Name = rec->getValueAsString("name");
+  explicit HandleRec(const Record *rec) : APIObject(rec) {};
+};
+
+class MacroRec : public APIObject {
+public:
+  explicit MacroRec(const Record *rec) : APIObject(rec) {
+    auto Name = rec->getName();
     auto OpenBrace = Name.find_first_of("(");
     nameWithoutArgs = Name.substr(0, OpenBrace);
   }
   StringRef getName() const { return nameWithoutArgs; }
-  StringRef getNameWithArgs() const { return rec->getValueAsString("name"); }
+  StringRef getNameWithArgs() const { return rec->getName(); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
 
   std::optional<StringRef> getCondition() const {
@@ -46,19 +51,15 @@ public:
   }
 
 private:
-  const Record *rec;
   std::string nameWithoutArgs;
 };
 
-class TypedefRec {
+class TypedefRec : public APIObject {
 public:
-  explicit TypedefRec(const Record *rec) : rec(rec) {}
-  StringRef getName() const { return rec->getValueAsString("name"); }
-  StringRef getDesc() const { return rec->getValueAsString("desc"); }
-  StringRef getValue() const { return rec->getValueAsString("value"); }
+  explicit TypedefRec(const Record *rec) : APIObject(rec) {};
 
-private:
-  const Record *rec;
+public:
+  StringRef getValue() const { return rec->getValueAsString("value"); }
 };
 
 class EnumValueRec {
@@ -74,15 +75,13 @@ private:
   const Record *rec;
 };
 
-class EnumRec {
+class EnumRec : public APIObject {
 public:
-  explicit EnumRec(const Record *rec) : rec(rec) {
+  explicit EnumRec(const Record *rec) : APIObject(rec) {
     for (const auto *Val : rec->getValueAsListOfDefs("etors")) {
       vals.emplace_back(EnumValueRec{Val});
     }
   }
-  StringRef getName() const { return rec->getValueAsString("name"); }
-  StringRef getDesc() const { return rec->getValueAsString("desc"); }
   const std::vector<EnumValueRec> &getValues() const { return vals; }
 
   std::string getEnumValNamePrefix() const {
@@ -95,7 +94,6 @@ public:
   bool isBitField() const { return rec->getValueAsBit("is_bit_field"); }
 
 private:
-  const Record *rec;
   std::vector<EnumValueRec> vals;
 };
 
@@ -112,22 +110,19 @@ private:
   const Record *rec;
 };
 
-class StructRec {
+class StructRec : public APIObject {
 public:
-  explicit StructRec(const Record *rec) : rec(rec) {
+  explicit StructRec(const Record *rec) : APIObject(rec) {
     for (auto *Member : rec->getValueAsListOfDefs("all_members")) {
       members.emplace_back(StructMemberRec(Member));
     }
   }
-  StringRef getName() const { return rec->getValueAsString("name"); }
-  StringRef getDesc() const { return rec->getValueAsString("desc"); }
   std::optional<StringRef> getBaseClass() const {
     return rec->getValueAsOptionalString("base_class");
   }
   const std::vector<StructMemberRec> &getMembers() const { return members; }
 
 private:
-  const Record *rec;
   std::vector<StructMemberRec> members;
 };
 
@@ -207,9 +202,9 @@ private:
   const Record *rec;
 };
 
-class FunctionRec {
+class FunctionRec : public APIObject {
 public:
-  FunctionRec(const Record *rec) : rec(rec) {
+  FunctionRec(const Record *rec) : APIObject(rec) {
     for (auto &Ret : rec->getValueAsListOfDefs("all_returns"))
       rets.emplace_back(Ret);
     for (auto &Param : rec->getValueAsListOfDefs("params"))
@@ -221,11 +216,9 @@ public:
                          llvm::convertToSnakeFromCamelCase(getName()));
   }
 
-  StringRef getName() const { return rec->getValueAsString("name"); }
   StringRef getClass() const { return rec->getValueAsString("api_class"); }
   const std::vector<ReturnRec> &getReturns() const { return rets; }
   const std::vector<ParamRec> &getParams() const { return params; }
-  StringRef getDesc() const { return rec->getValueAsString("desc"); }
   std::vector<StringRef> getDetails() const {
     return rec->getValueAsListOfStrings("details");
   }
@@ -236,25 +229,19 @@ public:
 private:
   std::vector<ReturnRec> rets;
   std::vector<ParamRec> params;
-
-  const Record *rec;
 };
 
-class FptrTypedefRec {
+class FptrTypedefRec : public APIObject {
 public:
-  explicit FptrTypedefRec(const Record *rec) : rec(rec) {
+  explicit FptrTypedefRec(const Record *rec) : APIObject(rec) {
     for (auto &Param : rec->getValueAsListOfDefs("params"))
       params.emplace_back(Param);
   }
-  StringRef getName() const { return rec->getValueAsString("name"); }
-  StringRef getDesc() const { return rec->getValueAsString("desc"); }
   StringRef getReturn() const { return rec->getValueAsString("return"); }
   const std::vector<ParamRec> &getParams() const { return params; }
 
 private:
   std::vector<ParamRec> params;
-
-  const Record *rec;
 };
 
 } // namespace tblgen
