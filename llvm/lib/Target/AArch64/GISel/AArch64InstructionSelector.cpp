@@ -4882,8 +4882,7 @@ MachineInstr *AArch64InstructionSelector::emitConjunctionRec(
     if (!CCOp) {
       if (isa<GICmp>(Cmp))
         return emitCMP(Cmp->getOperand(2), Cmp->getOperand(3), MIB);
-      return emitFPCompare(Cmp->getOperand(2).getReg(),
-                           Cmp->getOperand(3).getReg(), MIB);
+      return emitFPCompare(LHS, RHS, MIB, CC);
     }
     // Otherwise produce a ccmp.
     return emitConditionalComparison(LHS, RHS, CC, Predicate, OutCC, MIB);
