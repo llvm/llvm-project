@@ -62,39 +62,25 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
-  /// Different styles for aligning after open brackets.
-  enum BracketAlignmentStyle : int8_t {
-    /// Align parameters on the open bracket, e.g.:
-    /// \code
-    ///   someLongFunction(argument1,
-    ///                    argument2);
-    /// \endcode
-    BAS_Align,
-    /// Don't align, instead use ``ContinuationIndentWidth``, e.g.:
-    /// \code
-    ///   someLongFunction(argument1,
-    ///       argument2);
-    /// \endcode
-    BAS_DontAlign,
-    /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
-    /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
-    /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
-    /// BAS_AlwaysBreak,
-    /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
-    /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
-    /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
-    /// in combination with ``BreakBeforeCloseBracketBracedList``,
-    /// ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
-    /// ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
-    /// BAS_BlockIndent,
-  };
-
   /// If ``true``, horizontally aligns arguments after an open bracket.
+  ///
+  /// \code
+  ///   true:                               false:
+  ///   someLongFunction(argument1,   vs.   someLongFunction(argument1,
+  ///                    argument2);            argument2);
+  /// \endcode
+  ///
+  /// The values ``BAS_Align`` (configuration: ``Align``), ``BAS_DontAlign``
+  /// (configuration ``DontAlign``), ``BAS_Always`` (configuration:
+  /// ``Always``), and ``BAS_BlockIndent`` (configuration: ``BlockIndent``)
+  /// are *deprecated*. Individual control over breaking after open brackets
+  /// and before close brackets are provided by separate style options, e.g.,
+  /// ``BreakAfterOpenBracketFunction``, ``BreakBeforeCloseBracketFunction``.
   ///
   /// This applies to round brackets (parentheses), angle brackets and square
   /// brackets.
   /// \version 3.8
-  BracketAlignmentStyle AlignAfterOpenBracket;
+  bool AlignAfterOpenBracket;
 
   /// Different style for aligning array initializers.
   enum ArrayInitializerAlignmentStyle : int8_t {

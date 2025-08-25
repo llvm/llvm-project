@@ -5282,7 +5282,7 @@ TEST_F(FormatTest, BracedInitializerIndentWidth) {
                Style);
 
   // Aligning after open braces unaffected by BracedInitializerIndentWidth.
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.AlignAfterOpenBracket = true;
   Style.BreakAfterOpenBracketBracedList = false;
   verifyFormat("SomeStruct s{\"xxxxxxxxxxxxx\", \"yyyyyyyyyyyyy\",\n"
                "             \"zzzzzzzzzzzzz\"};",
@@ -7383,7 +7383,7 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
   Style.IndentWidth = 4;
   Style.TabWidth = 4;
   Style.UseTab = FormatStyle::UT_Always;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
   verifyFormat("return someVeryVeryLongConditionThatBarelyFitsOnALine\n"
                "\t&& (someOtherLongishConditionPart1\n"
@@ -7556,7 +7556,7 @@ TEST_F(FormatTest, NoOperandAlignment) {
                "        * cccccccccccccccccccccccccccccccccccc;",
                Style);
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   verifyFormat("return (a > b\n"
                "    // comment1\n"
                "    // comment2\n"
@@ -8054,19 +8054,19 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLine) {
 }
 
 TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
-  // Check that AllowAllArgumentsOnNextLine is respected for both BAS_DontAlign
-  // and BAS_Align.
+  // Check that AllowAllArgumentsOnNextLine is respected for
+  // AlignAfterOpenBracket.
   FormatStyle Style = getLLVMStyleWithColumns(35);
   StringRef Input = "functionCall(paramA, paramB, paramC);\n"
                     "void functionDecl(int A, int B, int C);";
   Style.AllowAllArgumentsOnNextLine = false;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "    paramC);\n"
                          "void functionDecl(int A, int B,\n"
                          "    int C);"),
                Input, Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.AlignAfterOpenBracket = true;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "             paramC);\n"
                          "void functionDecl(int A, int B,\n"
@@ -8102,14 +8102,14 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
                Input, Style);
   // It wouldn't fit on one line with aligned parameters so this setting
   // doesn't change anything for BAS_Align.
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.AlignAfterOpenBracket = true;
   Style.BreakAfterOpenBracketFunction = false;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "             paramC);\n"
                          "void functionDecl(int A, int B,\n"
                          "                  int C);"),
                Input, Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   verifyFormat(StringRef("functionCall(\n"
                          "    paramA, paramB, paramC);\n"
                          "void functionDecl(\n"
@@ -9433,336 +9433,6 @@ TEST_F(FormatTest, AlignsAfterReturn) {
                "    code == a || code == b;");
 }
 
-TEST_F(FormatTest, AlignAndBreakControlStatements) {
-  FormatStyle Style = getLLVMStyle();
-
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  Style.BreakAfterOpenBracketIf = true;
-  Style.BreakAfterOpenBracketLoop = true;
-  Style.BreakAfterOpenBracketSwitch = true;
-
-  verifyFormat("void foo() {\n"
-               "  if constexpr (\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "          bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               "bbb) == 0) {\n"
-               "    return;\n"
-               "  } else if (\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
-               "          bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               "bbb) == 0) {\n"
-               "    return;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  switch (\n"
-               "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "      bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {\n"
-               "  default:\n"
-               "    break;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat(
-      "void foo() {\n"
-      "  for (\n"
-      "      aaaaaaaaaaaaaaaaaaaaaa = 0;\n"
-      "      (aaaaaaaaaaaaaaaaaaaaaa->bbbbbbbbbbbbbb |\n"
-      "          aaaaaaaaaaaaaaaaaaaaaa->ccccccccccccccccccccccc) == 0;\n"
-      "      aaaaaaaaaaaaaaaaaaaaa = aaaaaaaaaaaaaaaaaaaaaa->next) {\n"
-      "    ;\n"
-      "  }\n"
-      "}",
-      Style);
-
-  verifyFormat(
-      "void foo() {\n"
-      "  while (\n"
-      "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-      "          bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) == 0) "
-      "{\n"
-      "    continue;\n"
-      "  }\n"
-      "}",
-      Style);
-
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
-  Style.BreakAfterOpenBracketIf = true;
-  Style.BreakAfterOpenBracketLoop = true;
-  Style.BreakAfterOpenBracketSwitch = true;
-  Style.BreakBeforeCloseBracketIf = false;
-  Style.BreakBeforeCloseBracketLoop = false;
-  Style.BreakBeforeCloseBracketSwitch = false;
-
-  verifyFormat("void foo() {\n"
-               "  if constexpr (\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               ") == 0) {\n"
-               "    return;\n"
-               "  } else if (\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
-               "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               ") == 0) {\n"
-               "    return;\n"
-               "  }\n"
-               "}",
-               Style);
-  Style.BreakAfterOpenBracketIf = false;
-  verifyFormat("void foo() {\n"
-               "  if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "                 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               "bbbbbbbbbb) ==\n"
-               "                0) {\n"
-               "    return;\n"
-               "  } else if ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
-               "              bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               "bbbbbbb) == 0) {\n"
-               "    return;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  switch (\n"
-               "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "      bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {\n"
-               "  default:\n"
-               "    break;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  for (\n"
-               "      aaaaaaaaaaaaaaaaaaaaaa = 0;\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaa->bbbbbbbbbbbbbb |\n"
-               "       aaaaaaaaaaaaaaaaaaaaaa->ccccccccccccccccccccccc) == 0;\n"
-               "      aaaaaaaaaaaaaaaaaaaaa = aaaaaaaaaaaaaaaaaaaaaa->next) {\n"
-               "    ;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  while (\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) == 0) "
-               "{\n"
-               "    continue;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  Style.BreakAfterOpenBracketIf = true;
-  Style.BreakAfterOpenBracketLoop = true;
-  Style.BreakAfterOpenBracketSwitch = true;
-
-  verifyFormat("void foo() {\n"
-               "  if constexpr (\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               ") == 0) {\n"
-               "    return;\n"
-               "  } else if (\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
-               "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               ") == 0) {\n"
-               "    return;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  switch (\n"
-               "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "      bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {\n"
-               "  default:\n"
-               "    break;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  for (\n"
-               "      aaaaaaaaaaaaaaaaaaaaaa = 0;\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaa->bbbbbbbbbbbbbb |\n"
-               "       aaaaaaaaaaaaaaaaaaaaaa->ccccccccccccccccccccccc) == 0;\n"
-               "      aaaaaaaaaaaaaaaaaaaaa = aaaaaaaaaaaaaaaaaaaaaa->next) {\n"
-               "    ;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  while (\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) == 0) "
-               "{\n"
-               "    continue;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  Style.BreakAfterOpenBracketIf = false;
-  Style.BreakAfterOpenBracketLoop = false;
-  Style.BreakAfterOpenBracketSwitch = false;
-
-  verifyFormat("void foo() {\n"
-               "  if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "                 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               "bbbbbbbbbb) ==\n"
-               "                0) {\n"
-               "    return;\n"
-               "  } else if ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
-               "              bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               "bbbbbbb) == 0) {\n"
-               "    return;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  switch (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "          bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {\n"
-               "  default:\n"
-               "    break;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat(
-      "void foo() {\n"
-      "  for (aaaaaaaaaaaaaaaaaaaaaa = 0;\n"
-      "       (aaaaaaaaaaaaaaaaaaaaaa->bbbbbbbbbbbbbb |\n"
-      "        aaaaaaaaaaaaaaaaaaaaaa->ccccccccccccccccccccccc) == 0;\n"
-      "       aaaaaaaaaaaaaaaaaaaaa = aaaaaaaaaaaaaaaaaaaaaa->next) {\n"
-      "    ;\n"
-      "  }\n"
-      "}",
-      Style);
-
-  verifyFormat(
-      "void foo() {\n"
-      "  while ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-      "          bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) == 0) "
-      "{\n"
-      "    continue;\n"
-      "  }\n"
-      "}",
-      Style);
-
-  Style.BreakAfterOpenBracketIf = true;
-  Style.BreakAfterOpenBracketLoop = true;
-  Style.BreakAfterOpenBracketSwitch = true;
-  Style.BreakBeforeCloseBracketIf = true;
-  Style.BreakBeforeCloseBracketLoop = true;
-  Style.BreakBeforeCloseBracketSwitch = true;
-
-  verifyFormat(
-      "void foo() {\n"
-      "  if constexpr (\n"
-      "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-      "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) == 0\n"
-      "  ) {\n"
-      "    return;\n"
-      "  } else if (\n"
-      "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
-      "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) == 0\n"
-      "  ) {\n"
-      "    return;\n"
-      "  }\n"
-      "}",
-      Style);
-
-  verifyFormat("void foo() {\n"
-               "  switch (\n"
-               "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | "
-               "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
-               "  ) {\n"
-               "  default:\n"
-               "    break;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  for (\n"
-               "      aaaaaaaaaaaaaaaaaaaaaa = 0;\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaa->bbbbbbbbbbbbbb |\n"
-               "       aaaaaaaaaaaaaaaaaaaaaa->ccccccccccccccccccccccc) == 0;\n"
-               "      aaaaaaaaaaaaaaaaaaaaa = aaaaaaaaaaaaaaaaaaaaaa->next\n"
-               "  ) {\n"
-               "    ;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  while (\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) == 0\n"
-               "  ) {\n"
-               "    continue;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  Style.BreakAfterOpenBracketIf = false;
-  Style.BreakAfterOpenBracketLoop = false;
-  Style.BreakAfterOpenBracketSwitch = false;
-  Style.BreakBeforeCloseBracketIf = false;
-  Style.BreakBeforeCloseBracketLoop = false;
-  Style.BreakBeforeCloseBracketSwitch = false;
-
-  verifyFormat("void foo() {\n"
-               "  if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "                 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               "bbbbbbbbbb) ==\n"
-               "                0) {\n"
-               "    return;\n"
-               "  } else if ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &\n"
-               "              bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-               "bbbbbbb) == 0) {\n"
-               "    return;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  switch (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-               "          bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {\n"
-               "  default:\n"
-               "    break;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat(
-      "void foo() {\n"
-      "  for (aaaaaaaaaaaaaaaaaaaaaa = 0;\n"
-      "       (aaaaaaaaaaaaaaaaaaaaaa->bbbbbbbbbbbbbb |\n"
-      "        aaaaaaaaaaaaaaaaaaaaaa->ccccccccccccccccccccccc) == 0;\n"
-      "       aaaaaaaaaaaaaaaaaaaaa = aaaaaaaaaaaaaaaaaaaaaa->next) {\n"
-      "    ;\n"
-      "  }\n"
-      "}",
-      Style);
-
-  verifyFormat(
-      "void foo() {\n"
-      "  while ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
-      "          bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) == 0) {\n"
-      "    continue;\n"
-      "  }\n"
-      "}",
-      Style);
-}
-
->>>>>>> 5823461e9528 (Format: add AlignAfterControlStatement)
 TEST_F(FormatTest, BreaksConditionalExpressions) {
   verifyFormat(
       "aaaa(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaaaaaa\n"
@@ -11567,7 +11237,7 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
 
 TEST_F(FormatTest, WrapsTemplateParameters) {
   FormatStyle Style = getLLVMStyle();
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   verifyFormat(
       "template <typename... a> struct q {};\n"
@@ -11575,7 +11245,7 @@ TEST_F(FormatTest, WrapsTemplateParameters) {
       "    aaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaa>\n"
       "    y;",
       Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   verifyFormat(
       "template <typename... a> struct r {};\n"

@@ -159,6 +159,7 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
 TEST(ConfigParseTest, ParsesConfigurationBools) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
+  CHECK_PARSE_BOOL(AlignAfterOpenBracket);
   CHECK_PARSE_BOOL(AllowAllArgumentsOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
   CHECK_PARSE_BOOL(AllowShortCaseExpressionOnASingleLine);
@@ -542,18 +543,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::ETC_Insert);
   CHECK_PARSE("EnumTrailingComma: Remove", EnumTrailingComma,
               FormatStyle::ETC_Remove);
-
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket,
-              FormatStyle::BAS_Align);
-  CHECK_PARSE("AlignAfterOpenBracket: DontAlign", AlignAfterOpenBracket,
-              FormatStyle::BAS_DontAlign);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
-  // For backward compatibility:
-  CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket,
-              FormatStyle::BAS_DontAlign);
-  CHECK_PARSE("AlignAfterOpenBracket: true", AlignAfterOpenBracket,
-              FormatStyle::BAS_Align);
 
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   CHECK_PARSE("AlignEscapedNewlines: DontAlign", AlignEscapedNewlines,
