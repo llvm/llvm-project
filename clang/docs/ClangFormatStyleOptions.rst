@@ -2755,8 +2755,8 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:                             false:
-    foo (                   vs.       foo (a ||
-       a || b)                             b)
+    foo (                   vs.       foo (a,
+       a , b)                              b)
 
 .. _BreakAfterOpenBracketIf:
 
@@ -2791,8 +2791,8 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:                             false:
-    switch (                 vs.      switch (a &&
-       a && b) {                              b) {
+    switch (                 vs.      switch (a +
+       a + b) {                               b) {
 
 .. _BreakAfterReturnType:
 
@@ -3456,7 +3456,7 @@ the configuration (without a prefix: ``Auto``).
 
     true:                             false:
     foo (                   vs.       foo (
-       a || b                            a || b)
+       a , b                             a , b)
     )
 
 .. _BreakBeforeCloseBracketIf:
@@ -3501,7 +3501,7 @@ the configuration (without a prefix: ``Auto``).
 
     true:                             false:
     switch (                 vs.      switch (
-       a && b                            a && b) {
+       a + b                             a + b) {
     ) {
 
 .. _BreakBeforeConceptDeclarations:
