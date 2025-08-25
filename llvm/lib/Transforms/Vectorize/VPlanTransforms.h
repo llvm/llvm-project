@@ -83,10 +83,6 @@ struct VPlanTransforms {
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
 
-  /// Creates extracts for values in \p Plan defined in a loop region and used
-  /// outside a loop region.
-  LLVM_ABI_FOR_TEST static void createExtractsForLiveOuts(VPlan &Plan);
-
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
   /// condition.
@@ -251,7 +247,8 @@ struct VPlanTransforms {
   /// one step backwards.
   static void
   optimizeInductionExitUsers(VPlan &Plan,
-                             DenseMap<VPValue *, VPValue *> &EndValues);
+                             DenseMap<VPValue *, VPValue *> &EndValues,
+                             ScalarEvolution &SE);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
