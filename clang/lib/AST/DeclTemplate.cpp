@@ -730,15 +730,15 @@ void TemplateTypeParmDecl::setDefaultArgument(
 }
 
 unsigned TemplateTypeParmDecl::getDepth() const {
-  return getTypeForDecl()->castAs<TemplateTypeParmType>()->getDepth();
+  return dyn_cast<TemplateTypeParmType>(getTypeForDecl())->getDepth();
 }
 
 unsigned TemplateTypeParmDecl::getIndex() const {
-  return getTypeForDecl()->castAs<TemplateTypeParmType>()->getIndex();
+  return dyn_cast<TemplateTypeParmType>(getTypeForDecl())->getIndex();
 }
 
 bool TemplateTypeParmDecl::isParameterPack() const {
-  return getTypeForDecl()->castAs<TemplateTypeParmType>()->isParameterPack();
+  return dyn_cast<TemplateTypeParmType>(getTypeForDecl())->isParameterPack();
 }
 
 void TemplateTypeParmDecl::setTypeConstraint(

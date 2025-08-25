@@ -949,7 +949,7 @@ mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
     errorNYI("CIRGenModule::emitNullConstant ConstantArrayType");
   }
 
-  if (t->getAs<RecordType>())
+  if (t->isRecordType())
     errorNYI("CIRGenModule::emitNullConstant RecordType");
 
   assert(t->isMemberDataPointerType() &&
