@@ -4186,7 +4186,9 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   return phi;
 }
 
-/// This function is used for BO_Add/BO_Sub/BO_AddAssign/BO_SubAssign.
+/// BO_Add/BO_Sub are handled by EmitPointerWithAlignment to preserve alignment
+/// information.
+/// This function is used for BO_AddAssign/BO_SubAssign.
 static Value *emitPointerArithmetic(CodeGenFunction &CGF, const BinOpInfo &op,
                                     bool isSubtraction) {
   // Must have binary (not unary) expr here.  Unary pointer
