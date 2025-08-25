@@ -446,9 +446,10 @@ class CreateDescToXeVMPattern
   matchAndRewrite(xegpu::CreateDescOp op, xegpu::CreateDescOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto eTy = op.getTensorDescType().getElementType();
-    if (eTy.getIntOrFloatBitWidth() % 8 != 0) {
-      return rewriter.notifyMatchFailure(op,
-                                         "Expected element type bit width to be multiple of 8.");
+    auto eBw = eTy.getIntOrFloatBitWidth();
+    if (eBw % 8 != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "Expected element type bit width to be multiple of 8.");
     }
     auto loc = op.getLoc();
     // offsets are provided as scalar i64 by type converter.
@@ -458,10 +459,8 @@ class CreateDescToXeVMPattern
     Value addr = adaptor.getSource();
     // ui32 or i32 are passed as i32 so they need to be casted to i64.
     if (addr.getType() != rewriter.getI64Type())
-      addr = arith::IndexCastUIOp::create(
-          rewriter, loc, rewriter.getI64Type(), addr);
-    auto laneAddr =
-        addOffset(rewriter, loc, addr, offsets, getElemByteSize(op));
+      addr = arith::ExtUIOp::create(rewriter, loc, rewriter.getI64Type(), addr);
+    auto laneAddr = addOffset(rewriter, loc, addr, offsets, eBw / 8);
     rewriter.replaceOp(op, laneAddr);
     return success();
   }
@@ -475,16 +474,16 @@ class UpdateOffsetToXeVMPattern
                   xegpu::UpdateOffsetOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto eTy = op.getTensorDescType().getElementType();
-    if (eTy.getIntOrFloatBitWidth() % 8 != 0) {
-      return rewriter.notifyMatchFailure(op,
-                                         "Expected element type bit width to be multiple of 8.");
+    auto eBw = eTy.getIntOrFloatBitWidth();
+    if (eBw % 8 != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "Expected element type bit width to be multiple of 8.");
     }
     auto loc = op.getLoc();
     // scatter descriptor is provided as scalar i64 by type converter.
     // offsets are provided as scalar i64 by type converter.
-    Value newOffset =
-        addOffset(rewriter, loc, adaptor.getTensorDesc(), adaptor.getOffsets(),
-                  getElemByteSize(op));
+    Value newOffset = addOffset(rewriter, loc, adaptor.getTensorDesc(),
+                                adaptor.getOffsets(), eBw / 8);
     rewriter.replaceOp(op, newOffset);
     return success();
   }
@@ -501,12 +500,35 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
     auto tdescTy = op.getTensorDescType();
-    LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
-            ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
-    if (tdescTy)
-        ptrTypeLLVM = LLVM::LLVMPointerType::get(
-            ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     Value basePtrI64;
+    // Load result or Store valye Type can be vector or scalar.
+    Type valOrResTy;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
+      valOrResTy = op.getResult().getType();
+    } else {
+      valOrResTy = adaptor.getValue().getType();
+    }
+    VectorType valOrResVecTy = dyn_cast<VectorType>(valOrResTy);
+    bool hasScalarVal = !valOrResVecTy;
+    int64_t elemBitWidth =
+        hasScalarVal ? valOrResTy.getIntOrFloatBitWidth()
+                     : valOrResVecTy.getElementType().getIntOrFloatBitWidth();
+    // Element type must be multiple of 8 bits.
+    if (elemBitWidth % 8 != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "Expected element type bit width to be multiple of 8.");
+    }
+    int64_t elemByteSize = elemBitWidth / 8;
+    // Default memory space is global.
+    LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
+        ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
+    // If tensor descriptor is available, we use its memory space.
+    if (tdescTy) {
+      ptrTypeLLVM = LLVM::LLVMPointerType::get(
+          ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
+    }
+    // Base pointer can come from source (load) or dest (store).
+    // If they are memrefs, we use their memory space.
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
       basePtrI64 = adaptor.getSource();
       if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
@@ -522,76 +544,79 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
           ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
       }
     }
+    // Base pointer is passed as i32 or i64 by adaptor, cast to i64 if needed.
     if (basePtrI64.getType() != rewriter.getI64Type()) {
-      basePtrI64 = arith::IndexCastUIOp::create(rewriter, loc, rewriter.getI64Type(),
-                                                basePtrI64);
+      basePtrI64 = arith::ExtUIOp::create(rewriter, loc, rewriter.getI64Type(),
+                                          basePtrI64);
     }
-    basePtrI64.dump();
     Value offsets = adaptor.getOffsets();
-    offsets.dump();
     Value mask = adaptor.getMask();
-    mask.dump();
     if (offsets) {
-      if (dyn_cast<VectorType>(offsets.getType())){
-        // Offset needs be scalar.
+      if (dyn_cast<VectorType>(offsets.getType())) {
+        // Offset needs be scalar. Single element vector is converted to scalar
+        // by type converter.
         return rewriter.notifyMatchFailure(op,
                                            "Expected offsets to be a scalar.");
       } else {
+        // If offsets are provided, we add them to the base pointer.
+        // Offsets are in number of elements, we need to multiply by
+        // element byte size.
         basePtrI64 =
-            addOffset(rewriter, loc, basePtrI64, offsets, getElemByteSize(op));
+            addOffset(rewriter, loc, basePtrI64, offsets, elemByteSize);
       }
     }
-    basePtrI64.dump();
+    // Convert base pointer (i64) to LLVM pointer type.
     Value basePtrLLVM =
         LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtrI64);
-    basePtrLLVM.dump();
-    VectorType srcOrDstVecTy = op.getValueType();
-    VectorType srcOrDstFlatVecTy = VectorType::get(
-        srcOrDstVecTy.getNumElements(), srcOrDstVecTy.getElementType());
+
     Value maskForLane;
     VectorType maskVecTy = dyn_cast<VectorType>(mask.getType());
     if (maskVecTy) {
+      // Mask needs be scalar. Single element vector is converted to scalar by
+      // type converter.
       return rewriter.notifyMatchFailure(op, "Expected mask to be a scalar.");
-    } else
+    } else {
       maskForLane = mask;
+    }
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
-      scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, {srcOrDstVecTy},
+      scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, {valOrResTy},
                                          maskForLane, true, true);
+      // If mask is true,- then clause - load from memory and yield.
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      if (!hasScalarVal)
+        valOrResTy = VectorType::get({valOrResVecTy.getNumElements()},
+                                     valOrResVecTy.getElementType());
       Value loaded =
-          LLVM::LoadOp::create(rewriter, loc, srcOrDstFlatVecTy, basePtrLLVM);
+          LLVM::LoadOp::create(rewriter, loc, valOrResTy, basePtrLLVM);
+      // Set cache control attribute on the load operation.
       loaded.getDefiningOp()->setAttr(
           "cache_control", xevm::LoadCacheControlAttr::get(
                                ctxt, translateLoadXeGPUCacheHint(
                                          op.getL1Hint(), op.getL3Hint())));
-      if (srcOrDstVecTy != srcOrDstFlatVecTy) {
-        loaded =
-            vector::ShapeCastOp::create(rewriter, loc, srcOrDstVecTy, loaded);
-      }
       scf::YieldOp::create(rewriter, loc, ValueRange{loaded});
       rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
-      // If mask is false, we yield a vector of zeros.
-      auto eTy = srcOrDstVecTy.getElementType();
-      loaded = arith::ConstantOp::create(
-          rewriter, loc,
-          eTy.isFloat()
-              ? DenseElementsAttr::get(srcOrDstVecTy, FloatAttr::get(eTy, 0.0))
-              : DenseElementsAttr::get(srcOrDstVecTy,
-                                       IntegerAttr::get(eTy, 0)));
+      // If mask is false - else clause -yield a vector of zeros.
+      auto eTy = hasScalarVal ? valOrResTy : valOrResVecTy.getElementType();
+      TypedAttr eVal;
+      if (eTy.isFloat())
+        eVal = FloatAttr::get(eTy, 0.0);
+      else
+        eVal = IntegerAttr::get(eTy, 0);
+      if (hasScalarVal)
+        loaded = arith::ConstantOp::create(rewriter, loc, eVal);
+      else
+        loaded = arith::ConstantOp::create(
+            rewriter, loc, DenseElementsAttr::get(valOrResVecTy, eVal));
       scf::YieldOp::create(rewriter, loc, ValueRange{loaded});
       rewriter.replaceOp(op, ifOp.getResult(0));
     } else {
+      // if mask is true, perform the store.
       scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, maskForLane, false);
       auto body = ifOp.getBody();
       rewriter.setInsertionPointToStart(body);
-      VectorType valTy = op.getValue().getType();
-      Value srcFlatVec = op.getValue();
-      if (valTy != srcOrDstFlatVecTy) {
-        srcFlatVec = vector::ShapeCastOp::create(rewriter, loc,
-                                                 srcOrDstFlatVecTy, srcFlatVec);
-      }
       auto storeOp =
-          LLVM::StoreOp::create(rewriter, loc, srcFlatVec, basePtrLLVM);
+          LLVM::StoreOp::create(rewriter, loc, adaptor.getValue(), basePtrLLVM);
+      // Set cache control attribute on the store operation.
       storeOp.getOperation()->setAttr(
           "cache_control", xevm::StoreCacheControlAttr::get(
                                ctxt, translateStoreXeGPUCacheHint(
@@ -610,14 +635,13 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
     auto tdescTy = op.getTensorDescType();
-    auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
-        ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     Value basePtrI64 = adaptor.getSource();
-    Value offsets = adaptor.getOffsets();
+    // Base pointer is passed as i32 or i64 by adaptor, cast to i64 if needed.
     if (basePtrI64.getType() != rewriter.getI64Type()) {
-      basePtrI64 = arith::IndexCastUIOp::create(rewriter, loc, rewriter.getI64Type(),
-                                                basePtrI64);
+      basePtrI64 = arith::ExtUIOp::create(rewriter, loc, rewriter.getI64Type(),
+                                          basePtrI64);
     }
+    Value offsets = adaptor.getOffsets();
     if (offsets) {
       VectorType offsetsVecTy = dyn_cast<VectorType>(offsets.getType());
       if (offsetsVecTy) {
@@ -625,12 +649,50 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
         return rewriter.notifyMatchFailure(op,
                                            "Expected offsets to be a scalar.");
       } else {
+        int64_t elemBitWidth{0};
+        int64_t elemByteSize;
+        // Element byte size can come from three sources:
+        if (tdescTy) {
+          // If tensor descriptor is available, we use its element type to
+          // determine element byte size.
+          elemBitWidth = tdescTy.getElementType().getIntOrFloatBitWidth();
+        } else if (auto memRefTy = dyn_cast<MemRefType>(op.getSourceType())) {
+          // If memref is available, we use its element type to
+          // determine element byte size.
+          elemBitWidth = memRefTy.getElementType().getIntOrFloatBitWidth();
+        } else {
+          // Otherwise, we use the provided offset byte alignment.
+          elemByteSize = *op.getOffsetAlignByte();
+        }
+        if (elemBitWidth != 0) {
+          if (elemBitWidth % 8 != 0) {
+            return rewriter.notifyMatchFailure(
+                op, "Expected element type bit width to be multiple of 8.");
+          }
+          elemByteSize = elemBitWidth / 8;
+        }
         basePtrI64 =
-            addOffset(rewriter, loc, basePtrI64, offsets, getElemByteSize(op));
+            addOffset(rewriter, loc, basePtrI64, offsets, elemByteSize);
       }
     }
+    // Default memory space is global.
+    LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
+        ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
+    // If tensor descriptor is available, we use its memory space.
+    if (tdescTy) {
+      ptrTypeLLVM = LLVM::LLVMPointerType::get(
+          ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
+    }
+    // If source is a memref, we use its memory space.
+    if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
+      auto addrSpace = memRefTy.getMemorySpaceAsInt();
+      if (addrSpace != 0)
+        ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+    }
+    // Convert base pointer (i64) to LLVM pointer type.
     Value ptrLLVM =
         LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtrI64);
+    // Create the prefetch op with cache control attribute.
     xevm::PrefetchOp::create(
         rewriter, loc, ptrLLVM,
         xevm::LoadCacheControlAttr::get(
@@ -863,17 +925,17 @@ struct ConvertXeGPUToXeVMPass
     });
 
     auto memrefMaterializationCast = [](OpBuilder &builder, Type type,
-                                      ValueRange inputs,
-                                      Location loc) -> Value {
+                                        ValueRange inputs,
+                                        Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
       if (auto memrefTy = dyn_cast<MemRefType>(input.getType())) {
 
-        Value addr = memref::ExtractAlignedPointerAsIndexOp::create(
-          builder, loc, input);
-        return arith::IndexCastUIOp::create(builder, loc, type,
-                                            addr).getResult();
+        Value addr =
+            memref::ExtractAlignedPointerAsIndexOp::create(builder, loc, input);
+        return arith::IndexCastUIOp::create(builder, loc, type, addr)
+            .getResult();
       }
       return {};
     };
@@ -888,7 +950,8 @@ struct ConvertXeGPUToXeVMPass
         Value cast =
             index::CastUOp::create(builder, loc, builder.getIndexType(), input)
                 .getResult();
-        return arith::IndexCastUIOp::create(builder, loc, type, cast).getResult();
+        return arith::IndexCastUIOp::create(builder, loc, type, cast)
+            .getResult();
       }
       return {};
     };
@@ -903,7 +966,8 @@ struct ConvertXeGPUToXeVMPass
         Value cast =
             index::CastUOp::create(builder, loc, builder.getIndexType(), input)
                 .getResult();
-        return arith::IndexCastUIOp::create(builder, loc, type, cast).getResult();
+        return arith::IndexCastUIOp::create(builder, loc, type, cast)
+            .getResult();
       }
       return {};
     };
