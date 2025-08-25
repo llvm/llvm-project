@@ -43,6 +43,7 @@ jobs:
           fetch-depth: 2
       - name: Build and Test
         run: |
+          cat $0
           git config --global --add safe.directory '*'
 
           source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
