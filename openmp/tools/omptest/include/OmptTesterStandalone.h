@@ -19,7 +19,7 @@
 #include "OmptAsserter.h"
 #include "OmptTesterGlobals.h"
 
-#include <map>
+#include <utility>
 #include <vector>
 
 // Forward declarations.
@@ -60,14 +60,15 @@ struct TestCase {
 /// A pretty crude test suite abstraction
 struct TestSuite {
   using TestCaseVec = std::vector<std::unique_ptr<TestCase>>;
-  std::string Name;
   TestSuite() = default;
+  TestSuite(const std::string &TSName) : Name(TSName) {}
   TestSuite(const TestSuite &O) = delete;
   TestSuite(TestSuite &&O);
   void setup();
   void teardown();
   TestCaseVec::iterator begin();
   TestCaseVec::iterator end();
+  std::string Name;
   TestCaseVec TestCases;
 };
 /// Static class used to register all test cases and provide them to the driver
@@ -75,14 +76,16 @@ class TestRegistrar {
 public:
   static TestRegistrar &get();
   static std::vector<TestSuite> getTestSuites();
-  static void addCaseToSuite(TestCase *TC, std::string TSName);
+  static void addCaseToSuite(TestCase *TC, const std::string &TSName);
 
 private:
   TestRegistrar() = default;
   TestRegistrar(const TestRegistrar &o) = delete;
   TestRegistrar operator=(const TestRegistrar &o) = delete;
-  // Keep tests in order 'of appearance' (top -> bottom), avoid unordered_map
-  static std::map<std::string, TestSuite> Tests;
+  // Keep tests in order 'of appearance', i.e. top -> bottom.
+  // This effectively mimicks the (observed) behavior of GoogleTest.
+  // Avoid maps as they do not have corresponding order guarantees.
+  static std::vector<std::pair<std::string, TestSuite>> Tests;
 };
 /// Hack to register test cases
 struct Registerer {
