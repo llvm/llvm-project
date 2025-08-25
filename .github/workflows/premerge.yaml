@@ -76,7 +76,7 @@ jobs:
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
 
-          if ! [[ "${{ matrix.runs-on }}" =~ "^depot" ]]; then
+          if ! [[ "${{ matrix.runs-on }}" =~ ^depot.* ]]; then
 
             echo "STARTING SCCACHE"
             # This environment variable is passes into the container through the
