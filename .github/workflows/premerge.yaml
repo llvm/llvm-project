@@ -50,7 +50,7 @@ jobs:
 
       - name: HACK - Remove SCCACHE
         run: |
-          rm -Rf /usr/local/bin/sccache
+          sudo rm -Rf /usr/local/bin/sccache
 
       - name: Setup sccache
         uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
