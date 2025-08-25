@@ -13,7 +13,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vqdotu_vv_u32mf2(vuint32mf2_t vd, vuint8mf2_t vs2,
-                                      vuint8mf2_t vs1, size_t vl) {
+                                   vuint8mf2_t vs1, size_t vl) {
   return __riscv_vqdotu_vv_u32mf2(vd, vs2, vs1, vl);
 }
 
@@ -23,8 +23,8 @@ vuint32mf2_t test_vqdotu_vv_u32mf2(vuint32mf2_t vd, vuint8mf2_t vs2,
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vqdotu.nxv2i32.nxv8i8.nxv8i8.i64(<vscale x 2 x i32> [[VD]], <vscale x 8 x i8> [[VS2]], <vscale x 8 x i8> [[VS1]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
-vuint32m1_t test_vqdotu_vv_u32m1(vuint32m1_t vd, vuint8m1_t vs2,
-                                    vuint8m1_t vs1, size_t vl) {
+vuint32m1_t test_vqdotu_vv_u32m1(vuint32m1_t vd, vuint8m1_t vs2, vuint8m1_t vs1,
+                                 size_t vl) {
   return __riscv_vqdotu_vv_u32m1(vd, vs2, vs1, vl);
 }
 
@@ -34,8 +34,8 @@ vuint32m1_t test_vqdotu_vv_u32m1(vuint32m1_t vd, vuint8m1_t vs2,
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vqdotu.nxv4i32.nxv16i8.nxv16i8.i64(<vscale x 4 x i32> [[VD]], <vscale x 16 x i8> [[VS2]], <vscale x 16 x i8> [[VS1]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-vuint32m2_t test_vqdotu_vv_u32m2(vuint32m2_t vd, vuint8m2_t vs2,
-                                    vuint8m2_t vs1, size_t vl) {
+vuint32m2_t test_vqdotu_vv_u32m2(vuint32m2_t vd, vuint8m2_t vs2, vuint8m2_t vs1,
+                                 size_t vl) {
   return __riscv_vqdotu_vv_u32m2(vd, vs2, vs1, vl);
 }
 
@@ -45,8 +45,8 @@ vuint32m2_t test_vqdotu_vv_u32m2(vuint32m2_t vd, vuint8m2_t vs2,
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vqdotu.nxv8i32.nxv32i8.nxv32i8.i64(<vscale x 8 x i32> [[VD]], <vscale x 32 x i8> [[VS2]], <vscale x 32 x i8> [[VS1]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
-vuint32m4_t test_vqdotu_vv_u32m4(vuint32m4_t vd, vuint8m4_t vs2,
-                                    vuint8m4_t vs1, size_t vl) {
+vuint32m4_t test_vqdotu_vv_u32m4(vuint32m4_t vd, vuint8m4_t vs2, vuint8m4_t vs1,
+                                 size_t vl) {
   return __riscv_vqdotu_vv_u32m4(vd, vs2, vs1, vl);
 }
 
@@ -56,8 +56,8 @@ vuint32m4_t test_vqdotu_vv_u32m4(vuint32m4_t vd, vuint8m4_t vs2,
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vqdotu.nxv16i32.nxv64i8.nxv64i8.i64(<vscale x 16 x i32> [[VD]], <vscale x 64 x i8> [[VS2]], <vscale x 64 x i8> [[VS1]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
 //
-vuint32m8_t test_vqdotu_vv_u32m8(vuint32m8_t vd, vuint8m8_t vs2,
-                                    vuint8m8_t vs1, size_t vl) {
+vuint32m8_t test_vqdotu_vv_u32m8(vuint32m8_t vd, vuint8m8_t vs2, vuint8m8_t vs1,
+                                 size_t vl) {
   return __riscv_vqdotu_vv_u32m8(vd, vs2, vs1, vl);
 }
 
@@ -68,8 +68,8 @@ vuint32m8_t test_vqdotu_vv_u32m8(vuint32m8_t vd, vuint8m8_t vs2,
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vqdotu_vv_u32mf2_m(vbool64_t vm, vuint32mf2_t vd,
-                                        vuint8mf2_t vs2, vuint8mf2_t vs1,
-                                        size_t vl) {
+                                     vuint8mf2_t vs2, vuint8mf2_t vs1,
+                                     size_t vl) {
   return __riscv_vqdotu_vv_u32mf2_m(vm, vd, vs2, vs1, vl);
 }
 
@@ -79,9 +79,8 @@ vuint32mf2_t test_vqdotu_vv_u32mf2_m(vbool64_t vm, vuint32mf2_t vd,
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vqdotu.mask.nxv2i32.nxv8i8.nxv8i8.i64(<vscale x 2 x i32> [[VD]], <vscale x 8 x i8> [[VS2]], <vscale x 8 x i8> [[VS1]], <vscale x 2 x i1> [[VM]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
 //
-vuint32m1_t test_vqdotu_vv_u32m1_m(vbool32_t vm, vuint32m1_t vd,
-                                      vuint8m1_t vs2, vuint8m1_t vs1,
-                                      size_t vl) {
+vuint32m1_t test_vqdotu_vv_u32m1_m(vbool32_t vm, vuint32m1_t vd, vuint8m1_t vs2,
+                                   vuint8m1_t vs1, size_t vl) {
   return __riscv_vqdotu_vv_u32m1_m(vm, vd, vs2, vs1, vl);
 }
 
@@ -91,9 +90,8 @@ vuint32m1_t test_vqdotu_vv_u32m1_m(vbool32_t vm, vuint32m1_t vd,
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vqdotu.mask.nxv4i32.nxv16i8.nxv16i8.i64(<vscale x 4 x i32> [[VD]], <vscale x 16 x i8> [[VS2]], <vscale x 16 x i8> [[VS1]], <vscale x 4 x i1> [[VM]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-vuint32m2_t test_vqdotu_vv_u32m2_m(vbool16_t vm, vuint32m2_t vd,
-                                      vuint8m2_t vs2, vuint8m2_t vs1,
-                                      size_t vl) {
+vuint32m2_t test_vqdotu_vv_u32m2_m(vbool16_t vm, vuint32m2_t vd, vuint8m2_t vs2,
+                                   vuint8m2_t vs1, size_t vl) {
   return __riscv_vqdotu_vv_u32m2_m(vm, vd, vs2, vs1, vl);
 }
 
@@ -103,9 +101,8 @@ vuint32m2_t test_vqdotu_vv_u32m2_m(vbool16_t vm, vuint32m2_t vd,
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vqdotu.mask.nxv8i32.nxv32i8.nxv32i8.i64(<vscale x 8 x i32> [[VD]], <vscale x 32 x i8> [[VS2]], <vscale x 32 x i8> [[VS1]], <vscale x 8 x i1> [[VM]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
 //
-vuint32m4_t test_vqdotu_vv_u32m4_m(vbool8_t vm, vuint32m4_t vd,
-                                      vuint8m4_t vs2, vuint8m4_t vs1,
-                                      size_t vl) {
+vuint32m4_t test_vqdotu_vv_u32m4_m(vbool8_t vm, vuint32m4_t vd, vuint8m4_t vs2,
+                                   vuint8m4_t vs1, size_t vl) {
   return __riscv_vqdotu_vv_u32m4_m(vm, vd, vs2, vs1, vl);
 }
 
@@ -115,8 +112,7 @@ vuint32m4_t test_vqdotu_vv_u32m4_m(vbool8_t vm, vuint32m4_t vd,
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vqdotu.mask.nxv16i32.nxv64i8.nxv64i8.i64(<vscale x 16 x i32> [[VD]], <vscale x 64 x i8> [[VS2]], <vscale x 64 x i8> [[VS1]], <vscale x 16 x i1> [[VM]], i64 [[VL]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
 //
-vuint32m8_t test_vqdotu_vv_u32m8_m(vbool4_t vm, vuint32m8_t vd,
-                                      vuint8m8_t vs2, vuint8m8_t vs1,
-                                      size_t vl) {
+vuint32m8_t test_vqdotu_vv_u32m8_m(vbool4_t vm, vuint32m8_t vd, vuint8m8_t vs2,
+                                   vuint8m8_t vs1, size_t vl) {
   return __riscv_vqdotu_vv_u32m8_m(vm, vd, vs2, vs1, vl);
 }

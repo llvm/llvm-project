@@ -99,7 +99,6 @@ multiclass VPatTernaryV_VV_AAXASwapped<string intrinsic, string instruction,
 
 multiclass VPatTernaryV_VV_VX_AAXASwapped<string intrinsic, string instruction,
                                           list<VTypeInfoToWide> info_pairs>
-    // keep the original VV because the order doesn't matter
     : VPatTernaryV_VV_AAXASwapped<intrinsic, instruction, info_pairs>,
       VPatTernaryV_VX_AAXASwapped<intrinsic, instruction, info_pairs>;
 
