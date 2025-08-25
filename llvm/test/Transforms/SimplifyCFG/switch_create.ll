@@ -1068,3 +1068,127 @@ if:
 else:
   ret void
 }
+
+define void @trunc_nuw_i1_condition(i32 %V) {
+; CHECK-LABEL: @trunc_nuw_i1_condition(
+; CHECK-NEXT:    switch i32 [[V:%.*]], label [[F:%.*]] [
+; CHECK-NEXT:      i32 2, label [[T:%.*]]
+; CHECK-NEXT:      i32 0, label [[T]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       F:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %C1 = icmp eq i32 %V, 2
+  br i1 %C1, label %T, label %N
+N:
+  %C2 = trunc nuw i32 %V to i1
+  br i1 %C2, label %F, label %T
+T:
+  call void @foo1( )
+  ret void
+F:
+  call void @foo2( )
+  ret void
+}
+
+define void @neg_trunc_i1_condition(i32 %V) {
+; CHECK-LABEL: @neg_trunc_i1_condition(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[V:%.*]], 2
+; CHECK-NEXT:    [[C2:%.*]] = trunc i32 [[V]] to i1
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       F:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %C1 = icmp eq i32 %V, 2
+  br i1 %C1, label %T, label %N
+N:
+  %C2 = trunc i32 %V to i1
+  br i1 %C2, label %F, label %T
+T:
+  call void @foo1( )
+  ret void
+F:
+  call void @foo2( )
+  ret void
+}
+
+define void @extra_cond_is_eq_cmp(i8 %c, i32 %x)  {
+; CHECK-LABEL: @extra_cond_is_eq_cmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i8 [[C:%.*]], label [[COMMON_RET:%.*]] [
+; CHECK-NEXT:      i8 99, label [[IF_THEN]]
+; CHECK-NEXT:      i8 97, label [[IF_THEN]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 32
+  %cmp4 = icmp eq i8 %c, 97
+  %or.cond = or i1 %cmp, %cmp4
+  %cmp9 = icmp eq i8 %c, 99
+  %or.cond11 = or i1 %or.cond, %cmp9
+  br i1 %or.cond11, label %if.then, label %if.end
+
+if.then:
+  tail call void @foo1()
+  ret void
+
+if.end:
+  ret void
+
+}
+
+define void @extra_cond_is_eq_cmp_c(i8 %c, i32 %x)  {
+; CHECK-LABEL: @extra_cond_is_eq_cmp_c(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i8 [[C:%.*]], label [[COMMON_RET:%.*]] [
+; CHECK-NEXT:      i8 99, label [[IF_THEN]]
+; CHECK-NEXT:      i8 97, label [[IF_THEN]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 32
+  %cmp4 = icmp eq i8 %c, 97
+  %or.cond = or i1 %cmp4, %cmp
+  %cmp9 = icmp eq i8 %c, 99
+  %or.cond11 = or i1 %or.cond, %cmp9
+  br i1 %or.cond11, label %if.then, label %if.end
+
+if.then:
+  tail call void @foo1()
+  ret void
+
+if.end:
+  ret void
+
+}

@@ -1540,6 +1540,16 @@ Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
   return Err;
 }
 
+Error GenericDeviceTy::dataFill(void *TgtPtr, const void *PatternPtr,
+                                int64_t PatternSize, int64_t Size,
+                                __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Err =
+      dataFillImpl(TgtPtr, PatternPtr, PatternSize, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
 Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     ptrdiff_t *ArgOffsets,
                                     KernelArgsTy &KernelArgs,
@@ -1585,6 +1595,15 @@ Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, *AsyncInfoPtr);
 
   auto Err = initAsyncInfoImpl(AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
+                                       __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = enqueueHostCallImpl(Callback, UserData, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }
@@ -1636,6 +1655,22 @@ Error GenericDeviceTy::waitEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
 Expected<bool> GenericDeviceTy::hasPendingWork(__tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
   auto Res = hasPendingWorkImpl(AsyncInfoWrapper);
+  if (auto Err = Res.takeError()) {
+    AsyncInfoWrapper.finalize(Err);
+    return Err;
+  }
+
+  auto Err = Plugin::success();
+  AsyncInfoWrapper.finalize(Err);
+  if (Err)
+    return Err;
+  return Res;
+}
+
+Expected<bool> GenericDeviceTy::isEventComplete(void *Event,
+                                                __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Res = isEventCompleteImpl(Event, AsyncInfoWrapper);
   if (auto Err = Res.takeError()) {
     AsyncInfoWrapper.finalize(Err);
     return Err;
@@ -2322,5 +2357,17 @@ int32_t GenericPluginTy::async_barrier(omp_interop_val_t *Interop) {
            DPxPTR(Interop), toString(std::move(Err)).c_str());
     return OFFLOAD_FAIL;
   }
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t GenericPluginTy::data_fence(int32_t DeviceId,
+                                    __tgt_async_info *AsyncInfo) {
+  auto Err = getDevice(DeviceId).dataFence(AsyncInfo);
+  if (Err) {
+    REPORT("failure to place data fence on device %d: %s\n", DeviceId,
+           toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
+
   return OFFLOAD_SUCCESS;
 }

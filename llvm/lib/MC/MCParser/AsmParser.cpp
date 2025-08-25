@@ -1864,11 +1864,13 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc &&
-        Sym->isExternal() && !static_cast<MCSymbolMachO *>(Sym)->isAltEntry())
-      return Error(StartTokLoc, "non-private labels cannot appear between "
-                                ".cfi_startproc / .cfi_endproc pairs") &&
-             Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
+    if (MAI.isMachO() && CFIStartProcLoc) {
+      auto *SymM = static_cast<MCSymbolMachO *>(Sym);
+      if (SymM->isExternal() && !SymM->isAltEntry())
+        return Error(StartTokLoc, "non-private labels cannot appear between "
+                                  ".cfi_startproc / .cfi_endproc pairs") &&
+               Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
+    }
 
     if (discardLTOSymbol(IDVal))
       return false;

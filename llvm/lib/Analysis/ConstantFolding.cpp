@@ -1662,6 +1662,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::aarch64_sve_convert_from_svbool:
   case Intrinsic::wasm_alltrue:
   case Intrinsic::wasm_anytrue:
+  case Intrinsic::wasm_dot:
   // WebAssembly float semantics are always known
   case Intrinsic::wasm_trunc_signed:
   case Intrinsic::wasm_trunc_unsigned:
@@ -1845,6 +1846,62 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nvvm_sqrt_rn_f:
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
     return !Call->isStrictFP();
+
+  // NVVM add intrinsics with explicit rounding modes
+  case Intrinsic::nvvm_add_rm_d:
+  case Intrinsic::nvvm_add_rn_d:
+  case Intrinsic::nvvm_add_rp_d:
+  case Intrinsic::nvvm_add_rz_d:
+  case Intrinsic::nvvm_add_rm_f:
+  case Intrinsic::nvvm_add_rn_f:
+  case Intrinsic::nvvm_add_rp_f:
+  case Intrinsic::nvvm_add_rz_f:
+  case Intrinsic::nvvm_add_rm_ftz_f:
+  case Intrinsic::nvvm_add_rn_ftz_f:
+  case Intrinsic::nvvm_add_rp_ftz_f:
+  case Intrinsic::nvvm_add_rz_ftz_f:
+
+  // NVVM div intrinsics with explicit rounding modes
+  case Intrinsic::nvvm_div_rm_d:
+  case Intrinsic::nvvm_div_rn_d:
+  case Intrinsic::nvvm_div_rp_d:
+  case Intrinsic::nvvm_div_rz_d:
+  case Intrinsic::nvvm_div_rm_f:
+  case Intrinsic::nvvm_div_rn_f:
+  case Intrinsic::nvvm_div_rp_f:
+  case Intrinsic::nvvm_div_rz_f:
+  case Intrinsic::nvvm_div_rm_ftz_f:
+  case Intrinsic::nvvm_div_rn_ftz_f:
+  case Intrinsic::nvvm_div_rp_ftz_f:
+  case Intrinsic::nvvm_div_rz_ftz_f:
+
+  // NVVM mul intrinsics with explicit rounding modes
+  case Intrinsic::nvvm_mul_rm_d:
+  case Intrinsic::nvvm_mul_rn_d:
+  case Intrinsic::nvvm_mul_rp_d:
+  case Intrinsic::nvvm_mul_rz_d:
+  case Intrinsic::nvvm_mul_rm_f:
+  case Intrinsic::nvvm_mul_rn_f:
+  case Intrinsic::nvvm_mul_rp_f:
+  case Intrinsic::nvvm_mul_rz_f:
+  case Intrinsic::nvvm_mul_rm_ftz_f:
+  case Intrinsic::nvvm_mul_rn_ftz_f:
+  case Intrinsic::nvvm_mul_rp_ftz_f:
+  case Intrinsic::nvvm_mul_rz_ftz_f:
+
+  // NVVM fma intrinsics with explicit rounding modes
+  case Intrinsic::nvvm_fma_rm_d:
+  case Intrinsic::nvvm_fma_rn_d:
+  case Intrinsic::nvvm_fma_rp_d:
+  case Intrinsic::nvvm_fma_rz_d:
+  case Intrinsic::nvvm_fma_rm_f:
+  case Intrinsic::nvvm_fma_rn_f:
+  case Intrinsic::nvvm_fma_rp_f:
+  case Intrinsic::nvvm_fma_rz_f:
+  case Intrinsic::nvvm_fma_rm_ftz_f:
+  case Intrinsic::nvvm_fma_rn_ftz_f:
+  case Intrinsic::nvvm_fma_rp_ftz_f:
+  case Intrinsic::nvvm_fma_rz_ftz_f:
 
   // Sign operations are actually bitwise operations, they do not raise
   // exceptions even for SNANs.
@@ -3321,6 +3378,96 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
 
         return ConstantFP::get(Ty->getContext(), Res);
       }
+
+      case Intrinsic::nvvm_add_rm_f:
+      case Intrinsic::nvvm_add_rn_f:
+      case Intrinsic::nvvm_add_rp_f:
+      case Intrinsic::nvvm_add_rz_f:
+      case Intrinsic::nvvm_add_rm_d:
+      case Intrinsic::nvvm_add_rn_d:
+      case Intrinsic::nvvm_add_rp_d:
+      case Intrinsic::nvvm_add_rz_d:
+      case Intrinsic::nvvm_add_rm_ftz_f:
+      case Intrinsic::nvvm_add_rn_ftz_f:
+      case Intrinsic::nvvm_add_rp_ftz_f:
+      case Intrinsic::nvvm_add_rz_ftz_f: {
+
+        bool IsFTZ = nvvm::FAddShouldFTZ(IntrinsicID);
+        APFloat A = IsFTZ ? FTZPreserveSign(Op1V) : Op1V;
+        APFloat B = IsFTZ ? FTZPreserveSign(Op2V) : Op2V;
+
+        APFloat::roundingMode RoundMode =
+            nvvm::GetFAddRoundingMode(IntrinsicID);
+
+        APFloat Res = A;
+        APFloat::opStatus Status = Res.add(B, RoundMode);
+
+        if (!Res.isNaN() &&
+            (Status == APFloat::opOK || Status == APFloat::opInexact)) {
+          Res = IsFTZ ? FTZPreserveSign(Res) : Res;
+          return ConstantFP::get(Ty->getContext(), Res);
+        }
+        return nullptr;
+      }
+
+      case Intrinsic::nvvm_mul_rm_f:
+      case Intrinsic::nvvm_mul_rn_f:
+      case Intrinsic::nvvm_mul_rp_f:
+      case Intrinsic::nvvm_mul_rz_f:
+      case Intrinsic::nvvm_mul_rm_d:
+      case Intrinsic::nvvm_mul_rn_d:
+      case Intrinsic::nvvm_mul_rp_d:
+      case Intrinsic::nvvm_mul_rz_d:
+      case Intrinsic::nvvm_mul_rm_ftz_f:
+      case Intrinsic::nvvm_mul_rn_ftz_f:
+      case Intrinsic::nvvm_mul_rp_ftz_f:
+      case Intrinsic::nvvm_mul_rz_ftz_f: {
+
+        bool IsFTZ = nvvm::FMulShouldFTZ(IntrinsicID);
+        APFloat A = IsFTZ ? FTZPreserveSign(Op1V) : Op1V;
+        APFloat B = IsFTZ ? FTZPreserveSign(Op2V) : Op2V;
+
+        APFloat::roundingMode RoundMode =
+            nvvm::GetFMulRoundingMode(IntrinsicID);
+
+        APFloat Res = A;
+        APFloat::opStatus Status = Res.multiply(B, RoundMode);
+
+        if (!Res.isNaN() &&
+            (Status == APFloat::opOK || Status == APFloat::opInexact)) {
+          Res = IsFTZ ? FTZPreserveSign(Res) : Res;
+          return ConstantFP::get(Ty->getContext(), Res);
+        }
+        return nullptr;
+      }
+
+      case Intrinsic::nvvm_div_rm_f:
+      case Intrinsic::nvvm_div_rn_f:
+      case Intrinsic::nvvm_div_rp_f:
+      case Intrinsic::nvvm_div_rz_f:
+      case Intrinsic::nvvm_div_rm_d:
+      case Intrinsic::nvvm_div_rn_d:
+      case Intrinsic::nvvm_div_rp_d:
+      case Intrinsic::nvvm_div_rz_d:
+      case Intrinsic::nvvm_div_rm_ftz_f:
+      case Intrinsic::nvvm_div_rn_ftz_f:
+      case Intrinsic::nvvm_div_rp_ftz_f:
+      case Intrinsic::nvvm_div_rz_ftz_f: {
+        bool IsFTZ = nvvm::FDivShouldFTZ(IntrinsicID);
+        APFloat A = IsFTZ ? FTZPreserveSign(Op1V) : Op1V;
+        APFloat B = IsFTZ ? FTZPreserveSign(Op2V) : Op2V;
+        APFloat::roundingMode RoundMode =
+            nvvm::GetFDivRoundingMode(IntrinsicID);
+
+        APFloat Res = A;
+        APFloat::opStatus Status = Res.divide(B, RoundMode);
+        if (!Res.isNaN() &&
+            (Status == APFloat::opOK || Status == APFloat::opInexact)) {
+          Res = IsFTZ ? FTZPreserveSign(Res) : Res;
+          return ConstantFP::get(Ty->getContext(), Res);
+        }
+        return nullptr;
+      }
       }
 
       if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
@@ -3732,6 +3879,38 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
           V.fusedMultiplyAdd(C2, C3, APFloat::rmNearestTiesToEven);
           return ConstantFP::get(Ty->getContext(), V);
         }
+
+        case Intrinsic::nvvm_fma_rm_f:
+        case Intrinsic::nvvm_fma_rn_f:
+        case Intrinsic::nvvm_fma_rp_f:
+        case Intrinsic::nvvm_fma_rz_f:
+        case Intrinsic::nvvm_fma_rm_d:
+        case Intrinsic::nvvm_fma_rn_d:
+        case Intrinsic::nvvm_fma_rp_d:
+        case Intrinsic::nvvm_fma_rz_d:
+        case Intrinsic::nvvm_fma_rm_ftz_f:
+        case Intrinsic::nvvm_fma_rn_ftz_f:
+        case Intrinsic::nvvm_fma_rp_ftz_f:
+        case Intrinsic::nvvm_fma_rz_ftz_f: {
+          bool IsFTZ = nvvm::FMAShouldFTZ(IntrinsicID);
+          APFloat A = IsFTZ ? FTZPreserveSign(C1) : C1;
+          APFloat B = IsFTZ ? FTZPreserveSign(C2) : C2;
+          APFloat C = IsFTZ ? FTZPreserveSign(C3) : C3;
+
+          APFloat::roundingMode RoundMode =
+              nvvm::GetFMARoundingMode(IntrinsicID);
+
+          APFloat Res = A;
+          APFloat::opStatus Status = Res.fusedMultiplyAdd(B, C, RoundMode);
+
+          if (!Res.isNaN() &&
+              (Status == APFloat::opOK || Status == APFloat::opInexact)) {
+            Res = IsFTZ ? FTZPreserveSign(Res) : Res;
+            return ConstantFP::get(Ty->getContext(), Res);
+          }
+          return nullptr;
+        }
+
         case Intrinsic::amdgcn_cubeid:
         case Intrinsic::amdgcn_cubema:
         case Intrinsic::amdgcn_cubesc:
@@ -3990,6 +4169,30 @@ static Constant *ConstantFoldFixedVectorCall(
       Result[2 * I] = Elt0;
       Result[2 * I + 1] = Elt1;
     }
+    return ConstantVector::get(Result);
+  }
+  case Intrinsic::wasm_dot: {
+    unsigned NumElements =
+        cast<FixedVectorType>(Operands[0]->getType())->getNumElements();
+
+    assert(NumElements == 8 && Result.size() == 4 &&
+           "wasm dot takes i16x8 and produces i32x4");
+    assert(Ty->isIntegerTy());
+    int32_t MulVector[8];
+
+    for (unsigned I = 0; I < NumElements; ++I) {
+      ConstantInt *Elt0 =
+          cast<ConstantInt>(Operands[0]->getAggregateElement(I));
+      ConstantInt *Elt1 =
+          cast<ConstantInt>(Operands[1]->getAggregateElement(I));
+
+      MulVector[I] = Elt0->getSExtValue() * Elt1->getSExtValue();
+    }
+    for (unsigned I = 0; I < Result.size(); I++) {
+      int64_t IAdd = (int64_t)MulVector[I * 2] + (int64_t)MulVector[I * 2 + 1];
+      Result[I] = ConstantInt::get(Ty, IAdd);
+    }
+
     return ConstantVector::get(Result);
   }
   default:
