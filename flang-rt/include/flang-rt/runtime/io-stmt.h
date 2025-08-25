@@ -84,6 +84,9 @@ public:
   // This design avoids virtual member functions and function pointers,
   // which may not have good support in some runtime environments.
 
+  RT_API_ATTRS const NonTbpDefinedIoTable *nonTbpDefinedIoTable() const;
+  RT_API_ATTRS void set_nonTbpDefinedIoTable(const NonTbpDefinedIoTable *);
+
   // CompleteOperation() is the last opportunity to raise an I/O error.
   // It is called by EndIoStatement(), but it can be invoked earlier to
   // catch errors for (e.g.) GetIoMsg() and GetNewUnit().  If called
@@ -363,6 +366,13 @@ public:
   using IoErrorHandler::IoErrorHandler;
 
   RT_API_ATTRS bool completedOperation() const { return completedOperation_; }
+  RT_API_ATTRS const NonTbpDefinedIoTable *nonTbpDefinedIoTable() const {
+    return nonTbpDefinedIoTable_;
+  }
+  RT_API_ATTRS void set_nonTbpDefinedIoTable(
+      const NonTbpDefinedIoTable *table) {
+    nonTbpDefinedIoTable_ = table;
+  }
 
   RT_API_ATTRS void CompleteOperation() { completedOperation_ = true; }
   RT_API_ATTRS int EndIoStatement() { return GetIoStat(); }
@@ -397,6 +407,11 @@ public:
 
 protected:
   bool completedOperation_{false};
+
+private:
+  // Original NonTbpDefinedIoTable argument to Input/OutputDerivedType,
+  // saved here so that it can also be used in child I/O statements.
+  const NonTbpDefinedIoTable *nonTbpDefinedIoTable_{nullptr};
 };
 
 // Common state for list-directed & NAMELIST I/O, both internal & external
@@ -423,7 +438,9 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
-  RT_API_ATTRS bool inNamelistSequence() const { return inNamelistSequence_; }
+  RT_API_ATTRS const NamelistGroup *namelistGroup() const {
+    return namelistGroup_;
+  }
   RT_API_ATTRS int EndIoStatement();
 
   // Skips value separators, handles repetition and null values.
@@ -436,15 +453,19 @@ public:
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  RT_API_ATTRS void ResetForNextNamelistItem(bool inNamelistSequence) {
+  RT_API_ATTRS void ResetForNextNamelistItem(
+      const NamelistGroup *namelistGroup) {
     remaining_ = 0;
     if (repeatPosition_) {
       repeatPosition_->Cancel();
     }
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
-    inNamelistSequence_ = inNamelistSequence;
+    namelistGroup_ = namelistGroup;
   }
+
+protected:
+  const NamelistGroup *namelistGroup_{nullptr};
 
 private:
   int remaining_{0}; // for "r*" repetition
@@ -453,7 +474,6 @@ private:
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
   bool imaginaryPart_{false};
-  bool inNamelistSequence_{false};
 };
 
 template <Direction DIR>
@@ -630,8 +650,10 @@ class ChildIoStatementState : public IoStatementBase,
 public:
   RT_API_ATTRS ChildIoStatementState(
       ChildIo &, const char *sourceFile = nullptr, int sourceLine = 0);
+  RT_API_ATTRS const NonTbpDefinedIoTable *nonTbpDefinedIoTable() const;
+  RT_API_ATTRS void set_nonTbpDefinedIoTable(const NonTbpDefinedIoTable *);
   RT_API_ATTRS ChildIo &child() { return child_; }
-  RT_API_ATTRS MutableModes &mutableModes();
+  RT_API_ATTRS MutableModes &mutableModes() { return mutableModes_; }
   RT_API_ATTRS ConnectionState &GetConnectionState();
   RT_API_ATTRS ExternalFileUnit *GetExternalFileUnit() const;
   RT_API_ATTRS int EndIoStatement();
@@ -644,6 +666,7 @@ public:
 
 private:
   ChildIo &child_;
+  MutableModes mutableModes_;
 };
 
 template <Direction DIR, typename CHAR>
@@ -654,7 +677,6 @@ public:
   RT_API_ATTRS ChildFormattedIoStatementState(ChildIo &, const CharType *format,
       std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
       const char *sourceFile = nullptr, int sourceLine = 0);
-  RT_API_ATTRS MutableModes &mutableModes() { return mutableModes_; }
   RT_API_ATTRS void CompleteOperation();
   RT_API_ATTRS int EndIoStatement();
   RT_API_ATTRS bool AdvanceRecord(int = 1);
@@ -664,7 +686,6 @@ public:
   }
 
 private:
-  MutableModes mutableModes_;
   FormatControl<ChildFormattedIoStatementState> format_;
 };
 
@@ -672,8 +693,10 @@ template <Direction DIR>
 class ChildListIoStatementState : public ChildIoStatementState<DIR>,
                                   public ListDirectedStatementState<DIR> {
 public:
-  using ChildIoStatementState<DIR>::ChildIoStatementState;
+  RT_API_ATTRS ChildListIoStatementState(
+      ChildIo &, const char *sourceFile = nullptr, int sourceLine = 0);
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS int EndIoStatement();
 };
 
@@ -707,6 +730,9 @@ public:
   RT_API_ATTRS void set_isUnformatted(bool yes = true) {
     isUnformatted_ = yes;
   } // FORM=
+  RT_API_ATTRS void set_mustBeFormatted(bool yes = true) {
+    mustBeFormatted_ = yes;
+  }
 
   RT_API_ATTRS void CompleteOperation();
   RT_API_ATTRS int EndIoStatement();
@@ -721,6 +747,7 @@ private:
   OwningPtr<char> path_;
   std::size_t pathLength_{};
   Fortran::common::optional<bool> isUnformatted_;
+  Fortran::common::optional<bool> mustBeFormatted_;
   Fortran::common::optional<Access> access_;
 };
 

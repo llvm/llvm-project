@@ -595,13 +595,11 @@ static void diagnoseBadCast(Sema &S, unsigned msg, CastType castType,
     DifferentPtrness--;
   }
   if (!DifferentPtrness) {
-    auto RecFrom = From->getAs<RecordType>();
-    auto RecTo = To->getAs<RecordType>();
-    if (RecFrom && RecTo) {
-      auto DeclFrom = RecFrom->getAsCXXRecordDecl();
+    if (auto *DeclFrom = From->getAsCXXRecordDecl(),
+        *DeclTo = To->getAsCXXRecordDecl();
+        DeclFrom && DeclTo) {
       if (!DeclFrom->isCompleteDefinition())
         S.Diag(DeclFrom->getLocation(), diag::note_type_incomplete) << DeclFrom;
-      auto DeclTo = RecTo->getAsCXXRecordDecl();
       if (!DeclTo->isCompleteDefinition())
         S.Diag(DeclTo->getLocation(), diag::note_type_incomplete) << DeclTo;
     }
@@ -964,7 +962,7 @@ void CastOperation::CheckDynamicCast() {
   }
 
   // C++ 5.2.7p6: Otherwise, v shall be [polymorphic].
-  const RecordDecl *SrcDecl = SrcRecord->getDecl()->getDefinition();
+  const RecordDecl *SrcDecl = SrcRecord->getOriginalDecl()->getDefinition();
   assert(SrcDecl && "Definition missing");
   if (!cast<CXXRecordDecl>(SrcDecl)->isPolymorphic()) {
     Self.Diag(OpRange.getBegin(), diag::err_bad_dynamic_cast_not_polymorphic)
@@ -1454,8 +1452,8 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // C++0x 5.2.9p9: A value of a scoped enumeration type can be explicitly
   // converted to an integral type. [...] A value of a scoped enumeration type
   // can also be explicitly converted to a floating-point type [...].
-  if (const EnumType *Enum = SrcType->getAs<EnumType>()) {
-    if (Enum->getDecl()->isScoped()) {
+  if (const EnumType *Enum = dyn_cast<EnumType>(SrcType)) {
+    if (Enum->getOriginalDecl()->isScoped()) {
       if (DestType->isBooleanType()) {
         Kind = CK_IntegralToBoolean;
         return TC_Success;
@@ -1487,8 +1485,8 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       // [expr.static.cast]p10 If the enumeration type has a fixed underlying
       // type, the value is first converted to that type by integral conversion
       const EnumType *Enum = DestType->castAs<EnumType>();
-      Kind = Enum->getDecl()->isFixed() &&
-                     Enum->getDecl()->getIntegerType()->isBooleanType()
+      const EnumDecl *ED = Enum->getOriginalDecl()->getDefinitionOrSelf();
+      Kind = ED->isFixed() && ED->getIntegerType()->isBooleanType()
                  ? CK_IntegralToBoolean
                  : CK_IntegralCast;
       return TC_Success;
@@ -1581,11 +1579,11 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
 
   // See if it looks like the user is trying to convert between
   // related record types, and select a better diagnostic if so.
-  if (auto SrcPointer = SrcType->getAs<PointerType>())
-    if (auto DestPointer = DestType->getAs<PointerType>())
-      if (SrcPointer->getPointeeType()->getAs<RecordType>() &&
-          DestPointer->getPointeeType()->getAs<RecordType>())
-       msg = diag::err_bad_cxx_cast_unrelated_class;
+  if (const auto *SrcPointer = SrcType->getAs<PointerType>())
+    if (const auto *DestPointer = DestType->getAs<PointerType>())
+      if (SrcPointer->getPointeeType()->isRecordType() &&
+          DestPointer->getPointeeType()->isRecordType())
+        msg = diag::err_bad_cxx_cast_unrelated_class;
 
   if (SrcType->isMatrixType() && DestType->isMatrixType()) {
     if (Self.CheckMatrixCast(OpRange, DestType, SrcType, Kind)) {
@@ -1856,7 +1854,7 @@ TryCastResult TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr,
                                                     FoundOverload)) {
       CXXMethodDecl *M = cast<CXXMethodDecl>(Fn);
       SrcType = Self.Context.getMemberPointerType(
-          Fn->getType(), /*Qualifier=*/nullptr, M->getParent());
+          Fn->getType(), /*Qualifier=*/std::nullopt, M->getParent());
       WasOverloadedFunction = true;
     }
   }
@@ -2102,9 +2100,9 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     return;
   }
   // or one of the types is a tag type.
-  if (SrcTy->getAs<TagType>() || DestTy->getAs<TagType>()) {
+  if (isa<TagType>(SrcTy.getCanonicalType()) ||
+      isa<TagType>(DestTy.getCanonicalType()))
     return;
-  }
 
   // FIXME: Scoped enums?
   if ((SrcTy->isUnsignedIntegerType() && DestTy->isSignedIntegerType()) ||
@@ -3097,27 +3095,26 @@ void CastOperation::CheckCStyleCast() {
 
   if (!DestType->isScalarType() && !DestType->isVectorType() &&
       !DestType->isMatrixType()) {
-    const RecordType *DestRecordTy = DestType->getAs<RecordType>();
-
-    if (DestRecordTy && Self.Context.hasSameUnqualifiedType(DestType, SrcType)){
-      // GCC struct/union extension: allow cast to self.
-      Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_nonscalar)
-        << DestType << SrcExpr.get()->getSourceRange();
-      Kind = CK_NoOp;
-      return;
-    }
-
-    // GCC's cast to union extension.
-    if (DestRecordTy && DestRecordTy->getDecl()->isUnion()) {
-      RecordDecl *RD = DestRecordTy->getDecl();
-      if (CastExpr::getTargetFieldForToUnionCast(RD, SrcType)) {
-        Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_to_union)
-          << SrcExpr.get()->getSourceRange();
-        Kind = CK_ToUnion;
+    if (const RecordType *DestRecordTy = DestType->getAs<RecordType>()) {
+      if (Self.Context.hasSameUnqualifiedType(DestType, SrcType)) {
+        // GCC struct/union extension: allow cast to self.
+        Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_nonscalar)
+            << DestType << SrcExpr.get()->getSourceRange();
+        Kind = CK_NoOp;
         return;
-      } else {
+      }
+
+      // GCC's cast to union extension.
+      if (RecordDecl *RD = DestRecordTy->getOriginalDecl(); RD->isUnion()) {
+        if (CastExpr::getTargetFieldForToUnionCast(RD->getDefinitionOrSelf(),
+                                                   SrcType)) {
+          Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_to_union)
+              << SrcExpr.get()->getSourceRange();
+          Kind = CK_ToUnion;
+          return;
+        }
         Self.Diag(OpRange.getBegin(), diag::err_typecheck_cast_to_union_no_type)
-          << SrcType << SrcExpr.get()->getSourceRange();
+            << SrcType << SrcExpr.get()->getSourceRange();
         SrcExpr = ExprError();
         return;
       }

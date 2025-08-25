@@ -9,50 +9,54 @@
 #include <clc/internal/clc.h>
 #include <clc/relational/relational.h>
 
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC2(RET_TYPE, FUNCTION, ARG_TYPE)        \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (RET_TYPE)((RET_TYPE){FUNCTION(x.lo), FUNCTION(x.hi)} !=            \
-                      (RET_TYPE)0);                                            \
+#define _CLC_DEFINE_RELATIONAL_UNARY_VEC2(RET_TYPE, __CLC_FUNCTION, ARG_TYPE)  \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE __CLC_FUNCTION(ARG_TYPE x) {                 \
+    return (RET_TYPE)((RET_TYPE){__CLC_FUNCTION(x.lo),                         \
+                                 __CLC_FUNCTION(x.hi)} != (RET_TYPE)0);        \
   }
 
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC3(RET_TYPE, FUNCTION, ARG_TYPE)        \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (RET_TYPE)((RET_TYPE){FUNCTION(x.s0), FUNCTION(x.s1),               \
-                                 FUNCTION(x.s2)} != (RET_TYPE)0);              \
+#define _CLC_DEFINE_RELATIONAL_UNARY_VEC3(RET_TYPE, __CLC_FUNCTION, ARG_TYPE)  \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE __CLC_FUNCTION(ARG_TYPE x) {                 \
+    return (RET_TYPE)((RET_TYPE){__CLC_FUNCTION(x.s0), __CLC_FUNCTION(x.s1),   \
+                                 __CLC_FUNCTION(x.s2)} != (RET_TYPE)0);        \
   }
 
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC4(RET_TYPE, FUNCTION, ARG_TYPE)        \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (RET_TYPE)((RET_TYPE){FUNCTION(x.s0), FUNCTION(x.s1),               \
-                                 FUNCTION(x.s2),                               \
-                                 FUNCTION(x.s3)} != (RET_TYPE)0);              \
+#define _CLC_DEFINE_RELATIONAL_UNARY_VEC4(RET_TYPE, __CLC_FUNCTION, ARG_TYPE)  \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE __CLC_FUNCTION(ARG_TYPE x) {                 \
+    return (RET_TYPE)((RET_TYPE){__CLC_FUNCTION(x.s0), __CLC_FUNCTION(x.s1),   \
+                                 __CLC_FUNCTION(x.s2),                         \
+                                 __CLC_FUNCTION(x.s3)} != (RET_TYPE)0);        \
   }
 
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC8(RET_TYPE, FUNCTION, ARG_TYPE)        \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (                                                                   \
-        RET_TYPE)((RET_TYPE){FUNCTION(x.s0), FUNCTION(x.s1), FUNCTION(x.s2),   \
-                             FUNCTION(x.s3), FUNCTION(x.s4), FUNCTION(x.s5),   \
-                             FUNCTION(x.s6), FUNCTION(x.s7)} != (RET_TYPE)0);  \
+#define _CLC_DEFINE_RELATIONAL_UNARY_VEC8(RET_TYPE, __CLC_FUNCTION, ARG_TYPE)  \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE __CLC_FUNCTION(ARG_TYPE x) {                 \
+    return (RET_TYPE)((RET_TYPE){__CLC_FUNCTION(x.s0), __CLC_FUNCTION(x.s1),   \
+                                 __CLC_FUNCTION(x.s2), __CLC_FUNCTION(x.s3),   \
+                                 __CLC_FUNCTION(x.s4), __CLC_FUNCTION(x.s5),   \
+                                 __CLC_FUNCTION(x.s6),                         \
+                                 __CLC_FUNCTION(x.s7)} != (RET_TYPE)0);        \
   }
 
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC16(RET_TYPE, FUNCTION, ARG_TYPE)       \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (                                                                   \
-        RET_TYPE)((RET_TYPE){FUNCTION(x.s0), FUNCTION(x.s1), FUNCTION(x.s2),   \
-                             FUNCTION(x.s3), FUNCTION(x.s4), FUNCTION(x.s5),   \
-                             FUNCTION(x.s6), FUNCTION(x.s7), FUNCTION(x.s8),   \
-                             FUNCTION(x.s9), FUNCTION(x.sa), FUNCTION(x.sb),   \
-                             FUNCTION(x.sc), FUNCTION(x.sd), FUNCTION(x.se),   \
-                             FUNCTION(x.sf)} != (RET_TYPE)0);                  \
+#define _CLC_DEFINE_RELATIONAL_UNARY_VEC16(RET_TYPE, __CLC_FUNCTION, ARG_TYPE) \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE __CLC_FUNCTION(ARG_TYPE x) {                 \
+    return (RET_TYPE)((RET_TYPE){__CLC_FUNCTION(x.s0), __CLC_FUNCTION(x.s1),   \
+                                 __CLC_FUNCTION(x.s2), __CLC_FUNCTION(x.s3),   \
+                                 __CLC_FUNCTION(x.s4), __CLC_FUNCTION(x.s5),   \
+                                 __CLC_FUNCTION(x.s6), __CLC_FUNCTION(x.s7),   \
+                                 __CLC_FUNCTION(x.s8), __CLC_FUNCTION(x.s9),   \
+                                 __CLC_FUNCTION(x.sa), __CLC_FUNCTION(x.sb),   \
+                                 __CLC_FUNCTION(x.sc), __CLC_FUNCTION(x.sd),   \
+                                 __CLC_FUNCTION(x.se),                         \
+                                 __CLC_FUNCTION(x.sf)} != (RET_TYPE)0);        \
   }
 
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC_ALL(RET_TYPE, FUNCTION, ARG_TYPE)     \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC2(RET_TYPE##2, FUNCTION, ARG_TYPE##2)        \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC3(RET_TYPE##3, FUNCTION, ARG_TYPE##3)        \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC4(RET_TYPE##4, FUNCTION, ARG_TYPE##4)        \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC8(RET_TYPE##8, FUNCTION, ARG_TYPE##8)        \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC16(RET_TYPE##16, FUNCTION, ARG_TYPE##16)
+#define _CLC_DEFINE_RELATIONAL_UNARY_VEC_ALL(RET_TYPE, __CLC_FUNCTION,         \
+                                             ARG_TYPE)                         \
+  _CLC_DEFINE_RELATIONAL_UNARY_VEC2(RET_TYPE##2, __CLC_FUNCTION, ARG_TYPE##2)  \
+  _CLC_DEFINE_RELATIONAL_UNARY_VEC3(RET_TYPE##3, __CLC_FUNCTION, ARG_TYPE##3)  \
+  _CLC_DEFINE_RELATIONAL_UNARY_VEC4(RET_TYPE##4, __CLC_FUNCTION, ARG_TYPE##4)  \
+  _CLC_DEFINE_RELATIONAL_UNARY_VEC8(RET_TYPE##8, __CLC_FUNCTION, ARG_TYPE##8)  \
+  _CLC_DEFINE_RELATIONAL_UNARY_VEC16(RET_TYPE##16, __CLC_FUNCTION, ARG_TYPE##16)
 
 _CLC_DEF _CLC_OVERLOAD int __clc_signbit(float x) {
   return __builtin_signbitf(x);

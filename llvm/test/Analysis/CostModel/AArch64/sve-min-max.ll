@@ -255,6 +255,89 @@ define void @maximum() {
   ret void
 }
 
+define void @minimumnum() {
+; CHECK-LABEL: 'minimumnum'
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %1 = call <vscale x 2 x float> @llvm.minimumnum.nxv2f32(<vscale x 2 x float> poison, <vscale x 2 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %2 = call <vscale x 4 x float> @llvm.minimumnum.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %3 = call <vscale x 8 x float> @llvm.minimumnum.nxv8f32(<vscale x 8 x float> poison, <vscale x 8 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %4 = call <vscale x 16 x float> @llvm.minimumnum.nxv16f32(<vscale x 16 x float> poison, <vscale x 16 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %5 = call <vscale x 2 x double> @llvm.minimumnum.nxv2f64(<vscale x 2 x double> poison, <vscale x 2 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %6 = call <vscale x 4 x double> @llvm.minimumnum.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %7 = call <vscale x 8 x double> @llvm.minimumnum.nxv8f64(<vscale x 8 x double> poison, <vscale x 8 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %8 = call <vscale x 16 x double> @llvm.minimumnum.nxv16f64(<vscale x 16 x double> poison, <vscale x 16 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %10 = call <vscale x 2 x half> @llvm.minimumnum.nxv2f16(<vscale x 2 x half> poison, <vscale x 2 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %11 = call <vscale x 4 x half> @llvm.minimumnum.nxv4f16(<vscale x 4 x half> poison, <vscale x 4 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %12 = call <vscale x 8 x half> @llvm.minimumnum.nxv8f16(<vscale x 8 x half> poison, <vscale x 8 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %13 = call <vscale x 16 x half> @llvm.minimumnum.nxv16f16(<vscale x 16 x half> poison, <vscale x 16 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %14 = call <vscale x 2 x bfloat> @llvm.minimumnum.nxv2bf16(<vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %15 = call <vscale x 4 x bfloat> @llvm.minimumnum.nxv4bf16(<vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %16 = call <vscale x 8 x bfloat> @llvm.minimumnum.nxv8bf16(<vscale x 8 x bfloat> poison, <vscale x 8 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %17 = call <vscale x 16 x bfloat> @llvm.minimumnum.nxv16bf16(<vscale x 16 x bfloat> poison, <vscale x 16 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call <vscale x 2 x float> @llvm.minimumnum(<vscale x 2 x float> poison, <vscale x 2 x float> poison)
+  call <vscale x 4 x float> @llvm.minimumnum(<vscale x 4 x float> poison, <vscale x 4 x float> poison)
+  call <vscale x 8 x float> @llvm.minimumnum(<vscale x 8 x float> poison, <vscale x 8 x float> poison)
+  call <vscale x 16 x float> @llvm.minimumnum(<vscale x 16 x float> poison, <vscale x 16 x float> poison)
+  call <vscale x 2 x double> @llvm.minimumnum(<vscale x 2 x double> poison, <vscale x 2 x double> poison)
+  call <vscale x 4 x double> @llvm.minimumnum(<vscale x 4 x double> poison, <vscale x 4 x double> poison)
+  call <vscale x 8 x double> @llvm.minimumnum(<vscale x 8 x double> poison, <vscale x 8 x double> poison)
+  call <vscale x 16 x double> @llvm.minimumnum(<vscale x 16 x double> poison, <vscale x 16 x double> poison)
+  ret void
+  call <vscale x 2 x half> @llvm.minimumnum(<vscale x 2 x half> poison, <vscale x 2 x half> poison)
+  call <vscale x 4 x half> @llvm.minimumnum(<vscale x 4 x half> poison, <vscale x 4 x half> poison)
+  call <vscale x 8 x half> @llvm.minimumnum(<vscale x 8 x half> poison, <vscale x 8 x half> poison)
+  call <vscale x 16 x half> @llvm.minimumnum(<vscale x 16 x half> poison, <vscale x 16 x half> poison)
+  call <vscale x 2 x bfloat> @llvm.minimumnum(<vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison)
+  call <vscale x 4 x bfloat> @llvm.minimumnum(<vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison)
+  call <vscale x 8 x bfloat> @llvm.minimumnum(<vscale x 8 x bfloat> poison, <vscale x 8 x bfloat> poison)
+  call <vscale x 16 x bfloat> @llvm.minimumnum(<vscale x 16 x bfloat> poison, <vscale x 16 x bfloat> poison)
+  ret void
+}
+
+define void @maximumnum() {
+; CHECK-LABEL: 'maximumnum'
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %1 = call <vscale x 2 x float> @llvm.maximumnum.nxv2f32(<vscale x 2 x float> poison, <vscale x 2 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %2 = call <vscale x 4 x float> @llvm.maximumnum.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %3 = call <vscale x 8 x float> @llvm.maximumnum.nxv8f32(<vscale x 8 x float> poison, <vscale x 8 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %4 = call <vscale x 16 x float> @llvm.maximumnum.nxv16f32(<vscale x 16 x float> poison, <vscale x 16 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %5 = call <vscale x 2 x double> @llvm.maximumnum.nxv2f64(<vscale x 2 x double> poison, <vscale x 2 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %6 = call <vscale x 4 x double> @llvm.maximumnum.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %7 = call <vscale x 8 x double> @llvm.maximumnum.nxv8f64(<vscale x 8 x double> poison, <vscale x 8 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %8 = call <vscale x 16 x double> @llvm.maximumnum.nxv16f64(<vscale x 16 x double> poison, <vscale x 16 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %10 = call <vscale x 2 x half> @llvm.maximumnum.nxv2f16(<vscale x 2 x half> poison, <vscale x 2 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %11 = call <vscale x 4 x half> @llvm.maximumnum.nxv4f16(<vscale x 4 x half> poison, <vscale x 4 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %12 = call <vscale x 8 x half> @llvm.maximumnum.nxv8f16(<vscale x 8 x half> poison, <vscale x 8 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %13 = call <vscale x 16 x half> @llvm.maximumnum.nxv16f16(<vscale x 16 x half> poison, <vscale x 16 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %14 = call <vscale x 2 x bfloat> @llvm.maximumnum.nxv2bf16(<vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %15 = call <vscale x 4 x bfloat> @llvm.maximumnum.nxv4bf16(<vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %16 = call <vscale x 8 x bfloat> @llvm.maximumnum.nxv8bf16(<vscale x 8 x bfloat> poison, <vscale x 8 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %17 = call <vscale x 16 x bfloat> @llvm.maximumnum.nxv16bf16(<vscale x 16 x bfloat> poison, <vscale x 16 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  call <vscale x 2 x float> @llvm.maximumnum(<vscale x 2 x float> poison, <vscale x 2 x float> poison)
+  call <vscale x 4 x float> @llvm.maximumnum(<vscale x 4 x float> poison, <vscale x 4 x float> poison)
+  call <vscale x 8 x float> @llvm.maximumnum(<vscale x 8 x float> poison, <vscale x 8 x float> poison)
+  call <vscale x 16 x float> @llvm.maximumnum(<vscale x 16 x float> poison, <vscale x 16 x float> poison)
+  call <vscale x 2 x double> @llvm.maximumnum(<vscale x 2 x double> poison, <vscale x 2 x double> poison)
+  call <vscale x 4 x double> @llvm.maximumnum(<vscale x 4 x double> poison, <vscale x 4 x double> poison)
+  call <vscale x 8 x double> @llvm.maximumnum(<vscale x 8 x double> poison, <vscale x 8 x double> poison)
+  call <vscale x 16 x double> @llvm.maximumnum(<vscale x 16 x double> poison, <vscale x 16 x double> poison)
+  ret void
+  call <vscale x 2 x half> @llvm.maximumnum(<vscale x 2 x half> poison, <vscale x 2 x half> poison)
+  call <vscale x 4 x half> @llvm.maximumnum(<vscale x 4 x half> poison, <vscale x 4 x half> poison)
+  call <vscale x 8 x half> @llvm.maximumnum(<vscale x 8 x half> poison, <vscale x 8 x half> poison)
+  call <vscale x 16 x half> @llvm.maximumnum(<vscale x 16 x half> poison, <vscale x 16 x half> poison)
+  call <vscale x 2 x bfloat> @llvm.maximumnum(<vscale x 2 x bfloat> poison, <vscale x 2 x bfloat> poison)
+  call <vscale x 4 x bfloat> @llvm.maximumnum(<vscale x 4 x bfloat> poison, <vscale x 4 x bfloat> poison)
+  call <vscale x 8 x bfloat> @llvm.maximumnum(<vscale x 8 x bfloat> poison, <vscale x 8 x bfloat> poison)
+  call <vscale x 16 x bfloat> @llvm.maximumnum(<vscale x 16 x bfloat> poison, <vscale x 16 x bfloat> poison)
+  ret void
+}
+
+
 declare <vscale x 4 x i8> @llvm.umin.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8>)
 declare <vscale x 8 x i8> @llvm.umin.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>)
 declare <vscale x 16 x i8> @llvm.umin.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)

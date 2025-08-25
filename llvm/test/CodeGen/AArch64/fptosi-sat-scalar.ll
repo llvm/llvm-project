@@ -24,7 +24,7 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs w8, s0
 ; CHECK-SD-NEXT:    ands w8, w8, w8, asr #31
-; CHECK-SD-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-SD-NEXT:    csinv w8, w8, wzr, pl
 ; CHECK-SD-NEXT:    and w0, w8, #0x1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -32,9 +32,9 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcvtzs w8, s0
 ; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    csel w8, w8, wzr, lt
+; CHECK-GI-NEXT:    csel w8, w8, wzr, mi
 ; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-GI-NEXT:    csinv w8, w8, wzr, pl
 ; CHECK-GI-NEXT:    and w0, w8, #0x1
 ; CHECK-GI-NEXT:    ret
     %x = call i1 @llvm.fptosi.sat.i1.f32(float %f)
@@ -269,7 +269,7 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs w8, d0
 ; CHECK-SD-NEXT:    ands w8, w8, w8, asr #31
-; CHECK-SD-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-SD-NEXT:    csinv w8, w8, wzr, pl
 ; CHECK-SD-NEXT:    and w0, w8, #0x1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -277,9 +277,9 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcvtzs w8, d0
 ; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    csel w8, w8, wzr, lt
+; CHECK-GI-NEXT:    csel w8, w8, wzr, mi
 ; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-GI-NEXT:    csinv w8, w8, wzr, pl
 ; CHECK-GI-NEXT:    and w0, w8, #0x1
 ; CHECK-GI-NEXT:    ret
     %x = call i1 @llvm.fptosi.sat.i1.f64(double %f)
@@ -519,7 +519,7 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-SD-CVT-NEXT:    fcvt s0, h0
 ; CHECK-SD-CVT-NEXT:    fcvtzs w8, s0
 ; CHECK-SD-CVT-NEXT:    ands w8, w8, w8, asr #31
-; CHECK-SD-CVT-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-SD-CVT-NEXT:    csinv w8, w8, wzr, pl
 ; CHECK-SD-CVT-NEXT:    and w0, w8, #0x1
 ; CHECK-SD-CVT-NEXT:    ret
 ;
@@ -527,7 +527,7 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs w8, h0
 ; CHECK-SD-FP16-NEXT:    ands w8, w8, w8, asr #31
-; CHECK-SD-FP16-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-SD-FP16-NEXT:    csinv w8, w8, wzr, pl
 ; CHECK-SD-FP16-NEXT:    and w0, w8, #0x1
 ; CHECK-SD-FP16-NEXT:    ret
 ;
@@ -536,9 +536,9 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
 ; CHECK-GI-CVT-NEXT:    fcvtzs w8, s0
 ; CHECK-GI-CVT-NEXT:    cmp w8, #0
-; CHECK-GI-CVT-NEXT:    csel w8, w8, wzr, lt
+; CHECK-GI-CVT-NEXT:    csel w8, w8, wzr, mi
 ; CHECK-GI-CVT-NEXT:    cmp w8, #0
-; CHECK-GI-CVT-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-GI-CVT-NEXT:    csinv w8, w8, wzr, pl
 ; CHECK-GI-CVT-NEXT:    and w0, w8, #0x1
 ; CHECK-GI-CVT-NEXT:    ret
 ;
@@ -546,9 +546,9 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    fcvtzs w8, h0
 ; CHECK-GI-FP16-NEXT:    cmp w8, #0
-; CHECK-GI-FP16-NEXT:    csel w8, w8, wzr, lt
+; CHECK-GI-FP16-NEXT:    csel w8, w8, wzr, mi
 ; CHECK-GI-FP16-NEXT:    cmp w8, #0
-; CHECK-GI-FP16-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-GI-FP16-NEXT:    csinv w8, w8, wzr, pl
 ; CHECK-GI-FP16-NEXT:    and w0, w8, #0x1
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i1 @llvm.fptosi.sat.i1.f16(half %f)
@@ -959,7 +959,7 @@ define i32 @test_signed_f128_i32(fp128 %f) {
 ; CHECK-SD-NEXT:    cmp w19, #0
 ; CHECK-SD-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    csel w19, w8, w0, lt
+; CHECK-SD-NEXT:    csel w19, w8, w0, mi
 ; CHECK-SD-NEXT:    adrp x8, .LCPI30_1
 ; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
 ; CHECK-SD-NEXT:    bl __gttf2
@@ -1001,11 +1001,11 @@ define i32 @test_signed_f128_i32(fp128 %f) {
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
 ; CHECK-GI-NEXT:    bl __lttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel x8, x19, xzr, lt
+; CHECK-GI-NEXT:    csel x8, x19, xzr, mi
 ; CHECK-GI-NEXT:    mov v0.d[0], x8
 ; CHECK-GI-NEXT:    mov x8, #281474976448512 // =0xfffffffc0000
 ; CHECK-GI-NEXT:    movk x8, #16413, lsl #48
-; CHECK-GI-NEXT:    csel x8, x20, x8, lt
+; CHECK-GI-NEXT:    csel x8, x20, x8, mi
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    bl __fixtfsi
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload

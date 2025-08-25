@@ -38,7 +38,7 @@ static_assert(!CanFind<NonTransparentMap>);
 static_assert(!CanFind<const NonTransparentMap>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_multimap<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
@@ -80,9 +80,12 @@ void test() {
   test_find(cm, "zzz", 10);
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<std::string>, std::vector<int>>();
-  test<std::deque<std::string>, std::vector<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<std::string>, std::vector<int>>();
   test<MinSequenceContainer<std::string>, MinSequenceContainer<int>>();
   test<std::vector<std::string, min_allocator<std::string>>, std::vector<int, min_allocator<int>>>();
 
@@ -102,6 +105,14 @@ int main(int, char**) {
     auto it = m.find("beta");
     assert(it == m.begin() + 1);
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -71,8 +71,8 @@ public:
 class ParseHLSLRootSignatureTest : public ::testing::Test {
 protected:
   ParseHLSLRootSignatureTest()
-      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Consumer(new ExpectedDiagConsumer()), Diags(DiagID, DiagOpts, Consumer),
+      : FileMgr(FileMgrOpts), Consumer(new ExpectedDiagConsumer()),
+        Diags(DiagnosticIDs::create(), DiagOpts, Consumer),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     // This is an arbitrarily chosen target triple to create the target info.
     TargetOpts->Triple = "dxil";
@@ -114,7 +114,6 @@ protected:
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
   DiagnosticOptions DiagOpts;
   ExpectedDiagConsumer *Consumer;
   DiagnosticsEngine Diags;
@@ -136,15 +135,13 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
-  ASSERT_EQ((int)Elements.size(), 0);
+  ASSERT_EQ((int)Parser.getElements().size(), 0);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -172,19 +169,18 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
 
+  auto Elements = Parser.getElements();
   // First Descriptor Table with 4 elements
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::BReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 0u);
@@ -197,7 +193,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
   Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::TReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 42u);
@@ -209,7 +205,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
   Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::SReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 987u);
@@ -222,7 +218,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
   Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::UReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 4294967294u);
@@ -277,15 +273,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
 
+  auto Elements = Parser.getElements();
   ASSERT_EQ(Elements.size(), 2u);
 
   // Check default values are as expected
@@ -364,15 +359,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
 
+  auto Elements = Parser.getElements();
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
@@ -441,18 +435,17 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
 
+  auto Elements = Parser.getElements();
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::Sampler);
   auto ValidSamplerFlags =
       llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile;
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidSamplerFlags);
@@ -474,15 +467,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
 
+  auto Elements = Parser.getElements();
   ASSERT_EQ(Elements.size(), 2u);
 
   RootElement Elem = Elements[0].getElement();
@@ -533,15 +525,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
 
+  auto Elements = Parser.getElements();
   ASSERT_EQ(Elements.size(), 3u);
 
   RootElement Elem = Elements[0].getElement();
@@ -588,20 +579,19 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
 
+  auto Elements = Parser.getElements();
   ASSERT_EQ(Elements.size(), 4u);
 
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
@@ -612,7 +602,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
 
   Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::TReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 42u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
@@ -626,7 +616,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
 
   Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::UReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 34893247u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
@@ -638,7 +628,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
             RootDescriptorFlags::DataVolatile);
 
   Elem = Elements[3].getElement();
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
@@ -664,9 +654,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidTrailingCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -697,29 +685,28 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_0, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_0, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
 
+  auto Elements = Parser.getElements();
   auto DefRootDescriptorFlag = llvm::dxbc::RootDescriptorFlags::DataVolatile;
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
 
   Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
 
   Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
 
   auto ValidNonSamplerFlags =
@@ -727,22 +714,22 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
       llvm::dxbc::DescriptorRangeFlags::DataVolatile;
   Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidNonSamplerFlags);
 
   Elem = Elements[4].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidNonSamplerFlags);
 
   Elem = Elements[5].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidNonSamplerFlags);
 
   Elem = Elements[6].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile);
 
@@ -770,54 +757,53 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion11Test) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
 
   ASSERT_FALSE(Parser.parse());
 
+  auto Elements = Parser.getElements();
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataVolatile);
 
   Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[4].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[5].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataVolatile);
 
   Elem = Elements[6].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::None);
 
@@ -838,9 +824,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedTokenTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_expected_either);
@@ -860,9 +844,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced - invalid token
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -882,9 +864,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced - expected '(' after DescriptorTable
   Consumer->setExpected(diag::err_expected_after);
@@ -909,9 +889,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingDTParameterTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
@@ -933,9 +911,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRDParameterTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
@@ -957,9 +933,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRCParameterTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
@@ -983,9 +957,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryDTParameterTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
@@ -1007,9 +979,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryRCParameterTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
@@ -1033,9 +1003,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalDTParameterTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
@@ -1061,9 +1029,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalRCParameterTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
@@ -1086,9 +1052,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1110,9 +1074,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseOverflowedNegativeNumberTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1133,9 +1095,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedFloatTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1156,9 +1116,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexNegOverflowedFloatTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1179,9 +1137,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedDoubleTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1202,9 +1158,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexUnderflowFloatTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_underflow);
@@ -1228,9 +1182,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidNonZeroFlagsTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_non_zero_flag);
@@ -1253,9 +1205,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootElementMissingCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_expected_either);
@@ -1280,9 +1230,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorTableMissingCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_expected_either);
@@ -1307,9 +1255,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootConstantParamsCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_expected_either);
@@ -1334,9 +1280,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootDescriptorParamsCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_expected_either);
@@ -1363,9 +1307,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorClauseParamsCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_expected_either);
@@ -1390,9 +1332,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidStaticSamplerCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_expected_either);
@@ -1414,9 +1354,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootDescriptorParamTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1441,9 +1379,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorTableParamTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1467,9 +1403,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorTableClauseParamTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1496,9 +1430,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidStaticSamplerParamTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1523,9 +1455,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidVisibilityValueTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1549,9 +1479,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRegisterValueTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1576,9 +1504,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidFilterValueTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1603,9 +1529,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidTextureAddressModeValueTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1630,9 +1554,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidComparisonFuncValueTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1657,9 +1579,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidStaticBorderColorValueTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1681,9 +1601,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootFlagsValueTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1705,9 +1623,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootDescriptorFlagsValueTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
@@ -1733,9 +1649,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorRangeFlagsValueTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootSignatureElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
-                                   Signature, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);

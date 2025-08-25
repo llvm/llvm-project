@@ -18,13 +18,10 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
-                     bool IsVirtual, MCSymbol *Begin)
-    : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      IsRegistered(false), IsText(IsText), IsVirtual(IsVirtual),
-      LinkerRelaxable(false), Name(Name), Variant(V) {
-  // The initial subsection number is 0. Create a fragment list.
-  CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
+MCSection::MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin)
+    : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
+      IsBss(IsBss), Name(Name) {
+  DummyFragment.setParent(this);
 }
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
@@ -35,27 +32,6 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
-void MCSection::setBundleLockState(BundleLockStateType NewState) {
-  if (NewState == NotBundleLocked) {
-    if (BundleLockNestingDepth == 0) {
-      report_fatal_error("Mismatched bundle_lock/unlock directives");
-    }
-    if (--BundleLockNestingDepth == 0) {
-      BundleLockState = NotBundleLocked;
-    }
-    return;
-  }
-
-  // If any of the directives is an align_to_end directive, the whole nested
-  // group is align_to_end. So don't downgrade from align_to_end to just locked.
-  if (BundleLockState != BundleLockedAlignToEnd) {
-    BundleLockState = NewState;
-  }
-  ++BundleLockNestingDepth;
-}
-
-StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump(
     DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> *FragToSyms)
@@ -63,6 +39,8 @@ LLVM_DUMP_METHOD void MCSection::dump(
   raw_ostream &OS = errs();
 
   OS << "MCSection Name:" << getName();
+  if (isLinkerRelaxable())
+    OS << " FirstLinkerRelaxable:" << firstLinkerRelaxable();
   for (auto &F : *this) {
     OS << '\n';
     F.dump();
@@ -80,19 +58,19 @@ LLVM_DUMP_METHOD void MCSection::dump(
 }
 #endif
 
-void MCEncodedFragment::setContents(ArrayRef<char> Contents) {
+void MCFragment::setVarContents(ArrayRef<char> Contents) {
   auto &S = getParent()->ContentStorage;
-  if (ContentStart + Contents.size() > ContentEnd) {
-    ContentStart = S.size();
+  if (VarContentStart + Contents.size() > VarContentEnd) {
+    VarContentStart = S.size();
     S.resize_for_overwrite(S.size() + Contents.size());
   }
-  ContentEnd = ContentStart + Contents.size();
-  llvm::copy(Contents, S.begin() + ContentStart);
+  VarContentEnd = VarContentStart + Contents.size();
+  llvm::copy(Contents, S.begin() + VarContentStart);
 }
 
-void MCEncodedFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
+void MCFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
 
-void MCEncodedFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
   auto &S = getParent()->FixupStorage;
   if (LLVM_UNLIKELY(FixupEnd != S.size())) {
     // Move the elements to the end. Reserve space to avoid invalidating
@@ -106,12 +84,20 @@ void MCEncodedFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
   FixupEnd = S.size();
 }
 
-void MCEncodedFragment::setFixups(ArrayRef<MCFixup> Fixups) {
+void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
+  assert(Fixups.size() < 256 &&
+         "variable-size tail cannot have more than 256 fixups");
   auto &S = getParent()->FixupStorage;
-  if (FixupStart + Fixups.size() > FixupEnd) {
-    FixupStart = S.size();
+  if (Fixups.size() > VarFixupSize) {
+    VarFixupStart = S.size();
     S.resize_for_overwrite(S.size() + Fixups.size());
   }
-  FixupEnd = FixupStart + Fixups.size();
-  llvm::copy(Fixups, S.begin() + FixupStart);
+  VarFixupSize = Fixups.size();
+  // Source fixup offsets are relative to the variable part's start. Add the
+  // fixed part size to make them relative to the fixed part's start.
+  std::transform(Fixups.begin(), Fixups.end(), S.begin() + VarFixupStart,
+                 [Fixed = getFixedSize()](MCFixup F) {
+                   F.setOffset(Fixed + F.getOffset());
+                   return F;
+                 });
 }

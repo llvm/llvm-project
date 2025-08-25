@@ -60,6 +60,15 @@ libc_test(
 )
 
 libc_test(
+    name = "strsep_test",
+    srcs = ["strsep_test.cpp"],
+    deps = [
+        "//libc:hdr_signal_macros",
+        "//libc:strsep",
+    ],
+)
+
+libc_test(
     name = "strstr_test",
     srcs = ["strstr_test.cpp"],
     deps = [
@@ -126,6 +135,7 @@ libc_test_library(
         "//libc:__support_libc_assert",
         "//libc:__support_macros_config",
         "//libc:__support_macros_sanitizer",
+        "//libc:hdr_stdint_proxy",
         "//libc:string_memory_utils",
     ],
 )
@@ -136,6 +146,7 @@ libc_test_library(
     deps = [
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_properties_os",
+        "//libc:hdr_stdint_proxy",
     ],
 )
 

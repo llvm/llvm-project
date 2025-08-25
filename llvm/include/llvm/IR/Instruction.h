@@ -584,9 +584,10 @@ public:
   dropUBImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
 
   /// Drop any attributes or metadata that can cause immediate undefined
-  /// behavior. Retain other attributes/metadata on a best-effort basis.
-  /// This should be used when speculating instructions.
-  LLVM_ABI void dropUBImplyingAttrsAndMetadata();
+  /// behavior. Retain other attributes/metadata on a best-effort basis, as well
+  /// as those passed in `Keep`. This should be used when speculating
+  /// instructions.
+  LLVM_ABI void dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep = {});
 
   /// Return true if this instruction has UB-implying attributes
   /// that can cause immediate undefined behavior.
@@ -897,17 +898,6 @@ public:
 
   /// Return true if the instruction is a DbgInfoIntrinsic or PseudoProbeInst.
   LLVM_ABI bool isDebugOrPseudoInst() const LLVM_READONLY;
-
-  /// Return a pointer to the previous non-debug instruction in the same basic
-  /// block as 'this', or nullptr if no such instruction exists. Skip any pseudo
-  /// operations if \c SkipPseudoOp is true.
-  LLVM_ABI const Instruction *
-  getPrevNonDebugInstruction(bool SkipPseudoOp = false) const;
-  Instruction *getPrevNonDebugInstruction(bool SkipPseudoOp = false) {
-    return const_cast<Instruction *>(
-        static_cast<const Instruction *>(this)->getPrevNonDebugInstruction(
-            SkipPseudoOp));
-  }
 
   /// Create a copy of 'this' instruction that is identical in all ways except
   /// the following:

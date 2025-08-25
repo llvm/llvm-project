@@ -244,15 +244,16 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
         mlir::Value cummulativeExtent = one;
         for (auto extent : shapeOp.getExtents()) {
           mlir::Value upperbound =
-              builder.create<mlir::arith::SubIOp>(loc, extent, one);
+              mlir::arith::SubIOp::create(builder, loc, extent, one);
           mlir::Value stride = one;
           if (strideIncludeLowerExtent) {
             stride = cummulativeExtent;
-            cummulativeExtent = builder.create<mlir::arith::MulIOp>(
-                loc, cummulativeExtent, extent);
+            cummulativeExtent = mlir::arith::MulIOp::create(
+                builder, loc, cummulativeExtent, extent);
           }
-          auto accBound = builder.create<mlir::acc::DataBoundsOp>(
-              loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+          auto accBound = mlir::acc::DataBoundsOp::create(
+              builder, loc,
+              mlir::acc::DataBoundsType::get(builder.getContext()),
               /*lowerbound=*/zero, /*upperbound=*/upperbound,
               /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
               /*startIdx=*/one);
@@ -269,17 +270,18 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
           } else {
             mlir::Value extent = val;
             mlir::Value upperbound =
-                builder.create<mlir::arith::SubIOp>(loc, extent, one);
-            upperbound = builder.create<mlir::arith::AddIOp>(loc, lowerbound,
-                                                             upperbound);
+                mlir::arith::SubIOp::create(builder, loc, extent, one);
+            upperbound = mlir::arith::AddIOp::create(builder, loc, lowerbound,
+                                                     upperbound);
             mlir::Value stride = one;
             if (strideIncludeLowerExtent) {
               stride = cummulativeExtent;
-              cummulativeExtent = builder.create<mlir::arith::MulIOp>(
-                  loc, cummulativeExtent, extent);
+              cummulativeExtent = mlir::arith::MulIOp::create(
+                  builder, loc, cummulativeExtent, extent);
             }
-            auto accBound = builder.create<mlir::acc::DataBoundsOp>(
-                loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+            auto accBound = mlir::acc::DataBoundsOp::create(
+                builder, loc,
+                mlir::acc::DataBoundsType::get(builder.getContext()),
                 /*lowerbound=*/zero, /*upperbound=*/upperbound,
                 /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
                 /*startIdx=*/lowerbound);
@@ -531,9 +533,9 @@ static fir::ShapeOp genShapeOp(mlir::OpBuilder &builder,
   llvm::SmallVector<mlir::Value> extents;
   mlir::Type idxTy = builder.getIndexType();
   for (auto extent : seqTy.getShape())
-    extents.push_back(builder.create<mlir::arith::ConstantOp>(
-        loc, idxTy, builder.getIntegerAttr(idxTy, extent)));
-  return builder.create<fir::ShapeOp>(loc, extents);
+    extents.push_back(mlir::arith::ConstantOp::create(
+        builder, loc, idxTy, builder.getIntegerAttr(idxTy, extent)));
+  return fir::ShapeOp::create(builder, loc, extents);
 }
 
 template <typename Ty>
@@ -549,9 +551,10 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   fir::FirOpBuilder firBuilder(builder, mod);
 
   auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
-    auto alloca = firBuilder.create<fir::AllocaOp>(loc, ty);
-    return firBuilder.create<hlfir::DeclareOp>(
-        loc, alloca, varName, /*shape=*/nullptr, llvm::ArrayRef<mlir::Value>{},
+    auto alloca = fir::AllocaOp::create(firBuilder, loc, ty);
+    return hlfir::DeclareOp::create(
+        firBuilder, loc, alloca, varName, /*shape=*/nullptr,
+        llvm::ArrayRef<mlir::Value>{},
         /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
   };
 
@@ -559,7 +562,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     auto declareOp = getDeclareOpForType(unwrappedTy);
     if (initVal) {
       auto convert = firBuilder.createConvert(loc, unwrappedTy, initVal);
-      firBuilder.create<fir::StoreOp>(loc, convert, declareOp.getBase());
+      fir::StoreOp::create(firBuilder, loc, convert, declareOp.getBase());
     }
     retVal = declareOp.getBase();
   } else if (auto seqTy =
@@ -567,14 +570,15 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value shape;
       if (seqTy.hasDynamicExtents()) {
-        shape = firBuilder.create<fir::ShapeOp>(loc, llvm::to_vector(extents));
+        shape = fir::ShapeOp::create(firBuilder, loc, llvm::to_vector(extents));
       } else {
         shape = genShapeOp(firBuilder, seqTy, loc);
       }
-      auto alloca = firBuilder.create<fir::AllocaOp>(
-          loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
-      auto declareOp = firBuilder.create<hlfir::DeclareOp>(
-          loc, alloca, varName, shape, llvm::ArrayRef<mlir::Value>{},
+      auto alloca = fir::AllocaOp::create(
+          firBuilder, loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
+      auto declareOp = hlfir::DeclareOp::create(
+          firBuilder, loc, alloca, varName, shape,
+          llvm::ArrayRef<mlir::Value>{},
           /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
 
       if (initVal) {
@@ -584,21 +588,23 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
         llvm::SmallVector<mlir::Value> ivs;
 
         if (seqTy.hasDynamicExtents()) {
-          firBuilder.create<hlfir::AssignOp>(loc, initVal, declareOp.getBase());
+          hlfir::AssignOp::create(firBuilder, loc, initVal,
+                                  declareOp.getBase());
         } else {
-          for (auto ext : seqTy.getShape()) {
+          // Generate loop nest from slowest to fastest running dimension
+          for (auto ext : llvm::reverse(seqTy.getShape())) {
             auto lb = firBuilder.createIntegerConstant(loc, idxTy, 0);
             auto ub = firBuilder.createIntegerConstant(loc, idxTy, ext - 1);
             auto step = firBuilder.createIntegerConstant(loc, idxTy, 1);
-            auto loop = firBuilder.create<fir::DoLoopOp>(loc, lb, ub, step,
-                                                         /*unordered=*/false);
+            auto loop = fir::DoLoopOp::create(firBuilder, loc, lb, ub, step,
+                                              /*unordered=*/false);
             firBuilder.setInsertionPointToStart(loop.getBody());
             loops.push_back(loop);
             ivs.push_back(loop.getInductionVar());
           }
-          auto coord = firBuilder.create<fir::CoordinateOp>(
-              loc, refTy, declareOp.getBase(), ivs);
-          firBuilder.create<fir::StoreOp>(loc, initVal, coord);
+          auto coord = fir::CoordinateOp::create(firBuilder, loc, refTy,
+                                                 declareOp.getBase(), ivs);
+          fir::StoreOp::create(firBuilder, loc, initVal, coord);
           firBuilder.setInsertionPointAfter(loops[0]);
         }
       }
@@ -609,6 +615,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
     if (fir::isa_trivial(innerTy)) {
       retVal = getDeclareOpForType(unwrappedTy).getBase();
+      mlir::Value allocatedScalar =
+          fir::AllocMemOp::create(builder, loc, innerTy);
+      mlir::Value firClass =
+          fir::EmboxOp::create(builder, loc, boxTy, allocatedScalar);
+      fir::StoreOp::create(builder, loc, firClass, retVal);
     } else if (mlir::isa<fir::SequenceType>(innerTy)) {
       hlfir::Entity source = hlfir::Entity{var};
       auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
@@ -626,7 +637,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
           storeDst = firBuilder.createConvert(
               loc, firBuilder.getRefType(temp.getType()), retVal);
         }
-        builder.create<fir::StoreOp>(loc, temp, storeDst);
+        fir::StoreOp::create(builder, loc, temp, storeDst);
       } else {
         retVal = temp;
       }
@@ -634,7 +645,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       TODO(loc, "Unsupported boxed type for OpenACC private-like recipe");
     }
     if (initVal) {
-      builder.create<hlfir::AssignOp>(loc, initVal, retVal);
+      hlfir::AssignOp::create(builder, loc, initVal, retVal);
     }
   }
   return retVal;

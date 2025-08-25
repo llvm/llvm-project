@@ -1,6 +1,13 @@
 ; RUN: llc < %s -mtriple=arm-eabi -float-abi=soft | FileCheck %s --check-prefix=SOFTFP
 ; RUN: llc < %s -mtriple=arm-eabi -float-abi=hard | FileCheck %s --check-prefix=HARDFP
 
+; FIXME: crash
+; define i32 @testmswh_builtin(half %x) {
+; entry:
+;   %0 = tail call i32 @llvm.lrint.i32.f16(half %x)
+;   ret i32 %0
+; }
+
 ; SOFTFP-LABEL: testmsws_builtin:
 ; SOFTFP:       bl      lrintf
 ; HARDFP-LABEL: testmsws_builtin:
@@ -18,6 +25,17 @@ entry:
 define i32 @testmswd_builtin(double %x) {
 entry:
   %0 = tail call i32 @llvm.lrint.i32.f64(double %x)
+  ret i32 %0
+}
+
+; FIXME(#44744): incorrect libcall
+; SOFTFP-LABEL: testmswq_builtin:
+; SOFTFP:       bl      lrintl
+; HARDFP-LABEL: testmswq_builtin:
+; HARDFP:       bl      lrintl
+define i32 @testmswq_builtin(fp128 %x) {
+entry:
+  %0 = tail call i32 @llvm.lrint.i32.f128(fp128 %x)
   ret i32 %0
 }
 
