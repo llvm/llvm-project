@@ -109,15 +109,15 @@ template <typename T>
 void ThrowException() { throw T(); }
 // CHECK-NOTES: [[@LINE-1]]:31: warning: throwing an exception whose type 'bad_generic_exception<int>' is not derived from 'std::exception'
 // CHECK-NOTES: [[@LINE-2]]:31: note: type 'bad_generic_exception<int>' is a template instantiation of 'T'
-// CHECK-NOTES: [[@LINE+25]]:1: note: type defined here
+// CHECK-NOTES: [[@LINE+26]]:1: note: type defined here
 
 // CHECK-NOTES: [[@LINE-5]]:31: warning: throwing an exception whose type 'bad_generic_exception<std::exception>' is not derived from 'std::exception'
 // CHECK-NOTES: [[@LINE-6]]:31: note: type 'bad_generic_exception<std::exception>' is a template instantiation of 'T'
-// CHECK-NOTES: [[@LINE+21]]:1: note: type defined here
+// CHECK-NOTES: [[@LINE+22]]:1: note: type defined here
 
 // CHECK-NOTES: [[@LINE-9]]:31: warning: throwing an exception whose type 'exotic_exception<non_derived_exception>' is not derived from 'std::exception'
 // CHECK-NOTES: [[@LINE-10]]:31: note: type 'exotic_exception<non_derived_exception>' is a template instantiation of 'T'
-// CHECK-NOTES: [[@LINE+20]]:1: note: type defined here
+// CHECK-NOTES: [[@LINE+21]]:1: note: type defined here
 
 // CHECK-NOTES: [[@LINE-13]]:31: warning: throwing an exception whose type 'int' is not derived from 'std::exception'
 // CHECK-NOTES: [[@LINE-14]]:31: note: type 'int' is a template instantiation of 'T'
@@ -158,16 +158,16 @@ void generic_exceptions() {
 
   throw bad_generic_exception<int>();
   // CHECK-NOTES: [[@LINE-1]]:9: warning: throwing an exception whose type 'bad_generic_exception<int>' is not derived from 'std::exception'
-  // CHECK-NOTES: [[@LINE-24]]:1: note: type defined here
+  // CHECK-NOTES: [[@LINE-23]]:1: note: type defined here
   throw bad_generic_exception<std::exception>();
   // CHECK-NOTES: [[@LINE-1]]:9: warning: throwing an exception whose type 'bad_generic_exception<std::exception>' is not derived from 'std::exception'
-  // CHECK-NOTES: [[@LINE-27]]:1: note: type defined here
+  // CHECK-NOTES: [[@LINE-26]]:1: note: type defined here
   THROW_EXCEPTION(bad_generic_exception<int>);
   THROW_EXCEPTION(bad_generic_exception<std::exception>);
 
   throw exotic_exception<non_derived_exception>();
   // CHECK-NOTES: [[@LINE-1]]:9: warning: throwing an exception whose type 'exotic_exception<non_derived_exception>' is not derived from 'std::exception'
-  // CHECK-NOTES: [[@LINE-30]]:1: note: type defined here
+  // CHECK-NOTES: [[@LINE-29]]:1: note: type defined here
   THROW_EXCEPTION(exotic_exception<non_derived_exception>);
 
   throw exotic_exception<derived_exception>();          // Ok

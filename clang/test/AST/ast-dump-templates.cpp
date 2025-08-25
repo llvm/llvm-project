@@ -889,10 +889,9 @@ namespace GH153540 {
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 765,
-// JSON-NEXT:        "line": 14,
+// JSON-NEXT:        "offset": 805,
 // JSON-NEXT:        "col": 1,
-// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:        "tokLen": 6
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
 // JSON-NEXT:        "offset": 879,
@@ -1526,10 +1525,9 @@ namespace GH153540 {
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 765,
-// JSON-NEXT:        "line": 14,
+// JSON-NEXT:        "offset": 805,
 // JSON-NEXT:        "col": 1,
-// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:        "tokLen": 6
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
 // JSON-NEXT:        "offset": 879,
@@ -4022,9 +4020,9 @@ namespace GH153540 {
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2263,
-// JSON-NEXT:          "col": 3,
-// JSON-NEXT:          "tokLen": 8
+// JSON-NEXT:          "offset": 2284,
+// JSON-NEXT:          "col": 24,
+// JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
 // JSON-NEXT:          "offset": 2294,
@@ -4581,10 +4579,9 @@ namespace GH153540 {
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2408,
-// JSON-NEXT:          "line": 80,
+// JSON-NEXT:          "offset": 2438,
 // JSON-NEXT:          "col": 1,
-// JSON-NEXT:          "tokLen": 8
+// JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
 // JSON-NEXT:          "offset": 2471,
@@ -8213,9 +8210,9 @@ namespace GH153540 {
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 9464,
-// JSON-NEXT:            "col": 5,
-// JSON-NEXT:            "tokLen": 8
+// JSON-NEXT:            "offset": 9485,
+// JSON-NEXT:            "col": 26,
+// JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
 // JSON-NEXT:            "offset": 9502,
