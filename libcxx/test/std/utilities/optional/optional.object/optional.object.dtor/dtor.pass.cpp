@@ -66,10 +66,10 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 26
     {
-        typedef int& T;
-        static_assert(std::is_trivially_destructible<T>::value, "");
-        static_assert(std::is_trivially_destructible<optional<T>>::value, "");
+      typedef int& T;
+      static_assert(std::is_trivially_destructible<T>::value, "");
+      static_assert(std::is_trivially_destructible<optional<T>>::value, "");
     }
-#endif 
-  return 0;
+#endif
+    return 0;
 }

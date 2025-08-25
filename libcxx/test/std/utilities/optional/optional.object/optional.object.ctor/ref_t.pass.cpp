@@ -25,8 +25,8 @@ constexpr bool test() {
     assert(&(*opt) == &item);
   }
   {
-    assert(*std::as_const(opt) == item);  
-    assert(&(*std::as_const(opt)) == &item);  
+    assert(*std::as_const(opt) == item);
+    assert(&(*std::as_const(opt)) == &item);
   }
 
   return true;

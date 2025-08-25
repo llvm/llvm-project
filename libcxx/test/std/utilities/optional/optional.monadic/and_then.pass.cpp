@@ -304,7 +304,6 @@ constexpr bool test_ref() {
       ASSERT_SAME_TYPE(decltype(i.and_then(l)), std::optional<int>);
     }
   }
-
   // Test && overload
   {
 
