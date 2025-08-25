@@ -3642,9 +3642,9 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
 void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Interleave group being replicated.");
-  assert((!NeedsMaskForGaps || !State.VF.isScalable()) &&
+  assert((!needsMaskForGaps() || !State.VF.isScalable()) &&
          "Masking gaps for scalable vectors is not yet supported.");
-  const InterleaveGroup<Instruction> *Group = IG;
+  const InterleaveGroup<Instruction> *Group = getInterleaveGroup();
   Instruction *Instr = Group->getInsertPos();
 
   // Prepare for the vector type of the interleaved load/store.
@@ -3684,7 +3684,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   // Vectorize the interleaved load group.
   if (isa<LoadInst>(Instr)) {
     Value *MaskForGaps = nullptr;
-    if (NeedsMaskForGaps) {
+    if (needsMaskForGaps()) {
       MaskForGaps =
           createBitMaskForGaps(State.Builder, State.VF.getFixedValue(), *Group);
       assert(MaskForGaps && "Mask for Gaps is required but it is null");
@@ -3761,7 +3761,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   // Vectorize the interleaved store group.
   Value *MaskForGaps =
       createBitMaskForGaps(State.Builder, State.VF.getKnownMinValue(), *Group);
-  assert(((MaskForGaps != nullptr) == NeedsMaskForGaps) &&
+  assert(((MaskForGaps != nullptr) == needsMaskForGaps()) &&
          "Mismatch between NeedsMaskForGaps and MaskForGaps");
   ArrayRef<VPValue *> StoredValues = getStoredValues();
   // Collect the stored vector from each member.
@@ -3812,6 +3812,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
+  const InterleaveGroup<Instruction> *IG = getInterleaveGroup();
   O << Indent << "INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
   IG->getInsertPos()->printAsOperand(O, false);
   O << ", ";
@@ -3844,9 +3845,9 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Interleave group being replicated.");
   assert(State.VF.isScalable() &&
          "Only support scalable VF for EVL tail-folding.");
-  assert(!NeedsMaskForGaps &&
+  assert(!needsMaskForGaps() &&
          "Masking gaps for scalable vectors is not yet supported.");
-  const InterleaveGroup<Instruction> *Group = IG;
+  const InterleaveGroup<Instruction> *Group = getInterleaveGroup();
   Instruction *Instr = Group->getInsertPos();
 
   // Prepare for the vector type of the interleaved load/store.
@@ -3955,6 +3956,7 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInterleaveEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
+  const InterleaveGroup<Instruction> *IG = getInterleaveGroup();
   O << Indent << "INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
   IG->getInsertPos()->printAsOperand(O, false);
   O << ", ";
