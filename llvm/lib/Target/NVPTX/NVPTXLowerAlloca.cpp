@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -68,33 +69,32 @@ bool NVPTXLowerAlloca::runOnModule(Module &M) {
 
 bool NVPTXLowerAlloca::lowerFunctionAllocas(Function &F) {
   SmallVector<AllocaInst *, 16> Allocas;
-  for (auto &BB : F)
-    for (auto &I : BB)
-      if (auto *Alloca = dyn_cast<AllocaInst>(&I))
-        if (Alloca->getAddressSpace() != ADDRESS_SPACE_LOCAL)
-          Allocas.push_back(Alloca);
+  for (auto &I : instructions(F))
+    if (auto *Alloca = dyn_cast<AllocaInst>(&I))
+      if (Alloca->getAddressSpace() != ADDRESS_SPACE_LOCAL)
+        Allocas.push_back(Alloca);
 
   if (Allocas.empty())
     return false;
 
+  IRBuilder<> Builder(F.getContext());
   for (AllocaInst *Alloca : Allocas) {
-    auto *NewAlloca = new AllocaInst(
-        Alloca->getAllocatedType(), ADDRESS_SPACE_LOCAL, Alloca->getArraySize(),
-        Alloca->getAlign(), Alloca->getName());
-    auto *Cast = new AddrSpaceCastInst(
+    Builder.SetInsertPoint(Alloca);
+    auto *NewAlloca =
+        Builder.CreateAlloca(Alloca->getAllocatedType(), ADDRESS_SPACE_LOCAL,
+                             Alloca->getArraySize(), Alloca->getName());
+    NewAlloca->setAlignment(Alloca->getAlign());
+    auto *Cast = Builder.CreateAddrSpaceCast(
         NewAlloca,
         PointerType::get(Alloca->getAllocatedType()->getContext(),
                          ADDRESS_SPACE_GENERIC),
         "");
-    Cast->insertBefore(Alloca->getIterator());
-    NewAlloca->insertBefore(Cast->getIterator());
     for (auto &U : llvm::make_early_inc_range(Alloca->uses())) {
       auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-      if (!II || (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-                  II->getIntrinsicID() != Intrinsic::lifetime_end))
+      if (!II || !II->isLifetimeStartOrEnd())
         continue;
 
-      IRBuilder<> Builder(II);
+      Builder.SetInsertPoint(II);
       Builder.CreateIntrinsic(II->getIntrinsicID(), {NewAlloca->getType()},
                               {NewAlloca});
       II->eraseFromParent();

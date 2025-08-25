@@ -1484,12 +1484,9 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   int64_t NumBytes = MFI.getStackSize();
   if (NumBytes) {
     O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
-      << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";
-    if (static_cast<const NVPTXTargetMachine &>(MF.getTarget())
-            .getPointerSize(ADDRESS_SPACE_LOCAL) == 8)
-      O << "\t.reg .b64 \t%SPL;\n";
-    else
-      O << "\t.reg .b32 \t%SPL;\n";
+      << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n"
+      << "\t.reg .b" << MF.getTarget().getPointerSizeInBits(ADDRESS_SPACE_LOCAL)
+      << " \t%SPL;\n";
   }
 
   // Go through all virtual registers to establish the mapping between the

@@ -47,8 +47,8 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
     // Emits
     //   mov %SPL, %depot;
     // for local address accesses in MF.
-    bool IsLocal64Bit = static_cast<const NVPTXTargetMachine &>(MF.getTarget())
-                            .getPointerSize(NVPTXAS::ADDRESS_SPACE_LOCAL) == 8;
+    bool IsLocal64Bit =
+        MF.getTarget().getPointerSize(NVPTXAS::ADDRESS_SPACE_LOCAL) == 8;
     unsigned MovDepotOpcode =
         (IsLocal64Bit ? NVPTX::MOV_DEPOT_ADDR_64 : NVPTX::MOV_DEPOT_ADDR);
     if (!MR.use_empty(NRI->getFrameLocalRegister(MF))) {
