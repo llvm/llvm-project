@@ -14,6 +14,7 @@ define i32 @test_ctselect_smin_zero(i32 %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a1, a0, 31
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %cmp = icmp slt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 0)
@@ -35,6 +36,7 @@ define i32 @test_ctselect_smax_zero(i32 %x) {
 ; RV32-NEXT:    sgtz a1, a0
 ; RV32-NEXT:    neg a1, a1
 ; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %cmp = icmp sgt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 0)
@@ -217,6 +219,7 @@ define i32 @test_ctselect_sign_extend(i32 %x) {
 ; RV32-LABEL: test_ctselect_sign_extend:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %cmp = icmp slt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 -1, i32 0)
@@ -236,6 +239,7 @@ define i32 @test_ctselect_zero_extend(i32 %x) {
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %cmp = icmp ne i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 1, i32 0)
@@ -250,6 +254,7 @@ define i32 @test_ctselect_constant_folding_true(i32 %a, i32 %b) {
 ;
 ; RV32-LABEL: test_ctselect_constant_folding_true:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
   ret i32 %result
@@ -263,7 +268,7 @@ define i32 @test_ctselect_constant_folding_false(i32 %a, i32 %b) {
 ;
 ; RV32-LABEL: test_ctselect_constant_folding_false:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    or a0, zero, a1
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
   ret i32 %result
@@ -377,6 +382,7 @@ define i64 @test_ctselect_i64_smin_zero(i64 %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srai a1, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    or a0, a0, zero
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_i64_smin_zero:
