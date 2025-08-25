@@ -207,15 +207,15 @@ private:
 
   template <typename KeyArgT, typename... Ts>
   std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
-    auto Result = Map.try_emplace(Key);
-    if (Result.second) {
-      Result.first->second = Vector.size();
+    auto [It, Inserted] = Map.try_emplace(Key);
+    if (Inserted) {
+      It->second = Vector.size();
       Vector.emplace_back(std::piecewise_construct,
                           std::forward_as_tuple(std::forward<KeyArgT>(Key)),
                           std::forward_as_tuple(std::forward<Ts>(Args)...));
       return {std::prev(end()), true};
     }
-    return {begin() + Result.first->second, false};
+    return {begin() + It->second, false};
   }
 };
 
