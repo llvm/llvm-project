@@ -122,14 +122,14 @@ AST_MATCHER(EnumDecl, hasSequentialInitialValues) {
   return !AllEnumeratorsArePowersOfTwo;
 }
 
-std::string getName(const EnumDecl *Decl) {
+} // namespace
+
+static std::string getName(const EnumDecl *Decl) {
   if (!Decl->getDeclName())
     return "<unnamed>";
 
   return Decl->getQualifiedNameAsString();
 }
-
-} // namespace
 
 EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
                                              ClangTidyContext *Context)

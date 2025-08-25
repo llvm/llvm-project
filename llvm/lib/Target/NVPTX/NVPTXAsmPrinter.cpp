@@ -436,9 +436,13 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
 
   if (STI->getSmVersion() >= 90) {
     const auto ClusterDim = getClusterDim(F);
+    const bool BlocksAreClusters = hasBlocksAreClusters(F);
 
     if (!ClusterDim.empty()) {
-      O << ".explicitcluster\n";
+
+      if (!BlocksAreClusters)
+        O << ".explicitcluster\n";
+
       if (ClusterDim[0] != 0) {
         assert(llvm::all_of(ClusterDim, [](unsigned D) { return D != 0; }) &&
                "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
@@ -452,6 +456,21 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
                "should be 0 as well");
       }
     }
+
+    if (BlocksAreClusters) {
+      LLVMContext &Ctx = F.getContext();
+      if (ReqNTID.empty() || ClusterDim.empty())
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "blocksareclusters requires reqntid and cluster_dim attributes",
+            F.getSubprogram()));
+      else if (STI->getPTXVersion() < 90)
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "blocksareclusters requires PTX version >= 9.0",
+            F.getSubprogram()));
+      else
+        O << ".blocksareclusters\n";
+    }
+
     if (const auto Maxclusterrank = getMaxClusterRank(F))
       O << ".maxclusterrank " << *Maxclusterrank << "\n";
   }

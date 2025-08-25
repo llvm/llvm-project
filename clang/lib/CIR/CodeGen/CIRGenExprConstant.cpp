@@ -578,8 +578,7 @@ ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitStringLiteral(const StringLiteral *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: string literal");
-  return {};
+  return cgm.getAddrOfConstantStringFromLiteral(e);
 }
 
 ConstantLValue

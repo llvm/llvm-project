@@ -2776,23 +2776,22 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case UserDefinedLiteralClass: {
     // If this is a direct call, get the callee.
     const CallExpr *CE = cast<CallExpr>(this);
-    if (const Decl *FD = CE->getCalleeDecl()) {
-      // If the callee has attribute pure, const, or warn_unused_result, warn
-      // about it. void foo() { strlen("bar"); } should warn.
-      //
-      // Note: If new cases are added here, DiagnoseUnusedExprResult should be
-      // updated to match for QoI.
-      if (CE->hasUnusedResultAttr(Ctx) ||
-          FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>()) {
-        WarnE = this;
-        Loc = CE->getCallee()->getBeginLoc();
-        R1 = CE->getCallee()->getSourceRange();
+    // If the callee has attribute pure, const, or warn_unused_result, warn
+    // about it. void foo() { strlen("bar"); } should warn.
+    // Note: If new cases are added here, DiagnoseUnusedExprResult should be
+    // updated to match for QoI.
+    const Decl *FD = CE->getCalleeDecl();
+    bool PureOrConst =
+        FD && (FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>());
+    if (CE->hasUnusedResultAttr(Ctx) || PureOrConst) {
+      WarnE = this;
+      Loc = getBeginLoc();
+      R1 = getSourceRange();
 
-        if (unsigned NumArgs = CE->getNumArgs())
-          R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
-                           CE->getArg(NumArgs - 1)->getEndLoc());
-        return true;
-      }
+      if (unsigned NumArgs = CE->getNumArgs())
+        R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                         CE->getArg(NumArgs - 1)->getEndLoc());
+      return true;
     }
     return false;
   }
@@ -3532,6 +3531,56 @@ bool CallExpr::isBuiltinAssumeFalse(const ASTContext &Ctx) const {
   bool ArgVal;
   return !Arg->isValueDependent() &&
          Arg->EvaluateAsBooleanCondition(ArgVal, Ctx) && !ArgVal;
+}
+
+const AllocSizeAttr *CallExpr::getCalleeAllocSizeAttr() const {
+  if (const FunctionDecl *DirectCallee = getDirectCallee())
+    return DirectCallee->getAttr<AllocSizeAttr>();
+  if (const Decl *IndirectCallee = getCalleeDecl())
+    return IndirectCallee->getAttr<AllocSizeAttr>();
+  return nullptr;
+}
+
+std::optional<llvm::APInt>
+CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
+  const AllocSizeAttr *AllocSize = getCalleeAllocSizeAttr();
+
+  assert(AllocSize && AllocSize->getElemSizeParam().isValid());
+  unsigned SizeArgNo = AllocSize->getElemSizeParam().getASTIndex();
+  unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
+  if (getNumArgs() <= SizeArgNo)
+    return {};
+
+  auto EvaluateAsSizeT = [&](const Expr *E, llvm::APSInt &Into) {
+    Expr::EvalResult ExprResult;
+    if (E->isValueDependent() ||
+        !E->EvaluateAsInt(ExprResult, Ctx, Expr::SE_AllowSideEffects))
+      return false;
+    Into = ExprResult.Val.getInt();
+    if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
+      return false;
+    Into = Into.zext(BitsInSizeT);
+    return true;
+  };
+
+  llvm::APSInt SizeOfElem;
+  if (!EvaluateAsSizeT(getArg(SizeArgNo), SizeOfElem))
+    return {};
+
+  if (!AllocSize->getNumElemsParam().isValid())
+    return SizeOfElem;
+
+  llvm::APSInt NumberOfElems;
+  unsigned NumArgNo = AllocSize->getNumElemsParam().getASTIndex();
+  if (!EvaluateAsSizeT(getArg(NumArgNo), NumberOfElems))
+    return {};
+
+  bool Overflow;
+  llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
+  if (Overflow)
+    return {};
+
+  return BytesAvailable;
 }
 
 bool CallExpr::isCallToStdMove() const {
