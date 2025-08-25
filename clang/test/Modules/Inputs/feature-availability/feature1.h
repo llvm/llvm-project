@@ -1,7 +1,7 @@
 #ifndef FEATURE1_H
 #define FEATURE1_H
-#include <feature-availability.h>
+#include <availability_domain.h>
 
-static struct __AvailabilityDomain feature1 __attribute__((availability_domain(feature1))) = {__AVAILABILITY_DOMAIN_ENABLED, 0};
+CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
 
 #endif

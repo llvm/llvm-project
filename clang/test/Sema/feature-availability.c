@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -ffeature-availability=feature1:1 -ffeature-availability=feature2:0 -ffeature-availability=feature3:on -fsyntax-only -Wunreachable-code -verify %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -fsyntax-only -Wunreachable-code -verify -DUSE_DOMAIN %s
 
-#include <feature-availability.h>
+#include <availability_domain.h>
 
 #define AVAIL 0
 #define UNAVAIL 1
@@ -9,10 +9,10 @@
 
 #ifdef USE_DOMAIN
 int pred1(void);
-static struct __AvailabilityDomain __feature1 __attribute__((availability_domain(feature1))) = {__AVAILABILITY_DOMAIN_ENABLED, 0};
-static struct __AvailabilityDomain __feature2 __attribute__((availability_domain(feature2))) = {__AVAILABILITY_DOMAIN_DISABLED, 0};
-static struct __AvailabilityDomain __feature3 __attribute__((availability_domain(feature3))) = {__AVAILABILITY_DOMAIN_ENABLED, 0};
-static struct __AvailabilityDomain __feature4 __attribute__((availability_domain(feature4))) = {__AVAILABILITY_DOMAIN_DYNAMIC, pred1};
+CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
+CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
+CLANG_ENABLED_AVAILABILITY_DOMAIN(feature3);
+CLANG_DYNAMIC_AVAILABILITY_DOMAIN(feature4, pred1);
 #endif
 
 #pragma clang attribute push (__attribute__((availability(domain:feature1, AVAIL))), apply_to=any(function))

@@ -345,6 +345,11 @@ module feature_availability {
   export *
 }
 
+module availability_domain {
+  header "availability_domain.h"
+  export *
+}
+
 /* TO_UPSTREAM(BoundsSafety) ON */
 module ptrcheck {
   header "ptrcheck.h"
