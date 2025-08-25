@@ -11,7 +11,6 @@
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -annotate-static-data-prefix \
 ; RUN: -print-static-data-prefix -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,CHECK
 
-
 ; LOG: Global variable .str has no section prefix
 ; LOG: Global variable var1 has section prefix: hot
 ; LOG: Global variable var2.llvm.125 has section prefix: hot
