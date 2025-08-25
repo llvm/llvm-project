@@ -50,6 +50,7 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+
 /// Replace a select operand based on an equality comparison with the identity
 /// constant of a binop.
 static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
@@ -1712,6 +1713,7 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
   if (Pred == CmpInst::ICMP_ULT && match(X, m_Add(m_Value(), m_Constant())))
     return nullptr;
 
+
   Value *SelVal0, *SelVal1; // We do not care which one is from where.
   match(&Sel, m_Select(m_Value(), m_Value(SelVal0), m_Value(SelVal1)));
   // At least one of these values we are selecting between must be a constant
@@ -2065,7 +2067,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *Folded =
           foldICmpUSubSatWithAndForMostSignificantBitCmp(SI, ICI, Builder))
     return Folded;
-  ;
 
   // NOTE: if we wanted to, this is where to detect integer MIN/MAX
   bool Changed = false;
