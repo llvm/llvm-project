@@ -959,8 +959,8 @@ static Constant *getLosslessInvCast(Constant *C, Type *InvCastTo,
     auto *InvC = ConstantExpr::getTrunc(C, InvCastTo);
     auto *CastInvC = ConstantFoldCastOperand(CastOp, InvC, C->getType(), DL);
     // Must satisfy CastOp(InvC) == C.
-    if (!CastInvC || CastInvC != C) 
-        return nullptr;
+    if (!CastInvC || CastInvC != C)
+      return nullptr;
     if (CastOp == Instruction::ZExt) {
       auto *SExtInvC =
           ConstantFoldCastOperand(Instruction::SExt, InvC, C->getType(), DL);
