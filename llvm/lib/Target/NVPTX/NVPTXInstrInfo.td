@@ -897,6 +897,9 @@ let Predicates = [hasOptEnabled] in {
   defm MAD_LO_S16 : MADInst<"lo.s16", mul, I16RT, I16RT>;
   defm MAD_LO_S32 : MADInst<"lo.s32", mul, I32RT, I32RT>;
   defm MAD_LO_S64 : MADInst<"lo.s64", mul, I64RT, I64RT>;
+
+  // Generating mad.wide causes a regression: 
+  // https://github.com/llvm/llvm-project/pull/150477#issuecomment-3191367837
 }
 
 //-----------------------------------
