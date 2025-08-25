@@ -729,6 +729,23 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   if (FD->getName() != TargetInfo.getTargetOpts().HLSLEntry)
     return;
 
+  // If we have specified a root signature to override the entry function then
+  // attach it now
+  if (RootSigOverrideIdent) {
+    LookupResult R(SemaRef, RootSigOverrideIdent, SourceLocation(),
+                   Sema::LookupOrdinaryName);
+    if (SemaRef.LookupQualifiedName(R, FD->getDeclContext()))
+      if (auto *SignatureDecl =
+              dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
+        FD->dropAttr<RootSignatureAttr>();
+        // We could look up the SourceRange of the macro here as well
+        AttributeCommonInfo AL(RootSigOverrideIdent, AttributeScopeInfo(),
+                               SourceRange(), ParsedAttr::Form::Microsoft());
+        FD->addAttr(::new (getASTContext()) RootSignatureAttr(
+            getASTContext(), AL, RootSigOverrideIdent, SignatureDecl));
+      }
+  }
+
   llvm::Triple::EnvironmentType Env = TargetInfo.getTriple().getEnvironment();
   if (HLSLShaderAttr::isValidShaderType(Env) && Env != llvm::Triple::Library) {
     if (const auto *Shader = FD->getAttr<HLSLShaderAttr>()) {
