@@ -31,6 +31,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <filesystem>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -368,8 +369,14 @@ void elf::parseFiles(Ctx &ctx,
 
 // Concatenates arguments to construct a string representing an error location.
 StringRef InputFile::getNameForScript() const {
-  if (archiveName.empty())
-    return getName();
+  if (archiveName.empty()) {
+    if (std::filesystem::current_path() ==
+        std::filesystem::path(getName().str()).parent_path()) {
+      return llvm::sys::path::filename(getName());
+    } else {
+      return getName();
+    }
+  }
 
   if (nameForScriptCache.empty())
     nameForScriptCache = (archiveName + Twine(':') + getName()).str();
