@@ -340,7 +340,8 @@ public:
   virtual void execute(VPTransformState *State) = 0;
 
   /// Return the cost of the block.
-  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
+  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx,
+                               bool CountsVecCalcOnly = false) = 0;
 
   /// Return true if it is legal to hoist instructions into this block.
   bool isLegalToHoistInto() {
@@ -3716,7 +3717,8 @@ public:
   void execute(VPTransformState *State) override;
 
   /// Return the cost of this VPBasicBlock.
-  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx,
+                       bool CountsVecCalcOnly) override;
 
   /// Return the position of the first non-phi node recipe in the block.
   iterator getFirstNonPhi();
@@ -3897,7 +3899,8 @@ public:
   void execute(VPTransformState *State) override;
 
   // Return the cost of this region.
-  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx,
+                       bool CountsVecCalcOnly) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPRegionBlock to \p O (recursively), prefixing all lines with
@@ -4022,7 +4025,8 @@ public:
   void execute(VPTransformState *State);
 
   /// Return the cost of this plan.
-  InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx,
+                       bool CountsVecCalcOnly = false);
 
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
