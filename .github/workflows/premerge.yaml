@@ -44,7 +44,7 @@ jobs:
       - name: Debug
         run: |
           ls -ltr /usr/bin/sh
-      -name: Debug
+      - name: Debug
         run: |
           git diff --name-only HEAD~1...HEAD
           python3 .ci/compute_projects.py
