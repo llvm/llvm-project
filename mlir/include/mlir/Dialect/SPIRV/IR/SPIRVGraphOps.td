@@ -45,10 +45,15 @@ def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
     This op declares or defines a SPIR-V graph using one region, which
     contains one or more blocks.
 
-    Different from the SPIR-V binary format, this op is not allowed to
-    implicitly capture global values, and all external references must use
-    function arguments or symbol references. This op itself defines a symbol
-    that is unique in the enclosing module op.
+    This op is not allowed to implicitly capture global values, and all external
+    references must use function arguments or symbol references. This op itself
+    defines a symbol that is unique in the enclosing module op.
+
+    Note that this op does not have a 1:1 mapping to the SPIR-V ops representing
+    a graph. Indeed during serialization a single GraphARMOp is serialized into
+    several different SPIR-V ops: OpGraphARM, OpGraphInputARM and OpGraphEndARM.
+    There are as many occurences of OpGraphInputARM ops as many inputs in the
+    graph. Deserialization maps that set of operations into a single GraphARMOp.
 
     This op itself takes no operands and generates no results. Its region
     can take zero or more arguments and return one or more values.
