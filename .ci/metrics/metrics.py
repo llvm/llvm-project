@@ -350,7 +350,6 @@ def github_get_metrics(
                         name_prefix + "_" + GITHUB_JOB_TO_TRACK[name_prefix][job_key]
                     )
 
-
             if task.status != "completed":
                 if job.status == "queued":
                     queued_count[metric_name] += 1
