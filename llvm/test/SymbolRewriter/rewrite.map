@@ -65,6 +65,16 @@ global variable: {
 }
 
 function: {
-  source: ?source_bad.$regex_function,
+  source: ?source_bad_regex_function,
   target: target_bad_regex_function,
+}
+
+global variable: {
+  source: ?source_bad_regex_variable,
+  target: target_bad_regex_variable,
+}
+
+global alias: {
+  source: ?source_bad_regex_alias,
+  target: target_bad_regex_alias,
 }
