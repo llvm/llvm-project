@@ -19,10 +19,9 @@
 
 using std::optional;
 
-struct X
-{
-    int test() noexcept {return 3;}
-    int test() const noexcept {return 3;}
+struct X {
+  int test() noexcept { return 3; }
+  int test() const noexcept { return 3; }
 };
 
 struct Y

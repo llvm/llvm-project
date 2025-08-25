@@ -78,7 +78,7 @@ int main(int, char**)
       assert(X::dtor_called == false);
       assert(static_cast<bool>(opt) == false);
     }
-#endif 
+#endif
 
-  return 0;
+    return 0;
 }

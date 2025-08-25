@@ -279,8 +279,7 @@ constexpr void test_with_ref() {
     assert(static_cast<bool>(opt) == false);
   }
 }
-#endif 
-
+#endif
 
 int main(int, char**)
 {

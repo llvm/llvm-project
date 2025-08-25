@@ -45,21 +45,21 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 26
     {
-        X x{};
-        const optional<X&> opt{x};
-        ASSERT_SAME_TYPE(decltype(*opt), X&);
-        ASSERT_NOEXCEPT(*opt);
+      X x{};
+      const optional<X&> opt{x};
+      ASSERT_SAME_TYPE(decltype(*opt), X&);
+      ASSERT_NOEXCEPT(*opt);
     }
     {
-        X x{};
-        const optional<const X&> opt{x};
-        ASSERT_SAME_TYPE(decltype(*opt), const X&);
-        ASSERT_NOEXCEPT(*opt);
+      X x{};
+      const optional<const X&> opt{x};
+      ASSERT_SAME_TYPE(decltype(*opt), const X&);
+      ASSERT_NOEXCEPT(*opt);
     }
     {
-        static constexpr X x{};
-        constexpr optional<const X&> opt(x);
-        static_assert((*opt).test() == 3, "");
+      static constexpr X x{};
+      constexpr optional<const X&> opt(x);
+      static_assert((*opt).test() == 3, "");
     }
 #endif
     {
