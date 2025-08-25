@@ -5838,10 +5838,9 @@ entry:
 define i1 @icmp_freeze_sext(i16 %x, i16 %y) {
 ; CHECK-LABEL: define i1 @icmp_freeze_sext(
 ; CHECK-SAME: i16 [[X:%.*]], i16 [[Y:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP1_FR:%.*]] = freeze i1 [[CMP1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[Y]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = or i1 [[TMP1]], [[CMP1_FR]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i16 [[Y]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i16 [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i16 [[X_FR]], [[Y_FR]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp uge i16 %x, %y

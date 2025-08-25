@@ -163,8 +163,9 @@ define float @freeze_sqrt(float %arg) {
 define float @freeze_powi(float %arg0, i32 %arg1) {
 ; CHECK-LABEL: define float @freeze_powi(
 ; CHECK-SAME: float [[ARG0:%.*]], i32 [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0]]
+; CHECK-NEXT:    [[ARG1_FR:%.*]] = freeze i32 [[ARG1]]
+; CHECK-NEXT:    [[FREEZE:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0_FR]], i32 [[ARG1_FR]])
 ; CHECK-NEXT:    ret float [[FREEZE]]
 ;
   %op = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
