@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
+// RUN:  -Wno-alloc-size \
 // RUN:  -verify=newdelete \
 // RUN:  -analyzer-checker=core \
 // RUN:  -analyzer-checker=cplusplus.NewDelete
@@ -6,11 +7,13 @@
 // leak-no-diagnostics
 
 // RUN: %clang_analyze_cc1 -std=c++11 -DLEAKS -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 
 // RUN: %clang_analyze_cc1 -std=c++11 -DLEAKS -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=mismatch \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.MismatchedDeallocator
