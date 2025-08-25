@@ -311,12 +311,12 @@ llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
     // Force conversion of all the relevant record types, to make sure
     // we re-convert the FunctionType when appropriate.
-    if (const RecordType *RT = FT->getReturnType()->getAs<RecordType>())
-      ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+    if (const auto *RD = FT->getReturnType()->getAsRecordDecl())
+      ConvertRecordDeclType(RD);
     if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT))
       for (unsigned i = 0, e = FPT->getNumParams(); i != e; i++)
-        if (const RecordType *RT = FPT->getParamType(i)->getAs<RecordType>())
-          ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+        if (const auto *RD = FPT->getParamType(i)->getAsRecordDecl())
+          ConvertRecordDeclType(RD);
 
     SkippedLayout = true;
 
@@ -875,10 +875,8 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
 
   // Records are non-zero-initializable if they contain any
   // non-zero-initializable subobjects.
-  if (const RecordType *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *RD = T->getAsRecordDecl())
     return isZeroInitializable(RD);
-  }
 
   // We have to ask the ABI about member pointers.
   if (const MemberPointerType *MPT = T->getAs<MemberPointerType>())

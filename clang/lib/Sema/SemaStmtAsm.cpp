@@ -944,16 +944,15 @@ Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member,
         /*FirstQualifierFoundInScope=*/nullptr, NameInfo, /*TemplateArgs=*/nullptr);
   }
 
-  const RecordType *RT = T->getAs<RecordType>();
+  auto *RD = T->getAsRecordDecl();
   // FIXME: Diagnose this as field access into a scalar type.
-  if (!RT)
+  if (!RD)
     return ExprResult();
 
   LookupResult FieldResult(*this, &Context.Idents.get(Member), AsmLoc,
                            LookupMemberName);
 
-  if (!LookupQualifiedName(FieldResult,
-                           RT->getOriginalDecl()->getDefinitionOrSelf()))
+  if (!LookupQualifiedName(FieldResult, RD))
     return ExprResult();
 
   // Only normal and indirect field results will work.

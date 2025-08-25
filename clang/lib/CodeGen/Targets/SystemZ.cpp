@@ -452,10 +452,9 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*ByVal=*/false);
 
   // Handle small structures.
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     // Structures with flexible arrays have variable length, so really
     // fail the size test above.
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->hasFlexibleArrayMember())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
@@ -525,8 +524,7 @@ bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
   if (Ty->isVectorType() && Ctx.getTypeSize(Ty) / 8 >= 16)
       return true;
 
-  if (const auto *RecordTy = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
       if (CXXRD->hasDefinition())
         for (const auto &I : CXXRD->bases())

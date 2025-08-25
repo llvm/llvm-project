@@ -1207,9 +1207,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
     // those because they are always unnamed.
     bool IsZeroSize = Field->isZeroSize(Context);
 
-    if (const auto *RecordTy = T->getAs<RecordType>()) {
-      auto *FieldRec = cast<CXXRecordDecl>(RecordTy->getOriginalDecl());
-      if (FieldRec->getDefinition()) {
+    if (auto *FieldRec = T->getAsCXXRecordDecl()) {
+      if (FieldRec->isBeingDefined() || FieldRec->isCompleteDefinition()) {
         addedClassSubobject(FieldRec);
 
         // We may need to perform overload resolution to determine whether a
@@ -1908,15 +1907,14 @@ static void CollectVisibleConversions(
 
   // Collect information recursively from any base classes.
   for (const auto &I : Record->bases()) {
-    const auto *RT = I.getType()->getAs<RecordType>();
-    if (!RT) continue;
+    const auto *Base = I.getType()->getAsCXXRecordDecl();
+    if (!Base)
+      continue;
 
     AccessSpecifier BaseAccess
       = CXXRecordDecl::MergeAccess(Access, I.getAccessSpecifier());
     bool BaseInVirtual = InVirtual || I.isVirtual();
 
-    auto *Base =
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
     CollectVisibleConversions(Context, Base, BaseInVirtual, BaseAccess,
                               *HiddenTypes, Output, VOutput, HiddenVBaseCs);
   }
@@ -1951,14 +1949,13 @@ static void CollectVisibleConversions(ASTContext &Context,
 
   // Recursively collect conversions from base classes.
   for (const auto &I : Record->bases()) {
-    const auto *RT = I.getType()->getAs<RecordType>();
-    if (!RT) continue;
+    const auto *Base = I.getType()->getAsCXXRecordDecl();
+    if (!Base)
+      continue;
 
-    CollectVisibleConversions(
-        Context,
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf(),
-        I.isVirtual(), I.getAccessSpecifier(), HiddenTypes, Output, VBaseCs,
-        HiddenVBaseCs);
+    CollectVisibleConversions(Context, Base, I.isVirtual(),
+                              I.getAccessSpecifier(), HiddenTypes, Output,
+                              VBaseCs, HiddenVBaseCs);
   }
 
   // Add any unhidden conversions provided by virtual bases.
@@ -2472,11 +2469,9 @@ CXXMethodDecl::getCorrespondingMethodInClass(const CXXRecordDecl *RD,
   };
 
   for (const auto &I : RD->bases()) {
-    const RecordType *RT = I.getType()->getAs<RecordType>();
-    if (!RT)
+    const auto *Base = I.getType()->getAsCXXRecordDecl();
+    if (!Base)
       continue;
-    const auto *Base =
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
     if (CXXMethodDecl *D = this->getCorrespondingMethodInClass(Base))
       AddFinalOverrider(D);
   }

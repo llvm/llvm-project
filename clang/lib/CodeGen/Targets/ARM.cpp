@@ -718,9 +718,8 @@ bool ARMABIInfo::containsAnyFP16Vectors(QualType Ty) const {
     if (NElements == 0)
       return false;
     return containsAnyFP16Vectors(AT->getElementType());
-  } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-
+  }
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     // If this is a C++ record, check the bases first.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
       if (llvm::any_of(CXXRD->bases(), [this](const CXXBaseSpecifier &B) {

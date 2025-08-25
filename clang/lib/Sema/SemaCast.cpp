@@ -595,13 +595,11 @@ static void diagnoseBadCast(Sema &S, unsigned msg, CastType castType,
     DifferentPtrness--;
   }
   if (!DifferentPtrness) {
-    auto RecFrom = From->getAs<RecordType>();
-    auto RecTo = To->getAs<RecordType>();
-    if (RecFrom && RecTo) {
-      auto DeclFrom = RecFrom->getAsCXXRecordDecl();
+    if (auto *DeclFrom = From->getAsCXXRecordDecl(),
+        *DeclTo = To->getAsCXXRecordDecl();
+        DeclFrom && DeclTo) {
       if (!DeclFrom->isCompleteDefinition())
         S.Diag(DeclFrom->getLocation(), diag::note_type_incomplete) << DeclFrom;
-      auto DeclTo = RecTo->getAsCXXRecordDecl();
       if (!DeclTo->isCompleteDefinition())
         S.Diag(DeclTo->getLocation(), diag::note_type_incomplete) << DeclTo;
     }
@@ -1454,7 +1452,7 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // C++0x 5.2.9p9: A value of a scoped enumeration type can be explicitly
   // converted to an integral type. [...] A value of a scoped enumeration type
   // can also be explicitly converted to a floating-point type [...].
-  if (const EnumType *Enum = SrcType->getAs<EnumType>()) {
+  if (const EnumType *Enum = dyn_cast<EnumType>(SrcType)) {
     if (Enum->getOriginalDecl()->isScoped()) {
       if (DestType->isBooleanType()) {
         Kind = CK_IntegralToBoolean;
@@ -1581,11 +1579,11 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
 
   // See if it looks like the user is trying to convert between
   // related record types, and select a better diagnostic if so.
-  if (auto SrcPointer = SrcType->getAs<PointerType>())
-    if (auto DestPointer = DestType->getAs<PointerType>())
-      if (SrcPointer->getPointeeType()->getAs<RecordType>() &&
-          DestPointer->getPointeeType()->getAs<RecordType>())
-       msg = diag::err_bad_cxx_cast_unrelated_class;
+  if (const auto *SrcPointer = SrcType->getAs<PointerType>())
+    if (const auto *DestPointer = DestType->getAs<PointerType>())
+      if (SrcPointer->getPointeeType()->isRecordType() &&
+          DestPointer->getPointeeType()->isRecordType())
+        msg = diag::err_bad_cxx_cast_unrelated_class;
 
   if (SrcType->isMatrixType() && DestType->isMatrixType()) {
     if (Self.CheckMatrixCast(OpRange, DestType, SrcType, Kind)) {

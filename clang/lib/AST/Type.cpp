@@ -113,10 +113,8 @@ const IdentifierInfo *QualType::getBaseTypeIdentifier() const {
     return DNT->getIdentifier();
   if (ty->isPointerOrReferenceType())
     return ty->getPointeeType().getBaseTypeIdentifier();
-  if (ty->isRecordType())
-    ND = ty->castAs<RecordType>()->getOriginalDecl();
-  else if (ty->isEnumeralType())
-    ND = ty->castAs<EnumType>()->getOriginalDecl();
+  if (const auto *TT = ty->getAs<TagType>())
+    ND = TT->getOriginalDecl();
   else if (ty->getTypeClass() == Type::Typedef)
     ND = ty->castAs<TypedefType>()->getDecl();
   else if (ty->isArrayType())
@@ -2459,8 +2457,8 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
 /// includes union types.
 bool Type::isAggregateType() const {
   if (const auto *Record = dyn_cast<RecordType>(CanonicalType)) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(
-            Record->getOriginalDecl()->getDefinitionOrSelf()))
+    if (const auto *ClassDecl =
+            dyn_cast<CXXRecordDecl>(Record->getOriginalDecl()))
       return ClassDecl->isAggregate();
 
     return true;
@@ -2573,7 +2571,7 @@ bool Type::isAlwaysIncompleteType() const {
 
   // Forward declarations of structs, classes, enums, and unions could be later
   // completed in a compilation unit by providing a type definition.
-  if (getAsTagDecl())
+  if (isa<TagType>(CanonicalType))
     return false;
 
   // Other types are incompletable.
@@ -2797,7 +2795,7 @@ bool QualType::isCXX98PODType(const ASTContext &Context) const {
   case Type::Record:
     if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(
             cast<RecordType>(CanonicalType)->getOriginalDecl()))
-      return ClassDecl->getDefinitionOrSelf()->isPOD();
+      return ClassDecl->isPOD();
 
     // C struct/union is POD.
     return true;
@@ -2837,22 +2835,21 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
   // As an extension, Clang treats vector types as Scalar types.
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
     return true;
-  if (const auto *RT = CanonicalType->getAs<RecordType>()) {
-    if (const auto *ClassDecl =
-            dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
-      // C++20 [class]p6:
-      //   A trivial class is a class that is trivially copyable, and
-      //     has one or more eligible default constructors such that each is
-      //     trivial.
-      // FIXME: We should merge this definition of triviality into
-      // CXXRecordDecl::isTrivial. Currently it computes the wrong thing.
-      return ClassDecl->hasTrivialDefaultConstructor() &&
-             !ClassDecl->hasNonTrivialDefaultConstructor() &&
-             ClassDecl->isTriviallyCopyable();
-    }
 
-    return true;
+  if (const auto *ClassDecl = CanonicalType->getAsCXXRecordDecl()) {
+    // C++20 [class]p6:
+    //   A trivial class is a class that is trivially copyable, and
+    //     has one or more eligible default constructors such that each is
+    //     trivial.
+    // FIXME: We should merge this definition of triviality into
+    // CXXRecordDecl::isTrivial. Currently it computes the wrong thing.
+    return ClassDecl->hasTrivialDefaultConstructor() &&
+           !ClassDecl->hasNonTrivialDefaultConstructor() &&
+           ClassDecl->isTriviallyCopyable();
   }
+
+  if (isa<RecordType>(CanonicalType))
+    return true;
 
   // No other types can match.
   return false;
@@ -2897,18 +2894,13 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType->isMFloat8Type())
     return true;
 
-  if (const auto *RT = CanonicalType->getAs<RecordType>()) {
-    if (const auto *ClassDecl =
-            dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
-      if (IsCopyConstructible) {
+  if (const auto *RD = CanonicalType->getAsRecordDecl()) {
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RD)) {
+      if (IsCopyConstructible)
         return ClassDecl->isTriviallyCopyConstructible();
-      } else {
-        return ClassDecl->isTriviallyCopyable();
-      }
+      return ClassDecl->isTriviallyCopyable();
     }
-    return !RT->getOriginalDecl()
-                ->getDefinitionOrSelf()
-                ->isNonTrivialToPrimitiveCopy();
+    return !RD->isNonTrivialToPrimitiveCopy();
   }
   // No other types can match.
   return false;
@@ -2996,11 +2988,9 @@ bool QualType::isWebAssemblyFuncrefType() const {
 
 QualType::PrimitiveDefaultInitializeKind
 QualType::isNonTrivialToPrimitiveDefaultInitialize() const {
-  if (const auto *RT =
-          getTypePtr()->getBaseElementTypeUnsafe()->getAs<RecordType>())
-    if (RT->getOriginalDecl()
-            ->getDefinitionOrSelf()
-            ->isNonTrivialToPrimitiveDefaultInitialize())
+  if (const auto *RD =
+          getTypePtr()->getBaseElementTypeUnsafe()->getAsRecordDecl())
+    if (RD->isNonTrivialToPrimitiveDefaultInitialize())
       return PDIK_Struct;
 
   switch (getQualifiers().getObjCLifetime()) {
@@ -3014,11 +3004,9 @@ QualType::isNonTrivialToPrimitiveDefaultInitialize() const {
 }
 
 QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
-  if (const auto *RT =
-          getTypePtr()->getBaseElementTypeUnsafe()->getAs<RecordType>())
-    if (RT->getOriginalDecl()
-            ->getDefinitionOrSelf()
-            ->isNonTrivialToPrimitiveCopy())
+  if (const auto *RD =
+          getTypePtr()->getBaseElementTypeUnsafe()->getAsRecordDecl())
+    if (RD->isNonTrivialToPrimitiveCopy())
       return PCK_Struct;
 
   Qualifiers Qs = getQualifiers();
@@ -3075,7 +3063,7 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   if (BaseTy->isReferenceType())
     return true;
   //    -- a class type that has all of the following properties:
-  if (const auto *RT = BaseTy->getAs<RecordType>()) {
+  if (const auto *RD = BaseTy->getAsRecordDecl()) {
     //    -- a trivial destructor,
     //    -- every constructor call and full-expression in the
     //       brace-or-equal-initializers for non-static data members (if any)
@@ -3086,8 +3074,8 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
     //    -- all non-static data members and base classes of literal types
     //
     // We resolve DR1361 by ignoring the second bullet.
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
-      return ClassDecl->getDefinitionOrSelf()->isLiteral();
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RD))
+      return ClassDecl->isLiteral();
 
     return true;
   }
@@ -3139,10 +3127,10 @@ bool Type::isStandardLayoutType() const {
   // As an extension, Clang treats vector types as Scalar types.
   if (BaseTy->isScalarType() || BaseTy->isVectorType())
     return true;
-  if (const auto *RT = BaseTy->getAs<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
-      if (!ClassDecl->getDefinitionOrSelf()->isStandardLayout())
-        return false;
+  if (const auto *RD = BaseTy->getAsRecordDecl()) {
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RD);
+        ClassDecl && !ClassDecl->isStandardLayout())
+      return false;
 
     // Default to 'true' for non-C++ class types.
     // FIXME: This is a bit dubious, but plain C structs should trivially meet
@@ -3182,10 +3170,8 @@ bool QualType::isCXX11PODType(const ASTContext &Context) const {
   // As an extension, Clang treats vector types as Scalar types.
   if (BaseTy->isScalarType() || BaseTy->isVectorType())
     return true;
-  if (const auto *RT = BaseTy->getAs<RecordType>()) {
-    if (const auto *ClassDecl =
-            dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
-      ClassDecl = ClassDecl->getDefinitionOrSelf();
+  if (const auto *RD = BaseTy->getAsRecordDecl()) {
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RD)) {
       // C++11 [class]p10:
       //   A POD struct is a non-union class that is both a trivial class [...]
       if (!ClassDecl->isTrivial())
@@ -5503,8 +5489,7 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
     return DK_objc_weak_lifetime;
   }
 
-  if (const auto *RT = type->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl();
+  if (const auto *RD = type->getBaseElementTypeUnsafe()->getAsRecordDecl()) {
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       /// Check if this is a C++ object with a non-trivial destructor.
       if (CXXRD->hasDefinition() && !CXXRD->hasTrivialDestructor())
@@ -5512,7 +5497,7 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
     } else {
       /// Check if this is a C struct that is non-trivial to destroy or an array
       /// that contains such a struct.
-      if (RD->getDefinitionOrSelf()->isNonTrivialToPrimitiveDestroy())
+      if (RD->isNonTrivialToPrimitiveDestroy())
         return DK_nontrivial_c_struct;
     }
   }
