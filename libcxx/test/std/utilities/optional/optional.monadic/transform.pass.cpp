@@ -238,7 +238,7 @@ constexpr bool test_ref() {
     }
   }
   // const& overload
-  { 
+  {
     // Without & qualifier on F's operator()
     {
       int i = 42;
