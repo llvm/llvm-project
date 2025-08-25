@@ -44,28 +44,6 @@ public:
   using reverse_iterator = typename VectorType::reverse_iterator;
   using const_reverse_iterator = typename VectorType::const_reverse_iterator;
 
-private:
-  MapType Map;
-  VectorType Vector;
-
-  static_assert(
-      std::is_integral_v<typename MapType::mapped_type>,
-      "The mapped_type of the specified Map must be an integral type");
-
-  template <typename KeyArgT, typename... Ts>
-  std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
-    auto Result = Map.try_emplace(Key);
-    if (Result.second) {
-      Result.first->second = Vector.size();
-      Vector.emplace_back(std::piecewise_construct,
-                          std::forward_as_tuple(std::forward<KeyArgT>(Key)),
-                          std::forward_as_tuple(std::forward<Ts>(Args)...));
-      return {std::prev(end()), true};
-    }
-    return {begin() + Result.first->second, false};
-  }
-
-public:
   /// Clear the MapVector and return the underlying vector.
   VectorType takeVector() {
     Map.clear();
@@ -218,6 +196,27 @@ public:
   /// Erase all elements that match \c Pred in a single pass.  Takes linear
   /// time.
   template <class Predicate> void remove_if(Predicate Pred);
+
+private:
+  MapType Map;
+  VectorType Vector;
+
+  static_assert(
+      std::is_integral_v<typename MapType::mapped_type>,
+      "The mapped_type of the specified Map must be an integral type");
+
+  template <typename KeyArgT, typename... Ts>
+  std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
+    auto Result = Map.try_emplace(Key);
+    if (Result.second) {
+      Result.first->second = Vector.size();
+      Vector.emplace_back(std::piecewise_construct,
+                          std::forward_as_tuple(std::forward<KeyArgT>(Key)),
+                          std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return {std::prev(end()), true};
+    }
+    return {begin() + Result.first->second, false};
+  }
 };
 
 template <typename KeyT, typename ValueT, typename MapType, typename VectorType>
