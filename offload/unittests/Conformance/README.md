@@ -30,52 +30,14 @@ Before you begin, ensure your system meets the following requirements:
     * **AMD:** [ROCm SDK](https://rocm.docs.amd.com)
     * **NVIDIA:** [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
 
+### Building the Dependencies
 
-### 1. Check out the LLVM project
+The official documentation for building LLVM-libc for GPUs provides a detailed guide and should be considered the primary reference. Please follow the instructions in the **"Standard runtimes build"** section of that guide:
 
-First, clone the LLVM project repository. For users who only need to build and run the tests, a shallow clone is sufficient and much faster.
+- [Building the GPU C library (Official Documentation)](https://libc.llvm.org/gpu/building.html)
 
-```bash
-git clone --depth=1 https://github.com/llvm/llvm-project.git
-```
-
-### 2. Configure the Build
-
-The recommended way to build the dependencies is to use the LLVM runtimes support. This approach automatically handles bootstrapping an up-to-date `clang` compiler and then uses it to build the `offload` and `libc` components.
-
-First, define an environment variable, `$LLVM_HOME`, to specify the desired installation directory for the toolchain and libraries.
-
-```bash
-export LLVM_HOME=/path/to/your/llvm/install
-```
-
-The command below provides an example configuration for a `Release` build. It specifically instructs the build system to compile `libc` for three distinct targets: the native host (`default`), AMD GPUs (`amdgcn-amd-amdhsa`), and NVIDIA GPUs (`nvptx64-nvidia-cuda`). You can customize options like `-DCMAKE_BUILD_TYPE` as needed.
-
-Execute this command from the root of the `llvm-project` directory:
-
-```bash
-cmake -S llvm -B build -G Ninja \
-  -DLLVM_ENABLE_PROJECTS="clang;lld" \
-  -DLLVM_ENABLE_RUNTIMES="openmp;offload;libc" \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DLLVM_ENABLE_ASSERTIONS=ON \
-  -DLLVM_PARALLEL_LINK_JOBS=1 \
-  -DCMAKE_INSTALL_PREFIX="$LLVM_HOME" \
-  -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=libc \
-  -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc \
-  -DLLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa;nvptx64-nvidia-cuda"
-```
-
-### 3. Build and Install
-
-After configuring the build, compile and install the necessary dependencies using Ninja.
-
-```bash
-ninja -C build install -j8
-```
-
-> [!NOTE]
-> Running Ninja with high parallelism can cause spurious failures, out-of-resource errors, or indefinite hangs. Limit the number of jobs with `-j<N>` if you hit such issues.
+> [!IMPORTANT]
+> For the conformance tests, the standard `cmake` command from the official documentation must be adapted slightly. You must also add `libc` to the main `-DLLVM_ENABLE_RUNTIMES` list. This is a crucial step because the tests need a host-side build of `libc` to use as the reference oracle for validating GPU results.
 
 ## Running the Tests
 
@@ -127,656 +89,656 @@ The following tables show the maximum observed ULP distance for each function co
 
 ### Exhaustive Test Results for Half-Precision Math Functions
 
-<table style="table-layout: fixed;">
+<table>
   <thead>
     <tr>
-      <th rowspan="2" style="text-align: left; width: 150px;">Function</th>
-      <th rowspan="2" style="text-align: center;">ULP Tolerance</th>
-      <th colspan="4" style="text-align: center;">Max ULP Distance</th>
+      <th rowspan="2" align="left">Function</th>
+      <th rowspan="2" align="center">ULP Tolerance</th>
+      <th colspan="4" align="center">Max ULP Distance</th>
     </tr>
     <tr>
-      <th style="text-align: center;">llvm-libm<br>(AMDGPU)</th>
-      <th style="text-align: center;">llvm-libm<br>(CUDA)</th>
-      <th style="text-align: center;">cuda-math<br>(CUDA)</th>
-      <th style="text-align: center;">hip-math<br>(AMDGPU)</th>
+      <th align="center">llvm-libm<br>(AMDGPU)</th>
+      <th align="center">llvm-libm<br>(CUDA)</th>
+      <th align="center">cuda-math<br>(CUDA)</th>
+      <th align="center">hip-math<br>(AMDGPU)</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td style="text-align: left;">acosf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">acosf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">acoshf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">0</td>
+      <td align="left">acoshf16</td>
+      <td align="center">2</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center">0</td>
     </tr>
     <tr>
-      <td style="text-align: left;">acospif16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;"></td>
+      <td align="left">acospif16</td>
+      <td align="center">2</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center"></td>
     </tr>
     <tr>
-      <td style="text-align: left;">asinf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">2</td>
+      <td align="left">asinf16</td>
+      <td align="center">2</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">asinhf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">asinhf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">atanf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">atanf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">atanhf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">atanhf16</td>
+      <td align="center">2</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">cosf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">cosf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">coshf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">coshf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">cospif16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;"></td>
+      <td align="left">cospif16</td>
+      <td align="center">2</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center"></td>
     </tr>
     <tr>
-      <td style="text-align: left;">expf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">expf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">exp10f16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">exp10f16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">exp2f16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">0</td>
+      <td align="left">exp2f16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">0</td>
     </tr>
     <tr>
-      <td style="text-align: left;">expm1f16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">expm1f16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">hypotf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;"></td>
+      <td align="left">hypotf16</td>
+      <td align="center">2</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center"></td>
     </tr>
     <tr>
-      <td style="text-align: left;">logf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">logf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">log10f16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">log10f16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">log2f16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">0</td>
+      <td align="left">log2f16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">0</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sinf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">sinf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sinhf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">sinhf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sinpif16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;"></td>
+      <td align="left">sinpif16</td>
+      <td align="center">2</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center"></td>
     </tr>
     <tr>
-      <td style="text-align: left;">tanf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">2</td>
+      <td align="left">tanf16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">tanhf16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;">1</td>
+      <td align="left">tanhf16</td>
+      <td align="center">2</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">tanpif16</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;"></td>
+      <td align="left">tanpif16</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center"></td>
+      <td align="center"></td>
     </tr>
   </tbody>
 </table>
 
 ### Exhaustive Test Results for Single-Precision Univariate Math Functions
 
-<table style="table-layout: fixed;">
+<table>
   <thead>
     <tr>
-      <th rowspan="2" style="text-align: left; width: 150px;">Function</th>
-      <th rowspan="2" style="text-align: center;">ULP Tolerance</th>
-      <th colspan="4" style="text-align: center;">Max ULP Distance</th>
+      <th rowspan="2" align="left">Function</th>
+      <th rowspan="2" align="center">ULP Tolerance</th>
+      <th colspan="4" align="center">Max ULP Distance</th>
     </tr>
     <tr>
-      <th style="text-align: center;">llvm-libm<br>(AMDGPU)</th>
-      <th style="text-align: center;">llvm-libm<br>(CUDA)</th>
-      <th style="text-align: center;">cuda-math<br>(CUDA)</th>
-      <th style="text-align: center;">hip-math<br>(AMDGPU)</th>
+      <th align="center">llvm-libm<br>(AMDGPU)</th>
+      <th align="center">llvm-libm<br>(CUDA)</th>
+      <th align="center">cuda-math<br>(CUDA)</th>
+      <th align="center">hip-math<br>(AMDGPU)</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td style="text-align: left;">acosf</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">acosf</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">acoshf</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">acoshf</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">asinf</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">3</td>
+      <td align="left">asinf</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">3</td>
     </tr>
     <tr>
-      <td style="text-align: left;">asinhf</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">asinhf</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">atanf</td>
-      <td style="text-align: center;">5</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">atanf</td>
+      <td align="center">5</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">atanhf</td>
-      <td style="text-align: center;">5</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">atanhf</td>
+      <td align="center">5</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">cbrtf</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">cbrtf</td>
+      <td align="center">2</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">cosf</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">cosf</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">coshf</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">coshf</td>
+      <td align="center">4</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">cospif</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">cospif</td>
+      <td align="center">4</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">erff</td>
-      <td style="text-align: center;">16</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">erff</td>
+      <td align="center">16</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">expf</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">expf</td>
+      <td align="center">3</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">exp10f</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">exp10f</td>
+      <td align="center">3</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">exp2f</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">exp2f</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">expm1f</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">expm1f</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">logf</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">logf</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">log10f</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">log10f</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">log1pf</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">log1pf</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">log2f</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">log2f</td>
+      <td align="center">3</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sinf</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">sinf</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sincosf (sin part)</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">sincosf (sin part)</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sincosf (cos part)</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">sincosf (cos part)</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sinhf</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">sinhf</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sinpif</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">sinpif</td>
+      <td align="center">4</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">tanf</td>
-      <td style="text-align: center;">5</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">tanf</td>
+      <td align="center">5</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">3</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">tanhf</td>
-      <td style="text-align: center;">5</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">tanhf</td>
+      <td align="center">5</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">tanpif</td>
-      <td style="text-align: center;">6</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;"></td>
-      <td style="text-align: center;"></td>
+      <td align="left">tanpif</td>
+      <td align="center">6</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center"></td>
+      <td align="center"></td>
     </tr>
   </tbody>
 </table>
 
 ### Randomized Test Results for Single-Precision Bivariate Math Functions
 
-<table style="table-layout: fixed;">
+<table>
   <thead>
     <tr>
-      <th rowspan="2" style="text-align: left; width: 150px;">Function</th>
-      <th rowspan="2" style="text-align: center;">ULP Tolerance</th>
-      <th colspan="4" style="text-align: center;">Max ULP Distance</th>
+      <th rowspan="2" align="left">Function</th>
+      <th rowspan="2" align="center">ULP Tolerance</th>
+      <th colspan="4" align="center">Max ULP Distance</th>
     </tr>
     <tr>
-      <th style="text-align: center;">llvm-libm<br>(AMDGPU)</th>
-      <th style="text-align: center;">llvm-libm<br>(CUDA)</th>
-      <th style="text-align: center;">cuda-math<br>(CUDA)</th>
-      <th style="text-align: center;">hip-math<br>(AMDGPU)</th>
+      <th align="center">llvm-libm<br>(AMDGPU)</th>
+      <th align="center">llvm-libm<br>(CUDA)</th>
+      <th align="center">cuda-math<br>(CUDA)</th>
+      <th align="center">hip-math<br>(AMDGPU)</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td style="text-align: left;">atan2f</td>
-      <td style="text-align: center;">6</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">3</td>
+      <td align="left">atan2f</td>
+      <td align="center">6</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
+      <td align="center">3</td>
     </tr>
     <tr>
-      <td style="text-align: left;">hypotf</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">hypotf</td>
+      <td align="center">4</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">powf<br>(integer exponents)</td>
-      <td style="text-align: center;">16</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">powf<br>(integer exponents)</td>
+      <td align="center">16</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">powf<br>(real exponents)</td>
-      <td style="text-align: center;">16</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">powf<br>(real exponents)</td>
+      <td align="center">16</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
   </tbody>
 </table>
 
 ### Randomized Test Results for Double-Precision Math Functions
 
-<table style="table-layout: fixed;">
+<table>
   <thead>
     <tr>
-      <th rowspan="2" style="text-align: left; width: 150px;">Function</th>
-      <th rowspan="2" style="text-align: center;">ULP Tolerance</th>
-      <th colspan="4" style="text-align: center;">Max ULP Distance</th>
+      <th rowspan="2" align="left">Function</th>
+      <th rowspan="2" align="center">ULP Tolerance</th>
+      <th colspan="4" align="center">Max ULP Distance</th>
     </tr>
     <tr>
-      <th style="text-align: center;">llvm-libm<br>(AMDGPU)</th>
-      <th style="text-align: center;">llvm-libm<br>(CUDA)</th>
-      <th style="text-align: center;">cuda-math<br>(CUDA)</th>
-      <th style="text-align: center;">hip-math<br>(AMDGPU)</th>
+      <th align="center">llvm-libm<br>(AMDGPU)</th>
+      <th align="center">llvm-libm<br>(CUDA)</th>
+      <th align="center">cuda-math<br>(CUDA)</th>
+      <th align="center">hip-math<br>(AMDGPU)</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td style="text-align: left;">acos</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">6 (FAILED)</td>
-      <td style="text-align: center;">6 (FAILED)</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">acos</td>
+      <td align="center">4</td>
+      <td align="center">6 (FAILED)</td>
+      <td align="center">6 (FAILED)</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">asin</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">6 (FAILED)</td>
-      <td style="text-align: center;">6 (FAILED)</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">asin</td>
+      <td align="center">4</td>
+      <td align="center">6 (FAILED)</td>
+      <td align="center">6 (FAILED)</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">cbrt</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">cbrt</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">cos</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">cos</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">exp</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">exp</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">exp10</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">exp10</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">exp2</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">exp2</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">expm1</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
+      <td align="left">expm1</td>
+      <td align="center">3</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
     </tr>
     <tr>
-      <td style="text-align: left;">hypot</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">0</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">hypot</td>
+      <td align="center">4</td>
+      <td align="center">0</td>
+      <td align="center">0</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">log</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">log</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">log10</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">log10</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">log1p</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">log1p</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">log2</td>
-      <td style="text-align: center;">3</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">log2</td>
+      <td align="center">3</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sin</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">sin</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sincos (cos part)</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">sincos (cos part)</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">sincos (sin part)</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">sincos (sin part)</td>
+      <td align="center">4</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
+      <td align="center">1</td>
     </tr>
     <tr>
-      <td style="text-align: left;">tan</td>
-      <td style="text-align: center;">5</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">2</td>
-      <td style="text-align: center;">1</td>
+      <td align="left">tan</td>
+      <td align="center">5</td>
+      <td align="center">2</td>
+      <td align="center">2</td>
+      <td align="center">2</td>
+      <td align="center">1</td>
     </tr>
   </tbody>
 </table>
