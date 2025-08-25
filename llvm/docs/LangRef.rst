@@ -415,6 +415,8 @@ added in the future:
 
     - On RISC-V the callee preserves x5-x31 except x6, x7 and x28 registers.
 
+    - On LoongArch the callee preserves r4-r31 except r12-r15 and r20-r21 registers.
+
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
     of code that doesn't use many registers. The cold path might need to call out to

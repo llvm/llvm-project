@@ -18,6 +18,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -7818,6 +7819,39 @@ ExprResult Sema::CheckExtVectorCast(SourceRange R, QualType DestTy,
   return prepareVectorSplat(DestTy, CastExpr);
 }
 
+/// Check that a call to alloc_size function specifies sufficient space for the
+/// destination type.
+static void CheckSufficientAllocSize(Sema &S, QualType DestType,
+                                     const Expr *E) {
+  QualType SourceType = E->getType();
+  if (!DestType->isPointerType() || !SourceType->isPointerType() ||
+      DestType == SourceType)
+    return;
+
+  const auto *CE = dyn_cast<CallExpr>(E->IgnoreParenCasts());
+  if (!CE)
+    return;
+
+  // Find the total size allocated by the function call.
+  if (!CE->getCalleeAllocSizeAttr())
+    return;
+  std::optional<llvm::APInt> AllocSize =
+      CE->getBytesReturnedByAllocSizeCall(S.Context);
+  if (!AllocSize)
+    return;
+  auto Size = CharUnits::fromQuantity(AllocSize->getZExtValue());
+
+  QualType TargetType = DestType->getPointeeType();
+  // Find the destination size. As a special case function types have size of
+  // one byte to match the sizeof operator behavior.
+  auto LhsSize = TargetType->isFunctionType()
+                     ? CharUnits::One()
+                     : S.Context.getTypeSizeInCharsIfKnown(TargetType);
+  if (LhsSize && Size < LhsSize)
+    S.Diag(E->getExprLoc(), diag::warn_alloc_size)
+        << Size.getQuantity() << TargetType << LhsSize->getQuantity();
+}
+
 ExprResult
 Sema::ActOnCastExpr(Scope *S, SourceLocation LParenLoc,
                     Declarator &D, ParsedType &Ty,
@@ -7882,6 +7916,8 @@ Sema::ActOnCastExpr(Scope *S, SourceLocation LParenLoc,
   ObjC().CheckObjCBridgeRelatedCast(castType, CastExpr);
 
   DiscardMisalignedMemberAddress(castType.getTypePtr(), CastExpr);
+
+  CheckSufficientAllocSize(*this, castType, CastExpr);
 
   return BuildCStyleCastExpr(LParenLoc, castTInfo, RParenLoc, CastExpr);
 }
@@ -9892,6 +9928,12 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
   CastKind Kind;
   AssignConvertType result =
       CheckAssignmentConstraints(LHSType, RHS, Kind, ConvertRHS);
+
+  // If assigning a void * created by an allocation function call to some other
+  // type, check that the allocated size is sufficient for that type.
+  if (result != AssignConvertType::Incompatible &&
+      RHS.get()->getType()->isVoidPointerType())
+    CheckSufficientAllocSize(*this, LHSType, RHS.get());
 
   // C99 6.5.16.1p2: The value of the right operand is converted to the
   // type of the assignment expression.

@@ -3533,6 +3533,56 @@ bool CallExpr::isBuiltinAssumeFalse(const ASTContext &Ctx) const {
          Arg->EvaluateAsBooleanCondition(ArgVal, Ctx) && !ArgVal;
 }
 
+const AllocSizeAttr *CallExpr::getCalleeAllocSizeAttr() const {
+  if (const FunctionDecl *DirectCallee = getDirectCallee())
+    return DirectCallee->getAttr<AllocSizeAttr>();
+  if (const Decl *IndirectCallee = getCalleeDecl())
+    return IndirectCallee->getAttr<AllocSizeAttr>();
+  return nullptr;
+}
+
+std::optional<llvm::APInt>
+CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
+  const AllocSizeAttr *AllocSize = getCalleeAllocSizeAttr();
+
+  assert(AllocSize && AllocSize->getElemSizeParam().isValid());
+  unsigned SizeArgNo = AllocSize->getElemSizeParam().getASTIndex();
+  unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
+  if (getNumArgs() <= SizeArgNo)
+    return {};
+
+  auto EvaluateAsSizeT = [&](const Expr *E, llvm::APSInt &Into) {
+    Expr::EvalResult ExprResult;
+    if (E->isValueDependent() ||
+        !E->EvaluateAsInt(ExprResult, Ctx, Expr::SE_AllowSideEffects))
+      return false;
+    Into = ExprResult.Val.getInt();
+    if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
+      return false;
+    Into = Into.zext(BitsInSizeT);
+    return true;
+  };
+
+  llvm::APSInt SizeOfElem;
+  if (!EvaluateAsSizeT(getArg(SizeArgNo), SizeOfElem))
+    return {};
+
+  if (!AllocSize->getNumElemsParam().isValid())
+    return SizeOfElem;
+
+  llvm::APSInt NumberOfElems;
+  unsigned NumArgNo = AllocSize->getNumElemsParam().getASTIndex();
+  if (!EvaluateAsSizeT(getArg(NumArgNo), NumberOfElems))
+    return {};
+
+  bool Overflow;
+  llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
+  if (Overflow)
+    return {};
+
+  return BytesAvailable;
+}
+
 bool CallExpr::isCallToStdMove() const {
   return getBuiltinCallee() == Builtin::BImove;
 }

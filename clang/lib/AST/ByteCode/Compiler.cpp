@@ -62,7 +62,7 @@ public:
   OptionScope(Compiler<Emitter> *Ctx, bool NewDiscardResult,
               bool NewInitializing, bool NewToLValue)
       : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
-        OldInitializing(Ctx->Initializing), OldToLValue(NewToLValue) {
+        OldInitializing(Ctx->Initializing), OldToLValue(Ctx->ToLValue) {
     Ctx->DiscardResult = NewDiscardResult;
     Ctx->Initializing = NewInitializing;
     Ctx->ToLValue = NewToLValue;

@@ -164,10 +164,9 @@ def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
 def ARMWrapperJT     : SDNode<"ARMISD::WrapperJT",   SDTIntUnaryOp>;
 
 def ARMcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_ARMCallSeqStart,
-                              [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOutGlue]>;
 def ARMcallseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_ARMCallSeqEnd,
-                              [SDNPHasChain, SDNPSideEffect,
-                               SDNPOptInGlue, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def ARMcopystructbyval : SDNode<"ARMISD::COPY_STRUCT_BYVAL" ,
                                 SDT_ARMStructByVal,
                                 [SDNPHasChain, SDNPInGlue, SDNPOutGlue,

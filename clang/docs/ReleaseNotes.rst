@@ -239,6 +239,10 @@ Improvements to Clang's diagnostics
   specializations in th same way as it already did for other declarators.
   (#GH147333)
 
+- A new warning ``-Walloc-size`` has been added to detect calls to functions
+  decorated with the ``alloc_size`` attribute don't allocate enough space for
+  the target pointer type.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -256,6 +260,9 @@ Bug Fixes in This Version
   cast chain. (#GH149967).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
+- Clang now emits a frontend error when a function marked with the `flatten` attribute
+  calls another function that requires target features not enabled in the caller. This
+  prevents a fatal error in the backend.
 - Fixed scope of typedefs present inside a template class. (#GH91451)
 
 Bug Fixes to Compiler Builtins

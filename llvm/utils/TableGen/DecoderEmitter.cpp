@@ -312,7 +312,7 @@ struct DecoderTableInfo {
   PredicateSet Predicates;
   DecoderSet Decoders;
 
-  bool isOutermostScope() const { return FixupStack.size() == 1; }
+  bool isOutermostScope() const { return FixupStack.empty(); }
 
   void pushScope() { FixupStack.emplace_back(); }
 
@@ -340,7 +340,7 @@ class DecoderEmitter {
   SmallDenseMap<unsigned, std::vector<unsigned>> EncodingIDsByHwMode;
 
 public:
-  DecoderEmitter(const RecordKeeper &RK, StringRef PredicateNamespace);
+  explicit DecoderEmitter(const RecordKeeper &RK);
 
   const CodeGenTarget &getTarget() const { return Target; }
 
@@ -370,9 +370,6 @@ private:
                                   NamespacesHwModesMap &NamespacesWithHwModes);
 
   void parseInstructionEncodings();
-
-public:
-  StringRef PredicateNamespace;
 };
 
 } // end anonymous namespace
@@ -487,8 +484,7 @@ class FilterChooser {
   /// This field allows us to ignore the extra bits.
   unsigned MaxFilterWidth;
 
-  // Parent emitter
-  const DecoderEmitter *Emitter;
+  const CodeGenTarget &Target;
 
   /// If the selected filter matches multiple encodings, then this is the
   /// starting position and the width of the filtered range.
@@ -524,9 +520,9 @@ public:
   /// Constructs a top-level filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs, unsigned MaxFilterWidth,
-                const DecoderEmitter *E)
+                const CodeGenTarget &Target)
       : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr),
-        MaxFilterWidth(MaxFilterWidth), Emitter(E) {
+        MaxFilterWidth(MaxFilterWidth), Target(Target) {
     // Sort encoding IDs once.
     stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings));
     // Filter width is the width of the smallest encoding.
@@ -542,7 +538,7 @@ public:
                 ArrayRef<unsigned> EncodingIDs, const KnownBits &FilterBits,
                 const FilterChooser &Parent)
       : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent),
-        MaxFilterWidth(Parent.MaxFilterWidth), Emitter(Parent.Emitter) {
+        MaxFilterWidth(Parent.MaxFilterWidth), Target(Parent.Target) {
     // Inferior filter choosers are created from sorted array of encoding IDs.
     assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings)));
     assert(!FilterBits.hasConflict() && "Broken filter");
@@ -770,8 +766,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
     uint32_t Index = ((I - Table.begin()) + NumToSkip);
     OS << (InComment ? ", " : "// ");
     OS << "Skip to: " << Index;
-    if (*(I + NumToSkip) == MCD::OPC_Fail)
-      OS << " (Fail)";
   };
 
   unsigned OpcodeMask = 0;
@@ -910,9 +904,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       OS << '\n';
       break;
     }
-    case MCD::OPC_Fail:
-      OS << "  MCD::OPC_Fail,\n";
-      break;
     }
   }
   OS << "};\n\n";
@@ -1155,8 +1146,7 @@ bool FilterChooser::emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
   if (const auto *D = dyn_cast<DefInit>(&Val)) {
     if (!D->getDef()->isSubClassOf("SubtargetFeature"))
       return true;
-    OS << "Bits[" << Emitter->PredicateNamespace << "::" << D->getAsString()
-       << "]";
+    OS << "Bits[" << Target.getName() << "::" << D->getAsString() << "]";
     return false;
   }
   if (const auto *D = dyn_cast<DagInit>(&Val)) {
@@ -1350,7 +1340,7 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
                                      : MCD::OPC_TryDecode;
   TableInfo.Table.insertOpcode(DecoderOp);
   const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
-  TableInfo.Table.insertULEB128(Emitter->getTarget().getInstrIntValue(InstDef));
+  TableInfo.Table.insertULEB128(Target.getInstrIntValue(InstDef));
   TableInfo.Table.insertULEB128(DIdx);
 
   if (DecoderOp == MCD::OPC_TryDecode) {
@@ -2327,10 +2317,6 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     })";
   }
   OS << R"(
-    case MCD::OPC_Fail: {
-      LLVM_DEBUG(dbgs() << Loc << ": OPC_Fail\n");
-      return MCDisassembler::Fail;
-    }
     }
   }
   llvm_unreachable("bogosity detected in disassembler state machine!");
@@ -2502,10 +2488,8 @@ void DecoderEmitter::parseInstructionEncodings() {
   NumEncodings = NumEncodingsSupported + NumEncodingsOmitted;
 }
 
-DecoderEmitter::DecoderEmitter(const RecordKeeper &RK,
-                               StringRef PredicateNamespace)
-    : RK(RK), Target(RK), CGH(Target.getHwModes()),
-      PredicateNamespace(PredicateNamespace) {
+DecoderEmitter::DecoderEmitter(const RecordKeeper &RK)
+    : RK(RK), Target(RK), CGH(Target.getHwModes()) {
   Target.reverseBitsForLittleEndianEncoding();
   parseInstructionEncodings();
 }
@@ -2560,20 +2544,14 @@ namespace {
     auto [DecoderNamespace, HwModeID, Size] = Key;
     const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
     // Emit the decoder for this (namespace, hwmode, width) combination.
-    FilterChooser FC(Encodings, EncodingIDs, BitWidth, this);
+    FilterChooser FC(Encodings, EncodingIDs, BitWidth, Target);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all
     // decoders to give more opportunities for uniqueing.
     TableInfo.Table.clear();
-    TableInfo.pushScope();
     FC.emitTableEntries(TableInfo);
-    // Any NumToSkip fixups in the top level scope can resolve to the
-    // OPC_Fail at the end of the table.
     assert(TableInfo.isOutermostScope() && "fixup stack phasing error!");
-    TableInfo.popScope();
-
-    TableInfo.Table.insertOpcode(MCD::OPC_Fail);
 
     // Print the table to the output stream.
     OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
@@ -2603,7 +2581,6 @@ namespace {
   OS << "\n} // namespace\n";
 }
 
-void llvm::EmitDecoder(const RecordKeeper &RK, raw_ostream &OS,
-                       StringRef PredicateNamespace) {
-  DecoderEmitter(RK, PredicateNamespace).run(OS);
+void llvm::EmitDecoder(const RecordKeeper &RK, raw_ostream &OS) {
+  DecoderEmitter(RK).run(OS);
 }

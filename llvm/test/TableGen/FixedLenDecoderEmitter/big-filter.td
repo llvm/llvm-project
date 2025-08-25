@@ -11,7 +11,7 @@ class I : Instruction {
 
 // Check that a 64-bit filter with all bits set does not confuse DecoderEmitter.
 //
-// CHECK-LABEL: static const uint8_t DecoderTable128[35] = {
+// CHECK-LABEL: static const uint8_t DecoderTable128[34] = {
 // CHECK-NEXT:    MCD::OPC_ExtractField, 0, 64,
 // CHECK-NEXT:    MCD::OPC_FilterValue, 1, 8, 0,
 // CHECK-NEXT:    MCD::OPC_CheckFieldOrFail, 127, 1, 1,
@@ -19,7 +19,6 @@ class I : Instruction {
 // CHECK-NEXT:    MCD::OPC_FilterValueOrFail, 255, 255, 255, 255, 255, 255, 255, 255, 255, 1,
 // CHECK-NEXT:    MCD::OPC_CheckFieldOrFail, 127, 1, 0,
 // CHECK-NEXT:    MCD::OPC_Decode, 186, 2, 0,
-// CHECK-NEXT:    MCD::OPC_Fail,
 // CHECK-NEXT:  };
 
 def I1 : I {

@@ -114,15 +114,6 @@ namespace {
     return Ctx.getLValueReferenceType(E->getType());
   }
 
-  /// Given a CallExpr, try to get the alloc_size attribute. May return null.
-  static const AllocSizeAttr *getAllocSizeAttr(const CallExpr *CE) {
-    if (const FunctionDecl *DirectCallee = CE->getDirectCallee())
-      return DirectCallee->getAttr<AllocSizeAttr>();
-    if (const Decl *IndirectCallee = CE->getCalleeDecl())
-      return IndirectCallee->getAttr<AllocSizeAttr>();
-    return nullptr;
-  }
-
   /// Attempts to unwrap a CallExpr (with an alloc_size attribute) from an Expr.
   /// This will look through a single cast.
   ///
@@ -142,7 +133,7 @@ namespace {
       E = Cast->getSubExpr()->IgnoreParens();
 
     if (const auto *CE = dyn_cast<CallExpr>(E))
-      return getAllocSizeAttr(CE) ? CE : nullptr;
+      return CE->getCalleeAllocSizeAttr() ? CE : nullptr;
     return nullptr;
   }
 
@@ -9466,57 +9457,6 @@ bool LValueExprEvaluator::VisitBinAssign(const BinaryOperator *E) {
 // Pointer Evaluation
 //===----------------------------------------------------------------------===//
 
-/// Attempts to compute the number of bytes available at the pointer
-/// returned by a function with the alloc_size attribute. Returns true if we
-/// were successful. Places an unsigned number into `Result`.
-///
-/// This expects the given CallExpr to be a call to a function with an
-/// alloc_size attribute.
-static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
-                                            const CallExpr *Call,
-                                            llvm::APInt &Result) {
-  const AllocSizeAttr *AllocSize = getAllocSizeAttr(Call);
-
-  assert(AllocSize && AllocSize->getElemSizeParam().isValid());
-  unsigned SizeArgNo = AllocSize->getElemSizeParam().getASTIndex();
-  unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
-  if (Call->getNumArgs() <= SizeArgNo)
-    return false;
-
-  auto EvaluateAsSizeT = [&](const Expr *E, APSInt &Into) {
-    Expr::EvalResult ExprResult;
-    if (!E->EvaluateAsInt(ExprResult, Ctx, Expr::SE_AllowSideEffects))
-      return false;
-    Into = ExprResult.Val.getInt();
-    if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
-      return false;
-    Into = Into.zext(BitsInSizeT);
-    return true;
-  };
-
-  APSInt SizeOfElem;
-  if (!EvaluateAsSizeT(Call->getArg(SizeArgNo), SizeOfElem))
-    return false;
-
-  if (!AllocSize->getNumElemsParam().isValid()) {
-    Result = std::move(SizeOfElem);
-    return true;
-  }
-
-  APSInt NumberOfElems;
-  unsigned NumArgNo = AllocSize->getNumElemsParam().getASTIndex();
-  if (!EvaluateAsSizeT(Call->getArg(NumArgNo), NumberOfElems))
-    return false;
-
-  bool Overflow;
-  llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
-  if (Overflow)
-    return false;
-
-  Result = std::move(BytesAvailable);
-  return true;
-}
-
 /// Convenience function. LVal's base must be a call to an alloc_size
 /// function.
 static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
@@ -9526,7 +9466,12 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
          "Can't get the size of a non alloc_size function");
   const auto *Base = LVal.getLValueBase().get<const Expr *>();
   const CallExpr *CE = tryUnwrapAllocSizeCall(Base);
-  return getBytesReturnedByAllocSizeCall(Ctx, CE, Result);
+  std::optional<llvm::APInt> Size = CE->getBytesReturnedByAllocSizeCall(Ctx);
+  if (!Size)
+    return false;
+
+  Result = std::move(*Size);
+  return true;
 }
 
 /// Attempts to evaluate the given LValueBase as the result of a call to
@@ -10017,7 +9962,7 @@ bool PointerExprEvaluator::visitNonBuiltinCallExpr(const CallExpr *E) {
   if (ExprEvaluatorBaseTy::VisitCallExpr(E))
     return true;
 
-  if (!(InvalidBaseOK && getAllocSizeAttr(E)))
+  if (!(InvalidBaseOK && E->getCalleeAllocSizeAttr()))
     return false;
 
   Result.setInvalid(E);

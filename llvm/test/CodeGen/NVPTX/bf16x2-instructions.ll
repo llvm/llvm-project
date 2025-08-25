@@ -711,11 +711,11 @@ define <2 x bfloat> @test_copysign(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_copysign_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_copysign_param_1];
-; CHECK-NEXT:    and.b32 %r3, %r2, -2147450880;
-; CHECK-NEXT:    and.b32 %r4, %r1, 2147450879;
-; CHECK-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_copysign_param_1];
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147450880;
+; CHECK-NEXT:    ld.param.b32 %r3, [test_copysign_param_0];
+; CHECK-NEXT:    and.b32 %r4, %r3, 2147450879;
+; CHECK-NEXT:    or.b32 %r5, %r4, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.copysign.f16(<2 x bfloat> %a, <2 x bfloat> %b)

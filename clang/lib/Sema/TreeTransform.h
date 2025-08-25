@@ -5539,21 +5539,10 @@ QualType TreeTransform<Derived>::TransformTypeInObjectScope(
         TLB, TL.castAs<DependentNameTypeLoc>(), /*DeducedTSTContext=*/false,
         ObjectType, UnqualLookup);
   }
-  case TypeLoc::Typedef:
-  case TypeLoc::TemplateSpecialization:
-  case TypeLoc::SubstTemplateTypeParm:
-  case TypeLoc::SubstTemplateTypeParmPack:
-  case TypeLoc::PackIndexing:
-  case TypeLoc::Enum:
-  case TypeLoc::Record:
-  case TypeLoc::InjectedClassName:
-  case TypeLoc::TemplateTypeParm:
-  case TypeLoc::Decltype:
-  case TypeLoc::UnresolvedUsing:
-  case TypeLoc::Using:
-    return getDerived().TransformType(TLB, TL);
   default:
-    llvm_unreachable("unexpected type class");
+    // Any dependent canonical type can appear here, through type alias
+    // templates.
+    return getDerived().TransformType(TLB, TL);
   }
 }
 
