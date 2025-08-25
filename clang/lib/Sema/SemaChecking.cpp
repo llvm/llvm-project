@@ -5601,8 +5601,10 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
                                       TheCall->getArg(1)->getEndLoc()));
     } else if (numElements != numResElements) {
       QualType eltType = LHSType->castAs<VectorType>()->getElementType();
-      resType =
-          Context.getVectorType(eltType, numResElements, VectorKind::Generic);
+      resType = resType->isExtVectorType()
+                    ? Context.getExtVectorType(eltType, numResElements)
+                    : Context.getVectorType(eltType, numResElements,
+                                            VectorKind::Generic);
     }
   }
 
@@ -15953,6 +15955,7 @@ bool Sema::BuiltinElementwiseTernaryMath(
       return true;
   }
 
+  TheCall->setArg(0, Args[0]);
   for (int I = 1; I < 3; ++I) {
     if (Args[0]->getType().getCanonicalType() !=
         Args[I]->getType().getCanonicalType()) {
