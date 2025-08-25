@@ -80,6 +80,12 @@ public:
   bool requiresValidation(llvm::opt::DerivedArgList &Args) const;
   bool requiresBinaryTranslation(llvm::opt::DerivedArgList &Args) const;
   bool requiresObjcopy(llvm::opt::DerivedArgList &Args) const;
+
+  /// If we are targeting DXIL then the last job should output the DXContainer
+  /// to the specified output file with /Fo. Otherwise, we will emit to a
+  /// temporary file for the next job to use.
+  ///
+  /// Returns true if we should output to the final result file.
   bool isLastJob(llvm::opt::DerivedArgList &Args, Action::ActionClass AC) const;
 
   // Set default DWARF version to 4 for DXIL uses version 4.

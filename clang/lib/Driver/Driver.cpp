@@ -6266,8 +6266,9 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
        C.getArgs().hasArg(options::OPT_dxc_Fo)) ||
       JA.getType() == types::TY_DX_CONTAINER) {
     StringRef FoValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fo);
-    // If we are targeting DXIL and not validating or translating, we should set
-    // the final result file. Otherwise we should emit to a temporary.
+    // If we are targeting DXIL and not validating/translating/objcopying, we
+    // should set the final result file. Otherwise we should emit to a
+    // temporary.
     if (C.getDefaultToolChain().getTriple().isDXIL()) {
       const auto &TC = static_cast<const toolchains::HLSLToolChain &>(
           C.getDefaultToolChain());
