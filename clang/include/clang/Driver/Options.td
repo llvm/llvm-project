@@ -9408,8 +9408,7 @@ def dxc_strip_rootsignature :
   Option<["/", "-"], "Qstrip-rootsignature", KIND_FLAG>,
   Group<dxc_Group>,
   Visibility<[DXCOption]>,
-  HelpText<"Omit the root signature from produced DXContainer">,
-  MarshallingInfoFlag<CodeGenOpts<"HLSLRootSigStrip">>;
+  HelpText<"Omit the root signature from produced DXContainer">;
 def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
   HelpText<"Set target profile">,
   Values<"ps_6_0, ps_6_1, ps_6_2, ps_6_3, ps_6_4, ps_6_5, ps_6_6, ps_6_7,"
