@@ -324,6 +324,16 @@ work over time. Maintainers are empowered to push back against *extractive*
 contributions and explain why they believe a contribution is overly burdensome
 or not aligned with the project goals.
 
+If a maintainer judges that a contribution is extractive (i.e. it is generated
+with tool-assistance and is not valuable), they should copy-paste the following
+response, add the ``extractive`` label if applicable, and refrain from further
+engagement::
+
+    This PR appears to be extractive, and requires additional justification for
+    why it is valuable enough to the project for us to review it. Please see
+    our developer policy on quality and AI contributions:
+    http://llvm.org/docs/DeveloperPolicy.html#quality
+
 Contribution size is an imperfect proxy of the burden of review, and the
 potential user base of the feature is another possible proxy for the value of
 the contribution. The best ways to make a change less extractive and more
@@ -441,17 +451,21 @@ reminding the contributor of this policy over reverting.
 Post-commit responsibilities
 ----------------------------
 
-After landing a change, the committer is responsible for addressing any problems
-found in the future that the change is responsible for.  For example:
+There are many important qualities that LLVM aims for, but which we cannot
+afford to test for as part of our premerge pipeline. After landing a change,
+the committer is responsible for addressing any problems found in the future
+that the change is responsible for. Here are some of the issues that arise
+post-commit:
 
-* The code should compile cleanly on all supported platforms.
+* The code needs to compile cleanly and pass tests on all stable `LLVM
+  buildbots <https://lab.llvm.org/buildbot/>`_.
 
 * The changes should not cause any correctness regressions in the
   `llvm-test-suite <https://github.com/llvm/llvm-test-suite>`_
   and must not cause any major performance regressions.
 
 * The change set should not cause performance or correctness regressions for the
-  LLVM tools.
+  LLVM tools. See `llvm-compile-time-tracker.com <https://llvm-compile-time-tracker.com>`_
 
 * The changes should not cause performance or correctness regressions in code
   compiled by LLVM on all applicable targets.
@@ -459,18 +473,18 @@ found in the future that the change is responsible for.  For example:
 * You are expected to address any `GitHub Issues
   <https://github.com/llvm/llvm-project/issues>`_ that result from your change.
 
-We prefer for this to be handled before submission but understand that it isn't
-possible to test all of this for every submission.  Our build bots and nightly
-testing infrastructure normally finds these problems.  A good rule of thumb is
-to check the nightly testers for regressions the day after your change.  Build
-bots will directly email you if a group of commits that included yours caused a
+Our build bots and `nightly testing infrastructure
+<https://llvm.org/docs/lnt/intro.html>`_ find many of these issues. Build bots
+will directly email you if a group of commits that included yours caused a
 failure.  You are expected to check the build bot messages to see if they are
-your fault and, if so, fix the breakage.
+your fault and, if so, fix the breakage. However, keep in mind that if you
+receive such an email, it is highly likely that your change is not at fault.
+Changes are batched together precisely because these tests are generally too
+expensive to run continuously for every change.
 
-Commits that violate these quality standards (e.g. are very broken) may be
-reverted. This is necessary when the change blocks other developers from making
-progress. The developer is welcome to re-commit the change after the problem has
-been fixed.
+Commits that violate these quality standards may be reverted (see below). This
+is necessary when the change blocks other developers from making progress. The
+developer is welcome to re-commit the change after the problem has been fixed.
 
 .. _revert_policy:
 
