@@ -4,12 +4,7 @@
 define ptr @icmp_ptrdiff_gt(ptr %0, ptr %1, ptr %2) {
 ; CHECK-LABEL: @icmp_ptrdiff_gt(
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0:%.*]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP1:%.*]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP2:%.*]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[TMP6]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp sgt i64 [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt ptr [[TMP4]], [[TMP2:%.*]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], ptr [[TMP2]], ptr [[TMP4]]
 ; CHECK-NEXT:    ret ptr [[TMP11]]
 ;
@@ -27,12 +22,7 @@ define ptr @icmp_ptrdiff_gt(ptr %0, ptr %1, ptr %2) {
 define ptr @icmp_ptrdiff_lt(ptr %0, ptr %1, ptr %2) {
 ; CHECK-LABEL: @icmp_ptrdiff_lt(
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0:%.*]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP1:%.*]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP2:%.*]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[TMP6]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt i64 [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult ptr [[TMP4]], [[TMP2:%.*]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], ptr [[TMP2]], ptr [[TMP4]]
 ; CHECK-NEXT:    ret ptr [[TMP11]]
 ;
@@ -50,12 +40,7 @@ define ptr @icmp_ptrdiff_lt(ptr %0, ptr %1, ptr %2) {
 define ptr @icmp_ptrdiff_ge(ptr %0, ptr %1, ptr %2) {
 ; CHECK-LABEL: @icmp_ptrdiff_ge(
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0:%.*]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP1:%.*]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP2:%.*]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[TMP6]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp slt i64 [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult ptr [[TMP4]], [[TMP2:%.*]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[DOTNOT]], ptr [[TMP4]], ptr [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[TMP10]]
 ;
@@ -73,12 +58,7 @@ define ptr @icmp_ptrdiff_ge(ptr %0, ptr %1, ptr %2) {
 define ptr @icmp_ptrdiff_le(ptr %0, ptr %1, ptr %2) {
 ; CHECK-LABEL: @icmp_ptrdiff_le(
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0:%.*]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP1:%.*]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP2:%.*]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[TMP6]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp sgt i64 [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP4]], [[TMP2:%.*]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[DOTNOT]], ptr [[TMP4]], ptr [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[TMP10]]
 ;
