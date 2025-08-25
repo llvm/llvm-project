@@ -124,7 +124,7 @@ DebuggerResourceProvider::GetResources() const {
   return resources;
 }
 
-llvm::Expected<lldb_protocol::mcp::ResourceResult>
+llvm::Expected<lldb_protocol::mcp::ResourcesReadResult>
 DebuggerResourceProvider::ReadResource(llvm::StringRef uri) const {
 
   auto [protocol, path] = uri.split("://");
@@ -161,7 +161,7 @@ DebuggerResourceProvider::ReadResource(llvm::StringRef uri) const {
   return ReadDebuggerResource(uri, debugger_idx);
 }
 
-llvm::Expected<lldb_protocol::mcp::ResourceResult>
+llvm::Expected<lldb_protocol::mcp::ResourcesReadResult>
 DebuggerResourceProvider::ReadDebuggerResource(llvm::StringRef uri,
                                                lldb::user_id_t debugger_id) {
   lldb::DebuggerSP debugger_sp = Debugger::FindDebuggerWithID(debugger_id);
@@ -178,12 +178,12 @@ DebuggerResourceProvider::ReadDebuggerResource(llvm::StringRef uri,
   contents.mimeType = kMimeTypeJSON;
   contents.text = llvm::formatv("{0}", toJSON(debugger_resource));
 
-  lldb_protocol::mcp::ResourceResult result;
+  lldb_protocol::mcp::ResourcesReadResult result;
   result.contents.push_back(contents);
   return result;
 }
 
-llvm::Expected<lldb_protocol::mcp::ResourceResult>
+llvm::Expected<lldb_protocol::mcp::ResourcesReadResult>
 DebuggerResourceProvider::ReadTargetResource(llvm::StringRef uri,
                                              lldb::user_id_t debugger_id,
                                              size_t target_idx) {
@@ -214,7 +214,7 @@ DebuggerResourceProvider::ReadTargetResource(llvm::StringRef uri,
   contents.mimeType = kMimeTypeJSON;
   contents.text = llvm::formatv("{0}", toJSON(target_resource));
 
-  lldb_protocol::mcp::ResourceResult result;
+  lldb_protocol::mcp::ResourcesReadResult result;
   result.contents.push_back(contents);
   return result;
 }

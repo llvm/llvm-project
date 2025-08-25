@@ -9,82 +9,52 @@
 #ifndef LLDB_PROTOCOL_MCP_SERVER_H
 #define LLDB_PROTOCOL_MCP_SERVER_H
 
-#include "lldb/Host/JSONTransport.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Protocol/MCP/Binder.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/Protocol/MCP/Tool.h"
+#include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 #include <mutex>
+
+namespace lldb_private::mcp {
+class ProtocolServerMCP;
+} // namespace lldb_private::mcp
 
 namespace lldb_protocol::mcp {
 
-class MCPTransport final
-    : public lldb_private::JSONRPCTransport<Request, Response, Notification> {
-public:
-  using LogCallback = std::function<void(llvm::StringRef message)>;
+class Server {
+  friend class lldb_private::mcp::ProtocolServerMCP;
+  friend class lldb_private::mcp::ProtocolServerMCP;
 
-  MCPTransport(lldb::IOObjectSP in, lldb::IOObjectSP out,
-               std::string client_name, LogCallback log_callback = {})
-      : JSONRPCTransport(in, out), m_client_name(std::move(client_name)),
-        m_log_callback(log_callback) {}
-  virtual ~MCPTransport() = default;
-
-  void Log(llvm::StringRef message) override {
-    if (m_log_callback)
-      m_log_callback(llvm::formatv("{0}: {1}", m_client_name, message).str());
-  }
-
-private:
-  std::string m_client_name;
-  LogCallback m_log_callback;
-};
-
-class Server : public MCPTransport::MessageHandler {
 public:
   Server(std::string name, std::string version,
          std::unique_ptr<MCPTransport> transport_up,
          lldb_private::MainLoop &loop);
   ~Server() = default;
 
-  using NotificationHandler = std::function<void(const Notification &)>;
-
   void AddTool(std::unique_ptr<Tool> tool);
   void AddResourceProvider(std::unique_ptr<ResourceProvider> resource_provider);
-  void AddNotificationHandler(llvm::StringRef method,
-                              NotificationHandler handler);
 
   llvm::Error Run();
 
+  Binder &GetBinder() { return m_binder; };
+
 protected:
-  Capabilities GetCapabilities();
+  ServerCapabilities GetCapabilities();
 
-  using RequestHandler =
-      std::function<llvm::Expected<Response>(const Request &)>;
+  llvm::Expected<InitializeResult>
+  InitializeHandler(const InitializeParams &request);
 
-  void AddRequestHandlers();
+  llvm::Expected<ToolsListResult> ToolsListHandler(const Void &);
+  llvm::Expected<ToolsCallResult> ToolsCallHandler(const ToolsCallParams &);
 
-  void AddRequestHandler(llvm::StringRef method, RequestHandler handler);
-
-  llvm::Expected<std::optional<Message>> HandleData(llvm::StringRef data);
-
-  llvm::Expected<Response> Handle(Request request);
-  void Handle(Notification notification);
-
-  llvm::Expected<Response> InitializeHandler(const Request &);
-
-  llvm::Expected<Response> ToolsListHandler(const Request &);
-  llvm::Expected<Response> ToolsCallHandler(const Request &);
-
-  llvm::Expected<Response> ResourcesListHandler(const Request &);
-  llvm::Expected<Response> ResourcesReadHandler(const Request &);
-
-  void Received(const Request &) override;
-  void Received(const Response &) override;
-  void Received(const Notification &) override;
-  void OnError(llvm::Error) override;
-  void OnClosed() override;
+  llvm::Expected<ResourcesListResult> ResourcesListHandler(const Void &);
+  llvm::Expected<ResourcesReadResult>
+  ResourcesReadHandler(const ResourcesReadParams &);
 
   void TerminateLoop();
 
@@ -99,9 +69,7 @@ private:
 
   llvm::StringMap<std::unique_ptr<Tool>> m_tools;
   std::vector<std::unique_ptr<ResourceProvider>> m_resource_providers;
-
-  llvm::StringMap<RequestHandler> m_request_handlers;
-  llvm::StringMap<NotificationHandler> m_notification_handlers;
+  Binder m_binder;
 };
 
 } // namespace lldb_protocol::mcp

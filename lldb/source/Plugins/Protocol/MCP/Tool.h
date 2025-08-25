@@ -22,10 +22,11 @@ public:
   using lldb_protocol::mcp::Tool::Tool;
   ~CommandTool() = default;
 
-  virtual llvm::Expected<lldb_protocol::mcp::TextResult>
-  Call(const lldb_protocol::mcp::ToolArguments &args) override;
+  void Call(const lldb_protocol::mcp::ToolArguments &,
+            llvm::unique_function<void(
+                llvm::Expected<lldb_protocol::mcp::ToolsCallResult>)>) override;
 
-  virtual std::optional<llvm::json::Value> GetSchema() const override;
+  std::optional<llvm::json::Value> GetSchema() const override;
 };
 
 } // namespace lldb_private::mcp

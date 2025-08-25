@@ -10,14 +10,10 @@
 #include "Resource.h"
 #include "Tool.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Protocol/MCP/MCPError.h"
-#include "lldb/Protocol/MCP/Tool.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Threading.h"
 #include <thread>
-#include <variant>
 
 using namespace lldb_private;
 using namespace lldb_private::mcp;
@@ -50,12 +46,14 @@ llvm::StringRef ProtocolServerMCP::GetPluginDescriptionStatic() {
   return "MCP Server.";
 }
 
-void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) const {
-  server.AddNotificationHandler("notifications/initialized",
-                                [](const lldb_protocol::mcp::Notification &) {
-                                  LLDB_LOG(GetLog(LLDBLog::Host),
-                                           "MCP initialization complete");
-                                });
+void ProtocolServerMCP::OnInitialized(
+    const lldb_protocol::mcp::Notification &) {
+  LLDB_LOG(GetLog(LLDBLog::Host), "MCP initialization complete");
+}
+
+void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) {
+  server.m_binder.notification("notifications/initialized",
+                               &ProtocolServerMCP::OnInitialized, this);
   server.AddTool(
       std::make_unique<CommandTool>("lldb_command", "Run an lldb command."));
   server.AddResourceProvider(std::make_unique<DebuggerResourceProvider>());
@@ -67,7 +65,7 @@ void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
   LLDB_LOG(log, "New MCP client connected: {0}", client_name);
 
   lldb::IOObjectSP io_sp = std::move(socket);
-  auto transport_up = std::make_unique<lldb_protocol::mcp::MCPTransport>(
+  auto transport_up = std::make_unique<lldb_protocol::mcp::Transport>(
       io_sp, io_sp, std::move(client_name), [&](llvm::StringRef message) {
         LLDB_LOG(GetLog(LLDBLog::Host), "{0}", message);
       });

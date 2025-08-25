@@ -23,7 +23,7 @@ public:
 
   virtual std::vector<lldb_protocol::mcp::Resource>
   GetResources() const override;
-  virtual llvm::Expected<lldb_protocol::mcp::ResourceResult>
+  virtual llvm::Expected<lldb_protocol::mcp::ResourcesReadResult>
   ReadResource(llvm::StringRef uri) const override;
 
 private:
@@ -31,9 +31,9 @@ private:
   static lldb_protocol::mcp::Resource GetTargetResource(size_t target_idx,
                                                         Target &target);
 
-  static llvm::Expected<lldb_protocol::mcp::ResourceResult>
+  static llvm::Expected<lldb_protocol::mcp::ResourcesReadResult>
   ReadDebuggerResource(llvm::StringRef uri, lldb::user_id_t debugger_id);
-  static llvm::Expected<lldb_protocol::mcp::ResourceResult>
+  static llvm::Expected<lldb_protocol::mcp::ResourcesReadResult>
   ReadTargetResource(llvm::StringRef uri, lldb::user_id_t debugger_id,
                      size_t target_idx);
 };

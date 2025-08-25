@@ -228,11 +228,11 @@ bool fromJSON(const llvm::json::Value &V, ResourceContents &RC,
          O.mapOptional("mimeType", RC.mimeType);
 }
 
-llvm::json::Value toJSON(const ResourceResult &RR) {
+llvm::json::Value toJSON(const ResourcesReadResult &RR) {
   return llvm::json::Object{{"contents", RR.contents}};
 }
 
-bool fromJSON(const llvm::json::Value &V, ResourceResult &RR,
+bool fromJSON(const llvm::json::Value &V, ResourcesReadResult &RR,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(V, P);
   return O && O.map("contents", RR.contents);
@@ -324,5 +324,160 @@ bool fromJSON(const llvm::json::Value &V, Message &M, llvm::json::Path P) {
   P.report("unrecognized message type");
   return false;
 }
+
+json::Value toJSON(const Implementation &I) {
+  json::Object result{{"name", I.name}, {"version", I.version}};
+
+  if (!I.title.empty())
+    result.insert({"title", I.title});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &V, Implementation &I, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("name", I.name) && O.mapOptional("title", I.title) &&
+         O.mapOptional("version", I.version);
+}
+
+json::Value toJSON(const ClientCapabilities &C) { return json::Object{}; }
+
+bool fromJSON(const json::Value &, ClientCapabilities &, json::Path) {
+  return true;
+}
+
+json::Value toJSON(const ServerCapabilities &C) {
+  json::Object result{};
+
+  if (C.supportsToolsList)
+    result.insert({"tools", json::Object{{"listChanged", true}}});
+
+  if (C.supportsResourcesList || C.supportsResourcesSubscribe) {
+    json::Object resources;
+    if (C.supportsResourcesList)
+      resources.insert({"listChanged", true});
+    if (C.supportsResourcesSubscribe)
+      resources.insert({"subscribe", true});
+    result.insert({"resources", std::move(resources)});
+  }
+
+  if (C.supportsCompletions)
+    result.insert({"completions", json::Object{}});
+
+  if (C.supportsLogging)
+    result.insert({"logging", json::Object{}});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &V, ServerCapabilities &C, json::Path P) {
+  const json::Object *O = V.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+
+  if (O->find("tools") != O->end())
+    C.supportsToolsList = true;
+
+  return true;
+}
+
+json::Value toJSON(const InitializeParams &P) {
+  return json::Object{
+      {"protocolVersion", P.protocolVersion},
+      {"capabilities", P.capabilities},
+      {"clientInfo", P.clientInfo},
+  };
+}
+
+bool fromJSON(const json::Value &V, InitializeParams &I, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("protocolVersion", I.protocolVersion) &&
+         O.map("capabilities", I.capabilities) &&
+         O.map("clientInfo", I.clientInfo);
+}
+
+json::Value toJSON(const InitializeResult &R) {
+  json::Object result{{"protocolVersion", R.protocolVersion},
+                      {"capabilities", R.capabilities},
+                      {"serverInfo", R.serverInfo}};
+
+  if (!R.instructions.empty())
+    result.insert({"instructions", R.instructions});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &V, InitializeResult &R, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("protocolVersion", R.protocolVersion) &&
+         O.map("capabilities", R.capabilities) &&
+         O.map("serverInfo", R.serverInfo) &&
+         O.mapOptional("instructions", R.instructions);
+}
+
+json::Value toJSON(const ToolsListResult &R) {
+  return json::Object{{"tools", R.tools}};
+}
+
+bool fromJSON(const json::Value &V, ToolsListResult &R, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("tools", R.tools);
+}
+
+json::Value toJSON(const ToolsCallResult &R) {
+  json::Object result{{"content", R.content}};
+
+  if (R.isError)
+    result.insert({"isError", R.isError});
+  if (R.structuredContent)
+    result.insert({"structuredContent", *R.structuredContent});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &V, ToolsCallResult &R, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("content", R.content) &&
+         O.mapOptional("isError", R.isError) &&
+         mapRaw(V, "structuredContent", R.structuredContent, P);
+}
+
+json::Value toJSON(const ToolsCallParams &R) {
+  json::Object result{{"name", R.name}};
+
+  if (R.arguments)
+    result.insert({"arguments", *R.arguments});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &V, ToolsCallParams &R, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("name", R.name) && mapRaw(V, "arguments", R.arguments, P);
+}
+
+json::Value toJSON(const ResourcesReadParams &R) {
+  return json::Object{{"uri", R.URI}};
+}
+
+bool fromJSON(const json::Value &V, ResourcesReadParams &R, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("uri", R.URI);
+}
+
+json::Value toJSON(const ResourcesListResult &R) {
+  return json::Object{{"resources", R.resources}};
+}
+
+bool fromJSON(const json::Value &V, ResourcesListResult &R, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("resources", R.resources);
+}
+
+json::Value toJSON(const Void &R) { return json::Object{}; }
+
+bool fromJSON(const json::Value &V, Void &R, json::Path P) { return true; }
 
 } // namespace lldb_protocol::mcp

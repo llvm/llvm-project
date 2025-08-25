@@ -14,6 +14,7 @@
 using namespace lldb_private;
 using namespace lldb_protocol;
 using namespace lldb_private::mcp;
+using namespace lldb_protocol::mcp;
 using namespace llvm;
 
 namespace {
@@ -29,10 +30,10 @@ bool fromJSON(const llvm::json::Value &V, CommandToolArguments &A,
          O.mapOptional("arguments", A.arguments);
 }
 
-/// Helper function to create a TextResult from a string output.
-static lldb_protocol::mcp::TextResult createTextResult(std::string output,
-                                                       bool is_error = false) {
-  lldb_protocol::mcp::TextResult text_result;
+/// Helper function to create a ToolsCallResult from a string output.
+static lldb_protocol::mcp::ToolsCallResult
+createTextResult(std::string output, bool is_error = false) {
+  lldb_protocol::mcp::ToolsCallResult text_result;
   text_result.content.emplace_back(
       lldb_protocol::mcp::TextContent{{std::move(output)}});
   text_result.isError = is_error;
@@ -41,22 +42,23 @@ static lldb_protocol::mcp::TextResult createTextResult(std::string output,
 
 } // namespace
 
-llvm::Expected<lldb_protocol::mcp::TextResult>
-CommandTool::Call(const lldb_protocol::mcp::ToolArguments &args) {
+namespace lldb_private::mcp {
+
+void CommandTool::Call(const ToolArguments &args, Reply reply) {
   if (!std::holds_alternative<json::Value>(args))
-    return createStringError("CommandTool requires arguments");
+    return reply(createStringError("CommandTool requires arguments"));
 
   json::Path::Root root;
 
   CommandToolArguments arguments;
   if (!fromJSON(std::get<json::Value>(args), arguments, root))
-    return root.getError();
+    return reply(root.getError());
 
   lldb::DebuggerSP debugger_sp =
       Debugger::FindDebuggerWithID(arguments.debugger_id);
   if (!debugger_sp)
-    return createStringError(
-        llvm::formatv("no debugger with id {0}", arguments.debugger_id));
+    return reply(createStringError(
+        llvm::formatv("no debugger with id {0}", arguments.debugger_id)));
 
   // FIXME: Disallow certain commands and their aliases.
   CommandReturnObject result(/*colors=*/false);
@@ -75,7 +77,7 @@ CommandTool::Call(const lldb_protocol::mcp::ToolArguments &args) {
     output += err_str;
   }
 
-  return createTextResult(output, !result.Succeeded());
+  reply(createTextResult(output, !result.Succeeded()));
 }
 
 std::optional<llvm::json::Value> CommandTool::GetSchema() const {
@@ -89,3 +91,5 @@ std::optional<llvm::json::Value> CommandTool::GetSchema() const {
                             {"required", std::move(required)}};
   return schema;
 }
+
+} // namespace lldb_private::mcp

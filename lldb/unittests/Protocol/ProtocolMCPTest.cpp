@@ -277,10 +277,11 @@ TEST(ProtocolMCPTest, ResourceResult) {
   contents2.text = "Second resource content";
   contents2.mimeType = "application/json";
 
-  ResourceResult result;
+  ResourcesReadResult result;
   result.contents = {contents1, contents2};
 
-  llvm::Expected<ResourceResult> deserialized_result = roundtripJSON(result);
+  llvm::Expected<ResourcesReadResult> deserialized_result =
+      roundtripJSON(result);
   ASSERT_THAT_EXPECTED(deserialized_result, llvm::Succeeded());
 
   ASSERT_EQ(result.contents.size(), deserialized_result->contents.size());
@@ -297,9 +298,10 @@ TEST(ProtocolMCPTest, ResourceResult) {
 }
 
 TEST(ProtocolMCPTest, ResourceResultEmpty) {
-  ResourceResult result;
+  ResourcesReadResult result;
 
-  llvm::Expected<ResourceResult> deserialized_result = roundtripJSON(result);
+  llvm::Expected<ResourcesReadResult> deserialized_result =
+      roundtripJSON(result);
   ASSERT_THAT_EXPECTED(deserialized_result, llvm::Succeeded());
 
   EXPECT_TRUE(deserialized_result->contents.empty());

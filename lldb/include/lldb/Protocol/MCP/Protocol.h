@@ -14,10 +14,12 @@
 #ifndef LLDB_PROTOCOL_MCP_PROTOCOL_H
 #define LLDB_PROTOCOL_MCP_PROTOCOL_H
 
+#include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace lldb_protocol::mcp {
 
@@ -42,6 +44,12 @@ struct Request {
 llvm::json::Value toJSON(const Request &);
 bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
 bool operator==(const Request &, const Request &);
+
+enum ErrorCode : signed {
+  eErrorCodeMethodNotFound = -32601,
+  eErrorCodeInvalidParams = -32602,
+  eErrorCodeInternalError = -32000,
+};
 
 struct Error {
   /// The error type that occurred.
@@ -147,6 +155,14 @@ struct Resource {
 llvm::json::Value toJSON(const Resource &);
 bool fromJSON(const llvm::json::Value &, Resource &, llvm::json::Path);
 
+/// The server’s response to a resources/list request from the client.
+struct ResourcesListResult {
+  std::vector<Resource> resources;
+};
+llvm::json::Value toJSON(const ResourcesListResult &);
+bool fromJSON(const llvm::json::Value &, ResourcesListResult &,
+              llvm::json::Path);
+
 /// The contents of a specific resource or sub-resource.
 struct ResourceContents {
   /// The URI of this resource.
@@ -163,13 +179,23 @@ struct ResourceContents {
 llvm::json::Value toJSON(const ResourceContents &);
 bool fromJSON(const llvm::json::Value &, ResourceContents &, llvm::json::Path);
 
+/// Sent from the client to the server, to read a specific resource URI.
+struct ResourcesReadParams {
+  /// The URI of the resource to read. The URI can use any protocol; it is up to
+  /// the server how to interpret it.
+  std::string URI;
+};
+llvm::json::Value toJSON(const ResourcesReadParams &);
+bool fromJSON(const llvm::json::Value &, ResourcesReadParams &,
+              llvm::json::Path);
+
 /// The server's response to a resources/read request from the client.
-struct ResourceResult {
+struct ResourcesReadResult {
   std::vector<ResourceContents> contents;
 };
-
-llvm::json::Value toJSON(const ResourceResult &);
-bool fromJSON(const llvm::json::Value &, ResourceResult &, llvm::json::Path);
+llvm::json::Value toJSON(const ResourcesReadResult &);
+bool fromJSON(const llvm::json::Value &, ResourcesReadResult &,
+              llvm::json::Path);
 
 /// Text provided to or from an LLM.
 struct TextContent {
@@ -203,6 +229,145 @@ llvm::json::Value toJSON(const ToolDefinition &);
 bool fromJSON(const llvm::json::Value &, ToolDefinition &, llvm::json::Path);
 
 using ToolArguments = std::variant<std::monostate, llvm::json::Value>;
+
+/// Describes the name and version of an MCP implementation, with an optional
+/// title for UI representation.
+///
+/// see
+/// https://modelcontextprotocol.io/specification/2025-06-18/schema#implementation
+struct Implementation {
+  /// Intended for programmatic or logical use, but used as a display name in
+  /// past specs or fallback (if title isn’t present).
+  std::string name;
+
+  /// Intended for UI and end-user contexts — optimized to be human-readable and
+  /// easily understood, even by those unfamiliar with domain-specific
+  /// terminology.
+  ///
+  /// If not provided, the name should be used for display (except for Tool,
+  /// where annotations.title should be given precedence over using name, if
+  /// present).
+  std::string title;
+
+  std::string version;
+};
+llvm::json::Value toJSON(const Implementation &);
+bool fromJSON(const llvm::json::Value &, Implementation &, llvm::json::Path);
+
+/// Capabilities a client may support. Known capabilities are defined here, in
+/// this schema, but this is not a closed set: any client can define its own,
+/// additional capabilities.
+struct ClientCapabilities {};
+llvm::json::Value toJSON(const ClientCapabilities &);
+bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
+              llvm::json::Path);
+
+/// Capabilities that a server may support. Known capabilities are defined here,
+/// in this schema, but this is not a closed set: any server can define its own,
+/// additional capabilities.
+struct ServerCapabilities {
+  bool supportsToolsList = false;
+  bool supportsResourcesList = false;
+  bool supportsResourcesSubscribe = false;
+
+  /// Utilities.
+  bool supportsCompletions = false;
+  bool supportsLogging = false;
+};
+llvm::json::Value toJSON(const ServerCapabilities &);
+bool fromJSON(const llvm::json::Value &, ServerCapabilities &,
+              llvm::json::Path);
+
+/// Initialization
+
+/// This request is sent from the client to the server when it first connects,
+/// asking it to begin initialization.
+///
+/// @category initialize
+struct InitializeParams {
+  /// The latest version of the Model Context Protocol that the client supports.
+  /// The client MAY decide to support older versions as well.
+  std::string protocolVersion;
+
+  ClientCapabilities capabilities;
+
+  Implementation clientInfo;
+};
+llvm::json::Value toJSON(const InitializeParams &);
+bool fromJSON(const llvm::json::Value &, InitializeParams &, llvm::json::Path);
+
+/// After receiving an initialize request from the client, the server sends this
+/// response.
+///
+/// @category initialize
+struct InitializeResult {
+  /// The version of the Model Context Protocol that the server wants to use.
+  /// This may not match the version that the client requested. If the client
+  /// cannot support this version, it MUST disconnect.
+  std::string protocolVersion;
+
+  ServerCapabilities capabilities;
+  Implementation serverInfo;
+
+  /// Instructions describing how to use the server and its features.
+  ///
+  /// This can be used by clients to improve the LLM's understanding of
+  /// available tools, resources, etc. It can be thought of like a "hint" to the
+  /// model. For example, this information MAY be added to the system prompt.
+  std::string instructions;
+};
+llvm::json::Value toJSON(const InitializeResult &);
+bool fromJSON(const llvm::json::Value &, InitializeResult &, llvm::json::Path);
+
+/// Special case parameter.
+using Void = std::monostate;
+llvm::json::Value toJSON(const Void &);
+bool fromJSON(const llvm::json::Value &, Void &, llvm::json::Path);
+
+/// The server's response to a `tools/list` request from the client.
+struct ToolsListResult {
+  std::vector<ToolDefinition> tools;
+};
+llvm::json::Value toJSON(const ToolsListResult &);
+bool fromJSON(const llvm::json::Value &, ToolsListResult &, llvm::json::Path);
+
+// FIXME: Support other content types as needed.
+using ContentBlock = TextContent;
+
+/// Used by the client to invoke a tool provided by the server.
+struct ToolsCallParams {
+  std::string name;
+  std::optional<llvm::json::Value> arguments;
+};
+llvm::json::Value toJSON(const ToolsCallParams &);
+bool fromJSON(const llvm::json::Value &, ToolsCallParams &, llvm::json::Path);
+
+/// The server’s response to a tool call.
+struct ToolsCallResult {
+  /// A list of content objects that represent the unstructured result of the
+  /// tool call.
+  std::vector<ContentBlock> content;
+
+  /// Whether the tool call ended in an error.
+  ///
+  /// If not set, this is assumed to be false (the call was successful).
+  ///
+  /// Any errors that originate from the tool SHOULD be reported inside the
+  /// result object, with `isError` set to true, not as an MCP protocol-level
+  /// error response. Otherwise, the LLM would not be able to see that an error
+  /// occurred and self-correct.
+  ///
+  /// However, any errors in finding the tool, an error indicating that the
+  /// server does not support tool calls, or any other exceptional conditions,
+  /// should be reported as an MCP error response.
+  bool isError = false;
+
+  /// An optional JSON object that represents the structured result of the tool
+  /// call.
+  std::optional<llvm::json::Value> structuredContent;
+};
+llvm::json::Value toJSON(const ToolsCallResult &);
+bool fromJSON(const llvm::json::Value &, ToolsCallResult &, llvm::json::Path);
 
 } // namespace lldb_protocol::mcp
 

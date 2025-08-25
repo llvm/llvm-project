@@ -19,6 +19,7 @@
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"
+#include "lldb/Protocol/MCP/Binder.h"
 #include "lldb/Protocol/MCP/MCPError.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Support/Error.h"
@@ -36,18 +37,34 @@ using namespace lldb_private;
 using namespace lldb_protocol::mcp;
 using testing::_;
 
+namespace lldb_protocol::mcp {
+void PrintTo(const Request &req, std::ostream *os) {
+  *os << formatv("{0}", toJSON(req)).str();
+}
+void PrintTo(const Response &resp, std::ostream *os) {
+  *os << formatv("{0}", toJSON(resp)).str();
+}
+void PrintTo(const Notification &note, std::ostream *os) {
+  *os << formatv("{0}", toJSON(note)).str();
+}
+void PrintTo(const Message &message, std::ostream *os) {
+  return std::visit([os](auto &&message) { return PrintTo(message, os); },
+                    message);
+}
+} // namespace lldb_protocol::mcp
+
 namespace {
 class TestProtocolServerMCP : public lldb_private::mcp::ProtocolServerMCP {
 public:
   using ProtocolServerMCP::GetSocket;
   using ProtocolServerMCP::ProtocolServerMCP;
 
-  using ExtendCallback =
-      std::function<void(lldb_protocol::mcp::Server &server)>;
+  using ExtendCallback = std::function<void(
+      lldb_protocol::mcp::Server &server, lldb_protocol::mcp::Binder &binder)>;
 
-  virtual void Extend(lldb_protocol::mcp::Server &server) const override {
+  void Extend(lldb_protocol::mcp::Server &server) override {
     if (m_extend_callback)
-      m_extend_callback(server);
+      m_extend_callback(server, server.GetBinder());
   };
 
   void Extend(ExtendCallback callback) { m_extend_callback = callback; }
@@ -55,7 +72,7 @@ public:
   ExtendCallback m_extend_callback;
 };
 
-using Message = typename Transport<Request, Response, Notification>::Message;
+using Message = typename lldb_protocol::mcp::Transport::Message;
 
 class TestJSONTransport final
     : public lldb_private::JSONRPCTransport<Request, Response, Notification> {
@@ -74,7 +91,8 @@ class TestTool : public Tool {
 public:
   using Tool::Tool;
 
-  llvm::Expected<TextResult> Call(const ToolArguments &args) override {
+  void Call(const ToolArguments &args,
+            Callback<void(llvm::Expected<ToolsCallResult>)> reply) override {
     std::string argument;
     if (const json::Object *args_obj =
             std::get<json::Value>(args).getAsObject()) {
@@ -83,9 +101,9 @@ public:
       }
     }
 
-    TextResult text_result;
+    ToolsCallResult text_result;
     text_result.content.emplace_back(TextContent{{argument}});
-    return text_result;
+    reply(text_result);
   }
 };
 
@@ -105,7 +123,7 @@ class TestResourceProvider : public ResourceProvider {
     return resources;
   }
 
-  llvm::Expected<ResourceResult>
+  llvm::Expected<ResourcesReadResult>
   ReadResource(llvm::StringRef uri) const override {
     if (uri != "lldb://foo/bar")
       return llvm::make_error<UnsupportedURI>(uri.str());
@@ -115,7 +133,7 @@ class TestResourceProvider : public ResourceProvider {
     contents.mimeType = "application/json";
     contents.text = "foobar";
 
-    ResourceResult result;
+    ResourcesReadResult result;
     result.contents.push_back(contents);
     return result;
   }
@@ -126,8 +144,9 @@ class ErrorTool : public Tool {
 public:
   using Tool::Tool;
 
-  llvm::Expected<TextResult> Call(const ToolArguments &args) override {
-    return llvm::createStringError("error");
+  void Call(const ToolArguments &args,
+            Callback<void(llvm::Expected<ToolsCallResult>)> reply) override {
+    reply(llvm::createStringError("error"));
   }
 };
 
@@ -136,11 +155,12 @@ class FailTool : public Tool {
 public:
   using Tool::Tool;
 
-  llvm::Expected<TextResult> Call(const ToolArguments &args) override {
-    TextResult text_result;
+  void Call(const ToolArguments &args,
+            Callback<void(llvm::Expected<ToolsCallResult>)> reply) override {
+    ToolsCallResult text_result;
     text_result.content.emplace_back(TextContent{{"failed"}});
     text_result.isError = true;
-    return text_result;
+    reply(text_result);
   }
 };
 
@@ -191,7 +211,7 @@ public:
     connection.protocol = Socket::SocketProtocol::ProtocolTcp;
     connection.name = llvm::formatv("{0}:0", k_localhost).str();
     m_server_up = std::make_unique<TestProtocolServerMCP>();
-    m_server_up->Extend([&](auto &server) {
+    m_server_up->Extend([&](auto &server, Binder &binder) {
       server.AddTool(std::make_unique<TestTool>("test", "test tool"));
       server.AddResourceProvider(std::make_unique<TestResourceProvider>());
     });
@@ -225,7 +245,7 @@ TEST_F(ProtocolServerMCPTest, Initialization) {
   llvm::StringLiteral request =
       R"json({"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lldb-unit","version":"0.1.0"}},"jsonrpc":"2.0","id":1})json";
   llvm::StringLiteral response =
-      R"json({"id":1,"jsonrpc":"2.0","result":{"capabilities":{"resources":{"listChanged":false,"subscribe":false},"tools":{"listChanged":true}},"protocolVersion":"2024-11-05","serverInfo":{"name":"lldb-mcp","version":"0.1.0"}}})json";
+      R"json({"id":1,"jsonrpc":"2.0","result":{"capabilities":{"resources":{"listChanged":true},"tools":{"listChanged":true}},"protocolVersion":"2024-11-05","serverInfo":{"name":"lldb-mcp","version":"0.1.0"}}})json";
 
   ASSERT_THAT_ERROR(Write(request), Succeeded());
   llvm::Expected<Response> expected_resp = json::parse<Response>(response);
@@ -271,7 +291,7 @@ TEST_F(ProtocolServerMCPTest, ToolsCall) {
   llvm::StringLiteral request =
       R"json({"method":"tools/call","params":{"name":"test","arguments":{"arguments":"foo","debugger_id":0}},"jsonrpc":"2.0","id":11})json";
   llvm::StringLiteral response =
-      R"json({"id":11,"jsonrpc":"2.0","result":{"content":[{"text":"foo","type":"text"}],"isError":false}})json";
+      R"json({"id":11,"jsonrpc":"2.0","result":{"content":[{"text":"foo","type":"text"}]}})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
   llvm::Expected<Response> expected_resp = json::parse<Response>(response);
@@ -281,7 +301,7 @@ TEST_F(ProtocolServerMCPTest, ToolsCall) {
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCallError) {
-  m_server_up->Extend([&](auto &server) {
+  m_server_up->Extend([&](auto &server, auto &binder) {
     server.AddTool(std::make_unique<ErrorTool>("error", "error tool"));
   });
 
@@ -298,7 +318,7 @@ TEST_F(ProtocolServerMCPTest, ToolsCallError) {
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCallFail) {
-  m_server_up->Extend([&](auto &server) {
+  m_server_up->Extend([&](auto &server, auto &binder) {
     server.AddTool(std::make_unique<FailTool>("fail", "fail tool"));
   });
 
@@ -319,15 +339,15 @@ TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
   std::condition_variable cv;
   std::mutex mutex;
 
-  m_server_up->Extend([&](auto &server) {
-    server.AddNotificationHandler("notifications/initialized",
-                                  [&](const Notification &notification) {
-                                    {
-                                      std::lock_guard<std::mutex> lock(mutex);
-                                      handler_called = true;
-                                    }
-                                    cv.notify_all();
-                                  });
+  m_server_up->Extend([&](auto &server, auto &binder) {
+    binder.template notification<Void>(
+        "notifications/initialized", [&](const Void &) {
+          {
+            std::lock_guard<std::mutex> lock(mutex);
+            handler_called = true;
+          }
+          cv.notify_all();
+        });
   });
   llvm::StringLiteral request =
       R"json({"method":"notifications/initialized","jsonrpc":"2.0"})json";

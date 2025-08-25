@@ -41,7 +41,9 @@ public:
 protected:
   // This adds tools and resource providers that
   // are specific to this server. Overridable by the unit tests.
-  virtual void Extend(lldb_protocol::mcp::Server &server) const;
+  virtual void Extend(lldb_protocol::mcp::Server &server);
+
+  void OnInitialized(const lldb_protocol::mcp::Notification &);
 
 private:
   void AcceptCallback(std::unique_ptr<Socket> socket);
