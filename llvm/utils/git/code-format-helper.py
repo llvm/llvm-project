@@ -92,6 +92,11 @@ You can test this locally with the following command:
 {self.instructions}
 ``````````
 
+> [!WARNING]  
+> The reproduction instructions above might return results for more than one PR
+> a stack if you are using a stacked PR workflow. You can limit the results by
+> changing `origin/main` to the base branch/commit you want to compare against.
+
 </details>
 
 <details>
@@ -198,7 +203,9 @@ class ClangFormatHelper(FormatHelper):
 
     @property
     def instructions(self) -> str:
-        return " ".join(self._construct_command(["origin/main", "HEAD", "--diff_from_common_commit"]))
+        # TODO(boomanaiden154): Add --diff_from_common_commit option when it has
+        # landed as in available in a released version.
+        return " ".join(self._construct_command(["origin/main", "HEAD"]))
 
     def should_include_extensionless_file(self, path: str) -> bool:
         return path.startswith("libcxx/include")
