@@ -6,7 +6,7 @@
 ; We don't need a line table for an empty function
 ; CHECK-NO-OFF-NOT: DW_LNE_set_address
 
-; CHECK-YES-OFF:                 DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset] ({{.*}})
+; CHECK-YES-OFF-NOT:             DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset] ({{.*}})
 ; CHECK-YES-OFF:                 Address
 ; CHECK-YES-OFF-NEXT:            ------------------
 ; CHECK-YES-OFF-NEXT:            DW_LNE_set_address ({{.*}})
