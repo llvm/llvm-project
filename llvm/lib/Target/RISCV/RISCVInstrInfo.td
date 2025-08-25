@@ -1746,7 +1746,7 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
                PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;
 
-let Predicates = [HasNoZicfilpCFI],
+let Predicates = [NoZicfilpCFI],
     isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
 def PseudoBRIND : Pseudo<(outs), (ins GPRJALR:$rs1, simm12:$imm12), []>,
                   PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12:$imm12)>;
@@ -1771,7 +1771,7 @@ def : Pat<(riscv_sw_guarded_brind (add GPRX7:$rs1, simm12:$imm12)),
           (PseudoBRINDX7 GPRX7:$rs1, simm12:$imm12)>;
 }
 
-let Predicates = [HasNoZicfilpCFI] in {
+let Predicates = [NoZicfilpCFI] in {
 def : Pat<(brind GPRJALR:$rs1), (PseudoBRIND GPRJALR:$rs1, 0)>;
 def : Pat<(brind (add GPRJALR:$rs1, simm12:$imm12)),
           (PseudoBRIND GPRJALR:$rs1, simm12:$imm12)>;
@@ -1808,7 +1808,7 @@ let Predicates = [HasStdExtSmrnmi] in
 def : Pat<(riscv_mnret_glue), (MNRET)>;
 
 let isCall = 1, Defs = [X1] in {
-let Predicates = [HasNoZicfilpCFI] in
+let Predicates = [NoZicfilpCFI] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
                                 [(riscv_call GPRJALR:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
@@ -1837,7 +1837,7 @@ def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in {
-let Predicates = [HasNoZicfilpCFI] in
+let Predicates = [NoZicfilpCFI] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
                                 [(riscv_tail GPRTC:$rs1)]>,
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;

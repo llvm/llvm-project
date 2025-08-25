@@ -1811,4 +1811,4 @@ def FeatureZicfilpFuncSig
           "zicfilp-func-sig", "HasZicfilpFuncSig", "true",
           "Enforce forward-edge control-flow integrity with ZICFILP-func-sig">;
 def HasZicfilpCFI : Predicate<"Subtarget->hasZicfilpCFI()">;
-def HasNoZicfilpCFI : Predicate<"!Subtarget->hasZicfilpCFI()">;
+def NoZicfilpCFI : Predicate<"!Subtarget->hasZicfilpCFI()">;
