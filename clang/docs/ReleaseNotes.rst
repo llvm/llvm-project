@@ -84,6 +84,9 @@ C++ Specific Potentially Breaking Changes
     static_assert((b.*mp)() == 1); // newly rejected
     static_assert((c.*mp)() == 1); // accepted
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
