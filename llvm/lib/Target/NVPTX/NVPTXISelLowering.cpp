@@ -1048,7 +1048,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // PTX support for 16-bit CAS is emulated. Only use 32+
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
-  setMaxAtomicSizeInBitsSupported(128);
+  setMaxAtomicSizeInBitsSupported(STI.hasAtomSwap128() ? 128 : 64);
   setMaxDivRemBitWidthSupported(64);
 
   // Custom lowering for tcgen05.ld vector operands

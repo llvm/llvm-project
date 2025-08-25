@@ -10,8 +10,8 @@
 target triple = "nvptx64-nvidia-cuda"
 
 ;; Check that the first couple of error messages are correct.
-; ERROR: error: <unknown>:0:0: in function test_xchg_generic i128 (ptr, i128): Support for b128 atomics introduced in PTX ISA version 8.3 and requires target sm_90.
-; ERROR: error: <unknown>:0:0: in function test_xchg_global i128 (ptr addrspace(1), i128): Support for b128 atomics introduced in PTX ISA version 8.3 and requires target sm_90.
+; ERROR: error: unsupported cmpxchg
+; ERROR: error: unsupported cmpxchg
 
 define i128 @test_xchg_generic(ptr %addr, i128 %amt) {
 ; CHECK-LABEL: test_xchg_generic(
