@@ -14,7 +14,7 @@ int main() {
   // CHECK: host addr=0x[[#%x,HOST_ADDR:]]
   fprintf(stderr, "host addr=%p\n", x);
 
-#pragma omp target data map(to : x [0:10])
+#pragma omp target data map(to : x[0 : 10])
   {
 // CHECK: omptarget device 0 info: variable x does not have a valid device
 // counterpart
@@ -27,4 +27,3 @@ int main() {
 
   return 0;
 }
-
