@@ -10093,40 +10093,43 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     return Combined;
 
   // fold (xor (smin(x, C), C)) -> select (x < C), xor(x, C), 0
-  // fold (xor (smin(C, x), C)) -> select (x < C), xor(x, C), 0
-  if (N0.getOpcode() == ISD::SMIN && N0.hasOneUse()) {
-    SDValue Op0 = N0.getOperand(0);
-    SDValue Op1 = N0.getOperand(1);
-
-    if (Op1 != N1) {
-      std::swap(Op0, Op1);
-    }
-
-    if (Op1 == N1) {
-      if (isa<ConstantSDNode>(N1)) {
-        EVT CCVT = getSetCCResultType(VT);
-        SDValue Cmp = DAG.getSetCC(SDLoc(N), CCVT, Op0, N1, ISD::SETLT);
-        SDValue XorXC = DAG.getNode(ISD::XOR, SDLoc(N), VT, Op0, N1);
-        SDValue Zero = DAG.getConstant(0, SDLoc(N), VT);
-        return DAG.getSelect(SDLoc(N), VT, Cmp, XorXC, Zero);
-      }
-    }
-  }
-
   // fold (xor (smax(x, C), C)) -> select (x > C), xor(x, C), 0
-  // fold (xor (smax(C, x), C)) -> select (x > C), xor(x, C), 0
-  if (N0.getOpcode() == ISD::SMAX && N0.hasOneUse()) {
+  // fold (xor (umin(x, C), C)) -> select (x < C), xor(x, C), 0
+  // fold (xor (umax(x, C), C)) -> select (x > C), xor(x, C), 0
+  if ((N0.getOpcode() == ISD::SMIN || N0.getOpcode() == ISD::SMAX ||
+       N0.getOpcode() == ISD::UMIN || N0.getOpcode() == ISD::UMAX) &&
+      N0.hasOneUse()) {
     SDValue Op0 = N0.getOperand(0);
     SDValue Op1 = N0.getOperand(1);
 
-    if (Op1 != N1) {
-      std::swap(Op0, Op1);
-    }
-
     if (Op1 == N1) {
-      if (isa<ConstantSDNode>(N1)) {
+      if (isa<ConstantSDNode>(N1) ||
+          ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
+        // For vectors, only optimize when the constant is zero or all-ones to
+        // avoid generating more instructions
+        if (VT.isVector()) {
+          ConstantSDNode *N1C = isConstOrConstSplat(N1);
+          if (!N1C || (!N1C->isZero() && !N1C->isAllOnes()))
+            return SDValue();
+        }
+
         EVT CCVT = getSetCCResultType(VT);
-        SDValue Cmp = DAG.getSetCC(SDLoc(N), CCVT, Op0, N1, ISD::SETGT);
+        ISD::CondCode CC;
+        switch (N0.getOpcode()) {
+        case ISD::SMIN:
+          CC = ISD::SETLT;
+          break;
+        case ISD::SMAX:
+          CC = ISD::SETGT;
+          break;
+        case ISD::UMIN:
+          CC = ISD::SETULT;
+          break;
+        case ISD::UMAX:
+          CC = ISD::SETUGT;
+          break;
+        }
+        SDValue Cmp = DAG.getSetCC(SDLoc(N), CCVT, Op0, N1, CC);
         SDValue XorXC = DAG.getNode(ISD::XOR, SDLoc(N), VT, Op0, N1);
         SDValue Zero = DAG.getConstant(0, SDLoc(N), VT);
         return DAG.getSelect(SDLoc(N), VT, Cmp, XorXC, Zero);
