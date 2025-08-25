@@ -112,6 +112,9 @@
 /mlir/**/NVGPU*/ @grypp
 /mlir/test/**/CUDA/ @grypp
 
+# MLIR GPU Dialect
+/mlir/**/GPU*/ @fabianmcg
+
 # MLIR NVVM Dialect in MLIR
 /mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
 /mlir/**/NVVM* @grypp

@@ -414,14 +414,11 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
     case SD_Static:
     case SD_Thread: {
       CXXDestructorDecl *ReferenceTemporaryDtor = nullptr;
-      if (const RecordType *RT =
-              E->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
+      if (const auto *ClassDecl =
+              E->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+          ClassDecl && !ClassDecl->hasTrivialDestructor())
         // Get the destructor for the reference temporary.
-        if (auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
-            ClassDecl && !ClassDecl->hasTrivialDestructor())
-          ReferenceTemporaryDtor =
-              ClassDecl->getDefinitionOrSelf()->getDestructor();
-      }
+        ReferenceTemporaryDtor = ClassDecl->getDestructor();
 
       if (!ReferenceTemporaryDtor)
         return;
@@ -2038,7 +2035,7 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   bool IsBool = (Ty->hasBooleanRepresentation() && !Ty->isVectorType()) ||
                 NSAPI(CGM.getContext()).isObjCBOOLType(Ty);
   bool NeedsBoolCheck = HasBoolCheck && IsBool;
-  bool NeedsEnumCheck = HasEnumCheck && Ty->getAs<EnumType>();
+  bool NeedsEnumCheck = HasEnumCheck && Ty->isEnumeralType();
   if (!NeedsBoolCheck && !NeedsEnumCheck)
     return false;
 

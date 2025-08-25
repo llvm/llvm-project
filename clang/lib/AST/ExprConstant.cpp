@@ -15353,6 +15353,13 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     const auto *VAT = Info.Ctx.getAsVariableArrayType(Ty);
     assert(VAT);
     if (VAT->getElementType()->isArrayType()) {
+      // Variable array size expression could be missing (e.g. int a[*][10]) In
+      // that case, it can't be a constant expression.
+      if (!VAT->getSizeExpr()) {
+        Info.FFDiag(E->getBeginLoc());
+        return false;
+      }
+
       std::optional<APSInt> Res =
           VAT->getSizeExpr()->getIntegerConstantExpr(Info.Ctx);
       if (Res) {
@@ -15400,10 +15407,9 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
 
     case OffsetOfNode::Field: {
       FieldDecl *MemberDecl = ON.getField();
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
+      const auto *RD = CurrentType->getAsRecordDecl();
+      if (!RD)
         return Error(OOE);
-      RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl()) return false;
       const ASTRecordLayout &RL = Info.Ctx.getASTRecordLayout(RD);
       unsigned i = MemberDecl->getFieldIndex();
@@ -15422,22 +15428,20 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
         return Error(OOE);
 
       // Find the layout of the class whose base we are looking into.
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
+      const auto *RD = CurrentType->getAsCXXRecordDecl();
+      if (!RD)
         return Error(OOE);
-      RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl()) return false;
       const ASTRecordLayout &RL = Info.Ctx.getASTRecordLayout(RD);
 
       // Find the base class itself.
       CurrentType = BaseSpec->getType();
-      const RecordType *BaseRT = CurrentType->getAs<RecordType>();
-      if (!BaseRT)
+      const auto *BaseRD = CurrentType->getAsCXXRecordDecl();
+      if (!BaseRD)
         return Error(OOE);
 
       // Add the offset to the base.
-      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(
-          BaseRT->getOriginalDecl()->getDefinitionOrSelf()));
+      Result += RL.getBaseClassOffset(BaseRD);
       break;
     }
     }
@@ -17890,7 +17894,10 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
         // it is an ICE or not.
         const auto *VAT = Ctx.getAsVariableArrayType(ArgTy);
         if (VAT->getElementType()->isArrayType())
-          return CheckICE(VAT->getSizeExpr(), Ctx);
+          // Variable array size expression could be missing (e.g. int a[*][10])
+          // In that case, it can't be a constant expression.
+          return VAT->getSizeExpr() ? CheckICE(VAT->getSizeExpr(), Ctx)
+                                    : ICEDiag(IK_NotICE, E->getBeginLoc());
 
         // Otherwise, this is a regular VLA, which is definitely not an ICE.
         return ICEDiag(IK_NotICE, E->getBeginLoc());

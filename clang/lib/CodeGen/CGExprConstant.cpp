@@ -876,8 +876,9 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
 
     for (const BaseInfo &Base : Bases) {
       bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
-      Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
-            VTableClass, Offset + Base.Offset);
+      if (!Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
+                 VTableClass, Offset + Base.Offset))
+        return false;
     }
   }
 
@@ -1510,10 +1511,8 @@ public:
 
     llvm::Type *ValTy = CGM.getTypes().ConvertType(destType);
     bool HasFlexibleArray = false;
-    if (const auto *RT = destType->getAs<RecordType>())
-      HasFlexibleArray = RT->getOriginalDecl()
-                             ->getDefinitionOrSelf()
-                             ->hasFlexibleArrayMember();
+    if (const auto *RD = destType->getAsRecordDecl())
+      HasFlexibleArray = RD->hasFlexibleArrayMember();
     return Const.build(ValTy, HasFlexibleArray);
   }
 
@@ -1627,7 +1626,7 @@ llvm::Constant *ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *CE) {
   if (CE->isGLValue())
     RetType = CGM.getContext().getLValueReferenceType(RetType);
 
-  return emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
+  return tryEmitAbstract(CE->getAPValueResult(), RetType);
 }
 
 llvm::Constant *
@@ -2756,10 +2755,9 @@ llvm::Constant *CodeGenModule::EmitNullConstant(QualType T) {
     return llvm::ConstantArray::get(ATy, Array);
   }
 
-  if (const RecordType *RT = T->getAs<RecordType>())
-    return ::EmitNullConstant(*this,
-                              RT->getOriginalDecl()->getDefinitionOrSelf(),
-                              /*complete object*/ true);
+  if (const auto *RD = T->getAsRecordDecl())
+    return ::EmitNullConstant(*this, RD,
+                              /*asCompleteObject=*/true);
 
   assert(T->isMemberDataPointerType() &&
          "Should only see pointers to data members here!");
