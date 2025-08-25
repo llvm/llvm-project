@@ -76,12 +76,12 @@ namespace {
 /// | 32x16                 | [2, 8]      | 16x2                     |
 /// | 2x32x16               | [1, 16]     | 2x32x1                   |
 static FailureOr<VectorType>
-getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
+getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
                                 VectorType originalType) {
   if (!layout)
     return failure();
 
-  auto laneLayout = layout.getLaneLayout().asArrayRef();
+  auto laneLayout = layout.getLaneLayoutAsInt().value();
   assert(originalType.getShape().size() >= laneLayout.size() &&
          "Rank of the original vector type should be greater or equal to the "
          "size of the lane layout to distribute the vector type.");
@@ -868,7 +868,7 @@ struct VectorBitcastDistribution final : public gpu::WarpDistributionPattern {
     unsigned operandIdx = operand->getOperandNumber();
     VectorType distributedSourceType =
         getDistVecTypeBasedOnLaneLayout(
-            xegpu::getLayoutAttr(bitcastOp.getSource()),
+            xegpu::getDistributeLayoutAttr(bitcastOp.getSource()),
             bitcastOp.getSourceVectorType())
             .value_or(VectorType());
     if (!distributedSourceType)
@@ -907,24 +907,26 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
           warpOp, "warp result is not a vector::Transpose op");
     auto transposeOp = operand->get().getDefiningOp<vector::TransposeOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    xegpu::LayoutAttr sourceLayout =
-        xegpu::getLayoutAttr(transposeOp.getVector());
-    xegpu::LayoutAttr resultLayout =
-        xegpu::getLayoutAttr(transposeOp.getResult());
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getDistributeLayoutAttr(transposeOp.getVector());
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getDistributeLayoutAttr(transposeOp.getResult());
     if (!sourceLayout || !resultLayout)
       return rewriter.notifyMatchFailure(
           transposeOp,
           "the source or result vector of the transpose op lacks layout "
           "attribute");
-    ArrayRef<int> sourceLaneLayout = sourceLayout.getLaneLayout().asArrayRef();
-    ArrayRef<int> resultLaneLayout = resultLayout.getLaneLayout().asArrayRef();
-    ArrayRef<int> sourceLaneData = sourceLayout.getLaneData().asArrayRef();
-    ArrayRef<int> resultLaneData = resultLayout.getLaneData().asArrayRef();
+    ArrayRef<int64_t> sourceLaneLayout =
+        sourceLayout.getLaneLayoutAsInt().value();
+    ArrayRef<int64_t> resultLaneLayout =
+        resultLayout.getLaneLayoutAsInt().value();
+    ArrayRef<int64_t> sourceLaneData = sourceLayout.getLaneDataAsInt().value();
+    ArrayRef<int64_t> resultLaneData = resultLayout.getLaneDataAsInt().value();
     if (sourceLaneLayout.size() != 2 || resultLaneLayout.size() != 2)
       return rewriter.notifyMatchFailure(
           transposeOp, "the source or result vector of the transpose op "
                        "does not have 2D layout");
-    auto is2DTranspose = [](ArrayRef<int> input, ArrayRef<int> output) {
+    auto is2DTranspose = [](ArrayRef<int64_t> input, ArrayRef<int64_t> output) {
       return input.size() == 2 && output.size() == 2 && input[0] == output[1] &&
              input[1] == output[0];
     };

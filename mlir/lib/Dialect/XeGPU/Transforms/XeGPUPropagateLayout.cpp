@@ -110,14 +110,11 @@ namespace {
 
 struct LayoutInfo {
 private:
-  mlir::Attribute storage = nullptr;
+  xegpu::DistributeLayoutAttr storage = nullptr;
 
 public:
   LayoutInfo() = default;
-  LayoutInfo(const xegpu::LayoutAttr &layout) : storage(layout) {}
-  LayoutInfo(const xegpu::SliceAttr &slice) : storage(slice) {
-    storage = slice.flatten();
-  }
+  LayoutInfo(const xegpu::DistributeLayoutAttr &layout) : storage(layout) {}
 
   // Two lattice values are equal if they have `some` layout. The actual
   // content of the layout does not matter.
@@ -135,28 +132,26 @@ public:
 
   LayoutInfo transpose(ArrayRef<int64_t> permutation) const;
 
-  ArrayRef<int> getLaneLayout() const {
+  SmallVector<int> getLaneLayout() const {
     if (!isAssigned())
       return {};
-    if (isa<xegpu::LayoutAttr>(storage))
-      return cast<xegpu::LayoutAttr>(storage).getLaneLayout().asArrayRef();
-    xegpu::SliceAttr slice = cast<xegpu::SliceAttr>(storage);
-    assert(isa<xegpu::LayoutAttr>(slice.getParent()) &&
-           "Slice parent must be a LayoutAttr");
-    auto parent = cast<xegpu::LayoutAttr>(slice.getParent());
-    return parent.getLaneLayout().asArrayRef();
+    assert(storage.getLaneLayoutAsInt().has_value() &&
+           "Expected lane layout to be assigned");
+    return llvm::map_to_vector(
+        storage.getLaneLayoutAsInt().value(),
+        [](int64_t val) { return static_cast<int>(val); });
   }
-  ArrayRef<int> getLaneData() const {
+
+  SmallVector<int> getLaneData() const {
     if (!isAssigned())
       return {};
-    if (isa<xegpu::LayoutAttr>(storage))
-      return cast<xegpu::LayoutAttr>(storage).getLaneData().asArrayRef();
-    xegpu::SliceAttr slice = cast<xegpu::SliceAttr>(storage);
-    assert(isa<xegpu::LayoutAttr>(slice.getParent()) &&
-           "Slice parent must be a LayoutAttr");
-    auto parent = cast<xegpu::LayoutAttr>(slice.getParent());
-    return parent.getLaneData().asArrayRef();
+    assert(storage.getLaneDataAsInt().has_value() &&
+           "Expected lane data to be assigned");
+    return llvm::map_to_vector(
+        storage.getLaneDataAsInt().value(),
+        [](int64_t val) { return static_cast<int>(val); });
   }
+
   bool isSliceLayout() const {
     if (!isAssigned())
       return false;
@@ -558,26 +553,49 @@ void LayoutInfoPropagation::visitShapeCastOp(
     return;
   }
   auto resultLaneLayout = resultLayout.getLaneLayout();
-  if (resultLaneLayout[0] != 1 && resultLaneLayout[1] != 1) {
+  if (resultRank == 2 && resultLaneLayout[0] != 1 && resultLaneLayout[1] != 1) {
     shapeCast.emitWarning(
-        "Expecting result layout to be of form [1, subgroupSize] "
+        "Expecting 2D result layout to be of form [1, subgroupSize] "
         "or [subgroupSize, 1].");
     return;
   }
   ArrayRef<int64_t> resultShape = shapeCast.getResultVectorType().getShape();
-  // For 2D -> 1D case, source gets the reusult's lane layout and lane data.
+  ArrayRef<int64_t> sourceShape = shapeCast.getSourceVectorType().getShape();
+  // For 2D -> 1D case.
   if (sourceRank == 2 && resultRank == 1) {
-    propagateIfChanged(operands[0],
-                       operands[0]->meet(LayoutInfo(xegpu::LayoutAttr::get(
-                           shapeCast->getContext(), resultLaneLayout,
-                           resultLayout.getLaneData()))));
-    return;
+    // If the result had slice layout, simply assign the parent layout of the
+    // slice.
+    if (resultLayout.isSliceLayout()) {
+      auto sliceAttr = cast<xegpu::SliceAttr>(resultLayout.get());
+      propagateIfChanged(operands[0],
+                         operands[0]->meet(LayoutInfo(sliceAttr.getParent())));
+      return;
+    }
+    // If the result has a regular 1D layout, then we find the first dimension
+    // that can be fully evenly distributed to lanes. This dimension becomes
+    // the distributed dimension for deciding the lane layout.
+    int sourceDistributedDim =
+        sourceShape[0] % xegpu::targetinfo::subgroupSize == 0
+            ? 0
+            : (sourceShape[1] % xegpu::targetinfo::subgroupSize ? 1 : -1);
+    if (sourceDistributedDim == -1) {
+      shapeCast.emitWarning(
+          "Source vector can not be evenly distributed across lanes.");
+      return;
+    }
+    SmallVector<int> sourceLaneLayout = {1, 1},
+                     laneData = {1, resultLayout.getLaneData()[0]};
+    sourceLaneLayout[sourceDistributedDim] = xegpu::targetinfo::subgroupSize;
+    propagateIfChanged(
+        operands[0],
+        operands[0]->meet(LayoutInfo(xegpu::LayoutAttr::get(
+            shapeCast->getContext(), sourceLaneLayout, laneData))));
   }
 
   // For 1D -> 2D case, If the result shape can be evenly distributed in the
-  // distributed dimension, then the source layout should be [subgroupSize][1].
-  // Otherwise, data is shared accross lanes (broadcasted). We use slice
-  // attribute for the broadcast case.
+  // distributed dimension, then the source layout should be
+  // [subgroupSize][1]. Otherwise, data is shared accross lanes (broadcasted).
+  // We use slice attribute for the broadcast case.
   int64_t distributedDim = resultLaneLayout[0] == 1 ? 1 : 0;
   xegpu::LayoutAttr plainLayout = xegpu::LayoutAttr::get(
       shapeCast->getContext(), resultLaneLayout, resultLayout.getLaneData());
@@ -591,8 +609,8 @@ void LayoutInfoPropagation::visitShapeCastOp(
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(plainLayout)));
 }
 
-/// Propagate the layout of the result tensor to the source tensor descriptor in
-/// UpdateNdOffsetOp.
+/// Propagate the layout of the result tensor to the source tensor descriptor
+/// in UpdateNdOffsetOp.
 void LayoutInfoPropagation::visitUpdateNdOffsetOp(
     xegpu::UpdateNdOffsetOp updateNdOffset,
     ArrayRef<LayoutInfoLattice *> operands,
@@ -710,9 +728,9 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   // innermost dimension.
   SmallVector<int> sourceLaneData(outData.begin(), outData.end() - 1);
   if (llvm::any_of(sourceLaneData, [](int64_t d) { return d != 1; })) {
-    bitcast.emitWarning(
-        "Each lane must not own multiple elements in any dimension other than "
-        "the innermost dimension.");
+    bitcast.emitWarning("Each lane must not own multiple elements in any "
+                        "dimension other than "
+                        "the innermost dimension.");
     return;
   }
   // Decide lane data based on whether the bitcast is narrowing or widening.
@@ -869,15 +887,16 @@ void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
     printFunctionResult(funcOp);
 }
 
-using GetLayoutFnTy = function_ref<xegpu::LayoutTrait(Value)>;
-/// Update an operation with the layout of its results. If the result type is a
-/// vector type, a temporary layout attribute is added to the operation. If the
-/// result type is a tensor descriptor type, the type is updated with the layout
-/// attribute. The users of the result are also updated with the layout
+using GetLayoutFnTy = function_ref<xegpu::DistributeLayoutAttr(Value)>;
+/// Update an operation with the layout of its results. If the result type is
+/// a vector type, a temporary layout attribute is added to the operation. If
+/// the result type is a tensor descriptor type, the type is updated with the
+/// layout attribute. The users of the result are also updated with the layout
 /// attribute.
 static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
                               GetLayoutFnTy getLayoutOfValue) {
-  // Region ops (like scf.for) are already handled by the updateControlFlowOps.
+  // Region ops (like scf.for) are already handled by the
+  // updateControlFlowOps.
   if (mlir::isa<mlir::RegionBranchOpInterface>(op))
     return success();
 
@@ -888,7 +907,7 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     if (!isa<VectorType, xegpu::TensorDescType>(resultType))
       continue;
     // If the result has no layout but has users, emit a warning and continue.
-    xegpu::LayoutTrait layout = getLayoutOfValue(result);
+    xegpu::DistributeLayoutAttr layout = getLayoutOfValue(result);
     if (!layout && result.getNumUses() > 0) {
       op->emitWarning("op has users but no layout assigned for its result");
       continue;
@@ -910,14 +929,14 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
 }
 
 /// Region ops like scf.for need special handling because they have blocks
-/// inside. If the blocks have tensor descriptor type as block arguments, thier
-/// types must be updated. Also region op can have results that may not have any
-/// users (e.g. A and B tiles). They are not assigned a layout by layout
-/// analysis because they have no users. However inside the region op
-/// corresponding block arguments for these results do have layouts. Therefore,
-/// in this case we still need to update the result types with the layout
-/// attribute. This function function updates the internal block arguments and
-/// the result types of the region op with the assigned layouts.
+/// inside. If the blocks have tensor descriptor type as block arguments,
+/// thier types must be updated. Also region op can have results that may not
+/// have any users (e.g. A and B tiles). They are not assigned a layout by
+/// layout analysis because they have no users. However inside the region op
+/// corresponding block arguments for these results do have layouts.
+/// Therefore, in this case we still need to update the result types with the
+/// layout attribute. This function function updates the internal block
+/// arguments and the result types of the region op with the assigned layouts.
 /// clang-format off
 /// Example: scf.for ... iter_args(...) -> (out types) {
 ///   ^bb0(block types):
@@ -929,8 +948,8 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
 /// regions. One is the ^bb0 (for loop body) and the other is the scf.for op
 /// itself (yield the results). So we update both the block arguments of the
 /// successor region (i.e. block types) and the result types of the scf.for op
-/// (i.e. out types). Note that yield types are updated by respective producers
-/// inside bb0.
+/// (i.e. out types). Note that yield types are updated by respective
+/// producers inside bb0.
 static LogicalResult
 updateControlFlowOps(mlir::OpBuilder &builder,
                      mlir::RegionBranchTerminatorOpInterface terminator,
@@ -954,17 +973,16 @@ updateControlFlowOps(mlir::OpBuilder &builder,
       // We only need to operate on tensor descriptor or vector types.
       if (!isa<xegpu::TensorDescType, VectorType>(inputType))
         continue;
-      xegpu::LayoutTrait successorInputLayout =
+      xegpu::DistributeLayoutAttr successorInputLayout =
           getLayoutOfValue(successorInput);
-      xegpu::LayoutTrait successorOperandLayout =
+      xegpu::DistributeLayoutAttr successorOperandLayout =
           getLayoutOfValue(successorOperand);
 
       // If either of the layouts is not assigned, we cannot proceed.
       if (!successorOperandLayout) {
-        LLVM_DEBUG(
-            DBGS()
-            << "No layout assigned for forwarded operand in branch terminator: "
-            << successorOperand << "\n");
+        LLVM_DEBUG(DBGS() << "No layout assigned for forwarded operand in "
+                             "branch terminator: "
+                          << successorOperand << "\n");
         return failure();
       }
       // We expect the layouts to match.
@@ -1004,7 +1022,7 @@ static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
     newArgTypes.push_back(argType);
     if (!isa<VectorType, xegpu::TensorDescType>(argType))
       continue;
-    xegpu::LayoutTrait layout = getLayoutOfValue(arg);
+    xegpu::DistributeLayoutAttr layout = getLayoutOfValue(arg);
     if (!layout) {
       LLVM_DEBUG(DBGS() << "Expecting layout for function argument: " << arg
                         << " but got none.\n");
@@ -1046,7 +1064,7 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     return;
   }
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
-  auto getXeGPULayoutForValue = [&](Value val) -> xegpu::LayoutTrait {
+  auto getXeGPULayoutForValue = [&](Value val) -> xegpu::DistributeLayoutAttr {
     LayoutInfo layout = analysis.getLayoutInfo(val);
     if (!layout.isAssigned())
       return {};
