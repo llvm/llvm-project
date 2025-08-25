@@ -847,7 +847,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     if (!FeatEnableOrErr)
       return FeatEnableOrErr.takeError();
     FeatEnable = *FeatEnableOrErr;
-    if (FeatEnable.CallsiteOffsets && Version < 3)
+    if (FeatEnable.CallsiteEndOffsets && Version < 3)
       return createError("version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when "
                          "callsite offsets feature is enabled: version = " +
                          Twine(static_cast<int>(Version)) +
@@ -890,22 +890,22 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           uint32_t ID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           // Read the callsite offsets.
-          uint32_t LastCallsiteOffset = 0;
-          SmallVector<uint32_t, 1> CallsiteOffsets;
-          if (FeatEnable.CallsiteOffsets) {
+          uint32_t LastCallsiteEndOffset = 0;
+          SmallVector<uint32_t, 1> CallsiteEndOffsets;
+          if (FeatEnable.CallsiteEndOffsets) {
             uint32_t NumCallsites =
                 readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-            CallsiteOffsets.reserve(NumCallsites);
+            CallsiteEndOffsets.reserve(NumCallsites);
             for (uint32_t CallsiteIndex = 0;
                  !ULEBSizeErr && Cur && (CallsiteIndex < NumCallsites);
                  ++CallsiteIndex) {
-              LastCallsiteOffset +=
+              LastCallsiteEndOffset +=
                   readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-              CallsiteOffsets.push_back(LastCallsiteOffset);
+              CallsiteEndOffsets.push_back(LastCallsiteEndOffset);
             }
           }
           uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr) +
-                          LastCallsiteOffset;
+                          LastCallsiteEndOffset;
           uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
               BBAddrMap::BBEntry::Metadata::decode(MD);
@@ -914,7 +914,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
             break;
           }
           BBEntries.push_back({ID, Offset + PrevBBEndOffset, Size,
-                               *MetadataOrErr, CallsiteOffsets});
+                               *MetadataOrErr, CallsiteEndOffsets});
           PrevBBEndOffset += Offset + Size;
         }
         TotalNumBlocks += BBEntries.size();
