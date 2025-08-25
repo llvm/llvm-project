@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Walloc-size %s
+// RUN: %clang_cc1 -triple x86_64-linux -fsyntax-only -verify -Walloc-size %s
 struct Foo { int x[10]; };
 
 struct ZeroSize {
@@ -42,7 +42,7 @@ void alloc_foo(void) {
                                                           // expected-warning@-1 {{allocation of insufficient size '1' for type 'int' with size '4'}}
   (void)(int *)my_malloc(1);                              // expected-warning {{allocation of insufficient size '1' for type 'int' with size '4'}}
 
-  struct ZeroSize *ptr18 = my_malloc(0); // okay becuase sizeof(struct ZeroSize) = 0
+  struct ZeroSize *ptr18 = my_malloc(0); // okay because sizeof(struct ZeroSize) = 0
 
   void *funcptr_1 = (void (*)(int))my_malloc(0); // expected-warning {{allocation of insufficient size '0' for type 'void (int)' with size '1'}}
   void *funcptr_2 = (void (*)(int))my_malloc(1);
