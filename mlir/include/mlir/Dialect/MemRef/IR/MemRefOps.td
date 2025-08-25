@@ -497,7 +497,7 @@ def MemRef_AliasDomainScopeOp : MemRef_Op<"alias_domain_scope", [
 
   let extraClassDeclaration = [{
     /// Inline op body into parent region and erase the op.
-    static void inlineIntoParent(PatternRewriter &builder, AliasDomainScopeOp op);
+    static void inlineIntoParent(RewriterBase &builder, AliasDomainScopeOp op);
   }];
 }
 

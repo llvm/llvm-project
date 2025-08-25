@@ -539,7 +539,7 @@ void AliasDomainScopeOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(getResults()));
 }
 
-void AliasDomainScopeOp::inlineIntoParent(mlir::PatternRewriter &builder,
+void AliasDomainScopeOp::inlineIntoParent(RewriterBase &builder,
                                           AliasDomainScopeOp op) {
   mlir::Block *block = &op.getRegion().front();
   Operation *term = block->getTerminator();
