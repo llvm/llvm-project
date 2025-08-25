@@ -7002,12 +7002,12 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
-        if (auto *WidenCmp = dyn_cast<VPWidenRecipe>(&R)) {
-          if ((WidenCmp->getOpcode() == Instruction::ICmp ||
-               WidenCmp->getOpcode() == Instruction::FCmp) &&
-              WidenCmp->getPredicate() != cast<CmpInst>(UI)->getPredicate())
-            return true;
-        }
+        using namespace VPlanPatternMatch;
+        CmpPredicate Pred;
+        if (match(&R, m_Cmp(Pred, m_VPValue(), m_VPValue())) &&
+            cast<VPRecipeWithIRFlags>(R).getPredicate() !=
+                cast<CmpInst>(UI)->getPredicate())
+          return true;
         SeenInstrs.insert(UI);
       }
     }
@@ -8599,8 +8599,7 @@ static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
     // the VPIRInstruction modeling the phi.
     for (VPUser *U : FOR->users()) {
       using namespace llvm::VPlanPatternMatch;
-      if (!match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                        m_Specific(FOR))))
+      if (!match(U, m_ExtractLastElement(m_Specific(FOR))))
         continue;
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
       // penultimate value of the recurrence. Instead we rely on the existing
@@ -8635,13 +8634,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit(),
-                                    Range);
+  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
 
   VPlanTransforms::createLoopRegions(*Plan);
-  VPlanTransforms::createExtractsForLiveOuts(*Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8910,7 +8907,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
                                        WithoutRuntimeCheck);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues);
+  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, *PSE.getSE());
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -8928,7 +8925,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
   VPlanTransforms::handleEarlyExits(*Plan,
-                                    /*HasUncountableExit*/ false, Range);
+                                    /*HasUncountableExit*/ false);
   VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
                                   /*TailFolded*/ false);
 
@@ -9243,8 +9240,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                       m_VPValue())))
+      if (match(U, m_ExtractLastElement(m_VPValue())))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 

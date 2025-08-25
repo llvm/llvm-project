@@ -70,8 +70,8 @@ struct VPlanTransforms {
               PredicatedScalarEvolution &PSE);
 
   /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void
-  handleEarlyExits(VPlan &Plan, bool HasUncountableExit, VFRange &Range);
+  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
+                                                 bool HasUncountableExit);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
@@ -82,10 +82,6 @@ struct VPlanTransforms {
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
-
-  /// Creates extracts for values in \p Plan defined in a loop region and used
-  /// outside a loop region.
-  LLVM_ABI_FOR_TEST static void createExtractsForLiveOuts(VPlan &Plan);
 
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
@@ -211,8 +207,7 @@ struct VPlanTransforms {
   static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                                          VPBasicBlock *EarlyExitVPBB,
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                         VPBasicBlock *LatchVPBB,
-                                         VFRange &Range);
+                                         VPBasicBlock *LatchVPBB);
 
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
@@ -251,7 +246,8 @@ struct VPlanTransforms {
   /// one step backwards.
   static void
   optimizeInductionExitUsers(VPlan &Plan,
-                             DenseMap<VPValue *, VPValue *> &EndValues);
+                             DenseMap<VPValue *, VPValue *> &EndValues,
+                             ScalarEvolution &SE);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
