@@ -396,6 +396,8 @@ makePrescriptiveness(parser::OmpPrescriptiveness::Value v) {
   switch (v) {
   case parser::OmpPrescriptiveness::Value::Strict:
     return clause::Prescriptiveness::Strict;
+  case parser::OmpPrescriptiveness::Value::Fallback:
+    return clause::Prescriptiveness::Fallback;
   }
   llvm_unreachable("Unexpected prescriptiveness");
 }
@@ -770,10 +772,42 @@ Doacross make(const parser::OmpClause::Doacross &inp,
 
 // DynamicAllocators: empty
 
+DynGroupprivate make(const parser::OmpClause::DynGroupprivate &inp,
+                     semantics::SemanticsContext &semaCtx) {
+  // imp.v -> OmpDyngroupprivateClause
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpAccessGroup::Value, DynGroupprivate::AccessGroup,
+      // clang-format off
+      MS(Cgroup,  Cgroup)
+      // clang-format on
+  );
+
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpAccessGroup>(mods);
+  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpPrescriptiveness>(mods);
+  auto &size = std::get<parser::ScalarIntExpr>(inp.v.t);
+
+  return DynGroupprivate{
+      {/*AccessGroup=*/maybeApplyToV(convert, m0),
+       /*Prescriptiveness=*/maybeApplyToV(makePrescriptiveness, m1),
+       /*Size=*/makeExpr(size, semaCtx)}};
+}
+
 Enter make(const parser::OmpClause::Enter &inp,
            semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpObjectList
-  return Enter{makeObjects(/*List=*/inp.v, semaCtx)};
+  // inp.v -> parser::OmpEnterClause
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpAutomapModifier::Value, Enter::Modifier,
+      // clang-format off
+      MS(Automap, Automap)
+      // clang-format on
+  );
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *mod = semantics::OmpGetUniqueModifier<parser::OmpAutomapModifier>(mods);
+  auto &objList = std::get<parser::OmpObjectList>(inp.v.t);
+
+  return Enter{{/*Modifier=*/maybeApplyToV(convert, mod),
+                /*List=*/makeObjects(objList, semaCtx)}};
 }
 
 Exclusive make(const parser::OmpClause::Exclusive &inp,

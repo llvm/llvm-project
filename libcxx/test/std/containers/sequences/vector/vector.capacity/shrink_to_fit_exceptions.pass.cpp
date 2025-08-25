@@ -39,7 +39,7 @@ void test_allocation_exception_for_strong_guarantee(std::vector<T, Alloc>& v, co
   } catch (...) {
   }
 
-  // As shrink_to_fit may swallow any exceptions, we place the checks outisde the catch block.
+  // As shrink_to_fit may swallow any exceptions, we place the checks outside the catch block.
   assert(v.data() == old_data);
   assert(v.size() == old_size);
   assert(v.capacity() == old_cap);

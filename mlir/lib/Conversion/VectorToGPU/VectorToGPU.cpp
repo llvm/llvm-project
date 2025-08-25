@@ -31,10 +31,9 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "vector-to-gpu"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define DBGSNL() (llvm::dbgs() << "\n")
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTVECTORTOGPU
@@ -366,7 +365,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
     // by all operations.
     if (llvm::any_of(dependentOps, [useNvGpu](Operation *op) {
           if (!supportsMMaMatrixType(op, useNvGpu)) {
-            LLVM_DEBUG(DBGS() << "cannot convert op: " << *op << "\n");
+            LDBG() << "cannot convert op: " << *op;
             return true;
           }
           return false;
@@ -548,7 +547,7 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   std::optional<int64_t> stride =
       getStaticallyKnownRowStride(op.getShapedType());
   if (!stride.has_value()) {
-    LLVM_DEBUG(DBGS() << "no stride\n");
+    LDBG() << "no stride";
     return rewriter.notifyMatchFailure(op, "no stride");
   }
 
@@ -583,7 +582,7 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
       isTranspose ? rewriter.getUnitAttr() : UnitAttr());
   valueMapping[mappingResult] = load;
 
-  LLVM_DEBUG(DBGS() << "transfer read to: " << load << "\n");
+  LDBG() << "transfer read to: " << load;
   return success();
 }
 
@@ -597,13 +596,13 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
   std::optional<int64_t> stride =
       getStaticallyKnownRowStride(op.getShapedType());
   if (!stride.has_value()) {
-    LLVM_DEBUG(DBGS() << "no stride\n");
+    LDBG() << "no stride";
     return rewriter.notifyMatchFailure(op, "no stride");
   }
 
   auto it = valueMapping.find(op.getVector());
   if (it == valueMapping.end()) {
-    LLVM_DEBUG(DBGS() << "no mapping\n");
+    LDBG() << "no mapping";
     return rewriter.notifyMatchFailure(op, "no mapping");
   }
 
@@ -613,9 +612,9 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
       rewriter.getIndexAttr(*stride), /*transpose=*/UnitAttr());
   (void)store;
 
-  LLVM_DEBUG(DBGS() << "transfer write to: " << store << "\n");
+  LDBG() << "transfer write to: " << store;
 
-  LLVM_DEBUG(DBGS() << "erase: " << op << "\n");
+  LDBG() << "erase: " << op;
   rewriter.eraseOp(op);
   return success();
 }
@@ -641,21 +640,21 @@ convertConstantOpMmaSync(RewriterBase &rewriter, arith::ConstantOp op,
   FailureOr<nvgpu::WarpMatrixInfo> warpMatrixInfo =
       nvgpu::getWarpMatrixInfo(op);
   if (failed(warpMatrixInfo)) {
-    LLVM_DEBUG(DBGS() << "no warpMatrixInfo\n");
+    LDBG() << "no warpMatrixInfo";
     return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
   }
 
   FailureOr<nvgpu::FragmentElementInfo> regInfo =
       nvgpu::getMmaSyncRegisterType(*warpMatrixInfo);
   if (failed(regInfo)) {
-    LLVM_DEBUG(DBGS() << "not mma sync reg info\n");
+    LDBG() << "not mma sync reg info";
     return rewriter.notifyMatchFailure(op, "not mma sync reg info");
   }
 
   VectorType vectorType = getMmaSyncVectorOperandType(*regInfo);
   auto dense = dyn_cast<SplatElementsAttr>(op.getValue());
   if (!dense) {
-    LLVM_DEBUG(DBGS() << "not a splat\n");
+    LDBG() << "not a splat";
     return rewriter.notifyMatchFailure(op, "not a splat");
   }
 
@@ -677,8 +676,8 @@ static FailureOr<bool> isTransposed(vector::TransferReadOp op) {
   mlir::AffineMap map = op.getPermutationMap();
 
   if (map.getNumResults() != 2) {
-    LLVM_DEBUG(DBGS() << "Failed because the result of `vector.transfer_read` "
-                         "is not a 2d operand\n");
+    LDBG() << "Failed because the result of `vector.transfer_read` "
+              "is not a 2d operand";
     return failure();
   }
 
@@ -691,8 +690,8 @@ static FailureOr<bool> isTransposed(vector::TransferReadOp op) {
   auto exprN = dyn_cast<AffineDimExpr>(dN);
 
   if (!exprM || !exprN) {
-    LLVM_DEBUG(DBGS() << "Failed because expressions are not affine dim "
-                         "expressions, then transpose cannot be determined.\n");
+    LDBG() << "Failed because expressions are not affine dim "
+              "expressions, then transpose cannot be determined.";
     return failure();
   }
 
@@ -709,20 +708,20 @@ creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   FailureOr<nvgpu::WarpMatrixInfo> warpMatrixInfo =
       nvgpu::getWarpMatrixInfo(op);
   if (failed(warpMatrixInfo)) {
-    LLVM_DEBUG(DBGS() << "no warpMatrixInfo\n");
+    LDBG() << "no warpMatrixInfo";
     return rewriter.notifyMatchFailure(op, "no warpMatrixInfo");
   }
 
   FailureOr<nvgpu::FragmentElementInfo> regInfo =
       nvgpu::getMmaSyncRegisterType(*warpMatrixInfo);
   if (failed(regInfo)) {
-    LLVM_DEBUG(DBGS() << "not mma sync reg info\n");
+    LDBG() << "not mma sync reg info";
     return rewriter.notifyMatchFailure(op, "not mma sync reg info");
   }
 
   FailureOr<bool> transpose = isTransposed(op);
   if (failed(transpose)) {
-    LLVM_DEBUG(DBGS() << "failed to determine the transpose\n");
+    LDBG() << "failed to determine the transpose";
     return rewriter.notifyMatchFailure(
         op, "Op should likely not be converted to a nvgpu.ldmatrix call.");
   }
@@ -731,10 +730,8 @@ creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
       nvgpu::getLdMatrixParams(*warpMatrixInfo, *transpose);
 
   if (failed(params)) {
-    LLVM_DEBUG(
-        DBGS()
-        << "failed to convert vector.transfer_read to ldmatrix. "
-        << "Op should likely not be converted to a nvgpu.ldmatrix call.\n");
+    LDBG() << "failed to convert vector.transfer_read to ldmatrix. "
+           << "Op should likely not be converted to a nvgpu.ldmatrix call.";
     return rewriter.notifyMatchFailure(
         op, "failed to convert vector.transfer_read to ldmatrix; this op "
             "likely should not be converted to a nvgpu.ldmatrix call.");
@@ -745,7 +742,7 @@ creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   FailureOr<AffineMap> offsets =
       nvgpu::getLaneIdToLdMatrixMatrixCoord(rewriter, loc, *params);
   if (failed(offsets)) {
-    LLVM_DEBUG(DBGS() << "no offsets\n");
+    LDBG() << "no offsets";
     return rewriter.notifyMatchFailure(op, "no offsets");
   }
 
@@ -934,7 +931,7 @@ convertTransferWriteToStores(RewriterBase &rewriter, vector::TransferWriteOp op,
     vector::StoreOp::create(rewriter, loc, el, op.getBase(), newIndices);
   }
 
-  LLVM_DEBUG(DBGS() << "erase: " << op << "\n");
+  LDBG() << "erase: " << op;
   rewriter.eraseOp(op);
   return success();
 }
@@ -1132,9 +1129,9 @@ static scf::ForOp replaceForOpWithNewSignature(RewriterBase &rewriter,
                                                   loop.getNumResults())))
     rewriter.replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
 
-  LLVM_DEBUG(DBGS() << "newLoop now: " << newLoop << "\n");
-  LLVM_DEBUG(DBGS() << "stripped scf.for: " << loop << "\n");
-  LLVM_DEBUG(DBGS() << "erase: " << loop);
+  LDBG() << "newLoop now: " << newLoop;
+  LDBG() << "stripped scf.for: " << loop;
+  LDBG() << "erase: " << loop;
 
   rewriter.eraseOp(loop);
   return newLoop;
@@ -1150,7 +1147,7 @@ static LogicalResult convertForOp(RewriterBase &rewriter, scf::ForOp op,
   for (const auto &operand : llvm::enumerate(op.getInitArgs())) {
     auto it = valueMapping.find(operand.value());
     if (it == valueMapping.end()) {
-      LLVM_DEBUG(DBGS() << "no value mapping for: " << operand.value() << "\n");
+      LDBG() << "no value mapping for: " << operand.value();
       continue;
     }
     argMapping.push_back(std::make_pair(
@@ -1168,7 +1165,7 @@ static LogicalResult convertForOp(RewriterBase &rewriter, scf::ForOp op,
         loopBody.getArgument(mapping.second + newForOp.getNumInductionVars());
   }
 
-  LLVM_DEBUG(DBGS() << "scf.for to: " << newForOp << "\n");
+  LDBG() << "scf.for to: " << newForOp;
   return success();
 }
 
@@ -1191,7 +1188,7 @@ convertYieldOp(RewriterBase &rewriter, scf::YieldOp op,
   }
   scf::YieldOp::create(rewriter, op.getLoc(), yieldOperands);
 
-  LLVM_DEBUG(DBGS() << "erase: " << op << "\n");
+  LDBG() << "erase: " << op;
   rewriter.eraseOp(op);
   return success();
 }
@@ -1244,7 +1241,7 @@ LogicalResult mlir::convertVectorToMMAOps(RewriterBase &rewriter,
 
   auto globalRes = LogicalResult::success();
   for (Operation *op : ops) {
-    LLVM_DEBUG(DBGS() << "Process op: " << *op << "\n");
+    LDBG() << "Process op: " << *op;
     // Apparently callers do not want to early exit on failure here.
     auto res = LogicalResult::success();
     if (auto transferRead = dyn_cast<vector::TransferReadOp>(op)) {

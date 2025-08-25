@@ -107,8 +107,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
                                    int Idx) const override;
 
-  void lowerVSPILL(MachineBasicBlock::iterator II) const;
-  void lowerVRELOAD(MachineBasicBlock::iterator II) const;
+  void lowerSegmentSpillReload(MachineBasicBlock::iterator II,
+                               bool IsSpill) const;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
@@ -143,6 +143,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  Register findVRegWithEncoding(const TargetRegisterClass &RegClass,
+                                uint16_t Encoding) const;
 
   static bool isVRRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags) &&

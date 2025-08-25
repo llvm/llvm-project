@@ -769,7 +769,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
       "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::Union);
   StaticRD->startDefinition();
   for (const RecordDecl *TeamReductionRec : TeamsReductions) {
-    QualType RecTy = C.getRecordType(TeamReductionRec);
+    CanQualType RecTy = C.getCanonicalTagType(TeamReductionRec);
     auto *Field = FieldDecl::Create(
         C, StaticRD, SourceLocation(), SourceLocation(), nullptr, RecTy,
         C.getTrivialTypeSourceInfo(RecTy, SourceLocation()),
@@ -779,7 +779,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
     StaticRD->addDecl(Field);
   }
   StaticRD->completeDefinition();
-  QualType StaticTy = C.getRecordType(StaticRD);
+  CanQualType StaticTy = C.getCanonicalTagType(StaticRD);
   llvm::Type *LLVMReductionsBufferTy =
       CGM.getTypes().ConvertTypeForMem(StaticTy);
   const auto &DL = CGM.getModule().getDataLayout();
@@ -2278,8 +2278,12 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_100a:
       case OffloadArch::SM_101:
       case OffloadArch::SM_101a:
+      case OffloadArch::SM_103:
+      case OffloadArch::SM_103a:
       case OffloadArch::SM_120:
       case OffloadArch::SM_120a:
+      case OffloadArch::SM_121:
+      case OffloadArch::SM_121a:
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
       case OffloadArch::GFX602:

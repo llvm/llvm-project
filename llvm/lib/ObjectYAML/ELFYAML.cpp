@@ -1160,7 +1160,7 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
   IO.mapOptional("ABIVersion", FileHdr.ABIVersion, Hex8(0));
   IO.mapRequired("Type", FileHdr.Type);
   IO.mapOptional("Machine", FileHdr.Machine);
-  IO.mapOptional("Flags", FileHdr.Flags, ELFYAML::ELF_EF(0));
+  IO.mapOptional("Flags", FileHdr.Flags);
   IO.mapOptional("Entry", FileHdr.Entry, Hex64(0));
   IO.mapOptional("SectionHeaderStringTable", FileHdr.SectionHeaderStringTable);
 
@@ -1884,7 +1884,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);
-  IO.mapOptional("CallsiteOffsets", E.CallsiteOffsets);
+  IO.mapOptional("CallsiteEndOffsets", E.CallsiteEndOffsets);
 }
 
 void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(

@@ -616,6 +616,8 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     assert(sym && "Symbol information is required to privatize derived types");
     assert(!scalarInitValue && "ScalarInitvalue is unused for privatization");
   }
+  if (hlfir::Entity{moldArg}.isAssumedRank())
+    TODO(loc, "Privatization of assumed rank variable");
   mlir::Type valTy = fir::unwrapRefType(argType);
 
   if (fir::isa_trivial(valTy)) {

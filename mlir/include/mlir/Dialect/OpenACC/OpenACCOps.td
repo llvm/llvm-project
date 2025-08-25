@@ -134,6 +134,24 @@ def OpenACC_VariableTypeCategory : I32BitEnumAttr<
   let printBitEnumPrimaryGroups = 1;
 }
 
+// These are parallelism determination modes for `acc loop`.
+// In the enum names, we use the "loop_" prefix because "auto" is
+// a language keyword - and thus for consistency all other cases
+// do the same.
+def OpenACC_LoopSeq : I32EnumAttrCase<"loop_seq", 0>;
+def OpenACC_LoopAuto : I32EnumAttrCase<"loop_auto", 1>;
+def OpenACC_LoopIndependent : I32EnumAttrCase<"loop_independent", 2>;
+
+def OpenACC_LoopParMode : I32EnumAttr<
+    "LoopParMode",
+    "Encodes the options for loop parallelism determination mode",
+    [
+      OpenACC_LoopAuto, OpenACC_LoopIndependent,
+      OpenACC_LoopSeq]> {
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+}
+
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
@@ -1514,6 +1532,19 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
+
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -1656,6 +1687,17 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -2373,6 +2415,19 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     // Return whether this LoopOp has a gang, worker, or vector applying to the
     // 'default'/None device-type.
     bool hasDefaultGangWorkerVector();
+
+    // Used to obtain the parallelism mode for the requested device type.
+    // This first checks if the mode is set for the device_type requested.
+    // And if not, it returns the non-device_type mode.
+    LoopParMode getDefaultOrDeviceTypeParallelism(DeviceType);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -2404,6 +2459,53 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   }];
 
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "::mlir::ValueRange":$lowerbounds,
+                   "::mlir::ValueRange":$upperbounds,
+                   "::mlir::ValueRange":$steps,
+                   "LoopParMode":$parMode), [{
+        auto deviceNoneAttr = mlir::acc::DeviceTypeAttr::get(
+          $_builder.getContext(), mlir::acc::DeviceType::None);
+        auto arrOfDeviceNone = mlir::ArrayAttr::get(
+          $_builder.getContext(), deviceNoneAttr);
+        build($_builder, $_state,
+          /*results=*/{},
+          /*lowerbound=*/lowerbounds,
+          /*upperbound=*/upperbounds,
+          /*step=*/steps,
+          /*inclusiveUpperbound=*/nullptr,
+          /*collapse=*/nullptr,
+          /*collapseDeviceType=*/nullptr,
+          /*gangOperands=*/{},
+          /*gangOperandsArgType=*/nullptr,
+          /*gangOperandsSegments=*/nullptr,
+          /*gangOperandsDeviceType=*/nullptr,
+          /*workerNumOperands=*/{},
+          /*workerNumOperandsDeviceType=*/nullptr,
+          /*vectorOperands=*/{},
+          /*vectorOperandsDeviceType=*/nullptr,
+          /*seq=*/parMode == LoopParMode::loop_seq ?
+            arrOfDeviceNone : nullptr,
+          /*independent=*/parMode == LoopParMode::loop_independent ?
+            arrOfDeviceNone : nullptr,
+          /*auto_=*/parMode == LoopParMode::loop_auto ?
+            arrOfDeviceNone : nullptr,
+          /*gang=*/nullptr,
+          /*worker=*/nullptr,
+          /*vector=*/nullptr,
+          /*tileOperands=*/{},
+          /*tileOperandsSegments=*/nullptr,
+          /*tileOperandsDeviceType=*/nullptr,
+          /*cacheOperands=*/{},
+          /*privateOperands=*/{},
+          /*privatizationRecipes=*/nullptr,
+          /*reductionOperands=*/{},
+          /*reductionRecipes=*/nullptr,
+          /*combined=*/nullptr);
+      }]
+    >
+  ];
 }
 
 // Yield operation for the acc.loop and acc.parallel operations.

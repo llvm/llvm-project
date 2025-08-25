@@ -321,6 +321,11 @@ def : SourceOfDivergence<int_amdgcn_permlane16>;
 def : SourceOfDivergence<int_amdgcn_permlanex16>;
 def : SourceOfDivergence<int_amdgcn_permlane16_var>;
 def : SourceOfDivergence<int_amdgcn_permlanex16_var>;
+def : SourceOfDivergence<int_amdgcn_permlane_bcast>;
+def : SourceOfDivergence<int_amdgcn_permlane_up>;
+def : SourceOfDivergence<int_amdgcn_permlane_down>;
+def : SourceOfDivergence<int_amdgcn_permlane_xor>;
+def : SourceOfDivergence<int_amdgcn_permlane_idx_gen>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
@@ -373,6 +378,7 @@ foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;
 
 def : SourceOfDivergence<int_amdgcn_dead>;
+def : SourceOfDivergence<int_amdgcn_call_whole_wave>;
 
 class AlwaysUniform<Intrinsic intr> {
   Intrinsic Intr = intr;
