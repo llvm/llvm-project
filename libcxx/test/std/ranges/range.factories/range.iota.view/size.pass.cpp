@@ -16,7 +16,6 @@
 #include <ranges>
 
 #include "test_macros.h"
-#define TEST_HAS_NO_INT128
 #include "type_algorithms.h"
 #include "types.h"
 

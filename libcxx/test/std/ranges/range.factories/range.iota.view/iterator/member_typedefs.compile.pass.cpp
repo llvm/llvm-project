@@ -106,7 +106,11 @@ void test() {
     // Same as below, if there is no type larger than long, we can just use that.
     static_assert(sizeof(Iter::difference_type) >= sizeof(long));
     static_assert(std::is_signed_v<Iter::difference_type>);
+#ifdef TEST_HAS_NO_INT128
     LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type, long long>);
+#else
+    LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type, __int128_t>);
+#endif
   }
   {
     const std::ranges::iota_view<long long> io(0);
@@ -118,7 +122,11 @@ void test() {
     // https://eel.is/c++draft/range.iota.view#1.3
     static_assert(sizeof(Iter::difference_type) >= sizeof(long long));
     static_assert(std::is_signed_v<Iter::difference_type>);
+#ifdef TEST_HAS_NO_INT128
     LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type, long long>);
+#else
+    LIBCPP_STATIC_ASSERT(std::same_as<Iter::difference_type, __int128_t>);
+#endif
   }
   {
     const std::ranges::iota_view<Decrementable> io;
