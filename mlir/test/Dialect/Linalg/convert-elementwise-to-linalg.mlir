@@ -166,3 +166,11 @@ func.func @scalar_tensor_scalar(%s1: f32, %t: tensor<?x?xf32>, %s2: f32) -> tens
        : (f32, tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
+
+// ----
+// CHECK-LABEL: func @negative_scalar_only_eltwise
+// CHECK-NOT: linalg
+func.func @negative_scalar_only_eltwise(%a: f32, %b: f32) -> f32 {
+  %0 = arith.addf %a, %b : f32
+  return %0 : f32
+}
