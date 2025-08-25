@@ -5200,7 +5200,6 @@ Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
       Align ConstAlign(1 << ConstVals->getAssumedMinTrailingZeros());
       if (ConstAlign >= AlignAA->getKnownAlign())
         return Align(1);
-      return AlignAA->getKnownAlign();
     }
     if (AlignAA)
       return AlignAA->getKnownAlign();
@@ -5225,9 +5224,8 @@ Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
                             DepClassTy::REQUIRED);
     if (ConstVals && ConstVals->isValidState())
       Alignment = Align(1 << ConstVals->getAssumedMinTrailingZeros());
-    if (AlignAA && AlignAA->isValidState() &&
-        Alignment < AlignAA->getAssumedAlign())
-      Alignment = AlignAA->getAssumedAlign();
+    if (AlignAA && AlignAA->isValidState())
+      Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
 
     return std::min(QueryingAA.getAssumedAlign(), Alignment);
   }
