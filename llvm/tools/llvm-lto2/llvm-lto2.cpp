@@ -198,13 +198,18 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
-static cl::opt<std::string> UnifiedLTOMode(
+static cl::opt<LTO::LTOKind> UnifiedLTOMode(
     "unified-lto", cl::Optional,
-    cl::desc("Set LTO mode with the following options:\n"
-             " thin      ThinLTO, with Unified LTO enabled.\n"
-             " full      Regular LTO, with Unified LTO enabled.\n"
-             " default   Any LTO mode without Unified LTO. The default mode."),
-    cl::value_desc("mode"));
+    cl::desc("Set LTO mode with the following options:"),
+    cl::values(
+        clEnumValN(LTO::LTOK_UnifiedThin, "thin",
+                   "ThinLTO with Unified LTO enabled"),
+        clEnumValN(LTO::LTOK_UnifiedRegular, "full",
+                   "Regular LTO with Unified LTO enabled"),
+        clEnumValN(LTO::LTOK_Default, "default",
+                   "Any LTO mode without Unified LTO. The default mode")
+    ),
+    cl::value_desc("mode"), cl::init(LTO::LTOK_Default)); 
 
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding",
@@ -408,18 +413,7 @@ static int run(int argc, char **argv) {
       HasErrors = true;
   };
 
-  LTO::LTOKind LTOMode = LTO::LTOK_Default;
-
-  if (UnifiedLTOMode == "full") {
-    LTOMode = LTO::LTOK_UnifiedRegular;
-  } else if (UnifiedLTOMode == "thin") {
-    LTOMode = LTO::LTOK_UnifiedThin;
-  } else if (UnifiedLTOMode == "default") {
-    LTOMode = LTO::LTOK_Default;
-  } else if (!UnifiedLTOMode.empty()) {
-    llvm::errs() << "invalid LTO mode\n";
-    return 1;
-  }
+  LTO::LTOKind LTOMode = UnifiedLTOMode;
 
   LTO Lto(std::move(Conf), std::move(Backend), 1, LTOMode);
 
