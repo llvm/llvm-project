@@ -26,8 +26,17 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 using namespace llvm;
+
+// FIXME: Flag used for an ablation performance test, Issue #147390. Placing it
+// here because referencing IR should be feasible from anywhere. Will be
+// removed after the ablation test.
+cl::opt<bool> ProfcheckDisableMetadataFixes(
+    "profcheck-disable-metadata-fixes", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Disable metadata propagation fixes discovered through Issue #147390"));
 
 InsertPosition::InsertPosition(Instruction *InsertBefore)
     : InsertAt(InsertBefore ? InsertBefore->getIterator()
@@ -543,14 +552,19 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
   CB->removeRetAttrs(UBImplyingAttributes);
 }
 
-void Instruction::dropUBImplyingAttrsAndMetadata() {
+void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
   // !annotation metadata does not impact semantics.
   // !range, !nonnull and !align produce poison, so they are safe to speculate.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
-  unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
-                         LLVMContext::MD_nonnull, LLVMContext::MD_align};
-  dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
+  static const unsigned KnownIDs[] = {
+      LLVMContext::MD_annotation, LLVMContext::MD_range,
+      LLVMContext::MD_nonnull, LLVMContext::MD_align};
+  SmallVector<unsigned> KeepIDs;
+  KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
+  append_range(KeepIDs, KnownIDs);
+  append_range(KeepIDs, Keep);
+  dropUBImplyingAttrsAndUnknownMetadata(KeepIDs);
 }
 
 bool Instruction::hasUBImplyingAttrs() const {
@@ -817,6 +831,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case UIToFP:        return "uitofp";
   case SIToFP:        return "sitofp";
   case IntToPtr:      return "inttoptr";
+  case PtrToAddr:     return "ptrtoaddr";
   case PtrToInt:      return "ptrtoint";
   case BitCast:       return "bitcast";
   case AddrSpaceCast: return "addrspacecast";

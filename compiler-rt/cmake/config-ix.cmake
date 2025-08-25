@@ -204,7 +204,7 @@ check_library_exists(stdc++ __cxa_throw "" COMPILER_RT_HAS_LIBSTDCXX)
 llvm_check_compiler_linker_flag(C "-Wl,-z,text" COMPILER_RT_HAS_Z_TEXT)
 llvm_check_compiler_linker_flag(C "-fuse-ld=lld" COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
+if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
   set(VERS_COMPAT_OPTION "-Wl,-z,gnu-version-script-compat")
   llvm_check_compiler_linker_flag(C "${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
 endif()
@@ -308,14 +308,6 @@ macro(get_test_cc_for_arch arch cc_out cflags_out)
       list(APPEND ${cflags_out} ${DARWIN_osx_CFLAGS})
     endif()
     string(REPLACE ";" " " ${cflags_out} "${${cflags_out}}")
-  endif()
-  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT ANDROID)
-    # ARM on Linux might use the slow unwinder as default and the unwind table
-    # is required to get a complete stacktrace.
-    string(APPEND ${cflags_out} " -funwind-tables")
-    if(CMAKE_SYSROOT)
-      string(APPEND ${cflags_out} " --sysroot=${CMAKE_SYSROOT}")
-    endif()
   endif()
 endmacro()
 

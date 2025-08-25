@@ -15,7 +15,7 @@
 #define LLVM_CLANG_AST_TEMPLATEBASE_H
 
 #include "clang/AST/DependenceFlags.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
@@ -478,31 +478,25 @@ public:
 
 /// Location information for a TemplateArgument.
 struct TemplateArgumentLocInfo {
-private:
   struct TemplateTemplateArgLocInfo {
-    // FIXME: We'd like to just use the qualifier in the TemplateName,
-    // but template arguments get canonicalized too quickly.
-    NestedNameSpecifier *Qualifier;
     void *QualifierLocData;
+    SourceLocation TemplateKwLoc;
     SourceLocation TemplateNameLoc;
     SourceLocation EllipsisLoc;
   };
-
-  llvm::PointerUnion<TemplateTemplateArgLocInfo *, Expr *, TypeSourceInfo *>
-      Pointer;
 
   TemplateTemplateArgLocInfo *getTemplate() const {
     return cast<TemplateTemplateArgLocInfo *>(Pointer);
   }
 
-public:
   TemplateArgumentLocInfo() {}
   TemplateArgumentLocInfo(TypeSourceInfo *Declarator) { Pointer = Declarator; }
 
   TemplateArgumentLocInfo(Expr *E) { Pointer = E; }
   // Ctx is used for allocation -- this case is unusually large and also rare,
   // so we store the payload out-of-line.
-  TemplateArgumentLocInfo(ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
+  TemplateArgumentLocInfo(ASTContext &Ctx, SourceLocation TemplateKwLoc,
+                          NestedNameSpecifierLoc QualifierLoc,
                           SourceLocation TemplateNameLoc,
                           SourceLocation EllipsisLoc);
 
@@ -512,10 +506,8 @@ public:
 
   Expr *getAsExpr() const { return cast<Expr *>(Pointer); }
 
-  NestedNameSpecifierLoc getTemplateQualifierLoc() const {
-    const auto *Template = getTemplate();
-    return NestedNameSpecifierLoc(Template->Qualifier,
-                                  Template->QualifierLocData);
+  SourceLocation getTemplateKwLoc() const {
+    return getTemplate()->TemplateKwLoc;
   }
 
   SourceLocation getTemplateNameLoc() const {
@@ -525,6 +517,10 @@ public:
   SourceLocation getTemplateEllipsisLoc() const {
     return getTemplate()->EllipsisLoc;
   }
+
+private:
+  llvm::PointerUnion<TemplateTemplateArgLocInfo *, Expr *, TypeSourceInfo *>
+      Pointer;
 };
 
 /// Location wrapper for a TemplateArgument.  TemplateArgument is to
@@ -558,14 +554,10 @@ public:
   }
 
   TemplateArgumentLoc(ASTContext &Ctx, const TemplateArgument &Argument,
+                      SourceLocation TemplateKWLoc,
                       NestedNameSpecifierLoc QualifierLoc,
                       SourceLocation TemplateNameLoc,
-                      SourceLocation EllipsisLoc = SourceLocation())
-      : Argument(Argument),
-        LocInfo(Ctx, QualifierLoc, TemplateNameLoc, EllipsisLoc) {
-    assert(Argument.getKind() == TemplateArgument::Template ||
-           Argument.getKind() == TemplateArgument::TemplateExpansion);
-  }
+                      SourceLocation EllipsisLoc = SourceLocation());
 
   /// - Fetches the primary location of the argument.
   SourceLocation getLocation() const {
@@ -614,12 +606,14 @@ public:
     return LocInfo.getAsExpr();
   }
 
-  NestedNameSpecifierLoc getTemplateQualifierLoc() const {
+  SourceLocation getTemplateKWLoc() const {
     if (Argument.getKind() != TemplateArgument::Template &&
         Argument.getKind() != TemplateArgument::TemplateExpansion)
-      return NestedNameSpecifierLoc();
-    return LocInfo.getTemplateQualifierLoc();
+      return SourceLocation();
+    return LocInfo.getTemplateKwLoc();
   }
+
+  NestedNameSpecifierLoc getTemplateQualifierLoc() const;
 
   SourceLocation getTemplateNameLoc() const {
     if (Argument.getKind() != TemplateArgument::Template &&

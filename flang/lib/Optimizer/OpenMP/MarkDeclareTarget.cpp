@@ -33,7 +33,7 @@ class MarkDeclareTargetPass
 
   void markNestedFuncs(mlir::omp::DeclareTargetDeviceType parentDevTy,
                        mlir::omp::DeclareTargetCaptureClause parentCapClause,
-                       mlir::Operation *currOp,
+                       bool parentAutomap, mlir::Operation *currOp,
                        llvm::SmallPtrSet<mlir::Operation *, 16> visited) {
     if (visited.contains(currOp))
       return;
@@ -57,13 +57,16 @@ class MarkDeclareTargetPass
                   currentDt != mlir::omp::DeclareTargetDeviceType::any) {
                 current.setDeclareTarget(
                     mlir::omp::DeclareTargetDeviceType::any,
-                    current.getDeclareTargetCaptureClause());
+                    current.getDeclareTargetCaptureClause(),
+                    current.getDeclareTargetAutomap());
               }
             } else {
-              current.setDeclareTarget(parentDevTy, parentCapClause);
+              current.setDeclareTarget(parentDevTy, parentCapClause,
+                                       parentAutomap);
             }
 
-            markNestedFuncs(parentDevTy, parentCapClause, currFOp, visited);
+            markNestedFuncs(parentDevTy, parentCapClause, parentAutomap,
+                            currFOp, visited);
           }
         }
       }
@@ -81,7 +84,8 @@ class MarkDeclareTargetPass
         llvm::SmallPtrSet<mlir::Operation *, 16> visited;
         markNestedFuncs(declareTargetOp.getDeclareTargetDeviceType(),
                         declareTargetOp.getDeclareTargetCaptureClause(),
-                        functionOp, visited);
+                        declareTargetOp.getDeclareTargetAutomap(), functionOp,
+                        visited);
       }
     }
 
@@ -92,9 +96,10 @@ class MarkDeclareTargetPass
     // the contents of the device clause
     getOperation()->walk([&](mlir::omp::TargetOp tarOp) {
       llvm::SmallPtrSet<mlir::Operation *, 16> visited;
-      markNestedFuncs(mlir::omp::DeclareTargetDeviceType::nohost,
-                      mlir::omp::DeclareTargetCaptureClause::to, tarOp,
-                      visited);
+      markNestedFuncs(
+          /*parentDevTy=*/mlir::omp::DeclareTargetDeviceType::nohost,
+          /*parentCapClause=*/mlir::omp::DeclareTargetCaptureClause::to,
+          /*parentAutomap=*/false, tarOp, visited);
     });
   }
 };

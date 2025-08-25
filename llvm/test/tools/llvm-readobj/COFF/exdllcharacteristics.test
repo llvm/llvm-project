@@ -1,9 +1,8 @@
 # To regenerate has-exdllcharacteristics.exe
 # $ echo int main() { return 0; } > has-exdllcharacteristics.c
-# To make minimum possible stub file (to decrease the binary size)
-# $ echo -n '4D5A00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' | xxd -r -p > stub
-# $ cl has-exdllcharacteristics.c /link /entry:main /STUB:stub /NOCOFFGRPINFO /EMITTOOLVERSIONINFO:NO /EMITPOGOPHASEINFO /NOVCFEATURE /MANIFEST:NO /cetcompat /cetcompatstrict /cetdynamicapisinproc /cetipvalidationrelaxed /hotpatchcompatible /functionpadmin:6
-RUN: llvm-readobj --coff-debug-directory %p/Inputs/has-exdllcharacteristics.exe | FileCheck %s
+# $ cl has-exdllcharacteristics.c /link /entry:main /cetcompat /cetcompatstrict /cetdynamicapisinproc /cetipvalidationrelaxed /hotpatchcompatible /functionpadmin:6
+RUN: yaml2obj %p/Inputs/has-exdllcharacteristics.yaml > %t.exe
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck %s
 
 CHECK:  DebugEntry {
 CHECK:    Characteristics: 0x0

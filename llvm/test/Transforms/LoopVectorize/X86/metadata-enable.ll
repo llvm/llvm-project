@@ -1201,10 +1201,9 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; O1VEC2:       middle.block:
 ; O1VEC2-NEXT:    br label [[FOR_END:%.*]]
 ; O1VEC2:       scalar.ph:
-; O1VEC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; O1VEC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; O1VEC2:       for.body:
-; O1VEC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; O1VEC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; O1VEC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[INDVARS_IV]]
 ; O1VEC2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; O1VEC2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP10]], [[N]]
@@ -1242,10 +1241,9 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; OzVEC2:       middle.block:
 ; OzVEC2-NEXT:    br label [[FOR_END:%.*]]
 ; OzVEC2:       scalar.ph:
-; OzVEC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; OzVEC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; OzVEC2:       for.body:
-; OzVEC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; OzVEC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; OzVEC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[INDVARS_IV]]
 ; OzVEC2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; OzVEC2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP10]], [[N]]

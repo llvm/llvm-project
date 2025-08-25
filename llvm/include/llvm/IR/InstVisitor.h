@@ -183,6 +183,7 @@ public:
   RetTy visitUIToFPInst(UIToFPInst &I)            { DELEGATE(CastInst);}
   RetTy visitSIToFPInst(SIToFPInst &I)            { DELEGATE(CastInst);}
   RetTy visitPtrToIntInst(PtrToIntInst &I)        { DELEGATE(CastInst);}
+  RetTy visitPtrToAddrInst(PtrToAddrInst &I)      { DELEGATE(CastInst);}
   RetTy visitIntToPtrInst(IntToPtrInst &I)        { DELEGATE(CastInst);}
   RetTy visitBitCastInst(BitCastInst &I)          { DELEGATE(CastInst);}
   RetTy visitAddrSpaceCastInst(AddrSpaceCastInst &I) { DELEGATE(CastInst);}

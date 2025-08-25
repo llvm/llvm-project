@@ -586,7 +586,7 @@ public:
   }
 };
 
-class DXContainerObjectFile : public ObjectFile {
+class LLVM_ABI DXContainerObjectFile : public ObjectFile {
 private:
   friend class ObjectFile;
   DXContainer Container;
@@ -603,7 +603,11 @@ private:
   }
 
 public:
+  const DXContainer &getDXContainer() const { return Container; }
+
   static bool classof(const Binary *v) { return v->isDXContainer(); }
+
+  const dxbc::Header &getHeader() const { return Container.getHeader(); }
 
   Expected<StringRef> getSymbolName(DataRefImpl) const override;
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;

@@ -56,30 +56,30 @@ namespace llvm {
   DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), LEVEL, DEBUG_TYPE)
 #define LDBG_LOG_LEVEL_1() LDBG_LOG_LEVEL(1)
 
+// We want the filename without the full path. We are using the __FILE__ macro
+// and a constexpr function to strip the path prefix. We can avoid the frontend
+// repeated evaluation of __FILE__ by using the __FILE_NAME__ when defined
+// (gcc and clang do) which contains the file name already.
+#if defined(__FILE_NAME__)
+#define __LLVM_FILE_NAME__ __FILE_NAME__
+#else
+#define __LLVM_FILE_NAME__ ::llvm::impl::getShortFileName(__FILE__)
+#endif
+
 #define DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(STREAM, LEVEL, TYPE, FILE,     \
                                                 LINE)                          \
   for (bool _c =                                                               \
            (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE, LEVEL));     \
        _c; _c = false)                                                         \
-    for (::llvm::impl::RAIINewLineStream NewLineStream{(STREAM)}; _c;          \
-         _c = false)                                                           \
-  ::llvm::impl::raw_ldbg_ostream{                                              \
-      ::llvm::impl::computePrefix(TYPE, FILE, LINE, LEVEL), NewLineStream}     \
-      .asLvalue()
+    for (::llvm::impl::raw_ldbg_ostream LdbgOS{                                \
+             ::llvm::impl::computePrefix(TYPE, FILE, LINE, LEVEL), (STREAM)};  \
+         _c; _c = false)                                                       \
+  ::llvm::impl::RAIINewLineStream{LdbgOS}.asLvalue()
 
 #define DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE, FILE)          \
   DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(STREAM, LEVEL, TYPE, FILE, __LINE__)
-// When __SHORT_FILE__ is not defined, the File is the full path,
-// otherwise __SHORT_FILE__ is defined in CMake to provide the file name
-// without the path prefix.
-#if defined(__SHORT_FILE__)
 #define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, LEVEL, TYPE)                     \
-  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE, __SHORT_FILE__)
-#else
-#define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, LEVEL, TYPE)                     \
-  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE,                      \
-                                     ::llvm::impl::getShortFileName(__FILE__))
-#endif
+  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE, __LLVM_FILE_NAME__)
 
 namespace impl {
 
@@ -88,22 +88,22 @@ namespace impl {
 class LLVM_ABI raw_ldbg_ostream final : public raw_ostream {
   std::string Prefix;
   raw_ostream &Os;
-  bool HasPendingNewline;
+  bool ShouldPrefixNextString;
 
   /// Split the line on newlines and insert the prefix before each
   /// newline. Forward everything to the underlying stream.
   void write_impl(const char *Ptr, size_t Size) final {
     auto Str = StringRef(Ptr, Size);
-    // Handle the initial prefix.
-    if (!Str.empty())
-      writeWithPrefix(StringRef());
-
     auto Eol = Str.find('\n');
+    // Handle `\n` occurring in the string, ensure to print the prefix at the
+    // beginning of each line.
     while (Eol != StringRef::npos) {
+      // Take the line up to the newline (including the newline).
       StringRef Line = Str.take_front(Eol + 1);
       if (!Line.empty())
         writeWithPrefix(Line);
-      HasPendingNewline = true;
+      // We printed a newline, record here to print a prefix.
+      ShouldPrefixNextString = true;
       Str = Str.drop_front(Eol + 1);
       Eol = Str.find('\n');
     }
@@ -112,24 +112,21 @@ class LLVM_ABI raw_ldbg_ostream final : public raw_ostream {
   }
   void emitPrefix() { Os.write(Prefix.c_str(), Prefix.size()); }
   void writeWithPrefix(StringRef Str) {
-    flushEol();
+    if (ShouldPrefixNextString) {
+      emitPrefix();
+      ShouldPrefixNextString = false;
+    }
     Os.write(Str.data(), Str.size());
   }
 
 public:
   explicit raw_ldbg_ostream(std::string Prefix, raw_ostream &Os,
-                            bool HasPendingNewline = true)
+                            bool ShouldPrefixNextString = true)
       : Prefix(std::move(Prefix)), Os(Os),
-        HasPendingNewline(HasPendingNewline) {
+        ShouldPrefixNextString(ShouldPrefixNextString) {
     SetUnbuffered();
   }
-  ~raw_ldbg_ostream() final { flushEol(); }
-  void flushEol() {
-    if (HasPendingNewline) {
-      emitPrefix();
-      HasPendingNewline = false;
-    }
-  }
+  ~raw_ldbg_ostream() final {}
 
   /// Forward the current_pos method to the underlying stream.
   uint64_t current_pos() const final { return Os.tell(); }
@@ -148,6 +145,7 @@ public:
   ~RAIINewLineStream() { Os << '\n'; }
   void write_impl(const char *Ptr, size_t Size) final { Os.write(Ptr, Size); }
   uint64_t current_pos() const final { return Os.tell(); }
+  RAIINewLineStream &asLvalue() { return *this; }
 };
 
 /// Remove the path prefix from the file name.
