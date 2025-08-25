@@ -2,7 +2,6 @@
 
 // CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1)[s0] -> ((d1 - d0 + s0 - 1) floordiv s0)>
 // CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1)[s0] -> (d0 + d1 * s0)>
-// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL:   func.func @simple_loop(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?xi32>,
 // CHECK-SAME:      %[[ARG1:.*]]: memref<3xindex>) {
@@ -34,6 +33,9 @@ func.func @simple_loop(%arg0: memref<?xi32>, %arg1: memref<3xindex>) {
   return
 }
 
+// -----
+
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL:   func.func @loop_with_constant_step(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?xi32>,
 // CHECK-SAME:      %[[ARG1:.*]]: index,
@@ -55,3 +57,32 @@ func.func @loop_with_constant_step(%arg0: memref<?xi32>, %arg1: index, %arg2: in
   return
 }
 
+// -----
+
+// CHECK: #[[$ATTR_3:.+]] = affine_map<(d0) -> (d0)>
+// CHECK-LABEL:   func.func @nested_loop(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<?x?xi32>,
+// CHECK-SAME:      %[[ARG1:.*]]: index,
+// CHECK-SAME:      %[[ARG2:.*]]: index) {
+// CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:           affine.for %[[VAL_3:.*]] = #[[$ATTR_3]](%[[VAL_1]]) to #[[$ATTR_3]](%[[ARG1]]) {
+// CHECK:             affine.for %[[VAL_4:.*]] = #[[$ATTR_3]](%[[VAL_1]]) to #[[$ATTR_3]](%[[ARG2]]) {
+// CHECK:               memref.store %[[VAL_0]], %[[ARG0]]{{\[}}%[[VAL_3]], %[[VAL_4]]] : memref<?x?xi32>
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+func.func @nested_loop(%arg0: memref<?x?xi32>, %arg1: index, %arg2: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for %arg3 = %c0 to %arg1 step %c1 {
+    scf.for %arg4 = %c0 to %arg2 step %c1 {
+      memref.store %c0_i32, %arg0[%arg3, %arg4] : memref<?x?xi32>
+    }
+  }
+  return
+}
