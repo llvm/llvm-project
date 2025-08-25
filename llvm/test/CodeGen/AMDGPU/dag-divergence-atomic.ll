@@ -42,7 +42,7 @@ define protected amdgpu_kernel void @sub(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw sub ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw sub ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -64,7 +64,7 @@ define protected amdgpu_kernel void @and(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw and ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw and ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -86,7 +86,7 @@ define protected amdgpu_kernel void @or(ptr addrspace(1) %p, ptr addrspace(1) %q
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw or ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw or ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -108,7 +108,7 @@ define protected amdgpu_kernel void @xor(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw xor ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw xor ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -144,7 +144,7 @@ define protected amdgpu_kernel void @nand(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw nand ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw nand ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -166,7 +166,7 @@ define protected amdgpu_kernel void @max_workgroup(ptr addrspace(1) %p, ptr addr
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw max ptr addrspace(1) %p, i32 1 syncscope("workgroup") monotonic
+  %n32 = atomicrmw max ptr addrspace(1) %p, i32 1 syncscope("workgroup") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -188,7 +188,7 @@ define protected amdgpu_kernel void @max(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw max ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw max ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -210,7 +210,7 @@ define protected amdgpu_kernel void @min_workgroup(ptr addrspace(1) %p, ptr addr
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw min ptr addrspace(1) %p, i32 1 syncscope("workgroup") monotonic
+  %n32 = atomicrmw min ptr addrspace(1) %p, i32 1 syncscope("workgroup") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -232,7 +232,7 @@ define protected amdgpu_kernel void @min(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw min ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw min ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -254,7 +254,7 @@ define protected amdgpu_kernel void @umax_workgroup(ptr addrspace(1) %p, ptr add
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw umax ptr addrspace(1) %p, i32 1 syncscope("workgroup") monotonic
+  %n32 = atomicrmw umax ptr addrspace(1) %p, i32 1 syncscope("workgroup") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -276,7 +276,7 @@ define protected amdgpu_kernel void @umax(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw umax ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw umax ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -298,7 +298,7 @@ define protected amdgpu_kernel void @umin_workgroup(ptr addrspace(1) %p, ptr add
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw umin ptr addrspace(1) %p, i32 1 syncscope("workgroup") monotonic
+  %n32 = atomicrmw umin ptr addrspace(1) %p, i32 1 syncscope("workgroup") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -320,7 +320,7 @@ define protected amdgpu_kernel void @umin(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw umin ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw umin ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -388,7 +388,7 @@ define protected amdgpu_kernel void @inc(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw uinc_wrap ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw uinc_wrap ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -410,7 +410,7 @@ define protected amdgpu_kernel void @dec(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = atomicrmw udec_wrap ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic
+  %n32 = atomicrmw udec_wrap ptr addrspace(1) %p, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -446,7 +446,7 @@ define protected amdgpu_kernel void @fadd(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %f32 = atomicrmw fadd ptr addrspace(1) %p, float 1.0 syncscope("agent") monotonic
+  %f32 = atomicrmw fadd ptr addrspace(1) %p, float 1.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n32 = fptoui float %f32 to i32
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
@@ -483,7 +483,7 @@ define protected amdgpu_kernel void @fsub(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %f32 = atomicrmw fsub ptr addrspace(1) %p, float 1.0 syncscope("agent") monotonic
+  %f32 = atomicrmw fsub ptr addrspace(1) %p, float 1.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0
   %n32 = fptoui float %f32 to i32
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0

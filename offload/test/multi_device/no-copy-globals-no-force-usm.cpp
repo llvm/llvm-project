@@ -28,8 +28,8 @@ int main() {
     rho[i] = 1.0;
 
 // clang-format off
-// CHECK: DEVID:  0 SGN:5 {{.*}} tripcount:10000 rpc:0 md:1 md_LB:0 md_UB:4999
-// CHECK: DEVID:  1 SGN:5 {{.*}} tripcount:10000 rpc:0 md:1 md_LB:5000 md_UB:9999
+// CHECK: DEVID:  0 SGN:7 {{.*}} tripcount:10000 rpc:0 md:1 md_LB:0 md_UB:4999
+// CHECK: DEVID:  1 SGN:7 {{.*}} tripcount:10000 rpc:0 md:1 md_LB:5000 md_UB:9999
 // clang-format on
 #pragma omp target teams distribute parallel for
   for (int i = 0; i < N; i++) {

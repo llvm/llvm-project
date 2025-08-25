@@ -25,12 +25,13 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/Remarks.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/RWMutex.h"
@@ -133,6 +134,11 @@ public:
   // Diagnostics
   //===--------------------------------------------------------------------===//
   DiagnosticEngine diagEngine;
+
+  //===--------------------------------------------------------------------===//
+  // Remark
+  //===--------------------------------------------------------------------===//
+  std::unique_ptr<remark::detail::RemarkEngine> remarkEngine;
 
   //===--------------------------------------------------------------------===//
   // Options
@@ -389,6 +395,19 @@ bool MLIRContext::hasActionHandler() { return (bool)getImpl().actionHandler; }
 DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
 
 //===----------------------------------------------------------------------===//
+// Remark Handlers
+//===----------------------------------------------------------------------===//
+
+void MLIRContext::setRemarkEngine(
+    std::unique_ptr<remark::detail::RemarkEngine> engine) {
+  getImpl().remarkEngine = std::move(engine);
+}
+
+remark::detail::RemarkEngine *MLIRContext::getRemarkEngine() {
+  return getImpl().remarkEngine.get();
+}
+
+//===----------------------------------------------------------------------===//
 // Dialect and Operation Registration
 //===----------------------------------------------------------------------===//
 
@@ -456,8 +475,7 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
   auto dialectIt = impl.loadedDialects.try_emplace(dialectNamespace, nullptr);
 
   if (dialectIt.second) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Load new dialect in Context " << dialectNamespace << "\n");
+    LDBG() << "Load new dialect in Context " << dialectNamespace;
 #ifndef NDEBUG
     if (impl.multiThreadedExecutionContext != 0)
       llvm::report_fatal_error(
@@ -526,8 +544,7 @@ DynamicDialect *MLIRContext::getOrLoadDynamicDialect(
                              "' has already been registered");
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "Load new dynamic dialect in Context "
-                          << dialectNamespace << "\n");
+  LDBG() << "Load new dynamic dialect in Context " << dialectNamespace;
 #ifndef NDEBUG
   if (impl.multiThreadedExecutionContext != 0)
     llvm::report_fatal_error(
@@ -1193,11 +1210,10 @@ willBeValidAffineMap(unsigned dimCount, unsigned symbolCount,
   getMaxDimAndSymbol(ArrayRef<ArrayRef<AffineExpr>>(results), maxDimPosition,
                      maxSymbolPosition);
   if ((maxDimPosition >= dimCount) || (maxSymbolPosition >= symbolCount)) {
-    LLVM_DEBUG(
-        llvm::dbgs()
+    LDBG()
         << "maximum dimensional identifier position in result expression must "
            "be less than `dimCount` and maximum symbolic identifier position "
-           "in result expression must be less than `symbolCount`\n");
+           "in result expression must be less than `symbolCount`";
     return false;
   }
   return true;

@@ -63,7 +63,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Type retTy, bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
 
   if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
-    baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
+    baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
     retTy = baseAddr.getType();
   }
 
@@ -78,7 +78,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
       varType = mlir::TypeAttr::get(seqType.getEleTy());
 
   mlir::omp::MapInfoOp op =
-      builder.create<mlir::omp::MapInfoOp>(loc, retTy, baseAddr, varType,
+      mlir::omp::MapInfoOp::create(builder, loc, retTy, baseAddr, varType,
           builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
           builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
           varPtrPtr, members, membersIndex, bounds, mapperId,
