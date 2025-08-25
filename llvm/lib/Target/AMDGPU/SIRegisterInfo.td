@@ -110,17 +110,17 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   let TSFlags{3} = HasAGPR;
   let TSFlags{4} = HasSGPR;
 
-  // RA will use RegisterClass AllocationPriority amongst other info (e.g. ordering in the basic block) 
+  // RA will use RegisterClass AllocationPriority amongst other info (e.g. ordering in the basic block)
   // to decide which registers to try to assign first. Usually, this RegisterClass priority is given
   // very high priority, if not the highest priority, when considering which VirtReg to allocate next.
   //
-  // We have 5 bits to assign AllocationPriorities to RegisterClasses. Generally, it is beneficial to 
-  // assign more constrained RegisterClasses first. As a result, we prioritize register classes with 
-  // more 32 bit tuples (e.g. VReg_512) over registers with fewer tuples (e.g. VGPR_32). 
-  // 
+  // We have 5 bits to assign AllocationPriorities to RegisterClasses. Generally, it is beneficial to
+  // assign more constrained RegisterClasses first. As a result, we prioritize register classes with
+  // more 32 bit tuples (e.g. VReg_512) over registers with fewer tuples (e.g. VGPR_32).
+  //
   // The interesting case is the vector register case on architectures which have ARegs, VRegs, AVRegs.
   // In this case, we would like to assign ARegs and VRegs before AVRegs, as AVRegs are less constrained
-  // and can be assigned to both AGPRs and VGPRs. We use the 5th bit to encode this into the 
+  // and can be assigned to both AGPRs and VGPRs. We use the 5th bit to encode this into the
   // RegisterClass AllocationPriority. BaseClassPriority is used to turn the bit on, and BaseClassScaleFactor
   // is used for scaling of the bit (i.e. 1 << 4).
   field int BaseClassPriority = 1;
@@ -976,14 +976,14 @@ class VRegClassBase<int numRegs, list<ValueType> regTypes, dag regList> :
   // Requires n v_mov_b32 to copy
   let CopyCost = numRegs;
 
-  // Since we only have 5 bits for the RegisterClass Allocation Priorty, and since we use the 
-  // 5th bit for BaseClassPriority, we need to encode the SizePriority into 4 bits. As a result 
-  // of this encoding, for registers with numRegs 15 or 16, we give SizePriority of 14, and for 
-  // regsters with numRegs 17+ we give SizePriority of 15. In  practice, there is only one 
-  // RegClass per Vector Register type in each of these groups (i.e. numRegs = 15,16 : {VReg_512}, 
-  // and numRegs = 17+ : {VReg_1024}). Therefore, we have not lost any info by compressing. 
+  // Since we only have 5 bits for the RegisterClass Allocation Priorty, and since we use the
+  // 5th bit for BaseClassPriority, we need to encode the SizePriority into 4 bits. As a result
+  // of this encoding, for registers with numRegs 15 or 16, we give SizePriority of 14, and for
+  // regsters with numRegs 17+ we give SizePriority of 15. In  practice, there is only one
+  // RegClass per Vector Register type in each of these groups (i.e. numRegs = 15,16 : {VReg_512},
+  // and numRegs = 17+ : {VReg_1024}). Therefore, we have not lost any info by compressing.
   defvar SizePrioriity = !if(!le(numRegs, 14), !sub(numRegs, 1), !if(!le(numRegs, 16), 14, 15));
-  
+
   let AllocationPriority = !add(SizePrioriity, !mul(BaseClassPriority, BaseClassScaleFactor));
   let Weight = numRegs;
 }
