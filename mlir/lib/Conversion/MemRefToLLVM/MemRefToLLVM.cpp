@@ -2093,11 +2093,6 @@ struct FinalizeMemRefToLLVMConversionPass
   }
 };
 
-struct TrivialPatternRewriter : public PatternRewriter {
-  explicit TrivialPatternRewriter(MLIRContext *context)
-      : PatternRewriter(context) {}
-};
-
 struct ConvertMemRefAliasAttributesToLLVMPass
     : public impl::ConvertMemRefAliasAttributesToLLVMPassBase<
           ConvertMemRefAliasAttributesToLLVMPass> {
@@ -2148,7 +2143,7 @@ struct ConvertMemRefAliasAttributesToLLVMPass
     if (op->walk(visitor).wasInterrupted())
       return signalPassFailure();
 
-    TrivialPatternRewriter rewriter(ctx);
+    PatternRewriter rewriter(ctx);
     op->walk([&](memref::AliasDomainScopeOp scope) {
       memref::AliasDomainScopeOp::inlineIntoParent(rewriter, scope);
     });
