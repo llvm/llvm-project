@@ -5141,6 +5141,19 @@ libc_function(
 )
 
 libc_function(
+    name = "strsep",
+    srcs = ["src/string/strsep.cpp"],
+    hdrs = ["src/string/strsep.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":hdr_signal_macros",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
     name = "strstr",
     srcs = ["src/string/strstr.cpp"],
     hdrs = ["src/string/strstr.h"],

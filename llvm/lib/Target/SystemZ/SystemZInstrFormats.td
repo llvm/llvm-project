@@ -188,7 +188,6 @@ def getTwoOperandOpcode : InstrMapping {
 class InstE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<2, outs, ins, asmstr, pattern> {
   field bits<16> Inst;
-  field bits<16> SoftFail = 0;
 
   let Inst = op;
 }
@@ -196,7 +195,6 @@ class InstE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<2, outs, ins, asmstr, pattern> {
   field bits<16> Inst;
-  field bits<16> SoftFail = 0;
 
   bits<8> I1;
 
@@ -207,7 +205,6 @@ class InstI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstIE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> I1;
   bits<4> I2;
@@ -221,7 +218,6 @@ class InstIE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstMII<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> M1;
   bits<12> RI2;
@@ -236,7 +232,6 @@ class InstMII<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIa<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<16> I2;
@@ -250,7 +245,6 @@ class InstRIa<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIb<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<16> RI2;
@@ -264,7 +258,6 @@ class InstRIb<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIc<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> M1;
   bits<16> RI2;
@@ -278,7 +271,6 @@ class InstRIc<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIEa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<16> I2;
@@ -296,7 +288,6 @@ class InstRIEa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIEb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -315,7 +306,6 @@ class InstRIEb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIEc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<8> I2;
@@ -333,7 +323,6 @@ class InstRIEc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIEd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R3;
@@ -350,7 +339,6 @@ class InstRIEd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIEe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R3;
@@ -368,7 +356,6 @@ class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
                bits<8> I3Or = 0, bits<8> I4Or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -402,7 +389,6 @@ class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
 class InstRIEg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> M3;
@@ -419,7 +405,6 @@ class InstRIEg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRILa<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<32> I2;
@@ -433,7 +418,6 @@ class InstRILa<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRILb<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<32> RI2;
@@ -447,7 +431,6 @@ class InstRILb<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRILc<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> M1;
   bits<32> RI2;
@@ -461,7 +444,6 @@ class InstRILc<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRIS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<8> I2;
@@ -481,7 +463,6 @@ class InstRIS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRR<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<2, outs, ins, asmstr, pattern> {
   field bits<16> Inst;
-  field bits<16> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -494,7 +475,6 @@ class InstRR<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRD<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R3;
@@ -510,7 +490,6 @@ class InstRRD<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -524,7 +503,6 @@ class InstRRE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -541,7 +519,6 @@ class InstRRFa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -558,7 +535,6 @@ class InstRRFb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -574,7 +550,6 @@ class InstRRFc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -590,7 +565,6 @@ class InstRRFd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRFe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -607,7 +581,6 @@ class InstRRFe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRRS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R2;
@@ -628,7 +601,6 @@ class InstRRS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> X2;
@@ -647,7 +619,6 @@ class InstRXa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> M1;
   bits<4> X2;
@@ -666,7 +637,6 @@ class InstRXb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> X2;
@@ -689,7 +659,6 @@ class InstRXE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXF<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R3;
@@ -712,7 +681,6 @@ class InstRXF<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXYa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> X2;
@@ -734,7 +702,6 @@ class InstRXYa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRXYb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> M1;
   bits<4> X2;
@@ -756,7 +723,6 @@ class InstRXYb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R3;
@@ -773,7 +739,6 @@ class InstRSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> M3;
@@ -790,7 +755,6 @@ class InstRSb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSEa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R3;
@@ -809,7 +773,6 @@ class InstRSEa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R3;
@@ -824,7 +787,6 @@ class InstRSI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSLa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> B1;
   bits<12> D1;
@@ -842,7 +804,6 @@ class InstRSLa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSLb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> B2;
@@ -862,7 +823,6 @@ class InstRSLb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSYa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> R3;
@@ -883,7 +843,6 @@ class InstRSYa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstRSYb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> M3;
@@ -904,7 +863,6 @@ class InstRSYb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> B1;
   bits<12> D1;
@@ -919,7 +877,6 @@ class InstSI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSIL<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> B1;
   bits<12> D1;
@@ -934,7 +891,6 @@ class InstSIL<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSIY<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> B1;
   bits<20> D1;
@@ -953,7 +909,6 @@ class InstSIY<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSMI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> M1;
   bits<16> RI2;
@@ -971,7 +926,6 @@ class InstSMI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> B1;
   bits<12> D1;
@@ -990,7 +944,6 @@ class InstSSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> B1;
   bits<12> D1;
@@ -1011,7 +964,6 @@ class InstSSb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSc<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> B1;
   bits<12> D1;
@@ -1032,7 +984,6 @@ class InstSSc<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSd<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> B1;
@@ -1053,7 +1004,6 @@ class InstSSd<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSe<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> B2;
@@ -1074,7 +1024,6 @@ class InstSSe<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSf<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> B1;
   bits<12> D1;
@@ -1093,7 +1042,6 @@ class InstSSf<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> B1;
   bits<12> D1;
@@ -1110,7 +1058,6 @@ class InstSSE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstSSF<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> B1;
   bits<12> D1;
@@ -1130,7 +1077,6 @@ class InstSSF<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
 
   bits<4> B2;
   bits<12> D2;
@@ -1143,7 +1089,6 @@ class InstS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<16> I2;
@@ -1162,7 +1107,6 @@ class InstVRIa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<8> I2;
@@ -1183,7 +1127,6 @@ class InstVRIb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V3;
@@ -1204,7 +1147,6 @@ class InstVRIc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRId<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1229,7 +1171,6 @@ class InstVRId<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1252,7 +1193,6 @@ class InstVRIe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1277,7 +1217,6 @@ class InstVRIf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1300,7 +1239,6 @@ class InstVRIg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIh<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<16> I2;
@@ -1319,7 +1257,6 @@ class InstVRIh<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<4> R2;
@@ -1340,7 +1277,6 @@ class InstVRIi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1362,7 +1298,6 @@ class InstVRIj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1387,7 +1322,6 @@ class InstVRIk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRIl<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1411,7 +1345,6 @@ class InstVRRa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
                bits<4> m4or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1441,7 +1374,6 @@ class InstVRRb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
                bits<4> m5or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1470,7 +1402,6 @@ class InstVRRb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
 class InstVRRc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1500,7 +1431,6 @@ class InstVRRd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
                bits<4> m6or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1530,7 +1460,6 @@ class InstVRRd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
 class InstVRRe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1557,7 +1486,6 @@ class InstVRRe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRRf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<4> R2;
@@ -1576,7 +1504,6 @@ class InstVRRf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRRg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<16> I2;
@@ -1595,7 +1522,6 @@ class InstVRRg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRRh<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1618,7 +1544,6 @@ class InstVRRh<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRRi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<5> V2;
@@ -1641,7 +1566,6 @@ class InstVRRi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRRj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1666,7 +1590,6 @@ class InstVRRj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRRk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1690,7 +1613,6 @@ class InstVRRk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRSa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<4> B2;
@@ -1713,7 +1635,6 @@ class InstVRSa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRSb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<4> B2;
@@ -1735,7 +1656,6 @@ class InstVRSb<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRSc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<4> R1;
   bits<4> B2;
@@ -1758,7 +1678,6 @@ class InstVRSc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRSd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<4> B2;
@@ -1779,7 +1698,6 @@ class InstVRSd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRV<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<5> V2;
@@ -1802,7 +1720,6 @@ class InstVRV<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVRX<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<4> X2;
@@ -1824,7 +1741,6 @@ class InstVRX<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 class InstVSI<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
-  field bits<48> SoftFail = 0;
 
   bits<5> V1;
   bits<4> B2;
