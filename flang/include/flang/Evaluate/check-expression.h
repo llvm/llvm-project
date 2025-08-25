@@ -164,7 +164,7 @@ std::optional<parser::Message> CheckStatementFunction(
     const Symbol &, const Expr<SomeType> &, FoldingContext &);
 
 bool MayNeedCopy(const ActualArgument *, const characteristics::DummyArgument *,
-    FoldingContext &, bool);
+    FoldingContext &, bool forCopyOut);
 
 } // namespace Fortran::evaluate
 #endif

@@ -1446,7 +1446,7 @@ std::optional<parser::Message> CheckStatementFunction(
   return StmtFunctionChecker{sf, context}(expr);
 }
 
-// Helper class for cheching differences between actual and dummy arguments
+// Helper class for checking differences between actual and dummy arguments
 class CopyInOutExplicitInterface {
 public:
   explicit CopyInOutExplicitInterface(FoldingContext &fc,
@@ -1477,10 +1477,7 @@ public:
         (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
         dummyObj_.attrs.test(
             characteristics::DummyDataObject::Attr::Contiguous)};
-    if (!actualTreatAsContiguous && dummyNeedsContiguity) {
-      return true;
-    }
-    return false;
+    return !actualTreatAsContiguous && dummyNeedsContiguity;
   }
 
   // Returns true, if actual and dummy have polymorphic differences
@@ -1513,9 +1510,10 @@ public:
     return false;
   }
 
-  bool HaveArrayArgs() const {
+  bool HaveArrayOrAssumedRankArgs() const {
     bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
-    return actual_.IsArray() && (dummyObj_.IsArray() || dummyTreatAsArray);
+    return IsArrayOrAssumedRank(actual_) &&
+        (IsArrayOrAssumedRank(dummyObj_) || dummyTreatAsArray);
   }
 
   bool PassByValue() const {
@@ -1529,6 +1527,15 @@ public:
   bool HasIntentOut() const { return dummyObj_.intent == common::Intent::Out; }
 
   bool HasIntentIn() const { return dummyObj_.intent == common::Intent::In; }
+
+  static bool IsArrayOrAssumedRank(const ActualArgument &actual) {
+    return semantics::IsAssumedRank(actual) || actual.Rank() > 0;
+  }
+
+  static bool IsArrayOrAssumedRank(const characteristics::DummyDataObject &dummy) {
+    return dummy.type.attrs().test(characteristics::TypeAndShape::Attr::AssumedRank) ||
+      dummy.type.Rank() > 0;
+  }
 
 private:
   FoldingContext &fc_;
@@ -1556,8 +1563,9 @@ static bool MayNeedCopyIn(FoldingContext &fc, const ActualArgument &actual,
     if (check.HaveCoarrayDifferences()) {
       return true;
     }
-    // Note: contiguity and polymorphic checks deal with array arguments
-    if (!check.HaveArrayArgs()) {
+    // Note: contiguity and polymorphic checks deal with array or assumed rank
+    // arguments
+    if (!check.HaveArrayOrAssumedRankArgs()) {
       return false;
     }
     if (check.HaveContiguityDifferences()) {
@@ -1600,8 +1608,9 @@ static bool MayNeedCopyOut(FoldingContext &fc, const ActualArgument &actual,
     if (check.HaveCoarrayDifferences()) {
       return true;
     }
-    // Note: contiguity and polymorphic checks deal with array arguments
-    if (!check.HaveArrayArgs()) {
+    // Note: contiguity and polymorphic checks deal with array or assumed rank
+    // arguments
+    if (!check.HaveArrayOrAssumedRankArgs()) {
       return false;
     }
     if (check.HaveContiguityDifferences()) {

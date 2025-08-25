@@ -56,10 +56,6 @@ int ActualArgument::Rank() const {
   }
 }
 
-bool ActualArgument::IsArray() const {
-  return semantics::IsAssumedRank(*this) || Rank() > 0;
-}
-
 bool ActualArgument::operator==(const ActualArgument &that) const {
   return keyword_ == that.keyword_ && attrs_ == that.attrs_ && u_ == that.u_;
 }
