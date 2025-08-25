@@ -1,0 +1,68 @@
+# This test should not crash when generating call-site information. 
+# It was created to make sure that if isCopyLikeInstr in TargetInstrInfo.h 
+# returns an undef Dest Reg or Src Reg, we don't try to get a SubReg for it.
+
+# RUN: llc --mtriple=arm64e-apple-ios -start-before=aarch64-asm-printer %s -filetype=obj -o /dev/null --emit-call-site-info 
+--- |
+  %struct.rtyuio = type { i8 }
+  define noundef i32 @aserty(ptr noundef %0, ptr noundef %1) local_unnamed_addr #0 !dbg !23 {
+    ret i32 0
+  }
+  define void @asdfgh(ptr noundef %0, ptr noundef %1, i8 noundef zeroext %2) local_unnamed_addr #0 !dbg !53 {
+    %4 = alloca ptr
+    %5 = call ptr @llvm.stackguard()
+    %6 = alloca %struct.rtyuio
+    %7 = icmp eq ptr %1, null
+    br i1 %7, label %10, label %8
+    %9 = tail call i8 @polkiokl(ptr noundef %0) #6
+    br label %10
+    ret void
+  }
+  declare i8 @polkiokl(ptr noundef) local_unnamed_addr #2
+  !llvm.module.flags = !{!2, !8}
+  !llvm.dbg.cu = !{!9}
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !8 = !{i32 7, !"frame-pointer", i32 1}
+  !9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_11, file: !10, emissionKind: FullDebug, sysroot: "/")
+  !10 = !DIFile(filename: "a.cpp", directory: "/")
+  !23 = distinct !DISubprogram(type: !27, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, unit: !9, retainedNodes: !46)
+  !24 = distinct !DICompositeType(tag: DW_TAG_class_type, identifier: "yshscbshhdvcm")
+  !27 = !DISubroutineType(types: !28)
+  !28 = !{}
+  !30 = !DIDerivedType(tag: DW_TAG_typedef, baseType: !33)
+  !33 = distinct !DICompositeType(tag: DW_TAG_structure_type, identifier: "tyruwyeuiwiybabd")
+  !36 = !DISubroutineType(types: !37)
+  !37 = !{}
+  !46 = !{}
+  !47 = !DILocalVariable(scope: !23, type: !48, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !48 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !24, size: 64)
+  !49 = !DILocalVariable(scope: !23, type: !30)
+  !50 = !DILocation(scope: !23)
+  !51 = !DILocation(scope: !23)
+  !53 = distinct !DISubprogram(type: !36, unit: !9, retainedNodes: !54)
+  !54 = !{}
+name:            aserty
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:
+  - { bb: 0, offset: 9, fwdArgRegs: 
+      - { arg: 2, reg: '$w2' } }
+body:             |
+  bb.0 (%ir-block.2):
+    DBG_VALUE $x0, $noreg, !47, !DIExpression(),  debug-location !50
+    DBG_VALUE $x1, $noreg, !49, !DIExpression(),  debug-location !50
+    frame-setup PACIBSP implicit-def $lr, implicit killed $lr, implicit $sp
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    $x2 = ORRXrs $xzr, undef $noreg, 0, implicit $wzr,  debug-location !51
+    BL @asdfgh, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $x1, implicit killed $w2, implicit-def $sp,  debug-location !51
+...
+name:            asdfgh
+body:             |
+  bb.2 (%ir-block.10):
