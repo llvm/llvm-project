@@ -82,6 +82,40 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   ASSERT_TRUE(isa<ConstantFP>(V));
   EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(3.5));
 
+  // Special floating point constants.
+  const APFloat *APFloatVal;
+  V = parseConstantValue("double nan", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isDoubleTy());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  APFloatVal = &cast<ConstantFP>(V)->getValueAPF();
+  EXPECT_TRUE(
+      APFloatVal->bitwiseIsEqual(APFloat::getQNaN(APFloat::IEEEdouble())));
+
+  V = parseConstantValue("double pinf", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isDoubleTy());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  APFloatVal = &cast<ConstantFP>(V)->getValueAPF();
+  EXPECT_TRUE(APFloatVal->isInfinity() && !APFloatVal->isNegative());
+
+  V = parseConstantValue("double ninf", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isDoubleTy());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  APFloatVal = &cast<ConstantFP>(V)->getValueAPF();
+  EXPECT_TRUE(APFloatVal->isInfinity() && APFloatVal->isNegative());
+
+  // We always parse special values into IEEEdouble first before converting
+  // them into the right semantics once the type info is available.
+  // The following tests whether this conversion works as expected.
+  V = parseConstantValue("bfloat pinf", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isBFloatTy());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  APFloatVal = &cast<ConstantFP>(V)->getValueAPF();
+  EXPECT_TRUE(APFloatVal->isInfinity() && !APFloatVal->isNegative());
+
   V = parseConstantValue("i32 42", Error, M);
   ASSERT_TRUE(V);
   EXPECT_TRUE(V->getType()->isIntegerTy());
