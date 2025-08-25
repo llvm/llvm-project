@@ -47,6 +47,7 @@ public:
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
+  bool SelectAddrRegImm9(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool SelectAddrRegRegScale(SDValue Addr, unsigned MaxShiftAmount,
@@ -58,19 +59,14 @@ public:
     return SelectAddrRegRegScale(Addr, MaxShift, Base, Index, Scale);
   }
 
+  bool SelectAddrRegZextRegScale(SDValue Addr, unsigned MaxShiftAmount,
+                                 unsigned Bits, SDValue &Base, SDValue &Index,
+                                 SDValue &Scale);
+
   template <unsigned MaxShift, unsigned Bits>
   bool SelectAddrRegZextRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
                                  SDValue &Scale) {
-    if (SelectAddrRegRegScale(Addr, MaxShift, Base, Index, Scale)) {
-      if (Index.getOpcode() == ISD::AND) {
-        auto *C = dyn_cast<ConstantSDNode>(Index.getOperand(1));
-        if (C && C->getZExtValue() == maskTrailingOnes<uint64_t>(Bits)) {
-          Index = Index.getOperand(0);
-          return true;
-        }
-      }
-    }
-    return false;
+    return SelectAddrRegZextRegScale(Addr, MaxShift, Bits, Base, Index, Scale);
   }
 
   bool SelectAddrRegReg(SDValue Addr, SDValue &Base, SDValue &Offset);
@@ -78,6 +74,9 @@ public:
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
   bool trySignedBitfieldInsertInSign(SDNode *Node);
+  bool trySignedBitfieldInsertInMask(SDNode *Node);
+  bool tryBitfieldInsertOpFromXor(SDNode *Node);
+  bool tryBitfieldInsertOpFromOrAndImm(SDNode *Node);
   bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
                                   SDValue X, unsigned Msb, unsigned Lsb);
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
@@ -123,7 +122,7 @@ public:
   bool selectNegImm(SDValue N, SDValue &Val);
   bool selectInvLogicImm(SDValue N, SDValue &Val);
 
-  bool orIsAdd(const SDNode *Node) const;
+  bool orDisjoint(const SDNode *Node) const;
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
   bool hasAllBUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 8); }
@@ -199,7 +198,6 @@ public:
 private:
   bool doPeepholeSExtW(SDNode *Node);
   bool doPeepholeMaskedRVV(MachineSDNode *Node);
-  bool doPeepholeMergeVVMFold();
   bool doPeepholeNoRegPassThru();
   bool performCombineVMergeAndVOps(SDNode *N);
   bool selectImm64IfCheaper(int64_t Imm, int64_t OrigImm, SDValue N,

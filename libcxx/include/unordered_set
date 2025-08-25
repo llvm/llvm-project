@@ -703,10 +703,10 @@ public:
 #  endif
 
   _LIBCPP_HIDE_FROM_ABI explicit unordered_set(const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u);
+  _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u, const allocator_type& __a);
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_set(unordered_set&& __u) _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
+  _LIBCPP_HIDE_FROM_ABI unordered_set(unordered_set&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_set(unordered_set&& __u, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI unordered_set(initializer_list<value_type> __il);
   _LIBCPP_HIDE_FROM_ABI
@@ -733,13 +733,9 @@ public:
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
   }
 
-  _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(const unordered_set& __u) {
-    __table_ = __u.__table_;
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(const unordered_set& __u) = default;
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(unordered_set&& __u)
-      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
+  _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(unordered_set&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(initializer_list<value_type> __il);
 #  endif // _LIBCPP_CXX03_LANG
 
@@ -769,13 +765,13 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(value_type&& __x) {
-    return __table_.__insert_unique(std::move(__x));
+    return __table_.__emplace_unique(std::move(__x));
   }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, value_type&& __x) { return insert(std::move(__x)).first; }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
 #  endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) { return __table_.__insert_unique(__x); }
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) { return __table_.__emplace_unique(__x); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, const value_type& __x) { return insert(__x).first; }
   template <class _InputIterator>
@@ -785,7 +781,7 @@ public:
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
     for (auto&& __element : __range) {
-      __table_.__insert_unique(std::forward<decltype(__element)>(__element));
+      __table_.__emplace_unique(std::forward<decltype(__element)>(__element));
     }
   }
 #  endif
@@ -1071,12 +1067,6 @@ template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(const allocator_type& __a) : __table_(__a) {}
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(const unordered_set& __u) : __table_(__u.__table_) {
-  __table_.__rehash_unique(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(const unordered_set& __u, const allocator_type& __a)
     : __table_(__u.__table_, __a) {
   __table_.__rehash_unique(__u.bucket_count());
@@ -1086,17 +1076,12 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(const unordered_set& 
 #  ifndef _LIBCPP_CXX03_LANG
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(unordered_set&& __u)
-    _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(std::move(__u.__table_)) {}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(unordered_set&& __u, const allocator_type& __a)
     : __table_(std::move(__u.__table_), __a) {
   if (__a != __u.get_allocator()) {
     iterator __i = __u.begin();
     while (__u.size() != 0)
-      __table_.__insert_unique(std::move(__u.__table_.remove(__i++)->__get_value()));
+      __table_.__emplace_unique(std::move(__u.__table_.remove(__i++)->__get_value()));
   }
 }
 
@@ -1127,14 +1112,6 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline unordered_set<_Value, _Hash, _Pred, _Alloc>&
-unordered_set<_Value, _Hash, _Pred, _Alloc>::operator=(unordered_set&& __u)
-    _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) {
-  __table_ = std::move(__u.__table_);
-  return *this;
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline unordered_set<_Value, _Hash, _Pred, _Alloc>&
 unordered_set<_Value, _Hash, _Pred, _Alloc>::operator=(initializer_list<value_type> __il) {
   __table_.__assign_unique(__il.begin(), __il.end());
   return *this;
@@ -1146,7 +1123,7 @@ template <class _Value, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
 inline void unordered_set<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first, _InputIterator __last) {
   for (; __first != __last; ++__first)
-    __table_.__insert_unique(*__first);
+    __table_.__emplace_unique(*__first);
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
@@ -1308,11 +1285,10 @@ public:
 #  endif
 
   _LIBCPP_HIDE_FROM_ABI explicit unordered_multiset(const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u);
+  _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u, const allocator_type& __a);
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_multiset(unordered_multiset&& __u)
-      _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
+  _LIBCPP_HIDE_FROM_ABI unordered_multiset(unordered_multiset&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multiset(unordered_multiset&& __u, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI unordered_multiset(initializer_list<value_type> __il);
   _LIBCPP_HIDE_FROM_ABI unordered_multiset(
@@ -1339,13 +1315,9 @@ public:
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
   }
 
-  _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(const unordered_multiset& __u) {
-    __table_ = __u.__table_;
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(const unordered_multiset& __u) = default;
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(unordered_multiset&& __u)
-      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
+  _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(unordered_multiset&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(initializer_list<value_type> __il);
 #  endif // _LIBCPP_CXX03_LANG
 
@@ -1374,17 +1346,17 @@ public:
     return __table_.__emplace_hint_multi(__p, std::forward<_Args>(__args)...);
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __x) { return __table_.__insert_multi(std::move(__x)); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __x) { return __table_.__emplace_multi(std::move(__x)); }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __x) {
-    return __table_.__insert_multi(__p, std::move(__x));
+    return __table_.__emplace_hint_multi(__p, std::move(__x));
   }
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__insert_multi(__x); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__emplace_multi(__x); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __x) {
-    return __table_.__insert_multi(__p, __x);
+    return __table_.__emplace_hint_multi(__p, __x);
   }
 
   template <class _InputIterator>
@@ -1394,7 +1366,7 @@ public:
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
     for (auto&& __element : __range) {
-      __table_.__insert_multi(std::forward<decltype(__element)>(__element));
+      __table_.__emplace_multi(std::forward<decltype(__element)>(__element));
     }
   }
 #  endif
@@ -1686,13 +1658,6 @@ inline unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(cons
     : __table_(__a) {}
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(const unordered_multiset& __u)
-    : __table_(__u.__table_) {
-  __table_.__rehash_multi(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
     const unordered_multiset& __u, const allocator_type& __a)
     : __table_(__u.__table_, __a) {
@@ -1703,18 +1668,13 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
 #  ifndef _LIBCPP_CXX03_LANG
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(unordered_multiset&& __u)
-    _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(std::move(__u.__table_)) {}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
     unordered_multiset&& __u, const allocator_type& __a)
     : __table_(std::move(__u.__table_), __a) {
   if (__a != __u.get_allocator()) {
     iterator __i = __u.begin();
     while (__u.size() != 0)
-      __table_.__insert_multi(std::move(__u.__table_.remove(__i++)->__get_value()));
+      __table_.__emplace_multi(std::move(__u.__table_.remove(__i++)->__get_value()));
   }
 }
 
@@ -1745,14 +1705,6 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline unordered_multiset<_Value, _Hash, _Pred, _Alloc>&
-unordered_multiset<_Value, _Hash, _Pred, _Alloc>::operator=(unordered_multiset&& __u)
-    _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) {
-  __table_ = std::move(__u.__table_);
-  return *this;
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline unordered_multiset<_Value, _Hash, _Pred, _Alloc>&
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::operator=(initializer_list<value_type> __il) {
   __table_.__assign_multi(__il.begin(), __il.end());
   return *this;
@@ -1764,7 +1716,7 @@ template <class _Value, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
 inline void unordered_multiset<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first, _InputIterator __last) {
   for (; __first != __last; ++__first)
-    __table_.__insert_multi(*__first);
+    __table_.__emplace_multi(*__first);
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>

@@ -89,7 +89,7 @@ static bool isCallback(QualType T) {
     T = T->getPointeeType();
 
   if (const RecordType *RT = T->getAsStructureType()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     for (const auto *I : RD->fields()) {
       QualType FieldT = I->getType();
       if (FieldT->isBlockPointerType() || FieldT->isFunctionPointerType())
@@ -391,7 +391,9 @@ bool CallEvent::isVariadic(const Decl *D) {
 
 static bool isTransparentUnion(QualType T) {
   const RecordType *UT = T->getAsUnionType();
-  return UT && UT->getDecl()->hasAttr<TransparentUnionAttr>();
+  return UT && UT->getOriginalDecl()
+                   ->getMostRecentDecl()
+                   ->hasAttr<TransparentUnionAttr>();
 }
 
 // In some cases, symbolic cases should be transformed before we associate
@@ -688,6 +690,18 @@ const FunctionDecl *SimpleFunctionCall::getDecl() const {
   return getSVal(getOriginExpr()->getCallee()).getAsFunctionDecl();
 }
 
+RuntimeDefinition SimpleFunctionCall::getRuntimeDefinition() const {
+  // Clang converts lambdas to function pointers using an implicit conversion
+  // operator, which returns the lambda's '__invoke' method. However, Sema
+  // leaves the body of '__invoke' empty (it is generated later in CodeGen), so
+  // we need to skip '__invoke' and access the lambda's operator() directly.
+  if (const auto *CMD = dyn_cast_if_present<CXXMethodDecl>(getDecl());
+      CMD && CMD->isLambdaStaticInvoker())
+    return RuntimeDefinition{CMD->getParent()->getLambdaCallOperator()};
+
+  return AnyFunctionCall::getRuntimeDefinition();
+}
+
 const FunctionDecl *CXXInstanceCall::getDecl() const {
   const auto *CE = cast_or_null<CallExpr>(getOriginExpr());
   if (!CE)
@@ -831,7 +845,7 @@ void CXXInstanceCall::getInitialStackFrameContents(
     if (MD->getCanonicalDecl() != getDecl()->getCanonicalDecl()) {
       ASTContext &Ctx = SVB.getContext();
       const CXXRecordDecl *Class = MD->getParent();
-      QualType Ty = Ctx.getPointerType(Ctx.getRecordType(Class));
+      CanQualType Ty = Ctx.getPointerType(Ctx.getCanonicalTagType(Class));
 
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
       std::optional<SVal> V =
@@ -842,7 +856,8 @@ void CXXInstanceCall::getInitialStackFrameContents(
         // Fall back to a generic pointer cast for this-value.
         const CXXMethodDecl *StaticMD = cast<CXXMethodDecl>(getDecl());
         const CXXRecordDecl *StaticClass = StaticMD->getParent();
-        QualType StaticTy = Ctx.getPointerType(Ctx.getRecordType(StaticClass));
+        CanQualType StaticTy =
+            Ctx.getPointerType(Ctx.getCanonicalTagType(StaticClass));
         ThisVal = SVB.evalCast(ThisVal, Ty, StaticTy);
       } else
         ThisVal = *V;

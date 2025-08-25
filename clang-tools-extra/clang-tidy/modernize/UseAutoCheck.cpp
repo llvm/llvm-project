@@ -186,16 +186,14 @@ TypeMatcher nestedIterator() {
 /// declarations and which name standard iterators for standard containers.
 TypeMatcher iteratorFromUsingDeclaration() {
   auto HasIteratorDecl = hasDeclaration(namedDecl(hasStdIteratorName()));
-  // Types resulting from using declarations are represented by elaboratedType.
-  return elaboratedType(
-      // Unwrap the nested name specifier to test for one of the standard
-      // containers.
-      hasQualifier(specifiesType(templateSpecializationType(hasDeclaration(
-          namedDecl(hasStdContainerName(), isInStdNamespace()))))),
-      // the named type is what comes after the final '::' in the type. It
-      // should name one of the standard iterator names.
-      namesType(
-          anyOf(typedefType(HasIteratorDecl), recordType(HasIteratorDecl))));
+  // Unwrap the nested name specifier to test for one of the standard
+  // containers.
+  auto Qualifier = hasQualifier(specifiesType(templateSpecializationType(
+      hasDeclaration(namedDecl(hasStdContainerName(), isInStdNamespace())))));
+  // the named type is what comes after the final '::' in the type. It should
+  // name one of the standard iterator names.
+  return anyOf(typedefType(HasIteratorDecl, Qualifier),
+               recordType(HasIteratorDecl, Qualifier));
 }
 
 /// This matcher returns declaration statements that contain variable

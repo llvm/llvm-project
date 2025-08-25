@@ -1192,8 +1192,8 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5})
+    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0, keyInstructions: true)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
     !5 = !DILocalVariable(name: "awaitables", scope: !4)
     !6 = !DILocation(line: 1, scope: !4, inlinedAt: !8, atomGroup: 1, atomRank: 1)
     !7 = !DILocation(line: 2, scope: !3, atomGroup: 1, atomRank: 1)
@@ -1203,13 +1203,9 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
 
   ASSERT_FALSE(verifyModule(*M, &errs()));
 
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
 #define EXPECT_ATOM(Inst, G)                                                   \
   EXPECT_TRUE(Inst->getDebugLoc());                                            \
   EXPECT_EQ(Inst->getDebugLoc()->getAtomGroup(), uint64_t(G));
-#else
-#define EXPECT_ATOM(Inst, G) (void)Inst;
-#endif
 
   Function *F = M->getFunction("test");
   BasicBlock *BB = &*F->begin();

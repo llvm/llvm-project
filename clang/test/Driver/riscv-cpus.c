@@ -157,6 +157,7 @@
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svinval"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svnapot"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svpbmt"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+xsmtvdot"
 // MCPU-SPACEMIT-X60-SAME: "-target-abi" "lp64d"
 
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
@@ -186,6 +187,9 @@
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zalrsc"
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zba"
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zbb"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+xmipscbop"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+xmipscmov"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+xmipslsp"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-base | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-BASE %s
 // MTUNE-SYNTACORE-SCR1-BASE: "-tune-cpu" "syntacore-scr1-base"
@@ -284,7 +288,7 @@
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=xiangshan-nanhu | FileCheck -check-prefix=MTUNE-XIANGSHAN-NANHU %s
 // MTUNE-XIANGSHAN-NANHU: "-tune-cpu" "xiangshan-nanhu"
 
-// Check mtune alias CPU has resolved to the right CPU according XLEN.
+// Check -mtune alias CPU has resolved to the right CPU according XLEN.
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=generic | FileCheck -check-prefix=MTUNE-GENERIC-32 %s
 // MTUNE-GENERIC-32: "-tune-cpu" "generic"
 
@@ -301,21 +305,21 @@
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=native | FileCheck -check-prefix=MTUNE-NATIVE %s
 // MTUNE-NATIVE-NOT: "-tune-cpu" "native"
 
-// mcpu with default march
+// -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-e20 | FileCheck -check-prefix=MCPU-SIFIVE-E20 %s
 // MCPU-SIFIVE-E20: "-nostdsysteminc" "-target-cpu" "sifive-e20"
 // MCPU-SIFIVE-E20: "-target-feature" "+m" "-target-feature" "+c"
 // MCPU-SIFIVE-E20: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SIFIVE-E20: "-target-abi" "ilp32"
 
-// mcpu with default march
+// -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-e21 | FileCheck -check-prefix=MCPU-SIFIVE-E21 %s
 // MCPU-SIFIVE-E21: "-nostdsysteminc" "-target-cpu" "sifive-e21"
 // MCPU-SIFIVE-E21: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+c"
 // MCPU-SIFIVE-E21: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SIFIVE-E21: "-target-abi" "ilp32"
 
-// mcpu with default march
+// -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-e24 | FileCheck -check-prefix=MCPU-SIFIVE-E24 %s
 // MCPU-SIFIVE-E24: "-nostdsysteminc" "-target-cpu" "sifive-e24"
 // MCPU-SIFIVE-E24: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
@@ -323,7 +327,7 @@
 // MCPU-SIFIVE-E24: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SIFIVE-E24: "-target-abi" "ilp32f"
 
-// mcpu with default march
+// -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-e34 | FileCheck -check-prefix=MCPU-SIFIVE-E34 %s
 // MCPU-SIFIVE-E34: "-nostdsysteminc" "-target-cpu" "sifive-e34"
 // MCPU-SIFIVE-E34: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
@@ -331,7 +335,7 @@
 // MCPU-SIFIVE-E34: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SIFIVE-E34: "-target-abi" "ilp32f"
 
-// mcpu with mabi option
+// -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s21 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-S21 %s
 // MCPU-ABI-SIFIVE-S21: "-nostdsysteminc" "-target-cpu" "sifive-s21"
 // MCPU-ABI-SIFIVE-S21: "-target-feature" "+m" "-target-feature" "+a"
@@ -339,7 +343,7 @@
 // MCPU-ABI-SIFIVE-S21: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-ABI-SIFIVE-S21: "-target-abi" "lp64"
 
-// mcpu with mabi option
+// -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s51 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-S51 %s
 // MCPU-ABI-SIFIVE-S51: "-nostdsysteminc" "-target-cpu" "sifive-s51"
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+m" "-target-feature" "+a"
@@ -347,7 +351,7 @@
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-ABI-SIFIVE-S51: "-target-abi" "lp64"
 
-// mcpu with default march
+// -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s54 | FileCheck -check-prefix=MCPU-SIFIVE-S54 %s
 // MCPU-SIFIVE-S54: "-nostdsysteminc" "-target-cpu" "sifive-s54"
 // MCPU-SIFIVE-S54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
@@ -355,7 +359,7 @@
 // MCPU-SIFIVE-S54: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SIFIVE-S54: "-target-abi" "lp64d"
 
-// mcpu with mabi option
+// -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s76 | FileCheck -check-prefix=MCPU-SIFIVE-S76 %s
 // MCPU-SIFIVE-S76: "-nostdsysteminc" "-target-cpu" "sifive-s76"
 // MCPU-SIFIVE-S76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
@@ -363,7 +367,7 @@
 // MCPU-SIFIVE-S76: "-target-feature" "+zicsr" "-target-feature" "+zifencei" "-target-feature" "+zihintpause"
 // MCPU-SIFIVE-S76: "-target-abi" "lp64d"
 
-// mcpu with default march
+// -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-u54 | FileCheck -check-prefix=MCPU-SIFIVE-U54 %s
 // MCPU-SIFIVE-U54: "-nostdsysteminc" "-target-cpu" "sifive-u54"
 // MCPU-SIFIVE-U54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
@@ -371,7 +375,7 @@
 // MCPU-SIFIVE-U54: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SIFIVE-U54: "-target-abi" "lp64d"
 
-// mcpu with mabi option
+// -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-u54 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-U54 %s
 // MCPU-ABI-SIFIVE-U54: "-nostdsysteminc" "-target-cpu" "sifive-u54"
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
@@ -379,7 +383,7 @@
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-ABI-SIFIVE-U54: "-target-abi" "lp64"
 
-// mcpu with default march
+// -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-e76 | FileCheck -check-prefix=MCPU-SIFIVE-E76 %s
 // MCPU-SIFIVE-E76: "-nostdsysteminc" "-target-cpu" "sifive-e76"
 // MCPU-SIFIVE-E76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
@@ -387,7 +391,7 @@
 // MCPU-SIFIVE-E76: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SIFIVE-E76: "-target-abi" "ilp32f"
 
-// mcpu with mabi option
+// -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-u74 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-U74 %s
 // MCPU-ABI-SIFIVE-U74: "-nostdsysteminc" "-target-cpu" "sifive-u74"
 // MCPU-ABI-SIFIVE-U74: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
@@ -395,13 +399,18 @@
 // MCPU-ABI-SIFIVE-U74: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-ABI-SIFIVE-U74: "-target-abi" "lp64"
 
-// march overwrite mcpu's default march
+// -march overwrite -mcpu's default -march
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=sifive-e31 -march=rv32imc | FileCheck -check-prefix=MCPU-MARCH %s
 // MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+c"
 // MCPU-MARCH: "-target-abi" "ilp32"
 
-// Check interaction between mcpu and mtune, mtune won't affect arch related
-// target feature, but mcpu will.
+// -march=unset erases previous march
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -march=rv32imc -march=unset -mcpu=sifive-e31 | FileCheck -check-prefix=MARCH-UNSET %s
+// MARCH-UNSET: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+c"
+// MARCH-UNSET-SAME: "-target-abi" "ilp32"
+
+// Check interaction between -mcpu and mtune, -mtune won't affect arch related
+// target feature, but -mcpu will.
 //
 // In this case, sifive-e31 is rv32imac, sifive-e76 is rv32imafc, so F-extension
 // should not enabled.
@@ -415,7 +424,7 @@
 // MTUNE-E31-MCPU-E76-SAME: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MTUNE-E31-MCPU-E76-SAME: "-tune-cpu" "sifive-e76"
 
-// mcpu with default march include experimental extensions
+// -mcpu with default -march include experimental extensions
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -menable-experimental-extensions -mcpu=sifive-x280 | FileCheck -check-prefix=MCPU-SIFIVE-X280 %s
 // MCPU-SIFIVE-X280: "-nostdsysteminc" "-target-cpu" "sifive-x280"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"

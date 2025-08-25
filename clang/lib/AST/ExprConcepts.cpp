@@ -23,7 +23,6 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
-#include <algorithm>
 
 using namespace clang;
 
@@ -42,10 +41,10 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
   assert(!Loc->getNestedNameSpecifierLoc() ||
          (!Loc->getNestedNameSpecifierLoc()
                .getNestedNameSpecifier()
-               ->isInstantiationDependent() &&
+               .isInstantiationDependent() &&
           !Loc->getNestedNameSpecifierLoc()
                .getNestedNameSpecifier()
-               ->containsUnexpandedParameterPack()));
+               .containsUnexpandedParameterPack()));
   assert((!isValueDependent() || isInstantiationDependent()) &&
          "should not be value-dependent");
 }

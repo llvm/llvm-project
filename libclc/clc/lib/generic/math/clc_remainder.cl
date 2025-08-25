@@ -73,8 +73,12 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remainder(float x, float y) {
 
   return xr;
 }
-_CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_remainder, float,
-                      float);
+
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION __clc_remainder
+#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_FUNCTION
 
 #ifdef cl_khr_fp64
 
@@ -207,8 +211,13 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y) {
 
   return ret;
 }
-_CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_remainder, double,
-                      double);
+
+#define __CLC_DOUBLE_ONLY
+#define __CLC_FUNCTION __clc_remainder
+#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_FUNCTION
+
 #endif
 
 #ifdef cl_khr_fp16
@@ -216,7 +225,7 @@ _CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_remainder, double,
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 // Forward the half version of this builtin onto the float one
-#define __HALF_ONLY
+#define __CLC_HALF_ONLY
 #define __CLC_FUNCTION __clc_remainder
 #define __CLC_BODY <clc/math/binary_def_via_fp32.inc>
 #include <clc/math/gentype.inc>

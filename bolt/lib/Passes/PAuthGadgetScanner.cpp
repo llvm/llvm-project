@@ -1078,6 +1078,15 @@ protected:
       dbgs() << ")\n";
     });
 
+    // If this instruction terminates the program immediately, no
+    // authentication oracles are possible past this point.
+    if (BC.MIB->isTrap(Point)) {
+      LLVM_DEBUG({ traceInst(BC, "Trap instruction found", Point); });
+      DstState Next(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
+      Next.CannotEscapeUnchecked.set();
+      return Next;
+    }
+
     // If this instruction is reachable by the analysis, a non-empty state will
     // be propagated to it sooner or later. Until then, skip computeNext().
     if (Cur.empty()) {
@@ -1185,8 +1194,8 @@ protected:
     //
     // A basic block without any successors, on the other hand, can be
     // pessimistically initialized to everything-is-unsafe: this will naturally
-    // handle both return and tail call instructions and is harmless for
-    // internal indirect branch instructions (such as computed gotos).
+    // handle return, trap and tail call instructions. At the same time, it is
+    // harmless for internal indirect branch instructions, like computed gotos.
     if (BB.succ_empty())
       return createUnsafeState();
 
@@ -1317,6 +1326,90 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
     return std::nullopt;
 
   return make_gadget_report(RetKind, Inst, *RetReg);
+}
+
+/// While BOLT already marks some of the branch instructions as tail calls,
+/// this function tries to detect less obvious cases, assuming false positives
+/// are acceptable as long as there are not too many of them.
+///
+/// It is possible that not all the instructions classified as tail calls by
+/// this function are safe to be considered as such for the purpose of code
+/// transformations performed by BOLT. The intention of this function is to
+/// spot some of actually missed tail calls (and likely a number of unrelated
+/// indirect branch instructions) as long as this doesn't increase the amount
+/// of false positive reports unacceptably.
+static bool shouldAnalyzeTailCallInst(const BinaryContext &BC,
+                                      const BinaryFunction &BF,
+                                      const MCInstReference &Inst) {
+  // Some BC.MIB->isXYZ(Inst) methods simply delegate to MCInstrDesc::isXYZ()
+  // (such as isBranch at the time of writing this comment), some don't (such
+  // as isCall). For that reason, call MCInstrDesc's methods explicitly when
+  // it is important.
+  const MCInstrDesc &Desc =
+      BC.MII->get(static_cast<const MCInst &>(Inst).getOpcode());
+  // Tail call should be a branch (but not necessarily an indirect one).
+  if (!Desc.isBranch())
+    return false;
+
+  // Always analyze the branches already marked as tail calls by BOLT.
+  if (BC.MIB->isTailCall(Inst))
+    return true;
+
+  // Try to also check the branches marked as "UNKNOWN CONTROL FLOW" - the
+  // below is a simplified condition from BinaryContext::printInstruction.
+  bool IsUnknownControlFlow =
+      BC.MIB->isIndirectBranch(Inst) && !BC.MIB->getJumpTable(Inst);
+
+  if (BF.hasCFG() && IsUnknownControlFlow)
+    return true;
+
+  return false;
+}
+
+static std::optional<PartialReport<MCPhysReg>>
+shouldReportUnsafeTailCall(const BinaryContext &BC, const BinaryFunction &BF,
+                           const MCInstReference &Inst, const SrcState &S) {
+  static const GadgetKind UntrustedLRKind(
+      "untrusted link register found before tail call");
+
+  if (!shouldAnalyzeTailCallInst(BC, BF, Inst))
+    return std::nullopt;
+
+  // Not only the set of registers returned by getTrustedLiveInRegs() can be
+  // seen as a reasonable target-independent _approximation_ of "the LR", these
+  // are *exactly* those registers used by SrcSafetyAnalysis to initialize the
+  // set of trusted registers on function entry.
+  // Thus, this function basically checks that the precondition expected to be
+  // imposed by a function call instruction (which is hardcoded into the target-
+  // specific getTrustedLiveInRegs() function) is also respected on tail calls.
+  SmallVector<MCPhysReg> RegsToCheck = BC.MIB->getTrustedLiveInRegs();
+  LLVM_DEBUG({
+    traceInst(BC, "Found tail call inst", Inst);
+    traceRegMask(BC, "Trusted regs", S.TrustedRegs);
+  });
+
+  // In musl on AArch64, the _start function sets LR to zero and calls the next
+  // stage initialization function at the end, something along these lines:
+  //
+  //   _start:
+  //     mov     x30, #0
+  //     ; ... other initialization ...
+  //     b       _start_c ; performs "exit" system call at some point
+  //
+  // As this would produce a false positive for every executable linked with
+  // such libc, ignore tail calls performed by ELF entry function.
+  if (BC.StartFunctionAddress &&
+      *BC.StartFunctionAddress == Inst.getFunction()->getAddress()) {
+    LLVM_DEBUG({ dbgs() << "  Skipping tail call in ELF entry function.\n"; });
+    return std::nullopt;
+  }
+
+  // Returns at most one report per instruction - this is probably OK...
+  for (auto Reg : RegsToCheck)
+    if (!S.TrustedRegs[Reg])
+      return make_gadget_report(UntrustedLRKind, Inst, Reg);
+
+  return std::nullopt;
 }
 
 static std::optional<PartialReport<MCPhysReg>>
@@ -1477,6 +1570,9 @@ void FunctionAnalysisContext::findUnsafeUses(
 
     if (PacRetGadgetsOnly)
       return;
+
+    if (auto Report = shouldReportUnsafeTailCall(BC, BF, Inst, S))
+      Reports.push_back(*Report);
 
     if (auto Report = shouldReportCallGadget(BC, Inst, S))
       Reports.push_back(*Report);

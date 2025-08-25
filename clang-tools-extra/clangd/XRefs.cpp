@@ -859,17 +859,47 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (Inc.Resolved.empty())
       continue;
+
+    // Get the location of the # symbole of the "#include ..." statement
     auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
+
+    // get the # Token itself, std::next to get the "include" token and the
+    // first token after (aka "File Token")
     const auto *HashTok = AST.getTokens().spelledTokenContaining(HashLoc);
     assert(HashTok && "got inclusion at wrong offset");
     const auto *IncludeTok = std::next(HashTok);
     const auto *FileTok = std::next(IncludeTok);
-    // FileTok->range is not sufficient here, as raw lexing wouldn't yield
-    // correct tokens for angled filenames. Hence we explicitly use
-    // Inc.Written's length.
-    auto FileRange =
-        syntax::FileRange(SM, FileTok->location(), Inc.Written.length())
-            .toCharRange(SM);
+
+    // The File Token can either be of kind :
+    // "less" if using the "#include <h-char-sequence> new-line" syntax
+    // "string_literal" if using the "#include "q-char-sequence" new-line"
+    // syntax something else (most likely "identifier") if using the "#include
+    // pp-tokens new-line" syntax (#include with macro argument)
+
+    CharSourceRange FileRange;
+
+    if (FileTok->kind() == tok::TokenKind::less) {
+      // FileTok->range would only include the '<' char. Hence we explicitly use
+      // Inc.Written's length.
+      FileRange =
+          syntax::FileRange(SM, FileTok->location(), Inc.Written.length())
+              .toCharRange(SM);
+    } else if (FileTok->kind() == tok::TokenKind::string_literal) {
+      // FileTok->range includes the quotes for string literals so just return
+      // it.
+      FileRange = FileTok->range(SM).toCharRange(SM);
+    } else {
+      // FileTok is the first Token of a macro spelling
+
+      // Report the range of the first token (as it should be the macro
+      // identifier)
+      // We could use the AST to find the last spelled token of the macro and
+      // report a range spanning the full macro expression, but it would require
+      // using token-buffers that are deemed too unstable and crash-prone
+      // due to optimizations in cland
+
+      FileRange = FileTok->range(SM).toCharRange(SM);
+    }
 
     Result.push_back(
         DocumentLink({halfOpenToRange(SM, FileRange),
@@ -1846,7 +1876,7 @@ static void fillSubTypes(const SymbolID &ID,
   });
 }
 
-using RecursionProtectionSet = llvm::SmallSet<const CXXRecordDecl *, 4>;
+using RecursionProtectionSet = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
 // Extracts parents from AST and populates the type hierarchy item.
 static void fillSuperTypes(const CXXRecordDecl &CXXRD, llvm::StringRef TUPath,
@@ -1935,7 +1965,8 @@ std::vector<const CXXRecordDecl *> findRecordTypeAt(ParsedAST &AST,
 
 // Return the type most associated with an AST node.
 // This isn't precisely defined: we want "go to type" to do something useful.
-static QualType typeForNode(const SelectionTree::Node *N) {
+static QualType typeForNode(const ASTContext &Ctx,
+                            const SelectionTree::Node *N) {
   // If we're looking at a namespace qualifier, walk up to what it's qualifying.
   // (If we're pointing at a *class* inside a NNS, N will be a TypeLoc).
   while (N && N->ASTNode.get<NestedNameSpecifierLoc>())
@@ -1969,10 +2000,13 @@ static QualType typeForNode(const SelectionTree::Node *N) {
 
   if (const Decl *D = N->ASTNode.get<Decl>()) {
     struct Visitor : ConstDeclVisitor<Visitor, QualType> {
+      const ASTContext &Ctx;
+      Visitor(const ASTContext &Ctx) : Ctx(Ctx) {}
+
       QualType VisitValueDecl(const ValueDecl *D) { return D->getType(); }
       // Declaration of a type => that type.
       QualType VisitTypeDecl(const TypeDecl *D) {
-        return QualType(D->getTypeForDecl(), 0);
+        return Ctx.getTypeDeclType(D);
       }
       // Exception: alias declaration => the underlying type, not the alias.
       QualType VisitTypedefNameDecl(const TypedefNameDecl *D) {
@@ -1982,7 +2016,7 @@ static QualType typeForNode(const SelectionTree::Node *N) {
       QualType VisitTemplateDecl(const TemplateDecl *D) {
         return Visit(D->getTemplatedDecl());
       }
-    } V;
+    } V(Ctx);
     return V.Visit(D);
   }
 
@@ -2126,7 +2160,8 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
     // information about the type you may have not known before
     // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
-    for (const QualType& Type : unwrapFindType(typeForNode(N), AST.getHeuristicResolver()))
+    for (const QualType &Type : unwrapFindType(
+             typeForNode(AST.getASTContext(), N), AST.getHeuristicResolver()))
       llvm::copy(locateSymbolForType(AST, Type, Index),
                  std::back_inserter(LocatedSymbols));
 
@@ -2287,7 +2322,8 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
         Decl->getKind() != Decl::Kind::FunctionTemplate &&
         !(Decl->getKind() == Decl::Kind::Var &&
           !cast<VarDecl>(Decl)->isLocalVarDecl()) &&
-        Decl->getKind() != Decl::Kind::Field)
+        Decl->getKind() != Decl::Kind::Field &&
+        Decl->getKind() != Decl::Kind::EnumConstant)
       continue;
     if (auto CHI = declToCallHierarchyItem(*Decl, AST.tuPath()))
       Result.emplace_back(std::move(*CHI));

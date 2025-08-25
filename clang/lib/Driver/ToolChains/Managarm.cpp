@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Managarm.h"
-#include "Arch/ARM.h"
 #include "Arch/RISCV.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
@@ -194,10 +193,8 @@ void Managarm::addLibStdCxxIncludePaths(
   if (!GCCInstallation.isValid())
     return;
 
-  StringRef TripleStr = GCCInstallation.getTriple().str();
-
   // Try generic GCC detection.
-  Generic_GCC::addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args, TripleStr);
+  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args);
 }
 
 SanitizerMask Managarm::getSupportedSanitizers() const {

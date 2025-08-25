@@ -21,6 +21,27 @@
 #error "huh?"
 #endif
 
+
+inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p; }
+namespace std {
+  using size_t = decltype(sizeof(0));
+  template<typename T> struct allocator {
+    constexpr T *allocate(size_t N) {
+      return (T*)__builtin_operator_new(sizeof(T) * N); // #alloc
+    }
+    constexpr void deallocate(void *p, __SIZE_TYPE__) {
+      __builtin_operator_delete(p);
+    }
+  };
+template<typename T, typename... Args>
+constexpr T* construct_at(T* p, Args&&... args) { return ::new((void*)p) T(static_cast<Args&&>(args)...); }
+
+  template<typename T>
+  constexpr void destroy_at(T* p) {
+    p->~T();
+  }
+}
+
 extern "C" {
   typedef decltype(sizeof(int)) size_t;
   extern size_t wcslen(const wchar_t *p);
@@ -1514,7 +1535,7 @@ namespace Memchr {
   extern struct Incomplete incomplete;
   static_assert(__builtin_memchr(&incomplete, 0, 0u) == nullptr);
   static_assert(__builtin_memchr(&incomplete, 0, 1u) == nullptr); // both-error {{not an integral constant}} \
-                                                                  // ref-note {{read of incomplete type 'struct Incomplete'}}
+                                                                  // both-note {{read of incomplete type 'struct Incomplete'}}
 
   const unsigned char &u1 = 0xf0;
   auto &&i1 = (const signed char []){-128};
@@ -1697,6 +1718,15 @@ namespace WMemMove {
                                                                      // both-note {{source of 'wmemmove' is nullptr}}
   static_assert(__builtin_wmemmove(null, &global, sizeof(wchar_t))); // both-error {{}} \
                                                                      // both-note {{destination of 'wmemmove' is nullptr}}
+
+  // Check that a pointer to an incomplete array is rejected.
+  constexpr int test_address_of_incomplete_array_type() { // both-error {{never produces a constant}}
+    extern int arr[];
+    __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0])); // both-note 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int[]'}}
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  static_assert(test_address_of_incomplete_array_type() == 1234); // both-error {{constant}} \
+                                                                  // both-note {{in call}}
 }
 
 namespace Invalid {
@@ -1738,6 +1768,50 @@ namespace WithinLifetime {
                                            // both-note {{'__builtin_is_within_lifetime' cannot be called with a one-past-the-end pointer}} \
                                            // both-warning {{expression result unused}}
   }
+
+
+  constexpr bool self = __builtin_is_within_lifetime(&self); // both-error {{must be initialized by a constant expression}} \
+                                                             // both-note {{'__builtin_is_within_lifetime' cannot be called with a pointer to an object whose lifetime has not yet begun}} \
+                                                             // ref-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                                             // ref-note {{initializer of 'self' is not a constant expression}} \
+                                                             // ref-note {{declared here}}
+
+  int nontCE(int p) { // both-note {{declared here}}
+    return __builtin_is_within_lifetime(&p); // both-error {{call to consteval function}} \
+                                             // both-note {{function parameter 'p' with unknown value cannot be used in a constant expression}}
+  }
+
+
+  struct XStd {
+    consteval XStd() {
+      __builtin_is_within_lifetime(this); // both-note {{cannot be called with a pointer to an object whose lifetime has not yet begun}}
+    }
+  } xstd; // both-error {{is not a constant expression}} \
+          // both-note {{in call to}}
+
+  /// FIXME: We do not have per-element lifetime information for primitive arrays.
+  /// See https://github.com/llvm/llvm-project/issues/147528
+  consteval bool test_dynamic(bool read_after_deallocate) {
+    std::allocator<int> a;
+    int* p = a.allocate(1); // expected-note 2{{allocation performed here was not deallocated}}
+    // a.allocate starts the lifetime of an array,
+    // the complete object of *p has started its lifetime
+    if (__builtin_is_within_lifetime(p))
+      return false;
+    std::construct_at(p);
+    if (!__builtin_is_within_lifetime(p))
+      return false;
+    std::destroy_at(p);
+    if (__builtin_is_within_lifetime(p))
+      return false;
+    a.deallocate(p, 1);
+    if (read_after_deallocate)
+      __builtin_is_within_lifetime(p); // ref-note {{read of heap allocated object that has been deleted}}
+    return true;
+  }
+  static_assert(test_dynamic(false)); // expected-error {{not an integral constant expression}}
+  static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
+                                     // ref-note {{in call to}}
 }
 
 #ifdef __SIZEOF_INT128__
@@ -1752,5 +1826,13 @@ namespace I128Mul {
   static_assert(mul() == 1);
 }
 #endif
+
+namespace InitParam {
+  constexpr int foo(int a) {
+      __builtin_mul_overflow(20, 10, &a);
+      return a;
+  }
+  static_assert(foo(10) == 200);
+}
 
 #endif

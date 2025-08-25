@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -44,6 +45,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     const TargetMachine &TM, const WebAssemblySubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
   auto MVTPtr = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
+
+  // Set the load count for memcmp expand optimization
+  MaxLoadsPerMemcmp = 8;
+  MaxLoadsPerMemcmpOptSize = 4;
 
   // Booleans always contain 0 or 1.
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -241,6 +246,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                    MVT::v2f64})
       setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
 
+    setOperationAction(ISD::AVGCEILU, {MVT::v8i16, MVT::v16i8}, Legal);
+
     // Custom lowering since wasm shifts must have a scalar shift amount
     for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})
@@ -283,7 +290,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
-                    ISD::FEXP, ISD::FEXP2})
+                    ISD::FEXP, ISD::FEXP2, ISD::FEXP10})
       for (auto T : {MVT::v4f32, MVT::v2f64})
         setOperationAction(Op, T, Expand);
 
@@ -793,6 +800,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
 
   if (IsIndirect) {
     // Placeholder for the type index.
+    // This gets replaced with the correct value in WebAssemblyMCInstLower.cpp
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = IsFuncrefCall
@@ -1303,7 +1311,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       OutVal = FINode;
     }
     // Count the number of fixed args *after* legalization.
-    NumFixedArgs += Out.IsFixed;
+    NumFixedArgs += !Out.Flags.isVarArg();
   }
 
   bool IsVarArg = CLI.IsVarArg;
@@ -1314,18 +1322,21 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // signature They are necessary to match callee and caller signature for
   // indirect call.
   if (CallConv == CallingConv::Swift) {
+    Type *PtrTy = PointerType::getUnqual(*DAG.getContext());
     if (!HasSwiftSelfArg) {
       NumFixedArgs++;
-      ISD::OutputArg Arg;
-      Arg.Flags.setSwiftSelf();
+      ISD::ArgFlagsTy Flags;
+      Flags.setSwiftSelf();
+      ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
       CLI.Outs.push_back(Arg);
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
       CLI.OutVals.push_back(ArgVal);
     }
     if (!HasSwiftErrorArg) {
       NumFixedArgs++;
-      ISD::OutputArg Arg;
-      Arg.Flags.setSwiftError();
+      ISD::ArgFlagsTy Flags;
+      Flags.setSwiftError();
+      ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
       CLI.Outs.push_back(Arg);
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
       CLI.OutVals.push_back(ArgVal);
@@ -1497,7 +1508,7 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
   for (const ISD::OutputArg &Out : Outs) {
     assert(!Out.Flags.isByVal() && "byval is not valid for return values");
     assert(!Out.Flags.isNest() && "nest is not valid for return values");
-    assert(Out.IsFixed && "non-fixed return value is not valid");
+    assert(!Out.Flags.isVarArg() && "non-fixed return value is not valid");
     if (Out.Flags.isInAlloca())
       fail(DL, DAG, "WebAssembly hasn't implemented inalloca results");
     if (Out.Flags.isInConsecutiveRegs())
@@ -1908,9 +1919,6 @@ SDValue WebAssemblyTargetLowering::LowerRETURNADDR(SDValue Op,
          "__builtin_return_address");
     return SDValue();
   }
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   unsigned Depth = Op.getConstantOperandVal(0);
   MakeLibCallOptions CallOptions;
@@ -2937,6 +2945,25 @@ performVectorExtendToFPCombine(SDNode *N,
 }
 
 static SDValue
+performVectorNonNegToFPCombine(SDNode *N,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+
+  SDNodeFlags Flags = N->getFlags();
+  SDValue Op0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Optimize uitofp to sitofp when the sign bit is known to be zero.
+  // Depending on the target (runtime) backend, this might be performance
+  // neutral (e.g. AArch64) or a significant improvement (e.g. x86_64).
+  if (VT.isVector() && (Flags.hasNonNeg() || DAG.SignBitIsZero(Op0))) {
+    return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, Op0);
+  }
+
+  return SDValue();
+}
+
+static SDValue
 performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
   assert(N->getOpcode() == ISD::SIGN_EXTEND ||
@@ -3214,20 +3241,23 @@ static SDValue performTruncateCombine(SDNode *N,
 
 static SDValue performBitcastCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace llvm::SDPatternMatch;
   auto &DAG = DCI.DAG;
   SDLoc DL(N);
   SDValue Src = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT SrcVT = Src.getValueType();
 
-  // bitcast <N x i1> to iN
+  if (!(DCI.isBeforeLegalize() && VT.isScalarInteger() &&
+        SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1))
+    return SDValue();
+
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  EVT Width = MVT::getIntegerVT(128 / NumElts);
+
+  // bitcast <N x i1> to iN, where N = 2, 4, 8, 16 (legal)
   //   ==> bitmask
-  if (DCI.isBeforeLegalize() && VT.isScalarInteger() &&
-      SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1) {
-    unsigned NumElts = SrcVT.getVectorNumElements();
-    if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
-      return SDValue();
-    EVT Width = MVT::getIntegerVT(128 / NumElts);
+  if (NumElts == 2 || NumElts == 4 || NumElts == 8 || NumElts == 16) {
     return DAG.getZExtOrTrunc(
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
                     {DAG.getConstant(Intrinsic::wasm_bitmask, DL, MVT::i32),
@@ -3235,6 +3265,102 @@ static SDValue performBitcastCombine(SDNode *N,
                                         SrcVT.changeVectorElementType(Width))}),
         DL, VT);
   }
+
+  // bitcast <N x i1>(setcc ...) to concat iN, where N = 32 and 64 (illegal)
+  if (NumElts == 32 || NumElts == 64) {
+    // Strategy: We will setcc them seperately in v16i8 -> v16i1
+    // Bitcast them to i16, extend them to either i32 or i64.
+    // Add them together, shifting left 1 by 1.
+    SDValue Concat, SetCCVector;
+    ISD::CondCode SetCond;
+
+    if (!sd_match(N, m_BitCast(m_c_SetCC(m_Value(Concat), m_Value(SetCCVector),
+                                         m_CondCode(SetCond)))))
+      return SDValue();
+    if (Concat.getOpcode() != ISD::CONCAT_VECTORS)
+      return SDValue();
+
+    uint64_t ElementWidth =
+        SetCCVector.getValueType().getVectorElementType().getFixedSizeInBits();
+
+    SmallVector<SDValue> VectorsToShuffle;
+    for (size_t I = 0; I < Concat->ops().size(); I++) {
+      VectorsToShuffle.push_back(DAG.getBitcast(
+          MVT::i16,
+          DAG.getSetCC(DL, MVT::v16i1, Concat->ops()[I],
+                       extractSubVector(SetCCVector, I * (128 / ElementWidth),
+                                        DAG, DL, 128),
+                       SetCond)));
+    }
+
+    MVT ReturnType = VectorsToShuffle.size() == 2 ? MVT::i32 : MVT::i64;
+    SDValue ReturningInteger = DAG.getConstant(0, DL, ReturnType);
+
+    for (SDValue V : VectorsToShuffle) {
+      ReturningInteger = DAG.getNode(
+          ISD::SHL, DL, ReturnType,
+          {DAG.getShiftAmountConstant(16, ReturnType, DL), ReturningInteger});
+
+      SDValue ExtendedV = DAG.getZExtOrTrunc(V, DL, ReturnType);
+      ReturningInteger =
+          DAG.getNode(ISD::ADD, DL, ReturnType, {ReturningInteger, ExtendedV});
+    }
+
+    return ReturningInteger;
+  }
+
+  return SDValue();
+}
+
+static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
+  // any_true (setcc <X>, 0, eq) => (not (all_true X))
+  // all_true (setcc <X>, 0, eq) => (not (any_true X))
+  // any_true (setcc <X>, 0, ne) => (any_true X)
+  // all_true (setcc <X>, 0, ne) => (all_true X)
+  assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN);
+  using namespace llvm::SDPatternMatch;
+
+  SDValue LHS;
+  if (!sd_match(N->getOperand(1),
+                m_c_SetCC(m_Value(LHS), m_Zero(), m_CondCode())))
+    return SDValue();
+  EVT LT = LHS.getValueType();
+  if (LT.getScalarSizeInBits() > 128 / LT.getVectorNumElements())
+    return SDValue();
+
+  auto CombineSetCC = [&N, &DAG](Intrinsic::WASMIntrinsics InPre,
+                                 ISD::CondCode SetType,
+                                 Intrinsic::WASMIntrinsics InPost) {
+    if (N->getConstantOperandVal(0) != InPre)
+      return SDValue();
+
+    SDValue LHS;
+    if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
+                                              m_SpecificCondCode(SetType))))
+      return SDValue();
+
+    SDLoc DL(N);
+    SDValue Ret = DAG.getZExtOrTrunc(
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                    {DAG.getConstant(InPost, DL, MVT::i32), LHS}),
+        DL, MVT::i1);
+    if (SetType == ISD::SETEQ)
+      Ret = DAG.getNOT(DL, Ret, MVT::i1);
+    return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
+  };
+
+  if (SDValue AnyTrueEQ = CombineSetCC(Intrinsic::wasm_anytrue, ISD::SETEQ,
+                                       Intrinsic::wasm_alltrue))
+    return AnyTrueEQ;
+  if (SDValue AllTrueEQ = CombineSetCC(Intrinsic::wasm_alltrue, ISD::SETEQ,
+                                       Intrinsic::wasm_anytrue))
+    return AllTrueEQ;
+  if (SDValue AnyTrueNE = CombineSetCC(Intrinsic::wasm_anytrue, ISD::SETNE,
+                                       Intrinsic::wasm_anytrue))
+    return AnyTrueNE;
+  if (SDValue AllTrueNE = CombineSetCC(Intrinsic::wasm_alltrue, ISD::SETNE,
+                                       Intrinsic::wasm_alltrue))
+    return AllTrueNE;
 
   return SDValue();
 }
@@ -3262,14 +3388,65 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 
+/// Try to convert a i128 comparison to a v16i8 comparison before type
+/// legalization splits it up into chunks
+static SDValue
+combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                                const WebAssemblySubtarget *Subtarget) {
+
+  SDLoc DL(N);
+  SDValue X = N->getOperand(0);
+  SDValue Y = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  EVT OpVT = X.getValueType();
+
+  SelectionDAG &DAG = DCI.DAG;
+  if (DCI.DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  // We're looking for an oversized integer equality comparison with SIMD
+  if (!OpVT.isScalarInteger() || !OpVT.isByteSized() || OpVT != MVT::i128 ||
+      !Subtarget->hasSIMD128() || !isIntEqualitySetCC(CC))
+    return SDValue();
+
+  // Don't perform this combine if constructing the vector will be expensive.
+  auto IsVectorBitCastCheap = [](SDValue X) {
+    X = peekThroughBitcasts(X);
+    return isa<ConstantSDNode>(X) || X.getOpcode() == ISD::LOAD;
+  };
+
+  if (!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y))
+    return SDValue();
+
+  SDValue VecX = DAG.getBitcast(MVT::v16i8, X);
+  SDValue VecY = DAG.getBitcast(MVT::v16i8, Y);
+  SDValue Cmp = DAG.getSetCC(DL, MVT::v16i8, VecX, VecY, CC);
+
+  SDValue Intr =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                  {DAG.getConstant(CC == ISD::SETEQ ? Intrinsic::wasm_alltrue
+                                                    : Intrinsic::wasm_anytrue,
+                                   DL, MVT::i32),
+                   Cmp});
+
+  return DAG.getSetCC(DL, VT, Intr, DAG.getConstant(0, DL, MVT::i32),
+                      ISD::SETNE);
+}
+
 static SDValue performSETCCCombine(SDNode *N,
-                                   TargetLowering::DAGCombinerInfo &DCI) {
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const WebAssemblySubtarget *Subtarget) {
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
   EVT VT = N->getValueType(0);
   if (!VT.isScalarInteger())
     return SDValue();
+
+  if (SDValue V = combineVectorSizedSetCCEquality(N, DCI, Subtarget))
+    return V;
 
   SDValue LHS = N->getOperand(0);
   if (LHS->getOpcode() != ISD::BITCAST)
@@ -3315,8 +3492,7 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::MUL);
+static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   if (VT != MVT::v8i32 && VT != MVT::v16i32)
     return SDValue();
@@ -3402,6 +3578,46 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue performMulCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  assert(N->getOpcode() == ISD::MUL);
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector())
+    return SDValue();
+
+  if (auto Res = TryWideExtMulCombine(N, DCI.DAG))
+    return Res;
+
+  // We don't natively support v16i8 mul, but we do support v8i16 so split the
+  // inputs and extend them to v8i16. Only do this before legalization in case
+  // a narrow vector is widened and may be simplified later.
+  if (!DCI.isBeforeLegalize() || VT != MVT::v16i8)
+    return SDValue();
+
+  SDLoc DL(N);
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue LowLHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_LOW_U, DL, MVT::v8i16, LHS);
+  SDValue HighLHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_HIGH_U, DL, MVT::v8i16, LHS);
+  SDValue LowRHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_LOW_U, DL, MVT::v8i16, RHS);
+  SDValue HighRHS =
+      DAG.getNode(WebAssemblyISD::EXTEND_HIGH_U, DL, MVT::v8i16, RHS);
+
+  SDValue MulLow =
+      DAG.getBitcast(VT, DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS));
+  SDValue MulHigh = DAG.getBitcast(
+      VT, DAG.getNode(ISD::MUL, DL, MVT::v8i16, HighLHS, HighRHS));
+
+  // Take the low byte of each lane.
+  return DAG.getVectorShuffle(
+      VT, DL, MulLow, MulHigh,
+      {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30});
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3411,13 +3627,16 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::BITCAST:
     return performBitcastCombine(N, DCI);
   case ISD::SETCC:
-    return performSETCCCombine(N, DCI);
+    return performSETCCCombine(N, DCI, Subtarget);
   case ISD::VECTOR_SHUFFLE:
     return performVECTOR_SHUFFLECombine(N, DCI);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return performVectorExtendCombine(N, DCI);
   case ISD::UINT_TO_FP:
+    if (auto ExtCombine = performVectorExtendToFPCombine(N, DCI))
+      return ExtCombine;
+    return performVectorNonNegToFPCombine(N, DCI);
   case ISD::SINT_TO_FP:
     return performVectorExtendToFPCombine(N, DCI);
   case ISD::FP_TO_SINT_SAT:
@@ -3427,9 +3646,12 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorTruncZeroCombine(N, DCI);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
-  case ISD::INTRINSIC_WO_CHAIN:
+  case ISD::INTRINSIC_WO_CHAIN: {
+    if (auto AnyAllCombine = performAnyAllCombine(N, DCI.DAG))
+      return AnyAllCombine;
     return performLowerPartialReduction(N, DCI.DAG);
+  }
   case ISD::MUL:
-    return performMulCombine(N, DCI.DAG);
+    return performMulCombine(N, DCI);
   }
 }

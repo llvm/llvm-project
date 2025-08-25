@@ -496,6 +496,35 @@ entry:
 ; CHECK: call void @use(ptr null)
 ; CHECK: ret
 
+@simpleFuncTu = global <{i32, i32}> <{
+  i32 trunc (i64 sub (i64 ptrtoint (ptr @simpleFunc to i64),
+             i64 ptrtoint (ptr @simpleFuncTu to i64)) to i32), i32 16 }>
+
+define swifttailcc void @simpleFunc(ptr swiftasync %0) presplitcoroutine {
+entry:
+  %1 = alloca ptr, align 8
+  %2 = call token @llvm.coro.id.async(i32 16, i32 16, i32 0, ptr @simpleFuncTu)
+  %3 = call ptr @llvm.coro.begin(token %2, ptr null)
+  store ptr %0, ptr %1, align 8
+  %4 = load ptr, ptr %1, align 8
+  %5 = getelementptr inbounds <{ ptr, ptr }>, ptr %4, i32 0, i32 1
+  %6 = load ptr, ptr %5, align 8
+  %7 = load ptr, ptr %1, align 8
+  %8 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %3, i1 false, ptr @simpleFunc.0, ptr %6, ptr %7)
+  unreachable
+}
+
+; CHECK-LABEL: define swifttailcc void @simpleFunc(ptr swiftasync %0) {
+; CHECK-NOT: define
+; CHECK:  [[RESUME:%.*]] = load ptr
+; CHECK:  musttail call swifttailcc void [[RESUME]]
+
+define internal swifttailcc void @simpleFunc.0(ptr %0, ptr %1) alwaysinline {
+entry:
+  musttail call swifttailcc void %0(ptr swiftasync %1)
+  ret void
+}
+
 declare { ptr, ptr, ptr, ptr } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, ptr, ptr, ...)
 declare ptr @llvm.coro.prepare.async(ptr)
 declare token @llvm.coro.id.async(i32, i32, i32, ptr)

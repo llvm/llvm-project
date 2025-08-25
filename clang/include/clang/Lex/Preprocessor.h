@@ -82,6 +82,7 @@ class PreprocessorLexer;
 class PreprocessorOptions;
 class ScratchBuffer;
 class TargetInfo;
+class NoTrivialPPDirectiveTracer;
 
 namespace Builtin {
 class Context;
@@ -350,8 +351,13 @@ private:
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
 
-  /// First pp-token in current translation unit.
-  std::optional<Token> FirstPPToken;
+  /// First pp-token source location in current translation unit.
+  SourceLocation FirstPPTokenLoc;
+
+  /// A preprocessor directive tracer to trace whether the preprocessing
+  /// state changed. These changes would mean most semantically observable
+  /// preprocessor state, particularly anything that is order dependent.
+  NoTrivialPPDirectiveTracer *DirTracer = nullptr;
 
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
@@ -608,6 +614,8 @@ private:
     bool isImplementationUnit() const {
       return State == NamedModuleImplementation && !getName().contains(':');
     }
+
+    bool isNotAModuleDecl() const { return State == NotAModuleDecl; }
 
     StringRef getName() const {
       assert(isNamedModule() && "Can't get name from a non named module");
@@ -1769,20 +1777,13 @@ public:
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
 
-  /// Whether the preprocessor already seen the first pp-token in main file.
-  bool hasSeenMainFileFirstPPToken() const { return FirstPPToken.has_value(); }
-
-  /// Record first pp-token and check if it has a Token::FirstPPToken flag.
-  void HandleMainFileFirstPPToken(const Token &Tok) {
-    if (!hasSeenMainFileFirstPPToken() && Tok.isFirstPPToken() &&
-        SourceMgr.isWrittenInMainFile(Tok.getLocation()))
-      FirstPPToken = Tok;
+  /// Get the start location of the first pp-token in main file.
+  SourceLocation getMainFileFirstPPTokenLoc() const {
+    assert(FirstPPTokenLoc.isValid() &&
+           "Did not see the first pp-token in the main file");
+    return FirstPPTokenLoc;
   }
 
-  Token getMainFileFirstPPToken() const {
-    assert(FirstPPToken && "First main file pp-token doesn't exists");
-    return *FirstPPToken;
-  }
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
@@ -1852,6 +1853,10 @@ public:
   void SetMacroExpansionOnlyInDirectives() {
     DisableMacroExpansion = true;
     MacroExpansionInDirectivesOverride = true;
+  }
+
+  void SetEnableMacroExpansion() {
+    DisableMacroExpansion = MacroExpansionInDirectivesOverride = false;
   }
 
   /// Peeks ahead N tokens and returns that token without consuming any
@@ -2304,7 +2309,9 @@ public:
 
   /// Check whether the next pp-token is one of the specificed token kind. this
   /// method should have no observable side-effect on the lexed tokens.
-  template <tok::TokenKind K, tok::TokenKind... Ks> bool isNextPPTokenOneOf() {
+  template <typename... Ts> bool isNextPPTokenOneOf(Ts... Ks) {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
     // Do some quick tests for rejection cases.
     std::optional<Token> Val;
     if (CurLexer)
@@ -2335,7 +2342,7 @@ public:
 
     // Okay, we found the token and return.  Otherwise we found the end of the
     // translation unit.
-    return Val->is(K) || (... || Val->is(Ks));
+    return Val->isOneOf(Ks...);
   }
 
 private:
@@ -3091,6 +3098,10 @@ public:
   /// is same as itself before the call.
   bool setDeserializedSafeBufferOptOutMap(
       const SmallVectorImpl<SourceLocation> &SrcLocSeqs);
+
+  /// Whether we've seen pp-directives which may have changed the preprocessing
+  /// state.
+  bool hasSeenNoTrivialPPDirective() const;
 
 private:
   /// Helper functions to forward lexing to the actual lexer. They all share the

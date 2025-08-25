@@ -1020,6 +1020,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::EndAttrKinds:
       case Attribute::EmptyKey:
       case Attribute::TombstoneKey:
+      case Attribute::DeadOnReturn:
         llvm_unreachable("Not a function attribute");
       }
 
@@ -1098,7 +1099,7 @@ static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
       // Get the memory operand of the lifetime marker. If the underlying
       // object is a sunk alloca, or is otherwise defined in the extraction
       // region, the lifetime marker must not be erased.
-      Value *Mem = II->getOperand(1)->stripInBoundsOffsets();
+      Value *Mem = II->getOperand(0);
       if (SunkAllocas.count(Mem) || definedInRegion(Blocks, Mem))
         continue;
 
@@ -1114,8 +1115,6 @@ static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
 static void insertLifetimeMarkersSurroundingCall(
     Module *M, ArrayRef<Value *> LifetimesStart, ArrayRef<Value *> LifetimesEnd,
     CallInst *TheCall) {
-  LLVMContext &Ctx = M->getContext();
-  auto NegativeOne = ConstantInt::getSigned(Type::getInt64Ty(Ctx), -1);
   Instruction *Term = TheCall->getParent()->getTerminator();
 
   // Emit lifetime markers for the pointers given in \p Objects. Insert the
@@ -1129,7 +1128,7 @@ static void insertLifetimeMarkersSurroundingCall(
 
       Function *Func =
           Intrinsic::getOrInsertDeclaration(M, MarkerFunc, Mem->getType());
-      auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
+      auto Marker = CallInst::Create(Func, Mem);
       if (InsertBefore)
         Marker->insertBefore(TheCall->getIterator());
       else
@@ -1218,12 +1217,8 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
 /// \p F.
 static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
   for (Instruction &I : instructions(F)) {
-    SmallVector<DbgVariableIntrinsic *, 4> DbgUsers;
     SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-    findDbgUsers(DbgUsers, &I, &DbgVariableRecords);
-    for (DbgVariableIntrinsic *DVI : DbgUsers)
-      if (DVI->getFunction() != &F)
-        DVI->eraseFromParent();
+    findDbgUsers(&I, DbgVariableRecords);
     for (DbgVariableRecord *DVR : DbgVariableRecords)
       if (DVR->getFunction() != &F)
         DVR->eraseFromParent();
@@ -1285,17 +1280,13 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
         NewFunc.getEntryBlock().getTerminator()->getIterator());
   };
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
-    SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
     SmallVector<DbgVariableRecord *, 1> DPUsers;
-    findDbgUsers(DbgUsers, Input, &DPUsers);
+    findDbgUsers(Input, DPUsers);
     DIExpression *Expr = DIB.createExpression();
 
     // Iterate the debud users of the Input values. If they are in the extracted
     // function then update their location with the new value. If they are in
     // the parent function then create a similar debug record.
-    for (auto *DVI : DbgUsers)
-      UpdateOrInsertDebugRecord(DVI, Input, NewVal, Expr,
-                                isa<DbgDeclareInst>(DVI));
     for (auto *DVR : DPUsers)
       UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
   }
@@ -1347,8 +1338,10 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     if (!NewLabel) {
       DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
           *OldLabel->getScope(), *NewSP, Ctx, Cache);
-      NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
-                              OldLabel->getFile(), OldLabel->getLine());
+      NewLabel =
+          DILabel::get(Ctx, NewScope, OldLabel->getName(), OldLabel->getFile(),
+                       OldLabel->getLine(), OldLabel->getColumn(),
+                       OldLabel->isArtificial(), OldLabel->getCoroSuspendIdx());
     }
     LabelRecord->setLabel(cast<DILabel>(NewLabel));
   };

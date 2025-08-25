@@ -38,7 +38,11 @@ bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
 
 unsigned GCNRegPressure::getRegKind(const TargetRegisterClass *RC,
                                     const SIRegisterInfo *STI) {
-  return STI->isSGPRClass(RC) ? SGPR : (STI->isAGPRClass(RC) ? AGPR : VGPR);
+  return STI->isSGPRClass(RC)
+             ? SGPR
+             : (STI->isAGPRClass(RC)
+                    ? AGPR
+                    : (STI->isVectorSuperClass(RC) ? AVGPR : VGPR));
 }
 
 void GCNRegPressure::inc(unsigned Reg,
@@ -359,6 +363,71 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
       return LaneBitmask::getNone();
   }
   return LastUseMask;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// GCNRPTarget
+
+GCNRPTarget::GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP)
+    : GCNRPTarget(RP, MF) {
+  const Function &F = MF.getFunction();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  setTarget(ST.getMaxNumSGPRs(F), ST.getMaxNumVGPRs(F));
+}
+
+GCNRPTarget::GCNRPTarget(unsigned NumSGPRs, unsigned NumVGPRs,
+                         const MachineFunction &MF, const GCNRegPressure &RP)
+    : GCNRPTarget(RP, MF) {
+  setTarget(NumSGPRs, NumVGPRs);
+}
+
+GCNRPTarget::GCNRPTarget(unsigned Occupancy, const MachineFunction &MF,
+                         const GCNRegPressure &RP)
+    : GCNRPTarget(RP, MF) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  unsigned DynamicVGPRBlockSize =
+      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+  setTarget(ST.getMaxNumSGPRs(Occupancy, /*Addressable=*/false),
+            ST.getMaxNumVGPRs(Occupancy, DynamicVGPRBlockSize));
+}
+
+void GCNRPTarget::setTarget(unsigned NumSGPRs, unsigned NumVGPRs) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  MaxSGPRs = std::min(ST.getAddressableNumSGPRs(), NumSGPRs);
+  MaxVGPRs = std::min(ST.getAddressableNumArchVGPRs(), NumVGPRs);
+  if (UnifiedRF) {
+    unsigned DynamicVGPRBlockSize =
+        MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+    MaxUnifiedVGPRs =
+        std::min(ST.getAddressableNumVGPRs(DynamicVGPRBlockSize), NumVGPRs);
+  } else {
+    MaxUnifiedVGPRs = 0;
+  }
+}
+
+bool GCNRPTarget::isSaveBeneficial(Register Reg) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);
+
+  if (SRI->isSGPRClass(RC))
+    return RP.getSGPRNum() > MaxSGPRs;
+  unsigned NumVGPRs =
+      SRI->isAGPRClass(RC) ? RP.getAGPRNum() : RP.getArchVGPRNum();
+  // The addressable limit must always be respected.
+  if (NumVGPRs > MaxVGPRs)
+    return true;
+  // For unified RFs, combined VGPR usage limit must be respected as well.
+  return UnifiedRF && RP.getVGPRNum(true) > MaxUnifiedVGPRs;
+}
+
+bool GCNRPTarget::satisfied() const {
+  if (RP.getSGPRNum() > MaxSGPRs || RP.getVGPRNum(false) > MaxVGPRs)
+    return false;
+  if (UnifiedRF && RP.getVGPRNum(true) > MaxUnifiedVGPRs)
+    return false;
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

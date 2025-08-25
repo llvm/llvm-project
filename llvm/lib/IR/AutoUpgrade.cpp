@@ -719,6 +719,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                              .StartsWith("vqaddu.", Intrinsic::uadd_sat)
                              .StartsWith("vqsubs.", Intrinsic::ssub_sat)
                              .StartsWith("vqsubu.", Intrinsic::usub_sat)
+                             .StartsWith("vrinta.", Intrinsic::round)
+                             .StartsWith("vrintn.", Intrinsic::roundeven)
+                             .StartsWith("vrintm.", Intrinsic::floor)
+                             .StartsWith("vrintp.", Intrinsic::ceil)
+                             .StartsWith("vrintx.", Intrinsic::rint)
+                             .StartsWith("vrintz.", Intrinsic::trunc)
                              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
@@ -1304,6 +1310,19 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       return true;
     }
     break;
+  case 'l':
+    if ((Name.starts_with("lifetime.start") ||
+         Name.starts_with("lifetime.end")) &&
+        F->arg_size() == 2) {
+      Intrinsic::ID IID = Name.starts_with("lifetime.start")
+                              ? Intrinsic::lifetime_start
+                              : Intrinsic::lifetime_end;
+      rename(F);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                F->getArg(0)->getType());
+      return true;
+    }
+    break;
   case 'm': {
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
@@ -1432,6 +1451,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                      .Case("popc.ll", true)
                      .Case("h2f", true)
                      .Case("swap.lo.hi.b64", true)
+                     .Case("tanh.approx.f32", true)
                      .Default(false);
 
       if (Expand) {
@@ -1623,7 +1643,6 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   NewFn = nullptr;
   bool Upgraded =
       upgradeIntrinsicFunction1(F, NewFn, CanUpgradeDebugIntrinsicsToRecords);
-  assert(F != NewFn && "Intrinsic function upgraded to the same function");
 
   // Upgrade intrinsic attributes.  This does not change the function.
   if (NewFn)
@@ -2526,6 +2545,12 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     MDNode *MD = MDNode::get(Builder.getContext(), {});
     LD->setMetadata(LLVMContext::MD_invariant_load, MD);
     return LD;
+  } else if (Name == "tanh.approx.f32") {
+    // nvvm.tanh.approx.f32 -> afn llvm.tanh.f32
+    FastMathFlags FMF;
+    FMF.setApproxFunc();
+    Rep = Builder.CreateUnaryIntrinsic(Intrinsic::tanh, CI->getArgOperand(0),
+                                       FMF);
   } else if (Name == "barrier0" || Name == "barrier.n" || Name == "bar.sync") {
     Value *Arg =
         Name.ends_with('0') ? Builder.getInt32(0) : CI->getArgOperand(0);
@@ -4564,6 +4589,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   }
 
   const auto &DefaultCase = [&]() -> void {
+    if (F == NewFn)
+      return;
+
     if (CI->getFunctionType() == NewFn->getFunctionType()) {
       // Handle generic mangling change.
       assert(
@@ -5103,6 +5131,30 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       MTI->setSourceAlignment(Align->getMaybeAlignValue());
     break;
   }
+
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end: {
+    if (CI->arg_size() != 2) {
+      DefaultCase();
+      return;
+    }
+
+    Value *Ptr = CI->getArgOperand(1);
+    // Try to strip pointer casts, such that the lifetime works on an alloca.
+    Ptr = Ptr->stripPointerCasts();
+    if (isa<AllocaInst>(Ptr)) {
+      // Don't use NewFn, as we might have looked through an addrspacecast.
+      if (NewFn->getIntrinsicID() == Intrinsic::lifetime_start)
+        NewCall = Builder.CreateLifetimeStart(Ptr);
+      else
+        NewCall = Builder.CreateLifetimeEnd(Ptr);
+      break;
+    }
+
+    // Otherwise remove the lifetime marker.
+    CI->eraseFromParent();
+    return;
+  }
   }
   assert(NewCall && "Should have either set this variable or returned through "
                     "the default case");
@@ -5125,7 +5177,8 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    F->eraseFromParent();
+    if (F != NewFn)
+      F->eraseFromParent();
   }
 }
 
@@ -5338,7 +5391,7 @@ void llvm::UpgradeNVVMAnnotations(Module &M) {
     return;
 
   SmallVector<MDNode *, 8> NewNodes;
-  SmallSet<const MDNode *, 8> SeenNodes;
+  SmallPtrSet<const MDNode *, 8> SeenNodes;
   for (MDNode *MD : NamedMD->operands()) {
     if (!SeenNodes.insert(MD).second)
       continue;

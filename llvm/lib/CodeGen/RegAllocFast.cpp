@@ -474,6 +474,13 @@ int RegAllocFastImpl::getStackSpaceFor(Register VirtReg) {
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   unsigned Size = TRI->getSpillSize(RC);
   Align Alignment = TRI->getSpillAlign(RC);
+
+  const MachineFunction &MF = MRI->getMF();
+  auto &ST = MF.getSubtarget();
+  Align CurrentAlign = ST.getFrameLowering()->getStackAlign();
+  if (Alignment > CurrentAlign && !TRI->canRealignStack(MF))
+    Alignment = CurrentAlign;
+
   int FrameIdx = MFI->CreateSpillStackObject(Size, Alignment);
 
   // Assign the slot.

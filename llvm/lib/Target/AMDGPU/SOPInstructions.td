@@ -154,6 +154,10 @@ class SOP1_1 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   let has_sdst = 0;
 }
 
+class SOP1_1_REGIMM64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs), (ins SSrc_b64:$src0), "$src0", pattern> {
+  let has_sdst = 0;
+}
 
 class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0),
@@ -317,6 +321,9 @@ let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 
 let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
+
+let SubtargetPredicate = HasAddPC64Inst in
+def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
 } // End isBranch = 1, isIndirectBranch = 1
 
 let isReturn = 1 in {
@@ -477,6 +484,24 @@ def S_BARRIER_SIGNAL_ISFIRST_M0 : SOP1_Pseudo <"s_barrier_signal_isfirst m0", (o
   let isConvergent = 1;
 }
 
+def S_BARRIER_INIT_M0 : SOP1_Pseudo <"s_barrier_init m0", (outs), (ins),
+  "", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
+def S_BARRIER_INIT_IMM : SOP1_Pseudo <"s_barrier_init", (outs),
+  (ins SplitBarrier:$src0), "$src0", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
+def S_BARRIER_JOIN_M0 : SOP1_Pseudo <"s_barrier_join m0", (outs), (ins),
+  "", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
 } // End Uses = [M0]
 
 def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
@@ -490,6 +515,12 @@ def S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_Pseudo <"s_barrier_signal_isfirst", (out
   let Defs = [SCC];
   let Uses = [SCC];
   let usesCustomInserter = 1;
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
+def S_BARRIER_JOIN_IMM : SOP1_Pseudo <"s_barrier_join", (outs),
+  (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
 }
@@ -1581,6 +1612,17 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
   let isConvergent = 1;
 }
 
+def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins)> {
+  let SchedRW = [WriteBarrier];
+  let simm16 = 0;
+  let fixed_imm = 1;
+  let isConvergent = 1;
+  let Defs = [SCC];
+}
+
+def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
+    (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_barrier_leave timm:$simm16)]>;
+
 def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let SubtargetPredicate = isGFX8Plus;
   let simm16 = 0;
@@ -1614,9 +1656,18 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
+// Represents the point at which a wave must wait for all outstanding direct loads to LDS.
+// Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
+
+def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
+   let hasSideEffects = 0;
+}
+
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
-def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;
+def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16"> {
+  let SubtargetPredicate = isNotGFX1250Plus;
+}
 
 // On SI the documentation says sleep for approximately 64 * low 2
 // bits, consistent with the reported maximum of 448. On VI the
@@ -1637,6 +1688,12 @@ def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
 def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio_inc_wg timm:$simm16)]> {
   let SubtargetPredicate = HasSetPrioIncWgInst;
+}
+
+def S_GET_SHADER_CYCLES_U64 : SOP1_64_0 <"s_get_shader_cycles_u64",
+  [(set i64:$sdst, (readcyclecounter))]> {
+  let SubtargetPredicate = HasSGetShaderCyclesInst;
+  let hasSideEffects = 1;
 }
 
 let Uses = [EXEC, M0] in {
@@ -1680,6 +1737,12 @@ def S_SET_GPR_IDX_OFF : SOPP_Pseudo<"s_set_gpr_idx_off", (ins) > {
   let Uses = [MODE];
 }
 }
+
+def S_MONITOR_SLEEP : SOPP_Pseudo <"s_monitor_sleep", (ins i16imm:$simm16), "$simm16",
+  [(int_amdgcn_s_monitor_sleep timm:$simm16)]> {
+  let SubtargetPredicate = isGFX1250Plus;
+}
+
 } // End hasSideEffects
 
 let SubtargetPredicate = HasVGPRIndexMode in {
@@ -1757,6 +1820,27 @@ let OtherPredicates = [HasExportInsts] in
     SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
+
+let SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1 in {
+  def S_WAIT_ASYNCCNT :
+    SOPP_Pseudo<"s_wait_asynccnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_asynccnt timm:$simm16)]> {
+      let mayLoad = 1;
+      let mayStore = 1;
+      let maybeAtomic = 0;
+      let Uses = [ASYNCcnt];
+      let Defs = [ASYNCcnt];
+    }
+  def S_WAIT_TENSORCNT :
+    SOPP_Pseudo<"s_wait_tensorcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_tensorcnt timm:$simm16)]> {
+      let mayLoad = 1;
+      let mayStore = 1;
+      let maybeAtomic = 0;
+      let Uses = [TENSORcnt];
+      let Defs = [TENSORcnt];
+    }
+} // End SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1
 
 let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
   def S_WAIT_XCNT :
@@ -2097,11 +2181,19 @@ defm S_SENDMSG_RTN_B64            : SOP1_Real_gfx11_gfx12<0x04d>;
 defm S_BARRIER_SIGNAL_M0          : SOP1_M0_Real_gfx12<0x04e>;
 defm S_BARRIER_SIGNAL_ISFIRST_M0  : SOP1_M0_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_M0       : SOP1_M0_Real_gfx12<0x050>;
+defm S_BARRIER_INIT_M0            : SOP1_M0_Real_gfx12<0x051>;
+defm S_BARRIER_JOIN_M0            : SOP1_M0_Real_gfx12<0x052>;
 defm S_BARRIER_SIGNAL_IMM         : SOP1_IMM_Real_gfx12<0x04e>;
 defm S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_IMM_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12<0x050>;
+defm S_BARRIER_INIT_IMM           : SOP1_IMM_Real_gfx12<0x051>;
+defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12<0x052>;
 defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
 defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
+
+// GFX1250
+defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
+defm S_ADD_PC_I64                 : SOP1_Real_gfx12<0x04b>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150, GFX12
@@ -2588,6 +2680,7 @@ multiclass SOPP_Real_32_gfx12<bits<7> op, string name = !tolower(NAME)> {
 }
 
 defm S_BARRIER_WAIT         : SOPP_Real_32_gfx12<0x014>;
+defm S_BARRIER_LEAVE        : SOPP_Real_32_gfx12<0x015>;
 defm S_WAIT_LOADCNT         : SOPP_Real_32_gfx12<0x040>;
 defm S_WAIT_STORECNT        : SOPP_Real_32_gfx12<0x041>;
 defm S_WAIT_SAMPLECNT       : SOPP_Real_32_gfx12<0x042>;
@@ -2603,6 +2696,8 @@ defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
 //===----------------------------------------------------------------------===//
 defm S_SETPRIO_INC_WG : SOPP_Real_32_gfx12<0x03e>;
 defm S_WAIT_XCNT      : SOPP_Real_32_gfx12<0x045>;
+defm S_WAIT_ASYNCCNT  : SOPP_Real_32_gfx12<0x04a>;
+defm S_WAIT_TENSORCNT : SOPP_Real_32_gfx12<0x04b>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX11, GFX12.
@@ -2691,6 +2786,12 @@ defm S_TTRACEDATA_IMM             : SOPP_Real_32_gfx11_gfx12<0x03b>;
 defm S_ICACHE_INV                 : SOPP_Real_32_gfx11_gfx12<0x03c>;
 
 defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
+
+//===----------------------------------------------------------------------===//
+// SOPP - GFX1250.
+//===----------------------------------------------------------------------===//
+
+defm S_MONITOR_SLEEP              : SOPP_Real_32_gfx12<0x004>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10

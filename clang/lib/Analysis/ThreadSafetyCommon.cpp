@@ -84,8 +84,8 @@ static std::pair<StringRef, bool> classifyCapability(QualType QT) {
   // which it is. The type should either be a record or a typedef, or a pointer
   // or reference thereof.
   if (const auto *RT = QT->getAs<RecordType>()) {
-    if (const auto *RD = RT->getDecl())
-      return classifyCapability(*RD);
+    if (const auto *RD = RT->getOriginalDecl())
+      return classifyCapability(*RD->getDefinitionOrSelf());
   } else if (const auto *TT = QT->getAs<TypedefType>()) {
     if (const auto *TD = TT->getDecl())
       return classifyCapability(*TD);
