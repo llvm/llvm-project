@@ -1691,6 +1691,11 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
   if (const AtomicType *AtomicLHS = LHSType->getAs<AtomicType>())
     LHSType = AtomicLHS->getValueType();
 
+  if (LHSType->isOverflowBehaviorType() || RHSType->isOverflowBehaviorType()) {
+    return handleOverflowBehaviorTypeConversion(
+        *this, LHS, RHS, ACK == ArithConvKind::CompAssign);
+  }
+
   // If both types are identical, no conversion is needed.
   if (Context.hasSameType(LHSType, RHSType)) {
     return Context.getCommonSugaredType(LHSType, RHSType);
@@ -1739,11 +1744,6 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
 
   if (LHSType->isFixedPointType() || RHSType->isFixedPointType())
     return handleFixedPointConversion(*this, LHSType, RHSType);
-
-  if (LHSType->isOverflowBehaviorType() || RHSType->isOverflowBehaviorType()) {
-    return handleOverflowBehaviorTypeConversion(
-        *this, LHS, RHS, ACK == ArithConvKind::CompAssign);
-  }
 
   // Finally, we have two differing integer types.
   return handleIntegerConversion<doIntegralCast, doIntegralCast>(

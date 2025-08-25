@@ -76,8 +76,6 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
     }
     // ... or an overflow behavior type.
     if (const OverflowBehaviorType *OBT = dyn_cast<OverflowBehaviorType>(Ty)) {
-      if (!OBT->isSugared())
-        break;
       QT = OBT->desugar();
       continue;
     }

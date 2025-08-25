@@ -405,8 +405,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     argTy = PT->getPointeeType();
   }
 
-  if (const OverflowBehaviorType *OBT =
-          dyn_cast<OverflowBehaviorType>(argTy.getCanonicalType()))
+  if (const auto *OBT = argTy->getAs<OverflowBehaviorType>())
     argTy = OBT->getUnderlyingType();
 
   switch (K) {

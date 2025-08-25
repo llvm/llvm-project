@@ -2872,8 +2872,6 @@ inline T TypeLoc::getAsAdjusted() const {
       Cur = ATL.getModifiedLoc();
     else if (auto ATL = Cur.getAs<BTFTagAttributedTypeLoc>())
       Cur = ATL.getWrappedLoc();
-    // else if (auto ATL = Cur.getAs<OverflowBehaviorTypeLoc>())
-    //   Cur = ATL.getWrappedLoc();
     else if (auto ATL = Cur.getAs<HLSLAttributedResourceTypeLoc>())
       Cur = ATL.getWrappedLoc();
     else if (auto ATL = Cur.getAs<AdjustedTypeLoc>())

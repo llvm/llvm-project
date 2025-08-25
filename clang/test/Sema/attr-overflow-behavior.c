@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -foverflow-behavior-types -Woverflow-behavior-conversion -Wconstant-conversion -verify -fsyntax-only
+// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -foverflow-behavior-types -Woverflow-behavior-conversion -Wconstant-conversion -verify -fsyntax-only -std=c11
 
 typedef int __attribute__((overflow_behavior)) bad_arg_count; // expected-error {{'overflow_behavior' attribute takes one argument}}
 typedef int __attribute__((overflow_behavior(not_real))) bad_arg_spec; // expected-error {{'not_real' is not a valid argument to attribute 'overflow_behavior'}}
@@ -163,3 +163,15 @@ void test_conflicting_behavior_kinds() {
 
 typedef int __attribute__((overflow_behavior(wrap))) __attribute__((overflow_behavior(wrap))) duplicate_wrap; // no warn
 typedef int __attribute__((overflow_behavior(no_wrap))) __attribute__((overflow_behavior(no_wrap))) duplicate_no_wrap; // no warn
+
+// Test type merging behavior for OBTs on top of typedefs
+typedef int pid_t;
+typedef int clockid_t;
+
+void test_obt_type_merging() {
+  pid_t __wrap a = 1;
+  clockid_t __wrap b = 2;
+  pid_t __wrap c = 4;
+  _Static_assert(_Generic((a + b), int __wrap: 1, default: 0), "a + b should be __wrap int");
+  _Static_assert(_Generic((a + c), pid_t __wrap: 1, default: 0), "a + c should be __wrap pid_t");
+}

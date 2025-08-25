@@ -3139,10 +3139,6 @@ template <> const BoundsAttributedType *Type::getAs() const;
 /// sugar until it reaches an CountAttributedType or a non-sugared type.
 template <> const CountAttributedType *Type::getAs() const;
 
-/// This will check for a OverflowBehaviorType by removing any existing
-/// sugar until it reaches an OverflowBehaviorType or a non-sugared type.
-template <> const OverflowBehaviorType *Type::getAs() const;
-
 // We can do canonical leaf types faster, because we don't have to
 // worry about preserving child type decoration.
 #define TYPE(Class, Base)
@@ -6694,11 +6690,6 @@ public:
     return BehaviorKind == OverflowBehaviorKind::NoWrap;
   }
 
-  OverflowBehaviorKind setBehaviorKind(OverflowBehaviorKind Kind) {
-    BehaviorKind = Kind;
-    return BehaviorKind;
-  }
-
   bool isSugared() const { return false; }
   QualType desugar() const { return getUnderlyingType(); }
 
@@ -8976,10 +8967,8 @@ inline bool Type::isIntegerType() const {
            !IsEnumDeclScoped(ET->getOriginalDecl());
   }
 
-  if (isOverflowBehaviorType())
-    return cast<OverflowBehaviorType>(CanonicalType)
-        ->getUnderlyingType()
-        ->isIntegerType();
+  if (const auto *OT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OT->getUnderlyingType()->isIntegerType();
 
   return isBitIntType();
 }
@@ -9043,7 +9032,7 @@ inline bool Type::isScalarType() const {
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
          isa<ObjCObjectPointerType>(CanonicalType) ||
-         isa<OverflowBehaviorType>(CanonicalType) || isBitIntType();
+         isOverflowBehaviorType() || isBitIntType();
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
@@ -9191,8 +9180,6 @@ template <typename T> const T *Type::getAsAdjusted() const {
       Ty = A->getModifiedType().getTypePtr();
     else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
-    // else if (const auto *A = dyn_cast<OverflowBehaviorType>(Ty))
-    //   Ty = A->getWrappedType().getTypePtr();
     else if (const auto *A = dyn_cast<HLSLAttributedResourceType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
     else if (const auto *P = dyn_cast<ParenType>(Ty))

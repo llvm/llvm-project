@@ -5857,10 +5857,9 @@ QualType ASTContext::getOverflowBehaviorType(
   QualType Canonical;
   if (!Underlying.isCanonical()) {
     Canonical = getOverflowBehaviorType(Kind, getCanonicalType(Underlying));
-    OverflowBehaviorType *NewOBT =
+    [[maybe_unused]] OverflowBehaviorType *NewOBT =
         OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewOBT && "Shouldn't be in the map!");
-    (void)NewOBT;
   }
 
   OverflowBehaviorType *Ty = new (*this, alignof(OverflowBehaviorType))
@@ -11820,9 +11819,8 @@ std::optional<QualType> ASTContext::tryMergeOverflowBehaviorTypes(
 
   if (LHSOBT) {
     if (RHSOBT) {
-      // Both are OverflowBehaviorTypes.
       if (LHSOBT->getBehaviorKind() != RHSOBT->getBehaviorKind())
-        return QualType(); // Incompatible if behaviors differ.
+        return QualType();
 
       QualType MergedUnderlying = mergeTypes(
           LHSOBT->getUnderlyingType(), RHSOBT->getUnderlyingType(),
@@ -11831,15 +11829,16 @@ std::optional<QualType> ASTContext::tryMergeOverflowBehaviorTypes(
       if (MergedUnderlying.isNull())
         return QualType();
 
-      // If the merged underlying type is the same as one of the original
-      // underlying types, we can return the original OBT to preserve typedefs.
-      if (getCanonicalType(MergedUnderlying) ==
-          getCanonicalType(LHSOBT->getUnderlyingType()))
-        return LHS;
-      if (getCanonicalType(MergedUnderlying) ==
-          getCanonicalType(RHSOBT->getUnderlyingType()))
-        return RHS;
+      if (getCanonicalType(LHSOBT) == getCanonicalType(RHSOBT)) {
+        if (LHSOBT->getUnderlyingType() == RHSOBT->getUnderlyingType())
+          return getCommonSugaredType(LHS, RHS);
+        return getOverflowBehaviorType(
+            LHSOBT->getBehaviorKind(),
+            getCanonicalType(LHSOBT->getUnderlyingType()));
+      }
 
+      // For different underlying types that successfully merge, wrap the
+      // merged underlying type with the common overflow behavior
       return getOverflowBehaviorType(LHSOBT->getBehaviorKind(),
                                      MergedUnderlying);
     }
@@ -14456,10 +14455,13 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
         getCommonQualifier(Ctx, NX, NY, /*IsSame=*/true), NX->getIdentifier());
   }
   case Type::OverflowBehavior: {
-    // FIXME: Should we consider both types?
-    const auto *NX = cast<OverflowBehaviorType>(X);
-    return Ctx.getOverflowBehaviorType(NX->getBehaviorKind(),
-                                       NX->getUnderlyingType());
+    const auto *NX = cast<OverflowBehaviorType>(X),
+               *NY = cast<OverflowBehaviorType>(Y);
+    assert(NX->getBehaviorKind() == NY->getBehaviorKind());
+    return Ctx.getOverflowBehaviorType(
+        NX->getBehaviorKind(),
+        getCommonNonSugarTypeNode(Ctx, NX->getUnderlyingType().getTypePtr(), QX,
+                                  NY->getUnderlyingType().getTypePtr(), QY));
   }
   case Type::DependentTemplateSpecialization: {
     const auto *TX = cast<DependentTemplateSpecializationType>(X),
