@@ -81,8 +81,6 @@ enum tgt_map_type {
   OMP_TGT_MAPTYPE_OMPX_HOLD = 0x2000,
   // mapping is for a descriptor (a.k.a. dope vector)
   OMP_TGT_MAPTYPE_DESCRIPTOR = 0x4000,
-  // Mapping is for a descriptor's (a.k.a. dope vector) data base address
-  OMP_MAP_DESCRIPTOR_BASE_ADDR = 0x8000,
   // Attach pointer and pointee, after processing all other maps.
   // Applicable to map-entering directives. Does not change ref-count.
   OMP_TGT_MAPTYPE_ATTACH = 0x10000,
