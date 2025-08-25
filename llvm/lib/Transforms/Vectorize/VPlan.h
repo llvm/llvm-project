@@ -2579,7 +2579,7 @@ public:
 
 /// A recipe for interleaved access operations with vector-predication
 /// intrinsics. The first operand is the address, the second operand is the
-/// explicit vector length . Stored values and mask are optional operands.
+/// explicit vector length. Stored values and mask are optional operands.
 class LLVM_ABI_FOR_TEST VPInterleaveEVLRecipe final : public VPInterleaveBase {
 public:
   VPInterleaveEVLRecipe(VPInterleaveRecipe &R, VPValue &EVL, VPValue *Mask)
