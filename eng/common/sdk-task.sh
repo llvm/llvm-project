@@ -10,6 +10,7 @@ show_usage() {
 
     echo "Advanced settings:"
     echo "  --excludeCIBinarylog     Don't output binary log (short: -nobl)"
+    echo "  --noWarnAsError          Do not warn as error
     echo ""
     echo "Command line arguments not listed above are passed thru to msbuild."
 }
@@ -52,6 +53,7 @@ exclude_ci_binary_log=false
 restore=false
 help=false
 properties=''
+warnAsError=true
 
 while (($# > 0)); do
   lowerI="$(echo $1 | tr "[:upper:]" "[:lower:]")"
@@ -73,6 +75,10 @@ while (($# > 0)); do
       exclude_ci_binary_log=true
       shift 1
       ;;
+    --noWarnAsError)
+      warnAsError=false
+      shift 1
+      ;;
     --help)
       help=true
       shift 1
@@ -85,7 +91,6 @@ while (($# > 0)); do
 done
 
 ci=true
-warnAsError=true
 
 if $help; then
   show_usage

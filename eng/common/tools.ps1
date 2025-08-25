@@ -553,7 +553,7 @@ function LocateVisualStudio([object]$vsRequirements = $null){
 
   if (!(Test-Path $vsWhereExe)) {
     Create-Directory $vsWhereDir
-    Write-Host 'Downloading vswhere $vswhereVersion'
+    Write-Host "Downloading vswhere $vswhereVersion"
     $ProgressPreference = 'SilentlyContinue' # Don't display the console progress UI - it's a huge perf hit
     Retry({
       Invoke-WebRequest "https://netcorenativeassets.blob.core.windows.net/resource-packages/external/windows/vswhere/$vswhereVersion/vswhere.exe" -OutFile $vswhereExe
