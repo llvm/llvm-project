@@ -195,7 +195,7 @@ static void createResourceCtorArgs(CodeGenModule &CGM, CXXConstructorDecl *CD,
 // Initializes local resource array variable. For multi-dimensional arrays it
 // calls itself recursively to initialize its sub-arrays. The Index used in the
 // resource constructor calls will begin at StartIndex and will be incremented
-// for each array element. The last last used resource Index is returned to the
+// for each array element. The last used resource Index is returned to the
 // caller.
 static Value *initializeLocalResourceArray(
     CodeGenFunction &CGF, AggValueSlot &ValueSlot,
