@@ -316,16 +316,17 @@ def ptxas_supported_isa_versions(ptxas):
             versions.append((int(match.group(1)), int(match.group(2))))
     return versions
 
+
 def ptxas_add_isa_features(major_version, minor_version):
     supported_isa_versions = ptxas_supported_isa_versions(ptxas_executable)
     if supported_isa_versions:
         for major_version, minor_version in supported_isa_versions:
-            config.available_features.add(
-                "ptxas-isa-{}.{}".format(major_version, minor_version)
-            )
+            config.available_features.add(f"ptxas-isa-{major_version}.{minor_version}")
         return
     if major_version >= 13:
-        raise RuntimeError("ptxas {} does not support ISA version listing".format(ptxas_executable))
+        raise RuntimeError(
+            f"ptxas {ptxas_executable} does not support ISA version listing"
+        )
     # Use a more pythonic approach: define a list of (major, minor, feature) tuples and iterate.
     isa_features = [
         (12, 9, "ptxas-isa-8.8"),
@@ -401,7 +402,7 @@ def ptxas_supports_address_size_32(ptxas_executable):
         return False
     if "Missing .version directive at start of file" in result.stderr:
         return True
-    raise RuntimeError("Unexpected ptxas output: {}".format(result.stderr))
+    raise RuntimeError(f"Unexpected ptxas output: {result.stderr}")
 
 
 def enable_ptxas(ptxas_executable):
@@ -409,17 +410,17 @@ def enable_ptxas(ptxas_executable):
     tools.extend(
         [
             ToolSubst("%ptxas", ptxas_executable),
-            ToolSubst("%ptxas-verify", "{} -c -".format(ptxas_executable)),
+            ToolSubst("%ptxas-verify", f"{ptxas_executable} -c -"),
         ]
     )
 
     major_version, minor_version = ptxas_version(ptxas_executable)
-    config.available_features.add("ptxas-{}.{}".format(major_version, minor_version))
+    config.available_features.add(f"ptxas-{major_version}.{minor_version}")
 
     ptxas_add_isa_features(major_version, minor_version)
 
     for sm in ptxas_supported_sms(ptxas_executable):
-        config.available_features.add("ptxas-sm_{}".format(sm))
+        config.available_features.add(f"ptxas-sm_{sm}")
 
     if ptxas_supports_address_size_32(ptxas_executable):
         config.available_features.add("ptxas-ptr32")
