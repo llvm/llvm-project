@@ -180,11 +180,10 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
          << "  Shader Visibility: "
          << enumToStringRef(Info.Visibility, dxbc::getShaderVisibility())
          << "\n";
-      const uint32_t &Loc = Info.Location;
       switch (Info.Type) {
       case dxbc::RootParameterType::Constants32Bit: {
         const mcdxbc::RootConstants &Constants =
-            RS.ParametersContainer.getConstant(Loc);
+            RS.ParametersContainer.getConstant(Info.Location);
         OS << "  Register Space: " << Constants.RegisterSpace << "\n"
            << "  Shader Register: " << Constants.ShaderRegister << "\n"
            << "  Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
@@ -194,7 +193,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       case dxbc::RootParameterType::UAV:
       case dxbc::RootParameterType::SRV: {
         const mcdxbc::RootDescriptor &Descriptor =
-            RS.ParametersContainer.getRootDescriptor(Loc);
+            RS.ParametersContainer.getRootDescriptor(Info.Location);
         OS << "  Register Space: " << Descriptor.RegisterSpace << "\n"
            << "  Shader Register: " << Descriptor.ShaderRegister << "\n";
         if (RS.Version > 1)
