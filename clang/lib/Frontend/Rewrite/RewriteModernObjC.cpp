@@ -3733,15 +3733,7 @@ void RewriteModernObjC::RewriteLocallyDefinedNamedAggregates(FieldDecl *fieldDec
 
   auto *IDecl = dyn_cast<ObjCContainerDecl>(fieldDecl->getDeclContext());
 
-  TagDecl *TD = nullptr;
-  if (Type->isRecordType()) {
-    TD = Type->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
-  }
-  else if (Type->isEnumeralType()) {
-    TD = Type->castAs<EnumType>()->getOriginalDecl()->getDefinitionOrSelf();
-  }
-
-  if (TD) {
+  if (auto *TD = Type->getAsTagDecl()) {
     if (GlobalDefinedTags.count(TD))
       return;
 

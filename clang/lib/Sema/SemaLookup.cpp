@@ -3114,17 +3114,15 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
 
     // Visit the base classes.
     for (const auto &Base : Class->bases()) {
-      const RecordType *BaseType = Base.getType()->getAs<RecordType>();
+      CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
       // In dependent contexts, we do ADL twice, and the first time around,
       // the base type might be a dependent TemplateSpecializationType, or a
       // TemplateTypeParmType. If that happens, simply ignore it.
       // FIXME: If we want to support export, we probably need to add the
       // namespace of the template in a TemplateSpecializationType, or even
       // the classes and namespaces of known non-dependent arguments.
-      if (!BaseType)
+      if (!BaseDecl)
         continue;
-      CXXRecordDecl *BaseDecl = cast<CXXRecordDecl>(BaseType->getOriginalDecl())
-                                    ->getDefinitionOrSelf();
       if (Result.addClassTransitive(BaseDecl)) {
         // Find the associated namespace for this base class.
         DeclContext *BaseCtx = BaseDecl->getDeclContext();
@@ -4262,10 +4260,9 @@ private:
             continue;
           RD = TD->getTemplatedDecl();
         } else {
-          const auto *Record = BaseType->getAs<RecordType>();
-          if (!Record)
+          RD = BaseType->getAsCXXRecordDecl();
+          if (!RD)
             continue;
-          RD = Record->getOriginalDecl()->getDefinitionOrSelf();
         }
 
         // FIXME: It would be nice to be able to determine whether referencing
