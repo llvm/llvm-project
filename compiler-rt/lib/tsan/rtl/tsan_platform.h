@@ -787,7 +787,7 @@ ALWAYS_INLINE auto SelectMapping(Arg arg) {
       return Func::template Apply<MappingGoRiscv64_39>(arg);
     case 48:
       return Func::template Apply<MappingGoRiscv64_48>(arg);
-   }
+  }
 #  elif SANITIZER_WINDOWS
   return Func::template Apply<MappingGoWindows>(arg);
 #  else
