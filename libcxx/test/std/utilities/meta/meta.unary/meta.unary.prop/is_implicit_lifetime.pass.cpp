@@ -48,7 +48,7 @@ struct OnlyDefaultConstructorIsTrivial {
 };
 
 struct AllConstructorsAreTrivial {
-  AllConstructorsAreTrivial()                                  = default;
+  AllConstructorsAreTrivial()                                 = default;
   AllConstructorsAreTrivial(const AllConstructorsAreTrivial&) = default;
   AllConstructorsAreTrivial(AllConstructorsAreTrivial&&)      = default;
 };
