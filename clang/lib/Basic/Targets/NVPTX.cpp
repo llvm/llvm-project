@@ -69,14 +69,15 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   HasFloat16 = true;
 
   if (TargetPointerWidth == 32)
-    resetDataLayout(
-        "e-p:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+    resetDataLayout("e-p:32:32-p6:32:32-p7:32:32-i64:64-i128:128-i256:256-v16:"
+                    "16-v32:32-n16:32:64");
   else if (Opts.NVPTXUseShortPointers)
-    resetDataLayout(
-        "e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:"
-        "16-v32:32-n16:32:64");
+    resetDataLayout("e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32-i64:64-"
+                    "i128:128-i256:256-v16:"
+                    "16-v32:32-n16:32:64");
   else
-    resetDataLayout("e-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+    resetDataLayout(
+        "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64");
 
   // If possible, get a TargetInfo for our host triple, so we can match its
   // types.

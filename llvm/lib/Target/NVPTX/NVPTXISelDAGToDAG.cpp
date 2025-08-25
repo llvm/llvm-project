@@ -1097,11 +1097,6 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   if (PlainLoad && PlainLoad->isIndexed())
     return false;
 
-  const EVT LoadedEVT = LD->getMemoryVT();
-  if (!LoadedEVT.isSimple())
-    return false;
-  const MVT LoadedVT = LoadedEVT.getSimpleVT();
-
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
@@ -1111,7 +1106,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, LD);
 
-  const unsigned FromTypeWidth = LoadedVT.getSizeInBits();
+  const unsigned FromTypeWidth = LD->getMemoryVT().getSizeInBits();
 
   // Vector Setting
   const unsigned FromType =
@@ -1165,9 +1160,6 @@ static unsigned getStoreVectorNumElts(SDNode *N) {
 
 bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   MemSDNode *LD = cast<MemSDNode>(N);
-  const EVT MemEVT = LD->getMemoryVT();
-  if (!MemEVT.isSimple())
-    return false;
 
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(LD);
@@ -1237,10 +1229,6 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
-  const EVT LoadedEVT = LD->getMemoryVT();
-  if (!LoadedEVT.isSimple())
-    return false;
-
   SDLoc DL(LD);
 
   unsigned ExtensionType;
@@ -1357,10 +1345,6 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   if (PlainStore && PlainStore->isIndexed())
     return false;
 
-  const EVT StoreVT = ST->getMemoryVT();
-  if (!StoreVT.isSimple())
-    return false;
-
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(ST);
 
@@ -1369,7 +1353,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
 
   // Vector Setting
-  const unsigned ToTypeWidth = StoreVT.getSimpleVT().getSizeInBits();
+  const unsigned ToTypeWidth = ST->getMemoryVT().getSizeInBits();
 
   // Create the machine instruction DAG
   SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
@@ -1406,8 +1390,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 
 bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   MemSDNode *ST = cast<MemSDNode>(N);
-  const EVT StoreVT = ST->getMemoryVT();
-  assert(StoreVT.isSimple() && "Store value is not simple");
+  const unsigned TotalWidth = ST->getMemoryVT().getSizeInBits();
 
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(ST);
@@ -1419,10 +1402,6 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
-
-  // Type Setting: toType + toTypeWidth
-  // - for integer type, always use 'u'
-  const unsigned TotalWidth = StoreVT.getSimpleVT().getSizeInBits();
 
   const unsigned NumElts = getStoreVectorNumElts(ST);
 
