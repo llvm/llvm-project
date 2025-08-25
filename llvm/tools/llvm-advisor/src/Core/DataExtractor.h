@@ -39,13 +39,39 @@ private:
   Error extractAST(CompilationUnit &unit, llvm::StringRef tempDir);
   Error extractPreprocessed(CompilationUnit &unit, llvm::StringRef tempDir);
   Error extractIncludeTree(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractDependencies(CompilationUnit &unit, llvm::StringRef tempDir);
   Error extractDebugInfo(CompilationUnit &unit, llvm::StringRef tempDir);
   Error extractStaticAnalysis(CompilationUnit &unit, llvm::StringRef tempDir);
   Error extractMacroExpansion(CompilationUnit &unit, llvm::StringRef tempDir);
   Error extractCompilationPhases(CompilationUnit &unit,
                                  llvm::StringRef tempDir);
+  Error extractFTimeReport(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractVersionInfo(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractSources(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractASTJSON(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractDiagnostics(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractCoverage(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractTimeTrace(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractRuntimeTrace(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractSARIF(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractBinarySize(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractPGO(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractSymbols(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractObjdump(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractXRay(CompilationUnit &unit, llvm::StringRef tempDir);
+  Error extractOptDot(CompilationUnit &unit, llvm::StringRef tempDir);
 
   Error runCompilerWithFlags(const llvm::SmallVector<std::string, 8> &args);
+
+  using ExtractorMethod = Error (DataExtractor::*)(CompilationUnit &,
+                                                   llvm::StringRef);
+  struct ExtractorInfo {
+    ExtractorMethod method;
+    const char *name;
+  };
+
+  static const ExtractorInfo extractors_[];
+  static const size_t numExtractors_;
 
   const AdvisorConfig &config_;
 };
