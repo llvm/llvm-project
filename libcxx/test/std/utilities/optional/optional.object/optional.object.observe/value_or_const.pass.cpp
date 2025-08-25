@@ -81,10 +81,10 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 26
     {
-        X y{3};
-        const optional<X&> opt;
-        assert(opt.value_or(y) == 3);
+      X y{3};
+      const optional<X&> opt;
+      assert(opt.value_or(y) == 3);
     }
-#endif 
-  return 0;
+#endif
+    return 0;
 }

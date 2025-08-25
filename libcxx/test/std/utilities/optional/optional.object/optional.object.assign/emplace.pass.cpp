@@ -224,20 +224,20 @@ TEST_CONSTEXPR_CXX20 bool test_empty_emplace() {
 #if TEST_STD_VER >= 26
 template <class T, std::remove_reference_t<T> _Val>
 constexpr bool test_ref() {
-    using Opt = std::optional<T&>;
-    T t{_Val};
-    {
-        Opt opt;
-        auto & v = opt.emplace(t);
-        static_assert(std::is_same_v<T&, decltype(v)>, "");
-        assert(static_cast<bool>(opt) == true);
-        assert(*opt == t);
-        assert(&v == &*opt);
-        assert(&t == &*opt);
-    }
-    return true;
+  using Opt = std::optional<T&>;
+  T t{_Val};
+  {
+    Opt opt;
+    auto& v = opt.emplace(t);
+    static_assert(std::is_same_v<T&, decltype(v)>, "");
+    assert(static_cast<bool>(opt) == true);
+    assert(*opt == t);
+    assert(&v == &*opt);
+    assert(&t == &*opt);
+  }
+  return true;
 }
-#endif 
+#endif
 
 int main(int, char**)
 {
@@ -314,6 +314,6 @@ int main(int, char**)
     static_assert(test_ref<double, 15.0>());
     assert((test_ref<int, 1>()));
     assert((test_ref<double, 15.0>()));
-#endif 
-  return 0;
+#endif
+    return 0;
 }
