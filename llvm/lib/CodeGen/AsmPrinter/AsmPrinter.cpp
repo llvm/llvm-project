@@ -1913,7 +1913,6 @@ void AsmPrinter::emitFunctionBody() {
 
   // Print out code for the function.
   bool HasAnyRealCode = false;
-  int NumInstsInFunction = 0;
   bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
   const MCSubtargetInfo *STI = nullptr;
@@ -2908,6 +2907,9 @@ MCSymbol *AsmPrinter::createCallsiteSymbol(const MachineBasicBlock &MBB) {
 void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   const Function &F = MF.getFunction();
+
+  // Reset instruction counter for the new function
+  NumInstsInFunction = 0;
 
   // Record that there are split-stack functions, so we will emit a special
   // section to tell the linker.

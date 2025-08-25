@@ -309,6 +309,9 @@ public:
   /// Return a unique ID for the current function.
   unsigned getFunctionNumber() const;
 
+  /// Return the number of instructions printed for the current function.
+  unsigned getInstructionCount() const { return NumInstsInFunction; }
+
   /// Return symbol for the function pseudo stack if the stack frame is not a
   /// register based.
   virtual const MCSymbol *getFunctionFrameSymbol() const { return nullptr; }
@@ -939,6 +942,9 @@ private:
   mutable const MachineInstr *LastMI = nullptr;
   mutable unsigned LastFn = 0;
   mutable unsigned Counter = ~0U;
+
+  /// Number of instructions printed in the current function
+  unsigned NumInstsInFunction = 0;
 
   bool DwarfUsesRelocationsAcrossSections = false;
 
