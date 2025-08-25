@@ -94,6 +94,8 @@ define i64 @vectorization_not_profitable_due_to_trunc(ptr dereferenceable(800) %
 ; CHECK-LABEL: LV: Checking a loop in 'vectorization_not_profitable_due_to_trunc'
 ; CHECK: LV: Selecting VF: 1.
 ; CHECK-NEXT: Calculating cost of work in exit block vector.early.exit:
+; CHECK-NEXT: Cost of 1 for VF 1: EMIT vp<%first.active.lane> = first-active-lane ir<%t>
+; CHECK-NEXT: Cost of 0 for VF 1: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%l>
 ; CHECK-NEXT: LV: Vectorization is possible but not beneficial.
 entry:
   br label %loop.header
