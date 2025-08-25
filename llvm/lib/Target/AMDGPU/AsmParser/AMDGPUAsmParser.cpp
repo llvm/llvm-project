@@ -5986,6 +5986,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   SMRange VGPRRange;
   const MCExpr *NextFreeVGPR = ZeroExpr;
   const MCExpr *AccumOffset = MCConstantExpr::create(0, getContext());
+  const MCExpr *NamedBarCnt = ZeroExpr;
   uint64_t SharedVGPRCount = 0;
   uint64_t PreloadLength = 0;
   uint64_t PreloadOffset = 0;
@@ -6208,6 +6209,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       if (!isGFX90A())
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
       AccumOffset = ExprVal;
+    } else if (ID == ".amdhsa_named_barrier_count") {
+      if (!isGFX1250())
+        return Error(IDRange.Start, "directive requires gfx1250+", IDRange);
+      NamedBarCnt = ExprVal;
     } else if (ID == ".amdhsa_reserve_vcc") {
       if (EvaluatableExpr && !isUInt<1>(Val))
         return OutOfRangeError(ValRange);
@@ -6270,8 +6275,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3, COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                        ExprVal, ValRange);
     } else if (ID == ".amdhsa_workgroup_processor_mode") {
-      if (IVersion.Major < 10)
-        return Error(IDRange.Start, "directive requires gfx10+", IDRange);
+      if (!supportsWGP(getSTI()))
+        return Error(IDRange.Start,
+                     "directive unsupported on " + getSTI().getCPU(), IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, ExprVal,
                        ValRange);
@@ -6404,12 +6410,24 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError("amdgpu_user_sgpr_count smaller than than implied by "
                     "enabled user SGPRs");
 
-  if (!isUInt<COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
-    return TokError("too many user SGPRs enabled");
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT, getContext());
+  if (isGFX1250()) {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT, getContext());
+  } else {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(
+            UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT, getContext());
+  }
 
   int64_t IVal = 0;
   if (!KD.kernarg_size->evaluateAsAbsolute(IVal))
@@ -6446,6 +6464,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                                  COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
                                  getContext());
   }
+
+  if (isGFX1250())
+    MCKernelDescriptor::bits_set(KD.compute_pgm_rsrc3, NamedBarCnt,
+                                 COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
+                                 COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+                                 getContext());
 
   if (IVersion.Major >= 10 && IVersion.Major < 12) {
     // SharedVGPRCount < 16 checked by PARSE_ENTRY_BITS

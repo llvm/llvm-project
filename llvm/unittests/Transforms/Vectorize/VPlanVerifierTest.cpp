@@ -170,15 +170,14 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n"
+  EXPECT_STREQ("Incoming def does not dominate incoming block!\n"
                "  EMIT vp<%2> = add ir<0>\n"
                "  does not dominate preheader for\n"
                "  EMIT-SCALAR vp<%1> = phi [ vp<%2>, preheader ]",
                ::testing::internal::GetCapturedStderr().c_str());
 #else
-  EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n", ::
-                   testing::internal::GetCapturedStderr()
-                       .c_str());
+  EXPECT_STREQ("Incoming def does not dominate incoming block!\n",
+               ::testing::internal::GetCapturedStderr().c_str());
 #endif
 #endif
 }

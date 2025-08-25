@@ -13,8 +13,6 @@ define void @test_sdiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
 ; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -56,7 +54,7 @@ define void @test_sdiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 2
+; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
@@ -125,8 +123,6 @@ define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
 ; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -168,7 +164,7 @@ define void @test_udiv(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 2
+; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
@@ -236,8 +232,6 @@ define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
 ; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -279,7 +273,7 @@ define void @test_srem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 2
+; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
@@ -347,8 +341,6 @@ define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
 ; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
-; IF-EVL-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -390,7 +382,7 @@ define void @test_urem(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; NO-VP-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; NO-VP-NEXT:  [[LOOP_PREHEADER:.*]]:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 2
+; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:

@@ -1068,6 +1068,13 @@ def SplitBarrier : ImmOperand<i32> {
   let PrintMethod = "printOperand";
 }
 
+// Pseudo-operand type. This is a pair of 32-bit inline constants
+// packed into a single 64-bit value.
+def AV_64_PSEUDO_IMM : Operand<i64> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_INLINE_C_AV64_PSEUDO";
+}
+
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
@@ -2708,7 +2715,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
-  field bit HasMatrixReuse = 0;
   field bit HasMatrixFMT = 0;
   field bit HasMatrixScale = 0;
   field bit HasMatrixReuse = 0;

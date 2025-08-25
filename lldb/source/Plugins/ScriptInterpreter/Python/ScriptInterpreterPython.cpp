@@ -98,17 +98,7 @@ public:
 #ifdef LLDB_USE_LIBEDIT_READLINE_COMPAT_MODULE
       // Python's readline is incompatible with libedit being linked into lldb.
       // Provide a patched version local to the embedded interpreter.
-      bool ReadlinePatched = false;
-      for (auto *p = PyImport_Inittab; p->name != nullptr; p++) {
-        if (strcmp(p->name, "readline") == 0) {
-          p->initfunc = initlldb_readline;
-          break;
-        }
-      }
-      if (!ReadlinePatched) {
-        PyImport_AppendInittab("readline", initlldb_readline);
-        ReadlinePatched = true;
-      }
+      PyImport_AppendInittab("readline", initlldb_readline);
 #endif
 
       // Register _lldb as a built-in module.
@@ -909,11 +899,11 @@ bool ScriptInterpreterPythonImpl::Interrupt() {
   Log *log = GetLog(LLDBLog::Script);
 
   if (IsExecutingPython()) {
-    PyThreadState *state = PyThreadState_GET();
+    PyThreadState *state = PyThreadState_Get();
     if (!state)
       state = GetThreadState();
     if (state) {
-      long tid = state->thread_id;
+      long tid = PyThread_get_thread_ident();
       PyThreadState_Swap(state);
       int num_threads = PyThreadState_SetAsyncExc(tid, PyExc_KeyboardInterrupt);
       LLDB_LOGF(log,

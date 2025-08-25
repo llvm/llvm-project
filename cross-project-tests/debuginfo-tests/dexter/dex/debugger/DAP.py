@@ -100,6 +100,36 @@ class DAPMessageLogger:
             )
 
 
+# Debuggers communicate optional feature support.
+class DAPDebuggerCapabilities:
+    def __init__(self):
+        self.supportsConfigurationDoneRequest: bool = False
+        self.supportsFunctionBreakpoints: bool = False
+        self.supportsConditionalBreakpoints: bool = False
+        self.supportsHitConditionalBreakpoints: bool = False
+        self.supportsEvaluateForHovers: bool = False
+        self.supportsSetVariable: bool = False
+        self.supportsStepInTargetsRequest: bool = False
+        self.supportsModulesRequest: bool = False
+        self.supportsValueFormattingOptions: bool = False
+        self.supportsLogPoints: bool = False
+        self.supportsSetExpression: bool = False
+        self.supportsDataBreakpoints: bool = False
+        self.supportsReadMemoryRequest: bool = False
+        self.supportsWriteMemoryRequest: bool = False
+        self.supportsDisassembleRequest: bool = False
+        self.supportsCancelRequest: bool = False
+        self.supportsSteppingGranularity: bool = False
+        self.supportsInstructionBreakpoints: bool = False
+
+    def update(self, logger: Logger, feature_dict: dict):
+        for k, v in feature_dict.items():
+            if hasattr(self, k):
+                setattr(self, k, v)
+            else:
+                logger.warning(f"DAP: Unknown support flag: {k}")
+
+
 # As DAP does not give us a trivially query-able process, we are responsible for maintaining our own state information,
 # including what breakpoints are currently set, and whether the debugger is running or stopped.
 # This class holds all state that is set based on events sent by the debug adapter; most responses are forwarded through
@@ -141,6 +171,9 @@ class DAPDebuggerState:
         self.responses = [None]
         # Map of DAP breakpoint IDs to resolved instruction addresses.
         self.bp_addr_map = {}
+
+        # DAP features supported by the debugger.
+        self.capabilities = DAPDebuggerCapabilities()
 
     def set_response(self, req_id: int, response: dict):
         if len(self.responses) > req_id:
@@ -315,6 +348,9 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                     and debugger_state.thread is None
                 ):
                     debugger_state.thread = event_details["threadId"]
+            elif event_type == "capabilities":
+                # Unchanged capabilites may not be included.
+                debugger_state.capabilities.update(logger, event_details)
             # There are many events we do not care about, just skip processing them.
             else:
                 pass
@@ -325,7 +361,10 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             # response or the event, since the DAP does not specify an order in which they are sent. May need revisiting
             # if there turns out to be some odd ordering issues, e.g. if we can receive messages in the order
             # ["response: continued", "event: stopped", "event: continued"].
-            if message["command"] == "continue" and message["success"] == True:
+            if (
+                message["command"] in ["continue", "stepIn", "next", "stepOut"]
+                and message["success"] == True
+            ):
                 debugger_state.is_running = True
                 # Reset all state that is invalidated upon program continue.
                 debugger_state.stopped_reason = None
@@ -338,6 +377,12 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 debugger_state.frame_map = [
                     stackframe["id"] for stackframe in message["body"]["stackFrames"]
                 ]
+            # The debugger communicates which optional DAP features are
+            # supported in its initalize response.
+            if message["command"] == "initialize" and message["success"] == True:
+                body = message.get("body")
+                if body:
+                    debugger_state.capabilities.update(logger, body)
 
     def _colorize_dap_message(message: dict) -> dict:
         colorized_message = copy.deepcopy(message)
@@ -635,20 +680,33 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def _post_step_hook(self):
         """Hook to be executed after completing a step request."""
 
-    def step(self):
+    def _step(self, step_request_string):
         self._flush_breakpoints()
         step_req_id = self.send_message(
-            self.make_request("stepIn", {"threadId": self._debugger_state.thread})
+            self.make_request(
+                step_request_string, {"threadId": self._debugger_state.thread}
+            )
         )
         response = self._await_response(step_req_id)
         if not response["success"]:
-            raise DebuggerException("failed to step")
+            raise DebuggerException(
+                f"failed to perform debugger action: '{step_request_string}'"
+            )
         # If we've "stepped" to a breakpoint, then continue to hit the breakpoint properly.
         # NB: This is an issue that only seems relevant to LLDB, but is also harmless outside of LLDB; if it turns out
         #     to cause issues for other debuggers, we can move it to a post-step hook.
         while self._debugger_state.is_running:
             time.sleep(0.001)
         self._post_step_hook()
+
+    def step_in(self):
+        self._step("stepIn")
+
+    def step_next(self):
+        self._step("next")
+
+    def step_out(self):
+        self._step("stepOut")
 
     def go(self) -> ReturnCode:
         self._flush_breakpoints()

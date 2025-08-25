@@ -1738,13 +1738,13 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
                          AttributeList attr,
                          SmallVectorImpl<ISD::OutputArg> &Outs,
                          const TargetLowering &TLI, const DataLayout &DL) {
-  SmallVector<EVT, 4> ValueVTs;
-  ComputeValueVTs(TLI, DL, ReturnType, ValueVTs);
-  unsigned NumValues = ValueVTs.size();
+  SmallVector<Type *, 4> Types;
+  ComputeValueTypes(DL, ReturnType, Types);
+  unsigned NumValues = Types.size();
   if (NumValues == 0) return;
 
-  for (unsigned j = 0, f = NumValues; j != f; ++j) {
-    EVT VT = ValueVTs[j];
+  for (Type *Ty : Types) {
+    EVT VT = TLI.getValueType(DL, Ty);
     ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
 
     if (attr.hasRetAttr(Attribute::SExt))
@@ -1772,7 +1772,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
       Flags.setZExt();
 
     for (unsigned i = 0; i < NumParts; ++i)
-      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, ReturnType, 0, 0));
+      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, Ty, 0, 0));
   }
 }
 
@@ -2059,29 +2059,37 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
-  if (!M.getNamedValue("__stack_chk_guard")) {
-    auto *GV = new GlobalVariable(M, PointerType::getUnqual(M.getContext()),
-                                  false, GlobalVariable::ExternalLinkage,
-                                  nullptr, "__stack_chk_guard");
+  RTLIB::LibcallImpl StackGuardImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (StackGuardImpl == RTLIB::Unsupported)
+    return;
 
-    // FreeBSD has "__stack_chk_guard" defined externally on libc.so
-    if (M.getDirectAccessExternalData() &&
-        !TM.getTargetTriple().isOSCygMing() &&
-        !(TM.getTargetTriple().isPPC64() &&
-          TM.getTargetTriple().isOSFreeBSD()) &&
-        (!TM.getTargetTriple().isOSDarwin() ||
-         TM.getRelocationModel() == Reloc::Static))
-      GV->setDSOLocal(true);
-  }
+  StringRef StackGuardVarName = getLibcallImplName(StackGuardImpl);
+  M.getOrInsertGlobal(
+      StackGuardVarName, PointerType::getUnqual(M.getContext()), [=, &M]() {
+        auto *GV = new GlobalVariable(M, PointerType::getUnqual(M.getContext()),
+                                      false, GlobalVariable::ExternalLinkage,
+                                      nullptr, StackGuardVarName);
+
+        // FreeBSD has "__stack_chk_guard" defined externally on libc.so
+        if (M.getDirectAccessExternalData() &&
+            !TM.getTargetTriple().isOSCygMing() &&
+            !(TM.getTargetTriple().isPPC64() &&
+              TM.getTargetTriple().isOSFreeBSD()) &&
+            (!TM.getTargetTriple().isOSDarwin() ||
+             TM.getRelocationModel() == Reloc::Static))
+          GV->setDSOLocal(true);
+
+        return GV;
+      });
 }
 
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
-  if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
-    return M.getNamedValue("__guard_local");
-  }
-  return M.getNamedValue("__stack_chk_guard");
+  RTLIB::LibcallImpl GuardVarImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (GuardVarImpl == RTLIB::Unsupported)
+    return nullptr;
+  return M.getNamedValue(getLibcallImplName(GuardVarImpl));
 }
 
 Function *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {

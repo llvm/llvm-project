@@ -122,3 +122,12 @@ TEST(LlvmLibcStrTokReentrantTest, DelimitersShouldNotBeIncludedInToken) {
   token = LIBC_NAMESPACE::strtok_r(nullptr, "_:,_", &reserve);
   ASSERT_STREQ(token, nullptr);
 }
+
+TEST(LlvmLibcStrTokReentrantTest, SubsequentSearchesReturnNull) {
+  char src[] = "a";
+  char *reserve = nullptr;
+  char *token = LIBC_NAMESPACE::strtok_r(src, ":", &reserve);
+  ASSERT_STREQ(token, "a");
+  ASSERT_EQ(LIBC_NAMESPACE::strtok_r(nullptr, ":", &reserve), nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::strtok_r(nullptr, ":", &reserve), nullptr);
+}

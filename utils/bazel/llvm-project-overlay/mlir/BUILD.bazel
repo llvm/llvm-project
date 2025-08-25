@@ -8,6 +8,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//llvm:targets.bzl", "llvm_targets")
 load(
     ":build_defs.bzl",
     "cc_headers_only",
@@ -397,6 +398,8 @@ cc_library(
         ":SymbolInterfacesIncGen",
         ":TensorEncodingIncGen",
         ":config",
+        "//llvm:Core",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:config",
     ],
@@ -481,6 +484,24 @@ mlir_c_api_cc_library(
         ":IRDLDialect",
         ":InferTypeOpInterface",
         ":Parser",
+    ],
+)
+
+cc_library(
+    name = "RemarkStreamer",
+    srcs = glob([
+        "lib/Remark/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Remark/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        "//llvm:BitstreamReader",
+        "//llvm:Core",
+        "//llvm:Remarks",
+        "//llvm:Support",
     ],
 )
 
@@ -3653,6 +3674,7 @@ cc_library(
         ":ArithUtils",
         ":BytecodeOpInterface",
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
         ":IndexDialect",
         ":ShapedOpInterfaces",
@@ -3662,6 +3684,7 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
@@ -3722,11 +3745,15 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
+        ":IndexDialect",
+        ":LLVMDialect",
         ":LoopLikeInterface",
         ":SCFTransforms",
         ":TransformUtils",
         ":XeGPUDialect",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
@@ -4133,6 +4160,7 @@ cc_library(
         ":TosaToTensor",
         ":UBToLLVM",
         ":UBToSPIRV",
+        ":VectorToAMX",
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
@@ -4913,6 +4941,7 @@ cc_library(
         ":MemRefDialect",
         ":Support",
         ":TensorDialect",
+        ":UBDialect",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -5508,6 +5537,7 @@ cc_library(
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
         ":config",
         "//llvm:Core",
         "//llvm:MC",
@@ -5574,6 +5604,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMDGPUDialect",
+        ":AMDGPUUtils",
         ":AffineDialect",
         ":ArithDialect",
         ":DialectUtils",
@@ -5709,6 +5740,7 @@ cc_library(
         ":NVGPUDialect",
         ":NVVMDialect",
         ":TransformUtils",
+        ":VectorTransforms",
     ],
 )
 
@@ -7131,6 +7163,26 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "WasmTranslationRegistration",
+    srcs = [
+        "lib/Target/Wasm/TranslateFromWasm.cpp",
+        "lib/Target/Wasm/TranslateRegistration.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Target/Wasm/WasmBinaryEncoding.h",
+        "include/mlir/Target/Wasm/WasmImporter.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":Support",
+        ":TranslateLib",
+        ":WasmSSADialect",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "TensorOpsTdFiles",
     srcs = [
@@ -7867,6 +7919,7 @@ cc_library(
         ":Pass",
         ":Rewrite",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -7950,6 +8003,7 @@ cc_library(
         ":Transforms",
         ":VectorDialect",
         ":XeGPUDialect",
+        ":XeGPUUtils",
         "//llvm:Support",
     ],
 )
@@ -8036,6 +8090,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -8848,7 +8903,6 @@ cc_library(
     srcs = [
         "lib/Target/LLVMIR/AttrKindDetail.h",
         "lib/Target/LLVMIR/DataLayoutImporter.cpp",
-        "lib/Target/LLVMIR/DataLayoutImporter.h",
         "lib/Target/LLVMIR/DebugImporter.cpp",
         "lib/Target/LLVMIR/DebugImporter.h",
         "lib/Target/LLVMIR/LLVMImportInterface.cpp",
@@ -8858,6 +8912,7 @@ cc_library(
         "lib/Target/LLVMIR/TypeFromLLVM.cpp",
     ],
     hdrs = [
+        "include/mlir/Target/LLVMIR/DataLayoutImporter.h",
         "include/mlir/Target/LLVMIR/Import.h",
         "include/mlir/Target/LLVMIR/LLVMImportInterface.h",
         "include/mlir/Target/LLVMIR/ModuleImport.h",
@@ -8878,6 +8933,43 @@ cc_library(
         "//llvm:IRPrinter",
         "//llvm:IRReader",
         "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TargetLLVMIRTransformsIncGen",
+    tbl_outs = {
+        "include/mlir/Target/LLVMIR/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=TargetLLVMIRTransforms",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Target/LLVMIR/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "TargetLLVMIRTransforms",
+    srcs = glob([
+        "lib/Target/LLVMIR/Transforms/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Target/LLVMIR/Transforms/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":DLTIDialect",
+        ":FromLLVMIRTranslation",
+        ":LLVMDialect",
+        ":Pass",
+        ":TargetLLVMIRTransformsIncGen",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:MC",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -8994,6 +9086,7 @@ cc_library(
         ":TargetCpp",
         ":TargetSMTLIB",
         ":ToLLVMIRTranslationRegistration",
+        ":WasmTranslationRegistration",
     ],
 )
 
@@ -9102,6 +9195,7 @@ cc_library(
         ":X86VectorDialect",
         ":XeGPUDialect",
         ":XeVMDialect",
+        ":XeVMTarget",
     ],
 )
 
@@ -9137,6 +9231,7 @@ cc_library(
         ":ShardTransforms",
         ":SparseTensorPipelines",
         ":SparseTensorTransforms",
+        ":TargetLLVMIRTransforms",
         ":TensorTransforms",
         ":TosaDialect",
         ":TransformDialectTransforms",
@@ -9196,6 +9291,7 @@ cc_library(
         ":VectorToLLVM",
         ":VectorTransformOps",
         ":XeVMToLLVM",
+        ":XeVMToLLVMIRTranslation",
     ],
 )
 
@@ -10745,7 +10841,10 @@ gentbl_cc_library(
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Linalg/Passes.td",
-    deps = [":PassBaseTdFiles"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":PassBaseTdFiles",
+    ],
 )
 
 cc_library(
@@ -11129,6 +11228,32 @@ cc_library(
         ":Pass",
         ":TransformUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "VectorToAMX",
+    srcs = glob([
+        "lib/Conversion/VectorToAMX/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/VectorToAMX/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AMXDialect",
+        ":AffineDialect",
+        ":AffineUtils",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":IR",
+        ":LinalgInterfaces",
+        ":MemRefDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":TransformUtils",
+        ":VectorDialect",
     ],
 )
 
@@ -13788,6 +13913,34 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/XeVMOps.td",
     deps = [":XeVMTdFiles"],
+)
+
+cc_library(
+    name = "XeVMTarget",
+    srcs = ["lib/Target/LLVM/XeVM/Target.cpp"],
+    hdrs = glob(["include/mlir/Target/LLVM/XeVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ExecutionEngineUtils",
+        ":GPUDialect",
+        ":GPUToLLVMIRTranslation",
+        ":IR",
+        ":LLVMToLLVMIRTranslation",
+        ":Support",
+        ":TargetLLVM",
+        ":ToLLVMIRTranslation",
+        ":XeVMDialect",
+        ":XeVMToLLVMIRTranslation",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:config",
+    ] + ([
+        "//llvm:SPIRVCodeGen",
+        "//llvm:SPIRVUtilsAndDesc",
+    ] if "SPIRV" in llvm_targets else []),
 )
 
 cc_library(

@@ -1622,6 +1622,14 @@
 // RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC-N %s
 // OPENBSD-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
 //
+// RUN: %clang_cc1 -x c -std=c11 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC %s
+// RUN: %clang_cc1 -x c -std=gnu11 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC %s
+// RUN: %clang_cc1 -x c -std=c17 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC %s
+// DRAGONFLY-STDC:#define __STDC_NO_THREADS__ 1
+//
+// RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC-N %s
+// DRAGONFLY-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
+//
 // RUN: %clang_cc1 -triple=aarch64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
 // RUN: %clang_cc1 -triple=riscv64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
 // RUN: %clang_cc1 -triple=x86_64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s

@@ -850,8 +850,8 @@ its enabled sub-projects. Nearly all of these variable names begin with
   Semicolon-separated list of targets to build, or *all* for building all
   targets. Case-sensitive. Defaults to *all*. Example:
   ``-DLLVM_TARGETS_TO_BUILD="X86;PowerPC"``.
-  The full list, as of March 2023, is:
-  ``AArch64;AMDGPU;ARM;AVR;BPF;Hexagon;Lanai;LoongArch;Mips;MSP430;NVPTX;PowerPC;RISCV;Sparc;SystemZ;VE;WebAssembly;X86;XCore``
+  The full list, as of August 2025, is:
+  ``AArch64;AMDGPU;ARM;AVR;BPF;Hexagon;Lanai;LoongArch;Mips;MSP430;NVPTX;PowerPC;RISCV;Sparc;SPIRV;SystemZ;VE;WebAssembly;X86;XCore``
 
   You can also specify ``host`` or ``Native`` to automatically detect and
   include the target corresponding to the host machine's architecture, or
