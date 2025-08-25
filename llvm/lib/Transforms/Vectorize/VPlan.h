@@ -2443,16 +2443,16 @@ public:
 /// the stored values and the mask.
 class LLVM_ABI_FOR_TEST VPInterleaveBase : public VPRecipeBase,
                                            public VPIRMetadata {
-protected:
   const InterleaveGroup<Instruction> *IG;
-
-  /// Indicates if the interleave group is in a conditional block and requires a
-  /// mask.
-  bool HasMask = false;
 
   /// Indicates if gaps between members of the group need to be masked out or if
   /// unusued gaps can be loaded speculatively.
   bool NeedsMaskForGaps = false;
+
+protected:
+  /// Indicates if the interleave group is in a conditional block and requires a
+  /// mask.
+  bool HasMask = false;
 
   VPInterleaveBase(const unsigned char SC,
                    const InterleaveGroup<Instruction> *IG,
@@ -2509,7 +2509,7 @@ public:
   /// Return true if the access needs a mask because of the gaps.
   bool needsMaskForGaps() const { return NeedsMaskForGaps; }
 
-  const InterleaveGroup<Instruction> *getInterleaveGroup() { return IG; }
+  const InterleaveGroup<Instruction> *getInterleaveGroup() const { return IG; }
 
   Instruction *getInsertPos() const { return IG->getInsertPos(); }
 
@@ -2552,8 +2552,9 @@ public:
   ~VPInterleaveRecipe() override = default;
 
   VPInterleaveRecipe *clone() override {
-    return new VPInterleaveRecipe(IG, getAddr(), getStoredValues(), getMask(),
-                                  NeedsMaskForGaps, *this, getDebugLoc());
+    return new VPInterleaveRecipe(getInterleaveGroup(), getAddr(),
+                                  getStoredValues(), getMask(),
+                                  needsMaskForGaps(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)
@@ -2588,7 +2589,7 @@ public:
                          ArrayRef<VPValue *>({R.getAddr(), &EVL}),
                          R.getStoredValues(), Mask, R.needsMaskForGaps(), R,
                          R.getDebugLoc()) {
-    assert(!IG->isReverse() &&
+    assert(!getInterleaveGroup()->isReverse() &&
            "Reversed interleave-group with tail folding is not supported.");
     assert(!needsMaskForGaps() && "Interleaved access with gap mask is not "
                                   "supported for scalable vector.");
