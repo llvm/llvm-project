@@ -135,6 +135,13 @@ bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
 std::size_t ExternalFileUnit::GetNextInputBytes(
     const char *&p, IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input);
+  if (access == Access::Sequential &&
+      positionInRecord < recordLength.value_or(positionInRecord)) {
+    // Fast path for variable-length formatted input: the whole record
+    // must be in frame as a result of newline detection for record length.
+    p = Frame() + recordOffsetInFrame_ + positionInRecord;
+    return *recordLength - positionInRecord;
+  }
   std::size_t length{1};
   if (auto recl{EffectiveRecordLength()}) {
     if (positionInRecord < *recl) {
@@ -443,7 +450,6 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
     DoImpliedEndfile(handler);
     SetPosition(0);
     currentRecordNumber = 1;
-    leftTabLimit.reset();
     anyWriteSinceLastPositioning_ = false;
   }
 }
@@ -455,6 +461,8 @@ void ExternalFileUnit::SetPosition(std::int64_t pos) {
     directAccessRecWasSet_ = true;
   }
   BeginRecord();
+  beganReadingRecord_ = false; // for positioning after nonadvancing input
+  leftTabLimit.reset();
 }
 
 void ExternalFileUnit::Sought(std::int64_t zeroBasedPos) {

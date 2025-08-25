@@ -375,16 +375,23 @@ std::error_code SampleProfileReaderText::readImpl() {
       StringRef FName;
       DenseMap<StringRef, uint64_t> TargetCountMap;
       uint32_t Depth, LineOffset, Discriminator;
-      LineType LineTy;
+      LineType LineTy = LineType::BodyProfile;
       uint64_t FunctionHash = 0;
       uint32_t Attributes = 0;
       bool IsFlat = false;
       if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
                      Discriminator, FName, TargetCountMap, FunctionHash,
                      Attributes, IsFlat)) {
-        reportError(LineIt.line_number(),
-                    "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
-                        *LineIt);
+        switch (LineTy) {
+        case LineType::Metadata:
+          reportError(LineIt.line_number(),
+                      "Cannot parse metadata: " + *LineIt);
+          break;
+        default:
+          reportError(LineIt.line_number(),
+                      "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
+                          *LineIt);
+        }
         return sampleprof_error::malformed;
       }
       if (LineTy != LineType::Metadata && Depth == DepthMetadata) {
@@ -411,9 +418,6 @@ std::error_code SampleProfileReaderText::readImpl() {
         break;
       }
       case LineType::BodyProfile: {
-        while (InlineStack.size() > Depth) {
-          InlineStack.pop_back();
-        }
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TargetCountMap) {
           mergeSampleProfErrors(Result, FProfile.addCalledTargetSamples(
@@ -612,7 +616,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
 
     if (!isOffsetLegal(*LineOffset)) {
-      return std::error_code();
+      return sampleprof_error::illegal_line_offset;
     }
 
     auto Discriminator = readNumber<uint64_t>();
@@ -908,7 +912,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     DenseSet<uint64_t> FuncGuidsToUse;
     if (useMD5()) {
       for (auto Name : FuncsToUse)
-        FuncGuidsToUse.insert(Function::getGUID(Name));
+        FuncGuidsToUse.insert(Function::getGUIDAssumingExternalLinkage(Name));
     }
 
     // For each function in current module, load all context profiles for
@@ -1239,7 +1243,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
         return EC;
 
       if (!isOffsetLegal(*LineOffset))
-        return std::error_code();
+        return sampleprof_error::illegal_line_offset;
 
       auto Discriminator = readNumber<uint64_t>();
       if (std::error_code EC = Discriminator.getError())
@@ -1842,7 +1846,7 @@ std::error_code SampleProfileReaderGCC::readImpl() {
 }
 
 bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
-  StringRef Magic(reinterpret_cast<const char *>(Buffer.getBufferStart()));
+  StringRef Magic(Buffer.getBufferStart());
   return Magic == "adcg*704";
 }
 

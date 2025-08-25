@@ -40,7 +40,7 @@ private:
 
   void test_one_input(RoundToIntegerFunc func, F input, I expected,
                       bool expectError) {
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);
@@ -97,8 +97,8 @@ public:
     test_one_input(func, F(-1.0), I(-1), false);
     test_one_input(func, F(10.0), I(10), false);
     test_one_input(func, F(-10.0), I(-10), false);
-    test_one_input(func, F(1234.0), I(1234), false);
-    test_one_input(func, F(-1234.0), I(-1234), false);
+    test_one_input(func, F(1232.0), I(1232), false);
+    test_one_input(func, F(-1232.0), I(-1232), false);
   }
 
   void testRoundNumbers(RoundToIntegerFunc func) {
@@ -113,7 +113,8 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr int COUNT = 1'000'001;
+    // Arbitrary, trades off completeness with testing time (esp. on failure)
+    constexpr int COUNT = 1'000;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));
@@ -123,7 +124,7 @@ public:
         continue;
       // All subnormal numbers should round to zero.
       if (TestModes) {
-        if (x > 0) {
+        if (x > zero) {
           LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
           test_one_input(func, x, I(1), false);
           LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);

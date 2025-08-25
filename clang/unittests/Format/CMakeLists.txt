@@ -1,4 +1,6 @@
-add_clang_unittest(FormatTests
+# Format tests have few LLVM and Clang dependencies, so linking it as a
+# distinct target enables faster iteration times at low cost.
+add_distinct_clang_unittest(FormatTests
   BracesInserterTest.cpp
   BracesRemoverTest.cpp
   CleanupTest.cpp
@@ -25,6 +27,7 @@ add_clang_unittest(FormatTests
   MacroExpanderTest.cpp
   MatchFilePathTest.cpp
   NamespaceEndCommentsFixerTest.cpp
+  NumericLiteralInfoTest.cpp
   ObjCPropertyAttributeOrderFixerTest.cpp
   QualifierFixerTest.cpp
   SortImportsTestJS.cpp
@@ -35,6 +38,7 @@ add_clang_unittest(FormatTests
   CLANG_LIBS
   clangBasic
   clangFormat
+  clangLex
   clangRewrite
   clangToolingCore
   LLVM_COMPONENTS

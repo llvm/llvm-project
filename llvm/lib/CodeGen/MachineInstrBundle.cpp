@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -82,27 +83,6 @@ llvm::createUnpackMachineBundles(
   return new UnpackMachineBundles(std::move(Ftor));
 }
 
-namespace {
-  class FinalizeMachineBundles : public MachineFunctionPass {
-  public:
-    static char ID; // Pass identification
-    FinalizeMachineBundles() : MachineFunctionPass(ID) {
-      initializeFinalizeMachineBundlesPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnMachineFunction(MachineFunction &MF) override;
-  };
-} // end anonymous namespace
-
-char FinalizeMachineBundles::ID = 0;
-char &llvm::FinalizeMachineBundlesID = FinalizeMachineBundles::ID;
-INITIALIZE_PASS(FinalizeMachineBundles, "finalize-mi-bundles",
-                "Finalize machine instruction bundles", false, false)
-
-bool FinalizeMachineBundles::runOnMachineFunction(MachineFunction &MF) {
-  return llvm::finalizeBundles(MF);
-}
-
 /// Return the first found DebugLoc that has a DILocation, given a range of
 /// instructions. The search range is from FirstMI to LastMI (exclusive). If no
 /// DILocation is found, then an empty location is returned.
@@ -112,6 +92,22 @@ static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
     if (MII->getDebugLoc())
       return MII->getDebugLoc();
   return DebugLoc();
+}
+
+/// Check if target reg is contained in given lists, which are:
+/// LocalDefsV as given list for virtual regs
+/// LocalDefsP as given list for physical regs, in BitVector[RegUnit] form
+static bool containsReg(SmallSetVector<Register, 32> LocalDefsV,
+                        const BitVector &LocalDefsP, Register Reg,
+                        const TargetRegisterInfo *TRI) {
+  if (Reg.isPhysical()) {
+    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+      if (!LocalDefsP[Unit])
+        return false;
+
+    return true;
+  }
+  return LocalDefsV.contains(Reg);
 }
 
 /// finalizeBundle - Finalize a machine instruction bundle which includes
@@ -134,102 +130,84 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       BuildMI(MF, getDebugLoc(FirstMI, LastMI), TII->get(TargetOpcode::BUNDLE));
   Bundle.prepend(MIB);
 
-  SmallVector<Register, 32> LocalDefs;
-  SmallSet<Register, 32> LocalDefSet;
+  SmallSetVector<Register, 32> LocalDefs;
+  BitVector LocalDefsP(TRI->getNumRegUnits());
   SmallSet<Register, 8> DeadDefSet;
   SmallSet<Register, 16> KilledDefSet;
-  SmallVector<Register, 8> ExternUses;
-  SmallSet<Register, 8> ExternUseSet;
+  SmallSetVector<Register, 8> ExternUses;
   SmallSet<Register, 8> KilledUseSet;
   SmallSet<Register, 8> UndefUseSet;
-  SmallVector<MachineOperand*, 4> Defs;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
     // Debug instructions have no effects to track.
     if (MII->isDebugInstr())
       continue;
 
-    for (MachineOperand &MO : MII->operands()) {
-      if (!MO.isReg())
-        continue;
-      if (MO.isDef()) {
-        Defs.push_back(&MO);
-        continue;
-      }
-
+    for (MachineOperand &MO : MII->all_uses()) {
       Register Reg = MO.getReg();
       if (!Reg)
         continue;
 
-      if (LocalDefSet.count(Reg)) {
+      if (containsReg(LocalDefs, LocalDefsP, Reg, TRI)) {
         MO.setIsInternalRead();
-        if (MO.isKill())
+        if (MO.isKill()) {
           // Internal def is now killed.
           KilledDefSet.insert(Reg);
+        }
       } else {
-        if (ExternUseSet.insert(Reg).second) {
-          ExternUses.push_back(Reg);
+        if (ExternUses.insert(Reg)) {
           if (MO.isUndef())
             UndefUseSet.insert(Reg);
         }
-        if (MO.isKill())
+        if (MO.isKill()) {
           // External def is now killed.
           KilledUseSet.insert(Reg);
+        }
       }
     }
 
-    for (MachineOperand *MO : Defs) {
-      Register Reg = MO->getReg();
+    for (MachineOperand &MO : MII->all_defs()) {
+      Register Reg = MO.getReg();
       if (!Reg)
         continue;
 
-      if (LocalDefSet.insert(Reg).second) {
-        LocalDefs.push_back(Reg);
-        if (MO->isDead()) {
+      if (LocalDefs.insert(Reg)) {
+        if (MO.isDead())
           DeadDefSet.insert(Reg);
-        }
       } else {
         // Re-defined inside the bundle, it's no longer killed.
         KilledDefSet.erase(Reg);
-        if (!MO->isDead())
+        if (!MO.isDead()) {
           // Previously defined but dead.
           DeadDefSet.erase(Reg);
-      }
-
-      if (!MO->isDead() && Reg.isPhysical()) {
-        for (MCPhysReg SubReg : TRI->subregs(Reg)) {
-          if (LocalDefSet.insert(SubReg).second)
-            LocalDefs.push_back(SubReg);
         }
       }
+
+      if (!MO.isDead() && Reg.isPhysical()) {
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          LocalDefsP.set(Unit);
+      }
     }
 
-    Defs.clear();
-  }
-
-  SmallSet<Register, 32> Added;
-  for (Register Reg : LocalDefs) {
-    if (Added.insert(Reg).second) {
-      // If it's not live beyond end of the bundle, mark it dead.
-      bool isDead = DeadDefSet.count(Reg) || KilledDefSet.count(Reg);
-      MIB.addReg(Reg, getDefRegState(true) | getDeadRegState(isDead) |
-                 getImplRegState(true));
-    }
-  }
-
-  for (Register Reg : ExternUses) {
-    bool isKill = KilledUseSet.count(Reg);
-    bool isUndef = UndefUseSet.count(Reg);
-    MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
-               getImplRegState(true));
-  }
-
-  // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions got
-  // the property, then also set it on the bundle.
-  for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions
+    // got the property, then also set it on the bundle.
     if (MII->getFlag(MachineInstr::FrameSetup))
       MIB.setMIFlag(MachineInstr::FrameSetup);
     if (MII->getFlag(MachineInstr::FrameDestroy))
       MIB.setMIFlag(MachineInstr::FrameDestroy);
+  }
+
+  for (Register Reg : LocalDefs) {
+    // If it's not live beyond end of the bundle, mark it dead.
+    bool isDead = DeadDefSet.contains(Reg) || KilledDefSet.contains(Reg);
+    MIB.addReg(Reg, getDefRegState(true) | getDeadRegState(isDead) |
+                        getImplRegState(true));
+  }
+
+  for (Register Reg : ExternUses) {
+    bool isKill = KilledUseSet.contains(Reg);
+    bool isUndef = UndefUseSet.contains(Reg);
+    MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
+               getImplRegState(true));
   }
 }
 
@@ -378,4 +356,14 @@ PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
   }
 
   return PRI;
+}
+
+PreservedAnalyses
+llvm::FinalizeBundleTestPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &) {
+  // For testing purposes, bundle the entire contents of each basic block
+  // except for terminators.
+  for (MachineBasicBlock &MBB : MF)
+    finalizeBundle(MBB, MBB.instr_begin(), MBB.getFirstInstrTerminator());
+  return PreservedAnalyses::none();
 }

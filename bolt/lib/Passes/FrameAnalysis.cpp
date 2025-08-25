@@ -320,7 +320,6 @@ bool FrameAnalysis::updateArgsTouchedFor(const BinaryFunction &BF, MCInst &Inst,
   if (!BC.MIB->isCall(Inst))
     return false;
 
-  std::set<int64_t> Res;
   const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Inst);
   // If indirect call, we conservatively assume it accesses all stack positions
   if (TargetSymbol == nullptr) {

@@ -17,6 +17,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 

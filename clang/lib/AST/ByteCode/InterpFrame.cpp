@@ -8,7 +8,6 @@
 
 #include "InterpFrame.h"
 #include "Boolean.h"
-#include "Floating.h"
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -107,12 +106,21 @@ void InterpFrame::destroy(unsigned Idx) {
 template <typename T>
 static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
                   QualType Ty) {
-  V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  if constexpr (std::is_same_v<Pointer, T>) {
+    if (Ty->isPointerOrReferenceType())
+      V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+    else {
+      if (std::optional<APValue> RValue = V.toRValue(ASTCtx, Ty))
+        RValue->printPretty(OS, ASTCtx, Ty);
+      else
+        OS << "...";
+    }
+  } else {
+    V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  }
 }
 
 static bool shouldSkipInBacktrace(const Function *F) {
-  if (F->isBuiltin())
-    return true;
   if (F->isLambdaStaticInvoker())
     return true;
 
@@ -120,15 +128,21 @@ static bool shouldSkipInBacktrace(const Function *F) {
   if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
       FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New)
     return true;
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      MD && MD->getParent()->isAnonymousStructOrUnion())
+    return true;
+
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
+      Ctor && Ctor->isDefaulted() && Ctor->isTrivial() &&
+      Ctor->isCopyOrMoveConstructor() && Ctor->inits().empty())
+    return true;
+
   return false;
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
-  // We create frames for builtin functions as well, but we can't reliably
-  // diagnose them. The 'in call to' diagnostics for them add no value to the
-  // user _and_ it doesn't generally work since the argument types don't always
-  // match the function prototype. Just ignore them.
-  // Similarly, for lambda static invokers, we would just print __invoke().
+  // For lambda static invokers, we would just print __invoke().
   if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
     return;
 
@@ -155,7 +169,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
       print(OS, This, S.getASTContext(),
             S.getASTContext().getLValueReferenceType(
-                S.getASTContext().getRecordType(M->getParent())));
+                S.getASTContext().getCanonicalTagType(M->getParent())));
       OS << ".";
     }
   }
@@ -193,7 +207,17 @@ SourceRange InterpFrame::getCallRange() const {
       return NullRange;
     return S.EvalLocation;
   }
-  return S.getRange(Caller->Func, RetPC - sizeof(uintptr_t));
+
+  // Move up to the frame that has a valid location for the caller.
+  for (const InterpFrame *C = this; C; C = C->Caller) {
+    if (!C->RetPC)
+      continue;
+    SourceRange CallRange =
+        S.getRange(C->Caller->Func, C->RetPC - sizeof(uintptr_t));
+    if (CallRange.isValid())
+      return CallRange;
+  }
+  return S.EvalLocation;
 }
 
 const FunctionDecl *InterpFrame::getCallee() const {
@@ -205,6 +229,10 @@ const FunctionDecl *InterpFrame::getCallee() const {
 Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
   assert(Offset < Func->getFrameSize() && "Invalid local offset.");
   return Pointer(localBlock(Offset));
+}
+
+Block *InterpFrame::getLocalBlock(unsigned Offset) const {
+  return localBlock(Offset);
 }
 
 Pointer InterpFrame::getParamPointer(unsigned Off) {

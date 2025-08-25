@@ -1074,7 +1074,7 @@ define bfloat @fcvt_bf16_wu_load(ptr %p) nounwind {
 ;
 ; CHECK64ZFBFMIN-LABEL: fcvt_bf16_wu_load:
 ; CHECK64ZFBFMIN:       # %bb.0:
-; CHECK64ZFBFMIN-NEXT:    lwu a0, 0(a0)
+; CHECK64ZFBFMIN-NEXT:    lw a0, 0(a0)
 ; CHECK64ZFBFMIN-NEXT:    fcvt.s.wu fa5, a0
 ; CHECK64ZFBFMIN-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK64ZFBFMIN-NEXT:    ret
@@ -1083,7 +1083,7 @@ define bfloat @fcvt_bf16_wu_load(ptr %p) nounwind {
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    addi sp, sp, -16
 ; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ID-NEXT:    lwu a0, 0(a0)
+; RV64ID-NEXT:    lw a0, 0(a0)
 ; RV64ID-NEXT:    fcvt.s.wu fa0, a0
 ; RV64ID-NEXT:    call __truncsfbf2
 ; RV64ID-NEXT:    fmv.x.w a0, fa0

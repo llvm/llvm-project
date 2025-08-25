@@ -4,7 +4,7 @@
 define void @_test_func(<16 x half> %0) #0 {
 ; CHECK-LABEL: _test_func:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[3,3,3,3,4,5,6,7]
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm1
 ; CHECK-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm1
@@ -16,7 +16,7 @@ define void @_test_func(<16 x half> %0) #0 {
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm1
 ; CHECK-NEXT:    movl $0, %esi
 ; CHECK-NEXT:    cmovnpl %ecx, %esi
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; CHECK-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm1
 ; CHECK-NEXT:    movl $0, %edi

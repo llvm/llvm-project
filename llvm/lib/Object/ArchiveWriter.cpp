@@ -700,7 +700,7 @@ static bool isECObject(object::SymbolicFile &Obj) {
         getBitcodeTargetTriple(Obj.getMemoryBufferRef());
     if (!TripleStr)
       return false;
-    Triple T(*TripleStr);
+    Triple T(std::move(*TripleStr));
     return T.isWindowsArm64EC() || T.getArch() == Triple::x86_64;
   }
 
@@ -719,7 +719,7 @@ static bool isAnyArm64COFF(object::SymbolicFile &Obj) {
         getBitcodeTargetTriple(Obj.getMemoryBufferRef());
     if (!TripleStr)
       return false;
-    Triple T(*TripleStr);
+    Triple T(std::move(*TripleStr));
     return T.isOSWindows() && T.getArch() == Triple::aarch64;
   }
 

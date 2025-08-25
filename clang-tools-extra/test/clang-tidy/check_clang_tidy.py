@@ -105,6 +105,7 @@ class CheckRunner:
         self.fixes = MessagePrefix("CHECK-FIXES")
         self.messages = MessagePrefix("CHECK-MESSAGES")
         self.notes = MessagePrefix("CHECK-NOTES")
+        self.match_partial_fixes = args.match_partial_fixes
 
         file_name_with_extension = self.assume_file_name or self.input_file_name
         _, extension = os.path.splitext(file_name_with_extension)
@@ -134,8 +135,7 @@ class CheckRunner:
                 "-fblocks",
             ] + self.clang_extra_args
 
-        if extension in [".cpp", ".hpp", ".mm"]:
-            self.clang_extra_args.append("-std=" + self.std)
+        self.clang_extra_args.append("-std=" + self.std)
 
         # Tests should not rely on STL being available, and instead provide mock
         # implementations of relevant APIs.
@@ -248,10 +248,14 @@ class CheckRunner:
             try_run(
                 [
                     "FileCheck",
-                    "-input-file=" + self.temp_file_name,
+                    "--input-file=" + self.temp_file_name,
                     self.input_file_name,
-                    "-check-prefixes=" + ",".join(self.fixes.prefixes),
-                    "-strict-whitespace",
+                    "--check-prefixes=" + ",".join(self.fixes.prefixes),
+                    (
+                        "--match-full-lines"
+                        if not self.match_partial_fixes
+                        else "--strict-whitespace"  # Keeping past behavior.
+                    ),
                 ]
             )
 
@@ -369,10 +373,23 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
     parser.add_argument(
         "-std",
         type=csv,
-        default=["c++11-or-later"],
+        default=None,
         help="Passed to clang. Special -or-later values are expanded.",
     )
-    return parser.parse_known_args()
+    parser.add_argument(
+        "--match-partial-fixes",
+        action="store_true",
+        help="allow partial line matches for fixes",
+    )
+
+    args, extra_args = parser.parse_known_args()
+    if args.std is None:
+        _, extension = os.path.splitext(args.assume_filename or args.input_file_name)
+        args.std = [
+            "c++11-or-later" if extension in [".cpp", ".hpp", ".mm"] else "c99-or-later"
+        ]
+
+    return (args, extra_args)
 
 
 def main() -> None:

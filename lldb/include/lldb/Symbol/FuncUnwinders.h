@@ -51,8 +51,6 @@ public:
   std::shared_ptr<const UnwindPlan>
   GetUnwindPlanArchitectureDefaultAtFunctionEntry(lldb_private::Thread &thread);
 
-  Address &GetFirstNonPrologueInsn(Target &target);
-
   const Address &GetFunctionStartAddress() const;
 
   bool ContainsAddress(const Address &addr) const {
@@ -60,19 +58,6 @@ public:
       return range.ContainsFileAddress(addr);
     });
   }
-
-  // A function may have a Language Specific Data Area specified -- a block of
-  // data in
-  // the object file which is used in the processing of an exception throw /
-  // catch. If any of the UnwindPlans have the address of the LSDA region for
-  // this function, this will return it.
-  Address GetLSDAAddress(Target &target);
-
-  // A function may have a Personality Routine associated with it -- used in the
-  // processing of throwing an exception.  If any of the UnwindPlans have the
-  // address of the personality routine, this will return it.  Read the target-
-  // pointer at this address to get the personality function address.
-  Address GetPersonalityRoutinePtrAddress(Target &target);
 
   // The following methods to retrieve specific unwind plans should rarely be
   // used. Instead, clients should ask for the *behavior* they are looking for,
@@ -126,10 +111,6 @@ private:
 
   /// The address ranges of the function.
   AddressRanges m_ranges;
-
-  /// The smallest address range covering the entire function.
-  /// DEPRECATED: Use m_ranges instead.
-  AddressRange m_range;
 
   std::recursive_mutex m_mutex;
 

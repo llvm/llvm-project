@@ -1,0 +1,54 @@
+# REQUIRES: system-darwin
+
+# Tests whether the expression evaluator can handle the `NS_ENUM`/`NS_OPTIONS`
+# typedefs from Objective-C `CoreFoundation`.
+# Here `module.h` mimicks the `NS_OPTIONS` typedef from `CoreFoundation`.
+# 
+# The `ClangModulesDeclVendor` currently compiles modules as
+# C++, so the `MyInt` Clang decl in the module will be a `TypedefType`,
+# while the DWARF AST parser will produce an `EnumType` (since that's what
+# the debug-info says). When the `ASTImporter` imports these decls into the
+# scratch AST, it will fail to re-use one or the other decl because they
+# aren't structurally equivalent (one is a typedef, the other an enum),
+# so we end up with two conflicting `MyInt` declarations in the scratch AST
+# and the expression fails to run due to ambiguity in name lookup.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.m -fmodules -fcxx-modules -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.m
+
+#import "module.h"
+
+int main() {
+    MyInt i;
+    return i;
+}
+
+#--- module.h
+
+#if (__cplusplus)
+typedef int MyInt;
+enum : MyInt { CASE };
+#else
+typedef enum MyInt : int MyInt;
+enum MyInt : int { CASE };
+#endif
+
+#--- module.modulemap
+module Int {
+    header "module.h"
+}
+
+#--- commands.input
+
+break set -n main
+run
+expression -l objective-c -- (MyInt)5
+
+# CHECK: error: reference to 'MyInt' is ambiguous 
+# CHECK: error: reference to 'MyInt' is ambiguous 
+# CHECK: note: note: candidate found by name lookup is 'MyInt' 
+# CHECK: note: note: candidate found by name lookup is 'MyInt' 

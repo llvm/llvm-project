@@ -15,30 +15,13 @@
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
+#include "sanitizer_common/sanitizer_glibc_version.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
 #include "rtsan/rtsan.h"
 
 #if SANITIZER_APPLE
-
-#if TARGET_OS_MAC
-// On MacOS OSSpinLockLock is deprecated and no longer present in the headers,
-// but the symbol still exists on the system. Forward declare here so we
-// don't get compilation errors.
-#include <stdint.h>
-extern "C" {
-typedef int32_t OSSpinLock;
-void OSSpinLockLock(volatile OSSpinLock *__lock);
-// A pointer to this type is in the interface for `_os_nospin_lock_lock`, but
-// it's an internal implementation detail of `os/lock.c` on Darwin, and
-// therefore not available in any headers. As a workaround, we forward declare
-// it here, which is enough to facilitate interception of _os_nospin_lock_lock.
-struct _os_nospin_lock_s;
-using _os_nospin_lock_t = _os_nospin_lock_s *;
-}
-#endif // TARGET_OS_MAC
-
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
 #endif // SANITIZER_APPLE
@@ -64,11 +47,40 @@ using _os_nospin_lock_t = _os_nospin_lock_s *;
 
 using namespace __sanitizer;
 
+DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, usize size)
+DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
+
 namespace {
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
   static bool UseImpl() { return !__rtsan_is_initialized(); }
 };
 } // namespace
+
+// See note in tsan as to why this is necessary
+static pthread_cond_t *init_cond(pthread_cond_t *c, bool force = false) {
+  if (!common_flags()->legacy_pthread_cond)
+    return c;
+
+  atomic_uintptr_t *p = (atomic_uintptr_t *)c;
+  uptr cond = atomic_load(p, memory_order_acquire);
+  if (!force && cond != 0)
+    return (pthread_cond_t *)cond;
+  void *newcond = WRAP(malloc)(sizeof(pthread_cond_t));
+  internal_memset(newcond, 0, sizeof(pthread_cond_t));
+  if (atomic_compare_exchange_strong(p, &cond, (uptr)newcond,
+                                     memory_order_acq_rel))
+    return (pthread_cond_t *)newcond;
+  WRAP(free)(newcond);
+  return (pthread_cond_t *)cond;
+}
+
+static void destroy_cond(pthread_cond_t *cond) {
+  if (common_flags()->legacy_pthread_cond) {
+    // Free our aux cond and zero the pointer to not leave dangling pointers.
+    WRAP(free)(cond);
+    atomic_store((atomic_uintptr_t *)cond, 0, memory_order_relaxed);
+  }
+}
 
 // Filesystem
 
@@ -717,15 +729,28 @@ INTERCEPTOR(mode_t, umask, mode_t cmask) {
 #pragma clang diagnostic push
 // OSSpinLockLock is deprecated, but still in use in libc++
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#undef OSSpinLockLock
+
 INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
   __rtsan_notify_intercepted_call("OSSpinLockLock");
   return REAL(OSSpinLockLock)(lock);
 }
-#pragma clang diagnostic pop
+
 #define RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK INTERCEPT_FUNCTION(OSSpinLockLock)
 #else
 #define RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK
 #endif // SANITIZER_APPLE
+
+#if SANITIZER_APPLE
+// _os_nospin_lock_lock may replace OSSpinLockLock due to deprecation macro.
+typedef volatile OSSpinLock *_os_nospin_lock_t;
+
+INTERCEPTOR(void, _os_nospin_lock_lock, _os_nospin_lock_t lock) {
+  __rtsan_notify_intercepted_call("_os_nospin_lock_lock");
+  return REAL(_os_nospin_lock_lock)(lock);
+}
+#pragma clang diagnostic pop // "-Wdeprecated-declarations"
+#endif                       // SANITIZER_APPLE
 
 #if SANITIZER_APPLE
 INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
@@ -733,10 +758,6 @@ INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
   return REAL(os_unfair_lock_lock)(lock);
 }
 
-INTERCEPTOR(void, _os_nospin_lock_lock, _os_nospin_lock_t lock) {
-  __rtsan_notify_intercepted_call("_os_nospin_lock_lock");
-  return REAL(_os_nospin_lock_lock)(lock);
-}
 #define RTSAN_MAYBE_INTERCEPT_OS_UNFAIR_LOCK_LOCK                              \
   INTERCEPT_FUNCTION(os_unfair_lock_lock)
 #else
@@ -775,26 +796,45 @@ INTERCEPTOR(int, pthread_join, pthread_t thread, void **value_ptr) {
   return REAL(pthread_join)(thread, value_ptr);
 }
 
+INTERCEPTOR(int, pthread_cond_init, pthread_cond_t *cond,
+            const pthread_condattr_t *a) {
+  __rtsan_notify_intercepted_call("pthread_cond_init");
+  pthread_cond_t *c = init_cond(cond, true);
+  return REAL(pthread_cond_init)(c, a);
+}
+
 INTERCEPTOR(int, pthread_cond_signal, pthread_cond_t *cond) {
   __rtsan_notify_intercepted_call("pthread_cond_signal");
-  return REAL(pthread_cond_signal)(cond);
+  pthread_cond_t *c = init_cond(cond);
+  return REAL(pthread_cond_signal)(c);
 }
 
 INTERCEPTOR(int, pthread_cond_broadcast, pthread_cond_t *cond) {
   __rtsan_notify_intercepted_call("pthread_cond_broadcast");
-  return REAL(pthread_cond_broadcast)(cond);
+  pthread_cond_t *c = init_cond(cond);
+  return REAL(pthread_cond_broadcast)(c);
 }
 
 INTERCEPTOR(int, pthread_cond_wait, pthread_cond_t *cond,
             pthread_mutex_t *mutex) {
   __rtsan_notify_intercepted_call("pthread_cond_wait");
-  return REAL(pthread_cond_wait)(cond, mutex);
+  pthread_cond_t *c = init_cond(cond);
+  return REAL(pthread_cond_wait)(c, mutex);
 }
 
 INTERCEPTOR(int, pthread_cond_timedwait, pthread_cond_t *cond,
             pthread_mutex_t *mutex, const timespec *ts) {
   __rtsan_notify_intercepted_call("pthread_cond_timedwait");
-  return REAL(pthread_cond_timedwait)(cond, mutex, ts);
+  pthread_cond_t *c = init_cond(cond);
+  return REAL(pthread_cond_timedwait)(c, mutex, ts);
+}
+
+INTERCEPTOR(int, pthread_cond_destroy, pthread_cond_t *cond) {
+  __rtsan_notify_intercepted_call("pthread_cond_destroy");
+  pthread_cond_t *c = init_cond(cond);
+  int res = REAL(pthread_cond_destroy)(c);
+  destroy_cond(c);
+  return res;
 }
 
 INTERCEPTOR(int, pthread_rwlock_rdlock, pthread_rwlock_t *lock) {
@@ -877,6 +917,48 @@ INTERCEPTOR(void, free, void *ptr) {
 
   return REAL(free)(ptr);
 }
+
+#if SANITIZER_INTERCEPT_FREE_SIZED
+INTERCEPTOR(void, free_sized, void *ptr, SIZE_T size) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+
+  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
+  // a no-op (and thus real-time safe). This can be confirmed for looking at
+  // __libc_free in the glibc source.
+  if (ptr != nullptr)
+    __rtsan_notify_intercepted_call("free_sized");
+
+  if (REAL(free_sized))
+    return REAL(free_sized)(ptr, size);
+  return REAL(free)(ptr);
+}
+#define RTSAN_MAYBE_INTERCEPT_FREE_SIZED INTERCEPT_FUNCTION(free_sized)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FREE_SIZED
+#endif
+
+#if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+INTERCEPTOR(void, free_aligned_sized, void *ptr, SIZE_T alignment,
+            SIZE_T size) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+
+  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
+  // a no-op (and thus real-time safe). This can be confirmed for looking at
+  // __libc_free in the glibc source.
+  if (ptr != nullptr)
+    __rtsan_notify_intercepted_call("free_aligned_sized");
+
+  if (REAL(free_aligned_sized))
+    return REAL(free_aligned_sized)(ptr, alignment, size);
+  return REAL(free)(ptr);
+}
+#define RTSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED                               \
+  INTERCEPT_FUNCTION(free_aligned_sized)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED
+#endif
 
 INTERCEPTOR(void *, malloc, SIZE_T size) {
   if (DlsymAlloc::Use())
@@ -1502,6 +1584,8 @@ INTERCEPTOR(INT_TYPE_SYSCALL, syscall, INT_TYPE_SYSCALL number, ...) {
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
   INTERCEPT_FUNCTION(free);
+  RTSAN_MAYBE_INTERCEPT_FREE_SIZED;
+  RTSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED;
   INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(realloc);
   INTERCEPT_FUNCTION(reallocf);
@@ -1606,10 +1690,26 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_mutex_lock);
   INTERCEPT_FUNCTION(pthread_mutex_unlock);
   INTERCEPT_FUNCTION(pthread_join);
+
+  // See the comment in tsan_interceptors_posix.cpp.
+#if SANITIZER_GLIBC && !__GLIBC_PREREQ(2, 36) &&                               \
+    (defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 ||          \
+     defined(__s390x__))
+  INTERCEPT_FUNCTION_VER(pthread_cond_init, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_signal, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_broadcast, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_wait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_timedwait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_destroy, "GLIBC_2.3.2");
+#else
+  INTERCEPT_FUNCTION(pthread_cond_init);
   INTERCEPT_FUNCTION(pthread_cond_signal);
   INTERCEPT_FUNCTION(pthread_cond_broadcast);
   INTERCEPT_FUNCTION(pthread_cond_wait);
   INTERCEPT_FUNCTION(pthread_cond_timedwait);
+  INTERCEPT_FUNCTION(pthread_cond_destroy);
+#endif
+
   INTERCEPT_FUNCTION(pthread_rwlock_rdlock);
   INTERCEPT_FUNCTION(pthread_rwlock_unlock);
   INTERCEPT_FUNCTION(pthread_rwlock_wrlock);

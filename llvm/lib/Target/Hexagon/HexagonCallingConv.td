@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-class CCIfArgIsVarArg<CCAction A>
-  : CCIf<"State.isVarArg() && "
-         "ValNo >= static_cast<HexagonCCState&>(State)"
-         ".getNumNamedVarArgParams()", A>;
-
 def CC_HexagonStack: CallingConv<[
   CCIfType<[i32,v2i16,v4i8],
     CCAssignToStack<4,4>>,
@@ -28,7 +23,7 @@ def CC_Hexagon_Legacy: CallingConv<[
 
   CCIfByVal<
     CCPassByVal<8,8>>,
-  CCIfArgIsVarArg<
+  CCIfArgVarArg<
     CCDelegateTo<CC_HexagonStack>>,
 
   // Pass split values in pairs, allocate odd register if necessary.
@@ -58,13 +53,14 @@ def CC_Hexagon: CallingConv<[
 
   CCIfByVal<
     CCPassByVal<8,1>>,
-  CCIfArgIsVarArg<
+  CCIfArgVarArg<
     CCDelegateTo<CC_HexagonStack>>,
 
   // Pass split values in pairs, allocate odd register if necessary.
   CCIfType<[i32],
     CCIfSplit<
       CCCustom<"CC_SkipOdd">>>,
+  CCIfType<[v2i1],  CCPromoteToType<v2i32>>,
   CCIfType<[v4i1],  CCPromoteToType<v4i16>>,
   CCIfType<[v8i1],  CCPromoteToType<v8i8>>,
 

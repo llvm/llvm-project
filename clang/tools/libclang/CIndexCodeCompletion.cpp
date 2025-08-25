@@ -256,8 +256,8 @@ struct AllocatedCXCodeCompleteResults : public CXCodeCompleteResults {
   /// Allocated API-exposed wrappters for Diagnostics.
   SmallVector<std::unique_ptr<CXStoredDiagnostic>, 8> DiagnosticsWrappers;
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
-  
+  DiagnosticOptions DiagOpts;
+
   /// Diag object
   IntrusiveRefCntPtr<DiagnosticsEngine> Diag;
   
@@ -356,11 +356,12 @@ static std::atomic<unsigned> CodeCompletionResultObjects;
 
 AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     IntrusiveRefCntPtr<FileManager> FileMgr)
-    : CXCodeCompleteResults(), DiagOpts(new DiagnosticOptions),
-      Diag(new DiagnosticsEngine(
-          IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts)),
+    : CXCodeCompleteResults(),
+      Diag(llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagnosticIDs::create(),
+                                                        DiagOpts)),
       FileMgr(std::move(FileMgr)),
-      SourceMgr(new SourceManager(*Diag, *this->FileMgr)),
+      SourceMgr(
+          llvm::makeIntrusiveRefCnt<SourceManager>(*Diag, *this->FileMgr)),
       CodeCompletionAllocator(
           std::make_shared<clang::GlobalCodeCompletionAllocator>()),
       Contexts(CXCompletionContext_Unknown),
@@ -369,7 +370,7 @@ AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     fprintf(stderr, "+++ %u completion results\n",
             ++CodeCompletionResultObjects);
 }
-  
+
 AllocatedCXCodeCompleteResults::~AllocatedCXCodeCompleteResults() {
   delete [] Results;
 
@@ -616,7 +617,7 @@ namespace {
       if (!baseType.isNull()) {
         // Get the declaration for a class/struct/union/enum type
         if (const TagType *Tag = baseType->getAs<TagType>())
-          D = Tag->getDecl();
+          D = Tag->getOriginalDecl();
         // Get the @interface declaration for a (possibly-qualified) Objective-C
         // object pointer type, e.g., NSString*
         else if (const ObjCObjectPointerType *ObjPtr = 
@@ -628,7 +629,7 @@ namespace {
         // Get the class for a C++ injected-class-name
         else if (const InjectedClassNameType *Injected =
                  baseType->getAs<InjectedClassNameType>())
-          D = Injected->getDecl();
+          D = Injected->getOriginalDecl();
       }
 
       if (D != nullptr) {
@@ -736,8 +737,8 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
   }
 
   // Parse the resulting source file to find code-completion results.
-  AllocatedCXCodeCompleteResults *Results = new AllocatedCXCodeCompleteResults(
-      &AST->getFileManager());
+  AllocatedCXCodeCompleteResults *Results =
+      new AllocatedCXCodeCompleteResults(AST->getFileManagerPtr());
   Results->Results = nullptr;
   Results->NumResults = 0;
   
@@ -763,8 +764,8 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                     RemappedFiles, (options & CXCodeComplete_IncludeMacros),
                     (options & CXCodeComplete_IncludeCodePatterns),
                     IncludeBriefComments, Capture,
-                    CXXIdx->getPCHContainerOperations(), *Results->Diag,
-                    Results->LangOpts, *Results->SourceMgr, *Results->FileMgr,
+                    CXXIdx->getPCHContainerOperations(), Results->Diag,
+                    Results->LangOpts, Results->SourceMgr, Results->FileMgr,
                     Results->Diagnostics, Results->TemporaryBuffers,
                     /*SyntaxOnlyAction=*/nullptr);
 

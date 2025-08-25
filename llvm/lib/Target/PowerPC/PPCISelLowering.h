@@ -430,20 +430,6 @@ namespace llvm {
     /// optimizations due to constant folding.
     VADD_SPLAT,
 
-    /// CHAIN = SC CHAIN, Imm128 - System call.  The 7-bit unsigned
-    /// operand identifies the operating system entry point.
-    SC,
-
-    /// CHAIN = CLRBHRB CHAIN - Clear branch history rolling buffer.
-    CLRBHRB,
-
-    /// GPRC, CHAIN = MFBHRBE CHAIN, Entry, Dummy - Move from branch
-    /// history rolling buffer entry.
-    MFBHRBE,
-
-    /// CHAIN = RFEBB CHAIN, State - Return from event-based branch.
-    RFEBB,
-
     /// VSRC, CHAIN = XXSWAPD CHAIN, VSRC - Occurs only for little
     /// endian.  Maps to an xxswapd instruction that corrects an lxvd2x
     /// or stxvd2x instruction.  The chain is necessary because the
@@ -927,6 +913,12 @@ namespace llvm {
       return true;
     }
 
+    Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
+                          AtomicOrdering Ord) const override;
+
+    Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
+                                AtomicOrdering Ord) const override;
+
     Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
                                   AtomicOrdering Ord) const override;
     Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
@@ -1082,7 +1074,7 @@ namespace llvm {
 
     /// It returns EVT::Other if the type should be determined using generic
     /// target-independent logic.
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// Is unaligned memory access allowed for the given type, and is it fast
@@ -1149,8 +1141,6 @@ namespace llvm {
 
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
-    void insertSSPDeclarations(Module &M) const override;
-    Value *getSDagStackGuard(const Module &M) const override;
 
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
@@ -1200,6 +1190,8 @@ namespace llvm {
     CCAssignFn *ccAssignFnForCall(CallingConv::ID CC, bool Return,
                                   bool IsVarArg) const;
     bool supportsTailCallFor(const CallBase *CB) const;
+
+    bool hasMultipleConditionRegisters(EVT VT) const override;
 
   private:
     struct ReuseLoadInfo {
@@ -1353,6 +1345,8 @@ namespace llvm {
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDMFVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDMFVectorStore(SDValue Op, SelectionDAG &DAG) const;
+    SDValue DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
+                          const SDLoc &dl, SelectionDAG &DAG) const;
 
     SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
@@ -1441,6 +1435,7 @@ namespace llvm {
     SDValue combineStoreFPToInt(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineFPToIntToFP(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSHL(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue combineVectorShift(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSRA(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSRL(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;

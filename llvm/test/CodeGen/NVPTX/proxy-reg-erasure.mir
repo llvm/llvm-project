@@ -33,18 +33,18 @@ debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
 registers:
-  - { id: 0, class: int32regs, preferred-register: '' }
-  - { id: 1, class: int32regs, preferred-register: '' }
-  - { id: 2, class: int32regs, preferred-register: '' }
-  - { id: 3, class: int32regs, preferred-register: '' }
-  - { id: 4, class: int32regs, preferred-register: '' }
-  - { id: 5, class: int32regs, preferred-register: '' }
-  - { id: 6, class: int32regs, preferred-register: '' }
-  - { id: 7, class: int32regs, preferred-register: '' }
-  - { id: 8, class: int32regs, preferred-register: '' }
-  - { id: 9, class: int32regs, preferred-register: '' }
-  - { id: 10, class: int32regs, preferred-register: '' }
-  - { id: 11, class: int32regs, preferred-register: '' }
+  - { id: 0, class: b32, preferred-register: '' }
+  - { id: 1, class: b32, preferred-register: '' }
+  - { id: 2, class: b32, preferred-register: '' }
+  - { id: 3, class: b32, preferred-register: '' }
+  - { id: 4, class: b32, preferred-register: '' }
+  - { id: 5, class: b32, preferred-register: '' }
+  - { id: 6, class: b32, preferred-register: '' }
+  - { id: 7, class: b32, preferred-register: '' }
+  - { id: 8, class: b32, preferred-register: '' }
+  - { id: 9, class: b32, preferred-register: '' }
+  - { id: 10, class: b32, preferred-register: '' }
+  - { id: 11, class: b32, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -66,8 +66,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -77,22 +77,22 @@ constants:       []
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    %0:int32regs, %1:int32regs, %2:int32regs, %3:int32regs = LoadParamMemV4I32 0
+    %0:b32, %1:b32, %2:b32, %3:b32 = LDV_i32_v4 0, 0, 101, 3, 32, &retval0, 0 :: (load (s128), addrspace 101)
     ; CHECK-NOT: ProxyReg
-    %4:int32regs = ProxyRegI32 killed %0
-    %5:int32regs = ProxyRegI32 killed %1
-    %6:int32regs = ProxyRegI32 killed %2
-    %7:int32regs = ProxyRegI32 killed %3
-    ; CHECK: StoreRetvalV4I32 killed %0, killed %1, killed %2, killed %3
-    StoreRetvalV4I32 killed %4, killed %5, killed %6, killed %7, 0
+    %4:b32 = ProxyRegB32 killed %0
+    %5:b32 = ProxyRegB32 killed %1
+    %6:b32 = ProxyRegB32 killed %2
+    %7:b32 = ProxyRegB32 killed %3
+    ; CHECK: STV_i32_v4 killed %0, killed %1, killed %2, killed %3
+    STV_i32_v4 killed %4, killed %5, killed %6, killed %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s128), addrspace 101)
 
-    %8:int32regs = LoadParamMemI32 0
+    %8:b32 = LD_i32 0, 0, 101, 3, 32, &retval0, 0 :: (load (s32), addrspace 101)
     ; CHECK-NOT: ProxyReg
-    %9:int32regs = ProxyRegI32 killed %8
-    %10:int32regs = ProxyRegI32 killed %9
-    %11:int32regs = ProxyRegI32 killed %10
-    ; CHECK: StoreRetvalI32 killed %8
-    StoreRetvalI32 killed %11, 0
+    %9:b32 = ProxyRegB32 killed %8
+    %10:b32 = ProxyRegB32 killed %9
+    %11:b32 = ProxyRegB32 killed %10
+    ; CHECK: ST_i32 killed %8
+    ST_i32 killed %11, 0, 0, 101, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
     Return
 
 ...

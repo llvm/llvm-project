@@ -98,6 +98,10 @@ bool fromJSON(json::Value const &Params, Request &R, json::Path P) {
   return mapRaw(Params, "arguments", R.arguments, P);
 }
 
+bool operator==(const Request &a, const Request &b) {
+  return a.seq == b.seq && a.command == b.command && a.arguments == b.arguments;
+}
+
 json::Value toJSON(const Response &R) {
   json::Object Result{{"type", "response"},
                       {"seq", 0},
@@ -163,11 +167,6 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
     return false;
   }
 
-  if (seq != 0) {
-    P.field("seq").report("expected to be '0'");
-    return false;
-  }
-
   if (R.command.empty()) {
     P.field("command").report("expected to not be ''");
     return false;
@@ -178,8 +177,13 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
     return false;
   }
 
-  return O.map("success", R.success) && O.mapOptional("message", R.message) &&
+  return O.map("success", R.success) && O.map("message", R.message) &&
          mapRaw(Params, "body", R.body, P);
+}
+
+bool operator==(const Response &a, const Response &b) {
+  return a.request_seq == b.request_seq && a.command == b.command &&
+         a.success == b.success && a.message == b.message && a.body == b.body;
 }
 
 json::Value toJSON(const ErrorMessage &EM) {
@@ -253,6 +257,10 @@ bool fromJSON(json::Value const &Params, Event &E, json::Path P) {
   return mapRaw(Params, "body", E.body, P);
 }
 
+bool operator==(const Event &a, const Event &b) {
+  return a.event == b.event && a.body == b.body;
+}
+
 bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
   json::ObjectMapper O(Params, P);
   if (!O)
@@ -284,6 +292,7 @@ bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
     PM = std::move(evt);
     return true;
   }
+  llvm_unreachable("unhandled message type request.");
 }
 
 json::Value toJSON(const Message &M) {

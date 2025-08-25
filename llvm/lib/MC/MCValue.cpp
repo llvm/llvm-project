@@ -11,7 +11,6 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -24,10 +23,10 @@ void MCValue::print(raw_ostream &OS) const {
 
   // FIXME: prints as a number, which isn't ideal. But the meaning will be
   // target-specific anyway.
-  if (getRefKind())
-    OS << ':' << getRefKind() <<  ':';
+  if (getSpecifier())
+    OS << ':' << getSpecifier() << ':';
 
-  OS << *getSymA();
+  SymA->print(OS, nullptr);
 
   if (auto *B = getSubSym()) {
     OS << " - ";
@@ -43,11 +42,3 @@ LLVM_DUMP_METHOD void MCValue::dump() const {
   print(dbgs());
 }
 #endif
-
-uint16_t MCValue::getAccessVariant() const {
-  const MCSymbolRefExpr *A = getSymA();
-  if (!A)
-    return 0;
-
-  return A->getSpecifier();
-}

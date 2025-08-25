@@ -194,13 +194,15 @@ function(darwin_filter_host_archs input output)
     endif()
   endif()
 
+  # arm64e isn't usually supported out of the box on darwin, because of ABI.
+  list(REMOVE_ITEM tmp_var arm64e)
+
   if(ARM_HOST)
     list(REMOVE_ITEM tmp_var i386)
     list(REMOVE_ITEM tmp_var x86_64)
     list(REMOVE_ITEM tmp_var x86_64h)
   else()
     list(REMOVE_ITEM tmp_var arm64)
-    list(REMOVE_ITEM tmp_var arm64e)
     execute_process(
       COMMAND sysctl hw.cpusubtype
       OUTPUT_VARIABLE SUBTYPE)

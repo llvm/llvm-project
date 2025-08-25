@@ -201,7 +201,14 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     timeoutHelper = TimeoutHelper(timeout)
     if timeout > 0:
         timeoutHelper.startTimer()
-    finalExitCode = _executeShCmd(cmd, shenv, results, timeoutHelper)
+    try:
+        finalExitCode = _executeShCmd(cmd, shenv, results, timeoutHelper)
+    except InternalShellError:
+        e = sys.exc_info()[1]
+        finalExitCode = 127
+        results.append(
+            ShellCommandResult(e.command, "", e.message, finalExitCode, False)
+        )
     timeoutHelper.cancel()
     timeoutInfo = None
     if timeoutHelper.timeoutReached():
@@ -1105,15 +1112,10 @@ def executeScriptInternal(
 
     results = []
     timeoutInfo = None
-    try:
-        shenv = ShellEnvironment(cwd, test.config.environment)
-        exitCode, timeoutInfo = executeShCmd(
-            cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
-        )
-    except InternalShellError:
-        e = sys.exc_info()[1]
-        exitCode = 127
-        results.append(ShellCommandResult(e.command, "", e.message, exitCode, False))
+    shenv = ShellEnvironment(cwd, test.config.environment)
+    exitCode, timeoutInfo = executeShCmd(
+        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+    )
 
     out = err = ""
     for i, result in enumerate(results):
@@ -1189,6 +1191,18 @@ def executeScriptInternal(
             out += "# error: command reached timeout: %s\n" % (
                 str(result.timeoutReached),
             )
+
+        if litConfig.update_tests:
+            for test_updater in litConfig.test_updaters:
+                try:
+                    update_output = test_updater(result, test)
+                except Exception as e:
+                    out += f"Exception occurred in test updater: {e}"
+                    continue
+                if update_output:
+                    for line in update_output.splitlines():
+                        out += f"# {line}\n"
+                    break
 
     return out, err, exitCode, timeoutInfo
 
@@ -2173,6 +2187,8 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     assert parsed["DEFINE:"] == script
     assert parsed["REDEFINE:"] == script
     test.xfails += parsed["XFAIL:"] or []
+    if test.exclude_xfail and test.isExpectedToFail():
+        return lit.Test.Result(Test.EXCLUDED, "excluding XFAIL tests")
     test.requires += parsed["REQUIRES:"] or []
     test.unsupported += parsed["UNSUPPORTED:"] or []
     if parsed["ALLOW_RETRIES:"]:
@@ -2290,7 +2306,9 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     if err:
         output += """Command Output (stderr):\n--\n%s\n--\n""" % (err,)
 
-    return lit.Test.Result(status, output)
+    return lit.Test.Result(
+        status, output, attempts=i + 1, max_allowed_attempts=attempts
+    )
 
 
 def executeShTest(

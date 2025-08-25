@@ -1269,11 +1269,11 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
     return OpRef::fail();
 
   if (Vb.isUndef()) {
-    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    llvm::copy(SM.Mask, NewMask.begin());
     return Va;
   }
   if (Va.isUndef()) {
-    std::copy(SM.Mask.begin(), SM.Mask.end(), NewMask.begin());
+    llvm::copy(SM.Mask, NewMask.begin());
     ShuffleVectorSDNode::commuteMask(NewMask);
     return Vb;
   }
@@ -1987,7 +1987,7 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
   // times). In such cases it will be impossible to complete this to a
   // perfect shuffle.
   SmallVector<uint32_t, 8> Sorted(Worklist);
-  llvm::sort(Sorted.begin(), Sorted.end());
+  llvm::sort(Sorted);
 
   for (unsigned I = 0, E = Sorted.size(); I != E;) {
     unsigned P = Sorted[I], Count = 1;

@@ -159,16 +159,10 @@ entry:
 }
 
 define <4 x i16> @test_vmla_laneq_s16(<4 x i16> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmla_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mla v0.4h, v1.4h, v2.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmla_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    mla v0.4h, v2.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmla_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mla v0.4h, v1.4h, v2.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %mul = mul <4 x i16> %shuffle, %b
@@ -189,16 +183,10 @@ entry:
 }
 
 define <2 x i32> @test_vmla_laneq_s32(<2 x i32> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmla_laneq_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mla v0.2s, v1.2s, v2.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmla_laneq_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    mla v0.2s, v2.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmla_laneq_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mla v0.2s, v1.2s, v2.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %mul = mul <2 x i32> %shuffle, %b
@@ -271,16 +259,10 @@ entry:
 }
 
 define <4 x i16> @test_vmls_laneq_s16(<4 x i16> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmls_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmls_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    mls v0.4h, v2.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmls_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mls v0.4h, v1.4h, v2.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %mul = mul <4 x i16> %shuffle, %b
@@ -301,16 +283,10 @@ entry:
 }
 
 define <2 x i32> @test_vmls_laneq_s32(<2 x i32> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmls_laneq_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mls v0.2s, v1.2s, v2.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmls_laneq_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    mls v0.2s, v2.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmls_laneq_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mls v0.2s, v1.2s, v2.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %mul = mul <2 x i32> %shuffle, %b
@@ -427,16 +403,10 @@ entry:
 }
 
 define <4 x i16> @test_vmul_laneq_s16(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-GI-NEXT:    mul v0.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mul v0.4h, v0.4h, v1.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %mul = mul <4 x i16> %shuffle, %a
@@ -455,16 +425,10 @@ entry:
 }
 
 define <2 x i32> @test_vmul_laneq_s32(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    mul v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mul v0.2s, v0.2s, v1.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %mul = mul <2 x i32> %shuffle, %a
@@ -483,16 +447,10 @@ entry:
 }
 
 define <4 x i16> @test_vmul_laneq_u16(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-GI-NEXT:    mul v0.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mul v0.4h, v0.4h, v1.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %mul = mul <4 x i16> %shuffle, %a
@@ -511,16 +469,10 @@ entry:
 }
 
 define <2 x i32> @test_vmul_laneq_u32(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_u32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_u32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    mul v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_u32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mul v0.2s, v0.2s, v1.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %mul = mul <2 x i32> %shuffle, %a
@@ -567,16 +519,10 @@ entry:
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
 
 define <2 x float> @test_vfma_laneq_f32(<2 x float> %a, <2 x float> %b, <4 x float> %v) {
-; CHECK-SD-LABEL: test_vfma_laneq_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmla v0.2s, v1.2s, v2.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vfma_laneq_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    fmla v0.2s, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vfma_laneq_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmla v0.2s, v1.2s, v2.s[3]
+; CHECK-NEXT:    ret
 entry:
   %lane = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> <i32 3, i32 3>
   %0 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %lane, <2 x float> %b, <2 x float> %a)
@@ -834,16 +780,10 @@ entry:
 }
 
 define <4 x i32> @test_vmlal_laneq_s16(<4 x i32> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmlal_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smlal v0.4s, v1.4h, v2.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlal_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlal_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %b, <4 x i16> %shuffle)
@@ -852,16 +792,10 @@ entry:
 }
 
 define <2 x i64> @test_vmlal_laneq_s32(<2 x i64> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmlal_laneq_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smlal v0.2d, v1.2s, v2.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlal_laneq_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlal_laneq_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smlal v0.2d, v1.2s, v2.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %b, <2 x i32> %shuffle)
@@ -920,8 +854,7 @@ define <4 x i32> @test_vmlal_high_laneq_s16(<4 x i32> %a, <8 x i16> %b, <8 x i16
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -940,8 +873,7 @@ define <2 x i64> @test_vmlal_high_laneq_s32(<2 x i64> %a, <4 x i32> %b, <4 x i32
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_s32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -978,16 +910,10 @@ entry:
 }
 
 define <4 x i32> @test_vmlsl_laneq_s16(<4 x i32> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmlsl_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smlsl v0.4s, v1.4h, v2.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlsl_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlsl_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smlsl v0.4s, v1.4h, v2.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %b, <4 x i16> %shuffle)
@@ -996,16 +922,10 @@ entry:
 }
 
 define <2 x i64> @test_vmlsl_laneq_s32(<2 x i64> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmlsl_laneq_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smlsl v0.2d, v1.2s, v2.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlsl_laneq_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlsl_laneq_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smlsl v0.2d, v1.2s, v2.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %b, <2 x i32> %shuffle)
@@ -1064,8 +984,7 @@ define <4 x i32> @test_vmlsl_high_laneq_s16(<4 x i32> %a, <8 x i16> %b, <8 x i16
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1084,8 +1003,7 @@ define <2 x i64> @test_vmlsl_high_laneq_s32(<2 x i64> %a, <4 x i32> %b, <4 x i32
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_s32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -1122,16 +1040,10 @@ entry:
 }
 
 define <4 x i32> @test_vmlal_laneq_u16(<4 x i32> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmlal_laneq_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umlal v0.4s, v1.4h, v2.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlal_laneq_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlal_laneq_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umlal v0.4s, v1.4h, v2.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %b, <4 x i16> %shuffle)
@@ -1140,16 +1052,10 @@ entry:
 }
 
 define <2 x i64> @test_vmlal_laneq_u32(<2 x i64> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmlal_laneq_u32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umlal v0.2d, v1.2s, v2.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlal_laneq_u32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlal_laneq_u32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umlal v0.2d, v1.2s, v2.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %b, <2 x i32> %shuffle)
@@ -1208,8 +1114,7 @@ define <4 x i32> @test_vmlal_high_laneq_u16(<4 x i32> %a, <8 x i16> %b, <8 x i16
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_u16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1228,8 +1133,7 @@ define <2 x i64> @test_vmlal_high_laneq_u32(<2 x i64> %a, <4 x i32> %b, <4 x i32
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_u32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -1266,16 +1170,10 @@ entry:
 }
 
 define <4 x i32> @test_vmlsl_laneq_u16(<4 x i32> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmlsl_laneq_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umlsl v0.4s, v1.4h, v2.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlsl_laneq_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlsl_laneq_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umlsl v0.4s, v1.4h, v2.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %b, <4 x i16> %shuffle)
@@ -1284,16 +1182,10 @@ entry:
 }
 
 define <2 x i64> @test_vmlsl_laneq_u32(<2 x i64> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmlsl_laneq_u32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umlsl v0.2d, v1.2s, v2.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlsl_laneq_u32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlsl_laneq_u32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umlsl v0.2d, v1.2s, v2.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %b, <2 x i32> %shuffle)
@@ -1352,8 +1244,7 @@ define <4 x i32> @test_vmlsl_high_laneq_u16(<4 x i32> %a, <8 x i16> %b, <8 x i16
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_u16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[7]
-; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1372,8 +1263,7 @@ define <2 x i64> @test_vmlsl_high_laneq_u32(<2 x i64> %a, <4 x i32> %b, <4 x i32
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_u32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[3]
-; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -1512,16 +1402,10 @@ entry:
 }
 
 define <4 x i32> @test_vmull_laneq_s16(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmull_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smull v0.4s, v0.4h, v1.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmull_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmull_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smull v0.4s, v0.4h, v1.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %a, <4 x i16> %shuffle)
@@ -1529,16 +1413,10 @@ entry:
 }
 
 define <2 x i64> @test_vmull_laneq_s32(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmull_laneq_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smull v0.2d, v0.2s, v1.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmull_laneq_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmull_laneq_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %a, <2 x i32> %shuffle)
@@ -1546,16 +1424,10 @@ entry:
 }
 
 define <4 x i32> @test_vmull_laneq_u16(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmull_laneq_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull v0.4s, v0.4h, v1.h[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmull_laneq_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmull_laneq_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umull v0.4s, v0.4h, v1.h[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %a, <4 x i16> %shuffle)
@@ -1563,16 +1435,10 @@ entry:
 }
 
 define <2 x i64> @test_vmull_laneq_u32(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmull_laneq_u32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull v0.2d, v0.2s, v1.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmull_laneq_u32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmull_laneq_u32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umull v0.2d, v0.2s, v1.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %a, <2 x i32> %shuffle)
@@ -1588,8 +1454,7 @@ define <4 x i32> @test_vmull_high_laneq_s16(<8 x i16> %a, <8 x i16> %v) {
 ; CHECK-GI-LABEL: test_vmull_high_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1607,8 +1472,7 @@ define <2 x i64> @test_vmull_high_laneq_s32(<4 x i32> %a, <4 x i32> %v) {
 ; CHECK-GI-LABEL: test_vmull_high_laneq_s32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -1626,8 +1490,7 @@ define <4 x i32> @test_vmull_high_laneq_u16(<8 x i16> %a, <8 x i16> %v) {
 ; CHECK-GI-LABEL: test_vmull_high_laneq_u16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1645,8 +1508,7 @@ define <2 x i64> @test_vmull_high_laneq_u32(<4 x i32> %a, <4 x i32> %v) {
 ; CHECK-GI-LABEL: test_vmull_high_laneq_u32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -1816,16 +1678,10 @@ entry:
 }
 
 define <4 x i32> @test_vqdmull_laneq_s16(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vqdmull_laneq_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqdmull v0.4s, v0.4h, v1.h[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqdmull_laneq_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[3]
-; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqdmull_laneq_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmull v0.4s, v0.4h, v1.h[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %vqdmull2.i = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %a, <4 x i16> %shuffle)
@@ -1833,16 +1689,10 @@ entry:
 }
 
 define <2 x i64> @test_vqdmull_laneq_s32(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vqdmull_laneq_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqdmull v0.2d, v0.2s, v1.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqdmull_laneq_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqdmull_laneq_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmull v0.2d, v0.2s, v1.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> <i32 3, i32 3>
   %vqdmull2.i = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %a, <2 x i32> %shuffle)
@@ -1898,8 +1748,7 @@ define <4 x i32> @test_vqdmull_high_laneq_s16(<8 x i16> %a, <8 x i16> %v) {
 ; CHECK-GI-LABEL: test_vqdmull_high_laneq_s16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.h[7]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1917,8 +1766,7 @@ define <2 x i64> @test_vqdmull_high_laneq_s32(<4 x i32> %a, <4 x i32> %v) {
 ; CHECK-GI-LABEL: test_vqdmull_high_laneq_s32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.s[3]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -2322,16 +2170,10 @@ entry:
 }
 
 define <2 x float> @test_vmul_laneq_f32(<2 x float> %a, <4 x float> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v1.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    fmul v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> <i32 3, i32 3>
   %mul = fmul <2 x float> %shuffle, %a
@@ -2553,16 +2395,10 @@ entry:
 }
 
 define <2 x float> @test_vmulx_laneq_f32(<2 x float> %a, <4 x float> %v) {
-; CHECK-SD-LABEL: test_vmulx_laneq_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmulx v0.2s, v0.2s, v1.s[3]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmulx_laneq_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[3]
-; CHECK-GI-NEXT:    fmulx v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmulx_laneq_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmulx v0.2s, v0.2s, v1.s[3]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> <i32 3, i32 3>
   %vmulx2.i = tail call <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float> %a, <2 x float> %shuffle)
@@ -2657,16 +2493,10 @@ entry:
 }
 
 define <4 x i16> @test_vmla_laneq_s16_0(<4 x i16> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmla_laneq_s16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mla v0.4h, v1.4h, v2.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmla_laneq_s16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    mla v0.4h, v2.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmla_laneq_s16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mla v0.4h, v1.4h, v2.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %mul = mul <4 x i16> %shuffle, %b
@@ -2687,16 +2517,10 @@ entry:
 }
 
 define <2 x i32> @test_vmla_laneq_s32_0(<2 x i32> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmla_laneq_s32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mla v0.2s, v1.2s, v2.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmla_laneq_s32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    mla v0.2s, v2.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmla_laneq_s32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mla v0.2s, v1.2s, v2.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %mul = mul <2 x i32> %shuffle, %b
@@ -2769,16 +2593,10 @@ entry:
 }
 
 define <4 x i16> @test_vmls_laneq_s16_0(<4 x i16> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmls_laneq_s16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmls_laneq_s16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    mls v0.4h, v2.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmls_laneq_s16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mls v0.4h, v1.4h, v2.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %mul = mul <4 x i16> %shuffle, %b
@@ -2799,16 +2617,10 @@ entry:
 }
 
 define <2 x i32> @test_vmls_laneq_s32_0(<2 x i32> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmls_laneq_s32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mls v0.2s, v1.2s, v2.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmls_laneq_s32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    mls v0.2s, v2.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmls_laneq_s32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mls v0.2s, v1.2s, v2.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %mul = mul <2 x i32> %shuffle, %b
@@ -2925,16 +2737,10 @@ entry:
 }
 
 define <4 x i16> @test_vmul_laneq_s16_0(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_s16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_s16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    mul v0.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_s16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mul v0.4h, v0.4h, v1.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %mul = mul <4 x i16> %shuffle, %a
@@ -2953,16 +2759,10 @@ entry:
 }
 
 define <2 x i32> @test_vmul_laneq_s32_0(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_s32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_s32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    mul v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_s32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mul v0.2s, v0.2s, v1.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %mul = mul <2 x i32> %shuffle, %a
@@ -2981,16 +2781,10 @@ entry:
 }
 
 define <4 x i16> @test_vmul_laneq_u16_0(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_u16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_u16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    mul v0.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_u16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mul v0.4h, v0.4h, v1.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %mul = mul <4 x i16> %shuffle, %a
@@ -3009,16 +2803,10 @@ entry:
 }
 
 define <2 x i32> @test_vmul_laneq_u32_0(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_u32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_u32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    mul v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_u32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mul v0.2s, v0.2s, v1.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %mul = mul <2 x i32> %shuffle, %a
@@ -3061,16 +2849,10 @@ entry:
 }
 
 define <2 x float> @test_vfma_laneq_f32_0(<2 x float> %a, <2 x float> %b, <4 x float> %v) {
-; CHECK-SD-LABEL: test_vfma_laneq_f32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmla v0.2s, v1.2s, v2.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vfma_laneq_f32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    fmla v0.2s, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vfma_laneq_f32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmla v0.2s, v1.2s, v2.s[0]
+; CHECK-NEXT:    ret
 entry:
   %lane = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> zeroinitializer
   %0 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %lane, <2 x float> %b, <2 x float> %a)
@@ -3188,16 +2970,10 @@ entry:
 }
 
 define <4 x i32> @test_vmlal_laneq_s16_0(<4 x i32> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmlal_laneq_s16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smlal v0.4s, v1.4h, v2.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlal_laneq_s16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlal_laneq_s16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %b, <4 x i16> %shuffle)
@@ -3206,16 +2982,10 @@ entry:
 }
 
 define <2 x i64> @test_vmlal_laneq_s32_0(<2 x i64> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmlal_laneq_s32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smlal v0.2d, v1.2s, v2.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlal_laneq_s32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlal_laneq_s32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smlal v0.2d, v1.2s, v2.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %b, <2 x i32> %shuffle)
@@ -3274,8 +3044,7 @@ define <4 x i32> @test_vmlal_high_laneq_s16_0(<4 x i32> %a, <8 x i16> %b, <8 x i
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    smlal v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -3294,8 +3063,7 @@ define <2 x i64> @test_vmlal_high_laneq_s32_0(<2 x i64> %a, <4 x i32> %b, <4 x i
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    smlal v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -3332,16 +3100,10 @@ entry:
 }
 
 define <4 x i32> @test_vmlsl_laneq_s16_0(<4 x i32> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmlsl_laneq_s16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smlsl v0.4s, v1.4h, v2.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlsl_laneq_s16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlsl_laneq_s16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smlsl v0.4s, v1.4h, v2.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %b, <4 x i16> %shuffle)
@@ -3350,16 +3112,10 @@ entry:
 }
 
 define <2 x i64> @test_vmlsl_laneq_s32_0(<2 x i64> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmlsl_laneq_s32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smlsl v0.2d, v1.2s, v2.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlsl_laneq_s32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlsl_laneq_s32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smlsl v0.2d, v1.2s, v2.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %b, <2 x i32> %shuffle)
@@ -3418,8 +3174,7 @@ define <4 x i32> @test_vmlsl_high_laneq_s16_0(<4 x i32> %a, <8 x i16> %b, <8 x i
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    smlsl v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -3438,8 +3193,7 @@ define <2 x i64> @test_vmlsl_high_laneq_s32_0(<2 x i64> %a, <4 x i32> %b, <4 x i
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    smlsl v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -3476,16 +3230,10 @@ entry:
 }
 
 define <4 x i32> @test_vmlal_laneq_u16_0(<4 x i32> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmlal_laneq_u16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umlal v0.4s, v1.4h, v2.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlal_laneq_u16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlal_laneq_u16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umlal v0.4s, v1.4h, v2.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %b, <4 x i16> %shuffle)
@@ -3494,16 +3242,10 @@ entry:
 }
 
 define <2 x i64> @test_vmlal_laneq_u32_0(<2 x i64> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmlal_laneq_u32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umlal v0.2d, v1.2s, v2.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlal_laneq_u32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlal_laneq_u32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umlal v0.2d, v1.2s, v2.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %b, <2 x i32> %shuffle)
@@ -3562,8 +3304,7 @@ define <4 x i32> @test_vmlal_high_laneq_u16_0(<4 x i32> %a, <8 x i16> %b, <8 x i
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_u16_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    umlal v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -3582,8 +3323,7 @@ define <2 x i64> @test_vmlal_high_laneq_u32_0(<2 x i64> %a, <4 x i32> %b, <4 x i
 ; CHECK-GI-LABEL: test_vmlal_high_laneq_u32_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    umlal v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -3620,16 +3360,10 @@ entry:
 }
 
 define <4 x i32> @test_vmlsl_laneq_u16_0(<4 x i32> %a, <4 x i16> %b, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmlsl_laneq_u16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umlsl v0.4s, v1.4h, v2.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlsl_laneq_u16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlsl_laneq_u16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umlsl v0.4s, v1.4h, v2.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %b, <4 x i16> %shuffle)
@@ -3638,16 +3372,10 @@ entry:
 }
 
 define <2 x i64> @test_vmlsl_laneq_u32_0(<2 x i64> %a, <2 x i32> %b, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmlsl_laneq_u32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umlsl v0.2d, v1.2s, v2.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmlsl_laneq_u32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmlsl_laneq_u32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umlsl v0.2d, v1.2s, v2.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %b, <2 x i32> %shuffle)
@@ -3706,8 +3434,7 @@ define <4 x i32> @test_vmlsl_high_laneq_u16_0(<4 x i32> %a, <8 x i16> %b, <8 x i
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_u16_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    umlsl v0.4s, v1.4h, v2.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -3726,8 +3453,7 @@ define <2 x i64> @test_vmlsl_high_laneq_u32_0(<2 x i64> %a, <4 x i32> %b, <4 x i
 ; CHECK-GI-LABEL: test_vmlsl_high_laneq_u32_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    umlsl v0.2d, v1.2s, v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -3866,16 +3592,10 @@ entry:
 }
 
 define <4 x i32> @test_vmull_laneq_s16_0(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmull_laneq_s16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smull v0.4s, v0.4h, v1.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmull_laneq_s16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmull_laneq_s16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smull v0.4s, v0.4h, v1.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %a, <4 x i16> %shuffle)
@@ -3883,16 +3603,10 @@ entry:
 }
 
 define <2 x i64> @test_vmull_laneq_s32_0(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmull_laneq_s32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smull v0.2d, v0.2s, v1.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmull_laneq_s32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmull_laneq_s32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %a, <2 x i32> %shuffle)
@@ -3900,16 +3614,10 @@ entry:
 }
 
 define <4 x i32> @test_vmull_laneq_u16_0(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vmull_laneq_u16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull v0.4s, v0.4h, v1.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmull_laneq_u16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmull_laneq_u16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umull v0.4s, v0.4h, v1.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %a, <4 x i16> %shuffle)
@@ -3917,16 +3625,10 @@ entry:
 }
 
 define <2 x i64> @test_vmull_laneq_u32_0(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vmull_laneq_u32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull v0.2d, v0.2s, v1.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmull_laneq_u32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmull_laneq_u32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umull v0.2d, v0.2s, v1.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %a, <2 x i32> %shuffle)
@@ -3942,8 +3644,7 @@ define <4 x i32> @test_vmull_high_laneq_s16_0(<8 x i16> %a, <8 x i16> %v) {
 ; CHECK-GI-LABEL: test_vmull_high_laneq_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -3961,8 +3662,7 @@ define <2 x i64> @test_vmull_high_laneq_s32_0(<4 x i32> %a, <4 x i32> %v) {
 ; CHECK-GI-LABEL: test_vmull_high_laneq_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -3980,8 +3680,7 @@ define <4 x i32> @test_vmull_high_laneq_u16_0(<8 x i16> %a, <8 x i16> %v) {
 ; CHECK-GI-LABEL: test_vmull_high_laneq_u16_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -3999,8 +3698,7 @@ define <2 x i64> @test_vmull_high_laneq_u32_0(<4 x i32> %a, <4 x i32> %v) {
 ; CHECK-GI-LABEL: test_vmull_high_laneq_u32_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -4170,16 +3868,10 @@ entry:
 }
 
 define <4 x i32> @test_vqdmull_laneq_s16_0(<4 x i16> %a, <8 x i16> %v) {
-; CHECK-SD-LABEL: test_vqdmull_laneq_s16_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqdmull v0.4s, v0.4h, v1.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqdmull_laneq_s16_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqdmull_laneq_s16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmull v0.4s, v0.4h, v1.h[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> zeroinitializer
   %vqdmull2.i = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %a, <4 x i16> %shuffle)
@@ -4187,16 +3879,10 @@ entry:
 }
 
 define <2 x i64> @test_vqdmull_laneq_s32_0(<2 x i32> %a, <4 x i32> %v) {
-; CHECK-SD-LABEL: test_vqdmull_laneq_s32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqdmull v0.2d, v0.2s, v1.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vqdmull_laneq_s32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vqdmull_laneq_s32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqdmull v0.2d, v0.2s, v1.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> undef, <2 x i32> zeroinitializer
   %vqdmull2.i = tail call <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32> %a, <2 x i32> %shuffle)
@@ -4252,8 +3938,7 @@ define <4 x i32> @test_vqdmull_high_laneq_s16_0(<8 x i16> %a, <8 x i16> %v) {
 ; CHECK-GI-LABEL: test_vqdmull_high_laneq_s16_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.8h, v1.h[0]
-; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    sqdmull v0.4s, v0.4h, v1.h[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -4271,8 +3956,7 @@ define <2 x i64> @test_vqdmull_high_laneq_s32_0(<4 x i32> %a, <4 x i32> %v) {
 ; CHECK-GI-LABEL: test_vqdmull_high_laneq_s32_0:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    sqdmull v0.2d, v0.2s, v1.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -4402,16 +4086,10 @@ entry:
 }
 
 define <2 x float> @test_vmul_laneq_f32_0(<2 x float> %a, <4 x float> %v) {
-; CHECK-SD-LABEL: test_vmul_laneq_f32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmul_laneq_f32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    fmul v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmul_laneq_f32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> zeroinitializer
   %mul = fmul <2 x float> %shuffle, %a
@@ -4498,16 +4176,10 @@ entry:
 }
 
 define <2 x float> @test_vmulx_laneq_f32_0(<2 x float> %a, <4 x float> %v) {
-; CHECK-SD-LABEL: test_vmulx_laneq_f32_0:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmulx v0.2s, v0.2s, v1.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_vmulx_laneq_f32_0:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-GI-NEXT:    fmulx v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_vmulx_laneq_f32_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmulx v0.2s, v0.2s, v1.s[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> zeroinitializer
   %vmulx2.i = tail call <2 x float> @llvm.aarch64.neon.fmulx.v2f32(<2 x float> %a, <2 x float> %shuffle)

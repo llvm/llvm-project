@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=aarch64 -filetype=obj %s | llvm-readobj -r - | FileCheck %s
-# RUN: not llvm-mc -triple=aarch64 -filetype=obj %s --defsym ERR=1 -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+# RUN: not llvm-mc -triple=aarch64 %s --defsym ERR=1 -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 # RUN: not llvm-mc -triple=aarch64 -filetype=obj %s --defsym OBJERR=1 -o /dev/null 2>&1 | FileCheck %s --check-prefix=OBJERR --implicit-check-not=error:
 
 .globl g
@@ -34,18 +34,20 @@ data1:
 
 ## Test parse-time errors
 .ifdef ERR
-# ERR: [[#@LINE+1]]:14: error: invalid variant 'pageoff'
-.word extern@pageoff
+# ERR: [[#@LINE+1]]:9: error: @ specifier only allowed after a symbol
+.quad 3@plt - .
+
+# ERR: [[#@LINE+1]]:9: error: expected ')'
+.quad (l@plt - .)
 .endif
 
-## Test assemble-time errors
 .ifdef OBJERR
-# OBJERR: [[#@LINE+1]]:7: error: symbol 'und' can not be undefined in a subtraction expression
-.word extern@plt - und
-
 .quad g@plt - .
 
 .word extern@gotpcrel - .
+
+# OBJERR: [[#@LINE+1]]:7: error: symbol 'und' can not be undefined in a subtraction expression
+.word extern@plt - und
 
 # OBJERR: [[#@LINE+1]]:7: error: symbol 'und' can not be undefined in a subtraction expression
 .word extern@gotpcrel - und

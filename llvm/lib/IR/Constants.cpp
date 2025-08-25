@@ -1507,7 +1507,9 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   if (V->isNullValue())
     return ConstantAggregateZero::get(VTy);
-  else if (isa<UndefValue>(V))
+  if (isa<PoisonValue>(V))
+    return PoisonValue::get(VTy);
+  if (isa<UndefValue>(V))
     return UndefValue::get(VTy);
 
   Type *IdxTy = Type::getInt64Ty(VTy->getContext());
@@ -1565,6 +1567,7 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::SIToFP:
   case Instruction::FPToUI:
   case Instruction::FPToSI:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -1709,6 +1712,8 @@ void ConstantVector::destroyConstantImpl() {
 
 Constant *Constant::getSplatValue(bool AllowPoison) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
+  if (isa<PoisonValue>(this))
+    return PoisonValue::get(cast<VectorType>(getType())->getElementType());
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
   if (auto *CI = dyn_cast<ConstantInt>(this))
@@ -1891,78 +1896,62 @@ void PoisonValue::destroyConstantImpl() {
   getContext().pImpl->PVConstants.erase(getType());
 }
 
-BlockAddress *BlockAddress::get(BasicBlock *BB) {
-  assert(BB->getParent() && "Block must have a parent");
-  return get(BB->getParent(), BB);
-}
-
-BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
-  BlockAddress *&BA =
-    F->getContext().pImpl->BlockAddresses[std::make_pair(F, BB)];
+BlockAddress *BlockAddress::get(Type *Ty, BasicBlock *BB) {
+  BlockAddress *&BA = BB->getContext().pImpl->BlockAddresses[BB];
   if (!BA)
-    BA = new BlockAddress(F, BB);
-
-  assert(BA->getFunction() == F && "Basic block moved between functions");
+    BA = new BlockAddress(Ty, BB);
   return BA;
 }
 
-BlockAddress::BlockAddress(Function *F, BasicBlock *BB)
-    : Constant(PointerType::get(F->getContext(), F->getAddressSpace()),
-               Value::BlockAddressVal, AllocMarker) {
-  setOperand(0, F);
-  setOperand(1, BB);
-  BB->AdjustBlockAddressRefCount(1);
+BlockAddress *BlockAddress::get(BasicBlock *BB) {
+  assert(BB->getParent() && "Block must have a parent");
+  return get(BB->getParent()->getType(), BB);
+}
+
+BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
+  assert(BB->getParent() == F && "Block not part of specified function");
+  return get(BB->getParent()->getType(), BB);
+}
+
+BlockAddress::BlockAddress(Type *Ty, BasicBlock *BB)
+    : Constant(Ty, Value::BlockAddressVal, AllocMarker) {
+  setOperand(0, BB);
+  BB->setHasAddressTaken(true);
 }
 
 BlockAddress *BlockAddress::lookup(const BasicBlock *BB) {
   if (!BB->hasAddressTaken())
     return nullptr;
 
-  const Function *F = BB->getParent();
-  assert(F && "Block must have a parent");
-  BlockAddress *BA =
-      F->getContext().pImpl->BlockAddresses.lookup(std::make_pair(F, BB));
+  BlockAddress *BA = BB->getContext().pImpl->BlockAddresses.lookup(BB);
   assert(BA && "Refcount and block address map disagree!");
   return BA;
 }
 
 /// Remove the constant from the constant table.
 void BlockAddress::destroyConstantImpl() {
-  getFunction()->getType()->getContext().pImpl
-    ->BlockAddresses.erase(std::make_pair(getFunction(), getBasicBlock()));
-  getBasicBlock()->AdjustBlockAddressRefCount(-1);
+  getType()->getContext().pImpl->BlockAddresses.erase(getBasicBlock());
+  getBasicBlock()->setHasAddressTaken(false);
 }
 
 Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
-  // This could be replacing either the Basic Block or the Function.  In either
-  // case, we have to remove the map entry.
-  Function *NewF = getFunction();
-  BasicBlock *NewBB = getBasicBlock();
-
-  if (From == NewF)
-    NewF = cast<Function>(To->stripPointerCasts());
-  else {
-    assert(From == NewBB && "From does not match any operand");
-    NewBB = cast<BasicBlock>(To);
-  }
+  assert(From == getBasicBlock());
+  BasicBlock *NewBB = cast<BasicBlock>(To);
 
   // See if the 'new' entry already exists, if not, just update this in place
   // and return early.
-  BlockAddress *&NewBA =
-    getContext().pImpl->BlockAddresses[std::make_pair(NewF, NewBB)];
+  BlockAddress *&NewBA = getContext().pImpl->BlockAddresses[NewBB];
   if (NewBA)
     return NewBA;
 
-  getBasicBlock()->AdjustBlockAddressRefCount(-1);
+  getBasicBlock()->setHasAddressTaken(false);
 
   // Remove the old entry, this can't cause the map to rehash (just a
   // tombstone will get added).
-  getContext().pImpl->BlockAddresses.erase(std::make_pair(getFunction(),
-                                                          getBasicBlock()));
+  getContext().pImpl->BlockAddresses.erase(getBasicBlock());
   NewBA = this;
-  setOperand(0, NewF);
-  setOperand(1, NewBB);
-  getBasicBlock()->AdjustBlockAddressRefCount(1);
+  setOperand(0, NewBB);
+  getBasicBlock()->setHasAddressTaken(true);
 
   // If we just want to keep the existing value, then return null.
   // Callers know that this means we shouldn't delete this value.
@@ -2235,6 +2224,8 @@ Constant *ConstantExpr::getCast(unsigned oc, Constant *C, Type *Ty,
     llvm_unreachable("Invalid cast opcode");
   case Instruction::Trunc:
     return getTrunc(C, Ty, OnlyIfReduced);
+  case Instruction::PtrToAddr:
+    return getPtrToAddr(C, Ty, OnlyIfReduced);
   case Instruction::PtrToInt:
     return getPtrToInt(C, Ty, OnlyIfReduced);
   case Instruction::IntToPtr:
@@ -2290,6 +2281,20 @@ Constant *ConstantExpr::getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced) {
          "SrcTy must be larger than DestTy for Trunc!");
 
   return getFoldedCast(Instruction::Trunc, C, Ty, OnlyIfReduced);
+}
+
+Constant *ConstantExpr::getPtrToAddr(Constant *C, Type *DstTy,
+                                     bool OnlyIfReduced) {
+  assert(C->getType()->isPtrOrPtrVectorTy() &&
+         "PtrToAddr source must be pointer or pointer vector");
+  assert(DstTy->isIntOrIntVectorTy() &&
+         "PtrToAddr destination must be integer or integer vector");
+  assert(isa<VectorType>(C->getType()) == isa<VectorType>(DstTy));
+  if (isa<VectorType>(C->getType()))
+    assert(cast<VectorType>(C->getType())->getElementCount() ==
+               cast<VectorType>(DstTy)->getElementCount() &&
+           "Invalid cast between a different number of vector elements");
+  return getFoldedCast(Instruction::PtrToAddr, C, DstTy, OnlyIfReduced);
 }
 
 Constant *ConstantExpr::getPtrToInt(Constant *C, Type *DstTy,
@@ -2447,6 +2452,7 @@ bool ConstantExpr::isDesirableCastOp(unsigned Opcode) {
   case Instruction::FPToSI:
     return false;
   case Instruction::Trunc:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -2469,6 +2475,7 @@ bool ConstantExpr::isSupportedCastOp(unsigned Opcode) {
   case Instruction::FPToSI:
     return false;
   case Instruction::Trunc:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -2892,9 +2899,7 @@ Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
 
   // Do a lookup to see if we have already formed one of these.
   auto &Slot =
-      *Ty->getContext()
-           .pImpl->CDSConstants.insert(std::make_pair(Elements, nullptr))
-           .first;
+      *Ty->getContext().pImpl->CDSConstants.try_emplace(Elements).first;
 
   // The bucket can point to a linked list of different CDS's that have the same
   // body but different types.  For example, 0,0,0,1 could be a 4 element array
@@ -3415,6 +3420,7 @@ Instruction *ConstantExpr::getAsInstruction() const {
 
   switch (getOpcode()) {
   case Instruction::Trunc:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:

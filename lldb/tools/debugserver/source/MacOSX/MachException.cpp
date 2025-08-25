@@ -15,7 +15,6 @@
 #include "DNBError.h"
 #include "DNBLog.h"
 #include "MachProcess.h"
-#include "PThreadMutex.h"
 #include "SysSignal.h"
 #include <cerrno>
 #include <inttypes.h>

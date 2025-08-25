@@ -274,6 +274,7 @@ bool RISCVFoldMemOffset::runOnMachineFunction(MachineFunction &MF) {
         MemMI->getOperand(2).setImm(NewOffset);
 
       MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
+      MRI.clearKillFlags(MI.getOperand(1).getReg());
       MI.eraseFromParent();
     }
   }

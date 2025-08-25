@@ -42,8 +42,7 @@ define <vscale x 8 x i16> @srshl_abs_positive_merge(<vscale x 8 x i16> %a, <vsca
 
 define <vscale x 8 x i16> @srshl_abs_all_active_pred(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i1> %pg2) #0 {
 ; CHECK-LABEL: @srshl_abs_all_active_pred(
-; CHECK-NEXT:    [[PG:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-; CHECK-NEXT:    [[ABS:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.abs.nxv8i16(<vscale x 8 x i16> [[B:%.*]], <vscale x 8 x i1> [[PG]], <vscale x 8 x i16> [[A:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.abs.nxv8i16(<vscale x 8 x i16> [[B:%.*]], <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.nxv8i16(<vscale x 8 x i1> [[PG2:%.*]], <vscale x 8 x i16> [[ABS]], <vscale x 8 x i16> splat (i16 2))
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;

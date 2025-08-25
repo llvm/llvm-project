@@ -51,6 +51,8 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(
     const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCXX11AttributeInfo(const llvm::RecordKeeper &Records,
                             llvm::raw_ostream &OS);
+void EmitAttributeSpellingList(const llvm::RecordKeeper &Records,
+                               llvm::raw_ostream &OS);
 void EmitClangAttrClass(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS);
 void EmitClangAttrImpl(const llvm::RecordKeeper &Records,
@@ -102,6 +104,8 @@ void EmitClangDiagGroups(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
 void EmitClangDiagsIndexName(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
+void EmitClangDiagsInterface(llvm::raw_ostream &OS,
+                             const std::string &Component);
 
 void EmitClangSACheckers(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
