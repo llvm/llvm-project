@@ -2480,9 +2480,7 @@ protected:
   }
 
 public:
-  VPInterleaveBase *clone() override {
-    llvm_unreachable("cloning not supported");
-  }
+  VPInterleaveBase *clone() override = 0;
 
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPInterleaveSC ||
