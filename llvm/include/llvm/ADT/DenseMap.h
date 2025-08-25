@@ -629,8 +629,9 @@ private:
     return TheBucket;
   }
 
-  template <typename LookupKeyT> BucketT *doFind(const LookupKeyT &Val) {
-    BucketT *BucketsPtr = getBuckets();
+  template <typename LookupKeyT>
+  const BucketT *doFind(const LookupKeyT &Val) const {
+    const BucketT *BucketsPtr = getBuckets();
     const unsigned NumBuckets = getNumBuckets();
     if (NumBuckets == 0)
       return nullptr;
@@ -639,7 +640,7 @@ private:
     unsigned BucketNo = getHashValue(Val) & (NumBuckets - 1);
     unsigned ProbeAmt = 1;
     while (true) {
-      BucketT *Bucket = BucketsPtr + BucketNo;
+      const BucketT *Bucket = BucketsPtr + BucketNo;
       if (LLVM_LIKELY(KeyInfoT::isEqual(Val, Bucket->getFirst())))
         return Bucket;
       if (LLVM_LIKELY(KeyInfoT::isEqual(Bucket->getFirst(), EmptyKey)))
@@ -652,9 +653,9 @@ private:
     }
   }
 
-  template <typename LookupKeyT>
-  const BucketT *doFind(const LookupKeyT &Val) const {
-    return const_cast<DenseMapBase *>(this)->doFind(Val); // NOLINT
+  template <typename LookupKeyT> BucketT *doFind(const LookupKeyT &Val) {
+    return const_cast<BucketT *>(
+        static_cast<const DenseMapBase *>(this)->doFind(Val));
   }
 
   /// LookupBucketFor - Lookup the appropriate bucket for Val, returning it in
