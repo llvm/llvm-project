@@ -49,32 +49,17 @@ uint32_t DIType::getAlignInBits() const {
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
 
-DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
-    : Variable(DII->getVariable()),
-      Fragment(DII->getExpression()->getFragmentInfo()),
-      InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
-
 DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
     : Variable(DVR->getVariable()),
       Fragment(DVR->getExpression()->getFragmentInfo()),
       InlinedAt(DVR->getDebugLoc().getInlinedAt()) {}
 
-DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
-    : DebugVariable(DVI->getVariable(), std::nullopt,
-                    DVI->getDebugLoc()->getInlinedAt()) {}
-
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
                        ArrayRef<Metadata *> MDs, bool ImplicitCode)
-    : MDNode(C, DILocationKind, Storage, MDs)
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-      ,
-      AtomGroup(AtomGroup), AtomRank(AtomRank)
-#endif
-{
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+    : MDNode(C, DILocationKind, Storage, MDs), AtomGroup(AtomGroup),
+      AtomRank(AtomRank) {
   assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
-#endif
   if (AtomGroup)
     C.updateDILocationAtomGroupWaterline(AtomGroup + 1);
 
@@ -1021,7 +1006,7 @@ DIDerivedType *DIDerivedType::getImpl(
 std::optional<DIDerivedType::PtrAuthData>
 DIDerivedType::getPtrAuthData() const {
   return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
-             ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
+             ? std::make_optional<PtrAuthData>(SubclassData32)
              : std::nullopt;
 }
 

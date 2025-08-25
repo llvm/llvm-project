@@ -239,8 +239,8 @@ for.body:                                         ; preds = %entry, %for.body
 define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %2 = alloca [101 x i32], align 4
   %3 = alloca [21 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 404, ptr nonnull %2)
-  call void @llvm.lifetime.start.p0(i64 84, ptr nonnull %3)
+  call void @llvm.lifetime.start.p0(ptr nonnull %2)
+  call void @llvm.lifetime.start.p0(ptr nonnull %3)
   %4 = icmp sgt i32 %0, 0
   br i1 %4, label %5, label %159
 
@@ -433,8 +433,8 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   br label %159
 
 159:                                              ; preds = %158, %1
-  call void @llvm.lifetime.end.p0(i64 84, ptr nonnull %3)
-  call void @llvm.lifetime.end.p0(i64 404, ptr nonnull %2)
+  call void @llvm.lifetime.end.p0(ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(ptr nonnull %2)
   ret i32 0
 }
 
@@ -472,7 +472,7 @@ while.end:                                        ; preds = %while.end.loopexit,
 }
 
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
+declare void @llvm.lifetime.end.p0(ptr)
 
 attributes #0 = { "target-features"="+mve.fp" }

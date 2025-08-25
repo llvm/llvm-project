@@ -791,6 +791,8 @@ void ModuleTranslation::forgetMapping(Region &region) {
           globalsMapping.erase(&op);
         if (isa<LLVM::AliasOp>(op))
           aliasesMapping.erase(&op);
+        if (isa<LLVM::IFuncOp>(op))
+          ifuncMapping.erase(&op);
         if (isa<LLVM::CallOp>(op))
           callMapping.erase(&op);
         llvm::append_range(
@@ -1756,6 +1758,48 @@ ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
   return attrBuilder;
 }
 
+LogicalResult ModuleTranslation::convertArgAndResultAttrs(
+    ArgAndResultAttrsOpInterface attrsOp, llvm::CallBase *call,
+    ArrayRef<unsigned> immArgPositions) {
+  // Convert the argument attributes.
+  if (ArrayAttr argAttrsArray = attrsOp.getArgAttrsAttr()) {
+    unsigned argAttrIdx = 0;
+    llvm::SmallDenseSet<unsigned> immArgPositionsSet(immArgPositions.begin(),
+                                                     immArgPositions.end());
+    for (unsigned argIdx : llvm::seq<unsigned>(call->arg_size())) {
+      if (argAttrIdx >= argAttrsArray.size())
+        break;
+      // Skip immediate arguments (they have no entries in argAttrsArray).
+      if (immArgPositionsSet.contains(argIdx))
+        continue;
+      // Skip empty argument attributes.
+      auto argAttrs = cast<DictionaryAttr>(argAttrsArray[argAttrIdx++]);
+      if (argAttrs.empty())
+        continue;
+      // Convert and add attributes to the call instruction.
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          convertParameterAttrs(attrsOp->getLoc(), argAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      call->addParamAttrs(argIdx, *attrBuilder);
+    }
+  }
+
+  // Convert the result attributes.
+  if (ArrayAttr resAttrsArray = attrsOp.getResAttrsAttr()) {
+    if (!resAttrsArray.empty()) {
+      auto resAttrs = cast<DictionaryAttr>(resAttrsArray[0]);
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          convertParameterAttrs(attrsOp->getLoc(), resAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      call->addRetAttrs(*attrBuilder);
+    }
+  }
+
+  return success();
+}
+
 FailureOr<llvm::AttrBuilder>
 ModuleTranslation::convertParameterAttrs(Location loc,
                                          DictionaryAttr paramAttrs) {
@@ -1863,6 +1907,33 @@ LogicalResult ModuleTranslation::convertFunctions() {
 
     if (failed(convertOneFunction(function)))
       return failure();
+  }
+
+  return success();
+}
+
+LogicalResult ModuleTranslation::convertIFuncs() {
+  for (auto op : getModuleBody(mlirModule).getOps<IFuncOp>()) {
+    llvm::Type *type = convertType(op.getIFuncType());
+    llvm::GlobalValue::LinkageTypes linkage =
+        convertLinkageToLLVM(op.getLinkage());
+    llvm::Constant *resolver;
+    if (auto *resolverFn = lookupFunction(op.getResolver())) {
+      resolver = cast<llvm::Constant>(resolverFn);
+    } else {
+      Operation *aliasOp = symbolTable().lookupSymbolIn(parentLLVMModule(op),
+                                                        op.getResolverAttr());
+      resolver = cast<llvm::Constant>(lookupAlias(aliasOp));
+    }
+
+    auto *ifunc =
+        llvm::GlobalIFunc::create(type, op.getAddressSpace(), linkage,
+                                  op.getSymName(), resolver, llvmModule.get());
+    addRuntimePreemptionSpecifier(op.getDsoLocal(), ifunc);
+    ifunc->setUnnamedAddr(convertUnnamedAddrToLLVM(op.getUnnamedAddr()));
+    ifunc->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
+
+    ifuncMapping.try_emplace(op, ifunc);
   }
 
   return success();
@@ -2247,6 +2318,25 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
     llvmModule->setTargetTriple(
         llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue()));
 
+  if (auto asmAttr = m->getDiscardableAttr(
+          LLVM::LLVMDialect::getModuleLevelAsmAttrName())) {
+    auto asmArrayAttr = dyn_cast<ArrayAttr>(asmAttr);
+    if (!asmArrayAttr) {
+      m->emitError("expected an array attribute for a module level asm");
+      return nullptr;
+    }
+
+    for (Attribute elt : asmArrayAttr) {
+      auto asmStrAttr = dyn_cast<StringAttr>(elt);
+      if (!asmStrAttr) {
+        m->emitError(
+            "expected a string attribute for each entry of a module level asm");
+        return nullptr;
+      }
+      llvmModule->appendModuleInlineAsm(asmStrAttr.getValue());
+    }
+  }
+
   return llvmModule;
 }
 
@@ -2284,6 +2374,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
   if (failed(translator.convertGlobalsAndAliases()))
     return nullptr;
+  if (failed(translator.convertIFuncs()))
+    return nullptr;
   if (failed(translator.createTBAAMetadata()))
     return nullptr;
   if (failed(translator.createIdentMetadata()))
@@ -2296,7 +2388,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // Convert other top-level operations if possible.
   for (Operation &o : getModuleBody(module).getOperations()) {
     if (!isa<LLVM::LLVMFuncOp, LLVM::AliasOp, LLVM::GlobalOp,
-             LLVM::GlobalCtorsOp, LLVM::GlobalDtorsOp, LLVM::ComdatOp>(&o) &&
+             LLVM::GlobalCtorsOp, LLVM::GlobalDtorsOp, LLVM::ComdatOp,
+             LLVM::IFuncOp>(&o) &&
         !o.hasTrait<OpTrait::IsTerminator>() &&
         failed(translator.convertOperation(o, llvmBuilder))) {
       return nullptr;

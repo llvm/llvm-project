@@ -141,6 +141,22 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
   return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
 
+WebAssemblyTTIImpl::TTI::MemCmpExpansionOptions
+WebAssemblyTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+
+  Options.AllowOverlappingLoads = true;
+
+  if (ST->hasSIMD128())
+    Options.LoadSizes.push_back(16);
+
+  Options.LoadSizes.append({8, 4, 2, 1});
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+
+  return Options;
+}
+
 InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
     unsigned Opcode, Type *Ty, Align Alignment, unsigned AddressSpace,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpInfo,

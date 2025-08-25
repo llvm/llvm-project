@@ -107,7 +107,6 @@ static bool verifyTypeParamCount(mlir::Type inType, unsigned numParams) {
 }
 
 /// Parser shared by Alloca and Allocmem
-///
 /// operation ::= %res = (`fir.alloca` | `fir.allocmem`) $in_type
 ///                      ( `(` $typeparams `)` )? ( `,` $shape )?
 ///                      attr-dict-without-keyword
@@ -782,8 +781,8 @@ private:
       return nullptr;
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(shapeShiftOp);
-    return rewriter.create<fir::ShapeOp>(shapeShiftOp.getLoc(),
-                                         shapeShiftOp.getExtents());
+    return fir::ShapeOp::create(rewriter, shapeShiftOp.getLoc(),
+                                shapeShiftOp.getExtents());
   }
 
   static std::optional<IndicesVectorTy>
@@ -797,19 +796,19 @@ private:
       rewriter.setInsertionPoint(op);
       mlir::Location loc = op->getLoc();
       mlir::Type idxTy = rewriter.getIndexType();
-      mlir::Value one = rewriter.create<mlir::arith::ConstantOp>(
-          loc, idxTy, rewriter.getIndexAttr(1));
+      mlir::Value one = mlir::arith::ConstantOp::create(
+          rewriter, loc, idxTy, rewriter.getIndexAttr(1));
       rewriter.restoreInsertionPoint(savedIP);
       auto nsw = mlir::arith::IntegerOverflowFlags::nsw;
 
       IndicesVectorTy shiftedIndices;
       for (auto [lb, idx] : llvm::zip(lbs, indices)) {
-        mlir::Value extLb = rewriter.create<fir::ConvertOp>(loc, idxTy, lb);
-        mlir::Value extIdx = rewriter.create<fir::ConvertOp>(loc, idxTy, idx);
+        mlir::Value extLb = fir::ConvertOp::create(rewriter, loc, idxTy, lb);
+        mlir::Value extIdx = fir::ConvertOp::create(rewriter, loc, idxTy, idx);
         mlir::Value add =
-            rewriter.create<mlir::arith::AddIOp>(loc, extIdx, extLb, nsw);
+            mlir::arith::AddIOp::create(rewriter, loc, extIdx, extLb, nsw);
         mlir::Value sub =
-            rewriter.create<mlir::arith::SubIOp>(loc, add, one, nsw);
+            mlir::arith::SubIOp::create(rewriter, loc, add, one, nsw);
         shiftedIndices.push_back(sub);
       }
 
@@ -1942,6 +1941,128 @@ llvm::LogicalResult fir::EmboxOp::verify() {
                "cannot convert between volatile and non-volatile types:")
            << " " << getMemref().getType() << " " << getResult().getType();
   return mlir::success();
+}
+
+/// Returns true if \p extent matches the extent of the \p box's
+/// dimension \p dim.
+static bool isBoxExtent(mlir::Value box, std::int64_t dim, mlir::Value extent) {
+  if (auto op = extent.getDefiningOp<fir::BoxDimsOp>())
+    if (op.getVal() == box && op.getExtent() == extent)
+      if (auto dimOperand = fir::getIntIfConstant(op.getDim()))
+        return *dimOperand == dim;
+  return false;
+}
+
+/// Returns true if \p lb matches the lower bound of the \p box's
+/// dimension \p dim. If \p mayHaveNonDefaultLowerBounds is false,
+/// then \p lb may be an integer constant 1.
+static bool isBoxLb(mlir::Value box, std::int64_t dim, mlir::Value lb,
+                    bool mayHaveNonDefaultLowerBounds = true) {
+  if (auto op = lb.getDefiningOp<fir::BoxDimsOp>()) {
+    if (op.getVal() == box && op.getLowerBound() == lb)
+      if (auto dimOperand = fir::getIntIfConstant(op.getDim()))
+        return *dimOperand == dim;
+  } else if (!mayHaveNonDefaultLowerBounds) {
+    if (auto constantLb = fir::getIntIfConstant(lb))
+      return *constantLb == 1;
+  }
+  return false;
+}
+
+/// Returns true if \p ub matches the upper bound of the \p box's
+/// dimension \p dim. If \p mayHaveNonDefaultLowerBounds is false,
+/// then the dimension's lower bound may be an integer constant 1.
+/// Note that the upper bound is usually a result of computation
+/// involving the lower bound and the extent, and the function
+/// tries its best to recognize the computation pattern.
+/// The conservative result 'false' does not necessarily mean
+/// that \p ub is not an actual upper bound value.
+static bool isBoxUb(mlir::Value box, std::int64_t dim, mlir::Value ub,
+                    bool mayHaveNonDefaultLowerBounds = true) {
+  if (auto sub1 = ub.getDefiningOp<mlir::arith::SubIOp>()) {
+    auto one = fir::getIntIfConstant(sub1.getOperand(1));
+    if (!one || *one != 1)
+      return false;
+    if (auto add = sub1.getOperand(0).getDefiningOp<mlir::arith::AddIOp>())
+      if ((isBoxLb(box, dim, add.getOperand(0)) &&
+           isBoxExtent(box, dim, add.getOperand(1))) ||
+          (isBoxLb(box, dim, add.getOperand(1)) &&
+           isBoxExtent(box, dim, add.getOperand(0))))
+        return true;
+  } else if (!mayHaveNonDefaultLowerBounds) {
+    return isBoxExtent(box, dim, ub);
+  }
+  return false;
+}
+
+/// Checks if the given \p sliceOp specifies a contiguous
+/// array slice. If \p checkWhole is true, then the check
+/// is done for all dimensions, otherwise, only for the innermost
+/// dimension.
+/// The simplest way to prove that this is an contiguous slice
+/// is to check whether the slice stride(s) is 1.
+/// For more complex cases, extra information must be provided
+/// by the caller:
+///   * \p origBox - if not null, then the source array is represented
+///     with this !fir.box value. The box is used to recognize
+///     the full dimension slices, which are specified by the triplets
+///     computed from the dimensions' lower bounds and extents.
+///   * \p mayHaveNonDefaultLowerBounds may be set to false to indicate
+///     that the source entity has default lower bounds, so the full
+///     dimension slices computations may use 1 for the lower bound.
+static bool isContiguousArraySlice(fir::SliceOp sliceOp, bool checkWhole = true,
+                                   mlir::Value origBox = nullptr,
+                                   bool mayHaveNonDefaultLowerBounds = true) {
+  if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
+    // TODO: generalize code for the triples analysis with
+    // hlfir::designatePreservesContinuity, especially when
+    // recognition of the whole dimension slices is added.
+    auto triples = sliceOp.getTriples();
+    assert((triples.size() % 3) == 0 && "invalid triples size");
+
+    // A slice with step=1 in the innermost dimension preserves
+    // the continuity of the array in the innermost dimension.
+    // If checkWhole is false, then check only the innermost slice triples.
+    std::size_t checkUpTo = checkWhole ? triples.size() : 3;
+    checkUpTo = std::min(checkUpTo, triples.size());
+    for (std::size_t i = 0; i < checkUpTo; i += 3) {
+      if (triples[i] != triples[i + 1]) {
+        // This is a section of the dimension. Only allow it
+        // to be the first triple, if the source of the slice
+        // is a boxed array. If it is a raw pointer, then
+        // the result will still be contiguous, as long as
+        // the strides are all ones.
+        // When origBox is not null, we must prove that the triple
+        // covers the whole dimension and the stride is one,
+        // before claiming contiguity for this dimension.
+        if (i != 0 && origBox) {
+          std::int64_t dim = i / 3;
+          if (!isBoxLb(origBox, dim, triples[i],
+                       mayHaveNonDefaultLowerBounds) ||
+              !isBoxUb(origBox, dim, triples[i + 1],
+                       mayHaveNonDefaultLowerBounds))
+            return false;
+        }
+        auto constantStep = fir::getIntIfConstant(triples[i + 2]);
+        if (!constantStep || *constantStep != 1)
+          return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+bool fir::isContiguousEmbox(fir::EmboxOp embox, bool checkWhole) {
+  auto sliceArg = embox.getSlice();
+  if (!sliceArg)
+    return true;
+
+  if (auto sliceOp =
+          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp()))
+    return isContiguousArraySlice(sliceOp, checkWhole);
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4326,7 +4447,7 @@ llvm::LogicalResult fir::UnboxProcOp::verify() {
 
 void fir::IfOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                       mlir::Value cond, bool withElseRegion) {
-  build(builder, result, std::nullopt, cond, withElseRegion);
+  build(builder, result, {}, cond, withElseRegion);
 }
 
 void fir::IfOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
@@ -4589,7 +4710,7 @@ mlir::func::FuncOp fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
     return f;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
   modBuilder.setInsertionPointToEnd(module.getBody());
-  auto result = modBuilder.create<mlir::func::FuncOp>(loc, name, type, attrs);
+  auto result = mlir::func::FuncOp::create(modBuilder, loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
   return result;
 }
@@ -4609,7 +4730,7 @@ fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
   if (auto g = module.lookupSymbol<fir::GlobalOp>(name))
     return g;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
-  auto result = modBuilder.create<fir::GlobalOp>(loc, name, type, attrs);
+  auto result = fir::GlobalOp::create(modBuilder, loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
   return result;
 }
@@ -4794,7 +4915,9 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   return eleTy;
 }
 
-bool fir::reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole) {
+bool fir::reboxPreservesContinuity(fir::ReboxOp rebox,
+                                   bool mayHaveNonDefaultLowerBounds,
+                                   bool checkWhole) {
   // If slicing is not involved, then the rebox does not affect
   // the continuity of the array.
   auto sliceArg = rebox.getSlice();
@@ -4802,33 +4925,10 @@ bool fir::reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole) {
     return true;
 
   if (auto sliceOp =
-          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp())) {
-    if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
-      // TODO: generalize code for the triples analysis with
-      // hlfir::designatePreservesContinuity, especially when
-      // recognition of the whole dimension slices is added.
-      auto triples = sliceOp.getTriples();
-      assert((triples.size() % 3) == 0 && "invalid triples size");
+          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp()))
+    return isContiguousArraySlice(sliceOp, checkWhole, rebox.getBox(),
+                                  mayHaveNonDefaultLowerBounds);
 
-      // A slice with step=1 in the innermost dimension preserves
-      // the continuity of the array in the innermost dimension.
-      // If checkWhole is false, then check only the innermost slice triples.
-      std::size_t checkUpTo = checkWhole ? triples.size() : 3;
-      checkUpTo = std::min(checkUpTo, triples.size());
-      for (std::size_t i = 0; i < checkUpTo; i += 3) {
-        if (triples[i] != triples[i + 1]) {
-          // This is a section of the dimension. Only allow it
-          // to be the first triple.
-          if (i != 0)
-            return false;
-          auto constantStep = fir::getIntIfConstant(triples[i + 2]);
-          if (!constantStep || *constantStep != 1)
-            return false;
-        }
-      }
-      return true;
-    }
-  }
   return false;
 }
 

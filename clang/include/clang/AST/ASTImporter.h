@@ -404,7 +404,7 @@ class TypeSourceInfo;
     ///
     /// \returns The equivalent nested-name-specifier in the "to"
     /// context, or the import error.
-    llvm::Expected<NestedNameSpecifier *> Import(NestedNameSpecifier *FromNNS);
+    llvm::Expected<NestedNameSpecifier> Import(NestedNameSpecifier FromNNS);
 
     /// Import the given nested-name-specifier-loc from the "from"
     /// context into the "to" context.

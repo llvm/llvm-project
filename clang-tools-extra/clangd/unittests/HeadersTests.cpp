@@ -344,6 +344,17 @@ TEST_F(HeadersTest, ShortenIncludesInSearchPathBracketed) {
   EXPECT_EQ(calculate(BarHeader), "<sub/bar.h>");
 }
 
+TEST_F(HeadersTest, ShortenIncludesInSearchPathBracketedFilterByFullPath) {
+  // The filter receives the full path of the header, so it is able to filter by
+  // the parent directory, even if it is part of the include search path
+  AngledHeaders.push_back([](auto Path) {
+    llvm::Regex Pattern("sub/.*");
+    return Pattern.match(Path);
+  });
+  std::string BarHeader = testPath("sub/bar.h");
+  EXPECT_EQ(calculate(BarHeader), "<bar.h>");
+}
+
 TEST_F(HeadersTest, ShortenedIncludeNotInSearchPath) {
   std::string BarHeader =
       llvm::sys::path::convert_to_slash(testPath("sub-2/bar.h"));
