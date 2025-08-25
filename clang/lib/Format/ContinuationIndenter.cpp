@@ -356,15 +356,14 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     return CurrentState.BreakBeforeClosingBrace;
   }
 
-  // Allow breaking before the right parens with block indentation if there was
-  // a break after the left parens, which is tracked by BreakBeforeClosingParen.
-  bool might_break_before = Style.BreakBeforeCloseBracketFunction ||
-                            Style.BreakBeforeCloseBracketIf ||
-                            Style.BreakBeforeCloseBracketLoop ||
-                            Style.BreakBeforeCloseBracketSwitch;
-
-  if (might_break_before && Current.is(tok::r_paren))
+  // Check need to break before the right parens if there was a break after
+  // the left parens, which is tracked by BreakBeforeClosingParen.
+  if ((Style.BreakBeforeCloseBracketFunction ||
+       Style.BreakBeforeCloseBracketIf || Style.BreakBeforeCloseBracketLoop ||
+       Style.BreakBeforeCloseBracketSwitch) &&
+      Current.is(tok::r_paren)) {
     return CurrentState.BreakBeforeClosingParen;
+  }
 
   if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser))
     return CurrentState.BreakBeforeClosingAngle;
