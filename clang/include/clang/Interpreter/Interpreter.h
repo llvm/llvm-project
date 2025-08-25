@@ -56,7 +56,8 @@ public:
   void SetTargetTriple(std::string TT) { TargetTriple = TT; }
 
   // General C++
-  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCpp();
+  llvm::Expected<std::unique_ptr<CompilerInstance>>
+  CreateCpp(std::string *CompilerRTPath = nullptr);
 
   // Offload options
   void SetOffloadArch(llvm::StringRef Arch) { OffloadArch = Arch; };
@@ -69,7 +70,8 @@ public:
 
 private:
   static llvm::Expected<std::unique_ptr<CompilerInstance>>
-  create(std::string TT, std::vector<const char *> &ClangArgv);
+  create(std::string TT, std::vector<const char *> &ClangArgv,
+         std::string *CompilerRTPath = nullptr);
 
   llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
 

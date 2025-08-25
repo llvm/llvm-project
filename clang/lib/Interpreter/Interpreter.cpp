@@ -149,7 +149,8 @@ namespace clang {
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::create(std::string TT,
-                                   std::vector<const char *> &ClangArgv) {
+                                   std::vector<const char *> &ClangArgv,
+                                   std::string *CompilerRTPath) {
 
   // If we don't know ClangArgv0 or the address of main() at this point, try
   // to guess it anyway (it's possible on some platforms).
@@ -190,11 +191,17 @@ IncrementalCompilerBuilder::create(std::string TT,
   if (auto Err = ErrOrCC1Args.takeError())
     return std::move(Err);
 
+  const driver::ToolChain &TC = Compilation->getDefaultToolChain();
+  std::optional<std::string> Path = TC.getCompilerRTPath();
+  if (Path && CompilerRTPath) {
+    *CompilerRTPath = *Path;
+  }
+
   return CreateCI(**ErrOrCC1Args);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCpp() {
+IncrementalCompilerBuilder::CreateCpp(std::string *CompilerRTPath) {
   std::vector<const char *> Argv;
   Argv.reserve(5 + 1 + UserArgs.size());
   Argv.push_back("-xc++");
@@ -206,7 +213,7 @@ IncrementalCompilerBuilder::CreateCpp() {
   llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
-  return IncrementalCompilerBuilder::create(TT, Argv);
+  return IncrementalCompilerBuilder::create(TT, Argv, CompilerRTPath);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>

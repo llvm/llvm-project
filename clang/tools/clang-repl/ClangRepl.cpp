@@ -22,14 +22,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticIDs.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
-#include "clang/Driver/ToolChain.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
@@ -99,41 +91,8 @@ static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
-static std::string getCompilerRTPath() {
-  clang::DiagnosticOptions DiagOpts;
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(
-      new clang::DiagnosticIDs());
-
-  clang::IgnoringDiagConsumer DiagConsumer;
-  clang::DiagnosticsEngine Diags(DiagID, DiagOpts, &DiagConsumer, false);
-  std::vector<const char *> Args = {"clang", "--version"};
-  clang::driver::Driver D("clang", llvm::sys::getProcessTriple(), Diags);
-  D.setCheckInputsExist(false);
-
-  std::unique_ptr<clang::driver::Compilation> C(D.BuildCompilation(Args));
-  if (!C) {
-    return "";
-  }
-
-  const clang::driver::ToolChain &TC = C->getDefaultToolChain();
-  std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
-
-  return CompilerRTPath ? *CompilerRTPath : "";
-}
-
-static std::string getOrcRuntimePath() {
-  if (OrcRuntimePath.empty()) {
-    llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
-        "clang-repl", reinterpret_cast<void *>(&getOrcRuntimePath)));
-    llvm::sys::path::remove_filename(BasePath); // Remove clang-repl filename.
-    llvm::sys::path::remove_filename(BasePath); // Remove ./bin directory.
-    llvm::sys::path::append(BasePath, getCompilerRTPath());
-    return BasePath.str().str();
-  }
-  return OrcRuntimePath;
-}
-
-static llvm::Error sanitizeOopArguments(const char *ArgV0) {
+static llvm::Error sanitizeOopArguments(const char *ArgV0,
+                                        std::string CompilerRTPath) {
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OOPExecutor.getNumOccurrences() &&
       !!OOPExecutorConnect.getNumOccurrences())
@@ -169,20 +128,12 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
   // Out-of-process executors require the ORC runtime.
   if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
                                  OOPExecutorConnect.getNumOccurrences())) {
-    llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
-        ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
-    llvm::sys::path::remove_filename(BasePath); // Remove clang-repl filename.
-    llvm::sys::path::remove_filename(BasePath); // Remove ./bin directory.
-    std::string CompilerRTPath = getCompilerRTPath();
     if (llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt.a")) {
-      llvm::sys::path::append(BasePath, CompilerRTPath);
-      OrcRuntimePath = BasePath.str().str() + "/liborc_rt.a";
-    } else if (!llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt_osx.a")) {
-      llvm::sys::path::append(BasePath, CompilerRTPath);
-      OrcRuntimePath = BasePath.str().str() + "/liborc_rt_osx.a";
-    } else if (!llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt-x86_64.a")) {
-      llvm::sys::path::append(BasePath, CompilerRTPath);
-      OrcRuntimePath = BasePath.str().str() + "/liborc_rt-x86_64.a";
+      OrcRuntimePath = CompilerRTPath + "/liborc_rt.a";
+    } else if (llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt_osx.a")) {
+      OrcRuntimePath = CompilerRTPath + "/liborc_rt_osx.a";
+    } else if (llvm::sys::fs::exists(CompilerRTPath + "/liborc_rt-x86_64.a")) {
+      OrcRuntimePath = CompilerRTPath + "/liborc_rt-x86_64.a";
     } else {
       return llvm::make_error<llvm::StringError>(
           "ORC runtime not found in " + CompilerRTPath,
@@ -339,7 +290,18 @@ int main(int argc, const char **argv) {
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
 
-  ExitOnErr(sanitizeOopArguments(argv[0]));
+  std::string CompilerRTPath;
+
+  // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
+  // can replace the boilerplate code for creation of the compiler instance.
+  std::unique_ptr<clang::CompilerInstance> CI;
+  if (CudaEnabled) {
+    CI = ExitOnErr(CB.CreateCudaHost());
+  } else {
+    CI = ExitOnErr(CB.CreateCpp(&CompilerRTPath));
+  }
+
+  ExitOnErr(sanitizeOopArguments(argv[0], CompilerRTPath));
 
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
   if (OOPExecutor.getNumOccurrences()) {
@@ -356,15 +318,6 @@ int main(int argc, const char **argv) {
     CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
     JB = ExitOnErr(
         clang::Interpreter::createLLJITBuilder(std::move(EPC), OrcRuntimePath));
-  }
-
-  // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
-  // can replace the boilerplate code for creation of the compiler instance.
-  std::unique_ptr<clang::CompilerInstance> CI;
-  if (CudaEnabled) {
-    CI = ExitOnErr(CB.CreateCudaHost());
-  } else {
-    CI = ExitOnErr(CB.CreateCpp());
   }
 
   // Set an error handler, so that any LLVM backend diagnostics go through our

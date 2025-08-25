@@ -16,8 +16,14 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Mangle.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Interpreter/Interpreter.h"
@@ -25,8 +31,14 @@
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/TargetParser/Host.h"
 
@@ -60,22 +72,43 @@ static std::string getExecutorPath() {
   return ExecutorPath.str().str();
 }
 
-static std::string getOrcRuntimePath() {
-  llvm::SmallString<256> RuntimePath(llvm::sys::fs::getMainExecutable(
-      nullptr, reinterpret_cast<void *>(&getOrcRuntimePath)));
-  removePathComponent(5, RuntimePath);
-  llvm::sys::path::append(RuntimePath, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
-                          CLANG_VERSION_MAJOR_STRING, "lib");
+static std::string getCompilerRTPath() {
+  clang::DiagnosticOptions DiagOpts;
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(
+      new clang::DiagnosticIDs());
 
-  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
-  if (SystemTriple.isOSBinFormatMachO()) {
-    llvm::sys::path::append(RuntimePath, "darwin", "liborc_rt_osx.a");
-  } else if (SystemTriple.isOSBinFormatELF()) {
-    llvm::sys::path::append(RuntimePath, "x86_64-unknown-linux-gnu",
-                            "liborc_rt.a");
+  clang::IgnoringDiagConsumer DiagConsumer;
+  clang::DiagnosticsEngine Diags(DiagID, DiagOpts, &DiagConsumer, false);
+  std::vector<const char *> Args = {"clang", "--version"};
+  clang::driver::Driver D("clang", llvm::sys::getProcessTriple(), Diags);
+  D.setCheckInputsExist(false);
+
+  std::unique_ptr<clang::driver::Compilation> C(D.BuildCompilation(Args));
+  if (!C) {
+    return "";
   }
 
-  return RuntimePath.str().str();
+  const clang::driver::ToolChain &TC = C->getDefaultToolChain();
+  std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
+
+  return CompilerRTPath ? *CompilerRTPath : "";
+}
+
+static std::string getOrcRuntimePath(std::string CompilerRTPath) {
+  llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
+      nullptr, reinterpret_cast<void *>(&getOrcRuntimePath)));
+  removePathComponent(5, BasePath);
+  llvm::sys::path::append(BasePath, CompilerRTPath);
+  std::string OrcRuntimePath;
+  if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt.a")) {
+    OrcRuntimePath = BasePath.str().str() + "/liborc_rt.a";
+  } else if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt_osx.a")) {
+    OrcRuntimePath = BasePath.str().str() + "/liborc_rt_osx.a";
+  } else if (llvm::sys::fs::exists(BasePath.str().str() +
+                                   "/liborc_rt-x86_64.a")) {
+    OrcRuntimePath = BasePath.str().str() + "/liborc_rt-x86_64.a";
+  }
+  return OrcRuntimePath;
 }
 
 static std::unique_ptr<Interpreter>
@@ -93,9 +126,11 @@ createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
 
   llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
 
+  std::string CompilerRTPath = getCompilerRTPath();
+
   if ((SystemTriple.isOSBinFormatELF() || SystemTriple.isOSBinFormatMachO())) {
     std::string OOPExecutor = getExecutorPath();
-    std::string OrcRuntimePath = getOrcRuntimePath();
+    std::string OrcRuntimePath = getOrcRuntimePath(CompilerRTPath);
     bool UseSharedMemory = false;
     std::string SlabAllocateSizeString = "";
     std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
