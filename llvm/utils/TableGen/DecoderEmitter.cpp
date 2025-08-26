@@ -483,12 +483,6 @@ class FilterChooser {
   // Links to the FilterChooser above us in the decoding tree.
   const FilterChooser *Parent;
 
-  /// Some targets (ARM) specify more encoding bits in Inst that Size allows.
-  /// This field allows us to ignore the extra bits.
-  unsigned MaxFilterWidth;
-
-  const CodeGenTarget &Target;
-
   /// If the selected filter matches multiple encodings, then this is the
   /// starting position and the width of the filtered range.
   unsigned StartBit;
@@ -522,16 +516,12 @@ class FilterChooser {
 public:
   /// Constructs a top-level filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
-                ArrayRef<unsigned> EncodingIDs, unsigned MaxFilterWidth,
-                const CodeGenTarget &Target)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr),
-        MaxFilterWidth(MaxFilterWidth), Target(Target) {
+                ArrayRef<unsigned> EncodingIDs)
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr) {
     // Sort encoding IDs once.
     stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings));
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[this->EncodingIDs.front()].getBitWidth();
-    // Cap it as necessary.
-    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
     FilterBits = KnownBits(FilterWidth);
     doFilter();
   }
@@ -540,15 +530,12 @@ public:
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs, const KnownBits &FilterBits,
                 const FilterChooser &Parent)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent),
-        MaxFilterWidth(Parent.MaxFilterWidth), Target(Parent.Target) {
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent) {
     // Inferior filter choosers are created from sorted array of encoding IDs.
     assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings)));
     assert(!FilterBits.hasConflict() && "Broken filter");
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[EncodingIDs.front()].getBitWidth();
-    // Cap it as necessary.
-    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
     this->FilterBits = FilterBits.anyext(FilterWidth);
     doFilter();
   }
@@ -2562,7 +2549,7 @@ namespace {
     auto [DecoderNamespace, HwModeID, Size] = Key;
     const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
     // Emit the decoder for this (namespace, hwmode, width) combination.
-    FilterChooser FC(Encodings, EncodingIDs, BitWidth, Target);
+    FilterChooser FC(Encodings, EncodingIDs);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all
