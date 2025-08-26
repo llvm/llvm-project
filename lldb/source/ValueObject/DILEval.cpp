@@ -348,10 +348,11 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
 
     if (!m_use_synthetic && is_objc_pointer) {
       std::string err_msg =
-          llvm::formatv("\"({0}) {1}\" is an Objective-C pointer, and cannot be "
-                        "subscripted",
-                        base->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetData());
+          llvm::formatv(
+              "\"({0}) {1}\" is an Objective-C pointer, and cannot be "
+              "subscripted",
+              base->GetTypeName().AsCString("<invalid type>"),
+              var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                   node->GetLocation());
     }
@@ -380,8 +381,8 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
             "array index {0} is not valid for \"({1}) {2}\"", child_idx,
             base->GetTypeName().AsCString("<invalid type>"),
             var_expr_path_strm.GetData());
-        return llvm::make_error<DILDiagnosticError>(
-            m_expr, std::move(err_msg), node->GetLocation());
+        return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                    node->GetLocation());
       }
       if (m_use_dynamic != lldb::eNoDynamicValues) {
         if (auto dynamic_sp = child_valobj_sp->GetDynamicValue(m_use_dynamic))
