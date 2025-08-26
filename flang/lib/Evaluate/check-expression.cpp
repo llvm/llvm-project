@@ -1612,7 +1612,7 @@ bool MayNeedCopy(const ActualArgument *actual,
       //           non-contiguous.
       // Copy-out: vector subscripts could refer to duplicate elements, can't
       //           copy out.
-      return forCopyOut ? !HasVectorSubscript(*actual) : true;
+      return !(forCopyOut && HasVectorSubscript(*actual));
     }
   }
   // For everything else, no copy-in or copy-out
