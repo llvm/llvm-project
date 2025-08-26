@@ -24,7 +24,7 @@ unsigned mul_overflow(unsigned c, unsigned d) { return c * d; }
 // DETAILED: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
 // DETAILED: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$unsigned integer multiplication overflow in 'c * d'"
 
-// In "Basic" mode both the trap reason is shared by both functions.
+// In "Basic" mode the trap reason is shared by both functions.
 // BASIC: [[SLOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
 // BASIC: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Integer multiplication overflowed"
 // BASIC: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
