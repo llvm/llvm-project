@@ -222,11 +222,11 @@ base::current_impl(size_t skip, size_t max_depth) {
     DWORD linedisp{0};
     IMAGEHLP_LINE64 line;
     if ((*dbghelp.SymGetSymFromAddr64)(proc, entry.__addr_, &symdisp, sym)) {
-      entry.assign_desc(__strings_.create()).assign(sym->Name);
+      entry.assign_desc(__create_str()).assign(sym->Name);
     }
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
     if ((*dbghelp.SymGetLineFromAddr64)(proc, entry.__addr_, &linedisp, &line)) {
-      entry.assign_file(__strings_.create()).assign(line.FileName);
+      entry.assign_file(__create_str()).assign(line.FileName);
       entry.__line_ = line.LineNumber;
     }
 #else
@@ -238,11 +238,11 @@ base::current_impl(size_t skip, size_t max_depth) {
     DWORD linedisp{0};
     IMAGEHLP_LINE line;
     if ((*dbghelp.SymGetSymFromAddr)(proc, entry.__addr_, &symdisp, sym)) {
-      entry.assign_desc(__strings_.create()).assign(sym->Name);
+      entry.assign_desc(__create_str()).assign(sym->Name);
     }
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
     if ((*dbghelp.SymGetLineFromAddr)(proc, entry.__addr_, &linedisp, &line)) {
-      entry.assign_file(__strings_.create()).assign(line.FileName);
+      entry.assign_file(__create_str()).assign(line.FileName);
       entry.__line_ = line.LineNumber;
     }
 #endif

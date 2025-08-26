@@ -80,7 +80,7 @@ use_available_progs.pass.cpp:84
 void addr2line::parse_sym(__stacktrace::entry_base& entry, std::string_view view) const {
   if (!view.starts_with("??")) {
     // XXX should check for "_Z" prefix (mangled symbol) and use cxxabi.h / demangle?
-    entry.assign_desc(base_.__strings_.create()).assign(view);
+    entry.assign_desc(base_.__create_str()).assign(view);
   }
 }
 
@@ -88,7 +88,7 @@ void addr2line::parse_loc(__stacktrace::entry_base& entry, std::string_view view
   if (!view.starts_with("??")) {
     auto colon = view.find_last_of(":");
     if (colon != string_view::npos) {
-      entry.assign_file(base_.__strings_.create()).assign(view.substr(0, colon));;
+      entry.assign_file(base_.__create_str()).assign(view.substr(0, colon));;
       entry.__line_ = atoi(view.data() + colon + 1);
     }
   }
@@ -103,7 +103,7 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<addr2line>(base& base) {
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  auto line = base.__strings_.create();
+  auto line = base.__create_str();
   line.reserve(entry_base::__max_file_len + entry_base::__max_sym_len);
 
   auto entry_iter = base.__entry_iters_().begin();  // position at first entry

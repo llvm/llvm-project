@@ -20,8 +20,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __stacktrace {
 
-str str_heap::create() { return str{str_alloc<char>{*this}}; }
-
 ostream& entry_base::write_to(ostream& __os) const {
   // Although 64-bit addresses are 16 nibbles long, they're often <= 0x7fff_ffff_ffff
   constexpr static int __k_addr_width = (sizeof(void*) > 4) ? 12 : 8;
