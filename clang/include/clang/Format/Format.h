@@ -62,7 +62,9 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
+  /*
   /// Different styles for aligning after open brackets.
+  /// This is **deprecated**. For backward compatibility only.
   enum BracketAlignmentStyle : int8_t {
     /// Align parameters on the open bracket, e.g.:
     /// \code
@@ -76,22 +78,20 @@ struct FormatStyle {
     ///       argument2);
     /// \endcode
     BAS_DontAlign,
-    /// ``BAS_AlwaysBreak``
     /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
     /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
-    /// For backward compatibility. Do not use.
-    BAS_ABDeprecated,
-    /// ``BAS_BlockIndent``
+    BAS_AlwaysBreak,
     /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
     /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
     /// in combination with ``BreakBeforeCloseBracketBracedList``,
     /// ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
     /// ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
-    /// For backward compatibility. Do not use.
-    BAS_BIDeprecated,
+    BAS_BlockIndent,
   };
+  */
+  LLVM_YAML_STRONG_TYPEDEF(bool, BracketAlignmentStyle)
 
   /// If ``true``, horizontally aligns arguments after an open bracket.
   ///
