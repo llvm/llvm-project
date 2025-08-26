@@ -22,7 +22,7 @@ class BufferedNoPwriteSmallVectorStream : public raw_ostream {
 public:
   // Choose a strange buffer size to ensure it doesn't collide with the default
   // on \a raw_ostream.
-  constexpr static const size_t PreferredBufferSize = 63;
+  static constexpr size_t PreferredBufferSize = 63;
 
   size_t preferred_buffer_size() const override { return PreferredBufferSize; }
   uint64_t current_pos() const override { return Vector.size(); }
@@ -40,7 +40,7 @@ public:
   bool IsDisplayed = false;
 };
 
-constexpr const size_t BufferedNoPwriteSmallVectorStream::PreferredBufferSize;
+constexpr size_t BufferedNoPwriteSmallVectorStream::PreferredBufferSize;
 
 TEST(raw_ostream_proxyTest, write) {
   // Besides confirming that "write" works, this test confirms that the proxy
@@ -167,10 +167,13 @@ TEST(raw_ostream_proxyTest, ColorMode) {
   {
     SmallString<128> Dest;
     BufferedNoPwriteSmallVectorStream DestOS(Dest);
+    DestOS.IsDisplayed = true;
     raw_ostream_proxy ProxyOS(DestOS);
     ProxyOS.enable_colors(true);
 
-    WithColor(ProxyOS, HighlightColor::Error, ColorMode::Disable) << "test";
+    WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false,
+              ColorMode::Disable)
+        << "test";
     EXPECT_EQ("", Dest);
     ProxyOS.flush();
     EXPECT_EQ("test", Dest);
@@ -180,9 +183,10 @@ TEST(raw_ostream_proxyTest, ColorMode) {
     SmallString<128> Dest;
     BufferedNoPwriteSmallVectorStream DestOS(Dest);
     raw_ostream_proxy ProxyOS(DestOS);
-    ProxyOS.enable_colors(true);
 
-    WithColor(ProxyOS, HighlightColor::Error, ColorMode::Auto) << "test";
+    WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false,
+              ColorMode::Auto)
+        << "test";
     EXPECT_EQ("", Dest);
     ProxyOS.flush();
     EXPECT_EQ("test", Dest);
@@ -195,7 +199,9 @@ TEST(raw_ostream_proxyTest, ColorMode) {
     raw_ostream_proxy ProxyOS(DestOS);
     ProxyOS.enable_colors(true);
 
-    WithColor(ProxyOS, HighlightColor::Error, ColorMode::Enable) << "test";
+    WithColor(ProxyOS, raw_ostream::Colors::RED, /*Bold=*/true, /*BG=*/false,
+              ColorMode::Enable)
+        << "test";
     EXPECT_EQ("", Dest);
     ProxyOS.flush();
     EXPECT_EQ("\x1B[0;1;31mtest\x1B[0m", Dest);
