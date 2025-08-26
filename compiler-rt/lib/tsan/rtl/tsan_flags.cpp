@@ -20,6 +20,43 @@
 #include "tsan_rtl.h"
 #include "ubsan/ubsan_flags.h"
 
+#if SANITIZER_APPLE
+namespace __sanitizer {
+
+template <>
+inline bool FlagHandler<LockDuringWriteSetting>::Parse(const char *value) {
+  if (internal_strcmp(value, "on") == 0) {
+    *t_ = kLockDuringAllWrites;
+    return true;
+  }
+  if (internal_strcmp(value, "disable_for_current_process") == 0) {
+    *t_ = kNoLockDuringWritesCurrentProcess;
+    return true;
+  }
+  if (internal_strcmp(value, "disable_for_all_processes") == 0) {
+    *t_ = kNoLockDuringWritesAllProcesses;
+    return true;
+  }
+  Printf("ERROR: Invalid value for signal handler option: '%s'\n", value);
+  return false;
+}
+
+template <>
+inline bool FlagHandler<LockDuringWriteSetting>::Format(char *buffer,
+                                                        uptr size) {
+  switch (*t_) {
+    case kLockDuringAllWrites:
+      return FormatString(buffer, size, "on");
+    case kNoLockDuringWritesCurrentProcess:
+      return FormatString(buffer, size, "disable_for_current_process");
+    case kNoLockDuringWritesAllProcesses:
+      return FormatString(buffer, size, "disable_for_all_processes");
+  }
+}
+
+}  // namespace __sanitizer
+#endif
+
 namespace __tsan {
 
 // Can be overriden in frontend.
