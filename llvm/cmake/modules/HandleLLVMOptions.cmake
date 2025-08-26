@@ -275,7 +275,10 @@ endif()
 
 if(APPLE)
   # Darwin-specific linker flags for loadable modules.
-  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-flat_namespace -Wl,-undefined -Wl,dynamic_lookup")
+  if(NOT BUILD_SHARED_LIBS)
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-flat_namespace")
+  endif()
+  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-undefined -Wl,dynamic_lookup")
 endif()
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
