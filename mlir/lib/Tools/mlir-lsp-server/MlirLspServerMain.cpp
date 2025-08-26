@@ -9,9 +9,9 @@
 #include "mlir/Tools/mlir-lsp-server/MlirLspServerMain.h"
 #include "LSPServer.h"
 #include "MLIRServer.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Transport.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/LSP/Transport.h"
 #include "llvm/Support/Program.h"
 
 using namespace mlir;

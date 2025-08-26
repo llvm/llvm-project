@@ -16,10 +16,10 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/ToolUtilities.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
+#include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
 
@@ -217,15 +217,15 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
 
   // Convert the severity for the diagnostic.
   switch (diag.getSeverity()) {
-  case DiagnosticSeverity::Note:
+  case mlir::DiagnosticSeverity::Note:
     llvm_unreachable("expected notes to be handled separately");
-  case DiagnosticSeverity::Warning:
+  case mlir::DiagnosticSeverity::Warning:
     lspDiag.severity = lsp::DiagnosticSeverity::Warning;
     break;
-  case DiagnosticSeverity::Error:
+  case mlir::DiagnosticSeverity::Error:
     lspDiag.severity = lsp::DiagnosticSeverity::Error;
     break;
-  case DiagnosticSeverity::Remark:
+  case mlir::DiagnosticSeverity::Remark:
     lspDiag.severity = lsp::DiagnosticSeverity::Information;
     break;
   }
@@ -1283,7 +1283,7 @@ lsp::MLIRServer::~MLIRServer() = default;
 
 void lsp::MLIRServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
-    std::vector<Diagnostic> &diagnostics) {
+    std::vector<llvm::lsp::Diagnostic> &diagnostics) {
   impl->files[uri.file()] = std::make_unique<MLIRTextFile>(
       uri, contents, version, impl->registry_fn, diagnostics);
 }
@@ -1298,17 +1298,17 @@ std::optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
   return version;
 }
 
-void lsp::MLIRServer::getLocationsOf(const URIForFile &uri,
-                                     const Position &defPos,
-                                     std::vector<Location> &locations) {
+void lsp::MLIRServer::getLocationsOf(
+    const URIForFile &uri, const Position &defPos,
+    std::vector<llvm::lsp::Location> &locations) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->getLocationsOf(uri, defPos, locations);
 }
 
-void lsp::MLIRServer::findReferencesOf(const URIForFile &uri,
-                                       const Position &pos,
-                                       std::vector<Location> &references) {
+void lsp::MLIRServer::findReferencesOf(
+    const URIForFile &uri, const Position &pos,
+    std::vector<llvm::lsp::Location> &references) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->findReferencesOf(uri, pos, references);

@@ -9,14 +9,15 @@
 #include "LSPServer.h"
 #include "MLIRServer.h"
 #include "Protocol.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Transport.h"
+#include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/LSP/Transport.h"
 #include <optional>
 
 #define DEBUG_TYPE "mlir-lsp-server"
 
 using namespace mlir;
 using namespace mlir::lsp;
+using namespace llvm::lsp;
 
 //===----------------------------------------------------------------------===//
 // LSPServer
