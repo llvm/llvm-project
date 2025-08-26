@@ -685,17 +685,15 @@ bool Type::isStructureTypeWithFlexibleArrayMember() const {
   const auto *RT = getAs<RecordType>();
   if (!RT)
     return false;
-  const auto *Decl = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const auto *Decl = RT->getOriginalDecl();
   if (!Decl->isStruct())
     return false;
-  return Decl->hasFlexibleArrayMember();
+  return Decl->getDefinitionOrSelf()->hasFlexibleArrayMember();
 }
 
 bool Type::isObjCBoxableRecordType() const {
-  if (const auto *RT = getAs<RecordType>())
-    return RT->getOriginalDecl()
-        ->getDefinitionOrSelf()
-        ->hasAttr<ObjCBoxableAttr>();
+  if (const auto *RD = getAsRecordDecl())
+    return RD->hasAttr<ObjCBoxableAttr>();
   return false;
 }
 
@@ -1918,12 +1916,7 @@ const CXXRecordDecl *Type::getPointeeCXXRecordDecl() const {
     PointeeType = RT->getPointeeType();
   else
     return nullptr;
-
-  if (const auto *RT = PointeeType->getAs<RecordType>())
-    return dyn_cast<CXXRecordDecl>(
-        RT->getOriginalDecl()->getDefinitionOrSelf());
-
-  return nullptr;
+  return PointeeType->getAsCXXRecordDecl();
 }
 
 CXXRecordDecl *Type::getAsCXXRecordDecl() const {
@@ -1936,6 +1929,11 @@ CXXRecordDecl *Type::getAsCXXRecordDecl() const {
   return cast<CXXRecordDecl>(TD)->getDefinitionOrSelf();
 }
 
+CXXRecordDecl *Type::castAsCXXRecordDecl() const {
+  const auto *TT = cast<TagType>(CanonicalType);
+  return cast<CXXRecordDecl>(TT->getOriginalDecl())->getDefinitionOrSelf();
+}
+
 RecordDecl *Type::getAsRecordDecl() const {
   const auto *TT = dyn_cast<TagType>(CanonicalType);
   if (!isa_and_present<RecordType, InjectedClassNameType>(TT))
@@ -1943,10 +1941,31 @@ RecordDecl *Type::getAsRecordDecl() const {
   return cast<RecordDecl>(TT->getOriginalDecl())->getDefinitionOrSelf();
 }
 
+RecordDecl *Type::castAsRecordDecl() const {
+  const auto *TT = cast<TagType>(CanonicalType);
+  return cast<RecordDecl>(TT->getOriginalDecl())->getDefinitionOrSelf();
+}
+
+EnumDecl *Type::getAsEnumDecl() const {
+  if (const auto *TT = dyn_cast<EnumType>(CanonicalType))
+    return TT->getOriginalDecl()->getDefinitionOrSelf();
+  return nullptr;
+}
+
+EnumDecl *Type::castAsEnumDecl() const {
+  return cast<EnumType>(CanonicalType)
+      ->getOriginalDecl()
+      ->getDefinitionOrSelf();
+}
+
 TagDecl *Type::getAsTagDecl() const {
   if (const auto *TT = dyn_cast<TagType>(CanonicalType))
     return TT->getOriginalDecl()->getDefinitionOrSelf();
   return nullptr;
+}
+
+TagDecl *Type::castAsTagDecl() const {
+  return cast<TagType>(CanonicalType)->getOriginalDecl()->getDefinitionOrSelf();
 }
 
 const TemplateSpecializationType *
@@ -2242,10 +2261,9 @@ bool Type::isSignedIntegerType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isSignedInteger();
 
-  if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
+  if (const auto *ED = getAsEnumDecl()) {
     // Incomplete enum types are not treated as integer types.
     // FIXME: In C++, enum types are never integer types.
-    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
     if (!ED->isComplete() || ED->isScoped())
       return false;
     return ED->getIntegerType()->isSignedIntegerType();
@@ -2263,8 +2281,7 @@ bool Type::isSignedIntegerOrEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isSignedInteger();
 
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
-    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *ED = getAsEnumDecl()) {
     if (!ED->isComplete())
       return false;
     return ED->getIntegerType()->isSignedIntegerType();
@@ -2292,10 +2309,9 @@ bool Type::isUnsignedIntegerType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isUnsignedInteger();
 
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
+  if (const auto *ED = getAsEnumDecl()) {
     // Incomplete enum types are not treated as integer types.
     // FIXME: In C++, enum types are never integer types.
-    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
     if (!ED->isComplete() || ED->isScoped())
       return false;
     return ED->getIntegerType()->isUnsignedIntegerType();
@@ -2313,8 +2329,7 @@ bool Type::isUnsignedIntegerOrEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isUnsignedInteger();
 
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
-    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *ED = getAsEnumDecl()) {
     if (!ED->isComplete())
       return false;
     return ED->getIntegerType()->isUnsignedIntegerType();
@@ -2394,10 +2409,8 @@ bool Type::isArithmeticType() const {
 bool Type::hasBooleanRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isBooleanType();
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
-    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *ED = getAsEnumDecl())
     return ED->isComplete() && ED->getIntegerType()->isBooleanType();
-  }
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->getNumBits() == 1;
   return isBooleanType();
@@ -2428,10 +2441,7 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
   } else if (isa<MemberPointerType>(T)) {
     return STK_MemberPointer;
   } else if (isa<EnumType>(T)) {
-    assert(cast<EnumType>(T)
-               ->getOriginalDecl()
-               ->getDefinitionOrSelf()
-               ->isComplete());
+    assert(T->castAsEnumDecl()->isComplete());
     return STK_Integral;
   } else if (const auto *CT = dyn_cast<ComplexType>(T)) {
     if (CT->getElementType()->isRealFloatingType())
@@ -2490,8 +2500,7 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     // be completed.
     return isVoidType();
   case Enum: {
-    EnumDecl *EnumD =
-        cast<EnumType>(CanonicalType)->getOriginalDecl()->getDefinitionOrSelf();
+    auto *EnumD = castAsEnumDecl();
     if (Def)
       *Def = EnumD;
     return !EnumD->isComplete();
@@ -2499,17 +2508,13 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
   case Record: {
     // A tagged type (struct/union/enum/class) is incomplete if the decl is a
     // forward declaration, but not a full definition (C99 6.2.5p22).
-    RecordDecl *Rec = cast<RecordType>(CanonicalType)
-                          ->getOriginalDecl()
-                          ->getDefinitionOrSelf();
+    auto *Rec = castAsRecordDecl();
     if (Def)
       *Def = Rec;
     return !Rec->isCompleteDefinition();
   }
   case InjectedClassName: {
-    CXXRecordDecl *Rec = cast<InjectedClassNameType>(CanonicalType)
-                             ->getOriginalDecl()
-                             ->getDefinitionOrSelf();
+    auto *Rec = castAsCXXRecordDecl();
     if (!Rec->isBeingDefined())
       return false;
     if (Def)
