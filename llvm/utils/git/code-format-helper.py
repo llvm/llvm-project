@@ -94,7 +94,7 @@ You can test this locally with the following command:
 
 :warning:
 The reproduction instructions above might return results for more than one PR
-a stack if you are using a stacked PR workflow. You can limit the results by
+in a stack if you are using a stacked PR workflow. You can limit the results by
 changing `origin/main` to the base branch/commit you want to compare against.
 :warning:
 
