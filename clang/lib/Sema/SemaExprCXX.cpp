@@ -543,7 +543,7 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
   QualType T
     = Context.getUnqualifiedArrayType(Operand->getType().getNonReferenceType(),
                                       Quals);
-  if (T->getAs<RecordType>() &&
+  if (T->isRecordType() &&
       RequireCompleteType(TypeidLoc, T, diag::err_incomplete_typeid))
     return ExprError();
 
@@ -570,9 +570,7 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
     }
 
     QualType T = E->getType();
-    if (const RecordType *RecordT = T->getAs<RecordType>()) {
-      CXXRecordDecl *RecordD = cast<CXXRecordDecl>(RecordT->getOriginalDecl())
-                                   ->getDefinitionOrSelf();
+    if (auto *RecordD = T->getAsCXXRecordDecl()) {
       // C++ [expr.typeid]p3:
       //   [...] If the type of the expression is a class type, the class
       //   shall be completely-defined.
@@ -946,7 +944,7 @@ collectPublicBases(CXXRecordDecl *RD,
 static void getUnambiguousPublicSubobjects(
     CXXRecordDecl *RD, llvm::SmallVectorImpl<CXXRecordDecl *> &Objects) {
   llvm::DenseMap<CXXRecordDecl *, unsigned> SubobjectsSeen;
-  llvm::SmallSet<CXXRecordDecl *, 2> VBases;
+  llvm::SmallPtrSet<CXXRecordDecl *, 2> VBases;
   llvm::SetVector<CXXRecordDecl *> PublicSubobjectsSeen;
   SubobjectsSeen[RD] = 1;
   PublicSubobjectsSeen.insert(RD);
@@ -2297,8 +2295,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       ConvertedSize = PerformImplicitConversion(
           *ArraySize, Context.getSizeType(), AssignmentAction::Converting);
 
-      if (!ConvertedSize.isInvalid() &&
-          (*ArraySize)->getType()->getAs<RecordType>())
+      if (!ConvertedSize.isInvalid() && (*ArraySize)->getType()->isRecordType())
         // Diagnose the compatibility of this conversion.
         Diag(StartLoc, diag::warn_cxx98_compat_array_size_conversion)
           << (*ArraySize)->getType() << 0 << "'size_t'";
@@ -4070,9 +4067,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                                    ? diag::err_delete_incomplete
                                    : diag::warn_delete_incomplete,
                                Ex.get())) {
-        if (const RecordType *RT = PointeeElem->getAs<RecordType>())
-          PointeeRD =
-              cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+        PointeeRD = PointeeElem->getAsCXXRecordDecl();
       }
     }
 
@@ -5753,10 +5748,12 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
     return {};
   }
 
+  // Boolean vectors are permitted outside of OpenCL mode.
   if (Context.getTypeSize(ResultElementTy) !=
-      Context.getTypeSize(CondElementTy)) {
-    Diag(QuestionLoc, diag::err_conditional_vector_element_size) << CondType
-                                                                 << ResultType;
+          Context.getTypeSize(CondElementTy) &&
+      (!CondElementTy->isBooleanType() || LangOpts.OpenCL)) {
+    Diag(QuestionLoc, diag::err_conditional_vector_element_size)
+        << CondType << ResultType;
     return {};
   }
 

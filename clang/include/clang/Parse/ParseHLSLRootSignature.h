@@ -236,6 +236,10 @@ private:
   RootSignatureToken CurToken;
 };
 
+IdentifierInfo *ParseHLSLRootSignature(Sema &Actions,
+                                       llvm::dxbc::RootSignatureVersion Version,
+                                       StringLiteral *Signature);
+
 } // namespace hlsl
 } // namespace clang
 

@@ -1575,6 +1575,10 @@ template <typename T, std::size_t N = SmallDataStructureSize>
 using ParamToSmallSetMap =
     llvm::DenseMap<const ParmVarDecl *, llvm::SmallSet<T, N>>;
 
+template <typename T, std::size_t N = SmallDataStructureSize>
+using ParamToSmallPtrSetMap =
+    llvm::DenseMap<const ParmVarDecl *, llvm::SmallPtrSet<T, N>>;
+
 /// Returns whether the sets mapped to the two elements in the map have at
 /// least one element in common.
 template <typename MapTy, typename ElemTy>
@@ -1699,7 +1703,7 @@ public:
 /// Implements the heuristic that marks two parameters related if the same
 /// member is accessed (referred to) inside the current function's body.
 class AccessedSameMemberOf {
-  ParamToSmallSetMap<const Decl *> AccessedMembers;
+  ParamToSmallPtrSetMap<const Decl *> AccessedMembers;
 
 public:
   void setup(const FunctionDecl *FD) {

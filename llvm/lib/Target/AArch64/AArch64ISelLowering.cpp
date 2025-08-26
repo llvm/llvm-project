@@ -17,6 +17,7 @@
 #include "AArch64PerfectShuffle.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
+#include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "Utils/AArch64SMEAttributes.h"
@@ -1120,7 +1121,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
   setOperationAction(ISD::UBSANTRAP, MVT::Other, Legal);
 
-  // We combine OR nodes for bitfield operations.
+  // We combine OR nodes for ccmp operations.
   setTargetDAGCombine(ISD::OR);
   // Try to create BICs for vector ANDs.
   setTargetDAGCombine(ISD::AND);
@@ -1769,7 +1770,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
-      if (Subtarget->hasSVEB16B16()) {
+      if (Subtarget->hasSVEB16B16() &&
+          Subtarget->isNonStreamingSVEorSME2Available()) {
         setOperationAction(ISD::FADD, VT, Legal);
         setOperationAction(ISD::FMA, VT, Custom);
         setOperationAction(ISD::FMAXIMUM, VT, Custom);
@@ -1791,7 +1793,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
     }
 
-    if (!Subtarget->hasSVEB16B16()) {
+    if (!Subtarget->hasSVEB16B16() ||
+        !Subtarget->isNonStreamingSVEorSME2Available()) {
       for (auto Opcode : {ISD::FADD, ISD::FMA, ISD::FMAXIMUM, ISD::FMAXNUM,
                           ISD::FMINIMUM, ISD::FMINNUM, ISD::FMUL, ISD::FSUB}) {
         setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
@@ -1996,6 +1999,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
     if (isOperationExpand(Op, MVT::f16))
       setOperationAction(Op, MVT::f16, Promote);
+}
+
+const AArch64TargetMachine &AArch64TargetLowering::getTM() const {
+  return static_cast<const AArch64TargetMachine &>(getTargetMachine());
 }
 
 void AArch64TargetLowering::addTypeForNEON(MVT VT) {
@@ -8311,53 +8318,54 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  // Create a 16 Byte TPIDR2 object. The dynamic buffer
-  // will be expanded and stored in the static object later using a pseudonode.
-  if (Attrs.hasZAState()) {
-    TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
-    TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
-    SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                              DAG.getConstant(1, DL, MVT::i32));
-
-    SDValue Buffer;
-    if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
-      Buffer = DAG.getNode(AArch64ISD::ALLOCATE_ZA_BUFFER, DL,
-                           DAG.getVTList(MVT::i64, MVT::Other), {Chain, SVL});
-    } else {
-      SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
-      Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL,
-                           DAG.getVTList(MVT::i64, MVT::Other),
-                           {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
-      MFI.CreateVariableSizedObject(Align(16), nullptr);
+  if (!getTM().useNewSMEABILowering() || Attrs.hasAgnosticZAInterface()) {
+    // Old SME ABI lowering (deprecated):
+    // Create a 16 Byte TPIDR2 object. The dynamic buffer
+    // will be expanded and stored in the static object later using a
+    // pseudonode.
+    if (Attrs.hasZAState()) {
+      TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
+      TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
+      SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                DAG.getConstant(1, DL, MVT::i32));
+      SDValue Buffer;
+      if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
+        Buffer = DAG.getNode(AArch64ISD::ALLOCATE_ZA_BUFFER, DL,
+                             DAG.getVTList(MVT::i64, MVT::Other), {Chain, SVL});
+      } else {
+        SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+        Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL,
+                             DAG.getVTList(MVT::i64, MVT::Other),
+                             {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
+        MFI.CreateVariableSizedObject(Align(16), nullptr);
+      }
+      Chain = DAG.getNode(
+          AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
+          {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
+    } else if (Attrs.hasAgnosticZAInterface()) {
+      // Call __arm_sme_state_size().
+      SDValue BufferSize =
+          DAG.getNode(AArch64ISD::GET_SME_SAVE_SIZE, DL,
+                      DAG.getVTList(MVT::i64, MVT::Other), Chain);
+      Chain = BufferSize.getValue(1);
+      SDValue Buffer;
+      if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
+        Buffer = DAG.getNode(AArch64ISD::ALLOC_SME_SAVE_BUFFER, DL,
+                             DAG.getVTList(MVT::i64, MVT::Other),
+                             {Chain, BufferSize});
+      } else {
+        // Allocate space dynamically.
+        Buffer = DAG.getNode(
+            ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
+            {Chain, BufferSize, DAG.getConstant(1, DL, MVT::i64)});
+        MFI.CreateVariableSizedObject(Align(16), nullptr);
+      }
+      // Copy the value to a virtual register, and save that in FuncInfo.
+      Register BufferPtr =
+          MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+      FuncInfo->setSMESaveBufferAddr(BufferPtr);
+      Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
     }
-    Chain = DAG.getNode(
-        AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
-        {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
-  } else if (Attrs.hasAgnosticZAInterface()) {
-    // Call __arm_sme_state_size().
-    SDValue BufferSize =
-        DAG.getNode(AArch64ISD::GET_SME_SAVE_SIZE, DL,
-                    DAG.getVTList(MVT::i64, MVT::Other), Chain);
-    Chain = BufferSize.getValue(1);
-
-    SDValue Buffer;
-    if (!Subtarget->isTargetWindows() && !hasInlineStackProbe(MF)) {
-      Buffer =
-          DAG.getNode(AArch64ISD::ALLOC_SME_SAVE_BUFFER, DL,
-                      DAG.getVTList(MVT::i64, MVT::Other), {Chain, BufferSize});
-    } else {
-      // Allocate space dynamically.
-      Buffer = DAG.getNode(
-          ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
-          {Chain, BufferSize, DAG.getConstant(1, DL, MVT::i64)});
-      MFI.CreateVariableSizedObject(Align(16), nullptr);
-    }
-
-    // Copy the value to a virtual register, and save that in FuncInfo.
-    Register BufferPtr =
-        MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
-    FuncInfo->setSMESaveBufferAddr(BufferPtr);
-    Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
   }
 
   if (CallConv == CallingConv::PreserveNone) {
@@ -8372,6 +8380,15 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         break;
       }
     }
+  }
+
+  if (getTM().useNewSMEABILowering()) {
+    // Clear new ZT0 state. TODO: Move this to the SME ABI pass.
+    if (Attrs.isNewZT0())
+      Chain = DAG.getNode(
+          ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
+          DAG.getConstant(Intrinsic::aarch64_sme_zero_zt, DL, MVT::i32),
+          DAG.getTargetConstant(0, DL, MVT::i32));
   }
 
   return Chain;
@@ -8945,7 +8962,6 @@ static SDValue emitSMEStateSaveRestore(const AArch64TargetLowering &TLI,
   MachineFunction &MF = DAG.getMachineFunction();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   FuncInfo->setSMESaveBufferUsed();
-
   TargetLowering::ArgListTy Args;
   Args.emplace_back(
       DAG.getCopyFromReg(Chain, DL, Info->getSMESaveBufferAddr(), MVT::i64),
@@ -9086,14 +9102,28 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       CallConv = CallingConv::AArch64_SVE_VectorCall;
   }
 
+  // Determine whether we need any streaming mode changes.
+  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
+  bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
+  bool IsAgnosticZAFunction = CallAttrs.caller().hasAgnosticZAInterface();
+  auto ZAMarkerNode = [&]() -> std::optional<unsigned> {
+    // TODO: Handle agnostic ZA functions.
+    if (!UseNewSMEABILowering || IsAgnosticZAFunction)
+      return std::nullopt;
+    if (!CallAttrs.caller().hasZAState() && !CallAttrs.caller().hasZT0State())
+      return std::nullopt;
+    return CallAttrs.requiresLazySave() ? AArch64ISD::REQUIRES_ZA_SAVE
+                                        : AArch64ISD::INOUT_ZA_USE;
+  }();
+
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
     IsTailCall = isEligibleForTailCallOptimization(CLI);
 
     // A sibling call is one where we're under the usual C ABI and not planning
     // to change that but can still do a tail call:
-    if (!TailCallOpt && IsTailCall && CallConv != CallingConv::Tail &&
-        CallConv != CallingConv::SwiftTail)
+    if (!ZAMarkerNode && !TailCallOpt && IsTailCall &&
+        CallConv != CallingConv::Tail && CallConv != CallingConv::SwiftTail)
       IsSibCall = true;
 
     if (IsTailCall)
@@ -9145,9 +9175,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     assert(FPDiff % 16 == 0 && "unaligned stack on tail call");
   }
 
-  // Determine whether we need any streaming mode changes.
-  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
-
   auto DescribeCallsite =
       [&](OptimizationRemarkAnalysis &R) -> OptimizationRemarkAnalysis & {
     R << "call from '" << ore::NV("Caller", MF.getName()) << "' to '";
@@ -9161,7 +9188,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     return R;
   };
 
-  bool RequiresLazySave = CallAttrs.requiresLazySave();
+  bool RequiresLazySave = !UseNewSMEABILowering && CallAttrs.requiresLazySave();
   bool RequiresSaveAllZA = CallAttrs.requiresPreservingAllZAState();
   if (RequiresLazySave) {
     const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
@@ -9236,10 +9263,20 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue), Chain,
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
 
-  // Adjust the stack pointer for the new arguments...
+  // Adjust the stack pointer for the new arguments... and mark ZA uses.
   // These operations are automatically eliminated by the prolog/epilog pass
-  if (!IsSibCall)
+  assert((!IsSibCall || !ZAMarkerNode) && "ZA markers require CALLSEQ_START");
+  if (!IsSibCall) {
     Chain = DAG.getCALLSEQ_START(Chain, IsTailCall ? 0 : NumBytes, 0, DL);
+    if (ZAMarkerNode) {
+      // Note: We need the CALLSEQ_START to glue the ZAMarkerNode to, simply
+      // using a chain can result in incorrect scheduling. The markers refer to
+      // the position just before the CALLSEQ_START (though occur after as
+      // CALLSEQ_START lacks in-glue).
+      Chain = DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other),
+                          {Chain, Chain.getValue(1)});
+    }
+  }
 
   SDValue StackPtr = DAG.getCopyFromReg(Chain, DL, AArch64::SP,
                                         getPointerTy(DAG.getDataLayout()));
@@ -9506,17 +9543,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
-    if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
-      Chain = DAG.getNode(AArch64ISD::VG_SAVE, DL,
-                          DAG.getVTList(MVT::Other, MVT::Glue), Chain);
-      InGlue = Chain.getValue(1);
-    }
-
-    SDValue NewChain =
+    Chain =
         changeStreamingMode(DAG, DL, CallAttrs.callee().hasStreamingInterface(),
                             Chain, InGlue, getSMToggleCondition(CallAttrs));
-    Chain = NewChain.getValue(0);
-    InGlue = NewChain.getValue(1);
+    InGlue = Chain.getValue(1);
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain
@@ -9701,16 +9731,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Result = changeStreamingMode(
         DAG, DL, !CallAttrs.callee().hasStreamingInterface(), Result, InGlue,
         getSMToggleCondition(CallAttrs));
-
-    if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
-      InGlue = Result.getValue(1);
-      Result =
-          DAG.getNode(AArch64ISD::VG_RESTORE, DL,
-                      DAG.getVTList(MVT::Other, MVT::Glue), {Result, InGlue});
-    }
   }
 
-  if (CallAttrs.requiresEnablingZAAfterCall())
+  if (RequiresLazySave || CallAttrs.requiresEnablingZAAfterCall())
     // Unconditionally resume ZA.
     Result = DAG.getNode(
         AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue), Result,
@@ -9732,7 +9755,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue TPIDR2_EL0 = DAG.getNode(
         ISD::INTRINSIC_W_CHAIN, DL, MVT::i64, Result,
         DAG.getConstant(Intrinsic::aarch64_sme_get_tpidr2, DL, MVT::i32));
-
     // Copy the address of the TPIDR2 block into X0 before 'calling' the
     // RESTORE_ZA pseudo.
     SDValue Glue;
@@ -9744,7 +9766,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         DAG.getNode(AArch64ISD::RESTORE_ZA, DL, MVT::Other,
                     {Result, TPIDR2_EL0, DAG.getRegister(AArch64::X0, MVT::i64),
                      RestoreRoutine, RegMask, Result.getValue(1)});
-
     // Finally reset the TPIDR2_EL0 register to 0.
     Result = DAG.getNode(
         ISD::INTRINSIC_VOID, DL, MVT::Other, Result,
@@ -14804,21 +14825,13 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   return ResultSLI;
 }
 
-static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                               const AArch64TargetLowering &TLI) {
+static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  SelectionDAG &DAG = DCI.DAG;
+  assert(VT.isVector() && "Expected vector type in tryLowerToBSL\n");
   SDLoc DL(N);
   const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
 
-  if (!VT.isVector())
-    return SDValue();
-
   if (VT.isScalableVector() && !Subtarget.hasSVE2())
-    return SDValue();
-
-  if (VT.isFixedLengthVector() &&
-      (!Subtarget.isNeonAvailable() || TLI.useSVEForFixedLengthVectorVT(VT)))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -14870,14 +14883,13 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // We only have to look for constant vectors here since the general, variable
   // case can be handled in TableGen.
   unsigned Bits = VT.getScalarSizeInBits();
-  uint64_t BitMask = Bits == 64 ? -1ULL : ((1ULL << Bits) - 1);
   for (int i = 1; i >= 0; --i)
     for (int j = 1; j >= 0; --j) {
       APInt Val1, Val2;
 
       if (ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) &&
           ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2) &&
-          (BitMask & ~Val1.getZExtValue()) == Val2.getZExtValue()) {
+          ~Val1.trunc(Bits) == Val2.trunc(Bits)) {
         return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
                            N0->getOperand(1 - i), N1->getOperand(1 - j));
       }
@@ -14891,7 +14903,8 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
         ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
         ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
         if (!CN0 || !CN1 ||
-            CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
+            CN0->getAPIntValue().trunc(Bits) !=
+                ~CN1->getAsAPIntVal().trunc(Bits)) {
           FoundMatch = false;
           break;
         }
@@ -14909,6 +14922,9 @@ SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
                                    !Subtarget->isNeonAvailable()))
     return LowerToScalableOp(Op, DAG);
+
+  if (SDValue Res = tryLowerToBSL(Op, DAG))
+    return Res;
 
   // Attempt to form a vector S[LR]I from (or (and X, C1), (lsl Y, C2))
   if (SDValue Res = tryLowerToSLI(Op.getNode(), DAG))
@@ -18154,7 +18170,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return true;
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasSVEB16B16();
+    return VT.isScalableVector() && Subtarget->hasSVEB16B16() &&
+           Subtarget->isNonStreamingSVEorSME2Available();
   default:
     break;
   }
@@ -18318,7 +18335,7 @@ bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   if (Val == 0 || AArch64_AM::isLogicalImmediate(Val, BitSize))
     return true;
 
-  if ((int64_t)Val < 0)
+  if (Val < 0)
     Val = ~Val;
   if (BitSize == 32)
     Val &= (1LL << 32) - 1;
@@ -19662,16 +19679,9 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget,
                                 const AArch64TargetLowering &TLI) {
   SelectionDAG &DAG = DCI.DAG;
-  EVT VT = N->getValueType(0);
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
-
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
-
-  if (SDValue Res = tryCombineToBSL(N, DCI, TLI))
-    return Res;
 
   return SDValue();
 }
@@ -28702,9 +28712,13 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
       getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
+
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal("__security_cookie",
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
                         PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
@@ -28719,13 +28733,6 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
     return;
   }
   TargetLowering::insertSSPDeclarations(M);
-}
-
-Value *AArch64TargetLowering::getSDagStackGuard(const Module &M) const {
-  // MSVC CRT has a global variable holding security cookie.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
-    return M.getGlobalVariable("__security_cookie");
-  return TargetLowering::getSDagStackGuard(M);
 }
 
 Function *AArch64TargetLowering::getSSPStackGuardCheck(const Module &M) const {

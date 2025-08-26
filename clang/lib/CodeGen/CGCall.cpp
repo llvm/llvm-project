@@ -1005,10 +1005,9 @@ getTypeExpansion(QualType Ty, const ASTContext &Context) {
     return std::make_unique<ConstantArrayExpansion>(AT->getElementType(),
                                                     AT->getZExtSize());
   }
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     SmallVector<const CXXBaseSpecifier *, 1> Bases;
     SmallVector<const FieldDecl *, 1> Fields;
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     assert(!RD->hasFlexibleArrayMember() &&
            "Cannot expand structure with flexible array.");
     if (RD->isUnion()) {
@@ -1602,6 +1601,7 @@ void ClangToLLVMArgMapping::construct(const ASTContext &Context,
       IRArgs.PaddingArgIndex = IRArgNo++;
 
     switch (AI.getKind()) {
+    case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
       // FIXME: handle sseregparm someday...
@@ -1712,6 +1712,7 @@ llvm::FunctionType *CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
   case ABIArgInfo::IndirectAliased:
     llvm_unreachable("Invalid ABI kind for return argument");
 
+  case ABIArgInfo::TargetSpecific:
   case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
     resultType = retAI.getCoerceToType();
@@ -1784,6 +1785,7 @@ llvm::FunctionType *CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
       ArgTypes[FirstIRArg] = llvm::PointerType::get(
           getLLVMContext(), ArgInfo.getIndirectAddrSpace());
       break;
+    case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
       // Fast-isel and the optimizer generally like scalar values better than
@@ -2697,6 +2699,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     else
       RetAttrs.addAttribute(llvm::Attribute::NoExt);
     [[fallthrough]];
+  case ABIArgInfo::TargetSpecific:
   case ABIArgInfo::Direct:
     if (RetAI.getInReg())
       RetAttrs.addAttribute(llvm::Attribute::InReg);
@@ -2838,6 +2841,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       else
         Attrs.addAttribute(llvm::Attribute::NoExt);
       [[fallthrough]];
+    case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Direct:
       if (ArgNo == 0 && FI.isChainCall())
         Attrs.addAttribute(llvm::Attribute::Nest);
@@ -3357,17 +3361,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         }
       }
 
-      // Struct of fixed-length vectors and struct of array of fixed-length
-      // vector in VLS calling convention are coerced to vector tuple
-      // type(represented as TargetExtType) and scalable vector type
-      // respectively, they're no longer handled as struct.
-      if (ArgI.isDirect() && isa<llvm::StructType>(ConvertType(Ty)) &&
-          (isa<llvm::TargetExtType>(ArgI.getCoerceToType()) ||
-           isa<llvm::ScalableVectorType>(ArgI.getCoerceToType()))) {
-        ArgVals.push_back(ParamValue::forDirect(AI));
-        break;
-      }
-
       llvm::StructType *STy =
           dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
       Address Alloca =
@@ -3508,6 +3501,25 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       break;
     }
 
+    case ABIArgInfo::TargetSpecific: {
+      auto *AI = Fn->getArg(FirstIRArg);
+      AI->setName(Arg->getName() + ".target_coerce");
+      Address Alloca =
+          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), Arg->getName());
+      Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
+      CGM.getABIInfo().createCoercedStore(AI, Ptr, ArgI, false, *this);
+      if (CodeGenFunction::hasScalarEvaluationKind(Ty)) {
+        llvm::Value *V =
+            EmitLoadOfScalar(Alloca, false, Ty, Arg->getBeginLoc());
+        if (isPromoted) {
+          V = emitArgumentDemotion(*this, Arg, V);
+        }
+        ArgVals.push_back(ParamValue::forDirect(V));
+      } else {
+        ArgVals.push_back(ParamValue::forIndirect(Alloca));
+      }
+      break;
+    }
     case ABIArgInfo::Ignore:
       assert(NumIRArgs == 0);
       // Initialize the local variable appropriately.
@@ -4134,6 +4146,11 @@ void CodeGenFunction::EmitFunctionEpilog(
         RV = Builder.CreateInsertValue(RV, results[i], i);
       }
     }
+    break;
+  }
+  case ABIArgInfo::TargetSpecific: {
+    Address V = emitAddressAtOffset(*this, ReturnValue, RetAI);
+    RV = CGM.getABIInfo().createCoercedLoad(V, RetAI, *this);
     break;
   }
   case ABIArgInfo::Expand:
@@ -5243,9 +5260,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     // since otherwise we could be making a conditional call after a check for
     // the proper cpu features (and it won't cause code generation issues due to
     // function based code generation).
-    if (TargetDecl->hasAttr<AlwaysInlineAttr>() &&
-        (TargetDecl->hasAttr<TargetAttr>() ||
-         (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>())))
+    if ((TargetDecl->hasAttr<AlwaysInlineAttr>() &&
+         (TargetDecl->hasAttr<TargetAttr>() ||
+          (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>()))) ||
+        (CurFuncDecl && CurFuncDecl->hasAttr<FlattenAttr>() &&
+         (CurFuncDecl->hasAttr<TargetAttr>() ||
+          TargetDecl->hasAttr<TargetAttr>())))
       checkTargetFeatures(Loc, FD);
   }
 
@@ -5702,6 +5722,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       unsigned IRArgPos = FirstIRArg;
       ExpandTypeToArgs(I->Ty, *I, IRFuncTy, IRCallArgs, IRArgPos);
       assert(IRArgPos == FirstIRArg + NumIRArgs);
+      break;
+    }
+
+    case ABIArgInfo::TargetSpecific: {
+      Address Src = Address::invalid();
+      if (!I->isAggregate()) {
+        Src = CreateMemTemp(I->Ty, "target_coerce");
+        I->copyInto(*this, Src);
+      } else {
+        Src = I->hasLValue() ? I->getKnownLValue().getAddress()
+                             : I->getKnownRValue().getAggregateAddress();
+      }
+
+      // If the value is offset in memory, apply the offset now.
+      Src = emitAddressAtOffset(*this, Src, ArgInfo);
+      llvm::Value *Load =
+          CGM.getABIInfo().createCoercedLoad(Src, ArgInfo, *this);
+      IRCallArgs[FirstIRArg] = Load;
       break;
     }
     }
@@ -6186,6 +6224,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
               DestIsVolatile);
         }
 
+        return convertTempToRValue(DestPtr, RetTy, SourceLocation());
+      }
+
+      case ABIArgInfo::TargetSpecific: {
+        Address DestPtr = ReturnValue.getValue();
+        Address StorePtr = emitAddressAtOffset(*this, DestPtr, RetAI);
+        bool DestIsVolatile = ReturnValue.isVolatile();
+        if (!DestPtr.isValid()) {
+          DestPtr = CreateMemTemp(RetTy, "target_coerce");
+          DestIsVolatile = false;
+        }
+        CGM.getABIInfo().createCoercedStore(CI, StorePtr, RetAI, DestIsVolatile,
+                                            *this);
         return convertTempToRValue(DestPtr, RetTy, SourceLocation());
       }
 

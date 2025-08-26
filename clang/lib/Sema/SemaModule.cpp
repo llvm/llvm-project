@@ -137,7 +137,7 @@ makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
          "modules only.");
 
   llvm::SmallVector<Module *, 4> Worklist;
-  llvm::SmallSet<Module *, 16> Visited;
+  llvm::SmallPtrSet<Module *, 16> Visited;
   Worklist.push_back(Imported);
 
   Module *FoundPrimaryModuleInterface =

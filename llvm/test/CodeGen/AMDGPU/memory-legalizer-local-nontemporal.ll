@@ -12,6 +12,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250 %s
 
 define amdgpu_kernel void @local_nontemporal_load_0(
 ; GFX6-LABEL: local_nontemporal_load_0:
@@ -193,6 +194,18 @@ define amdgpu_kernel void @local_nontemporal_load_0(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: local_nontemporal_load_0:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    ds_load_b32 v1, v1
+; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(1) %out) {
 entry:
   %val = load i32, ptr addrspace(3) %in, align 4, !nontemporal !0
@@ -428,6 +441,22 @@ define amdgpu_kernel void @local_nontemporal_load_1(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: local_nontemporal_load_1:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_mov_b32 s2, 0x3ff
+; GFX1250-NEXT:    v_and_b32_e64 v1, v1, s2
+; GFX1250-NEXT:    s_mov_b32 s2, 2
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_lshl_add_u32 v1, v1, s2, s3
+; GFX1250-NEXT:    ds_load_b32 v1, v1
+; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(1) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -597,6 +626,18 @@ define amdgpu_kernel void @local_nontemporal_store_0(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: local_nontemporal_store_0:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[2:3], 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
+; GFX1250-NEXT:    ds_store_b32 v0, v1
+; GFX1250-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(3) %out) {
 entry:
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -802,6 +843,22 @@ define amdgpu_kernel void @local_nontemporal_store_1(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: local_nontemporal_store_1:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s1, 0x3ff
+; GFX1250-NEXT:    v_and_b32_e64 v0, v0, s1
+; GFX1250-NEXT:    s_mov_b32 s1, 2
+; GFX1250-NEXT:    v_lshl_add_u32 v0, v0, s1, s2
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
+; GFX1250-NEXT:    ds_store_b32 v0, v1
+; GFX1250-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(3) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -991,6 +1048,18 @@ define amdgpu_kernel void @local_nontemporal_volatile_load(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: local_nontemporal_volatile_load:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    ds_load_b32 v1, v1
+; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(1) %out) {
 entry:
   %val = load volatile i32, ptr addrspace(3) %in, align 4, !nontemporal !0

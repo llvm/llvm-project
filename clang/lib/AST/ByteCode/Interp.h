@@ -1640,6 +1640,9 @@ bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
   const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.initialize();
@@ -1652,6 +1655,9 @@ bool InitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
   const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.activate();
@@ -1663,7 +1669,13 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
+  const Pointer &Field = Ptr.atField(F->Offset);
 
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
@@ -1689,7 +1701,13 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
                           const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
+  const Pointer &Field = Ptr.atField(F->Offset);
 
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
@@ -1788,6 +1806,8 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
 
   if (!Ptr.isBlockPointer()) {
+    if (!Ptr.isIntegralPointer())
+      return false;
     S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
     return true;
   }
@@ -1809,6 +1829,8 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
     return false;
 
   if (!Ptr.isBlockPointer()) {
+    if (!Ptr.isIntegralPointer())
+      return false;
     S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
     return true;
   }
@@ -2437,9 +2459,17 @@ inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
     const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
 
     if (Ptr.getLifetime() == Lifetime::Ended) {
-      auto *D = cast<NamedDecl>(Ptr.getFieldDesc()->asDecl());
-      S.FFDiag(D->getLocation(), diag::note_constexpr_destroy_out_of_lifetime)
-          << D->getNameAsString();
+      // Try to use the declaration for better diagnostics
+      if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
+        auto *ND = cast<NamedDecl>(D);
+        S.FFDiag(ND->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << ND->getNameAsString();
+      } else {
+        S.FFDiag(Ptr.getDeclDesc()->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << Ptr.toDiagnosticString(S.getASTContext());
+      }
       return false;
     }
   }
@@ -3158,8 +3188,10 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
     return true;
   }
 
-  if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
-    return false;
+  if (!Ptr.isZeroSizeArray()) {
+    if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
+      return false;
+  }
 
   if (Ptr.isRoot() || !Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));

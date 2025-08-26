@@ -190,12 +190,14 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -955,6 +957,7 @@ public:
       Module &M, LDSUsesInfoTy &LDSUsesInfo,
       VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
     bool Changed = false;
+    const DataLayout &DL = M.getDataLayout();
     // The 1st round: give module-absolute assignments
     int NumAbsolutes = 0;
     std::vector<GlobalVariable *> OrderedGVs;
@@ -976,8 +979,11 @@ public:
     }
     OrderedGVs = sortByName(std::move(OrderedGVs));
     for (GlobalVariable *GV : OrderedGVs) {
-      int BarId = ++NumAbsolutes;
       unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+      unsigned BarId = NumAbsolutes + 1;
+      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+      NumAbsolutes += BarCnt;
+
       // 4 bits for alignment, 5 bits for the barrier num,
       // 3 bits for the barrier scope
       unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
@@ -1015,12 +1021,11 @@ public:
         // create a new GV used only by this kernel and its function.
         auto NewGV = uniquifyGVPerKernel(M, GV, F);
         Changed |= (NewGV != GV);
-        int BarId = (NumAbsolutes + 1);
-        if (Kernel2BarId.contains(F)) {
-          BarId = (Kernel2BarId[F] + 1);
-        }
-        Kernel2BarId[F] = BarId;
         unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+        unsigned BarId = Kernel2BarId[F];
+        BarId += NumAbsolutes + 1;
+        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        Kernel2BarId[F] += BarCnt;
         unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
         recordLDSAbsoluteAddress(&M, NewGV, Offset);
       }

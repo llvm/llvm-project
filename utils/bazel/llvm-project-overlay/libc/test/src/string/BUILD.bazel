@@ -60,6 +60,15 @@ libc_test(
 )
 
 libc_test(
+    name = "strsep_test",
+    srcs = ["strsep_test.cpp"],
+    deps = [
+        "//libc:hdr_signal_macros",
+        "//libc:strsep",
+    ],
+)
+
+libc_test(
     name = "strstr_test",
     srcs = ["strstr_test.cpp"],
     deps = [
