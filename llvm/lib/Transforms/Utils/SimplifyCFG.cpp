@@ -7071,6 +7071,27 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
                                    /*HasNSW =*/!MayWrap);
   }
 
+  // Keep track of the tables we create for each phi node
+  struct TableInfo {
+    SwitchLookupTable Table;
+    Constant *DefaultValue;
+  };
+  // Find out what kind of table to create by creating a SwitchLookupTable
+  SmallDenseMap<PHINode *, TableInfo> PhiToTableMap;
+  for (PHINode *PHI : PHIs) {
+    const auto &ResultList = ResultLists[PHI];
+
+    Type *ResultType = ResultList.begin()->second->getType();
+    // Use any value to fill the lookup table holes.
+    Constant *DV =
+        AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
+    StringRef FuncName = Fn->getName();
+    SwitchLookupTable Table(*Fn->getParent(), TableSize, TableIndexOffset,
+                            ResultList, DV, DL, FuncName);
+    TableInfo TI = {Table, DV};
+    PhiToTableMap.insert({PHI, TI});
+  }
+
   std::vector<DominatorTree::UpdateType> Updates;
 
   // Compute the maximum table size representable by the integer type we are
@@ -7159,25 +7180,16 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
-
-    Type *ResultType = ResultList.begin()->second->getType();
-
-    // Use any value to fill the lookup table holes.
-    Constant *DV =
-        AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
-    StringRef FuncName = Fn->getName();
-    SwitchLookupTable Table(Mod, TableSize, TableIndexOffset, ResultList, DV,
-                            DL, FuncName);
-
-    Value *Result = Table.buildLookup(TableIndex, Builder, DL);
-
+    auto TableInfo = PhiToTableMap.at(PHI);
+    auto *Result = TableInfo.Table.buildLookup(TableIndex, Builder, DL);
     // Do a small peephole optimization: re-use the switch table compare if
     // possible.
     if (!TableHasHoles && HasDefaultResults && RangeCheckBranch) {
       BasicBlock *PhiBlock = PHI->getParent();
       // Search for compare instructions which use the phi.
       for (auto *User : PHI->users()) {
-        reuseTableCompare(User, PhiBlock, RangeCheckBranch, DV, ResultList);
+        reuseTableCompare(User, PhiBlock, RangeCheckBranch,
+                          TableInfo.DefaultValue, ResultList);
       }
     }
 
