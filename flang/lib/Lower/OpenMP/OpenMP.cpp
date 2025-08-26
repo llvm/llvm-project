@@ -3894,8 +3894,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
           parser::omp::GetOmpDirectiveName(*ompNestedLoopCons).v;
       switch (nestedDirective) {
       case llvm::omp::Directive::OMPD_tile:
-        // Emit the omp.loop_nest with annotation for tiling
-        genOMP(converter, symTable, semaCtx, eval, ompNestedLoopCons->value());
+        // Skip OMPD_tile since the tile sizes will be retrieved when
+        // generating the omp.looop_nest op.
         break;
       default: {
         unsigned version = semaCtx.langOptions().OpenMPVersion;
