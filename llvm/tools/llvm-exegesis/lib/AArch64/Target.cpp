@@ -8,7 +8,6 @@
 #include "../Target.h"
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 
 #if defined(__aarch64__) && defined(__linux__)
 #include <sys/prctl.h> // For PR_PAC_* constants
@@ -110,10 +109,6 @@ static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
 
 namespace {
 
-// Use X19 as the loop counter register since it's a callee-saved register
-// that's available for temporary use.
-constexpr const MCPhysReg kDefaultLoopCounterReg = AArch64::X19;
-
 class ExegesisAArch64Target : public ExegesisTarget {
 public:
   ExegesisAArch64Target()
@@ -145,31 +140,6 @@ private:
 
     errs() << "setRegTo is not implemented, results will be unreliable\n";
     return {};
-  }
-  MCRegister getDefaultLoopCounterRegister(const Triple &) const override {
-    return kDefaultLoopCounterReg;
-  }
-
-  void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
-                                   MachineBasicBlock &TargetMBB,
-                                   const MCInstrInfo &MII,
-                                   MCRegister LoopRegister) const override {
-    // subs LoopRegister, LoopRegister, #1
-    BuildMI(&MBB, DebugLoc(), MII.get(AArch64::SUBSXri))
-        .addDef(LoopRegister)
-        .addUse(LoopRegister)
-        .addImm(1)  // Subtract 1
-        .addImm(0); // No shift amount
-    // b.ne TargetMBB
-    BuildMI(&MBB, DebugLoc(), MII.get(AArch64::Bcc))
-        .addImm(AArch64CC::NE)
-        .addMBB(&TargetMBB);
-  }
-
-  // Registers that should not be selected for use in snippets.
-  const MCPhysReg UnavailableRegisters[1] = {kDefaultLoopCounterReg};
-  ArrayRef<MCPhysReg> getUnavailableRegisters() const override {
-    return UnavailableRegisters;
   }
 
   bool matchesArch(Triple::ArchType Arch) const override {
