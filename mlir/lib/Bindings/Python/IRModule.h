@@ -1216,7 +1216,7 @@ public:
   /// Note that PyAffineExpr instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineExpr
   /// is taken by calling this function.
-  static PyAffineExpr createFromCapsule(nanobind::object capsule);
+  static PyAffineExpr createFromCapsule(const nanobind::object &capsule);
 
   PyAffineExpr add(const PyAffineExpr &other) const;
   PyAffineExpr mul(const PyAffineExpr &other) const;
@@ -1243,7 +1243,7 @@ public:
   /// Note that PyAffineMap instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineMap
   /// is taken by calling this function.
-  static PyAffineMap createFromCapsule(nanobind::object capsule);
+  static PyAffineMap createFromCapsule(const nanobind::object &capsule);
 
 private:
   MlirAffineMap affineMap;
@@ -1263,7 +1263,7 @@ public:
   /// Creates a PyIntegerSet from the MlirAffineMap wrapped by a capsule.
   /// Note that PyIntegerSet instances may be uniqued, so the returned object
   /// may be a pre-existing object. Integer sets are owned by the context.
-  static PyIntegerSet createFromCapsule(nanobind::object capsule);
+  static PyIntegerSet createFromCapsule(const nanobind::object &capsule);
 
 private:
   MlirIntegerSet integerSet;

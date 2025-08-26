@@ -1,0 +1,55 @@
+// RUN: cir-opt %s | FileCheck %s
+
+// Test the parsing and printing of the two forms of vtt.address_point op, as
+// they will appear in constructors.
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_A = !cir.record<struct "A" {!u8i}>
+!rec_B = !cir.record<struct "B" {!cir.vptr}>
+!rec_C = !cir.record<struct "C" {!rec_B}>
+!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 3>}>
+module {
+  cir.func private @_ZN1AC2Ev(!cir.ptr<!rec_A>)
+  cir.func private @_ZN1BC2Ev(!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>)
+  cir.func dso_local @_ZN1CC2Ev(%arg0: !cir.ptr<!rec_C>, %arg1: !cir.ptr<!cir.ptr<!void>>) {
+    %0 = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!cir.ptr<!cir.ptr<!void>>>, ["vtt", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>
+    cir.store %arg1, %1 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
+    %3 = cir.load align(8) %1 : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>, !cir.ptr<!cir.ptr<!void>>
+    %4 = cir.base_class_addr %2 : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_B>
+
+    %5 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+    // CHECK: cir.vtt.address_point %{{.*}} : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+
+    cir.call @_ZN1BC2Ev(%4, %5) : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
+    %6 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
+    %7 = cir.cast(bitcast, %6 : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+    %8 = cir.load align(8) %7 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %9 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
+    cir.store align(8) %8, %9 : !cir.vptr, !cir.ptr<!cir.vptr>
+    cir.return
+  }
+  cir.global linkonce_odr dso_local @_ZTV1C = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct {alignment = 8 : i64}
+  cir.global linkonce_odr @_ZTT1C = #cir.const_array<[#cir.global_view<@_ZTV1C, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1C0_1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 2> {alignment = 8 : i64}
+  cir.func dso_local @_ZN1CC1Ev(%arg0: !cir.ptr<!rec_C>) {
+    %0 = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>
+    %1 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
+    %2 = cir.base_class_addr %1 : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_A>
+    cir.call @_ZN1AC2Ev(%2) : (!cir.ptr<!rec_A>) -> ()
+    %3 = cir.base_class_addr %1 : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_B>
+
+    %4 = cir.vtt.address_point @_ZTT1C, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+    // CHECK: cir.vtt.address_point @_ZTT1C, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+
+    cir.call @_ZN1BC2Ev(%3, %4) : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
+    %5 = cir.vtable.address_point(@_ZTV1C, address_point = <index = 0, offset = 3>) : !cir.vptr
+    %6 = cir.vtable.get_vptr %1 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
+    cir.store align(8) %5, %6 : !cir.vptr, !cir.ptr<!cir.vptr>
+    cir.return
+  }
+  cir.global linkonce_odr dso_local @_ZTC1C0_1B = #cir.const_record<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct {alignment = 8 : i64}
+}

@@ -3801,6 +3801,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_disable_llvm_passes,
       options::OPT_fnative_half_type,
       options::OPT_hlsl_entrypoint,
+      options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version};
   if (!types::isHLSL(InputType))
     return;
@@ -5981,12 +5982,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fno_knr_functions);
 
-  // This is a coarse approximation of what llvm-gcc actually does, both
-  // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
-  // complicated ways.
   auto SanitizeArgs = TC.getSanitizerArgs(Args);
   Args.AddLastArg(CmdArgs,
                   options::OPT_fallow_runtime_check_skip_hot_cutoff_EQ);
+
+  // This is a coarse approximation of what llvm-gcc actually does, both
+  // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
+  // complicated ways.
   bool IsAsyncUnwindTablesDefault =
       TC.getDefaultUnwindTableLevel(Args) == ToolChain::UnwindTableLevel::Asynchronous;
   bool IsSyncUnwindTablesDefault =

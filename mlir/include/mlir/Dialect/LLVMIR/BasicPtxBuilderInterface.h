@@ -26,11 +26,11 @@ namespace NVVM {
 enum class PTXRegisterMod {
   /// Read register with no modifier
   Read = 0,
-  /// Read register with '+' modifier
+  /// Write register with '=' modifier
   Write = 2,
-  /// Read register with '=' modifier.
-  /// Note that, this is not natively supported by LLVM, but it is possible to
-  /// set read and write for the same operand.
+  /// ReadWrite register with '+' modifier.
+  /// Note that, this is not natively supported by LLVM, the Interface does
+  /// mapping
   ReadWrite = 1,
 };
 
@@ -67,13 +67,19 @@ class PtxBuilder {
   SmallVector<Value> ptxOperands;
   // Register constraints (read, write, readwrite) and register data types
   std::string registerConstraints;
-
+  // Modifiers
+  SmallVector<PTXRegisterMod> registerModifiers;
+  // Has return value as write-only or read-write
   bool hasResult = false;
+  // Indicates if the Op will handle the register mapping manually.
+  bool needsManualRegisterMapping = false;
 
 public:
   /// Single constructor that only initializes members.
-  PtxBuilder(Operation *op, PatternRewriter &rewriter)
-      : interfaceOp(op), rewriter(rewriter) {}
+  PtxBuilder(Operation *op, PatternRewriter &rewriter,
+             bool needsManualRegisterMapping = false)
+      : interfaceOp(op), rewriter(rewriter),
+        needsManualRegisterMapping(needsManualRegisterMapping) {}
 
   /// Add an operand with the read/write input type.
   void insertValue(Value v, PTXRegisterMod itype = PTXRegisterMod::Read);
@@ -86,6 +92,16 @@ public:
   /// op with
   void buildAndReplaceOp();
 };
+
+/// Count the number of placeholder variables such as {$r}, {$w}, {$rw} in the
+/// PTX code.
+void countPlaceholderNumbers(StringRef ptxCode,
+                             llvm::SmallDenseSet<unsigned> &seenRW,
+                             llvm::SmallDenseSet<unsigned> &seenW,
+                             llvm::SmallDenseSet<unsigned> &seenR,
+                             llvm::SmallVectorImpl<unsigned> &rwNums,
+                             llvm::SmallVectorImpl<unsigned> &wNums,
+                             llvm::SmallVectorImpl<unsigned> &rNums);
 
 } // namespace NVVM
 } // namespace mlir
