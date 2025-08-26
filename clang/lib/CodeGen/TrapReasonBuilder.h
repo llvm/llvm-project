@@ -24,7 +24,7 @@ namespace CodeGen {
 /// It is intended that this object be allocated on the stack.
 class TrapReason {
 public:
-  TrapReason() {}
+  TrapReason() = default;
   /// \return The trap message. Note the lifetime of the underlying storage for
   /// the returned StringRef lives in this class which means the returned
   /// StringRef should not be used after this class is destroyed.
