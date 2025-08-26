@@ -56,7 +56,8 @@ IncrementalAction::IncrementalAction(CompilerInstance &Instance,
       Interp(I), CI(Instance), Consumer(std::move(Consumer)) {}
 
 std::unique_ptr<ASTConsumer>
-IncrementalAction::CreateASTConsumer(CompilerInstance & /*CI*/, StringRef InFile) {
+IncrementalAction::CreateASTConsumer(CompilerInstance & /*CI*/,
+                                     StringRef InFile) {
   std::unique_ptr<ASTConsumer> C =
       WrapperFrontendAction::CreateASTConsumer(this->CI, InFile);
 
