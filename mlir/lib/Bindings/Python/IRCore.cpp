@@ -1087,9 +1087,12 @@ PyModuleRef PyModule::forModule(MlirModule module) {
 
   // Create.
   PyModule *unownedModule = new PyModule(std::move(contextRef), module);
-  // Note that the default return value policy on cast is automatic_reference,
-  // which does not take ownership (delete will not be called).
-  // Just be explicit.
+  // Note that the default return value policy on cast is `automatic_reference`,
+  // which means "does not take ownership, does not call delete/dtor".
+  // We use `take_ownership`, which means "Python will call the C++ destructor
+  // and delete operator when the Python wrapper is garbage collected", because
+  // MlirModule actually wraps OwningOpRef<ModuleOp> (see mlirModuleCreateParse
+  // etc).
   nb::object pyRef = nb::cast(unownedModule, nb::rv_policy::take_ownership);
   unownedModule->handle = pyRef;
   return PyModuleRef(unownedModule, std::move(pyRef));
@@ -1158,7 +1161,6 @@ PyOperationRef PyOperation::createInstance(PyMlirContextRef contextRef,
 PyOperationRef PyOperation::forOperation(PyMlirContextRef contextRef,
                                          MlirOperation operation,
                                          nb::object parentKeepAlive) {
-  // Create.
   return createInstance(std::move(contextRef), operation,
                         std::move(parentKeepAlive));
 }
