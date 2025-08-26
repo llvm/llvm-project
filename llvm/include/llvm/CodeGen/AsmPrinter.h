@@ -135,12 +135,12 @@ public:
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
 
-  /// Vector of symbols marking the position of callsites in the current
+  /// Vector of symbols marking the end of the callsites in the current
   /// function, keyed by their containing basic block.
   /// The callsite symbols of each block are stored in the order they appear
   /// in that block.
   DenseMap<const MachineBasicBlock *, SmallVector<MCSymbol *, 1>>
-      CurrentFnCallsiteSymbols;
+      CurrentFnCallsiteEndSymbols;
 
   /// Provides the profile information for constants.
   const StaticDataProfileInfo *SDPI = nullptr;
@@ -332,9 +332,9 @@ public:
   /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
-  /// Creates a new symbol to be used for the beginning of a callsite at the
-  /// specified basic block.
-  MCSymbol *createCallsiteSymbol(const MachineBasicBlock &MBB);
+  /// Creates a new symbol to be used for the end of a callsite at the specified
+  /// basic block.
+  MCSymbol *createCallsiteEndSymbol(const MachineBasicBlock &MBB);
 
   /// If the specified function has had any references to address-taken blocks
   /// generated, but the block got deleted, return the symbol now so we can
