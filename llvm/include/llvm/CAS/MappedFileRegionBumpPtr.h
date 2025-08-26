@@ -42,20 +42,28 @@ class MappedFileRegionBumpPtr {
 public:
   using RegionT = sys::fs::mapped_file_region;
 
+  /// Header for MappedFileRegionBumpPtr. It can be configured to be located
+  /// at any location within the file and the allocation will be appended after
+  /// the header.
+  struct Header {
+    std::atomic<uint64_t> BumpPtr;
+    std::atomic<uint64_t> AllocatedSize;
+  };
+
   /// Create a \c MappedFileRegionBumpPtr.
   ///
   /// \param Path the path to open the mapped region.
   /// \param Capacity the maximum size for the mapped file region.
-  /// \param BumpPtrOffset the offset at which to store the bump pointer.
+  /// \param HeaderOffset the offset at which to store the header. This is so
+  /// that information can be stored before the header, like a file magic.
   /// \param NewFileConstructor is for constructing new files. It has exclusive
   /// access to the file. Must call \c initializeBumpPtr.
   static Expected<MappedFileRegionBumpPtr>
-  create(const Twine &Path, uint64_t Capacity, int64_t BumpPtrOffset,
+  create(const Twine &Path, uint64_t Capacity, uint64_t HeaderOffset,
          function_ref<Error(MappedFileRegionBumpPtr &)> NewFileConstructor);
 
-  /// Finish initializing the bump pointer. Must be called by
-  /// \c NewFileConstructor.
-  void initializeBumpPtr(int64_t BumpPtrOffset);
+  /// Finish initializing the header. Must be called by \c NewFileConstructor.
+  void initializeHeader(uint64_t HeaderOffset);
 
   /// Minimum alignment for allocations, currently hardcoded to 8B.
   static constexpr Align getAlign() {
@@ -105,10 +113,6 @@ private:
   }
 
 private:
-  struct Header {
-    std::atomic<int64_t> BumpPtr;
-    std::atomic<int64_t> AllocatedSize;
-  };
   RegionT Region;
   Header *H = nullptr;
   std::string Path;

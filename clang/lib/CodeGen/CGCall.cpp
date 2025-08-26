@@ -5261,9 +5261,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     // since otherwise we could be making a conditional call after a check for
     // the proper cpu features (and it won't cause code generation issues due to
     // function based code generation).
-    if (TargetDecl->hasAttr<AlwaysInlineAttr>() &&
-        (TargetDecl->hasAttr<TargetAttr>() ||
-         (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>())))
+    if ((TargetDecl->hasAttr<AlwaysInlineAttr>() &&
+         (TargetDecl->hasAttr<TargetAttr>() ||
+          (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>()))) ||
+        (CurFuncDecl && CurFuncDecl->hasAttr<FlattenAttr>() &&
+         (CurFuncDecl->hasAttr<TargetAttr>() ||
+          TargetDecl->hasAttr<TargetAttr>())))
       checkTargetFeatures(Loc, FD);
   }
 

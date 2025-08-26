@@ -10,9 +10,11 @@
 #include "llvm/CAS/MappedFileRegionBumpPtr.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #if defined(__APPLE__)
 #include <crt_externs.h>
@@ -84,15 +86,16 @@ protected:
 TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
   auto TestAllocator = [](StringRef Path) {
     auto NewFileConstructor = [&](MappedFileRegionBumpPtr &Alloc) -> Error {
-      Alloc.initializeBumpPtr(0);
+      Alloc.initializeHeader(0);
       return Error::success();
     };
 
-    auto Alloc = MappedFileRegionBumpPtr::create(
-        Path, /*Capacity=*/10 * 1024 * 1024,
-        /*BumpPtrOffset=*/0, NewFileConstructor);
-    if (!Alloc)
-      ASSERT_TRUE(false);
+    std::optional<MappedFileRegionBumpPtr> Alloc;
+    ASSERT_THAT_ERROR(
+        MappedFileRegionBumpPtr::create(Path, /*Capacity=*/10 * 1024 * 1024,
+                                        /*HeaderOffset=*/0, NewFileConstructor)
+            .moveInto(Alloc),
+        Succeeded());
 
     std::vector<unsigned *> AllocatedPtr;
     AllocatedPtr.resize(100);
@@ -144,6 +147,83 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
   ASSERT_NE(PI.Pid, sys::ProcessInfo::InvalidPid) << "Invalid process id";
   llvm::sys::Wait(PI, /*SecondsToWait=*/5, &Error);
   ASSERT_TRUE(Error.empty());
+
+  // Clean up after both processes finish testing.
+  sys::fs::remove(FilePath);
+  sys::fs::remove_directories(sys::path::parent_path(FilePath));
+}
+
+TEST_F(CASProgramTest, MappedFileRegionBumpPtrSizeTest) {
+  using namespace std::chrono_literals;
+  auto NewFileConstructor = [&](MappedFileRegionBumpPtr &Alloc) -> Error {
+    Alloc.initializeHeader(0);
+    return Error::success();
+  };
+
+  if (const char *File = getenv("LLVM_CAS_TEST_MAPPED_FILE_REGION")) {
+    ExponentialBackoff Backoff(5s);
+    do {
+      if (sys::fs::exists(File)) {
+        break;
+      }
+    } while (Backoff.waitForNextAttempt());
+
+    std::optional<MappedFileRegionBumpPtr> Alloc;
+    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/1024,
+                                                      /*HeaderOffset=*/0,
+                                                      NewFileConstructor)
+                          .moveInto(Alloc),
+                      Succeeded());
+
+    ASSERT_TRUE(Alloc->capacity() == 2048);
+
+    Alloc.reset();
+
+    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/4096,
+                                                      /*HeaderOffset=*/0,
+                                                      NewFileConstructor)
+                          .moveInto(Alloc),
+                      Succeeded());
+
+    ASSERT_TRUE(Alloc->capacity() == 4096);
+    exit(0);
+  }
+
+  SmallString<128> FilePath;
+  sys::fs::createUniqueDirectory("MappedFileRegionBumpPtr", FilePath);
+  sys::path::append(FilePath, "allocation-file");
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramID);
+  StringRef Argv[] = {
+      Executable,
+      "--gtest_filter=CASProgramTest.MappedFileRegionBumpPtrSizeTest"};
+
+  // Add LLVM_PROGRAM_TEST_LOCKED_FILE to the environment of the child.
+  std::string EnvVar = "LLVM_CAS_TEST_MAPPED_FILE_REGION=";
+  EnvVar += FilePath.str();
+  addEnvVar(EnvVar);
+
+  std::string Error;
+  bool ExecutionFailed;
+  sys::ProcessInfo PI = sys::ExecuteNoWait(Executable, Argv, getEnviron(), {},
+                                           0, &Error, &ExecutionFailed);
+
+  std::optional<MappedFileRegionBumpPtr> Alloc;
+  ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(FilePath, /*Capacity=*/2048,
+                                                    /*HeaderOffset=*/0,
+                                                    NewFileConstructor)
+                        .moveInto(Alloc),
+                    Succeeded());
+
+  ASSERT_FALSE(ExecutionFailed) << Error;
+  ASSERT_TRUE(Error.empty());
+  ASSERT_NE(PI.Pid, sys::ProcessInfo::InvalidPid) << "Invalid process id";
+  llvm::sys::Wait(PI, /*SecondsToWait=*/100, &Error);
+  ASSERT_TRUE(Error.empty());
+
+  // Size is still the requested 2048.
+  ASSERT_TRUE(Alloc->capacity() == 2048);
 
   // Clean up after both processes finish testing.
   sys::fs::remove(FilePath);

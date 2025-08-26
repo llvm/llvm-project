@@ -924,7 +924,7 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
   }
 
   case ParsedTemplateArgument::NonType: {
-    Expr *E = static_cast<Expr *>(Arg.getAsExpr());
+    Expr *E = Arg.getAsExpr();
     return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
   }
 

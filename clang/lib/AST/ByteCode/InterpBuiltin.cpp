@@ -205,6 +205,8 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
   if (A.isDummy() || B.isDummy())
     return false;
+  if (!A.isBlockPointer() || !B.isBlockPointer())
+    return false;
 
   bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
                 ID == Builtin::BI__builtin_wcscmp ||
@@ -212,7 +214,10 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
-  assert(getElemType(A).getTypePtr() == getElemType(B).getTypePtr());
+  // Different element types shouldn't happen, but with casts they can.
+  if (!S.getASTContext().hasSameUnqualifiedType(getElemType(A), getElemType(B)))
+    return false;
+
   PrimType ElemT = *S.getContext().classify(getElemType(A));
 
   auto returnResult = [&](int V) -> bool {
@@ -2683,9 +2688,10 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   PrimType ElemT = *S.getContext().classify(VT->getElementType());
   unsigned SourceLen = VT->getNumElements();
-  SmallVector<APValue, 4> ResultElements;
-  ResultElements.reserve(SourceLen / 2);
 
+  PrimType DstElemT = *S.getContext().classify(
+      Call->getType()->castAs<VectorType>()->getElementType());
+  unsigned DstElem = 0;
   for (unsigned I = 0; I != SourceLen; I += 2) {
     APSInt Elem1;
     APSInt Elem2;
@@ -2699,16 +2705,19 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
     case clang::X86::BI__builtin_ia32_pmuludq128:
     case clang::X86::BI__builtin_ia32_pmuludq256:
     case clang::X86::BI__builtin_ia32_pmuludq512:
-      Result = APSInt(llvm::APIntOps::muluExtended(Elem1, Elem2), true);
+      Result = APSInt(llvm::APIntOps::muluExtended(Elem1, Elem2),
+                      /*IsUnsigned=*/true);
       break;
     case clang::X86::BI__builtin_ia32_pmuldq128:
     case clang::X86::BI__builtin_ia32_pmuldq256:
     case clang::X86::BI__builtin_ia32_pmuldq512:
-      Result = APSInt(llvm::APIntOps::mulsExtended(Elem1, Elem2), false);
+      Result = APSInt(llvm::APIntOps::mulsExtended(Elem1, Elem2),
+                      /*IsUnsigned=*/false);
       break;
     }
-    INT_TYPE_SWITCH_NO_BOOL(ElemT,
-                            { Dst.elem<T>(I) = static_cast<T>(Result); });
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                            { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
+    ++DstElem;
   }
 
   Dst.initializeAllElements();
@@ -2771,6 +2780,40 @@ static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
     Dst.elem<Floating>(I) = Floating(X);
   }
   Dst.initializeAllElements();
+  return true;
+}
+
+/// AVX512 predicated move: "Result = Mask[] ? LHS[] : RHS[]".
+static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
+                                   const CallExpr *Call) {
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  PrimType MaskT = *S.getContext().classify(Call->getArg(0));
+  APSInt Mask = popToAPSInt(S.Stk, MaskT);
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  assert(LHS.getNumElems() == RHS.getNumElems());
+  assert(LHS.getNumElems() == Dst.getNumElems());
+  unsigned NumElems = LHS.getNumElems();
+  PrimType ElemT = LHS.getFieldDesc()->getPrimType();
+  PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
+
+  for (unsigned I = 0; I != NumElems; ++I) {
+    if (ElemT == PT_Float) {
+      assert(DstElemT == PT_Float);
+      Dst.elem<Floating>(I) =
+          Mask[I] ? LHS.elem<Floating>(I) : RHS.elem<Floating>(I);
+    } else {
+      APSInt Elem;
+      INT_TYPE_SWITCH(ElemT, {
+        Elem = Mask[I] ? LHS.elem<T>(I).toAPSInt() : RHS.elem<T>(I).toAPSInt();
+      });
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                              { Dst.elem<T>(I) = static_cast<T>(Elem); });
+    }
+  }
+  Dst.initializeAllElements();
+
   return true;
 }
 
@@ -3204,9 +3247,37 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pmuldq512:
   case clang::X86::BI__builtin_ia32_pmuludq128:
   case clang::X86::BI__builtin_ia32_pmuludq256:
+  case clang::X86::BI__builtin_ia32_pmuludq512:
     return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
+
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_fma(S, OpPC, Call);
+
+  case X86::BI__builtin_ia32_selectb_128:
+  case X86::BI__builtin_ia32_selectb_256:
+  case X86::BI__builtin_ia32_selectb_512:
+  case X86::BI__builtin_ia32_selectw_128:
+  case X86::BI__builtin_ia32_selectw_256:
+  case X86::BI__builtin_ia32_selectw_512:
+  case X86::BI__builtin_ia32_selectd_128:
+  case X86::BI__builtin_ia32_selectd_256:
+  case X86::BI__builtin_ia32_selectd_512:
+  case X86::BI__builtin_ia32_selectq_128:
+  case X86::BI__builtin_ia32_selectq_256:
+  case X86::BI__builtin_ia32_selectq_512:
+  case X86::BI__builtin_ia32_selectph_128:
+  case X86::BI__builtin_ia32_selectph_256:
+  case X86::BI__builtin_ia32_selectph_512:
+  case X86::BI__builtin_ia32_selectpbf_128:
+  case X86::BI__builtin_ia32_selectpbf_256:
+  case X86::BI__builtin_ia32_selectpbf_512:
+  case X86::BI__builtin_ia32_selectps_128:
+  case X86::BI__builtin_ia32_selectps_256:
+  case X86::BI__builtin_ia32_selectps_512:
+  case X86::BI__builtin_ia32_selectpd_128:
+  case X86::BI__builtin_ia32_selectpd_256:
+  case X86::BI__builtin_ia32_selectpd_512:
+    return interp__builtin_select(S, OpPC, Call);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

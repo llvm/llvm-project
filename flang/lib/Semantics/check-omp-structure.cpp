@@ -20,6 +20,7 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -57,6 +58,7 @@
 namespace Fortran::semantics {
 
 using namespace Fortran::semantics::omp;
+using namespace Fortran::parser::omp;
 
 // Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
@@ -130,6 +132,64 @@ public:
                 "WORKSHARE construct"_err_en_US,
                 attrs, root.name());
           }
+        }
+      }
+    }
+    return false;
+  }
+
+private:
+  SemanticsContext &context_;
+  parser::CharBlock source_;
+};
+
+// 'OmpWorkdistributeBlockChecker' is used to check the validity of the
+// assignment statements and the expressions enclosed in an OpenMP
+// WORKDISTRIBUTE construct
+class OmpWorkdistributeBlockChecker {
+public:
+  OmpWorkdistributeBlockChecker(
+      SemanticsContext &context, parser::CharBlock source)
+      : context_{context}, source_{source} {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::AssignmentStmt &assignment) {
+    const auto &var{std::get<parser::Variable>(assignment.t)};
+    const auto &expr{std::get<parser::Expr>(assignment.t)};
+    const auto *lhs{GetExpr(context_, var)};
+    const auto *rhs{GetExpr(context_, expr)};
+    if (lhs && rhs) {
+      Tristate isDefined{semantics::IsDefinedAssignment(
+          lhs->GetType(), lhs->Rank(), rhs->GetType(), rhs->Rank())};
+      if (isDefined == Tristate::Yes) {
+        context_.Say(expr.source,
+            "Defined assignment statement is not allowed in a WORKDISTRIBUTE construct"_err_en_US);
+      }
+    }
+    return true;
+  }
+
+  bool Pre(const parser::Expr &expr) {
+    if (const auto *e{GetExpr(context_, expr)}) {
+      if (!e)
+        return false;
+      for (const Symbol &symbol : evaluate::CollectSymbols(*e)) {
+        const Symbol &root{GetAssociationRoot(symbol)};
+        if (IsFunction(root)) {
+          std::vector<std::string> attrs;
+          if (!IsElementalProcedure(root)) {
+            attrs.push_back("non-ELEMENTAL");
+          }
+          if (root.attrs().test(Attr::IMPURE)) {
+            attrs.push_back("IMPURE");
+          }
+          std::string attrsStr =
+              attrs.empty() ? "" : " " + llvm::join(attrs, ", ");
+          context_.Say(expr.source,
+              "User defined%s function '%s' is not allowed in a WORKDISTRIBUTE construct"_err_en_US,
+              attrsStr, root.name());
         }
       }
     }
@@ -813,6 +873,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
           "TARGET construct with nested TEAMS region contains statements or "
           "directives outside of the TEAMS construct"_err_en_US);
     }
+    if (GetContext().directive == llvm::omp::Directive::OMPD_workdistribute &&
+        GetContextParent().directive != llvm::omp::Directive::OMPD_teams) {
+      context_.Say(x.BeginDir().DirName().source,
+          "%s region can only be strictly nested within TEAMS region"_err_en_US,
+          ContextDirectiveAsFortran());
+    }
   }
 
   CheckNoBranching(block, beginSpec.DirId(), beginSpec.source);
@@ -895,6 +961,17 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     CheckWorkshareBlockStmts(block, beginSpec.source);
     HasInvalidWorksharingNesting(
         beginSpec.source, llvm::omp::nestedWorkshareErrSet);
+    break;
+  case llvm::omp::OMPD_workdistribute:
+    if (!CurrentDirectiveIsNested()) {
+      context_.Say(beginSpec.source,
+          "A WORKDISTRIBUTE region must be nested inside TEAMS region only."_err_en_US);
+    }
+    CheckWorkdistributeBlockStmts(block, beginSpec.source);
+    break;
+  case llvm::omp::OMPD_teams_workdistribute:
+  case llvm::omp::OMPD_target_teams_workdistribute:
+    CheckWorkdistributeBlockStmts(block, beginSpec.source);
     break;
   case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
@@ -1182,6 +1259,53 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
 void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
   PushContextAndClauseSets(
       x.v.DirName().source, llvm::omp::Directive::OMPD_groupprivate);
+
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    auto *locator{std::get_if<parser::OmpLocator>(&arg.u)};
+    const Symbol *sym{GetArgumentSymbol(arg)};
+
+    if (!locator || !sym ||
+        (!IsVariableListItem(*sym) && !IsCommonBlock(*sym))) {
+      context_.Say(arg.source,
+          "GROUPPRIVATE argument should be a variable or a named common block"_err_en_US);
+      continue;
+    }
+
+    if (sym->has<AssocEntityDetails>()) {
+      context_.SayWithDecl(*sym, arg.source,
+          "GROUPPRIVATE argument cannot be an ASSOCIATE name"_err_en_US);
+      continue;
+    }
+    if (auto *obj{sym->detailsIf<ObjectEntityDetails>()}) {
+      if (obj->IsCoarray()) {
+        context_.Say(
+            arg.source, "GROUPPRIVATE argument cannot be a coarray"_err_en_US);
+        continue;
+      }
+      if (obj->init()) {
+        context_.SayWithDecl(*sym, arg.source,
+            "GROUPPRIVATE argument cannot be declared with an initializer"_err_en_US);
+        continue;
+      }
+    }
+    if (sym->test(Symbol::Flag::InCommonBlock)) {
+      context_.Say(arg.source,
+          "GROUPPRIVATE argument cannot be a member of a common block"_err_en_US);
+      continue;
+    }
+    if (!IsCommonBlock(*sym)) {
+      const Scope &thisScope{context_.FindScope(x.v.source)};
+      if (thisScope != sym->owner()) {
+        context_.SayWithDecl(*sym, arg.source,
+            "GROUPPRIVATE argument variable must be declared in the same scope as the construct on which it appears"_err_en_US);
+        continue;
+      } else if (!thisScope.IsModule() && !sym->attrs().test(Attr::SAVE)) {
+        context_.SayWithDecl(*sym, arg.source,
+            "GROUPPRIVATE argument variable must be declared in the module scope or have SAVE attribute"_err_en_US);
+        continue;
+      }
+    }
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPGroupprivate &x) {
@@ -4497,6 +4621,27 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
   }
 }
 
+void OmpStructureChecker::CheckWorkdistributeBlockStmts(
+    const parser::Block &block, parser::CharBlock source) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  unsigned since{60};
+  if (version < since)
+    context_.Say(source,
+        "WORKDISTRIBUTE construct is not allowed in %s, %s"_err_en_US,
+        ThisVersion(version), TryVersion(since));
+
+  OmpWorkdistributeBlockChecker ompWorkdistributeBlockChecker{context_, source};
+
+  for (auto it{block.begin()}; it != block.end(); ++it) {
+    if (parser::Unwrap<parser::AssignmentStmt>(*it)) {
+      parser::Walk(*it, ompWorkdistributeBlockChecker);
+    } else {
+      context_.Say(source,
+          "The structured block in a WORKDISTRIBUTE construct may consist of only SCALAR or ARRAY assignments"_err_en_US);
+    }
+  }
+}
+
 void OmpStructureChecker::CheckIfContiguous(const parser::OmpObject &object) {
   if (auto contig{IsContiguous(context_, object)}; contig && !*contig) {
     const parser::Name *name{GetObjectName(object)};
@@ -4538,42 +4683,6 @@ struct NameHelper {
 const parser::Name *OmpStructureChecker::GetObjectName(
     const parser::OmpObject &object) {
   return NameHelper::Visit(object);
-}
-
-const parser::OmpObjectList *OmpStructureChecker::GetOmpObjectList(
-    const parser::OmpClause &clause) {
-
-  // Clauses with OmpObjectList as its data member
-  using MemberObjectListClauses =
-      std::tuple<parser::OmpClause::Copyprivate, parser::OmpClause::Copyin,
-          parser::OmpClause::Firstprivate, parser::OmpClause::Link,
-          parser::OmpClause::Private, parser::OmpClause::Shared,
-          parser::OmpClause::UseDevicePtr, parser::OmpClause::UseDeviceAddr>;
-
-  // Clauses with OmpObjectList in the tuple
-  using TupleObjectListClauses =
-      std::tuple<parser::OmpClause::Aligned, parser::OmpClause::Allocate,
-          parser::OmpClause::From, parser::OmpClause::Lastprivate,
-          parser::OmpClause::Map, parser::OmpClause::Reduction,
-          parser::OmpClause::To, parser::OmpClause::Enter>;
-
-  // TODO:: Generate the tuples using TableGen.
-  // Handle other constructs with OmpObjectList such as OpenMPThreadprivate.
-  return common::visit(
-      common::visitors{
-          [&](const auto &x) -> const parser::OmpObjectList * {
-            using Ty = std::decay_t<decltype(x)>;
-            if constexpr (common::HasMember<Ty, MemberObjectListClauses>) {
-              return &x.v;
-            } else if constexpr (common::HasMember<Ty,
-                                     TupleObjectListClauses>) {
-              return &(std::get<parser::OmpObjectList>(x.v.t));
-            } else {
-              return nullptr;
-            }
-          },
-      },
-      clause.u);
 }
 
 void OmpStructureChecker::Enter(

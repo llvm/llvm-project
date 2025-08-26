@@ -37,10 +37,13 @@
 /// which typically loses sparseness. These mitigations only work while the file
 /// is not in use.
 ///
-/// TODO: we assume that all concurrent users of the file will use the same
-/// value for Capacity. Otherwise a process with a larger capacity can write
-/// data that is "out of bounds" for processes with smaller capacity. Currently
-/// this is true in the CAS.
+/// If different values of the capacity is used for concurrent users of the same
+/// mapping, the actual capacity will be the largest value requested at the time
+/// of the creation. As a result, the mapped region in one process can be
+/// smaller than the size of the file on disk and can run out of reserved space
+/// when the file has still space. It is highly recommanded to use the same
+/// capacity for all the concurrent users of the same instance of
+/// MappedFileRegionBumpPtr.
 ///
 /// To support resizing, we use two separate file locks:
 /// 1. We use a shared reader lock on a ".shared" file until destruction.
@@ -107,7 +110,7 @@ struct FileSizeInfo {
 } // end anonymous namespace
 
 Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
-    const Twine &Path, uint64_t Capacity, int64_t BumpPtrOffset,
+    const Twine &Path, uint64_t Capacity, uint64_t HeaderOffset,
     function_ref<Error(MappedFileRegionBumpPtr &)> NewFileConstructor) {
   MappedFileRegionBumpPtr Result;
   Result.Path = Path.str();
@@ -131,7 +134,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   // Take shared/reader lock that will be held until we close the file; unlocked
   // by destroyImpl.
   if (std::error_code EC =
-          lockFileThreadSafe(SharedLockFD, sys::fs::LockKind::Exclusive))
+          lockFileThreadSafe(SharedLockFD, sys::fs::LockKind::Shared))
     return createFileError(Path, EC);
 
   // Take shared/reader lock for initialization.
@@ -187,7 +190,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     if (Error E = NewFileConstructor(Result))
       return std::move(E);
   } else {
-    Result.initializeBumpPtr(BumpPtrOffset);
+    Result.initializeHeader(HeaderOffset);
   }
 
   if (FileSize->Size < Capacity && FileSize->AllocatedSize < Capacity) {
@@ -242,18 +245,18 @@ void MappedFileRegionBumpPtr::destroyImpl() {
   Close(SharedLockFD);
 }
 
-void MappedFileRegionBumpPtr::initializeBumpPtr(int64_t BumpPtrOffset) {
+void MappedFileRegionBumpPtr::initializeHeader(uint64_t HeaderOffset) {
   assert(capacity() < (uint64_t)INT64_MAX && "capacity must fit in int64_t");
-  int64_t BumpPtrEndOffset = BumpPtrOffset + sizeof(decltype(*H));
-  assert(BumpPtrEndOffset <= (int64_t)capacity() &&
+  uint64_t HeaderEndOffset = HeaderOffset + sizeof(decltype(*H));
+  assert(HeaderEndOffset <= capacity() &&
          "Expected end offset to be pre-allocated");
-  assert(isAligned(Align::Of<decltype(*H)>(), BumpPtrOffset) &&
+  assert(isAligned(Align::Of<decltype(*H)>(), HeaderOffset) &&
          "Expected end offset to be aligned");
-  H = reinterpret_cast<decltype(H)>(data() + BumpPtrOffset);
+  H = reinterpret_cast<decltype(H)>(data() + HeaderOffset);
 
-  int64_t ExistingValue = 0;
-  if (!H->BumpPtr.compare_exchange_strong(ExistingValue, BumpPtrEndOffset))
-    assert(ExistingValue >= BumpPtrEndOffset &&
+  uint64_t ExistingValue = 0;
+  if (!H->BumpPtr.compare_exchange_strong(ExistingValue, HeaderEndOffset))
+    assert(ExistingValue >= HeaderEndOffset &&
            "Expected 0, or past the end of the BumpPtr itself");
 }
 
@@ -264,26 +267,26 @@ static Error createAllocatorOutOfSpaceError() {
 
 Expected<int64_t> MappedFileRegionBumpPtr::allocateOffset(uint64_t AllocSize) {
   AllocSize = alignTo(AllocSize, getAlign());
-  int64_t OldEnd = H->BumpPtr.fetch_add(AllocSize);
-  int64_t NewEnd = OldEnd + AllocSize;
-  if (LLVM_UNLIKELY(NewEnd > (int64_t)capacity())) {
+  uint64_t OldEnd = H->BumpPtr.fetch_add(AllocSize);
+  uint64_t NewEnd = OldEnd + AllocSize;
+  if (LLVM_UNLIKELY(NewEnd > capacity())) {
     // Return the allocation. If the start already passed the end, that means
     // some other concurrent allocations already consumed all the capacity.
     // There is no need to return the original value. If the start was not
     // passed the end, current allocation certainly bumped it passed the end.
     // All other allocation afterwards must have failed and current allocation
     // is in charge of return the allocation back to a valid value.
-    if (OldEnd <= (int64_t)capacity())
+    if (OldEnd <= capacity())
       (void)H->BumpPtr.exchange(OldEnd);
 
     return createAllocatorOutOfSpaceError();
   }
 
-  int64_t DiskSize = H->AllocatedSize;
+  uint64_t DiskSize = H->AllocatedSize;
   if (LLVM_UNLIKELY(NewEnd > DiskSize)) {
-    int64_t NewSize;
+    uint64_t NewSize;
     // The minimum increment is a page, but allocate more to amortize the cost.
-    constexpr int64_t Increment = 1 * 1024 * 1024; // 1 MB
+    constexpr uint64_t Increment = 1 * 1024 * 1024; // 1 MB
     if (Error E = preallocateFileTail(*FD, DiskSize, DiskSize + Increment)
                       .moveInto(NewSize))
       return std::move(E);

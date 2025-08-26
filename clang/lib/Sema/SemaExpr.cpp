@@ -18,6 +18,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -3254,10 +3255,6 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
 
   return ULE;
 }
-
-static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
-                                                        SourceLocation loc,
-                                                        ValueDecl *var);
 
 ExprResult Sema::BuildDeclarationNameExpr(
     const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
@@ -7822,6 +7819,39 @@ ExprResult Sema::CheckExtVectorCast(SourceRange R, QualType DestTy,
   return prepareVectorSplat(DestTy, CastExpr);
 }
 
+/// Check that a call to alloc_size function specifies sufficient space for the
+/// destination type.
+static void CheckSufficientAllocSize(Sema &S, QualType DestType,
+                                     const Expr *E) {
+  QualType SourceType = E->getType();
+  if (!DestType->isPointerType() || !SourceType->isPointerType() ||
+      DestType == SourceType)
+    return;
+
+  const auto *CE = dyn_cast<CallExpr>(E->IgnoreParenCasts());
+  if (!CE)
+    return;
+
+  // Find the total size allocated by the function call.
+  if (!CE->getCalleeAllocSizeAttr())
+    return;
+  std::optional<llvm::APInt> AllocSize =
+      CE->getBytesReturnedByAllocSizeCall(S.Context);
+  if (!AllocSize)
+    return;
+  auto Size = CharUnits::fromQuantity(AllocSize->getZExtValue());
+
+  QualType TargetType = DestType->getPointeeType();
+  // Find the destination size. As a special case function types have size of
+  // one byte to match the sizeof operator behavior.
+  auto LhsSize = TargetType->isFunctionType()
+                     ? CharUnits::One()
+                     : S.Context.getTypeSizeInCharsIfKnown(TargetType);
+  if (LhsSize && Size < LhsSize)
+    S.Diag(E->getExprLoc(), diag::warn_alloc_size)
+        << Size.getQuantity() << TargetType << LhsSize->getQuantity();
+}
+
 ExprResult
 Sema::ActOnCastExpr(Scope *S, SourceLocation LParenLoc,
                     Declarator &D, ParsedType &Ty,
@@ -7886,6 +7916,8 @@ Sema::ActOnCastExpr(Scope *S, SourceLocation LParenLoc,
   ObjC().CheckObjCBridgeRelatedCast(castType, CastExpr);
 
   DiscardMisalignedMemberAddress(castType.getTypePtr(), CastExpr);
+
+  CheckSufficientAllocSize(*this, castType, CastExpr);
 
   return BuildCStyleCastExpr(LParenLoc, castTInfo, RParenLoc, CastExpr);
 }
@@ -9897,6 +9929,12 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
   AssignConvertType result =
       CheckAssignmentConstraints(LHSType, RHS, Kind, ConvertRHS);
 
+  // If assigning a void * created by an allocation function call to some other
+  // type, check that the allocated size is sufficient for that type.
+  if (result != AssignConvertType::Incompatible &&
+      RHS.get()->getType()->isVoidPointerType())
+    CheckSufficientAllocSize(*this, LHSType, RHS.get());
+
   // C99 6.5.16.1p2: The value of the right operand is converted to the
   // type of the assignment expression.
   // CheckAssignmentConstraints allows the left-hand side to be a reference,
@@ -10752,9 +10790,50 @@ static void DiagnoseBadDivideOrRemainderValues(Sema& S, ExprResult &LHS,
                             << IsDiv << RHS.get()->getSourceRange());
 }
 
+static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
+                                const ExprResult &LHS, const ExprResult &RHS,
+                                BinaryOperatorKind Opc) {
+  if (!LHS.isUsable() || !RHS.isUsable())
+    return;
+  const Expr *LHSExpr = LHS.get();
+  const Expr *RHSExpr = RHS.get();
+  const QualType LHSType = LHSExpr->getType();
+  const QualType RHSType = RHSExpr->getType();
+  const bool LHSIsScoped = LHSType->isScopedEnumeralType();
+  const bool RHSIsScoped = RHSType->isScopedEnumeralType();
+  if (!LHSIsScoped && !RHSIsScoped)
+    return;
+  if (BinaryOperator::isAssignmentOp(Opc) && LHSIsScoped)
+    return;
+  if (!LHSIsScoped && !LHSType->isIntegralOrUnscopedEnumerationType())
+    return;
+  if (!RHSIsScoped && !RHSType->isIntegralOrUnscopedEnumerationType())
+    return;
+  auto DiagnosticHelper = [&S](const Expr *expr, const QualType type) {
+    SourceLocation BeginLoc = expr->getBeginLoc();
+    QualType IntType = type->castAs<EnumType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf()
+                           ->getIntegerType();
+    std::string InsertionString = "static_cast<" + IntType.getAsString() + ">(";
+    S.Diag(BeginLoc, diag::note_no_implicit_conversion_for_scoped_enum)
+        << FixItHint::CreateInsertion(BeginLoc, InsertionString)
+        << FixItHint::CreateInsertion(expr->getEndLoc(), ")");
+  };
+  if (LHSIsScoped) {
+    DiagnosticHelper(LHSExpr, LHSType);
+  }
+  if (RHSIsScoped) {
+    DiagnosticHelper(RHSExpr, RHSType);
+  }
+}
+
 QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
                                            SourceLocation Loc,
-                                           bool IsCompAssign, bool IsDiv) {
+                                           BinaryOperatorKind Opc) {
+  bool IsCompAssign = Opc == BO_MulAssign || Opc == BO_DivAssign;
+  bool IsDiv = Opc == BO_Div || Opc == BO_DivAssign;
+
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/false);
 
   QualType LHSTy = LHS.get()->getType();
@@ -10782,9 +10861,11 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
 
-
-  if (compType.isNull() || !compType->isArithmeticType())
-    return InvalidOperands(Loc, LHS, RHS);
+  if (compType.isNull() || !compType->isArithmeticType()) {
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+    return ResultTy;
+  }
   if (IsDiv) {
     DetectPrecisionLossInComplexDivision(*this, RHS.get()->getType(), Loc);
     DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, IsDiv);
@@ -10847,8 +10928,12 @@ QualType Sema::CheckRemainderOperands(
 
   if (compType.isNull() ||
       (!compType->isIntegerType() &&
-       !(getLangOpts().HLSL && compType->isFloatingType())))
-    return InvalidOperands(Loc, LHS, RHS);
+       !(getLangOpts().HLSL && compType->isFloatingType()))) {
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS,
+                        IsCompAssign ? BO_RemAssign : BO_Rem);
+    return ResultTy;
+  }
   DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, false /* IsDiv */);
   return compType;
 }
@@ -11204,7 +11289,9 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
     } else if (PExp->getType()->isObjCObjectPointerType()) {
       isObjCPointer = true;
     } else {
-      return InvalidOperands(Loc, LHS, RHS);
+      QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
+      diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+      return ResultTy;
     }
   }
   assert(PExp->getType()->isAnyPointerType());
@@ -11261,7 +11348,8 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
 // C99 6.5.6
 QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                         SourceLocation Loc,
-                                        QualType* CompLHSTy) {
+                                        BinaryOperatorKind Opc,
+                                        QualType *CompLHSTy) {
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/false);
 
   if (LHS.get()->getType()->isVectorType() ||
@@ -11406,7 +11494,9 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
     }
   }
 
-  return InvalidOperands(Loc, LHS, RHS);
+  QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
+  diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+  return ResultTy;
 }
 
 static bool isScopedEnumerationType(QualType T) {
@@ -11754,15 +11844,12 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
   // Embedded-C 4.1.6.2.2: The LHS may also be fixed-point.
   if ((!LHSType->isFixedPointOrIntegerType() &&
        !LHSType->hasIntegerRepresentation()) ||
-      !RHSType->hasIntegerRepresentation())
-    return InvalidOperands(Loc, LHS, RHS);
-
-  // C++0x: Don't allow scoped enums. FIXME: Use something better than
-  // hasIntegerRepresentation() above instead of this.
-  if (isScopedEnumerationType(LHSType) ||
-      isScopedEnumerationType(RHSType)) {
-    return InvalidOperands(Loc, LHS, RHS);
+      !RHSType->hasIntegerRepresentation()) {
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+    return ResultTy;
   }
+
   DiagnoseBadShiftValues(*this, LHS, RHS, Loc, Opc, LHSType);
 
   // "The type of the result is that of the promoted left operand."
@@ -12323,8 +12410,11 @@ static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
       S.UsualArithmeticConversions(LHS, RHS, Loc, ArithConvKind::Comparison);
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
-  if (Type.isNull())
-    return S.InvalidOperands(Loc, LHS, RHS);
+  if (Type.isNull()) {
+    QualType ResultTy = S.InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(S, Loc, LHS, RHS, BO_Cmp);
+    return ResultTy;
+  }
 
   std::optional<ComparisonCategoryType> CCT =
       getComparisonCategoryForBuiltinCmp(Type);
@@ -12356,8 +12446,11 @@ static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
       S.UsualArithmeticConversions(LHS, RHS, Loc, ArithConvKind::Comparison);
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
-  if (Type.isNull())
-    return S.InvalidOperands(Loc, LHS, RHS);
+  if (Type.isNull()) {
+    QualType ResultTy = S.InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(S, Loc, LHS, RHS, Opc);
+    return ResultTy;
+  }
   assert(Type->isArithmeticType() || Type->isEnumeralType());
 
   if (Type->isAnyComplexType() && BinaryOperator::isRelationalOp(Opc))
@@ -13367,7 +13460,9 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (!compType.isNull() && compType->isIntegralOrUnscopedEnumerationType())
     return compType;
-  return InvalidOperands(Loc, LHS, RHS);
+  QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
+  diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+  return ResultTy;
 }
 
 // C99 6.5.[13,14]
@@ -13469,13 +13564,19 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   // C++ [expr.log.or]p1
   // The operands are both contextually converted to type bool.
   ExprResult LHSRes = PerformContextuallyConvertToBool(LHS.get());
-  if (LHSRes.isInvalid())
-    return InvalidOperands(Loc, LHS, RHS);
+  if (LHSRes.isInvalid()) {
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+    return ResultTy;
+  }
   LHS = LHSRes;
 
   ExprResult RHSRes = PerformContextuallyConvertToBool(RHS.get());
-  if (RHSRes.isInvalid())
-    return InvalidOperands(Loc, LHS, RHS);
+  if (RHSRes.isInvalid()) {
+    QualType ResultTy = InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+    return ResultTy;
+  }
   RHS = RHSRes;
 
   // C++ [expr.log.and]p2
@@ -15071,8 +15172,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_Mul:
   case BO_Div:
     ConvertHalfVec = true;
-    ResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, false,
-                                           Opc == BO_Div);
+    ResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, Opc);
     break;
   case BO_Rem:
     ResultTy = CheckRemainderOperands(LHS, RHS, OpLoc);
@@ -15083,7 +15183,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     break;
   case BO_Sub:
     ConvertHalfVec = true;
-    ResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc);
+    ResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, Opc);
     break;
   case BO_Shl:
   case BO_Shr:
@@ -15127,8 +15227,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_MulAssign:
   case BO_DivAssign:
     ConvertHalfVec = true;
-    CompResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, true,
-                                               Opc == BO_DivAssign);
+    CompResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, Opc);
     CompLHSTy = CompResultTy;
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
       ResultTy =
@@ -15150,7 +15249,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     break;
   case BO_SubAssign:
     ConvertHalfVec = true;
-    CompResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, &CompLHSTy);
+    CompResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, Opc, &CompLHSTy);
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
       ResultTy =
           CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy, Opc);
@@ -18659,8 +18758,9 @@ void Sema::MarkCaptureUsedInEnclosingContext(ValueDecl *Capture,
   MarkVarDeclODRUsed(Capture, Loc, *this, &CapturingScopeIndex);
 }
 
-void diagnoseUncapturableValueReferenceOrBinding(Sema &S, SourceLocation loc,
-                                                 ValueDecl *var) {
+static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
+                                                        SourceLocation loc,
+                                                        ValueDecl *var) {
   DeclContext *VarDC = var->getDeclContext();
 
   //  If the parameter still belongs to the translation unit, then

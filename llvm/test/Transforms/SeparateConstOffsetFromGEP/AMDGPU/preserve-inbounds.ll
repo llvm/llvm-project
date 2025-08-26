@@ -311,7 +311,7 @@ entry:
 define ptr @nuw_inbounds_implies_nuw_inbounds_trunc_nuw(ptr %p, i128 %i) {
 ; CHECK-LABEL: @nuw_inbounds_implies_nuw_inbounds_trunc_nuw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i128 [[I:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[P:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX2]]
