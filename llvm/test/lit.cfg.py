@@ -385,7 +385,17 @@ def ptxas_supported_sms(ptxas_executable):
         text=True,
         check=True,
     )
-    supported_sms = re.findall(r"'sm_(\d+(?:[af]?))'", result.stdout)
+    
+    # Look for the --gpu-arch option section and extract SM variants from the allowed values
+    gpu_arch_section = re.search(
+        r'Allowed values for this option:(.*?)--',
+        result.stdout,
+        re.DOTALL
+    )
+    # Extract SM variants from the allowed values subsection
+    allowed_values = gpu_arch_section.group(1)
+    supported_sms = re.findall(r"'sm_(\d+(?:[af]?))'", allowed_values)
+    
     if not supported_sms:
         raise RuntimeError("No SM architecture values found in ptxas help output")
     return supported_sms
