@@ -75,7 +75,7 @@ void add_lc_threads_armv7(CoreSpec &spec,
           add_reg_value(spec, lc, rs.registers, names[i], 4);
       }
       if (rs.flavor == RegisterFlavor::EXC) {
-        add_uint32(lc, ARM_EXCEPTION_STATE); // thread_command.flavor
+        add_uint32(lc, ARM_EXCEPTION_STATE);       // thread_command.flavor
         add_uint32(lc, ARM_EXCEPTION_STATE_COUNT); // thread_command.count
         const char *names[] = {"far", "esr", "exception", nullptr};
         for (int i = 0; names[i]; i++)

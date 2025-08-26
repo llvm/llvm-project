@@ -28,9 +28,9 @@ void create_lc_note_binary_load_cmd(const CoreSpec &spec,
   uuid.SetFromStringRef(uuid_str);
   for (size_t i = 0; i < uuid.GetBytes().size(); i++)
     payload_bytes.push_back(uuid.GetBytes().data()[i]);
-  add_uint64(payload_bytes, UINT64_MAX);       // address
-  add_uint64(payload_bytes, slide);            // slide
-  payload_bytes.push_back(0);                  // name_cstring
+  add_uint64(payload_bytes, UINT64_MAX); // address
+  add_uint64(payload_bytes, slide);      // slide
+  payload_bytes.push_back(0);            // name_cstring
 
   size_t payload_size = payload_bytes.size() - starting_payload_size;
   // Pad out the entry to a 4-byte aligned size.
