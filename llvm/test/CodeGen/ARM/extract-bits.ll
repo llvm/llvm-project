@@ -1011,8 +1011,8 @@ define i32 @bextr64_32_a0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; V7M-NEXT:    lsrpl.w r0, r1, r2
 ; V7M-NEXT:    ldr r1, [sp]
 ; V7M-NEXT:    movs r2, #1
-; V7M-NEXT:    lsls r2, r1
-; V7M-NEXT:    subs r1, #32
+; V7M-NEXT:    cmp r1, #32
+; V7M-NEXT:    lsl.w r2, r2, r1
 ; V7M-NEXT:    it pl
 ; V7M-NEXT:    movpl r2, #0
 ; V7M-NEXT:    subs r1, r2, #1
@@ -1029,7 +1029,7 @@ define i32 @bextr64_32_a0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; V7A-NEXT:    lsrpl r0, r1, r2
 ; V7A-NEXT:    mov r1, #1
 ; V7A-NEXT:    lsl r1, r1, r12
-; V7A-NEXT:    subs r2, r12, #32
+; V7A-NEXT:    cmp r12, #32
 ; V7A-NEXT:    movwpl r1, #0
 ; V7A-NEXT:    sub r1, r1, #1
 ; V7A-NEXT:    and r0, r1, r0
@@ -1047,7 +1047,7 @@ define i32 @bextr64_32_a0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; V7A-T-NEXT:    lsrpl.w r0, r1, r2
 ; V7A-T-NEXT:    movs r1, #1
 ; V7A-T-NEXT:    lsl.w r1, r1, r12
-; V7A-T-NEXT:    subs.w r2, r12, #32
+; V7A-T-NEXT:    cmp.w r12, #32
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    movpl r1, #0
 ; V7A-T-NEXT:    subs r1, #1
@@ -1940,8 +1940,8 @@ define i32 @bextr64_32_b0(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; V7M-NEXT:    lsrpl.w r0, r1, r2
 ; V7M-NEXT:    ldrb.w r1, [sp]
 ; V7M-NEXT:    mov.w r2, #-1
-; V7M-NEXT:    lsls r2, r1
-; V7M-NEXT:    subs r1, #32
+; V7M-NEXT:    cmp r1, #32
+; V7M-NEXT:    lsl.w r2, r2, r1
 ; V7M-NEXT:    it pl
 ; V7M-NEXT:    movpl r2, #0
 ; V7M-NEXT:    bics r0, r2
@@ -1957,7 +1957,7 @@ define i32 @bextr64_32_b0(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; V7A-NEXT:    lsrpl r0, r1, r2
 ; V7A-NEXT:    mvn r1, #0
 ; V7A-NEXT:    lsl r1, r1, r12
-; V7A-NEXT:    subs r2, r12, #32
+; V7A-NEXT:    cmp r12, #32
 ; V7A-NEXT:    movwpl r1, #0
 ; V7A-NEXT:    bic r0, r0, r1
 ; V7A-NEXT:    bx lr
@@ -1974,7 +1974,7 @@ define i32 @bextr64_32_b0(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; V7A-T-NEXT:    lsrpl.w r0, r1, r2
 ; V7A-T-NEXT:    mov.w r1, #-1
 ; V7A-T-NEXT:    lsls r1, r3
-; V7A-T-NEXT:    subs.w r2, r3, #32
+; V7A-T-NEXT:    cmp r3, #32
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    movpl r1, #0
 ; V7A-T-NEXT:    bics r0, r1

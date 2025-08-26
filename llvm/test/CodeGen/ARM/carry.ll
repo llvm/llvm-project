@@ -30,7 +30,7 @@ entry:
 define i64 @f3(i32 %al, i32 %bl) {
 ; CHECK-LABEL: f3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adds r0, r0, r1
+; CHECK-NEXT:    cmn r0, r1
 ; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    adcs r0, r1, #0
 ; CHECK-NEXT:    adc r1, r2, #0
