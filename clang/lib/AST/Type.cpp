@@ -1961,12 +1961,10 @@ NestedNameSpecifier Type::getPrefix() const {
   switch (getTypeClass()) {
   case Type::DependentName:
     return cast<DependentNameType>(this)->getQualifier();
-  case Type::TemplateSpecialization: {
-    QualifiedTemplateName *S = cast<TemplateSpecializationType>(this)
-                                   ->getTemplateName()
-                                   .getAsAdjustedQualifiedTemplateName();
-    return S ? S->getQualifier() : std::nullopt;
-  }
+  case Type::TemplateSpecialization:
+    return cast<TemplateSpecializationType>(this)
+        ->getTemplateName()
+        .getQualifier();
   case Type::DependentTemplateSpecialization:
     return cast<DependentTemplateSpecializationType>(this)
         ->getDependentTemplateName()
