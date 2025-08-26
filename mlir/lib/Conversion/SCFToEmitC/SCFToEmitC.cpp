@@ -350,25 +350,10 @@ struct WhileLowering : public OpConversionPattern<WhileOp> {
     // Create variable storage for loop-carried values to enable imperative
     // updates while maintaining SSA semantics at conversion boundaries.
     SmallVector<Value> variables;
-    if (failed(
-            createInitVariables(whileOp, rewriter, variables, loc, context))) {
+    if (failed(createInitVariables(whileOp, rewriter, variables, loc, context)))
       return failure();
-    }
 
-    // Select lowering strategy based on condition argument usage:
-    // - emitc.while when condition args match region inputs (direct mapping);
-    // - emitc.do when condition args differ (requires state synchronization).
-    Region &beforeRegion = adaptor.getBefore();
-    Block &beforeBlock = beforeRegion.front();
-    auto condOp = cast<scf::ConditionOp>(beforeRegion.back().getTerminator());
-
-    bool isDoOp = !llvm::equal(beforeBlock.getArguments(), condOp.getArgs());
-
-    LogicalResult result =
-        isDoOp ? lowerDoWhile(whileOp, variables, context, rewriter, loc)
-               : lowerWhile(whileOp, variables, context, rewriter, loc);
-
-    if (failed(result))
+    if (failed(lowerDoWhile(whileOp, variables, context, rewriter, loc)))
       return failure();
 
     // Create an emitc::variable op for each result. These variables will be
