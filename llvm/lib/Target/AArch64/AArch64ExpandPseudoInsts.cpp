@@ -1169,9 +1169,9 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // Create the SMSTART/SMSTOP (MSRpstatesvcrImm1) instruction in SMBB.
   MachineInstrBuilder MIB = BuildMI(CondBB, CondBB.back(), MI.getDebugLoc(),
                                     TII->get(AArch64::MSRpstatesvcrImm1));
-  // Copy all but the second and third operands of MSRcond_pstatesvcrImm1
-  // (as these contain the CopyFromReg for the first argument and the flag
-  // to indicate whether the callee is streaming or normal).
+  // Copy all but the second and third operands of MSRcond_pstatesvcrImm1 (as
+  // these contain the CopyFromReg for the first argument and the flag to
+  // indicate whether the callee is streaming or normal).
   MIB.add(MI.getOperand(0));
   MIB.add(MI.getOperand(1));
   for (unsigned i = 4; i < MI.getNumOperands(); ++i)
