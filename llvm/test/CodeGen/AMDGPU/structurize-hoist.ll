@@ -178,3 +178,56 @@ latch:
 end:
   ret void
 }
+
+define void @test_nested_if(ptr %ptr, i32 %val, i1 %cond) {
+; GFX900-LABEL: test_nested_if:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    flat_load_dword v2, v[0:1]
+; GFX900-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX900-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v3
+; GFX900-NEXT:    s_mov_b64 s[8:9], -1
+; GFX900-NEXT:    s_xor_b64 s[10:11], s[4:5], -1
+; GFX900-NEXT:    s_and_saveexec_b64 s[6:7], s[10:11]
+; GFX900-NEXT:    s_cbranch_execz .LBB3_4
+; GFX900-NEXT:  ; %bb.1: ; %then
+; GFX900-NEXT:    s_and_saveexec_b64 s[12:13], s[10:11]
+; GFX900-NEXT:    s_cbranch_execz .LBB3_3
+; GFX900-NEXT:  ; %bb.2: ; %then_2
+; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    flat_load_dword v2, v[0:1]
+; GFX900-NEXT:    s_xor_b64 s[8:9], exec, -1
+; GFX900-NEXT:  .LBB3_3: ; %Flow1
+; GFX900-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GFX900-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
+; GFX900-NEXT:    s_and_b64 s[8:9], s[8:9], exec
+; GFX900-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GFX900-NEXT:  .LBB3_4: ; %Flow
+; GFX900-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GFX900-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
+; GFX900-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    flat_store_dword v[0:1], v2
+; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %load_then = load %pair, ptr %ptr
+  br i1 %cond, label %else, label %then
+
+then:
+  %a16 = icmp slt i32  %val, 255
+  br i1 %cond, label %else, label %then_2
+
+then_2:
+  %loaded = load i32, ptr  %ptr
+  br label %merge
+
+else:
+  %a_else = extractvalue %pair %load_then, 0
+  br label %merge
+
+merge:
+  %phi = phi i32  [ %loaded, %then_2 ], [ %a_else, %else ]
+  store i32 %phi, ptr  %ptr
+  ret void
+}
