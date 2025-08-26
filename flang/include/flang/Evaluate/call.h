@@ -110,7 +110,6 @@ public:
 
   std::optional<DynamicType> GetType() const;
   int Rank() const;
-  bool IsArray() const;
   bool operator==(const ActualArgument &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
