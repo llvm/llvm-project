@@ -2717,7 +2717,7 @@ bool QualType::isCXX98PODType(const ASTContext &Context) const {
   QualType CanonicalType = getTypePtr()->CanonicalType;
 
   // Any type that is, or contains, address discriminated data is never POD.
-  if (Context.containsAddressDiscriminatedPointerAuth(CanonicalType))
+  if (const_cast<ASTContext&>(Context).containsAddressDiscriminatedPointerAuth(CanonicalType))
     return false;
 
   switch (CanonicalType->getTypeClass()) {
@@ -2780,7 +2780,7 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
 
   // Any type that is, or contains, address discriminated data is never a
   // trivial type.
-  if (Context.containsAddressDiscriminatedPointerAuth(CanonicalType))
+  if (const_cast<ASTContext&>(Context).containsAddressDiscriminatedPointerAuth(CanonicalType))
     return false;
 
   // C++0x [basic.types]p9:
@@ -2883,7 +2883,7 @@ bool QualType::isBitwiseCloneableType(const ASTContext &Context) const {
 
   // Any type that is, or contains, address discriminated data is never
   // bitwise clonable.
-  if (Context.containsAddressDiscriminatedPointerAuth(CanonicalType))
+  if (const_cast<ASTContext&>(Context).containsAddressDiscriminatedPointerAuth(CanonicalType))
     return false;
 
   const auto *RD = CanonicalType->getAsRecordDecl(); // struct/union/class
@@ -3132,7 +3132,7 @@ bool QualType::isCXX11PODType(const ASTContext &Context) const {
     return false;
 
   // Any type that is, or contains, address discriminated data is non-POD.
-  if (Context.containsAddressDiscriminatedPointerAuth(*this))
+  if (const_cast<ASTContext&>(Context).containsAddressDiscriminatedPointerAuth(*this))
     return false;
 
   // As an extension, Clang treats vector types as Scalar types.

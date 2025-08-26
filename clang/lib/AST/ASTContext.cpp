@@ -1706,7 +1706,7 @@ void ASTContext::setRelocationInfoForCXXRecord(
 }
 
 static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
-    const ASTContext &Context, const CXXRecordDecl *Class) {
+    ASTContext &Context, const CXXRecordDecl *Class) {
   if (!Class->isPolymorphic())
     return false;
   const CXXRecordDecl *BaseType = Context.baseForVTableAuthentication(Class);
@@ -1721,8 +1721,7 @@ static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
   return AddressDiscrimination == AuthAttr::AddressDiscrimination;
 }
 
-ASTContext::PointerAuthContent
-ASTContext::findPointerAuthContent(QualType T) const {
+ASTContext::PointerAuthContent ASTContext::findPointerAuthContent(QualType T) {
   assert(isPointerAuthenticationAvailable());
 
   T = T.getCanonicalType();
@@ -15107,7 +15106,7 @@ StringRef ASTContext::getCUIDHash() const {
 }
 
 const CXXRecordDecl *
-ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) const {
+ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
   assert(ThisClass);
   assert(ThisClass->isPolymorphic());
   const CXXRecordDecl *PrimaryBase = ThisClass;
