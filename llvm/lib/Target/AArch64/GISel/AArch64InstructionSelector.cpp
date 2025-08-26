@@ -5104,6 +5104,36 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
 
   // Given this:
   //
+  // z = G_SUB/G_ADD x, y
+  // G_ICMP z, 0
+  //
+  // Produce this if the compare is signed:
+  //
+  // cmp/cmn x, y
+  if ((LHSDef->getFlag(MachineInstr::NoSWrap) && !CmpInst::isUnsigned(P)) ||
+      (P == CmpInst::ICMP_EQ || P == CmpInst::ICMP_NE ||
+       P == CmpInst::ICMP_SLT || P == CmpInst::ICMP_SGE)) {
+
+    if (LHSDef->getOpcode() == TargetOpcode::G_SUB ||
+        LHSDef->getOpcode() == TargetOpcode::G_ADD) {
+      // Make sure that the RHS is 0.
+      auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS.getReg(), MRI);
+      if (!ValAndVReg || ValAndVReg->Value != 0)
+        return nullptr;
+
+      if (LHSDef->getOpcode() == TargetOpcode::G_SUB) {
+        auto Dst = MRI.cloneVirtualRegister(LHS.getReg());
+        return emitSUBS(Dst, LHSDef->getOperand(1), LHSDef->getOperand(2),
+                        MIRBuilder);
+      } else {
+        return emitCMN(LHSDef->getOperand(1), LHSDef->getOperand(2),
+                       MIRBuilder);
+      }
+    }
+  }
+
+  // Given this:
+  //
   // z = G_AND x, y
   // G_ICMP z, 0
   //
