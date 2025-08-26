@@ -100,10 +100,10 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) nounwind {
 ; AVX-LABEL: complex_canonicalize_fmul_half:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
-; AVX-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; AVX-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; AVX-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill

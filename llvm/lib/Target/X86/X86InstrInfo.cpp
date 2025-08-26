@@ -6127,15 +6127,15 @@ static bool expandSHXDROT(MachineInstrBuilder &MIB, const MCInstrDesc &Desc) {
 }
 
 static bool expandMOVSHP(MachineInstrBuilder &MIB, MachineInstr &MI,
-                         const TargetInstrInfo &TII) {
+                         const TargetInstrInfo &TII, const X86Subtarget &STI) {
   unsigned NewOpc;
   if (MI.getOpcode() == X86::MOVSHPrm) {
-    NewOpc = X86::MOVSSrm;
+    NewOpc = STI.hasAVX() ? X86::VMOVSSrm : X86::MOVSSrm;
     Register Reg = MI.getOperand(0).getReg();
     if (Reg > X86::XMM15)
       NewOpc = X86::VMOVSSZrm;
   } else {
-    NewOpc = X86::MOVSSmr;
+    NewOpc = STI.hasAVX() ? X86::VMOVSSmr : X86::MOVSSmr;
     Register Reg = MI.getOperand(5).getReg();
     if (Reg > X86::XMM15)
       NewOpc = X86::VMOVSSZmr;
@@ -6219,7 +6219,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
   case X86::MOVSHPmr:
   case X86::MOVSHPrm:
-    return expandMOVSHP(MIB, MI, *this);
+    return expandMOVSHP(MIB, MI, *this, Subtarget);
   case X86::V_SETALLONES:
     return Expand2AddrUndef(MIB,
                             get(HasAVX ? X86::VPCMPEQDrr : X86::PCMPEQDrr));

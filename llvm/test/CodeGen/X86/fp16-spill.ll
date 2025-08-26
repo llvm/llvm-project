@@ -30,7 +30,7 @@ define half @test(float %f, ptr %p) nounwind {
 ; AVX-NEXT:    subq $16, %rsp
 ; AVX-NEXT:    movq %rdi, %rbx
 ; AVX-NEXT:    callq __truncsfhf2@PLT
-; AVX-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX-NEXT:    #APP
@@ -38,7 +38,7 @@ define half @test(float %f, ptr %p) nounwind {
 ; AVX-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; AVX-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovss %xmm0, (%rbx)
-; AVX-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; AVX-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; AVX-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    addq $16, %rsp
 ; AVX-NEXT:    popq %rbx
