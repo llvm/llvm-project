@@ -68,8 +68,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 namespace mca {
@@ -161,7 +161,7 @@ protected:
   bool FoundErrors;
 
   // Annotations specified in comments, indexed by SMLoc value
-  llvm::DenseMap<const char*, InstAnnotation> Annotations;
+  llvm::DenseMap<const char *, InstAnnotation> Annotations;
 
 public:
   CodeRegions(llvm::SourceMgr &S) : SM(S), FoundErrors(false) {}
@@ -178,7 +178,9 @@ public:
   void addInstruction(const llvm::MCInst &Instruction);
   llvm::SourceMgr &getSourceMgr() const { return SM; }
 
-  void Annotate(llvm::SMLoc Loc, const InstAnnotation& A) { Annotations[Loc.getPointer()] = A; }
+  void Annotate(llvm::SMLoc Loc, const InstAnnotation& A) {
+    Annotations[Loc.getPointer()] = A;
+  }
   std::optional<unsigned> getExplicitLatency(llvm::SMLoc Loc) const {
     const auto It = Annotations.find(Loc.getPointer());
     if (It != Annotations.end()) {
