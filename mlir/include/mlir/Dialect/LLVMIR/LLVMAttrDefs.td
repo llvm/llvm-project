@@ -638,7 +638,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
-                                      "DIScopeAttr"> {
+                                      "DILocalScopeAttr"> {
   let parameters = (ins
     // DIRecursiveTypeAttrInterface specific parameters.
     OptionalParameter<"DistinctAttr">:$recId,
