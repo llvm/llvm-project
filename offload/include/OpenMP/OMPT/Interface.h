@@ -16,6 +16,7 @@
 // Only provide functionality if target OMPT support is enabled
 #ifdef OMPT_SUPPORT
 #include "Callback.h"
+#include "OmptEventInfoTy.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "omp-tools.h"
@@ -462,14 +463,6 @@ template <typename FunctionPairTy, typename... ArgsTy>
 InterfaceRAII(FunctionPairTy Callbacks, ArgsTy... Args)
     -> InterfaceRAII<FunctionPairTy, ArgsTy...>;
 
-/// Holds info needed to fill asynchronous trace records
-struct OmptEventInfoTy {
-  /// The granted number of teams at runtime
-  uint64_t NumTeams;
-  /// Pointer to the actual buffer storage location
-  ompt_record_ompt_t *TraceRecord;
-};
-
 /// Similar to the original InterfaceRAII this class is used for tracing and
 /// extends the original with async capabilities. That is: It takes an
 /// additional AsyncInfo reference as argument to populate the relevant fields.
@@ -488,13 +481,15 @@ public:
       auto Record = begin();
       // Gets freed in interface.cpp, functions
       // targetKernel and targetData once launching target operations returns.
-      if (!AI->OmptEventInfo)
-        AI->OmptEventInfo = new OmptEventInfoTy();
-      AI->OmptEventInfo->TraceRecord = Record;
-      AI->OmptEventInfo->NumTeams = 0;
+      if (!AI->ProfilerData)
+        AI->ProfilerData = new OmptEventInfoTy();
+      // TODO: Make sure this has the right type
+      auto OEI = reinterpret_cast<OmptEventInfoTy *>(AI->ProfilerData);
+      OEI->TraceRecord = Record;
+      OEI->NumTeams = 0;
     } else {
       // Actively prevent further tracing of this event
-      AI->OmptEventInfo = nullptr;
+      AI->ProfilerData = nullptr;
     }
   }
 

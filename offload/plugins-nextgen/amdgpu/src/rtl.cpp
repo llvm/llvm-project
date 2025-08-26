@@ -29,6 +29,7 @@
 #include "ErrorReporting.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/OMPT/OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptEventInfoTy.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
@@ -186,14 +187,14 @@ static void printOmptEventInfoTy(ompt::OmptEventInfoTy &OmptEventInfo) {
 static std::unique_ptr<ompt::OmptEventInfoTy>
 getOrNullOmptEventInfo(AsyncInfoWrapperTy &AsyncInfoWrapper) {
   __tgt_async_info *AI = AsyncInfoWrapper;
-  if (!AI || !AI->OmptEventInfo)
+  if (!AI || !AI->ProfilerData)
     return nullptr;
 
-  // We need to copy the content of the OmptEventInfo object to persist it
+  // We need to copy the content of the ProfilerData object to persist it
   // between multiple async operations.
-  auto LocalOmptEventInfo =
-      std::make_unique<ompt::OmptEventInfoTy>(*AI->OmptEventInfo);
-  printOmptEventInfoTy(*AI->OmptEventInfo);
+  auto LocalOmptEventInfo = std::make_unique<ompt::OmptEventInfoTy>(
+      *reinterpret_cast<ompt::OmptEventInfoTy *>(AI->ProfilerData));
+  // printOmptEventInfoTy(*AI->ProfilerData);
   printOmptEventInfoTy(*LocalOmptEventInfo);
   return LocalOmptEventInfo;
 }

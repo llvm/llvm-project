@@ -456,7 +456,7 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
     : Device(Device),
       AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {
-  LocalAsyncInfo.OmptEventInfo = nullptr;
+  LocalAsyncInfo.ProfilerData = nullptr;
 }
 
 void AsyncInfoWrapperTy::finalize(Error &Err) {
@@ -525,7 +525,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   } else {
     // Check that the retrieved execution mode is valid.
     if (!GenericKernelTy::isValidExecutionMode(ExecModeGlobal.getValue()))
-      return Plugin::error(ErrorCode::UNKNOWN, 
+      return Plugin::error(ErrorCode::UNKNOWN,
                            "Invalid execution mode %d for '%s'",
                            ExecModeGlobal.getValue(), getName());
     ExecutionMode = ExecModeGlobal.getValue();
@@ -613,22 +613,22 @@ GenericKernelTy::getKernelLaunchEnvironment(
        DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
        sizeof(KernelLaunchEnvironmentTy));
 
-  // The OmptEventInfo at this point will have a callback for a kernel launch,
+  // The ProfilerData at this point will have a callback for a kernel launch,
   // not a data-op. This is due to the "external" operation being a kernel
   // launch and the data submit here being an implementation detail. We
-  // temporarily set the OmptEventInfo to nullptr, such that we disable the
+  // temporarily set the ProfilerData to nullptr, such that we disable the
   // timing etc further down to not trigger assertions or report implementation
   // detail.
   __tgt_async_info *AI = AsyncInfoWrapper;
-  if (AI && AI->OmptEventInfo) {
-    auto LocalOEI = AI->OmptEventInfo;
-    AI->OmptEventInfo = nullptr;
+  if (AI && AI->ProfilerData) {
+    auto LocalOEI = AI->ProfilerData;
+    AI->ProfilerData = nullptr;
     auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                         sizeof(KernelLaunchEnvironmentTy),
                                         AsyncInfoWrapper);
     if (Err)
       return Err;
-    AI->OmptEventInfo = LocalOEI;
+    AI->ProfilerData = LocalOEI;
     return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
   }
 
@@ -783,10 +783,11 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   OMPT_IF_TRACING_ENABLED(if (llvm::omp::target::ompt::isTracedDevice(
                                   getDeviceId(&GenericDevice))) {
     __tgt_async_info *AI = AsyncInfoWrapper;
-    if (AI->OmptEventInfo != nullptr) {
+    if (AI->ProfilerData != nullptr) {
       // Set number of granted teams for OMPT
       setOmptGrantedNumTeams(NumBlocks[0]);
-      AI->OmptEventInfo->NumTeams = NumBlocks[0];
+      reinterpret_cast<OmptEventInfoTy *>(AI->ProfilerData)->NumTeams =
+          NumBlocks[0];
     }
   });
 

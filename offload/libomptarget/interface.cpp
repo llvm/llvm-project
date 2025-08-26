@@ -201,8 +201,8 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   }
 
 #ifdef OMPT_SUPPORT
-  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo)
-    delete AI->OmptEventInfo;
+  if (__tgt_async_info *AI = AsyncInfo; AI->ProfilerData)
+    delete AI->ProfilerData;
 #endif
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
@@ -491,13 +491,13 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   }
 
 #ifdef OMPT_SUPPORT
-  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo)
-    delete AI->OmptEventInfo;
+  if (__tgt_async_info *AI = AsyncInfo; AI->ProfilerData)
+    delete AI->ProfilerData;
 
   for (TargetAsyncInfoTy *LocalTAI : TargetAsyncInfos) {
     AsyncInfoTy &AsyncInfo = *LocalTAI;
-    if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo) {
-      delete AI->OmptEventInfo;
+    if (__tgt_async_info *AI = AsyncInfo; AI->ProfilerData) {
+      delete AI->ProfilerData;
     }
   }
 #endif
