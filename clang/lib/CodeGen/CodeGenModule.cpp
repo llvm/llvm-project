@@ -555,7 +555,9 @@ CodeGenModule::CodeGenModule(ASTContext &C,
     checkDataLayoutConsistency(Context.getTargetInfo(), LLVMContext, LangOpts);
 }
 
-CodeGenModule::~CodeGenModule() {}
+CodeGenModule::~CodeGenModule() {
+  destroyPointerAuthCaches();
+}
 
 void CodeGenModule::createObjCRuntime() {
   // This is just isGNUFamily(), but we want to force implementors of

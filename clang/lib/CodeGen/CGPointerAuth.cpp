@@ -21,6 +21,40 @@
 using namespace clang;
 using namespace CodeGen;
 
+struct CodeGenModule::PointerAuthCachesTy {
+  struct PointerAuthConstantEntry {
+    unsigned Key;
+    llvm::Constant *OtherDiscriminator;
+    llvm::GlobalVariable *Global;
+  };
+
+  using PointerAuthConstantEntries =
+    std::vector<PointerAuthConstantEntry>;
+  using ByConstantCacheTy =
+    llvm::ValueMap<llvm::Constant*, PointerAuthConstantEntries>;
+  using ByDeclCacheTy =
+    llvm::DenseMap<const Decl *, llvm::Constant*>;
+  using PtrAuthDiscriminatorHashCacheTy = llvm::DenseMap<GlobalDecl, uint16_t>;
+  PtrAuthDiscriminatorHashCacheTy PtrAuthDiscriminatorHashes;
+  using VTablePtrAuthInfoCacheTy =
+    llvm::DenseMap<const CXXRecordDecl *, std::optional<PointerAuthQualifier>>;
+  VTablePtrAuthInfoCacheTy VTablePtrAuthInfos;
+  ByConstantCacheTy ConstantSignedPointersByConstant;
+  ByDeclCacheTy ConstantSignedPointersByDecl;
+  ByDeclCacheTy SignedThunkPointers;
+};
+
+CodeGenModule::PointerAuthCachesTy&
+CodeGenModule::getPointerAuthCaches() const {
+  if (!PointerAuthCaches)
+    PointerAuthCaches = new PointerAuthCachesTy;
+  return *PointerAuthCaches;
+}
+
+void CodeGenModule::destroyPointerAuthCaches() {
+  delete PointerAuthCaches;
+}
+
 /// Given a pointer-authentication schema, return a concrete "other"
 /// discriminator for it.
 llvm::ConstantInt *CodeGenModule::getPointerAuthOtherDiscriminator(
@@ -59,7 +93,7 @@ uint16_t CodeGen::getPointerAuthDeclDiscriminator(CodeGenModule &CGM,
 /// Return the "other" decl-specific discriminator for the given decl.
 uint16_t
 CodeGenModule::getPointerAuthDeclDiscriminator(GlobalDecl Declaration) {
-  uint16_t &EntityHash = PtrAuthDiscriminatorHashes[Declaration];
+  uint16_t &EntityHash = getPointerAuthCaches().PtrAuthDiscriminatorHashes[Declaration];
 
   if (EntityHash == 0) {
     StringRef Name = getMangledName(Declaration);
@@ -477,15 +511,38 @@ CodeGen::getConstantSignedPointer(CodeGenModule &CGM, llvm::Constant *Pointer,
 /// If applicable, sign a given constant function pointer with the ABI rules for
 /// functionType.
 llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *Pointer,
-                                                  QualType FunctionType) {
+                                                  QualType FunctionType,
+                                                  GlobalDecl GD) {
   assert(FunctionType->isFunctionType() ||
          FunctionType->isFunctionReferenceType() ||
          FunctionType->isFunctionPointerType());
 
-  if (auto PointerAuth = getFunctionPointerAuthInfo(FunctionType))
-    return getConstantSignedPointer(
-        Pointer, PointerAuth.getKey(), /*StorageAddress=*/nullptr,
+  if (auto PointerAuth = getFunctionPointerAuthInfo(FunctionType)) {
+    // Check a cache that, for now, just has entries for functions signed
+    // with the standard function-pointer scheme.
+    // Cache function pointers based on their decl.  Anything without a decl is
+    // going to be a one-off that doesn't need to be cached anyway.
+    llvm::Constant **Entry = nullptr;
+    if (GD) {
+      const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
+      PointerAuthCachesTy::ByDeclCacheTy &Cache =
+        getPointerAuthCaches().ConstantSignedPointersByDecl;
+      Entry = &Cache[FD->getCanonicalDecl()];
+      if (*Entry)
+        return llvm::ConstantExpr::getBitCast(*Entry, Pointer->getType());
+    }
+
+    // If the cache misses, build a new constant.  It's not a *problem* to
+    // have more than one of these for a particular function, but it's nice
+    // to avoid it.
+    Pointer = getConstantSignedPointer(
+        Pointer, PointerAuth.getKey(), nullptr,
         cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
+
+    // Store the result back into the cache, if any.
+    if (Entry)
+      *Entry = Pointer;
+  }
 
   return Pointer;
 }
@@ -522,11 +579,25 @@ CGPointerAuthInfo CodeGenModule::getMemberFunctionPointerAuthInfo(QualType FT) {
 }
 
 llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
-                                                        QualType FT) {
-  if (CGPointerAuthInfo PointerAuth = getMemberFunctionPointerAuthInfo(FT))
-    return getConstantSignedPointer(
+                                                        QualType FT,
+                                                        const FunctionDecl *FD) {
+  if (CGPointerAuthInfo PointerAuth = getMemberFunctionPointerAuthInfo(FT)) {
+    llvm::Constant **Entry = nullptr;
+    if (FD) {
+      PointerAuthCachesTy::ByDeclCacheTy &Cache =
+        getPointerAuthCaches().SignedThunkPointers;
+      Entry = &Cache[FD->getCanonicalDecl()];
+      if (*Entry)
+        return llvm::ConstantExpr::getBitCast(*Entry, Pointer->getType());
+    }
+
+    Pointer = getConstantSignedPointer(
         Pointer, PointerAuth.getKey(), nullptr,
         cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
+
+    if (Entry)
+      *Entry = Pointer;
+  }
 
   if (const auto *MFT = dyn_cast<MemberPointerType>(FT.getTypePtr())) {
     if (MFT->hasPointeeToToCFIUncheckedCalleeFunctionType())
@@ -541,7 +612,7 @@ llvm::Constant *CodeGenModule::getMemberFunctionPointer(const FunctionDecl *FD,
   QualType FT = FD->getType();
   FT = getContext().getMemberPointerType(FT, /*Qualifier=*/std::nullopt,
                                          cast<CXXMethodDecl>(FD)->getParent());
-  return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), FT);
+  return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), FT, FD);
 }
 
 std::optional<PointerAuthQualifier>
@@ -615,6 +686,7 @@ CodeGenModule::getVTablePointerAuthentication(const CXXRecordDecl *Record) {
   if (!Record->getDefinition() || !Record->isPolymorphic())
     return std::nullopt;
 
+  auto &VTablePtrAuthInfos = getPointerAuthCaches().VTablePtrAuthInfos;
   auto Existing = VTablePtrAuthInfos.find(Record);
   std::optional<PointerAuthQualifier> Authentication;
   if (Existing != VTablePtrAuthInfos.end()) {

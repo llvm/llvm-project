@@ -669,10 +669,15 @@ private:
   std::pair<std::unique_ptr<CodeGenFunction>, const TopLevelStmtDecl *>
       GlobalTopLevelStmtBlockInFlight;
 
-  llvm::DenseMap<GlobalDecl, uint16_t> PtrAuthDiscriminatorHashes;
+  struct PointerAuthCachesTy;
 
-  llvm::DenseMap<const CXXRecordDecl *, std::optional<PointerAuthQualifier>>
-      VTablePtrAuthInfos;
+  // We use a raw pointer, and a manual destruction function here as we want
+  // to avoid fully specifying PointerAuthCachesTy outside of the pointer auth
+  // codegen.
+  mutable PointerAuthCachesTy* PointerAuthCaches = nullptr;
+  PointerAuthCachesTy& getPointerAuthCaches() const;
+  void destroyPointerAuthCaches();
+
   std::optional<PointerAuthQualifier>
   computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
@@ -1033,13 +1038,15 @@ public:
   /// to the given function.  This will apply a pointer signature if
   /// necessary.
   llvm::Constant *getFunctionPointer(llvm::Constant *Pointer,
-                                     QualType FunctionType);
+                                     QualType FunctionType,
+                                     GlobalDecl GD = GlobalDecl());
 
   llvm::Constant *getMemberFunctionPointer(const FunctionDecl *FD,
                                            llvm::Type *Ty = nullptr);
 
   llvm::Constant *getMemberFunctionPointer(llvm::Constant *Pointer,
-                                           QualType FT);
+                                           QualType FT,
+                                           const FunctionDecl *FD);
 
   CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
 
