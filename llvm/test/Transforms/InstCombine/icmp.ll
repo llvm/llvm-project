@@ -6059,8 +6059,7 @@ define i1 @icmp_samesign_logical_or(i32 %In) {
 define i1 @float_to_int_comparing_constant1_positive1(float %arg0) {
 ; CHECK-LABEL: define i1 @float_to_int_comparing_constant1_positive1(
 ; CHECK-SAME: float [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi float [[ARG0]] to i32
-; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[V0]], -1
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ogt float [[ARG0]], -1.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptosi float %arg0 to i32
@@ -6072,8 +6071,7 @@ define i1 @float_to_int_comparing_constant1_positive1(float %arg0) {
 define i1 @float_to_int_comparing_constant1_positive2(float %arg0) {
 ; CHECK-LABEL: define i1 @float_to_int_comparing_constant1_positive2(
 ; CHECK-SAME: float [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi float [[ARG0]] to i32
-; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[V0]], 1
+; CHECK-NEXT:    [[V1:%.*]] = fcmp oge float [[ARG0]], 2.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptosi float %arg0 to i32
@@ -6085,8 +6083,7 @@ define i1 @float_to_int_comparing_constant1_positive2(float %arg0) {
 define i1 @float_to_int_comparing_constant2_positive1(float %arg0) {
 ; CHECK-LABEL: define i1 @float_to_int_comparing_constant2_positive1(
 ; CHECK-SAME: float [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi float [[ARG0]] to i32
-; CHECK-NEXT:    [[V1:%.*]] = icmp slt i32 [[V0]], 1
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ole float [[ARG0]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptosi float %arg0 to i32
@@ -6098,8 +6095,7 @@ define i1 @float_to_int_comparing_constant2_positive1(float %arg0) {
 define i1 @float_to_int_comparing_constant2_positive2(float %arg0) {
 ; CHECK-LABEL: define i1 @float_to_int_comparing_constant2_positive2(
 ; CHECK-SAME: float [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi float [[ARG0]] to i32
-; CHECK-NEXT:    [[V1:%.*]] = icmp slt i32 [[V0]], 0
+; CHECK-NEXT:    [[V1:%.*]] = fcmp olt float [[ARG0]], -1.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptosi float %arg0 to i32
@@ -6110,8 +6106,7 @@ define i1 @float_to_int_comparing_constant2_positive2(float %arg0) {
 define i1 @double_to_int_comparing_constant1_positive1(double %arg0) {
 ; CHECK-LABEL: define i1 @double_to_int_comparing_constant1_positive1(
 ; CHECK-SAME: double [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi double [[ARG0]] to i32
-; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[V0]], -1
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ogt double [[ARG0]], -1.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptosi double %arg0 to i32
@@ -6122,8 +6117,7 @@ define i1 @double_to_int_comparing_constant1_positive1(double %arg0) {
 define i1 @double_to_int_comparing_constant1_positive2(double %arg0) {
 ; CHECK-LABEL: define i1 @double_to_int_comparing_constant1_positive2(
 ; CHECK-SAME: double [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi double [[ARG0]] to i32
-; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[V0]], 1
+; CHECK-NEXT:    [[V1:%.*]] = fcmp oge double [[ARG0]], 2.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptosi double %arg0 to i32
@@ -6134,9 +6128,8 @@ define i1 @double_to_int_comparing_constant1_positive2(double %arg0) {
 define i1 @fp16_to_int_comparing_constant2_positive1(half %arg0) {
 ; CHECK-LABEL: define i1 @fp16_to_int_comparing_constant2_positive1(
 ; CHECK-SAME: half [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = fptosi half [[ARG0]] to i32
-; CHECK-NEXT:    [[V2:%.*]] = icmp slt i32 [[V1]], 1
-; CHECK-NEXT:    ret i1 [[V2]]
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ole half [[ARG0]], 0xH3C00
+; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptosi half %arg0 to i32
   %v1 = icmp slt i32 %v0, 1
@@ -6146,9 +6139,8 @@ define i1 @fp16_to_int_comparing_constant2_positive1(half %arg0) {
 define i1 @fp16_to_int_comparing_constant2_positive2(half %arg0) {
 ; CHECK-LABEL: define i1 @fp16_to_int_comparing_constant2_positive2(
 ; CHECK-SAME: half [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = fptosi half [[ARG0]] to i32
-; CHECK-NEXT:    [[V2:%.*]] = icmp slt i32 [[V1]], 0
-; CHECK-NEXT:    ret i1 [[V2]]
+; CHECK-NEXT:    [[V1:%.*]] = fcmp olt half [[ARG0]], 0xHBC00
+; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptosi half %arg0 to i32
   %v1 = icmp slt i32 %v0, 0
@@ -6202,8 +6194,7 @@ define i1 @float_to_int_comparing_constant2_negative2(float %arg0) {
 define <2 x i1> @float_to_int_comparing_constant_vec_positive1(<2 x float> %arg0) {
 ; CHECK-LABEL: define <2 x i1> @float_to_int_comparing_constant_vec_positive1(
 ; CHECK-SAME: <2 x float> [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi <2 x float> [[ARG0]] to <2 x i32>
-; CHECK-NEXT:    [[V1:%.*]] = icmp sgt <2 x i32> [[V0]], splat (i32 -1)
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ogt <2 x float> [[ARG0]], splat (float -1.000000e+00)
 ; CHECK-NEXT:    ret <2 x i1> [[V1]]
 ;
   %v0 = fptosi <2 x float> %arg0 to <2 x i32>
@@ -6214,8 +6205,7 @@ define <2 x i1> @float_to_int_comparing_constant_vec_positive1(<2 x float> %arg0
 define <2 x i1> @float_to_int_comparing_constant_vec_positive2(<2 x float> %arg0) {
 ; CHECK-LABEL: define <2 x i1> @float_to_int_comparing_constant_vec_positive2(
 ; CHECK-SAME: <2 x float> [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi <2 x float> [[ARG0]] to <2 x i32>
-; CHECK-NEXT:    [[V1:%.*]] = icmp sgt <2 x i32> [[V0]], <i32 0, i32 1>
+; CHECK-NEXT:    [[V1:%.*]] = fcmp oge <2 x float> [[ARG0]], <float 1.000000e+00, float 2.000000e+00>
 ; CHECK-NEXT:    ret <2 x i1> [[V1]]
 ;
   %v0 = fptosi <2 x float> %arg0 to <2 x i32>
@@ -6227,8 +6217,7 @@ define <2 x i1> @float_to_int_comparing_constant_vec_positive2(<2 x float> %arg0
 define <2 x i1> @float_to_int_comparing_constant_vec_positive3(<2 x float> %arg0) {
 ; CHECK-LABEL: define <2 x i1> @float_to_int_comparing_constant_vec_positive3(
 ; CHECK-SAME: <2 x float> [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi <2 x float> [[ARG0]] to <2 x i32>
-; CHECK-NEXT:    [[V1:%.*]] = icmp slt <2 x i32> [[V0]], splat (i32 1)
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ole <2 x float> [[ARG0]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x i1> [[V1]]
 ;
   %v0 = fptosi <2 x float> %arg0 to <2 x i32>
@@ -6239,8 +6228,7 @@ define <2 x i1> @float_to_int_comparing_constant_vec_positive3(<2 x float> %arg0
 define <2 x i1> @float_to_int_comparing_constant_vec_positive4(<2 x float> %arg0) {
 ; CHECK-LABEL: define <2 x i1> @float_to_int_comparing_constant_vec_positive4(
 ; CHECK-SAME: <2 x float> [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi <2 x float> [[ARG0]] to <2 x i32>
-; CHECK-NEXT:    [[V1:%.*]] = icmp slt <2 x i32> [[V0]], <i32 -1, i32 0>
+; CHECK-NEXT:    [[V1:%.*]] = fcmp olt <2 x float> [[ARG0]], <float -2.000000e+00, float -1.000000e+00>
 ; CHECK-NEXT:    ret <2 x i1> [[V1]]
 ;
   %v0 = fptosi <2 x float> %arg0 to <2 x i32>
@@ -6251,8 +6239,7 @@ define <2 x i1> @float_to_int_comparing_constant_vec_positive4(<2 x float> %arg0
 define <2 x i1> @half_to_int_comparing_constant_vec_positive1(<2 x half> %arg0) {
 ; CHECK-LABEL: define <2 x i1> @half_to_int_comparing_constant_vec_positive1(
 ; CHECK-SAME: <2 x half> [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi <2 x half> [[ARG0]] to <2 x i32>
-; CHECK-NEXT:    [[V1:%.*]] = icmp sgt <2 x i32> [[V0]], splat (i32 -1)
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ogt <2 x half> [[ARG0]], splat (half 0xHBC00)
 ; CHECK-NEXT:    ret <2 x i1> [[V1]]
 ;
   %v0 = fptosi <2 x half> %arg0 to <2 x i32>
@@ -6263,8 +6250,7 @@ define <2 x i1> @half_to_int_comparing_constant_vec_positive1(<2 x half> %arg0) 
 define <2 x i1> @half_to_int_comparing_constant_vec_positive2(<2 x half> %arg0) {
 ; CHECK-LABEL: define <2 x i1> @half_to_int_comparing_constant_vec_positive2(
 ; CHECK-SAME: <2 x half> [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi <2 x half> [[ARG0]] to <2 x i32>
-; CHECK-NEXT:    [[V1:%.*]] = icmp sgt <2 x i32> [[V0]], <i32 0, i32 1>
+; CHECK-NEXT:    [[V1:%.*]] = fcmp oge <2 x half> [[ARG0]], <half 0xH3C00, half 0xH4000>
 ; CHECK-NEXT:    ret <2 x i1> [[V1]]
 ;
   %v0 = fptosi <2 x half> %arg0 to <2 x i32>
@@ -6275,8 +6261,7 @@ define <2 x i1> @half_to_int_comparing_constant_vec_positive2(<2 x half> %arg0) 
 define <2 x i1> @double_to_int_comparing_constant_vec_positive3(<2 x double> %arg0) {
 ; CHECK-LABEL: define <2 x i1> @double_to_int_comparing_constant_vec_positive3(
 ; CHECK-SAME: <2 x double> [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi <2 x double> [[ARG0]] to <2 x i32>
-; CHECK-NEXT:    [[V1:%.*]] = icmp slt <2 x i32> [[V0]], splat (i32 1)
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ole <2 x double> [[ARG0]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x i1> [[V1]]
 ;
   %v0 = fptosi <2 x double> %arg0 to <2 x i32>
@@ -6287,8 +6272,7 @@ define <2 x i1> @double_to_int_comparing_constant_vec_positive3(<2 x double> %ar
 define <2 x i1> @double_to_int_comparing_constant_vec_positive4(<2 x double> %arg0) {
 ; CHECK-LABEL: define <2 x i1> @double_to_int_comparing_constant_vec_positive4(
 ; CHECK-SAME: <2 x double> [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptosi <2 x double> [[ARG0]] to <2 x i32>
-; CHECK-NEXT:    [[V1:%.*]] = icmp slt <2 x i32> [[V0]], <i32 -1, i32 0>
+; CHECK-NEXT:    [[V1:%.*]] = fcmp olt <2 x double> [[ARG0]], <double -2.000000e+00, double -1.000000e+00>
 ; CHECK-NEXT:    ret <2 x i1> [[V1]]
 ;
   %v0 = fptosi <2 x double> %arg0 to <2 x i32>
