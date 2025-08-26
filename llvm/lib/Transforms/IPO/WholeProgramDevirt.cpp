@@ -24,7 +24,8 @@
 //   returns 0, or a single vtable's function returns 1, replace each virtual
 //   call with a comparison of the vptr against that vtable's address.
 //
-// This pass is intended to be used during the regular and thin LTO pipelines:
+// This pass is intended to be used during the regular/thinLTO and non-LTO
+// pipelines:
 //
 // During regular LTO, the pass determines the best optimization for each
 // virtual call and applies the resolutions directly to virtual calls that are
@@ -48,6 +49,12 @@
 //   is supported.
 // - Import phase: (same as with hybrid case above).
 //
+// In non-LTO mode:
+// - The pass applies speculative devirtualization without requiring any type of
+// visibility.
+// - Skips other features like virtual constant propagation, uniform return
+// value optimization, unique return value optimization, branch funnels as they
+// need LTO.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
@@ -60,7 +67,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -210,6 +219,14 @@ static cl::opt<WPDCheckMode> DevirtCheckMode(
                clEnumValN(WPDCheckMode::Trap, "trap", "Trap when incorrect"),
                clEnumValN(WPDCheckMode::Fallback, "fallback",
                           "Fallback to indirect when incorrect")));
+
+// This pass runs mainly in lto mode, it can run in nonlto mode for limited
+// features. For testing, provide a way to tell that we are running in nonlto
+// mode.
+static cl::opt<bool>
+    TestNoLTOMode("wholeprogramdevirt-nolto", cl::Hidden,
+                  cl::desc("Run whole program devirt outside LTO mode."),
+                  cl::init(false));
 
 namespace {
 struct PatternList {
@@ -611,11 +628,13 @@ struct DevirtModule {
   std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
   PatternList FunctionsToSkip;
 
+  const bool InLTOMode;
+
   DevirtModule(Module &M, function_ref<AAResults &(Function &)> AARGetter,
                function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
                function_ref<DominatorTree &(Function &)> LookupDomTree,
                ModuleSummaryIndex *ExportSummary,
-               const ModuleSummaryIndex *ImportSummary)
+               const ModuleSummaryIndex *ImportSummary, bool InLTOMode)
       : M(M), AARGetter(AARGetter), LookupDomTree(LookupDomTree),
         ExportSummary(ExportSummary), ImportSummary(ImportSummary),
         Int8Ty(Type::getInt8Ty(M.getContext())),
@@ -624,7 +643,8 @@ struct DevirtModule {
         Int64Ty(Type::getInt64Ty(M.getContext())),
         IntPtrTy(M.getDataLayout().getIntPtrType(M.getContext(), 0)),
         Int8Arr0Ty(ArrayType::get(Type::getInt8Ty(M.getContext()), 0)),
-        RemarksEnabled(areRemarksEnabled()), OREGetter(OREGetter) {
+        RemarksEnabled(areRemarksEnabled()), OREGetter(OREGetter),
+        InLTOMode(InLTOMode) {
     assert(!(ExportSummary && ImportSummary));
     FunctionsToSkip.init(SkipFunctionNames);
   }
@@ -741,7 +761,8 @@ struct DevirtModule {
   static bool
   runForTesting(Module &M, function_ref<AAResults &(Function &)> AARGetter,
                 function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
-                function_ref<DominatorTree &(Function &)> LookupDomTree);
+                function_ref<DominatorTree &(Function &)> LookupDomTree,
+                bool InLTOMode);
 };
 
 struct DevirtIndex {
@@ -794,12 +815,29 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
     return FAM.getResult<DominatorTreeAnalysis>(F);
   };
   if (UseCommandLine) {
-    if (!DevirtModule::runForTesting(M, AARGetter, OREGetter, LookupDomTree))
+    if (TestNoLTOMode)
+      // we are outside LTO mode. enable speculative devirtualization:
+      DevirtCheckMode = WPDCheckMode::Fallback;
+    if (!DevirtModule::runForTesting(M, AARGetter, OREGetter, LookupDomTree,
+                                     !TestNoLTOMode))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
+  std::optional<ModuleSummaryIndex> Index;
+  // Force Fallback mode as it's safe in case it's non-LTO mode where
+  // we don't have hidden visibility.
+  if (!InLTOMode) {
+    DevirtCheckMode = WPDCheckMode::Fallback;
+    // In non-LTO mode, we don't have an ExportSummary, so we
+    // build the ExportSummary from the module.
+    assert(!ExportSummary &&
+           "ExportSummary is expected to be empty in non-LTO mode");
+    ProfileSummaryInfo PSI(M);
+    Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
+    ExportSummary = Index.has_value() ? &Index.value() : nullptr;
+  }
   if (!DevirtModule(M, AARGetter, OREGetter, LookupDomTree, ExportSummary,
-                    ImportSummary)
+                    ImportSummary, InLTOMode)
            .run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
@@ -998,7 +1036,7 @@ static Error checkCombinedSummaryForTesting(ModuleSummaryIndex *Summary) {
 bool DevirtModule::runForTesting(
     Module &M, function_ref<AAResults &(Function &)> AARGetter,
     function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
-    function_ref<DominatorTree &(Function &)> LookupDomTree) {
+    function_ref<DominatorTree &(Function &)> LookupDomTree, bool InLTOMode) {
   std::unique_ptr<ModuleSummaryIndex> Summary =
       std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
 
@@ -1027,7 +1065,8 @@ bool DevirtModule::runForTesting(
                    ClSummaryAction == PassSummaryAction::Export ? Summary.get()
                                                                 : nullptr,
                    ClSummaryAction == PassSummaryAction::Import ? Summary.get()
-                                                                : nullptr)
+                                                                : nullptr,
+                   InLTOMode)
           .run();
 
   if (!ClWriteSummary.empty()) {
@@ -1091,10 +1130,10 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!TM.Bits->GV->isConstant())
       return false;
 
-    // We cannot perform whole program devirtualization analysis on a vtable
-    // with public LTO visibility.
-    if (TM.Bits->GV->getVCallVisibility() ==
-        GlobalObject::VCallVisibilityPublic)
+    // In LTO mode, it's not safe to perform whole program devirtualization
+    // analysis on a vtable with public LTO visibility.
+    if (InLTOMode && TM.Bits->GV->getVCallVisibility() ==
+                         GlobalObject::VCallVisibilityPublic)
       return false;
 
     Function *Fn = nullptr;
@@ -1111,6 +1150,11 @@ bool DevirtModule::tryFindVirtualCallTargets(
     // We can disregard __cxa_pure_virtual as a possible call target, as
     // calls to pure virtuals are UB.
     if (Fn->getName() == "__cxa_pure_virtual")
+      continue;
+    // In most cases empty functions will be overridden by the
+    // implementation of the derived class, so we can skip them.
+    if (!InLTOMode && Fn->getReturnType()->isVoidTy() &&
+        Fn->getInstructionCount() <= 1)
       continue;
 
     // We can disregard unreachable functions as possible call targets, as
@@ -1333,10 +1377,10 @@ bool DevirtModule::trySingleImplDevirt(
   if (!IsExported)
     return false;
 
-  // If the only implementation has local linkage, we must promote to external
-  // to make it visible to thin LTO objects. We can only get here during the
-  // ThinLTO export phase.
-  if (TheFn->hasLocalLinkage()) {
+  // In LTO mode, if the only implementation has local linkage, we must promote
+  // to external to make it visible to thin LTO objects. We can only get here
+  // during the ThinLTO export phase.
+  if (InLTOMode && TheFn->hasLocalLinkage()) {
     std::string NewName = (TheFn->getName() + ".llvm.merged").str();
 
     // Since we are renaming the function, any comdats with the same name must
@@ -2331,6 +2375,11 @@ bool DevirtModule::run() {
 
   Function *TypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
+  // If we are out of LTO mode, we can work on the public
+  // type test intrinsics.
+  if (!TypeTestFunc && !InLTOMode)
+    TypeTestFunc =
+        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   Function *TypeCheckedLoadFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
   Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
@@ -2453,8 +2502,11 @@ bool DevirtModule::run() {
                  .WPDRes[S.first.ByteOffset];
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
                                   S.first.ByteOffset, ExportSummary)) {
-
-      if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res)) {
+      bool SingleImplDevirt =
+          trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
+      // We apply virtual constant propagation and branch funneling only in LTO
+      // mode.
+      if (!SingleImplDevirt && InLTOMode) {
         DidVirtualConstProp |=
             tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
