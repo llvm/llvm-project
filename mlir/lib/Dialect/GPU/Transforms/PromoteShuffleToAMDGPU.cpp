@@ -101,16 +101,16 @@ static Value getLaneId(RewriterBase &rewriter, Location loc) {
   auto int32Type = IntegerType::get(rewriter.getContext(), 32);
   Value zero = arith::ConstantIntOp::create(rewriter, loc, 0, 32);
   Value minus1 = arith::ConstantIntOp::create(rewriter, loc, -1, 32);
-  NamedAttribute noundef = rewriter.getNamedAttr(
-      LLVM::LLVMDialect::getNoUndefAttrName(), rewriter.getUnitAttr());
-  NamedAttribute lowRange = rewriter.getNamedAttr(
+  NamedAttribute noundef = {LLVM::LLVMDialect::getNoUndefAttrName(),
+                            rewriter.getUnitAttr()};
+  NamedAttribute lowRange = {LLVM::LLVMDialect::getRangeAttrName(),
+                             LLVM::ConstantRangeAttr::get(rewriter.getContext(),
+                                                          APInt::getZero(32),
+                                                          APInt(32, 32))};
+  NamedAttribute highRange = {
       LLVM::LLVMDialect::getRangeAttrName(),
       LLVM::ConstantRangeAttr::get(rewriter.getContext(), APInt::getZero(32),
-                                   APInt(32, 32)));
-  NamedAttribute highRange = rewriter.getNamedAttr(
-      LLVM::LLVMDialect::getRangeAttrName(),
-      LLVM::ConstantRangeAttr::get(rewriter.getContext(), APInt::getZero(32),
-                                   APInt(32, 64)));
+                                   APInt(32, 64))};
   Value mbcntLo = ROCDL::MbcntLoOp::create(
       rewriter, loc, int32Type, minus1, zero, /*arg_attrs=*/{},
       /*res_attrs=*/
@@ -133,9 +133,7 @@ struct PromoteShuffleToDPPPattern : public OpRewritePattern<gpu::ShuffleOp> {
       return rewriter.notifyMatchFailure(op,
                                          "width must be a constant integer");
     int64_t widthValue = *width;
-    if (widthValue != 4 && widthValue != 8 && widthValue != 12 &&
-        widthValue != 16 && widthValue != 32 && widthValue != 48 &&
-        widthValue != 64)
+    if (!llvm::is_contained({4, 8, 12, 16, 32, 48, 64}, widthValue))
       return rewriter.notifyMatchFailure(
           op, "width must be 4, 8, 12, 16, 32, 48 or 64");
 
