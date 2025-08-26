@@ -6437,20 +6437,22 @@ static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
 
 namespace {
 
-/// This class represents a lookup table that can be used to replace a switch.
-class SwitchLookupTable {
+/// This class finds alternatives for switches to ultimately
+/// replace the switch.
+class SwitchReplacement {
 public:
-  /// Create a lookup table to use as a switch replacement with the contents
-  /// of Values, using DefaultValue to fill any holes in the table.
-  SwitchLookupTable(
+  /// Create a helper for optimizations to use as a switch replacement.
+  /// Find a better representation for the content of Values,
+  /// using DefaultValue to fill any holes in the table.
+  SwitchReplacement(
       Module &M, uint64_t TableSize, ConstantInt *Offset,
       const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
       Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName);
 
-  /// Build instructions with Builder to retrieve the value at
-  /// the position given by Index in the lookup table.
-  Value *buildLookup(Value *Index, IRBuilder<> &Builder, const DataLayout &DL,
-                     Function *Func);
+  /// Build instructions with Builder to retrieve values using Index
+  /// and replace the switch.
+  Value *replaceSwitch(Value *Index, IRBuilder<> &Builder, const DataLayout &DL,
+                       Function *Func);
 
   /// Return true if a table with TableSize elements of
   /// type ElementType would fit in a target-legal register.
@@ -6458,14 +6460,13 @@ public:
                                  Type *ElementType);
 
 private:
-  // Depending on the contents of the table, it can be represented in
-  // different ways.
+  // Depending on the switch, there are different alternatives.
   enum {
-    // For tables where each element contains the same value, we just have to
+    // For switches where each case contains the same value, we just have to
     // store that single value and return it for each lookup.
     SingleValueKind,
 
-    // For tables where there is a linear relationship between table index
+    // For switches where there is a linear relationship between table index
     // and values. We calculate the result with a simple multiplication
     // and addition instead of a table lookup.
     LinearMapKind,
@@ -6477,7 +6478,7 @@ private:
 
     // The table is stored as an array of values. Values are retrieved by load
     // instructions from the table.
-    ArrayKind
+    LookupTableKind
   } Kind;
 
   // The type of the output values.
@@ -6495,15 +6496,15 @@ private:
   ConstantInt *LinearMultiplier = nullptr;
   bool LinearMapValWrapped = false;
 
-  // For ArrayKind, this is the array.
-  GlobalVariable *Array = nullptr;
-  ArrayType *ArrayTy = nullptr;
+  // For LookupTableKind, this is the table.
+  GlobalVariable *Table = nullptr;
+  ArrayType *TableTy = nullptr;
   Constant *Initializer = nullptr;
 };
 
 } // end anonymous namespace
 
-SwitchLookupTable::SwitchLookupTable(
+SwitchReplacement::SwitchReplacement(
     Module &M, uint64_t TableSize, ConstantInt *Offset,
     const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
     Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName) {
@@ -6628,14 +6629,14 @@ SwitchLookupTable::SwitchLookupTable(
   }
 
   // Store the table in an array.
-  ArrayTy = ArrayType::get(ValueType, TableSize);
-  Initializer = ConstantArray::get(ArrayTy, TableContents);
+  TableTy = ArrayType::get(ValueType, TableSize);
+  Initializer = ConstantArray::get(TableTy, TableContents);
 
-  Kind = ArrayKind;
+  Kind = LookupTableKind;
 }
 
-Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
-                                      const DataLayout &DL, Function *Func) {
+Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
+                                        const DataLayout &DL, Function *Func) {
   switch (Kind) {
   case SingleValueKind:
     return SingleValue;
@@ -6676,18 +6677,18 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
     // Mask off.
     return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
   }
-  case ArrayKind: {
+  case LookupTableKind: {
     // Only build lookup table when we have a target that supports it or the
-    // attribute is not set.
-    Array = new GlobalVariable(*Func->getParent(), ArrayTy, /*isConstant=*/true,
+    // attribute is notable.
+    Table = new GlobalVariable(*Func->getParent(), TableTy, /*isConstant=*/true,
                                GlobalVariable::PrivateLinkage, Initializer,
                                "switch.table." + Func->getName());
-    Array->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+    Table->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
     // Set the alignment to that of an array items. We will be only loading one
     // value out of it.
-    Array->setAlignment(DL.getPrefTypeAlign(ValueType));
-    Type *IndexTy = DL.getIndexType(Array->getType());
-    auto *ArrayTy = cast<ArrayType>(Array->getValueType());
+    Table->setAlignment(DL.getPrefTypeAlign(ValueType));
+    Type *IndexTy = DL.getIndexType(Table->getType());
+    auto *ArrayTy = cast<ArrayType>(Table->getValueType());
 
     if (Index->getType() != IndexTy) {
       unsigned OldBitWidth = Index->getType()->getIntegerBitWidth();
@@ -6699,14 +6700,14 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
 
     Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
     Value *GEP =
-        Builder.CreateInBoundsGEP(ArrayTy, Array, GEPIndices, "switch.gep");
+        Builder.CreateInBoundsGEP(ArrayTy, Table, GEPIndices, "switch.gep");
     return Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
   }
   }
-  llvm_unreachable("Unknown lookup table kind!");
+  llvm_unreachable("Unknown helper kind!");
 }
 
-bool SwitchLookupTable::wouldFitInRegister(const DataLayout &DL,
+bool SwitchReplacement::wouldFitInRegister(const DataLayout &DL,
                                            uint64_t TableSize,
                                            Type *ElementType) {
   auto *IT = dyn_cast<IntegerType>(ElementType);
@@ -6786,7 +6787,7 @@ shouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
     // Saturate this flag to false.
     AllTablesFitInRegister =
         AllTablesFitInRegister &&
-        SwitchLookupTable::wouldFitInRegister(DL, TableSize, Ty);
+        SwitchReplacement::wouldFitInRegister(DL, TableSize, Ty);
 
     // If both flags saturate, we're done. NOTE: This *only* works with
     // saturating flags, and all flags have to saturate first due to the
@@ -6817,7 +6818,7 @@ static bool shouldUseSwitchConditionAsTableIndex(
       !HasDefaultResults)
     return false;
   return all_of(ResultTypes, [&](const auto &KV) {
-    return SwitchLookupTable::wouldFitInRegister(
+    return SwitchReplacement::wouldFitInRegister(
         DL, MaxCaseVal.getLimitedValue() + 1 /* TableSize */,
         KV.second /* ResultType */);
   });
@@ -6908,9 +6909,9 @@ static void reuseTableCompare(
 /// If the switch is only used to initialize one or more phi nodes in a common
 /// successor block with different constant values, replace the switch with
 /// lookup tables.
-static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
-                                DomTreeUpdater *DTU, const DataLayout &DL,
-                                const TargetTransformInfo &TTI) {
+static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
+                                 DomTreeUpdater *DTU, const DataLayout &DL,
+                                 const TargetTransformInfo &TTI) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
   BasicBlock *BB = SI->getParent();
@@ -7046,7 +7047,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
       // if no optsize is specified.
       const uint64_t UpperBound = CR.getUpper().getLimitedValue();
       if (!CR.isUpperWrapped() && all_of(ResultTypes, [&](const auto &KV) {
-            return SwitchLookupTable::wouldFitInRegister(
+            return SwitchReplacement::wouldFitInRegister(
                 DL, UpperBound, KV.second /* ResultType */);
           })) {
         // There may be some case index larger than the UpperBound (unreachable
@@ -7080,24 +7081,24 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   }
 
   // Keep track of the tables we create for each phi node
-  struct TableInfo {
-    SwitchLookupTable Table;
-    Constant *DefaultValue;
+  struct ReplacementParams {
+    SwitchReplacement Replacer;
+    Constant *DefaultVal;
   };
-  // Find out what kind of table to create by creating a SwitchLookupTable
-  SmallDenseMap<PHINode *, TableInfo> PhiToTableMap;
+  // Keep track of the switch replacement for each phi
+  SmallDenseMap<PHINode *, ReplacementParams> PhiToReplacementMap;
   for (PHINode *PHI : PHIs) {
     const auto &ResultList = ResultLists[PHI];
 
     Type *ResultType = ResultList.begin()->second->getType();
     // Use any value to fill the lookup table holes.
-    Constant *DV =
+    Constant *DefaultVal =
         AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
-    SwitchLookupTable Table(*Fn->getParent(), TableSize, TableIndexOffset,
-                            ResultList, DV, DL, FuncName);
-    TableInfo TI = {Table, DV};
-    PhiToTableMap.insert({PHI, TI});
+    SwitchReplacement Replacement(*Fn->getParent(), TableSize, TableIndexOffset,
+                                  ResultList, DefaultVal, DL, FuncName);
+    ReplacementParams Parameters = {Replacement, DefaultVal};
+    PhiToReplacementMap.insert({PHI, Parameters});
   }
 
   std::vector<DominatorTree::UpdateType> Updates;
@@ -7188,8 +7189,9 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
-    auto TableInfo = PhiToTableMap.at(PHI);
-    auto *Result = TableInfo.Table.buildLookup(TableIndex, Builder, DL, Fn);
+    auto TableInfo = PhiToReplacementMap.at(PHI);
+    auto *Result =
+        TableInfo.Replacer.replaceSwitch(TableIndex, Builder, DL, Fn);
     // Do a small peephole optimization: re-use the switch table compare if
     // possible.
     if (!TableHasHoles && HasDefaultResults && RangeCheckBranch) {
@@ -7197,7 +7199,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
       // Search for compare instructions which use the phi.
       for (auto *User : PHI->users()) {
         reuseTableCompare(User, PhiBlock, RangeCheckBranch,
-                          TableInfo.DefaultValue, ResultList);
+                          TableInfo.DefaultVal, ResultList);
       }
     }
 
@@ -7730,7 +7732,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   // CVP. Therefore, only apply this transformation during late stages of the
   // optimisation pipeline.
   if (Options.ConvertSwitchToLookupTable &&
-      switchToLookupTable(SI, Builder, DTU, DL, TTI))
+      simplifySwitchLookup(SI, Builder, DTU, DL, TTI))
     return requestResimplify();
 
   if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
