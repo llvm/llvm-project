@@ -76,21 +76,17 @@ struct FormatStyle {
     ///       argument2);
     /// \endcode
     BAS_DontAlign,
-    /// ``BAS_AlwaysBreak``
     /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
     /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
-    /// For backward compatibility. Do not use.
-    BAS_ABDeprecated,
-    /// ``BAS_BlockIndent``
+    BAS_AlwaysBreak,
     /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
     /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
     /// in combination with ``BreakBeforeCloseBracketBracedList``,
     /// ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
     /// ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
-    /// For backward compatibility. Do not use.
-    BAS_BIDeprecated,
+    BAS_BlockIndent
   };
 
   /// If ``true``, horizontally aligns arguments after an open bracket.
