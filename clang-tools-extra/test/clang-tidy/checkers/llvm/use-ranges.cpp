@@ -76,52 +76,52 @@ void test_positive() {
   int arr[5] = {1, 2, 3, 4, 5};
   
   auto it1 = std::find(vec.begin(), vec.end(), 3);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: auto it1 = llvm::find(vec, 3);
 
   auto it2 = std::find(std::begin(arr), std::end(arr), 3);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: auto it2 = llvm::find(arr, 3);
 
   std::stable_sort(vec.begin(), vec.end());
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: llvm::stable_sort(vec);
 
   bool all = std::all_of(vec.begin(), vec.end(), is_even);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: bool all = llvm::all_of(vec, is_even);
 
   std::for_each(vec.begin(), vec.end(), double_ref);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: llvm::for_each(vec, double_ref);
 
   auto min_it = std::min_element(vec.begin(), vec.end());
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: auto min_it = llvm::min_element(vec);
 
   std::vector<int> vec2;
   bool eq = std::equal(vec.begin(), vec.end(), vec2.begin(), vec2.end());
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: bool eq = llvm::equal(vec, vec2);
 
   std::copy(vec.begin(), vec.end(), vec2.begin());
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: llvm::copy(vec, vec2.begin());
 
   std::fill(vec.begin(), vec.end(), 0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: llvm::fill(vec, 0);
   
   auto last = std::unique(vec.begin(), vec.end());
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: auto last = llvm::unique(vec);
 
   bool sorted = std::is_sorted(vec.begin(), vec.end());
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: bool sorted = llvm::is_sorted(vec);
 
   std::includes(vec.begin(), vec.end(), std::begin(arr), std::end(arr));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a LLVM range-based algorithm
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: llvm::includes(vec, arr);
 }
 

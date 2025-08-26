@@ -34,7 +34,7 @@ public:
   }
 
 private:
-  SmallVector<utils::UseRangesCheck::Signature> Signatures;
+  ArrayRef<utils::UseRangesCheck::Signature> Signatures;
 };
 
 } // namespace
@@ -55,14 +55,31 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
 
   // Single range algorithms
   AddStdToLLVM(llvm::makeIntrusiveRefCnt<StdToLLVMReplacer>(SingleSig),
-               {"all_of",        "any_of",      "none_of",
-                "for_each",      "find",        "find_if",
-                "find_if_not",   "count",       "count_if",
-                "transform",     "replace",     "remove_if",
-                "stable_sort",   "partition",   "partition_point",
-                "is_sorted",     "min_element", "max_element",
-                "binary_search", "lower_bound", "upper_bound",
-                "unique",        "copy",        "copy_if",
+               {"all_of",
+                "any_of",
+                "none_of",
+                "for_each",
+                "find",
+                "find_if",
+                "find_if_not",
+                "count",
+                "count_if",
+                "transform",
+                "replace",
+                "remove_if",
+                "stable_sort",
+                "partition",
+                "partition_point",
+                "is_sorted",
+                "min_element",
+                "max_element",
+                "binary_search",
+                "lower_bound",
+                "upper_bound",
+                "unique",
+                "uninitialized_copy",
+                "copy",
+                "copy_if",
                 "fill"});
 
   // Two range algorithms
@@ -76,12 +93,12 @@ UseRangesCheck::UseRangesCheck(StringRef Name, ClangTidyContext *Context)
     : utils::UseRangesCheck(Name, Context) {}
 
 DiagnosticBuilder UseRangesCheck::createDiag(const CallExpr &Call) {
-  return diag(Call.getBeginLoc(), "use a LLVM range-based algorithm");
+  return diag(Call.getBeginLoc(), "use an LLVM range-based algorithm");
 }
 
 ArrayRef<std::pair<StringRef, StringRef>>
 UseRangesCheck::getFreeBeginEndMethods() const {
-  static const std::pair<StringRef, StringRef> Refs[] = {
+  static constexpr std::pair<StringRef, StringRef> Refs[] = {
       {"::std::begin", "::std::end"},
       {"::std::cbegin", "::std::cend"},
       {"::std::rbegin", "::std::rend"},
