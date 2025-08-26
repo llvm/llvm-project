@@ -2232,7 +2232,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
                                        VPTypeAnalysis &TypeInfo, VPValue &EVL) {
   VPlan *Plan = CurRecipe.getParent()->getPlan();
-  VPValue *Addr, *Mask;
+  VPValue *Addr, *Mask, *EndPtr;
 
   /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
   auto AdjustEndPtr = [&CurRecipe, &EVL](VPValue *EndPtr) {
@@ -2247,23 +2247,22 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
                                     EVL, Mask);
 
-  if (match(&CurRecipe, m_ReverseLoad(m_VecEndPtr(m_VPValue(Addr),
-                                                  m_Specific(&Plan->getVF())),
-                                      m_RemoveMask(HeaderMask, Mask))))
+  if (match(&CurRecipe,
+            m_ReverseLoad(m_VPValue(EndPtr), m_RemoveMask(HeaderMask, Mask))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))))
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
-                                    AdjustEndPtr(Addr), EVL, Mask);
+                                    AdjustEndPtr(EndPtr), EVL, Mask);
 
   if (match(&CurRecipe, m_Store(m_VPValue(Addr), m_VPValue(),
                                 m_RemoveMask(HeaderMask, Mask))))
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
                                      EVL, Mask);
 
-  if (match(&CurRecipe,
-            m_ReverseStore(
-                m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF())),
-                m_VPValue(), m_RemoveMask(HeaderMask, Mask))))
+  if (match(&CurRecipe, m_ReverseStore(m_VPValue(EndPtr), m_VPValue(),
+                                       m_RemoveMask(HeaderMask, Mask))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))))
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe),
-                                     AdjustEndPtr(Addr), EVL, Mask);
+                                     AdjustEndPtr(EndPtr), EVL, Mask);
 
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
     if (Rdx->isConditional() &&
