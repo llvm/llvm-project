@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -18,13 +19,7 @@
 
 namespace mlir {
 namespace lsp {
-struct Diagnostic;
-struct DocumentLink;
-struct Hover;
-struct Location;
-struct Position;
-struct TextDocumentContentChangeEvent;
-class URIForFile;
+using namespace llvm::lsp;
 
 /// This class implements all of the TableGen related functionality necessary
 /// for a language server. This class allows for keeping the TableGen specific

@@ -9,13 +9,14 @@
 #include "LSPServer.h"
 
 #include "TableGenServer.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Protocol.h"
-#include "mlir/Tools/lsp-server-support/Transport.h"
+#include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/LSP/Protocol.h"
+#include "llvm/Support/LSP/Transport.h"
 #include <optional>
 
 using namespace mlir;
 using namespace mlir::lsp;
+using namespace llvm::lsp;
 
 //===----------------------------------------------------------------------===//
 // LSPServer
