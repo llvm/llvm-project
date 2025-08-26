@@ -170,15 +170,9 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  std::unique_ptr<llvm::Module> GenModule(IncrementalAction *Action = nullptr);
-  PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
-                                      std::unique_ptr<llvm::Module> M = {},
-                                      IncrementalAction *Action = nullptr);
-
 private:
   size_t getEffectivePTUSize() const;
   void markUserCodeStart();
-  llvm::Expected<Expr *> ExtractValueFromExpr(Expr *E);
 
   // A cache for the compiled destructors used to for de-allocation of managed
   // clang::Values.
@@ -201,11 +195,6 @@ private:
   // This function forces emission of the needed dtor.
   llvm::Expected<llvm::orc::ExecutorAddr>
   CompileDtorCall(CXXRecordDecl *CXXRD) const;
-
-  /// @}
-  /// @name Code generation
-  /// @{
-  CodeGenerator *getCodeGen(IncrementalAction *Action = nullptr) const;
 };
 } // namespace clang
 

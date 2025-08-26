@@ -137,7 +137,7 @@ bool InProcessPrintingASTConsumer::HandleTopLevelDecl(DeclGroupRef DGR) {
     if (auto *TLSD = llvm::dyn_cast<TopLevelStmtDecl>(D))
       if (TLSD && TLSD->isSemiMissing()) {
         auto ExprOrErr =
-            Interp.ExtractValueFromExpr(cast<Expr>(TLSD->getStmt()));
+            Interp.convertExprToValue(cast<Expr>(TLSD->getStmt()));
         if (llvm::Error E = ExprOrErr.takeError()) {
           llvm::logAllUnhandledErrors(std::move(E), llvm::errs(),
                                       "Value printing failed: ");
