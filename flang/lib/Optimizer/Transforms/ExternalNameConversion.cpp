@@ -82,6 +82,48 @@ void ExternalNameConversionPass::runOnOperation() {
         mlir::SymbolTable::getSymbolAttrName());
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
     if (fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
+      // Check if this is a private function that would conflict with a common
+      // block and get its mangled name.
+      if (auto funcOp = llvm::dyn_cast<mlir::func::FuncOp>(funcOrGlobal)) {
+        if (funcOp.isPrivate()) {
+          auto mangledName =
+              mangleExternalName(deconstructedName, appendUnderscoreOpt);
+          auto mod = funcOp->getParentOfType<mlir::ModuleOp>();
+          bool hasConflictingCommonBlock = false;
+
+          // Check if any existing global has the same mangled name.
+          mod.walk([&](fir::GlobalOp globalOp) {
+            auto globalSymName = globalOp.getSymName();
+            if (globalSymName == mangledName) {
+              hasConflictingCommonBlock = true;
+              return mlir::WalkResult::interrupt();
+            }
+            return mlir::WalkResult::advance();
+          });
+
+          // Skip externalization if the function has a conflicting common block
+          // and is not directly called (i.e. procedure pointers or type
+          // specifications)
+          if (hasConflictingCommonBlock) {
+            bool isDirectlyCalled = false;
+            auto uses = funcOp.getSymbolUses(mod);
+            if (uses.has_value()) {
+              for (auto use : *uses) {
+                auto *user = use.getUser();
+                if (mlir::isa<fir::CallOp>(user) ||
+                    mlir::isa<mlir::func::CallOp>(user)) {
+                  isDirectlyCalled = true;
+                  break;
+                }
+              }
+            }
+            if (!isDirectlyCalled) {
+              return;
+            }
+          }
+        }
+      }
+
       auto newName = mangleExternalName(deconstructedName, appendUnderscoreOpt);
       auto newAttr = mlir::StringAttr::get(context, newName);
       mlir::SymbolTable::setSymbolName(&funcOrGlobal, newAttr);
