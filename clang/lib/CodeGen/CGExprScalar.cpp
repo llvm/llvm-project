@@ -1845,8 +1845,8 @@ void ScalarExprEmitter::EmitBinOpCheck(
       int ArithOverflowKind = 0;
       switch (Opcode) {
       case BO_Add: {
-        ArithOverflowKind = diag::UBSanArithKind::Add;
         Check = SanitizerHandler::AddOverflow;
+        ArithOverflowKind = diag::UBSanArithKind::Add;
         break;
       }
       case BO_Sub: {
