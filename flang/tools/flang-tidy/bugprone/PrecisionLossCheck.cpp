@@ -12,13 +12,11 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include <clang/Basic/SourceLocation.h>
-#include <variant>
 
 namespace Fortran::tidy::bugprone {
 
 static bool IsLossOfPrecision(const semantics::SomeExpr *lhs,
-                              const semantics::SomeExpr *rhs,
-                              bool hasExplicitKind, bool isConstantReal) {
+                              const semantics::SomeExpr *rhs) {
 
   const auto &lhsType{lhs->GetType()};
   const auto &rhsType{rhs->GetType()};
@@ -43,10 +41,6 @@ static bool IsLossOfPrecision(const semantics::SomeExpr *lhs,
   //
   if (lhsCat == rhsCat && lhsKind < rhsKind)
     return true;
-
-  if (isConstantReal && lhsKind > rhsKind && !hasExplicitKind) {
-    return true;
-  }
 
   if (lhsCat == common::TypeCategory::Complex &&
       rhsCat == common::TypeCategory::Real) {
@@ -86,19 +80,7 @@ void PrecisionLossCheck::Enter(const parser::AssignmentStmt &assignment) {
   if (!lhs || !rhs)
     return;
 
-  bool hasExplicitKind = false;
-  bool isConstantReal = false;
-  if (std::holds_alternative<parser::LiteralConstant>(expr.u)) {
-    const auto &literal = std::get<parser::LiteralConstant>(expr.u);
-    if (std::holds_alternative<parser::RealLiteralConstant>(literal.u)) {
-      const auto &realLiteral =
-          std::get<parser::RealLiteralConstant>(literal.u);
-      hasExplicitKind = realLiteral.kind.has_value();
-      isConstantReal = true;
-    }
-  }
-
-  if (IsLossOfPrecision(lhs, rhs, hasExplicitKind, isConstantReal)) {
+  if (IsLossOfPrecision(lhs, rhs)) {
     Say(context()->getSemanticsContext().location().value(),
         "Possible loss of precision in implicit conversion (%s to %s) "_warn_en_US,
         rhs->GetType()->AsFortran(), lhs->GetType()->AsFortran());
