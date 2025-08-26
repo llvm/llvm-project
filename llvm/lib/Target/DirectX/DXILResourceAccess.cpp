@@ -273,22 +273,23 @@ static void phiNodeRemapHelper(PHINode *Phi, BasicBlock *BB,
 static void phiNodeReplacement(IntrinsicInst *II) {
   SmallVector<Instruction *> DeadInsts;
   for (User *U : II->users()) {
-    if (auto *Phi = dyn_cast<PHINode>(U)) {
+    auto *Phi = dyn_cast<PHINode>(U);
+    if (!Phi)
+      continue;
 
-      IRBuilder<> Builder(Phi);
-      SmallVector<Instruction *> UsesInBlock;
-      collectBlockUseDef(Phi, UsesInBlock);
+    IRBuilder<> Builder(Phi);
+    SmallVector<Instruction *> UsesInBlock;
+    collectBlockUseDef(Phi, UsesInBlock);
 
-      for (uint I = 0; I < Phi->getNumIncomingValues(); I++) {
-        auto *CurrIncomingBB = Phi->getIncomingBlock(I);
-        phiNodeRemapHelper(Phi, CurrIncomingBB, Builder, UsesInBlock);
-      }
+    for (uint I = 0; I < Phi->getNumIncomingValues(); I++) {
+      auto *CurrIncomingBB = Phi->getIncomingBlock(I);
+      phiNodeRemapHelper(Phi, CurrIncomingBB, Builder, UsesInBlock);
+    }
 
-      DeadInsts.push_back(Phi);
+    DeadInsts.push_back(Phi);
 
-      for (Instruction *I : UsesInBlock) {
-        DeadInsts.push_back(I);
-      }
+    for (Instruction *I : UsesInBlock) {
+      DeadInsts.push_back(I);
     }
   }
 
