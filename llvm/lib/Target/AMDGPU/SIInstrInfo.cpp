@@ -5942,7 +5942,7 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
                           const MachineRegisterInfo &MRI,
                           const MCInstrDesc &TID, unsigned RCID,
                           bool IsAllocatable) {
-  if ((IsAllocatable || !ST.hasGFX90AInsts() || !MRI.reservedRegsFrozen()) &&
+  if ((IsAllocatable || !ST.hasGFX90AInsts()) &&
       (((TID.mayLoad() || TID.mayStore()) &&
         !(TID.TSFlags & SIInstrFlags::Spill)) ||
        (TID.TSFlags & (SIInstrFlags::DS | SIInstrFlags::MIMG)))) {
