@@ -450,6 +450,16 @@ class DAPTestCaseBase(TestBase):
 
         return disassembled_instructions, disassembled_instructions[memoryReference]
 
+    def _register_dap_teardown_hooks(self, disconnectAutomatically):
+        """Register teardown hooks to ensure DAP debug adapter is properly cleaned up.
+        Uses separate hooks to ensure terminate() is called even if disconnect() fails.
+        """
+        if disconnectAutomatically:
+            self.addTearDownHook(
+                lambda: self.dap_server.request_disconnect(terminateDebuggee=True)
+            )
+        self.addTearDownHook(lambda: self.dap_server.terminate())
+
     def attach(
         self,
         *,
@@ -464,20 +474,8 @@ class DAPTestCaseBase(TestBase):
 
         # Make sure we disconnect and terminate the DAP debug adapter even
         # if we throw an exception during the test case.
-        def cleanup():
-            if disconnectAutomatically:
-                try:
-                    self.dap_server.request_disconnect(terminateDebuggee=True)
-                except Exception as e:
-                    # DAP server might not be responsive, skip disconnect and terminate directly
-                    print(f"Warning: disconnect failed ({e}), skipping and terminating directly")
-            try:
-                self.dap_server.terminate()
-            except Exception as e:
-                print(f"Warning: terminate failed ({e}), DAP server may have already died")
+        self._register_dap_teardown_hooks(disconnectAutomatically)
 
-        # Execute the cleanup function during test case tear down.
-        self.addTearDownHook(cleanup)
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
         response = self.dap_server.request_attach(**kwargs)
@@ -500,14 +498,8 @@ class DAPTestCaseBase(TestBase):
         """Sending launch request to dap"""
 
         # Make sure we disconnect and terminate the DAP debug adapter,
-        # if we throw an exception during the test case
-        def cleanup():
-            if disconnectAutomatically:
-                self.dap_server.request_disconnect(terminateDebuggee=True)
-            self.dap_server.terminate()
-
-        # Execute the cleanup function during test case tear down.
-        self.addTearDownHook(cleanup)
+        # if we throw an exception during the test case.
+        self._register_dap_teardown_hooks(disconnectAutomatically)
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
