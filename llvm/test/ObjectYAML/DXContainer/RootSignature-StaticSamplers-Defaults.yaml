@@ -15,7 +15,7 @@ Parts:
     RootSignature:
       Version: 2
       NumRootParameters: 0
-      RootParametersOffset: 0
+      RootParametersOffset: 24
       NumStaticSamplers: 1
       StaticSamplersOffset: 24
       Parameters: []
@@ -31,7 +31,7 @@ Parts:
 #CHECK-NEXT:    RootSignature:
 #CHECK-NEXT:      Version:         2
 #CHECK-NEXT:      NumRootParameters: 0
-#CHECK-NEXT:      RootParametersOffset: 0
+#CHECK-NEXT:      RootParametersOffset: 24
 #CHECK-NEXT:      NumStaticSamplers: 1
 #CHECK-NEXT:      StaticSamplersOffset: 24
 #CHECK-NEXT:      Parameters:      []
