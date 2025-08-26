@@ -120,7 +120,7 @@ void ASTDumper::dump(NumberExprAST *num) {
 ///    [ [ 1, 2 ], [ 3, 4 ] ]
 /// We print out such array with the dimensions spelled out at every level:
 ///    <2,2>[<2>[ 1, 2 ], <2>[ 3, 4 ] ]
-void printLitHelper(ExprAST *litOrNum) {
+static void printLitHelper(ExprAST *litOrNum) {
   // Inside a literal expression we can have either a number or another literal
   if (auto *num = llvm::dyn_cast<NumberExprAST>(litOrNum)) {
     llvm::errs() << num->getValue();

@@ -1763,6 +1763,7 @@ Hexadecimal floating constants (N308)                                          C
 Compound literals (N716)                                                       C99           C89, C++
 ``//`` comments (N644)                                                         C99           C89
 Mixed declarations and code (N740)                                             C99           C89
+init-statement in for (N740)                                                   C99           C89
 Variadic macros (N707)                                                         C99           C89
 Empty macro arguments (N570)                                                   C99           C89
 Trailing comma in enum declaration                                             C99           C89
@@ -4181,7 +4182,7 @@ builtin, the mangler emits their usual pattern without any special treatment.
 -----------------------
 
 ``__builtin_popcountg`` returns the number of 1 bits in the argument. The
-argument can be of any unsigned integer type.
+argument can be of any unsigned integer type or fixed boolean vector.
 
 **Syntax**:
 
@@ -4213,7 +4214,13 @@ such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 ``__builtin_clzg`` (respectively ``__builtin_ctzg``) returns the number of
 leading (respectively trailing) 0 bits in the first argument. The first argument
-can be of any unsigned integer type.
+can be of any unsigned integer type or fixed boolean vector.
+
+For boolean vectors, these builtins interpret the vector like a bit-field where
+the ith element of the vector is bit i of the bit-field, counting from the
+least significant end. ``__builtin_clzg`` returns the number of zero elements at
+the end of the vector, while ``__builtin_ctzg`` returns the number of zero
+elements at the start of the vector.
 
 If the first argument is 0 and an optional second argument of ``int`` type is
 provided, then the second argument is returned. If the first argument is 0, but

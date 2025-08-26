@@ -2626,6 +2626,32 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
                                        << Op->getConstantOperandVal(1)));
     break;
   }
+  case AArch64ISD::MOVImsl: {
+    Known = KnownBits::makeConstant(
+        APInt(Known.getBitWidth(), ~(~Op->getConstantOperandVal(0)
+                                     << Op->getConstantOperandVal(1))));
+    break;
+  }
+  case AArch64ISD::MOVIedit: {
+    Known = KnownBits::makeConstant(APInt(
+        Known.getBitWidth(),
+        AArch64_AM::decodeAdvSIMDModImmType10(Op->getConstantOperandVal(0))));
+    break;
+  }
+  case AArch64ISD::MVNIshift: {
+    Known = KnownBits::makeConstant(
+        APInt(Known.getBitWidth(),
+              ~(Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
+              /*isSigned*/ false, /*implicitTrunc*/ true));
+    break;
+  }
+  case AArch64ISD::MVNImsl: {
+    Known = KnownBits::makeConstant(
+        APInt(Known.getBitWidth(),
+              (~Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
+              /*isSigned*/ false, /*implicitTrunc*/ true));
+    break;
+  }
   case AArch64ISD::LOADgot:
   case AArch64ISD::ADDlow: {
     if (!Subtarget->isTargetILP32())
@@ -17599,14 +17625,16 @@ bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
 bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
                                                   Value *LaneMask,
                                                   ShuffleVectorInst *SVI,
-                                                  unsigned Factor) const {
+                                                  unsigned Factor,
+                                                  const APInt &GapMask) const {
 
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
-  assert(!LaneMask && "Unexpected mask on store");
+  assert(!LaneMask && GapMask.popcount() == Factor &&
+         "Unexpected mask on store");
 
   auto *VecTy = cast<FixedVectorType>(SVI->getType());
   assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");
@@ -18309,7 +18337,7 @@ bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   if (Val == 0 || AArch64_AM::isLogicalImmediate(Val, BitSize))
     return true;
 
-  if ((int64_t)Val < 0)
+  if (Val < 0)
     Val = ~Val;
   if (BitSize == 32)
     Val &= (1LL << 32) - 1;
@@ -28686,9 +28714,13 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
       getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
+
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal("__security_cookie",
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
                         PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
@@ -28703,13 +28735,6 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
     return;
   }
   TargetLowering::insertSSPDeclarations(M);
-}
-
-Value *AArch64TargetLowering::getSDagStackGuard(const Module &M) const {
-  // MSVC CRT has a global variable holding security cookie.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
-    return M.getGlobalVariable("__security_cookie");
-  return TargetLowering::getSDagStackGuard(M);
 }
 
 Function *AArch64TargetLowering::getSSPStackGuardCheck(const Module &M) const {
@@ -30647,6 +30672,16 @@ bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
   return Op.getOpcode() == AArch64ISD::DUP ||
          Op.getOpcode() == AArch64ISD::MOVI ||
          Op.getOpcode() == AArch64ISD::MOVIshift ||
+         Op.getOpcode() == AArch64ISD::MOVImsl ||
+         Op.getOpcode() == AArch64ISD::MOVIedit ||
+         Op.getOpcode() == AArch64ISD::MVNIshift ||
+         Op.getOpcode() == AArch64ISD::MVNImsl ||
+         // Ignoring fneg(movi(0)), because if it is folded to FPConstant(-0.0),
+         // ISel will select fmov(mov i64 0x8000000000000000), resulting in a
+         // fmov from fpr to gpr, which is more expensive than fneg(movi(0))
+         (Op.getOpcode() == ISD::FNEG &&
+          Op.getOperand(0).getOpcode() == AArch64ISD::MOVIedit &&
+          Op.getOperand(0).getConstantOperandVal(0) == 0) ||
          (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           Op.getOperand(0).getOpcode() == AArch64ISD::DUP) ||
          TargetLowering::isTargetCanonicalConstantNode(Op);

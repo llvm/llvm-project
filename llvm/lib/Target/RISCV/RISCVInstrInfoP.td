@@ -30,7 +30,7 @@ def simm8_unsigned : RISCVOp {
   let ParserMatchClass = SImm8UnsignedAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<8>";
-  let OperandType = "OPERAND_SIMM10";
+  let OperandType = "OPERAND_SIMM8_UNSIGNED";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -49,7 +49,7 @@ def simm10_unsigned : RISCVOp {
   let ParserMatchClass = SImm10UnsignedAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<10>";
-  let OperandType = "OPERAND_SIMM10";
+  let OperandType = "OPERAND_SIMM10_UNSIGNED";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))

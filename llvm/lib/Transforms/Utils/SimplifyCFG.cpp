@@ -568,8 +568,19 @@ struct ConstantComparesGatherer {
   /// If the elements in Vals matches the comparisons
   bool IsEq = false;
 
+  // Used to check if the first matched CompValue shall be the Extra check.
+  bool IgnoreFirstMatch = false;
+  bool MultipleMatches = false;
+
   /// Construct and compute the result for the comparison instruction Cond
   ConstantComparesGatherer(Instruction *Cond, const DataLayout &DL) : DL(DL) {
+    gather(Cond);
+    if (CompValue || !MultipleMatches)
+      return;
+    Extra = nullptr;
+    Vals.clear();
+    UsedICmps = 0;
+    IgnoreFirstMatch = true;
     gather(Cond);
   }
 
@@ -581,10 +592,16 @@ private:
   /// Try to set the current value used for the comparison, it succeeds only if
   /// it wasn't set before or if the new value is the same as the old one
   bool setValueOnce(Value *NewVal) {
-    if (CompValue && CompValue != NewVal)
+    if (IgnoreFirstMatch) {
+      IgnoreFirstMatch = false;
       return false;
+    }
+    if (CompValue && CompValue != NewVal) {
+      MultipleMatches = true;
+      return false;
+    }
     CompValue = NewVal;
-    return (CompValue != nullptr);
+    return true;
   }
 
   /// Try to match Instruction "I" as a comparison against a constant and
@@ -695,7 +712,7 @@ private:
 
       UsedICmps++;
       Vals.push_back(C);
-      return ICI->getOperand(0);
+      return true;
     }
 
     // If we have "x ult 3", for example, then we can add 0,1,2 to the set.
@@ -4387,10 +4404,12 @@ static bool mergeConditionalStoreToAddress(
 
   // OK, we're going to sink the stores to PostBB. The store has to be
   // conditional though, so first create the predicate.
-  Value *PCond = cast<BranchInst>(PFB->getSinglePredecessor()->getTerminator())
-                     ->getCondition();
-  Value *QCond = cast<BranchInst>(QFB->getSinglePredecessor()->getTerminator())
-                     ->getCondition();
+  BranchInst *PBranch =
+      cast<BranchInst>(PFB->getSinglePredecessor()->getTerminator());
+  BranchInst *QBranch =
+      cast<BranchInst>(QFB->getSinglePredecessor()->getTerminator());
+  Value *PCond = PBranch->getCondition();
+  Value *QCond = QBranch->getCondition();
 
   Value *PPHI = ensureValueAvailableInSuccessor(PStore->getValueOperand(),
                                                 PStore->getParent());
@@ -4401,13 +4420,11 @@ static bool mergeConditionalStoreToAddress(
   IRBuilder<> QB(PostBB, PostBBFirst);
   QB.SetCurrentDebugLocation(PostBBFirst->getStableDebugLoc());
 
-  Value *PPred = PStore->getParent() == PTB ? PCond : QB.CreateNot(PCond);
-  Value *QPred = QStore->getParent() == QTB ? QCond : QB.CreateNot(QCond);
+  InvertPCond ^= (PStore->getParent() != PTB);
+  InvertQCond ^= (QStore->getParent() != QTB);
+  Value *PPred = InvertPCond ? QB.CreateNot(PCond) : PCond;
+  Value *QPred = InvertQCond ? QB.CreateNot(QCond) : QCond;
 
-  if (InvertPCond)
-    PPred = QB.CreateNot(PPred);
-  if (InvertQCond)
-    QPred = QB.CreateNot(QPred);
   Value *CombinedPred = QB.CreateOr(PPred, QPred);
 
   BasicBlock::iterator InsertPt = QB.GetInsertPoint();

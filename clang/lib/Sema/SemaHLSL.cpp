@@ -236,9 +236,8 @@ static unsigned calculateLegacyCbufferFieldAlign(const ASTContext &Context,
 static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
                                            QualType T) {
   constexpr unsigned CBufferAlign = 16;
-  if (const RecordType *RT = T->getAs<RecordType>()) {
+  if (const auto *RD = T->getAsRecordDecl()) {
     unsigned Size = 0;
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     for (const FieldDecl *Field : RD->fields()) {
       QualType Ty = Field->getType();
       unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
@@ -364,8 +363,8 @@ static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
   Ty = Ty->getUnqualifiedDesugaredType();
   if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
     return true;
-  if (Ty->isRecordType())
-    return Ty->getAsCXXRecordDecl()->isEmpty();
+  if (const auto *RD = Ty->getAsCXXRecordDecl())
+    return RD->isEmpty();
   if (Ty->isConstantArrayType() &&
       isZeroSizedArray(cast<ConstantArrayType>(Ty)))
     return true;
@@ -387,14 +386,14 @@ static bool requiresImplicitBufferLayoutStructure(const CXXRecordDecl *RD) {
     QualType Ty = Field->getType();
     if (isInvalidConstantBufferLeafElementType(Ty.getTypePtr()))
       return true;
-    if (Ty->isRecordType() &&
-        requiresImplicitBufferLayoutStructure(Ty->getAsCXXRecordDecl()))
+    if (const auto *RD = Ty->getAsCXXRecordDecl();
+        RD && requiresImplicitBufferLayoutStructure(RD))
       return true;
   }
   // check bases
   for (const CXXBaseSpecifier &Base : RD->bases())
     if (requiresImplicitBufferLayoutStructure(
-            Base.getType()->getAsCXXRecordDecl()))
+            Base.getType()->castAsCXXRecordDecl()))
       return true;
   return false;
 }
@@ -459,8 +458,7 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
   if (isInvalidConstantBufferLeafElementType(Ty))
     return nullptr;
 
-  if (Ty->isRecordType()) {
-    CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+  if (auto *RD = Ty->getAsCXXRecordDecl()) {
     if (requiresImplicitBufferLayoutStructure(RD)) {
       RD = createHostLayoutStruct(S, RD);
       if (!RD)
@@ -511,7 +509,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
     assert(NumBases == 1 && "HLSL supports only one base type");
     (void)NumBases;
     CXXBaseSpecifier Base = *StructDecl->bases_begin();
-    CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    CXXRecordDecl *BaseDecl = Base.getType()->castAsCXXRecordDecl();
     if (requiresImplicitBufferLayoutStructure(BaseDecl)) {
       BaseDecl = createHostLayoutStruct(S, BaseDecl);
       if (BaseDecl) {
@@ -728,6 +726,23 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 
   if (FD->getName() != TargetInfo.getTargetOpts().HLSLEntry)
     return;
+
+  // If we have specified a root signature to override the entry function then
+  // attach it now
+  if (RootSigOverrideIdent) {
+    LookupResult R(SemaRef, RootSigOverrideIdent, SourceLocation(),
+                   Sema::LookupOrdinaryName);
+    if (SemaRef.LookupQualifiedName(R, FD->getDeclContext()))
+      if (auto *SignatureDecl =
+              dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
+        FD->dropAttr<RootSignatureAttr>();
+        // We could look up the SourceRange of the macro here as well
+        AttributeCommonInfo AL(RootSigOverrideIdent, AttributeScopeInfo(),
+                               SourceRange(), ParsedAttr::Form::Microsoft());
+        FD->addAttr(::new (getASTContext()) RootSignatureAttr(
+            getASTContext(), AL, RootSigOverrideIdent, SignatureDecl));
+      }
+  }
 
   llvm::Triple::EnvironmentType Env = TargetInfo.getTriple().getEnvironment();
   if (HLSLShaderAttr::isValidShaderType(Env) && Env != llvm::Triple::Library) {
@@ -3194,10 +3209,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       List.insert(List.end(), VT->getNumElements(), VT->getElementType());
       continue;
     }
-    if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
-      assert(RD && "HLSL record types should all be CXXRecordDecls!");
-
+    if (const auto *RD = T->getAsCXXRecordDecl()) {
       if (RD->isStandardLayout())
         RD = RD->getStandardLayoutBaseWithFields();
 
@@ -3967,19 +3979,19 @@ class InitListTransformer {
       return true;
     }
 
-    if (auto *RTy = Ty->getAs<RecordType>()) {
-      llvm::SmallVector<const RecordType *> RecordTypes;
-      RecordTypes.push_back(RTy);
-      while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
-        CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+    if (auto *RD = Ty->getAsCXXRecordDecl()) {
+      llvm::SmallVector<CXXRecordDecl *> RecordDecls;
+      RecordDecls.push_back(RD);
+      while (RecordDecls.back()->getNumBases()) {
+        CXXRecordDecl *D = RecordDecls.back();
         assert(D->getNumBases() == 1 &&
                "HLSL doesn't support multiple inheritance");
-        RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+        RecordDecls.push_back(
+            D->bases_begin()->getType()->castAsCXXRecordDecl());
       }
-      while (!RecordTypes.empty()) {
-        const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD :
-             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
+      while (!RecordDecls.empty()) {
+        CXXRecordDecl *RD = RecordDecls.pop_back_val();
+        for (auto *FD : RD->fields()) {
           DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
           DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
           ExprResult Res = S.BuildFieldReferenceExpr(
@@ -4016,21 +4028,20 @@ class InitListTransformer {
       for (uint64_t I = 0; I < Size; ++I)
         Inits.push_back(generateInitListsImpl(ElTy));
     }
-    if (auto *RTy = Ty->getAs<RecordType>()) {
-      llvm::SmallVector<const RecordType *> RecordTypes;
-      RecordTypes.push_back(RTy);
-      while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
-        CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+    if (auto *RD = Ty->getAsCXXRecordDecl()) {
+      llvm::SmallVector<CXXRecordDecl *> RecordDecls;
+      RecordDecls.push_back(RD);
+      while (RecordDecls.back()->getNumBases()) {
+        CXXRecordDecl *D = RecordDecls.back();
         assert(D->getNumBases() == 1 &&
                "HLSL doesn't support multiple inheritance");
-        RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+        RecordDecls.push_back(
+            D->bases_begin()->getType()->castAsCXXRecordDecl());
       }
-      while (!RecordTypes.empty()) {
-        const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD :
-             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
+      while (!RecordDecls.empty()) {
+        CXXRecordDecl *RD = RecordDecls.pop_back_val();
+        for (auto *FD : RD->fields())
           Inits.push_back(generateInitListsImpl(FD->getType()));
-        }
       }
     }
     auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
