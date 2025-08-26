@@ -2595,21 +2595,6 @@ public:
     Word("!$OMP END ASSUME\n");
     EndOpenMP();
   }
-  void Unparse(const OmpCriticalDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP CRITICAL");
-    Walk(" (", std::get<std::optional<Name>>(x.t), ")");
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpEndCriticalDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP END CRITICAL");
-    Walk(" (", std::get<std::optional<Name>>(x.t), ")");
-    Put("\n");
-    EndOpenMP();
-  }
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
@@ -2721,6 +2706,13 @@ public:
   void Unparse(const OpenMPDispatchConstruct &x) { //
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
+  void Unparse(const OpenMPGroupprivate &x) {
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OpenMPRequiresConstruct &y) {
     BeginOpenMP();
     Word("!$OMP REQUIRES ");
@@ -2781,7 +2773,7 @@ public:
     Walk(std::get<std::list<OpenMPConstruct>>(x.t), "");
     BeginOpenMP();
     Word("!$OMP END ");
-    Walk(std::get<OmpEndSectionsDirective>(x.t));
+    Walk(std::get<std::optional<OmpEndSectionsDirective>>(x.t));
     Put("\n");
     EndOpenMP();
   }

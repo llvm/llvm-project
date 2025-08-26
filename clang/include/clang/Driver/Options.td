@@ -6820,10 +6820,10 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
-            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
             Group<m_x86_Features_Group>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
-               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
                Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
@@ -9404,6 +9404,11 @@ def res_may_alias : Option<["/", "-"], "res-may-alias", KIND_FLAG>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
   HelpText<"Assume that UAVs/SRVs may alias">,
   MarshallingInfoFlag<CodeGenOpts<"ResMayAlias">>;
+def dxc_strip_rootsignature :
+  Option<["/", "-"], "Qstrip-rootsignature", KIND_FLAG>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>,
+  HelpText<"Omit the root signature from produced DXContainer">;
 def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
   HelpText<"Set target profile">,
   Values<"ps_6_0, ps_6_1, ps_6_2, ps_6_3, ps_6_4, ps_6_5, ps_6_6, ps_6_7,"
@@ -9434,6 +9439,18 @@ def fdx_rootsignature_version :
 def dxc_rootsig_ver :
   Separate<["/", "-"], "force-rootsig-ver">,
   Alias<fdx_rootsignature_version>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>;
+def fdx_rootsignature_define :
+  Joined<["-"], "fdx-rootsignature-define=">,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"HLSLRootSigOverride">, "\"\"">,
+  HelpText<"Override entry function root signature with root signature at "
+           "given macro name.">;
+def dxc_rootsig_define :
+  Separate<["-"], "rootsig-define">,
+  Alias<fdx_rootsignature_define>,
   Group<dxc_Group>,
   Visibility<[DXCOption]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
@@ -9468,8 +9485,12 @@ def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
 def fspv_extension_EQ
     : Joined<["-"], "fspv-extension=">,
       Group<dxc_Group>,
-      HelpText<"Specify the available SPIR-V extensions. If this option is not "
-               "specified, then all extensions are available.">;
+      HelpText<
+          "Specify the available SPIR-V extensions. If this option is not "
+          "specified, then all extensions are available. If KHR is specified, "
+          "then all KHR extensions will be available. If DXC is specifided, "
+          "then all extensions implemented by the DirectX Shader compiler will "
+          "be available. This option is useful for moving from DXC to Clang.">;
 def fvk_use_dx_layout
     : DXCFlag<"fvk-use-dx-layout">,
       HelpText<"Use DirectX memory layout for Vulkan resources.">;

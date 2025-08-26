@@ -338,7 +338,7 @@ static bool requiresSaveVG(const MachineFunction &MF);
 // Conservatively, returns true if the function is likely to have an SVE vectors
 // on the stack. This function is safe to be called before callee-saves or
 // object offsets have been determined.
-static bool isLikelyToHaveSVEStack(MachineFunction &MF) {
+static bool isLikelyToHaveSVEStack(const MachineFunction &MF) {
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   if (AFI->isSVECC())
     return true;
@@ -532,6 +532,7 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
 bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
+  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
 
   // Win64 EH requires a frame pointer if funclets are present, as the locals
   // are accessed off the frame pointer in both the parent function and the
@@ -544,6 +545,29 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
       RegInfo->hasStackRealignment(MF))
+    return true;
+
+  // If we:
+  //
+  //   1. Have streaming mode changes
+  //     OR:
+  //   2. Have a streaming body with SVE stack objects
+  //
+  // Then the value of VG restored when unwinding to this function may not match
+  // the value of VG used to set up the stack.
+  //
+  // This is a problem as the CFA can be described with an expression of the
+  // form: CFA = SP + NumBytes + VG * NumScalableBytes.
+  //
+  // If the value of VG used in that expression does not match the value used to
+  // set up the stack, an incorrect address for the CFA will be computed, and
+  // unwinding will fail.
+  //
+  // We work around this issue by ensuring the frame-pointer can describe the
+  // CFA in either of these cases.
+  if (AFI.needsDwarfUnwindInfo(MF) &&
+      ((requiresSaveVG(MF) || AFI.getSMEFnAttrs().hasStreamingBody()) &&
+       (!AFI.hasCalculatedStackSizeSVE() || AFI.getStackSizeSVE() > 0)))
     return true;
   // With large callframes around we may need to use FP to access the scavenging
   // emergency spillslot.
@@ -663,10 +687,6 @@ void AArch64FrameLowering::emitCalleeSavedGPRLocations(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  SMEAttrs Attrs = AFI->getSMEFnAttrs();
-  bool LocallyStreaming =
-      Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface();
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   if (CSI.empty())
@@ -680,14 +700,6 @@ void AArch64FrameLowering::emitCalleeSavedGPRLocations(
 
     assert(!Info.isSpilledToReg() && "Spilling to registers not implemented");
     int64_t Offset = MFI.getObjectOffset(FrameIdx) - getOffsetOfLocalArea();
-
-    // The location of VG will be emitted before each streaming-mode change in
-    // the function. Only locally-streaming functions require emitting the
-    // non-streaming VG location here.
-    if ((LocallyStreaming && FrameIdx == AFI->getStreamingVGIdx()) ||
-        (!LocallyStreaming && Info.getReg() == AArch64::VG))
-      continue;
-
     CFIBuilder.buildOffset(Info.getReg(), Offset);
   }
 }
@@ -707,8 +719,16 @@ void AArch64FrameLowering::emitCalleeSavedSVELocations(
   AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
 
+  std::optional<int64_t> IncomingVGOffsetFromDefCFA;
+  if (requiresSaveVG(MF)) {
+    auto IncomingVG = *find_if(
+        reverse(CSI), [](auto &Info) { return Info.getReg() == AArch64::VG; });
+    IncomingVGOffsetFromDefCFA =
+        MFI.getObjectOffset(IncomingVG.getFrameIdx()) - getOffsetOfLocalArea();
+  }
+
   for (const auto &Info : CSI) {
-    if (!(MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector))
+    if (MFI.getStackID(Info.getFrameIdx()) != TargetStackID::ScalableVector)
       continue;
 
     // Not all unwinders may know about SVE registers, so assume the lowest
@@ -722,7 +742,8 @@ void AArch64FrameLowering::emitCalleeSavedSVELocations(
         StackOffset::getScalable(MFI.getObjectOffset(Info.getFrameIdx())) -
         StackOffset::getFixed(AFI.getCalleeSavedStackSize(MFI));
 
-    CFIBuilder.insertCFIInst(createCFAOffset(TRI, Reg, Offset));
+    CFIBuilder.insertCFIInst(
+        createCFAOffset(TRI, Reg, Offset, IncomingVGOffsetFromDefCFA));
   }
 }
 
@@ -781,9 +802,6 @@ static void emitCalleeSavedRestores(MachineBasicBlock &MBB,
     MCRegister Reg = Info.getReg();
     if (SVE &&
         !static_cast<const AArch64RegisterInfo &>(TRI).regNeedsCFI(Reg, Reg))
-      continue;
-
-    if (!Info.isRestored())
       continue;
 
     CFIBuilder.buildRestore(Info.getReg());
@@ -1465,10 +1483,10 @@ bool requiresGetVGCall(MachineFunction &MF) {
 
 static bool requiresSaveVG(const MachineFunction &MF) {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (!AFI->needsDwarfUnwindInfo(MF) || !AFI->hasStreamingModeChanges())
+    return false;
   // For Darwin platforms we don't save VG for non-SVE functions, even if SME
   // is enabled with streaming mode changes.
-  if (!AFI->hasStreamingModeChanges())
-    return false;
   auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (ST.isTargetDarwin())
     return ST.hasSVE();
@@ -1484,8 +1502,7 @@ static bool matchLibcall(const TargetLowering &TLI, const MachineOperand &MO,
 bool isVGInstruction(MachineBasicBlock::iterator MBBI,
                      const TargetLowering &TLI) {
   unsigned Opc = MBBI->getOpcode();
-  if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI ||
-      Opc == AArch64::UBFMXri)
+  if (Opc == AArch64::CNTD_XPiI)
     return true;
 
   if (!requiresGetVGCall(*MBBI->getMF()))
@@ -1494,7 +1511,7 @@ bool isVGInstruction(MachineBasicBlock::iterator MBBI,
   if (Opc == AArch64::BL)
     return matchLibcall(TLI, MBBI->getOperand(0), RTLIB::SMEABI_GET_CURRENT_VG);
 
-  return Opc == AArch64::ORRXrr;
+  return Opc == TargetOpcode::COPY;
 }
 
 // Convert callee-save register save/restore instruction to do stack pointer
@@ -1509,9 +1526,8 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   unsigned NewOpc;
 
   // If the function contains streaming mode changes, we expect instructions
-  // to calculate the value of VG before spilling. For locally-streaming
-  // functions, we need to do this for both the streaming and non-streaming
-  // vector length. Move past these instructions if necessary.
+  // to calculate the value of VG before spilling. Move past these instructions
+  // if necessary.
   MachineFunction &MF = *MBB.getParent();
   if (requiresSaveVG(MF)) {
     auto &TLI = *MF.getSubtarget().getTargetLowering();
@@ -3475,7 +3491,6 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   MachineFunction &MF = *MBB.getParent();
   auto &TLI = *MF.getSubtarget<AArch64Subtarget>().getTargetLowering();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool NeedsWinCFI = needsWinCFI(MF);
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
@@ -3544,48 +3559,34 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
 
     unsigned X0Scratch = AArch64::NoRegister;
+    auto RestoreX0 = make_scope_exit([&] {
+      if (X0Scratch != AArch64::NoRegister)
+        BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), AArch64::X0)
+            .addReg(X0Scratch)
+            .setMIFlag(MachineInstr::FrameSetup);
+    });
+
     if (Reg1 == AArch64::VG) {
       // Find an available register to store value of VG to.
       Reg1 = findScratchNonCalleeSaveRegister(&MBB, true);
       assert(Reg1 != AArch64::NoRegister);
-      SMEAttrs Attrs = AFI->getSMEFnAttrs();
-
-      if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface() &&
-          AFI->getStreamingVGIdx() == std::numeric_limits<int>::max()) {
-        // For locally-streaming functions, we need to store both the streaming
-        // & non-streaming VG. Spill the streaming value first.
-        BuildMI(MBB, MI, DL, TII.get(AArch64::RDSVLI_XI), Reg1)
-            .addImm(1)
-            .setMIFlag(MachineInstr::FrameSetup);
-        BuildMI(MBB, MI, DL, TII.get(AArch64::UBFMXri), Reg1)
-            .addReg(Reg1)
-            .addImm(3)
-            .addImm(63)
-            .setMIFlag(MachineInstr::FrameSetup);
-
-        AFI->setStreamingVGIdx(RPI.FrameIdx);
-      } else if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
+      if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
         BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
             .addImm(31)
             .addImm(1)
             .setMIFlag(MachineInstr::FrameSetup);
-        AFI->setVGIdx(RPI.FrameIdx);
       } else {
         const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
-        if (llvm::any_of(
-                MBB.liveins(),
-                [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
-                  return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
-                      AArch64::X0, LiveIn.PhysReg);
-                }))
+        if (any_of(MBB.liveins(),
+                   [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
+                     return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
+                         AArch64::X0, LiveIn.PhysReg);
+                   })) {
           X0Scratch = Reg1;
-
-        if (X0Scratch != AArch64::NoRegister)
-          BuildMI(MBB, MI, DL, TII.get(AArch64::ORRXrr), Reg1)
-              .addReg(AArch64::XZR)
-              .addReg(AArch64::X0, RegState::Undef)
-              .addReg(AArch64::X0, RegState::Implicit)
+          BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), X0Scratch)
+              .addReg(AArch64::X0)
               .setMIFlag(MachineInstr::FrameSetup);
+        }
 
         RTLIB::Libcall LC = RTLIB::SMEABI_GET_CURRENT_VG;
         const uint32_t *RegMask =
@@ -3596,7 +3597,6 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
             .addReg(AArch64::X0, RegState::ImplicitDefine)
             .setMIFlag(MachineInstr::FrameSetup);
         Reg1 = AArch64::X0;
-        AFI->setVGIdx(RPI.FrameIdx);
       }
     }
 
@@ -3691,13 +3691,6 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       if (RPI.isPaired())
         MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
     }
-
-    if (X0Scratch != AArch64::NoRegister)
-      BuildMI(MBB, MI, DL, TII.get(AArch64::ORRXrr), AArch64::X0)
-          .addReg(AArch64::XZR)
-          .addReg(X0Scratch, RegState::Undef)
-          .addReg(X0Scratch, RegState::Implicit)
-          .setMIFlag(MachineInstr::FrameSetup);
   }
   return true;
 }
@@ -4076,15 +4069,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // Increase the callee-saved stack size if the function has streaming mode
   // changes, as we will need to spill the value of the VG register.
-  // For locally streaming functions, we spill both the streaming and
-  // non-streaming VG value.
-  SMEAttrs Attrs = AFI->getSMEFnAttrs();
-  if (requiresSaveVG(MF)) {
-    if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface())
-      CSStackSize += 16;
-    else
-      CSStackSize += 8;
-  }
+  if (requiresSaveVG(MF))
+    CSStackSize += 8;
 
   // Determine if a Hazard slot should be used, and increase the CSStackSize by
   // StackHazardSize if so.
@@ -4235,29 +4221,13 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
 
   // Insert VG into the list of CSRs, immediately before LR if saved.
   if (requiresSaveVG(MF)) {
-    std::vector<CalleeSavedInfo> VGSaves;
-    SMEAttrs Attrs = AFI->getSMEFnAttrs();
-
-    auto VGInfo = CalleeSavedInfo(AArch64::VG);
-    VGInfo.setRestored(false);
-    VGSaves.push_back(VGInfo);
-
-    // Add VG again if the function is locally-streaming, as we will spill two
-    // values.
-    if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface())
-      VGSaves.push_back(VGInfo);
-
-    bool InsertBeforeLR = false;
-
-    for (unsigned I = 0; I < CSI.size(); I++)
-      if (CSI[I].getReg() == AArch64::LR) {
-        InsertBeforeLR = true;
-        CSI.insert(CSI.begin() + I, VGSaves.begin(), VGSaves.end());
-        break;
-      }
-
-    if (!InsertBeforeLR)
-      llvm::append_range(CSI, VGSaves);
+    CalleeSavedInfo VGInfo(AArch64::VG);
+    auto It =
+        find_if(CSI, [](auto &Info) { return Info.getReg() == AArch64::LR; });
+    if (It != CSI.end())
+      CSI.insert(It, VGInfo);
+    else
+      CSI.push_back(VGInfo);
   }
 
   Register LastReg = 0;
@@ -5260,46 +5230,11 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
 }
 } // namespace
 
-static void emitVGSaveRestore(MachineBasicBlock::iterator II,
-                              const AArch64FrameLowering *TFI) {
-  MachineInstr &MI = *II;
-  MachineBasicBlock *MBB = MI.getParent();
-  MachineFunction *MF = MBB->getParent();
-
-  if (MI.getOpcode() != AArch64::VGSavePseudo &&
-      MI.getOpcode() != AArch64::VGRestorePseudo)
-    return;
-
-  auto *AFI = MF->getInfo<AArch64FunctionInfo>();
-  SMEAttrs FuncAttrs = AFI->getSMEFnAttrs();
-  bool LocallyStreaming =
-      FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
-
-  int64_t VGFrameIdx =
-      LocallyStreaming ? AFI->getStreamingVGIdx() : AFI->getVGIdx();
-  assert(VGFrameIdx != std::numeric_limits<int>::max() &&
-         "Expected FrameIdx for VG");
-
-  CFIInstBuilder CFIBuilder(*MBB, II, MachineInstr::NoFlags);
-  if (MI.getOpcode() == AArch64::VGSavePseudo) {
-    const MachineFrameInfo &MFI = MF->getFrameInfo();
-    int64_t Offset =
-        MFI.getObjectOffset(VGFrameIdx) - TFI->getOffsetOfLocalArea();
-    CFIBuilder.buildOffset(AArch64::VG, Offset);
-  } else {
-    CFIBuilder.buildRestore(AArch64::VG);
-  }
-
-  MI.eraseFromParent();
-}
-
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
     MachineFunction &MF, RegScavenger *RS = nullptr) const {
   for (auto &BB : MF)
     for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
-      if (requiresSaveVG(MF))
-        emitVGSaveRestore(II++, this);
-      else if (StackTaggingMergeSetTag)
+      if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);
     }
 

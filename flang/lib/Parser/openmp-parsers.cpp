@@ -1484,11 +1484,25 @@ struct OmpBlockConstructParser {
                 [](auto &&s) { return OmpEndDirective(std::move(s)); })};
       } else if (auto &&body{
                      attempt(LooselyStructuredBlockParser{}).Parse(state)}) {
-        // Try loosely-structured block with a mandatory end-directive
-        if (auto end{OmpEndDirectiveParser{dir_}.Parse(state)}) {
-          return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
-              std::move(*body), OmpEndDirective{std::move(*end)}};
+        // Try loosely-structured block with a mandatory end-directive.
+        auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
+        // Dereference outer optional (maybe() always succeeds) and look at the
+        // inner optional.
+        bool endPresent{end->has_value()};
+
+        // ORDERED is special. We do need to return failure here so that the
+        // standalone ORDERED construct can be distinguished from the block
+        // associated construct.
+        if (!endPresent && dir_ == llvm::omp::Directive::OMPD_ordered) {
+          return std::nullopt;
         }
+
+        // Delay the error for a missing end-directive until semantics so that
+        // we have better control over the output.
+        return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
+            std::move(*body),
+            llvm::transformOptional(std::move(*end),
+                [](auto &&s) { return OmpEndDirective(std::move(s)); })};
       }
     }
     return std::nullopt;
@@ -1790,6 +1804,12 @@ TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
     verbatim("DECLARE SIMD"_tok) || verbatim("DECLARE_SIMD"_tok),
     maybe(parenthesized(name)), Parser<OmpClauseList>{})))
 
+TYPE_PARSER(sourced( //
+    construct<OpenMPGroupprivate>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_groupprivate)) >=
+        Parser<OmpDirectiveSpecification>{})))
+
 // 2.4 Requires construct
 TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
     verbatim("REQUIRES"_tok), Parser<OmpClauseList>{})))
@@ -1825,6 +1845,8 @@ TYPE_PARSER(
                                 Parser<OmpDeclareVariantDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OpenMPDeclarativeAllocate>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPGroupprivate>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OpenMPRequiresConstruct>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
@@ -1862,11 +1884,15 @@ TYPE_PARSER( //
     MakeBlockConstruct(llvm::omp::Directive::OMPD_target_data) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_target_parallel) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_target_teams) ||
+    MakeBlockConstruct(
+        llvm::omp::Directive::OMPD_target_teams_workdistribute) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_target) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_task) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_taskgroup) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_teams) ||
-    MakeBlockConstruct(llvm::omp::Directive::OMPD_workshare))
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_teams_workdistribute) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_workshare) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_workdistribute))
 #undef MakeBlockConstruct
 
 // OMP SECTIONS Directive
@@ -1895,7 +1921,7 @@ TYPE_PARSER(sourced(construct<OpenMPSectionsConstruct>(
             construct<OpenMPSectionConstruct>(maybe(sectionDir), block))),
         many(construct<OpenMPConstruct>(
             sourced(construct<OpenMPSectionConstruct>(sectionDir, block))))),
-    Parser<OmpEndSectionsDirective>{} / endOmpLine)))
+    maybe(Parser<OmpEndSectionsDirective>{} / endOmpLine))))
 
 static bool IsExecutionPart(const OmpDirectiveName &name) {
   return name.IsExecutionPart();

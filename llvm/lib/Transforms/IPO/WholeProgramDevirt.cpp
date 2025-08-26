@@ -68,6 +68,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -82,6 +83,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
@@ -451,21 +453,21 @@ struct VirtualCallSite {
 
   void
   emitRemark(const StringRef OptName, const StringRef TargetName,
-             function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
+             function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter) {
     Function *F = CB.getCaller();
     DebugLoc DLoc = CB.getDebugLoc();
     BasicBlock *Block = CB.getParent();
 
     using namespace ore;
-    OREGetter(F).emit(OptimizationRemark(DEBUG_TYPE, OptName, DLoc, Block)
-                      << NV("Optimization", OptName)
-                      << ": devirtualized a call to "
-                      << NV("FunctionName", TargetName));
+    OREGetter(*F).emit(OptimizationRemark(DEBUG_TYPE, OptName, DLoc, Block)
+                       << NV("Optimization", OptName)
+                       << ": devirtualized a call to "
+                       << NV("FunctionName", TargetName));
   }
 
   void replaceAndErase(
       const StringRef OptName, const StringRef TargetName, bool RemarksEnabled,
-      function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
+      function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter,
       Value *New) {
     if (RemarksEnabled)
       emitRemark(OptName, TargetName, OREGetter);
@@ -573,22 +575,21 @@ struct DevirtModule {
   function_ref<AAResults &(Function &)> AARGetter;
   function_ref<DominatorTree &(Function &)> LookupDomTree;
 
-  ModuleSummaryIndex *ExportSummary;
-  const ModuleSummaryIndex *ImportSummary;
+  ModuleSummaryIndex *const ExportSummary;
+  const ModuleSummaryIndex *const ImportSummary;
 
-  IntegerType *Int8Ty;
-  PointerType *Int8PtrTy;
-  IntegerType *Int32Ty;
-  IntegerType *Int64Ty;
-  IntegerType *IntPtrTy;
+  IntegerType *const Int8Ty;
+  PointerType *const Int8PtrTy;
+  IntegerType *const Int32Ty;
+  IntegerType *const Int64Ty;
+  IntegerType *const IntPtrTy;
   /// Sizeless array type, used for imported vtables. This provides a signal
   /// to analyzers that these imports may alias, as they do for example
   /// when multiple unique return values occur in the same vtable.
-  ArrayType *Int8Arr0Ty;
+  ArrayType *const Int8Arr0Ty;
 
-  bool RemarksEnabled;
-  function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter;
-
+  const bool RemarksEnabled;
+  function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter;
   MapVector<VTableSlot, VTableSlotInfo> CallSlots;
 
   // Calls that have already been optimized. We may add a call to multiple
@@ -612,7 +613,7 @@ struct DevirtModule {
   PatternList FunctionsToSkip;
 
   DevirtModule(Module &M, function_ref<AAResults &(Function &)> AARGetter,
-               function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
+               function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter,
                function_ref<DominatorTree &(Function &)> LookupDomTree,
                ModuleSummaryIndex *ExportSummary,
                const ModuleSummaryIndex *ImportSummary)
@@ -740,7 +741,7 @@ struct DevirtModule {
   // arguments. For testing purposes only.
   static bool
   runForTesting(Module &M, function_ref<AAResults &(Function &)> AARGetter,
-                function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
+                function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter,
                 function_ref<DominatorTree &(Function &)> LookupDomTree);
 };
 
@@ -787,8 +788,8 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   auto AARGetter = [&](Function &F) -> AAResults & {
     return FAM.getResult<AAManager>(F);
   };
-  auto OREGetter = [&](Function *F) -> OptimizationRemarkEmitter & {
-    return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*F);
+  auto OREGetter = [&](Function &F) -> OptimizationRemarkEmitter & {
+    return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   };
   auto LookupDomTree = [&FAM](Function &F) -> DominatorTree & {
     return FAM.getResult<DominatorTreeAnalysis>(F);
@@ -832,8 +833,8 @@ typeIDVisibleToRegularObj(StringRef TypeID,
   // function for the base type and thus only contains a reference to the
   // type info (_ZTI). To catch this case we query using the type info
   // symbol corresponding to the TypeID.
-  std::string typeInfo = ("_ZTI" + TypeID).str();
-  return IsVisibleToRegularObj(typeInfo);
+  std::string TypeInfo = ("_ZTI" + TypeID).str();
+  return IsVisibleToRegularObj(TypeInfo);
 }
 
 static bool
@@ -842,7 +843,7 @@ skipUpdateDueToValidation(GlobalVariable &GV,
   SmallVector<MDNode *, 2> Types;
   GV.getMetadata(LLVMContext::MD_type, Types);
 
-  for (auto Type : Types)
+  for (auto *Type : Types)
     if (auto *TypeID = dyn_cast<MDString>(Type->getOperand(1).get()))
       return typeIDVisibleToRegularObj(TypeID->getString(),
                                        IsVisibleToRegularObj);
@@ -912,9 +913,9 @@ void llvm::getVisibleToRegularObjVtableGUIDs(
     ModuleSummaryIndex &Index,
     DenseSet<GlobalValue::GUID> &VisibleToRegularObjSymbols,
     function_ref<bool(StringRef)> IsVisibleToRegularObj) {
-  for (const auto &typeID : Index.typeIdCompatibleVtableMap()) {
-    if (typeIDVisibleToRegularObj(typeID.first, IsVisibleToRegularObj))
-      for (const TypeIdOffsetVtableInfo &P : typeID.second)
+  for (const auto &TypeID : Index.typeIdCompatibleVtableMap()) {
+    if (typeIDVisibleToRegularObj(TypeID.first, IsVisibleToRegularObj))
+      for (const TypeIdOffsetVtableInfo &P : TypeID.second)
         VisibleToRegularObjSymbols.insert(P.VTableVI.getGUID());
   }
 }
@@ -957,7 +958,7 @@ void llvm::runWholeProgramDevirtOnIndex(
 
 void llvm::updateIndexWPDForExports(
     ModuleSummaryIndex &Summary,
-    function_ref<bool(StringRef, ValueInfo)> isExported,
+    function_ref<bool(StringRef, ValueInfo)> IsExported,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap) {
   for (auto &T : LocalWPDTargetsMap) {
     auto &VI = T.first;
@@ -965,7 +966,7 @@ void llvm::updateIndexWPDForExports(
     assert(VI.getSummaryList().size() == 1 &&
            "Devirt of local target has more than one copy");
     auto &S = VI.getSummaryList()[0];
-    if (!isExported(S->modulePath(), VI))
+    if (!IsExported(S->modulePath(), VI))
       continue;
 
     // It's been exported by a cross module import.
@@ -997,7 +998,7 @@ static Error checkCombinedSummaryForTesting(ModuleSummaryIndex *Summary) {
 
 bool DevirtModule::runForTesting(
     Module &M, function_ref<AAResults &(Function &)> AARGetter,
-    function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
+    function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter,
     function_ref<DominatorTree &(Function &)> LookupDomTree) {
   std::unique_ptr<ModuleSummaryIndex> Summary =
       std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
@@ -1071,7 +1072,7 @@ void DevirtModule::buildTypeIdentifierMap(
     }
 
     for (MDNode *Type : Types) {
-      auto TypeID = Type->getOperand(1).get();
+      auto *TypeID = Type->getOperand(1).get();
 
       uint64_t Offset =
           cast<ConstantInt>(
@@ -1120,7 +1121,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
 
     // Save the symbol used in the vtable to use as the devirtualization
     // target.
-    auto GV = dyn_cast<GlobalValue>(C);
+    auto *GV = dyn_cast<GlobalValue>(C);
     assert(GV);
     TargetsForSlot.push_back({GV, &TM});
   }
@@ -1284,7 +1285,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
     Apply(P.second);
 }
 
-static bool AddCalls(VTableSlotInfo &SlotInfo, const ValueInfo &Callee) {
+static bool addCalls(VTableSlotInfo &SlotInfo, const ValueInfo &Callee) {
   // We can't add calls if we haven't seen a definition
   if (Callee.getSummaryList().empty())
     return false;
@@ -1359,7 +1360,7 @@ bool DevirtModule::trySingleImplDevirt(
   if (ValueInfo TheFnVI = ExportSummary->getValueInfo(TheFn->getGUID()))
     // Any needed promotion of 'TheFn' has already been done during
     // LTO unit split, so we can ignore return value of AddCalls.
-    AddCalls(SlotInfo, TheFnVI);
+    addCalls(SlotInfo, TheFnVI);
 
   Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
   Res->SingleImplName = std::string(TheFn->getName());
@@ -1400,7 +1401,7 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
     DevirtTargets.insert(TheFn);
 
   auto &S = TheFn.getSummaryList()[0];
-  bool IsExported = AddCalls(SlotInfo, TheFn);
+  bool IsExported = addCalls(SlotInfo, TheFn);
   if (IsExported)
     ExportedGUIDs.insert(TheFn.getGUID());
 
@@ -1597,7 +1598,7 @@ bool DevirtModule::tryEvaluateFunctionsWithArgs(
     // TODO: Skip for now if the vtable symbol was an alias to a function,
     // need to evaluate whether it would be correct to analyze the aliasee
     // function for this optimization.
-    auto Fn = dyn_cast<Function>(Target.Fn);
+    auto *Fn = dyn_cast<Function>(Target.Fn);
     if (!Fn)
       return false;
 
@@ -1836,11 +1837,11 @@ bool DevirtModule::tryVirtualConstProp(
   // TODO: Skip for now if the vtable symbol was an alias to a function,
   // need to evaluate whether it would be correct to analyze the aliasee
   // function for this optimization.
-  auto Fn = dyn_cast<Function>(TargetsForSlot[0].Fn);
+  auto *Fn = dyn_cast<Function>(TargetsForSlot[0].Fn);
   if (!Fn)
     return false;
   // This only works if the function returns an integer.
-  auto RetType = dyn_cast<IntegerType>(Fn->getReturnType());
+  auto *RetType = dyn_cast<IntegerType>(Fn->getReturnType());
   if (!RetType)
     return false;
   unsigned BitWidth = RetType->getBitWidth();
@@ -1871,7 +1872,7 @@ bool DevirtModule::tryVirtualConstProp(
     // TODO: Skip for now if the vtable symbol was an alias to a function,
     // need to evaluate whether it would be correct to analyze the aliasee
     // function for this optimization.
-    auto Fn = dyn_cast<Function>(Target.Fn);
+    auto *Fn = dyn_cast<Function>(Target.Fn);
     if (!Fn)
       return false;
 
@@ -1992,11 +1993,11 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
 
   // Build an anonymous global containing the before bytes, followed by the
   // original initializer, followed by the after bytes.
-  auto NewInit = ConstantStruct::getAnon(
+  auto *NewInit = ConstantStruct::getAnon(
       {ConstantDataArray::get(M.getContext(), B.Before.Bytes),
        B.GV->getInitializer(),
        ConstantDataArray::get(M.getContext(), B.After.Bytes)});
-  auto NewGV =
+  auto *NewGV =
       new GlobalVariable(M, NewInit->getType(), B.GV->isConstant(),
                          GlobalVariable::PrivateLinkage, NewInit, "", B.GV);
   NewGV->setSection(B.GV->getSection());
@@ -2009,7 +2010,7 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
 
   // Build an alias named after the original global, pointing at the second
   // element (the original initializer).
-  auto Alias = GlobalAlias::create(
+  auto *Alias = GlobalAlias::create(
       B.GV->getInitializer()->getType(), 0, B.GV->getLinkage(), "",
       ConstantExpr::getInBoundsGetElementPtr(
           NewInit->getType(), NewGV,
@@ -2270,7 +2271,7 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
 }
 
 void DevirtModule::removeRedundantTypeTests() {
-  auto True = ConstantInt::getTrue(M.getContext());
+  auto *True = ConstantInt::getTrue(M.getContext());
   for (auto &&U : NumUnsafeUsesForTypeTest) {
     if (U.second == 0) {
       U.first->replaceAllUsesWith(True);
@@ -2490,18 +2491,17 @@ bool DevirtModule::run() {
     // Generate remarks for each devirtualized function.
     for (const auto &DT : DevirtTargets) {
       GlobalValue *GV = DT.second;
-      auto F = dyn_cast<Function>(GV);
+      auto *F = dyn_cast<Function>(GV);
       if (!F) {
-        auto A = dyn_cast<GlobalAlias>(GV);
+        auto *A = dyn_cast<GlobalAlias>(GV);
         assert(A && isa<Function>(A->getAliasee()));
         F = dyn_cast<Function>(A->getAliasee());
         assert(F);
       }
 
       using namespace ore;
-      OREGetter(F).emit(OptimizationRemark(DEBUG_TYPE, "Devirtualized", F)
-                        << "devirtualized "
-                        << NV("FunctionName", DT.first));
+      OREGetter(*F).emit(OptimizationRemark(DEBUG_TYPE, "Devirtualized", F)
+                         << "devirtualized " << NV("FunctionName", DT.first));
     }
   }
 

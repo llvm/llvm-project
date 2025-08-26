@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
+#include "Options.h"
 #include "ProfileGenerator.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -15,43 +16,47 @@
 
 #define DEBUG_TYPE "perf-reader"
 
-using namespace llvm;
+namespace llvm {
 
 cl::opt<bool> SkipSymbolization("skip-symbolization",
                                 cl::desc("Dump the unsymbolized profile to the "
                                          "output file. It will show unwinder "
-                                         "output for CS profile generation."));
+                                         "output for CS profile generation."),
+                                cl::cat(ProfGenCategory));
 
 static cl::opt<bool> ShowMmapEvents("show-mmap-events",
-                                    cl::desc("Print binary load events."));
+                                    cl::desc("Print binary load events."),
+                                    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     UseOffset("use-offset", cl::init(true),
               cl::desc("Work with `--skip-symbolization` or "
                        "`--unsymbolized-profile` to write/read the "
-                       "offset instead of virtual address."));
+                       "offset instead of virtual address."),
+              cl::cat(ProfGenCategory));
 
 static cl::opt<bool> UseLoadableSegmentAsBase(
     "use-first-loadable-segment-as-base",
     cl::desc("Use first loadable segment address as base address "
              "for offsets in unsymbolized profile. By default "
-             "first executable segment address is used"));
+             "first executable segment address is used"),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     IgnoreStackSamples("ignore-stack-samples",
                        cl::desc("Ignore call stack samples for hybrid samples "
-                                "and produce context-insensitive profile."));
+                                "and produce context-insensitive profile."),
+                       cl::cat(ProfGenCategory));
 cl::opt<bool> ShowDetailedWarning("show-detailed-warning",
-                                  cl::desc("Show detailed warning message."));
+                                  cl::desc("Show detailed warning message."),
+                                  cl::cat(ProfGenCategory));
 
 static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
     "csprof-max-unsymbolized-context-depth", cl::init(-1),
     cl::desc("Keep the last K contexts while merging unsymbolized profile. -1 "
-             "means no depth limit."));
+             "means no depth limit."),
+    cl::cat(ProfGenCategory));
 
-extern cl::opt<std::string> OutputFilename;
-
-namespace llvm {
 namespace sampleprof {
 
 void VirtualUnwinder::unwindCall(UnwindState &State) {

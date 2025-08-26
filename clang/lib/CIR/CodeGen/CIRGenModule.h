@@ -102,6 +102,7 @@ public:
   clang::ASTContext &getASTContext() const { return astContext; }
   const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
+  clang::DiagnosticsEngine &getDiags() const { return diags; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
 
@@ -149,6 +150,7 @@ public:
 
   static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
                                       llvm::StringRef name, mlir::Type t,
+                                      bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
 
   llvm::StringMap<unsigned> cgGlobalNames;
@@ -188,6 +190,16 @@ public:
       mlir::Location loc, llvm::StringRef name, mlir::Type ty,
       cir::GlobalLinkageKind linkage, clang::CharUnits alignment);
 
+  void emitVTable(const CXXRecordDecl *rd);
+
+  /// Return the appropriate linkage for the vtable, VTT, and type information
+  /// of the given class.
+  cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *rd);
+
+  /// Get the address of the RTTI descriptor for the given type.
+  mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
+                                          bool forEH = false);
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -195,6 +207,12 @@ public:
   /// literal.
   cir::GlobalOp getGlobalForStringLiteral(const StringLiteral *s,
                                           llvm::StringRef name = ".str");
+
+  /// Return a global symbol reference to a constant array for the given string
+  /// literal.
+  cir::GlobalViewAttr
+  getAddrOfConstantStringFromLiteral(const StringLiteral *s,
+                                     llvm::StringRef name = ".str");
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
@@ -281,6 +299,13 @@ public:
   mlir::Operation *
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
+
+  // Return whether RTTI information should be emitted for this target.
+  bool shouldEmitRTTI(bool forEH = false) {
+    return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
+           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
+             getTriple().isNVPTX());
+  }
 
   /// Emit type info if type of an expression is a variably modified
   /// type. Also emit proper debug info for cast types.
@@ -453,6 +478,9 @@ private:
   void replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF);
 
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
+
+  /// Map source language used to a CIR attribute.
+  std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
 };
 } // namespace CIRGen
 

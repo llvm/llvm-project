@@ -4893,8 +4893,11 @@ struct OpenMPSectionsConstruct {
   CharBlock source;
   // Each of the OpenMPConstructs in the list below contains an
   // OpenMPSectionConstruct. This is guaranteed by the parser.
+  // The end sections directive is optional here because it is difficult to
+  // generate helpful error messages for a missing end directive within the
+  // parser. Semantics will generate an error if this is absent.
   std::tuple<OmpBeginSectionsDirective, std::list<OpenMPConstruct>,
-      OmpEndSectionsDirective>
+      std::optional<OmpEndSectionsDirective>>
       t;
 };
 
@@ -4955,6 +4958,15 @@ struct OpenMPDeclareSimdConstruct {
   std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
 };
 
+// ref: [6.0:301-303]
+//
+// groupprivate-directive ->
+//    GROUPPRIVATE (variable-list-item...)          // since 6.0
+struct OpenMPGroupprivate {
+  WRAPPER_CLASS_BOILERPLATE(OpenMPGroupprivate, OmpDirectiveSpecification);
+  CharBlock source;
+};
+
 // 2.4 requires -> REQUIRES requires-clause[ [ [,] requires-clause]...]
 struct OpenMPRequiresConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPRequiresConstruct);
@@ -4982,21 +4994,10 @@ struct OpenMPDeclarativeConstruct {
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclarativeAssumes,
       OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
       OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
-      OmpDeclareVariantDirective, OpenMPThreadprivate, OpenMPRequiresConstruct,
-      OpenMPUtilityConstruct, OmpMetadirectiveDirective>
+      OmpDeclareVariantDirective, OpenMPGroupprivate, OpenMPThreadprivate,
+      OpenMPRequiresConstruct, OpenMPUtilityConstruct,
+      OmpMetadirectiveDirective>
       u;
-};
-
-// 2.13.2 CRITICAL [Name] <block> END CRITICAL [Name]
-struct OmpCriticalDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpCriticalDirective);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
-};
-struct OmpEndCriticalDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpEndCriticalDirective);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>> t;
 };
 
 struct OpenMPCriticalConstruct : public OmpBlockConstruct {

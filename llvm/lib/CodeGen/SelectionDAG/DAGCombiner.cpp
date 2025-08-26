@@ -4710,7 +4710,10 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
     if (SDValue LogBase2 = BuildLogBase2(N1, DL)) {
       EVT ShiftVT = getShiftAmountTy(N0.getValueType());
       SDValue Trunc = DAG.getZExtOrTrunc(LogBase2, DL, ShiftVT);
-      return Matcher.getNode(ISD::SHL, DL, VT, N0, Trunc);
+      SDNodeFlags Flags;
+      Flags.setNoUnsignedWrap(N->getFlags().hasNoUnsignedWrap());
+      // TODO: Preserve setNoSignedWrap if LogBase2 isn't BitWidth - 1.
+      return Matcher.getNode(ISD::SHL, DL, VT, N0, Trunc, Flags);
     }
   }
 
@@ -6069,6 +6072,16 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   // If the operands are the same, this is a no-op.
   if (N0 == N1)
     return N0;
+
+  // Fold operation with vscale operands.
+  if (N0.getOpcode() == ISD::VSCALE && N1.getOpcode() == ISD::VSCALE) {
+    uint64_t C0 = N0->getConstantOperandVal(0);
+    uint64_t C1 = N1->getConstantOperandVal(0);
+    if (Opcode == ISD::UMAX)
+      return C0 > C1 ? N0 : N1;
+    else if (Opcode == ISD::UMIN)
+      return C0 > C1 ? N1 : N0;
+  }
 
   // canonicalize constant to RHS
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
@@ -11079,38 +11092,43 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     }
   }
 
-  // fold (srl (shl x, c1), c2) -> (and (shl x, (sub c1, c2), MASK) or
-  //                               (and (srl x, (sub c2, c1), MASK)
-  if (N0.getOpcode() == ISD::SHL &&
-      (N0.getOperand(1) == N1 || N0->hasOneUse()) &&
-      TLI.shouldFoldConstantShiftPairToMask(N, Level)) {
-    auto MatchShiftAmount = [OpSizeInBits](ConstantSDNode *LHS,
-                                           ConstantSDNode *RHS) {
-      const APInt &LHSC = LHS->getAPIntValue();
-      const APInt &RHSC = RHS->getAPIntValue();
-      return LHSC.ult(OpSizeInBits) && RHSC.ult(OpSizeInBits) &&
-             LHSC.getZExtValue() <= RHSC.getZExtValue();
-    };
-    if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchShiftAmount,
-                                  /*AllowUndefs*/ false,
-                                  /*AllowTypeMismatch*/ true)) {
-      SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
-      SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N01, N1);
-      SDValue Mask = DAG.getAllOnesConstant(DL, VT);
-      Mask = DAG.getNode(ISD::SRL, DL, VT, Mask, N01);
-      Mask = DAG.getNode(ISD::SHL, DL, VT, Mask, Diff);
-      SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0), Diff);
-      return DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
-    }
-    if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchShiftAmount,
-                                  /*AllowUndefs*/ false,
-                                  /*AllowTypeMismatch*/ true)) {
-      SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
-      SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N1, N01);
-      SDValue Mask = DAG.getAllOnesConstant(DL, VT);
-      Mask = DAG.getNode(ISD::SRL, DL, VT, Mask, N1);
-      SDValue Shift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), Diff);
-      return DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
+  if (N0.getOpcode() == ISD::SHL) {
+    // fold (srl (shl nuw x, c), c) -> x
+    if (N0.getOperand(1) == N1 && N0->getFlags().hasNoUnsignedWrap())
+      return N0.getOperand(0);
+
+    // fold (srl (shl x, c1), c2) -> (and (shl x, (sub c1, c2), MASK) or
+    //                               (and (srl x, (sub c2, c1), MASK)
+    if ((N0.getOperand(1) == N1 || N0->hasOneUse()) &&
+        TLI.shouldFoldConstantShiftPairToMask(N, Level)) {
+      auto MatchShiftAmount = [OpSizeInBits](ConstantSDNode *LHS,
+                                             ConstantSDNode *RHS) {
+        const APInt &LHSC = LHS->getAPIntValue();
+        const APInt &RHSC = RHS->getAPIntValue();
+        return LHSC.ult(OpSizeInBits) && RHSC.ult(OpSizeInBits) &&
+               LHSC.getZExtValue() <= RHSC.getZExtValue();
+      };
+      if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchShiftAmount,
+                                    /*AllowUndefs*/ false,
+                                    /*AllowTypeMismatch*/ true)) {
+        SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+        SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N01, N1);
+        SDValue Mask = DAG.getAllOnesConstant(DL, VT);
+        Mask = DAG.getNode(ISD::SRL, DL, VT, Mask, N01);
+        Mask = DAG.getNode(ISD::SHL, DL, VT, Mask, Diff);
+        SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0), Diff);
+        return DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
+      }
+      if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchShiftAmount,
+                                    /*AllowUndefs*/ false,
+                                    /*AllowTypeMismatch*/ true)) {
+        SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+        SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N1, N01);
+        SDValue Mask = DAG.getAllOnesConstant(DL, VT);
+        Mask = DAG.getNode(ISD::SRL, DL, VT, Mask, N1);
+        SDValue Shift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), Diff);
+        return DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
+      }
     }
   }
 
@@ -11270,6 +11288,11 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
   bool IsFSHL = N->getOpcode() == ISD::FSHL;
   unsigned BitWidth = VT.getScalarSizeInBits();
   SDLoc DL(N);
+
+  // fold (fshl/fshr C0, C1, C2) -> C3
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(N->getOpcode(), DL, VT, {N0, N1, N2}))
+    return C;
 
   // fold (fshl N0, N1, 0) -> N0
   // fold (fshr N0, N1, 0) -> N1
@@ -15122,7 +15145,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       return foldedExt;
   } else if (ISD::isNON_EXTLoad(N0.getNode()) &&
              ISD::isUNINDEXEDLoad(N0.getNode()) &&
-             TLI.isLoadExtLegal(ISD::EXTLOAD, VT, N0.getValueType())) {
+             TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, VT, N0.getValueType())) {
     bool DoXform = true;
     SmallVector<SDNode *, 4> SetCCs;
     if (!N0.hasOneUse())
@@ -16279,40 +16302,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // because targets may prefer a wider type during later combines and invert
   // this transform.
   switch (N0.getOpcode()) {
-  case ISD::AVGCEILU:
-  case ISD::AVGFLOORU:
-    if (!LegalOperations && N0.hasOneUse() &&
-        TLI.isOperationLegal(N0.getOpcode(), VT)) {
-      SDValue X = N0.getOperand(0);
-      SDValue Y = N0.getOperand(1);
-      unsigned SrcBits = X.getScalarValueSizeInBits();
-      unsigned DstBits = VT.getScalarSizeInBits();
-      APInt UpperBits = APInt::getBitsSetFrom(SrcBits, DstBits);
-      if (DAG.MaskedValueIsZero(X, UpperBits) &&
-          DAG.MaskedValueIsZero(Y, UpperBits)) {
-        SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
-        SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
-        return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
-      }
-    }
-    break;
-  case ISD::AVGCEILS:
-  case ISD::AVGFLOORS:
-    if (!LegalOperations && N0.hasOneUse() &&
-        TLI.isOperationLegal(N0.getOpcode(), VT)) {
-      SDValue X = N0.getOperand(0);
-      SDValue Y = N0.getOperand(1);
-      unsigned SrcBits = X.getScalarValueSizeInBits();
-      unsigned DstBits = VT.getScalarSizeInBits();
-      unsigned NeededSignBits = SrcBits - DstBits + 1;
-      if (DAG.ComputeNumSignBits(X) >= NeededSignBits &&
-          DAG.ComputeNumSignBits(Y) >= NeededSignBits) {
-        SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
-        SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
-        return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
-      }
-    }
-    break;
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
@@ -16361,10 +16350,15 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                  DAG, DL);
     }
     break;
-  case ISD::ABDU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
   case ISD::ABDS:
+  case ISD::ABDU:
+    // (trunc (avg a, b)) -> (avg (trunc a), (trunc b))
     // (trunc (abdu/abds a, b)) -> (abdu/abds (trunc a), (trunc b))
-    if ((!LegalOperations || N0.hasOneUse()) &&
+    if (!LegalOperations && N0.hasOneUse() &&
         TLI.isOperationLegal(N0.getOpcode(), VT)) {
       EVT TruncVT = VT;
       unsigned SrcBits = SrcVT.getScalarSizeInBits();
@@ -16374,7 +16368,8 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       SDValue B = N0.getOperand(1);
       bool CanFold = false;
 
-      if (N0.getOpcode() == ISD::ABDU) {
+      if (N0.getOpcode() == ISD::AVGFLOORU || N0.getOpcode() == ISD::AVGCEILU ||
+          N0.getOpcode() == ISD::ABDU) {
         APInt UpperBits = APInt::getBitsSetFrom(SrcBits, TruncBits);
         CanFold = DAG.MaskedValueIsZero(B, UpperBits) &&
                   DAG.MaskedValueIsZero(A, UpperBits);
@@ -17047,8 +17042,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   // fadd (G, (fma A, B, (fma (C, D, (fmul (E, F)))))) -->
   // fma A, B, (fma C, D, fma (E, F, G)).
   // This requires reassociation because it changes the order of operations.
-  bool CanReassociate =
-      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
+  bool CanReassociate = N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
     SDValue FMA, E;
     if (isFusedOp(N0) && N0.hasOneUse()) {
@@ -17714,7 +17708,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // If 'unsafe math' or reassoc and nsz, fold lots of things.
   // TODO: break out portions of the transformations below for which Unsafe is
   //       considered and which do not require both nsz and reassoc
-  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
+  if ((Options.NoSignedZerosFPMath ||
        (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
       AllowNewConst) {
     // fadd (fadd x, c1), c2 -> fadd x, c1 + c2
@@ -17801,7 +17795,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     }
   } // enable-unsafe-fp-math && AllowNewConst
 
-  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
+  if ((Options.NoSignedZerosFPMath ||
        (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))) {
     // Fold fadd(vecreduce(x), vecreduce(y)) -> vecreduce(fadd(x, y))
     if (SDValue SD = reassociateReduction(ISD::VECREDUCE_FADD, ISD::FADD, DL,
@@ -17904,7 +17898,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
     }
   }
 
-  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
+  if ((Options.NoSignedZerosFPMath ||
        (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
       N1.getOpcode() == ISD::FADD) {
     // X - (X + Y) -> -Y
@@ -18044,7 +18038,6 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, true);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  const TargetOptions &Options = DAG.getTarget().Options;
   const SDNodeFlags Flags = N->getFlags();
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
@@ -18068,7 +18061,7 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
-  if (Options.UnsafeFPMath || Flags.hasAllowReassociation()) {
+  if (Flags.hasAllowReassociation()) {
     // fmul (fmul X, C1), C2 -> fmul X, C1 * C2
     if (DAG.isConstantFPBuildVectorOrConstantFP(N1) &&
         N0.getOpcode() == ISD::FMUL) {
@@ -18245,8 +18238,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
      !DAG.isConstantFPBuildVectorOrConstantFP(N1))
     return matcher.getNode(ISD::FMA, DL, VT, N1, N0, N2);
 
-  bool CanReassociate =
-      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
+  bool CanReassociate = N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
     // (fma x, c1, (fmul x, c2)) -> (fmul x, c1+c2)
     if (matcher.match(N2, ISD::FMUL) && N0 == N2.getOperand(0) &&
@@ -18341,9 +18333,8 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   // TODO: Limit this transform based on optsize/minsize - it always creates at
   //       least 1 extra instruction. But the perf win may be substantial enough
   //       that only minsize should restrict this.
-  bool UnsafeMath = DAG.getTarget().Options.UnsafeFPMath;
   const SDNodeFlags Flags = N->getFlags();
-  if (LegalDAG || (!UnsafeMath && !Flags.hasAllowReciprocal()))
+  if (LegalDAG || !Flags.hasAllowReciprocal())
     return SDValue();
 
   // Skip if current node is a reciprocal/fneg-reciprocal.
@@ -18380,7 +18371,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
 
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
-      if (UnsafeMath || U->getFlags().hasAllowReciprocal())
+      if (U->getFlags().hasAllowReciprocal())
         Users.insert(U);
     }
   }
@@ -19005,7 +18996,9 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     // single-step fp_round we want to fold to.
     // In other words, double rounding isn't the same as rounding.
     // Also, this is a value preserving truncation iff both fp_round's are.
-    if (DAG.getTarget().Options.UnsafeFPMath || N0IsTrunc)
+    if ((N->getFlags().hasAllowContract() &&
+         N0->getFlags().hasAllowContract()) ||
+        N0IsTrunc)
       return DAG.getNode(
           ISD::FP_ROUND, DL, VT, N0.getOperand(0),
           DAG.getIntPtrConstant(NIsTrunc && N0IsTrunc, DL, /*isTarget=*/true));
@@ -26125,8 +26118,6 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     EVT ConcatSrcVT = V.getOperand(0).getValueType();
     assert(ConcatSrcVT.getVectorElementType() == NVT.getVectorElementType() &&
            "Concat and extract subvector do not change element type");
-    assert((ExtIdx % ExtNumElts) == 0 &&
-           "Extract index is not a multiple of the input vector length.");
 
     unsigned ConcatSrcNumElts = ConcatSrcVT.getVectorMinNumElements();
     unsigned ConcatOpIdx = ExtIdx / ConcatSrcNumElts;

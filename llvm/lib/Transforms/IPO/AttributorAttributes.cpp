@@ -2008,9 +2008,8 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     // destination) and second (=source) arguments as we know how they are
     // accessed.
     if (auto *MI = dyn_cast_or_null<MemIntrinsic>(getCtxI())) {
-      ConstantInt *Length = dyn_cast<ConstantInt>(MI->getLength());
       int64_t LengthVal = AA::RangeTy::Unknown;
-      if (Length)
+      if (auto Length = MI->getLengthInBytes())
         LengthVal = Length->getSExtValue();
       unsigned ArgNo = getIRPosition().getCallSiteArgNo();
       ChangeStatus Changed = ChangeStatus::UNCHANGED;

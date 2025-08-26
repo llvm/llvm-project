@@ -19,7 +19,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -6356,27 +6355,6 @@ llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
   return nullptr;
 }
 
-bool llvm::isGEPBasedOnPointerToString(const GEPOperator *GEP,
-                                       unsigned CharSize) {
-  // Make sure the GEP has exactly three arguments.
-  if (GEP->getNumOperands() != 3)
-    return false;
-
-  // Make sure the index-ee is a pointer to array of \p CharSize integers.
-  // CharSize.
-  ArrayType *AT = dyn_cast<ArrayType>(GEP->getSourceElementType());
-  if (!AT || !AT->getElementType()->isIntegerTy(CharSize))
-    return false;
-
-  // Check to make sure that the first operand of the GEP is an integer and
-  // has value 0 so that we are sure we're indexing into the initializer.
-  const ConstantInt *FirstIdx = dyn_cast<ConstantInt>(GEP->getOperand(1));
-  if (!FirstIdx || !FirstIdx->isZero())
-    return false;
-
-  return true;
-}
-
 // If V refers to an initialized global constant, set Slice either to
 // its initializer if the size of its elements equals ElementSize, or,
 // for ElementSize == 8, to its representation as an array of unsiged
@@ -7415,8 +7393,10 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::fshr:
       case Intrinsic::smax:
       case Intrinsic::smin:
+      case Intrinsic::scmp:
       case Intrinsic::umax:
       case Intrinsic::umin:
+      case Intrinsic::ucmp:
       case Intrinsic::ptrmask:
       case Intrinsic::fptoui_sat:
       case Intrinsic::fptosi_sat:

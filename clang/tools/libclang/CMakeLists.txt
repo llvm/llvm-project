@@ -93,7 +93,7 @@ if(MSVC)
   set(LLVM_EXPORTED_SYMBOL_FILE)
 endif()
 
-if (UNIX AND NOT APPLE AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND NOT CYGWIN)
+if (UNIX AND NOT APPLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX" AND NOT CYGWIN)
   set(LLVM_EXPORTED_SYMBOL_FILE)
   set(USE_VERSION_SCRIPT ${LLVM_HAVE_LINK_VERSION_SCRIPT})
 endif()
@@ -125,7 +125,7 @@ else()
   set(output_name "clang")
 endif()
 
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
     # libclang requires headers which need _ALL_SOURCE to build on AIX
     remove_definitions("-D_XOPEN_SOURCE=700")
@@ -186,7 +186,7 @@ if(ENABLE_SHARED)
     endif()
   endif()
   if (USE_VERSION_SCRIPT)
-    if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+    if ("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
       include(CheckLinkerFlag)
       # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
       # but requires a special option to enable it.

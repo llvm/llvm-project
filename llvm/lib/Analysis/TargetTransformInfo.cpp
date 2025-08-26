@@ -637,9 +637,8 @@ InstructionCost TargetTransformInfo::getScalarizationOverhead(
 }
 
 InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
-    ArrayRef<const Value *> Args, ArrayRef<Type *> Tys,
-    TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getOperandsScalarizationOverhead(Args, Tys, CostKind);
+    ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getOperandsScalarizationOverhead(Tys, CostKind);
 }
 
 bool TargetTransformInfo::supportsEfficientVectorElementLoadStore() const {
@@ -1126,6 +1125,15 @@ TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
   // This is mentioned in the interface description and respected by all
   // callers, but never asserted upon.
   InstructionCost Cost = TTIImpl->getVectorInstrCost(I, Val, CostKind, Index);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getIndexedVectorInstrCostFromEnd(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+    unsigned Index) const {
+  InstructionCost Cost =
+      TTIImpl->getIndexedVectorInstrCostFromEnd(Opcode, Val, CostKind, Index);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

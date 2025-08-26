@@ -5085,8 +5085,13 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
         MCRegister DestRegX = TRI->getMatchingSuperReg(
             DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
-        MCRegister SrcRegX = TRI->getMatchingSuperReg(
-            SrcReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
+        assert(DestRegX.isValid() && "Destination super-reg not valid");
+        MCRegister SrcRegX =
+            SrcReg == AArch64::WZR
+                ? AArch64::XZR
+                : TRI->getMatchingSuperReg(SrcReg, AArch64::sub_32,
+                                           &AArch64::GPR64spRegClass);
+        assert(SrcRegX.isValid() && "Source super-reg not valid");
         // This instruction is reading and writing X registers.  This may upset
         // the register scavenger and machine verifier, so we need to indicate
         // that we are reading an undefined value from SrcRegX, but a proper
@@ -5895,6 +5900,18 @@ static void appendReadRegExpr(SmallVectorImpl<char> &Expr, unsigned RegNum) {
   Expr.push_back(0);
 }
 
+// Convenience function to create a DWARF expression for loading a register from
+// a CFA offset.
+static void appendLoadRegExpr(SmallVectorImpl<char> &Expr,
+                              int64_t OffsetFromDefCFA) {
+  // This assumes the top of the DWARF stack contains the CFA.
+  Expr.push_back(dwarf::DW_OP_dup);
+  // Add the offset to the register.
+  appendConstantExpr(Expr, OffsetFromDefCFA, dwarf::DW_OP_plus);
+  // Dereference the address (loads a 64 bit value)..
+  Expr.push_back(dwarf::DW_OP_deref);
+}
+
 // Convenience function to create a comment for
 //  (+/-) NumBytes (* RegScale)?
 static void appendOffsetComment(int NumBytes, llvm::raw_string_ostream &Comment,
@@ -5963,9 +5980,10 @@ MCCFIInstruction llvm::createDefCFA(const TargetRegisterInfo &TRI,
   return MCCFIInstruction::cfiDefCfa(nullptr, DwarfReg, (int)Offset.getFixed());
 }
 
-MCCFIInstruction llvm::createCFAOffset(const TargetRegisterInfo &TRI,
-                                       unsigned Reg,
-                                       const StackOffset &OffsetFromDefCFA) {
+MCCFIInstruction
+llvm::createCFAOffset(const TargetRegisterInfo &TRI, unsigned Reg,
+                      const StackOffset &OffsetFromDefCFA,
+                      std::optional<int64_t> IncomingVGOffsetFromDefCFA) {
   int64_t NumBytes, NumVGScaledBytes;
   AArch64InstrInfo::decomposeStackOffsetForDwarfOffsets(
       OffsetFromDefCFA, NumBytes, NumVGScaledBytes);
@@ -5984,9 +6002,16 @@ MCCFIInstruction llvm::createCFAOffset(const TargetRegisterInfo &TRI,
   assert(NumVGScaledBytes && "Expected scalable offset");
   SmallString<64> OffsetExpr;
   // + VG * NumVGScaledBytes
-  appendOffsetComment(NumVGScaledBytes, Comment, "* VG");
-  appendReadRegExpr(OffsetExpr, TRI.getDwarfRegNum(AArch64::VG, true));
+  StringRef VGRegScale;
+  if (IncomingVGOffsetFromDefCFA) {
+    appendLoadRegExpr(OffsetExpr, *IncomingVGOffsetFromDefCFA);
+    VGRegScale = "* IncomingVG";
+  } else {
+    appendReadRegExpr(OffsetExpr, TRI.getDwarfRegNum(AArch64::VG, true));
+    VGRegScale = "* VG";
+  }
   appendConstantExpr(OffsetExpr, NumVGScaledBytes, dwarf::DW_OP_mul);
+  appendOffsetComment(NumVGScaledBytes, Comment, VGRegScale);
   OffsetExpr.push_back(dwarf::DW_OP_plus);
   if (NumBytes) {
     // + NumBytes
@@ -7498,7 +7523,7 @@ static bool getGatherLanePattern(MachineInstr &Root,
   // limit.
   auto MBBItr = Root.getIterator();
   unsigned RemainingSteps = GatherOptSearchLimit;
-  SmallSet<const MachineInstr *, 16> RemainingLoadInstrs;
+  SmallPtrSet<const MachineInstr *, 16> RemainingLoadInstrs;
   RemainingLoadInstrs.insert(LoadInstrs.begin(), LoadInstrs.end());
   const MachineBasicBlock *MBB = Root.getParent();
 

@@ -5,7 +5,9 @@ define void @insert_32xi8(ptr %src, ptr %dst, i8 %in) nounwind {
 ; CHECK-LABEL: insert_32xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 1
+; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
+; CHECK-NEXT:    xvextrins.b $xr0, $xr1, 17
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <32 x i8>, ptr %src
@@ -18,9 +20,9 @@ define void @insert_32xi8_upper(ptr %src, ptr %dst, i8 %in) nounwind {
 ; CHECK-LABEL: insert_32xi8_upper:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
-; CHECK-NEXT:    vinsgr2vr.b $vr1, $a2, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 48
+; CHECK-NEXT:    xvextrins.b $xr0, $xr1, 0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <32 x i8>, ptr %src
@@ -29,11 +31,37 @@ define void @insert_32xi8_upper(ptr %src, ptr %dst, i8 %in) nounwind {
   ret void
 }
 
+define void @insert_32xi8_undef(ptr %dst, i8 %in) nounwind {
+; CHECK-LABEL: insert_32xi8_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v = insertelement <32 x i8> poison, i8 %in, i32 1
+  store <32 x i8> %v, ptr %dst
+  ret void
+}
+
+define void @insert_32xi8_undef_upper(ptr %dst, i8 %in) nounwind {
+; CHECK-LABEL: insert_32xi8_undef_upper:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 48
+; CHECK-NEXT:    xvextrins.b $xr0, $xr0, 102
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v = insertelement <32 x i8> poison, i8 %in, i32 22
+  store <32 x i8> %v, ptr %dst
+  ret void
+}
+
 define void @insert_16xi16(ptr %src, ptr %dst, i16 %in) nounwind {
 ; CHECK-LABEL: insert_16xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 1
+; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
+; CHECK-NEXT:    xvextrins.h $xr0, $xr1, 17
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <16 x i16>, ptr %src
@@ -46,14 +74,38 @@ define void @insert_16xi16_upper(ptr %src, ptr %dst, i16 %in) nounwind {
 ; CHECK-LABEL: insert_16xi16_upper:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a2, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 48
+; CHECK-NEXT:    xvextrins.h $xr0, $xr1, 0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <16 x i16>, ptr %src
   %v_new = insertelement <16 x i16> %v, i16 %in, i32 8
   store <16 x i16> %v_new, ptr %dst
+  ret void
+}
+
+define void @insert_16xi16_undef(ptr %dst, i16 %in) nounwind {
+; CHECK-LABEL: insert_16xi16_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v = insertelement <16 x i16> poison, i16 %in, i32 1
+  store <16 x i16> %v, ptr %dst
+  ret void
+}
+
+define void @insert_16xi16_undef_upper(ptr %dst, i16 %in) nounwind {
+; CHECK-LABEL: insert_16xi16_undef_upper:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 48
+; CHECK-NEXT:    xvextrins.h $xr0, $xr0, 34
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v = insertelement <16 x i16> poison, i16 %in, i32 10
+  store <16 x i16> %v, ptr %dst
   ret void
 }
 
@@ -114,8 +166,8 @@ define void @insert_4xdouble(ptr %src, ptr %dst, double %in) nounwind {
 define void @insert_32xi8_idx(ptr %src, ptr %dst, i8 %in, i32 %idx) nounwind {
 ; CHECK-LABEL: insert_32xi8_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI8_0)
-; CHECK-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI8_0)
+; CHECK-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI12_0)
+; CHECK-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI12_0)
 ; CHECK-NEXT:    xvld $xr1, $a0, 0
 ; CHECK-NEXT:    bstrpick.d $a0, $a3, 31, 0
 ; CHECK-NEXT:    xvreplgr2vr.b $xr2, $a0
@@ -133,8 +185,8 @@ define void @insert_32xi8_idx(ptr %src, ptr %dst, i8 %in, i32 %idx) nounwind {
 define void @insert_16xi16_idx(ptr %src, ptr %dst, i16 %in, i32 %idx) nounwind {
 ; CHECK-LABEL: insert_16xi16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI9_0)
-; CHECK-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI9_0)
+; CHECK-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI13_0)
+; CHECK-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI13_0)
 ; CHECK-NEXT:    xvld $xr1, $a0, 0
 ; CHECK-NEXT:    bstrpick.d $a0, $a3, 31, 0
 ; CHECK-NEXT:    xvreplgr2vr.h $xr2, $a0
@@ -152,8 +204,8 @@ define void @insert_16xi16_idx(ptr %src, ptr %dst, i16 %in, i32 %idx) nounwind {
 define void @insert_8xi32_idx(ptr %src, ptr %dst, i32 %in, i32 %idx) nounwind {
 ; CHECK-LABEL: insert_8xi32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI10_0)
-; CHECK-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI10_0)
+; CHECK-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI14_0)
+; CHECK-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI14_0)
 ; CHECK-NEXT:    xvld $xr1, $a0, 0
 ; CHECK-NEXT:    bstrpick.d $a0, $a3, 31, 0
 ; CHECK-NEXT:    xvreplgr2vr.w $xr2, $a0
@@ -171,8 +223,8 @@ define void @insert_8xi32_idx(ptr %src, ptr %dst, i32 %in, i32 %idx) nounwind {
 define void @insert_4xi64_idx(ptr %src, ptr %dst, i64 %in, i32 %idx) nounwind {
 ; CHECK-LABEL: insert_4xi64_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI11_0)
-; CHECK-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI11_0)
+; CHECK-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI15_0)
+; CHECK-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI15_0)
 ; CHECK-NEXT:    xvld $xr1, $a0, 0
 ; CHECK-NEXT:    bstrpick.d $a0, $a3, 31, 0
 ; CHECK-NEXT:    xvreplgr2vr.d $xr2, $a0
@@ -191,8 +243,8 @@ define void @insert_8xfloat_idx(ptr %src, ptr %dst, float %in, i32 %idx) nounwin
 ; CHECK-LABEL: insert_8xfloat_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
-; CHECK-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI12_0)
-; CHECK-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI12_0)
+; CHECK-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI16_0)
+; CHECK-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI16_0)
 ; CHECK-NEXT:    xvld $xr2, $a0, 0
 ; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
 ; CHECK-NEXT:    xvreplgr2vr.w $xr3, $a0
@@ -211,8 +263,8 @@ define void @insert_4xdouble_idx(ptr %src, ptr %dst, double %in, i32 %idx) nounw
 ; CHECK-LABEL: insert_4xdouble_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
-; CHECK-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI13_0)
-; CHECK-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI13_0)
+; CHECK-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI17_0)
+; CHECK-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI17_0)
 ; CHECK-NEXT:    xvld $xr2, $a0, 0
 ; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
 ; CHECK-NEXT:    xvreplgr2vr.d $xr3, $a0

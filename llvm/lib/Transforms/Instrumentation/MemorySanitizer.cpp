@@ -3263,7 +3263,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return true;
   }
 
-  /// Heuristically instrument unknown intrinsics.
+  /// Returns whether it was able to heuristically instrument unknown
+  /// intrinsics.
   ///
   /// The main purpose of this code is to do something reasonable with all
   /// random intrinsics we might encounter, most importantly - SIMD intrinsics.
@@ -3273,7 +3274,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// We special-case intrinsics where this approach fails. See llvm.bswap
   /// handling as an example of that.
-  bool handleUnknownIntrinsicUnlogged(IntrinsicInst &I) {
+  bool maybeHandleUnknownIntrinsicUnlogged(IntrinsicInst &I) {
     unsigned NumArgOperands = I.arg_size();
     if (NumArgOperands == 0)
       return false;
@@ -3300,8 +3301,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return false;
   }
 
-  bool handleUnknownIntrinsic(IntrinsicInst &I) {
-    if (handleUnknownIntrinsicUnlogged(I)) {
+  bool maybeHandleUnknownIntrinsic(IntrinsicInst &I) {
+    if (maybeHandleUnknownIntrinsicUnlogged(I)) {
       if (ClDumpHeuristicInstructions)
         dumpInst(I);
 
@@ -3429,8 +3430,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return ShadowType;
   }
 
-  /// Doubles the length of a vector shadow (filled with zeros) if necessary to
-  /// match the length of the shadow for the instruction.
+  /// Doubles the length of a vector shadow (extending with zeros) if necessary
+  /// to match the length of the shadow for the instruction.
+  /// If scalar types of the vectors are different, it will use the type of the
+  /// input vector.
   /// This is more type-safe than CreateShadowCast().
   Value *maybeExtendVectorShadowWithZeros(Value *Shadow, IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
@@ -3438,17 +3441,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(isa<FixedVectorType>(I.getType()));
 
     Value *FullShadow = getCleanShadow(&I);
-    assert(cast<FixedVectorType>(Shadow->getType())->getNumElements() <=
-           cast<FixedVectorType>(FullShadow->getType())->getNumElements());
-    assert(cast<FixedVectorType>(Shadow->getType())->getScalarType() ==
-           cast<FixedVectorType>(FullShadow->getType())->getScalarType());
+    unsigned ShadowNumElems =
+        cast<FixedVectorType>(Shadow->getType())->getNumElements();
+    unsigned FullShadowNumElems =
+        cast<FixedVectorType>(FullShadow->getType())->getNumElements();
 
-    if (Shadow->getType() == FullShadow->getType()) {
+    assert((ShadowNumElems == FullShadowNumElems) ||
+           (ShadowNumElems * 2 == FullShadowNumElems));
+
+    if (ShadowNumElems == FullShadowNumElems) {
       FullShadow = Shadow;
     } else {
       // TODO: generalize beyond 2x?
-      SmallVector<int, 32> ShadowMask(
-          cast<FixedVectorType>(FullShadow->getType())->getNumElements());
+      SmallVector<int, 32> ShadowMask(FullShadowNumElems);
       std::iota(ShadowMask.begin(), ShadowMask.end(), 0);
 
       // Append zeros
@@ -3846,7 +3851,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Instrument multiply-add intrinsics.
+  // Instrument multiply-add(-accumulate)? intrinsics.
   //
   // e.g., Two operands:
   //         <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
@@ -3854,10 +3859,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //       Two operands which require an EltSizeInBits override:
   //         <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
   //
-  //       Three operands are not implemented yet:
+  //       Three operands:
   //         <4 x i32> @llvm.x86.avx512.vpdpbusd.128
   //                       (<4 x i32> %s, <4 x i32> %a, <4 x i32> %b)
-  //         (the result of multiply-add'ing %a and %b is accumulated with %s)
+  //         (this is equivalent to multiply-add on %a and %b, followed by
+  //          adding/"accumulating" %s. "Accumulation" stores the result in one
+  //          of the source registers, but this accumulate vs. add distinction
+  //          is lost when dealing with LLVM intrinsics.)
   void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
                                   unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
@@ -3866,21 +3874,38 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         cast<FixedVectorType>(I.getType());
     assert(isa<FixedVectorType>(ReturnType));
 
-    assert(I.arg_size() == 2);
-
     // Vectors A and B, and shadows
-    Value *Va = I.getOperand(0);
-    Value *Vb = I.getOperand(1);
+    Value *Va = nullptr;
+    Value *Vb = nullptr;
+    Value *Sa = nullptr;
+    Value *Sb = nullptr;
 
-    Value *Sa = getShadow(&I, 0);
-    Value *Sb = getShadow(&I, 1);
+    assert(I.arg_size() == 2 || I.arg_size() == 3);
+    if (I.arg_size() == 2) {
+      Va = I.getOperand(0);
+      Vb = I.getOperand(1);
 
-    FixedVectorType *ParamType =
-        cast<FixedVectorType>(I.getArgOperand(0)->getType());
-    assert(ParamType == I.getArgOperand(1)->getType());
+      Sa = getShadow(&I, 0);
+      Sb = getShadow(&I, 1);
+    } else if (I.arg_size() == 3) {
+      // Operand 0 is the accumulator. We will deal with that below.
+      Va = I.getOperand(1);
+      Vb = I.getOperand(2);
+
+      Sa = getShadow(&I, 1);
+      Sb = getShadow(&I, 2);
+    }
+
+    FixedVectorType *ParamType = cast<FixedVectorType>(Va->getType());
+    assert(ParamType == Vb->getType());
 
     assert(ParamType->getPrimitiveSizeInBits() ==
            ReturnType->getPrimitiveSizeInBits());
+
+    if (I.arg_size() == 3) {
+      assert(ParamType == ReturnType);
+      assert(ParamType == I.getArgOperand(0)->getType());
+    }
 
     FixedVectorType *ImplicitReturnType = ReturnType;
     // Step 1: instrument multiplication of corresponding vector elements
@@ -3944,9 +3969,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                          Constant::getNullValue(Horizontal->getType())),
         ImplicitReturnType);
 
-    // For MMX, cast it back to the required fake return type (<1 x i64>).
+    // Cast it back to the required fake return type (<1 x i64>).
     if (EltSizeInBits)
       OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
+
+    // Step 3 (if applicable): instrument accumulator
+    if (I.arg_size() == 3)
+      OutShadow = IRB.CreateOr(OutShadow, getShadow(&I, 0));
 
     setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
@@ -4504,58 +4533,102 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return isFixedFPVectorTy(V->getType());
   }
 
-  // e.g., call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
-  //                           (<16 x float> a, <16 x i32> writethru, i16 mask,
-  //                           i32 rounding)
+  // e.g., <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
+  //                      (<16 x float> a, <16 x i32> writethru, i16 mask,
+  //                       i32 rounding)
+  //
+  // Inconveniently, some similar intrinsics have a different operand order:
+  //       <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512
+  //                      (<16 x float> a, i32 rounding, <16 x i16> writethru,
+  //                       i16 mask)
+  //
+  // If the return type has more elements than A, the excess elements are
+  // zeroed (and the corresponding shadow is initialized).
+  //       <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.128
+  //                      (<4 x float> a, i32 rounding, <8 x i16> writethru,
+  //                       i8 mask)
   //
   // dst[i] = mask[i] ? convert(a[i]) : writethru[i]
   // dst_shadow[i] = mask[i] ? all_or_nothing(a_shadow[i]) : writethru_shadow[i]
   //    where all_or_nothing(x) is fully uninitialized if x has any
   //    uninitialized bits
-  void handleAVX512VectorConvertFPToInt(IntrinsicInst &I) {
+  void handleAVX512VectorConvertFPToInt(IntrinsicInst &I, bool LastMask) {
     IRBuilder<> IRB(&I);
 
     assert(I.arg_size() == 4);
     Value *A = I.getOperand(0);
-    Value *WriteThrough = I.getOperand(1);
-    Value *Mask = I.getOperand(2);
-    Value *RoundingMode = I.getOperand(3);
+    Value *WriteThrough;
+    Value *Mask;
+    Value *RoundingMode;
+    if (LastMask) {
+      WriteThrough = I.getOperand(2);
+      Mask = I.getOperand(3);
+      RoundingMode = I.getOperand(1);
+    } else {
+      WriteThrough = I.getOperand(1);
+      Mask = I.getOperand(2);
+      RoundingMode = I.getOperand(3);
+    }
 
     assert(isFixedFPVector(A));
     assert(isFixedIntVector(WriteThrough));
 
     unsigned ANumElements =
         cast<FixedVectorType>(A->getType())->getNumElements();
-    assert(ANumElements ==
-           cast<FixedVectorType>(WriteThrough->getType())->getNumElements());
+    [[maybe_unused]] unsigned WriteThruNumElements =
+        cast<FixedVectorType>(WriteThrough->getType())->getNumElements();
+    assert(ANumElements == WriteThruNumElements ||
+           ANumElements * 2 == WriteThruNumElements);
 
     assert(Mask->getType()->isIntegerTy());
-    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    unsigned MaskNumElements = Mask->getType()->getScalarSizeInBits();
+    assert(ANumElements == MaskNumElements ||
+           ANumElements * 2 == MaskNumElements);
+
+    assert(WriteThruNumElements == MaskNumElements);
+
+    // Some bits of the mask may be unused, though it's unusual to have partly
+    // uninitialized bits.
     insertCheckShadowOf(Mask, &I);
 
     assert(RoundingMode->getType()->isIntegerTy());
-    // Only four bits of the rounding mode are used, though it's very
+    // Only some bits of the rounding mode are used, though it's very
     // unusual to have uninitialized bits there (more commonly, it's a
     // constant).
     insertCheckShadowOf(RoundingMode, &I);
 
     assert(I.getType() == WriteThrough->getType());
 
+    Value *AShadow = getShadow(A);
+    AShadow = maybeExtendVectorShadowWithZeros(AShadow, I);
+
+    if (ANumElements * 2 == MaskNumElements) {
+      // Ensure that the irrelevant bits of the mask are zero, hence selecting
+      // from the zeroed shadow instead of the writethrough's shadow.
+      Mask =
+          IRB.CreateTrunc(Mask, IRB.getIntNTy(ANumElements), "_ms_mask_trunc");
+      Mask =
+          IRB.CreateZExt(Mask, IRB.getIntNTy(MaskNumElements), "_ms_mask_zext");
+    }
+
     // Convert i16 mask to <16 x i1>
     Mask = IRB.CreateBitCast(
-        Mask, FixedVectorType::get(IRB.getInt1Ty(), ANumElements));
+        Mask, FixedVectorType::get(IRB.getInt1Ty(), MaskNumElements),
+        "_ms_mask_bitcast");
 
-    Value *AShadow = getShadow(A);
-    /// For scalars:
-    /// Since they are converting from floating-point, the output is:
+    /// For floating-point to integer conversion, the output is:
     /// - fully uninitialized if *any* bit of the input is uninitialized
     /// - fully ininitialized if all bits of the input are ininitialized
     /// We apply the same principle on a per-element basis for vectors.
-    AShadow = IRB.CreateSExt(IRB.CreateICmpNE(AShadow, getCleanShadow(A)),
-                             getShadowTy(A));
+    ///
+    /// We use the scalar width of the return type instead of A's.
+    AShadow = IRB.CreateSExt(
+        IRB.CreateICmpNE(AShadow, getCleanShadow(AShadow->getType())),
+        getShadowTy(&I), "_ms_a_shadow");
 
     Value *WriteThroughShadow = getShadow(WriteThrough);
-    Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThroughShadow);
+    Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThroughShadow,
+                                     "_ms_writethru_select");
 
     setShadow(&I, Shadow);
     setOriginForNaryOp(I);
@@ -5190,7 +5263,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     handleShadowOr(I);
   }
 
-  void visitIntrinsicInst(IntrinsicInst &I) {
+  bool maybeHandleCrossPlatformIntrinsic(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::uadd_with_overflow:
     case Intrinsic::sadd_with_overflow:
@@ -5270,12 +5343,42 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorReduceWithStarterIntrinsic(I);
       break;
 
+    case Intrinsic::scmp:
+    case Intrinsic::ucmp: {
+      handleShadowOr(I);
+      break;
+    }
+
+    case Intrinsic::fshl:
+    case Intrinsic::fshr:
+      handleFunnelShift(I);
+      break;
+
+    case Intrinsic::is_constant:
+      // The result of llvm.is.constant() is always defined.
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      break;
+
+    default:
+      return false;
+    }
+
+    return true;
+  }
+
+  bool maybeHandleX86SIMDIntrinsic(IntrinsicInst &I) {
+    switch (I.getIntrinsicID()) {
     case Intrinsic::x86_sse_stmxcsr:
       handleStmxcsr(I);
       break;
     case Intrinsic::x86_sse_ldmxcsr:
       handleLdmxcsr(I);
       break;
+
+    // Convert Scalar Double Precision Floating-Point Value
+    //   to Unsigned Doubleword Integer
+    // etc.
     case Intrinsic::x86_avx512_vcvtsd2usi64:
     case Intrinsic::x86_avx512_vcvtsd2usi32:
     case Intrinsic::x86_avx512_vcvtss2usi64:
@@ -5316,6 +5419,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    // Convert Packed Single Precision Floating-Point Values
+    //   to Packed Signed Doubleword Integer Values
+    //
+    // <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
+    //                (<16 x float>, <16 x i32>, i16, i32)
+    case Intrinsic::x86_avx512_mask_cvtps2dq_512:
+      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/false);
+      break;
+
+    // Convert Packed Double Precision Floating-Point Values
+    //   to Packed Single Precision Floating-Point Values
     case Intrinsic::x86_sse2_cvtpd2ps:
     case Intrinsic::x86_sse2_cvtps2dq:
     case Intrinsic::x86_sse2_cvtpd2dq:
@@ -5330,6 +5444,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    // Convert Single-Precision FP Value to 16-bit FP Value
+    // <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512
+    //                (<16 x float>, i32, <16 x i16>, i16)
+    //  <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.128
+    //                (<4 x float>, i32, <8 x i16>, i8)
+    //  <8 x i16> @llvm.x86.avx512.mask.vcvtps2ph.256
+    //                (<8 x float>, i32, <8 x i16>, i8)
+    case Intrinsic::x86_avx512_mask_vcvtps2ph_512:
+    case Intrinsic::x86_avx512_mask_vcvtps2ph_256:
+    case Intrinsic::x86_avx512_mask_vcvtps2ph_128:
+      handleAVX512VectorConvertFPToInt(I, /*LastMask=*/true);
+      break;
+
+    // Shift Packed Data (Left Logical, Right Arithmetic, Right Logical)
     case Intrinsic::x86_avx512_psll_w_512:
     case Intrinsic::x86_avx512_psll_d_512:
     case Intrinsic::x86_avx512_psll_q_512:
@@ -5400,23 +5528,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_mmx_psrli_q:
     case Intrinsic::x86_mmx_psrai_w:
     case Intrinsic::x86_mmx_psrai_d:
-    case Intrinsic::aarch64_neon_rshrn:
-    case Intrinsic::aarch64_neon_sqrshl:
-    case Intrinsic::aarch64_neon_sqrshrn:
-    case Intrinsic::aarch64_neon_sqrshrun:
-    case Intrinsic::aarch64_neon_sqshl:
-    case Intrinsic::aarch64_neon_sqshlu:
-    case Intrinsic::aarch64_neon_sqshrn:
-    case Intrinsic::aarch64_neon_sqshrun:
-    case Intrinsic::aarch64_neon_srshl:
-    case Intrinsic::aarch64_neon_sshl:
-    case Intrinsic::aarch64_neon_uqrshl:
-    case Intrinsic::aarch64_neon_uqrshrn:
-    case Intrinsic::aarch64_neon_uqshl:
-    case Intrinsic::aarch64_neon_uqshrn:
-    case Intrinsic::aarch64_neon_urshl:
-    case Intrinsic::aarch64_neon_ushl:
-      // Not handled here: aarch64_neon_vsli (vector shift left and insert)
       handleVectorShiftIntrinsic(I, /* Variable */ false);
       break;
     case Intrinsic::x86_avx2_psllv_d:
@@ -5524,6 +5635,143 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_mmx_pmadd_wd:
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
       break;
+
+    // AVX Vector Neural Network Instructions: bytes
+    //
+    // Multiply and Add Packed Signed and Unsigned Bytes
+    //   < 4 x i32> @llvm.x86.avx512.vpdpbusd.128
+    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
+    //   < 8 x i32> @llvm.x86.avx512.vpdpbusd.256
+    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //   <16 x i32> @llvm.x86.avx512.vpdpbusd.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
+    //
+    // Multiply and Add Unsigned and Signed Bytes With Saturation
+    //   < 4 x i32> @llvm.x86.avx512.vpdpbusds.128
+    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
+    //   < 8 x i32> @llvm.x86.avx512.vpdpbusds.256
+    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //   <16 x i32> @llvm.x86.avx512.vpdpbusds.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
+    //
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbssd.128
+    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpbssd.256
+    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbssds.128
+    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpbssds.256
+    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //
+    //   <16 x i32> @llvm.x86.avx10.vpdpbssd.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpbssds.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
+    //
+    // These intrinsics are auto-upgraded into non-masked forms:
+    //   <4 x i32> @llvm.x86.avx512.mask.vpdpbusd.128
+    //                  (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //   <4 x i32> @llvm.x86.avx512.maskz.vpdpbusd.128
+    //                  (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //   <8 x i32> @llvm.x86.avx512.mask.vpdpbusd.256
+    //                  (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //   <8 x i32> @llvm.x86.avx512.maskz.vpdpbusd.256
+    //                  (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //   <16 x i32> @llvm.x86.avx512.mask.vpdpbusd.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //   <16 x i32> @llvm.x86.avx512.maskz.vpdpbusd.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //
+    //   <4 x i32> @llvm.x86.avx512.mask.vpdpbusds.128
+    //                  (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //   <4 x i32> @llvm.x86.avx512.maskz.vpdpbusds.128
+    //                  (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //   <8 x i32> @llvm.x86.avx512.mask.vpdpbusds.256
+    //                  (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //   <8 x i32> @llvm.x86.avx512.maskz.vpdpbusds.256
+    //                  (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //   <16 x i32> @llvm.x86.avx512.mask.vpdpbusds.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //   <16 x i32> @llvm.x86.avx512.maskz.vpdpbusds.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    case Intrinsic::x86_avx512_vpdpbusd_128:
+    case Intrinsic::x86_avx512_vpdpbusd_256:
+    case Intrinsic::x86_avx512_vpdpbusd_512:
+    case Intrinsic::x86_avx512_vpdpbusds_128:
+    case Intrinsic::x86_avx512_vpdpbusds_256:
+    case Intrinsic::x86_avx512_vpdpbusds_512:
+    case Intrinsic::x86_avx2_vpdpbssd_128:
+    case Intrinsic::x86_avx2_vpdpbssd_256:
+    case Intrinsic::x86_avx2_vpdpbssds_128:
+    case Intrinsic::x86_avx2_vpdpbssds_256:
+    case Intrinsic::x86_avx10_vpdpbssd_512:
+    case Intrinsic::x86_avx10_vpdpbssds_512:
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4, /*EltSize=*/8);
+      break;
+
+    // AVX Vector Neural Network Instructions: words
+    //
+    // Multiply and Add Signed Word Integers
+    //   < 4 x i32> @llvm.x86.avx512.vpdpwssd.128
+    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
+    //   < 8 x i32> @llvm.x86.avx512.vpdpwssd.256
+    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //   <16 x i32> @llvm.x86.avx512.vpdpwssd.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
+    //
+    // Multiply and Add Signed Word Integers With Saturation
+    //   < 4 x i32> @llvm.x86.avx512.vpdpwssds.128
+    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
+    //   < 8 x i32> @llvm.x86.avx512.vpdpwssds.256
+    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //   <16 x i32> @llvm.x86.avx512.vpdpwssds.512
+    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
+    //
+    // These intrinsics are auto-upgraded into non-masked forms:
+    //   <4 x i32> @llvm.x86.avx512.mask.vpdpwssd.128
+    //                 (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //   <4 x i32> @llvm.x86.avx512.maskz.vpdpwssd.128
+    //                 (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //   <8 x i32> @llvm.x86.avx512.mask.vpdpwssd.256
+    //                 (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //   <8 x i32> @llvm.x86.avx512.maskz.vpdpwssd.256
+    //                 (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //   <16 x i32> @llvm.x86.avx512.mask.vpdpwssd.512
+    //                 (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //   <16 x i32> @llvm.x86.avx512.maskz.vpdpwssd.512
+    //                 (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //
+    //   <4 x i32> @llvm.x86.avx512.mask.vpdpwssds.128
+    //                 (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //   <4 x i32> @llvm.x86.avx512.maskz.vpdpwssds.128
+    //                 (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //   <8 x i32> @llvm.x86.avx512.mask.vpdpwssds.256
+    //                 (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //   <8 x i32> @llvm.x86.avx512.maskz.vpdpwssds.256
+    //                 (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //   <16 x i32> @llvm.x86.avx512.mask.vpdpwssds.512
+    //                 (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //   <16 x i32> @llvm.x86.avx512.maskz.vpdpwssds.512
+    //                 (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    case Intrinsic::x86_avx512_vpdpwssd_128:
+    case Intrinsic::x86_avx512_vpdpwssd_256:
+    case Intrinsic::x86_avx512_vpdpwssd_512:
+    case Intrinsic::x86_avx512_vpdpwssds_128:
+    case Intrinsic::x86_avx512_vpdpwssds_256:
+    case Intrinsic::x86_avx512_vpdpwssds_512:
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
+      break;
+
+      // TODO: Dot Product of BF16 Pairs Accumulated Into Packed Single
+      // Precision
+      //   <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128
+      //                   (<4 x float>, <8 x bfloat>, <8 x bfloat>)
+      //   <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256
+      //                   (<8 x float>, <16 x bfloat>, <16 x bfloat>)
+      //   <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512
+      //                   (<16 x float>, <32 x bfloat>, <32 x bfloat>)
+      // handleVectorPmaddIntrinsic() currently only handles integer types.
 
     case Intrinsic::x86_sse_cmp_ss:
     case Intrinsic::x86_sse2_cmp_sd:
@@ -5701,7 +5949,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_max_pd_512: {
       // These AVX512 variants contain the rounding mode as a trailing flag.
       // Earlier variants do not have a trailing flag and are already handled
-      // by maybeHandleSimpleNomemIntrinsic(I, 0) via handleUnknownIntrinsic.
+      // by maybeHandleSimpleNomemIntrinsic(I, 0) via
+      // maybeHandleUnknownIntrinsic.
       [[maybe_unused]] bool Success =
           maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
       assert(Success);
@@ -5758,11 +6007,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
                                         /*trailingVerbatimArgs=*/1);
       break;
-
-    case Intrinsic::x86_avx512_mask_cvtps2dq_512: {
-      handleAVX512VectorConvertFPToInt(I);
-      break;
-    }
 
     // AVX512 PMOV: Packed MOV, with truncation
     // Precisely handled by applying the same intrinsic to the shadow
@@ -5841,15 +6085,33 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleAVXGF2P8Affine(I);
       break;
 
-    case Intrinsic::fshl:
-    case Intrinsic::fshr:
-      handleFunnelShift(I);
-      break;
+    default:
+      return false;
+    }
 
-    case Intrinsic::is_constant:
-      // The result of llvm.is.constant() is always defined.
-      setShadow(&I, getCleanShadow(&I));
-      setOrigin(&I, getCleanOrigin());
+    return true;
+  }
+
+  bool maybeHandleArmSIMDIntrinsic(IntrinsicInst &I) {
+    switch (I.getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_rshrn:
+    case Intrinsic::aarch64_neon_sqrshl:
+    case Intrinsic::aarch64_neon_sqrshrn:
+    case Intrinsic::aarch64_neon_sqrshrun:
+    case Intrinsic::aarch64_neon_sqshl:
+    case Intrinsic::aarch64_neon_sqshlu:
+    case Intrinsic::aarch64_neon_sqshrn:
+    case Intrinsic::aarch64_neon_sqshrun:
+    case Intrinsic::aarch64_neon_srshl:
+    case Intrinsic::aarch64_neon_sshl:
+    case Intrinsic::aarch64_neon_uqrshl:
+    case Intrinsic::aarch64_neon_uqrshrn:
+    case Intrinsic::aarch64_neon_uqshl:
+    case Intrinsic::aarch64_neon_uqshrn:
+    case Intrinsic::aarch64_neon_urshl:
+    case Intrinsic::aarch64_neon_ushl:
+      // Not handled here: aarch64_neon_vsli (vector shift left and insert)
+      handleVectorShiftIntrinsic(I, /* Variable */ false);
       break;
 
     // TODO: handling max/min similarly to AND/OR may be more precise
@@ -6000,17 +6262,27 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
-    case Intrinsic::scmp:
-    case Intrinsic::ucmp: {
-      handleShadowOr(I);
-      break;
+    default:
+      return false;
     }
 
-    default:
-      if (!handleUnknownIntrinsic(I))
-        visitInstruction(I);
-      break;
-    }
+    return true;
+  }
+
+  void visitIntrinsicInst(IntrinsicInst &I) {
+    if (maybeHandleCrossPlatformIntrinsic(I))
+      return;
+
+    if (maybeHandleX86SIMDIntrinsic(I))
+      return;
+
+    if (maybeHandleArmSIMDIntrinsic(I))
+      return;
+
+    if (maybeHandleUnknownIntrinsic(I))
+      return;
+
+    visitInstruction(I);
   }
 
   void visitLibAtomicLoad(CallBase &CB) {

@@ -2210,20 +2210,24 @@ protected:
     unsigned PackIndex : 15;
   };
 
-  class SubstTemplateTypeParmPackTypeBitfields {
+  class SubstPackTypeBitfields {
+    friend class SubstPackType;
     friend class SubstTemplateTypeParmPackType;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
-
-    // The index of the template parameter this substitution represents.
-    unsigned Index : 16;
 
     /// The number of template arguments in \c Arguments, which is
     /// expected to be able to hold at least 1024 according to [implimits].
     /// However as this limit is somewhat easy to hit with template
     /// metaprogramming we'd prefer to keep it as large as possible.
     unsigned NumArgs : 16;
+
+    // The index of the template parameter this substitution represents.
+    // Only used by SubstTemplateTypeParmPackType. We keep it in the same
+    // class to avoid dealing with complexities of bitfields that go over
+    // the size of `unsigned`.
+    unsigned SubstTemplTypeParmPackIndex : 16;
   };
 
   class TemplateSpecializationTypeBitfields {
@@ -2340,7 +2344,7 @@ protected:
     VectorTypeBitfields VectorTypeBits;
     TemplateTypeParmTypeBitfields TemplateTypeParmTypeBits;
     SubstTemplateTypeParmTypeBitfields SubstTemplateTypeParmTypeBits;
-    SubstTemplateTypeParmPackTypeBitfields SubstTemplateTypeParmPackTypeBits;
+    SubstPackTypeBitfields SubstPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     DependentTemplateSpecializationTypeBitfields
       DependentTemplateSpecializationTypeBits;
@@ -2879,14 +2883,21 @@ public:
   /// because the type is a RecordType or because it is the injected-class-name
   /// type of a class template or class template partial specialization.
   CXXRecordDecl *getAsCXXRecordDecl() const;
+  CXXRecordDecl *castAsCXXRecordDecl() const;
 
   /// Retrieves the RecordDecl this type refers to.
   RecordDecl *getAsRecordDecl() const;
+  RecordDecl *castAsRecordDecl() const;
+
+  /// Retrieves the EnumDecl this type refers to.
+  EnumDecl *getAsEnumDecl() const;
+  EnumDecl *castAsEnumDecl() const;
 
   /// Retrieves the TagDecl that this type refers to, either
   /// because the type is a TagType or because it is the injected-class-name
   /// type of a class template or class template partial specialization.
   TagDecl *getAsTagDecl() const;
+  TagDecl *castAsTagDecl() const;
 
   /// If this is a pointer or reference to a RecordType, return the
   /// CXXRecordDecl that the type refers to.
@@ -6401,6 +6412,9 @@ protected:
           bool IsInjected, const Type *CanonicalType);
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   TagDecl *getOriginalDecl() const { return decl; }
 
   NestedNameSpecifier getQualifier() const;
@@ -6466,6 +6480,9 @@ class RecordType final : public TagType {
   using TagType::TagType;
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   RecordDecl *getOriginalDecl() const {
     return reinterpret_cast<RecordDecl *>(TagType::getOriginalDecl());
   }
@@ -6483,6 +6500,9 @@ class EnumType final : public TagType {
   using TagType::TagType;
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   EnumDecl *getOriginalDecl() const {
     return reinterpret_cast<EnumDecl *>(TagType::getOriginalDecl());
   }
@@ -6515,6 +6535,9 @@ class InjectedClassNameType final : public TagType {
                         bool IsInjected, const Type *CanonicalType);
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   CXXRecordDecl *getOriginalDecl() const {
     return reinterpret_cast<CXXRecordDecl *>(TagType::getOriginalDecl());
   }
@@ -6980,6 +7003,56 @@ public:
   }
 };
 
+/// Represents the result of substituting a set of types as a template argument
+/// that needs to be expanded later.
+///
+/// These types are always dependent and produced depending on the situations:
+/// - SubstTemplateTypeParmPack is an expansion that had to be delayed,
+/// - SubstBuiltinTemplatePackType is an expansion from a builtin.
+class SubstPackType : public Type, public llvm::FoldingSetNode {
+  friend class ASTContext;
+
+  /// A pointer to the set of template arguments that this
+  /// parameter pack is instantiated with.
+  const TemplateArgument *Arguments;
+
+protected:
+  SubstPackType(TypeClass Derived, QualType Canon,
+                const TemplateArgument &ArgPack);
+
+public:
+  unsigned getNumArgs() const { return SubstPackTypeBits.NumArgs; }
+
+  TemplateArgument getArgumentPack() const;
+
+  void Profile(llvm::FoldingSetNodeID &ID);
+  static void Profile(llvm::FoldingSetNodeID &ID,
+                      const TemplateArgument &ArgPack);
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == SubstTemplateTypeParmPack ||
+           T->getTypeClass() == SubstBuiltinTemplatePack;
+  }
+};
+
+/// Represents the result of substituting a builtin template as a pack.
+class SubstBuiltinTemplatePackType : public SubstPackType {
+  friend class ASTContext;
+
+  SubstBuiltinTemplatePackType(QualType Canon, const TemplateArgument &ArgPack);
+
+public:
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  /// Mark that we reuse the Profile. We do not introduce new fields.
+  using SubstPackType::Profile;
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == SubstBuiltinTemplatePack;
+  }
+};
+
 /// Represents the result of substituting a set of types for a template
 /// type parameter pack.
 ///
@@ -6992,7 +7065,7 @@ public:
 /// that pack expansion (e.g., when all template parameters have corresponding
 /// arguments), this type will be replaced with the \c SubstTemplateTypeParmType
 /// at the current pack substitution index.
-class SubstTemplateTypeParmPackType : public Type, public llvm::FoldingSetNode {
+class SubstTemplateTypeParmPackType : public SubstPackType {
   friend class ASTContext;
 
   /// A pointer to the set of template arguments that this
@@ -7018,20 +7091,16 @@ public:
 
   /// Returns the index of the replaced parameter in the associated declaration.
   /// This should match the result of `getReplacedParameter()->getIndex()`.
-  unsigned getIndex() const { return SubstTemplateTypeParmPackTypeBits.Index; }
+  unsigned getIndex() const {
+    return SubstPackTypeBits.SubstTemplTypeParmPackIndex;
+  }
 
   // This substitution will be Final, which means the substitution will be fully
   // sugared: it doesn't need to be resugared later.
   bool getFinal() const;
 
-  unsigned getNumArgs() const {
-    return SubstTemplateTypeParmPackTypeBits.NumArgs;
-  }
-
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
-
-  TemplateArgument getArgumentPack() const;
 
   void Profile(llvm::FoldingSetNodeID &ID);
   static void Profile(llvm::FoldingSetNodeID &ID, const Decl *AssociatedDecl,
@@ -7267,9 +7336,7 @@ public:
             TemplateSpecializationTypeBits.NumArgs};
   }
 
-  bool isSugared() const {
-    return !isDependentType() || isCurrentInstantiation() || isTypeAlias();
-  }
+  bool isSugared() const;
 
   QualType desugar() const {
     return isTypeAlias() ? getAliasedType() : getCanonicalTypeInternal();

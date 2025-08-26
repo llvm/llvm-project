@@ -545,7 +545,7 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   OS << "  Initialized: " << IsInitialized << "\n";
   OS << "  Weak: " << isWeak() << "\n";
   OS << "  Dummy: " << isDummy() << '\n';
-  OS << "  Dynamic: " << IsDynamic << "\n";
+  OS << "  Dynamic: " << isDynamic() << "\n";
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {
