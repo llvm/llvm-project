@@ -4144,10 +4144,15 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
-  llvm::StringRef TrapMessage =
-      TR ? TR->getMessage() : GetUBSanTrapForHandler(CheckHandlerID);
-  llvm::StringRef TrapCategory =
-      TR ? TR->getCategory() : "Undefined Behavior Sanitizer";
+  llvm::StringRef TrapMessage;
+  llvm::StringRef TrapCategory;
+  if (TR && !TR->isEmpty()) {
+    TrapMessage = TR->getMessage();
+    TrapCategory = TR->getCategory();
+  } else {
+    TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+    TrapCategory = "Undefined Behavior Sanitizer";
+  }
 
   if (getDebugInfo() && !TrapMessage.empty() &&
       CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
