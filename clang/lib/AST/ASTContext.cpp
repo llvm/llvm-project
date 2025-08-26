@@ -3032,7 +3032,7 @@ bool ASTContext::hasUniqueObjectRepresentations(
     return true;
   }
 
-  // All other pointers (except __ptrauth pointers) are unique.
+  // All other pointers are unique.
   if (Ty->isPointerType())
     return !Ty.hasAddressDiscriminatedPointerAuth();
 
