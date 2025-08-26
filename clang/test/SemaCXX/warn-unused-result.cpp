@@ -484,7 +484,17 @@ B<A>::NoDIntIgnored2<A> return_nodint_ignored2();
 B<A>::NoDClass2<A> return_nodclass2();
 B<A>::NoDClassIgnored2<A> return_nodclass_ignored2();
 
-void test() {
+NoDiscard (A::*mp_return_nodiscard)();
+WarnUnused (A::*mp_return_warnunused)();
+WarnUnusedResult (A::*mp_return_warnunusedresult)();
+NoDIgnored (A::*mp_return_nodiscard_ignored)();
+WUIgnored (A::*mp_return_warnunused_ignored)();
+WURIgnored (A::*mp_return_warnunusedresult_ignored)();
+[[clang::candiscard]] NoDiscard (A::*mp_return_nodiscard_ignored2)();
+[[clang::candiscard]] WarnUnused (A::*mp_return_warnunused_ignored2)();
+[[clang::candiscard]] WarnUnusedResult (A::*mp_return_warnunusedresult_ignored2)();
+
+void test(A *pa) {
   // Unused but named variables
   NoDiscard unused_variable1(1);         // no warning
   NoDiscard unused_variable2("");        // no warning
@@ -516,9 +526,9 @@ void test() {
   static_cast<WarnUnusedResult>(""); // expected-warning {{ignoring temporary of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
 
   // Function return values
-  return_nodiscard(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
-  return_warnunused(); // no warning
-  return_warnunusedresult(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+  return_nodiscard();                 // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  return_warnunused();                // no warning
+  return_warnunusedresult();          // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
   return_nodiscard_ignored();         // no warning
   return_warnunused_ignored();        // no warning
   return_warnunusedresult_ignored();  // no warning
@@ -527,15 +537,26 @@ void test() {
   return_warnunusedresult_ignored2(); // no warning
 
   // Function pointer return values
-  p_return_nodiscard(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
-  p_return_warnunused(); // no warning
-  p_return_warnunusedresult(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+  p_return_nodiscard();                 // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  p_return_warnunused();                // no warning
+  p_return_warnunusedresult();          // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
   p_return_nodiscard_ignored();         // no warning
   p_return_warnunused_ignored();        // no warning
   p_return_warnunusedresult_ignored();  // no warning
   p_return_nodiscard_ignored2();        // no warning
   p_return_warnunused_ignored2();       // no warning
   p_return_warnunusedresult_ignored2(); // no warning
+
+  // Member function pointer return values
+  (pa->*mp_return_nodiscard)();                 // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  (pa->*mp_return_warnunused)();                // no warning
+  (pa->*mp_return_warnunusedresult)();          // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+  (pa->*mp_return_nodiscard_ignored)();         // no warning
+  (pa->*mp_return_warnunused_ignored)();        // no warning
+  (pa->*mp_return_warnunusedresult_ignored)();  // no warning
+  (pa->*mp_return_nodiscard_ignored2)();        // no warning
+  (pa->*mp_return_warnunused_ignored2)();       // no warning
+  (pa->*mp_return_warnunusedresult_ignored2)(); // no warning
 
   // Function pointer expression return values
   pp_return_nodiscard()(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
@@ -572,6 +593,18 @@ void test() {
   return_nodint_ignored2();   // expected-warning {{ignoring return value of type 'NoDInt' declared with 'clang::warn_unused_result' attribute}}
   return_nodclass2();         // expected-warning {{ignoring return value of type 'NoDClass' declared with 'nodiscard' attribute}}
   return_nodclass_ignored2(); // expected-warning {{ignoring return value of type 'NoDClass' declared with 'nodiscard' attribute}}
+}
+
+using BothAttributes [[clang::warn_unused_result, clang::candiscard]] = int;
+
+BothAttributes return_bothattributes1();
+[[nodiscard, clang::candiscard]] int return_bothattributes2();
+[[nodiscard]] NoDIgnored return_nodignored_nodiscard();
+
+void testBothAttributes() {
+  return_bothattributes1(); // no warning because candiscard takes priority
+  return_bothattributes2(); // no warning because candiscard takes priority
+  return_nodignored_nodiscard(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
 
 } // namespace candiscard
