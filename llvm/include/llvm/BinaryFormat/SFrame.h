@@ -31,6 +31,24 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 constexpr uint16_t Magic = 0xdee2;
 
+constexpr int32_t FRERAOffsetInvalid = 0;
+
+constexpr int32_t S390xCFAOffsetAdjustment = -160;
+constexpr int32_t S390xCFAOffsetAlignmentFactor = 8;
+constexpr int32_t v2S390xCFAOffsetEncode(int32_t Offset) {
+  return (Offset + S390xCFAOffsetAdjustment) / S390xCFAOffsetAlignmentFactor;
+}
+constexpr int32_t v2S390xCFAOffsetDecode(int32_t Offset) {
+  return (Offset * S390xCFAOffsetAlignmentFactor) - S390xCFAOffsetAdjustment;
+}
+constexpr bool v2S390xOffsetIsRegnum(int32_t Offset) { return Offset & 1; }
+constexpr int32_t v2S390xOffsetEncodeRegnum(int32_t Regnum) {
+  return (Regnum << 1) | 1;
+}
+constexpr int32_t v2S390xOffsetDecodeRegnum(int32_t Offset) {
+  return Offset >> 1;
+}
+
 enum class Version : uint8_t {
 #define HANDLE_SFRAME_VERSION(CODE, NAME) NAME = CODE,
 #include "llvm/BinaryFormat/SFrameConstants.def"

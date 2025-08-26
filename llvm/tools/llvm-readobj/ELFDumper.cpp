@@ -6522,6 +6522,7 @@ void ELFDumper<ELFT>::printSFrameFDEs(
                     sframe::getAArch64PAuthKeys());
         break;
       case sframe::ABI::AMD64EndianLittle:
+      case sframe::ABI::S390xEndianBig:
         // unused
         break;
       }
@@ -6555,10 +6556,22 @@ void ELFDumper<ELFT>::printSFrameFDEs(
                   sframe::getBaseRegisters());
       if (std::optional<int32_t> Off = Parser.getCFAOffset(FRE))
         W.printNumber("CFA Offset", *Off);
-      if (std::optional<int32_t> Off = Parser.getRAOffset(FRE))
-        W.printNumber("RA Offset", *Off);
-      if (std::optional<int32_t> Off = Parser.getFPOffset(FRE))
-        W.printNumber("FP Offset", *Off);
+
+      using RegisterLocation =
+          typename SFrameParser<ELFT::Endianness>::RegisterLocation;
+      auto PrintLocation = [&](const char *Name,
+                               std::optional<RegisterLocation> Loc) {
+        if (!Loc)
+          return;
+        DictScope LocScope(W, Name);
+        W.printString("Kind", Loc->Kind == RegisterLocation::Register
+                                  ? "Register"
+                                  : "Stack Slot");
+        W.printNumber("Value", Loc->Value);
+      };
+      PrintLocation("RA Offset", Parser.getRAOffset(FRE));
+      PrintLocation("FP Offset", Parser.getFPOffset(FRE));
+
       if (ArrayRef<int32_t> Offs = Parser.getExtraOffsets(FRE); !Offs.empty())
         W.printList("Extra Offsets", Offs);
     }

@@ -196,23 +196,61 @@ static std::optional<int32_t> getOffset(ArrayRef<int32_t> Offsets, size_t Idx) {
 template <endianness E>
 std::optional<int32_t>
 SFrameParser<E>::getCFAOffset(const FrameRowEntry &FRE) const {
-  return getOffset(FRE.Offsets, 0);
+  std::optional<int32_t> Offset = getOffset(FRE.Offsets, 0);
+  switch (Header.ABIArch) {
+  case sframe::ABI::AArch64EndianBig:
+  case sframe::ABI::AArch64EndianLittle:
+  case sframe::ABI::AMD64EndianLittle:
+    return Offset;
+
+  case sframe::ABI::S390xEndianBig:
+    if (!Offset)
+      return std::nullopt;
+    return sframe::v2S390xCFAOffsetDecode(*Offset);
+  }
+  llvm_unreachable("Unhandled ABI!");
 }
 
 template <endianness E>
-std::optional<int32_t>
+typename SFrameParser<E>::RegisterLocation
+SFrameParser<E>::getRegisterLocation(int32_t Offset) const {
+  switch (Header.ABIArch) {
+  case sframe::ABI::S390xEndianBig:
+    if (sframe::v2S390xOffsetIsRegnum(Offset))
+      return RegisterLocation{RegisterLocation::Register,
+                              sframe::v2S390xOffsetDecodeRegnum(Offset)};
+    [[fallthrough]];
+  case sframe::ABI::AArch64EndianBig:
+  case sframe::ABI::AArch64EndianLittle:
+  case sframe::ABI::AMD64EndianLittle:
+    return RegisterLocation{RegisterLocation::StackSlot, Offset};
+  }
+  llvm_unreachable("Unhandled ABI!");
+}
+
+template <endianness E>
+std::optional<typename SFrameParser<E>::RegisterLocation>
 SFrameParser<E>::getRAOffset(const FrameRowEntry &FRE) const {
-  if (usesFixedRAOffset())
-    return Header.CFAFixedRAOffset;
-  return getOffset(FRE.Offsets, 1);
+  std::optional<int32_t> Offset =
+      usesFixedRAOffset() ? Header.CFAFixedRAOffset : getOffset(FRE.Offsets, 1);
+  if (!Offset)
+    return std::nullopt;
+  if (Header.ABIArch == sframe::ABI::S390xEndianBig &&
+      *Offset == sframe::FRERAOffsetInvalid)
+    return std::nullopt;
+  return getRegisterLocation(*Offset);
 }
 
 template <endianness E>
-std::optional<int32_t>
+std::optional<typename SFrameParser<E>::RegisterLocation>
 SFrameParser<E>::getFPOffset(const FrameRowEntry &FRE) const {
-  if (usesFixedFPOffset())
-    return Header.CFAFixedFPOffset;
-  return getOffset(FRE.Offsets, usesFixedRAOffset() ? 1 : 2);
+  size_t Idx = usesFixedRAOffset() ? 1 : 2;
+  std::optional<int32_t> Offset = usesFixedFPOffset()
+                                      ? Header.CFAFixedFPOffset
+                                      : getOffset(FRE.Offsets, Idx);
+  if (!Offset)
+    return std::nullopt;
+  return getRegisterLocation(*Offset);
 }
 
 template <endianness E>
