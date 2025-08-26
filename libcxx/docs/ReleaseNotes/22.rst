@@ -38,7 +38,8 @@ What's New in Libc++ 22.0.0?
 Implemented Papers
 ------------------
 
-- P2321R2: ``zip`` (`Github <https://github.com/llvm/llvm-project/issues/105169>`__) (The paper is partially implemented. ``zip_transform_view`` is implemented in this release)
+- P2321R2: ``zip`` (`Github <https://github.com/llvm/llvm-project/issues/105169>`__) (The paper is partially
+  implemented. ``zip_transform_view`` is implemented in this release)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://github.com/llvm/llvm-project/issues/105430>`__)
 
 Improvements and New Features
@@ -50,7 +51,8 @@ Improvements and New Features
 - The performance of ``unordered_set::operator=(const unordered_set&)`` has been improved by up to 5x.
 - The performance of ``map::erase`` and ``set::erase`` has been improved by up to 2x
 - The performance of ``find(key)`` in ``map``, ``set``, ``multimap`` and ``multiset`` has been improved by up to 2.3x
-- Some reallocations are now avoided in `std::filesystem::path::lexically_relative`, resulting in a performance improvement of up to 1.7x.
+- Some reallocations are now avoided in `std::filesystem::path::lexically_relative`, resulting in a performance
+  improvement of up to 1.7x.
 - The performance of the ``(iterator, iterator)`` constructors of ``multimap`` and ``multiset``
   has been improved by up to 3x
 - The performance of ``insert(iterator, iterator)`` of ``multimap`` and ``multiset`` has been improved by up to 2.5x
@@ -62,7 +64,11 @@ Deprecations and Removals
 Potentially breaking changes
 ----------------------------
 
-- The algorithm for ``multi{map,set}::find`` has been modified such that it doesn't necessarily return an iterator to the first equal element in the container. This was never guaranteed by the Standard, but libc++ previously happened to always return the first equal element, like other implementations do. Starting with this release, code relying on the first element being returned from ``find`` will be broken, and ``lower_bound`` or ``equal_range`` should be used instead.
+- The algorithm for ``multi{map,set}::find`` has been modified such that it doesn't necessarily return an iterator to
+  the first equal element in the container. This was never guaranteed by the Standard, but libc++ previously happened to
+  always return the first equal element, like other implementations do. Starting with this release, code relying on the
+  first element being returned from ``find`` will be broken, and ``lower_bound`` or ``equal_range`` should be used
+  instead.
 
 Announcements About Future Releases
 -----------------------------------
