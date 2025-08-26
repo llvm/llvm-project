@@ -43,9 +43,9 @@ void UnusedIntentCheck::CheckUnusedIntentHelper(
             "Dummy argument '%s' with intent(inout) is never written to, consider changing to intent(in)"_warn_en_US,
             symbol.name());
       }
-      if (!symbol.attrs().HasAny({semantics::Attr::INTENT_IN,
-                                  semantics::Attr::INTENT_INOUT,
-                                  semantics::Attr::INTENT_OUT})) {
+      if (!symbol.attrs().HasAny(
+              {semantics::Attr::INTENT_IN, semantics::Attr::INTENT_INOUT,
+               semantics::Attr::INTENT_OUT, semantics::Attr::VALUE})) {
         // warn about dummy arguments without explicit intent
         Say(symbol.name(),
             "Dummy argument '%s' has no explicit intent"_warn_en_US,
