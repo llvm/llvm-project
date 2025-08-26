@@ -789,6 +789,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::SETCC:
     Res = ScalarizeVecOp_VSETCC(N);
     break;
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+    Res = ScalarizeVecOp_VSTRICT_FSETCC(N, OpNo);
+    break;
   case ISD::STORE:
     Res = ScalarizeVecOp_STORE(cast<StoreSDNode>(N), OpNo);
     break;
@@ -985,6 +989,43 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VSETCC(SDNode *N) {
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Res);
 }
 
+// Similiar to ScalarizeVecOp_VSETCC, with added logic to update chains.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VSTRICT_FSETCC(SDNode *N,
+                                                        unsigned OpNo) {
+  assert(OpNo == 1 && "Wrong operand for scalarization!");
+  assert(N->getValueType(0).isVector() &&
+         N->getOperand(1).getValueType().isVector() &&
+         "Operand types must be vectors");
+  assert(N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type");
+
+  EVT VT = N->getValueType(0);
+  SDValue Ch = N->getOperand(0);
+  SDValue LHS = GetScalarizedVector(N->getOperand(1));
+  SDValue RHS = GetScalarizedVector(N->getOperand(2));
+  SDValue CC = N->getOperand(3);
+
+  EVT OpVT = N->getOperand(1).getValueType();
+  EVT NVT = VT.getVectorElementType();
+  SDLoc DL(N);
+  SDValue Res = DAG.getNode(N->getOpcode(), DL, {MVT::i1, MVT::Other},
+                            {Ch, LHS, RHS, CC});
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+
+  ISD::NodeType ExtendCode =
+      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
+
+  Res = DAG.getNode(ExtendCode, DL, NVT, Res);
+  Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Res);
+
+  // Do our own replacement and return SDValue() to tell the caller that we
+  // handled all replacements since caller can only handle a single result.
+  ReplaceValueWith(SDValue(N, 0), Res);
+  return SDValue();
+}
+
 /// If the value to store is a vector that needs to be scalarized, it must be
 /// <1 x ty>. Just store the element.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
@@ -1151,6 +1192,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::VP_LOAD:
     SplitVecRes_VP_LOAD(cast<VPLoadSDNode>(N), Lo, Hi);
+    break;
+  case ISD::VP_LOAD_FF:
+    SplitVecRes_VP_LOAD_FF(cast<VPLoadFFSDNode>(N), Lo, Hi);
     break;
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     SplitVecRes_VP_STRIDED_LOAD(cast<VPStridedLoadSDNode>(N), Lo, Hi);
@@ -2225,6 +2269,45 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(LD, 1), Ch);
+}
+
+void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
+                                              SDValue &Hi) {
+  SDLoc dl(LD);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(LD->getValueType(0));
+
+  SDValue Ch = LD->getChain();
+  SDValue Ptr = LD->getBasePtr();
+  Align Alignment = LD->getBaseAlign();
+  SDValue Mask = LD->getMask();
+  SDValue EVL = LD->getVectorLength();
+
+  // Split Mask operand
+  SDValue MaskLo, MaskHi;
+  if (Mask.getOpcode() == ISD::SETCC) {
+    SplitVecRes_SETCC(Mask.getNode(), MaskLo, MaskHi);
+  } else {
+    if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
+      GetSplitVector(Mask, MaskLo, MaskHi);
+    else
+      std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, dl);
+  }
+
+  // Split EVL operand
+  auto [EVLLo, EVLHi] = DAG.SplitEVL(EVL, LD->getValueType(0), dl);
+
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      LD->getPointerInfo(), MachineMemOperand::MOLoad,
+      LocationSize::beforeOrAfterPointer(), Alignment, LD->getAAInfo(),
+      LD->getRanges());
+
+  Lo = DAG.getLoadFFVP(LoVT, dl, Ch, Ptr, MaskLo, EVLLo, MMO);
+
+  // Fill the upper half with poison.
+  Hi = DAG.getUNDEF(HiVT);
+
+  ReplaceValueWith(SDValue(LD, 1), Lo.getValue(1));
+  ReplaceValueWith(SDValue(LD, 2), Lo.getValue(2));
 }
 
 void DAGTypeLegalizer::SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD,
@@ -3800,13 +3883,45 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
   uint64_t LoEltsMin = Lo.getValueType().getVectorMinNumElements();
   uint64_t IdxVal = Idx->getAsZExtVal();
 
+  unsigned NumResultElts = SubVT.getVectorMinNumElements();
+
   if (IdxVal < LoEltsMin) {
-    assert(IdxVal + SubVT.getVectorMinNumElements() <= LoEltsMin &&
-           "Extracted subvector crosses vector split!");
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
-  } else if (SubVT.isScalableVector() ==
-             N->getOperand(0).getValueType().isScalableVector())
-    return DAG.getExtractSubvector(dl, SubVT, Hi, IdxVal - LoEltsMin);
+    // If the extracted elements are all in the low half, do a simple extract.
+    if (IdxVal + NumResultElts <= LoEltsMin)
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
+
+    // Extracted subvector crosses vector split, so we need to blend the two
+    // halves.
+    // TODO: May be able to emit partial extract_subvector.
+    SmallVector<SDValue, 8> Elts;
+    Elts.reserve(NumResultElts);
+
+    DAG.ExtractVectorElements(Lo, Elts, /*Start=*/IdxVal,
+                              /*Count=*/LoEltsMin - IdxVal);
+    DAG.ExtractVectorElements(Hi, Elts, /*Start=*/0,
+                              /*Count=*/SubVT.getVectorNumElements() -
+                                  Elts.size());
+    return DAG.getBuildVector(SubVT, dl, Elts);
+  }
+
+  EVT SrcVT = N->getOperand(0).getValueType();
+  if (SubVT.isScalableVector() == SrcVT.isScalableVector()) {
+    uint64_t ExtractIdx = IdxVal - LoEltsMin;
+    if (ExtractIdx % NumResultElts == 0)
+      return DAG.getExtractSubvector(dl, SubVT, Hi, ExtractIdx);
+
+    // We cannot create an extract_subvector that isn't a multiple of the result
+    // size, which may go out of bounds for the last elements. Shuffle the
+    // desired elements down to 0 and do a simple 0 extract.
+    EVT HiVT = Hi.getValueType();
+    SmallVector<int, 8> Mask(HiVT.getVectorNumElements(), -1);
+    for (int I = 0; I != static_cast<int>(NumResultElts); ++I)
+      Mask[I] = ExtractIdx + I;
+
+    SDValue Shuffle =
+        DAG.getVectorShuffle(HiVT, dl, Hi, DAG.getPOISON(HiVT), Mask);
+    return DAG.getExtractSubvector(dl, SubVT, Shuffle, 0);
+  }
 
   // After this point the DAG node only permits extracting fixed-width
   // subvectors from scalable vectors.
@@ -4706,6 +4821,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::VP_LOAD:
     Res = WidenVecRes_VP_LOAD(cast<VPLoadSDNode>(N));
+    break;
+  case ISD::VP_LOAD_FF:
+    Res = WidenVecRes_VP_LOAD_FF(cast<VPLoadFFSDNode>(N));
     break;
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     Res = WidenVecRes_VP_STRIDED_LOAD(cast<VPStridedLoadSDNode>(N));
@@ -6160,6 +6278,29 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_LOAD(VPLoadSDNode *N) {
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_VP_LOAD_FF(VPLoadFFSDNode *N) {
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDValue Mask = N->getMask();
+  SDValue EVL = N->getVectorLength();
+  SDLoc dl(N);
+
+  // The mask should be widened as well
+  assert(getTypeAction(Mask.getValueType()) ==
+             TargetLowering::TypeWidenVector &&
+         "Unable to widen binary VP op");
+  Mask = GetWidenedVector(Mask);
+  assert(Mask.getValueType().getVectorElementCount() ==
+             TLI.getTypeToTransformTo(*DAG.getContext(), Mask.getValueType())
+                 .getVectorElementCount() &&
+         "Unable to widen vector load");
+
+  SDValue Res = DAG.getLoadFFVP(WidenVT, dl, N->getChain(), N->getBasePtr(),
+                                Mask, EVL, N->getMemOperand());
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  ReplaceValueWith(SDValue(N, 2), Res.getValue(2));
   return Res;
 }
 

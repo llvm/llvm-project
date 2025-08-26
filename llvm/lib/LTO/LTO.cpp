@@ -1422,7 +1422,7 @@ SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
 
   for (RTLIB::LibcallImpl Impl : LibcallImpls) {
     if (Impl != RTLIB::Unsupported)
-      LibcallSymbols.push_back(Libcalls.getLibcallImplName(Impl));
+      LibcallSymbols.push_back(Libcalls.getLibcallImplName(Impl).data());
   }
 
   return LibcallSymbols;

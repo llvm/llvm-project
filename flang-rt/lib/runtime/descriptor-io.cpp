@@ -110,7 +110,7 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
     Fortran::common::optional<std::int64_t> startPos;
     if (edit.descriptor == DataEdit::DefinedDerivedType &&
         special.which() == typeInfo::SpecialBinding::Which::ReadFormatted) {
-      // DT is an edit descriptor so everything that the child
+      // DT is an edit descriptor, so everything that the child
       // I/O subroutine reads counts towards READ(SIZE=).
       startPos = io.InquirePos();
     }

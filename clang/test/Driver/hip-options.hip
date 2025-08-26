@@ -241,7 +241,7 @@
 // Check --offload-compress --offload-jobs=N does not cause warning.
 // RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --offload-arch=gfx1100 --offload-compress --offload-host-only -M %s \
-// RUN:   --offload-jobs=4
+// RUN:   --offload-jobs=4 --offload-new-driver
 
 // Check --offload-jobs=N option.
 

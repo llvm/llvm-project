@@ -6,7 +6,7 @@
 define void @test(ptr %data) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[DATA:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -20,10 +20,9 @@ define void @test(ptr %data) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OR_IV_1:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_POSTSCALE:%.*]] = getelementptr [64 x float], ptr @postscale, i64 0, i64 [[OR_IV_1]]
 ; CHECK-NEXT:    [[LOAD_POSTSCALE:%.*]] = load float, ptr [[GEP_POSTSCALE]], align 4, !tbaa [[TBAA0]]

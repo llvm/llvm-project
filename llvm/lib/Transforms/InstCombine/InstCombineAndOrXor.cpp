@@ -1338,16 +1338,51 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
       V2 = X;
   }
 
+  // Look through and with a negative power of 2 mask on V1 or V2. This
+  // detects idioms of the form `(x == A) || ((x & Mask) == A + 1)` where A + 1
+  // is aligned to the mask and A + 1 >= |Mask|. This pattern corresponds to a
+  // contiguous range check, which can be folded into an addition and compare.
+  // The same applies for `(x != A) && ((x & Mask) != A + 1)`.
+  auto AreContiguousRangePredicates = [](CmpPredicate Pred1, CmpPredicate Pred2,
+                                         bool IsAnd) {
+    if (IsAnd)
+      return Pred1 == ICmpInst::ICMP_NE && Pred2 == ICmpInst::ICMP_NE;
+    return Pred1 == ICmpInst::ICMP_EQ && Pred2 == ICmpInst::ICMP_EQ;
+  };
+  const APInt *Mask1 = nullptr, *Mask2 = nullptr;
+  bool MatchedAnd1 = false, MatchedAnd2 = false;
+  if (V1 != V2 && AreContiguousRangePredicates(Pred1, Pred2, IsAnd)) {
+    Value *X;
+    if (match(V1, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask1)))) &&
+        C1->getBitWidth() == C2->getBitWidth() && *C1 == *C2 + 1 &&
+        C1->uge(Mask1->abs()) && C1->isPowerOf2()) {
+      MatchedAnd1 = true;
+      V1 = X;
+    }
+    if (match(V2, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask2)))) &&
+        C1->getBitWidth() == C2->getBitWidth() && *C2 == *C1 + 1 &&
+        C2->uge(Mask2->abs()) && C2->isPowerOf2()) {
+      MatchedAnd2 = true;
+      V2 = X;
+    }
+  }
+
   if (V1 != V2)
     return nullptr;
 
-  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
-      IsAnd ? ICmpInst::getInverseCmpPredicate(Pred1) : Pred1, *C1);
+  ConstantRange CR1 =
+      MatchedAnd1
+          ? ConstantRange(*C1, *C1 - *Mask1)
+          : ConstantRange::makeExactICmpRegion(
+                IsAnd ? ICmpInst::getInverseCmpPredicate(Pred1) : Pred1, *C1);
   if (Offset1)
     CR1 = CR1.subtract(*Offset1);
 
-  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(
-      IsAnd ? ICmpInst::getInverseCmpPredicate(Pred2) : Pred2, *C2);
+  ConstantRange CR2 =
+      MatchedAnd2
+          ? ConstantRange(*C2, *C2 - *Mask2)
+          : ConstantRange::makeExactICmpRegion(
+                IsAnd ? ICmpInst::getInverseCmpPredicate(Pred2) : Pred2, *C2);
   if (Offset2)
     CR2 = CR2.subtract(*Offset2);
 
@@ -3605,16 +3640,11 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
                                           int64_t &VecOffset,
                                           SmallBitVector &Mask,
                                           const DataLayout &DL) {
-  static const auto m_ConstShlOrSelf = [](const auto &Base, uint64_t &ShlAmt) {
-    ShlAmt = 0;
-    return m_CombineOr(m_Shl(Base, m_ConstantInt(ShlAmt)), Base);
-  };
-
   // First try to match extractelement -> zext -> shl
   uint64_t VecIdx, ShlAmt;
-  if (match(V, m_ConstShlOrSelf(m_ZExtOrSelf(m_ExtractElt(
-                                    m_Value(Vec), m_ConstantInt(VecIdx))),
-                                ShlAmt))) {
+  if (match(V, m_ShlOrSelf(m_ZExtOrSelf(m_ExtractElt(m_Value(Vec),
+                                                     m_ConstantInt(VecIdx))),
+                           ShlAmt))) {
     auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
     if (!VecTy)
       return false;
@@ -3740,6 +3770,82 @@ static Instruction *foldIntegerPackFromVector(Instruction &I,
   return CastInst::Create(Instruction::BitCast, MaskedVec, I.getType());
 }
 
+/// Match \p V as "lshr -> mask -> zext -> shl".
+///
+/// \p Int is the underlying integer being extracted from.
+/// \p Mask is a bitmask identifying which bits of the integer are being
+/// extracted. \p Offset identifies which bit of the result \p V corresponds to
+/// the least significant bit of \p Int
+static bool matchZExtedSubInteger(Value *V, Value *&Int, APInt &Mask,
+                                  uint64_t &Offset, bool &IsShlNUW,
+                                  bool &IsShlNSW) {
+  Value *ShlOp0;
+  uint64_t ShlAmt = 0;
+  if (!match(V, m_OneUse(m_Shl(m_Value(ShlOp0), m_ConstantInt(ShlAmt)))))
+    return false;
+
+  IsShlNUW = cast<BinaryOperator>(V)->hasNoUnsignedWrap();
+  IsShlNSW = cast<BinaryOperator>(V)->hasNoSignedWrap();
+
+  Value *ZExtOp0;
+  if (!match(ShlOp0, m_OneUse(m_ZExt(m_Value(ZExtOp0)))))
+    return false;
+
+  Value *MaskedOp0;
+  const APInt *ShiftedMaskConst = nullptr;
+  if (!match(ZExtOp0, m_CombineOr(m_OneUse(m_And(m_Value(MaskedOp0),
+                                                 m_APInt(ShiftedMaskConst))),
+                                  m_Value(MaskedOp0))))
+    return false;
+
+  uint64_t LShrAmt = 0;
+  if (!match(MaskedOp0,
+             m_CombineOr(m_OneUse(m_LShr(m_Value(Int), m_ConstantInt(LShrAmt))),
+                         m_Value(Int))))
+    return false;
+
+  if (LShrAmt > ShlAmt)
+    return false;
+  Offset = ShlAmt - LShrAmt;
+
+  Mask = ShiftedMaskConst ? ShiftedMaskConst->shl(LShrAmt)
+                          : APInt::getBitsSetFrom(
+                                Int->getType()->getScalarSizeInBits(), LShrAmt);
+
+  return true;
+}
+
+/// Try to fold the join of two scalar integers whose bits are unpacked and
+/// zexted from the same source integer.
+static Value *foldIntegerRepackThroughZExt(Value *Lhs, Value *Rhs,
+                                           InstCombiner::BuilderTy &Builder) {
+
+  Value *LhsInt, *RhsInt;
+  APInt LhsMask, RhsMask;
+  uint64_t LhsOffset, RhsOffset;
+  bool IsLhsShlNUW, IsLhsShlNSW, IsRhsShlNUW, IsRhsShlNSW;
+  if (!matchZExtedSubInteger(Lhs, LhsInt, LhsMask, LhsOffset, IsLhsShlNUW,
+                             IsLhsShlNSW))
+    return nullptr;
+  if (!matchZExtedSubInteger(Rhs, RhsInt, RhsMask, RhsOffset, IsRhsShlNUW,
+                             IsRhsShlNSW))
+    return nullptr;
+  if (LhsInt != RhsInt || LhsOffset != RhsOffset)
+    return nullptr;
+
+  APInt Mask = LhsMask | RhsMask;
+
+  Type *DestTy = Lhs->getType();
+  Value *Res = Builder.CreateShl(
+      Builder.CreateZExt(
+          Builder.CreateAnd(LhsInt, Mask, LhsInt->getName() + ".mask"), DestTy,
+          LhsInt->getName() + ".zext"),
+      ConstantInt::get(DestTy, LhsOffset), "", IsLhsShlNUW && IsRhsShlNUW,
+      IsLhsShlNSW && IsRhsShlNSW);
+  Res->takeName(Lhs);
+  return Res;
+}
+
 // A decomposition of ((X & Mask) * Factor). The NUW / NSW bools
 // track these properities for preservation. Note that we can decompose
 // equivalent select form of this expression (e.g. (!(X & Mask) ? 0 : Mask *
@@ -3840,6 +3946,8 @@ static Value *foldBitmaskMul(Value *Op0, Value *Op1,
 
 Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
   if (Value *Res = foldBitmaskMul(LHS, RHS, Builder))
+    return Res;
+  if (Value *Res = foldIntegerRepackThroughZExt(LHS, RHS, Builder))
     return Res;
 
   return nullptr;
@@ -3973,7 +4081,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
 
-    if (Value *Res = foldBitmaskMul(I.getOperand(0), I.getOperand(1), Builder))
+    if (Value *Res = foldDisjointOr(I.getOperand(0), I.getOperand(1)))
       return replaceInstUsesWith(I, Res);
 
     if (Value *Res = reassociateDisjointOr(I.getOperand(0), I.getOperand(1)))

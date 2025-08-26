@@ -40,15 +40,18 @@ public:
   void GetGlobalVariables(
       DWARFUnit &unit,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
-  void GetObjCMethods(ConstString class_name,
-                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetObjCMethods(
+      ConstString class_name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(ConstString name,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(const DWARFDeclContext &context,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(ConstString name,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(const DWARFDeclContext &context,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetNamespaces(
       ConstString name,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;

@@ -31,8 +31,8 @@ define i1 @test_sext_w(i64 %x, i32 %y) nounwind {
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    j .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: # %truebb
-; CHECK-NEXT:    lw a0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    slti a0, a0, 0
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    srliw a0, a0, 31
 ; CHECK-NEXT:  .LBB0_3: # %falsebb
 ; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload

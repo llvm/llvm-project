@@ -45,12 +45,12 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   Compiler<ByteCodeEmitter>(*this, *P).compileFunc(
       FD, const_cast<Function *>(Func));
 
-  ++EvalID;
-  // And run it.
-  if (!Run(Parent, Func))
+  if (!Func->isValid())
     return false;
 
-  return Func->isValid();
+  ++EvalID;
+  // And run it.
+  return Run(Parent, Func);
 }
 
 void Context::isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
@@ -364,8 +364,7 @@ OptPrimType Context::classify(QualType T) const {
     return integralTypeToPrimTypeU(BT->getNumBits());
   }
 
-  if (const auto *ET = T->getAs<EnumType>()) {
-    const auto *D = ET->getDecl();
+  if (const auto *D = T->getAsEnumDecl()) {
     if (!D->isComplete())
       return std::nullopt;
     return classify(D->getIntegerType());
@@ -398,17 +397,11 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func) {
-
-  {
-    InterpState State(Parent, *P, Stk, *this, Func);
-    if (Interpret(State)) {
-      assert(Stk.empty());
-      return true;
-    }
-    // State gets destroyed here, so the Stk.clear() below doesn't accidentally
-    // remove values the State's destructor might access.
+  InterpState State(Parent, *P, Stk, *this, Func);
+  if (Interpret(State)) {
+    assert(Stk.empty());
+    return true;
   }
-
   Stk.clear();
   return false;
 }
@@ -474,7 +467,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     IsLambdaStaticInvoker = true;
 
     const CXXRecordDecl *ClosureClass = MD->getParent();
-    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+    assert(ClosureClass->captures().empty());
     if (ClosureClass->isGenericLambda()) {
       const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
       assert(MD->isFunctionTemplateSpecialization() &&
@@ -501,7 +494,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // elsewhere in the code.
   QualType Ty = FuncDecl->getReturnType();
   bool HasRVO = false;
-  if (!Ty->isVoidType() && !classify(Ty)) {
+  if (!Ty->isVoidType() && !canClassify(Ty)) {
     HasRVO = true;
     ParamTypes.push_back(PT_Ptr);
     ParamOffsets.push_back(ParamOffset);

@@ -908,6 +908,32 @@ def SupportedRoundMode : TImmLeaf<i32, [{
          Imm == (int)RoundingMode::TowardNegative;
 }]>;
 
+def VOP3PModsNeg : SDNodeXForm<timm, [{
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (N->getZExtValue())
+    Mods ^= SISrcMods::NEG;
+  return CurDAG->getTargetConstant(Mods, SDLoc(N), MVT::i32);
+}]>;
+
+def VOP3PModsNegs : SDNodeXForm<timm, [{
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (N->getZExtValue())
+    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+  return CurDAG->getTargetConstant(Mods, SDLoc(N), MVT::i32);
+}]>;
+
+def VOP3PModsNegAbs : SDNodeXForm<timm, [{
+  unsigned Val = N->getZExtValue();
+  unsigned Mods = SISrcMods::OP_SEL_1; // default: none
+  if (Val == 1) // neg
+    Mods ^= SISrcMods::NEG;
+  if (Val == 2) // abs
+    Mods ^= SISrcMods::ABS;
+  if (Val == 3) // neg and abs
+    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
+  return CurDAG->getTargetConstant(Mods, SDLoc(N), MVT::i32);
+}]>;
+
 class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{
   uint64_t Imm = N->getZExtValue();
   unsigned Bit = (Imm >> }] # bitnum # [{ ) & 1;
@@ -1040,6 +1066,13 @@ def SplitBarrier : ImmOperand<i32> {
   let OperandType = "OPERAND_INLINE_SPLIT_BARRIER_INT32";
   let DecoderMethod = "decodeSplitBarrier";
   let PrintMethod = "printOperand";
+}
+
+// Pseudo-operand type. This is a pair of 32-bit inline constants
+// packed into a single 64-bit value.
+def AV_64_PSEUDO_IMM : Operand<i64> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_INLINE_C_AV64_PSEUDO";
 }
 
 def VReg32OrOffClass : AsmOperandClass {
@@ -1309,6 +1342,12 @@ def bitop3_0 : DefaultOperand<BitOp3, 0>;
 
 def MatrixAFMT : CustomOperand<i32, 1, "MatrixAFMT">;
 def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
+
+def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
+def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
+
+def MatrixAScaleFmt : CustomOperand<i32, 1, "MatrixAScaleFmt">;
+def MatrixBScaleFmt : CustomOperand<i32, 1, "MatrixBScaleFmt">;
 
 def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
@@ -1647,9 +1686,6 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
-def VOP3PModsNeg  : ComplexPattern<untyped, 1, "SelectVOP3PModsNeg">;
-def VOP3PModsNegs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegs">; // chfang: not use complex pattern?
-def VOP3PModsNegAbs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegAbs">;
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def WMMAModsF32NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF32NegAbs">;
@@ -1925,6 +1961,7 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
         !eq(VT, v2f16)  : VCSrc_v2f16,
         !eq(VT, v2bf16) : VCSrc_v2bf16,
         !eq(VT, f32)    : VCSrc_f32,
+        !eq(VT, f64)    : VCSrc_f64,
         !eq(VT, v2i32)  : VCSrc_v2b32,
         1               : VCSrc_b32);
 }
@@ -2678,8 +2715,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
-  field bit HasMatrixReuse = 0;
   field bit HasMatrixFMT = 0;
+  field bit HasMatrixScale = 0;
+  field bit HasMatrixReuse = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);

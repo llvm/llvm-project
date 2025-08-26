@@ -2,7 +2,7 @@
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes=gvn,dse -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare void @external(ptr)
 
@@ -71,7 +71,7 @@ define void @test3(i8 %X) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[P]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[P]])
 ; CHECK-NEXT:    store i8 2, ptr [[P2]], align 1
 ; CHECK-NEXT:    call void @external(ptr [[P]])
 ; CHECK-NEXT:    ret void
@@ -81,7 +81,7 @@ define void @test3(i8 %X) {
 
   %P2 = getelementptr i8, ptr %P, i32 2
   store i8 %Y, ptr %P2  ;; Not read by lifetime.end, should be removed.
-  call void @llvm.lifetime.end.p0(i64 1, ptr %P)
+  call void @llvm.lifetime.end.p0(ptr %P)
   store i8 2, ptr %P2
   call void @external(ptr %P)
   ret void
@@ -90,7 +90,7 @@ define void @test3(i8 %X) {
 define void @test3a(i8 %X) {
 ; CHECK-LABEL: @test3a(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr [[P]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   %P = alloca i64
@@ -98,7 +98,7 @@ define void @test3a(i8 %X) {
 
   %P2 = getelementptr i8, ptr %P, i32 2
   store i8 %Y, ptr %P2
-  call void @llvm.lifetime.end.p0(i64 10, ptr %P)
+  call void @llvm.lifetime.end.p0(ptr %P)
   ret void
 }
 

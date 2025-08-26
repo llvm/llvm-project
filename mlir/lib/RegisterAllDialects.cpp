@@ -95,12 +95,14 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/Transforms/SubsetOpInterfaceImpl.h"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
 #include "mlir/Target/LLVM/ROCDL/Target.h"
+#include "mlir/Target/LLVM/XeVM/Target.h"
 #include "mlir/Target/SPIRV/Target.h"
 
 /// Add all the MLIR dialects to the provided registry.
@@ -149,6 +151,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
                   transform::TransformDialect,
                   ub::UBDialect,
                   vector::VectorDialect,
+                  wasmssa::WasmSSADialect,
                   x86vector::X86VectorDialect,
                   xegpu::XeGPUDialect,
                   xevm::XeVMDialect>();
@@ -197,6 +200,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);
   ROCDL::registerROCDLTargetInterfaceExternalModels(registry);
   spirv::registerSPIRVTargetInterfaceExternalModels(registry);
+  xevm::registerXeVMTargetInterfaceExternalModels(registry);
 }
 
 /// Append all the MLIR dialects to the registry contained in the given context.

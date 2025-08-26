@@ -545,6 +545,15 @@ define void @masked_expand_compress_intrinsics(ptr %0, <7 x i1> %1, <7 x float> 
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @masked_expand_compress_intrinsics_with_alignment
+define void @masked_expand_compress_intrinsics_with_alignment(ptr %0, <7 x i1> %1, <7 x float> %2) {
+  ; CHECK: %[[val1:.+]] = "llvm.intr.masked.expandload"(%{{.*}}, %{{.*}}, %{{.*}}) <{arg_attrs = [{llvm.align = 8 : i64}, {}, {}]}> : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
+  %4 = call <7 x float> @llvm.masked.expandload.v7f32(ptr align 8 %0, <7 x i1> %1, <7 x float> %2)
+  ; CHECK: "llvm.intr.masked.compressstore"(%[[val1]], %{{.*}}, %{{.*}}) <{arg_attrs = [{}, {llvm.align = 8 : i64}, {}]}> : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
+  call void @llvm.masked.compressstore.v7f32(<7 x float> %4, ptr align 8 %0, <7 x i1> %1)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @annotate_intrinsics
 define void @annotate_intrinsics(ptr %var, ptr %ptr, i16 %int, ptr %annotation, ptr %fileName, i32 %line, ptr %args) {
   ; CHECK: "llvm.intr.var.annotation"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> ()
@@ -876,10 +885,10 @@ define void @stack_restore(ptr %0, ptr addrspace(1) %1) {
 ; CHECK-LABEL: llvm.func @lifetime
 define void @lifetime() {
   %a = alloca [16 x i8]
-  ; CHECK: llvm.intr.lifetime.start 16, %{{.*}} : !llvm.ptr
-  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
-  ; CHECK: llvm.intr.lifetime.end 32, %{{.*}} : !llvm.ptr
-  call void @llvm.lifetime.end.p0(i64 32, ptr %a)
+  ; CHECK: llvm.intr.lifetime.start %{{.*}} : !llvm.ptr
+  call void @llvm.lifetime.start.p0(ptr %a)
+  ; CHECK: llvm.intr.lifetime.end %{{.*}} : !llvm.ptr
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -1353,8 +1362,8 @@ declare <8 x i64> @llvm.vp.fptoui.v8i64.v8f64(<8 x double>, <8 x i1>, i32)
 declare <8 x i64> @llvm.vp.fptosi.v8i64.v8f64(<8 x double>, <8 x i1>, i32)
 declare <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0(<8 x ptr>, <8 x i1>, i32)
 declare <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64(<8 x i64>, <8 x i1>, i32)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
 declare ptr @llvm.launder.invariant.group.p0(ptr nocapture)
