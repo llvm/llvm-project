@@ -130,15 +130,10 @@ void MethodHidingCheck::check(const MatchFinder::MatchResult &Result) {
     llvm_unreachable("Required binding not found");
   }
 
-  auto const MethodName = ShadowingMethod->getNameInfo().getAsString();
-  auto const DerivedClassName = DerivedClass->getNameAsString();
-  const std::string BaseClassName = BaseMethod->getParent()->getNameAsString();
-
-  std::string Message;
-  llvm::raw_string_ostream StringStream(Message);
-  StringStream << "'" << ShadowingMethod->getQualifiedNameAsString()
-               << "' hides same method in '" << BaseClassName << "'";
-  diag(ShadowingMethod->getBeginLoc(), Message);
+  diag(ShadowingMethod->getBeginLoc(),
+       "'" + ShadowingMethod->getQualifiedNameAsString() +
+           "' hides same method in '" +
+           BaseMethod->getParent()->getNameAsString() + "'");
   diag(BaseMethod->getBeginLoc(), "previous definition is here",
        DiagnosticIDs::Note);
 }
