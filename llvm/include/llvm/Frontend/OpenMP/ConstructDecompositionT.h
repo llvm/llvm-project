@@ -209,8 +209,6 @@ private:
 
   bool applyClause(const tomp::clause::CollapseT<TypeTy, IdTy, ExprTy> &clause,
                    const ClauseTy *);
-  bool applyClause(const tomp::clause::SizesT<TypeTy, IdTy, ExprTy> &clause,
-                   const ClauseTy *);
   bool applyClause(const tomp::clause::PrivateT<TypeTy, IdTy, ExprTy> &clause,
                    const ClauseTy *);
   bool
@@ -472,24 +470,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::CollapseT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
   // Apply "collapse" to the innermost directive. If it's not one that
-  // allows it flag an error.
-  if (!leafs.empty()) {
-    auto &last = leafs.back();
-
-    if (llvm::omp::isAllowedClauseForDirective(last.id, node->id, version)) {
-      last.clauses.push_back(node);
-      return true;
-    }
-  }
-
-  return false;
-}
-// FIXME(JAN): Do the correct thing, but for now we'll do the same as collapse
-template <typename C, typename H>
-bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::SizesT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  // Apply "sizes" to the innermost directive. If it's not one that
   // allows it flag an error.
   if (!leafs.empty()) {
     auto &last = leafs.back();
