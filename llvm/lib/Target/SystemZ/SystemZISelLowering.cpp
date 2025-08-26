@@ -287,6 +287,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     // Additional instructions available with z17.
     if (Subtarget.hasVectorEnhancements3()) {
       setOperationAction(ISD::ABS, MVT::i128, Legal);
+
+      setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
+                         MVT::i128, Legal);
     }
   }
 
