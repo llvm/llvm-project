@@ -14,12 +14,20 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/CommandLine.h"
+
 #include <queue>
 
 namespace clang {
 namespace clangd {
 
 namespace {
+
+llvm::cl::opt<bool> DebugModulesBuilder(
+    "debug-modules-builder",
+    llvm::cl::desc("Don't remove clangd's built module files for debugging. "
+                   "Remember to remove them later after debugging."),
+    llvm::cl::init(false));
 
 // Create a path to store module files. Generally it should be:
 //
@@ -122,7 +130,7 @@ struct ModuleFile {
   }
 
   ~ModuleFile() {
-    if (!ModuleFilePath.empty())
+    if (!ModuleFilePath.empty() && !DebugModulesBuilder)
       llvm::sys::fs::remove(ModuleFilePath);
   }
 
