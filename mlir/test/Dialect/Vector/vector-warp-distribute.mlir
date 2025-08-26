@@ -1824,3 +1824,18 @@ func.func @warp_propagate_duplicated_operands_in_yield(%laneid: index)  {
 // CHECK-PROP       :   }
 // CHECK-PROP       :   %[T1:.*] = math.exp %[[W]] : vector<1xf32>
 // CHECK-PROP       :   "some_use"(%[[T1]]) : (vector<1xf32>) -> ()
+
+// -----
+
+func.func @warp_step_distribute(%laneid: index, %buffer: memref<128xindex>)  {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xindex>) {
+    %seq = vector.step : vector<32xindex>
+    gpu.yield %seq : vector<32xindex>
+  }
+  vector.transfer_write %r, %buffer[%laneid] : vector<1xindex>, memref<128xindex>
+  return
+}
+
+// CHECK-PROP-LABEL: func.func @warp_step_distribute
+//       CHECK-PROP:   %[[LANE_ID_VEC:.*]] = vector.broadcast %{{.*}} : index to vector<1xindex>
+//       CHECK-PROP:   vector.transfer_write %[[LANE_ID_VEC]], %{{.*}} : vector<1xindex>, memref<128xindex>
