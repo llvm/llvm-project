@@ -98,6 +98,24 @@ class PLUI_i<bits<7> funct7, string opcodestr>
   let Inst{23-15} = imm10{9-1};
 }
 
+// Common base for widening binary ops
+class RVPWideningBase<bits<2> w, bit arith_shift, string opcodestr>
+  : RVInst<(outs GPRPairRV32:$rd), (ins GPR:$rs1, GPR:$rs2), opcodestr,
+           "$rd, $rs1, $rs2", [], InstFormatOther> {
+  bits<5> rs2;
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31}    = 0b0;
+  let Inst{26-25} = w;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b010;
+  let Inst{11-8}  = rd{4-1};
+  let Inst{7}     = arith_shift;
+  let Inst{6-0}   = OPC_OP_32.Value;
+}
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPShift_ri<bits<3> f, bits<3> funct3, string opcodestr, Operand ImmType>
     : RVInstIBase<funct3, OPC_OP_IMM_32, (outs GPR:$rd),
@@ -140,9 +158,10 @@ class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr>
   let Inst{22-20} = shamt;
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPWideningShift_ri<bits<3> f, string opcodestr, Operand ImmType>
     : RVInst<(outs GPRPairRV32:$rd), (ins GPR:$rs1, ImmType:$shamt), opcodestr,
-                  "$rd, $rs1, $shamt"> {
+                  "$rd, $rs1, $shamt", [], InstFormatOther> {
   bits<5> rs1;
   bits<5> rd;
 
@@ -185,6 +204,13 @@ class RVPWideningShiftB_ri<bits<3> f, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPWideningShift_rr<bits<3> f, bits<2> w, string opcodestr>
+    : RVPWideningBase<w, 0b0, opcodestr> {
+  let Inst{30-28} = f;
+  let Inst{27} = 0b1;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr>
     : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins GPR:$rs1),
                   opcodestr, "$rd, $rs1">  {
@@ -210,6 +236,12 @@ class RVPBinary_rr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
   let Inst{31} = 0b1;
   let Inst{30-27} = f;
   let Inst{26-25} = w;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPWideningBinary_rr<bits<4> f, bits<2> w, string opcodestr>
+    : RVPWideningBase<w, 0b1, opcodestr> {
+  let Inst{30-27} = f;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -935,11 +967,92 @@ let Predicates = [HasStdExtP, IsRV32] in {
 }
 
 let Predicates = [HasStdExtP, IsRV32] in {
-  def PWSLLI_B : RVPWideningShiftB_ri<0b000, "pwslli.b">;
-  def PWSLLI_H : RVPWideningShiftH_ri<0b000, "pwslli.h">;
-  def WSLLI    : RVPWideningShiftW_ri<0b000, "wslli">;
+  def PWSLLI_B     : RVPWideningShiftB_ri<0b000, "pwslli.b">;
+  def PWSLLI_H     : RVPWideningShiftH_ri<0b000, "pwslli.h">;
+  def WSLLI        : RVPWideningShiftW_ri<0b000, "wslli">;
 
-  def PWSLAI_B : RVPWideningShiftB_ri<0b100, "pwslai.b">;
-  def PWSLAI_H : RVPWideningShiftH_ri<0b100, "pwslai.h">;
-  def WSLAI    : RVPWideningShiftW_ri<0b100, "wslai">;
+  def PWSLAI_B     : RVPWideningShiftB_ri<0b100, "pwslai.b">;
+  def PWSLAI_H     : RVPWideningShiftH_ri<0b100, "pwslai.h">;
+  def WSLAI        : RVPWideningShiftW_ri<0b100, "wslai">;
+
+  def PWSLL_BS     : RVPWideningShift_rr<0b000, 0b00, "pwsll.bs">;
+  def PWSLL_HS     : RVPWideningShift_rr<0b000, 0b01, "pwsll.hs">;
+  def WSLL         : RVPWideningShift_rr<0b000, 0b11, "wsll">;
+
+  def PWSLA_BS     : RVPWideningShift_rr<0b100, 0b00, "pwsla.bs">;
+  def PWSLA_HS     : RVPWideningShift_rr<0b100, 0b01, "pwsla.hs">;
+  def WSLA         : RVPWideningShift_rr<0b100, 0b11, "wsla">;
+
+  def WZIP8P       : RVPWideningShift_rr<0b111, 0b00, "wzip8p">;
+  def WZIP16P      : RVPWideningShift_rr<0b111, 0b01, "wzip16p">;
+
+  def PWADD_H      : RVPWideningBinary_rr<0b0000, 0b00, "pwadd.h">;
+  def WADD         : RVPWideningBinary_rr<0b0000, 0b01, "wadd">;
+  def PWADD_B      : RVPWideningBinary_rr<0b0000, 0b10, "pwadd.b">;
+  def PW2WADD_H    : RVPWideningBinary_rr<0b0000, 0b11, "pw2wadd.h">;
+
+  def PWADDA_H     : RVPWideningBinary_rr<0b0001, 0b00, "pwadda.h">;
+  def WADDA        : RVPWideningBinary_rr<0b0001, 0b01, "wadda">;
+  def PWADDA_B     : RVPWideningBinary_rr<0b0001, 0b10, "pwadda.b">;
+  def PW2WADDA_H   : RVPWideningBinary_rr<0b0001, 0b11, "pw2wadda.h">;
+
+  def PWADDU_H     : RVPWideningBinary_rr<0b0010, 0b00, "pwaddu.h">;
+  def WADDU        : RVPWideningBinary_rr<0b0010, 0b01, "waddu">;
+  def PWADDU_B     : RVPWideningBinary_rr<0b0010, 0b10, "pwaddu.b">;
+  def PW2WADD_HX   : RVPWideningBinary_rr<0b0010, 0b11, "pw2wadd.hx">;
+
+  def PWADDAU_H    : RVPWideningBinary_rr<0b0011, 0b00, "pwaddau.h">;
+  def WADDAU       : RVPWideningBinary_rr<0b0011, 0b01, "waddau">;
+  def PWADDAU_B    : RVPWideningBinary_rr<0b0011, 0b10, "pwaddau.b">;
+  def PW2WADDA_HX  : RVPWideningBinary_rr<0b0011, 0b11, "pw2wadda.hx">;
+
+  def PWMUL_H      : RVPWideningBinary_rr<0b0100, 0b00, "pwmul.h">;
+  def WMUL         : RVPWideningBinary_rr<0b0100, 0b01, "wmul">;
+  def PWMUL_B      : RVPWideningBinary_rr<0b0100, 0b10, "pwmul.b">;
+  def PW2WADDU_H   : RVPWideningBinary_rr<0b0100, 0b11, "pw2waddu.h">;
+
+  def PWMACC_H     : RVPWideningBinary_rr<0b0101, 0b00, "pwmacc.h">;
+  def WMACC        : RVPWideningBinary_rr<0b0101, 0b01, "wmacc">;
+  def PM2WADDAU_H  : RVPWideningBinary_rr<0b0101, 0b11, "pm2waddau.h">;
+
+  def PWMULU_H     : RVPWideningBinary_rr<0b0110, 0b00, "pwmulu.h">;
+  def WMULU        : RVPWideningBinary_rr<0b0110, 0b01, "wmulu">;
+  def PWMULU_B     : RVPWideningBinary_rr<0b0110, 0b10, "pwmulu.b">;
+
+  def PWMACCU_H    : RVPWideningBinary_rr<0b0111, 0b00, "pwmaccu.h">;
+  def WMACCU       : RVPWideningBinary_rr<0b0111, 0b01, "wmaccu">;
+
+  def PWSUB_H      : RVPWideningBinary_rr<0b1000, 0b00, "pwsub.h">;
+  def WSUB         : RVPWideningBinary_rr<0b1000, 0b01, "wsub">;
+  def PWSUB_B      : RVPWideningBinary_rr<0b1000, 0b10, "pwsub.b">;
+  def PW2WSUB_H    : RVPWideningBinary_rr<0b1000, 0b11, "pw2wsub.h">;
+
+  def PWSUBA_H     : RVPWideningBinary_rr<0b1001, 0b00, "pwsuba.h">;
+  def WSUBA        : RVPWideningBinary_rr<0b1001, 0b01, "wsuba">;
+  def PWSUBA_B     : RVPWideningBinary_rr<0b1001, 0b10, "pwsuba.b">;
+  def PW2WSUBA_H   : RVPWideningBinary_rr<0b1001, 0b11, "pw2wsuba.h">;
+
+  def PWSUBU_H     : RVPWideningBinary_rr<0b1010, 0b00, "pwsubu.h">;
+  def WSUBU        : RVPWideningBinary_rr<0b1010, 0b01, "wsubu">;
+  def PWSUBU_B     : RVPWideningBinary_rr<0b1010, 0b10, "pwsubu.b">;
+  def PW2WSUB_HX   : RVPWideningBinary_rr<0b1010, 0b11, "pw2wsub.hx">;
+
+  def PWSUBAU_H    : RVPWideningBinary_rr<0b1011, 0b00, "pwsubau.h">;
+  def WSUBAU       : RVPWideningBinary_rr<0b1011, 0b01, "wsubau">;
+  def PWSUBAU_B    : RVPWideningBinary_rr<0b1011, 0b10, "pwsubau.b">;
+  def PW2WSUBA_HX  : RVPWideningBinary_rr<0b1011, 0b11, "pw2wsuba.hx">;
+  
+  def PWMULSU_H    : RVPWideningBinary_rr<0b1100, 0b00, "pwmulsu.h">;
+  def WMULSU       : RVPWideningBinary_rr<0b1100, 0b01, "wmulsu">;
+  def PWMULSU_B    : RVPWideningBinary_rr<0b1100, 0b10, "pwmulsu.b">;
+  def PM2WADDSU_H  : RVPWideningBinary_rr<0b1100, 0b11, "pm2waddsu.h">;
+
+  def PWMACCSU_H   : RVPWideningBinary_rr<0b1101, 0b00, "pwmaccsu.h">;
+  def WMACCSU      : RVPWideningBinary_rr<0b1101, 0b01, "wmaccsu">;
+  def PM2WADDASU_H : RVPWideningBinary_rr<0b1101, 0b11, "pm2waddasu.h">;
+
+  def PMQWACC_H    : RVPWideningBinary_rr<0b1111, 0b00, "pmqwacc.h">;
+  def PMQWACC      : RVPWideningBinary_rr<0b1111, 0b01, "pmqwacc">;
+  def PMQRWACC_H   : RVPWideningBinary_rr<0b1111, 0b10, "pmqrwacc.h">;
+  def PMQRWACC     : RVPWideningBinary_rr<0b1111, 0b11, "pmqrwacc">;
 } // Predicates = [HasStdExtP, IsRV32]
