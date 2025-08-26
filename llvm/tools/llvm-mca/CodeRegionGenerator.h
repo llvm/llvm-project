@@ -52,7 +52,8 @@ public:
   }
 
   void AddLatencyAnnotation(unsigned Lat) {
-    if (!CurrentAnnotation) CurrentAnnotation = InstAnnotation();
+    if (!CurrentAnnotation)
+      CurrentAnnotation = InstAnnotation();
     CurrentAnnotation->Latency = Lat;
   }
 
@@ -91,7 +92,8 @@ class AnalysisRegionCommentConsumer : public MCACommentConsumer {
   MCStreamerWrapper &Streamer;
 
 public:
-  AnalysisRegionCommentConsumer(AnalysisRegions &R, MCStreamerWrapper &S) : Regions(R), Streamer(S) {}
+  AnalysisRegionCommentConsumer(AnalysisRegions &R, MCStreamerWrapper &S)
+      : Regions(R), Streamer(S) {}
 
   /// Parses a comment. It begins a new region if it is of the form
   /// LLVM-MCA-BEGIN. It ends a region if it is of the form LLVM-MCA-END.
