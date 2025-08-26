@@ -4879,8 +4879,11 @@ struct OpenMPSectionsConstruct {
   CharBlock source;
   // Each of the OpenMPConstructs in the list below contains an
   // OpenMPSectionConstruct. This is guaranteed by the parser.
+  // The end sections directive is optional here because it is difficult to
+  // generate helpful error messages for a missing end directive within the
+  // parser. Semantics will generate an error if this is absent.
   std::tuple<OmpBeginSectionsDirective, std::list<OpenMPConstruct>,
-      OmpEndSectionsDirective>
+      std::optional<OmpEndSectionsDirective>>
       t;
 };
 
@@ -4981,18 +4984,6 @@ struct OpenMPDeclarativeConstruct {
       OpenMPRequiresConstruct, OpenMPUtilityConstruct,
       OmpMetadirectiveDirective>
       u;
-};
-
-// 2.13.2 CRITICAL [Name] <block> END CRITICAL [Name]
-struct OmpCriticalDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpCriticalDirective);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
-};
-struct OmpEndCriticalDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpEndCriticalDirective);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>> t;
 };
 
 struct OpenMPCriticalConstruct : public OmpBlockConstruct {
