@@ -15398,6 +15398,17 @@ TEST_F(FormatTest, AllowShortRecordsOnASingleLine) {
                Style);
   verifyFormat("union foo\n{};", Style);
 
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
+
+  verifyFormat("class foo { void bar(); };", Style);
+  verifyFormat("class foo {};", Style);
+
+  verifyFormat("struct foo { int bar; };", Style);
+  verifyFormat("struct foo {};", Style);
+
+  verifyFormat("union foo { int bar; };", Style);
+  verifyFormat("union foo {};", Style);
+
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
 
   verifyFormat("class foo\n{\n"
@@ -15418,16 +15429,10 @@ TEST_F(FormatTest, AllowShortRecordsOnASingleLine) {
                Style);
   verifyFormat("union foo {};", Style);
 
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
-
-  verifyFormat("class foo { void bar(); };", Style);
-  verifyFormat("class foo {};", Style);
-
-  verifyFormat("struct foo { int bar; };", Style);
-  verifyFormat("struct foo {};", Style);
-
-  verifyFormat("union foo { int bar; };", Style);
-  verifyFormat("union foo {};", Style);
+  Style.BraceWrapping.SplitEmptyRecord = true;
+  verifyFormat("class foo\n{\n}", Style);
+  verifyFormat("struct foo\n{\n}", Style);
+  verifyFormat("union foo\n{\n}", Style);
 }
 
 TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
