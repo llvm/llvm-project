@@ -648,8 +648,7 @@ public:
   bool containsNonRelocatablePointerAuth(QualType T) {
     if (!isPointerAuthenticationAvailable())
       return false;
-    return findPointerAuthContent(T) ==
-           PointerAuthContent::AddressDiscriminatedData;
+    return findPointerAuthContent(T) != PointerAuthContent::None;
   }
 
 private:
