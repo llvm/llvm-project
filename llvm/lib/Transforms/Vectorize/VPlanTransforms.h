@@ -62,9 +62,40 @@ struct VPlanTransforms {
   /// The created loop is wrapped in an initial skeleton to facilitate
   /// vectorization, consisting of a vector pre-header, an exit block for the
   /// main vector loop (middle.block) and a new block as preheader of the scalar
-  /// loop (scalar.ph). It also adds a canonical IV and its increment, using \p
-  /// InductionTy and \p IVDL, and creates a VPValue expression for the original
-  /// trip count.
+  /// loop (scalar.ph). See below for an illustration. It also adds a canonical
+  /// IV and its increment, using \p InductionTy and \p IVDL, and creates a
+  /// VPValue expression for the original trip count.
+  ///
+  ///    [ ] <-- Plan's entry VPIRBasicBlock, wrapping the original loop's
+  ///    / \       old preheader. Will contain iteration number check and SCEV
+  ///   |   |      expansions.
+  ///   |   |
+  ///   /   v
+  ///  |   [ ] <-- vector loop bypass (may consist of multiple blocks) will be
+  ///  |  / |      added later.
+  ///  | /  v
+  ///  ||  [ ]     <-- vector pre header.
+  ///  |/   |
+  ///  |    v
+  ///  |   [  ] \  <-- plain CFG loop wrapping original loop to be vectorized.
+  ///  |   [  ]_|
+  ///  |    |
+  ///  |    v
+  ///  |   [ ]   <--- middle-block with the branch to successors
+  ///  |   / |
+  ///  |  /  |
+  ///  | |   v
+  ///  \--->[ ]   <--- scalar preheader (initial a VPBasicBlock, which will be
+  ///    |   |        replaced later by a VPIRBasicBlock wrapping the scalar
+  ///    |   |         preheader basic block.
+  ///    |   |
+  ///        v      <-- edge from middle to exit iff epilogue is not required.
+  ///    |  [ ] \
+  ///    |  [ ]_|   <-- old scalar loop to handle remainder (scalar epilogue,
+  ///    |   |          header wrapped in VPIRBasicBlock).
+  ///    \   |
+  ///     \  v
+  ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
               PredicatedScalarEvolution &PSE);
@@ -78,6 +109,13 @@ struct VPlanTransforms {
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan,
                                                bool RequiresScalarEpilogueCheck,
                                                bool TailFolded);
+
+  // Create a check to \p Plan to see if the vector loop should be executed.
+  static void addMinimumIterationCheck(
+      VPlan &Plan, ElementCount VF, unsigned UF,
+      ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
+      bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
+      const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
