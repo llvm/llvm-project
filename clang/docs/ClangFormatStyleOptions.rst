@@ -221,18 +221,22 @@ the configuration (without a prefix: ``Auto``).
       someLongFunction(argument1,
           argument2);
 
-  * ``BAS_AlwaysBreak`` (in configuration: ``AlwaysBreak``)
+  * ``BAS_ABDeprecated`` (in configuration: ``ABDeprecated``)
+    ``BAS_AlwaysBreak``
     This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
     ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+    For backward compatibility. Do not use.
 
-  * ``BAS_BlockIndent`` (in configuration: ``BlockIndent``)
+  * ``BAS_BIDeprecated`` (in configuration: ``BIDeprecated``)
+    ``BAS_BlockIndent``
     This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
     ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
     ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
     in combination with ``BreakBeforeCloseBracketBracedList``,
     ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
     ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
+    For backward compatibility. Do not use.
 
 
 
