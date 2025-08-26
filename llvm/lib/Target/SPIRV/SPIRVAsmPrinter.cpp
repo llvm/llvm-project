@@ -704,8 +704,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
       Inst.addOperand(MCOperand::createReg(TypeReg));
       unsigned Flags = FPFastMathDefaultInfo.FastMathFlags;
       if (FPFastMathDefaultInfo.ContractionOff &&
-          (Flags & SPIRV::FPFastMathMode::AllowContract) &&
-          FPFastMathDefaultInfo.FPFastMathDefault)
+          (Flags & SPIRV::FPFastMathMode::AllowContract))
         report_fatal_error(
             "Conflicting FPFastMathFlags: ContractionOff and AllowContract");
 
