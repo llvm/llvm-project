@@ -2253,21 +2253,30 @@ def trapexitinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>, Requires<[
 // brkpt instruction
 def debugtrapinst : BasicNVPTXInst<(outs), (ins), "brkpt", [(debugtrap)]>;
 
-def SDTDynAllocaOp :
-  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisVT<2, i32>]>;
+def SDTDynAllocaOp
+    : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisVT<2, i32>]>;
 
-def dyn_alloca :
-  SDNode<"NVPTXISD::DYNAMIC_STACKALLOC", SDTDynAllocaOp,
-         [SDNPHasChain, SDNPSideEffect]>;
+def getAllocaAlign : SDNodeXForm<imm, [{
+  if (N->getZExtValue() != 0)
+    return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), N->getValueType(0));
+  return CurDAG->getTargetConstant(CurDAG->getSubtarget().getFrameLowering()->getStackAlign().value(), SDLoc(N), N->getValueType(0));
+}]>;
 
-foreach t = [I32RT, I64RT] in {
-  def DYNAMIC_STACKALLOC # t.Size :
-    BasicNVPTXInst<(outs t.RC:$ptr),
-              (ins t.RC:$size, i32imm:$align),
-              "alloca.u" # t.Size,
-              [(set t.Ty:$ptr, (dyn_alloca t.Ty:$size, timm:$align))]>,
-              Requires<[hasPTX<73>, hasSM<52>]>;
+def dyn_alloca : SDNode<"ISD::DYNAMIC_STACKALLOC",
+                        SDTDynAllocaOp, [SDNPHasChain, SDNPSideEffect]>;
+
+let Predicates = [hasPTX<73>, hasSM<52>] in {
+  foreach t = [I32RT, I64RT] in {
+    def DYNAMIC_STACKALLOC_#t.Size
+        : BasicNVPTXInst<(outs t.RC:$ptr), (ins t.RC:$size, i32imm:$align),
+                         "alloca.u"#t.Size>;
+  }
 }
+
+def : Pat<(i32(dyn_alloca i32:$size, imm:$align)),
+          (DYNAMIC_STACKALLOC_32 $size, (getAllocaAlign imm:$align))>;
+def : Pat<(i64(dyn_alloca i64:$size, imm:$align)),
+          (DYNAMIC_STACKALLOC_64 $size, (getAllocaAlign imm:$align))>;
 
 //
 // BRX

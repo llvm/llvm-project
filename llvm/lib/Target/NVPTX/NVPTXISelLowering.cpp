@@ -1106,7 +1106,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::FMINNUM3)
     MAKE_CASE(NVPTXISD::FMAXIMUM3)
     MAKE_CASE(NVPTXISD::FMINIMUM3)
-    MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
     MAKE_CASE(NVPTXISD::STACKRESTORE)
     MAKE_CASE(NVPTXISD::STACKSAVE)
     MAKE_CASE(NVPTXISD::SETP_F16X2)
@@ -1771,10 +1770,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
 SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                      SelectionDAG &DAG) const {
-
   if (STI.getPTXVersion() < 73 || STI.getSmVersion() < 52) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
-
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         Fn,
         "Support for dynamic alloca introduced in PTX ISA version 7.3 and "
@@ -1785,25 +1782,7 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     return DAG.getMergeValues(Ops, SDLoc());
   }
 
-  SDLoc DL(Op.getNode());
-  SDValue Chain = Op.getOperand(0);
-  SDValue Size = Op.getOperand(1);
-  uint64_t Align = Op.getConstantOperandVal(2);
-
-  // The alignment on a ISD::DYNAMIC_STACKALLOC node may be 0 to indicate that
-  // the default stack alignment should be used.
-  if (Align == 0)
-    Align = DAG.getSubtarget().getFrameLowering()->getStackAlign().value();
-
-  // The size for ptx alloca instruction is 64-bit for m64 and 32-bit for m32.
-  const MVT LocalVT = getPointerTy(DAG.getDataLayout(), ADDRESS_SPACE_LOCAL);
-
-  SDValue Alloc =
-      DAG.getNode(NVPTXISD::DYNAMIC_STACKALLOC, DL, {LocalVT, MVT::Other},
-                  {Chain, DAG.getZExtOrTrunc(Size, DL, LocalVT),
-                   DAG.getTargetConstant(Align, DL, MVT::i32)});
-
-  return Alloc;
+  return Op;
 }
 
 SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
