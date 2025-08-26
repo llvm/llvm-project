@@ -10447,6 +10447,12 @@ TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier Qualifier,
   assert(Template.getKind() == TemplateName::Template ||
          Template.getKind() == TemplateName::UsingTemplate);
 
+  if (Template.getAsTemplateDecl()->getKind() == Decl::TemplateTemplateParm) {
+    assert(!Qualifier && "unexpected qualified template template parameter");
+    assert(TemplateKeyword == false);
+    return Template;
+  }
+
   // FIXME: Canonicalization?
   llvm::FoldingSetNodeID ID;
   QualifiedTemplateName::Profile(ID, Qualifier, TemplateKeyword, Template);
