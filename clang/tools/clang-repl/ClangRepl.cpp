@@ -128,10 +128,6 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0,
   // Out-of-process executors require the ORC runtime.
   if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
                                  OOPExecutorConnect.getNumOccurrences())) {
-    if(!llvm::sys::fs::exists(_OrcRuntimePath))
-      return llvm::make_error<llvm::StringError>(
-          "The ORC runtime is required for out-of-process execution",
-          llvm::inconvertibleErrorCode());
     OrcRuntimePath = _OrcRuntimePath;
   }
 
@@ -284,6 +280,9 @@ int main(int argc, const char **argv) {
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
 
+  bool IsOutOfProcess = !!OOPExecutor.getNumOccurrences() ||
+                        !!OOPExecutorConnect.getNumOccurrences();
+
   std::string _OrcRuntimePath;
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
@@ -292,7 +291,7 @@ int main(int argc, const char **argv) {
   if (CudaEnabled) {
     CI = ExitOnErr(CB.CreateCudaHost());
   } else {
-    CI = ExitOnErr(CB.CreateCpp(&_OrcRuntimePath));
+    CI = ExitOnErr(CB.CreateCpp(&_OrcRuntimePath, IsOutOfProcess));
   }
 
   ExitOnErr(sanitizeOopArguments(argv[0], _OrcRuntimePath));

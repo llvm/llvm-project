@@ -150,7 +150,8 @@ namespace clang {
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::create(std::string TT,
                                    std::vector<const char *> &ClangArgv,
-                                   std::string *OrcRuntimePath) {
+                                   std::string *OrcRuntimePath,
+                                   bool IsOutOfProcess) {
 
   // If we don't know ClangArgv0 or the address of main() at this point, try
   // to guess it anyway (it's possible on some platforms).
@@ -191,23 +192,36 @@ IncrementalCompilerBuilder::create(std::string TT,
   if (auto Err = ErrOrCC1Args.takeError())
     return std::move(Err);
 
-  const driver::ToolChain &TC = Compilation->getDefaultToolChain();
-  std::optional<std::string> Path = TC.getCompilerRTPath();
-  if (Path && OrcRuntimePath) {
-    *OrcRuntimePath = *Path;
-    if(llvm::sys::fs::exists(*OrcRuntimePath + "/liborc_rt.a"))
-      *OrcRuntimePath = *OrcRuntimePath + "/liborc_rt.a";
-    else if (llvm::sys::fs::exists(*OrcRuntimePath + "/liborc_rt_osx.a"))
-      *OrcRuntimePath = *OrcRuntimePath + "/liborc_rt_osx.a";
-    else if (llvm::sys::fs::exists(*OrcRuntimePath + "/liborc_rt-x86_64.a"))
-      *OrcRuntimePath = *OrcRuntimePath + "/liborc_rt-x86_64.a";
+  if (IsOutOfProcess) {
+    const driver::ToolChain &TC = Compilation->getDefaultToolChain();
+    std::optional<std::string> Path = TC.getCompilerRTPath();
+    if (!Path) {
+      return llvm::createStringError(llvm::errc::not_supported,
+                                     "The compiler-rt library path is not set "
+                                     "in the default toolchain");
+    }
+    if (OrcRuntimePath) {
+      *OrcRuntimePath = *Path;
+      if (llvm::sys::fs::exists(*OrcRuntimePath + "/liborc_rt.a"))
+        *OrcRuntimePath = *OrcRuntimePath + "/liborc_rt.a";
+      else if (llvm::sys::fs::exists(*OrcRuntimePath + "/liborc_rt_osx.a"))
+        *OrcRuntimePath = *OrcRuntimePath + "/liborc_rt_osx.a";
+      else if (llvm::sys::fs::exists(*OrcRuntimePath + "/liborc_rt-x86_64.a"))
+        *OrcRuntimePath = *OrcRuntimePath + "/liborc_rt-x86_64.a";
+      else {
+        return llvm::createStringError(
+            llvm::errc::not_supported,
+            "The ORC runtime is required for out-of-process execution");
+      }
+    }
   }
 
   return CreateCI(**ErrOrCC1Args);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCpp(std::string *OrcRuntimePath) {
+IncrementalCompilerBuilder::CreateCpp(std::string *OrcRuntimePath,
+                                      bool IsOutOfProcess) {
   std::vector<const char *> Argv;
   Argv.reserve(5 + 1 + UserArgs.size());
   Argv.push_back("-xc++");
@@ -219,7 +233,8 @@ IncrementalCompilerBuilder::CreateCpp(std::string *OrcRuntimePath) {
   llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
-  return IncrementalCompilerBuilder::create(TT, Argv, OrcRuntimePath);
+  return IncrementalCompilerBuilder::create(TT, Argv, OrcRuntimePath,
+                                            IsOutOfProcess);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
