@@ -26023,6 +26023,7 @@ TEST_F(FormatTest, SkipMacroDefinitionBody) {
                  " A  a",
                  Style);
   verifyNoChange("#define MY_MACRO  \\\n"
+                 " /*foo*//*bar*/  \\\n"
                  " /* comment */  \\\n"
                  "   1",
                  Style);
