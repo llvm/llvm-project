@@ -106,11 +106,11 @@ define <3 x i4> @partial_undef_vec() {
 ; Move the freeze forward to prevent poison from spreading.
 
 define i32 @early_freeze_test1(i32 %x, i32 %y) {
-; CHECK-LABEL: define i32 @early_freeze_test1(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = add i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
-; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[V1_FR]], 1
+; CHECK-LABEL: @early_freeze_test1(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = add i32 [[X_FR]], [[Y_FR]]
+; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[V1]], 1
 ; CHECK-NEXT:    [[V3:%.*]] = and i32 [[V2]], 2
 ; CHECK-NEXT:    ret i32 [[V3]]
 ;
@@ -153,9 +153,8 @@ define i32 @early_freeze_test3(i32 %v1) {
 }
 
 define i32 @early_freeze_test4(i32 %v1) {
-; CHECK-LABEL: define i32 @early_freeze_test4(
-; CHECK-SAME: i32 [[V1:%.*]]) {
-; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
+; CHECK-LABEL: @early_freeze_test4(
+; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1:%.*]]
 ; CHECK-NEXT:    [[V2:%.*]] = mul i32 [[V1_FR]], [[V1_FR]]
 ; CHECK-NEXT:    ret i32 [[V2]]
 ;
@@ -938,21 +937,20 @@ exit:                                             ; preds = %loop
 }
 
 ; The recurrence for the GEP offset can't produce poison so the freeze should
-; be pushed through to the ptr, but this is not currently supported.
+; be pushed through to the ptr.
 define void @fold_phi_gep_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
-; CHECK-LABEL: define void @fold_phi_gep_phi_offset(
-; CHECK-SAME: ptr [[INIT:%.*]], ptr [[END:%.*]], i64 noundef [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[I_NEXT_FR:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-LABEL: @fold_phi_gep_phi_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
-; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -971,22 +969,21 @@ exit:                                             ; preds = %loop
   ret void
 }
 
-; Offset is still guaranteed not to be poison, so the freeze could be moved
-; here if we strip inbounds from the GEP, but this is not currently supported.
+; Offset is still guaranteed not to be poison, so the freeze can be moved
+; here if we strip inbounds from the GEP.
 define void @fold_phi_gep_inbounds_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
-; CHECK-LABEL: define void @fold_phi_gep_inbounds_phi_offset(
-; CHECK-SAME: ptr [[INIT:%.*]], ptr [[END:%.*]], i64 noundef [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[I_NEXT_FR:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-LABEL: @fold_phi_gep_inbounds_phi_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 [[OFF_NEXT]]
-; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1005,21 +1002,21 @@ exit:                                             ; preds = %loop
   ret void
 }
 
-; GEP can produce poison, check freeze isn't moved.
-define void @cant_fold_phi_gep_phi_offset(ptr %init, ptr %end, i64 %n) {
-; CHECK-LABEL: define void @cant_fold_phi_gep_phi_offset(
-; CHECK-SAME: ptr [[INIT:%.*]], ptr [[END:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[I_NEXT_FR:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
+; Same as previous, but also requires freezing %n.
+define void @fold_phi_gep_phi_offset_multiple(ptr %init, ptr %end, i64 %n) {
+; CHECK-LABEL: @fold_phi_gep_phi_offset_multiple(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[N:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[TMP1]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 [[OFF_NEXT]]
-; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
