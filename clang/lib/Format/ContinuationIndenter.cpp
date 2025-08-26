@@ -928,7 +928,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // Note: This doesn't apply to macro expansion lines, which are MACRO( , , )
   // with args as children of the '(' and ',' tokens. It does not make sense to
   // align the commas with the opening paren.
-  if (Style.AlignAfterOpenBracket != false &&
+  if (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign &&
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
       Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
       Previous.isNot(TT_TableGenDAGArgOpener) &&
@@ -1862,7 +1862,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
          PrecedenceLevel < prec::Assignment) &&
         (!Previous || Previous->isNot(tok::kw_return) ||
          (!Style.isJava() && PrecedenceLevel > 0)) &&
-        (Style.AlignAfterOpenBracket != false ||
+        (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
          PrecedenceLevel > prec::Comma || Current.NestingLevel == 0) &&
         (!Style.isTableGen() ||
          (Previous && Previous->isOneOf(TT_TableGenDAGArgListComma,
@@ -1904,7 +1904,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
       NewParenState.LastSpace = std::max(NewParenState.LastSpace, State.Column);
     if (PrecedenceLevel != prec::Conditional &&
         Current.isNot(TT_UnaryOperator) &&
-        Style.AlignAfterOpenBracket != false) {
+        Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign) {
       NewParenState.StartOfFunctionCall = State.Column;
     }
 

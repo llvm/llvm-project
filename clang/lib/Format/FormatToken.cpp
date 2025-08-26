@@ -181,7 +181,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
     return;
 
   // Column format doesn't really make sense if we don't align after brackets.
-  if (Style.AlignAfterOpenBracket == false)
+  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign)
     return;
 
   FormatToken *ItemBegin = Token->Next;
