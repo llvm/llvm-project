@@ -246,6 +246,25 @@ static void dtorRecord(Block *B, std::byte *Ptr, const Descriptor *D) {
     destroyBase(B, Ptr, F.Desc, F.Offset);
 }
 
+/// Whether a record needs its descriptor dtor function called.
+static bool needsRecordDtor(const Record *R) {
+  for (const auto &B : R->bases()) {
+    if (B.Desc->DtorFn)
+      return true;
+  }
+
+  for (const auto &F : R->fields()) {
+    if (F.Desc->DtorFn)
+      return true;
+  }
+
+  for (const auto &V : R->virtual_bases()) {
+    if (V.Desc->DtorFn)
+      return true;
+  }
+  return false;
+}
+
 static BlockCtorFn getCtorPrim(PrimType Type) {
   // Floating types are special. They are primitives, but need their
   // constructor called.
@@ -336,7 +355,7 @@ Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy,
       AllocSize(std::max<size_t>(alignof(void *), Size) + MDSize),
       ElemDesc(Elem), IsConst(IsConst), IsMutable(IsMutable),
       IsTemporary(IsTemporary), IsArray(true), CtorFn(ctorArrayDesc),
-      DtorFn(dtorArrayDesc) {
+      DtorFn(Elem->DtorFn ? dtorArrayDesc : nullptr) {
   assert(Source && "Missing source");
 }
 
@@ -347,7 +366,7 @@ Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
       Size(UnknownSizeMark), MDSize(MD.value_or(0)),
       AllocSize(MDSize + alignof(void *)), ElemDesc(Elem), IsConst(true),
       IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
-      CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc) {
+      CtorFn(ctorArrayDesc), DtorFn(Elem->DtorFn ? dtorArrayDesc : nullptr) {
   assert(Source && "Missing source");
 }
 
@@ -359,7 +378,7 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
       Size(ElemSize), MDSize(MD.value_or(0)), AllocSize(Size + MDSize),
       ElemRecord(R), IsConst(IsConst), IsMutable(IsMutable),
       IsTemporary(IsTemporary), IsVolatile(IsVolatile), CtorFn(ctorRecord),
-      DtorFn(dtorRecord) {
+      DtorFn(needsRecordDtor(R) ? dtorRecord : nullptr) {
   assert(Source && "Missing source");
 }
 
