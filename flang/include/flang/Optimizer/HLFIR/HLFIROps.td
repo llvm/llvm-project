@@ -47,6 +47,10 @@ def hlfir_DeclareOp
     include bounds, length parameters, and Fortran attributes.
 
     The arguments are the same as for fir.declare.
+    The storage and storage_offset operands are optional and are required
+    for FortranVariableStorageOpInterface, where they are documented.
+    If these operands are absent, then the storage of the declared variable
+    is only known to start where the memref operand points to.
 
     The main difference with fir.declare is that hlfir.declare returns two
     values:

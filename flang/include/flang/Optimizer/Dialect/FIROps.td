@@ -3207,6 +3207,8 @@ def fir_DeclareOp
 
     The storage and storage_offset operands are optional and are required
     for FortranVariableStorageOpInterface, where they are documented.
+    If these operands are absent, then the storage of the declared variable
+    is only known to start where the memref operand points to.
 
     Example:
 

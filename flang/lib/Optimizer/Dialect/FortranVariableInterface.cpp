@@ -76,7 +76,8 @@ fir::detail::verifyFortranVariableStorageOpInterface(mlir::Operation *op) {
   std::uint64_t storageOffset = storageIface.getStorageOffset();
   if (!storage) {
     if (storageOffset != 0)
-      op->emitOpError("storage offset specified without the storage reference");
+      return op->emitOpError(
+          "storage offset specified without the storage reference");
     return mlir::success();
   }
 

@@ -228,6 +228,12 @@ def fir_FortranVariableStorageOpInterface
     at different offsets. The storage offset for a variable must not
     exceed the storage size. Note that the zero-sized variables
     may start at the offset that is after the final byte of the storage.
+    When getStorage() returns nullptr, getStorageOffset() must return 0.
+    This means that nothing is known about the physical storage
+    of the variable (beyond the information maybe provided
+    by the concrete operation itself, e.g. fir.declare defines
+    the physical storage of a variable via memref operand,
+    where the variable starts).
   }];
 
   let methods =
