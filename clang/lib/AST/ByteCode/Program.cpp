@@ -101,7 +101,7 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
       }
     }
   }
-  Ptr.initialize();
+  Ptr.initializeAllElements();
 
   return GlobalIndex;
 }
