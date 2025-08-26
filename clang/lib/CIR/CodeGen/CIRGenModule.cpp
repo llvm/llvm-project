@@ -103,9 +103,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   PtrDiffTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
 
-  theModule->setAttr(
-      cir::CIRDialect::getSourceLanguageAttrName(),
-      cir::SourceLanguageAttr::get(&mlirContext, getCIRSourceLanguage()));
+  std::optional<cir::SourceLanguage> sourceLanguage = getCIRSourceLanguage();
+  if (sourceLanguage)
+    theModule->setAttr(
+        cir::CIRDialect::getSourceLanguageAttrName(),
+        cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
 
@@ -513,7 +515,7 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   assert(!cir::MissingFeatures::setTargetAttributes());
 }
 
-cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() const {
+std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
   using ClangStd = clang::LangStandard;
   using CIRLang = cir::SourceLanguage;
   auto opts = getLangOpts();
@@ -528,6 +530,7 @@ cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() const {
   // TODO(cir): support remaining source languages.
   assert(!cir::MissingFeatures::sourceLanguageCases());
   errorNYI("CIR does not yet support the given source language");
+  return std::nullopt;
 }
 
 static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
@@ -845,7 +848,7 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
         emitGlobalFunctionDefinition(gd, op);
 
       if (method->isVirtual())
-        errorNYI(method->getSourceRange(), "virtual member function");
+        getVTables().emitThunks(gd);
 
       return;
     }
@@ -1074,8 +1077,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &astContext,
     if (astContext.isAlignmentRequired(varType))
       return true;
 
-    if (const auto *rt = varType->getAs<RecordType>()) {
-      const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
+    if (const auto *rd = varType->getAsRecordDecl()) {
       for (const FieldDecl *fd : rd->fields()) {
         if (fd->isBitField())
           continue;
@@ -2149,6 +2151,18 @@ bool CIRGenModule::verifyModule() const {
   // check the structural properties of the IR and invoke any specific
   // verifiers we have on the CIR operations.
   return mlir::verify(theModule).succeeded();
+}
+
+mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
+                                                      QualType ty, bool forEh) {
+  // Return a bogus pointer if RTTI is disabled, unless it's for EH.
+  // FIXME: should we even be calling this method if RTTI is disabled
+  // and it's not for EH?
+  if (!shouldEmitRTTI(forEh))
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+
+  errorNYI(loc, "getAddrOfRTTIDescriptor");
+  return mlir::Attribute();
 }
 
 // TODO(cir): this can be shared with LLVM codegen.

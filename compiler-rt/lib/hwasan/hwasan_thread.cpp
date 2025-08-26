@@ -174,7 +174,7 @@ uptr Thread::stack_size() {
 
 void Thread::Print(const char *Prefix) {
   Printf("%sT%zd %p stack: [%p,%p) sz: %zd tls: [%p,%p)\n", Prefix,
-         (ssize_t)unique_id_, (void *)this, (void *)stack_bottom(),
+         (ssize)unique_id_, (void *)this, (void *)stack_bottom(),
          (void *)stack_top(), stack_top() - stack_bottom(), (void *)tls_begin(),
          (void *)tls_end());
 }
