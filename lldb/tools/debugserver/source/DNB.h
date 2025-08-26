@@ -52,15 +52,15 @@ nub_process_t DNBProcessLaunch(
 
 nub_process_t DNBProcessGetPIDByName(const char *name);
 nub_process_t DNBProcessAttach(nub_process_t pid, struct timespec *timeout,
-                               const RNBContext::IgnoredExceptions 
-                                   &ignored_exceptions, 
-                               char *err_str,
-                               size_t err_len);
+                 const RNBContext::IgnoredExceptions 
+&ignored_exceptions,
+                 char *err_str,
+size_t err_len);
 nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
-                                     const RNBContext::IgnoredExceptions 
-                                         &ignored_exceptions, 
-                                     char *err_str,
-                                     size_t err_len);
+                       const RNBContext::IgnoredExceptions 
+&ignored_exceptions,
+                       char *err_str,
+size_t err_len);
 nub_process_t DNBProcessAttachWait(RNBContext *ctx, const char *wait_name,
                                    bool ignore_existing,
                                    struct timespec *timeout,
@@ -137,9 +137,10 @@ DNBProcessGetSharedLibraryInfo(nub_process_t pid, nub_bool_t only_changed,
                                DNBExecutableImageInfo **image_infos) DNB_EXPORT;
 std::optional<std::string>
 DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
-                     const struct load_command &lc,
+                     uint32_t dyld_platform, const struct load_command &lc,
                      uint64_t load_command_address, uint32_t &major_version,
                      uint32_t &minor_version, uint32_t &patch_version);
+uint32_t DNBGetPlatform(nub_process_t pid);
 nub_bool_t DNBProcessSetNameToAddressCallback(nub_process_t pid,
                                               DNBCallbackNameToAddress callback,
                                               void *baton) DNB_EXPORT;
