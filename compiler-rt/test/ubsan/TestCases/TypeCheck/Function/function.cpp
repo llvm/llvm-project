@@ -1,3 +1,4 @@
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx -std=c++17 -fsanitize=function %s -O3 -g -DSHARED_LIB -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx -std=c++17 -fsanitize=function %s -O3 -g -o %t %ld_flags_rpath_exe
 // RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK
