@@ -81,10 +81,6 @@ bool operator==(const Request &a, const Request &b) {
   return a.id == b.id && a.method == b.method && a.params == b.params;
 }
 
-void PrintTo(const Request &req, std::ostream *os) {
-  *os << formatv("{0}", toJSON(req)).str();
-}
-
 llvm::json::Value toJSON(const Error &E) {
   llvm::json::Object Result{{"code", E.code}, {"message", E.message}};
   if (E.data)
@@ -148,10 +144,6 @@ bool operator==(const Response &a, const Response &b) {
   return a.id == b.id && a.result == b.result;
 }
 
-void PrintTo(const Response &resp, std::ostream *os) {
-  *os << formatv("{0}", toJSON(resp)).str();
-}
-
 llvm::json::Value toJSON(const Notification &N) {
   llvm::json::Object Result{{"jsonrpc", "2.0"}, {"method", N.method}};
   if (N.params)
@@ -173,15 +165,6 @@ bool fromJSON(const llvm::json::Value &V, Notification &N, llvm::json::Path P) {
 
 bool operator==(const Notification &a, const Notification &b) {
   return a.method == b.method && a.params == b.params;
-}
-
-void PrintTo(const Notification &note, std::ostream *os) {
-  *os << formatv("{0}", toJSON(note)).str();
-}
-
-void PrintTo(const Message &message, std::ostream *os) {
-  return std::visit([os](auto &&message) { return PrintTo(message, os); },
-                    message);
 }
 
 bool fromJSON(const llvm::json::Value &V, Resource &R, llvm::json::Path P) {

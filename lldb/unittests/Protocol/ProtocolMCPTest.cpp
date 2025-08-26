@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ProtocolMCPTestUtilities.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Testing/Support/Error.h"

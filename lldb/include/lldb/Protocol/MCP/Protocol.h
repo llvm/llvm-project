@@ -45,7 +45,6 @@ struct Request {
 llvm::json::Value toJSON(const Request &);
 bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
 bool operator==(const Request &, const Request &);
-void PrintTo(const Request &req, std::ostream *os);
 
 enum ErrorCode : signed {
   /// Invalid JSON was received by the server. An error occurred on the server
@@ -92,7 +91,6 @@ struct Response {
 llvm::json::Value toJSON(const Response &);
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 bool operator==(const Response &, const Response &);
-void PrintTo(const Response &resp, std::ostream *os);
 
 /// A notification which does not expect a response.
 /// See
@@ -106,7 +104,6 @@ struct Notification {
 llvm::json::Value toJSON(const Notification &);
 bool fromJSON(const llvm::json::Value &, Notification &, llvm::json::Path);
 bool operator==(const Notification &, const Notification &);
-void PrintTo(const Notification &note, std::ostream *os);
 
 /// A general message as defined by the JSON-RPC 2.0 spec.
 using Message = std::variant<Request, Response, Notification>;
@@ -116,7 +113,6 @@ static_assert(std::is_convertible_v<Message, Message>,
               "Message is not convertible to itself");
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
-void PrintTo(const Message &message, std::ostream *os);
 
 /// A known resource that the server is capable of reading.
 ///
