@@ -155,13 +155,13 @@ func1:
 # BTIPACEX2: Disassembly of section .plt:
 # BTIPACEX2: 0000000000210380 <.plt>:
 # BTIPACEX2-NEXT:   210380:              bti     c
+# BTIPACEX2-NEXT:                        pacibsp
 # BTIPACEX2-NEXT:                        stp     x16, x30, [sp, #-16]!
 # BTIPACEX2-NEXT:                        adrp    x16, 0x230000
 # BTIPACEX2-NEXT:                        ldr     x17, [x16, #1208]
 # BTIPACEX2-NEXT:                        add     x16, x16, #1208
+# BTIPACEX2-NEXT:                        autia1716
 # BTIPACEX2-NEXT:                        br      x17
-# BTIPACEX2-NEXT:                        nop
-# BTIPACEX2-NEXT:                        nop
 # BTIPACEX2: 00000000002103a0 <func2@plt>:
 # BTIPACEX2-NEXT:   2103a0:              adrp    x16, 0x230000
 # BTIPACEX2-NEXT:                        ldr     x17, [x16, #1216]
