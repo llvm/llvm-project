@@ -617,8 +617,7 @@ Error DebuginfodServer::init(DebuginfodLog &Log,
 Expected<DebuginfodServer>
 DebuginfodServer::create(DebuginfodLog &Log, DebuginfodCollection &Collection) {
   DebuginfodServer Serverd;
-  if (llvm::Error Err = Serverd.init(Log, Collection))
-    std::move(Err);
+  if (llvm::Error Err = Serverd.init(Log, Collection))return std::move(Err);
   return std::move(Serverd);
 }
 
