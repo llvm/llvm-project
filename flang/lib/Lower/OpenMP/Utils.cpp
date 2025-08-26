@@ -24,7 +24,7 @@
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
-#include <flang/Support/OpenMP-utils.h>
+#include <flang/Utils/OpenMP.h>
 #include <llvm/Support/CommandLine.h>
 
 #include <iterator>
@@ -372,7 +372,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
-        mlir::omp::MapInfoOp mapOp = common::openmp::createMapInfoOp(
+        mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
             firOpBuilder, clauseLocation, curValue,
             /*varPtrPtr=*/mlir::Value{}, asFortran,
             /*bounds=*/interimBounds,
@@ -532,7 +532,7 @@ void insertChildMapInfoIntoParent(
               converter.getCurrentLocation(), asFortran, bounds,
               treatIndexAsSection);
 
-      mlir::omp::MapInfoOp mapOp = common::openmp::createMapInfoOp(
+      mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
           firOpBuilder, info.rawInput.getLoc(), info.rawInput,
           /*varPtrPtr=*/mlir::Value(), asFortran.str(), bounds, members,
           firOpBuilder.create2DI64ArrayAttr(

@@ -11,7 +11,6 @@
 
 #include "flang/Semantics/symbol.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Value.h"
 
@@ -73,20 +72,6 @@ struct EntryBlockArgs {
 /// \param [in]  region - Empty region in which to create the entry block.
 mlir::Block *genEntryBlock(
     mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
-
-/// Create an `omp.map.info` op. Parameters other than the ones documented below
-/// correspond to operation arguments in the OpenMPOps.td file, see op docs for
-/// more details.
-///
-/// \param [in] builder - MLIR operation builder.
-/// \param [in] loc     - Source location of the created op.
-mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
-    mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
-    llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
-    llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
-    uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
-    mlir::Type retTy, bool partialMap = false,
-    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
 } // namespace Fortran::common::openmp
 
 #endif // FORTRAN_SUPPORT_OPENMP_UTILS_H_
