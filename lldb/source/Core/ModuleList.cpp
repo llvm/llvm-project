@@ -1110,8 +1110,6 @@ public:
   }
 
   bool RemoveIfOrphaned(const Module *module_ptr) {
-    if (!module_ptr)
-      return false;
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
     RemoveFromMap(*module_ptr, /*if_orphaned=*/true);
     return m_list.RemoveIfOrphaned(module_ptr);
@@ -1248,7 +1246,7 @@ private:
 };
 
 struct SharedModuleListInfo {
-  SharedModuleList module_list;
+  ModuleList module_list;
   ModuleListProperties module_list_properties;
 };
 }
@@ -1266,7 +1264,7 @@ static SharedModuleListInfo &GetSharedModuleListInfo()
   return *g_shared_module_list_info;
 }
 
-static SharedModuleList &GetSharedModuleList() {
+static ModuleList &GetSharedModuleList() {
   return GetSharedModuleListInfo().module_list;
 }
 
@@ -1276,8 +1274,8 @@ ModuleListProperties &ModuleList::GetGlobalModuleListProperties() {
 
 bool ModuleList::ModuleIsInCache(const Module *module_ptr) {
   if (module_ptr) {
-    SharedModuleList &shared_module_list = GetSharedModuleList();
-    return shared_module_list.FindModule(*module_ptr).get() != nullptr;
+    ModuleList &shared_module_list = GetSharedModuleList();
+    return shared_module_list.FindModule(module_ptr).get() != nullptr;
   }
   return false;
 }
@@ -1300,8 +1298,9 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
                             const FileSpecList *module_search_paths_ptr,
                             llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                             bool *did_create_ptr, bool always_create) {
-  SharedModuleList &shared_module_list = GetSharedModuleList();
-  std::lock_guard<std::recursive_mutex> guard(shared_module_list.GetMutex());
+  ModuleList &shared_module_list = GetSharedModuleList();
+  std::lock_guard<std::recursive_mutex> guard(
+      shared_module_list.m_modules_mutex);
   char path[PATH_MAX];
 
   Status error;
