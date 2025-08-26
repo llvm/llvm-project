@@ -39,8 +39,11 @@ class EnumCase<string sym, int intVal, string strVal, int widthVal> {
 class IntEnumAttrCaseBase<I intType, string sym, string strVal, int intVal> :
     EnumCase<sym, intVal, strVal, intType.bitwidth>,
     SignlessIntegerAttrBase<intType, "case " # strVal> {
-  let predicate =
-    CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == " # intVal>;
+  let predicate = CPred<[{
+    ::llvm::cast<::mlir::IntegerAttr>($_self).getValue().eq(::llvm::APInt(}]
+      # intType.bitwidth # ", "
+      # intVal # 
+    "))">;
 }
 
 // Cases of integer enums with a specific type. By default, the string

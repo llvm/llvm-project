@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchFixupKinds.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -97,6 +97,18 @@ public:
 };
 } // end namespace
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  switch (Kind) {
+  case LoongArch::fixup_loongarch_b16:
+  case LoongArch::fixup_loongarch_b21:
+  case LoongArch::fixup_loongarch_b26:
+    PCRel = true;
+  }
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 unsigned
 LoongArchMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                                           SmallVectorImpl<MCFixup> &Fixups,
@@ -130,7 +142,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
   unsigned FixupKind = LoongArch::fixup_loongarch_invalid;
-  if (Kind == MCExpr::Target) {
+  if (Kind == MCExpr::Specifier) {
     const LoongArchMCExpr *LAExpr = cast<LoongArchMCExpr>(Expr);
     FixupKind = LAExpr->getSpecifier();
     RelaxCandidate = LAExpr->getRelaxHint();
@@ -167,9 +179,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
       RelaxCandidate = true;
       break;
     }
-  } else if (Kind == MCExpr::SymbolRef &&
-             cast<MCSymbolRefExpr>(Expr)->getKind() ==
-                 MCSymbolRefExpr::VK_None) {
+  } else if (Kind == MCExpr::SymbolRef) {
     switch (MI.getOpcode()) {
     default:
       break;
@@ -197,13 +207,12 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   assert(FixupKind != LoongArch::fixup_loongarch_invalid &&
          "Unhandled expression!");
 
-  Fixups.push_back(
-      MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
+  addFixup(Fixups, 0, Expr, FixupKind);
   // If linker relaxation is enabled and supported by this relocation, set
   // a bit so that if fixup is unresolved, a R_LARCH_RELAX relocation will be
   // appended.
   if (EnableRelax && RelaxCandidate)
-    Fixups.back().setNeedsRelax();
+    Fixups.back().setLinkerRelaxable();
 
   return 0;
 }
@@ -251,10 +260,9 @@ void LoongArchMCCodeEmitter::expandAddTPRel(const MCInst &MI,
          "Expected %le_add_r relocation on TP-relative symbol");
 
   // Emit the correct %le_add_r relocation for the symbol.
-  Fixups.push_back(
-      MCFixup::create(0, Expr, ELF::R_LARCH_TLS_LE_ADD_R, MI.getLoc()));
+  addFixup(Fixups, 0, Expr, ELF::R_LARCH_TLS_LE_ADD_R);
   if (STI.hasFeature(LoongArch::FeatureRelax))
-    Fixups.back().setNeedsRelax();
+    Fixups.back().setLinkerRelaxable();
 
   // Emit a normal ADD instruction with the given operands.
   unsigned ADD = MI.getOpcode() == LoongArch::PseudoAddTPRel_D

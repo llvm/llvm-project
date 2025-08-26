@@ -286,3 +286,11 @@ class DebuggerAPITestCase(TestBase):
             ('remove bar ret', False), # remove_bar should fail, because it's already invoked and removed
             ('foo called', original_dbg_id), # foo should be called
         ])
+
+    def test_version(self):
+        instance_str = self.dbg.GetVersionString()
+        class_str = lldb.SBDebugger.GetVersionString()
+        property_str = lldb.SBDebugger.version
+
+        self.assertEqual(instance_str, class_str)
+        self.assertEqual(class_str, property_str)

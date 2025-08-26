@@ -471,18 +471,21 @@ OMPUnrollDirective *OMPUnrollDirective::CreateEmpty(const ASTContext &C,
 OMPReverseDirective *
 OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, Stmt *AssociatedStmt,
-                            Stmt *TransformedStmt, Stmt *PreInits) {
+                            unsigned NumLoops, Stmt *TransformedStmt,
+                            Stmt *PreInits) {
   OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
-      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
+      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
+      NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;
 }
 
-OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C) {
+OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C,
+                                                      unsigned NumLoops) {
   return createEmptyDirective<OMPReverseDirective>(
       C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true,
-      TransformedStmtOffset + 1, SourceLocation(), SourceLocation());
+      TransformedStmtOffset + 1, SourceLocation(), SourceLocation(), NumLoops);
 }
 
 OMPInterchangeDirective *OMPInterchangeDirective::Create(

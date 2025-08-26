@@ -30,7 +30,7 @@ static void verifyRule(const RewriteRuleWith<std::string> &Rule) {
 // If a string unintentionally containing '%' is passed as a diagnostic, Clang
 // will claim the string is ill-formed and assert-fail. This function escapes
 // such strings so they can be safely used in diagnostics.
-std::string escapeForDiagnostic(std::string ToEscape) {
+static std::string escapeForDiagnostic(std::string ToEscape) {
   // Optimize for the common case that the string does not contain `%` at the
   // cost of an extra scan over the string in the slow case.
   auto Pos = ToEscape.find('%');

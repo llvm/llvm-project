@@ -6,7 +6,7 @@
 // integer. It is converted to an integer on call and converted back after the
 // function.
 
-// CHECK: define void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void trunc_Param(inout int X) {}
 
 // ALL-LABEL: define noundef nofpclass(nan inf) float {{.*}}case1
@@ -32,7 +32,7 @@ export float case1(float F) {
 // uninitialized in the function. If they are not initialized before the
 // function returns the value is undefined.
 
-// CHECK: define void {{.*}}undef{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}undef{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void undef(out int Z) { }
 
 // ALL-LABEL: define noundef i32 {{.*}}case2
@@ -54,7 +54,7 @@ export int case2() {
 // This test should verify that an out parameter value is written to as
 // expected.
 
-// CHECK: define void {{.*}}zero{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}zero{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void zero(out int Z) { Z = 0; }
 
 // ALL-LABEL: define noundef i32 {{.*}}case3
@@ -76,7 +76,7 @@ export int case3() {
 // Vector swizzles in HLSL produce lvalues, so they can be used as arguments to
 // inout parameters and the swizzle is reversed on writeback.
 
-// CHECK: define void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
+// CHECK: define hidden void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void funky(inout int3 X) {
   X.x += 1;
   X.y += 2;
@@ -116,7 +116,7 @@ export int3 case4() {
 
 // Case 5: Straightforward inout of a scalar value.
 
-// CHECK: define void {{.*}}increment{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}increment{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void increment(inout int I) {
   I += 1;
 }
@@ -144,7 +144,7 @@ struct S {
   float Y;
 };
 
-// CHECK: define void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) {{%.*}})
+// CHECK: define hidden void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) {{%.*}})
 void init(out S s) {
   s.X = 3;
   s.Y = 4;
@@ -170,7 +170,7 @@ struct R {
   float Y;
 };
 
-// CHECK: define void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) {{%.*}})
+// CHECK: define hidden void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) {{%.*}})
 void init(inout R s) {
   s.X = 3;
   s.Y = 4;
@@ -194,7 +194,7 @@ export int case7() {
 
 // Case 8: Non-scalars with a cast expression.
 
-// CHECK: define void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
+// CHECK: define hidden void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void trunc_vec(inout int3 V) {}
 
 // ALL-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}case8

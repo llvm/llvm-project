@@ -694,6 +694,9 @@ def err_pragma_push_pop_macro_malformed : Error<
 def warn_pragma_pop_macro_no_push : Warning<
    "pragma pop_macro could not pop '%0', no matching push_macro">,
   InGroup<IgnoredPragmas>;
+def warn_pargma_push_pop_macro_empty_string : Warning<
+   "'#pragma %select{push_macro|pop_macro}0' expected a non-empty string">,
+  InGroup<IgnoredPragmas>;
 def warn_pragma_message : Warning<"%0">,
    InGroup<PoundPragmaMessage>, DefaultWarnNoWerror;
 def err_pragma_message : Error<"%0">;
@@ -909,6 +912,11 @@ def err_mmap_nested_submodule_id : Error<
   "qualified module name can only be used to define modules at the top level">;
 def err_mmap_expected_feature : Error<"expected a feature name">;
 def err_mmap_expected_attribute : Error<"expected an attribute name">;
+def warn_mmap_link_redeclaration : Warning<"redeclaration of link library '%0'">,
+  InGroup<DiagGroup<"module-link-redeclaration">>, DefaultError;
+def note_mmap_prev_link_declaration : Note<"previously declared here">;
+def err_mmap_submodule_link_decl
+    : Error<"link declaration is not allowed in submodules">;
 def warn_mmap_unknown_attribute : Warning<"unknown attribute '%0'">,
   InGroup<IgnoredAttributes>;
 def warn_mmap_mismatched_private_submodule : Warning<

@@ -17,7 +17,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/TargetInfo.h"
@@ -26,7 +25,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -2455,7 +2453,8 @@ NonLoc RegionStoreManager::createLazyBinding(RegionBindingsConstRef B,
 
 SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
                                              const TypedValueRegion *R) {
-  const RecordDecl *RD = R->getValueType()->castAs<RecordType>()->getDecl();
+  const RecordDecl *RD =
+      R->getValueType()->castAs<RecordType>()->getOriginalDecl();
   if (!RD->getDefinition())
     return UnknownVal();
 
@@ -2846,7 +2845,7 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
   assert(T->isStructureOrClassType());
 
   const RecordType* RT = T->castAs<RecordType>();
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
 
   if (!RD->isCompleteDefinition())
     return B;

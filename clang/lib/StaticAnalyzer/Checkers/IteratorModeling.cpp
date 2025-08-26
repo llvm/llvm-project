@@ -66,12 +66,10 @@
 
 #include "clang/AST/DeclTemplate.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include "Iterator.h"
@@ -152,7 +150,8 @@ public:
   IteratorModeling() = default;
 
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
   void checkPostStmt(const UnaryOperator *UO, CheckerContext &C) const;
   void checkPostStmt(const BinaryOperator *BO, CheckerContext &C) const;
   void checkPostStmt(const MaterializeTemporaryExpr *MTE,
@@ -236,7 +235,7 @@ void IteratorModeling::checkPostCall(const CallEvent &Call,
 }
 
 void IteratorModeling::checkBind(SVal Loc, SVal Val, const Stmt *S,
-                                 CheckerContext &C) const {
+                                 bool AtDeclInit, CheckerContext &C) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
   if (Pos) {

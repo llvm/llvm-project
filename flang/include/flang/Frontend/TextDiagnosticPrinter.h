@@ -37,13 +37,13 @@ class TextDiagnostic;
 
 class TextDiagnosticPrinter : public clang::DiagnosticConsumer {
   raw_ostream &os;
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts;
+  clang::DiagnosticOptions &diagOpts;
 
   /// A string to prefix to error messages.
   std::string prefix;
 
 public:
-  TextDiagnosticPrinter(raw_ostream &os, clang::DiagnosticOptions *diags);
+  TextDiagnosticPrinter(raw_ostream &os, clang::DiagnosticOptions &diags);
   ~TextDiagnosticPrinter() override;
 
   /// Set the diagnostic printer prefix string, which will be printed at the

@@ -189,7 +189,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             self.dap_server.get_completions("str"),
             [
                 {"text": "struct", "label": "struct"},
-                {"text": "str1", "label": "str1 -- string &"},
+                {"text": "str1", "label": "str1 -- std::string &"},
             ],
         )
 

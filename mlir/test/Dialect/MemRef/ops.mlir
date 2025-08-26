@@ -174,6 +174,9 @@ memref.global "private" @memref3 : memref<2xf32>  = uninitialized
 // CHECK-LABEL: memref.global "private" constant @memref4 : memref<2xf32> = uninitialized
 memref.global "private" constant @memref4 : memref<2xf32>  = uninitialized
 
+// CHECK-LABEL: memref.global "private" constant @memref5 : memref<1xf16, 42 : i32> = dense<1.000000e+00>
+"memref.global"() <{constant, initial_value = dense<1.000000e+00> : tensor<1xf16>, sym_name = "memref5", sym_visibility = "private", type = memref<1xf16, 42 : i32>}> : () -> ()
+
 // CHECK-LABEL: func @read_global_memref
 func.func @read_global_memref() {
   %0 = memref.get_global @memref0 : memref<2xf32>
@@ -262,6 +265,17 @@ func.func @zero_dim_no_idx(%arg0 : memref<i32>, %arg1 : memref<i32>, %arg2 : mem
   // CHECK: memref.store %{{.*}}, %{{.*}}[] : memref<i32>
 }
 
+
+// CHECK-LABEL: func @load_store_alignment
+func.func @load_store_alignment(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: memref.load {{.*}} {alignment = 16 : i64}
+  %val = memref.load %memref[%c0] { alignment = 16 } : memref<4xi32>
+  // CHECK: memref.store {{.*}} {alignment = 16 : i64}
+  memref.store %val, %memref[%c0] { alignment = 16 } : memref<4xi32>
+  return
+}
+
 // CHECK-LABEL: func @memref_view(%arg0
 func.func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>
@@ -283,7 +297,7 @@ func.func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-LABEL: func @assume_alignment
 // CHECK-SAME: %[[MEMREF:.*]]: memref<4x4xf16>
 func.func @assume_alignment(%0: memref<4x4xf16>) {
-  // CHECK: memref.assume_alignment %[[MEMREF]], 16 : memref<4x4xf16>
+  // CHECK: %{{.*}} = memref.assume_alignment %[[MEMREF]], 16 : memref<4x4xf16>
   %1 = memref.assume_alignment %0, 16 : memref<4x4xf16>
   return
 }

@@ -35,7 +35,7 @@ constexpr int how_many(Swim& swam) {
   return (p + 1 - 1)->phelps();
 }
 
-void splash(Swim& swam) {
+void splash(Swim& swam) {                 // nointerpreter-note {{declared here}}
   static_assert(swam.phelps() == 28);     // ok
   static_assert((&swam)->phelps() == 28); // ok
   Swim* pswam = &swam;                    // expected-note {{declared here}}
@@ -43,8 +43,10 @@ void splash(Swim& swam) {
                                           // expected-note {{read of non-constexpr variable 'pswam' is not allowed in a constant expression}}
   static_assert(how_many(swam) == 28);    // ok
   static_assert(Swim().lochte() == 12);   // ok
-  static_assert(swam.lochte() == 12);     // expected-error {{static assertion expression is not an integral constant expression}}
-  static_assert(swam.coughlin == 12);     // expected-error {{static assertion expression is not an integral constant expression}}
+  static_assert(swam.lochte() == 12);     // expected-error {{static assertion expression is not an integral constant expression}} \
+                                          // nointerpreter-note {{virtual function called on object 'swam' whose dynamic type is not constant}}
+  static_assert(swam.coughlin == 12);     // expected-error {{static assertion expression is not an integral constant expression}} \
+                                          // nointerpreter-note {{read of variable 'swam' whose value is not known}}
 }
 
 extern Swim dc;
@@ -52,6 +54,7 @@ extern Swim& trident; // interpreter-note {{declared here}}
 
 constexpr auto& sandeno   = typeid(dc);         // ok: can only be typeid(Swim)
 constexpr auto& gallagher = typeid(trident);    // expected-error {{constexpr variable 'gallagher' must be initialized by a constant expression}} \
+                                                // nointerpreter-note {{typeid applied to object 'trident' whose dynamic type is not constant}} \
                                                 // interpreter-note {{initializer of 'trident' is unknown}}
 
 namespace explicitThis {
@@ -249,4 +252,148 @@ namespace uninit_reference_used {
   constexpr uintptr_t gg5 = g5(); // expected-error {{must be initialized by a constant expression}} \
   // expected-note {{in call to 'g5()'}}
 
+}
+
+namespace param_reference {
+  constexpr int arbitrary = -12345;
+  constexpr void f(const int &x = arbitrary) { // nointerpreter-note 3 {{declared here}} interpreter-note {{declared here}}
+    constexpr const int &v1 = x; // expected-error {{must be initialized by a constant expression}} \
+    // expected-note {{reference to 'x' is not a constant expression}}
+    constexpr const int &v2 = (x, arbitrary); // expected-warning {{left operand of comma operator has no effect}}
+    constexpr int v3 = x; // expected-error {{must be initialized by a constant expression}} \
+                          // nointerpreter-note {{read of variable 'x' whose value is not known}}
+    static_assert(x==arbitrary); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                 // nointerpreter-note {{read of variable 'x' whose value is not known}}
+    static_assert(&x - &x == 0);
+  }
+}
+
+namespace dropped_note {
+  extern int &x; // expected-note {{declared here}}
+  constexpr int f() { return x; } // nointerpreter-note {{read of non-constexpr variable 'x'}} \
+                                  // interpreter-note {{initializer of 'x' is unknown}}
+  constexpr int y = f(); // expected-error {{constexpr variable 'y' must be initialized by a constant expression}} expected-note {{in call to 'f()'}}
+}
+
+namespace dynamic {
+  struct A {virtual ~A();};
+  struct B : A {};
+  void f(A& a) {
+    constexpr B* b = dynamic_cast<B*>(&a); // expected-error {{must be initialized by a constant expression}} \
+                                           // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
+    constexpr void* b2 = dynamic_cast<void*>(&a); // expected-error {{must be initialized by a constant expression}} \
+                                                  // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
+  }
+}
+
+namespace unsized_array {
+  void f(int (&a)[], int (&b)[], int (&c)[4]) {
+    constexpr int t1 = a - a;
+    constexpr int t2 = a - b; // expected-error {{constexpr variable 't2' must be initialized by a constant expression}} \
+                              // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}} \
+                              // interpreter-note {{arithmetic involving unrelated objects 'a' and 'b' has unspecified value}}
+    constexpr int t3 = a - &c[2];  // expected-error {{constexpr variable 't3' must be initialized by a constant expression}} \
+                              // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}} \
+                              // interpreter-note {{arithmetic involving unrelated objects 'a' and '*((char*)&c + 8)' has unspecified value}}
+  }
+}
+
+namespace casting {
+  struct A {};
+  struct B : A {};
+  struct C : A {};
+  extern A &a; // interpreter-note {{declared here}}
+  extern B &b; // expected-note {{declared here}} interpreter-note 2 {{declared here}}
+  constexpr B &t1 = (B&)a; // expected-error {{must be initialized by a constant expression}} \
+                           // nointerpreter-note {{cannot cast object of dynamic type 'A' to type 'B'}} \
+                           // interpreter-note {{initializer of 'a' is unknown}}
+  constexpr B &t2 = (B&)(A&)b; // expected-error {{must be initialized by a constant expression}} \
+                               // nointerpreter-note {{initializer of 'b' is not a constant expression}} \
+                               // interpreter-note {{initializer of 'b' is unknown}}
+  // FIXME: interpreter incorrectly rejects.
+  constexpr bool t3 = &b + 1 == &(B&)(A&)b; // interpreter-error {{must be initialized by a constant expression}} \
+                                            // interpreter-note {{initializer of 'b' is unknown}}
+  constexpr C &t4 = (C&)(A&)b; // expected-error {{must be initialized by a constant expression}} \
+                               // nointerpreter-note {{cannot cast object of dynamic type 'B' to type 'C'}} \
+                               // interpreter-note {{initializer of 'b' is unknown}}
+}
+
+namespace pointer_comparisons {
+  extern int &extern_n; // interpreter-note 4 {{declared here}}
+  extern int &extern_n2;
+  constexpr int f1(bool b, int& n) {
+    if (b) {
+      return &extern_n == &n;
+    }
+    return f1(true, n);
+  }
+  // FIXME: interpreter incorrectly rejects; both sides are the same constexpr-unknown value.
+  static_assert(f1(false, extern_n)); // interpreter-error {{static assertion expression is not an integral constant expression}} \
+                                      // interpreter-note {{initializer of 'extern_n' is unknown}}
+  static_assert(&extern_n != &extern_n2); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                          // nointerpreter-note {{comparison between pointers to unrelated objects '&extern_n' and '&extern_n2' has unspecified value}} \
+                                          // interpreter-note {{initializer of 'extern_n' is unknown}}
+  void f2(const int &n) {
+    constexpr int x = &x == &n; // nointerpreter-error {{must be initialized by a constant expression}} \
+                                // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&n' has unspecified value}}
+    // Distinct variables are not equal, even if they're local variables.
+    constexpr int y = &x == &y;
+    static_assert(!y);
+  }
+  constexpr int f3() {
+    int x;
+    return &x == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&extern_n' has unspecified value}} \
+                            // interpreter-note {{initializer of 'extern_n' is unknown}}
+  }
+  static_assert(!f3()); // expected-error {{static assertion expression is not an integral constant expression}} \
+                        // expected-note {{in call to 'f3()'}}
+  constexpr int f4() {
+    int *p = new int;
+    bool b = p == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&{*new int#0}' and '&extern_n' has unspecified value}} \
+                             // interpreter-note {{initializer of 'extern_n' is unknown}}
+    delete p;
+    return b;
+  }
+  static_assert(!f4()); // expected-error {{static assertion expression is not an integral constant expression}} \
+                        // expected-note {{in call to 'f4()'}}
+}
+
+namespace GH149188 {
+namespace enable_if_1 {
+  template <__SIZE_TYPE__ N>
+  constexpr void foo(const char (&Str)[N])
+  __attribute((enable_if(__builtin_strlen(Str), ""))) {}
+
+  void x() {
+      foo("1234");
+  }
+}
+
+namespace enable_if_2 {
+  constexpr const char (&f())[];
+  extern const char (&Str)[];
+  constexpr int foo()
+  __attribute((enable_if(__builtin_strlen(Str), "")))
+  {return __builtin_strlen(Str);}
+
+  constexpr const char (&f())[] {return "a";}
+  constexpr const char (&Str)[] = f();
+  void x() {
+      constexpr int x = foo();
+  }
+}
+}
+
+namespace GH150015 {
+  extern int (& c)[8]; // interpreter-note {{declared here}}
+  constexpr int x = c <= c+8; // interpreter-error {{constexpr variable 'x' must be initialized by a constant expression}} \
+                              // interpreter-note {{initializer of 'c' is unknown}}
+
+  struct X {};
+  struct Y {};
+  struct Z : X, Y {};
+  extern Z &z; // interpreter-note{{declared here}}
+  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // expected-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
+                                                 // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}} \
+                                                 // interpreter-note {{initializer of 'z' is unknown}}
 }

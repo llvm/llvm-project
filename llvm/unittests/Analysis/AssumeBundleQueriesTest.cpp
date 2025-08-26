@@ -13,6 +13,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -22,7 +23,7 @@
 using namespace llvm;
 
 namespace llvm {
-extern cl::opt<bool> ShouldPreserveAllAttributes;
+LLVM_ABI extern cl::opt<bool> ShouldPreserveAllAttributes;
 } // namespace llvm
 
 static void RunTest(

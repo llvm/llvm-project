@@ -212,9 +212,7 @@ public:
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // in the dylib
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 [[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void __throw_runtime_error(const char*);
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_logic_error(const char* __msg) {
 #  if _LIBCPP_HAS_EXCEPTIONS

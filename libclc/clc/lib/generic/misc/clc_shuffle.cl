@@ -52,7 +52,7 @@
     return VAR.sF;
 
 #define _CLC_GET_ELEMENT_DEFINE(ARGTYPE, ARGSIZE, IDXTYPE)                     \
-  inline ARGTYPE __clc_get_el_##ARGTYPE##ARGSIZE##_##IDXTYPE(                  \
+  _CLC_INLINE ARGTYPE __clc_get_el_##ARGTYPE##ARGSIZE##_##IDXTYPE(             \
       ARGTYPE##ARGSIZE x, IDXTYPE idx) {                                       \
     switch (idx) { _CLC_ELEMENT_CASES##ARGSIZE(x) default : return 0; }        \
   }

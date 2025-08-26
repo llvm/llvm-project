@@ -120,8 +120,11 @@ void COFFWriter::layoutSections() {
 
 Expected<size_t> COFFWriter::finalizeStringTable() {
   for (const auto &S : Obj.getSections())
-    if (S.Name.size() > COFF::NameSize)
-      StrTabBuilder.add(S.Name);
+    if (S.Name.size() > COFF::NameSize) {
+      // Put the section name at the start of strtab to ensure its offset is
+      // less than Max7DecimalOffset. Otherwise, lldb/gdb will not read it.
+      StrTabBuilder.add(S.Name, /*Priority=*/UINT8_MAX);
+    }
 
   for (const auto &S : Obj.getSymbols())
     if (S.Name.size() > COFF::NameSize)

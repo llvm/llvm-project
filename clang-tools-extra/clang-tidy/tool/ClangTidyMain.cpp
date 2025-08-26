@@ -162,14 +162,19 @@ in .clang-tidy file, if any.
                                    cl::init(false), cl::cat(ClangTidyCategory));
 
 static cl::opt<std::string> LineFilter("line-filter", desc(R"(
-List of files with line ranges to filter the
-warnings. Can be used together with
--header-filter. The format of the list is a
-JSON array of objects:
+List of files and line ranges to output diagnostics from.
+The range is inclusive on both ends. Can be used together
+with -header-filter. The format of the list is a JSON
+array of objects. For example:
+
   [
     {"name":"file1.cpp","lines":[[1,3],[5,7]]},
     {"name":"file2.h"}
   ]
+
+This will output diagnostics from 'file1.cpp' only for
+the line ranges [1,3] and [5,7], as well as all from the
+entire 'file2.h'.
 )"),
                                        cl::init(""),
                                        cl::cat(ClangTidyCategory));
@@ -328,7 +333,7 @@ This option overrides the 'UseColor' option in
 
 static cl::opt<bool> VerifyConfig("verify-config", desc(R"(
 Check the config files to ensure each check and
-option is recognized.
+option is recognized without running any checks.
 )"),
                                   cl::init(false), cl::cat(ClangTidyCategory));
 
@@ -337,8 +342,7 @@ Allow empty enabled checks. This suppresses
 the "no checks enabled" error when disabling
 all of the checks.
 )"),
-                                         cl::init(false),
-                                         cl::cat(ClangTidyCategory));
+                                   cl::init(false), cl::cat(ClangTidyCategory));
 
 namespace clang::tidy {
 
@@ -370,8 +374,8 @@ static void printStats(const ClangTidyStats &Stats) {
   }
 }
 
-static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
-   llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+static std::unique_ptr<ClangTidyOptionsProvider>
+createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   ClangTidyGlobalOptions GlobalOptions;
   if (std::error_code Err = parseLineFilter(LineFilter, GlobalOptions)) {
     llvm::errs() << "Invalid LineFilter: " << Err.message() << "\n\nUsage:\n";
@@ -448,7 +452,7 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
       std::move(OverrideOptions), std::move(FS));
 }
 
-llvm::IntrusiveRefCntPtr<vfs::FileSystem>
+static llvm::IntrusiveRefCntPtr<vfs::FileSystem>
 getVfsFromFile(const std::string &OverlayFile,
                llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
@@ -660,9 +664,10 @@ int clangTidyMain(int argc, const char **argv) {
   if (DumpConfig) {
     EffectiveOptions.CheckOptions =
         getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
-    llvm::outs() << configurationAsText(ClangTidyOptions::getDefaults().merge(
-                        EffectiveOptions, 0))
-                 << "\n";
+    ClangTidyOptions OptionsToDump =
+        ClangTidyOptions::getDefaults().merge(EffectiveOptions, 0);
+    filterCheckOptions(OptionsToDump, EnabledChecks);
+    llvm::outs() << configurationAsText(OptionsToDump) << "\n";
     return 0;
   }
 
@@ -712,7 +717,7 @@ int clangTidyMain(int argc, const char **argv) {
                            EnableModuleHeadersParsing);
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
-                   FixNotes, EnableCheckProfile, ProfilePrefix);
+                   FixNotes, EnableCheckProfile, ProfilePrefix, Quiet);
   bool FoundErrors = llvm::any_of(Errors, [](const ClangTidyError &E) {
     return E.DiagLevel == ClangTidyError::Error;
   });

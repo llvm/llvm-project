@@ -16,7 +16,6 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
@@ -71,7 +70,7 @@ static cl::opt<unsigned> MinCodeSizeSavings(
              "much percent of the original function size"));
 
 static cl::opt<unsigned> MinLatencySavings(
-    "funcspec-min-latency-savings", cl::init(40), cl::Hidden,
+    "funcspec-min-latency-savings", cl::init(20), cl::Hidden,
     cl::desc("Reject specializations whose latency savings are less than this "
              "much percent of the original function size"));
 
@@ -400,12 +399,6 @@ Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
 Constant *InstCostVisitor::visitCallBase(CallBase &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
-  // Look through calls to ssa_copy intrinsics.
-  if (auto *II = dyn_cast<IntrinsicInst>(&I);
-      II && II->getIntrinsicID() == Intrinsic::ssa_copy) {
-    return LastVisited->second;
-  }
-
   Function *F = I.getCalledFunction();
   if (!F || !canConstantFoldCallTo(&I, F))
     return nullptr;
@@ -611,17 +604,15 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
   }
 }
 
-// ssa_copy intrinsics are introduced by the SCCP solver. These intrinsics
-// interfere with the promoteConstantStackValues() optimization.
+// The SCCP solver inserts bitcasts for PredicateInfo. These interfere with the
+// promoteConstantStackValues() optimization.
 static void removeSSACopy(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-      auto *II = dyn_cast<IntrinsicInst>(&Inst);
-      if (!II)
+      auto *BC = dyn_cast<BitCastInst>(&Inst);
+      if (!BC || BC->getType() != BC->getOperand(0)->getType())
         continue;
-      if (II->getIntrinsicID() != Intrinsic::ssa_copy)
-        continue;
-      Inst.replaceAllUsesWith(II->getOperand(0));
+      Inst.replaceAllUsesWith(BC->getOperand(0));
       Inst.eraseFromParent();
     }
   }

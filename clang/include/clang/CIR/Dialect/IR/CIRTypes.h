@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_CIR_IR_CIRTYPES_H_
-#define MLIR_DIALECT_CIR_IR_CIRTYPES_H_
+#ifndef CLANG_CIR_DIALECT_IR_CIRTYPES_H
+#define CLANG_CIR_DIALECT_IR_CIRTYPES_H
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
 namespace cir {
 
@@ -26,7 +26,14 @@ struct RecordTypeStorage;
 
 bool isValidFundamentalIntWidth(unsigned width);
 
-bool isFPOrFPVectorTy(mlir::Type);
+/// Returns true if the type is a CIR sized type.
+///
+/// Types are sized if they implement SizedTypeInterface and
+/// return true from its method isSized.
+///
+/// Unsized types are those that do not have a size, such as
+/// void, or abstract types.
+bool isSized(mlir::Type ty);
 
 } // namespace cir
 
@@ -43,4 +50,4 @@ namespace cir {
 #define GET_TYPEDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"
 
-#endif // MLIR_DIALECT_CIR_IR_CIRTYPES_H_
+#endif // CLANG_CIR_DIALECT_IR_CIRTYPES_H

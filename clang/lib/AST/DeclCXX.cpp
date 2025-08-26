@@ -132,16 +132,9 @@ CXXRecordDecl::CXXRecordDecl(Kind K, TagKind TK, const ASTContext &C,
 CXXRecordDecl *CXXRecordDecl::Create(const ASTContext &C, TagKind TK,
                                      DeclContext *DC, SourceLocation StartLoc,
                                      SourceLocation IdLoc, IdentifierInfo *Id,
-                                     CXXRecordDecl *PrevDecl,
-                                     bool DelayTypeCreation) {
-  auto *R = new (C, DC) CXXRecordDecl(CXXRecord, TK, C, DC, StartLoc, IdLoc, Id,
-                                      PrevDecl);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-
-  // FIXME: DelayTypeCreation seems like such a hack
-  if (!DelayTypeCreation)
-    C.getTypeDeclType(R, PrevDecl);
-  return R;
+                                     CXXRecordDecl *PrevDecl) {
+  return new (C, DC)
+      CXXRecordDecl(CXXRecord, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl);
 }
 
 CXXRecordDecl *
@@ -154,10 +147,7 @@ CXXRecordDecl::CreateLambda(const ASTContext &C, DeclContext *DC,
   R->setBeingDefined(true);
   R->DefinitionData = new (C) struct LambdaDefinitionData(
       R, Info, DependencyKind, IsGeneric, CaptureDefault);
-  R->setMayHaveOutOfDateDef(false);
   R->setImplicit(true);
-
-  C.getTypeDeclType(R, /*PrevDecl=*/nullptr);
   return R;
 }
 
@@ -166,7 +156,6 @@ CXXRecordDecl *CXXRecordDecl::CreateDeserialized(const ASTContext &C,
   auto *R = new (C, ID)
       CXXRecordDecl(CXXRecord, TagTypeKind::Struct, C, nullptr,
                     SourceLocation(), SourceLocation(), nullptr, nullptr);
-  R->setMayHaveOutOfDateDef(false);
   return R;
 }
 
@@ -178,7 +167,7 @@ static bool hasRepeatedBaseClass(const CXXRecordDecl *StartRD) {
   SmallVector<const CXXRecordDecl*, 8> WorkList = {StartRD};
   while (!WorkList.empty()) {
     const CXXRecordDecl *RD = WorkList.pop_back_val();
-    if (RD->getTypeForDecl()->isDependentType())
+    if (RD->isDependentType())
       continue;
     for (const CXXBaseSpecifier &BaseSpec : RD->bases()) {
       if (const CXXRecordDecl *B = BaseSpec.getType()->getAsCXXRecordDecl()) {
@@ -228,7 +217,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     if (BaseType->isDependentType())
       continue;
     auto *BaseClassDecl =
-        cast<CXXRecordDecl>(BaseType->castAs<RecordType>()->getDecl());
+        cast<CXXRecordDecl>(BaseType->castAs<RecordType>()->getOriginalDecl())
+            ->getDefinitionOrSelf();
 
     // C++2a [class]p7:
     //   A standard-layout class is a class that:
@@ -1217,9 +1207,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
     // those because they are always unnamed.
     bool IsZeroSize = Field->isZeroSize(Context);
 
-    if (const auto *RecordTy = T->getAs<RecordType>()) {
-      auto *FieldRec = cast<CXXRecordDecl>(RecordTy->getDecl());
-      if (FieldRec->getDefinition()) {
+    if (auto *FieldRec = T->getAsCXXRecordDecl()) {
+      if (FieldRec->isBeingDefined() || FieldRec->isCompleteDefinition()) {
         addedClassSubobject(FieldRec);
 
         // We may need to perform overload resolution to determine whether a
@@ -1828,7 +1817,7 @@ CXXRecordDecl::getLambdaExplicitTemplateParameters() const {
 
   const auto ExplicitEnd = llvm::partition_point(
       *List, [](const NamedDecl *D) { return !D->isImplicit(); });
-  return llvm::ArrayRef(List->begin(), ExplicitEnd);
+  return ArrayRef(List->begin(), ExplicitEnd);
 }
 
 Decl *CXXRecordDecl::getLambdaContextDecl() const {
@@ -1918,14 +1907,14 @@ static void CollectVisibleConversions(
 
   // Collect information recursively from any base classes.
   for (const auto &I : Record->bases()) {
-    const auto *RT = I.getType()->getAs<RecordType>();
-    if (!RT) continue;
+    const auto *Base = I.getType()->getAsCXXRecordDecl();
+    if (!Base)
+      continue;
 
     AccessSpecifier BaseAccess
       = CXXRecordDecl::MergeAccess(Access, I.getAccessSpecifier());
     bool BaseInVirtual = InVirtual || I.isVirtual();
 
-    auto *Base = cast<CXXRecordDecl>(RT->getDecl());
     CollectVisibleConversions(Context, Base, BaseInVirtual, BaseAccess,
                               *HiddenTypes, Output, VOutput, HiddenVBaseCs);
   }
@@ -1960,12 +1949,13 @@ static void CollectVisibleConversions(ASTContext &Context,
 
   // Recursively collect conversions from base classes.
   for (const auto &I : Record->bases()) {
-    const auto *RT = I.getType()->getAs<RecordType>();
-    if (!RT) continue;
+    const auto *Base = I.getType()->getAsCXXRecordDecl();
+    if (!Base)
+      continue;
 
-    CollectVisibleConversions(Context, cast<CXXRecordDecl>(RT->getDecl()),
-                              I.isVirtual(), I.getAccessSpecifier(),
-                              HiddenTypes, Output, VBaseCs, HiddenVBaseCs);
+    CollectVisibleConversions(Context, Base, I.isVirtual(),
+                              I.getAccessSpecifier(), HiddenTypes, Output,
+                              VBaseCs, HiddenVBaseCs);
   }
 
   // Add any unhidden conversions provided by virtual bases.
@@ -1983,7 +1973,7 @@ CXXRecordDecl::getVisibleConversionFunctions() const {
   ASTContext &Ctx = getASTContext();
 
   ASTUnresolvedSet *Set;
-  if (bases_begin() == bases_end()) {
+  if (bases().empty()) {
     // If root class, all conversions are visible.
     Set = &data().Conversions.get(Ctx);
   } else {
@@ -2125,11 +2115,10 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
 
 CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
   ASTContext &Context = getASTContext();
-  QualType ClassType = Context.getTypeDeclType(this);
+  CanQualType ClassType = Context.getCanonicalTagType(this);
 
-  DeclarationName Name
-    = Context.DeclarationNames.getCXXDestructorName(
-                                          Context.getCanonicalType(ClassType));
+  DeclarationName Name =
+      Context.DeclarationNames.getCXXDestructorName(ClassType);
 
   DeclContext::lookup_result R = lookup(Name);
 
@@ -2147,6 +2136,39 @@ bool CXXRecordDecl::hasDeletedDestructor() const {
   if (const CXXDestructorDecl *D = getDestructor())
     return D->isDeleted();
   return false;
+}
+
+bool CXXRecordDecl::isInjectedClassName() const {
+  if (!isImplicit() || !getDeclName())
+    return false;
+
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
+    return RD->getDeclName() == getDeclName();
+
+  return false;
+}
+
+bool CXXRecordDecl::hasInjectedClassType() const {
+  switch (getDeclKind()) {
+  case Decl::ClassTemplatePartialSpecialization:
+    return true;
+  case Decl::ClassTemplateSpecialization:
+    return false;
+  case Decl::CXXRecord:
+    return getDescribedClassTemplate() != nullptr;
+  default:
+    llvm_unreachable("unexpected decl kind");
+  }
+}
+
+CanQualType CXXRecordDecl::getCanonicalTemplateSpecializationType(
+    const ASTContext &Ctx) const {
+  if (auto *RD = dyn_cast<ClassTemplatePartialSpecializationDecl>(this))
+    return RD->getCanonicalInjectedSpecializationType(Ctx);
+  if (const ClassTemplateDecl *TD = getDescribedClassTemplate();
+      TD && !isa<ClassTemplateSpecializationDecl>(this))
+    return TD->getCanonicalInjectedSpecializationType(Ctx);
+  return CanQualType();
 }
 
 static bool isDeclContextInNamespace(const DeclContext *DC) {
@@ -2262,7 +2284,7 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
         Context.getDiagnostics().Report(
             AT->getLocation(),
             diag::warn_cxx20_compat_requires_explicit_init_non_aggregate)
-            << AT << FD << Context.getRecordType(this);
+            << AT << FD << Context.getCanonicalTagType(this);
     }
   }
 
@@ -2274,7 +2296,7 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
       if (const auto *AT = FD->getAttr<ExplicitInitAttr>())
         Context.getDiagnostics().Report(AT->getLocation(),
                                         diag::warn_attribute_needs_aggregate)
-            << AT << Context.getRecordType(this);
+            << AT << Context.getCanonicalTagType(this);
     }
     setHasUninitializedExplicitInitFields(false);
   }
@@ -2286,8 +2308,8 @@ bool CXXRecordDecl::mayBeAbstract() const {
     return false;
 
   for (const auto &B : bases()) {
-    const auto *BaseDecl =
-        cast<CXXRecordDecl>(B.getType()->castAs<RecordType>()->getDecl());
+    const auto *BaseDecl = cast<CXXRecordDecl>(
+        B.getType()->castAs<RecordType>()->getOriginalDecl());
     if (BaseDecl->isAbstract())
       return true;
   }
@@ -2447,10 +2469,9 @@ CXXMethodDecl::getCorrespondingMethodInClass(const CXXRecordDecl *RD,
   };
 
   for (const auto &I : RD->bases()) {
-    const RecordType *RT = I.getType()->getAs<RecordType>();
-    if (!RT)
+    const auto *Base = I.getType()->getAsCXXRecordDecl();
+    if (!Base)
       continue;
-    const auto *Base = cast<CXXRecordDecl>(RT->getDecl());
     if (CXXMethodDecl *D = this->getCorrespondingMethodInClass(Base))
       AddFinalOverrider(D);
   }
@@ -2702,8 +2723,7 @@ bool CXXMethodDecl::isCopyAssignmentOperator() const {
     ParamType = Ref->getPointeeType();
 
   ASTContext &Context = getASTContext();
-  QualType ClassType
-    = Context.getCanonicalType(Context.getTypeDeclType(getParent()));
+  CanQualType ClassType = Context.getCanonicalTagType(getParent());
   return Context.hasSameUnqualifiedType(ClassType, ParamType);
 }
 
@@ -2723,8 +2743,7 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
   ParamType = ParamType->getPointeeType();
 
   ASTContext &Context = getASTContext();
-  QualType ClassType
-    = Context.getCanonicalType(Context.getTypeDeclType(getParent()));
+  CanQualType ClassType = Context.getCanonicalTagType(getParent());
   return Context.hasSameUnqualifiedType(ClassType, ParamType);
 }
 
@@ -2759,7 +2778,7 @@ CXXMethodDecl::overridden_methods() const {
 
 static QualType getThisObjectType(ASTContext &C, const FunctionProtoType *FPT,
                                   const CXXRecordDecl *Decl) {
-  QualType ClassTy = C.getTypeDeclType(Decl);
+  CanQualType ClassTy = C.getCanonicalTagType(Decl);
   return C.getQualifiedType(ClassTy, FPT->getMethodQuals());
 }
 
@@ -3017,11 +3036,9 @@ bool CXXConstructorDecl::isCopyOrMoveConstructor(unsigned &TypeQuals) const {
   // Is it a reference to our class type?
   ASTContext &Context = getASTContext();
 
-  CanQualType PointeeType
-    = Context.getCanonicalType(ParamRefType->getPointeeType());
-  CanQualType ClassTy
-    = Context.getCanonicalType(Context.getTagDeclType(getParent()));
-  if (PointeeType.getUnqualifiedType() != ClassTy)
+  QualType PointeeType = ParamRefType->getPointeeType();
+  CanQualType ClassTy = Context.getCanonicalTagType(getParent());
+  if (!Context.hasSameUnqualifiedType(PointeeType, ClassTy))
     return false;
 
   // FIXME: other qualifiers?
@@ -3056,15 +3073,11 @@ bool CXXConstructorDecl::isSpecializationCopyingObject() const {
   const ParmVarDecl *Param = getParamDecl(0);
 
   ASTContext &Context = getASTContext();
-  CanQualType ParamType = Context.getCanonicalType(Param->getType());
+  CanQualType ParamType = Param->getType()->getCanonicalTypeUnqualified();
 
   // Is it the same as our class type?
-  CanQualType ClassTy
-    = Context.getCanonicalType(Context.getTagDeclType(getParent()));
-  if (ParamType.getUnqualifiedType() != ClassTy)
-    return false;
-
-  return true;
+  CanQualType ClassTy = Context.getCanonicalTagType(getParent());
+  return ParamType == ClassTy;
 }
 
 void CXXDestructorDecl::anchor() {}
@@ -3201,6 +3214,12 @@ UsingDirectiveDecl *UsingDirectiveDecl::CreateDeserialized(ASTContext &C,
                                         SourceLocation(), nullptr, nullptr);
 }
 
+NamespaceDecl *NamespaceBaseDecl::getNamespace() {
+  if (auto *Alias = dyn_cast<NamespaceAliasDecl>(this))
+    return Alias->getNamespace();
+  return cast<NamespaceDecl>(this);
+}
+
 NamespaceDecl *UsingDirectiveDecl::getNominatedNamespace() {
   if (auto *NA = dyn_cast_or_null<NamespaceAliasDecl>(NominatedNamespace))
     return NA->getNamespace();
@@ -3211,7 +3230,7 @@ NamespaceDecl::NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              IdentifierInfo *Id, NamespaceDecl *PrevDecl,
                              bool Nested)
-    : NamedDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
+    : NamespaceBaseDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
       redeclarable_base(C), LocStart(StartLoc) {
   setInline(Inline);
   setNested(Nested);
@@ -3258,13 +3277,11 @@ NamespaceAliasDecl *NamespaceAliasDecl::getMostRecentDeclImpl() {
   return getMostRecentDecl();
 }
 
-NamespaceAliasDecl *NamespaceAliasDecl::Create(ASTContext &C, DeclContext *DC,
-                                               SourceLocation UsingLoc,
-                                               SourceLocation AliasLoc,
-                                               IdentifierInfo *Alias,
-                                           NestedNameSpecifierLoc QualifierLoc,
-                                               SourceLocation IdentLoc,
-                                               NamedDecl *Namespace) {
+NamespaceAliasDecl *NamespaceAliasDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation UsingLoc,
+    SourceLocation AliasLoc, IdentifierInfo *Alias,
+    NestedNameSpecifierLoc QualifierLoc, SourceLocation IdentLoc,
+    NamespaceBaseDecl *Namespace) {
   // FIXME: Preserve the aliased namespace as written.
   if (auto *NS = dyn_cast_or_null<NamespaceDecl>(Namespace))
     Namespace = NS->getFirstDecl();
@@ -3357,7 +3374,7 @@ ConstructorUsingShadowDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
 }
 
 CXXRecordDecl *ConstructorUsingShadowDecl::getNominatedBaseClass() const {
-  return getIntroducer()->getQualifier()->getAsRecordDecl();
+  return getIntroducer()->getQualifier().getAsRecordDecl();
 }
 
 void BaseUsingDecl::anchor() {}
@@ -3578,13 +3595,13 @@ VarDecl *BindingDecl::getHoldingVar() const {
   return VD;
 }
 
-llvm::ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
+ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
   assert(Binding && "expecting a pack expr");
   auto *FP = cast<FunctionParmPackExpr>(Binding);
   ValueDecl *const *First = FP->getNumExpansions() > 0 ? FP->begin() : nullptr;
   assert((!First || isa<BindingDecl>(*First)) && "expecting a BindingDecl");
-  return llvm::ArrayRef<BindingDecl *>(
-      reinterpret_cast<BindingDecl *const *>(First), FP->getNumExpansions());
+  return ArrayRef<BindingDecl *>(reinterpret_cast<BindingDecl *const *>(First),
+                                 FP->getNumExpansions());
 }
 
 void DecompositionDecl::anchor() {}

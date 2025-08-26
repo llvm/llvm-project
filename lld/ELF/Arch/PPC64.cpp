@@ -13,8 +13,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
-#include "lld/Common/CommonLinkerContext.h"
-#include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::object;

@@ -798,8 +798,9 @@ BranchProbabilityInfo::getInitialEstimatedBlockWeight(const BasicBlock *BB) {
 // Does RPO traversal over all blocks in \p F and assigns weights to
 // 'unreachable', 'noreturn', 'cold', 'unwind' blocks. In addition it does its
 // best to propagate the weight to up/down the IR.
-void BranchProbabilityInfo::computeEestimateBlockWeight(
-    const Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
+void BranchProbabilityInfo::estimateBlockWeights(const Function &F,
+                                                 DominatorTree *DT,
+                                                 PostDominatorTree *PDT) {
   SmallVector<BasicBlock *, 8> BlockWorkList;
   SmallVector<LoopBlock, 8> LoopWorkList;
   SmallDenseMap<LoopData, SmallVector<BasicBlock *, 4>> LoopExitBlocks;
@@ -1244,7 +1245,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
     PDT = PDTPtr.get();
   }
 
-  computeEestimateBlockWeight(F, DT, PDT);
+  estimateBlockWeights(F, DT, PDT);
 
   // Walk the basic blocks in post-order so that we can build up state about
   // the successors of a block iteratively.

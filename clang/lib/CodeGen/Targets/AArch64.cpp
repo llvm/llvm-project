@@ -375,7 +375,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   if (!passAsAggregateType(Ty)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getDecl()->getIntegerType();
+      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
@@ -487,9 +487,37 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     }
     Size = llvm::alignTo(Size, Alignment);
 
+    // If the Aggregate is made up of pointers, use an array of pointers for the
+    // coerced type. This prevents having to convert ptr2int->int2ptr through
+    // the call, allowing alias analysis to produce better code.
+    auto ContainsOnlyPointers = [&](const auto &Self, QualType Ty) {
+      if (isEmptyRecord(getContext(), Ty, true))
+        return false;
+      const auto *RD = Ty->getAsRecordDecl();
+      if (!RD)
+        return false;
+      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (const auto &I : CXXRD->bases())
+          if (!Self(Self, I.getType()))
+            return false;
+      }
+      return all_of(RD->fields(), [&](FieldDecl *FD) {
+        QualType FDTy = FD->getType();
+        if (FDTy->isArrayType())
+          FDTy = getContext().getBaseElementType(FDTy);
+        return (FDTy->isPointerOrReferenceType() &&
+                getContext().getTypeSize(FDTy) == 64 &&
+                !FDTy->getPointeeType().hasAddressSpace()) ||
+               Self(Self, FDTy);
+      });
+    };
+
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
     // For aggregates with 16-byte alignment, we use i128.
     llvm::Type *BaseTy = llvm::Type::getIntNTy(getVMContext(), Alignment);
+    if ((Size == 64 || Size == 128) && Alignment == 64 &&
+        ContainsOnlyPointers(ContainsOnlyPointers, Ty))
+      BaseTy = llvm::PointerType::getUnqual(getVMContext());
     return ABIArgInfo::getDirect(
         Size == Alignment ? BaseTy
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
@@ -519,7 +547,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
   if (!passAsAggregateType(RetTy)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy = EnumTy->getDecl()->getIntegerType();
+      RetTy =
+          EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
@@ -715,7 +744,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
       return false;
 
     // Pure scalable types are never unions and never contain unions.
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isUnion())
       return false;
 
@@ -774,8 +803,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
   case BuiltinType::Id:                                                        \
     isPredicate = true;                                                        \
     break;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   default:
     return false;
   }

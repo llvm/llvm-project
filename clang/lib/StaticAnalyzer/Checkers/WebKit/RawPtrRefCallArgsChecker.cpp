@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -19,7 +18,6 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
@@ -296,7 +294,7 @@ public:
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
         name == "is" || name == "equal" || name == "hash" || name == "isType" ||
         // FIXME: Most/all of these should be implemented via attributes.
-        name == "equalIgnoringASCIICase" ||
+        name == "CFEqual" || name == "equalIgnoringASCIICase" ||
         name == "equalIgnoringASCIICaseCommon" ||
         name == "equalIgnoringNullity" || name == "toString")
       return true;
@@ -443,6 +441,10 @@ public:
 
   bool isSafePtrType(const QualType type) const final {
     return isRefOrCheckedPtrType(type);
+  }
+
+  bool isSafeExpr(const Expr *E) const final {
+    return isExprToGetCheckedPtrCapableMember(E);
   }
 
   const char *ptrKind() const final { return "unchecked"; }

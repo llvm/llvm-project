@@ -42,10 +42,10 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addiw a0, a0, 32
+; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    addiw a0, a1, 1622
+; CHECK-NEXT:    addi a0, a1, 1622
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    vse8.v v8, (s1)
 ; CHECK-NEXT:    vse8.v v8, (s2)
@@ -54,7 +54,7 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    sd s3, 64(sp)
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addiw a0, a0, 32
+; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -66,7 +66,7 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add sp, sp, a1
 ; CHECK-NEXT:    lui a1, 8
-; CHECK-NEXT:    addiw a1, a1, -1952
+; CHECK-NEXT:    addi a1, a1, -1952
 ; CHECK-NEXT:    add sp, sp, a1
 ; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload

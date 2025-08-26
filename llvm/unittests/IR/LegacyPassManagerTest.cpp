@@ -359,7 +359,8 @@ namespace llvm {
     struct CustomOptPassGate : public OptPassGate {
       bool Skip;
       CustomOptPassGate(bool Skip) : Skip(Skip) { }
-      bool shouldRunPass(const StringRef PassName, StringRef IRDescription) override {
+      bool shouldRunPass(StringRef PassName,
+                         StringRef IRDescription) const override {
         return !Skip;
       }
       bool isEnabled() const override { return true; }

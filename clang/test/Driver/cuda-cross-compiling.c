@@ -104,3 +104,11 @@
 // RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=STARTUP %s
 
 // STARTUP: clang-nvlink-wrapper{{.*}}"-lc" "-lm" "{{.*}}crt1.o"
+
+//
+// Test cuda path handling
+//
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=PATH %s
+
+// PATH: clang-nvlink-wrapper{{.*}}"--cuda-path={{.*}}/Inputs/CUDA/usr/local/cuda"

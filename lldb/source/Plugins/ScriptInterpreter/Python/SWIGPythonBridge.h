@@ -151,15 +151,6 @@ public:
                                     const char *session_dictionary_name,
                                     lldb::DebuggerSP debugger_sp);
 
-  static python::PythonObject LLDBSwigPythonCreateScriptedBreakpointResolver(
-      const char *python_class_name, const char *session_dictionary_name,
-      const StructuredDataImpl &args, const lldb::BreakpointSP &bkpt_sp);
-
-  static unsigned int
-  LLDBSwigPythonCallBreakpointResolver(void *implementor,
-                                       const char *method_name,
-                                       lldb_private::SymbolContext *sym_ctx);
-
   static size_t LLDBSwigPython_CalculateNumChildren(PyObject *implementor,
                                                     uint32_t max);
 
@@ -270,6 +261,7 @@ void *LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);

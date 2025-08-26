@@ -17,6 +17,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -73,16 +74,13 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
   auto RecipeI = VPBB->begin();
   auto End = VPBB->end();
   unsigned NumActiveLaneMaskPhiRecipes = 0;
-  const VPRegionBlock *ParentR = VPBB->getParent();
-  bool IsHeaderVPBB = ParentR && !ParentR->isReplicator() &&
-                      ParentR->getEntryBasicBlock() == VPBB;
+  bool IsHeaderVPBB = VPBlockUtils::isHeader(VPBB, VPDT);
   while (RecipeI != End && RecipeI->isPhi()) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
 
-    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI) &&
-        !isa<VPInstruction>(*RecipeI) &&
-        cast<VPInstruction>(RecipeI)->getOpcode() == Instruction::PHI) {
+    if (IsHeaderVPBB &&
+        !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(*RecipeI)) {
       errs() << "Found non-header PHI recipe in header VPBB";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
@@ -158,22 +156,53 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case<VPWidenIntrinsicRecipe>([&](const VPWidenIntrinsicRecipe *S) {
           return VerifyEVLUse(*S, S->getNumOperands() - 1);
         })
-        .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe>(
+        .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
+              VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
+        .Case<VPScalarIVStepsRecipe>([&](auto *R) {
+          if (R->getNumOperands() != 3) {
+            errs() << "Unrolling with EVL tail folding not yet supported\n";
+            return false;
+          }
+          return VerifyEVLUse(*R, 2);
+        })
         .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
         .Case<VPInstructionWithType>(
             [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
-          if (I->getOpcode() == Instruction::PHI)
+          if (I->getOpcode() == Instruction::PHI ||
+              I->getOpcode() == Instruction::ICmp ||
+              I->getOpcode() == Instruction::Sub)
             return VerifyEVLUse(*I, 1);
-          if (I->getOpcode() != Instruction::Add) {
-            errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
+          switch (I->getOpcode()) {
+          case Instruction::Add:
+            break;
+          case Instruction::UIToFP:
+          case Instruction::Trunc:
+          case Instruction::ZExt:
+          case Instruction::Mul:
+          case Instruction::FMul:
+          case VPInstruction::Broadcast:
+            // Opcodes above can only use EVL after wide inductions have been
+            // expanded.
+            if (!VerifyLate) {
+              errs() << "EVL used by unexpected VPInstruction\n";
+              return false;
+            }
+            break;
+          default:
+            errs() << "EVL used by unexpected VPInstruction\n";
             return false;
           }
-          if (I->getNumUsers() != 1) {
-            errs() << "EVL is used in VPInstruction:Add with multiple "
-                      "users\n";
+          // EVLIVIncrement is only used by EVLIV & BranchOnCount.
+          // Having more than two users is unexpected.
+          if ((I->getNumUsers() != 1) &&
+              (I->getNumUsers() != 2 || none_of(I->users(), [&I](VPUser *U) {
+                 using namespace llvm::VPlanPatternMatch;
+                 return match(U, m_BranchOnCount(m_Specific(I), m_VPValue()));
+               }))) {
+            errs() << "EVL is used in VPInstruction with multiple users\n";
             return false;
           }
           if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
@@ -222,17 +251,15 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
         if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
-          for (unsigned Idx = 0; Idx != Phi->getNumIncoming(); ++Idx) {
-            VPValue *IncomingVPV = Phi->getIncomingValue(Idx);
+          for (const auto &[IncomingVPV, IncomingVPBB] :
+               Phi->incoming_values_and_blocks()) {
             if (IncomingVPV != V)
               continue;
 
-            const VPBasicBlock *IncomingVPBB = Phi->getIncomingBlock(Idx);
             if (VPDT.dominates(VPBB, IncomingVPBB))
               continue;
 
-            errs() << "Incoming def at index " << Idx
-                   << " does not dominate incoming block!\n";
+            errs() << "Incoming def does not dominate incoming block!\n";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
             VPSlotTracker Tracker(VPBB->getPlan());
             IncomingVPV->getDefiningRecipe()->print(errs(), "  ", Tracker);
@@ -245,9 +272,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           continue;
         }
         // TODO: Also verify VPPredInstPHIRecipe.
-        if (isa<VPPredInstPHIRecipe>(UI) ||
-            (isa<VPInstruction>(UI) && (cast<VPInstruction>(UI)->getOpcode() ==
-                                        VPInstruction::ResumePhi)))
+        if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
@@ -433,8 +458,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
   }
 
-  // TODO: Remove once loop regions are dissolved before execution.
-  if (!VerifyLate && !isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
+  if (!isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
     errs() << "VPlan vector loop header does not start with a "
               "VPCanonicalIVPHIRecipe\n";
     return false;

@@ -17,6 +17,11 @@
 # RUN:   -Wl,--image-base=0xffffffff80000000,--no-dynamic-linker,--no-eh-frame-hdr
 # RUN: llvm-bolt %t.exe -o %t.out 2>&1 | FileCheck --check-prefix=CHECK-C %s
 
+# RUN: %clang -DD -target x86_64-unknown-unknown \
+# RUN:   %cflags -nostdlib %s -o %t.exe \
+# RUN:   -Wl,--image-base=0xffffffff80000000,--no-dynamic-linker,--no-eh-frame-hdr
+# RUN: llvm-bolt %t.exe -o %t.out 2>&1 | FileCheck --check-prefix=CHECK-D %s
+
   .text
   .globl foo
   .type foo, %function
@@ -45,6 +50,12 @@ linux_banner:
   .string  "Linux version 6.6\n"
 #endif
 # CHECK-C: BOLT-INFO: Linux kernel version is 6.6
+
+#ifdef D
+  .hidden linux_banner
+  .string  "Linux version 6.6.15.2-2-xxx\n"
+#endif
+# CHECK-D: BOLT-INFO: Linux kernel version is 6.6
 
   .size  linux_banner, . - linux_banner
 

@@ -48,6 +48,9 @@ flang:frontend:
   - flang/Evaluate/**/*
   - flang/Semantics/**/*
 
+libclc:
+  - libclc/**
+
 HLSL:
   - clang/*HLSL*/**/*
   - clang/**/*HLSL*
@@ -86,9 +89,6 @@ LTO:
   - llvm/*/ThinLTO/**
   - llvm/lib/Transforms/*/FunctionImport*
   - llvm/tools/gold/**
-
-mc:
-  - llvm/*/MC/**
 
 clang:driver:
   - clang/*/Driver/**
@@ -554,6 +554,12 @@ flang:fir-hlfir:
 flang:codegen:
   - flang/**/CodeGen/**
 
+llvm:codegen:
+  - llvm/lib/CodeGen/*
+  - llvm/lib/CodeGen/MIRParser/*
+  - llvm/lib/CodeGen/LiveDebugValues/*
+  - llvm/lib/CodeGen/AsmPrinter/*
+
 llvm:globalisel:
   - llvm/**/GlobalISel/**
   - llvm/utils/TableGen/GlobalISel*
@@ -612,6 +618,12 @@ llvm:adt:
 llvm:support:
   - llvm/**/Support/**
 
+# Skip llvm/test/MC and llvm/unittests/MC, which includes target-specific directories.
+llvm:mc:
+  - llvm/include/llvm/MC/**
+  - llvm/lib/MC/**
+  - llvm/tools/llvm-mc/**
+
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
@@ -625,6 +637,10 @@ llvm:instcombine:
   - llvm/include/llvm/Analysis/InstructionSimplify.h
   - llvm/test/Transforms/InstCombine/**
   - llvm/test/Transforms/InstSimplify/**
+
+llvm:vectorcombine:
+  - llvm/lib/Transforms/Vectorize/VectorCombine.cpp
+  - llvm/test/Transforms/VectorCombine/**
 
 clangd:
   - clang-tools-extra/clangd/**
@@ -703,11 +719,20 @@ mlgo:
   - llvm/test/CodeGen/MLRegAlloc/**
   - llvm/utils/mlgo-utils/**
   - llvm/docs/MLGO.rst
+  - llvm/include/llvm/Analysis/IR2Vec.h
+  - llvm/lib/Analysis/IR2Vec.cpp
+  - llvm/lib/Analysis/models/**
+  - llvm/test/Analysis/IR2Vec/**
+  - llvm/tools/llvm-ir2vec/**
+  - llvm/docs/CommandGuide/llvm-ir2vec.rst
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
   - llvm/test/tools/llvm-exegesis/**
   - llvm/unittests/tools/llvm-exegesis/**
+
+tools:llvm-reduce:
+  - llvm/tools/llvm-reduce/**
 
 platform:windows:
   - lld/COFF/**
@@ -764,17 +789,23 @@ backend:NVPTX:
   - 'llvm/**/*nvptx*/**'
   - 'llvm/**/*NVPTX*/**'
 
+backend:MIPS:
+  - '**/*mips*'
+  - '**/*Mips*'
+  - '**/*mips*/**'
+  - '**/*Mips*/**'
+
 backend:RISC-V:
-  - clang/**/*riscv*
-  - clang/**/*RISCV*
-  - llvm/**/*riscv*
-  - llvm/**/*RISCV*
+  - '**/*riscv*'
+  - '**/*RISCV*'
+  - '**/*riscv*/**'
+  - '**/*RISCV*/**'
 
 backend:Xtensa:
-  - clang/**/*xtensa*
-  - clang/**/*Xtensa*
-  - llvm/**/*xtensa*
-  - llvm/**/*Xtensa*
+  - '**/*xtensa*'
+  - '**/*Xtensa*'
+  - '**/*xtensa*/**'
+  - '**/*Xtensa*/**'
 
 lld:coff:
   - lld/**/COFF/**

@@ -14,6 +14,7 @@
 #define LLVMIR_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
   let description = [{
@@ -165,42 +166,6 @@ def NonNegFlagInterface : OpInterface<"NonNegFlagInterface"> {
     }], "StringRef", "getNonNegName", (ins), [{}], [{
       return "nonNeg";
     }]>,
-  ];
-}
-
-def BranchWeightOpInterface : OpInterface<"BranchWeightOpInterface"> {
-  let description = [{
-    An interface for operations that can carry branch weights metadata. It
-    provides setters and getters for the operation's branch weights attribute.
-    The default implementation of the interface methods expect the operation to
-    have an attribute of type DenseI32ArrayAttr named branch_weights.
-  }];
-
-  let cppNamespace = "::mlir::LLVM";
-
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/        "Returns the branch weights attribute or nullptr",
-      /*returnType=*/  "::mlir::DenseI32ArrayAttr",
-      /*methodName=*/  "getBranchWeightsOrNull",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getBranchWeightsAttr();
-      }]
-      >,
-    InterfaceMethod<
-      /*desc=*/        "Sets the branch weights attribute",
-      /*returnType=*/  "void",
-      /*methodName=*/  "setBranchWeights",
-      /*args=*/        (ins "::mlir::DenseI32ArrayAttr":$attr),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        op.setBranchWeightsAttr(attr);
-      }]
-      >
   ];
 }
 
@@ -565,6 +530,41 @@ def LLVM_DIRecursiveTypeAttrInterface
       Build a rec-self instance using the provided `recId`.
     }], "DIRecursiveTypeAttrInterface", "getRecSelf",
     (ins "DistinctAttr":$recId)>
+  ];
+}
+
+def LLVM_TargetAttrInterface
+  : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
+  let description = [{
+    Interface for attributes that describe LLVM targets.
+
+    These attributes should be able to return the specified target `triple`,
+    `chip` and `features`.
+
+    Implementing attributes should provide a `DLTIQueryInterface::query()`
+    implementation which responds to keys `"triple"`, `"chip"` and `"features"`
+    by returning appropriate `StringAttr`s.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the target triple identifier.",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getTriple",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target chip (i.e. \"cpu\") identifier.",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getChip",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target features as a string.",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getFeatures",
+      /*args=*/(ins)
+    >
   ];
 }
 

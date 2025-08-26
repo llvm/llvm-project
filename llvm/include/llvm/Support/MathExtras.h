@@ -74,12 +74,16 @@ constexpr float ef          = 0x1.5bf0a8P+1F, // (2.71828183) https://oeis.org/A
                 sqrt3f      = 0x1.bb67aeP+0F, // (1.73205081) https://oeis.org/A002194
                 inv_sqrt3f  = 0x1.279a74P-1F, // (.577350269)
                 phif        = 0x1.9e377aP+0F; // (1.61803399) https://oeis.org/A001622
+// These string literals are taken from below:
+// https://github.com/bminor/glibc/blob/8543577b04ded6d979ffcc5a818930e4d74d0645/math/math.h#L1215-L1229
+constexpr const char *pis     = "3.141592653589793238462643383279502884",
+                     *inv_pis = "0.318309886183790671537767526745028724";
 // clang-format on
 } // namespace numbers
 
 /// Create a bitmask with the N right-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.
-template <typename T> T maskTrailingOnes(unsigned N) {
+template <typename T> constexpr T maskTrailingOnes(unsigned N) {
   static_assert(std::is_unsigned_v<T>, "Invalid type!");
   const unsigned Bits = CHAR_BIT * sizeof(T);
   assert(N <= Bits && "Invalid bit index");
@@ -90,19 +94,19 @@ template <typename T> T maskTrailingOnes(unsigned N) {
 
 /// Create a bitmask with the N left-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.
-template <typename T> T maskLeadingOnes(unsigned N) {
+template <typename T> constexpr T maskLeadingOnes(unsigned N) {
   return ~maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
 /// Create a bitmask with the N right-most bits set to 0, and all other
 /// bits set to 1.  Only unsigned types are allowed.
-template <typename T> T maskTrailingZeros(unsigned N) {
+template <typename T> constexpr T maskTrailingZeros(unsigned N) {
   return maskLeadingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
 /// Create a bitmask with the N left-most bits set to 0, and all other
 /// bits set to 1.  Only unsigned types are allowed.
-template <typename T> T maskLeadingZeros(unsigned N) {
+template <typename T> constexpr T maskLeadingZeros(unsigned N) {
   return maskTrailingOnes<T>(CHAR_BIT * sizeof(T) - N);
 }
 
@@ -120,7 +124,7 @@ static const unsigned char BitReverseTable256[256] = {
 };
 
 /// Reverse the bits in \p Val.
-template <typename T> T reverseBits(T Val) {
+template <typename T> constexpr T reverseBits(T Val) {
 #if __has_builtin(__builtin_bitreverse8)
   if constexpr (std::is_same_v<T, uint8_t>)
     return __builtin_bitreverse8(Val);
@@ -217,7 +221,7 @@ constexpr bool isShiftedUInt(uint64_t x) {
 }
 
 /// Gets the maximum value for a N-bit unsigned integer.
-inline uint64_t maxUIntN(uint64_t N) {
+inline constexpr uint64_t maxUIntN(uint64_t N) {
   assert(N <= 64 && "integer width out of range");
 
   // uint64_t(1) << 64 is undefined behavior, so we can't do
@@ -233,7 +237,7 @@ inline uint64_t maxUIntN(uint64_t N) {
 }
 
 /// Gets the minimum value for a N-bit signed integer.
-inline int64_t minIntN(int64_t N) {
+inline constexpr int64_t minIntN(int64_t N) {
   assert(N <= 64 && "integer width out of range");
 
   if (N == 0)
@@ -242,7 +246,7 @@ inline int64_t minIntN(int64_t N) {
 }
 
 /// Gets the maximum value for a N-bit signed integer.
-inline int64_t maxIntN(int64_t N) {
+inline constexpr int64_t maxIntN(int64_t N) {
   assert(N <= 64 && "integer width out of range");
 
   // This relies on two's complement wraparound when N == 64, so we convert to
@@ -253,12 +257,12 @@ inline int64_t maxIntN(int64_t N) {
 }
 
 /// Checks if an unsigned integer fits into the given (dynamic) bit width.
-inline bool isUIntN(unsigned N, uint64_t x) {
+inline constexpr bool isUIntN(unsigned N, uint64_t x) {
   return N >= 64 || x <= maxUIntN(N);
 }
 
 /// Checks if an signed integer fits into the given (dynamic) bit width.
-inline bool isIntN(unsigned N, int64_t x) {
+inline constexpr bool isIntN(unsigned N, int64_t x) {
   return N >= 64 || (minIntN(N) <= x && x <= maxIntN(N));
 }
 
@@ -328,8 +332,7 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
 /// Compile time Log2.
 /// Valid only for positive powers of two.
 template <size_t kValue> constexpr size_t CTLog2() {
-  static_assert(kValue > 0 && llvm::isPowerOf2_64(kValue),
-                "Value is not a valid power of 2");
+  static_assert(llvm::isPowerOf2_64(kValue), "Value is not a valid power of 2");
   return 1 + CTLog2<kValue / 2>();
 }
 

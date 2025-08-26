@@ -43,13 +43,9 @@ add_llvm_component_library(LLVMMC
   MCRegisterInfo.cpp
   MCSchedule.cpp
   MCSection.cpp
-  MCSectionCOFF.cpp
-  MCSectionDXContainer.cpp
-  MCSectionELF.cpp
   MCSectionMachO.cpp
-  MCSectionWasm.cpp
-  MCSectionXCOFF.cpp
   MCStreamer.cpp
+  MCSFrame.cpp
   MCSPIRVStreamer.cpp
   MCSubtargetInfo.cpp
   MCSymbol.cpp

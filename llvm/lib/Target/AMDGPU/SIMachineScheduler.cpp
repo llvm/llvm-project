@@ -287,13 +287,10 @@ void SIScheduleBlock::fastSchedule() {
 static bool isDefBetween(Register Reg, SlotIndex First, SlotIndex Last,
                          const MachineRegisterInfo *MRI,
                          const LiveIntervals *LIS) {
-  for (MachineRegisterInfo::def_instr_iterator
-       UI = MRI->def_instr_begin(Reg),
-       UE = MRI->def_instr_end(); UI != UE; ++UI) {
-    const MachineInstr* MI = &*UI;
-    if (MI->isDebugValue())
+  for (const MachineInstr &MI : MRI->def_instructions(Reg)) {
+    if (MI.isDebugValue())
       continue;
-    SlotIndex InstSlot = LIS->getInstructionIndex(*MI).getRegSlot();
+    SlotIndex InstSlot = LIS->getInstructionIndex(MI).getRegSlot();
     if (InstSlot >= First && InstSlot <= Last)
       return true;
   }

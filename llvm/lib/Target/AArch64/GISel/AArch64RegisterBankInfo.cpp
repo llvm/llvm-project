@@ -13,6 +13,7 @@
 
 #include "AArch64RegisterBankInfo.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -476,6 +477,11 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_facgt:
   case Intrinsic::aarch64_neon_fabd:
   case Intrinsic::aarch64_sisd_fabd:
+  case Intrinsic::aarch64_neon_sqrdmlah:
+  case Intrinsic::aarch64_neon_sqrdmlsh:
+  case Intrinsic::aarch64_neon_sqrdmulh:
+  case Intrinsic::aarch64_neon_sqadd:
+  case Intrinsic::aarch64_neon_sqsub:
     return true;
   case Intrinsic::aarch64_neon_saddlv: {
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
@@ -485,9 +491,9 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   }
 }
 
-bool AArch64RegisterBankInfo::isPHIWithFPContraints(
+bool AArch64RegisterBankInfo::isPHIWithFPConstraints(
     const MachineInstr &MI, const MachineRegisterInfo &MRI,
-    const TargetRegisterInfo &TRI, const unsigned Depth) const {
+    const AArch64RegisterInfo &TRI, const unsigned Depth) const {
   if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
     return false;
 
@@ -495,13 +501,13 @@ bool AArch64RegisterBankInfo::isPHIWithFPContraints(
                 [&](const MachineInstr &UseMI) {
                   if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
                     return true;
-                  return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
+                  return isPHIWithFPConstraints(UseMI, MRI, TRI, Depth + 1);
                 });
 }
 
 bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                                const MachineRegisterInfo &MRI,
-                                               const TargetRegisterInfo &TRI,
+                                               const AArch64RegisterInfo &TRI,
                                                unsigned Depth) const {
   unsigned Op = MI.getOpcode();
   if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MRI, MI))
@@ -539,7 +545,7 @@ bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
 
 bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
-                                         const TargetRegisterInfo &TRI,
+                                         const AArch64RegisterInfo &TRI,
                                          unsigned Depth) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_FPTOSI:
@@ -577,7 +583,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
 
 bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
                                             const MachineRegisterInfo &MRI,
-                                            const TargetRegisterInfo &TRI,
+                                            const AArch64RegisterInfo &TRI,
                                             unsigned Depth) const {
   switch (MI.getOpcode()) {
   case AArch64::G_DUP:
@@ -611,6 +617,19 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
     break;
   }
   return hasFPConstraints(MI, MRI, TRI, Depth);
+}
+
+bool AArch64RegisterBankInfo::prefersFPUse(const MachineInstr &MI,
+                                           const MachineRegisterInfo &MRI,
+                                           const AArch64RegisterInfo &TRI,
+                                           unsigned Depth) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+    return MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() ==
+           MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+  }
+  return onlyDefinesFP(MI, MRI, TRI, Depth);
 }
 
 bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
@@ -666,8 +685,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo &TRI = *STI.getRegisterInfo();
 
   switch (Opc) {
     // G_{F|S|U}REM are not listed because they are not legal.
@@ -821,7 +840,9 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Integer to FP conversions don't necessarily happen between GPR -> FPR
     // regbanks. They can also be done within an FPR register.
     Register SrcReg = MI.getOperand(1).getReg();
-    if (getRegBank(SrcReg, MRI, TRI) == &AArch64::FPRRegBank)
+    if (getRegBank(SrcReg, MRI, TRI) == &AArch64::FPRRegBank &&
+        MRI.getType(SrcReg).getSizeInBits() ==
+            MRI.getType(MI.getOperand(0).getReg()).getSizeInBits())
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
     else
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
@@ -890,13 +911,13 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                  // instruction.
                  //
                  // Int->FP conversion operations are also captured in
-                 // onlyDefinesFP().
+                 // prefersFPUse().
 
-                 if (isPHIWithFPContraints(UseMI, MRI, TRI))
+                 if (isPHIWithFPConstraints(UseMI, MRI, TRI))
                    return true;
 
                  return onlyUsesFP(UseMI, MRI, TRI) ||
-                        onlyDefinesFP(UseMI, MRI, TRI);
+                        prefersFPUse(UseMI, MRI, TRI);
                }))
       OpRegBankIdx[0] = PMI_FirstFPR;
     break;

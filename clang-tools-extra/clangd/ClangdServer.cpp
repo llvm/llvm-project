@@ -521,29 +521,32 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
                                  std::move(Action));
 }
 
-void ClangdServer::formatFile(PathRef File, std::optional<Range> Rng,
+void ClangdServer::formatFile(PathRef File, const std::vector<Range> &Rngs,
                               Callback<tooling::Replacements> CB) {
   auto Code = getDraft(File);
   if (!Code)
     return CB(llvm::make_error<LSPError>("trying to format non-added document",
                                          ErrorCode::InvalidParams));
-  tooling::Range RequestedRange;
-  if (Rng) {
-    llvm::Expected<size_t> Begin = positionToOffset(*Code, Rng->start);
-    if (!Begin)
-      return CB(Begin.takeError());
-    llvm::Expected<size_t> End = positionToOffset(*Code, Rng->end);
-    if (!End)
-      return CB(End.takeError());
-    RequestedRange = tooling::Range(*Begin, *End - *Begin);
+  std::vector<tooling::Range> RequestedRanges;
+  if (!Rngs.empty()) {
+    RequestedRanges.reserve(Rngs.size());
+    for (const auto &Rng : Rngs) {
+      llvm::Expected<size_t> Begin = positionToOffset(*Code, Rng.start);
+      if (!Begin)
+        return CB(Begin.takeError());
+      llvm::Expected<size_t> End = positionToOffset(*Code, Rng.end);
+      if (!End)
+        return CB(End.takeError());
+      RequestedRanges.emplace_back(*Begin, *End - *Begin);
+    }
   } else {
-    RequestedRange = tooling::Range(0, Code->size());
+    RequestedRanges = {tooling::Range(0, Code->size())};
   }
 
   // Call clang-format.
   auto Action = [File = File.str(), Code = std::move(*Code),
-                 Ranges = std::vector<tooling::Range>{RequestedRange},
-                 CB = std::move(CB), this]() mutable {
+                 Ranges = std::move(RequestedRanges), CB = std::move(CB),
+                 this]() mutable {
     format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS, true);
     tooling::Replacements IncludeReplaces =
         format::sortIncludes(Style, Code, Ranges, File);

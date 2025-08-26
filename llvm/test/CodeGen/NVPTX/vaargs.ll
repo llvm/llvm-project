@@ -53,7 +53,7 @@ entry:
 ; CHECK-NEXT:    and.b[[BITS]] [[VA_PTR_ALIGN:%(r|rd)[0-9]+]], [[VA_PTR_TMP]], -8;
 ; CHECK-NEXT:    add.s[[BITS]] [[VA_PTR_NEXT:%(r|rd)[0-9]+]], [[VA_PTR_ALIGN]], 8;
 ; CHECK-NEXT:    st.b[[BITS]] [%SP], [[VA_PTR_NEXT]];
-; CHECK-NEXT:    ld.local.b64 %fd{{[0-9]+}}, [[[VA_PTR_ALIGN]]];
+; CHECK-NEXT:    ld.local.b64 %rd{{[0-9]+}}, [[[VA_PTR_ALIGN]]];
 
   %2 = va_arg ptr %al, double
 
@@ -84,19 +84,19 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; Load arguments to temporary variables
 ; CHECK32:       ld.param.b32 [[ARG_VOID_PTR:%r[0-9]+]], [test_foo_param_3];
 ; CHECK64:       ld.param.b64 [[ARG_VOID_PTR:%rd[0-9]+]], [test_foo_param_3];
-; CHECK-NEXT:    ld.param.b64 [[ARG_DOUBLE:%fd[0-9]+]], [test_foo_param_2];
+; CHECK-NEXT:    ld.param.b64 [[ARG_DOUBLE:%rd[0-9]+]], [test_foo_param_2];
 ; CHECK-NEXT:    ld.param.b64 [[ARG_I64:%rd[0-9]+]], [test_foo_param_1];
 ; CHECK-NEXT:    ld.param.b32 [[ARG_I32:%r[0-9]+]], [test_foo_param_0];
 
 ; Store arguments to an array
-; CHECK32:  .param .align 8 .b8 param1[28];
-; CHECK64:  .param .align 8 .b8 param1[32];
-; CHECK-NEXT:    st.param.b32 [param1], [[ARG_I32]];
-; CHECK-NEXT:    st.param.b64 [param1+8], [[ARG_I64]];
-; CHECK-NEXT:    st.param.b64 [param1+16], [[ARG_DOUBLE]];
-; CHECK-NEXT:    st.param.b[[BITS]] [param1+24], [[ARG_VOID_PTR]];
-; CHECK-NEXT:    .param .b32 retval0;
-; CHECK-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .align 8 .b8 _[]
+; CHECK32:      .param .align 8 .b8 param1[28];
+; CHECK64:      .param .align 8 .b8 param1[32];
+; CHECK-DAG:    .param .b32 retval0;
+; CHECK-DAG:    st.param.b32 [param1], [[ARG_I32]];
+; CHECK-DAG:    st.param.b64 [param1+8], [[ARG_I64]];
+; CHECK-DAG:    st.param.b64 [param1+16], [[ARG_DOUBLE]];
+; CHECK-DAG:    st.param.b[[BITS]] [param1+24], [[ARG_VOID_PTR]];
+; CHECK-DAG:    prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .align 8 .b8 _[]
 
 entry:
   %ptr = load ptr, ptr addrspacecast (ptr addrspace(1) @foo_ptr to ptr), align 8

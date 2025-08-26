@@ -1,9 +1,9 @@
-<!--===- docs/Extensions.md 
-  
+<!--===- docs/Extensions.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Fortran Extensions supported by Flang
@@ -164,6 +164,24 @@ end
   No other Fortran compiler enforces C7108 (to our knowledge);
   they all resolve the ambiguity by interpreting the call as a function
   reference.  We do the same, with a portability warning.
+* An override for an inaccessible procedure binding works only within
+  the same module; other apparent overrides of inaccessible bindings
+  are actually new bindings of the same name.
+  In the case of `DEFERRED` bindings in an `ABSTRACT` derived type,
+  however, overrides are necessary, so they are permitted for inaccessible
+  bindings with an optional warning.
+* Main program name is allowed to be the same as the other symbols used
+  in the main program, for example:
+```
+module m
+end
+program m
+use m
+end
+```
+  Note that internally the main program symbol name is all uppercase, unlike
+  the names of all other symbols, which are usually all lowercase. This
+  may make a difference in testing/debugging.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -246,6 +264,8 @@ end
   the type resolution of such BOZ literals usages is highly non portable).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
+* `TRANSFER(boz, MOLD=integer or real scalar)` is accepted as an alternate
+  spelling of `INT(boz, KIND=kind(mold))` or `REAL(boz, KIND=kind(mold))`.
 * EQUIVALENCE of numeric and character sequences (a ubiquitous extension),
   as well as of sequences of non-default kinds of numeric types
   with each other.
@@ -291,7 +311,10 @@ end
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
 * Nonstandard intrinsic functions: ISNAN, SIZEOF
-* A forward reference to a default INTEGER scalar dummy argument or
+* A forward reference to an INTEGER dummy argument is permitted to appear
+  in a specification expression, such as an array bound, in a scope with
+  IMPLICIT NONE(TYPE).
+* A forward reference to a default INTEGER scalar
   `COMMON` block variable is permitted to appear in a specification
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
@@ -397,8 +420,9 @@ end
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
-* A comma in a fixed-width numeric input field terminates the
-  field rather than signaling an invalid character error.
+* A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
+  fixed-width numeric input field terminates the field rather than
+  signaling an invalid character error.
 * Arguments to the intrinsic functions `MAX` and `MIN` are converted
   when necessary to the type of the result.
   An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
@@ -424,6 +448,10 @@ end
 * A zero field width is allowed for logical formatted output (`L0`).
 * `OPEN(..., FORM='BINARY')` is accepted as a legacy synonym for
   the standard `OPEN(..., FORM='UNFORMATTED', ACCESS='STREAM')`.
+* A character string edit descriptor is allowed in an input format
+  with an optional compilation-time warning.  When executed, it
+  is treated as an 'nX' positioning control descriptor that skips
+  over the same number of characters, without comparison.
 
 ### Extensions supported when enabled by options
 
@@ -451,6 +479,9 @@ end
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
 * `UNSIGNED` type (-funsigned)
+* Default exponent of zero, e.g. `3.14159E`, on a READ from a
+  fixed-width input field.  Includes the case with only an
+  exponent letter for compatibility with other compilers.
 
 ### Extensions and legacy features deliberately not supported
 
@@ -464,7 +495,7 @@ end
 * `VIRTUAL` as synonym for `DIMENSION`
 * `ENCODE` and `DECODE` as synonyms for internal I/O
 * `IMPLICIT AUTOMATIC`, `IMPLICIT STATIC`
-* Default exponent of zero, e.g. `3.14159E`
+* Default exponent of zero, e.g. `3.14159E`, on a literal constant
 * Characters in defined operators that are neither letters nor digits
 * `B` suffix on unquoted octal constants
 * `Z` prefix on unquoted hexadecimal constants (dangerous)
@@ -514,6 +545,8 @@ end
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
   like function references.  Fortran's line continuation methods also work.
+* We implement the `__COUNTER__` preprocessing extension,
+  see [Non-standard Extensions](Preprocessing.md#non-standard-extensions)
 
 ## Standard features not silently accepted
 
@@ -842,6 +875,40 @@ print *, [(j,j=1,10)]
   in a specification expression via host association with a portability
   warning since such values may have become defined by the time the nested
   expression's value is required.
+
+* Intrinsic assignment of arrays is defined elementally, and intrinsic
+  assignment of derived type components is defined componentwise.
+  However, when intrinsic assignment takes place for an array of derived
+  type, the order of the loop nesting is not defined.
+  Some compilers will loop over the elements, assigning all of the components
+  of each element before proceeding to the next element.
+  This compiler loops over all of the components, and assigns all of
+  the elements for each component before proceeding to the next component.
+  A program using defined assignment might be able to detect the difference.
+
+* The standard forbids instances of derived types with defined unformatted
+  WRITE subroutines from appearing in the I/O list of an `INQUIRE(IOLENGTH=...)`
+  statement.  It then also says that these defined I/O procedures should be
+  ignored for that statement.  So we allow them to appear (like most
+  compilers) and don't use any defined unformatted WRITE that might have been
+  defined.
+
+* Forward references to target objects are allowed to appear
+  in the initializers of data pointer declarationss.
+  Forward references to target objects are not accepted in the default
+  initializers of derived type component declarations, however,
+  since these default values need to be available to process incomplete
+  structure constructors.
+
+* When an `ALLOCATE` or `DEALLOCATE` statement with multiple variables
+  has a `STAT=` specifier that allows the program to continue execution
+  after an error, the variables after the one with the error are left
+  deallocated (or allocated).  This interpretation allows the program to
+  identify the variable that encountered the problem while avoiding any
+  ambiguity in the case of multiple errors with distinct status codes.
+  Some compilers work differently; for maximum portability, avoid
+  `ALLOCATE` and `DEALLOCATE` statements with error recovery for
+  multiple variables.
 
 ## De Facto Standard Features
 

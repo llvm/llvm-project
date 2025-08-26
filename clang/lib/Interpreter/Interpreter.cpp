@@ -46,6 +46,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
@@ -85,7 +86,6 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
 static llvm::Expected<std::unique_ptr<CompilerInstance>>
 CreateCI(const llvm::opt::ArgStringList &Argv) {
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
   // FIXME: Clang should register these container operations automatically.
@@ -95,9 +95,9 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
   // Buffer diagnostics from argument parsing so that we can output them using
   // a well formed diagnostic object.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagsBuffer);
   bool Success = CompilerInvocation::CreateFromArgs(
       Clang->getInvocation(), llvm::ArrayRef(Argv.begin(), Argv.size()), Diags);
 
@@ -131,7 +131,8 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
                                    "Initialization failed. "
                                    "Target is missing");
 
-  Clang->getTarget().adjust(Clang->getDiagnostics(), Clang->getLangOpts());
+  Clang->getTarget().adjust(Clang->getDiagnostics(), Clang->getLangOpts(),
+                            Clang->getAuxTarget());
 
   // Don't clear the AST before backend codegen since we do codegen multiple
   // times, reusing the same AST.
@@ -172,11 +173,10 @@ IncrementalCompilerBuilder::create(std::string TT,
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
+  std::unique_ptr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(ClangArgv);
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagsBuffer);
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
@@ -262,7 +262,7 @@ public:
       if (auto *TLSD = llvm::dyn_cast<TopLevelStmtDecl>(D))
         if (TLSD && TLSD->isSemiMissing()) {
           auto ExprOrErr =
-              Interp.ExtractValueFromExpr(cast<Expr>(TLSD->getStmt()));
+              Interp.convertExprToValue(cast<Expr>(TLSD->getStmt()));
           if (llvm::Error E = ExprOrErr.takeError()) {
             llvm::logAllUnhandledErrors(std::move(E), llvm::errs(),
                                         "Value printing failed: ");
@@ -372,8 +372,11 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
 
-  Act = std::make_unique<IncrementalAction>(*CI, *TSCtx->getContext(), ErrOut,
-                                            *this, std::move(Consumer));
+  Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
+    return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
+                                               std::move(Consumer));
+  });
+
   if (ErrOut)
     return;
   CI->ExecuteAction(*Act);
@@ -435,11 +438,10 @@ const char *const Runtimes = R"(
     #define __CLANG_REPL__ 1
 #ifdef __cplusplus
     #define EXTERN_C extern "C"
-    void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
     struct __clang_Interpreter_NewTag{} __ci_newtag;
     void* operator new(__SIZE_TYPE__, void* __p, __clang_Interpreter_NewTag) noexcept;
     template <class T, class = T (*)() /*disable for arrays*/>
-    void __clang_Interpreter_SetValueCopyArr(T* Src, void* Placement, unsigned long Size) {
+    void __clang_Interpreter_SetValueCopyArr(const T* Src, void* Placement, unsigned long Size) {
       for (auto Idx = 0; Idx < Size; ++Idx)
         new ((void*)(((T*)Placement) + Idx), __ci_newtag) T(Src[Idx]);
     }
@@ -449,27 +451,32 @@ const char *const Runtimes = R"(
     }
 #else
     #define EXTERN_C extern
+    EXTERN_C void *memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ n);
+    EXTERN_C inline void __clang_Interpreter_SetValueCopyArr(const void* Src, void* Placement, unsigned long Size) {
+      memcpy(Placement, Src, Size);
+    }
 #endif // __cplusplus
-
+  EXTERN_C void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
+Interpreter::create(std::unique_ptr<CompilerInstance> CI,
+                    std::unique_ptr<llvm::orc::LLJITBuilder> JB) {
   llvm::Error Err = llvm::Error::success();
-  auto Interp =
-      std::unique_ptr<Interpreter>(new Interpreter(std::move(CI), Err));
+  auto Interp = std::unique_ptr<Interpreter>(
+      new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr));
   if (Err)
     return std::move(Err);
 
   // Add runtime code and set a marker to hide it from user code. Undo will not
   // go through that.
-  auto PTU = Interp->Parse(Runtimes);
-  if (!PTU)
-    return PTU.takeError();
+  Err = Interp->ParseAndExecute(Runtimes);
+  if (Err)
+    return std::move(Err);
+
   Interp->markUserCodeStart();
 
-  Interp->ValuePrintingInfo.resize(4);
   return std::move(Interp);
 }
 
@@ -493,10 +500,10 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   std::unique_ptr<Interpreter> Interp = std::move(*InterpOrErr);
 
   llvm::Error Err = llvm::Error::success();
-  llvm::LLVMContext &LLVMCtx = *Interp->TSCtx->getContext();
 
-  auto DeviceAct =
-      std::make_unique<IncrementalAction>(*DCI, LLVMCtx, Err, *Interp);
+  auto DeviceAct = Interp->TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
+    return std::make_unique<IncrementalAction>(*DCI, *Ctx, Err, *Interp);
+  });
 
   if (Err)
     return std::move(Err);
@@ -518,11 +525,10 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   return std::move(Interp);
 }
 
-const CompilerInstance *Interpreter::getCompilerInstance() const {
-  return CI.get();
-}
-
 CompilerInstance *Interpreter::getCompilerInstance() { return CI.get(); }
+const CompilerInstance *Interpreter::getCompilerInstance() const {
+  return const_cast<Interpreter *>(this)->getCompilerInstance();
+}
 
 llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
   if (!IncrExecutor) {
@@ -604,7 +610,14 @@ Interpreter::Parse(llvm::StringRef Code) {
   if (!TuOrErr)
     return TuOrErr.takeError();
 
-  return RegisterPTU(*TuOrErr);
+  PTUs.emplace_back(PartialTranslationUnit());
+  PartialTranslationUnit &LastPTU = PTUs.back();
+  LastPTU.TUPart = *TuOrErr;
+
+  if (std::unique_ptr<llvm::Module> M = GenModule())
+    LastPTU.TheModule = std::move(M);
+
+  return LastPTU;
 }
 
 static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
@@ -615,6 +628,25 @@ createJITTargetMachineBuilder(const std::string &TT) {
 
   // If the target backend is not registered, LLJITBuilder::create() will fail
   return llvm::orc::JITTargetMachineBuilder(llvm::Triple(TT));
+}
+
+llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+Interpreter::createLLJITBuilder(
+    std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
+    llvm::StringRef OrcRuntimePath) {
+  const std::string &TT = EPC->getTargetTriple().getTriple();
+  auto JTMB = createJITTargetMachineBuilder(TT);
+  if (!JTMB)
+    return JTMB.takeError();
+  auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
+  if (!JB)
+    return JB.takeError();
+
+  (*JB)->setExecutorProcessControl(std::move(EPC));
+  (*JB)->setPlatformSetUp(
+      llvm::orc::ExecutorNativePlatform(OrcRuntimePath.str()));
+
+  return std::move(*JB);
 }
 
 llvm::Error Interpreter::CreateExecutor() {
@@ -654,14 +686,13 @@ void Interpreter::ResetExecutor() { IncrExecutor.reset(); }
 
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
-  LLVM_DEBUG(llvm::dbgs()
-             << "execute-ptu "
-             << ((std::find(PTUs.begin(), PTUs.end(), T) != PTUs.end())
-                     ? std::distance(PTUs.begin(),
-                                     std::find(PTUs.begin(), PTUs.end(), T))
-                     : -1)
-             << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get() << " ("
-             << T.TheModule->getName() << ")]\n");
+  LLVM_DEBUG(
+      llvm::dbgs() << "execute-ptu "
+                   << (llvm::is_contained(PTUs, T)
+                           ? std::distance(PTUs.begin(), llvm::find(PTUs, T))
+                           : -1)
+                   << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get()
+                   << " (" << T.TheModule->getName() << ")]\n");
   if (!IncrExecutor) {
     auto Err = CreateExecutor();
     if (Err)
@@ -728,10 +759,18 @@ Interpreter::getSymbolAddressFromLinkerName(llvm::StringRef Name) const {
 
 llvm::Error Interpreter::Undo(unsigned N) {
 
-  if (N > getEffectivePTUSize())
+  if (getEffectivePTUSize() == 0) {
     return llvm::make_error<llvm::StringError>("Operation failed. "
-                                               "Too many undos",
+                                               "No input left to undo",
                                                std::error_code());
+  } else if (N > getEffectivePTUSize()) {
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv(
+            "Operation failed. Wanted to undo {0} inputs, only have {1}.", N,
+            getEffectivePTUSize()),
+        std::error_code());
+  }
+
   for (unsigned I = 0; I < N; I++) {
     if (IncrExecutor) {
       if (llvm::Error Err = IncrExecutor->removeModule(PTUs.back()))
@@ -757,11 +796,13 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
   if (!EE)
     return EE.takeError();
 
-  auto &DL = EE->getDataLayout();
-
-  if (auto DLSG = llvm::orc::DynamicLibrarySearchGenerator::Load(
-          name, DL.getGlobalPrefix()))
-    EE->getMainJITDylib().addGenerator(std::move(*DLSG));
+  if (llvm::Expected<
+          std::unique_ptr<llvm::orc::EPCDynamicLibrarySearchGenerator>>
+          DLSG = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
+              EE->getExecutionSession(), name))
+    // FIXME: Eventually we should put each library in its own JITDylib and
+    //        turn off process symbols by default.
+    EE->getProcessSymbolsJITDylib()->addGenerator(std::move(*DLSG));
   else
     return DLSG.takeError();
 #endif
@@ -782,10 +823,10 @@ Interpreter::GenModule(IncrementalAction *Action) {
     // sure it always stays empty.
     assert(((!CachedInCodeGenModule ||
              !getCompilerInstance()->getPreprocessorOpts().Includes.empty()) ||
-            (CachedInCodeGenModule->empty() &&
-             CachedInCodeGenModule->global_empty() &&
-             CachedInCodeGenModule->alias_empty() &&
-             CachedInCodeGenModule->ifunc_empty())) &&
+            ((CachedInCodeGenModule->empty() &&
+              CachedInCodeGenModule->global_empty() &&
+              CachedInCodeGenModule->alias_empty() &&
+              CachedInCodeGenModule->ifunc_empty()))) &&
            "CodeGen wrote to a readonly module");
     std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
     CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
@@ -802,4 +843,4 @@ CodeGenerator *Interpreter::getCodeGen(IncrementalAction *Action) const {
     return nullptr;
   return static_cast<CodeGenAction *>(WrappedAct)->getCodeGenerator();
 }
-} // namespace clang
+} // end namespace clang

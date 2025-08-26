@@ -507,7 +507,7 @@ define i64 @addmul4230(i64 %a, i64 %b) {
 ; CHECK-LABEL: addmul4230:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a2, 1
-; CHECK-NEXT:    addiw a2, a2, 134
+; CHECK-NEXT:    addi a2, a2, 134
 ; CHECK-NEXT:    mul a0, a0, a2
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -1034,7 +1034,7 @@ define i64 @add4104(i64 %a) {
 ; RV64I-LABEL: add4104:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    addi a1, a1, 8
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -1051,7 +1051,7 @@ define i64 @add4104_2(i64 %a) {
 ; RV64I-LABEL: add4104_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    addi a1, a1, 8
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -1068,7 +1068,7 @@ define i64 @add8208(i64 %a) {
 ; RV64I-LABEL: add8208:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 2
-; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

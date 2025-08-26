@@ -4,6 +4,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
@@ -269,6 +270,7 @@ cc_library(
         "include/llvm-c/ExternC.h",
         "include/llvm-c/Support.h",
         "include/llvm-c/Types.h",
+        "include/llvm-c/Visibility.h",
         "include/llvm-c/blake3.h",
         "include/llvm/ExecutionEngine/JITSymbol.h",
         "include/llvm/Support/Extension.def",
@@ -319,6 +321,7 @@ cc_library(
     deps = [
         ":config",
         ":Demangle",
+        "//third-party/siphash",
         # We unconditionally depend on the custom LLVM zlib wrapper. This will
         # be an empty library unless zlib is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
@@ -378,6 +381,7 @@ cc_library(
     hdrs = glob(["include/llvm/TableGen/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":FrontendDirective",
         ":Support",
         ":config",
     ],
@@ -417,6 +421,7 @@ cc_library(
         "include/llvm/BinaryFormat/ELFRelocs/*.def",
     ]),
     deps = [
+        ":PPCTargetParser",
         ":Support",
         ":TargetParser",
     ],
@@ -491,6 +496,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
         ":MC",
@@ -542,6 +548,22 @@ cc_library(
 )
 
 cc_library(
+    name = "DWARFCFIChecker",
+    srcs = glob([
+        "lib/DWARFCFIChecker/*.cpp",
+        "lib/DWARFCFIChecker/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWARFCFIChecker/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":DebugInfoDWARFLowLevel",
+        ":MC",
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "MC",
     srcs = glob([
         "lib/MC/*.cpp",
@@ -570,8 +592,23 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
+        ":DebugInfoDWARFLowLevel",
         ":MC",
         ":Object",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "DebugInfoDWARFLowLevel",
+    srcs = glob([
+        "lib/DebugInfo/DWARF/LowLevel/*.cpp",
+    ]),
+    hdrs = glob(["include/llvm/DebugInfo/DWARF/LowLevel/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
         ":Support",
         ":TargetParser",
     ],
@@ -653,6 +690,7 @@ cc_binary(
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
         "utils/TableGen/Basic/SDNodeProperties.h",
         "utils/TableGen/Basic/SequenceToOffsetTable.h",
@@ -754,6 +792,17 @@ gentbl_cc_library(
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
     deps = [":CommonTargetTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "runtime_libcalls_gen",
+    tbl_outs = {"include/llvm/IR/RuntimeLibcalls.inc": ["-gen-runtime-libcalls"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "include/llvm/IR/RuntimeLibcalls.td",
+    deps = [
+        ":IRTdFiles",
+        ":TableGenTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -941,7 +990,6 @@ filegroup(
 cc_library(
     name = "Core",
     srcs = glob([
-        "include/llvm/ProfileData/MemProfCommon.h",
         "lib/IR/*.cpp",
         "lib/IR/*.h",
     ]),
@@ -959,9 +1007,13 @@ cc_library(
         "include/llvm/Analysis/SimplifyQuery.h",
         "include/llvm/Analysis/ValueTracking.h",
         "include/llvm/Analysis/WithCache.h",
+        "include/llvm/ProfileData/InstrProf.h",
+        "include/llvm/ProfileData/InstrProfData.inc",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
-    textual_hdrs = glob(["include/llvm/IR/*.def"]),
+    textual_hdrs = glob([
+        "include/llvm/IR/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":Demangle",
@@ -972,6 +1024,7 @@ cc_library(
         ":config",
         ":intrinsic_enums_gen",
         ":intrinsics_impl_gen",
+        ":runtime_libcalls_gen",
     ],
 )
 
@@ -1150,6 +1203,7 @@ cc_library(
         ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":Demangle",
         ":Object",
         ":Support",
@@ -1227,6 +1281,7 @@ cc_library(
         ":AnalysisFpExc",
         ":BinaryFormat",
         ":Core",
+        ":FrontendHLSL",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -1313,6 +1368,12 @@ td_library(
 )
 
 td_library(
+    name = "TableGenTdFiles",
+    srcs = glob(["include/llvm/TableGen/*.td"]),
+    includes = ["include"],
+)
+
+td_library(
     name = "CommonTargetTdFiles",
     srcs = [":common_target_td_sources"],
     includes = ["include"],
@@ -1361,6 +1422,13 @@ td_library(
     ]),
 )
 
+td_library(
+    name = "PPCTargetTdFiles",
+    srcs = glob([
+        "lib/Target/PowerPC/**/*.td",
+    ]),
+)
+
 gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
@@ -1372,11 +1440,38 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "PPCGenTargetFeaturesGen",
+    tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/PPC.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":PPCTargetTdFiles",
+    ],
+)
+
+cc_library(
+    name = "PPCTargetParser",
+    srcs = ["lib/TargetParser/PPCTargetParser.cpp"],
+    hdrs = ["include/llvm/TargetParser/PPCTargetParser.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [
+        ":PPCGenTargetFeaturesGen",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
 cc_library(
     name = "TargetParser",
-    srcs = glob([
-        "lib/TargetParser/*.cpp",
-    ]) + select({
+    srcs = glob(
+        [
+            "lib/TargetParser/*.cpp",
+        ],
+        exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
+    ) + select({
         "@platforms//os:windows": glob([
             "lib/TargetParser/Windows/*.inc",
         ]),
@@ -1628,6 +1723,8 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":ProfileData",
+        ":Support",
         ":TargetParser",
     ],
 )
@@ -1642,7 +1739,9 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Core",
+        ":MC",
         ":Support",
     ],
 )
@@ -1728,6 +1827,7 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendAtomic",
+        ":FrontendDirective",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",
@@ -1764,6 +1864,13 @@ gentbl_filegroup(
 )
 
 cc_library(
+    name = "FrontendDirective",
+    srcs = glob(["lib/Frontend/Directive/*.cpp"]),
+    hdrs = glob(["include/llvm/Frontend/Directive/*.h"]),
+    deps = [":Support"],
+)
+
+cc_library(
     name = "FrontendOpenACC",
     srcs = glob([
         "lib/Frontend/OpenACC/*.cpp",
@@ -1775,6 +1882,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":FrontendDirective",
         ":Support",
         ":TransformUtils",
     ],
@@ -2032,6 +2140,7 @@ cc_library(
         ":Core",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":IPO",
         ":IRPrinter",
         ":Instrumentation",
@@ -2109,10 +2218,10 @@ llvm_target_lib_list = [lib for lib in [
                 "-combiners=AArch64PostLegalizerLowering",
             ],
             "lib/Target/AArch64/AArch64GenCallingConv.inc": ["-gen-callingconv"],
+            "lib/Target/AArch64/AArch64GenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/AArch64/AArch64GenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",
-                "--large-decoder-table",
             ],
             "lib/Target/AArch64/AArch64GenSystemOperands.inc": ["-gen-searchable-tables"],
             "lib/Target/AArch64/AArch64GenExegesis.inc": ["-gen-exegesis"],
@@ -3173,6 +3282,7 @@ cc_library(
         ":CodeGenTypes",
         ":DWARFLinkerBase",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":MC",
         ":Support",
         ":Target",
@@ -3191,6 +3301,7 @@ cc_library(
         ":BinaryFormat",
         ":CodeGen",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":Support",
         ":Target",
     ],
@@ -3491,6 +3602,7 @@ cc_library(
         ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":DsymutilTableGen",
         ":MC",
         ":Object",
@@ -3908,6 +4020,7 @@ cc_binary(
         ":BinaryFormat",
         ":DebugInfo",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":MC",
         ":Object",
         ":Support",
@@ -3939,6 +4052,7 @@ cc_binary(
         ":DWARFLinker",
         ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":DwarfutilOptionsTableGen",
         ":MC",
         ":ObjCopy",
@@ -4279,6 +4393,7 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":DWARFCFIChecker",
         ":MC",
         ":MCDisassembler",
         ":MCParser",
@@ -4556,6 +4671,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoBTF",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":Debuginfod",
         ":Demangle",
         ":MC",
@@ -4612,6 +4728,25 @@ cc_binary(
         ":Demangle",
         ":Remarks",
         ":Support",
+    ],
+)
+
+cc_binary(
+    name = "llvm-offload-wrapper",
+    srcs = glob([
+        "tools/llvm-offload-wrapper/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":BitWriter",
+        ":Core",
+        ":FrontendOffloading",
+        ":Object",
+        ":Option",
+        ":Support",
+        ":TargetParser",
+        ":intrinsic_enums_gen",
     ],
 )
 
@@ -4873,6 +5008,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":BitWriter",
         ":Core",
+        ":IPO",
         ":IRPrinter",
         ":IRReader",
         ":MC",
@@ -5078,6 +5214,11 @@ cc_binary(
     ],
 )
 
+filegroup(
+    name = "gdb-scripts",
+    srcs = glob(["utils/gdb-scripts/*"]),
+)
+
 ################################################################################
 # Begin testonly libraries
 
@@ -5121,8 +5262,8 @@ py_binary(
 py_binary(
     name = "extract_ir",
     srcs = [
+        "utils/mlgo-utils/extract_ir.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py",
         "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
@@ -5132,8 +5273,8 @@ py_binary(
 py_binary(
     name = "combine_training_corpus",
     srcs = [
+        "utils/mlgo-utils/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py",
         "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
@@ -5143,8 +5284,8 @@ py_binary(
 py_binary(
     name = "make_corpus",
     srcs = [
+        "utils/mlgo-utils/make_corpus.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/make_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py",
     ],
     imports = ["utils/mlgo-utils"],
@@ -5161,6 +5302,13 @@ cc_library(
         ":Support",
         "//third-party/unittest:gmock",
     ],
+)
+
+cc_library(
+    name = "TestingDemangle",
+    testonly = True,
+    copts = llvm_copts,
+    textual_hdrs = glob(["include/llvm/Testing/Demangle/*.inc"]),
 )
 
 cc_library(

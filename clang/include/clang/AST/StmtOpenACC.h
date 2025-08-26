@@ -538,10 +538,8 @@ public:
 
   bool hasDevNumExpr() const { return getExprs()[0]; }
   Expr *getDevNumExpr() const { return getExprs()[0]; }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() { return getExprs().drop_front(); }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() const {
-    return getExprs().drop_front();
-  }
+  ArrayRef<Expr *> getQueueIdExprs() { return getExprs().drop_front(); }
+  ArrayRef<Expr *> getQueueIdExprs() const { return getExprs().drop_front(); }
 
   child_range children() {
     Stmt **Begin = reinterpret_cast<Stmt **>(getExprPtr());
@@ -736,7 +734,7 @@ class OpenACCUpdateConstruct final
                              OpenACCDirectiveKind::Update, SourceLocation{},
                              SourceLocation{}, SourceLocation{}) {
     std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCUpdateConstruct(SourceLocation Start, SourceLocation DirectiveLoc,

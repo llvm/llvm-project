@@ -130,6 +130,11 @@ clang_tablegen("CXX11AttributeInfo") {
   td_file = "../Basic/Attr.td"
 }
 
+clang_tablegen("AttributeSpellingList") {
+  args = [ "-gen-attribute-spelling-list" ]
+  td_file = "Attr.td"
+}
+
 clang_tablegen("Builtins") {
   args = [ "-gen-clang-builtins" ]
 }
@@ -154,7 +159,15 @@ clang_tablegen("BuiltinsRISCV") {
   args = [ "-gen-clang-builtins" ]
 }
 
-clang_tablegen("BuiltinsSPIRV") {
+clang_tablegen("BuiltinsSPIRVCommon") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsSPIRVVK") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsSPIRVCL") {
   args = [ "-gen-clang-builtins" ]
 }
 

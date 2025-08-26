@@ -235,6 +235,11 @@ class TestingConfig(object):
             # files. Should we distinguish them?
             self.test_source_root = str(self.test_source_root)
         self.excludes = set(self.excludes)
+        if (
+            litConfig.maxRetriesPerTest is not None
+            and getattr(self, "test_retry_attempts", None) is None
+        ):
+            self.test_retry_attempts = litConfig.maxRetriesPerTest
 
     @property
     def root(self):

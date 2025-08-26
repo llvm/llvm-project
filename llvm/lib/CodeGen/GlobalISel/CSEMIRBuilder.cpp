@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
 
@@ -53,8 +52,7 @@ CSEMIRBuilder::getDominatingInstrForID(FoldingSetNodeID &ID,
     } else if (!dominates(MI, CurrPos)) {
       // Update the spliced machineinstr's debug location by merging it with the
       // debug location of the instruction at the insertion point.
-      auto *Loc = DILocation::getMergedLocation(getDebugLoc().get(),
-                                                MI->getDebugLoc().get());
+      auto Loc = DebugLoc::getMergedLocation(getDebugLoc(), MI->getDebugLoc());
       MI->setDebugLoc(Loc);
       CurMBB->splice(CurrPos, CurMBB, MI);
     }
@@ -97,7 +95,7 @@ void CSEMIRBuilder::profileSrcOp(const SrcOp &Op,
                                  GISelInstProfileBuilder &B) const {
   switch (Op.getSrcOpKind()) {
   case SrcOp::SrcType::Ty_Imm:
-    B.addNodeIDImmediate(static_cast<int64_t>(Op.getImm()));
+    B.addNodeIDImmediate(Op.getImm());
     break;
   case SrcOp::SrcType::Ty_Predicate:
     B.addNodeIDImmediate(static_cast<int64_t>(Op.getPredicate()));
@@ -170,7 +168,7 @@ CSEMIRBuilder::generateCopiesIfRequired(ArrayRef<DstOp> DstOps,
     if (Observer)
       Observer->changingInstr(*MIB);
     MIB->setDebugLoc(
-        DILocation::getMergedLocation(MIB->getDebugLoc(), getDebugLoc()));
+        DebugLoc::getMergedLocation(MIB->getDebugLoc(), getDebugLoc()));
     if (Observer)
       Observer->changedInstr(*MIB);
   }

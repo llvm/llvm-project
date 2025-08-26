@@ -17,15 +17,14 @@
 #ifndef LLVM_PROFILEDATA_DATAACCESSPROF_H_
 #define LLVM_PROFILEDATA_DATAACCESSPROF_H_
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -35,12 +34,15 @@
 
 namespace llvm {
 
-namespace data_access_prof {
+namespace memprof {
 
 /// The location of data in the source code. Used by profile lookup API.
 struct SourceLocation {
   SourceLocation(StringRef FileNameRef, uint32_t Line)
       : FileName(FileNameRef.str()), Line(Line) {}
+
+  // Empty constructor is used in yaml conversion.
+  SourceLocation() {}
   /// The filename where the data is located.
   std::string FileName;
   /// The line number in the source code.
@@ -53,6 +55,8 @@ namespace internal {
 // which strings are owned by `DataAccessProfData`. Used by `DataAccessProfData`
 // to represent data locations internally.
 struct SourceLocationRef {
+  SourceLocationRef(StringRef FileNameRef, uint32_t Line)
+      : FileName(FileNameRef), Line(Line) {}
   // The filename where the data is located.
   StringRef FileName;
   // The line number in the source code.
@@ -100,18 +104,21 @@ using SymbolHandle = std::variant<std::string, uint64_t>;
 /// The data access profiles for a symbol.
 struct DataAccessProfRecord {
 public:
-  DataAccessProfRecord(SymbolHandleRef SymHandleRef,
-                       ArrayRef<internal::SourceLocationRef> LocRefs) {
+  DataAccessProfRecord(SymbolHandleRef SymHandleRef, uint64_t AccessCount,
+                       ArrayRef<internal::SourceLocationRef> LocRefs)
+      : AccessCount(AccessCount) {
     if (std::holds_alternative<StringRef>(SymHandleRef)) {
       SymHandle = std::get<StringRef>(SymHandleRef).str();
     } else
       SymHandle = std::get<uint64_t>(SymHandleRef);
 
     for (auto Loc : LocRefs)
-      Locations.push_back(SourceLocation(Loc.FileName, Loc.Line));
+      Locations.emplace_back(Loc.FileName, Loc.Line);
   }
+  // Empty constructor is used in yaml conversion.
+  DataAccessProfRecord() : AccessCount(0) {}
   SymbolHandle SymHandle;
-
+  uint64_t AccessCount;
   // The locations of data in the source code. Optional.
   SmallVector<SourceLocation> Locations;
 };
@@ -132,33 +139,35 @@ public:
   /// - Serialized strings.
   /// - The encoded hashes.
   /// - Records.
-  Error serialize(ProfOStream &OS) const;
+  LLVM_ABI Error serialize(ProfOStream &OS) const;
 
   /// Deserialize this class from the given buffer.
-  Error deserialize(const unsigned char *&Ptr);
+  LLVM_ABI Error deserialize(const unsigned char *&Ptr);
 
   /// Returns a profile record for \p SymbolID, or std::nullopt if there
   /// isn't a record. Internally, this function will canonicalize the symbol
   /// name before the lookup.
-  std::optional<DataAccessProfRecord>
+  LLVM_ABI std::optional<DataAccessProfRecord>
   getProfileRecord(const SymbolHandleRef SymID) const;
 
   /// Returns true if \p SymID is seen in profiled binaries and cold.
-  bool isKnownColdSymbol(const SymbolHandleRef SymID) const;
+  LLVM_ABI bool isKnownColdSymbol(const SymbolHandleRef SymID) const;
 
   /// Methods to set symbolized data access profile. Returns error if
   /// duplicated symbol names or content hashes are seen. The user of this
   /// class should aggregate counters that correspond to the same symbol name
   /// or with the same string literal hash before calling 'set*' methods.
-  Error setDataAccessProfile(SymbolHandleRef SymbolID, uint64_t AccessCount);
+  LLVM_ABI Error setDataAccessProfile(SymbolHandleRef SymbolID,
+                                      uint64_t AccessCount);
   /// Similar to the method above, for records with \p Locations representing
   /// the `filename:line` where this symbol shows up. Note because of linker's
   /// merge of identical symbols (e.g., unnamed_addr string literals), one
   /// symbol is likely to have multiple locations.
-  Error setDataAccessProfile(SymbolHandleRef SymbolID, uint64_t AccessCount,
-                             ArrayRef<SourceLocation> Locations);
+  LLVM_ABI Error setDataAccessProfile(SymbolHandleRef SymbolID,
+                                      uint64_t AccessCount,
+                                      ArrayRef<SourceLocation> Locations);
   /// Add a symbol that's seen in the profiled binary without samples.
-  Error addKnownSymbolWithoutSamples(SymbolHandleRef SymbolID);
+  LLVM_ABI Error addKnownSymbolWithoutSamples(SymbolHandleRef SymbolID);
 
   /// The following methods return array reference for various internal data
   /// structures.
@@ -208,7 +217,7 @@ private:
   llvm::SetVector<StringRef> KnownColdSymbols;
 };
 
-} // namespace data_access_prof
+} // namespace memprof
 } // namespace llvm
 
 #endif // LLVM_PROFILEDATA_DATAACCESSPROF_H_

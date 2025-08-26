@@ -58,6 +58,13 @@ def SDT_LoongArchMovgr2fcsr : SDTypeProfile<0, 2, [SDTCisVT<0, GRLenVT>,
 def SDT_LoongArchMovfcsr2gr : SDTypeProfile<1, 1, [SDTCisVT<0, GRLenVT>,
                                                    SDTCisSameAs<0, 1>]>;
 
+def SDT_LoongArchBuildPairF64 : SDTypeProfile<1, 2, [SDTCisVT<0, f64>,
+                                                     SDTCisVT<1, i32>,
+                                                     SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchSplitPairF64 : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
+                                                     SDTCisVT<1, i32>,
+                                                     SDTCisVT<2, f64>]>;
+
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
@@ -164,6 +171,11 @@ def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
                                   [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_cpucfg : SDNode<"LoongArchISD::CPUCFG", SDTUnaryOp,
                                [SDNPHasChain]>;
+
+def loongarch_build_pair_f64 : SDNode<"LoongArchISD::BUILD_PAIR_F64",
+                                      SDT_LoongArchBuildPairF64>;
+def loongarch_split_pair_f64 : SDNode<"LoongArchISD::SPLIT_PAIR_F64",
+                                      SDT_LoongArchSplitPairF64>;
 
 def to_fclass_mask: SDNodeXForm<timm, [{
   uint64_t Check = N->getZExtValue();
@@ -300,17 +312,31 @@ def simm5 : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<5>";
 }
 
-def simm8 : Operand<GRLenVT> {
+def simm8 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isInt<8>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<8>;
   let DecoderMethod = "decodeSImmOperand<8>";
 }
 
-foreach I = [1, 2, 3] in {
-def simm8_lsl # I : Operand<GRLenVT> {
-  let ParserMatchClass = SImmAsmOperand<8, "lsl" # I>;
-  let EncoderMethod = "getImmOpValueAsr<" # I # ">";
-  let DecoderMethod = "decodeSImmOperand<8," # I # ">";
+def simm8_lsl1 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isShiftedInt<8,1>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<8, "lsl1">;
+  let EncoderMethod = "getImmOpValueAsr<1>";
+  let DecoderMethod = "decodeSImmOperand<8, 1>";
 }
+
+def simm8_lsl2 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isShiftedInt<8,2>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<8, "lsl2">;
+  let EncoderMethod = "getImmOpValueAsr<2>";
+  let DecoderMethod = "decodeSImmOperand<8, 2>";
+}
+
+def simm8_lsl3 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isShiftedInt<8,3>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<8, "lsl3">;
+  let EncoderMethod = "getImmOpValueAsr<3>";
+  let DecoderMethod = "decodeSImmOperand<8, 3>";
 }
 
 def simm9_lsl3 : Operand<GRLenVT>,
@@ -510,22 +536,22 @@ def ImmSubFrom32 : SDNodeXForm<imm, [{
 
 // Return the lowest 12 bits of the signed immediate.
 def LO12: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(SignExtend64<12>(N->getSExtValue()),
-                                   SDLoc(N), N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(SignExtend64<12>(N->getSExtValue()),
+                                         SDLoc(N), N->getValueType(0));
 }]>;
 
 // Return the higher 16 bits of the signed immediate.
 def HI16 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() >> 16, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(N->getSExtValue() >> 16, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Return the higher 16 bits of the signed immediate, adjusted for use within an
 // `addu16i.d + addi` pair.
 def HI16ForAddu16idAddiPair: SDNodeXForm<imm, [{
   auto Imm = N->getSExtValue();
-  return CurDAG->getTargetConstant((Imm - SignExtend64<12>(Imm)) >> 16,
-                                   SDLoc(N), N->getValueType(0));
+  return CurDAG->getSignedTargetConstant((Imm - SignExtend64<12>(Imm)) >> 16,
+                                          SDLoc(N), N->getValueType(0));
 }]>;
 
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
@@ -2041,6 +2067,10 @@ def PseudoAtomicLoadSub32 : PseudoAM;
 def PseudoAtomicLoadAnd32 : PseudoAM;
 def PseudoAtomicLoadOr32 : PseudoAM;
 def PseudoAtomicLoadXor32 : PseudoAM;
+def PseudoAtomicLoadUMax32 : PseudoAM;
+def PseudoAtomicLoadUMin32 : PseudoAM;
+def PseudoAtomicLoadMax32 : PseudoAM;
+def PseudoAtomicLoadMin32 : PseudoAM;
 
 multiclass PseudoBinPat<string Op, Pseudo BinInst> {
   def : Pat<(!cast<PatFrag>(Op#"_monotonic") GPR:$addr, GPR:$incr),
@@ -2239,6 +2269,22 @@ def : Pat<(atomic_cmp_swap_i64 GPR:$addr, GPR:$cmp, GPR:$new),
           (AMCAS__DB_D GPR:$cmp, GPR:$new, GPR:$addr)>;
 }
 
+// Ordering constants must be kept in sync with the AtomicOrdering enum in
+// AtomicOrdering.h.
+multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
+                            ValueType vt = GRLenVT> {
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_monotonic") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 2)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acquire") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 4)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_release") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 5)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acq_rel") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 6)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_seq_cst") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 7)>;
+}
+
 let Predicates = [IsLA64] in {
 defm : binary_atomic_op_wd<"AMSWAP", "atomic_swap">;
 defm : binary_atomic_op_wd<"AMADD", "atomic_load_add">;
@@ -2274,23 +2320,6 @@ def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i64,
 def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i64,
                 PseudoMaskedAtomicLoadUMin32>;
 
-// Ordering constants must be kept in sync with the AtomicOrdering enum in
-// AtomicOrdering.h.
-multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
-                            ValueType vt = GRLenVT> {
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_monotonic") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 2)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acquire") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 4)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_release") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 5)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acq_rel") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 6)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_seq_cst") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 7)>;
-}
-
-defm : PseudoCmpXchgPat<"atomic_cmp_swap_i32", PseudoCmpXchg32>;
 defm : PseudoCmpXchgPat<"atomic_cmp_swap_i64", PseudoCmpXchg64, i64>;
 def : Pat<(int_loongarch_masked_cmpxchg_i64
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$fail_order),
@@ -2303,6 +2332,7 @@ def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_min_i64,
                               PseudoMaskedAtomicLoadMin32>;
 } // Predicates = [IsLA64]
 
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_i32", PseudoCmpXchg32>;
 defm : PseudoBinPat<"atomic_load_nand_i32", PseudoAtomicLoadNand32>;
 
 let Predicates = [IsLA32] in {
@@ -2315,11 +2345,30 @@ def : AtomicPat<int_loongarch_masked_atomicrmw_sub_i32,
                 PseudoMaskedAtomicLoadSub32>;
 def : AtomicPat<int_loongarch_masked_atomicrmw_nand_i32,
                 PseudoMaskedAtomicLoadNand32>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i32,
+                PseudoMaskedAtomicLoadUMax32>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i32,
+                PseudoMaskedAtomicLoadUMin32>;
+
+def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_max_i32,
+                              PseudoMaskedAtomicLoadMax32>;
+def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_min_i32,
+                              PseudoMaskedAtomicLoadMin32>;
+
+def : Pat<(int_loongarch_masked_cmpxchg_i32
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$fail_order),
+          (PseudoMaskedCmpXchg32
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$fail_order)>;
+
 defm : PseudoBinPat<"atomic_load_add_i32", PseudoAtomicLoadAdd32>;
 defm : PseudoBinPat<"atomic_load_sub_i32", PseudoAtomicLoadSub32>;
 defm : PseudoBinPat<"atomic_load_and_i32", PseudoAtomicLoadAnd32>;
 defm : PseudoBinPat<"atomic_load_or_i32", PseudoAtomicLoadOr32>;
 defm : PseudoBinPat<"atomic_load_xor_i32", PseudoAtomicLoadXor32>;
+defm : PseudoBinPat<"atomic_load_umax_i32", PseudoAtomicLoadUMax32>;
+defm : PseudoBinPat<"atomic_load_umin_i32", PseudoAtomicLoadUMin32>;
+defm : PseudoBinPat<"atomic_load_max_i32", PseudoAtomicLoadMax32>;
+defm : PseudoBinPat<"atomic_load_min_i32", PseudoAtomicLoadMin32>;
 } // Predicates = [IsLA32]
 
 /// Intrinsics
@@ -2431,7 +2480,7 @@ let hasSideEffects = 1, Constraints = "$rd = $dst" in {
 def CSRWR : FmtCSR<0x04000020, (outs GPR:$dst),
                    (ins GPR:$rd, uimm14:$csr_num), "$rd, $csr_num">;
 def CSRXCHG : FmtCSRXCHG<0x04000000, (outs GPR:$dst),
-                         (ins GPR:$rd, GPR:$rj, uimm14:$csr_num),
+                         (ins GPR:$rd, GPRNoR0R1:$rj, uimm14:$csr_num),
                          "$rd, $rj, $csr_num">;
 } // hasSideEffects = 1, Constraints = "$rd = $dst"
 
@@ -2478,8 +2527,8 @@ def IDLE : MISC_I15<0x06488000>;
 def : Pat<(loongarch_csrrd uimm14:$imm14), (CSRRD uimm14:$imm14)>;
 def : Pat<(loongarch_csrwr GPR:$rd, uimm14:$imm14),
           (CSRWR GPR:$rd, uimm14:$imm14)>;
-def : Pat<(loongarch_csrxchg GPR:$rd, GPR:$rj, uimm14:$imm14),
-          (CSRXCHG GPR:$rd, GPR:$rj, uimm14:$imm14)>;
+def : Pat<(loongarch_csrxchg GPR:$rd, GPRNoR0R1:$rj, uimm14:$imm14),
+          (CSRXCHG GPR:$rd, GPRNoR0R1:$rj, uimm14:$imm14)>;
 
 def : Pat<(loongarch_iocsrrd_b GPR:$rj), (IOCSRRD_B GPR:$rj)>;
 def : Pat<(loongarch_iocsrrd_h GPR:$rj), (IOCSRRD_H GPR:$rj)>;

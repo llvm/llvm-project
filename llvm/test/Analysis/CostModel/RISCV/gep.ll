@@ -396,14 +396,3 @@ define void @foldable_vector_uses(ptr %base, <2 x ptr> %base.vec) {
   ret void
 }
 
-declare <2 x i8> @llvm.masked.load.v2i8.p0(ptr, i32, <2 x i1>, <2 x i8>)
-declare <2 x i8> @llvm.masked.gather.v2i8.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i8>)
-declare <2 x i8> @llvm.masked.expandload.v2i8(ptr, <2 x i1>, <2 x i8>)
-declare <2 x i8> @llvm.vp.load.v2i8.p0(ptr, <2 x i1>, i32)
-declare <2 x i8> @llvm.experimental.vp.strided.load.v2i8.i64(ptr, i64, <2 x i1>, i32)
-
-declare void @llvm.masked.store.v2i8.p0(<2 x i8>, ptr, i32, <2 x i1>)
-declare void @llvm.masked.scatter.v2i8.v2p0(<2 x i8>, <2 x ptr>, i32, <2 x i1>)
-declare void @llvm.masked.compressstore.v2i8(<2 x i8>, ptr, <2 x i1>)
-declare void @llvm.vp.store.v2i8.p0(<2 x i8>, ptr, <2 x i1>, i32)
-declare void @llvm.experimental.vp.strided.store.v2i8.i64(<2 x i8>, ptr, i64, <2 x i1>, i32)

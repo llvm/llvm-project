@@ -1222,17 +1222,6 @@ func.func @batch_reduce_matmul(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32
 
 // -----
 
-// CHECK-LABEL: func @matmul_transpose_a
-//       CHECK:   linalg.matmul_transpose_a
-//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<5x3xf32>, memref<5x7xf32>)
-//  CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
-func.func @matmul_transpose_a(%arg0: memref<5x3xf32>, %arg1: memref<5x7xf32>, %arg2: memref<3x7xf32>) {
-  linalg.matmul_transpose_a ins(%arg0, %arg1 : memref<5x3xf32>, memref<5x7xf32>) outs(%arg2: memref<3x7xf32>)
-  return
-}
-
-// -----
-
 // CHECK-LABEL: func @matmul_transpose_a_explicit
 //       CHECK:   linalg.matmul
 //  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<5x3xf32>, memref<5x7xf32>)
@@ -1475,17 +1464,6 @@ func.func @matmul_bcast_b_transpose_a(%arg0: memref<5x3xf32>, %arg1: memref<5xf3
 // CHECK:           linalg.matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<5x3xf32>, memref<5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>)
 // CHECK:           return
 // CHECK:         }
-
-// -----
-
-// CHECK-LABEL: func @matmul_transpose_b
-//       CHECK:   linalg.matmul_transpose_b
-//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<3x5xf32>, memref<7x5xf32>)
-//  CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
-func.func @matmul_transpose_b(%arg0: memref<3x5xf32>, %arg1: memref<7x5xf32>, %arg2: memref<3x7xf32>) {
-  linalg.matmul_transpose_b ins(%arg0, %arg1 : memref<3x5xf32>, memref<7x5xf32>) outs(%arg2: memref<3x7xf32>)
-  return
-}
 
 // -----
 
@@ -1801,28 +1779,6 @@ func.func @bcast_A_transpose_B(%A: memref<3x5xf32>, %B: memref<2x7x5xf32>, %C: m
                        affine_map<(d0, d1, d2, d3) -> (d1, d2)>
                      ]
                      ins(%A, %B : memref<3x5xf32>, memref<2x7x5xf32>) outs(%C: memref<3x7xf32>)
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @batchmatmul_transpose_a
-//       CHECK:   linalg.batch_matmul_transpose_a
-//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<2x5x3xf32>, memref<2x5x7xf32>)
-//  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
-func.func @batchmatmul_transpose_a(%arg0: memref<2x5x3xf32>, %arg1: memref<2x5x7xf32>, %arg2: memref<2x3x7xf32>) {
-  linalg.batch_matmul_transpose_a ins(%arg0, %arg1 : memref<2x5x3xf32>, memref<2x5x7xf32>) outs(%arg2: memref<2x3x7xf32>)
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @batchmatmul_transpose_b
-//       CHECK:   linalg.batch_matmul_transpose_b
-//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<2x3x5xf32>, memref<2x7x5xf32>)
-//  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
-func.func @batchmatmul_transpose_b(%arg0: memref<2x3x5xf32>, %arg1: memref<2x7x5xf32>, %arg2: memref<2x3x7xf32>) {
-  linalg.batch_matmul_transpose_b ins(%arg0, %arg1 : memref<2x3x5xf32>, memref<2x7x5xf32>) outs(%arg2: memref<2x3x7xf32>)
   return
 }
 
@@ -2768,6 +2724,101 @@ func.func @pad_and_pack_partially_dynamic(%source: tensor<?x?xf32>, %dest: tenso
 // CHECK-SAME:  %[[DEST:.*]]: tensor<?x?x8x2xf32>,
 // CHECK-SAME:  %[[PAD:.*]]: f32)
 // CHECK: %{{.*}} = linalg.pack %[[SOURCE]] padding_value(%[[PAD]] : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %[[DEST]] : tensor<?x?xf32> -> tensor<?x?x8x2xf32>
+
+// -----
+
+func.func @pack_transposed_inner_dims_with_padding(%source: tensor<1x5x7xf32>, %dest: tensor<1x3x2x4x2xf32>, %pad: f32) -> tensor<1x3x2x4x2xf32> {
+  %0 = linalg.pack %source padding_value(%pad : f32) inner_dims_pos = [2, 1] inner_tiles = [4, 2] into %dest : tensor<1x5x7xf32> -> tensor<1x3x2x4x2xf32>
+  return %0 : tensor<1x3x2x4x2xf32>
+}
+
+// CHECK-LABEL: func.func @pack_transposed_inner_dims_with_padding(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<1x5x7xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<1x3x2x4x2xf32>,
+// CHECK-SAME:  %[[PAD:.*]]: f32)
+// CHECK:       %{{.*}} = linalg.pack
+// CHECK-SAME:      inner_dims_pos = [2, 1]
+// CHECK-SAME:      inner_tiles = [4, 2]
+// CHECK-SAME:      into %[[DEST]] : tensor<1x5x7xf32> -> tensor<1x3x2x4x2xf32>
+
+// -----
+
+// The function suffix "with_padding" refers to the padding that was introduced by the pack operation. But here
+// we are dropping the padding. Creating a tensor with less elements than what we started with.
+func.func @unpack_descending_inner_dims_with_padding(%source: tensor<1x3x2x4x2xf32>, %dest: tensor<1x5x7xf32>) -> tensor<1x5x7xf32> {
+  %0 = linalg.unpack %source inner_dims_pos = [2, 1] inner_tiles = [4, 2] into %dest : tensor<1x3x2x4x2xf32> -> tensor<1x5x7xf32>
+  return %0 : tensor<1x5x7xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_descending_inner_dims_with_padding(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<1x3x2x4x2xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<1x5x7xf32>)
+// CHECK:       %{{.*}} = linalg.unpack
+// CHECK-SAME:      inner_dims_pos = [2, 1]
+// CHECK-SAME:      inner_tiles = [4, 2]
+// CHECK-SAME:      into %[[DEST]] : tensor<1x3x2x4x2xf32> -> tensor<1x5x7xf32>
+
+// -----
+
+func.func @pack_non_adjacent_inner_dims(%source: tensor<20x1x12xf32>, %dest: tensor<10x1x3x4x2xf32>) -> tensor<10x1x3x4x2xf32> {
+  %0 = linalg.pack %source inner_dims_pos = [2, 0] inner_tiles = [4, 2] into %dest : tensor<20x1x12xf32> -> tensor<10x1x3x4x2xf32>
+  return %0 : tensor<10x1x3x4x2xf32>
+}
+
+// CHECK-LABEL: func.func @pack_non_adjacent_inner_dims(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<20x1x12xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<10x1x3x4x2xf32>)
+// CHECK:       %{{.*}} = linalg.pack
+// CHECK-SAME:      inner_dims_pos = [2, 0]
+// CHECK-SAME:      inner_tiles = [4, 2]
+// CHECK-SAME:      into %[[DEST]] : tensor<20x1x12xf32> -> tensor<10x1x3x4x2xf32>
+
+// -----
+
+func.func @unpack_non_adjacent_inner_dims(%source: tensor<10x1x3x4x2xf32>, %dest: tensor<20x1x12xf32>) -> tensor<20x1x12xf32> {
+  %0 = linalg.unpack %source inner_dims_pos = [2, 0] inner_tiles = [4, 2] into %dest : tensor<10x1x3x4x2xf32> -> tensor<20x1x12xf32>
+  return %0 : tensor<20x1x12xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_non_adjacent_inner_dims(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<10x1x3x4x2xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<20x1x12xf32>)
+// CHECK:       %{{.*}} = linalg.unpack
+// CHECK-SAME:      inner_dims_pos = [2, 0]
+// CHECK-SAME:      inner_tiles = [4, 2]
+// CHECK-SAME:      into %[[DEST]] : tensor<10x1x3x4x2xf32> -> tensor<20x1x12xf32>
+
+// -----
+
+func.func @pack_implementing_transpose(%source: tensor<3x5x7xf32>, %dest: tensor<3x7x5xf32>) -> tensor<3x7x5xf32> {
+  %0 = linalg.pack %source outer_dims_perm = [0, 2, 1] inner_dims_pos = [] inner_tiles = [] into %dest : tensor<3x5x7xf32> -> tensor<3x7x5xf32>
+  return %0 : tensor<3x7x5xf32>
+}
+
+// CHECK-LABEL: func.func @pack_implementing_transpose(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<3x5x7xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<3x7x5xf32>)
+// CHECK:       %{{.*}} = linalg.pack
+// CHECK-SAME:      outer_dims_perm = [0, 2, 1]
+// CHECK-SAME:      inner_dims_pos = []
+// CHECK-SAME:      inner_tiles = []
+// CHECK-SAME:      into %[[DEST]] : tensor<3x5x7xf32> -> tensor<3x7x5xf32>
+
+// -----
+
+func.func @unpack_implementing_transpose(%source: tensor<3x7x5xf32>, %dest: tensor<3x5x7xf32>) -> tensor<3x5x7xf32> {
+  %0 = linalg.unpack %source outer_dims_perm = [0, 2, 1] inner_dims_pos = [] inner_tiles = [] into %dest : tensor<3x7x5xf32> -> tensor<3x5x7xf32>
+  return %0 : tensor<3x5x7xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_implementing_transpose(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<3x7x5xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<3x5x7xf32>)
+// CHECK:       %{{.*}} = linalg.unpack
+// CHECK-SAME:      outer_dims_perm = [0, 2, 1]
+// CHECK-SAME:      inner_dims_pos = []
+// CHECK-SAME:      inner_tiles = []
+// CHECK-SAME:      into %[[DEST]] : tensor<3x7x5xf32> -> tensor<3x5x7xf32>
 
 // -----
 

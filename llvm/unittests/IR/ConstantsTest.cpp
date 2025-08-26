@@ -774,12 +774,12 @@ TEST(ConstantsTest, ComdatUserTracking) {
   EXPECT_TRUE(Users.size() == 0);
 
   Type *Ty = Type::getInt8Ty(Context);
-  GlobalVariable *GV1 = cast<GlobalVariable>(M.getOrInsertGlobal("gv1", Ty));
+  GlobalVariable *GV1 = M.getOrInsertGlobal("gv1", Ty);
   GV1->setComdat(C);
   EXPECT_TRUE(Users.size() == 1);
   EXPECT_TRUE(Users.contains(GV1));
 
-  GlobalVariable *GV2 = cast<GlobalVariable>(M.getOrInsertGlobal("gv2", Ty));
+  GlobalVariable *GV2 = M.getOrInsertGlobal("gv2", Ty);
   GV2->setComdat(C);
   EXPECT_TRUE(Users.size() == 2);
   EXPECT_TRUE(Users.contains(GV2));

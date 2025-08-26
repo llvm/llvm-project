@@ -137,7 +137,7 @@ private:
   // Schedule being built.
   hlfir::Schedule schedule;
   /// Leaf regions that have been saved so far.
-  llvm::SmallSet<mlir::Region *, 16> savedRegions;
+  llvm::SmallPtrSet<mlir::Region *, 16> savedRegions;
   /// Is schedule.back() a schedule that is only saving region with read
   /// effects?
   bool currentRunIsReadOnly = false;

@@ -6,41 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define _CLC_SHUFFLE2_DECL(TYPE, MASKTYPE, RETTYPE)                            \
-  _CLC_OVERLOAD _CLC_DECL RETTYPE shuffle2(TYPE x, TYPE y, MASKTYPE mask);
+#ifndef __CLC_OPENCL_MISC_SHUFFLE2_H__
+#define __CLC_OPENCL_MISC_SHUFFLE2_H__
 
-// Return type is same base type as the input type, with the same vector size as
-// the mask. Elements in the mask must be the same size (number of bits) as the
-// input value. E.g. char8 ret = shuffle2(char2 x, char2 y, uchar8 mask);
+#define __CLC_FUNCTION shuffle2
 
-#define _CLC_VECTOR_SHUFFLE2_MASKSIZE(INBASE, INTYPE, MASKTYPE)                \
-  _CLC_SHUFFLE2_DECL(INTYPE, MASKTYPE##2, INBASE##2)                           \
-  _CLC_SHUFFLE2_DECL(INTYPE, MASKTYPE##4, INBASE##4)                           \
-  _CLC_SHUFFLE2_DECL(INTYPE, MASKTYPE##8, INBASE##8)                           \
-  _CLC_SHUFFLE2_DECL(INTYPE, MASKTYPE##16, INBASE##16)
+// Integer-type decls
+#define __CLC_BODY <clc/misc/shuffle2_decl.inc>
+#include <clc/integer/gentype.inc>
 
-#define _CLC_VECTOR_SHUFFLE2_INSIZE(TYPE, MASKTYPE)                            \
-  _CLC_VECTOR_SHUFFLE2_MASKSIZE(TYPE, TYPE##2, MASKTYPE)                       \
-  _CLC_VECTOR_SHUFFLE2_MASKSIZE(TYPE, TYPE##4, MASKTYPE)                       \
-  _CLC_VECTOR_SHUFFLE2_MASKSIZE(TYPE, TYPE##8, MASKTYPE)                       \
-  _CLC_VECTOR_SHUFFLE2_MASKSIZE(TYPE, TYPE##16, MASKTYPE)
+// Floating-point decls
+#define __CLC_BODY <clc/misc/shuffle2_decl.inc>
+#include <clc/math/gentype.inc>
 
-_CLC_VECTOR_SHUFFLE2_INSIZE(char, uchar)
-_CLC_VECTOR_SHUFFLE2_INSIZE(short, ushort)
-_CLC_VECTOR_SHUFFLE2_INSIZE(int, uint)
-_CLC_VECTOR_SHUFFLE2_INSIZE(long, ulong)
-_CLC_VECTOR_SHUFFLE2_INSIZE(uchar, uchar)
-_CLC_VECTOR_SHUFFLE2_INSIZE(ushort, ushort)
-_CLC_VECTOR_SHUFFLE2_INSIZE(uint, uint)
-_CLC_VECTOR_SHUFFLE2_INSIZE(ulong, ulong)
-_CLC_VECTOR_SHUFFLE2_INSIZE(float, uint)
-#ifdef cl_khr_fp64
-_CLC_VECTOR_SHUFFLE2_INSIZE(double, ulong)
-#endif
-#ifdef cl_khr_fp16
-_CLC_VECTOR_SHUFFLE2_INSIZE(half, ushort)
-#endif
+#undef __CLC_FUNCTION
 
-#undef _CLC_SHUFFLE_DECL
-#undef _CLC_VECTOR_SHUFFLE2_MASKSIZE
-#undef _CLC_VECTOR_SHUFFLE2_INSIZE
+#endif // __CLC_OPENCL_MISC_SHUFFLE2_H__

@@ -198,6 +198,9 @@ def NoFree : EnumAttr<"nofree", IntersectAnd, [FnAttr, ParamAttr]>;
 /// Argument is dead if the call unwinds.
 def DeadOnUnwind : EnumAttr<"dead_on_unwind", IntersectAnd, [ParamAttr]>;
 
+/// Argument is dead upon function return.
+def DeadOnReturn : EnumAttr<"dead_on_return", IntersectAnd, [ParamAttr]>;
+
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 
@@ -388,6 +391,16 @@ def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", In
 /// The coroutine call meets the elide requirement. Hint the optimization
 /// pipeline to perform elide on the call or invoke instruction.
 def CoroElideSafe : EnumAttr<"coro_elide_safe", IntersectPreserve, [FnAttr]>;
+
+/// Function is marked for Windows Hot Patching
+def MarkedForWindowsSecureHotPatching
+    : StrBoolAttr<"marked_for_windows_hot_patching">;
+
+/// Global variable should not be accessed through a "__ref_" global variable in
+/// a hot patching function This attribute is applied to the global variable
+/// decl, not the hotpatched function.
+def AllowDirectAccessInHotPatchFunction
+    : StrBoolAttr<"allow_direct_access_in_hot_patch_function">;
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;

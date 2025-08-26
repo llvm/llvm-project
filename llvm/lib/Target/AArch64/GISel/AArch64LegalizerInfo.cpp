@@ -287,6 +287,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .lower();
 
+  getActionDefinitionsBuilder({G_ABDS, G_ABDU})
+      .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+      .lower();
+
   getActionDefinitionsBuilder(
       {G_SADDE, G_SSUBE, G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO, G_USUBO})
       .legalFor({{s32, s32}, {s64, s32}})
@@ -370,6 +374,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(0)
       .lower();
 
@@ -792,6 +797,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMinNumElements(0, s16, 4)
       .alwaysLegal();
 
+  getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
+      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}});
+
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({s32, s64})
       .legalFor(PackedVectorAllTypeList)
@@ -922,16 +930,28 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(1)
       .widenScalarOrEltToNextPow2OrMinSize(1)
       .minScalar(1, s32)
+      .lowerIf([](const LegalityQuery &Query) {
+        return Query.Types[1].isVector() &&
+               Query.Types[1].getScalarSizeInBits() == 64 &&
+               Query.Types[0].getScalarSizeInBits() == 16;
+      })
       .widenScalarOrEltToNextPow2OrMinSize(0, /*MinSize=*/HasFP16 ? 16 : 32)
+      .scalarizeIf(
+          // v2i64->v2f32 needs to scalarize to avoid double-rounding issues.
+          [](const LegalityQuery &Query) {
+            return Query.Types[0].getScalarSizeInBits() == 32 &&
+                   Query.Types[1].getScalarSizeInBits() == 64;
+          },
+          0)
       .widenScalarIf(
-          [=](const LegalityQuery &Query) {
+          [](const LegalityQuery &Query) {
             return Query.Types[1].getScalarSizeInBits() <= 64 &&
                    Query.Types[0].getScalarSizeInBits() <
                        Query.Types[1].getScalarSizeInBits();
           },
           LegalizeMutations::changeElementSizeTo(0, 1))
       .widenScalarIf(
-          [=](const LegalityQuery &Query) {
+          [](const LegalityQuery &Query) {
             return Query.Types[0].getScalarSizeInBits() <= 64 &&
                    Query.Types[0].getScalarSizeInBits() >
                        Query.Types[1].getScalarSizeInBits();
@@ -948,6 +968,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    {s128, s64}});
 
   // Control-flow
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND)
     .legalFor({s32})
     .clampScalar(0, s32, s32);
@@ -1238,6 +1259,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, s64}});
 
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
 
   getActionDefinitionsBuilder({G_STACKSAVE, G_STACKRESTORE}).lower();
@@ -1275,6 +1298,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
+      .moreElementsToNextPow2(1)
+      .scalarize(1)
       .lower();
 
   // For fmul reductions we need to split up into individual operations. We
@@ -1622,10 +1647,23 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                              MachineInstr &MI) const {
-  auto LowerBinOp = [&MI](unsigned Opcode) {
-    MachineIRBuilder MIB(MI);
+  MachineIRBuilder &MIB = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  auto LowerUnaryOp = [&MI, &MIB](unsigned Opcode) {
+    MIB.buildInstr(Opcode, {MI.getOperand(0)}, {MI.getOperand(2)});
+    MI.eraseFromParent();
+    return true;
+  };
+  auto LowerBinOp = [&MI, &MIB](unsigned Opcode) {
     MIB.buildInstr(Opcode, {MI.getOperand(0)},
                    {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
+    return true;
+  };
+  auto LowerTriOp = [&MI, &MIB](unsigned Opcode) {
+    MIB.buildInstr(Opcode, {MI.getOperand(0)},
+                   {MI.getOperand(2), MI.getOperand(3), MI.getOperand(4)});
     MI.eraseFromParent();
     return true;
   };
@@ -1642,7 +1680,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MachineFunction &MF = *MI.getMF();
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
         LLT::scalar(VaListSize * 8));
-    MachineIRBuilder MIB(MI);
     MIB.buildLoad(Val, MI.getOperand(2),
                   *MF.getMachineMemOperand(MachinePointerInfo(),
                                            MachineMemOperand::MOLoad,
@@ -1655,7 +1692,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   }
   case Intrinsic::get_dynamic_area_offset: {
-    MachineIRBuilder &MIB = Helper.MIRBuilder;
     MIB.buildConstant(MI.getOperand(0).getReg(), 0);
     MI.eraseFromParent();
     return true;
@@ -1664,14 +1700,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
     // Anyext the value being set to 64 bit (only the bottom 8 bits are read by
     // the instruction).
-    MachineIRBuilder MIB(MI);
     auto &Value = MI.getOperand(3);
     Register ExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
     Value.setReg(ExtValueReg);
     return true;
   }
   case Intrinsic::aarch64_prefetch: {
-    MachineIRBuilder MIB(MI);
     auto &AddrVal = MI.getOperand(1);
 
     int64_t IsWrite = MI.getOperand(2).getImm();
@@ -1694,8 +1728,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_smaxv:
   case Intrinsic::aarch64_neon_uminv:
   case Intrinsic::aarch64_neon_sminv: {
-    MachineIRBuilder MIB(MI);
-    MachineRegisterInfo &MRI = *MIB.getMRI();
     bool IsSigned = IntrinsicID == Intrinsic::aarch64_neon_saddv ||
                     IntrinsicID == Intrinsic::aarch64_neon_smaxv ||
                     IntrinsicID == Intrinsic::aarch64_neon_sminv;
@@ -1720,8 +1752,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_uaddlp:
   case Intrinsic::aarch64_neon_saddlp: {
-    MachineIRBuilder MIB(MI);
-
     unsigned Opc = IntrinsicID == Intrinsic::aarch64_neon_uaddlp
                        ? AArch64::G_UADDLP
                        : AArch64::G_SADDLP;
@@ -1732,9 +1762,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_uaddlv:
   case Intrinsic::aarch64_neon_saddlv: {
-    MachineIRBuilder MIB(MI);
-    MachineRegisterInfo &MRI = *MIB.getMRI();
-
     unsigned Opc = IntrinsicID == Intrinsic::aarch64_neon_uaddlv
                        ? AArch64::G_UADDLV
                        : AArch64::G_SADDLV;
@@ -1788,13 +1815,46 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(AArch64::G_SMULL);
   case Intrinsic::aarch64_neon_umull:
     return LowerBinOp(AArch64::G_UMULL);
+  case Intrinsic::aarch64_neon_sabd:
+    return LowerBinOp(TargetOpcode::G_ABDS);
+  case Intrinsic::aarch64_neon_uabd:
+    return LowerBinOp(TargetOpcode::G_ABDU);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
-    MachineIRBuilder MIB(MI);
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_neon_sqadd: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return LowerBinOp(TargetOpcode::G_SADDSAT);
+    break;
+  }
+  case Intrinsic::aarch64_neon_sqsub: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return LowerBinOp(TargetOpcode::G_SSUBSAT);
+    break;
+  }
+  case Intrinsic::aarch64_neon_uqadd: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return LowerBinOp(TargetOpcode::G_UADDSAT);
+    break;
+  }
+  case Intrinsic::aarch64_neon_uqsub: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+      return LowerBinOp(TargetOpcode::G_USUBSAT);
+    break;
+  }
+  case Intrinsic::aarch64_neon_udot:
+    return LowerTriOp(AArch64::G_UDOT);
+  case Intrinsic::aarch64_neon_sdot:
+    return LowerTriOp(AArch64::G_SDOT);
+  case Intrinsic::aarch64_neon_sqxtn:
+    return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_S);
+  case Intrinsic::aarch64_neon_sqxtun:
+    return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_U);
+  case Intrinsic::aarch64_neon_uqxtn:
+    return LowerUnaryOp(TargetOpcode::G_TRUNC_USAT_U);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse

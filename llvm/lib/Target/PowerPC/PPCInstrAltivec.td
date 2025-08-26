@@ -1617,18 +1617,24 @@ class VX_VT5_EO5_VB5_XO9_o<bits<5> eo, bits<9> xo, string opc,
 }
 
 // Decimal Convert From/to National/Zoned/Signed-QWord
-def BCDCFN_rec  : VX_VT5_EO5_VB5_PS1_XO9_o<7, 385, "bcdcfn." , []>;
-def BCDCFZ_rec  : VX_VT5_EO5_VB5_PS1_XO9_o<6, 385, "bcdcfz." , []>;
-def BCDCTN_rec  : VX_VT5_EO5_VB5_XO9_o    <5, 385, "bcdctn." , []>;
-def BCDCTZ_rec  : VX_VT5_EO5_VB5_PS1_XO9_o<4, 385, "bcdctz." , []>;
+def BCDCFN_rec  : VX_VT5_EO5_VB5_PS1_XO9_o<7, 385, "bcdcfn." ,
+                  [(set v16i8:$VD, (int_ppc_national2packed v16i8:$VB, timm:$PS))]>;
+def BCDCFZ_rec  : VX_VT5_EO5_VB5_PS1_XO9_o<6, 385, "bcdcfz." , 
+                  [(set v16i8:$VD, (int_ppc_zoned2packed v16i8:$VB, timm:$PS))]>;
+def BCDCTN_rec  : VX_VT5_EO5_VB5_XO9_o    <5, 385, "bcdctn." , 
+                  [(set v16i8:$VD, (int_ppc_packed2national v16i8:$VB))]>;
+def BCDCTZ_rec  : VX_VT5_EO5_VB5_PS1_XO9_o<4, 385, "bcdctz." , 
+                  [(set v16i8:$VD, (int_ppc_packed2zoned v16i8:$VB, timm:$PS))]>;
 def BCDCFSQ_rec : VX_VT5_EO5_VB5_PS1_XO9_o<2, 385, "bcdcfsq.", []>;
 def BCDCTSQ_rec : VX_VT5_EO5_VB5_XO9_o    <0, 385, "bcdctsq.", []>;
 
 // Decimal Copy-Sign/Set-Sign
 let Defs = [CR6] in
-def BCDCPSGN_rec : VX1_VT5_VA5_VB5<833, "bcdcpsgn.", []>;
+def BCDCPSGN_rec : VX1_VT5_VA5_VB5<833, "bcdcpsgn.",
+    [(set v16i8:$VD, (int_ppc_bcdcopysign v16i8:$VA, v16i8:$VB))]>;
 
-def BCDSETSGN_rec : VX_VT5_EO5_VB5_PS1_XO9_o<31, 385, "bcdsetsgn.", []>;
+def BCDSETSGN_rec : VX_VT5_EO5_VB5_PS1_XO9_o<31, 385, "bcdsetsgn.",
+    [(set v16i8:$VD, (int_ppc_bcdsetsign v16i8:$VB, i32:$PS))]>;
 
 // Decimal Shift/Unsigned-Shift/Shift-and-Round
 def BCDS_rec :  VX_VT5_VA5_VB5_PS1_XO9_o<193, "bcds." , []>;

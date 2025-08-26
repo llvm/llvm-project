@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
     "//:vars.bzl",
@@ -259,8 +260,20 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsSPIRVBaseTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsSPIRVBase.td"],
+    includes = ["include"],
+)
+
+td_library(
     name = "BuiltinsRISCVXCVTdFiles",
     srcs = ["include/clang/Basic/BuiltinsRISCVXCV.td"],
+    includes = ["include"],
+)
+
+td_library(
+    name = "BuiltinsRISCVXAndesTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsRISCVXAndes.td"],
     includes = ["include"],
 )
 
@@ -303,11 +316,36 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "basic_builtins_spirv_gen",
-    tbl_outs = {"include/clang/Basic/BuiltinsSPIRV.inc": ["-gen-clang-builtins"]},
+    name = "basic_builtins_spirv_cl_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsSPIRVCL.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
-    td_file = "include/clang/Basic/BuiltinsSPIRV.td",
-    deps = [":BuiltinsBaseTdFiles"],
+    td_file = "include/clang/Basic/BuiltinsSPIRVCL.td",
+    deps = [
+        ":BuiltinsBaseTdFiles",
+        ":BuiltinsSPIRVBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "basic_builtins_spirv_common_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsSPIRVCommon.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsSPIRVCommon.td",
+    deps = [
+        ":BuiltinsBaseTdFiles",
+        ":BuiltinsSPIRVBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "basic_builtins_spirv_vk_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsSPIRVVK.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsSPIRVVK.td",
+    deps = [
+        ":BuiltinsBaseTdFiles",
+        ":BuiltinsSPIRVBaseTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -317,6 +355,7 @@ gentbl_cc_library(
     td_file = "include/clang/Basic/BuiltinsRISCV.td",
     deps = [
         ":BuiltinsBaseTdFiles",
+        ":BuiltinsRISCVXAndesTdFiles",
         ":BuiltinsRISCVXCVTdFiles",
     ],
 )
@@ -503,6 +542,7 @@ gentbl_cc_library(
         "include/clang/Basic/AttrList.inc": ["-gen-clang-attr-list"],
         "include/clang/Basic/AttrParsedAttrList.inc": ["-gen-clang-attr-parsed-attr-list"],
         "include/clang/Basic/AttrSubMatchRulesList.inc": ["-gen-clang-attr-subject-match-rule-list"],
+        "include/clang/Basic/AttributeSpellingList.inc": ["-gen-attribute-spelling-list"],
         "include/clang/Basic/RegularKeywordAttrInfo.inc": ["-gen-clang-regular-keyword-attr-info"],
         "include/clang/Basic/CXX11AttributeInfo.inc": ["-gen-cxx11-attribute-info"],
     },
@@ -655,7 +695,9 @@ cc_library(
         ":basic_builtins_hexagon_gen",
         ":basic_builtins_nvptx_gen",
         ":basic_builtins_riscv_gen",
-        ":basic_builtins_spirv_gen",
+        ":basic_builtins_spirv_cl_gen",
+        ":basic_builtins_spirv_common_gen",
+        ":basic_builtins_spirv_vk_gen",
         ":basic_builtins_x86_64_gen",
         ":basic_builtins_x86_gen",
         ":basic_riscv_andes_vector_builtins_gen",
@@ -666,6 +708,7 @@ cc_library(
         ":diagnostic_defs_gen",
         ":sema_attr_gen",
         ":support",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:FrontendDebug",
         "//llvm:FrontendDriver",
@@ -1486,6 +1529,7 @@ cc_library(
         ":basic",
         ":config",
         ":driver_options_inc_gen",
+        ":lex",
         ":parse",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
@@ -1794,6 +1838,7 @@ cc_library(
         "//llvm:Target",
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
+        "//llvm:config",
     ],
 )
 
@@ -1843,6 +1888,29 @@ cc_library(
         "include/clang/Support/*.h",
     ]),
     includes = ["include"],
+    deps = [
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "directory_watcher",
+    srcs = glob([
+        "lib/DirectoryWatcher/*.cpp",
+        "lib/DirectoryWatcher/*.h",
+    ]) + select({
+        "@platforms//os:windows": glob(["lib/DirectoryWatcher/windows/*.cpp"]),
+        "@platforms//os:macos": glob(["lib/DirectoryWatcher/mac/*.cpp"]),
+        "@platforms//os:linux": glob(["lib/DirectoryWatcher/linux/*.cpp"]),
+        "//conditions:default": glob(["lib/DirectoryWatcher/default/*.cpp"]),
+    }),
+    hdrs = glob([
+        "include/clang/DirectoryWatcher/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/DirectoryWatcher",
+    ],
     deps = [
         "//llvm:Support",
     ],
@@ -2309,6 +2377,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":basic",
+        ":config",
         ":frontend",
         ":interpreter",
         ":lex",
@@ -2317,8 +2386,10 @@ cc_binary(
         "//llvm:Core",
         "//llvm:LineEditor",
         "//llvm:Option",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

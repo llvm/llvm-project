@@ -69,6 +69,10 @@ def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
   let summary = "Inline hlfir.assign operations";
 }
 
+def InlineHLFIRCopyIn : Pass<"inline-hlfir-copy-in"> {
+  let summary = "Inline hlfir.copy_in operations";
+}
+
 def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {
   let summary = "Propagate FortranVariableFlagsAttr attributes through HLFIR";
 }

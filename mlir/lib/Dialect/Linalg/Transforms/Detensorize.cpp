@@ -9,15 +9,12 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include <iterator>
-#include <memory>
 #include <utility>
 
 namespace mlir {
@@ -37,8 +34,8 @@ static Value sourceMaterializationCallback(OpBuilder &builder, Type type,
 
   // A detensored value is converted back by creating a new tensor from its
   // element(s).
-  return builder.create<tensor::FromElementsOp>(
-      loc, RankedTensorType::get({}, inputType), inputs[0]);
+  return tensor::FromElementsOp::create(
+      builder, loc, RankedTensorType::get({}, inputType), inputs[0]);
 }
 
 namespace {
@@ -150,7 +147,7 @@ public:
     // A tensor value is detensoried by extracting its element(s).
     addTargetMaterialization([](OpBuilder &builder, Type type,
                                 ValueRange inputs, Location loc) -> Value {
-      return builder.create<tensor::ExtractOp>(loc, inputs[0], ValueRange{});
+      return tensor::ExtractOp::create(builder, loc, inputs[0], ValueRange{});
     });
 
     addSourceMaterialization(sourceMaterializationCallback);
@@ -483,8 +480,8 @@ struct LinalgDetensorize
     Block *postEntryBlock =
         rewriter.splitBlock(entryBlock, entryBlock->begin());
     rewriter.setInsertionPointToStart(entryBlock);
-    auto branch =
-        rewriter.create<cf::BranchOp>(rewriter.getUnknownLoc(), postEntryBlock);
+    auto branch = cf::BranchOp::create(rewriter, rewriter.getUnknownLoc(),
+                                       postEntryBlock);
 
     if (aggressiveMode.getValue()) {
       AggressiveDetensoringModel costModel;

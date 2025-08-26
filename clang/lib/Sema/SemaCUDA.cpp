@@ -22,7 +22,6 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
 using namespace clang;
@@ -322,7 +321,7 @@ void SemaCUDA::EraseUnwantedMatches(
   if (Matches.size() <= 1)
     return;
 
-  using Pair = std::pair<DeclAccessPair, FunctionDecl*>;
+  using Pair = std::pair<DeclAccessPair, FunctionDecl *>;
 
   // Gets the CUDA function preference for a call from Caller to Match.
   auto GetCFP = [&](const Pair &Match) {
@@ -422,12 +421,10 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
   }
 
   for (const auto *B : Bases) {
-    const RecordType *BaseType = B->getType()->getAs<RecordType>();
-    if (!BaseType) {
+    auto *BaseClassDecl = B->getType()->getAsCXXRecordDecl();
+    if (!BaseClassDecl)
       continue;
-    }
 
-    CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(BaseType->getDecl());
     Sema::SpecialMemberOverloadResult SMOR =
         SemaRef.LookupSpecialMember(BaseClassDecl, CSM,
                                     /* ConstArg */ ConstRHS,
@@ -466,13 +463,11 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       continue;
     }
 
-    const RecordType *FieldType =
-        getASTContext().getBaseElementType(F->getType())->getAs<RecordType>();
-    if (!FieldType) {
+    auto *FieldRecDecl =
+        getASTContext().getBaseElementType(F->getType())->getAsCXXRecordDecl();
+    if (!FieldRecDecl)
       continue;
-    }
 
-    CXXRecordDecl *FieldRecDecl = cast<CXXRecordDecl>(FieldType->getDecl());
     Sema::SpecialMemberOverloadResult SMOR =
         SemaRef.LookupSpecialMember(FieldRecDecl, CSM,
                                     /* ConstArg */ ConstRHS && !F->isMutable(),
@@ -504,7 +499,6 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       }
     }
   }
-
 
   // If no target was inferred, mark this member as __host__ __device__;
   // it's the least restrictive option that can be invoked from any target.
@@ -680,16 +674,22 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
       FD && FD->isDependentContext())
     return;
 
+  bool IsSharedVar = VD->hasAttr<CUDASharedAttr>();
+  bool IsDeviceOrConstantVar =
+      !IsSharedVar &&
+      (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>());
+  if ((IsSharedVar || IsDeviceOrConstantVar) &&
+      VD->getType().getQualifiers().getAddressSpace() != LangAS::Default) {
+    Diag(VD->getLocation(), diag::err_cuda_address_space_gpuvar);
+    VD->setInvalidDecl();
+    return;
+  }
   // Do not check dependent variables since the ctor/dtor/initializer are not
   // determined. Do it after instantiation.
   if (VD->isInvalidDecl() || !VD->hasInit() || !VD->hasGlobalStorage() ||
       IsDependentVar(VD))
     return;
   const Expr *Init = VD->getInit();
-  bool IsSharedVar = VD->hasAttr<CUDASharedAttr>();
-  bool IsDeviceOrConstantVar =
-      !IsSharedVar &&
-      (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>());
   if (IsDeviceOrConstantVar || IsSharedVar) {
     if (HasAllowedCUDADeviceStaticInitializer(
             *this, VD, IsSharedVar ? CICK_Shared : CICK_DeviceOrConstant))

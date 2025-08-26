@@ -11,7 +11,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -1470,6 +1469,43 @@ TEST_F(FileSystemTest, FileMapping) {
     ASSERT_EQ(close(FD), 0);
   }
   ASSERT_NO_ERROR(fs::remove(TempPath));
+}
+
+TEST_F(FileSystemTest, FileMappingSync) {
+  // Create a temp file.
+  SmallString<0> TempPath(TestDirectory);
+  sys::path::append(TempPath, "test-%%%%");
+  auto TempFileOrError = fs::TempFile::create(TempPath);
+  ASSERT_TRUE((bool)TempFileOrError);
+  fs::TempFile File = std::move(*TempFileOrError);
+  StringRef Content("hello there");
+  std::string FileName = File.TmpName;
+  ASSERT_NO_ERROR(
+      fs::resize_file_before_mapping_readwrite(File.FD, Content.size()));
+  {
+    // Map in the file and write some content.
+    std::error_code EC;
+    fs::mapped_file_region MFR(fs::convertFDToNativeFile(File.FD),
+                               fs::mapped_file_region::readwrite,
+                               Content.size(), 0, EC);
+
+    // Keep the file so it can be read.
+    ASSERT_FALSE((bool)File.keep());
+
+    // Write content through mapped memory.
+    ASSERT_NO_ERROR(EC);
+    std::copy(Content.begin(), Content.end(), MFR.data());
+
+    // Synchronize to file system.
+    ASSERT_FALSE((bool)MFR.sync());
+
+    // Check the file content using file IO APIs.
+    auto Buffer = MemoryBuffer::getFile(FileName);
+    ASSERT_TRUE((bool)Buffer);
+    ASSERT_EQ(Content, Buffer->get()->getBuffer());
+  }
+  // Manually remove the test file.
+  ASSERT_FALSE((bool)fs::remove(FileName));
 }
 
 TEST(Support, NormalizePath) {

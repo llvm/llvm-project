@@ -806,17 +806,37 @@ def VR512_0_15 : RegisterClass<"X86", [v16f32, v8f64, v64i8, v32i16, v16i32, v8i
                                512, (sequence "ZMM%u", 0, 15)>;
 
 // Scalar AVX-512 floating point registers.
-def FR32X : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 31)>;
+def FR32X : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 31)> {
+  let AltOrders = [(add (sequence "XMM%u", 16, 31), (sequence "XMM%u", 0, 15))];
+  let AltOrderSelect = [{
+    return Rev;
+  }];
+}
 
-def FR64X : RegisterClass<"X86", [f64], 64, (add FR32X)>;
+def FR64X : RegisterClass<"X86", [f64], 64, (add FR32X)> {
+  let AltOrders = [(add (sequence "XMM%u", 16, 31), (sequence "XMM%u", 0, 15))];
+  let AltOrderSelect = [{
+    return Rev;
+  }];
+}
 
 def FR16X : RegisterClass<"X86", [f16], 16, (add FR32X)> {let Size = 32;}
 
 // Extended VR128 and VR256 for AVX-512 instructions
 def VR128X : RegisterClass<"X86", [v4f32, v2f64, v8f16, v8bf16, v16i8, v8i16, v4i32, v2i64, f128],
-                           128, (add FR32X)>;
+                           128, (add FR32X)> {
+  let AltOrders = [(add (sequence "XMM%u", 16, 31), (sequence "XMM%u", 0, 15))];
+  let AltOrderSelect = [{
+    return Rev;
+  }];
+}
 def VR256X : RegisterClass<"X86", [v8f32, v4f64, v16f16, v16bf16, v32i8, v16i16, v8i32, v4i64],
-                           256, (sequence "YMM%u", 0, 31)>;
+                           256, (sequence "YMM%u", 0, 31)> {
+  let AltOrders = [(add (sequence "YMM%u", 16, 31), (sequence "YMM%u", 0, 15))];
+  let AltOrderSelect = [{
+    return Rev;
+  }];
+}
 
 // Mask registers
 def VK1     : RegisterClass<"X86", [v1i1],  16,  (sequence "K%u", 0, 7)> {let Size = 16;}

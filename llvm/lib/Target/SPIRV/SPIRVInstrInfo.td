@@ -245,7 +245,7 @@ def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_op
                   "$res = OpSpecConstantComposite $type">;
 def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
                   "OpSpecConstantCompositeContinuedINTEL">;
-def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, i32imm:$c, ID:$o, variable_ops),
+def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ID:$o, variable_ops),
                   "$res = OpSpecConstantOp $t $c $o">;
 
 // 3.42.8 Memory Instructions
@@ -444,6 +444,9 @@ def OpCrossWorkgroupCastToPtrINTEL : UnOp<"OpCrossWorkgroupCastToPtrINTEL", 5938
 // SPV_INTEL_bfloat16_conversion
 def OpConvertFToBF16INTEL : UnOp<"OpConvertFToBF16INTEL", 6116>;
 def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
+
+// SPV_INTEL_tensor_float32_conversion
+def OpRoundFToTF32INTEL : UnOp<"OpRoundFToTF32INTEL", 6426>;
 
 // 3.42.12 Composite Instructions
 

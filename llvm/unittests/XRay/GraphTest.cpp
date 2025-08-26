@@ -72,9 +72,7 @@ template <typename T> void graphVertexTester(T &G) {
     ASSERT_TRUE(!!EVV);
     EXPECT_EQ(1u, G.count(u));
     EXPECT_EQ(VA[u], EVV->VA);
-    EXPECT_NE(G.vertices().end(),
-              llvm::find_if(G.vertices(),
-                            [&](const VVT &VV) { return VV.first == u; }));
+    EXPECT_TRUE(llvm::is_contained(llvm::make_first_range(G.vertices()), u));
     consumeError(EVV.takeError());
   }
 
@@ -97,8 +95,7 @@ template <typename T> void graphEdgeTester(T &G) {
     EXPECT_EQ(1u, G.count(u));
     EXPECT_EQ(VA[u.first] * VA[u.second] * ((u.first > u.second) ? 2 : 1),
               EEV->EA);
-    auto Pred = [&](const EVT &EV) { return EV.first == u; };
-    EXPECT_NE(G.edges().end(), llvm::find_if(G.edges(), Pred));
+    EXPECT_TRUE(llvm::is_contained(llvm::make_first_range(G.edges()), u));
     consumeError(EEV.takeError());
   }
 
@@ -113,31 +110,14 @@ template <typename T> void graphEdgeTester(T &G) {
     EXPECT_NE(OE.size(), 0u);
     EXPECT_NE(IE.begin(), IE.end());
     EXPECT_NE(OE.begin(), OE.end());
-    {
-      auto It = std::find_if(
-          G.inEdges(EV.first.second).begin(), G.inEdges(EV.first.second).end(),
-          [&](const EVT &EVI) { return EVI.first == EV.first; });
-      EXPECT_NE(G.inEdges(EV.first.second).end(), It);
-    }
-    {
-      auto It = std::find_if(
-          G.inEdges(EV.first.first).begin(), G.inEdges(EV.first.first).end(),
-          [&](const EVT &EVI) { return EVI.first == EV.first; });
-      EXPECT_EQ(G.inEdges(EV.first.first).end(), It);
-    }
-    {
-      auto It =
-          std::find_if(G.outEdges(EV.first.second).begin(),
-                       G.outEdges(EV.first.second).end(),
-                       [&](const EVT &EVI) { return EVI.first == EV.first; });
-      EXPECT_EQ(G.outEdges(EV.first.second).end(), It);
-    }
-    {
-      auto It = std::find_if(
-          G.outEdges(EV.first.first).begin(), G.outEdges(EV.first.first).end(),
-          [&](const EVT &EVI) { return EVI.first == EV.first; });
-      EXPECT_NE(G.outEdges(EV.first.first).end(), It);
-    }
+    EXPECT_TRUE(llvm::is_contained(
+        llvm::make_first_range(G.inEdges(EV.first.second)), EV.first));
+    EXPECT_FALSE(llvm::is_contained(
+        llvm::make_first_range(G.inEdges(EV.first.first)), EV.first));
+    EXPECT_FALSE(llvm::is_contained(
+        llvm::make_first_range(G.outEdges(EV.first.second)), EV.first));
+    EXPECT_TRUE(llvm::is_contained(
+        llvm::make_first_range(G.outEdges(EV.first.first)), EV.first));
   }
 }
 

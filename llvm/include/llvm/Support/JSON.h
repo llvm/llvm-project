@@ -531,7 +531,7 @@ private:
                                       llvm::StringRef, std::string, json::Array,
                                       json::Object>
       Union;
-  LLVM_ABI_FRIEND friend bool operator==(const Value &, const Value &);
+  LLVM_ABI friend bool operator==(const Value &, const Value &);
 };
 
 LLVM_ABI bool operator==(const Value &, const Value &);
@@ -713,7 +713,7 @@ class Path::Root {
   llvm::StringLiteral ErrorMessage;
   std::vector<Path::Segment> ErrorPath; // Only valid in error state. Reversed.
 
-  LLVM_ABI_FRIEND friend void Path::report(llvm::StringLiteral Message);
+  LLVM_ABI friend void Path::report(llvm::StringLiteral Message);
 
 public:
   Root(llvm::StringRef Name = "") : Name(Name), ErrorMessage("") {}

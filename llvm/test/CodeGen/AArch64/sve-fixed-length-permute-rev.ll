@@ -227,9 +227,8 @@ define void @test_revdv4f64_sve2p1(ptr %a) #2 {
 ; CHECK-LABEL: test_revdv4f64_sve2p1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    revd z0.q, p1/m, z0.q
+; CHECK-NEXT:    revd z0.q, p0/m, z0.q
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a

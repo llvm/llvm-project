@@ -13,7 +13,7 @@
 
 namespace clang::tidy::misc {
 
-///checks for locations that do not throw by value
+/// Checks for locations that do not throw by value
 // or catch by reference.
 // The check is C++ only. It checks that all throw locations
 // throw by value and not by pointer. Additionally it

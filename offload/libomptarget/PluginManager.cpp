@@ -128,6 +128,13 @@ void PluginManager::initializeAllDevices() {
       initializeDevice(Plugin, DeviceId);
     }
   }
+  // After all plugins are initialized, register atExit cleanup handlers
+  std::atexit([]() {
+    // Interop cleanup should be done before the plugins are deinitialized as
+    // the backend libraries may be already unloaded.
+    if (PM)
+      PM->InteropTbl.clear();
+  });
 }
 
 // Returns a pointer to the binary descriptor, upgrading from a legacy format if
@@ -286,16 +293,16 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   }
   PM->RTLsMtx.unlock();
 
-  bool UseAutoZeroCopy = Plugins.size() > 0;
+  bool UseAutoZeroCopy = false;
 
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
-  for (const auto &Device : *ExclusiveDevicesAccessor)
-    UseAutoZeroCopy &= Device->useAutoZeroCopy();
+  // APUs are homogeneous set of GPUs. Check the first device for
+  // configuring Auto Zero-Copy.
+  if (ExclusiveDevicesAccessor->size() > 0) {
+    auto &Device = *(*ExclusiveDevicesAccessor)[0];
+    UseAutoZeroCopy = Device.useAutoZeroCopy();
+  }
 
-  // Auto Zero-Copy can only be currently triggered when the system is an
-  // homogeneous APU architecture without attached discrete GPUs.
-  // If all devices suggest to use it, change requirement flags to trigger
-  // zero-copy behavior when mapping memory.
   if (UseAutoZeroCopy)
     addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
 

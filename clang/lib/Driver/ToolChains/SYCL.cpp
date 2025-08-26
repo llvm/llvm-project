@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
-#include "CommonArgs.h"
-#include "llvm/Support/Path.h"
+#include "clang/Driver/CommonArgs.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;

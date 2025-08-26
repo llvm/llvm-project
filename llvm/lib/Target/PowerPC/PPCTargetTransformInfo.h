@@ -24,7 +24,7 @@
 
 namespace llvm {
 
-class PPCTTIImpl : public BasicTTIImplBase<PPCTTIImpl> {
+class PPCTTIImpl final : public BasicTTIImplBase<PPCTTIImpl> {
   typedef BasicTTIImplBase<PPCTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -111,9 +111,9 @@ public:
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
   InstructionCost
   getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
@@ -148,12 +148,6 @@ public:
                            const Function *Callee) const override;
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
                              const ArrayRef<Type *> &Types) const override;
-  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
-                             Align Alignment) const override;
-  InstructionCost
-  getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                    unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                    const Instruction *I = nullptr) const override;
   bool supportsTailCallFor(const CallBase *CB) const override;
 
 private:

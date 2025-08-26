@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -106,8 +107,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 
@@ -863,7 +863,7 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
             "Reached BB end within common tail");
       }
       assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
-      DL = DILocation::getMergedLocation(DL, Pos->getDebugLoc());
+      DL = DebugLoc::getMergedLocation(DL, Pos->getDebugLoc());
       NextCommonInsts[i] = ++Pos;
     }
     MI.setDebugLoc(DL);
@@ -934,7 +934,13 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+  // If origin-tracking is enabled then MergePotentialElt is no longer a POD
+  // type, so we need std::sort instead.
+  std::sort(MergePotentials.begin(), MergePotentials.end());
+#else
   array_pod_sort(MergePotentials.begin(), MergePotentials.end());
+#endif
 
   // Walk through equivalence sets looking for actual exact matches.
   while (MergePotentials.size() > 1) {
@@ -1781,10 +1787,18 @@ ReoptimizeBlock:
       // below were performed for EH "FallThrough" blocks.  Therefore, even if
       // that appears not to be happening anymore, we should assume that it is
       // possible and not remove the "!FallThrough()->isEHPad" condition below.
+      //
+      // Similarly, the analyzeBranch call does not consider callbr, which also
+      // introduces the possibility of infinite rotation, as there may be
+      // multiple successors of PrevBB. Thus we check such case by
+      // FallThrough->isInlineAsmBrIndirectTarget().
+      // NOTE: Checking if PrevBB contains callbr is more precise, but much
+      // more expensive.
       MachineBasicBlock *PrevTBB = nullptr, *PrevFBB = nullptr;
       SmallVector<MachineOperand, 4> PrevCond;
-      if (FallThrough != MF.end() &&
-          !FallThrough->isEHPad() &&
+
+      if (FallThrough != MF.end() && !FallThrough->isEHPad() &&
+          !FallThrough->isInlineAsmBrIndirectTarget() &&
           !TII->analyzeBranch(PrevBB, PrevTBB, PrevFBB, PrevCond, true) &&
           PrevBB.isSuccessor(&*FallThrough)) {
         MBB->moveAfter(&MF.back());
@@ -2072,25 +2086,60 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     return false;
 
   // Hoist the instructions from [T.begin, TIB) and then delete [F.begin, FIB).
-  // Merge the debug locations. FIXME: We should do something with the
-  // debug instructions too (from BOTH branches).
-  {
+  // If we're hoisting from a single block then just splice. Else step through
+  // and merge the debug locations.
+  if (TBB == FBB) {
+    MBB->splice(Loc, TBB, TBB->begin(), TIB);
+  } else {
+    // Merge the debug locations, and hoist and kill the debug instructions from
+    // both branches. FIXME: We could probably try harder to preserve some debug
+    // instructions (but at least this isn't producing wrong locations).
+    MachineInstrBuilder MIRBuilder(*MBB->getParent(), Loc);
+    auto HoistAndKillDbgInstr = [MBB, Loc](MachineBasicBlock::iterator DI) {
+      assert(DI->isDebugInstr() && "Expected a debug instruction");
+      if (DI->isDebugRef()) {
+        const TargetInstrInfo *TII =
+            MBB->getParent()->getSubtarget().getInstrInfo();
+        const MCInstrDesc &DBGV = TII->get(TargetOpcode::DBG_VALUE);
+        DI = BuildMI(*MBB->getParent(), DI->getDebugLoc(), DBGV, false, 0,
+                     DI->getDebugVariable(), DI->getDebugExpression());
+        MBB->insert(Loc, &*DI);
+        return;
+      }
+      // Deleting a DBG_PHI results in an undef at the referenced DBG_INSTR_REF.
+      if (DI->isDebugPHI()) {
+        DI->eraseFromParent();
+        return;
+      }
+      // Move DBG_LABELs without modifying them. Set DBG_VALUEs undef.
+      if (!DI->isDebugLabel())
+        DI->setDebugValueUndef();
+      DI->moveBefore(&*Loc);
+    };
+
     // TIB and FIB point to the end of the regions to hoist/merge in TBB and
     // FBB.
     MachineBasicBlock::iterator FE = FIB;
     MachineBasicBlock::iterator FI = FBB->begin();
     for (MachineBasicBlock::iterator TI :
          make_early_inc_range(make_range(TBB->begin(), TIB))) {
-      // Move debug instructions and pseudo probes without modifying them.
-      // FIXME: This is the wrong thing to do for debug locations, which
-      // should at least be killed.
-      if (TI->isDebugOrPseudoInstr()) {
-        TI->moveBefore(&*Loc);
+      // Hoist and kill debug instructions from FBB. After this loop FI points
+      // to the next non-debug instruction to hoist (checked in assert after the
+      // TBB debug instruction handling code).
+      while (FI != FE && FI->isDebugInstr())
+        HoistAndKillDbgInstr(FI++);
+
+      // Kill debug instructions before moving.
+      if (TI->isDebugInstr()) {
+        HoistAndKillDbgInstr(TI);
         continue;
       }
 
-      // Get the next non-meta instruction in FBB.
-      FI = skipDebugInstructionsForward(FI, FE, false);
+      // FI and TI now point to identical non-debug instructions.
+      assert(FI != FE && "Unexpected end of FBB range");
+      // Pseudo probes are excluded from the range when identifying foldable
+      // instructions, so we don't expect to see one now.
+      assert(!TI->isPseudoProbe() && "Unexpected pseudo probe in range");
       // NOTE: The loop above checks CheckKillDead but we can't do that here as
       // it modifies some kill markers after the check.
       assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
@@ -2103,6 +2152,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       ++FI;
     }
   }
+
   FBB->erase(FBB->begin(), FIB);
 
   if (UpdateLiveIns)

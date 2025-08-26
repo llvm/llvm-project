@@ -4,7 +4,6 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include <sys/types.h>
 
 using namespace llvm;
 void StaticDataProfileInfo::addConstantProfileCount(

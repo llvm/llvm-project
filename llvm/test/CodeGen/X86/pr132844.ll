@@ -4,12 +4,11 @@
 define  { ptr, i8 } @PR132844(<4 x ptr> %0, <4 x ptr> %1) {
 ; CHECK-LABEL: PR132844:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; CHECK-NEXT:    movb $10, %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vinserti64x2 $1, 16, %ymm2, %ymm0 {%k1}
-; CHECK-NEXT:    vmovdqu %ymm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; CHECK-NEXT:    vinsertf128 $1, 16, %ymm2, %ymm2
+; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3],ymm0[4,5],ymm2[6,7]
+; CHECK-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    vzeroupper

@@ -65,6 +65,17 @@ class AtomicExpandImpl {
   const DataLayout *DL = nullptr;
 
 private:
+  void handleFailure(Instruction &FailedInst, const Twine &Msg) const {
+    LLVMContext &Ctx = FailedInst.getContext();
+
+    // TODO: Do not use generic error type.
+    Ctx.emitError(&FailedInst, Msg);
+
+    if (!FailedInst.getType()->isVoidTy())
+      FailedInst.replaceAllUsesWith(PoisonValue::get(FailedInst.getType()));
+    FailedInst.eraseFromParent();
+  }
+
   bool bracketInstWithFences(Instruction *I, AtomicOrdering Order);
   IntegerType *getCorrespondingIntegerType(Type *T, const DataLayout &DL);
   LoadInst *convertAtomicLoadToIntegerType(LoadInst *LI);
@@ -1570,12 +1581,12 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 }
 
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
+  // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)
     return false;
 
-  AtomicRMWInst::BinOp Op = RMWI->getOperation();
-  switch (Op) {
+  switch (RMWI->getOperation()) {
   case AtomicRMWInst::Add:
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Or:
@@ -1583,7 +1594,14 @@ bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
     return C->isZero();
   case AtomicRMWInst::And:
     return C->isMinusOne();
-  // FIXME: we could also treat Min/Max/UMin/UMax by the INT_MIN/INT_MAX/...
+  case AtomicRMWInst::Min:
+    return C->isMaxValue(true);
+  case AtomicRMWInst::Max:
+    return C->isMinValue(true);
+  case AtomicRMWInst::UMin:
+    return C->isMaxValue(false);
+  case AtomicRMWInst::UMax:
+    return C->isMinValue(false);
   default:
     return false;
   }
@@ -1737,7 +1755,7 @@ void AtomicExpandImpl::expandAtomicLoadToLibcall(LoadInst *I) {
       I, Size, I->getAlign(), I->getPointerOperand(), nullptr, nullptr,
       I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
   if (!expanded)
-    report_fatal_error("expandAtomicOpToLibcall shouldn't fail for Load");
+    handleFailure(*I, "unsupported atomic load");
 }
 
 void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I) {
@@ -1750,7 +1768,7 @@ void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I) {
       I, Size, I->getAlign(), I->getPointerOperand(), I->getValueOperand(),
       nullptr, I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
   if (!expanded)
-    report_fatal_error("expandAtomicOpToLibcall shouldn't fail for Store");
+    handleFailure(*I, "unsupported atomic store");
 }
 
 void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I) {
@@ -1765,7 +1783,7 @@ void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I) {
       I->getCompareOperand(), I->getSuccessOrdering(), I->getFailureOrdering(),
       Libcalls);
   if (!expanded)
-    report_fatal_error("expandAtomicOpToLibcall shouldn't fail for CAS");
+    handleFailure(*I, "unsupported cmpxchg");
 }
 
 static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
@@ -1897,7 +1915,6 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   // TODO: the "order" argument type is "int", not int32. So
   // getInt32Ty may be wrong if the arch uses e.g. 16-bit ints.
-  ConstantInt *SizeVal64 = ConstantInt::get(Type::getInt64Ty(Ctx), Size);
   assert(Ordering != AtomicOrdering::NotAtomic && "expect atomic MO");
   Constant *OrderingVal =
       ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(Ordering));
@@ -1994,7 +2011,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (CASExpected) {
     AllocaCASExpected = AllocaBuilder.CreateAlloca(CASExpected->getType());
     AllocaCASExpected->setAlignment(AllocaAlignment);
-    Builder.CreateLifetimeStart(AllocaCASExpected, SizeVal64);
+    Builder.CreateLifetimeStart(AllocaCASExpected);
     Builder.CreateAlignedStore(CASExpected, AllocaCASExpected, AllocaAlignment);
     Args.push_back(AllocaCASExpected);
   }
@@ -2008,7 +2025,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
       AllocaValue->setAlignment(AllocaAlignment);
-      Builder.CreateLifetimeStart(AllocaValue, SizeVal64);
+      Builder.CreateLifetimeStart(AllocaValue);
       Builder.CreateAlignedStore(ValueOperand, AllocaValue, AllocaAlignment);
       Args.push_back(AllocaValue);
     }
@@ -2018,7 +2035,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (!CASExpected && HasResult && !UseSizedLibcall) {
     AllocaResult = AllocaBuilder.CreateAlloca(I->getType());
     AllocaResult->setAlignment(AllocaAlignment);
-    Builder.CreateLifetimeStart(AllocaResult, SizeVal64);
+    Builder.CreateLifetimeStart(AllocaResult);
     Args.push_back(AllocaResult);
   }
 
@@ -2051,7 +2068,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   // And then, extract the results...
   if (ValueOperand && !UseSizedLibcall)
-    Builder.CreateLifetimeEnd(AllocaValue, SizeVal64);
+    Builder.CreateLifetimeEnd(AllocaValue);
 
   if (CASExpected) {
     // The final result from the CAS is {load of 'expected' alloca, bool result
@@ -2060,7 +2077,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Value *V = PoisonValue::get(FinalResultTy);
     Value *ExpectedOut = Builder.CreateAlignedLoad(
         CASExpected->getType(), AllocaCASExpected, AllocaAlignment);
-    Builder.CreateLifetimeEnd(AllocaCASExpected, SizeVal64);
+    Builder.CreateLifetimeEnd(AllocaCASExpected);
     V = Builder.CreateInsertValue(V, ExpectedOut, 0);
     V = Builder.CreateInsertValue(V, Result, 1);
     I->replaceAllUsesWith(V);
@@ -2071,7 +2088,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     else {
       V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
                                     AllocaAlignment);
-      Builder.CreateLifetimeEnd(AllocaResult, SizeVal64);
+      Builder.CreateLifetimeEnd(AllocaResult);
     }
     I->replaceAllUsesWith(V);
   }

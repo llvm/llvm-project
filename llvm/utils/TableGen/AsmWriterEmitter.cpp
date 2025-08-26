@@ -1138,10 +1138,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       uint32_t UnescapedSize = 0;
       std::string EncodedAsmString = IAP->formatAliasString(UnescapedSize);
       auto Insertion =
-          AsmStringOffsets.insert({EncodedAsmString, AsmStringsSize});
+          AsmStringOffsets.try_emplace(EncodedAsmString, AsmStringsSize);
       if (Insertion.second) {
         // If the string is new, add it to the vector.
-        AsmStrings.push_back({AsmStringsSize, EncodedAsmString});
+        AsmStrings.emplace_back(AsmStringsSize, EncodedAsmString);
         AsmStringsSize += UnescapedSize + 1;
       }
       unsigned AsmStrOffset = Insertion.first->second;
@@ -1314,7 +1314,7 @@ AsmWriterEmitter::AsmWriterEmitter(const RecordKeeper &R)
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
 
   // Get the instruction numbering.
-  NumberedInstructions = Target.getInstructionsByEnumValue();
+  NumberedInstructions = Target.getInstructions();
 
   for (const auto &[Idx, I] : enumerate(NumberedInstructions)) {
     if (!I->AsmString.empty() && I->TheDef->getName() != "PHI")

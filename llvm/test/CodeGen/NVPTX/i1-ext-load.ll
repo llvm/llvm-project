@@ -7,7 +7,6 @@ target triple = "nvptx-nvidia-cuda"
 
 define ptx_kernel void @foo(ptr noalias readonly %ptr, ptr noalias %retval) {
 ; CHECK-LABEL: foo(
-; CHECK:    .reg .b16 %rs<2>;
 ; CHECK:    .reg .b32 %r<4>;
 ; CHECK:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -15,8 +14,7 @@ define ptx_kernel void @foo(ptr noalias readonly %ptr, ptr noalias %retval) {
 ; CHECK:    cvta.to.global.u64 %rd2, %rd1;
 ; CHECK:    ld.param.b64 %rd3, [foo_param_1];
 ; CHECK:    cvta.to.global.u64 %rd4, %rd3;
-; CHECK:    ld.global.nc.b8 %rs1, [%rd2];
-; CHECK:    cvt.u32.u8 %r1, %rs1;
+; CHECK:    ld.global.nc.b8 %r1, [%rd2];
 ; CHECK:    add.s32 %r2, %r1, 1;
 ; CHECK:    and.b32 %r3, %r2, 1;
 ; CHECK:    st.global.b32 [%rd4], %r3;

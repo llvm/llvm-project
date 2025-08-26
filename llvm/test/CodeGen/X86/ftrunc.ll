@@ -514,7 +514,7 @@ define double @trunc_signed_f64_no_fast_math(double %x) {
 ; X64-AVX1-LABEL: trunc_signed_f64_no_fast_math:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vcvttsd2si %xmm0, %rax
-; X64-AVX1-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm0
+; X64-AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X86-AVX1-LABEL: trunc_signed_f64_no_fast_math:
@@ -695,7 +695,7 @@ define float @trunc_unsigned_f32_disable_via_intrinsic(float %x) #0 {
 ; X64-AVX1-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-AVX1-NEXT:    movl $-1, %eax
 ; X64-AVX1-NEXT:    cmovbel %ecx, %eax
-; X64-AVX1-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
+; X64-AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X86-AVX1-LABEL: trunc_unsigned_f32_disable_via_intrinsic:
@@ -752,7 +752,7 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 ; X64-AVX1-NEXT:    xorl %eax, %eax
 ; X64-AVX1-NEXT:    vucomisd %xmm0, %xmm0
 ; X64-AVX1-NEXT:    cmovnpq %rcx, %rax
-; X64-AVX1-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm0
+; X64-AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X86-AVX1-LABEL: trunc_signed_f64_disable_via_intrinsic:

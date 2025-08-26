@@ -15,8 +15,10 @@
 #define MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
@@ -34,12 +36,16 @@ constexpr int kSharedMemoryAlignmentBit = 128;
 
 /// NVVM memory space identifiers.
 enum NVVMMemorySpace {
+  /// Generic memory space identifier.
+  kGenericMemorySpace = 0,
   /// Global memory space identifier.
   kGlobalMemorySpace = 1,
   /// Shared memory space identifier.
   kSharedMemorySpace = 3,
   /// Constant memory space identifier.
   kConstantMemorySpace = 4,
+  /// Local memory space identifier.
+  kLocalMemorySpace = 5,
   /// Tensor memory space identifier.
   /// Tensor memory is available only in arch-accelerated
   /// variants from sm100 onwards.

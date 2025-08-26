@@ -51,6 +51,8 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(
     const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCXX11AttributeInfo(const llvm::RecordKeeper &Records,
                             llvm::raw_ostream &OS);
+void EmitAttributeSpellingList(const llvm::RecordKeeper &Records,
+                               llvm::raw_ostream &OS);
 void EmitClangAttrClass(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS);
 void EmitClangAttrImpl(const llvm::RecordKeeper &Records,

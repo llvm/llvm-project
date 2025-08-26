@@ -141,6 +141,22 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
   return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
 
+WebAssemblyTTIImpl::TTI::MemCmpExpansionOptions
+WebAssemblyTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+
+  Options.AllowOverlappingLoads = true;
+
+  if (ST->hasSIMD128())
+    Options.LoadSizes.push_back(16);
+
+  Options.LoadSizes.append({8, 4, 2, 1});
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+
+  return Options;
+}
+
 InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
     unsigned Opcode, Type *Ty, Align Alignment, unsigned AddressSpace,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpInfo,
@@ -198,10 +214,13 @@ InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
 InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
-    TTI::PartialReductionExtendKind OpBExtend,
-    std::optional<unsigned> BinOp) const {
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
   if (!VF.isFixed() || !ST->hasSIMD128())
+    return Invalid;
+
+  if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
   InstructionCost Cost(TTI::TCC_Basic);

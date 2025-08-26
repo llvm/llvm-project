@@ -160,7 +160,7 @@ entry:
 
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memmove_caller(
 ; PTX:        ld.param.b64 %rd[[N:[0-9]+]]
-; PTX-DAG:    setp.eq.s64 %p[[NEQ0:[0-9]+]], %rd[[N]], 0
+; PTX-DAG:    setp.eq.b64 %p[[NEQ0:[0-9]+]], %rd[[N]], 0
 ; PTX-DAG:    setp.ge.u64 %p[[SRC_GT_THAN_DST:[0-9]+]], %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; PTX-NEXT:   @%p[[SRC_GT_THAN_DST]] bra $L__BB[[FORWARD_BB:[0-9_]+]]
 ; -- this is the backwards copying BB

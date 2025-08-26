@@ -42,11 +42,7 @@ define void @call(fp128 %x) {
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {%rd1, %rd2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call, (param0);
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    ret;
   call void @call(fp128 %x)

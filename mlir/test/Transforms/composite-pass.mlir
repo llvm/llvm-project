@@ -2,8 +2,9 @@
 // RUN: mlir-opt %s --log-actions-to=- --composite-fixed-point-pass='name=TestCompositePass pipeline=any(canonicalize,cse)' -split-input-file | FileCheck %s
 
 // Ensure the composite pass correctly prints its options.
-// PIPELINE:      builtin.module(composite-fixed-point-pass{max-iterations=10 name=TestCompositePass
-// PIPELINE-SAME: pipeline=canonicalize{ max-iterations=10 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=true},cse})
+// PIPELINE:      builtin.module(
+// PIPELINE-NEXT:    composite-fixed-point-pass{max-iterations=10 name=TestCompositePass
+// PIPELINE-SAME: pipeline=canonicalize{ max-iterations=10 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=true},cse}
 
 // CHECK-LABEL: running `TestCompositePass`
 //       CHECK: running `Canonicalizer`

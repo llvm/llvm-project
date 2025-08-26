@@ -5,18 +5,18 @@
 define float @div_full(float %a, float %b) {
 ; CHECK-LABEL: div_full(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [div_full_param_0];
-; CHECK-NEXT:    ld.param.b32 %f2, [div_full_param_1];
-; CHECK-NEXT:    div.full.f32 %f3, %f1, %f2;
-; CHECK-NEXT:    mov.b32 %f4, 0f40400000;
-; CHECK-NEXT:    div.full.f32 %f5, %f3, %f4;
-; CHECK-NEXT:    div.full.ftz.f32 %f6, %f5, %f2;
-; CHECK-NEXT:    mov.b32 %f7, 0f40800000;
-; CHECK-NEXT:    div.full.ftz.f32 %f8, %f6, %f7;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f8;
+; CHECK-NEXT:    ld.param.b32 %r1, [div_full_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [div_full_param_1];
+; CHECK-NEXT:    div.full.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    mov.b32 %r4, 0f40400000;
+; CHECK-NEXT:    div.full.f32 %r5, %r3, %r4;
+; CHECK-NEXT:    div.full.ftz.f32 %r6, %r5, %r2;
+; CHECK-NEXT:    mov.b32 %r7, 0f40800000;
+; CHECK-NEXT:    div.full.ftz.f32 %r8, %r6, %r7;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
   %1 = call float @llvm.nvvm.div.full(float %a, float %b)
   %2 = call float @llvm.nvvm.div.full(float %1, float 3.0)
@@ -28,13 +28,13 @@ define float @div_full(float %a, float %b) {
 define float @div_fast_rr(float %a, float %b) {
 ; CHECK-LABEL: div_fast_rr(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [div_fast_rr_param_0];
-; CHECK-NEXT:    ld.param.b32 %f2, [div_fast_rr_param_1];
-; CHECK-NEXT:    div.approx.f32 %f3, %f1, %f2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f3;
+; CHECK-NEXT:    ld.param.b32 %r1, [div_fast_rr_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [div_fast_rr_param_1];
+; CHECK-NEXT:    div.approx.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %t1 = fdiv afn float %a, %b
   ret float %t1
@@ -43,13 +43,13 @@ define float @div_fast_rr(float %a, float %b) {
 define float @div_fast_rr_ftz(float %a, float %b) #0 {
 ; CHECK-LABEL: div_fast_rr_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [div_fast_rr_ftz_param_0];
-; CHECK-NEXT:    ld.param.b32 %f2, [div_fast_rr_ftz_param_1];
-; CHECK-NEXT:    div.approx.ftz.f32 %f3, %f1, %f2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f3;
+; CHECK-NEXT:    ld.param.b32 %r1, [div_fast_rr_ftz_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [div_fast_rr_ftz_param_1];
+; CHECK-NEXT:    div.approx.ftz.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %t1 = fdiv afn float %a, %b
   ret float %t1
@@ -58,12 +58,12 @@ define float @div_fast_rr_ftz(float %a, float %b) #0 {
 define float @div_fast_ri(float %a, float %b) {
 ; CHECK-LABEL: div_fast_ri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [div_fast_ri_param_0];
-; CHECK-NEXT:    mul.rn.f32 %f2, %f1, 0f3F000000;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [div_fast_ri_param_0];
+; CHECK-NEXT:    mul.rn.f32 %r2, %r1, 0f3F000000;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %t1 = fdiv afn float %a, 2.0
   ret float %t1
@@ -72,12 +72,12 @@ define float @div_fast_ri(float %a, float %b) {
 define float @div_fast_ri_ftz(float %a, float %b) #0 {
 ; CHECK-LABEL: div_fast_ri_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [div_fast_ri_ftz_param_0];
-; CHECK-NEXT:    mul.rn.ftz.f32 %f2, %f1, 0f3F000000;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [div_fast_ri_ftz_param_0];
+; CHECK-NEXT:    mul.rn.ftz.f32 %r2, %r1, 0f3F000000;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %t1 = fdiv afn float %a, 2.0
   ret float %t1
@@ -86,12 +86,12 @@ define float @div_fast_ri_ftz(float %a, float %b) #0 {
 define float @rcp_fast(float %a) {
 ; CHECK-LABEL: rcp_fast(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [rcp_fast_param_0];
-; CHECK-NEXT:    rcp.approx.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [rcp_fast_param_0];
+; CHECK-NEXT:    rcp.approx.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %t1 = fdiv afn float 1.0, %a
   ret float %t1
@@ -100,12 +100,12 @@ define float @rcp_fast(float %a) {
 define float @rcp_fast_ftz(float %a) #0 {
 ; CHECK-LABEL: rcp_fast_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [rcp_fast_ftz_param_0];
-; CHECK-NEXT:    rcp.approx.ftz.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [rcp_fast_ftz_param_0];
+; CHECK-NEXT:    rcp.approx.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %t1 = fdiv afn float 1.0, %a
   ret float %t1
@@ -114,17 +114,17 @@ define float @rcp_fast_ftz(float %a) #0 {
 define float @div_fast_vec(float %a, float %b, float %c, float %d) {
 ; CHECK-LABEL: div_fast_vec(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<8>;
+; CHECK-NEXT:    .reg .b32 %r<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [div_fast_vec_param_0];
-; CHECK-NEXT:    ld.param.b32 %f2, [div_fast_vec_param_1];
-; CHECK-NEXT:    ld.param.b32 %f3, [div_fast_vec_param_2];
-; CHECK-NEXT:    ld.param.b32 %f4, [div_fast_vec_param_3];
-; CHECK-NEXT:    div.approx.f32 %f5, %f2, %f4;
-; CHECK-NEXT:    div.approx.f32 %f6, %f1, %f3;
-; CHECK-NEXT:    add.rn.f32 %f7, %f6, %f5;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f7;
+; CHECK-NEXT:    ld.param.b32 %r1, [div_fast_vec_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [div_fast_vec_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [div_fast_vec_param_2];
+; CHECK-NEXT:    ld.param.b32 %r4, [div_fast_vec_param_3];
+; CHECK-NEXT:    div.approx.f32 %r5, %r2, %r4;
+; CHECK-NEXT:    div.approx.f32 %r6, %r1, %r3;
+; CHECK-NEXT:    add.rn.f32 %r7, %r6, %r5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
 ; CHECK-NEXT:    ret;
   %ins_a0 = insertelement <2 x float> poison, float %a, i32 0
   %ins_a1 = insertelement <2 x float> %ins_a0, float %b, i32 1
@@ -140,17 +140,17 @@ define float @div_fast_vec(float %a, float %b, float %c, float %d) {
 define float @div_fast_vec_ftz(float %a, float %b, float %c, float %d) #0 {
 ; CHECK-LABEL: div_fast_vec_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<8>;
+; CHECK-NEXT:    .reg .b32 %r<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [div_fast_vec_ftz_param_0];
-; CHECK-NEXT:    ld.param.b32 %f2, [div_fast_vec_ftz_param_1];
-; CHECK-NEXT:    ld.param.b32 %f3, [div_fast_vec_ftz_param_2];
-; CHECK-NEXT:    ld.param.b32 %f4, [div_fast_vec_ftz_param_3];
-; CHECK-NEXT:    div.approx.ftz.f32 %f5, %f2, %f4;
-; CHECK-NEXT:    div.approx.ftz.f32 %f6, %f1, %f3;
-; CHECK-NEXT:    add.rn.ftz.f32 %f7, %f6, %f5;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f7;
+; CHECK-NEXT:    ld.param.b32 %r1, [div_fast_vec_ftz_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [div_fast_vec_ftz_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [div_fast_vec_ftz_param_2];
+; CHECK-NEXT:    ld.param.b32 %r4, [div_fast_vec_ftz_param_3];
+; CHECK-NEXT:    div.approx.ftz.f32 %r5, %r2, %r4;
+; CHECK-NEXT:    div.approx.ftz.f32 %r6, %r1, %r3;
+; CHECK-NEXT:    add.rn.ftz.f32 %r7, %r6, %r5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
 ; CHECK-NEXT:    ret;
   %ins_a0 = insertelement <2 x float> poison, float %a, i32 0
   %ins_a1 = insertelement <2 x float> %ins_a0, float %b, i32 1

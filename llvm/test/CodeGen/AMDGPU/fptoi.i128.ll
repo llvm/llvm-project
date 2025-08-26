@@ -223,9 +223,10 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_or3_b32 v8, v1, v2, 1
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x433
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0xfffff, v5
+; GISEL-NEXT:    v_mov_b32_e32 v2, 0xfffff
+; GISEL-NEXT:    s_mov_b32 s6, 0x100000
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
-; GISEL-NEXT:    v_or_b32_e32 v5, 0x100000, v2
+; GISEL-NEXT:    v_and_or_b32 v5, v5, v2, s6
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
@@ -587,9 +588,10 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_or3_b32 v8, v1, v2, 1
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x433
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0xfffff, v5
+; GISEL-NEXT:    v_mov_b32_e32 v2, 0xfffff
+; GISEL-NEXT:    s_mov_b32 s6, 0x100000
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
-; GISEL-NEXT:    v_or_b32_e32 v5, 0x100000, v2
+; GISEL-NEXT:    v_and_or_b32 v5, v5, v2, s6
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
@@ -1433,15 +1435,25 @@ define i128 @fptoui_f32_to_i128(float %x) {
 }
 
 define i128 @fptosi_f16_to_i128(half %x) {
-; GCN-LABEL: fptosi_f16_to_i128:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GCN-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, v1
-; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-LABEL: fptosi_f16_to_i128:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SDAG-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; SDAG-NEXT:    v_mov_b32_e32 v3, v2
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: fptosi_f16_to_i128:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GISEL-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GISEL-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GISEL-NEXT:    v_mov_b32_e32 v2, v1
+; GISEL-NEXT:    v_mov_b32_e32 v3, v1
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cvt = fptosi half %x to i128
   ret i128 %cvt
 }

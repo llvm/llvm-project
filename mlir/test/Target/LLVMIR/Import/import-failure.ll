@@ -259,22 +259,6 @@ end:
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: expected function_entry_count to be attached to a function
-; CHECK:      warning: unhandled metadata: !0 = !{!"function_entry_count", i64 42}
-define void @cond_br(i1 %arg) {
-entry:
-  br i1 %arg, label %bb1, label %bb2, !prof !0
-bb1:
-  ret void
-bb2:
-  ret void
-}
-
-!0 = !{!"function_entry_count", i64 42}
-
-; // -----
-
-; CHECK:      <unknown>
 ; CHECK-SAME: warning: dropped instruction: call void @llvm.experimental.noalias.scope.decl(metadata !0)
 define void @unused_scope() {
   call void @llvm.experimental.noalias.scope.decl(metadata !0)

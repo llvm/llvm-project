@@ -19,27 +19,40 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpStack::~InterpStack() { clear(); }
-
-void InterpStack::clear() {
+InterpStack::~InterpStack() {
   if (Chunk && Chunk->Next)
     std::free(Chunk->Next);
   if (Chunk)
     std::free(Chunk);
   Chunk = nullptr;
   StackSize = 0;
-#ifndef NDEBUG
   ItemTypes.clear();
-#endif
+}
+
+// We keep the last chunk around to reuse.
+void InterpStack::clear() {
+  for (PrimType Item : llvm::reverse(ItemTypes)) {
+    TYPE_SWITCH(Item, { this->discard<T>(); });
+  }
+  assert(ItemTypes.empty());
+  assert(empty());
 }
 
 void InterpStack::clearTo(size_t NewSize) {
-  assert(NewSize <= size());
-  size_t ToShrink = size() - NewSize;
-  if (ToShrink == 0)
+  if (NewSize == 0)
+    return clear();
+  if (NewSize == size())
     return;
 
-  shrink(ToShrink);
+  assert(NewSize <= size());
+  for (PrimType Item : llvm::reverse(ItemTypes)) {
+    TYPE_SWITCH(Item, { this->discard<T>(); });
+
+    if (size() == NewSize)
+      break;
+  }
+
+  // Note: discard() above already removed the types from ItemTypes.
   assert(size() == NewSize);
 }
 
@@ -92,25 +105,9 @@ void InterpStack::shrink(size_t Size) {
 
   Chunk->End -= Size;
   StackSize -= Size;
-
-#ifndef NDEBUG
-  size_t TypesSize = 0;
-  for (PrimType T : ItemTypes)
-    TYPE_SWITCH(T, { TypesSize += aligned_size<T>(); });
-
-  size_t StackSize = size();
-  while (TypesSize > StackSize) {
-    TYPE_SWITCH(ItemTypes.back(), {
-      TypesSize -= aligned_size<T>();
-      ItemTypes.pop_back();
-    });
-  }
-  assert(TypesSize == StackSize);
-#endif
 }
 
 void InterpStack::dump() const {
-#ifndef NDEBUG
   llvm::errs() << "Items: " << ItemTypes.size() << ". Size: " << size() << '\n';
   if (ItemTypes.empty())
     return;
@@ -120,11 +117,11 @@ void InterpStack::dump() const {
 
   // The type of the item on the top of the stack is inserted to the back
   // of the vector, so the iteration has to happen backwards.
-  for (auto TyIt = ItemTypes.rbegin(); TyIt != ItemTypes.rend(); ++TyIt) {
-    Offset += align(primSize(*TyIt));
+  for (PrimType Item : llvm::reverse(ItemTypes)) {
+    Offset += align(primSize(Item));
 
     llvm::errs() << Index << '/' << Offset << ": ";
-    TYPE_SWITCH(*TyIt, {
+    TYPE_SWITCH(Item, {
       const T &V = peek<T>(Offset);
       llvm::errs() << V;
     });
@@ -132,5 +129,4 @@ void InterpStack::dump() const {
 
     ++Index;
   }
-#endif
 }

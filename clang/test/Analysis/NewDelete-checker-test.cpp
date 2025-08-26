@@ -1,34 +1,41 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
 // RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
 // RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
 // RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
 // RUN: %clang_analyze_cc1 -DLEAKS -std=c++17 -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
 // RUN: %clang_analyze_cc1 -std=c++17 -fblocks -verify %s \
-// RUN:   -verify=expected,leak \
+// RUN:   -Wno-alloc-size \
+// RUN:   -verify=expected,leak,inspection \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
+// RUN:   -analyzer-checker=debug.ExprInspection
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -62,6 +69,39 @@ void testGlobalNoThrowPlacementOpNewBeforeOverload() {
 void testGlobalNoThrowPlacementExprNewBeforeOverload() {
   int *p = new(std::nothrow) int;
 } // leak-warning{{Potential leak of memory pointed to by 'p'}}
+
+//----- Standard pointer placement operators
+void testGlobalPointerPlacementNew() {
+  int i;
+  void *p1 = operator new(0, &i); // no leak: placement new never allocates
+  void *p2 = operator new[](0, &i); // no leak
+  int *p3 = new(&i) int; // no leak
+  int *p4 = new(&i) int[0]; // no leak
+}
+
+template<typename T>
+void clang_analyzer_dump(T x);
+
+void testPlacementNewBufValue() {
+  int i = 10;
+  int *p = new(&i) int;
+  clang_analyzer_dump(p); // inspection-warning{{&i}}
+  clang_analyzer_dump(*p); // inspection-warning{{10}}
+}
+
+void testPlacementNewBufValueExplicitOp() {
+  int i = 10;
+  int *p = (int*)operator new(sizeof(int), &i);
+  clang_analyzer_dump(p); // inspection-warning{{&i}}
+  clang_analyzer_dump(*p); // inspection-warning{{10}}
+}
+
+void testPlacementArrNewBufValueExplicitArrOp() {
+  int i = 10;
+  int *p = (int*)operator new[](sizeof(int), &i);
+  clang_analyzer_dump(p); // inspection-warning{{&i}}
+  clang_analyzer_dump(*p); // inspection-warning{{10}}
+}
 
 //----- Other cases
 void testNewMemoryIsInHeap() {
@@ -121,52 +161,52 @@ void g(SomeClass &c, ...);
 void testUseFirstArgAfterDelete() {
   int *p = new int;
   delete p;
-  f(p); // newdelete-warning{{Use of memory after it is freed}}
+  f(p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseMiddleArgAfterDelete(int *p) {
   delete p;
-  f(0, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseLastArgAfterDelete(int *p) {
   delete p;
-  f(0, 0, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(0, 0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseSeveralArgsAfterDelete(int *p) {
   delete p;
-  f(p, p, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(p, p, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseRefArgAfterDelete(SomeClass &c) {
   delete &c;
-  g(c); // newdelete-warning{{Use of memory after it is freed}}
+  g(c); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testVariadicArgAfterDelete() {
   SomeClass c;
   int *p = new int;
   delete p;
-  g(c, 0, p); // newdelete-warning{{Use of memory after it is freed}}
+  g(c, 0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseMethodArgAfterDelete(int *p) {
   SomeClass *c = new SomeClass;
   delete p;
-  c->f(p); // newdelete-warning{{Use of memory after it is freed}}
+  c->f(p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseThisAfterDelete() {
   SomeClass *c = new SomeClass;
   delete c;
-  c->f(0); // newdelete-warning{{Use of memory after it is freed}}
+  c->f(0); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testDoubleDelete() {
   int *p = new int;
   delete p;
-  delete p; // newdelete-warning{{Attempt to free released memory}}
+  delete p; // newdelete-warning{{Attempt to release already released memory}}
 }
 
 void testExprDeleteArg() {
@@ -378,7 +418,7 @@ public:
 void testDoubleDeleteClassInstance() {
   DerefClass *foo = new DerefClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to delete released memory}}
+  delete foo; // newdelete-warning {{Attempt to release already released memory}}
 }
 
 class EmptyClass{
@@ -390,7 +430,7 @@ public:
 void testDoubleDeleteEmptyClass() {
   EmptyClass *foo = new EmptyClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to delete released memory}}
+  delete foo; // newdelete-warning {{Attempt to release already released memory}}
 }
 
 struct Base {

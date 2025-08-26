@@ -17,6 +17,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/Directive/Spelling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <string>
@@ -94,6 +96,42 @@ private:
   }
 };
 
+class Versioned {
+public:
+  int getMinVersion(const Record *R) const {
+    int64_t Min = R->getValueAsInt("minVersion");
+    assert(llvm::isInt<IntWidth>(Min) && "Value out of range of 'int'");
+    return Min;
+  }
+
+  int getMaxVersion(const Record *R) const {
+    int64_t Max = R->getValueAsInt("maxVersion");
+    assert(llvm::isInt<IntWidth>(Max) && "Value out of range of 'int'");
+    return Max;
+  }
+
+private:
+  constexpr static int IntWidth = 8 * sizeof(int);
+};
+
+class Spelling : public Versioned {
+public:
+  using Value = directive::Spelling;
+
+  Spelling(const Record *Def) : Def(Def) {}
+
+  StringRef getText() const { return Def->getValueAsString("spelling"); }
+  llvm::directive::VersionRange getVersions() const {
+    return llvm::directive::VersionRange{getMinVersion(Def),
+                                         getMaxVersion(Def)};
+  }
+
+  Value get() const { return Value{getText(), getVersions()}; }
+
+private:
+  const Record *Def;
+};
+
 // Note: In all the classes below, allow implicit construction from Record *,
 // to allow writing code like:
 //  for (const Directive D : getDirectives()) {
@@ -109,23 +147,81 @@ class BaseRecord {
 public:
   BaseRecord(const Record *Def) : Def(Def) {}
 
-  StringRef getName() const { return Def->getValueAsString("name"); }
+  std::vector<Spelling::Value> getSpellings() const {
+    std::vector<Spelling::Value> List;
+    llvm::transform(Def->getValueAsListOfDefs("spellings"),
+                    std::back_inserter(List),
+                    [](const Record *R) { return Spelling(R).get(); });
+    return List;
+  }
+
+  StringRef getSpellingForIdentifier() const {
+    // From all spellings, pick the first one with the minimum version
+    // (i.e. pick the first from all the oldest ones). This guarantees
+    // that given several equivalent (in terms of versions) names, the
+    // first one is used, e.g. given
+    //   Clause<[Spelling<"foo">, Spelling<"bar">]> ...
+    // "foo" will be the selected spelling.
+    //
+    // This is a suitable spelling for generating an identifier name,
+    // since it will remain unchanged when any potential new spellings
+    // are added.
+    Spelling::Value Oldest{"not found", {/*Min=*/INT_MAX, 0}};
+    for (auto V : getSpellings())
+      if (V.Versions.Min < Oldest.Versions.Min)
+        Oldest = V;
+    return Oldest.Name;
+  }
 
   // Returns the name of the directive formatted for output. Whitespace are
   // replaced with underscores.
-  static std::string getFormattedName(const Record *R) {
-    StringRef Name = R->getValueAsString("name");
+  static std::string getSnakeName(StringRef Name) {
     std::string N = Name.str();
     llvm::replace(N, ' ', '_');
     return N;
   }
 
-  std::string getFormattedName() const { return getFormattedName(Def); }
+  // Take a string Name with sub-words separated with characters from Sep,
+  // and return a string with each of the sub-words capitalized, and the
+  // separators removed, e.g.
+  //   Name = "some_directive^name", Sep = "_^"  ->  "SomeDirectiveName".
+  static std::string getUpperCamelName(StringRef Name, StringRef Sep) {
+    std::string Camel = Name.str();
+    // Convert to uppercase
+    bool Cap = true;
+    llvm::transform(Camel, Camel.begin(), [&](unsigned char C) {
+      if (Sep.contains(C)) {
+        assert(!Cap && "No initial or repeated separators");
+        Cap = true;
+      } else if (Cap) {
+        C = llvm::toUpper(C);
+        Cap = false;
+      }
+      return C;
+    });
+    size_t Out = 0;
+    // Remove separators
+    for (size_t In = 0, End = Camel.size(); In != End; ++In) {
+      unsigned char C = Camel[In];
+      if (!Sep.contains(C))
+        Camel[Out++] = C;
+    }
+    Camel.resize(Out);
+    return Camel;
+  }
+
+  std::string getFormattedName() const {
+    if (auto maybeName = Def->getValueAsOptionalString("name"))
+      return getSnakeName(*maybeName);
+    return getSnakeName(getSpellingForIdentifier());
+  }
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
 
   // Returns the record name.
   StringRef getRecordName() const { return Def->getName(); }
+
+  const Record *getRecord() const { return Def; }
 
 protected:
   const Record *Def;
@@ -169,26 +265,13 @@ public:
 
   // Clang uses a different format for names of its directives enum.
   std::string getClangAccSpelling() const {
-    std::string Name = Def->getValueAsString("name").str();
+    StringRef Name = getSpellingForIdentifier();
 
     // Clang calls the 'unknown' value 'invalid'.
     if (Name == "unknown")
       return "Invalid";
 
-    // Clang entries all start with a capital letter, so apply that.
-    Name[0] = std::toupper(Name[0]);
-    // Additionally, spaces/underscores are handled by capitalizing the next
-    // letter of the name and removing the space/underscore.
-    for (unsigned I = 0; I < Name.size(); ++I) {
-      if (Name[I] == ' ' || Name[I] == '_') {
-        Name.erase(I, 1);
-        assert(Name[I] != ' ' && Name[I] != '_' &&
-               "No double spaces/underscores");
-        Name[I] = std::toupper(Name[I]);
-      }
-    }
-
-    return Name;
+    return BaseRecord::getUpperCamelName(Name, " _");
   }
 };
 
@@ -214,20 +297,8 @@ public:
   // ex: async -> Async
   //     num_threads -> NumThreads
   std::string getFormattedParserClassName() const {
-    StringRef Name = Def->getValueAsString("name");
-    std::string N = Name.str();
-    bool Cap = true;
-    llvm::transform(N, N.begin(), [&Cap](unsigned char C) {
-      if (Cap == true) {
-        C = toUpper(C);
-        Cap = false;
-      } else if (C == '_') {
-        Cap = true;
-      }
-      return C;
-    });
-    erase(N, '_');
-    return N;
+    StringRef Name = getSpellingForIdentifier();
+    return BaseRecord::getUpperCamelName(Name, "_");
   }
 
   // Clang uses a different format for names of its clause enum, which can be
@@ -238,20 +309,8 @@ public:
         !ClangSpelling.empty())
       return ClangSpelling.str();
 
-    std::string Name = Def->getValueAsString("name").str();
-    // Clang entries all start with a capital letter, so apply that.
-    Name[0] = std::toupper(Name[0]);
-    // Additionally, underscores are handled by capitalizing the next letter of
-    // the name and removing the underscore.
-    for (unsigned I = 0; I < Name.size(); ++I) {
-      if (Name[I] == '_') {
-        Name.erase(I, 1);
-        assert(Name[I] != '_' && "No double underscores");
-        Name[I] = std::toupper(Name[I]);
-      }
-    }
-
-    return Name;
+    StringRef Name = getSpellingForIdentifier();
+    return BaseRecord::getUpperCamelName(Name, "_");
   }
 
   // Optional field.
@@ -305,9 +364,9 @@ private:
   const Record *Def;
 };
 
-class ClauseVal : public BaseRecord {
+class EnumVal : public BaseRecord {
 public:
-  ClauseVal(const Record *Def) : BaseRecord(Def) {}
+  EnumVal(const Record *Def) : BaseRecord(Def) {}
 
   int getValue() const { return Def->getValueAsInt("value"); }
 

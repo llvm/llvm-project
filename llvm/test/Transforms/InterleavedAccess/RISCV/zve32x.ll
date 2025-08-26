@@ -13,7 +13,7 @@ define <4 x i1> @load_large_vector(ptr %p) {
 ; ZVE32X-NEXT:    ret <4 x i1> [[RET]]
 ;
 ; ZVE64X-LABEL: @load_large_vector(
-; ZVE64X-NEXT:    [[TMP1:%.*]] = call { <4 x ptr>, <4 x ptr>, <4 x ptr> } @llvm.riscv.seg3.load.mask.v4p0.i64(ptr [[P:%.*]], <4 x i1> splat (i1 true), i64 4)
+; ZVE64X-NEXT:    [[TMP1:%.*]] = call { <4 x ptr>, <4 x ptr>, <4 x ptr> } @llvm.riscv.seg3.load.mask.v4p0.p0.i64(ptr [[P:%.*]], <4 x i1> splat (i1 true), i64 4)
 ; ZVE64X-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x ptr>, <4 x ptr>, <4 x ptr> } [[TMP1]], 1
 ; ZVE64X-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x ptr>, <4 x ptr>, <4 x ptr> } [[TMP1]], 0
 ; ZVE64X-NEXT:    [[RET:%.*]] = icmp ne <4 x ptr> [[TMP3]], [[TMP2]]

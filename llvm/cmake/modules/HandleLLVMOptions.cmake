@@ -175,6 +175,24 @@ if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   endif()
 endif()
 
+CHECK_CXX_SOURCE_COMPILES("
+#include <iosfwd>
+#if !defined(__GLIBCXX__)
+#error Not libstdc++
+#endif
+int main() { return 0; }
+" LLVM_USES_LIBSTDCXX)
+
+option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" ON)
+
+if (LLVM_USES_LIBSTDCXX)
+  if (GLIBCXX_USE_CXX11_ABI)
+    add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=1)
+  else()
+    add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
+  endif()
+endif()
+
 if (LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS)
   add_compile_definitions(STRICT_FIXED_SIZE_VECTORS)
 endif()
@@ -199,34 +217,36 @@ endif()
 string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING)
 
 if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
-  set( LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 1 )
+elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE_AND_ORIGIN" )
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 1 )
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN 1 )
 elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
-  # The DISABLED setting is default and requires no additional defines.
+  # The DISABLED setting is default.
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 0 )
 else()
   message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
 endif()
-
-if(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS)
-  add_compile_definitions(EXPERIMENTAL_KEY_INSTRUCTIONS)
-endif()
+# LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE (non-cached) is expected to be
+# 1 or 0 here, assuming referenced in #cmakedefine01.
 
 if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
 
-if(WIN32)
+if(WIN32 OR CYGWIN)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   if(CYGWIN)
     set(LLVM_ON_WIN32 0)
     set(LLVM_ON_UNIX 1)
-  else(CYGWIN)
+  else()
     set(LLVM_ON_WIN32 1)
     set(LLVM_ON_UNIX 0)
-  endif(CYGWIN)
+  endif()
 elseif(FUCHSIA OR UNIX)
   set(LLVM_ON_WIN32 0)
   set(LLVM_ON_UNIX 1)
-  if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  if(APPLE OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
@@ -247,7 +267,7 @@ set(EXEEXT ${CMAKE_EXECUTABLE_SUFFIX})
 set(LTDL_SHLIB_EXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
 
 # We use *.dylib rather than *.so on darwin, but we stick with *.so on AIX.
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LLVM_PLUGIN_EXT ${CMAKE_SHARED_MODULE_SUFFIX})
 else()
   set(LLVM_PLUGIN_EXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
@@ -258,7 +278,7 @@ if(APPLE)
   set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-flat_namespace -Wl,-undefined -Wl,dynamic_lookup")
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   # RHEL7 has ar and ranlib being non-deterministic by default. The D flag forces determinism,
   # however only GNU version of ar and ranlib (2.27) have this option.
   # RHEL DTS7 is also affected by this, which uses GNU binutils 2.28
@@ -290,7 +310,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   endif()
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   # -fPIC does not enable the large code model for GCC on AIX but does for XL.
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     append("-mcmodel=large" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
@@ -326,7 +346,7 @@ endif()
 # by dlclose(). We need that since the CLI API relies on cross-references
 # between global objects which became horribly broken when one of the libraries
 # is unloaded.
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,nodelete")
   set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,nodelete")
 endif()
@@ -452,14 +472,14 @@ if( LLVM_ENABLE_PIC )
   # to SEGV (GCC PR target/96607).
   # clang with -O3 -fPIC generates code that SEGVs.
   # Both can be worked around by compiling with -O instead.
-  if(${CMAKE_SYSTEM_NAME} STREQUAL "SunOS" AND LLVM_NATIVE_ARCH STREQUAL "Sparc")
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS" AND LLVM_NATIVE_ARCH STREQUAL "Sparc")
     llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELEASE "-O[23]" "-O")
     llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O[23]" "-O")
   endif()
 endif()
 
-if((NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX")) AND
-   (NOT (WIN32 OR CYGWIN) OR (MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
+if((NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")) AND
+   (NOT (WIN32 OR CYGWIN) OR ((MINGW OR CYGWIN) AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
   # GCC for MinGW does nothing about -fvisibility-inlines-hidden, but warns
   # about use of the attributes. As long as we don't use the attributes (to
   # override the default) we shouldn't set the command line options either.
@@ -706,7 +726,7 @@ endif ()
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
   set(module_flags "-fmodules -fmodules-cache-path=${PROJECT_BINARY_DIR}/module.cache")
-  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     # On Darwin -fmodules does not imply -fcxx-modules.
     set(module_flags "${module_flags} -fcxx-modules")
   endif()
@@ -882,11 +902,6 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
   append("-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
-  # LLVM has a policy of including virtual "anchor" functions to control
-  # where the vtable is emitted. In `final` classes, these are exactly what
-  # this warning detects: unnecessary virtual methods.
-  add_flag_if_supported("-Wno-unnecessary-virtual-specifier" CXX_SUPPORTS_UNNECESSARY_VIRTUAL_FLAG)
-
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
   endif()
@@ -1037,13 +1052,14 @@ if(LLVM_USE_SANITIZER)
         # lld string tail merging interacts badly with ASAN on Windows, turn it off here
         # See https://github.com/llvm/llvm-project/issues/62078
         append("/opt:nolldtailmerge" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+        # Static and dynamic C runtimes all load ASAN as a DLL
+        # See https://devblogs.microsoft.com/cppblog/msvc-address-sanitizer-one-dll-for-all-runtime-configurations/
+        append("clang_rt.asan_dynamic-${arch}.lib" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         if (${CMAKE_MSVC_RUNTIME_LIBRARY} MATCHES "^(MultiThreaded|MultiThreadedDebug)$")
-          append("/wholearchive:clang_rt.asan-${arch}.lib /wholearchive:clang_rt.asan_cxx-${arch}.lib"
-            CMAKE_EXE_LINKER_FLAGS)
-          append("/wholearchive:clang_rt.asan_dll_thunk-${arch}.lib"
-            CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+          append("/wholearchive:clang_rt.asan_static_runtime_thunk-${arch}.lib"
+            CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         else()
-          append("clang_rt.asan_dynamic-${arch}.lib /wholearchive:clang_rt.asan_dynamic_runtime_thunk-${arch}.lib"
+          append("/wholearchive:clang_rt.asan_dynamic_runtime_thunk-${arch}.lib"
             CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         endif()
       endif()
@@ -1125,7 +1141,7 @@ endif()
 # But MinSizeRel seems to add that automatically, so maybe disable these
 # flags instead if LLVM_NO_DEAD_STRIP is set.
 if(NOT CYGWIN AND NOT MSVC)
-  if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND
+  if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin" AND
      NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     if (CMAKE_CXX_COMPILER_ID MATCHES "XL")
       append("-qfuncsect" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -1317,9 +1333,14 @@ endif()
 # linking (due to incompatibility). With MSVC, note that the plugin has to
 # explicitly link against (exactly one) tool so we can't unilaterally turn on
 # LLVM_ENABLE_PLUGINS when it's enabled.
+if("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
+  set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION OFF)
+else()
+  set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION ON)
+endif()
 CMAKE_DEPENDENT_OPTION(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS
        "Export symbols from LLVM tools so that plugins can import them" OFF
-       "NOT ${CMAKE_SYSTEM_NAME} MATCHES AIX" ${LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default})
+       "LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION" ${LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_AIX_default})
 if(BUILD_SHARED_LIBS AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
   message(FATAL_ERROR "BUILD_SHARED_LIBS not compatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS")
 endif()

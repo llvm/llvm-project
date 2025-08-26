@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.13",
+  "version": "0.2.16",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -29,11 +29,15 @@
   ],
   "devDependencies": {
     "@types/node": "^18.19.41",
+    "@types/tabulator-tables": "^6.2.10",
     "@types/vscode": "1.75.0",
+    "@types/vscode-webview": "^1.57.5",
     "@vscode/debugprotocol": "^1.68.0",
     "@vscode/vsce": "^3.2.2",
+    "esbuild": "^0.25.9",
     "prettier": "^3.4.2",
     "prettier-plugin-curly": "^0.3.1",
+    "tabulator-tables": "^6.3.1",
     "typescript": "^5.7.3"
   },
   "activationEvents": [
@@ -42,10 +46,13 @@
   ],
   "main": "./out/extension",
   "scripts": {
-    "vscode:prepublish": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "bundle-symbols-table-view": "npx tsc -p src-ts/webview --noEmit && npx esbuild src-ts/webview/symbols-table-view.ts --bundle --format=iife --outdir=./out/webview",
+    "bundle-tabulator": "cp node_modules/tabulator-tables/dist/js/tabulator.min.js ./out/webview/ && cp node_modules/tabulator-tables/dist/css/tabulator_midnight.min.css ./out/webview/ && cp node_modules/tabulator-tables/dist/css/tabulator_simple.min.css ./out/webview/",
+    "bundle-webview": "npm run bundle-symbols-table-view && npm run bundle-tabulator",
+    "vscode:prepublish": "npm run bundle-webview && tsc -p ./",
+    "watch": "npm run bundle-webview && tsc -watch -p ./",
     "format": "npx prettier './src-ts/' --write",
-    "package": "vsce package --out ./out/lldb-dap.vsix",
+    "package": "rm -rf ./out/lldb-dap.vsix && vsce package --out ./out/lldb-dap.vsix",
     "publish": "vsce publish",
     "vscode-uninstall": "code --uninstall-extension llvm-vs-code-extensions.lldb-dap",
     "vscode-install": "code --install-extension ./out/lldb-dap.vsix"
@@ -81,10 +88,16 @@
             "description": "The path to the lldb-dap binary, e.g. /usr/local/bin/lldb-dap"
           },
           "lldb-dap.log-path": {
+            "scope": "machine-overridable",
+            "type": "string",
+            "description": "The log path for lldb-dap (if any)",
+            "markdownDeprecationMessage": "Use the `#lldb-dap.logFolder#` setting instead"
+          },
+          "lldb-dap.logFolder": {
             "order": 0,
             "scope": "machine-overridable",
             "type": "string",
-            "description": "The log path for lldb-dap (if any)"
+            "markdownDescription": "The folder to persist lldb-dap logs. If no value is provided, logs will be persisted in the [Extension Logs Folder](command:workbench.action.openExtensionLogsFolder)."
           },
           "lldb-dap.serverMode": {
             "order": 0,
@@ -110,6 +123,11 @@
             "additionalProperties": {
               "type": "string"
             }
+          },
+          "lldb-dap.captureSessionLogs": {
+            "type": "boolean",
+            "description": "When enabled, LLDB-DAP session logs will be written to the Extension's log folder if the `lldb-dap.log-path` setting is not explicitly set.",
+            "default": false
           }
         }
       },
@@ -248,6 +266,15 @@
       {
         "command": "lldb-dap.modules.copyProperty",
         "title": "Copy Value"
+      },
+      {
+        "command": "lldb-dap.modules.showSymbols",
+        "title": "Show Module Symbols"
+      },
+      {
+        "category": "lldb-dap",
+        "command": "lldb-dap.debug.showSymbols",
+        "title": "Show Symbols of a Module"
       }
     ],
     "menus": {
@@ -255,16 +282,31 @@
         {
           "command": "lldb-dap.modules.copyProperty",
           "when": "false"
+        },
+        {
+          "command": "lldb-dap.modules.showSymbols",
+          "when": "false"
+        },
+        {
+          "command": "lldb-dap.debug.showSymbols",
+          "when": "debuggersAvailable && debugType == 'lldb-dap' && lldb-dap.supportsModuleSymbolsRequest"
         }
       ],
       "view/item/context": [
         {
           "command": "lldb-dap.modules.copyProperty",
           "when": "view == lldb-dap.modules && viewItem == property"
+        },
+        {
+          "command": "lldb-dap.modules.showSymbols",
+          "when": "view == lldb-dap.modules && viewItem == module && lldb-dap.supportsModuleSymbolsRequest"
         }
       ]
     },
     "breakpoints": [
+      {
+        "language": "lldb.disassembly"
+      },
       {
         "language": "ada"
       },
@@ -287,7 +329,7 @@
         "language": "d"
       },
       {
-        "language": "fortan"
+        "language": "fortran"
       },
       {
         "language": "fortran-modern"
@@ -315,6 +357,22 @@
       {
         "type": "lldb-dap",
         "label": "LLDB DAP Debugger",
+        "languages": [
+          "ada",
+          "arm",
+          "c",
+          "cpp",
+          "crystal",
+          "d",
+          "fortran",
+          "fortran-modern",
+          "nim",
+          "objective-c",
+          "objectpascal",
+          "pascal",
+          "rust",
+          "swift"
+        ],
         "configurationAttributes": {
           "launch": {
             "required": [
@@ -509,7 +567,23 @@
               "runInTerminal": {
                 "type": "boolean",
                 "description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
-                "default": false
+                "default": false,
+                "deprecationMessage": "Attribute 'runInTerminal' is deprecated, use 'console' instead."
+              },
+              "console": {
+                "type": "string",
+                "enum": [
+                  "internalConsole",
+                  "integratedTerminal",
+                  "externalTerminal"
+                ],
+                "enumDescriptions": [
+                  "Use Debug Console for output (input is not supported).",
+                  "Launch the program inside an integrated terminal in the IDE.",
+                  "Launch the program inside an external terminal window."
+                ],
+                "description": "Specify where to launch the program: internal console, integrated terminal or external terminal.",
+                "default": "internalConsole"
               },
               "timeout": {
                 "type": "number",

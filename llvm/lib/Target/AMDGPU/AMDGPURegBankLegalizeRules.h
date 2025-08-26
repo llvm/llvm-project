@@ -15,6 +15,7 @@
 
 namespace llvm {
 
+class LLT;
 class MachineRegisterInfo;
 class MachineInstr;
 class GCNSubtarget;
@@ -25,6 +26,9 @@ using MachineSSAContext = GenericSSAContext<MachineFunction>;
 using MachineUniformityInfo = GenericUniformityInfo<MachineSSAContext>;
 
 namespace AMDGPU {
+
+/// \returns true if \p Ty is a pointer type with size \p Width.
+bool isAnyPtr(LLT Ty, unsigned Width);
 
 // IDs used to build predicate for RegBankLegalizeRule. Predicate can have one
 // or more IDs and each represents a check for 'uniform or divergent' + LLT or
@@ -39,15 +43,19 @@ enum UniformityLLTOpPredicateID {
   S16,
   S32,
   S64,
+  S128,
 
   UniS1,
   UniS16,
   UniS32,
   UniS64,
+  UniS128,
 
   DivS1,
+  DivS16,
   DivS32,
   DivS64,
+  DivS128,
 
   // pointers
   P0,
@@ -55,24 +63,37 @@ enum UniformityLLTOpPredicateID {
   P3,
   P4,
   P5,
+  Ptr32,
+  Ptr64,
+  Ptr128,
 
   UniP0,
   UniP1,
   UniP3,
   UniP4,
   UniP5,
+  UniPtr32,
+  UniPtr64,
+  UniPtr128,
 
   DivP0,
   DivP1,
   DivP3,
   DivP4,
   DivP5,
+  DivPtr32,
+  DivPtr64,
+  DivPtr128,
 
   // vectors
   V2S16,
   V2S32,
   V3S32,
   V4S32,
+
+  UniV2S16,
+
+  DivV2S16,
 
   // B types
   B32,
@@ -112,11 +133,17 @@ enum RegBankLLTMappingApplyID {
   Sgpr16,
   Sgpr32,
   Sgpr64,
+  Sgpr128,
   SgprP1,
   SgprP3,
   SgprP4,
   SgprP5,
+  SgprPtr32,
+  SgprPtr64,
+  SgprPtr128,
+  SgprV2S16,
   SgprV4S32,
+  SgprV2S32,
   SgprB32,
   SgprB64,
   SgprB96,
@@ -125,13 +152,20 @@ enum RegBankLLTMappingApplyID {
   SgprB512,
 
   // vgpr scalars, pointers, vectors and B-types
+  Vgpr16,
   Vgpr32,
   Vgpr64,
+  Vgpr128,
   VgprP0,
   VgprP1,
   VgprP3,
   VgprP4,
   VgprP5,
+  VgprPtr32,
+  VgprPtr64,
+  VgprPtr128,
+  VgprV2S16,
+  VgprV2S32,
   VgprB32,
   VgprB64,
   VgprB96,
@@ -143,6 +177,7 @@ enum RegBankLLTMappingApplyID {
   // Dst only modifiers: read-any-lane and truncs
   UniInVcc,
   UniInVgprS32,
+  UniInVgprV2S16,
   UniInVgprV4S32,
   UniInVgprB32,
   UniInVgprB64,
@@ -153,10 +188,17 @@ enum RegBankLLTMappingApplyID {
 
   Sgpr32Trunc,
 
-  // Src only modifiers: waterfalls, extends
+  // Src only modifiers: execute in waterfall loop if divergent
+  Sgpr32_WF,
+  SgprV4S32_WF,
+
+  // Src only modifiers: extends
   Sgpr32AExt,
   Sgpr32AExtBoolInReg,
   Sgpr32SExt,
+  Sgpr32ZExt,
+  Vgpr32SExt,
+  Vgpr32ZExt,
 };
 
 // Instruction needs to be replaced with sequence of instructions. Lowering was
@@ -168,8 +210,13 @@ enum LoweringMethodID {
   DoNotLower,
   VccExtToSel,
   UniExtToSel,
+  UnpackBitShift,
+  S_BFE,
+  V_BFE,
   VgprToVccCopy,
   SplitTo32,
+  SplitTo32Select,
+  SplitTo32SExtInReg,
   Ext32To64,
   UniCstExt,
   SplitLoad,

@@ -15,10 +15,10 @@ define void @int_and_pointer_predicate(ptr %v, i32 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1:0x[0-9a-f]+]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %v High: (2 + %v))
 ; CHECK-NEXT:            Member: %v
-; CHECK-NEXT:        Group [[GRP2:0x[0-9a-f]+]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %v High: (6 + (4 * (trunc i32 %N to i16)) + %v))
 ; CHECK-NEXT:            Member: {%v,+,4}<%loop>
 ; CHECK-EMPTY:
@@ -63,36 +63,36 @@ define void @int_and_multiple_pointer_predicates(ptr %v, ptr %w, i32 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %v
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:        ptr %w
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP3]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %v
-; CHECK-NEXT:        Against group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.w = getelementptr { i16, i16 }, ptr %w, i16 %iv.i16
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.v = getelementptr { i16, i16 }, ptr %v, i16 %iv.i16
-; CHECK-NEXT:        Against group ([[GRP4]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:        ptr %w
 ; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group ([[GRP6]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.v = getelementptr { i16, i16 }, ptr %v, i16 %iv.i16
-; CHECK-NEXT:        Against group ([[GRP5]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.w = getelementptr { i16, i16 }, ptr %w, i16 %iv.i16
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %v High: (2 + %v))
 ; CHECK-NEXT:            Member: %v
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %v High: (6 + (4 * (trunc i32 %N to i16)) + %v))
 ; CHECK-NEXT:            Member: {%v,+,4}<%loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %w High: (2 + %w))
 ; CHECK-NEXT:            Member: %w
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %w High: (6 + (4 * (trunc i32 %N to i16)) + %w))
 ; CHECK-NEXT:            Member: {%w,+,4}<%loop>
 ; CHECK-EMPTY:

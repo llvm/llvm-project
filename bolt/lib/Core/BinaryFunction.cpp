@@ -166,12 +166,7 @@ bool shouldPrint(const BinaryFunction &Function) {
   }
 
   std::optional<StringRef> Origin = Function.getOriginSectionName();
-  if (Origin && llvm::any_of(opts::PrintOnly, [&](const std::string &Name) {
-        return Name == *Origin;
-      }))
-    return true;
-
-  return false;
+  return Origin && llvm::is_contained(opts::PrintOnly, *Origin);
 }
 
 } // namespace opts
@@ -476,6 +471,8 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Sample Count: " << RawSampleCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
+  if (ExternEntryCount)
+    OS << "\n  Extern Entry Count: " << ExternEntryCount;
 
   if (opts::PrintDynoStats && !getLayout().block_empty()) {
     OS << '\n';
@@ -1531,8 +1528,6 @@ add_instruction:
   if (uint64_t Offset = getFirstInstructionOffset())
     Labels[Offset] = BC.Ctx->createNamedTempSymbol();
 
-  clearList(Relocations);
-
   if (!IsSimple) {
     clearList(Instructions);
     return createNonFatalBOLTError("");
@@ -1920,13 +1915,9 @@ void BinaryFunction::postProcessEntryPoints() {
       continue;
 
     // If we have grabbed a wrong code label which actually points to some
-    // constant island inside the function, ignore this label and remove it
-    // from the secondary entry point map.
-    if (isStartOfConstantIsland(Offset)) {
-      BC.SymbolToFunctionMap.erase(Label);
-      removeSymbolFromSecondaryEntryPointMap(Label);
+    // constant island inside the function, ignore this label.
+    if (isStartOfConstantIsland(Offset))
       continue;
-    }
 
     BC.errs() << "BOLT-WARNING: reference in the middle of instruction "
                  "detected in function "
@@ -1968,7 +1959,9 @@ void BinaryFunction::postProcessJumpTables() {
             return EntryAddress == Parent->getAddress() + Parent->getSize();
           });
       if (IsBuiltinUnreachable) {
-        MCSymbol *Label = getOrCreateLocalLabel(EntryAddress, true);
+        BinaryFunction *TargetBF = BC.getBinaryFunctionAtAddress(EntryAddress);
+        MCSymbol *Label = TargetBF ? TargetBF->getSymbol()
+                                   : getOrCreateLocalLabel(EntryAddress, true);
         JT.Entries.push_back(Label);
         continue;
       }
@@ -3249,15 +3242,25 @@ void BinaryFunction::setTrapOnEntry() {
 }
 
 void BinaryFunction::setIgnored() {
+  IsIgnored = true;
+
   if (opts::processAllFunctions()) {
     // We can accept ignored functions before they've been disassembled.
-    // In that case, they would still get disassembled and emited, but not
+    // In that case, they would still get disassembled and emitted, but not
     // optimized.
-    assert(CurrentState == State::Empty &&
-           "cannot ignore non-empty functions in current mode");
-    IsIgnored = true;
+    if (CurrentState != State::Empty) {
+      BC.errs() << "BOLT-ERROR: cannot ignore non-empty function " << *this
+                << " in current mode\n";
+      exit(1);
+    }
     return;
   }
+
+  IsSimple = false;
+  LLVM_DEBUG(dbgs() << "Ignoring " << getPrintName() << '\n');
+
+  if (CurrentState == State::Empty)
+    return;
 
   clearDisasmState();
 
@@ -3278,9 +3281,11 @@ void BinaryFunction::setIgnored() {
 
   CurrentState = State::Empty;
 
-  IsIgnored = true;
-  IsSimple = false;
-  LLVM_DEBUG(dbgs() << "Ignoring " << getPrintName() << '\n');
+  // Fix external references in the original function body.
+  if (BC.HasRelocations) {
+    LLVM_DEBUG(dbgs() << "Scanning refs in " << *this << '\n');
+    scanExternalRefs();
+  }
 }
 
 void BinaryFunction::duplicateConstantIslands() {
@@ -3321,10 +3326,7 @@ void BinaryFunction::duplicateConstantIslands() {
 
         // Update instruction reference
         Operand = MCOperand::createExpr(BC.MIB->getTargetExprFor(
-            Inst,
-            MCSymbolRefExpr::create(ColdSymbol, MCSymbolRefExpr::VK_None,
-                                    *BC.Ctx),
-            *BC.Ctx, 0));
+            Inst, MCSymbolRefExpr::create(ColdSymbol, *BC.Ctx), *BC.Ctx, 0));
         ++OpNum;
       }
     }
@@ -3584,6 +3586,8 @@ bool BinaryFunction::validateCFG() const {
 }
 
 void BinaryFunction::fixBranches() {
+  assert(isSimple() && "Expected function with valid CFG.");
+
   auto &MIB = BC.MIB;
   MCContext *Ctx = BC.Ctx.get();
 
@@ -3767,7 +3771,6 @@ void BinaryFunction::postProcessBranches() {
 
 MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   assert(Offset && "cannot add primary entry point");
-  assert(CurrentState == State::Empty || CurrentState == State::Disassembled);
 
   const uint64_t EntryPointAddress = getAddress() + Offset;
   MCSymbol *LocalSymbol = getOrCreateLocalLabel(EntryPointAddress);
@@ -3775,6 +3778,8 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(LocalSymbol);
   if (EntrySymbol)
     return EntrySymbol;
+
+  assert(CurrentState == State::Empty || CurrentState == State::Disassembled);
 
   if (BinaryData *EntryBD = BC.getBinaryDataAtAddress(EntryPointAddress)) {
     EntrySymbol = EntryBD->getSymbol();

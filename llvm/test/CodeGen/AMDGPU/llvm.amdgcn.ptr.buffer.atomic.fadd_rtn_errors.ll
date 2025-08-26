@@ -11,10 +11,10 @@
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %t/raw-ret-v2bf16-error.ll 2>&1 | FileCheck -check-prefix=ERR-RAW-V2BF16-SDAG %s
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %t/struct-ret-v2bf16-error.ll 2>&1 | FileCheck -check-prefix=ERR-STRUCT-V2BF16-SDAG %s
 
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/raw-ret-f32-error.ll 2>&1 | FileCheck -check-prefix=ERR-RAW-F32-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/struct-ret-f32-error.ll 2>&1 | FileCheck -check-prefix=ERR-STRUCT-F32-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/raw-ret-v2f16-error.ll 2>&1 | FileCheck -check-prefix=ERR-RAW-V2F16-GISEL %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/struct-ret-v2f16-error.ll 2>&1 | FileCheck -check-prefix=ERR-STRUCT-V2F16-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/raw-ret-f32-error.ll 2>&1 | FileCheck -check-prefix=ERR-RAW-F32-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/struct-ret-f32-error.ll 2>&1 | FileCheck -check-prefix=ERR-STRUCT-F32-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/raw-ret-v2f16-error.ll 2>&1 | FileCheck -check-prefix=ERR-RAW-V2F16-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/struct-ret-v2f16-error.ll 2>&1 | FileCheck -check-prefix=ERR-STRUCT-V2F16-GISEL %s
 ; RUN: not --crash llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/raw-ret-v2bf16-error.ll 2>&1 | FileCheck -check-prefix=ERR-RAW-V2BF16-GISEL %s
 ; RUN: not --crash llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %t/struct-ret-v2bf16-error.ll 2>&1 | FileCheck -check-prefix=ERR-STRUCT-V2BF16-GISEL %s
 ; RUN: not --crash llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=null %t/raw-ret-v2bf16-error.ll 2>&1 | FileCheck -check-prefix=ERR-RAW-V2BF16-GISEL %s

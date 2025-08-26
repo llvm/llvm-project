@@ -79,11 +79,12 @@
 #define FUNC_ALIGN
 #endif
 
-// BTI and PAC gnu property note
+// BTI, PAC, and GCS gnu property note
 #define NT_GNU_PROPERTY_TYPE_0 5
 #define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
 #define GNU_PROPERTY_AARCH64_FEATURE_1_BTI 1
 #define GNU_PROPERTY_AARCH64_FEATURE_1_PAC 2
+#define GNU_PROPERTY_AARCH64_FEATURE_1_GCS 4
 
 #if defined(__ARM_FEATURE_BTI_DEFAULT)
 #define BTI_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_BTI
@@ -95,6 +96,12 @@
 #define PAC_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_PAC
 #else
 #define PAC_FLAG 0
+#endif
+
+#if defined(__ARM_FEATURE_GCS_DEFAULT)
+#define GCS_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+#else
+#define GCS_FLAG 0
 #endif
 
 #define GNU_PROPERTY(type, value)                                              \
@@ -118,11 +125,12 @@
 #define BTI_J
 #endif
 
-#if (BTI_FLAG | PAC_FLAG) != 0
-#define GNU_PROPERTY_BTI_PAC                                                   \
-  GNU_PROPERTY(GNU_PROPERTY_AARCH64_FEATURE_1_AND, BTI_FLAG | PAC_FLAG)
+#if (BTI_FLAG | PAC_FLAG | GCS_FLAG) != 0
+#define GNU_PROPERTY_BTI_PAC_GCS                                               \
+  GNU_PROPERTY(GNU_PROPERTY_AARCH64_FEATURE_1_AND,                             \
+               BTI_FLAG | PAC_FLAG | GCS_FLAG)
 #else
-#define GNU_PROPERTY_BTI_PAC
+#define GNU_PROPERTY_BTI_PAC_GCS
 #endif
 
 #if defined(__clang__) || defined(__GCC_HAVE_DWARF2_CFI_ASM)
@@ -194,6 +202,23 @@
 #else
 #define WIDE(op) op
 #endif
+
+#if defined(__ARM_FEATURE_PAC_DEFAULT) && defined(__ARM_FEATURE_BTI_DEFAULT)
+#define PACBTI_LANDING pacbti r12, lr, sp
+#elif defined(__ARM_FEATURE_PAC_DEFAULT)
+#define PACBTI_LANDING pac r12, lr, sp
+#elif defined(__ARM_FEATURE_BTI_DEFAULT)
+#define PACBTI_LANDING bti
+#else
+#define PACBTI_LANDING
+#endif
+
+#if defined(__ARM_FEATURE_PAUTH)
+#define PAC_RETURN bxaut r12, lr, sp
+#else
+#define PAC_RETURN aut r12, lr, sp SEPARATOR bx lr
+#endif
+
 #else // !defined(__arm)
 #define DECLARE_FUNC_ENCODING
 #define DEFINE_CODE_STATE

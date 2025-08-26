@@ -3,9 +3,9 @@
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvknha,+zvknhb \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
-; RUN: sed 's/iXLen/i32/g' %s | not --crash llc -mtriple=riscv32 -mattr=+v,+zvknha 2>&1 \
+; RUN: sed 's/iXLen/i32/g' %s | not llc -mtriple=riscv32 -mattr=+v,+zvknha 2>&1 \
 ; RUN:   | FileCheck --check-prefixes=CHECK-ERROR %s
-; RUN: sed 's/iXLen/i64/g' %s | not --crash llc -mtriple=riscv64 -mattr=+v,+zvknha 2>&1 \
+; RUN: sed 's/iXLen/i64/g' %s | not llc -mtriple=riscv64 -mattr=+v,+zvknha 2>&1 \
 ; RUN:   | FileCheck --check-prefixes=CHECK-ERROR %s
 
 ; CHECK-ERROR: LLVM ERROR: SEW=64 needs Zvknhb to be enabled.

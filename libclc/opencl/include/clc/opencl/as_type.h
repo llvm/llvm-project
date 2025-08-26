@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_AS_TYPE_H__
+#define __CLC_OPENCL_AS_TYPE_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define as_char(x) __builtin_astype(x, char)
 #define as_uchar(x) __builtin_astype(x, uchar)
 #define as_short(x) __builtin_astype(x, short)
@@ -83,3 +88,5 @@
 #define as_half8(x) __builtin_astype(x, half8)
 #define as_half16(x) __builtin_astype(x, half16)
 #endif
+
+#endif // __CLC_OPENCL_AS_TYPE_H__

@@ -16,10 +16,8 @@
 #include "APINotesFormat.h"
 #include "clang/APINotes/Types.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
 namespace clang {
@@ -135,6 +133,13 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
     Info.setNSErrorDomain(std::optional<std::string>(std::string(
         reinterpret_cast<const char *>(Data), ErrorDomainLength - 1)));
     Data += ErrorDomainLength - 1;
+  }
+
+  if (unsigned ConformanceLength =
+          endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
+    Info.setSwiftConformance(std::string(reinterpret_cast<const char *>(Data),
+                                         ConformanceLength - 1));
+    Data += ConformanceLength - 1;
   }
 }
 
@@ -631,11 +636,12 @@ public:
           reinterpret_cast<const char *>(Data), DefaultOwnershipLength - 1);
       Data += DefaultOwnershipLength - 1;
     }
-    if (unsigned ConformanceLength =
-            endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
-      Info.SwiftConformance = std::string(reinterpret_cast<const char *>(Data),
-                                          ConformanceLength - 1);
-      Data += ConformanceLength - 1;
+    unsigned DestroyOpLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DestroyOpLength > 0) {
+      Info.SwiftDestroyOp = std::string(reinterpret_cast<const char *>(Data),
+                                        DestroyOpLength - 1);
+      Data += DestroyOpLength - 1;
     }
 
     ReadCommonTypeInfo(Data, Info);

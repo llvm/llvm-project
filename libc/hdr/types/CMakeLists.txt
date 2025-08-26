@@ -1,4 +1,36 @@
 add_proxy_header_library(
+  char8_t 
+  HDRS
+    char8_t.h
+  DEPENDS
+    libc.hdr.uchar_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.char8_t
+    libc.include.uchar
+)
+
+add_proxy_header_library(
+  char32_t 
+  HDRS
+    char32_t.h
+  DEPENDS
+    libc.hdr.uchar_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.char32_t
+    libc.include.uchar
+)
+
+add_proxy_header_library(
+  mbstate_t
+  HDRS
+    mbstate_t.h
+  DEPENDS
+    libc.include.llvm-libc-types.mbstate_t
+  FULL_BUILD_DEPENDS
+    libc.include.uchar
+)
+
+add_proxy_header_library(
   div_t
   HDRS
     div_t.h
@@ -62,6 +94,7 @@ add_proxy_header_library(
   DEPENDS
     libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.llvm-libc-types.struct_flock
 )
 
@@ -72,6 +105,7 @@ add_proxy_header_library(
   DEPENDS
     libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.llvm-libc-types.struct_flock64
 )
 
@@ -208,6 +242,22 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  pthread_barrier_t
+  HDRS
+    pthread_barrier_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_barrier_t
+)
+
+add_proxy_header_library(
+  pthread_barrierattr_t
+  HDRS
+    pthread_barrierattr_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_barrierattr_t
+)
+
+add_proxy_header_library(
   atexithandler_t
   HDRS
     atexithandler_t.h
@@ -282,6 +332,15 @@ add_proxy_header_library(
     jmp_buf.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.jmp_buf
+    libc.include.setjmp
+)
+
+add_proxy_header_library(
+  sigjmp_buf
+  HDRS
+    sigjmp_buf.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.sigjmp_buf
     libc.include.setjmp
 )
 
@@ -373,6 +432,7 @@ add_proxy_header_library(
     cpu_set_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.cpu_set_t
+    libc.include.sched
 )
 
 add_proxy_header_library(
@@ -391,4 +451,13 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.ACTION
     libc.include.search
+)
+
+add_proxy_header_library(
+  struct_sched_param
+  HDRS
+    struct_sched_param.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sched_param
+    libc.include.sched
 )

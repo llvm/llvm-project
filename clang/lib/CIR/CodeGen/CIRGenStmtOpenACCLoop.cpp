@@ -22,6 +22,36 @@ using namespace clang::CIRGen;
 using namespace cir;
 using namespace mlir::acc;
 
+void CIRGenFunction::updateLoopOpParallelism(mlir::acc::LoopOp &op,
+                                             bool isOrphan,
+                                             OpenACCDirectiveKind dk) {
+  // Check that at least one of auto, independent, or seq is present
+  // for the device-independent default clauses.
+  if (op.hasParallelismFlag(mlir::acc::DeviceType::None))
+    return;
+
+  switch (dk) {
+  default:
+    llvm_unreachable("Invalid parent directive kind");
+  case OpenACCDirectiveKind::Invalid:
+  case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::ParallelLoop:
+    op.addIndependent(builder.getContext(), {});
+    return;
+  case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::KernelsLoop:
+    op.addAuto(builder.getContext(), {});
+    return;
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::SerialLoop:
+    if (op.hasDefaultGangWorkerVector())
+      op.addAuto(builder.getContext(), {});
+    else
+      op.addSeq(builder.getContext(), {});
+    return;
+  };
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
@@ -90,6 +120,9 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
                      s.clauses());
 
+  updateLoopOpParallelism(op, s.isOrphanedLoopConstruct(),
+                          s.getParentComputeConstructKind());
+
   mlir::LogicalResult stmtRes = mlir::success();
   // Emit body.
   {
@@ -97,6 +130,7 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPointToEnd(&block);
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
+    ActiveOpenACCLoopRAII activeLoop{*this, &op};
 
     stmtRes = emitStmt(s.getLoop(), /*useCurrentScope=*/true);
     builder.create<mlir::acc::YieldOp>(end);

@@ -467,7 +467,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    call callee_stack_args
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, 48
+; RV64I-NEXT:    addi a0, a0, 48
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload

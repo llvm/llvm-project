@@ -31,6 +31,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   clc/lib/amdgcn/SOURCES;
   clc/lib/amdgpu/SOURCES;
   clc/lib/clspv/SOURCES;
+  clc/lib/ptx-nvidiacl/SOURCES;
   clc/lib/r600/SOURCES;
   clc/lib/spirv/SOURCES;
 )
@@ -41,6 +42,16 @@ set( LIBCLC_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
 
 option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
+
+option(
+  LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
+)
+
+# Top level target used to build all Libclc libraries.
+add_custom_target( libclc ALL )
+
+add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
+add_dependencies( libclc libclc-opencl-builtins )
 
 if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   # Out-of-tree configuration
@@ -63,6 +74,9 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
       set( ${tool}_target )
     endforeach()
   endif()
+
+  # Setup the paths where libclc runtimes should be stored.
+  set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 else()
   # In-tree configuration
   set( LIBCLC_STANDALONE_BUILD FALSE )
@@ -72,7 +86,7 @@ else()
   # Note that we check this later (for both build types) but we can provide a
   # more useful error message when built in-tree. We assume that LLVM tools are
   # always available so don't warn here.
-  if( NOT clang IN_LIST LLVM_ENABLE_PROJECTS )
+  if( NOT LLVM_RUNTIMES_BUILD AND NOT clang IN_LIST LLVM_ENABLE_PROJECTS )
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
   endif()
 
@@ -82,6 +96,13 @@ else()
     get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
     get_host_tool_path( opt OPT opt_exe opt_target )
   endif()
+
+  # Setup the paths where libclc runtimes should be stored. By default, in an
+  # in-tree build we place the libraries in clang's resource driectory.
+  get_clang_resource_dir( LIBCLC_OUTPUT_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. )
+
+  # Note we do not adhere to LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.
+  set( LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_OUTPUT_DIR}/lib/libclc )
 endif()
 
 if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
@@ -106,14 +127,17 @@ foreach( tool IN ITEMS clang opt llvm-as llvm-link )
   endif()
 endforeach()
 
-# llvm-spirv is an optional dependency, used to build spirv-* targets.
-# It may be provided in-tree or externally.
-if( TARGET llvm-spirv )
-  get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
-else()
-  find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
-  set( llvm-spirv_exe "${LLVM_SPIRV}" )
-  set( llvm-spirv_target )
+if( NOT LIBCLC_USE_SPIRV_BACKEND )
+  # llvm-spirv is an optional dependency, used to build spirv-* targets when
+  # the SPIR-V backend hasn't been requested. It may be provided in-tree or
+  # externally.
+  if( TARGET llvm-spirv )
+    get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
+  else()
+    find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
+    set( llvm-spirv_exe "${LLVM_SPIRV}" )
+    set( llvm-spirv_target )
+  endif()
 endif()
 
 # List of all targets. Note that some are added dynamically below.
@@ -129,22 +153,24 @@ set( LIBCLC_TARGETS_ALL
   nvptx64--nvidiacl
 )
 
-# mesa3d environment is only available since LLVM 4.0
+# The mesa3d environment is only available since LLVM 4.0
 if( LLVM_PACKAGE_VERSION VERSION_GREATER_EQUAL 4.0.0 )
   list( APPEND LIBCLC_TARGETS_ALL amdgcn-mesa-mesa3d )
 endif()
 
-# spirv-mesa3d and spirv64-mesa3d targets can only be built with the (optional)
-# llvm-spirv external tool.
-if( llvm-spirv_exe )
-  list( APPEND LIBCLC_TARGETS_ALL  spirv-mesa3d- spirv64-mesa3d- )
+# The spirv-mesa3d and spirv64-mesa3d targets are optional and can be built
+# with either the LLVM SPIR-V backend or the external llvm-spirv tool.
+if( LIBCLC_USE_SPIRV_BACKEND OR llvm-spirv_exe )
+  list( APPEND LIBCLC_TARGETS_ALL spirv-mesa3d- spirv64-mesa3d- )
 endif()
 
 # Verify that the user hasn't requested mesa3d targets without an available
 # llvm-spirv tool.
-if( "spirv-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD OR "spirv64-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD )
-  if( NOT llvm-spirv_exe )
-    message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not installed" )
+if( spirv-mesa3d- IN_LIST LIBCLC_TARGETS_TO_BUILD
+    OR spirv64-mesa3d- IN_LIST LIBCLC_TARGETS_TO_BUILD )
+  if( NOT LIBCLC_USE_SPIRV_BACKEND AND NOT llvm-spirv_exe )
+    message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not "
+      "installed and the SPIR-V backend has not been requested." )
   endif()
 endif()
 
@@ -161,34 +187,14 @@ endif()
 
 list( SORT LIBCLC_TARGETS_TO_BUILD )
 
-# Construct LLVM version define
-set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}" )
-
 # This needs to be set before any target that needs it
 # We need to use LLVM_INCLUDE_DIRS here, because if we are linking to an
 # llvm build directory, this includes $src/llvm/include which is where all the
 # headers are not $build/include/ which is what LLVM_INCLUDE_DIR is set to.
 include_directories( ${LLVM_INCLUDE_DIRS} )
 
-# Setup prepare_builtins tools
-set(LLVM_LINK_COMPONENTS
-  BitReader
-  BitWriter
-  Core
-  IRReader
-  Support
-)
-if( LIBCLC_STANDALONE_BUILD )
-  add_llvm_executable( prepare_builtins utils/prepare-builtins.cpp )
-  set( prepare_builtins_exe prepare_builtins )
-  set( prepare_builtins_target prepare_builtins )
-else()
-  add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
-  setup_host_tool( prepare_builtins PREPARE_BUILTINS prepare_builtins_exe prepare_builtins_target )
-endif()
-target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
-# These were not properly reported in early LLVM and we don't need them
-target_compile_options( prepare_builtins PRIVATE -fno-rtti -fno-exceptions )
+# Configure prepare_builtins
+add_subdirectory( utils )
 
 # Setup arch devices
 set( r600--_devices cedar cypress barts cayman )
@@ -420,11 +426,39 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
+      # Error on undefined macros
+      -Werror=undef
+      -fdiscard-value-names
     )
 
     if( NOT "${cpu}" STREQUAL "" )
       list( APPEND build_flags -mcpu=${cpu} )
     endif()
+
+    # Generic address space support.
+    # Note: when declaring builtins, we must consider that even if a target
+    # formally/nominally supports the generic address space, in practice that
+    # target may map it to the same target address space as another address
+    # space (often the private one). In such cases we must be careful not to
+    # multiply-define a builtin in a single target address space, as it would
+    # result in a mangling clash.
+    # For this reason we must consider the target support of the generic
+    # address space separately from the *implementation* decision about whether
+    # to declare certain builtins in that address space.
+    # Note: we assume that if there is no distinct generic address space, it
+    # maps to the private address space.
+    set ( private_addrspace_val 0 )
+    set ( generic_addrspace_val 0 )
+    if( ARCH STREQUAL amdgcn OR ARCH STREQUAL r600 OR ARCH STREQUAL amdgcn-amdhsa )
+      set ( private_addrspace_val 5 )
+    endif()
+    if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
+      set ( generic_addrspace_val 4 )
+    endif()
+    list( APPEND build_flags
+      -D__CLC_PRIVATE_ADDRSPACE_VAL=${private_addrspace_val}
+      -D__CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
+    )
 
     set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
 
@@ -452,6 +486,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       LIB_FILES ${opencl_lib_files}
       GEN_FILES ${opencl_gen_files}
       ALIASES ${${d}_aliases}
+      PARENT_TARGET libclc-opencl-builtins
       # Link in the CLC builtins and internalize their symbols
       INTERNAL_LINK_DEPENDENCIES builtins.link.clc-${arch_suffix}
     )

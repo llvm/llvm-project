@@ -24,32 +24,24 @@ namespace NVPTXISD {
 enum NodeType : unsigned {
   // Start the numbering from where ISD NodeType finishes.
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  Wrapper,
-  CALL,
   RET_GLUE,
-  LOAD_PARAM,
-  DeclareParam,
+
+  /// These nodes represent a parameter declaration. In PTX this will look like:
+  ///   .param .align 16 .b8 param0[1024];
+  ///   .param .b32 retval0;
+  ///
+  /// DeclareArrayParam(Chain, Externalsym, Align, Size, Glue)
+  /// DeclareScalarParam(Chain, Externalsym, Size, Glue)
   DeclareScalarParam,
-  DeclareRetParam,
-  DeclareRet,
-  DeclareScalarRet,
-  PrintCall,
-  PrintConvergentCall,
-  PrintCallUni,
-  PrintConvergentCallUni,
-  CallArgBegin,
-  CallArg,
-  LastCallArg,
-  CallArgEnd,
-  CallVoid,
-  CallVal,
-  CallSymbol,
-  Prototype,
+  DeclareArrayParam,
+
+  /// This node represents a PTX call instruction. It's operands are as follows:
+  ///
+  /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
+  ///      NumParams, Callee, Proto)
+  CALL,
+
   MoveParam,
-  PseudoUseParam,
-  RETURN,
-  CallSeqBegin,
-  CallSeqEnd,
   CallPrototype,
   ProxyReg,
   FSHL_CLAMP,
@@ -58,7 +50,6 @@ enum NodeType : unsigned {
   MUL_WIDE_UNSIGNED,
   SETP_F16X2,
   SETP_BF16X2,
-  BFE,
   BFI,
   PRMT,
 
@@ -73,6 +64,11 @@ enum NodeType : unsigned {
   UNPACK_VECTOR,
 
   FCOPYSIGN,
+  FMAXNUM3,
+  FMINNUM3,
+  FMAXIMUM3,
+  FMINIMUM3,
+
   DYNAMIC_STACKALLOC,
   STACKRESTORE,
   STACKSAVE,
@@ -83,7 +79,6 @@ enum NodeType : unsigned {
   CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X,
   CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y,
   CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z,
-  Dummy,
 
   FIRST_MEMORY_OPCODE,
   LoadV2 = FIRST_MEMORY_OPCODE,
@@ -94,18 +89,7 @@ enum NodeType : unsigned {
   StoreV2,
   StoreV4,
   StoreV8,
-  LoadParam,
-  LoadParamV2,
-  LoadParamV4,
-  StoreParam,
-  StoreParamV2,
-  StoreParamV4,
-  StoreParamS32, // to sext and store a <32bit value, not used currently
-  StoreParamU32, // to zext and store a <32bit value, not used currently
-  StoreRetval,
-  StoreRetvalV2,
-  StoreRetvalV4,
-  LAST_MEMORY_OPCODE = StoreRetvalV4,
+  LAST_MEMORY_OPCODE = StoreV8,
 };
 }
 
@@ -119,8 +103,6 @@ public:
   explicit NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
-
-  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
 
@@ -193,11 +175,10 @@ public:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
-  std::string
-  getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
-               const SmallVectorImpl<ISD::OutputArg> &, MaybeAlign retAlignment,
-               std::optional<std::pair<unsigned, const APInt &>> VAInfo,
-               const CallBase &CB, unsigned UniqueCallSite) const;
+  std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
+                           const SmallVectorImpl<ISD::OutputArg> &,
+                           std::optional<unsigned> FirstVAArg,
+                           const CallBase &CB, unsigned UniqueCallSite) const;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -225,7 +206,7 @@ public:
 
   // Get whether we should use a precise or approximate 32-bit floating point
   // sqrt instruction.
-  bool usePrecSqrtF32() const;
+  bool usePrecSqrtF32(const SDNode *N = nullptr) const;
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.
@@ -238,7 +219,6 @@ public:
   unsigned combineRepeatedFPDivisors() const override { return 2; }
 
   bool allowFMA(MachineFunction &MF, CodeGenOptLevel OptLevel) const;
-  bool allowUnsafeFPMath(const MachineFunction &MF) const;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT) const override {
@@ -288,17 +268,28 @@ public:
   unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
                                      EVT ToVT) const override;
 
+  void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
+                                     const APInt &DemandedElts,
+                                     const SelectionDAG &DAG,
+                                     unsigned Depth = 0) const override;
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth = 0) const override;
+
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   mutable unsigned GlobalUniqueCallSite;
 
-  SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
-
+  SDValue getParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
+  SDValue getCallParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
   SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
@@ -318,8 +309,6 @@ private:
   SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerLOADi1(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const;

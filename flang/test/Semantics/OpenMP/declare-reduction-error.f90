@@ -7,5 +7,5 @@ end subroutine initme
 
 subroutine subr
   !$omp declare reduction(red_add:integer(4):omp_out=omp_out+omp_in) initializer(initme(omp_priv,0))
-  !CHECK: error: Implicit subroutine declaration 'initme' in !$OMP DECLARE REDUCTION
+  !CHECK: error: Implicit subroutine declaration 'initme' in DECLARE REDUCTION
 end subroutine subr

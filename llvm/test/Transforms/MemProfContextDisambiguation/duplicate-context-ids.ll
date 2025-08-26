@@ -64,6 +64,10 @@
 ; RUN:  --check-prefix=STATS --check-prefix=REMARKS
 
 ; RUN:  cat %t.ccg.prestackupdate.dot | FileCheck %s --check-prefix=DOTPRE
+;; There are no changes for this test case in between from immediately after
+;; the stack update through the end of graph finalization, so the
+;; corresponding dot graphs should be identical.
+; RUN:  cat %t.ccg.poststackupdate.dot | FileCheck %s --check-prefix=DOTPOST
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOST
 ;; We should clone D once for the cold allocations via C.
 ; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
@@ -313,8 +317,8 @@ attributes #6 = { builtin }
 ; DOTPRE: }
 
 
-; DOTPOST:digraph "postbuild" {
-; DOTPOST:	label="postbuild";
+; DOTPOST:digraph "post
+; DOTPOST:	label="post
 ; DOTPOST:	Node[[D:0x[a-z0-9]+]] [shape=record,tooltip="N[[D]] ContextIds: 1 2 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc0\n_Z1Dv -\> _Znam}"];
 ; DOTPOST:	Node[[F:0x[a-z0-9]+]] [shape=record,tooltip="N[[F]] ContextIds: 2",fillcolor="brown1",style="filled",label="{OrigId: 13543580133643026784\n_Z1Fv -\> _Z1Dv}"];
 ; DOTPOST:	Node[[F]] -> Node[[D]][tooltip="ContextIds: 2",fillcolor="brown1"

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref -fcxx-exceptions %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref      -fcxx-exceptions %s
 
 void test_alignas_operand() {
   alignas(8) char dummy;
@@ -122,8 +122,8 @@ static_assert(!b4);
 constexpr auto bar(const char *p) { return p + __builtin_strlen(p); }
 constexpr auto b5 = bar(p1) == p1;
 static_assert(!b5);
-constexpr auto b6 = bar(p1) == ""; // ref-error {{must be initialized by a constant expression}} \
-                                   // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b6 = bar(p1) == ""; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{comparison of addresses of potentially overlapping literals}}
 constexpr auto b7 = bar(p1) + 1 == ""; // both-error {{must be initialized by a constant expression}} \
                                        // both-note {{comparison against pointer '&"test1"[6]' that points past the end of a complete object has unspecified value}}
 
@@ -1014,4 +1014,89 @@ namespace OnePastEndDtor {
     A a;
     (&a+1)->~A(); // both-note {{destruction of dereferenced one-past-the-end pointer}}
   }
+}
+
+namespace Virtual {
+  struct NonZeroOffset { int padding = 123; };
+
+  constexpr void assert(bool b) { if (!b) throw 0; }
+
+  // Ensure that we pick the right final overrider during construction.
+  struct A {
+    virtual constexpr char f() const { return 'A'; }
+    char a = f();
+    constexpr ~A() { assert(f() == 'A'); }
+  };
+  struct NoOverrideA : A {};
+  struct B : NonZeroOffset, NoOverrideA {
+    virtual constexpr char f() const { return 'B'; }
+    char b = f();
+    constexpr ~B() { assert(f() == 'B'); }
+  };
+  struct NoOverrideB : B {};
+  struct C : NonZeroOffset, A {
+    virtual constexpr char f() const { return 'C'; }
+    A *pba;
+    char c = ((A*)this)->f();
+    char ba = pba->f();
+    constexpr C(A *pba) : pba(pba) {}
+    constexpr ~C() { assert(f() == 'C'); }
+  };
+  struct D : NonZeroOffset, NoOverrideB, C { // both-warning {{inaccessible}}
+    virtual constexpr char f() const { return 'D'; }
+    char d = f();
+    constexpr D() : C((B*)this) {}
+    constexpr ~D() { assert(f() == 'D'); }
+  };
+  constexpr int n = (D(), 0);
+
+  constexpr D d;
+  static_assert(((B&)d).a == 'A');
+  static_assert(((C&)d).a == 'A');
+  static_assert(d.b == 'B');
+  static_assert(d.c == 'C');
+  // During the construction of C, the dynamic type of B's A is B.
+  static_assert(d.ba == 'B'); // expected-error {{failed}} \
+                              // expected-note {{expression evaluates to}}
+  static_assert(d.d == 'D');
+  static_assert(d.f() == 'D');
+  constexpr const A &a = (B&)d;
+  constexpr const B &b = d;
+  static_assert(a.f() == 'D');
+  static_assert(b.f() == 'D');
+
+
+  class K {
+  public:
+    int a = f();
+
+    virtual constexpr int f() { return 10; }
+  };
+
+  class L : public K {
+  public:
+    int b = f();
+    int c =((L*)this)->f();
+  };
+
+  constexpr L l;
+  static_assert(l.a == 10);
+  static_assert(l.b == 10);
+  static_assert(l.c == 10);
+}
+
+namespace DiscardedTrivialCXXConstructExpr {
+  struct S {
+    constexpr S(int a) : x(a) {}
+    int x;
+  };
+
+  constexpr int foo(int x) { // ref-error {{never produces a constant expression}}
+    throw S(3); // both-note {{not valid in a constant expression}} \
+                // ref-note {{not valid in a constant expression}}
+    return 1;
+  }
+
+  constexpr int y = foo(12); // both-error {{must be initialized by a constant expression}} \
+                             // both-note {{in call to}}
 }

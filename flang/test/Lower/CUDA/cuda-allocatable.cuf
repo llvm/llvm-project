@@ -6,6 +6,10 @@ module globals
   real, device, allocatable :: a_device(:)
   real, managed, allocatable :: a_managed(:)
   real, pinned, allocatable :: a_pinned(:)
+  type :: t1
+    integer :: a
+    real, dimension(:), allocatable, device :: b
+  end type
 end module
 
 ! CHECK-LABEL: fir.global @_QMglobalsEa_device {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
@@ -186,7 +190,7 @@ attributes(global) subroutine sub8()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub8() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
-! CHECK: %[[DESC:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub8Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[DESC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QFsub8Ea"}
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[DESC]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub8Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK: %[[HEAP:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {fir.must_be_heap = true, uniq_name = "_QFsub8Ea.alloc"}
 ! CHECK: %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
@@ -222,3 +226,12 @@ end
 ! CHECK: %[[FALSE:.*]] = arith.constant false
 ! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
 ! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#0 : !fir.ref<!fir.logical<4>>
+
+subroutine cuda_component()
+  use globals
+  type(t1), pointer, dimension(:) :: d
+  allocate(d(10))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPcuda_component()
+! CHECK: cuf.allocate

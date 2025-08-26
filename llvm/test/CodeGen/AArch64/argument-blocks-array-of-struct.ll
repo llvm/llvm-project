@@ -581,9 +581,8 @@ define void @callee_in_memory(%T_IN_MEMORY %a) {
 ; CHECK-SD-NEXT:    add x8, x8, :lo12:in_memory_store
 ; CHECK-SD-NEXT:    ldr d0, [sp, #64]
 ; CHECK-SD-NEXT:    str d0, [x8, #64]
-; CHECK-SD-NEXT:    ldr q0, [sp, #16]
 ; CHECK-SD-NEXT:    str q2, [x8, #48]
-; CHECK-SD-NEXT:    ldr q2, [sp]
+; CHECK-SD-NEXT:    ldp q2, q0, [sp]
 ; CHECK-SD-NEXT:    stp q0, q1, [x8, #16]
 ; CHECK-SD-NEXT:    str q2, [x8]
 ; CHECK-SD-NEXT:    ret

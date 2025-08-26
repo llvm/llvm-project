@@ -140,6 +140,12 @@ def SharedVar : SubsetSubject<Var,
                               [{S->hasGlobalStorage() && !S->getTLSKind()}],
                               "global variables">;
 
+def HLSLInputBuiltin
+    : SubsetSubject<Var, [{S->hasGlobalStorage() &&
+                           S->getStorageClass() == StorageClass::SC_Static &&
+                           S->getType().isConstQualified()}],
+                    "static const globals">;
+
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
 
@@ -190,8 +196,10 @@ def FunctionPointer : SubsetSubject<DeclBase,
                                     "functions pointers">;
 
 def OpenCLKernelFunction
-    : SubsetSubject<Function, [{S->hasAttr<OpenCLKernelAttr>()}],
-                    "kernel functions">;
+    : SubsetSubject<Function, [{S->getASTContext().getLangOpts().OpenCL &&
+                               DeviceKernelAttr::isOpenCLSpelling(
+			                 S->getAttr<DeviceKernelAttr>()}],
+                               "kernel functions">;
 
 // HasFunctionProto is a more strict version of FunctionLike, so it should
 // never be specified in a Subjects list along with FunctionLike (due to the
@@ -484,9 +492,22 @@ def TargetHasDLLImportExport : TargetSpec {
 def TargetItaniumCXXABI : TargetSpec {
   let CustomCode = [{ Target.getCXXABI().isItaniumFamily() }];
 }
+
 def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch64"]> {
   let CustomCode = [{ Target.getCXXABI().isMicrosoft() }];
 }
+
+// The target follows Microsoft record layout. Usually this happens in two
+// cases: 1. the target itself has Microsoft C++ ABI, e.g. x86_64 in MSVC
+// environment on Windows 2. an offloading target e.g. amdgcn or nvptx with
+// a host target in MSVC environment on Windows.
+def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
+                                              "aarch64", "amdgcn", "nvptx",
+                                              "nvptx64", "spirv", "spirv32",
+                                              "spirv64"]> {
+  let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
+}
+
 def TargetELF : TargetSpec {
   let ObjectFormats = ["ELF"];
 }
@@ -957,6 +978,13 @@ def AnalyzerNoReturn : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def InferredNoReturn : InheritableAttr {
+  let Spellings = []; 
+  let SemaHandler = 0;
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [InternalOnly];
+}
+
 def Annotate : InheritableParamOrStmtAttr {
   let Spellings = [Clang<"annotate">];
   let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
@@ -1031,22 +1059,13 @@ def AVRSignal : InheritableAttr, TargetSpecificAttr<TargetAVR> {
 def AsmLabel : InheritableAttr {
   let Spellings = [CustomKeyword<"asm">, CustomKeyword<"__asm__">];
   let Args = [
-    // Label specifies the mangled name for the decl.
-    StringArgument<"Label">,
-
-    // IsLiteralLabel specifies whether the label is literal (i.e. suppresses
-    // the global C symbol prefix) or not. If not, the mangle-suppression prefix
-    // ('\01') is omitted from the decl name at the LLVM IR level.
-    //
-    // Non-literal labels are used by some external AST sources like LLDB.
-    BoolArgument<"IsLiteralLabel", /*optional=*/0, /*fake=*/1>
-  ];
+      // Label specifies the mangled name for the decl.
+      StringArgument<"Label">, ];
   let SemaHandler = 0;
   let Documentation = [AsmLabelDocs];
-  let AdditionalMembers =
-[{
+  let AdditionalMembers = [{
 bool isEquivalent(AsmLabelAttr *Other) const {
-  return getLabel() == Other->getLabel() && getIsLiteralLabel() == Other->getIsLiteralLabel();
+  return getLabel() == Other->getLabel();
 }
 }];
 }
@@ -1103,6 +1122,8 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
     return llvm::StringSwitch<llvm::StringRef>(Platform)
              .Case("iOS", "ios")
              .Case("macOS", "macos")
+             .Case("macOSX", "macos")
+             .Case("macosx", "macos")
              .Case("tvOS", "tvos")
              .Case("watchOS", "watchos")
              .Case("iOSApplicationExtension", "ios_app_extension")
@@ -1167,6 +1188,26 @@ static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environm
              .Case("library", llvm::Triple::Library)
              .Default(llvm::Triple::UnknownEnvironment);
 }
+
+static llvm::Triple::OSType getOSType(llvm::StringRef Platform) {
+    using OSType = llvm::Triple::OSType;
+    return llvm::StringSwitch<OSType>(Platform)
+             .Case("ios", OSType::IOS)
+             .Case("macos", OSType::MacOSX)
+             .Case("maccatalyst", OSType::IOS)
+             .Case("tvos", OSType::TvOS)
+             .Case("watchos", OSType::WatchOS)
+             .Case("bridgeos", OSType::BridgeOS)
+             .Case("ios_app_extension", OSType::IOS)
+             .Case("maccatalyst_app_extension", OSType::IOS)
+             .Case("macos_app_extension", OSType::MacOSX)
+             .Case("tvos_app_extension", OSType::TvOS)
+             .Case("watchos_app_extension", OSType::WatchOS)
+             .Case("xros", OSType::XROS)
+             .Case("xros_app_extension", OSType::XROS)
+             .Default(OSType::UnknownOS);
+}
+
 }];
   let HasCustomParsing = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -1354,6 +1395,17 @@ def Cleanup : InheritableAttr {
   let Args = [DeclArgument<Function, "FunctionDecl">];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [CleanupDocs];
+  // FIXME: DeclArgument should be reworked to also store the
+  // Expr instead of adding attr specific hacks like the following.
+  // See the discussion in https://github.com/llvm/llvm-project/pull/14023.
+  let AdditionalMembers = [{
+private:
+    SourceLocation ArgLoc;
+
+public:
+    void setArgLoc(const SourceLocation &Loc) { ArgLoc = Loc; }
+    auto getArgLoc() const { return ArgLoc; }
+  }];
 }
 
 def CmseNSEntry : InheritableAttr, TargetSpecificAttr<TargetARM> {
@@ -1498,12 +1550,6 @@ def CUDAGridConstant : InheritableAttr {
   let Documentation = [CUDAGridConstantAttrDocs];
 }
 
-def NVPTXKernel : InheritableAttr, TargetSpecificAttr<TargetNVPTX> {
-  let Spellings = [Clang<"nvptx_kernel">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
-}
-
 def HIPManaged : InheritableAttr {
   let Spellings = [GNU<"managed">, Declspec<"__managed__">];
   let Subjects = SubjectList<[Var]>;
@@ -1538,15 +1584,63 @@ def CUDAShared : InheritableAttr {
 }
 def : MutualExclusions<[CUDAConstant, CUDAShared, HIPManaged]>;
 
-def SYCLKernel : InheritableAttr {
-  let Spellings = [Clang<"sycl_kernel">];
-  let Subjects = SubjectList<[FunctionTmpl]>;
-  let LangOpts = [SYCLDevice];
-  let Documentation = [SYCLKernelDocs];
+def DeviceKernel : DeclOrTypeAttr {
+  let Spellings = [Clang<"device_kernel">, Clang<"sycl_kernel">,
+                   Clang<"nvptx_kernel">, Clang<"amdgpu_kernel">,
+                   CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
+  let Documentation = [DeviceKernelDocs];
+  let AdditionalMembers =
+  [{
+    static inline bool isAMDGPUSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == GNU_amdgpu_kernel ||
+             A.getAttributeSpellingListIndex() == CXX11_clang_amdgpu_kernel ||
+             A.getAttributeSpellingListIndex() == C23_clang_amdgpu_kernel;
+    }
+    static inline bool isAMDGPUSpelling(const AttributeCommonInfo* A) {
+      if(!A) return false;
+      return isAMDGPUSpelling(*A);
+    }
+    static inline bool isNVPTXSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == GNU_nvptx_kernel ||
+             A.getAttributeSpellingListIndex() == CXX11_clang_nvptx_kernel ||
+             A.getAttributeSpellingListIndex() == C23_clang_nvptx_kernel;
+    }
+    static inline bool isNVPTXSpelling(const AttributeCommonInfo* A) {
+      if(!A) return false;
+      return isNVPTXSpelling(*A);
+    }
+    static inline bool isSYCLSpelling(const AttributeCommonInfo& A) {
+      return A.getAttributeSpellingListIndex() == GNU_sycl_kernel ||
+             A.getAttributeSpellingListIndex() == CXX11_clang_sycl_kernel ||
+             A.getAttributeSpellingListIndex() == C23_clang_sycl_kernel;
+    }
+    static inline bool isSYCLSpelling(const AttributeCommonInfo* A) {
+      if(!A) return false;
+      return isSYCLSpelling(*A);
+    }
+    static inline bool isOpenCLSpelling(const AttributeCommonInfo& A) {
+    // Tablegen trips underscores from spellings to build the spelling
+    // list, but here we have the same spelling with unscores and without,
+    // so handle that case manually.
+      return A.getAttributeSpellingListIndex() == Keyword_kernel ||
+      (A.getAttrName() && A.getAttrName()->getName() == "kernel");
+    }
+    static inline bool isOpenCLSpelling(const AttributeCommonInfo* A) {
+      if (!A) return false;
+      return isOpenCLSpelling(*A);
+    }
+}];
+}
+
+def SYCLExternal : InheritableAttr {
+  let Spellings = [CXX11<"clang", "sycl_external">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLExternalDocs];
 }
 
 def SYCLKernelEntryPoint : InheritableAttr {
-  let Spellings = [Clang<"sycl_kernel_entry_point">];
+  let Spellings = [CXX11<"clang", "sycl_kernel_entry_point">];
   let Args = [
     // KernelName is required and specifies the kernel name type.
     TypeArgument<"KernelName">,
@@ -1606,15 +1700,6 @@ def Blocking : TypeAttr {
 def Allocating : TypeAttr {
   let Spellings = [Clang<"allocating">];
   let Documentation = [AllocatingDocs];
-}
-
-// Similar to CUDA, OpenCL attributes do not receive a [[]] spelling because
-// the specification does not expose them with one currently.
-def OpenCLKernel : InheritableAttr {
-  let Spellings = [CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
-  let Documentation = [Undocumented];
-  let SimpleHandler = 1;
 }
 
 def OpenCLUnrollHint : StmtAttr {
@@ -1715,7 +1800,7 @@ def Destructor : InheritableAttr {
   let Documentation = [CtorDtorDocs];
 }
 
-def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
+def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftRecordLayout> {
   let Spellings = [Declspec<"empty_bases">];
   let Subjects = SubjectList<[CXXRecord]>;
   let Documentation = [EmptyBasesDocs];
@@ -1947,7 +2032,7 @@ def Restrict : InheritableAttr {
   let Documentation = [RestrictDocs];
 }
 
-def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
+def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftRecordLayout> {
   let Spellings = [Declspec<"layout_version">];
   let Args = [UnsignedArgument<"Version">];
   let Subjects = SubjectList<[CXXRecord]>;
@@ -1986,10 +2071,12 @@ private:
   ArrayRef<SourceLocation> ArgLocs;
 
 public:
-  static constexpr int THIS = 0;
-  static constexpr int INVALID = -1;
-  static constexpr int UNKNOWN = -2;
-  static constexpr int GLOBAL = -3;
+  enum ArgIndex {
+    This = 0,
+    Invalid = -1,
+    Unknown = -2,
+    Global = -3,
+  };
 
   void setArgs(ArrayRef<IdentifierInfo*> Idents, ArrayRef<SourceLocation> Locs) {
     assert(Idents.size() == params_Size);
@@ -2163,7 +2250,7 @@ def NoUniqueAddress : InheritableAttr {
   let Spellings = [CXX11<"", "no_unique_address", 201803>, CXX11<"msvc", "no_unique_address", 201803>];
   let TargetSpecificSpellings = [
     TargetSpecificSpelling<TargetItaniumCXXABI, [CXX11<"", "no_unique_address", 201803>]>,
-    TargetSpecificSpelling<TargetMicrosoftCXXABI, [CXX11<"msvc", "no_unique_address", 201803>]>,
+    TargetSpecificSpelling<TargetMicrosoftRecordLayout, [CXX11<"msvc", "no_unique_address", 201803>]>,
   ];
   let Documentation = [NoUniqueAddressDocs];
 }
@@ -2272,6 +2359,7 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
                                    [
                                      "supervisor",
                                      "machine",
+                                     "rnmi",
                                      "qci-nest",
                                      "qci-nonest",
                                      "SiFive-CLIC-preemptible",
@@ -2280,6 +2368,7 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
                                    [
                                      "supervisor",
                                      "machine",
+                                     "rnmi",
                                      "qcinest",
                                      "qcinonest",
                                      "SiFiveCLICPreemptible",
@@ -2349,11 +2438,6 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Args = [ExprArgument<"MaxNumWorkGroupsX">, ExprArgument<"MaxNumWorkGroupsY", 1>, ExprArgument<"MaxNumWorkGroupsZ", 1>];
   let Documentation = [AMDGPUMaxNumWorkGroupsDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
-}
-
-def AMDGPUKernelCall : DeclOrTypeAttr {
-  let Spellings = [Clang<"amdgpu_kernel">];
-  let Documentation = [Undocumented];
 }
 
 def BPFPreserveAccessIndex : InheritableAttr,
@@ -2984,6 +3068,26 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+def SwiftType : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [StringArgument<"TypeString">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
+def SwiftNullability : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [EnumArgument<"Kind", "Kind", /*is_string=*/false,
+                           ["non_null", "nullable", "unspecified", "nullable_result"],
+                           ["NonNull", "Nullable", "Unspecified", "NullableResult"]>];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def SwiftAsyncName : InheritableAttr {
   let Spellings = [GNU<"swift_async_name">];
   let Args = [StringArgument<"Name">];
@@ -3096,6 +3200,11 @@ def SwiftVersionedRemoval : Attr {
 def NoDeref : TypeAttr {
   let Spellings = [Clang<"noderef">];
   let Documentation = [NoDerefDocs];
+}
+
+def CFIUncheckedCallee : TypeAttr {
+  let Spellings = [Clang<"cfi_unchecked_callee">];
+  let Documentation = [CFIUncheckedCalleeDocs];
 }
 
 def ReqdWorkGroupSize : InheritableAttr {
@@ -3666,6 +3775,7 @@ def Visibility : InheritableAttr {
                            ["default", "hidden", "internal", "protected"],
                            ["Default", "Hidden", "Hidden", "Protected"]>];
   let MeaningfulToClassTemplateDefinition = 1;
+  let PragmaAttributeSupport = 1;
   let Documentation = [Undocumented];
 }
 
@@ -3817,6 +3927,14 @@ def CFICanonicalJumpTable : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [CFICanonicalJumpTableDocs];
   let SimpleHandler = 1;
+}
+
+def CFISalt : TypeAttr {
+  let Spellings = [Clang<"cfi_salt">];
+  let Args = [StringArgument<"Salt">];
+  let Subjects = SubjectList<[FunctionLike], ErrorDiag>;
+  let Documentation = [CFISaltDocs];
+  let LangOpts = [COnly];
 }
 
 // C/C++ Thread safety attributes (e.g. for deadlock, data race checking)
@@ -4025,6 +4143,13 @@ def LocksExcluded : InheritableAttr {
   let InheritEvenIfAlreadyPresent = 1;
   let Subjects = SubjectList<[Function, ParmVar]>;
   let Documentation = [Undocumented];
+}
+
+def ReentrantCapability : InheritableAttr {
+  let Spellings = [Clang<"reentrant_capability">];
+  let Subjects = SubjectList<[Record, TypedefName]>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
 }
 
 // C/C++ consumed attributes.
@@ -4554,6 +4679,7 @@ def OMPDeclareVariant : InheritableAttr {
     OMPTraitInfoArgument<"TraitInfos">,
     VariadicExprArgument<"AdjustArgsNothing">,
     VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
+    VariadicExprArgument<"AdjustArgsNeedDeviceAddr">,
     VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{
@@ -4776,6 +4902,14 @@ def HLSLSV_GroupIndex: HLSLAnnotationAttr {
   let Documentation = [HLSLSV_GroupIndexDocs];
 }
 
+def HLSLVkBinding : InheritableAttr {
+  let Spellings = [CXX11<"vk", "binding">];
+  let Subjects = SubjectList<[HLSLBufferObj, ExternalGlobalVar], ErrorDiag>;
+  let Args = [IntArgument<"Binding">, IntArgument<"Set", 1>];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBindingDocs];
+}
+
 def HLSLResourceBinding: InheritableAttr {
   let Spellings = [HLSLAnnotation<"register">];
   let Subjects = SubjectList<[HLSLBufferObj, ExternalGlobalVar], ErrorDiag>;
@@ -4813,9 +4947,10 @@ def HLSLResourceBinding: InheritableAttr {
         return SpaceNumber;
       }
       void setImplicitBindingOrderID(uint32_t Value) {
+        assert(!hasImplicitBindingOrderID() && "attribute already has implicit binding order id");
         ImplicitBindingOrderID = Value;
       }
-      bool hasImplicitBindingOrderID() const { 
+      bool hasImplicitBindingOrderID() const {
         return ImplicitBindingOrderID.has_value();
       }
       uint32_t getImplicitBindingOrderID() const {
@@ -4823,6 +4958,13 @@ def HLSLResourceBinding: InheritableAttr {
         return ImplicitBindingOrderID.value();
       }
   }];
+}
+
+def HLSLSV_Position : HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"sv_position">];
+  let Subjects = SubjectList<[ParmVar, Field]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLSV_PositionDocs];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {
@@ -4929,6 +5071,22 @@ def HLSLWaveSize: InheritableAttr {
       int getSpelledArgsCount() const { return SpelledArgsCount; }
   }];
   let Documentation = [WaveSizeDocs];
+}
+
+def HLSLVkExtBuiltinInput : InheritableAttr {
+  let Spellings = [CXX11<"vk", "ext_builtin_input">];
+  let Args = [UnsignedArgument<"BuiltIn">];
+  let Subjects = SubjectList<[HLSLInputBuiltin], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkExtBuiltinInputDocs];
+}
+
+def HLSLVkConstantId : InheritableAttr {
+  let Spellings = [CXX11<"vk", "constant_id">];
+  let Args = [IntArgument<"Id">];
+  let Subjects = SubjectList<[ExternalGlobalVar]>;
+  let LangOpts = [HLSL];
+  let Documentation = [VkConstantIdDocs];
 }
 
 def RandomizeLayout : InheritableAttr {

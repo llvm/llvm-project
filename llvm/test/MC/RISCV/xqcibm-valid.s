@@ -133,6 +133,11 @@ qc.c.extu x15, 32
 # CHECK-ENC: encoding: [0xaa,0x15]
 qc.extu x11, x11, 11, 0
 
+# CHECK-NOALIAS: qc.c.bexti  a1, 5
+# CHECK-ALIAS: bexti   a1, a1, 5
+# CHECK-ENC: encoding: [0x95,0x91]
+qc.extu x11, x11, 1, 5
+
 # CHECK-NOALIAS: qc.c.bexti  s1, 8
 # CHECK-ALIAS: bexti s1, s1, 8
 # CHECK-ENC-ZBS: encoding: [0xa1,0x90]

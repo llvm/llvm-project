@@ -68,8 +68,8 @@ llvm::Error clang::tooling::validateRange(const CharSourceRange &Range,
                                            "Range is in system header");
   }
 
-  std::pair<FileID, unsigned> BeginInfo = SM.getDecomposedLoc(Range.getBegin());
-  std::pair<FileID, unsigned> EndInfo = SM.getDecomposedLoc(Range.getEnd());
+  FileIDAndOffset BeginInfo = SM.getDecomposedLoc(Range.getBegin());
+  FileIDAndOffset EndInfo = SM.getDecomposedLoc(Range.getEnd());
   if (BeginInfo.first != EndInfo.first)
     return llvm::make_error<StringError>(
         errc::invalid_argument, "Range begins and ends in different files");

@@ -7,19 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_remquo.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/remquo.h>
 
 #define __CLC_BODY <remquo.inc>
-#define __CLC_ADDRESS_SPACE global
 #include <clc/math/gentype.inc>
-#undef __CLC_ADDRESS_SPACE
-
-#define __CLC_BODY <remquo.inc>
-#define __CLC_ADDRESS_SPACE local
-#include <clc/math/gentype.inc>
-#undef __CLC_ADDRESS_SPACE
-
-#define __CLC_BODY <remquo.inc>
-#define __CLC_ADDRESS_SPACE private
-#include <clc/math/gentype.inc>
-#undef __CLC_ADDRESS_SPACE

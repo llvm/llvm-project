@@ -41,7 +41,7 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | target construct                                           | P      | device clause not supported |
 | target update construct                                    | P      | device clause not supported |
 | declare target directive                                   | P      | |
-| teams construct                                            | P      | reduction clause not supported |
+| teams construct                                            | Y      | |
 | distribute construct                                       | P      | dist_schedule clause not supported |
 | distribute simd construct                                  | P      | dist_schedule and linear clauses are not supported |
 | distribute parallel loop construct                         | P      | dist_schedule clause not supported |
@@ -51,12 +51,25 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | atomic construct extensions                                | Y      | |
 | cancel construct                                           | Y      | |
 | cancellation point construct                               | Y      | |
-| parallel do simd construct                                 | P      | linear clause is not supported |
-| target teams construct                                     | P      | device and reduction clauses are not supported |
-| teams distribute construct                                 | P      | reduction and dist_schedule clauses not supported |
-| teams distribute simd construct                            | P      | reduction, dist_schedule and linear clauses are not supported |
-| target teams distribute construct                          | P      | device, reduction and dist_schedule clauses are not supported |
-| teams distribute parallel loop construct                   | P      | reduction and dist_schedule clauses are not supported |
-| target teams distribute parallel loop construct            | P      | device, reduction and dist_schedule clauses are not supported |
-| teams distribute parallel loop simd construct              | P      | reduction, dist_schedule, and linear clauses are not supported |
-| target teams distribute parallel loop simd construct       | P      | device, reduction, dist_schedule and linear clauses are not supported |
+| parallel do simd construct                                 | P      | linear clause not supported |
+| target teams construct                                     | P      | device clause not supported |
+| teams distribute construct                                 | P      | dist_schedule clause not supported |
+| teams distribute simd construct                            | P      | dist_schedule and linear clauses are not supported |
+| target teams distribute construct                          | P      | device and dist_schedule clauses are not supported |
+| teams distribute parallel loop construct                   | P      | dist_schedule clause not supported |
+| target teams distribute parallel loop construct            | P      | device and dist_schedule clauses are not supported |
+| teams distribute parallel loop simd construct              | P      | dist_schedule and linear clauses are not supported |
+| target teams distribute parallel loop simd construct       | P      | device, dist_schedule and linear clauses are not supported |
+
+## Extensions
+### ATOMIC construct
+The implementation of the ATOMIC construct follows OpenMP 6.0 with the following extensions:
+- `x = x` is an allowed form of ATOMIC UPDATE.
+This is motivated by the fact that the equivalent forms `x = x+0` or `x = x*1` are allowed.
+- Explicit type conversions are allowed in ATOMIC READ, WRITE or UPDATE constructs, and in the capture statement in ATOMIC UPDATE CAPTURE.
+The OpenMP spec requires intrinsic- or pointer-assignments, which include (as per the Fortran standard) implicit type conversions.  Since such conversions need to be handled, allowing explicit conversions comes at no extra cost.
+- A literal `.true.` or `.false.` is an allowed condition in ATOMIC UPDATE COMPARE. [1]
+- A logical variable is an allowed form of the condition even if its value is not computed within the ATOMIC UPDATE COMPARE construct [1].
+- `expr equalop x` is an allowed condition in ATOMIC UPDATE COMPARE. [1]
+
+[1] Code generation for ATOMIC UPDATE COMPARE is not implemented yet.

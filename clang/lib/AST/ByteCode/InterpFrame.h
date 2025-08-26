@@ -86,6 +86,7 @@ public:
 
   /// Returns a pointer to a local variables.
   Pointer getLocalPointer(unsigned Offset) const;
+  Block *getLocalBlock(unsigned Offset) const;
 
   /// Returns the value of an argument.
   template <typename T> const T &getParam(unsigned Offset) const {
@@ -119,7 +120,7 @@ public:
   CodePtr getRetPC() const { return RetPC; }
 
   /// Map a location to a source.
-  virtual SourceInfo getSource(CodePtr PC) const;
+  SourceInfo getSource(CodePtr PC) const;
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
   SourceRange getRange(CodePtr PC) const;

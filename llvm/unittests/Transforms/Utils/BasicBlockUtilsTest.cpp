@@ -180,7 +180,7 @@ bb4:
   LoopInfo LI(DT);
 
   DataLayout DL("e-i64:64-f80:128-n8:16:32:64-S128");
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   AssumptionCache AC(*F);
   AAResults AA(TLI);
@@ -255,7 +255,7 @@ declare void @sink_alt() cold
 
   LoopInfo LI(DT);
 
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
 
   AAResults AA(TLI);

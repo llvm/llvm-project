@@ -14,10 +14,8 @@
 
 #include "ReduceFunctions.h"
 #include "Utils.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <iterator>
 
 using namespace llvm;
 

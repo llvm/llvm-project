@@ -18,13 +18,11 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -42,7 +40,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -77,11 +74,11 @@ DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
   Output.append(Str.begin(), Str.end());
 }
 
-DiagnosticsEngine::DiagnosticsEngine(
-    IntrusiveRefCntPtr<DiagnosticIDs> diags,
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts, DiagnosticConsumer *client,
-    bool ShouldOwnClient)
-    : Diags(std::move(diags)), DiagOpts(std::move(DiagOpts)) {
+DiagnosticsEngine::DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> diags,
+                                     DiagnosticOptions &DiagOpts,
+                                     DiagnosticConsumer *client,
+                                     bool ShouldOwnClient)
+    : Diags(std::move(diags)), DiagOpts(DiagOpts) {
   setClient(client, ShouldOwnClient);
   ArgToStringFn = DummyArgToStringFn;
 
@@ -122,6 +119,8 @@ bool DiagnosticsEngine::popMappings(SourceLocation Loc) {
   return true;
 }
 
+void DiagnosticsEngine::ResetPragmas() { DiagStatesByLoc.clear(/*Soft=*/true); }
+
 void DiagnosticsEngine::Reset(bool soft /*=false*/) {
   ErrorOccurred = false;
   UncompilableErrorOccurred = false;
@@ -133,12 +132,12 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
   TrapNumErrorsOccurred = 0;
   TrapNumUnrecoverableErrorsOccurred = 0;
 
-  LastDiagLevel = DiagnosticIDs::Ignored;
+  LastDiagLevel = Ignored;
 
   if (!soft) {
     // Clear state related to #pragma diagnostic.
     DiagStates.clear();
-    DiagStatesByLoc.clear();
+    DiagStatesByLoc.clear(false);
     DiagStateOnPushStack.clear();
 
     // Create a DiagState and DiagStatePoint representing diagnostic changes
@@ -174,7 +173,7 @@ void DiagnosticsEngine::DiagStateMap::append(SourceManager &SrcMgr,
   CurDiagState = State;
   CurDiagStateLoc = Loc;
 
-  std::pair<FileID, unsigned> Decomp = SrcMgr.getDecomposedLoc(Loc);
+  FileIDAndOffset Decomp = SrcMgr.getDecomposedLoc(Loc);
   unsigned Offset = Decomp.second;
   for (File *F = getFile(SrcMgr, Decomp.first); F;
        Offset = F->ParentOffset, F = F->Parent) {
@@ -200,7 +199,7 @@ DiagnosticsEngine::DiagStateMap::lookup(SourceManager &SrcMgr,
   if (Files.empty())
     return FirstDiagState;
 
-  std::pair<FileID, unsigned> Decomp = SrcMgr.getDecomposedLoc(Loc);
+  FileIDAndOffset Decomp = SrcMgr.getDecomposedLoc(Loc);
   const File *F = getFile(SrcMgr, Decomp.first);
   return F->lookup(Decomp.second);
 }
@@ -227,7 +226,7 @@ DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
   // We created a new File; look up the diagnostic state at the start of it and
   // initialize it.
   if (ID.isValid()) {
-    std::pair<FileID, unsigned> Decomp = SrcMgr.getDecomposedIncludedLoc(ID);
+    FileIDAndOffset Decomp = SrcMgr.getDecomposedIncludedLoc(ID);
     F.Parent = getFile(SrcMgr, Decomp.first);
     F.ParentOffset = Decomp.second;
     F.StateTransitions.push_back({F.Parent->lookup(Decomp.second), 0});
@@ -264,8 +263,7 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
                    << ">: " << SrcMgr.getBufferOrFake(ID).getBufferIdentifier();
 
       if (F.second.Parent) {
-        std::pair<FileID, unsigned> Decomp =
-            SrcMgr.getDecomposedIncludedLoc(ID);
+        FileIDAndOffset Decomp = SrcMgr.getDecomposedIncludedLoc(ID);
         assert(File.ParentOffset == Decomp.second);
         llvm::errs() << " parent " << File.Parent << " <FileID "
                      << Decomp.first.getHashValue() << "> ";
@@ -553,7 +551,12 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
     // Each section has a matcher with that section's name, attached to that
     // line.
     const auto &DiagSectionMatcher = Entry.SectionMatcher;
-    unsigned DiagLine = DiagSectionMatcher->Globs.at(DiagName).second;
+    unsigned DiagLine = 0;
+    for (const auto &Glob : DiagSectionMatcher->Globs)
+      if (Glob->Name == DiagName) {
+        DiagLine = Glob->LineNo;
+        break;
+      }
     LineAndSectionEntry.emplace_back(DiagLine, &Entry);
   }
   llvm::sort(LineAndSectionEntry);
@@ -625,12 +628,12 @@ bool WarningsSpecialCaseList::globsMatches(
     StringRef Category = Entry.getKey();
     const llvm::SpecialCaseList::Matcher &Matcher = Entry.getValue();
     bool IsPositive = Category != "emit";
-    for (const auto &[Pattern, Glob] : Matcher.Globs) {
-      if (Pattern.size() < LongestMatch.size())
+    for (const auto &Glob : Matcher.Globs) {
+      if (Glob->Name.size() < LongestMatch.size())
         continue;
-      if (!Glob.first.match(FilePath))
+      if (!Glob->Pattern.match(FilePath))
         continue;
-      LongestMatch = Pattern;
+      LongestMatch = Glob->Name;
       LongestIsPositive = IsPositive;
     }
   }
@@ -656,11 +659,93 @@ void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
   Level DiagLevel = storedDiag.getLevel();
   Diagnostic Info(this, storedDiag.getLocation(), storedDiag.getID(),
                   DiagStorage, storedDiag.getMessage());
+  Report(DiagLevel, Info);
+}
+
+void DiagnosticsEngine::Report(Level DiagLevel, const Diagnostic &Info) {
+  assert(DiagLevel != Ignored && "Cannot emit ignored diagnostics!");
   Client->HandleDiagnostic(DiagLevel, Info);
   if (Client->IncludeInDiagnosticCounts()) {
-    if (DiagLevel == DiagnosticsEngine::Warning)
+    if (DiagLevel == Warning)
       ++NumWarnings;
   }
+}
+
+/// ProcessDiag - This is the method used to report a diagnostic that is
+/// finally fully formed.
+bool DiagnosticsEngine::ProcessDiag(const DiagnosticBuilder &DiagBuilder) {
+  Diagnostic Info(this, DiagBuilder);
+
+  assert(getClient() && "DiagnosticClient not set!");
+
+  // Figure out the diagnostic level of this message.
+  unsigned DiagID = Info.getID();
+  Level DiagLevel = getDiagnosticLevel(DiagID, Info.getLocation());
+
+  // Update counts for DiagnosticErrorTrap even if a fatal error occurred
+  // or diagnostics are suppressed.
+  if (DiagLevel >= Error) {
+    ++TrapNumErrorsOccurred;
+    if (Diags->isUnrecoverable(DiagID))
+      ++TrapNumUnrecoverableErrorsOccurred;
+  }
+
+  if (SuppressAllDiagnostics)
+    return false;
+
+  if (DiagLevel != Note) {
+    // Record that a fatal error occurred only when we see a second
+    // non-note diagnostic. This allows notes to be attached to the
+    // fatal error, but suppresses any diagnostics that follow those
+    // notes.
+    if (LastDiagLevel == Fatal)
+      FatalErrorOccurred = true;
+
+    LastDiagLevel = DiagLevel;
+  }
+
+  // If a fatal error has already been emitted, silence all subsequent
+  // diagnostics.
+  if (FatalErrorOccurred) {
+    if (DiagLevel >= Error && Client->IncludeInDiagnosticCounts())
+      ++NumErrors;
+
+    return false;
+  }
+
+  // If the client doesn't care about this message, don't issue it.  If this is
+  // a note and the last real diagnostic was ignored, ignore it too.
+  if (DiagLevel == Ignored || (DiagLevel == Note && LastDiagLevel == Ignored))
+    return false;
+
+  if (DiagLevel >= Error) {
+    if (Diags->isUnrecoverable(DiagID))
+      UnrecoverableErrorOccurred = true;
+
+    // Warnings which have been upgraded to errors do not prevent compilation.
+    if (Diags->isDefaultMappingAsError(DiagID))
+      UncompilableErrorOccurred = true;
+
+    ErrorOccurred = true;
+    if (Client->IncludeInDiagnosticCounts())
+      ++NumErrors;
+
+    // If we've emitted a lot of errors, emit a fatal error instead of it to
+    // stop a flood of bogus errors.
+    if (ErrorLimit && NumErrors > ErrorLimit && DiagLevel == Error) {
+      Report(diag::fatal_too_many_errors);
+      return false;
+    }
+  }
+
+  // Make sure we set FatalErrorOccurred to ensure that the notes from the
+  // diagnostic that caused `fatal_too_many_errors` won't be emitted.
+  if (Info.getID() == diag::fatal_too_many_errors)
+    FatalErrorOccurred = true;
+
+  // Finally, report it.
+  Report(DiagLevel, Info);
+  return true;
 }
 
 bool DiagnosticsEngine::EmitDiagnostic(const DiagnosticBuilder &DB,
@@ -672,14 +757,12 @@ bool DiagnosticsEngine::EmitDiagnostic(const DiagnosticBuilder &DB,
     Diagnostic Info(this, DB);
 
     // Figure out the diagnostic level of this message.
-    DiagnosticIDs::Level DiagLevel =
-        Diags->getDiagnosticLevel(Info.getID(), Info.getLocation(), *this);
+    Level DiagLevel = getDiagnosticLevel(Info.getID(), Info.getLocation());
 
-    Emitted = (DiagLevel != DiagnosticIDs::Ignored);
-    if (Emitted) {
-      // Emit the diagnostic regardless of suppression level.
-      Diags->EmitDiag(*this, DB, DiagLevel);
-    }
+    // Emit the diagnostic regardless of suppression level.
+    Emitted = DiagLevel != Ignored;
+    if (Emitted)
+      Report(DiagLevel, Info);
   } else {
     // Process the diagnostic, sending the accumulated information to the
     // DiagnosticConsumer.
@@ -1265,6 +1348,7 @@ void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     case DiagnosticsEngine::ak_declcontext:
     case DiagnosticsEngine::ak_attr:
     case DiagnosticsEngine::ak_expr:
+    case DiagnosticsEngine::ak_attr_info:
       getDiags()->ConvertArgToString(Kind, getRawArg(ArgNo),
                                      StringRef(Modifier, ModifierLen),
                                      StringRef(Argument, ArgumentLen),

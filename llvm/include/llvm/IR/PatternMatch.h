@@ -822,12 +822,52 @@ template <typename Class> struct bind_ty {
   }
 };
 
+/// Check whether the value has the given Class and matches the nested
+/// pattern. Capture it into the provided variable if successful.
+template <typename Class, typename MatchTy> struct bind_and_match_ty {
+  Class *&VR;
+  MatchTy Match;
+
+  bind_and_match_ty(Class *&V, const MatchTy &Match) : VR(V), Match(Match) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    auto *CV = dyn_cast<Class>(V);
+    if (CV && Match.match(V)) {
+      VR = CV;
+      return true;
+    }
+    return false;
+  }
+};
+
 /// Match a value, capturing it if we match.
 inline bind_ty<Value> m_Value(Value *&V) { return V; }
 inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
 
+/// Match against the nested pattern, and capture the value if we match.
+template <typename MatchTy>
+inline bind_and_match_ty<Value, MatchTy> m_Value(Value *&V,
+                                                 const MatchTy &Match) {
+  return {V, Match};
+}
+
+/// Match against the nested pattern, and capture the value if we match.
+template <typename MatchTy>
+inline bind_and_match_ty<const Value, MatchTy> m_Value(const Value *&V,
+                                                       const MatchTy &Match) {
+  return {V, Match};
+}
+
 /// Match an instruction, capturing it if we match.
 inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
+
+/// Match against the nested pattern, and capture the instruction if we match.
+template <typename MatchTy>
+inline bind_and_match_ty<Instruction, MatchTy>
+m_Instruction(Instruction *&I, const MatchTy &Match) {
+  return {I, Match};
+}
+
 /// Match a unary operator, capturing it if we match.
 inline bind_ty<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
 /// Match a binary operator, capturing it if we match.
@@ -973,12 +1013,13 @@ struct bind_const_intval_ty {
   bind_const_intval_ty(uint64_t &V) : VR(V) {}
 
   template <typename ITy> bool match(ITy *V) const {
-    if (const auto *CV = dyn_cast<ConstantInt>(V))
-      if (CV->getValue().ule(UINT64_MAX)) {
-        VR = CV->getZExtValue();
-        return true;
-      }
-    return false;
+    const APInt *ConstInt;
+    if (!apint_match(ConstInt, /*AllowPoison=*/false).match(V))
+      return false;
+    if (ConstInt->getActiveBits() > 64)
+      return false;
+    VR = ConstInt->getZExtValue();
+    return true;
   }
 };
 
@@ -1287,6 +1328,45 @@ inline BinaryOp_match<LHS, RHS, Instruction::AShr> m_AShr(const LHS &L,
   return BinaryOp_match<LHS, RHS, Instruction::AShr>(L, R);
 }
 
+template <typename LHS_t, unsigned Opcode> struct ShiftLike_match {
+  LHS_t L;
+  uint64_t &R;
+
+  ShiftLike_match(const LHS_t &LHS, uint64_t &RHS) : L(LHS), R(RHS) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    if (auto *Op = dyn_cast<BinaryOperator>(V)) {
+      if (Op->getOpcode() == Opcode)
+        return m_ConstantInt(R).match(Op->getOperand(1)) &&
+               L.match(Op->getOperand(0));
+    }
+    // Interpreted as shiftop V, 0
+    R = 0;
+    return L.match(V);
+  }
+};
+
+/// Matches shl L, ConstShAmt or L itself (R will be set to zero in this case).
+template <typename LHS>
+inline ShiftLike_match<LHS, Instruction::Shl> m_ShlOrSelf(const LHS &L,
+                                                          uint64_t &R) {
+  return ShiftLike_match<LHS, Instruction::Shl>(L, R);
+}
+
+/// Matches lshr L, ConstShAmt or L itself (R will be set to zero in this case).
+template <typename LHS>
+inline ShiftLike_match<LHS, Instruction::LShr> m_LShrOrSelf(const LHS &L,
+                                                            uint64_t &R) {
+  return ShiftLike_match<LHS, Instruction::LShr>(L, R);
+}
+
+/// Matches ashr L, ConstShAmt or L itself (R will be set to zero in this case).
+template <typename LHS>
+inline ShiftLike_match<LHS, Instruction::AShr> m_AShrOrSelf(const LHS &L,
+                                                            uint64_t &R) {
+  return ShiftLike_match<LHS, Instruction::AShr>(L, R);
+}
+
 template <typename LHS_t, typename RHS_t, unsigned Opcode,
           unsigned WrapFlags = 0, bool Commutable = false>
 struct OverflowingBinaryOp_match {
@@ -1321,6 +1401,14 @@ m_NSWAdd(const LHS &L, const RHS &R) {
   return OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
                                    OverflowingBinaryOperator::NoSignedWrap>(L,
                                                                             R);
+}
+template <typename LHS, typename RHS>
+inline OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                                 OverflowingBinaryOperator::NoSignedWrap, true>
+m_c_NSWAdd(const LHS &L, const RHS &R) {
+  return OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                                   OverflowingBinaryOperator::NoSignedWrap,
+                                   true>(L, R);
 }
 template <typename LHS, typename RHS>
 inline OverflowingBinaryOp_match<LHS, RHS, Instruction::Sub,
@@ -2111,6 +2199,13 @@ m_IntToPtr(const OpTy &Op) {
   return CastOperator_match<OpTy, Instruction::IntToPtr>(Op);
 }
 
+/// Matches any cast or self. Used to ignore casts.
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, CastInst>, OpTy>
+m_CastOrSelf(const OpTy &Op) {
+  return m_CombineOr(CastInst_match<OpTy, CastInst>(Op), Op);
+}
+
 /// Matches Trunc.
 template <typename OpTy>
 inline CastInst_match<OpTy, TruncInst> m_Trunc(const OpTy &Op) {
@@ -2618,7 +2713,7 @@ struct IntrinsicID_match {
 
   template <typename OpTy> bool match(OpTy *V) const {
     if (const auto *CI = dyn_cast<CallInst>(V))
-      if (const auto *F = CI->getCalledFunction())
+      if (const auto *F = dyn_cast_or_null<Function>(CI->getCalledOperand()))
         return F->getIntrinsicID() == ID;
     return false;
   }
@@ -3046,35 +3141,8 @@ inline InsertValue_match<Ind, Val_t, Elt_t> m_InsertValue(const Val_t &Val,
   return InsertValue_match<Ind, Val_t, Elt_t>(Val, Elt);
 }
 
-/// Matches patterns for `vscale`. This can either be a call to `llvm.vscale` or
-/// the constant expression
-///  `ptrtoint(gep <vscale x 1 x i8>, <vscale x 1 x i8>* null, i32 1>`
-/// under the right conditions determined by DataLayout.
-struct VScaleVal_match {
-  template <typename ITy> bool match(ITy *V) const {
-    if (m_Intrinsic<Intrinsic::vscale>().match(V))
-      return true;
-
-    Value *Ptr;
-    if (m_PtrToInt(m_Value(Ptr)).match(V)) {
-      if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-        auto *DerefTy =
-            dyn_cast<ScalableVectorType>(GEP->getSourceElementType());
-        if (GEP->getNumIndices() == 1 && DerefTy &&
-            DerefTy->getElementType()->isIntegerTy(8) &&
-            m_Zero().match(GEP->getPointerOperand()) &&
-            m_SpecificInt(1).match(GEP->idx_begin()->get()))
-          return true;
-      }
-    }
-
-    return false;
-  }
-};
-
-inline VScaleVal_match m_VScale() {
-  return VScaleVal_match();
-}
+/// Matches a call to `llvm.vscale()`.
+inline IntrinsicID_match m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
 
 template <typename Opnd0, typename Opnd1>
 inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty

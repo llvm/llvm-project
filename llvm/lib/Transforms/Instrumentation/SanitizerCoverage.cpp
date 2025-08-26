@@ -486,10 +486,8 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   SanCovTraceSwitchFunction =
       M.getOrInsertFunction(SanCovTraceSwitchName, VoidTy, Int64Ty, PtrTy);
 
-  Constant *SanCovLowestStackConstant =
-      M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
-  SanCovLowestStack = dyn_cast<GlobalVariable>(SanCovLowestStackConstant);
-  if (!SanCovLowestStack || SanCovLowestStack->getValueType() != IntptrTy) {
+  SanCovLowestStack = M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
+  if (SanCovLowestStack->getValueType() != IntptrTy) {
     C->emitError(StringRef("'") + SanCovLowestStackName +
                  "' should not be declared by the user");
     return true;
