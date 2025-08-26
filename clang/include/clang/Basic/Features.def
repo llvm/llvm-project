@@ -150,11 +150,6 @@ FEATURE(memory_sanitizer,
 FEATURE(type_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Type))
 FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
-FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics)
-FEATURE(ptrauth_qualifier, LangOpts.PointerAuthIntrinsics)
-FEATURE(ptrauth_calls, LangOpts.PointerAuthCalls)
-FEATURE(ptrauth_returns, LangOpts.PointerAuthReturns)
-FEATURE(ptrauth_indirect_gotos, LangOpts.PointerAuthIndirectGotos)
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
 FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics &&
                             PP.getTargetInfo().getTriple().isOSDarwin())

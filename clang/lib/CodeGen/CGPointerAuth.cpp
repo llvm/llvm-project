@@ -53,6 +53,16 @@ llvm::ConstantInt *CodeGenModule::getPointerAuthOtherDiscriminator(
   llvm_unreachable("bad discrimination kind");
 }
 
+uint16_t CodeGen::getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
+                                                  QualType FunctionType) {
+  return CGM.getContext().getPointerAuthTypeDiscriminator(FunctionType);
+}
+
+uint16_t CodeGen::getPointerAuthDeclDiscriminator(CodeGenModule &CGM,
+                                                  GlobalDecl Declaration) {
+  return CGM.getPointerAuthDeclDiscriminator(Declaration);
+}
+
 /// Return the "other" decl-specific discriminator for the given decl.
 uint16_t
 CodeGenModule::getPointerAuthDeclDiscriminator(GlobalDecl Declaration) {
@@ -85,6 +95,41 @@ CGPointerAuthInfo CodeGenModule::getFunctionPointerAuthInfo(QualType T) {
   return CGPointerAuthInfo(Schema.getKey(), Schema.getAuthenticationMode(),
                            /*IsaPointer=*/false, /*AuthenticatesNull=*/false,
                            Discriminator);
+}
+
+llvm::Value *
+CodeGenFunction::EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
+                                                   llvm::Value *Discriminator) {
+  StorageAddress = Builder.CreatePtrToInt(StorageAddress, IntPtrTy);
+  auto Intrinsic = CGM.getIntrinsic(llvm::Intrinsic::ptrauth_blend);
+  return Builder.CreateCall(Intrinsic, {StorageAddress, Discriminator});
+}
+
+/// Emit the concrete pointer authentication informaton for the
+/// given authentication schema.
+CGPointerAuthInfo CodeGenFunction::EmitPointerAuthInfo(
+    const PointerAuthSchema &Schema, llvm::Value *StorageAddress,
+    GlobalDecl SchemaDecl, QualType SchemaType) {
+  if (!Schema)
+    return CGPointerAuthInfo();
+
+  llvm::Value *Discriminator =
+      CGM.getPointerAuthOtherDiscriminator(Schema, SchemaDecl, SchemaType);
+
+  if (Schema.isAddressDiscriminated()) {
+    assert(StorageAddress &&
+           "address not provided for address-discriminated schema");
+
+    if (Discriminator)
+      Discriminator =
+          EmitPointerAuthBlendDiscriminator(StorageAddress, Discriminator);
+    else
+      Discriminator = Builder.CreatePtrToInt(StorageAddress, IntPtrTy);
+  }
+
+  return CGPointerAuthInfo(Schema.getKey(), Schema.getAuthenticationMode(),
+                           Schema.isIsaPointer(),
+                           Schema.authenticatesNullValues(), Discriminator);
 }
 
 CGPointerAuthInfo
@@ -445,41 +490,6 @@ buildConstantSignedPointer(CodeGenModule &CGM,
   global->setSection("llvm.ptrauth");
 
   return global;
-}
-
-llvm::Value *
-CodeGenFunction::EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
-                                                   llvm::Value *Discriminator) {
-  StorageAddress = Builder.CreatePtrToInt(StorageAddress, IntPtrTy);
-  auto Intrinsic = CGM.getIntrinsic(llvm::Intrinsic::ptrauth_blend);
-  return Builder.CreateCall(Intrinsic, {StorageAddress, Discriminator});
-}
-
-/// Emit the concrete pointer authentication informaton for the
-/// given authentication schema.
-CGPointerAuthInfo CodeGenFunction::EmitPointerAuthInfo(
-    const PointerAuthSchema &Schema, llvm::Value *StorageAddress,
-    GlobalDecl SchemaDecl, QualType SchemaType) {
-  if (!Schema)
-    return CGPointerAuthInfo();
-
-  llvm::Value *Discriminator =
-      CGM.getPointerAuthOtherDiscriminator(Schema, SchemaDecl, SchemaType);
-
-  if (Schema.isAddressDiscriminated()) {
-    assert(StorageAddress &&
-           "address not provided for address-discriminated schema");
-
-    if (Discriminator)
-      Discriminator =
-          EmitPointerAuthBlendDiscriminator(StorageAddress, Discriminator);
-    else
-      Discriminator = Builder.CreatePtrToInt(StorageAddress, IntPtrTy);
-  }
-
-  return CGPointerAuthInfo(Schema.getKey(), Schema.getAuthenticationMode(),
-                           Schema.isIsaPointer(),
-                           Schema.authenticatesNullValues(), Discriminator);
 }
 
 void CodeGenFunction::EmitPointerAuthCopy(PointerAuthQualifier Qual, QualType T,
