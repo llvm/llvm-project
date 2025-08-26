@@ -382,10 +382,10 @@ gpu.module @test {
 // CHECK-LABEL: gpu.func @mma_transpose_b(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x8xi32>,
 // CHECK-SAME: %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
-// CHECK:         %[[ADESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
-// CHECK-NEXT:    %[[A:.*]] = xegpu.load_nd %[[ADESC]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8xf16>
-// CHECK-NEXT:    %[[BDESC:.*]] = xegpu.create_nd_tdesc %[[ARG1]][%{{.*}}] : memref<16x8xi32> -> !xegpu.tensor_desc<16x8xi32>
-// CHECK-NEXT:    %[[B:.*]] = xegpu.load_nd %[[BDESC]] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<16x8xi32> -> vector<8xi32>
+// CHECK-DAG:     %[[ADESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
+// CHECK-DAG:     %[[BDESC:.*]] = xegpu.create_nd_tdesc %[[ARG1]][%{{.*}}] : memref<16x8xi32> -> !xegpu.tensor_desc<16x8xi32>
+// CHECK-DAG:     %[[A:.*]] = xegpu.load_nd %[[ADESC]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8xf16>
+// CHECK-DAG:     %[[B:.*]] = xegpu.load_nd %[[BDESC]] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<16x8xi32> -> vector<8xi32>
 // CHECK-NEXT:    %[[BCAST0:.*]] = vector.shape_cast %[[B]] : vector<8xi32> to vector<1x8xi32>
 // CHECK-NEXT:    %[[BCAST1:.*]] = vector.bitcast %[[BCAST0]] : vector<1x8xi32> to vector<1x16xf16>
 // CHECK-NEXT:    %[[BCAST2:.*]] = vector.shape_cast %[[BCAST1]] : vector<1x16xf16> to vector<16xf16>
