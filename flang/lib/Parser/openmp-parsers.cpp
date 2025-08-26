@@ -1484,11 +1484,25 @@ struct OmpBlockConstructParser {
                 [](auto &&s) { return OmpEndDirective(std::move(s)); })};
       } else if (auto &&body{
                      attempt(LooselyStructuredBlockParser{}).Parse(state)}) {
-        // Try loosely-structured block with a mandatory end-directive
-        if (auto end{OmpEndDirectiveParser{dir_}.Parse(state)}) {
-          return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
-              std::move(*body), OmpEndDirective{std::move(*end)}};
+        // Try loosely-structured block with a mandatory end-directive.
+        auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
+        // Dereference outer optional (maybe() always succeeds) and look at the
+        // inner optional.
+        bool endPresent{end->has_value()};
+
+        // ORDERED is special. We do need to return failure here so that the
+        // standalone ORDERED construct can be distinguished from the block
+        // associated construct.
+        if (!endPresent && dir_ == llvm::omp::Directive::OMPD_ordered) {
+          return std::nullopt;
         }
+
+        // Delay the error for a missing end-directive until semantics so that
+        // we have better control over the output.
+        return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
+            std::move(*body),
+            llvm::transformOptional(std::move(*end),
+                [](auto &&s) { return OmpEndDirective(std::move(s)); })};
       }
     }
     return std::nullopt;
