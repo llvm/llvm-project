@@ -224,7 +224,7 @@ func.func @vector_bitcast_i16_to_i32(%arg0: memref<8x32xi16>, %arg1: memref<8x16
 
 // -----
 // CHECK-LABEL: func.func @vector_bitcast_require_cross_lane_shuffle(
-// CHECK-NOT: %[[LOAD:.*]] = xegpu.load_nd %{{.*}} {layout_result_0 = {{.*}}} : !xegpu.tensor_desc<8x16xi32> -> vector<8x16xi32>
+// CHECK:     %[[LOAD:.*]] = xegpu.load_nd %{{.*}} : !xegpu.tensor_desc<8x16xi32> -> vector<8x16xi32>
 // CHECK:     %{{.*}} = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
 // CHECK-SAME:     vector<8x16xi32> to vector<8x32xi16>
 func.func @vector_bitcast_require_cross_lane_shuffle(%arg0: memref<8x16xi32>, %arg1: memref<8x32xi16>) {
