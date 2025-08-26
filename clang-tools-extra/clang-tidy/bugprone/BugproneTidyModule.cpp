@@ -157,8 +157,7 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
-    CheckFactories.registerCheck<MethodHidingCheck>(
-        "bugprone-method-hiding");
+    CheckFactories.registerCheck<MethodHidingCheck>("bugprone-method-hiding");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
