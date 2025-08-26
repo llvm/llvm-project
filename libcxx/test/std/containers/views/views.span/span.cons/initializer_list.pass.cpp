@@ -34,7 +34,7 @@ static_assert(!ConstElementType<std::span<int>>);
 static_assert(ConstElementType<std::span<const int, 94>>);
 static_assert(!ConstElementType<std::span<int, 94>>);
 
-// Constructor constraings
+// Constructor constraints
 
 template <typename I, typename T, std::size_t... N>
 concept HasInitializerListCtr = requires(I il) { std::span<T, N...>{il}; };

@@ -9,14 +9,15 @@ define i64 @t1(i32 %a, i32 %b, i64 %c) {
 ; O1-LABEL: t1(
 ; O1:       {
 ; O1-NEXT:    .reg .b32 %r<3>;
-; O1-NEXT:    .reg .b64 %rd<3>;
+; O1-NEXT:    .reg .b64 %rd<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b32 %r1, [t1_param_0];
 ; O1-NEXT:    ld.param.b32 %r2, [t1_param_1];
-; O1-NEXT:    ld.param.b64 %rd1, [t1_param_2];
-; O1-NEXT:    mad.wide.s32 %rd2, %r1, %r2, %rd1;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd2;
+; O1-NEXT:    mul.wide.s32 %rd1, %r1, %r2;
+; O1-NEXT:    ld.param.b64 %rd2, [t1_param_2];
+; O1-NEXT:    add.s64 %rd3, %rd2, %rd1;
+; O1-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t1(
@@ -44,14 +45,15 @@ define i64 @t2(i32 %a, i32 %b, i64 %c) {
 ; O1-LABEL: t2(
 ; O1:       {
 ; O1-NEXT:    .reg .b32 %r<3>;
-; O1-NEXT:    .reg .b64 %rd<3>;
+; O1-NEXT:    .reg .b64 %rd<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b32 %r1, [t2_param_0];
 ; O1-NEXT:    ld.param.b32 %r2, [t2_param_1];
-; O1-NEXT:    ld.param.b64 %rd1, [t2_param_2];
-; O1-NEXT:    mad.wide.s32 %rd2, %r1, %r2, %rd1;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd2;
+; O1-NEXT:    mul.wide.s32 %rd1, %r1, %r2;
+; O1-NEXT:    ld.param.b64 %rd2, [t2_param_2];
+; O1-NEXT:    add.s64 %rd3, %rd1, %rd2;
+; O1-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t2(
@@ -79,13 +81,14 @@ define i64 @t3(i32 %a, i32 %b) {
 ; O1-LABEL: t3(
 ; O1:       {
 ; O1-NEXT:    .reg .b32 %r<3>;
-; O1-NEXT:    .reg .b64 %rd<2>;
+; O1-NEXT:    .reg .b64 %rd<3>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b32 %r1, [t3_param_0];
 ; O1-NEXT:    ld.param.b32 %r2, [t3_param_1];
-; O1-NEXT:    mad.wide.s32 %rd1, %r1, %r2, 1;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
+; O1-NEXT:    mul.wide.s32 %rd1, %r1, %r2;
+; O1-NEXT:    add.s64 %rd2, %rd1, 1;
+; O1-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t3(
@@ -112,13 +115,14 @@ define i64 @t4(i32 %a, i64 %c) {
 ; O1-LABEL: t4(
 ; O1:       {
 ; O1-NEXT:    .reg .b32 %r<2>;
-; O1-NEXT:    .reg .b64 %rd<3>;
+; O1-NEXT:    .reg .b64 %rd<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b32 %r1, [t4_param_0];
 ; O1-NEXT:    ld.param.b64 %rd1, [t4_param_1];
-; O1-NEXT:    mad.wide.s32 %rd2, %r1, 3, %rd1;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd2;
+; O1-NEXT:    mul.wide.s32 %rd2, %r1, 3;
+; O1-NEXT:    add.s64 %rd3, %rd1, %rd2;
+; O1-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t4(
@@ -145,12 +149,13 @@ define i64 @t4_1(i32 %a, i64 %c) {
 ; O1-LABEL: t4_1(
 ; O1:       {
 ; O1-NEXT:    .reg .b32 %r<2>;
-; O1-NEXT:    .reg .b64 %rd<2>;
+; O1-NEXT:    .reg .b64 %rd<3>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b32 %r1, [t4_1_param_0];
-; O1-NEXT:    mad.wide.s32 %rd1, %r1, 3, 5;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd1;
+; O1-NEXT:    mul.wide.s32 %rd1, %r1, 3;
+; O1-NEXT:    add.s64 %rd2, %rd1, 5;
+; O1-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t4_1(
@@ -176,14 +181,15 @@ define i64 @t5(i32 %a, i32 %b, i64 %c) {
 ; O1-LABEL: t5(
 ; O1:       {
 ; O1-NEXT:    .reg .b32 %r<3>;
-; O1-NEXT:    .reg .b64 %rd<3>;
+; O1-NEXT:    .reg .b64 %rd<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b32 %r1, [t5_param_0];
 ; O1-NEXT:    ld.param.b32 %r2, [t5_param_1];
-; O1-NEXT:    ld.param.b64 %rd1, [t5_param_2];
-; O1-NEXT:    mad.wide.u32 %rd2, %r1, %r2, %rd1;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd2;
+; O1-NEXT:    mul.wide.u32 %rd1, %r1, %r2;
+; O1-NEXT:    ld.param.b64 %rd2, [t5_param_2];
+; O1-NEXT:    add.s64 %rd3, %rd2, %rd1;
+; O1-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t5(
@@ -211,14 +217,15 @@ define i64 @t6(i32 %a, i32 %b, i64 %c) {
 ; O1-LABEL: t6(
 ; O1:       {
 ; O1-NEXT:    .reg .b32 %r<3>;
-; O1-NEXT:    .reg .b64 %rd<3>;
+; O1-NEXT:    .reg .b64 %rd<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b32 %r1, [t6_param_0];
 ; O1-NEXT:    ld.param.b32 %r2, [t6_param_1];
-; O1-NEXT:    ld.param.b64 %rd1, [t6_param_2];
-; O1-NEXT:    mad.wide.u32 %rd2, %r1, %r2, %rd1;
-; O1-NEXT:    st.param.b64 [func_retval0], %rd2;
+; O1-NEXT:    mul.wide.u32 %rd1, %r1, %r2;
+; O1-NEXT:    ld.param.b64 %rd2, [t6_param_2];
+; O1-NEXT:    add.s64 %rd3, %rd1, %rd2;
+; O1-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t6(
@@ -932,14 +939,15 @@ define i32 @t32(i16 %a, i16 %b, i32 %c) {
 ; O1-LABEL: t32(
 ; O1:       {
 ; O1-NEXT:    .reg .b16 %rs<3>;
-; O1-NEXT:    .reg .b32 %r<3>;
+; O1-NEXT:    .reg .b32 %r<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b16 %rs1, [t32_param_0];
 ; O1-NEXT:    ld.param.b16 %rs2, [t32_param_1];
-; O1-NEXT:    ld.param.b32 %r1, [t32_param_2];
-; O1-NEXT:    mad.wide.s16 %r2, %rs1, %rs2, %r1;
-; O1-NEXT:    st.param.b32 [func_retval0], %r2;
+; O1-NEXT:    mul.wide.s16 %r1, %rs1, %rs2;
+; O1-NEXT:    ld.param.b32 %r2, [t32_param_2];
+; O1-NEXT:    add.s32 %r3, %r2, %r1;
+; O1-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t32(
@@ -967,14 +975,15 @@ define i32 @t33(i16 %a, i16 %b, i32 %c) {
 ; O1-LABEL: t33(
 ; O1:       {
 ; O1-NEXT:    .reg .b16 %rs<3>;
-; O1-NEXT:    .reg .b32 %r<3>;
+; O1-NEXT:    .reg .b32 %r<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b16 %rs1, [t33_param_0];
 ; O1-NEXT:    ld.param.b16 %rs2, [t33_param_1];
-; O1-NEXT:    ld.param.b32 %r1, [t33_param_2];
-; O1-NEXT:    mad.wide.s16 %r2, %rs1, %rs2, %r1;
-; O1-NEXT:    st.param.b32 [func_retval0], %r2;
+; O1-NEXT:    mul.wide.s16 %r1, %rs1, %rs2;
+; O1-NEXT:    ld.param.b32 %r2, [t33_param_2];
+; O1-NEXT:    add.s32 %r3, %r2, %r1;
+; O1-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t33(
@@ -1002,13 +1011,14 @@ define i32 @t34(i16 %a, i16 %b) {
 ; O1-LABEL: t34(
 ; O1:       {
 ; O1-NEXT:    .reg .b16 %rs<3>;
-; O1-NEXT:    .reg .b32 %r<2>;
+; O1-NEXT:    .reg .b32 %r<3>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b16 %rs1, [t34_param_0];
 ; O1-NEXT:    ld.param.b16 %rs2, [t34_param_1];
-; O1-NEXT:    mad.wide.s16 %r1, %rs1, %rs2, 1;
-; O1-NEXT:    st.param.b32 [func_retval0], %r1;
+; O1-NEXT:    mul.wide.s16 %r1, %rs1, %rs2;
+; O1-NEXT:    add.s32 %r2, %r1, 1;
+; O1-NEXT:    st.param.b32 [func_retval0], %r2;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t34(
@@ -1035,13 +1045,14 @@ define i32 @t35(i16 %a, i32 %c) {
 ; O1-LABEL: t35(
 ; O1:       {
 ; O1-NEXT:    .reg .b16 %rs<2>;
-; O1-NEXT:    .reg .b32 %r<3>;
+; O1-NEXT:    .reg .b32 %r<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b16 %rs1, [t35_param_0];
 ; O1-NEXT:    ld.param.b32 %r1, [t35_param_1];
-; O1-NEXT:    mad.wide.s16 %r2, %rs1, 3, %r1;
-; O1-NEXT:    st.param.b32 [func_retval0], %r2;
+; O1-NEXT:    mul.wide.s16 %r2, %rs1, 3;
+; O1-NEXT:    add.s32 %r3, %r1, %r2;
+; O1-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t35(
@@ -1068,12 +1079,13 @@ define i32 @t36(i16 %a, i32 %c) {
 ; O1-LABEL: t36(
 ; O1:       {
 ; O1-NEXT:    .reg .b16 %rs<2>;
-; O1-NEXT:    .reg .b32 %r<2>;
+; O1-NEXT:    .reg .b32 %r<3>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b16 %rs1, [t36_param_0];
-; O1-NEXT:    mad.wide.s16 %r1, %rs1, 3, 5;
-; O1-NEXT:    st.param.b32 [func_retval0], %r1;
+; O1-NEXT:    mul.wide.s16 %r1, %rs1, 3;
+; O1-NEXT:    add.s32 %r2, %r1, 5;
+; O1-NEXT:    st.param.b32 [func_retval0], %r2;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t36(
@@ -1099,14 +1111,15 @@ define i32 @t37(i16 %a, i16 %b, i32 %c) {
 ; O1-LABEL: t37(
 ; O1:       {
 ; O1-NEXT:    .reg .b16 %rs<3>;
-; O1-NEXT:    .reg .b32 %r<3>;
+; O1-NEXT:    .reg .b32 %r<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b16 %rs1, [t37_param_0];
 ; O1-NEXT:    ld.param.b16 %rs2, [t37_param_1];
-; O1-NEXT:    ld.param.b32 %r1, [t37_param_2];
-; O1-NEXT:    mad.wide.u16 %r2, %rs1, %rs2, %r1;
-; O1-NEXT:    st.param.b32 [func_retval0], %r2;
+; O1-NEXT:    mul.wide.u16 %r1, %rs1, %rs2;
+; O1-NEXT:    ld.param.b32 %r2, [t37_param_2];
+; O1-NEXT:    add.s32 %r3, %r2, %r1;
+; O1-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t37(
@@ -1134,14 +1147,15 @@ define i32 @t38(i16 %a, i16 %b, i32 %c) {
 ; O1-LABEL: t38(
 ; O1:       {
 ; O1-NEXT:    .reg .b16 %rs<3>;
-; O1-NEXT:    .reg .b32 %r<3>;
+; O1-NEXT:    .reg .b32 %r<4>;
 ; O1-EMPTY:
 ; O1-NEXT:  // %bb.0:
 ; O1-NEXT:    ld.param.b16 %rs1, [t38_param_0];
 ; O1-NEXT:    ld.param.b16 %rs2, [t38_param_1];
-; O1-NEXT:    ld.param.b32 %r1, [t38_param_2];
-; O1-NEXT:    mad.wide.u16 %r2, %rs1, %rs2, %r1;
-; O1-NEXT:    st.param.b32 [func_retval0], %r2;
+; O1-NEXT:    mul.wide.u16 %r1, %rs1, %rs2;
+; O1-NEXT:    ld.param.b32 %r2, [t38_param_2];
+; O1-NEXT:    add.s32 %r3, %r1, %r2;
+; O1-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O1-NEXT:    ret;
 ;
 ; O0-LABEL: t38(

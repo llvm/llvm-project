@@ -289,28 +289,23 @@ QualifiedTemplateName *TemplateName::getAsQualifiedTemplateName() const {
   return dyn_cast_if_present<QualifiedTemplateName *>(Storage);
 }
 
-QualifiedTemplateName *
-TemplateName::getAsAdjustedQualifiedTemplateName() const {
-  for (std::optional<TemplateName> Cur = *this; Cur;
-       Cur = Cur->desugar(/*IgnoreDeduced=*/true))
-    if (QualifiedTemplateName *N = Cur->getAsQualifiedTemplateName())
-      return N;
-  return nullptr;
-}
-
 DependentTemplateName *TemplateName::getAsDependentTemplateName() const {
   return Storage.dyn_cast<DependentTemplateName *>();
 }
 
-NestedNameSpecifier TemplateName::getQualifier() const {
+std::tuple<NestedNameSpecifier, bool>
+TemplateName::getQualifierAndTemplateKeyword() const {
   for (std::optional<TemplateName> Cur = *this; Cur;
        Cur = Cur->desugar(/*IgnoreDeduced=*/true)) {
     if (DependentTemplateName *N = Cur->getAsDependentTemplateName())
-      return N->getQualifier();
+      return {N->getQualifier(), N->hasTemplateKeyword()};
     if (QualifiedTemplateName *N = Cur->getAsQualifiedTemplateName())
-      return N->getQualifier();
+      return {N->getQualifier(), N->hasTemplateKeyword()};
+    if (Cur->getAsSubstTemplateTemplateParm() ||
+        Cur->getAsSubstTemplateTemplateParmPack())
+      break;
   }
-  return std::nullopt;
+  return {std::nullopt, false};
 }
 
 UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
@@ -448,8 +443,14 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
       Template = cast<TemplateDecl>(Template->getCanonicalDecl());
     if (handleAnonymousTTP(Template, OS))
       return;
-    if (Qual == Qualified::None || Policy.SuppressScope) {
-      OS << *Template;
+    if (Qual == Qualified::None || isa<TemplateTemplateParmDecl>(Template) ||
+        Policy.SuppressScope) {
+      if (IdentifierInfo *II = Template->getIdentifier();
+          Policy.CleanUglifiedParameters && II &&
+          isa<TemplateTemplateParmDecl>(Template))
+        OS << II->deuglifiedName();
+      else
+        OS << *Template;
     } else {
       PrintingPolicy NestedNamePolicy = Policy;
       NestedNamePolicy.SuppressUnwrittenScope = true;
@@ -474,12 +475,7 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     if (handleAnonymousTTP(UTD, OS))
       return;
 
-    if (IdentifierInfo *II = UTD->getIdentifier();
-        Policy.CleanUglifiedParameters && II &&
-        isa<TemplateTemplateParmDecl>(UTD))
-      OS << II->deuglifiedName();
-    else
-      OS << *UTD;
+    OS << *UTD;
   } else if (DependentTemplateName *DTN = getAsDependentTemplateName()) {
     DTN->print(OS, Policy);
   } else if (SubstTemplateTemplateParmStorage *subst =

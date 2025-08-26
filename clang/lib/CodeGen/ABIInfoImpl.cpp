@@ -124,13 +124,11 @@ bool CodeGen::classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
                                  const ABIInfo &Info) {
   QualType Ty = FI.getReturnType();
 
-  if (const auto *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-    if (!isa<CXXRecordDecl>(RD) && !RD->canPassInRegisters()) {
-      FI.getReturnInfo() = Info.getNaturalAlignIndirect(
-          Ty, Info.getDataLayout().getAllocaAddrSpace());
-      return true;
-    }
+  if (const auto *RD = Ty->getAsRecordDecl();
+      RD && !isa<CXXRecordDecl>(RD) && !RD->canPassInRegisters()) {
+    FI.getReturnInfo() = Info.getNaturalAlignIndirect(
+        Ty, Info.getDataLayout().getAllocaAddrSpace());
+    return true;
   }
 
   return CXXABI.classifyReturnType(FI);
@@ -285,10 +283,9 @@ bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
 
 bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
                             bool AsIfNoUniqueAddr) {
-  const RecordType *RT = T->getAs<RecordType>();
-  if (!RT)
+  const auto *RD = T->getAsRecordDecl();
+  if (!RD)
     return false;
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   if (RD->hasFlexibleArrayMember())
     return false;
 
@@ -316,11 +313,9 @@ bool CodeGen::isEmptyFieldForLayout(const ASTContext &Context,
 }
 
 bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
-  const RecordType *RT = T->getAs<RecordType>();
-  if (!RT)
+  const auto *RD = T->getAsRecordDecl();
+  if (!RD)
     return false;
-
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
 
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
@@ -340,11 +335,10 @@ bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
 }
 
 const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
-  const RecordType *RT = T->getAs<RecordType>();
-  if (!RT)
+  const auto *RD = T->getAsRecordDecl();
+  if (!RD)
     return nullptr;
 
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   if (RD->hasFlexibleArrayMember())
     return nullptr;
 
@@ -460,10 +454,9 @@ bool CodeGen::isSIMDVectorType(ASTContext &Context, QualType Ty) {
 }
 
 bool CodeGen::isRecordWithSIMDVectorType(ASTContext &Context, QualType Ty) {
-  const RecordType *RT = Ty->getAs<RecordType>();
-  if (!RT)
+  const auto *RD = Ty->getAsRecordDecl();
+  if (!RD)
     return false;
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
 
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))

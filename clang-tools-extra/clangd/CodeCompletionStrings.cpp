@@ -112,7 +112,7 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
   std::string Doc;
 
   if (Cfg.Documentation.CommentFormat == Config::CommentFormatPolicy::Doxygen &&
-      isa<ParmVarDecl>(Decl)) {
+      isa<ParmVarDecl, TemplateTypeParmDecl>(Decl)) {
     // Parameters are documented in their declaration context (function or
     // template function).
     const NamedDecl *ND = dyn_cast<NamedDecl>(Decl.getDeclContext());
@@ -135,7 +135,11 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
     std::string RawDoc;
     llvm::raw_string_ostream OS(RawDoc);
 
-    V.parameterDocToString(dyn_cast<ParmVarDecl>(&Decl)->getName(), OS);
+    if (auto *PVD = dyn_cast<ParmVarDecl>(&Decl))
+      V.parameterDocToString(PVD->getName(), OS);
+    else
+      V.templateTypeParmDocToString(
+          cast<TemplateTypeParmDecl>(&Decl)->getName(), OS);
 
     Doc = StringRef(RawDoc).trim().str();
   } else {

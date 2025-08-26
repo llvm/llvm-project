@@ -382,10 +382,9 @@ public:
     // the list of successors of this basic block as appropriate.
 
     // Any of the above code sequences assume the fall-through basic block
-    // is a dead-end BRK instruction (any immediate operand is accepted).
+    // is a dead-end trap instruction.
     const BinaryBasicBlock *BreakBB = BB.getFallthrough();
-    if (!BreakBB || BreakBB->empty() ||
-        BreakBB->front().getOpcode() != AArch64::BRK)
+    if (!BreakBB || BreakBB->empty() || !isTrap(BreakBB->front()))
       return std::nullopt;
 
     // Iterate over the instructions of BB in reverse order, matching opcodes
@@ -1742,6 +1741,34 @@ public:
     Inst.setOpcode(AArch64::HINT);
     Inst.clear();
     Inst.addOperand(MCOperand::createImm(0));
+  }
+
+  bool isTrap(const MCInst &Inst) const override {
+    if (Inst.getOpcode() != AArch64::BRK)
+      return false;
+    // Only match the immediate values that are likely to indicate this BRK
+    // instruction is emitted to terminate the program immediately and not to
+    // be handled by a SIGTRAP handler, for example.
+    switch (Inst.getOperand(0).getImm()) {
+    case 0xc470:
+    case 0xc471:
+    case 0xc472:
+    case 0xc473:
+      // Explicit Pointer Authentication check failed, see
+      // AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue().
+      return true;
+    case 0x1:
+      // __builtin_trap(), as emitted by Clang.
+      return true;
+    case 0x3e8: // decimal 1000
+      // __builtin_trap(), as emitted by GCC.
+      return true;
+    default:
+      // Some constants may indicate intentionally recoverable break-points.
+      // This is the case at least for 0xf000, which is used by
+      // __builtin_debugtrap() supported by Clang.
+      return false;
+    }
   }
 
   bool isStorePair(const MCInst &Inst) const {

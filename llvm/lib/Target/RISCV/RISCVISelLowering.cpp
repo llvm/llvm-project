@@ -10738,11 +10738,11 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
   }
   case Intrinsic::riscv_mopr:
-    return DAG.getNode(RISCVISD::MOPR, DL, XLenVT, Op.getOperand(1),
+    return DAG.getNode(RISCVISD::MOP_R, DL, XLenVT, Op.getOperand(1),
                        Op.getOperand(2));
 
   case Intrinsic::riscv_moprr: {
-    return DAG.getNode(RISCVISD::MOPRR, DL, XLenVT, Op.getOperand(1),
+    return DAG.getNode(RISCVISD::MOP_RR, DL, XLenVT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
   }
   case Intrinsic::riscv_clmul:
@@ -14877,7 +14877,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue NewOp =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
       SDValue Res = DAG.getNode(
-          RISCVISD::MOPR, DL, MVT::i64, NewOp,
+          RISCVISD::MOP_R, DL, MVT::i64, NewOp,
           DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
@@ -14890,7 +14890,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue NewOp1 =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
       SDValue Res = DAG.getNode(
-          RISCVISD::MOPRR, DL, MVT::i64, NewOp0, NewOp1,
+          RISCVISD::MOP_RR, DL, MVT::i64, NewOp0, NewOp1,
           DAG.getTargetConstant(N->getConstantOperandVal(3), DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;

@@ -75,8 +75,7 @@ protected:
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                              {}, PSE);
 
-    VFRange R(ElementCount::getFixed(1), ElementCount::getFixed(2));
-    VPlanTransforms::handleEarlyExits(*Plan, false, R);
+    VPlanTransforms::handleEarlyExits(*Plan, false);
     VPlanTransforms::addMiddleCheck(*Plan, true, false);
 
     VPlanTransforms::createLoopRegions(*Plan);

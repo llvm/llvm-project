@@ -5782,7 +5782,7 @@ LogicalResult GatherOp::verify() {
 
   if (resVType.getElementType() != baseType.getElementType())
     return emitOpError("base and result element type should match");
-  if (llvm::size(getIndices()) != baseType.getRank())
+  if (llvm::size(getOffsets()) != baseType.getRank())
     return emitOpError("requires ") << baseType.getRank() << " indices";
   if (resVType.getShape() != indVType.getShape())
     return emitOpError("expected result dim to match indices dim");
@@ -5854,11 +5854,11 @@ public:
     if (!isa<MemRefType>(op.getBase().getType()))
       return rewriter.notifyMatchFailure(op, "base must be of memref type");
 
-    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
+    if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
 
     rewriter.replaceOpWithNewOp<MaskedLoadOp>(op, op.getType(), op.getBase(),
-                                              op.getIndices(), op.getMask(),
+                                              op.getOffsets(), op.getMask(),
                                               op.getPassThru());
     return success();
   }
@@ -5882,7 +5882,7 @@ LogicalResult ScatterOp::verify() {
 
   if (valueVType.getElementType() != memType.getElementType())
     return emitOpError("base and valueToStore element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
+  if (llvm::size(getOffsets()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
   if (valueVType.getShape() != indVType.getShape())
     return emitOpError("expected valueToStore dim to match indices dim");
@@ -5917,11 +5917,11 @@ public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(ScatterOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
+    if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
 
     rewriter.replaceOpWithNewOp<MaskedStoreOp>(
-        op, op.getBase(), op.getIndices(), op.getMask(), op.getValueToStore());
+        op, op.getBase(), op.getOffsets(), op.getMask(), op.getValueToStore());
     return success();
   }
 };

@@ -70,8 +70,8 @@ struct VPlanTransforms {
               PredicatedScalarEvolution &PSE);
 
   /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void
-  handleEarlyExits(VPlan &Plan, bool HasUncountableExit, VFRange &Range);
+  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
+                                                 bool HasUncountableExit);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
@@ -207,8 +207,7 @@ struct VPlanTransforms {
   static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                                          VPBasicBlock *EarlyExitVPBB,
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                         VPBasicBlock *LatchVPBB,
-                                         VFRange &Range);
+                                         VPBasicBlock *LatchVPBB);
 
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);

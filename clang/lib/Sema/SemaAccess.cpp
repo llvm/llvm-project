@@ -439,10 +439,8 @@ static AccessResult MatchesFriend(Sema &S,
 static AccessResult MatchesFriend(Sema &S,
                                   const EffectiveContext &EC,
                                   CanQualType Friend) {
-  if (const RecordType *RT = Friend->getAs<RecordType>())
-    return MatchesFriend(
-        S, EC,
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf());
+  if (const auto *RD = Friend->getAsCXXRecordDecl())
+    return MatchesFriend(S, EC, RD);
 
   // TODO: we can do better than this
   if (Friend->isDependentType())

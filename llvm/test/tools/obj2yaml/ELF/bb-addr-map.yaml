@@ -39,7 +39,7 @@
 # VALID-NEXT:                 AddressOffset:   0xA
 # VALID-NEXT:                 Size:            0xB
 # VALID-NEXT:                 Metadata:        0xC
-# VALID-NEXT:                 CallsiteOffsets: [ 0x1, 0x2 ]
+# VALID-NEXT:                 CallsiteEndOffsets: [ 0x1, 0x2 ]
 
 --- !ELF
 FileHeader:
@@ -79,7 +79,7 @@ Sections:
                AddressOffset:   0xA
                Size:            0xB
                Metadata:        0xC
-               CallsiteOffsets: [ 0x1, 0x2 ]
+               CallsiteEndOffsets: [ 0x1, 0x2 ]
 
 ## Check obj2yaml can dump empty .llvm_bb_addr_map sections.
 

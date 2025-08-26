@@ -118,12 +118,12 @@ public:
       Elts = CArrTy->getZExtSize();
     if (Elts == 0)
       return;
-    const RecordType *RT = ArrTy->getElementType()->getAs<RecordType>();
-    if (RT == nullptr)
+    const auto *RD = ArrTy->getElementType()->getAsRecordDecl();
+    if (!RD)
       return;
 
     // TODO: Recurse into the fields to see if they have excess padding.
-    visitRecord(RT->getOriginalDecl()->getDefinitionOrSelf(), Elts);
+    visitRecord(RD, Elts);
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {

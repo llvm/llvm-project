@@ -3801,6 +3801,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_disable_llvm_passes,
       options::OPT_fnative_half_type,
       options::OPT_hlsl_entrypoint,
+      options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version};
   if (!types::isHLSL(InputType))
     return;

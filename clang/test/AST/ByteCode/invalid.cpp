@@ -58,3 +58,11 @@ namespace Casts {
   /// Just make sure this doesn't crash.
   float PR9558 = reinterpret_cast<const float&>("asd");
 }
+
+
+/// This used to crash in collectBlock().
+struct S {
+};
+S s;
+S *sp[2] = {&s, &s};
+S *&spp = sp[1];

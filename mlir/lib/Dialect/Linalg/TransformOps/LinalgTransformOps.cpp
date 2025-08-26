@@ -70,12 +70,7 @@ static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
   PatternTy pattern(operation->getContext(), std::forward<Args>(args)...);
   // We want to discourage direct use of PatternRewriter in APIs but In this
   // very specific case, an IRRewriter is not enough.
-  struct TrivialPatternRewriter : public PatternRewriter {
-  public:
-    explicit TrivialPatternRewriter(MLIRContext *context)
-        : PatternRewriter(context) {}
-  };
-  TrivialPatternRewriter rewriter(operation->getContext());
+  PatternRewriter rewriter(operation->getContext());
   rewriter.setInsertionPoint(operation);
   auto result = pattern.returningMatchAndRewrite(op, rewriter);
   if (failed(result))

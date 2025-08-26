@@ -118,11 +118,9 @@ ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
   if (!isAggregateTypeForABI(RetTy) || getRecordArgABI(RetTy, getCXXABI()))
     return DefaultABIInfo::classifyReturnType(RetTy);
 
-  if (const RecordType *RT = RetTy->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-    if (RD->hasFlexibleArrayMember())
-      return DefaultABIInfo::classifyReturnType(RetTy);
-  }
+  if (const auto *RD = RetTy->getAsRecordDecl();
+      RD && RD->hasFlexibleArrayMember())
+    return DefaultABIInfo::classifyReturnType(RetTy);
 
   // TODO: The AMDGPU ABI is non-trivial to represent in SPIR-V; in order to
   // avoid encoding various architecture specific bits here we return everything
@@ -186,11 +184,9 @@ ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                    RAA == CGCXXABI::RAA_DirectInMemory);
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-    if (RD->hasFlexibleArrayMember())
-      return DefaultABIInfo::classifyArgumentType(Ty);
-  }
+  if (const auto *RD = Ty->getAsRecordDecl();
+      RD && RD->hasFlexibleArrayMember())
+    return DefaultABIInfo::classifyArgumentType(Ty);
 
   return ABIArgInfo::getDirect(CGT.ConvertType(Ty), 0u, nullptr, false);
 }
@@ -431,8 +427,7 @@ static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
     }
     case SpirvOperandKind::TypeId: {
       QualType TypeOperand = Operand.getResultType();
-      if (auto *RT = TypeOperand->getAs<RecordType>()) {
-        auto *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+      if (const auto *RD = TypeOperand->getAsRecordDecl()) {
         assert(RD->isCompleteDefinition() &&
                "Type completion should have been required in Sema");
 

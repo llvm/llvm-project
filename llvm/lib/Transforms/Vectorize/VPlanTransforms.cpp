@@ -2983,9 +2983,11 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
     R->eraseFromParent();
 }
 
-void VPlanTransforms::handleUncountableEarlyExit(
-    VPBasicBlock *EarlyExitingVPBB, VPBasicBlock *EarlyExitVPBB, VPlan &Plan,
-    VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VFRange &Range) {
+void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
+                                                 VPBasicBlock *EarlyExitVPBB,
+                                                 VPlan &Plan,
+                                                 VPBasicBlock *HeaderVPBB,
+                                                 VPBasicBlock *LatchVPBB) {
   VPBlockBase *MiddleVPBB = LatchVPBB->getSuccessors()[0];
   if (!EarlyExitVPBB->getSinglePredecessor() &&
       EarlyExitVPBB->getPredecessors()[1] == MiddleVPBB) {
@@ -3038,13 +3040,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
     }
 
     VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
-    auto IsVector = [](ElementCount VF) { return VF.isVector(); };
-    // When the VFs are vectors, need to add `extract` to get the incoming value
-    // from early exit. When the range contains scalar VF, limit the range to
-    // scalar VF to prevent mis-compilation for the range containing both scalar
-    // and vector VFs.
-    if (!IncomingFromEarlyExit->isLiveIn() &&
-        LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
+    if (!IncomingFromEarlyExit->isLiveIn()) {
       // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {CondToEarlyExit}, nullptr,

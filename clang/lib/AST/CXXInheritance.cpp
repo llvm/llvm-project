@@ -128,17 +128,11 @@ bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches) const {
   const CXXRecordDecl *Record = this;
   while (true) {
     for (const auto &I : Record->bases()) {
-      const RecordType *Ty = I.getType()->getAs<RecordType>();
-      if (!Ty)
+      const auto *Base = I.getType()->getAsCXXRecordDecl();
+      if (!Base || !(Base->isBeingDefined() || Base->isCompleteDefinition()))
         return false;
-
-      CXXRecordDecl *Base = cast_if_present<CXXRecordDecl>(
-          Ty->getOriginalDecl()->getDefinition());
-      if (!Base ||
-          (Base->isDependentContext() &&
-           !Base->isCurrentInstantiation(Record))) {
+      if (Base->isDependentContext() && !Base->isCurrentInstantiation(Record))
         return false;
-      }
 
       Queue.push_back(Base);
       if (!BaseMatches(Base))
@@ -255,9 +249,7 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
         const TemplateSpecializationType *TST =
             BaseSpec.getType()->getAs<TemplateSpecializationType>();
         if (!TST) {
-          if (auto *RT = BaseSpec.getType()->getAs<RecordType>())
-            BaseRecord = cast<CXXRecordDecl>(RT->getOriginalDecl())
-                             ->getDefinitionOrSelf();
+          BaseRecord = BaseSpec.getType()->getAsCXXRecordDecl();
         } else {
           TemplateName TN = TST->getTemplateName();
           if (auto *TD =
@@ -347,11 +339,8 @@ bool CXXRecordDecl::lookupInBases(BaseMatchesCallback BaseMatches,
       // base is a subobject of any other path; if so, then the
       // declaration in this path are hidden by that patch.
       for (const CXXBasePath &HidingP : Paths) {
-        CXXRecordDecl *HidingClass = nullptr;
-        if (const RecordType *Record =
-                HidingP.back().Base->getType()->getAs<RecordType>())
-          HidingClass = cast<CXXRecordDecl>(Record->getOriginalDecl())
-                            ->getDefinitionOrSelf();
+        auto *HidingClass =
+            HidingP.back().Base->getType()->getAsCXXRecordDecl();
         if (!HidingClass)
           break;
 
@@ -470,9 +459,7 @@ void FinalOverriderCollector::Collect(const CXXRecordDecl *RD,
       = ++SubobjectCount[cast<CXXRecordDecl>(RD->getCanonicalDecl())];
 
   for (const auto &Base : RD->bases()) {
-    if (const RecordType *RT = Base.getType()->getAs<RecordType>()) {
-      const CXXRecordDecl *BaseDecl =
-          cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+    if (const auto *BaseDecl = Base.getType()->getAsCXXRecordDecl()) {
       if (!BaseDecl->isPolymorphic())
         continue;
 

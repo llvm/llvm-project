@@ -118,17 +118,15 @@ define i32 @mulwideu8(i8 %a, i8 %b) {
 ; NOOPT-LABEL: mulwideu8(
 ; NOOPT:       {
 ; NOOPT-NEXT:    .reg .b16 %rs<3>;
-; NOOPT-NEXT:    .reg .b32 %r<6>;
+; NOOPT-NEXT:    .reg .b32 %r<4>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
 ; NOOPT-NEXT:    ld.param.b8 %rs2, [mulwideu8_param_1];
 ; NOOPT-NEXT:    ld.param.b8 %rs1, [mulwideu8_param_0];
 ; NOOPT-NEXT:    cvt.u32.u16 %r1, %rs1;
-; NOOPT-NEXT:    and.b32 %r2, %r1, 255;
-; NOOPT-NEXT:    cvt.u32.u16 %r3, %rs2;
-; NOOPT-NEXT:    and.b32 %r4, %r3, 255;
-; NOOPT-NEXT:    mul.lo.s32 %r5, %r2, %r4;
-; NOOPT-NEXT:    st.param.b32 [func_retval0], %r5;
+; NOOPT-NEXT:    cvt.u32.u16 %r2, %rs2;
+; NOOPT-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; NOOPT-NEXT:    st.param.b32 [func_retval0], %r3;
 ; NOOPT-NEXT:    ret;
   %val0 = zext i8 %a to i32
   %val1 = zext i8 %b to i32

@@ -66,7 +66,7 @@
 # CHECK-NEXT:     0000: 030800
 # CHECK-NEXT:   )
 
-# Case 9: Specify empty CallsiteOffsets.
+# Case 9: Specify empty CallsiteEndOffsets.
 # CHECK:        Name: .llvm_bb_addr_map (1)
 # CHECK:        SectionData (
 # CHECK-NEXT:     0000: 03202000 00000000 0000010E 01000203
@@ -113,7 +113,7 @@ Sections:
                 AddressOffset: 0x00000001
                 Size:          0x00000002
                 Metadata:      0x00000003
-                CallsiteOffsets: [0x1, 0x2]
+                CallsiteEndOffsets: [0x1, 0x2]
 
 ## 5) When specifying the description with Entries, the 'Address' field will be
 ##    zero when omitted.
@@ -174,7 +174,7 @@ Sections:
                AddressOffset:   0x00000001
                Size:            0x00000002
                Metadata:        0x00000003
-               CallsiteOffsets: []
+               CallsiteEndOffsets: []
 
 ## Check we can't use Entries at the same time as either Content or Size.
 # RUN: not yaml2obj --docnum=2 -DCONTENT="00" %s 2>&1 | FileCheck %s --check-prefix=INVALID

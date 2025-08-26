@@ -147,15 +147,12 @@ Value::Value(const Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
         } while (ArrTy);
         ElementsSize = static_cast<size_t>(ArrSize.getZExtValue());
       }
-      if (const auto *RT = DtorTy->getAs<RecordType>()) {
-        if (CXXRecordDecl *CXXRD =
-                llvm::dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
-          if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
-                  Interp.CompileDtorCall(CXXRD->getDefinitionOrSelf()))
-            DtorF = reinterpret_cast<void *>(Addr->getValue());
-          else
-            llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
-        }
+      if (auto *CXXRD = DtorTy->getAsCXXRecordDecl()) {
+        if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
+                Interp.CompileDtorCall(CXXRD))
+          DtorF = reinterpret_cast<void *>(Addr->getValue());
+        else
+          llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
       }
 
       size_t AllocSize =

@@ -1339,6 +1339,15 @@ bool mlir::affine::isValidLoopInterchangePermutation(
   unsigned maxLoopDepth = loops.size();
   if (maxLoopDepth == 1)
     return true;
+
+  // We cannot guarantee the validity of the interchange if the loops have
+  // iter_args, since the dependence analysis does not take them into account.
+  // Conservatively return false in such cases.
+  if (llvm::any_of(loops, [](AffineForOp loop) {
+        return loop.getNumIterOperands() > 0;
+      }))
+    return false;
+
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;

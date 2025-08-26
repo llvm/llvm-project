@@ -106,16 +106,43 @@ public:
     return Parameters.contains(ParamName);
   }
 
-  void parameterDocToMarkup(StringRef ParamName, markup::Paragraph &Out);
-
-  void parameterDocToString(StringRef ParamName, llvm::raw_string_ostream &Out);
-
-  void docToMarkup(markup::Document &Out);
-
-  void visitBlockCommandComment(const comments::BlockCommandComment *B) {
-    BlockCommands[CommentPartIndex] = B;
-    CommentPartIndex++;
+  bool isTemplateTypeParmDocumented(StringRef ParamName) const {
+    return TemplateParameters.contains(ParamName);
   }
+
+  bool hasBriefCommand() const { return BriefParagraph; }
+
+  bool hasReturnCommand() const { return ReturnParagraph; }
+
+  bool hasRetvalCommands() const { return !RetvalParagraphs.empty(); }
+
+  bool hasNoteCommands() const { return !NoteParagraphs.empty(); }
+
+  bool hasWarningCommands() const { return !WarningParagraphs.empty(); }
+
+  /// Converts all unhandled comment commands to a markup document.
+  void docToMarkup(markup::Document &Out) const;
+  /// Converts the "brief" command(s) to a markup document.
+  void briefToMarkup(markup::Paragraph &Out) const;
+  /// Converts the "return" command(s) to a markup document.
+  void returnToMarkup(markup::Paragraph &Out) const;
+  /// Converts the "note" command(s) to a markup document.
+  void notesToMarkup(markup::Document &Out) const;
+  /// Converts the "warning" command(s) to a markup document.
+  void warningsToMarkup(markup::Document &Out) const;
+
+  void visitBlockCommandComment(const comments::BlockCommandComment *B);
+
+  void templateTypeParmDocToMarkup(StringRef TemplateParamName,
+                                   markup::Paragraph &Out) const;
+
+  void templateTypeParmDocToString(StringRef TemplateParamName,
+                                   llvm::raw_string_ostream &Out) const;
+
+  void parameterDocToMarkup(StringRef ParamName, markup::Paragraph &Out) const;
+
+  void parameterDocToString(StringRef ParamName,
+                            llvm::raw_string_ostream &Out) const;
 
   void visitParagraphComment(const comments::ParagraphComment *P) {
     FreeParagraphs[CommentPartIndex] = P;
@@ -124,6 +151,10 @@ public:
 
   void visitParamCommandComment(const comments::ParamCommandComment *P) {
     Parameters[P->getParamNameAsWritten()] = P;
+  }
+
+  void visitTParamCommandComment(const comments::TParamCommandComment *TP) {
+    TemplateParameters[TP->getParamNameAsWritten()] = std::move(TP);
   }
 
 private:
@@ -136,17 +167,42 @@ private:
   /// This index allows us to keep the order of the other comment parts.
   unsigned CommentPartIndex = 0;
 
+  /// Paragraph of the "brief" command.
+  const comments::ParagraphComment *BriefParagraph = nullptr;
+
+  /// Paragraph of the "return" command.
+  const comments::ParagraphComment *ReturnParagraph = nullptr;
+
+  /// Paragraph(s) of the "note" command(s)
+  llvm::SmallVector<const comments::ParagraphComment *> RetvalParagraphs;
+
+  /// Paragraph(s) of the "note" command(s)
+  llvm::SmallVector<const comments::ParagraphComment *> NoteParagraphs;
+
+  /// Paragraph(s) of the "warning" command(s)
+  llvm::SmallVector<const comments::ParagraphComment *> WarningParagraphs;
+
+  /// All the paragraphs we don't have any special handling for,
+  /// e.g. "details".
+  llvm::SmallDenseMap<unsigned, const comments::BlockCommandComment *>
+      UnhandledCommands;
+
   /// Parsed paragaph(s) of the "param" comamnd(s)
   llvm::SmallDenseMap<StringRef, const comments::ParamCommandComment *>
       Parameters;
 
-  /// All the block commands.
-  llvm::SmallDenseMap<unsigned, const comments::BlockCommandComment *>
-      BlockCommands;
+  /// Parsed paragaph(s) of the "tparam" comamnd(s)
+  llvm::SmallDenseMap<StringRef, const comments::TParamCommandComment *>
+      TemplateParameters;
 
   /// All "free" text paragraphs.
   llvm::SmallDenseMap<unsigned, const comments::ParagraphComment *>
       FreeParagraphs;
+
+  void paragraphsToMarkup(
+      markup::Document &Out,
+      const llvm::SmallVectorImpl<const comments::ParagraphComment *>
+          &Paragraphs) const;
 };
 
 } // namespace clangd

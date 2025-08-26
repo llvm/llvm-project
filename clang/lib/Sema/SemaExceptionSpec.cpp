@@ -163,9 +163,8 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
     DiagID = diag::ext_incomplete_in_exception_spec;
     ReturnValueOnError = false;
   }
-  if (!(PointeeT->isRecordType() && PointeeT->castAs<RecordType>()
-                                        ->getOriginalDecl()
-                                        ->isEntityBeingDefined()) &&
+  if (auto *RD = PointeeT->getAsRecordDecl();
+      !(RD && RD->isBeingDefined()) &&
       RequireCompleteType(Range.getBegin(), PointeeT, DiagID, Kind, Range))
     return ReturnValueOnError;
 

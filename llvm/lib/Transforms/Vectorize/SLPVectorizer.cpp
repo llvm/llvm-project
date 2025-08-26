@@ -8030,11 +8030,11 @@ void BoUpSLP::reorderTopToBottom() {
         // it is an attempt to reorder node with reused scalars but with
         // external uses.
         if (OpTE->getVectorFactor() != OpTE->Scalars.size()) {
-          OrdersUses.insert(std::make_pair(OrdersType(), 0)).first->second +=
+          OrdersUses.try_emplace(OrdersType(), 0).first->second +=
               ExternalUserReorderIndices.size();
         } else {
           for (const OrdersType &ExtOrder : ExternalUserReorderIndices)
-            ++OrdersUses.insert(std::make_pair(ExtOrder, 0)).first->second;
+            ++OrdersUses.try_emplace(ExtOrder, 0).first->second;
         }
         // No other useful reorder data in this entry.
         if (Order.empty())
@@ -8054,9 +8054,9 @@ void BoUpSLP::reorderTopToBottom() {
           return Idx == PoisonMaskElem ? E : static_cast<unsigned>(Idx);
         });
         fixupOrderingIndices(CurrentOrder);
-        ++OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second;
+        ++OrdersUses.try_emplace(CurrentOrder, 0).first->second;
       } else {
-        ++OrdersUses.insert(std::make_pair(Order, 0)).first->second;
+        ++OrdersUses.try_emplace(Order, 0).first->second;
       }
     }
     if (OrdersUses.empty())
@@ -8480,12 +8480,11 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
             return Idx == PoisonMaskElem ? E : static_cast<unsigned>(Idx);
           });
           fixupOrderingIndices(CurrentOrder);
-          OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second +=
-              NumOps;
+          OrdersUses.try_emplace(CurrentOrder, 0).first->second += NumOps;
         } else {
-          OrdersUses.insert(std::make_pair(Order, 0)).first->second += NumOps;
+          OrdersUses.try_emplace(Order, 0).first->second += NumOps;
         }
-        auto Res = OrdersUses.insert(std::make_pair(OrdersType(), 0));
+        auto Res = OrdersUses.try_emplace(OrdersType(), 0);
         const auto AllowsReordering = [&](const TreeEntry *TE) {
           if (!TE->ReorderIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
               (TE->State == TreeEntry::Vectorize && TE->isAltShuffle()) ||
@@ -23797,9 +23796,7 @@ public:
         size_t Key, Idx;
         std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
                                                /*AllowAlternate=*/false);
-        ++PossibleReducedVals[Key][Idx]
-              .insert(std::make_pair(V, 0))
-              .first->second;
+        ++PossibleReducedVals[Key][Idx].try_emplace(V, 0).first->second;
       }
       for (Instruction *I : reverse(PossibleReductionOps))
         Worklist.emplace_back(I, I->getParent() == BB ? 0 : Level + 1);
@@ -26061,7 +26058,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
   InstSetVector PostProcessInserts;
   SmallSetVector<CmpInst *, 8> PostProcessCmps;
-  // Vectorizes Inserts in `PostProcessInserts` and if `VecctorizeCmps` is true
+  // Vectorizes Inserts in `PostProcessInserts` and if `VectorizeCmps` is true
   // also vectorizes `PostProcessCmps`.
   auto VectorizeInsertsAndCmps = [&](bool VectorizeCmps) {
     bool Changed = vectorizeInserts(PostProcessInserts, BB, R);

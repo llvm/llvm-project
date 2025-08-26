@@ -1487,8 +1487,8 @@ void ELFState<ELFT>::writeSectionContent(
     if (!E.BBRanges)
       continue;
     uint64_t TotalNumBlocks = 0;
-    bool EmitCallsiteOffsets =
-        FeatureOrErr->CallsiteOffsets || E.hasAnyCallsiteOffsets();
+    bool EmitCallsiteEndOffsets =
+        FeatureOrErr->CallsiteEndOffsets || E.hasAnyCallsiteEndOffsets();
     for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
       // Write the base address of the range.
       CBA.write<uintX_t>(BBR.BaseAddress, ELFT::Endianness);
@@ -1506,12 +1506,12 @@ void ELFState<ELFT>::writeSectionContent(
         if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
           SHeader.sh_size += CBA.writeULEB128(BBE.ID);
         SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
-        if (EmitCallsiteOffsets) {
-          size_t NumCallsiteOffsets =
-              BBE.CallsiteOffsets ? BBE.CallsiteOffsets->size() : 0;
-          SHeader.sh_size += CBA.writeULEB128(NumCallsiteOffsets);
-          if (BBE.CallsiteOffsets) {
-            for (uint32_t Offset : *BBE.CallsiteOffsets)
+        if (EmitCallsiteEndOffsets) {
+          size_t NumCallsiteEndOffsets =
+              BBE.CallsiteEndOffsets ? BBE.CallsiteEndOffsets->size() : 0;
+          SHeader.sh_size += CBA.writeULEB128(NumCallsiteEndOffsets);
+          if (BBE.CallsiteEndOffsets) {
+            for (uint32_t Offset : *BBE.CallsiteEndOffsets)
               SHeader.sh_size += CBA.writeULEB128(Offset);
           }
         }

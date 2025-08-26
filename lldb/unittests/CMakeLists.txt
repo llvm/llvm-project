@@ -79,10 +79,6 @@ add_subdirectory(Utility)
 add_subdirectory(ValueObject)
 add_subdirectory(tools)
 
-if(LLDB_ENABLE_PROTOCOL_SERVERS)
-  add_subdirectory(ProtocolServer)
-endif()
-
 if(LLDB_CAN_USE_DEBUGSERVER AND LLDB_TOOL_DEBUGSERVER_BUILD AND NOT LLDB_USE_SYSTEM_DEBUGSERVER)
   add_subdirectory(debugserver)
 endif()

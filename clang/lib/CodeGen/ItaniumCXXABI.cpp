@@ -1484,21 +1484,18 @@ void ItaniumCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
   // The address of the destructor.  If the exception type has a
   // trivial destructor (or isn't a record), we just pass null.
   llvm::Constant *Dtor = nullptr;
-  if (const RecordType *RecordTy = ThrowType->getAs<RecordType>()) {
-    CXXRecordDecl *Record =
-        cast<CXXRecordDecl>(RecordTy->getOriginalDecl())->getDefinitionOrSelf();
-    if (!Record->hasTrivialDestructor()) {
-      // __cxa_throw is declared to take its destructor as void (*)(void *). We
-      // must match that if function pointers can be authenticated with a
-      // discriminator based on their type.
-      const ASTContext &Ctx = getContext();
-      QualType DtorTy = Ctx.getFunctionType(Ctx.VoidTy, {Ctx.VoidPtrTy},
-                                            FunctionProtoType::ExtProtoInfo());
+  if (const auto *Record = ThrowType->getAsCXXRecordDecl();
+      Record && !Record->hasTrivialDestructor()) {
+    // __cxa_throw is declared to take its destructor as void (*)(void *). We
+    // must match that if function pointers can be authenticated with a
+    // discriminator based on their type.
+    const ASTContext &Ctx = getContext();
+    QualType DtorTy = Ctx.getFunctionType(Ctx.VoidTy, {Ctx.VoidPtrTy},
+                                          FunctionProtoType::ExtProtoInfo());
 
-      CXXDestructorDecl *DtorD = Record->getDestructor();
-      Dtor = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
-      Dtor = CGM.getFunctionPointer(Dtor, DtorTy);
-    }
+    CXXDestructorDecl *DtorD = Record->getDestructor();
+    Dtor = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
+    Dtor = CGM.getFunctionPointer(Dtor, DtorTy);
   }
   if (!Dtor) Dtor = llvm::Constant::getNullValue(CGM.Int8PtrTy);
 

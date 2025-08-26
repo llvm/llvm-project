@@ -352,15 +352,15 @@ bool X86_32ABIInfo::shouldReturnTypeInRegister(QualType Ty,
     return shouldReturnTypeInRegister(AT->getElementType(), Context);
 
   // Otherwise, it must be a record type.
-  const RecordType *RT = Ty->getAs<RecordType>();
-  if (!RT) return false;
+  const auto *RD = Ty->getAsRecordDecl();
+  if (!RD)
+    return false;
 
   // FIXME: Traverse bases here too.
 
   // Structure types are passed in register if all fields would be
   // passed in a register.
-  for (const auto *FD :
-       RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
+  for (const auto *FD : RD->fields()) {
     // Empty fields are ignored.
     if (isEmptyField(Context, FD, true))
       continue;
@@ -427,11 +427,10 @@ static bool addBaseAndFieldSizes(ASTContext &Context, const CXXRecordDecl *RD,
 /// optimizations.
 bool X86_32ABIInfo::canExpandIndirectArgument(QualType Ty) const {
   // We can only expand structure types.
-  const RecordType *RT = Ty->getAs<RecordType>();
-  if (!RT)
+  const RecordDecl *RD = Ty->getAsRecordDecl();
+  if (!RD)
     return false;
   uint64_t Size = 0;
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
     if (!IsWin32StructABI) {
       // On non-Windows, we have to conservatively match our old bitcode
@@ -508,13 +507,10 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
   }
 
   if (isAggregateTypeForABI(RetTy)) {
-    if (const RecordType *RT = RetTy->getAs<RecordType>()) {
+    if (const auto *RD = RetTy->getAsRecordDecl();
+        RD && RD->hasFlexibleArrayMember())
       // Structures with flexible arrays are always indirect.
-      if (RT->getOriginalDecl()
-              ->getDefinitionOrSelf()
-              ->hasFlexibleArrayMember())
-        return getIndirectReturnResult(RetTy, State);
-    }
+      return getIndirectReturnResult(RetTy, State);
 
     // If specified, structs and unions are always indirect.
     if (!IsRetSmallStructInRegABI && !RetTy->isAnyComplexType())
@@ -2354,8 +2350,7 @@ static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
     return true;
   }
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
     // If this is a C++ record, check the bases first.

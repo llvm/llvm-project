@@ -1882,23 +1882,21 @@ public:
     // Visit the dtors of all members
     for (const FieldDecl *FD : RD->fields()) {
       QualType FT = FD->getType();
-      if (const auto *RT = FT->getAs<RecordType>())
-        if (const auto *ClassDecl =
-                dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
-          if (const auto *Def = ClassDecl->getDefinition())
-            if (CXXDestructorDecl *MemberDtor = Def->getDestructor())
-              asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
+      if (const auto *ClassDecl = FT->getAsCXXRecordDecl();
+          ClassDecl &&
+          (ClassDecl->isBeingDefined() || ClassDecl->isCompleteDefinition()))
+        if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
+          asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
     }
 
     // Also visit base class dtors
     for (const auto &Base : RD->bases()) {
       QualType BaseType = Base.getType();
-      if (const auto *RT = BaseType->getAs<RecordType>())
-        if (const auto *BaseDecl =
-                dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
-          if (const auto *Def = BaseDecl->getDefinition())
-            if (CXXDestructorDecl *BaseDtor = Def->getDestructor())
-              asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
+      if (const auto *BaseDecl = BaseType->getAsCXXRecordDecl();
+          BaseDecl &&
+          (BaseDecl->isBeingDefined() || BaseDecl->isCompleteDefinition()))
+        if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
+          asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
     }
   }
 
@@ -1909,12 +1907,11 @@ public:
         if (VD->isThisDeclarationADefinition() &&
             VD->needsDestruction(S.Context)) {
           QualType VT = VD->getType();
-          if (const auto *RT = VT->getAs<RecordType>())
-            if (const auto *ClassDecl =
-                    dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
-              if (const auto *Def = ClassDecl->getDefinition())
-                if (CXXDestructorDecl *Dtor = Def->getDestructor())
-                  asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
+          if (const auto *ClassDecl = VT->getAsCXXRecordDecl();
+              ClassDecl && (ClassDecl->isBeingDefined() ||
+                            ClassDecl->isCompleteDefinition()))
+            if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
+              asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
         }
 
     Inherited::VisitDeclStmt(DS);

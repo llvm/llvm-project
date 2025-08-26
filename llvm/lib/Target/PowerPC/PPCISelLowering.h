@@ -1345,6 +1345,8 @@ namespace llvm {
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDMFVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDMFVectorStore(SDValue Op, SelectionDAG &DAG) const;
+    SDValue DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
+                          const SDLoc &dl, SelectionDAG &DAG) const;
 
     SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,

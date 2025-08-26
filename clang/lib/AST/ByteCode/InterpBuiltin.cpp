@@ -3303,11 +3303,8 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
     switch (Node.getKind()) {
     case OffsetOfNode::Field: {
       const FieldDecl *MemberDecl = Node.getField();
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
-        return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->isInvalidDecl())
+      const auto *RD = CurrentType->getAsRecordDecl();
+      if (!RD || RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
       unsigned FieldIndex = MemberDecl->getFieldIndex();
@@ -3336,23 +3333,19 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
         return false;
 
       // Find the layout of the class whose base we are looking into.
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
-        return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->isInvalidDecl())
+      const auto *RD = CurrentType->getAsCXXRecordDecl();
+      if (!RD || RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
 
       // Find the base class itself.
       CurrentType = BaseSpec->getType();
-      const RecordType *BaseRT = CurrentType->getAs<RecordType>();
-      if (!BaseRT)
+      const auto *BaseRD = CurrentType->getAsCXXRecordDecl();
+      if (!BaseRD)
         return false;
 
       // Add the offset to the base.
-      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(
-          BaseRT->getOriginalDecl()->getDefinitionOrSelf()));
+      Result += RL.getBaseClassOffset(BaseRD);
       break;
     }
     case OffsetOfNode::Identifier:

@@ -3,8 +3,10 @@
 ; RUN: not llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -global-isel=1 -new-reg-bank-select < %s 2>&1 | FileCheck -check-prefix=GFX9-GISEL-ERR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -mattr=+architected-sgprs -global-isel=0 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -mattr=+architected-sgprs -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefix=GFX9 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=0 < %s | FileCheck -check-prefix=GFX12 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefix=GFX12 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=0 < %s | FileCheck -check-prefix=GFX1200 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefix=GFX1200 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel=0 < %s | FileCheck -check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefix=GFX1250 %s
 
 ; GFX9-SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.wave.id
 ; GFX9-GISEL-ERR: LLVM ERROR: unable to legalize instruction: {{.*}} = G_INTRINSIC intrinsic(@llvm.amdgcn.wave.id)
@@ -17,13 +19,21 @@ define amdgpu_cs void @test_wave_id(ptr addrspace(1) %out) {
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: test_wave_id:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-NEXT:    s_endpgm
+; GFX1200-LABEL: test_wave_id:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
+; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1200-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1200-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1200-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: test_wave_id:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_endpgm
   %waveid = call i32 @llvm.amdgcn.wave.id()
   store i32 %waveid, ptr addrspace(1) %out
   ret void
@@ -39,6 +49,28 @@ define amdgpu_gfx void @test_wave_id_callable(ptr addrspace(1) %out) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX1200-LABEL: test_wave_id_callable:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1200-NEXT:    s_wait_expcnt 0x0
+; GFX1200-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
+; GFX1200-NEXT:    s_wait_alu 0xfffe
+; GFX1200-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1200-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: test_wave_id_callable:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX12-LABEL: test_wave_id_callable:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0

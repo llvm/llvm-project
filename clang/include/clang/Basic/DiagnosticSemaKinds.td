@@ -3687,6 +3687,10 @@ def warn_alloca_align_alignof : Warning<
   "second argument to __builtin_alloca_with_align is supposed to be in bits">,
   InGroup<DiagGroup<"alloca-with-align-alignof">>;
 
+def warn_alloc_size : Warning<
+  "allocation of insufficient size '%0' for type %1 with size '%2'">,
+  InGroup<DiagGroup<"alloc-size">>;
+
 def err_alignment_too_small : Error<
   "requested alignment must be %0 or greater">;
 def err_alignment_too_big : Error<

@@ -68,3 +68,44 @@ latch:                                            ; preds = %inner_exit
 end:                                              ; preds = %header
   ret void
 }
+
+
+declare void @foo()
+
+define i64 @narow_canonical_iv_wide_multiplied_iv(i32 %x, i64 %y, ptr %0) {
+; CHECK-LABEL: @narow_canonical_iv_wide_multiplied_iv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SMAX:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 1)
+; CHECK-NEXT:    [[MUL_Y:%.*]] = shl i64 [[Y:%.*]], 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_MUL:%.*]] = phi i64 [ 1, [[ENTRY]] ], [ [[IV_MUL_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_MUL_NEXT]] = add i64 [[IV_MUL]], [[MUL_Y]]
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[SMAX]]
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i64 [ [[IV_MUL_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[TMP6]]
+;
+entry:
+  %smax = tail call i32 @llvm.smax.i32(i32 %x, i32 1)
+  %mul.y = shl i64 %y, 1
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.mul = phi i64 [ 1, %entry ], [ %iv.mul.next, %loop ]
+  %iv.mul.next = add i64 %iv.mul, %mul.y
+  call void @foo()
+  %iv.next = add i32 %iv, 1
+  %ec = icmp ult i32 %iv.next, %smax
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret i64 %iv.mul.next
+}
+
+declare i32 @llvm.smax.i32(i32, i32)

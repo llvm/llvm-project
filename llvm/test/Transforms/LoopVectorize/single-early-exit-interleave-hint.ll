@@ -26,9 +26,13 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD2]], splat (i32 10)
 ; VF4IC4-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD3]], splat (i32 10)
 ; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; VF4IC4-NEXT:    [[TMP9:%.*]] = or <4 x i1> [[TMP2]], [[TMP6]]
-; VF4IC4-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP9]], [[TMP7]]
-; VF4IC4-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP10]], [[TMP8]]
+; VF4IC4-NEXT:    [[TMP14:%.*]] = freeze <4 x i1> [[TMP2]]
+; VF4IC4-NEXT:    [[TMP9:%.*]] = freeze <4 x i1> [[TMP6]]
+; VF4IC4-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP14]], [[TMP9]]
+; VF4IC4-NEXT:    [[TMP15:%.*]] = freeze <4 x i1> [[TMP7]]
+; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP10]], [[TMP15]]
+; VF4IC4-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP8]]
+; VF4IC4-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP16]], [[TMP17]]
 ; VF4IC4-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP11]])
 ; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]

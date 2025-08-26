@@ -1408,12 +1408,9 @@ FieldHasTrivialDestructorBody(ASTContext &Context,
 {
   QualType FieldBaseElementType = Context.getBaseElementType(Field->getType());
 
-  const RecordType *RT = FieldBaseElementType->getAs<RecordType>();
-  if (!RT)
+  auto *FieldClassDecl = FieldBaseElementType->getAsCXXRecordDecl();
+  if (!FieldClassDecl)
     return true;
-
-  auto *FieldClassDecl =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
 
   // The destructor for an implicit anonymous union member is never invoked.
   if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
@@ -2850,12 +2847,9 @@ void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T, Address Derived,
   if (!getLangOpts().CPlusPlus)
     return;
 
-  auto *ClassTy = T->getAs<RecordType>();
-  if (!ClassTy)
+  const auto *ClassDecl = T->getAsCXXRecordDecl();
+  if (!ClassDecl)
     return;
-
-  const auto *ClassDecl =
-      cast<CXXRecordDecl>(ClassTy->getOriginalDecl())->getDefinitionOrSelf();
 
   if (!ClassDecl->isCompleteDefinition() || !ClassDecl->isDynamicClass())
     return;

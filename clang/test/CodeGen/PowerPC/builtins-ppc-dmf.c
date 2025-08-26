@@ -93,18 +93,36 @@ void test_pmdmxvi8gerx4spp(unsigned char *vdmrp, unsigned char *vpp, vector unsi
   *((__dmr1024 *)resp) = vdmr;
 }
 
-// CHECK-LABEL: @test_dmf_basic
-// CHECK-NEXT: entry:
-// CHECK-NEXT: [[TMP0:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
-// CHECK-NEXT: [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1> [[TMP0]])
-// CHECK-NEXT: store <1024 x i1> [[TMP1]], ptr %res1, align 128
-// CHECK-NEXT: [[TMP2:%.*]] = load <1024 x i1>, ptr %res2, align 128
-// CHECK-NEXT: [[TMP3:%.*]] = load <1024 x i1>, ptr %p, align 128
-// CHECK-NEXT: [[TMP4:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1> [[TMP2]], <1024 x i1> [[TMP3]])
-// CHECK-NEXT: store <1024 x i1> [[TMP4]], ptr %res2, align 128
+// CHECK-LABEL: @test_dmf_basic(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1> [[TMP0]])
+// CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RES1:%.*]], align 128
+// CHECK-NEXT:    [[TMP2:%.*]] = load <1024 x i1>, ptr [[RES2:%.*]], align 128
+// CHECK-NEXT:    [[TMP3:%.*]] = load <1024 x i1>, ptr [[P:%.*]], align 128
+// CHECK-NEXT:    [[TMP4:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1> [[TMP2]], <1024 x i1> [[TMP3]])
+// CHECK-NEXT:    store <1024 x i1> [[TMP4]], ptr [[RES2]], align 128
+// CHECK-NEXT:    ret void
+//
 void test_dmf_basic(char *p, char *res1, char *res2) {
   __dmr1024 x[2];
   __builtin_mma_dmsetdmrz(&x[0]);
   __builtin_mma_dmmr((__dmr1024*)res1, &x[0]);
   __builtin_mma_dmxor((__dmr1024*)res2, (__dmr1024*)p);
+}
+
+// CHECK-LABEL: @test_dmf_basic2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[V:%.*]], align 16, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <1024 x i1> @llvm.ppc.mma.build.dmr(<16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]], <16 x i8> [[TMP0]])
+// CHECK-NEXT:    store <1024 x i1> [[TMP1]], ptr [[RES2:%.*]], align 128
+// CHECK-NEXT:    [[TMP2:%.*]] = load <1024 x i1>, ptr [[P1:%.*]], align 128
+// CHECK-NEXT:    store <1024 x i1> [[TMP2]], ptr [[RES1:%.*]], align 128
+// CHECK-NEXT:    ret void
+//
+void test_dmf_basic2(char *p1, char *res1, char *res2,
+                     vector unsigned char *v) {
+  vector unsigned char vv = *v;
+  __builtin_mma_build_dmr((__dmr1024*)res2, vv, vv, vv, vv, vv, vv, vv, vv);
+  __builtin_mma_disassemble_dmr(res1, (__dmr1024*)p1);
 }
