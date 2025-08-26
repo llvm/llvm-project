@@ -30,7 +30,7 @@ if(MLIR_LINK_MLIR_DYLIB)
   set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
 endif()
 
-if(LLVM_BUILD_LLVM_DYLIB)
+if(MLIR_BUILD_MLIR_DYLIB)
   add_mlir_library(
     MLIR
     SHARED
@@ -45,6 +45,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
     ${mlir_llvm_link_components}
   )
   target_link_libraries(MLIR PRIVATE ${LLVM_PTHREAD_LIB})
+  target_link_libraries(MLIRDylib INTERFACE MLIR)
 endif()
 
 #message("Libraries included in libMLIR.so: ${mlir_libs}")
