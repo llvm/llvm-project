@@ -1123,6 +1123,33 @@ program rename_proc
 end program rename_proc
 ```
 
+### Non-Standard Intrinsics: SECNDS
+#### Description
+`SECNDS(refTime)` returns the number of seconds since midnight minus a user-supplied reference time `refTime`. If the difference is negative (i.e., the current time is past midnight and refTime was from the previous day), the result wraps around midnight to yield a positive value.
+
+#### Usage and Info
+- **Standard:**  GNU extension
+- **Class:**     function
+- **Syntax:**    result = `SECNDS(refTime)`
+- **Arguments:** 
+ 
+| ARGUMENT  | INTENT |      TYPE     |          KIND           |           Description                    |
+|-----------|--------|---------------|-------------------------|------------------------------------------|
+| `refTime` | `IN`   | `REAL, scalar`| REAL(KIND=4), required  | Reference time in seconds since midnight |
+
+- **Return Value:** REAL(KIND=4), scalar — seconds elapsed since `refTime`.
+- **Purity:**       Impure. SECNDS references the system clock and may not be invoked from a PURE procedure.
+
+#### Example
+```Fortran
+PROGRAM example_secnds
+  REAL :: refTime, elapsed
+  refTime = SECNDS(0.0)
+  elapsed = SECNDS(refTime)
+  PRINT *, "Elapsed seconds:", elapsed
+END PROGRAM example_secnds
+```
+
 ### Non-standard Intrinsics: SECOND
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
