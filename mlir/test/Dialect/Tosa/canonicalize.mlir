@@ -1304,10 +1304,9 @@ func.func nested @fold_reciprocal() -> tensor<3x600x1200xf32> {
   // CHECK:           %[[VAL_0:.*]] = "tosa.const"() <{values = dense<8.620690e-03> : tensor<3x600x1200xf32>}> : () -> tensor<3x600x1200xf32>
   // CHECK:           return %[[VAL_0]] : tensor<3x600x1200xf32>
   // CHECK:         }
-  %0 = "tosa.const"(){ values = dense<116.0>: tensor<f32> }: () -> tensor<f32>
-  %1 = "tosa.cast"(%0) : (tensor<f32>) -> tensor<3x600x1200xf32>
-  %2 = "tosa.reciprocal"(%1): (tensor<3x600x1200xf32>) -> tensor<3x600x1200xf32>
-  return %2 : tensor<3x600x1200xf32>
+  %0 = "tosa.const"(){ values = dense<116.0>: tensor<3x600x1200xf32> }: () -> tensor<3x600x1200xf32>
+  %1 = "tosa.reciprocal"(%0): (tensor<3x600x1200xf32>) -> tensor<3x600x1200xf32>
+  return %1 : tensor<3x600x1200xf32>
 }
 
 // -----
@@ -1315,10 +1314,9 @@ func.func nested @fold_reciprocal() -> tensor<3x600x1200xf32> {
 // CHECK-LABEL: @do_not_fold_reciprocal_int
 func.func nested @do_not_fold_reciprocal_int() -> tensor<3x600x1200xi32> {
   // CHECK:           tosa.reciprocal
-  %0 = "tosa.const"(){ values = dense<11>: tensor<i32> }: () -> tensor<i32>
-  %1 = "tosa.cast"(%0) : (tensor<i32>) -> tensor<3x600x1200xi32>
-  %2 = "tosa.reciprocal"(%1): (tensor<3x600x1200xi32>) -> tensor<3x600x1200xi32>
-  return %2 : tensor<3x600x1200xi32>
+  %0 = "tosa.const"(){ values = dense<11>: tensor<3x600x1200xi32> }: () -> tensor<3x600x1200xi32>
+  %1 = "tosa.reciprocal"(%0): (tensor<3x600x1200xi32>) -> tensor<3x600x1200xi32>
+  return %1 : tensor<3x600x1200xi32>
 }
 
 // -----
