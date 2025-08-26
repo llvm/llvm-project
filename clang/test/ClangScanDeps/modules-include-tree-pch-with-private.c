@@ -47,7 +47,7 @@
 // CHECK-LABEL: MODULE Indirect2
 // CHECK: <module-includes> llvmcas://
 // CHECK: 1:1 <built-in> llvmcas://
-// CHECK: 2:1 [[PREFIX]]/indirect2.h llvmcas://
+// CHECK: 2:1 [[PREFIX]]{{[/\\]}}indirect2.h llvmcas://
 // CHECK:   Submodule: Indirect2
 // CHECK:   2:1 (Module) Indirect1
 // CHECK:   3:1 (Module) Mod_Private

@@ -30,7 +30,7 @@
 // RUN: echo "TRANSLATION UNIT 2" >> %t/result.txt
 // RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/tu2.casid >> %t/result.txt
 
-// RUN: FileCheck %s -input-file %t/result.txt -DPREFIX=%/t
+// RUN: cat %t/result.txt | sed 's/\\/\//g' | FileCheck %s -DPREFIX=%/t
 
 // Build the include-tree commands
 // RUN: %clang @%t/TwoSubs.rsp

@@ -17,7 +17,7 @@
 // RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/tu.casid | FileCheck %s -DPREFIX=%/t
 // RUN: %clang @%t/tu.rsp
 
-// CHECK: [[PREFIX]]/tu.c llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]{{[/\\]}}tu.c llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
 
 // Note: this is surprising, but correct: when building the implementation files
@@ -25,14 +25,14 @@
 // machinery. The second include is treated as a module import (unless in a PCH)
 // but will not actually import the module only trigger visibility changes.
 
-// CHECK: 2:1 [[PREFIX]]/Mod.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 [[PREFIX]]{{[/\\]}}Mod.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   Submodule: Mod
 // CHECK: 3:1 (Module for visibility only) Mod
 
 // CHECK: Files:
-// CHECK: [[PREFIX]]/tu.c llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]{{[/\\]}}tu.c llvmcas://{{[[:xdigit:]]+}}
 // CHECK-NOT: [[PREFIX]]/module.modulemap
-// CHECK: [[PREFIX]]/Mod.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]{{[/\\]}}Mod.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK-NOT: [[PREFIX]]/module.modulemap
 
 // RUN: %deps-to-rsp %t/deps.json --tu-index 1 > %t/tu_missing_module.rsp

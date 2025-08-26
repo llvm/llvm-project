@@ -142,9 +142,9 @@ Error CASFileSystem::initialize(ObjectRef Root) {
 }
 
 std::error_code CASFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
-  SmallString<128> Storage;
+  PathStorage PathStorage(Path, PathStyle);
   StringRef CanonicalPath = FileSystemCache::canonicalizeWorkingDirectory(
-      Path, PathStyle, WorkingDirectory.Path, Storage);
+      PathStyle, WorkingDirectory.Path, PathStorage.Storage);
 
   // Read and cache all the symlinks in the path by looking it up. Return any
   // error encountered.
@@ -233,8 +233,8 @@ Error CASFileSystem::loadSymlink(DirectoryEntry &Entry) {
 }
 
 ErrorOr<vfs::Status> CASFileSystem::status(const Twine &Path) {
-  SmallString<128> Storage;
-  StringRef PathRef = Path.toStringRef(Storage);
+  PathStorage PathStorage(Path, PathStyle);
+  StringRef PathRef = PathStorage.Path;
 
   // Lookup only returns an Error if there's a problem communicating with the
   // CAS, or there's data corruption.
@@ -257,8 +257,8 @@ ErrorOr<vfs::Status> CASFileSystem::status(const Twine &Path) {
 
 Expected<const vfs::CachedDirectoryEntry *>
 CASFileSystem::getDirectoryEntry(const Twine &Path, bool FollowSymlinks) const {
-  SmallString<128> Storage;
-  StringRef PathRef = Path.toStringRef(Storage);
+  PathStorage PathStorage(Path, PathStyle);
+  StringRef PathRef = PathStorage.Path;
 
   // It's not a const operation, but it's thread-safe.
   return const_cast<CASFileSystem *>(this)->lookupPath(PathRef, FollowSymlinks);
@@ -266,8 +266,8 @@ CASFileSystem::getDirectoryEntry(const Twine &Path, bool FollowSymlinks) const {
 
 ErrorOr<std::unique_ptr<vfs::File>>
 CASFileSystem::openFileForRead(const Twine &Path) {
-  SmallString<128> Storage;
-  StringRef PathRef = Path.toStringRef(Storage);
+  PathStorage PathStorage(Path, PathStyle);
+  StringRef PathRef = PathStorage.Path;
 
   Expected<DirectoryEntry *> ExpectedEntry = lookupPath(PathRef);
   if (!ExpectedEntry)
@@ -286,8 +286,8 @@ CASFileSystem::openFileForRead(const Twine &Path) {
 
 ErrorOr<vfs::directory_iterator>
 CASFileSystem::getDirectoryIterator(const Twine &Path) {
-  SmallString<128> Storage;
-  StringRef PathRef = Path.toStringRef(Storage);
+  PathStorage PathStorage(Path, PathStyle);
+  StringRef PathRef = PathStorage.Path;
 
   Expected<DirectoryEntry *> ExpectedEntry = lookupPath(PathRef);
   if (!ExpectedEntry)
@@ -341,8 +341,10 @@ private:
 
 Expected<CASFileSystem::DirectoryEntry *>
 CASFileSystem::lookupPath(StringRef Path, bool FollowSymlinks) {
+  PathStorage PathStorage(Path, PathStyle);
+  StringRef PathRef = PathStorage.Path;
   DiscoveryInstanceImpl DI(*this);
-  return Cache->lookupPath(DI, Path, *WorkingDirectory.Entry, FollowSymlinks);
+  return Cache->lookupPath(DI, PathRef, *WorkingDirectory.Entry, FollowSymlinks);
 }
 
 static Expected<std::unique_ptr<CASFileSystem>>

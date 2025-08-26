@@ -12,21 +12,21 @@
 // Make sure order is as expected.
 // RUN: FileCheck %s -input-file %t/result1.txt -DPREFIX=%/t -check-prefix ORDER
 
-// ORDER:      {{.*}} - [[PREFIX]]/t.c
-// ORDER-NEXT: [[PREFIX]]/t.c
+// ORDER:      {{.*}} - [[PREFIX]]{{[/\\]}}t.c
+// ORDER-NEXT: [[PREFIX]]{{[/\\]}}t.c
 // ORDER-NEXT: 1:1 <built-in>
-// ORDER-NEXT:   [[PREFIX]]/top.h
-// ORDER-NEXT:     [[PREFIX]]/n1.h
-// ORDER-NEXT:       [[PREFIX]]/n2.h
-// ORDER-NEXT:     [[PREFIX]]/n3.h
-// ORDER-NEXT: [[PREFIX]]/n3.h
-// ORDER-NEXT: [[PREFIX]]/n2.h
+// ORDER-NEXT:   [[PREFIX]]{{[/\\]}}top.h
+// ORDER-NEXT:     [[PREFIX]]{{[/\\]}}n1.h
+// ORDER-NEXT:       [[PREFIX]]{{[/\\]}}n2.h
+// ORDER-NEXT:     [[PREFIX]]{{[/\\]}}n3.h
+// ORDER-NEXT: [[PREFIX]]{{[/\\]}}n3.h
+// ORDER-NEXT: [[PREFIX]]{{[/\\]}}n2.h
 // ORDER-NEXT: Files:
-// ORDER-NEXT: [[PREFIX]]/t.c
-// ORDER-NEXT: [[PREFIX]]/top.h
-// ORDER-NEXT: [[PREFIX]]/n1.h
-// ORDER-NEXT: [[PREFIX]]/n2.h
-// ORDER-NEXT: [[PREFIX]]/n3.h
+// ORDER-NEXT: [[PREFIX]]{{[/\\]}}t.c
+// ORDER-NEXT: [[PREFIX]]{{[/\\]}}top.h
+// ORDER-NEXT: [[PREFIX]]{{[/\\]}}n1.h
+// ORDER-NEXT: [[PREFIX]]{{[/\\]}}n2.h
+// ORDER-NEXT: [[PREFIX]]{{[/\\]}}n3.h
 // ORDER-NOT: [[PREFIX]]
 
 // Full dependency output
@@ -40,7 +40,7 @@
 
 // Capture the tree id from experimental-include-tree ; ensure that it matches
 // the result from experimental-full.
-// FULL: [[TREE_ID:llvmcas://[[:xdigit:]]+]] - [[PREFIX]]/t.c
+// FULL: [[TREE_ID:llvmcas://[[:xdigit:]]+]] - [[PREFIX]]{{[/\\]}}t.c
 // FULL: FULL DEPS START
 
 // FULL-NEXT: {
@@ -67,7 +67,7 @@
 // FULL-NEXT:             "t.c"
 // FULL-NOT:              "t.c"
 // FULL:                ]
-// FULL:                "executable": "[[CLANG]]"
+// FULL:                "{{.*[\\/]clang(\.exe)?}}",
 // FULL:                "file-deps": [
 // FULL-NEXT:             "[[PREFIX]]/t.c"
 // FULL-NEXT:             "[[PREFIX]]/top.h"
@@ -110,16 +110,16 @@
 //--- t.c
 
 #include "top.h" // this is top
-// CHECK: [[@LINE]]:1 [[PREFIX]]/top.h
+// CHECK: [[@LINE]]:1 [[PREFIX]]{{[/\\]}}top.h
 
 // Skipped because of macro guard.
 #include "n1.h"
 
 #include "n3.h"
-// CHECK-DAG: [[@LINE]]:1 [[PREFIX]]/n3.h
+// CHECK-DAG: [[@LINE]]:1 [[PREFIX]]{{[/\\]}}n3.h
 
 #include "n2.h"
-// CHECK-DAG: [[@LINE]]:1 [[PREFIX]]/n2.h
+// CHECK-DAG: [[@LINE]]:1 [[PREFIX]]{{[/\\]}}n2.h
 
 //--- top.h
 #ifndef _TOP_H_
@@ -131,10 +131,10 @@ typedef int MyT;
 
 #define WHATEVER 1
 #include "n1.h"
-// CHECK-DAG:   [[@LINE]]:1 [[PREFIX]]/n1.h
+// CHECK-DAG:   [[@LINE]]:1 [[PREFIX]]{{[/\\]}}n1.h
 
 #include "n3.h"
-// CHECK-DAG:   [[@LINE]]:1 [[PREFIX]]/n3.h
+// CHECK-DAG:   [[@LINE]]:1 [[PREFIX]]{{[/\\]}}n3.h
 
 #define ANOTHER 2
 
@@ -149,7 +149,7 @@ struct S {
 
 int x1;
 #include "n2.h"
-// CHECK-DAG:     [[@LINE]]:1 [[PREFIX]]/n2.h
+// CHECK-DAG:     [[@LINE]]:1 [[PREFIX]]{{[/\\]}}n2.h
 
 int x2;
 
