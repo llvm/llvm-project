@@ -76,12 +76,10 @@ async function findDAPExecutable(): Promise<string | undefined> {
  * @returns Whether or not the DAP environment is valid
  */
 function validateDAPEnv(debugConfigEnv: any): boolean {
-  // If the env is an object, it should have string keys and values.
+  // If the env is an object, it should have string values.
+  // The keys are guaranteed to be strings.
   if (
     typeof debugConfigEnv === "object" &&
-    Object.keys(debugConfigEnv).findIndex(
-      (entry) => typeof entry !== "string",
-    ) !== -1 &&
     Object.values(debugConfigEnv).findIndex(
       (entry) => typeof entry !== "string",
     ) !== -1
