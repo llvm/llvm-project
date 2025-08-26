@@ -92,7 +92,7 @@ public:
   void addRecipeForPart(VPRecipeBase *OrigR, VPRecipeBase *CopyR,
                         unsigned Part) {
     for (const auto &[Idx, VPV] : enumerate(OrigR->definedValues())) {
-      const auto &[V, _] = VPV2Parts.try_emplace(VPV, SmallVector<VPValue *>());
+      const auto &[V, _] = VPV2Parts.try_emplace(VPV);
       assert(V->second.size() == Part - 1 && "earlier parts not set");
       V->second.push_back(CopyR->getVPValue(Idx));
     }
@@ -100,8 +100,7 @@ public:
 
   /// Given a uniform recipe \p R, add it for all parts.
   void addUniformForAllParts(VPSingleDefRecipe *R) {
-    const auto &[V, Inserted] =
-        VPV2Parts.try_emplace(R, SmallVector<VPValue *>());
+    const auto &[V, Inserted] = VPV2Parts.try_emplace(R);
     assert(Inserted && "uniform value already added");
     for (unsigned Part = 0; Part != UF; ++Part)
       V->second.push_back(R);
