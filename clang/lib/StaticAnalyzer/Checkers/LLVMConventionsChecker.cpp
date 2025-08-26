@@ -195,14 +195,10 @@ static bool IsPartOfAST(const CXXRecordDecl *R) {
   if (IsClangStmt(R) || IsClangType(R) || IsClangDecl(R) || IsClangAttr(R))
     return true;
 
-  for (const auto &BS : R->bases()) {
-    QualType T = BS.getType();
-    if (const RecordType *baseT = T->getAs<RecordType>()) {
-      CXXRecordDecl *baseD = cast<CXXRecordDecl>(baseT->getOriginalDecl());
-      if (IsPartOfAST(baseD))
-        return true;
-    }
-  }
+  for (const auto &BS : R->bases())
+    if (const auto *baseD = BS.getType()->getAsCXXRecordDecl();
+        baseD && IsPartOfAST(baseD))
+      return true;
 
   return false;
 }
@@ -243,11 +239,9 @@ void ASTFieldVisitor::Visit(FieldDecl *D) {
   if (AllocatesMemory(T))
     ReportError(T);
 
-  if (const RecordType *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
+  if (const auto *RD = T->getAsRecordDecl())
     for (auto *I : RD->fields())
       Visit(I);
-  }
 
   FieldChain.pop_back();
 }
