@@ -12,6 +12,7 @@ struct throwing_destructor {
     throw 1;
   }
 };
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'int' may be thrown in function '~throwing_destructor' here
 
 struct throwing_move_constructor {
   throwing_move_constructor(throwing_move_constructor&&) {
@@ -19,6 +20,7 @@ struct throwing_move_constructor {
     throw 1;
   }
 };
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throwing_move_constructor' here
 
 struct throwing_move_assignment {
   throwing_move_assignment& operator=(throwing_move_assignment&&) {
@@ -26,11 +28,13 @@ struct throwing_move_assignment {
     throw 1;
   }
 };
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator=' here
 
 void throwing_noexcept() noexcept {
     // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throwing_noexcept' which should not throw exceptions
   throw 1;
 }
+// CHECK-MESSAGES: :[[@LINE-2]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throwing_noexcept' here
 
 void throw_and_catch() noexcept {
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_and_catch' which should not throw exceptions
@@ -48,6 +52,7 @@ void throw_and_catch_some(int n) noexcept {
   } catch(int &) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'double' may be thrown in function 'throw_and_catch_some' here
 
 void throw_and_catch_each(int n) noexcept {
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_and_catch_each' which should not throw exceptions
@@ -76,6 +81,7 @@ void throw_and_rethrow() noexcept {
     throw;
   }
 }
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_and_rethrow' here
 
 void throw_catch_throw() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_catch_throw' which should not throw exceptions
@@ -85,6 +91,7 @@ void throw_catch_throw() noexcept {
     throw 2;
   }
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_catch_throw' here
 
 void throw_catch_rethrow_the_rest(int n) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_catch_rethrow_the_rest' which should not throw exceptions
@@ -96,6 +103,7 @@ void throw_catch_rethrow_the_rest(int n) noexcept {
     throw;
   }
 }
+// CHECK-MESSAGES: :[[@LINE-6]]:5: note: frame #0: unhandled exception of type 'double' may be thrown in function 'throw_catch_rethrow_the_rest' here
 
 void throw_catch_pointer_c() noexcept {
   try {
@@ -126,6 +134,7 @@ void throw_catch_multi_ptr_1() noexcept {
   } catch (const char **) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'char **' may be thrown in function 'throw_catch_multi_ptr_1' here
 
 void throw_catch_multi_ptr_2() noexcept {
   try {
@@ -171,6 +180,7 @@ void throw_c_catch_pointer() noexcept {
     throw p;
   } catch(int *) {}
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'const int *' may be thrown in function 'throw_c_catch_pointer' here
 
 void throw_c_catch_pointer_v() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_c_catch_pointer_v' which should not throw exceptions
@@ -180,6 +190,7 @@ void throw_c_catch_pointer_v() noexcept {
     throw p;
   } catch(volatile int *) {}
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'const int *' may be thrown in function 'throw_c_catch_pointer_v' here
 
 void throw_v_catch_pointer() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_v_catch_pointer' which should not throw exceptions
@@ -189,6 +200,7 @@ void throw_v_catch_pointer() noexcept {
     throw p;
   } catch(int *) {}
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'volatile int *' may be thrown in function 'throw_v_catch_pointer' here
 
 void throw_v_catch_pointer_c() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_v_catch_pointer_c' which should not throw exceptions
@@ -198,6 +210,7 @@ void throw_v_catch_pointer_c() noexcept {
     throw p;
   } catch(const int *) {}
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'volatile int *' may be thrown in function 'throw_v_catch_pointer_c' here
 
 void throw_cv_catch_pointer_c() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_cv_catch_pointer_c' which should not throw exceptions
@@ -207,6 +220,7 @@ void throw_cv_catch_pointer_c() noexcept {
     throw p;
   } catch(const int *) {}
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'const volatile int *' may be thrown in function 'throw_cv_catch_pointer_c' here
 
 void throw_cv_catch_pointer_v() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_cv_catch_pointer_v' which should not throw exceptions
@@ -216,6 +230,7 @@ void throw_cv_catch_pointer_v() noexcept {
     throw p;
   } catch(volatile int *) {}
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: unhandled exception of type 'const volatile int *' may be thrown in function 'throw_cv_catch_pointer_v' here
 
 class base {};
 class derived: public base {};
@@ -263,6 +278,7 @@ void throw_derived_catch_base_ptr() noexcept {
   } catch(base *) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'const derived *' may be thrown in function 'throw_derived_catch_base_ptr' here
 
 class A {};
 class B : A {};
@@ -286,6 +302,7 @@ void throw_derived_catch_base_private() noexcept {
   } catch(A) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'B' may be thrown in function 'throw_derived_catch_base_private' here
 
 void throw_derived_catch_base_private_ptr() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_private_ptr' which should not throw exceptions
@@ -295,6 +312,7 @@ void throw_derived_catch_base_private_ptr() noexcept {
   } catch(A *) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'B *' may be thrown in function 'throw_derived_catch_base_private_ptr' here
 
 void throw_derived_catch_base_protected() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_protected' which should not throw exceptions
@@ -304,6 +322,7 @@ void throw_derived_catch_base_protected() noexcept {
   } catch(A) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'C' may be thrown in function 'throw_derived_catch_base_protected' here
 
 void throw_derived_catch_base_protected_ptr() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_protected_ptr' which should not throw exceptions
@@ -313,6 +332,7 @@ void throw_derived_catch_base_protected_ptr() noexcept {
   } catch(A *) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'C *' may be thrown in function 'throw_derived_catch_base_protected_ptr' here
 
 void throw_derived_catch_base_ambiguous() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_ambiguous' which should not throw exceptions
@@ -322,6 +342,7 @@ void throw_derived_catch_base_ambiguous() noexcept {
   } catch(A) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'E' may be thrown in function 'throw_derived_catch_base_ambiguous' here
 
 void throw_derived_catch_base_ambiguous_ptr() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derived_catch_base_ambiguous_ptr' which should not throw exceptions
@@ -331,6 +352,7 @@ void throw_derived_catch_base_ambiguous_ptr() noexcept {
   } catch(A) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'E' may be thrown in function 'throw_derived_catch_base_ambiguous_ptr' here
 
 void throw_alias_catch_original() noexcept {
   using alias = int;
@@ -352,6 +374,7 @@ void throw_alias_catch_original_warn() noexcept {
   } catch (int) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'float' may be thrown in function 'throw_alias_catch_original_warn' here
 
 void throw_original_catch_alias() noexcept {
   using alias = char;
@@ -373,6 +396,7 @@ void throw_original_catch_alias_warn() noexcept {
   } catch (volatile const alias *const *) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'char **' may be thrown in function 'throw_original_catch_alias_warn' here
 
 void throw_original_catch_alias_2() noexcept {
   using alias = const char *const;
@@ -433,6 +457,7 @@ void throw_basefn_catch_derivedfn() noexcept {
   } catch(void(derivedMember::*)()) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'void (baseMember::*)()' may be thrown in function 'throw_basefn_catch_derivedfn' here
 
 void throw_basefn_catch_basefn() noexcept {
   try {
@@ -449,6 +474,7 @@ void throw_basem_catch_basem_throw() noexcept {
   } catch(const int* baseMember::* const *) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'int *baseMember::**' may be thrown in function 'throw_basem_catch_basem_throw' here
 
 void throw_basem_catch_basem() noexcept {
   try {
@@ -466,6 +492,7 @@ void throw_basem_catch_derivedm() noexcept {
   } catch(const int* const derivedMember::* const *) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'int *baseMember::**' may be thrown in function 'throw_basem_catch_derivedm' here
 
 void throw_derivedm_catch_basem() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_derivedm_catch_basem' which should not throw exceptions
@@ -475,6 +502,7 @@ void throw_derivedm_catch_basem() noexcept {
   } catch(const int* const baseMember::* const *) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'int *derivedMember::**' may be thrown in function 'throw_derivedm_catch_basem' here
 
 void throw_original_catch_alias_2_warn() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_original_catch_alias_2_warn' which should not throw exceptions
@@ -486,6 +514,7 @@ void throw_original_catch_alias_2_warn() noexcept {
   } catch (volatile alias *) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #0: unhandled exception of type 'char **' may be thrown in function 'throw_original_catch_alias_2_warn' here
 
 void try_nested_try(int n) noexcept {
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'try_nested_try' which should not throw exceptions
@@ -510,6 +539,7 @@ void bad_try_nested_try(int n) noexcept {
   } catch(double &) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-8]]:12: note: frame #0: unhandled exception of type 'int' may be thrown in function 'bad_try_nested_try' here
 
 void try_nested_catch() noexcept {
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'try_nested_catch' which should not throw exceptions
@@ -547,6 +577,7 @@ void bad_catch_nested_try() noexcept {
   } catch(double &) {
   }
 }
+// CHECK-MESSAGES: :[[@LINE-6]]:7: note: frame #0: unhandled exception of type 'double' may be thrown in function 'bad_catch_nested_try' here
 
 void implicit_int_thrower() {
   throw 1;
@@ -560,11 +591,15 @@ void indirect_implicit() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_implicit' which should not throw exceptions
   implicit_int_thrower();
 }
+// CHECK-MESSAGES: :[[@LINE-11]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'implicit_int_thrower' here
+// CHECK-MESSAGES: :[[@LINE-3]]:3: note: frame #1: function 'indirect_implicit' calls function 'implicit_int_thrower' here
 
 void indirect_explicit() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_explicit' which should not throw exceptions
   explicit_int_thrower();
 }
+// CHECK-MESSAGES: :[[@LINE-14]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'explicit_int_thrower' here
+// CHECK-MESSAGES: :[[@LINE-3]]:3: note: frame #1: function 'indirect_explicit' calls function 'explicit_int_thrower' here
 
 void indirect_catch() noexcept {
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_catch' which should not throw exceptions
@@ -585,16 +620,19 @@ void swap(int&, int&) {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'swap' which should not throw exceptions
   throw 1;
 }
+// CHECK-MESSAGES: :[[@LINE-2]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'swap' here
 
 void iter_swap(int&, int&) {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'iter_swap' which should not throw exceptions
   throw 1;
 }
+// CHECK-MESSAGES: :[[@LINE-2]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'iter_swap' here
 
 void iter_move(int&) {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'iter_move' which should not throw exceptions
   throw 1;
 }
+// CHECK-MESSAGES: :[[@LINE-2]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'iter_move' here
 
 namespace std {
 class bad_alloc {};
@@ -613,11 +651,14 @@ void enabled1() {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'enabled1' which should not throw exceptions
   throw 1;
 }
+// CHECK-MESSAGES: :[[@LINE-2]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'enabled1' here
 
 void enabled2() {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'enabled2' which should not throw exceptions
   enabled1();
 }
+// CHECK-MESSAGES: :[[@LINE-8]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'enabled1' here
+// CHECK-MESSAGES: :[[@LINE-3]]:3: note: frame #1: function 'enabled2' calls function 'enabled1' here
 
 void enabled3() {
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'enabled3' which should not throw exceptions
@@ -626,6 +667,64 @@ void enabled3() {
   } catch(...) {
   }
 }
+
+void deep_level3_thrower() {
+  throw 42;
+}
+
+void deep_level2_caller() {
+  deep_level3_thrower();
+}
+
+void deep_level1_caller() {
+  deep_level2_caller();
+}
+
+void deep_stack_test() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'deep_stack_test' which should not throw exceptions
+  deep_level1_caller();
+}
+// CHECK-MESSAGES: :[[@LINE-15]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'deep_level3_thrower' here
+// CHECK-MESSAGES: :[[@LINE-12]]:3: note: frame #1: function 'deep_level2_caller' calls function 'deep_level3_thrower' here
+// CHECK-MESSAGES: :[[@LINE-9]]:3: note: frame #2: function 'deep_level1_caller' calls function 'deep_level2_caller' here
+// CHECK-MESSAGES: :[[@LINE-5]]:3: note: frame #3: function 'deep_stack_test' calls function 'deep_level1_caller' here
+
+// Template function call stack
+template<typename T>
+void template_thrower(T t) {
+  throw T{};
+}
+
+template<typename T>
+void template_caller(T t) {
+  template_thrower<T>(t);
+}
+
+void template_stack_test() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'template_stack_test' which should not throw exceptions
+  template_caller<char>('a');
+}
+// CHECK-MESSAGES: :[[@LINE-12]]:3: note: frame #0: unhandled exception of type 'char' may be thrown in function 'template_thrower<char>' here
+// CHECK-MESSAGES: :[[@LINE-8]]:3: note: frame #1: function 'template_caller<char>' calls function 'template_thrower<char>' here
+// CHECK-MESSAGES: :[[@LINE-4]]:3: note: frame #2: function 'template_stack_test' calls function 'template_caller<char>' here
+
+// template function without instantiation is not warned
+template<typename T>
+void template_function_stack_test(T t) noexcept {
+  template_thrower(t);
+}
+
+void multiple_exception_types(int choice) noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'multiple_exception_types' which should not throw exceptions
+  if (choice == 1) {
+    throw 42;
+  } else if (choice == 2) {
+    throw 3.14;
+  } else if (choice == 3) {
+    throw "string";
+  }
+}
+// CHECK-MESSAGES: note: frame #0: unhandled exception of type '{{(int|double|const char \*)}}' may be thrown in function 'multiple_exception_types' here
 
 class ignored1 {};
 class ignored2 {};
@@ -649,6 +748,7 @@ void this_counts(int n) noexcept {
   if (n) throw 1;
   throw ignored1();
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:10: note: frame #0: unhandled exception of type 'int' may be thrown in function 'this_counts' here
 
 void thrower(int n) {
   throw n;
@@ -660,11 +760,14 @@ int directly_recursive(int n) noexcept {
     thrower(n);
   return directly_recursive(n);
 }
+// CHECK-MESSAGES: :[[@LINE-9]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #1: function 'directly_recursive' calls function 'thrower' here
 
 int indirectly_recursive(int n) noexcept;
 
 int recursion_helper(int n) {
   indirectly_recursive(n);
+  return 0;
 }
 
 int indirectly_recursive(int n) noexcept {
@@ -673,6 +776,8 @@ int indirectly_recursive(int n) noexcept {
     thrower(n);
   return recursion_helper(n);
 }
+// CHECK-MESSAGES: :[[@LINE-25]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #1: function 'indirectly_recursive' calls function 'thrower' here
 
 struct super_throws {
   super_throws() noexcept(false) { throw 42; }
@@ -682,6 +787,8 @@ struct sub_throws : super_throws {
   sub_throws() noexcept : super_throws() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'sub_throws' which should not throw exceptions
 };
+// CHECK-MESSAGES: :[[@LINE-7]]:36: note: frame #0: unhandled exception of type 'int' may be thrown in function 'super_throws' here
+// CHECK-MESSAGES: :[[@LINE-4]]:27: note: frame #1: function 'sub_throws' calls function 'super_throws' here
 
 struct init_member_throws {
   super_throws s;
@@ -689,6 +796,8 @@ struct init_member_throws {
   init_member_throws() noexcept : s() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'init_member_throws' which should not throw exceptions
 };
+// CHECK-MESSAGES: :[[@LINE-16]]:36: note: frame #0: unhandled exception of type 'int' may be thrown in function 'super_throws' here
+// CHECK-MESSAGES: :[[@LINE-4]]:35: note: frame #1: function 'init_member_throws' calls function 'super_throws' here
 
 struct implicit_init_member_throws {
   super_throws s;
@@ -696,6 +805,8 @@ struct implicit_init_member_throws {
   implicit_init_member_throws() noexcept {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'implicit_init_member_throws' which should not throw exceptions
 };
+// CHECK-MESSAGES: :[[@LINE-25]]:36: note: frame #0: unhandled exception of type 'int' may be thrown in function 'super_throws' here
+// CHECK-MESSAGES: :[[@LINE-4]]:3: note: frame #1: function 'implicit_init_member_throws' calls function 'super_throws'
 
 struct init {
   explicit init(int, int) noexcept(false) { throw 42; }
@@ -707,18 +818,22 @@ struct in_class_init_throws {
   in_class_init_throws() noexcept {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'in_class_init_throws' which should not throw exceptions
 };
+// CHECK-MESSAGES: :[[@LINE-9]]:45: note: frame #0: unhandled exception of type 'int' may be thrown in function 'init' here
+// CHECK-MESSAGES: :[[@LINE-6]]:9: note: frame #1: function 'in_class_init_throws' calls function 'init' here
 
 int main() {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'main' which should not throw exceptions
   throw 1;
   return 0;
 }
+// CHECK-MESSAGES: :[[@LINE-3]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'main' here
 
 // The following function all incorrectly throw exceptions, *but* calling them
 // should not yield a warning because they are marked as noexcept.
 
 void test_basic_no_throw() noexcept { throw 42; }
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'test_basic_no_throw' which should not throw exceptions
+// CHECK-MESSAGES: :[[@LINE-2]]:39: note: frame #0: unhandled exception of type 'int' may be thrown in function 'test_basic_no_throw' here
 
 void test_basic_throw() noexcept(false) { throw 42; }
 
@@ -731,6 +846,8 @@ void calls_non_and_throwing() noexcept {
   test_basic_no_throw();
   test_basic_throw();
 }
+// CHECK-MESSAGES: :[[@LINE-11]]:43: note: frame #0: unhandled exception of type 'int' may be thrown in function 'test_basic_throw' here
+// CHECK-MESSAGES: :[[@LINE-3]]:3: note: frame #1: function 'calls_non_and_throwing' calls function 'test_basic_throw' here
 
 namespace PR55143 { namespace PR40583 {
 
@@ -748,11 +865,14 @@ struct test_implicit_throw {
     test_implicit_throw(const test_implicit_throw&) { throw 42; }
     test_implicit_throw(test_implicit_throw&&) { throw 42; }
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'test_implicit_throw' which should not throw exceptions
+    // CHECK-MESSAGES: :[[@LINE-2]]:50: note: frame #0: unhandled exception of type 'int' may be thrown in function 'test_implicit_throw' here
     test_implicit_throw& operator=(const test_implicit_throw&) { throw 42; }
     test_implicit_throw& operator=(test_implicit_throw&&) { throw 42; }
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: an exception may be thrown in function 'operator=' which should not throw exceptions
+    // CHECK-MESSAGES: :[[@LINE-2]]:61: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator='
     ~test_implicit_throw() { throw 42; }
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function '~test_implicit_throw' which should not throw exceptions
+    // CHECK-MESSAGES: :[[@LINE-2]]:30: note: frame #0: unhandled exception of type 'int' may be thrown in function '~test_implicit_throw' here
 };
 
 }}

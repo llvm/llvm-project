@@ -230,7 +230,6 @@ exit:
 define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
@@ -239,7 +238,8 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $buf, %ecx
 ; CHECK-NEXT:    movl $32, %edx
-; CHECK-NEXT:    leal -1(%rsi), %r8d
+; CHECK-NEXT:    movl %esi, %r8d
+; CHECK-NEXT:    decl %r8d
 ; CHECK-NEXT:    jmp .LBB4_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_3: # %if.false

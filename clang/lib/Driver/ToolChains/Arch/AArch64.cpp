@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "../CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -51,6 +50,22 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
       Triple.getArch() == llvm::Triple::aarch64) {
     // Apple Silicon macs default to M1 CPUs.
     return "apple-m1";
+  }
+
+  if (Triple.getOS() == llvm::Triple::IOS) {
+    assert(!Triple.isSimulatorEnvironment() && "iossim should be mac-like");
+    // iOS 26 only runs on apple-a12 and later CPUs.
+    if (!Triple.isOSVersionLT(26))
+      return "apple-a12";
+  }
+
+  if (Triple.isWatchOS()) {
+    assert(!Triple.isSimulatorEnvironment() && "watchossim should be mac-like");
+    // arm64_32/arm64e watchOS requires S4 before watchOS 26, S6 after.
+    if (Triple.getArch() == llvm::Triple::aarch64_32 || Triple.isArm64e())
+      return Triple.isOSVersionLT(26) ? "apple-s4" : "apple-s6";
+    // arm64 (non-e, non-32) watchOS comes later, and requires S6 anyway.
+    return "apple-s6";
   }
 
   if (Triple.isXROS()) {
@@ -135,14 +150,20 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   return true;
 }
 
-static bool
-getAArch64ArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
-                               const ArgList &Args,
-                               llvm::AArch64::ExtensionSet &Extensions) {
+static bool getAArch64ArchFeaturesFromMcpu(
+    const Driver &D, StringRef Mcpu, const ArgList &Args,
+    llvm::AArch64::ExtensionSet &Extensions, std::vector<StringRef> &Features) {
   StringRef CPU;
   std::string McpuLowerCase = Mcpu.lower();
   if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, Extensions))
     return false;
+
+  if (Mcpu == "native") {
+    llvm::StringMap<bool> HostFeatures = llvm::sys::getHostCPUFeatures();
+    for (auto &[Feature, Enabled] : HostFeatures) {
+      Features.push_back(Args.MakeArgString((Enabled ? "+" : "-") + Feature));
+    }
+  }
 
   return true;
 }
@@ -151,46 +172,25 @@ static bool
 getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
                                      const ArgList &Args,
                                      std::vector<StringRef> &Features) {
-  std::string MtuneLowerCase = Mtune.lower();
   // Check CPU name is valid, but ignore any extensions on it.
+  std::string MtuneLowerCase = Mtune.lower();
   llvm::AArch64::ExtensionSet Extensions;
   StringRef Tune;
-  if (!DecodeAArch64Mcpu(D, MtuneLowerCase, Tune, Extensions))
-    return false;
-
-  // Handle CPU name is 'native'.
-  if (MtuneLowerCase == "native")
-    MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
-
-  // 'cyclone' and later have zero-cycle register moves and zeroing.
-  if (MtuneLowerCase == "cyclone" ||
-      StringRef(MtuneLowerCase).starts_with("apple")) {
-    Features.push_back("+zcm");
-    Features.push_back("+zcz");
-  }
-
-  return true;
+  return DecodeAArch64Mcpu(D, MtuneLowerCase, Tune, Extensions);
 }
 
 static bool
 getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
                                     const ArgList &Args,
                                     std::vector<StringRef> &Features) {
-  StringRef CPU;
-  // Check CPU name is valid, but ignore any extensions on it.
-  llvm::AArch64::ExtensionSet DecodedFeature;
-  std::string McpuLowerCase = Mcpu.lower();
-  if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, DecodedFeature))
-    return false;
-
-  return getAArch64MicroArchFeaturesFromMtune(D, CPU, Args, Features);
+  return getAArch64MicroArchFeaturesFromMtune(D, Mcpu, Args, Features);
 }
 
 void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        const llvm::Triple &Triple,
                                        const ArgList &Args,
                                        std::vector<StringRef> &Features,
-                                       bool ForAS) {
+                                       bool ForAS, bool ForMultilib) {
   Arg *A;
   bool success = true;
   llvm::StringRef WaMArch;
@@ -210,11 +210,11 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success =
         getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Extensions);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success =
-        getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
+    success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions,
+                                             Features);
   else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions);
+        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions, Features);
   else
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
@@ -325,6 +325,19 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
       Features.push_back("+strict-align");
   } else if (Triple.isOSOpenBSD())
     Features.push_back("+strict-align");
+
+  // Generate execute-only output (no data access to code sections).
+  // This only makes sense for the compiler, not for the assembler.
+  // It's not needed for multilib selection and may hide an unused
+  // argument diagnostic if the code is always run.
+  if (!ForAS && !ForMultilib) {
+    if (Arg *A = Args.getLastArg(options::OPT_mexecute_only,
+                                 options::OPT_mno_execute_only)) {
+      if (A->getOption().matches(options::OPT_mexecute_only)) {
+        Features.push_back("+execute-only");
+      }
+    }
+  }
 
   if (Args.hasArg(options::OPT_ffixed_x1))
     Features.push_back("+reserve-x1");
@@ -469,4 +482,19 @@ void aarch64::setPAuthABIInTriple(const Driver &D, const ArgList &Args,
           << ABIArg->getAsString(Args) << Triple.getTriple();
     break;
   }
+}
+
+/// Is the triple {aarch64.aarch64_be}-none-elf?
+bool aarch64::isAArch64BareMetal(const llvm::Triple &Triple) {
+  if (Triple.getArch() != llvm::Triple::aarch64 &&
+      Triple.getArch() != llvm::Triple::aarch64_be)
+    return false;
+
+  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
+    return false;
+
+  if (Triple.getOS() != llvm::Triple::UnknownOS)
+    return false;
+
+  return Triple.getEnvironmentName() == "elf";
 }

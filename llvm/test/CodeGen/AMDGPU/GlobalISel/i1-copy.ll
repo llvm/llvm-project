@@ -22,7 +22,7 @@ main_body:
   %vcc = icmp eq i32 %val, 2
   %a = select i1 %vcc, float %a0, float %a1
   %b = select i1 %vcc, float %b0, float %b1
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %a, float %b, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %a, float %b, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -52,7 +52,7 @@ main_body:
   %uniform_i1 = icmp eq i32 %val, 2
   %a = select i1 %uniform_i1, float %a0, float %a1
   %b = select i1 %uniform_i1, float %b0, float %b1
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %a, float %b, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %a, float %b, float poison, float poison, i1 true, i1 true)
   ret void
 }
 

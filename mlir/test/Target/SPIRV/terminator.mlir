@@ -24,4 +24,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     // CHECK-NOT: spirv.Unreachable
     spirv.Unreachable
   }
+
+  // CHECK-LABEL: @kill
+  spirv.func @kill() -> () "None" {
+    // CHECK: spirv.Kill
+    spirv.Kill
+  }
 }

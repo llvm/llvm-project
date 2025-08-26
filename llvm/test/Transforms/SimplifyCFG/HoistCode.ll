@@ -65,14 +65,12 @@ define float @PR39535min_switch(i64 %i, float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i64 [[I:%.*]], label [[END:%.*]] [
 ; CHECK-NEXT:      i64 1, label [[BB1:%.*]]
-; CHECK-NEXT:      i64 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[END]]
-; CHECK:       bb2:
-; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[COND:%.*]] = phi fast float [ [[X:%.*]], [[BB1]] ], [ [[X]], [[BB2]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi fast float [ [[X:%.*]], [[BB1]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[COND]]
 ;
 entry:

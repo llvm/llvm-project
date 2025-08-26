@@ -37,6 +37,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "lcg"
 
+template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const LazyCallGraph::SCC *>;
+
 void LazyCallGraph::EdgeSequence::insertEdgeInternal(Node &TargetN,
                                                      Edge::Kind EK) {
   EdgeIndexMap.try_emplace(&TargetN, Edges.size());
@@ -1082,7 +1084,7 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
 
   // Build a set, so we can do fast tests for whether a RefSCC will end up as
   // part of the merged RefSCC.
-  SmallPtrSet<RefSCC *, 16> MergeSet(MergeRange.begin(), MergeRange.end());
+  SmallPtrSet<RefSCC *, 16> MergeSet(llvm::from_range, MergeRange);
 
   // This RefSCC will always be part of that set, so just insert it here.
   MergeSet.insert(this);

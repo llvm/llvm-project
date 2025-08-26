@@ -57,6 +57,8 @@ public:
 
   explicit MipsInstrInfo(const MipsSubtarget &STI, unsigned UncondBrOpc);
 
+  MCInst getNop() const override;
+
   static const MipsInstrInfo *create(MipsSubtarget &STI);
 
   /// Branch Analysis
@@ -113,6 +115,8 @@ public:
   /// Predicate to determine if an instruction has a load delay slot.
   bool HasLoadDelaySlot(const MachineInstr &MI) const;
 
+  bool isAsCheapAsAMove(const MachineInstr &MI) const override;
+
   /// Insert nop instruction when hazard condition is found
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
@@ -137,36 +141,34 @@ public:
   /// Return the number of bytes of code the specified instruction may be.
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override {
-    storeRegToStack(MBB, MBBI, SrcReg, isKill, FrameIndex, RC, TRI, 0);
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override {
+    storeRegToStack(MBB, MBBI, SrcReg, isKill, FrameIndex, RC, TRI, 0, Flags);
   }
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override {
-    loadRegFromStack(MBB, MBBI, DestReg, FrameIndex, RC, TRI, 0);
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override {
+    loadRegFromStack(MBB, MBBI, DestReg, FrameIndex, RC, TRI, 0, Flags);
   }
 
-  virtual void storeRegToStack(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MI,
-                               Register SrcReg, bool isKill, int FrameIndex,
-                               const TargetRegisterClass *RC,
-                               const TargetRegisterInfo *TRI,
-                               int64_t Offset) const = 0;
+  virtual void
+  storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                  Register SrcReg, bool isKill, int FrameIndex,
+                  const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+                  int64_t Offset,
+                  MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const = 0;
 
-  virtual void loadRegFromStack(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MI,
-                                Register DestReg, int FrameIndex,
-                                const TargetRegisterClass *RC,
-                                const TargetRegisterInfo *TRI,
-                                int64_t Offset) const = 0;
+  virtual void loadRegFromStack(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, int64_t Offset,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const = 0;
 
   virtual void adjustStackPtr(unsigned SP, int64_t Amount,
                               MachineBasicBlock &MBB,

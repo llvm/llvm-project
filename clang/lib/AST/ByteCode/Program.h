@@ -19,10 +19,7 @@
 #include "Record.h"
 #include "Source.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include <map>
 #include <vector>
 
 namespace clang {
@@ -76,6 +73,10 @@ public:
     return Globals[Idx]->block();
   }
 
+  bool isGlobalInitialized(unsigned Index) const {
+    return getPtrGlobal(Index).isInitialized();
+  }
+
   /// Finds a global's index.
   std::optional<unsigned> getGlobal(const ValueDecl *VD);
   std::optional<unsigned> getGlobal(const Expr *E);
@@ -115,37 +116,50 @@ public:
   Record *getOrCreateRecord(const RecordDecl *RD);
 
   /// Creates a descriptor for a primitive type.
-  Descriptor *createDescriptor(const DeclTy &D, PrimType Type,
+  Descriptor *createDescriptor(const DeclTy &D, PrimType T,
+                               const Type *SourceTy = nullptr,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
-                               bool IsMutable = false) {
-    return allocateDescriptor(D, Type, MDSize, IsConst, IsTemporary, IsMutable);
+                               bool IsMutable = false,
+                               bool IsVolatile = false) {
+    return allocateDescriptor(D, SourceTy, T, MDSize, IsConst, IsTemporary,
+                              IsMutable, IsVolatile);
   }
 
   /// Creates a descriptor for a composite type.
   Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
-                               bool IsMutable = false,
+                               bool IsMutable = false, bool IsVolatile = false,
                                const Expr *Init = nullptr);
+
+  void *Allocate(size_t Size, unsigned Align = 8) const {
+    return Allocator.Allocate(Size, Align);
+  }
+  template <typename T> T *Allocate(size_t Num = 1) const {
+    return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
+  }
+  void Deallocate(void *Ptr) const {}
 
   /// Context to manage declaration lifetimes.
   class DeclScope {
   public:
-    DeclScope(Program &P, const ValueDecl *VD) : P(P) {
-      P.startDeclaration(VD);
+    DeclScope(Program &P) : P(P), PrevDecl(P.CurrentDeclaration) {
+      ++P.LastDeclaration;
+      P.CurrentDeclaration = P.LastDeclaration;
     }
-    ~DeclScope() { P.endDeclaration(); }
+    ~DeclScope() { P.CurrentDeclaration = PrevDecl; }
 
   private:
     Program &P;
+    unsigned PrevDecl;
   };
 
   /// Returns the current declaration ID.
-  std::optional<unsigned> getCurrentDecl() const {
+  UnsignedOrNone getCurrentDecl() const {
     if (CurrentDeclaration == NoDeclaration)
-      return std::optional<unsigned>{};
-    return LastDeclaration;
+      return std::nullopt;
+    return CurrentDeclaration;
   }
 
 private:
@@ -162,16 +176,13 @@ private:
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
 
-  /// Function relocation locations.
-  llvm::DenseMap<const FunctionDecl *, std::vector<unsigned>> Relocs;
-
   /// Native pointers referenced by bytecode.
   std::vector<const void *> NativePointers;
   /// Cached native pointer indices.
   llvm::DenseMap<const void *, unsigned> NativePointerIndices;
 
   /// Custom allocator for global storage.
-  using PoolAllocTy = llvm::BumpPtrAllocatorImpl<llvm::MallocAllocator>;
+  using PoolAllocTy = llvm::BumpPtrAllocator;
 
   /// Descriptor + storage for a global object.
   ///
@@ -199,7 +210,7 @@ private:
   };
 
   /// Allocator for globals.
-  PoolAllocTy Allocator;
+  mutable PoolAllocTy Allocator;
 
   /// Global objects.
   std::vector<Global *> Globals;
@@ -218,20 +229,11 @@ private:
   }
 
   /// No declaration ID.
-  static constexpr unsigned NoDeclaration = (unsigned)-1;
+  static constexpr unsigned NoDeclaration = ~0u;
   /// Last declaration ID.
   unsigned LastDeclaration = 0;
   /// Current declaration ID.
   unsigned CurrentDeclaration = NoDeclaration;
-
-  /// Starts evaluating a declaration.
-  void startDeclaration(const ValueDecl *Decl) {
-    LastDeclaration += 1;
-    CurrentDeclaration = LastDeclaration;
-  }
-
-  /// Ends a global declaration.
-  void endDeclaration() { CurrentDeclaration = NoDeclaration; }
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
@@ -241,5 +243,19 @@ public:
 
 } // namespace interp
 } // namespace clang
+
+inline void *operator new(size_t Bytes, const clang::interp::Program &C,
+                          size_t Alignment = 8) {
+  return C.Allocate(Bytes, Alignment);
+}
+
+inline void operator delete(void *Ptr, const clang::interp::Program &C,
+                            size_t) {
+  C.Deallocate(Ptr);
+}
+inline void *operator new[](size_t Bytes, const clang::interp::Program &C,
+                            size_t Alignment = 8) {
+  return C.Allocate(Bytes, Alignment);
+}
 
 #endif

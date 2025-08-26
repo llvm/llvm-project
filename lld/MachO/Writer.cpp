@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
+#include "LinkerOptimizationHints.h"
 #include "MapFile.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -25,7 +26,6 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -409,6 +409,31 @@ private:
   StringRef path;
 };
 
+class LCSubClient final : public LoadCommand {
+public:
+  explicit LCSubClient(StringRef client) : client(client) {}
+
+  uint32_t getSize() const override {
+    return alignToPowerOf2(sizeof(sub_client_command) + client.size() + 1,
+                           target->wordSize);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<sub_client_command *>(buf);
+    buf += sizeof(sub_client_command);
+
+    c->cmd = LC_SUB_CLIENT;
+    c->cmdsize = getSize();
+    c->client = sizeof(sub_client_command);
+
+    memcpy(buf, client.data(), client.size());
+    buf[client.size()] = '\0';
+  }
+
+private:
+  StringRef client;
+};
+
 class LCDyldEnv final : public LoadCommand {
 public:
   explicit LCDyldEnv(StringRef name) : name(name) {}
@@ -686,7 +711,7 @@ void Writer::scanRelocations() {
 
       // Canonicalize the referent so that later accesses in Writer won't
       // have to worry about it.
-      if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
+      if (auto *referentIsec = dyn_cast_if_present<InputSection *>(r.referent))
         r.referent = referentIsec->canonical();
 
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
@@ -700,7 +725,7 @@ void Writer::scanRelocations() {
           it->referent = referentIsec->canonical();
         continue;
       }
-      if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+      if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined, isec, r.offset);
         // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
@@ -822,6 +847,8 @@ template <class LP> void Writer::createLoadCommands() {
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,
                                             config->dylibCompatibilityVersion,
                                             config->dylibCurrentVersion));
+    for (StringRef client : config->allowableClients)
+      in.header->addLoadCommand(make<LCSubClient>(client));
     break;
   case MH_BUNDLE:
     break;
@@ -911,17 +938,20 @@ template <class LP> void Writer::createLoadCommands() {
     }
 
     ordinal = dylibFile->ordinal = dylibOrdinal++;
-    LoadCommandType lcType =
-        dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak
-            ? LC_LOAD_WEAK_DYLIB
-            : LC_LOAD_DYLIB;
+    LoadCommandType lcType = LC_LOAD_DYLIB;
+    if (dylibFile->reexport) {
+      if (dylibFile->forceWeakImport)
+        warn(path::filename(dylibFile->getName()) +
+             " is re-exported so cannot be weak-linked");
+
+      lcType = LC_REEXPORT_DYLIB;
+    } else if (dylibFile->forceWeakImport ||
+               dylibFile->refState == RefState::Weak) {
+      lcType = LC_LOAD_WEAK_DYLIB;
+    }
     in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->installName,
                                             dylibFile->compatibilityVersion,
                                             dylibFile->currentVersion));
-
-    if (dylibFile->reexport)
-      in.header->addLoadCommand(
-          make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->installName));
   }
 
   for (const auto &dyldEnv : config->dyldEnvs)
@@ -948,7 +978,7 @@ static void sortSegmentsAndSections() {
   TimeTraceScope timeScope("Sort segments and sections");
   sortOutputSegments();
 
-  DenseMap<const InputSection *, size_t> isecPriorities =
+  DenseMap<const InputSection *, int> isecPriorities =
       priorityBuilder.buildInputSectionPriorities();
 
   uint32_t sectionIndex = 0;
@@ -981,7 +1011,7 @@ static void sortSegmentsAndSections() {
         if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
           llvm::stable_sort(
               merged->inputs, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) > isecPriorities.lookup(b);
+                return isecPriorities.lookup(a) < isecPriorities.lookup(b);
               });
         }
       }
@@ -1180,14 +1210,15 @@ void Writer::writeSections() {
 }
 
 void Writer::applyOptimizationHints() {
-  if (config->arch() != AK_arm64 || config->ignoreOptimizationHints)
+  if (!is_contained({AK_arm64, AK_arm64e, AK_arm64_32}, config->arch()) ||
+      config->ignoreOptimizationHints)
     return;
 
   uint8_t *buf = buffer->getBufferStart();
   TimeTraceScope timeScope("Apply linker optimization hints");
   parallelForEach(inputFiles, [buf](const InputFile *file) {
     if (const auto *objFile = dyn_cast<ObjFile>(file))
-      target->applyOptimizationHints(buf, *objFile);
+      macho::applyOptimizationHints(buf, *objFile);
   });
 }
 

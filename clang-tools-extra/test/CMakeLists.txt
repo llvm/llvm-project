@@ -50,13 +50,11 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-resource-headers
 
   clang-tidy
-  # Clang-tidy tests need clang for building modules.
-  clang
 )
 
 # Add lit test dependencies.
 set(LLVM_UTILS_DEPS
-  FileCheck count not
+  FileCheck count not split-file
 )
 foreach(dep ${LLVM_UTILS_DEPS})
   if(TARGET ${dep})

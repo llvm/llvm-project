@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMInstPrinter.h"
-#include "Utils/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
+#include "Utils/ARMBaseInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -23,10 +23,8 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 
@@ -50,7 +48,7 @@ static unsigned translateShiftImm(unsigned imm) {
 }
 
 static void printRegImmShift(raw_ostream &O, ARM_AM::ShiftOpc ShOpc,
-                             unsigned ShImm, const ARMInstPrinter &printer) {
+                             unsigned ShImm, ARMInstPrinter &printer) {
   if (ShOpc == ARM_AM::no_shift || (ShOpc == ARM_AM::lsl && !ShImm))
     return;
   O << ", ";
@@ -81,7 +79,7 @@ bool ARMInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void ARMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void ARMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << getRegisterName(Reg, DefaultAltIdx);
 }
 
@@ -352,7 +350,7 @@ void ARMInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     switch (Expr->getKind()) {
     case MCExpr::Binary:
       O << '#';
-      Expr->print(O, &MAI);
+      MAI.printExpr(O, *Expr);
       break;
     case MCExpr::Constant: {
       // If a symbolic branch target was added as a constant expression then
@@ -362,7 +360,7 @@ void ARMInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       int64_t TargetAddress;
       if (!Constant->evaluateAsAbsolute(TargetAddress)) {
         O << '#';
-        Expr->print(O, &MAI);
+        MAI.printExpr(O, *Expr);
       } else {
         O << "0x";
         O.write_hex(static_cast<uint32_t>(TargetAddress));
@@ -372,7 +370,7 @@ void ARMInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     default:
       // FIXME: Should we always treat this as if it is a constant literal and
       // prefix it with '#'?
-      Expr->print(O, &MAI);
+      MAI.printExpr(O, *Expr);
       break;
     }
   }
@@ -397,7 +395,7 @@ void ARMInstPrinter::printThumbLdrLabelOperand(const MCInst *MI, unsigned OpNum,
                                                raw_ostream &O) {
   const MCOperand &MO1 = MI->getOperand(OpNum);
   if (MO1.isExpr()) {
-    MO1.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO1.getExpr());
     return;
   }
 
@@ -1083,7 +1081,7 @@ void ARMInstPrinter::printAdrLabelOperand(const MCInst *MI, unsigned OpNum,
   const MCOperand &MO = MI->getOperand(OpNum);
 
   if (MO.isExpr()) {
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
 

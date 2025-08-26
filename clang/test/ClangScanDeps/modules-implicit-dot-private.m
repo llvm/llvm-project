@@ -32,8 +32,8 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [
 // CHECK-NEXT:         {

@@ -17,7 +17,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -71,7 +71,7 @@ class NonLocalizedStringChecker
   // Methods that return a localized string
   mutable llvm::SmallSet<std::pair<const IdentifierInfo *, Selector>, 12> LSM;
   // C Functions that return a localized string
-  mutable llvm::SmallSet<const IdentifierInfo *, 5> LSF;
+  mutable llvm::SmallPtrSet<const IdentifierInfo *, 5> LSF;
 
   void initUIMethods(ASTContext &Ctx) const;
   void initLocStringsMethods(ASTContext &Ctx) const;
@@ -131,9 +131,7 @@ public:
 
 #define NEW_RECEIVER(receiver)                                                 \
   llvm::DenseMap<Selector, uint8_t> &receiver##M =                             \
-      UIMethods.insert({&Ctx.Idents.get(#receiver),                            \
-                        llvm::DenseMap<Selector, uint8_t>()})                  \
-          .first->second;
+      UIMethods[&Ctx.Idents.get(#receiver)];
 #define ADD_NULLARY_METHOD(receiver, method, argument)                         \
   receiver##M.insert(                                                          \
       {Ctx.Selectors.getNullarySelector(&Ctx.Idents.get(#method)), argument});
@@ -749,9 +747,7 @@ void NonLocalizedStringChecker::reportLocalizationError(
   if (isDebuggingContext(C))
     return;
 
-  static CheckerProgramPointTag Tag("NonLocalizedStringChecker",
-                                    "UnlocalizedString");
-  ExplodedNode *ErrNode = C.addTransition(C.getState(), C.getPredecessor(), &Tag);
+  ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
 
   if (!ErrNode)
     return;
@@ -974,7 +970,6 @@ void NonLocalizedStringChecker::checkPostObjCMessage(const ObjCMethodCall &msg,
   const IdentifierInfo *odInfo = OD->getIdentifier();
 
   Selector S = msg.getSelector();
-  std::string SelectorName = S.getAsString();
 
   std::pair<const IdentifierInfo *, Selector> MethodDescription = {odInfo, S};
 
@@ -1123,8 +1118,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
   // source, so SL should point to the NSLocalizedString macro.
   SourceLocation SL =
       Mgr.getSourceManager().getImmediateMacroCallerLoc(R.getBegin());
-  std::pair<FileID, unsigned> SLInfo =
-      Mgr.getSourceManager().getDecomposedLoc(SL);
+  FileIDAndOffset SLInfo = Mgr.getSourceManager().getDecomposedLoc(SL);
 
   SrcMgr::SLocEntry SE = Mgr.getSourceManager().getSLocEntry(SLInfo.first);
 
@@ -1191,7 +1185,7 @@ namespace {
 class PluralMisuseChecker : public Checker<check::ASTCodeBody> {
 
   // A helper class, which walks the AST
-  class MethodCrawler : public RecursiveASTVisitor<MethodCrawler> {
+  class MethodCrawler : public DynamicRecursiveASTVisitor {
     BugReporter &BR;
     const CheckerBase *Checker;
     AnalysisDeclContext *AC;
@@ -1209,13 +1203,13 @@ class PluralMisuseChecker : public Checker<check::ASTCodeBody> {
                            AnalysisDeclContext *InAC)
         : BR(InBR), Checker(Checker), AC(InAC) {}
 
-    bool VisitIfStmt(const IfStmt *I);
+    bool VisitIfStmt(IfStmt *I) override;
     bool EndVisitIfStmt(IfStmt *I);
-    bool TraverseIfStmt(IfStmt *x);
-    bool VisitConditionalOperator(const ConditionalOperator *C);
-    bool TraverseConditionalOperator(ConditionalOperator *C);
-    bool VisitCallExpr(const CallExpr *CE);
-    bool VisitObjCMessageExpr(const ObjCMessageExpr *ME);
+    bool TraverseIfStmt(IfStmt *x) override;
+    bool VisitConditionalOperator(ConditionalOperator *C) override;
+    bool TraverseConditionalOperator(ConditionalOperator *C) override;
+    bool VisitCallExpr(CallExpr *CE) override;
+    bool VisitObjCMessageExpr(ObjCMessageExpr *ME) override;
 
   private:
     void reportPluralMisuseError(const Stmt *S) const;
@@ -1274,7 +1268,7 @@ bool PluralMisuseChecker::MethodCrawler::isCheckingPlurality(
 // has been shown to almost always be a function that returns a localized
 // string. Raise a diagnostic when this is in a statement that matches
 // the condition.
-bool PluralMisuseChecker::MethodCrawler::VisitCallExpr(const CallExpr *CE) {
+bool PluralMisuseChecker::MethodCrawler::VisitCallExpr(CallExpr *CE) {
   if (InMatchingStatement) {
     if (const FunctionDecl *FD = CE->getDirectCallee()) {
       std::string NormalizedName =
@@ -1296,7 +1290,7 @@ bool PluralMisuseChecker::MethodCrawler::VisitCallExpr(const CallExpr *CE) {
 // diagnostic when this is in a statement that matches
 // the condition.
 bool PluralMisuseChecker::MethodCrawler::VisitObjCMessageExpr(
-    const ObjCMessageExpr *ME) {
+    ObjCMessageExpr *ME) {
   const ObjCInterfaceDecl *OD = ME->getReceiverInterface();
   if (!OD)
     return true;
@@ -1314,7 +1308,7 @@ bool PluralMisuseChecker::MethodCrawler::VisitObjCMessageExpr(
 
 /// Override TraverseIfStmt so we know when we are done traversing an IfStmt
 bool PluralMisuseChecker::MethodCrawler::TraverseIfStmt(IfStmt *I) {
-  RecursiveASTVisitor<MethodCrawler>::TraverseIfStmt(I);
+  DynamicRecursiveASTVisitor::TraverseIfStmt(I);
   return EndVisitIfStmt(I);
 }
 
@@ -1333,7 +1327,7 @@ bool PluralMisuseChecker::MethodCrawler::EndVisitIfStmt(IfStmt *I) {
   return true;
 }
 
-bool PluralMisuseChecker::MethodCrawler::VisitIfStmt(const IfStmt *I) {
+bool PluralMisuseChecker::MethodCrawler::VisitIfStmt(IfStmt *I) {
   const Expr *Condition = I->getCond();
   if (!Condition)
     return true;
@@ -1352,7 +1346,7 @@ bool PluralMisuseChecker::MethodCrawler::VisitIfStmt(const IfStmt *I) {
 // Preliminary support for conditional operators.
 bool PluralMisuseChecker::MethodCrawler::TraverseConditionalOperator(
     ConditionalOperator *C) {
-  RecursiveASTVisitor<MethodCrawler>::TraverseConditionalOperator(C);
+  DynamicRecursiveASTVisitor::TraverseConditionalOperator(C);
   MatchingStatements.pop_back();
   if (!MatchingStatements.empty()) {
     if (MatchingStatements.back() != nullptr)
@@ -1366,7 +1360,7 @@ bool PluralMisuseChecker::MethodCrawler::TraverseConditionalOperator(
 }
 
 bool PluralMisuseChecker::MethodCrawler::VisitConditionalOperator(
-    const ConditionalOperator *C) {
+    ConditionalOperator *C) {
   const Expr *Condition = C->getCond()->IgnoreParenImpCasts();
   if (isCheckingPlurality(Condition)) {
     MatchingStatements.push_back(C);

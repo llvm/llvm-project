@@ -41,8 +41,52 @@ class StepScriptedTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual("main", frame.GetFunctionName())
-        stop_desc = thread.GetStopDescription(1000)
+        stop_desc = thread.stop_description
         self.assertIn("Stepping out from", stop_desc, "Got right description")
+
+    def run_until_branch_instruction(self):
+        self.build()
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Break on branch instruction", self.main_source_file
+        )
+
+        # Check that we landed in a call instruction
+        frame = thread.GetFrameAtIndex(0)
+        current_instruction = target.ReadInstructions(frame.GetPCAddress(), 1)[0]
+        self.assertEqual(
+            lldb.eInstructionControlFlowKindCall,
+            current_instruction.GetControlFlowKind(target),
+        )
+        return (target, process, thread, bkpt)
+
+    @skipIf(archs=no_match(["x86_64"]))
+    def test_step_single_instruction(self):
+        (target, process, thread, bkpt) = self.run_until_branch_instruction()
+
+        err = thread.StepUsingScriptedThreadPlan("Steps.StepSingleInstruction")
+        self.assertSuccess(err)
+
+        # Verify that stepping a single instruction after "foo();" steps into `foo`
+        frame = thread.GetFrameAtIndex(0)
+        self.assertEqual("foo", frame.GetFunctionName())
+
+    @skipIf(archs=no_match(["x86_64"]))
+    def test_step_single_instruction_with_step_over(self):
+        (target, process, thread, bkpt) = self.run_until_branch_instruction()
+
+        frame = thread.GetFrameAtIndex(0)
+        next_instruction = target.ReadInstructions(frame.GetPCAddress(), 2)[1]
+        next_instruction_address = next_instruction.GetAddress()
+
+        err = thread.StepUsingScriptedThreadPlan(
+            "Steps.StepSingleInstructionWithStepOver"
+        )
+        self.assertSuccess(err)
+
+        # Verify that stepping over an instruction doesn't step into `foo`
+        frame = thread.GetFrameAtIndex(0)
+        self.assertEqual("main", frame.GetFunctionName())
+        self.assertEqual(next_instruction_address, frame.GetPCAddress())
 
     def test_misspelled_plan_name(self):
         """Test that we get a useful error if we misspell the plan class name"""
@@ -109,7 +153,7 @@ class StepScriptedTestCase(TestBase):
         self.assertTrue(foo_val.GetValueDidChange(), "Foo changed")
 
         # And we should have a reasonable stop description:
-        desc = thread.GetStopDescription(1000)
+        desc = thread.stop_description
         self.assertIn("Stepped until foo changed", desc, "Got right stop description")
 
     def test_stop_others_from_command(self):

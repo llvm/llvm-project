@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=pic < %s | FileCheck %s -check-prefix=picel
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=pic < %s | FileCheck %s -check-prefix=picel
 
 @ptrsv = global ptr @sv, align 4
 @ptrdv = global ptr @dv, align 4

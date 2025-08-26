@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 ; CHECK-NOT: .globl __do_copy_data
 ; CHECK:     .globl __do_clear_bss

@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMTransformUtils
   CtorUtils.cpp
   CountVisits.cpp
   Debugify.cpp
+  DeclareRuntimeLibcalls.cpp
   DemoteRegToStack.cpp
   DXILUpgrade.cpp
   EntryExitInstrumenter.cpp
@@ -56,6 +57,7 @@ add_llvm_component_library(LLVMTransformUtils
   LowerInvoke.cpp
   LowerMemIntrinsics.cpp
   LowerSwitch.cpp
+  LowerVectorIntrinsics.cpp
   MatrixUtils.cpp
   MemoryOpRemark.cpp
   MemoryTaggingSupport.cpp
@@ -66,6 +68,7 @@ add_llvm_component_library(LLVMTransformUtils
   MoveAutoInit.cpp
   NameAnonGlobals.cpp
   PredicateInfo.cpp
+  ProfileVerify.cpp
   PromoteMemoryToRegister.cpp
   RelLookupTableConverter.cpp
   ScalarEvolutionExpander.cpp
@@ -81,6 +84,7 @@ add_llvm_component_library(LLVMTransformUtils
   SimplifyLibCalls.cpp
   SizeOpts.cpp
   SplitModule.cpp
+  SplitModuleByCategory.cpp
   StripNonLineTableDebugInfo.cpp
   SymbolRewriter.cpp
   UnifyFunctionExitNodes.cpp

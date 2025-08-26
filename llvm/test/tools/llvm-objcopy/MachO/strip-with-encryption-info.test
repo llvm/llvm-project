@@ -1,0 +1,279 @@
+# RUN: rm -rf %t && mkdir %t
+# RUN: yaml2obj %s -o %t/original
+# RUN: llvm-strip --strip-all %t/original -o %t/stripped
+# RUN: llvm-readobj --macho-segment --section-headers %t/stripped | FileCheck %s
+
+# CHECK-LABEL: Sections [
+# CHECK:      Index: 0
+# CHECK-NEXT: Name: __text
+# CHECK-NEXT: Segment: __TEXT
+# CHECK:      Offset: 16384
+
+# CHECK-LABEL: Name: __PAGEZERO
+# CHECK:       fileoff: 0
+
+# CHECK-LABEL: Name: __TEXT
+# CHECK:       fileoff: 0
+
+# The YAML below is the following code
+# ```
+# static int foo = 12345;
+# int bar = 4567;
+# int main(int argc, char **argv) { return 0; }
+# ```
+# Compiled on macOS against the macOS SDK and passing `-Wl,-encryptable`
+# Contents are removed, since they are not important for the test. We need a
+# small text segment (smaller than a page).
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x2
+  ncmds:           18
+  sizeofcmds:      920
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          32768
+    fileoff:         0
+    filesize:        32768
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100004000
+        size:            32
+        offset:          0x4000
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x100004020
+        size:            88
+        offset:          0x4020
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          4295000064
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x100008000
+        size:            4
+        offset:          0x8000
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4295016448
+    vmsize:          16384
+    fileoff:         49152
+    filesize:        768
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_CHAINED_FIXUPS
+    cmdsize:         16
+    dataoff:         49152
+    datasize:        56
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         49208
+    datasize:        64
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          49280
+    nsyms:           3
+    stroff:          49328
+    strsize:         40
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      3
+    iundefsym:       3
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            ADDA943C-657A-3A49-9580-168E17A40FFB
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           983040
+    sdk:             984320
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         76481537
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        16384
+    stacksize:       0
+  - cmd:             LC_ENCRYPTION_INFO_64
+    cmdsize:         24
+    cryptoff:        16384
+    cryptsize:       16384
+    cryptid:         0
+    pad:             0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 88539136
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         49272
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         49280
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         49376
+    datasize:        544
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      25
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      9
+            Name:            _mh_execute_header
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      13
+            Name:            bar
+            Flags:           0x0
+            Address:         0x8000
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      19
+            Name:            main
+            Flags:           0x0
+            Address:         0x4000
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         4295000064
+    - n_strx:          27
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294983680
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _bar
+    - _main
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+  FunctionStarts:  [ 0x4000 ]
+  ChainedFixups:   [ 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0, 0x34, 0x0,
+                     0x0, 0x0, 0x34, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+...

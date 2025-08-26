@@ -1,7 +1,7 @@
 ; Positive test for inline register constraints
 ;
-; RUN: llc -march=mipsel -mcpu=mips32 < %s | FileCheck %s
-; RUN: llc -march=mipsel -mcpu=mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -mcpu=mips32 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2 < %s | FileCheck %s
 
 define i32 @main() nounwind {
 entry:

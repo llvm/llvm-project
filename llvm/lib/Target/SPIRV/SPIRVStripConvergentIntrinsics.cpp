@@ -13,30 +13,21 @@
 
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVStripConvergentIntrinsicsPass(PassRegistry &);
-}
-
+namespace {
 class SPIRVStripConvergentIntrinsics : public FunctionPass {
 public:
   static char ID;
 
-  SPIRVStripConvergentIntrinsics() : FunctionPass(ID) {
-    initializeSPIRVStripConvergentIntrinsicsPass(
-        *PassRegistry::getPassRegistry());
-  };
+  SPIRVStripConvergentIntrinsics() : FunctionPass(ID) {}
 
   virtual bool runOnFunction(Function &F) override {
     DenseSet<Instruction *> ToRemove;
@@ -85,6 +76,7 @@ public:
     return ToRemove.size() != 0;
   }
 };
+} // namespace
 
 char SPIRVStripConvergentIntrinsics::ID = 0;
 INITIALIZE_PASS(SPIRVStripConvergentIntrinsics, "strip-convergent-intrinsics",

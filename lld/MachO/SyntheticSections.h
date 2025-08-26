@@ -447,6 +447,7 @@ private:
   // match its behavior here since some tools depend on it.
   // Consequently, the empty string will be at index 1, not zero.
   std::vector<StringRef> strings{" "};
+  llvm::DenseMap<llvm::CachedHashStringRef, uint32_t> stringMap;
   size_t size = 2;
 };
 
@@ -485,6 +486,7 @@ private:
   void emitEndSourceStab();
   void emitObjectFileStab(ObjFile *);
   void emitEndFunStab(Defined *);
+  Defined *getFuncBodySym(Defined *);
   void emitStabs();
 
 protected:

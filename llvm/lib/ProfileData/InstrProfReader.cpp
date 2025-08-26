@@ -18,7 +18,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/MemProf.h"
+// #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/Support/Endian.h"
@@ -26,7 +27,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cstddef>
@@ -52,6 +52,9 @@ static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   }
   if (Version & VARIANT_MASK_INSTR_ENTRY) {
     ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
+  }
+  if (Version & VARIANT_MASK_INSTR_LOOP_ENTRIES) {
+    ProfileKind |= InstrProfKind::LoopEntriesInstrumentation;
   }
   if (Version & VARIANT_MASK_BYTE_COVERAGE) {
     ProfileKind |= InstrProfKind::SingleByteCoverage;
@@ -263,6 +266,8 @@ Error TextInstrProfReader::readHeader() {
       ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
     else if (Str.equals_insensitive("not_entry_first"))
       ProfileKind &= ~InstrProfKind::FunctionEntryInstrumentation;
+    else if (Str.equals_insensitive("instrument_loop_entries"))
+      ProfileKind |= InstrProfKind::LoopEntriesInstrumentation;
     else if (Str.equals_insensitive("single_byte_coverage"))
       ProfileKind |= InstrProfKind::SingleByteCoverage;
     else if (Str.equals_insensitive("temporal_prof_traces")) {
@@ -1092,7 +1097,7 @@ public:
                                SmallVectorImpl<char> &Out) {
     Out.reserve(OrigName.size() + Replacement.size() - ExtractedName.size());
     Out.insert(Out.end(), OrigName.begin(), ExtractedName.begin());
-    Out.insert(Out.end(), Replacement.begin(), Replacement.end());
+    llvm::append_range(Out, Replacement);
     Out.insert(Out.end(), ExtractedName.end(), OrigName.end());
   }
 
@@ -1226,149 +1231,6 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
   }
 }
 
-Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
-                                            const unsigned char *Ptr,
-                                            uint64_t FirstWord) {
-  // The value returned from RecordTableGenerator.Emit.
-  const uint64_t RecordTableOffset =
-      Version == memprof::Version0
-          ? FirstWord
-          : support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The offset in the stream right before invoking
-  // FrameTableGenerator.Emit.
-  const uint64_t FramePayloadOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The value returned from FrameTableGenerator.Emit.
-  const uint64_t FrameTableOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-
-  // The offset in the stream right before invoking
-  // CallStackTableGenerator.Emit.
-  uint64_t CallStackPayloadOffset = 0;
-  // The value returned from CallStackTableGenerator.Emit.
-  uint64_t CallStackTableOffset = 0;
-  if (Version >= memprof::Version2) {
-    CallStackPayloadOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-    CallStackTableOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  }
-
-  // Read the schema.
-  auto SchemaOr = memprof::readMemProfSchema(Ptr);
-  if (!SchemaOr)
-    return SchemaOr.takeError();
-  Schema = SchemaOr.get();
-
-  // Now initialize the table reader with a pointer into data buffer.
-  MemProfRecordTable.reset(MemProfRecordHashTable::Create(
-      /*Buckets=*/Start + RecordTableOffset,
-      /*Payload=*/Ptr,
-      /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
-
-  // Initialize the frame table reader with the payload and bucket offsets.
-  MemProfFrameTable.reset(MemProfFrameHashTable::Create(
-      /*Buckets=*/Start + FrameTableOffset,
-      /*Payload=*/Start + FramePayloadOffset,
-      /*Base=*/Start));
-
-  if (Version >= memprof::Version2)
-    MemProfCallStackTable.reset(MemProfCallStackHashTable::Create(
-        /*Buckets=*/Start + CallStackTableOffset,
-        /*Payload=*/Start + CallStackPayloadOffset,
-        /*Base=*/Start));
-
-  return Error::success();
-}
-
-Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
-                                          const unsigned char *Ptr) {
-  // The offset in the stream right before invoking
-  // CallStackTableGenerator.Emit.
-  const uint64_t CallStackPayloadOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The offset in the stream right before invoking RecordTableGenerator.Emit.
-  const uint64_t RecordPayloadOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The value returned from RecordTableGenerator.Emit.
-  const uint64_t RecordTableOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-
-  // Read the schema.
-  auto SchemaOr = memprof::readMemProfSchema(Ptr);
-  if (!SchemaOr)
-    return SchemaOr.takeError();
-  Schema = SchemaOr.get();
-
-  FrameBase = Ptr;
-  CallStackBase = Start + CallStackPayloadOffset;
-
-  // Now initialize the table reader with a pointer into data buffer.
-  MemProfRecordTable.reset(MemProfRecordHashTable::Create(
-      /*Buckets=*/Start + RecordTableOffset,
-      /*Payload=*/Start + RecordPayloadOffset,
-      /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version3, Schema)));
-
-  return Error::success();
-}
-
-Error IndexedMemProfReader::deserialize(const unsigned char *Start,
-                                        uint64_t MemProfOffset) {
-  const unsigned char *Ptr = Start + MemProfOffset;
-
-  // Read the first 64-bit word, which may be RecordTableOffset in
-  // memprof::MemProfVersion0 or the MemProf version number in
-  // memprof::MemProfVersion1 and above.
-  const uint64_t FirstWord =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-
-  if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2 ||
-      FirstWord == memprof::Version3) {
-    // Everything is good.  We can proceed to deserialize the rest.
-    Version = static_cast<memprof::IndexedVersion>(FirstWord);
-  } else if (FirstWord >= 24) {
-    // This is a heuristic/hack to detect memprof::MemProfVersion0,
-    // which does not have a version field in the header.
-    // In memprof::MemProfVersion0, FirstWord will be RecordTableOffset,
-    // which should be at least 24 because of the MemProf header size.
-    Version = memprof::Version0;
-  } else {
-    return make_error<InstrProfError>(
-        instrprof_error::unsupported_version,
-        formatv("MemProf version {} not supported; "
-                "requires version between {} and {}, inclusive",
-                FirstWord, memprof::MinimumSupportedVersion,
-                memprof::MaximumSupportedVersion));
-  }
-
-  switch (Version) {
-  case memprof::Version0:
-  case memprof::Version1:
-  case memprof::Version2:
-    if (Error E = deserializeV012(Start, Ptr, FirstWord))
-      return E;
-    break;
-  case memprof::Version3:
-    if (Error E = deserializeV3(Start, Ptr))
-      return E;
-    break;
-  }
-
-#ifdef EXPENSIVE_CHECKS
-  // Go through all the records and verify that CSId has been correctly
-  // populated.  Do this only under EXPENSIVE_CHECKS.  Otherwise, we
-  // would defeat the purpose of OnDiskIterableChainedHashTable.
-  // Note that we can compare CSId against actual call stacks only for
-  // Version0 and Version1 because IndexedAllocationInfo::CallStack and
-  // IndexedMemProfRecord::CallSites are not populated in Version2.
-  if (Version <= memprof::Version1)
-    for (const auto &Record : MemProfRecordTable->data())
-      verifyIndexedMemProfRecord(Record);
-#endif
-
-  return Error::success();
-}
-
 Error IndexedInstrProfReader::readHeader() {
   using namespace support;
 
@@ -1433,7 +1295,7 @@ Error IndexedInstrProfReader::readHeader() {
     // Writer first writes the length of compressed string, and then the actual
     // content.
     const char *VTableNamePtr = (const char *)Ptr;
-    if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
+    if (VTableNamePtr > DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::truncated);
 
     VTableName = StringRef(VTableNamePtr, CompressedVTableNamesLen);
@@ -1507,7 +1369,7 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
   return *Symtab;
 }
 
-Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
+Expected<NamedInstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
     StringRef FuncName, uint64_t FuncHash, StringRef DeprecatedFuncName,
     uint64_t *MismatchedFuncSum) {
   ArrayRef<NamedInstrProfRecord> Data;
@@ -1566,25 +1428,6 @@ Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
 }
 
 static Expected<memprof::MemProfRecord>
-getMemProfRecordV0(const memprof::IndexedMemProfRecord &IndexedRecord,
-                   MemProfFrameHashTable &MemProfFrameTable) {
-  memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
-      MemProfFrameTable);
-
-  memprof::MemProfRecord Record =
-      memprof::MemProfRecord(IndexedRecord, FrameIdConv);
-
-  // Check that all frame ids were successfully converted to frames.
-  if (FrameIdConv.LastUnmappedId) {
-    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
-                                      "memprof frame not found for frame id " +
-                                          Twine(*FrameIdConv.LastUnmappedId));
-  }
-
-  return Record;
-}
-
-static Expected<memprof::MemProfRecord>
 getMemProfRecordV2(const memprof::IndexedMemProfRecord &IndexedRecord,
                    MemProfFrameHashTable &MemProfFrameTable,
                    MemProfCallStackHashTable &MemProfCallStackTable) {
@@ -1614,16 +1457,6 @@ getMemProfRecordV2(const memprof::IndexedMemProfRecord &IndexedRecord,
   return Record;
 }
 
-static Expected<memprof::MemProfRecord>
-getMemProfRecordV3(const memprof::IndexedMemProfRecord &IndexedRecord,
-                   const unsigned char *FrameBase,
-                   const unsigned char *CallStackBase) {
-  memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
-  memprof::LinearCallStackIdConverter CSIdConv(CallStackBase, FrameIdConv);
-  memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
-  return Record;
-}
-
 Expected<memprof::MemProfRecord>
 IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
   // TODO: Add memprof specific errors.
@@ -1638,24 +1471,25 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
 
   const memprof::IndexedMemProfRecord &IndexedRecord = *Iter;
   switch (Version) {
-  case memprof::Version0:
-  case memprof::Version1:
-    assert(MemProfFrameTable && "MemProfFrameTable must be available");
-    assert(!MemProfCallStackTable &&
-           "MemProfCallStackTable must not be available");
-    return getMemProfRecordV0(IndexedRecord, *MemProfFrameTable);
   case memprof::Version2:
     assert(MemProfFrameTable && "MemProfFrameTable must be available");
     assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
     return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
                               *MemProfCallStackTable);
+  // Combine V3 and V4 cases as the record conversion logic is the same.
   case memprof::Version3:
+  case memprof::Version4:
     assert(!MemProfFrameTable && "MemProfFrameTable must not be available");
     assert(!MemProfCallStackTable &&
            "MemProfCallStackTable must not be available");
     assert(FrameBase && "FrameBase must be available");
     assert(CallStackBase && "CallStackBase must be available");
-    return getMemProfRecordV3(IndexedRecord, FrameBase, CallStackBase);
+    {
+      memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
+      memprof::LinearCallStackIdConverter CSIdConv(CallStackBase, FrameIdConv);
+      memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
+      return Record;
+    }
   }
 
   return make_error<InstrProfError>(
@@ -1666,10 +1500,79 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
               memprof::MaximumSupportedVersion));
 }
 
+DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+IndexedMemProfReader::getMemProfCallerCalleePairs() const {
+  assert(MemProfRecordTable);
+  assert(Version == memprof::Version3 || Version == memprof::Version4);
+
+  memprof::LinearFrameIdConverter FrameIdConv(FrameBase);
+  memprof::CallerCalleePairExtractor Extractor(CallStackBase, FrameIdConv,
+                                               RadixTreeSize);
+
+  // The set of linear call stack IDs that we need to traverse from.  We expect
+  // the set to be dense, so we use a BitVector.
+  BitVector Worklist(RadixTreeSize);
+
+  // Collect the set of linear call stack IDs.  Since we expect a lot of
+  // duplicates, we first collect them in the form of a bit vector before
+  // processing them.
+  for (const memprof::IndexedMemProfRecord &IndexedRecord :
+       MemProfRecordTable->data()) {
+    for (const memprof::IndexedAllocationInfo &IndexedAI :
+         IndexedRecord.AllocSites)
+      Worklist.set(IndexedAI.CSId);
+  }
+
+  // Collect caller-callee pairs for each linear call stack ID in Worklist.
+  for (unsigned CS : Worklist.set_bits())
+    Extractor(CS);
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> Pairs =
+      std::move(Extractor.CallerCalleePairs);
+
+  // Sort each call list by the source location.
+  for (auto &[CallerGUID, CallList] : Pairs) {
+    llvm::sort(CallList);
+    CallList.erase(llvm::unique(CallList), CallList.end());
+  }
+
+  return Pairs;
+}
+
+memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
+  memprof::AllMemProfData AllMemProfData;
+  AllMemProfData.HeapProfileRecords.reserve(
+      MemProfRecordTable->getNumEntries());
+  for (uint64_t Key : MemProfRecordTable->keys()) {
+    auto Record = getMemProfRecord(Key);
+    if (Record.takeError())
+      continue;
+    memprof::GUIDMemProfRecordPair Pair;
+    Pair.GUID = Key;
+    Pair.Record = std::move(*Record);
+    AllMemProfData.HeapProfileRecords.push_back(std::move(Pair));
+  }
+  // Populate the data access profiles for yaml output.
+  if (DataAccessProfileData != nullptr) {
+    for (const auto &[SymHandleRef, RecordRef] :
+         DataAccessProfileData->getRecords())
+      AllMemProfData.YamlifiedDataAccessProfiles.Records.push_back(
+          memprof::DataAccessProfRecord(SymHandleRef, RecordRef.AccessCount,
+                                        RecordRef.Locations));
+    for (StringRef ColdSymbol : DataAccessProfileData->getKnownColdSymbols())
+      AllMemProfData.YamlifiedDataAccessProfiles.KnownColdSymbols.push_back(
+          ColdSymbol.str());
+    for (uint64_t Hash : DataAccessProfileData->getKnownColdHashes())
+      AllMemProfData.YamlifiedDataAccessProfiles.KnownColdStrHashes.push_back(
+          Hash);
+  }
+  return AllMemProfData;
+}
+
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
                                                 uint64_t FuncHash,
                                                 std::vector<uint64_t> &Counts) {
-  Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
+  auto Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 
@@ -1680,7 +1583,7 @@ Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
 Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
                                                 uint64_t FuncHash,
                                                 BitVector &Bitmap) {
-  Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
+  auto Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 

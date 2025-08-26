@@ -47,7 +47,7 @@ define double @ldexp_zext_double_fast_math(double %x, i1 %bool) {
 
 define <2 x float> @ldexp_zext_float_vector(<2 x float> %x, <2 x i1> %bool) {
 ; CHECK-LABEL: @ldexp_zext_float_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[BOOL:%.*]], <2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[BOOL:%.*]], <2 x float> splat (float 2.000000e+00), <2 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[LDEXP:%.*]] = fmul <2 x float> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[LDEXP]]
 ;
@@ -102,7 +102,7 @@ define double @ldexp_sext_double_fast_math(double %x, i1 %bool) {
 
 define <2 x float> @ldexp_sext_float_vector(<2 x float> %x, <2 x i1> %bool) {
 ; CHECK-LABEL: @ldexp_sext_float_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[BOOL:%.*]], <2 x float> <float 5.000000e-01, float 5.000000e-01>, <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[BOOL:%.*]], <2 x float> splat (float 5.000000e-01), <2 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[LDEXP:%.*]] = fmul <2 x float> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[LDEXP]]
 ;

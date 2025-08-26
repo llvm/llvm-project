@@ -169,7 +169,7 @@ void test_update_dpp_int(global int* out, int arg1, int arg2)
 
 // CHECK-LABEL: @test_update_dpp_long
 // CHECK:      %0 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %x, i32 257, i32 15, i32 15, i1 false)
-// CHECk-NEXT: store i64 %0,
+// CHECK-NEXT: store i64 %0,
 void test_update_dpp_long(long x, global long *p) {
   *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
 }
@@ -216,6 +216,29 @@ void test_update_dpp_char(char x, global char *p) {
 // CHECK-NEXT: store i16 %3,
 void test_update_dpp_half(half *x, global half *p) {
   *p = __builtin_amdgcn_update_dpp(*x, *x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_update_dpp_int_uint
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %arg1, i32 %arg2, i32 0, i32 0, i32 0, i1 false)
+void test_update_dpp_int_uint(global int* out, int arg1, unsigned int arg2)
+{
+  *out = __builtin_amdgcn_update_dpp(arg1, arg2, 0, 0, 0, false);
+}
+
+// CHECK-LABEL: @test_update_dpp_lit_int
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 5, i32 %arg1, i32 0, i32 0, i32 0, i1 false)
+void test_update_dpp_lit_int(global int* out, int arg1)
+{
+  *out = __builtin_amdgcn_update_dpp(5, arg1, 0, 0, 0, false);
+}
+
+__constant int gi = 5;
+
+// CHECK-LABEL: @test_update_dpp_const_int
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 5, i32 %arg1, i32 0, i32 0, i32 0, i1 false)
+void test_update_dpp_const_int(global int* out, int arg1)
+{
+  *out = __builtin_amdgcn_update_dpp(gi, arg1, 0, 0, 0, false);
 }
 
 // CHECK-LABEL: @test_ds_fadd

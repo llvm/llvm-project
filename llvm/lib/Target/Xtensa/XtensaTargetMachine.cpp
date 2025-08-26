@@ -14,10 +14,12 @@
 
 #include "XtensaTargetMachine.h"
 #include "TargetInfo/XtensaTargetInfo.h"
+#include "XtensaMachineFunctionInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -26,6 +28,8 @@ using namespace llvm;
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTarget() {
   // Register the target.
   RegisterTargetMachine<XtensaTargetMachine> A(getTheXtensaTarget());
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeXtensaAsmPrinterPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
@@ -49,9 +53,10 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OL, bool JIT,
                                          bool IsLittle)
-    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, IsLittle), TT,
-                        CPU, FS, Options, getEffectiveRelocModel(JIT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, IsLittle),
+                               TT, CPU, FS, Options,
+                               getEffectiveRelocModel(JIT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
   initAsmInfo();
 }
@@ -83,6 +88,13 @@ XtensaTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+MachineFunctionInfo *XtensaTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return XtensaMachineFunctionInfo::create<XtensaMachineFunctionInfo>(Allocator,
+                                                                      F, STI);
+}
+
 namespace {
 /// Xtensa Code Generator Pass Configuration Options.
 class XtensaPassConfig : public TargetPassConfig {
@@ -95,6 +107,8 @@ public:
   }
 
   bool addInstSelector() override;
+  void addIRPasses() override;
+  void addPreEmitPass() override;
 };
 } // end anonymous namespace
 
@@ -102,6 +116,13 @@ bool XtensaPassConfig::addInstSelector() {
   addPass(createXtensaISelDag(getXtensaTargetMachine(), getOptLevel()));
   return false;
 }
+
+void XtensaPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+  TargetPassConfig::addIRPasses();
+}
+
+void XtensaPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
 
 TargetPassConfig *XtensaTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new XtensaPassConfig(*this, PM);

@@ -53,20 +53,27 @@ define <4 x half> @uitofp_v4i64_to_v4f16(ptr %ptr) {
 define <4 x bfloat> @uitofp_v4i64_to_v4bf16(ptr %ptr) {
 ; CHECK-LABEL: uitofp_v4i64_to_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    ucvtf s1, x9
+; CHECK-NEXT:    mov x9, v2.d[1]
+; CHECK-NEXT:    ucvtf s0, x8
+; CHECK-NEXT:    fmov x8, d2
+; CHECK-NEXT:    ucvtf s2, x8
+; CHECK-NEXT:    mov v1.s[1], v0.s[0]
+; CHECK-NEXT:    ucvtf s0, x9
+; CHECK-NEXT:    mov v1.s[2], v2.s[0]
 ; CHECK-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v1.2d
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
-; CHECK-NEXT:    orr v0.4s, #64, lsl #16
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-NEXT:    mov v1.s[3], v0.s[0]
+; CHECK-NEXT:    movi v0.4s, #1
+; CHECK-NEXT:    ushr v3.4s, v1.4s, #16
+; CHECK-NEXT:    add v2.4s, v1.4s, v2.4s
+; CHECK-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
+; CHECK-NEXT:    orr v1.4s, #64, lsl #16
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bif v0.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    shrn v0.4h, v0.4s, #16
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i64>, ptr %ptr

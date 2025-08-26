@@ -43,7 +43,7 @@ declare dso_local noalias noundef ptr @malloc(i64 noundef)
 !6 = !{i64 0}
 !7 = !{!8}
 ; CHECK: call stack metadata should have at least 1 operand
-; CHECK: Not all !memprof MemInfoBlock operands 1 to N-1 are MDString
+; CHECK: Not all !memprof MemInfoBlock operands 2 to N are MDNode
 !8 = !{!0, !"default", i64 0, i64 5}
 !9 = !{i64 123}
 ; CHECK: call stack metadata operand should be constant integer

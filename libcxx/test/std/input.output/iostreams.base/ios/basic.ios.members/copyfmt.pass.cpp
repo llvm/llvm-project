@@ -15,6 +15,8 @@
 
 // basic_ios& copyfmt(const basic_ios& rhs);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <ios>
 #include <memory>
 #include <streambuf>

@@ -198,6 +198,7 @@ body:             |
   ; GCN-NEXT:   $sgpr6 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 2
   ; GCN-NEXT:   $sgpr5 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 1
   ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 0
+  ; GCN-NEXT:   $sgpr32 = frame-destroy COPY $sgpr33
   ; GCN-NEXT:   $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.69, addrspace 5)
   ; GCN-NEXT:   $vgpr2 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.70, addrspace 5)
@@ -205,7 +206,6 @@ body:             |
   ; GCN-NEXT:   $vgpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 12, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.72, addrspace 5)
   ; GCN-NEXT:   $vgpr5 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.73, addrspace 5)
   ; GCN-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr0
-  ; GCN-NEXT:   $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -24, implicit-def dead $scc
   ; GCN-NEXT:   $sgpr33 = frame-destroy COPY $vcc_hi
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:

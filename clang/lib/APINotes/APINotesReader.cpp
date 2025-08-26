@@ -14,11 +14,10 @@
 //===----------------------------------------------------------------------===//
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
+#include "clang/APINotes/Types.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
 namespace clang {
@@ -134,6 +133,13 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
     Info.setNSErrorDomain(std::optional<std::string>(std::string(
         reinterpret_cast<const char *>(Data), ErrorDomainLength - 1)));
     Data += ErrorDomainLength - 1;
+  }
+
+  if (unsigned ConformanceLength =
+          endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
+    Info.setSwiftConformance(std::string(reinterpret_cast<const char *>(Data),
+                                         ConformanceLength - 1));
+    Data += ConformanceLength - 1;
   }
 }
 
@@ -332,6 +338,9 @@ void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   }
   Payload >>= 3;
   if (Payload & 0x01)
+    Info.setLifetimebound(Payload & 0x02);
+  Payload >>= 2;
+  if (Payload & 0x01)
     Info.setNoEscape(Payload & 0x02);
   Payload >>= 2;
   assert(Payload == 0 && "Bad API notes");
@@ -369,6 +378,13 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
       endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.ResultType = std::string(Data, Data + ResultTypeLen);
   Data += ResultTypeLen;
+
+  unsigned SwiftReturnOwnershipLength =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Info.SwiftReturnOwnership = std::string(reinterpret_cast<const char *>(Data),
+                                          reinterpret_cast<const char *>(Data) +
+                                              SwiftReturnOwnershipLength);
+  Data += SwiftReturnOwnershipLength;
 }
 
 /// Used to deserialize the on-disk Objective-C method table.
@@ -393,12 +409,19 @@ public:
                                         const uint8_t *&Data) {
     ObjCMethodInfo Info;
     uint8_t Payload = *Data++;
+    bool HasSelf = Payload & 0x01;
+    Payload >>= 1;
     Info.RequiredInit = Payload & 0x01;
     Payload >>= 1;
     Info.DesignatedInit = Payload & 0x01;
     Payload >>= 1;
+    assert(Payload == 0 && "Unable to fully decode 'Payload'.");
 
     ReadFunctionInfo(Data, Info);
+    if (HasSelf) {
+      Info.Self = ParamInfo{};
+      ReadParamInfo(Data, *Info.Self);
+    }
     return Info;
   }
 };
@@ -513,7 +536,17 @@ public:
   static CXXMethodInfo readUnversioned(internal_key_type Key,
                                        const uint8_t *&Data) {
     CXXMethodInfo Info;
+
+    uint8_t Payload = *Data++;
+    bool HasThis = Payload & 0x01;
+    Payload >>= 1;
+    assert(Payload == 0 && "Unable to fully decode 'Payload'.");
+
     ReadFunctionInfo(Data, Info);
+    if (HasThis) {
+      Info.This = ParamInfo{};
+      ReadParamInfo(Data, *Info.This);
+    }
     return Info;
   }
 };
@@ -568,10 +601,12 @@ public:
 
     uint8_t Copyable =
         endian::readNext<uint8_t, llvm::endianness::little>(Data);
-    if (Copyable == kSwiftNonCopyable)
-      Info.setSwiftCopyable(std::optional(false));
-    else if (Copyable == kSwiftCopyable)
-      Info.setSwiftCopyable(std::optional(true));
+    if (Copyable == kSwiftConforms || Copyable == kSwiftDoesNotConform)
+      Info.setSwiftCopyable(std::optional(Copyable == kSwiftConforms));
+    uint8_t Escapable =
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    if (Escapable == kSwiftConforms || Escapable == kSwiftDoesNotConform)
+      Info.setSwiftEscapable(std::optional(Escapable == kSwiftConforms));
 
     unsigned ImportAsLength =
         endian::readNext<uint16_t, llvm::endianness::little>(Data);
@@ -594,11 +629,19 @@ public:
                                         ReleaseOpLength - 1);
       Data += ReleaseOpLength - 1;
     }
-    if (unsigned ConformanceLength =
-            endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
-      Info.SwiftConformance = std::string(reinterpret_cast<const char *>(Data),
-                                          ConformanceLength - 1);
-      Data += ConformanceLength - 1;
+    unsigned DefaultOwnershipLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DefaultOwnershipLength > 0) {
+      Info.SwiftDefaultOwnership = std::string(
+          reinterpret_cast<const char *>(Data), DefaultOwnershipLength - 1);
+      Data += DefaultOwnershipLength - 1;
+    }
+    unsigned DestroyOpLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DestroyOpLength > 0) {
+      Info.SwiftDestroyOp = std::string(reinterpret_cast<const char *>(Data),
+                                        DestroyOpLength - 1);
+      Data += DestroyOpLength - 1;
     }
 
     ReadCommonTypeInfo(Data, Info);
@@ -2011,11 +2054,16 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
     : Results(std::move(R)) {
 
   assert(!Results.empty());
-  assert(std::is_sorted(
-      Results.begin(), Results.end(),
+  assert(llvm::is_sorted(
+      Results,
       [](const std::pair<llvm::VersionTuple, T> &left,
          const std::pair<llvm::VersionTuple, T> &right) -> bool {
-        assert(left.first != right.first && "two entries for the same version");
+        // The comparison function should be reflective, and with expensive
+        // checks we can get callbacks basically checking that lambda(a,a) is
+        // false. We could still check that we do not find equal elements when
+        // left!=right.
+        assert((&left == &right || left.first != right.first) &&
+               "two entries for the same version");
         return left.first < right.first;
       }));
 

@@ -45,6 +45,9 @@ An escaped horizontal tab, form feed, or vertical tab prevents the string
 literal from being converted. The presence of a horizontal tab, form feed or
 vertical tab in source code is not visually obvious.
 
+Options
+-------
+
 .. option:: DelimiterStem
 
   Custom delimiter to escape characters in raw string literals. It is used in

@@ -9,11 +9,9 @@
 /// GlobalISel pipeline.
 //===----------------------------------------------------------------------===//
 #include "AArch64GlobalISelUtils.h"
-#include "AArch64InstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -52,8 +50,10 @@ bool AArch64GISelUtils::isCMN(const MachineInstr *MaybeSub,
   //
   // %sub = G_SUB 0, %y
   // %cmp = G_ICMP eq/ne, %z, %sub
+  // or with signed comparisons with the no-signed-wrap flag set
   if (!MaybeSub || MaybeSub->getOpcode() != TargetOpcode::G_SUB ||
-      !CmpInst::isEquality(Pred))
+      (!CmpInst::isEquality(Pred) &&
+       !(CmpInst::isSigned(Pred) && MaybeSub->getFlag(MachineInstr::NoSWrap))))
     return false;
   auto MaybeZero =
       getIConstantVRegValWithLookThrough(MaybeSub->getOperand(1).getReg(), MRI);

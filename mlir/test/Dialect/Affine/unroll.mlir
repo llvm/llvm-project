@@ -1,8 +1,9 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-full" | FileCheck %s --check-prefix UNROLL-FULL
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-full unroll-full-threshold=2" | FileCheck %s --check-prefix SHORT
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=4" | FileCheck %s --check-prefix UNROLL-BY-4
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=1" | FileCheck %s --check-prefix UNROLL-BY-1
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=5 cleanup-unroll=true" | FileCheck %s --check-prefix UNROLL-CLEANUP-LOOP
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-full=true}))" | FileCheck %s --check-prefix UNROLL-FULL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-full=true unroll-full-threshold=2}))" | FileCheck %s --check-prefix SHORT
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=4}))" | FileCheck %s --check-prefix UNROLL-BY-4
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=1}))" | FileCheck %s --check-prefix UNROLL-BY-1
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=5 cleanup-unroll=true}))" | FileCheck %s --check-prefix UNROLL-CLEANUP-LOOP
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(gpu.module(gpu.func(affine-loop-unroll{unroll-full=true})))" | FileCheck %s --check-prefix GPU-UNROLL-FULL
 
 // UNROLL-FULL-DAG: [[$MAP0:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 // UNROLL-FULL-DAG: [[$MAP1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 2)>
@@ -239,6 +240,23 @@ func.func @loop_nest_unroll_full() {
   }
   return
 } // UNROLL-FULL }
+
+gpu.module @unroll_full {
+  // GPU-UNROLL-FULL-LABEL: func @gpu_loop_nest_simplest() {
+  gpu.func @gpu_loop_nest_simplest() {
+    // GPU-UNROLL-FULL: affine.for %arg0 = 0 to 100 step 2 {
+    affine.for %i = 0 to 100 step 2 {
+      // GPU-UNROLL-FULL: %c1_i32 = arith.constant 1 : i32
+      // GPU-UNROLL-FULL-NEXT: %c1_i32_0 = arith.constant 1 : i32
+      // GPU-UNROLL-FULL-NEXT: %c1_i32_1 = arith.constant 1 : i32
+      // GPU-UNROLL-FULL-NEXT: %c1_i32_2 = arith.constant 1 : i32
+      affine.for %j = 0 to 4 {
+        %x = arith.constant 1 : i32
+      }
+    }           // GPU-UNROLL-FULL:  }
+    gpu.return  // GPU-UNROLL-FULL:  return
+  }
+}
 
 // SHORT-LABEL: func @loop_nest_outer_unroll() {
 func.func @loop_nest_outer_unroll() {

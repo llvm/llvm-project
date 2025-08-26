@@ -317,15 +317,10 @@ ExprInspection checks
   The value can be represented either as a range set or as a concrete integer.
   For the rest of the types function prints ``n/a`` (aka not available).
 
-  **Note:** This function will print nothing for clang built with Z3 constraint manager.
-  This may cause crashes of your tests. To manage this use one of the test constraining
-  techniques:
-
-  * llvm-lit commands ``REQUIRES no-z3`` or ``UNSUPPORTED z3`` `See for details. <https://llvm.org/docs/TestingGuide.html#constraining-test-execution>`_
-
-  * a preprocessor directive ``#ifndef ANALYZER_CM_Z3``
-
-  * a clang command argument ``-analyzer-constraints=range``
+  **Note:** This function will print nothing when clang uses Z3 as the
+  constraint manager (which is an unsupported and badly broken analysis mode
+  that's distinct from the supported and stable "Z3 refutation" aka "Z3
+  crosscheck" mode).
 
   Example usage::
 

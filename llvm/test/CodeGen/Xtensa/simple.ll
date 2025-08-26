@@ -3,3 +3,6 @@
 
 ; CHECK:  .text
 ; DUMP:   file format elf32-xtensa
+define void @f() {
+  ret void
+}

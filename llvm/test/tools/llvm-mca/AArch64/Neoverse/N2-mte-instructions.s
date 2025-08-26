@@ -215,12 +215,12 @@ stzgm	xzr, [x2]
 # CHECK-NEXT:  1      4     0.33    *             U     ldgm	x0, [x1]
 # CHECK-NEXT:  1      4     0.33    *             U     ldgm	x1, [sp]
 # CHECK-NEXT:  1      4     0.33    *             U     ldgm	xzr, [x2]
-# CHECK-NEXT:  2      1     0.50                  U     stgm	x0, [x1]
-# CHECK-NEXT:  2      1     0.50                  U     stgm	x1, [sp]
-# CHECK-NEXT:  2      1     0.50                  U     stgm	xzr, [x2]
-# CHECK-NEXT:  2      1     0.50                  U     stzgm	x0, [x1]
-# CHECK-NEXT:  2      1     0.50                  U     stzgm	x1, [sp]
-# CHECK-NEXT:  2      1     0.50                  U     stzgm	xzr, [x2]
+# CHECK-NEXT:  2      1     0.50           *      U     stgm	x0, [x1]
+# CHECK-NEXT:  2      1     0.50           *      U     stgm	x1, [sp]
+# CHECK-NEXT:  2      1     0.50           *      U     stgm	xzr, [x2]
+# CHECK-NEXT:  2      1     0.50           *      U     stzgm	x0, [x1]
+# CHECK-NEXT:  2      1     0.50           *      U     stzgm	x1, [sp]
+# CHECK-NEXT:  2      1     0.50           *      U     stzgm	xzr, [x2]
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - N2UnitB

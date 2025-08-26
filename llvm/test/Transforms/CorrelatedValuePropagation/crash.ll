@@ -37,13 +37,13 @@ func_29.exit:
 }
 
 ; PR13972
-define void @test3() nounwind {
+define void @test3(i1 %arg) nounwind {
 for.body:
   br label %return
 
 for.cond.i:                                       ; preds = %if.else.i, %for.body.i
   %e.2.i = phi i32 [ %e.2.i, %if.else.i ], [ -8, %for.body.i ]
-  br i1 undef, label %return, label %for.body.i
+  br i1 %arg, label %return, label %for.body.i
 
 for.body.i:                                       ; preds = %for.cond.i
   switch i32 %e.2.i, label %for.cond3.i [

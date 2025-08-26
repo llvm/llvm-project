@@ -132,12 +132,39 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         target = self.createTarget("a.yaml")
         process = self.connect(target)
 
-        self.assertEqual(1, self.server.responder.packetLog.count("g"))
-        self.server.responder.packetLog = []
+        # We want to make sure that the process is using the g packet, but it's
+        # not required the "connect" should read all registers.  However, it might
+        # have...  So we need to wait till we explicitly 'read_registers' to do
+        # test.
+        # Also, even with the use-g-packet-for-reading lldb will sometimes send p0
+        # early on to see if the packet is supported.  So we can't say that there
+        # will be NO p packets.
+        # But there certainly should be no p packets after the g packet.
+
         self.read_registers(process)
-        # Reading registers should not cause any 'p' packets to be exchanged.
+        print(f"\nPACKET LOG:\n{self.server.responder.packetLog}\n")
+        g_pos = 0
+        try:
+            g_pos = self.server.responder.packetLog.index("g")
+        except err:
+            self.fail("'g' packet not found after fetching registers")
+
+        try:
+            second_g = self.server.responder.packetLog.index("g", g_pos)
+            self.fail("Found more than one 'g' packet")
+        except:
+            pass
+
+        # Make sure there aren't any `p` packets after the `g` packet:
         self.assertEqual(
-            0, len([p for p in self.server.responder.packetLog if p.startswith("p")])
+            0,
+            len(
+                [
+                    p
+                    for p in self.server.responder.packetLog[g_pos:]
+                    if p.startswith("p")
+                ]
+            ),
         )
 
     def test_read_registers_using_p_packets(self):
@@ -295,6 +322,78 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             def vRun(self, packet):
                 self.started = True
                 return "T13"
+
+            def A(self, packet):
+                return "E28"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("a.yaml")
+        # NB: apparently GDB packets are using "/" on Windows too
+        exe_path = self.getBuildArtifact("a").replace(os.path.sep, "/")
+        exe_hex = binascii.b2a_hex(exe_path.encode()).decode()
+        process = self.connect(target)
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateConnected]
+        )
+
+        process = target.Launch(
+            lldb.SBListener(),
+            ["arg1", "arg2", "arg3"],  # argv
+            [],  # envp
+            None,  # stdin_path
+            None,  # stdout_path
+            None,  # stderr_path
+            None,  # working_directory
+            0,  # launch_flags
+            True,  # stop_at_entry
+            lldb.SBError(),
+        )  # error
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetProcessID(), 16)
+
+        self.assertPacketLogContains(
+            ["vRun;%s;61726731;61726732;61726733" % (exe_hex,)]
+        )
+
+    def test_launch_lengthy_vRun(self):
+        class MyResponder(MockGDBServerResponder):
+            def __init__(self, *args, **kwargs):
+                self.started = False
+                return super().__init__(*args, **kwargs)
+
+            def qC(self):
+                if self.started:
+                    return "QCp10.10"
+                else:
+                    return "E42"
+
+            def qfThreadInfo(self):
+                if self.started:
+                    return "mp10.10"
+                else:
+                    return "E42"
+
+            def qsThreadInfo(self):
+                return "l"
+
+            def qEcho(self, num):
+                resp = "qEcho:" + str(num)
+                if num >= 2:
+                    # We have launched our program
+                    self.started = True
+                    return [resp, "T13"]
+
+                return resp
+
+            def qSupported(self, client_supported):
+                return "PacketSize=3fff;QStartNoAckMode+;qEcho+;"
+
+            def qHostInfo(self):
+                return "default_packet_timeout:1;"
+
+            def vRun(self, packet):
+                return [self.RESPONSE_NONE]
 
             def A(self, packet):
                 return "E28"
@@ -495,7 +594,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.assertEqual(process.threads[0].GetStopReason(), lldb.eStopReasonSignal)
-        self.assertEqual(process.threads[0].GetStopDescription(100), "signal SIGBUS")
+        self.assertEqual(process.threads[0].stop_description, "signal SIGBUS")
 
     def test_signal_lldb_old(self):
         class MyResponder(MockGDBServerResponder):
@@ -521,7 +620,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.assertEqual(process.threads[0].GetStopReason(), lldb.eStopReasonSignal)
-        self.assertEqual(process.threads[0].GetStopDescription(100), "signal SIGUSR1")
+        self.assertEqual(process.threads[0].stop_description, "signal SIGUSR1")
 
     def test_signal_lldb(self):
         class MyResponder(MockGDBServerResponder):
@@ -544,7 +643,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.assertEqual(process.threads[0].GetStopReason(), lldb.eStopReasonSignal)
-        self.assertEqual(process.threads[0].GetStopDescription(100), "signal SIGUSR1")
+        self.assertEqual(process.threads[0].stop_description, "signal SIGUSR1")
 
     def do_siginfo_test(self, platform, target_yaml, raw_data, expected):
         class MyResponder(MockGDBServerResponder):

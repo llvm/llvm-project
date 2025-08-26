@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp \
-! RUN:   -mmlir --openmp-enable-delayed-privatization=true -o - %s 2>&1 \
+! RUN:   -mmlir --enable-delayed-privatization=true -o - %s 2>&1 \
 ! RUN: | FileCheck %s
 
 !CHECK: func.func @_QPfirstprivate_common() {

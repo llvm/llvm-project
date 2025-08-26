@@ -38,7 +38,7 @@ static void run(Module &M, StringRef FuncName,
   auto *F = M.getFunction(FuncName);
   DominatorTree DT(*F);
   PostDominatorTree PDT(*F);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   AssumptionCache AC(*F);
   AliasAnalysis AA(TLI);
@@ -227,7 +227,7 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentCondNestTest) {
   //       i = 2;
   // }
   std::unique_ptr<Module> M =
-      parseIR(C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2) { 
+      parseIR(C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2) {
          entry:
            br i1 %cond1, label %if.outer.first, label %if.first.end
          if.outer.first:
@@ -282,8 +282,8 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentImbalanceTest) {
   //   if (cond1)
   //     i = 4;
   // }
-  std::unique_ptr<Module> M = parseIR(
-      C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2, i1 %cond3) { 
+  std::unique_ptr<Module> M =
+      parseIR(C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2, i1 %cond3) {
          entry:
            br i1 %cond1, label %if.outer.first, label %if.first.end
          if.outer.first:

@@ -9,6 +9,22 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 
+#if defined(__aarch64__) && defined(__linux__)
+#include <sys/prctl.h> // For PR_PAC_* constants
+#ifndef PR_PAC_APIAKEY
+#define PR_PAC_APIAKEY (1UL << 0)
+#endif
+#ifndef PR_PAC_APIBKEY
+#define PR_PAC_APIBKEY (1UL << 1)
+#endif
+#ifndef PR_PAC_APDAKEY
+#define PR_PAC_APDAKEY (1UL << 2)
+#endif
+#ifndef PR_PAC_APDBKEY
+#define PR_PAC_APDBKEY (1UL << 3)
+#endif
+#endif
+
 #define GET_AVAILABLE_OPCODE_CHECKER
 #include "AArch64GenInstrInfo.inc"
 
@@ -26,13 +42,67 @@ static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
 }
 
 // Generates instruction to load an immediate value into a register.
-static MCInst loadImmediate(unsigned Reg, unsigned RegBitWidth,
+static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
                             const APInt &Value) {
-  if (Value.getBitWidth() > RegBitWidth)
-    llvm_unreachable("Value must fit in the Register");
+  assert(Value.getBitWidth() <= RegBitWidth &&
+         "Value must fit in the Register");
   return MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
       .addReg(Reg)
       .addImm(Value.getZExtValue());
+}
+
+static MCInst loadZPRImmediate(MCRegister Reg, unsigned RegBitWidth,
+                               const APInt &Value) {
+  assert(Value.getZExtValue() < (1 << 7) &&
+         "Value must be in the range of the immediate opcode");
+  return MCInstBuilder(AArch64::DUP_ZI_D)
+      .addReg(Reg)
+      .addImm(Value.getZExtValue())
+      .addImm(0);
+}
+
+static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
+                               const APInt &Value) {
+  // For PPR, we typically use PTRUE instruction to set predicate registers
+  return MCInstBuilder(AArch64::PTRUE_B)
+      .addReg(Reg)
+      .addImm(31); // All lanes true for 16 bits
+}
+
+// Generates instructions to load an immediate value into an FPCR register.
+static std::vector<MCInst>
+loadFPCRImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
+  MCRegister TempReg = AArch64::X8;
+  MCInst LoadImm = MCInstBuilder(AArch64::MOVi64imm).addReg(TempReg).addImm(0);
+  MCInst MoveToFPCR =
+      MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::FPCR).addReg(TempReg);
+  return {LoadImm, MoveToFPCR};
+}
+
+// Fetch base-instruction to load an FP immediate value into a register.
+static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
+  switch (RegBitWidth) {
+  case 16:
+    return AArch64::FMOVH0; // FMOVHi;
+  case 32:
+    return AArch64::FMOVS0; // FMOVSi;
+  case 64:
+    return AArch64::MOVID; // FMOVDi;
+  case 128:
+    return AArch64::MOVIv2d_ns;
+  }
+  llvm_unreachable("Invalid Value Width");
+}
+
+// Generates instruction to load an FP immediate value into a register.
+static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
+                              const APInt &Value) {
+  assert(Value.getZExtValue() == 0 && "Expected initialisation value 0");
+  MCInst Instructions =
+      MCInstBuilder(getLoadFPImmediateOpcode(RegBitWidth)).addReg(Reg);
+  if (RegBitWidth >= 64)
+    Instructions.addOperand(MCOperand::createImm(Value.getZExtValue()));
+  return Instructions;
 }
 
 #include "AArch64GenExegesis.inc"
@@ -45,12 +115,29 @@ public:
       : ExegesisTarget(AArch64CpuPfmCounters, AArch64_MC::isOpcodeAvailable) {}
 
 private:
-  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
+  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
                                const APInt &Value) const override {
     if (AArch64::GPR32RegClass.contains(Reg))
       return {loadImmediate(Reg, 32, Value)};
     if (AArch64::GPR64RegClass.contains(Reg))
       return {loadImmediate(Reg, 64, Value)};
+    if (AArch64::PPRRegClass.contains(Reg))
+      return {loadPPRImmediate(Reg, 16, Value)};
+    if (AArch64::FPR8RegClass.contains(Reg))
+      return {loadFPImmediate(Reg - AArch64::B0 + AArch64::D0, 64, Value)};
+    if (AArch64::FPR16RegClass.contains(Reg))
+      return {loadFPImmediate(Reg, 16, Value)};
+    if (AArch64::FPR32RegClass.contains(Reg))
+      return {loadFPImmediate(Reg, 32, Value)};
+    if (AArch64::FPR64RegClass.contains(Reg))
+      return {loadFPImmediate(Reg, 64, Value)};
+    if (AArch64::FPR128RegClass.contains(Reg))
+      return {loadFPImmediate(Reg, 128, Value)};
+    if (AArch64::ZPRRegClass.contains(Reg))
+      return {loadZPRImmediate(Reg, 128, Value)};
+    if (Reg == AArch64::FPCR)
+      return {loadFPCRImmediate(Reg, 32, Value)};
+
     errs() << "setRegTo is not implemented, results will be unreliable\n";
     return {};
   }

@@ -25,7 +25,7 @@ end subroutine
 ! CHECK:    hlfir.yield_element %[[VAL_15]] : i32
 ! CHECK:  }
 ! CHECK:  %[[VAL_16:.*]]:3 = hlfir.associate %[[VAL_17:.*]](%[[VAL_9]]) {adapt.valuebyref} : (!hlfir.expr<20xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>, i1)
-! CHECK:  fir.call @_QPbar(%[[VAL_16]]#1) fastmath<contract> : (!fir.ref<!fir.array<20xi32>>) -> ()
+! CHECK:  fir.call @_QPbar(%[[VAL_16]]#0) fastmath<contract> : (!fir.ref<!fir.array<20xi32>>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_16]]#1, %[[VAL_16]]#2 : !fir.ref<!fir.array<20xi32>>, i1
 ! CHECK:  hlfir.destroy %[[VAL_17]] : !hlfir.expr<20xi32>
 
@@ -209,10 +209,9 @@ end subroutine
 ! CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_4]], %[[VAL_11]])  : (!fir.class<!fir.array<?x?xnone>>, index, i64) -> !fir.class<none>
 ! CHECK:             hlfir.yield_element %[[VAL_12]] : !fir.class<none>
 ! CHECK:           }
-! CHECK:           %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_8]](%[[VAL_7]]) {adapt.valuebyref} : (!hlfir.expr<?xnone?>, !fir.shape<1>) -> (!fir.class<!fir.heap<!fir.array<?xnone>>>, !fir.class<!fir.heap<!fir.array<?xnone>>>, i1)
-! CHECK:           %[[VAL_14:.*]] = fir.rebox %[[VAL_13]]#0 : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.class<!fir.array<?xnone>>
-! CHECK:           fir.call @_QPdo_something(%[[VAL_14]]) fastmath<contract> : (!fir.class<!fir.array<?xnone>>) -> ()
-! CHECK:           hlfir.end_associate %[[VAL_13]]#0, %[[VAL_13]]#2 : !fir.class<!fir.heap<!fir.array<?xnone>>>, i1
+! CHECK:           %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_8]](%[[VAL_7]]) {adapt.valuebyref} : (!hlfir.expr<?xnone?>, !fir.shape<1>) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>, i1)
+! CHECK:           fir.call @_QPdo_something(%[[VAL_13]]#0) fastmath<contract> : (!fir.class<!fir.array<?xnone>>) -> ()
+! CHECK:           hlfir.end_associate %[[VAL_13]]#0, %[[VAL_13]]#2 : !fir.class<!fir.array<?xnone>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_8]] : !hlfir.expr<?xnone?>
 ! CHECK:           return
 ! CHECK:         }

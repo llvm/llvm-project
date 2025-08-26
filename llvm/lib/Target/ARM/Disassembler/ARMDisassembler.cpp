@@ -13,6 +13,7 @@
 #include "TargetInfo/ARMTargetInfo.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -31,6 +32,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "arm-disassembler"
 
@@ -38,94 +40,80 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 namespace {
 
-  // Handles the condition code status of instructions in IT blocks
-  class ITStatus
-  {
-    public:
-      // Returns the condition code for instruction in IT block
-      unsigned getITCC() {
-        unsigned CC = ARMCC::AL;
-        if (instrInITBlock())
-          CC = ITStates.back();
-        return CC;
-      }
+// Handles the condition code status of instructions in IT blocks
+class ITStatus {
+public:
+  // Returns the condition code for instruction in IT block
+  unsigned getITCC() {
+    unsigned CC = ARMCC::AL;
+    if (instrInITBlock())
+      CC = ITStates.back();
+    return CC;
+  }
 
-      // Advances the IT block state to the next T or E
-      void advanceITState() {
-        ITStates.pop_back();
-      }
+  // Advances the IT block state to the next T or E
+  void advanceITState() { ITStates.pop_back(); }
 
-      // Returns true if the current instruction is in an IT block
-      bool instrInITBlock() {
-        return !ITStates.empty();
-      }
+  // Returns true if the current instruction is in an IT block
+  bool instrInITBlock() { return !ITStates.empty(); }
 
-      // Returns true if current instruction is the last instruction in an IT block
-      bool instrLastInITBlock() {
-        return ITStates.size() == 1;
-      }
+  // Returns true if current instruction is the last instruction in an IT block
+  bool instrLastInITBlock() { return ITStates.size() == 1; }
 
-      // Called when decoding an IT instruction. Sets the IT state for
-      // the following instructions that for the IT block. Firstcond
-      // corresponds to the field in the IT instruction encoding; Mask
-      // is in the MCOperand format in which 1 means 'else' and 0 'then'.
-      void setITState(char Firstcond, char Mask) {
-        // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
-        unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
-        assert(NumTZ <= 3 && "Invalid IT mask!");
-        // push condition codes onto the stack the correct order for the pops
-        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
-          unsigned Else = (Mask >> Pos) & 1;
-          ITStates.push_back(CCBits ^ Else);
-        }
-        ITStates.push_back(CCBits);
-      }
+  // Called when decoding an IT instruction. Sets the IT state for
+  // the following instructions that for the IT block. Firstcond
+  // corresponds to the field in the IT instruction encoding; Mask
+  // is in the MCOperand format in which 1 means 'else' and 0 'then'.
+  void setITState(char Firstcond, char Mask) {
+    // (3 - the number of trailing zeros) is the number of then / else.
+    unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
+    unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
+    assert(NumTZ <= 3 && "Invalid IT mask!");
+    // push condition codes onto the stack the correct order for the pops
+    for (unsigned Pos = NumTZ + 1; Pos <= 3; ++Pos) {
+      unsigned Else = (Mask >> Pos) & 1;
+      ITStates.push_back(CCBits ^ Else);
+    }
+    ITStates.push_back(CCBits);
+  }
 
-    private:
-      std::vector<unsigned char> ITStates;
-  };
+private:
+  std::vector<unsigned char> ITStates;
+};
 
-  class VPTStatus
-  {
-    public:
-      unsigned getVPTPred() {
-        unsigned Pred = ARMVCC::None;
-        if (instrInVPTBlock())
-          Pred = VPTStates.back();
-        return Pred;
-      }
+class VPTStatus {
+public:
+  unsigned getVPTPred() {
+    unsigned Pred = ARMVCC::None;
+    if (instrInVPTBlock())
+      Pred = VPTStates.back();
+    return Pred;
+  }
 
-      void advanceVPTState() {
-        VPTStates.pop_back();
-      }
+  void advanceVPTState() { VPTStates.pop_back(); }
 
-      bool instrInVPTBlock() {
-        return !VPTStates.empty();
-      }
+  bool instrInVPTBlock() { return !VPTStates.empty(); }
 
-      bool instrLastInVPTBlock() {
-        return VPTStates.size() == 1;
-      }
+  bool instrLastInVPTBlock() { return VPTStates.size() == 1; }
 
-      void setVPTState(char Mask) {
-        // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
-        assert(NumTZ <= 3 && "Invalid VPT mask!");
-        // push predicates onto the stack the correct order for the pops
-        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
-          bool T = ((Mask >> Pos) & 1) == 0;
-          if (T)
-            VPTStates.push_back(ARMVCC::Then);
-          else
-            VPTStates.push_back(ARMVCC::Else);
-        }
+  void setVPTState(char Mask) {
+    // (3 - the number of trailing zeros) is the number of then / else.
+    unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
+    assert(NumTZ <= 3 && "Invalid VPT mask!");
+    // push predicates onto the stack the correct order for the pops
+    for (unsigned Pos = NumTZ + 1; Pos <= 3; ++Pos) {
+      bool T = ((Mask >> Pos) & 1) == 0;
+      if (T)
         VPTStates.push_back(ARMVCC::Then);
-      }
+      else
+        VPTStates.push_back(ARMVCC::Else);
+    }
+    VPTStates.push_back(ARMVCC::Then);
+  }
 
-    private:
-      SmallVector<unsigned char, 4> VPTStates;
-  };
+private:
+  SmallVector<unsigned char, 4> VPTStates;
+};
 
 /// ARM disassembler for all ARM platforms.
 class ARMDisassembler : public MCDisassembler {
@@ -704,6 +692,42 @@ static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
 
+/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
+/// immediate Value in the MCInst.  The immediate Value has had any PC
+/// adjustment made by the caller.  If the instruction is a branch instruction
+/// then isBranch is true, else false.  If the getOpInfo() function was set as
+/// part of the setupForSymbolicDisassembly() call then that function is called
+/// to get any symbolic information at the Address for this instruction.  If
+/// that returns non-zero then the symbolic information it returns is used to
+/// create an MCExpr and that is added as an operand to the MCInst.  If
+/// getOpInfo() returns zero and isBranch is true then a symbol look up for
+/// Value is done and if a symbol is found an MCExpr is created with that, else
+/// an MCExpr with Value is created.  This function returns true if it adds an
+/// operand to the MCInst and false otherwise.
+static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
+                                     bool isBranch, uint64_t InstSize,
+                                     MCInst &MI,
+                                     const MCDisassembler *Decoder) {
+  // FIXME: Does it make sense for value to be negative?
+  return Decoder->tryAddingSymbolicOperand(MI, (uint32_t)Value, Address,
+                                           isBranch, /*Offset=*/0, /*OpSize=*/0,
+                                           InstSize);
+}
+
+/// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
+/// referenced by a load instruction with the base register that is the Pc.
+/// These can often be values in a literal pool near the Address of the
+/// instruction.  The Address of the instruction and its immediate Value are
+/// used as a possible literal pool entry.  The SymbolLookUp call back will
+/// return the name of a symbol referenced by the literal pool's entry if
+/// the referenced address is that of a symbol.  Or it will return a pointer to
+/// a literal 'C' string if the referenced address of the literal pool's entry
+/// is an address into a section with 'C' string literals.
+static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
+                                            const MCDisassembler *Decoder) {
+  Decoder->tryAddingPcLoadReferenceComment(Value, Address);
+}
+
 #include "ARMGenDisassemblerTables.inc"
 
 static MCDisassembler *createARMDisassembler(const Target &T,
@@ -842,43 +866,6 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
 
   Size = 4;
   return MCDisassembler::Fail;
-}
-
-/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
-/// immediate Value in the MCInst.  The immediate Value has had any PC
-/// adjustment made by the caller.  If the instruction is a branch instruction
-/// then isBranch is true, else false.  If the getOpInfo() function was set as
-/// part of the setupForSymbolicDisassembly() call then that function is called
-/// to get any symbolic information at the Address for this instruction.  If
-/// that returns non-zero then the symbolic information it returns is used to
-/// create an MCExpr and that is added as an operand to the MCInst.  If
-/// getOpInfo() returns zero and isBranch is true then a symbol look up for
-/// Value is done and if a symbol is found an MCExpr is created with that, else
-/// an MCExpr with Value is created.  This function returns true if it adds an
-/// operand to the MCInst and false otherwise.
-static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
-                                     bool isBranch, uint64_t InstSize,
-                                     MCInst &MI,
-                                     const MCDisassembler *Decoder) {
-  // FIXME: Does it make sense for value to be negative?
-  return Decoder->tryAddingSymbolicOperand(MI, (uint32_t)Value, Address,
-                                           isBranch, /*Offset=*/0, /*OpSize=*/0,
-                                           InstSize);
-}
-
-/// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
-/// referenced by a load instruction with the base register that is the Pc.
-/// These can often be values in a literal pool near the Address of the
-/// instruction.  The Address of the instruction and its immediate Value are
-/// used as a possible literal pool entry.  The SymbolLookUp call back will
-/// return the name of a symbol referenced by the literal pool's entry if
-/// the referenced address is that of a symbol.  Or it will return a pointer to
-/// a literal 'C' string if the referenced address of the literal pool's entry
-/// is an address into a section with 'C' string literals.
-static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
-                                            const MCDisassembler *Decoder) {
-  const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
-  Dis->tryAddingPcLoadReferenceComment(Value, Address);
 }
 
 // Thumb1 instructions don't have explicit S bits.  Rather, they
@@ -1265,11 +1252,16 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
     return Result;
   }
 
+  // Advance IT state to prevent next instruction inheriting
+  // the wrong IT state.
+  if (ITBlock.instrInITBlock())
+    ITBlock.advanceITState();
   Size = 0;
   return MCDisassembler::Fail;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeARMDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheARMLETarget(),
                                          createARMDisassembler);
   TargetRegistry::RegisterMCDisassembler(getTheARMBETarget(),
@@ -1481,7 +1473,7 @@ static DecodeStatus DecoderGPRRegisterClass(MCInst &Inst, unsigned RegNo,
   DecodeStatus S = MCDisassembler::Success;
 
   const FeatureBitset &featureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   if ((RegNo == 13 && !featureBits[ARM::HasV8Ops]) || RegNo == 15)
     S = MCDisassembler::SoftFail;
@@ -1490,7 +1482,7 @@ static DecodeStatus DecoderGPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return S;
 }
 
-static const uint16_t SPRDecoderTable[] = {
+static const MCPhysReg SPRDecoderTable[] = {
      ARM::S0,  ARM::S1,  ARM::S2,  ARM::S3,
      ARM::S4,  ARM::S5,  ARM::S6,  ARM::S7,
      ARM::S8,  ARM::S9, ARM::S10, ARM::S11,
@@ -1518,7 +1510,7 @@ static DecodeStatus DecodeHPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeSPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static const uint16_t DPRDecoderTable[] = {
+static const MCPhysReg DPRDecoderTable[] = {
      ARM::D0,  ARM::D1,  ARM::D2,  ARM::D3,
      ARM::D4,  ARM::D5,  ARM::D6,  ARM::D7,
      ARM::D8,  ARM::D9, ARM::D10, ARM::D11,
@@ -1534,7 +1526,7 @@ static bool PermitsD32(const MCInst &Inst, const MCDisassembler *Decoder) {
   if (Inst.getOpcode() == ARM::VSCCLRMD || Inst.getOpcode() == ARM::VSCCLRMS)
     return true;
   const FeatureBitset &featureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
   return featureBits[ARM::FeatureD32];
 }
 
@@ -1573,7 +1565,7 @@ static DecodeStatus DecodeDPR_VFP2RegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeDPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static const uint16_t QPRDecoderTable[] = {
+static const MCPhysReg QPRDecoderTable[] = {
      ARM::Q0,  ARM::Q1,  ARM::Q2,  ARM::Q3,
      ARM::Q4,  ARM::Q5,  ARM::Q6,  ARM::Q7,
      ARM::Q8,  ARM::Q9, ARM::Q10, ARM::Q11,
@@ -1592,7 +1584,7 @@ static DecodeStatus DecodeQPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static const uint16_t DPairDecoderTable[] = {
+static const MCPhysReg DPairDecoderTable[] = {
   ARM::Q0,  ARM::D1_D2,   ARM::Q1,  ARM::D3_D4,   ARM::Q2,  ARM::D5_D6,
   ARM::Q3,  ARM::D7_D8,   ARM::Q4,  ARM::D9_D10,  ARM::Q5,  ARM::D11_D12,
   ARM::Q6,  ARM::D13_D14, ARM::Q7,  ARM::D15_D16, ARM::Q8,  ARM::D17_D18,
@@ -1612,7 +1604,7 @@ static DecodeStatus DecodeDPairRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static const uint16_t DPairSpacedDecoderTable[] = {
+static const MCPhysReg DPairSpacedDecoderTable[] = {
   ARM::D0_D2,   ARM::D1_D3,   ARM::D2_D4,   ARM::D3_D5,
   ARM::D4_D6,   ARM::D5_D7,   ARM::D6_D8,   ARM::D7_D9,
   ARM::D8_D10,  ARM::D9_D11,  ARM::D10_D12, ARM::D11_D13,
@@ -1878,7 +1870,7 @@ static DecodeStatus DecodeCopMemInstruction(MCInst &Inst, unsigned Insn,
   unsigned Rn = fieldFromInstruction(Insn, 16, 4);
   unsigned U = fieldFromInstruction(Insn, 23, 1);
   const FeatureBitset &featureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   switch (Inst.getOpcode()) {
     case ARM::LDC_OFFSET:
@@ -2552,8 +2544,8 @@ static DecodeStatus DecodeHINTInstruction(MCInst &Inst, unsigned Insn,
                                           const MCDisassembler *Decoder) {
   unsigned pred = fieldFromInstruction(Insn, 28, 4);
   unsigned imm8 = fieldFromInstruction(Insn, 0, 8);
-  const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
-  const FeatureBitset &FeatureBits = Dis->getSubtargetInfo().getFeatureBits();
+  const FeatureBitset &FeatureBits =
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   DecodeStatus S = MCDisassembler::Success;
 
@@ -2797,8 +2789,8 @@ static DecodeStatus DecodeSETPANInstruction(MCInst &Inst, unsigned Insn,
 
   unsigned Imm = fieldFromInstruction(Insn, 9, 1);
 
-  const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
-  const FeatureBitset &FeatureBits = Dis->getSubtargetInfo().getFeatureBits();
+  const FeatureBitset &FeatureBits =
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   if (!FeatureBits[ARM::HasV8_1aOps] ||
       !FeatureBits[ARM::HasV8Ops])
@@ -4080,7 +4072,7 @@ static DecodeStatus DecodeT2LoadShift(MCInst &Inst, unsigned Insn,
   unsigned Rn = fieldFromInstruction(Insn, 16, 4);
 
   const FeatureBitset &featureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   bool hasMP = featureBits[ARM::FeatureMP];
   bool hasV7Ops = featureBits[ARM::HasV7Ops];
@@ -4169,7 +4161,7 @@ static DecodeStatus DecodeT2LoadImm8(MCInst &Inst, unsigned Insn,
   unsigned add = fieldFromInstruction(Insn, 9, 1);
 
   const FeatureBitset &featureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   bool hasMP = featureBits[ARM::FeatureMP];
   bool hasV7Ops = featureBits[ARM::HasV7Ops];
@@ -4251,7 +4243,7 @@ static DecodeStatus DecodeT2LoadImm12(MCInst &Inst, unsigned Insn,
   imm |= (Rn << 13);
 
   const FeatureBitset &featureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   bool hasMP = featureBits[ARM::FeatureMP];
   bool hasV7Ops = featureBits[ARM::HasV7Ops];
@@ -4370,7 +4362,7 @@ static DecodeStatus DecodeT2LoadLabel(MCInst &Inst, unsigned Insn,
   int imm = fieldFromInstruction(Insn, 0, 12);
 
   const FeatureBitset &featureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   bool hasV7Ops = featureBits[ARM::HasV7Ops];
 
@@ -4825,7 +4817,7 @@ static DecodeStatus DecodeCoprocessor(MCInst &Inst, unsigned Val,
     return MCDisassembler::Fail;
 
   const FeatureBitset &featureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   if (!isValidCoprocessorNumber(Val, featureBits))
     return MCDisassembler::Fail;
@@ -4838,7 +4830,7 @@ static DecodeStatus DecodeThumbTableBranch(MCInst &Inst, unsigned Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
   const FeatureBitset &FeatureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
   DecodeStatus S = MCDisassembler::Success;
 
   unsigned Rn = fieldFromInstruction(Insn, 16, 4);
@@ -4983,7 +4975,7 @@ static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Val, uint64_t Address,
                                   const MCDisassembler *Decoder) {
   DecodeStatus S = MCDisassembler::Success;
   const FeatureBitset &FeatureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   if (FeatureBits[ARM::FeatureMClass]) {
     unsigned ValLow = Val & 0xff;
@@ -6018,7 +6010,7 @@ static DecodeStatus DecodeSwap(MCInst &Inst, unsigned Insn, uint64_t Address,
 static DecodeStatus DecodeVCVTD(MCInst &Inst, unsigned Insn, uint64_t Address,
                                 const MCDisassembler *Decoder) {
   const FeatureBitset &featureBits =
-      ((const MCDisassembler *)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
   bool hasFullFP16 = featureBits[ARM::FeatureFullFP16];
 
   unsigned Vd = (fieldFromInstruction(Insn, 12, 4) << 0);
@@ -6077,7 +6069,7 @@ static DecodeStatus DecodeVCVTD(MCInst &Inst, unsigned Insn, uint64_t Address,
 static DecodeStatus DecodeVCVTQ(MCInst &Inst, unsigned Insn, uint64_t Address,
                                 const MCDisassembler *Decoder) {
   const FeatureBitset &featureBits =
-      ((const MCDisassembler *)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
   bool hasFullFP16 = featureBits[ARM::FeatureFullFP16];
 
   unsigned Vd = (fieldFromInstruction(Insn, 12, 4) << 0);
@@ -6243,7 +6235,7 @@ static DecodeStatus DecodeForVMRSandVMSR(MCInst &Inst, unsigned Val,
                                          uint64_t Address,
                                          const MCDisassembler *Decoder) {
   const FeatureBitset &featureBits =
-      ((const MCDisassembler *)Decoder)->getSubtargetInfo().getFeatureBits();
+      Decoder->getSubtargetInfo().getFeatureBits();
   DecodeStatus S = MCDisassembler::Success;
 
   // Add explicit operand for the destination sysreg, for cases where
@@ -6494,7 +6486,7 @@ static DecodeStatus DecodeMQPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static const uint16_t QQPRDecoderTable[] = {
+static const MCPhysReg QQPRDecoderTable[] = {
      ARM::Q0_Q1,  ARM::Q1_Q2,  ARM::Q2_Q3,  ARM::Q3_Q4,
      ARM::Q4_Q5,  ARM::Q5_Q6,  ARM::Q6_Q7
 };
@@ -6510,7 +6502,7 @@ static DecodeStatus DecodeMQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static const uint16_t QQQQPRDecoderTable[] = {
+static const MCPhysReg QQQQPRDecoderTable[] = {
      ARM::Q0_Q1_Q2_Q3,  ARM::Q1_Q2_Q3_Q4,  ARM::Q2_Q3_Q4_Q5,
      ARM::Q3_Q4_Q5_Q6,  ARM::Q4_Q5_Q6_Q7
 };
@@ -6686,6 +6678,13 @@ static unsigned FixedRegForVSTRVLDR_SYSREG(unsigned Opcode) {
   case ARM::VLDR_P0_pre:
   case ARM::VLDR_P0_post:
     return ARM::P0;
+  case ARM::VSTR_FPSCR_NZCVQC_off:
+  case ARM::VSTR_FPSCR_NZCVQC_pre:
+  case ARM::VSTR_FPSCR_NZCVQC_post:
+  case ARM::VLDR_FPSCR_NZCVQC_off:
+  case ARM::VLDR_FPSCR_NZCVQC_pre:
+  case ARM::VLDR_FPSCR_NZCVQC_post:
+    return ARM::FPSCR;
   default:
     return 0;
   }
@@ -6709,7 +6708,7 @@ static DecodeStatus DecodeVSTRVLDR_SYSREG(MCInst &Inst, unsigned Val,
   case ARM::VLDR_FPSCR_post:
   case ARM::VLDR_FPSCR_NZCVQC_post:
     const FeatureBitset &featureBits =
-        ((const MCDisassembler *)Decoder)->getSubtargetInfo().getFeatureBits();
+        Decoder->getSubtargetInfo().getFeatureBits();
 
     if (!featureBits[ARM::HasMVEIntegerOps] && !featureBits[ARM::FeatureVFP2])
       return MCDisassembler::Fail;

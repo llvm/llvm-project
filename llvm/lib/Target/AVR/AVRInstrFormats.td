@@ -19,8 +19,6 @@ class AVRInst<dag outs, dag ins, string asmstr, list<dag> pattern>
   dag InOperandList = ins;
   let AsmString = asmstr;
   let Pattern = pattern;
-
-  field bits<32> SoftFail = 0;
 }
 
 /// A 16-bit AVR instruction.
@@ -173,7 +171,6 @@ class FSTDLDD<bit type, dag outs, dag ins, string asmstr, list<dag> pattern>
 //===---------------------------------------------------------------------===//
 class FSTLD<bit type, bits<2> mode, dag outs, dag ins, string asmstr,
             list<dag> pattern> : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<2> ptrreg;
   bits<5> reg;
 
   let Inst{15 - 13} = 0b100;
@@ -187,7 +184,6 @@ class FSTLD<bit type, bits<2> mode, dag outs, dag ins, string asmstr,
 
   let Inst{7 - 4} = reg{3 - 0};
 
-  let Inst{3 - 2} = ptrreg{1 - 0};
   let Inst{1 - 0} = mode{1 - 0};
 
   let DecoderMethod = "decodeLoadStore";

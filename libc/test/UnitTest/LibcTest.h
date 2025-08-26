@@ -162,6 +162,14 @@ protected:
                           (unsigned long long)RHS, LHSStr, RHSStr, Loc);
   }
 
+  // Helper to allow macro invocations like `ASSERT_EQ(foo, nullptr)`.
+  template <typename ValType,
+            cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
+  bool test(TestCond Cond, ValType LHS, cpp::nullptr_t, const char *LHSStr,
+            const char *RHSStr, internal::Location Loc) {
+    return test(Cond, LHS, static_cast<ValType>(nullptr), LHSStr, RHSStr, Loc);
+  }
+
   template <
       typename ValType,
       cpp::enable_if_t<
@@ -392,6 +400,14 @@ CString libc_make_test_file_path_func(const char *file_name);
   SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
   void SuiteClass##_##TestName::Run()
 
+// Helper to trick the compiler into ignoring lack of braces on the else
+// branch.  We cannot introduce braces at this point, since it would prevent
+// using `<< ...` after the test macro for additional failure output.
+#define LIBC_TEST_DISABLE_DANGLING_ELSE                                        \
+  switch (0)                                                                   \
+  case 0:                                                                      \
+  default: // NOLINT
+
 // If RET_OR_EMPTY is the 'return' keyword we perform an early return which
 // corresponds to an assert. If it is empty the execution continues, this
 // corresponds to an expect.
@@ -403,6 +419,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 // returning a boolean. This expression is responsible for logging the
 // diagnostic in case of failure.
 #define LIBC_TEST_SCAFFOLDING_(TEST, RET_OR_EMPTY)                             \
+  LIBC_TEST_DISABLE_DANGLING_ELSE                                              \
   if (TEST)                                                                    \
     ;                                                                          \
   else                                                                         \

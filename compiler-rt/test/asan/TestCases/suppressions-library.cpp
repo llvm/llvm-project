@@ -1,3 +1,4 @@
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -O0 -DSHARED_LIB %s %fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_asan -O0 %s -o %t %ld_flags_rpath_exe
 
@@ -9,6 +10,7 @@
 // RUN: echo "interceptor_via_lib:"%xdynamiclib_filename > %t.supp
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
+// FIXME: Upload suppressions to device.
 // XFAIL: android
 
 #include <stdio.h>

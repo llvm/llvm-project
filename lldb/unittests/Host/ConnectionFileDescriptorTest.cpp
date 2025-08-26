@@ -22,11 +22,11 @@ public:
     std::unique_ptr<TCPSocket> socket_a_up;
     std::unique_ptr<TCPSocket> socket_b_up;
     CreateTCPConnectedSockets(ip, &socket_a_up, &socket_b_up);
-    auto *socket = socket_a_up.release();
-    ConnectionFileDescriptor connection_file_descriptor(socket);
+    uint16_t socket_a_remote_port = socket_a_up->GetRemotePortNumber();
+    ConnectionFileDescriptor connection_file_descriptor(std::move(socket_a_up));
 
     std::string uri(connection_file_descriptor.GetURI());
-    EXPECT_EQ((URI{"connect", ip, socket->GetRemotePortNumber(), "/"}),
+    EXPECT_EQ((URI{"connect", ip, socket_a_remote_port, "/"}),
               *URI::Parse(uri));
   }
 };

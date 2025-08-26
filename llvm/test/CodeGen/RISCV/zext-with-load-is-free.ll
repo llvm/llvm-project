@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 
-; TODO: lbu and lhu should be selected to avoid the unnecessary masking.
-
 @bytes = dso_local global [5 x i8] zeroinitializer, align 1
 
 define dso_local i32 @test_zext_i8() nounwind {

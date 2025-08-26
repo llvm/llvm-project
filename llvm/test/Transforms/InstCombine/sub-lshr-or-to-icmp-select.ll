@@ -47,7 +47,7 @@ define <4 x i32> @neg_or_lshr_i32_vec(<4 x i32> %x) {
 
 define <4 x i32> @neg_or_lshr_i32_vec_commute(<4 x i32> %x0) {
 ; CHECK-LABEL: @neg_or_lshr_i32_vec_commute(
-; CHECK-NEXT:    [[X:%.*]] = sdiv <4 x i32> <i32 42, i32 42, i32 42, i32 42>, [[X0:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = sdiv <4 x i32> splat (i32 42), [[X0:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[SHR:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SHR]]

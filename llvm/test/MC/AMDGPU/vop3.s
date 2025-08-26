@@ -1,11 +1,11 @@
-// RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck %s --check-prefix=SICI
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=SICI
 // RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck %s --check-prefix=CI --check-prefix=SICI
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
 
 // Make sure interp instructions disassemble regardless of lds bank count
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=VI
 
-// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck %s -check-prefix=NOCI --check-prefix=NOSICI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 %s 2>&1 | FileCheck -check-prefix=NOVI --implicit-check-not=error: %s

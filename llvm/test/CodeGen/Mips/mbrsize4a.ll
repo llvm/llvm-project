@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands   < %s | FileCheck %s -check-prefix=jal16
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands < %s | FileCheck %s -check-prefix=jal16
 
 @j = global i32 10, align 4
 @.str = private unnamed_addr constant [11 x i8] c"at bottom\0A\00", align 1

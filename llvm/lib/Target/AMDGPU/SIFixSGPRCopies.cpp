@@ -68,7 +68,6 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
@@ -128,6 +127,7 @@ class SIFixSGPRCopies {
   unsigned NextVGPRToSGPRCopyID = 0;
   MapVector<unsigned, V2SCopyInfo> V2SCopies;
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
+  DenseSet<MachineInstr *> PHISources;
 
 public:
   MachineRegisterInfo *MRI;
@@ -156,7 +156,8 @@ public:
   // have any other uses.
   bool tryMoveVGPRConstToSGPR(MachineOperand &MO, Register NewDst,
                               MachineBasicBlock *BlockToInsertTo,
-                              MachineBasicBlock::iterator PointToInsertTo);
+                              MachineBasicBlock::iterator PointToInsertTo,
+                              const DebugLoc &DL);
 };
 
 class SIFixSGPRCopiesLegacy : public MachineFunctionPass {
@@ -377,6 +378,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   default:
     return false;
   case AMDGPU::V_MOV_B32_e32:
+  case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
     SMovOp = AMDGPU::S_MOV_B32;
     break;
   case AMDGPU::V_MOV_B64_PSEUDO:
@@ -458,7 +460,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   // List of clobbering instructions.
   SmallVector<MachineInstr*, 8> Clobbers;
   // List of instructions marked for deletion.
-  SmallSet<MachineInstr*, 8> MergedInstrs;
+  SmallPtrSet<MachineInstr *, 8> MergedInstrs;
 
   bool Changed = false;
 
@@ -617,8 +619,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
 
 bool SIFixSGPRCopies::run(MachineFunction &MF) {
   // Only need to run this in SelectionDAG path.
-  if (MF.getProperties().hasProperty(
-        MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return false;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -634,11 +635,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
       switch (MI.getOpcode()) {
       default:
         continue;
-      case AMDGPU::COPY:
-      case AMDGPU::WQM:
-      case AMDGPU::STRICT_WQM:
-      case AMDGPU::SOFT_WQM:
-      case AMDGPU::STRICT_WWM: {
+      case AMDGPU::COPY: {
         const TargetRegisterClass *SrcRC, *DstRC;
         std::tie(SrcRC, DstRC) = getCopyRegClasses(MI, *TRI, *MRI);
 
@@ -662,6 +659,10 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
         break;
       }
+      case AMDGPU::WQM:
+      case AMDGPU::STRICT_WQM:
+      case AMDGPU::SOFT_WQM:
+      case AMDGPU::STRICT_WWM:
       case AMDGPU::INSERT_SUBREG:
       case AMDGPU::PHI:
       case AMDGPU::REG_SEQUENCE: {
@@ -670,6 +671,9 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
             if (!MO.isReg() || !MO.getReg().isVirtual())
               continue;
             const TargetRegisterClass *SrcRC = MRI->getRegClass(MO.getReg());
+            if (SrcRC == &AMDGPU::VReg_1RegClass)
+              continue;
+
             if (TRI->hasVectorRegisters(SrcRC)) {
               const TargetRegisterClass *DestRC =
                   TRI->getEquivalentSGPRClass(SrcRC);
@@ -680,15 +684,16 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
               MachineBasicBlock::iterator PointToInsertCopy =
                   MI.isPHI() ? BlockToInsertCopy->getFirstInstrTerminator() : I;
 
+              const DebugLoc &DL = MI.getDebugLoc();
               if (!tryMoveVGPRConstToSGPR(MO, NewDst, BlockToInsertCopy,
-                                          PointToInsertCopy)) {
+                                          PointToInsertCopy, DL)) {
                 MachineInstr *NewCopy =
-                    BuildMI(*BlockToInsertCopy, PointToInsertCopy,
-                            PointToInsertCopy->getDebugLoc(),
+                    BuildMI(*BlockToInsertCopy, PointToInsertCopy, DL,
                             TII->get(AMDGPU::COPY), NewDst)
                         .addReg(MO.getReg());
                 MO.setReg(NewDst);
                 analyzeVGPRToSGPRCopy(NewCopy);
+                PHISources.insert(NewCopy);
               }
             }
           }
@@ -795,6 +800,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   RegSequences.clear();
   PHINodes.clear();
   S2VCopies.clear();
+  PHISources.clear();
 
   return true;
 }
@@ -802,7 +808,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   bool AllAGPRUses = true;
   SetVector<const MachineInstr *> worklist;
-  SmallSet<const MachineInstr *, 4> Visited;
+  SmallPtrSet<const MachineInstr *, 4> Visited;
   SetVector<MachineInstr *> PHIOperands;
   worklist.insert(&MI);
   Visited.insert(&MI);
@@ -853,7 +859,7 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
 bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
     MachineOperand &MaybeVGPRConstMO, Register DstReg,
     MachineBasicBlock *BlockToInsertTo,
-    MachineBasicBlock::iterator PointToInsertTo) {
+    MachineBasicBlock::iterator PointToInsertTo, const DebugLoc &DL) {
 
   MachineInstr *DefMI = MRI->getVRegDef(MaybeVGPRConstMO.getReg());
   if (!DefMI || !DefMI->isMoveImmediate())
@@ -867,8 +873,7 @@ bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
       MRI->getRegClass(MaybeVGPRConstMO.getReg());
   unsigned MoveSize = TRI->getRegSizeInBits(*SrcRC);
   unsigned MoveOp = MoveSize == 64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
-  BuildMI(*BlockToInsertTo, PointToInsertTo, PointToInsertTo->getDebugLoc(),
-          TII->get(MoveOp), DstReg)
+  BuildMI(*BlockToInsertTo, PointToInsertTo, DL, TII->get(MoveOp), DstReg)
       .add(*SrcConst);
   if (MRI->hasOneUse(MaybeVGPRConstMO.getReg()))
     DefMI->eraseFromParent();
@@ -894,7 +899,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
           .add(MI.getOperand(1));
       MI.getOperand(1).setReg(TmpReg);
     } else if (tryMoveVGPRConstToSGPR(MI.getOperand(1), DstReg, MI.getParent(),
-                                      MI)) {
+                                      MI, MI.getDebugLoc())) {
       I = std::next(I);
       MI.eraseFromParent();
     }
@@ -921,11 +926,13 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
 }
 
 void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
+  if (PHISources.contains(MI))
+    return;
   Register DstReg = MI->getOperand(0).getReg();
   const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
 
   V2SCopyInfo Info(getNextVGPRToSGPRCopyId(), MI,
-                      TRI->getRegSizeInBits(*DstRC));
+                   TRI->getRegSizeInBits(*DstRC));
   SmallVector<MachineInstr *, 8> AnalysisWorklist;
   // Needed because the SSA is not a tree but a graph and may have
   // forks and joins. We should not then go same way twice.
@@ -940,13 +947,18 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 
     // Copies and REG_SEQUENCE do not contribute to the final assembly
     // So, skip them but take care of the SGPR to VGPR copies bookkeeping.
-    if (Inst->isCopy() || Inst->isRegSequence()) {
-      if (TRI->isVGPR(*MRI, Inst->getOperand(0).getReg())) {
-        if (!Inst->isCopy() ||
-            !tryChangeVGPRtoSGPRinCopy(*Inst, TRI, TII)) {
-          Info.NumSVCopies++;
-          continue;
-        }
+    if (Inst->isRegSequence() &&
+        TRI->isVGPR(*MRI, Inst->getOperand(0).getReg())) {
+      Info.NumSVCopies++;
+      continue;
+    }
+    if (Inst->isCopy()) {
+      const TargetRegisterClass *SrcRC, *DstRC;
+      std::tie(SrcRC, DstRC) = getCopyRegClasses(*Inst, *TRI, *MRI);
+      if (isSGPRToVGPRCopy(SrcRC, DstRC, *TRI) &&
+          !tryChangeVGPRtoSGPRinCopy(*Inst, TRI, TII)) {
+        Info.NumSVCopies++;
+        continue;
       }
     }
 
@@ -964,9 +976,10 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       }
     } else if (Inst->getNumExplicitDefs() != 0) {
       Register Reg = Inst->getOperand(0).getReg();
-      if (TRI->isSGPRReg(*MRI, Reg) && !TII->isVALU(*Inst))
+      if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) && !TII->isVALU(*Inst)) {
         for (auto &U : MRI->use_instructions(Reg))
           Users.push_back(&U);
+      }
     }
     for (auto *U : Users) {
       if (TII->isSALU(*U))
@@ -1070,16 +1083,32 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
                       << " is being turned to v_readfirstlane_b32"
                       << " Score: " << C.second.Score << "\n");
     Register DstReg = MI->getOperand(0).getReg();
+    MRI->constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass);
+
     Register SrcReg = MI->getOperand(1).getReg();
     unsigned SubReg = MI->getOperand(1).getSubReg();
     const TargetRegisterClass *SrcRC =
         TRI->getRegClassForOperandReg(*MRI, MI->getOperand(1));
     size_t SrcSize = TRI->getRegSizeInBits(*SrcRC);
     if (SrcSize == 16) {
-      // HACK to handle possible 16bit VGPR source
-      auto MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
-                         TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg);
-      MIB.addReg(SrcReg, 0, AMDGPU::NoSubRegister);
+      assert(MF.getSubtarget<GCNSubtarget>().useRealTrue16Insts() &&
+             "We do not expect to see 16-bit copies from VGPR to SGPR unless "
+             "we have 16-bit VGPRs");
+      assert(MRI->getRegClass(DstReg) == &AMDGPU::SReg_32RegClass ||
+             MRI->getRegClass(DstReg) == &AMDGPU::SReg_32_XM0RegClass);
+      // There is no V_READFIRSTLANE_B16, so legalize the dst/src reg to 32 bits
+      MRI->setRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass);
+      Register VReg32 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      const DebugLoc &DL = MI->getDebugLoc();
+      Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), VReg32)
+          .addReg(SrcReg, 0, SubReg)
+          .addImm(AMDGPU::lo16)
+          .addReg(Undef)
+          .addImm(AMDGPU::hi16);
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+          .addReg(VReg32);
     } else if (SrcSize == 32) {
       auto MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
                          TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg);
@@ -1093,7 +1122,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
             Result, *MRI, MI->getOperand(1), SrcRC,
             TRI->getSubRegFromChannel(i), &AMDGPU::VGPR_32RegClass);
         Register PartialDst =
-            MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+            MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
         BuildMI(*MBB, *Result, Result->getDebugLoc(),
                 TII->get(AMDGPU::V_READFIRSTLANE_B32), PartialDst)
             .addReg(PartialSrc);

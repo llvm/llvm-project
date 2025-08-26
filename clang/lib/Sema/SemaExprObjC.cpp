@@ -26,9 +26,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
 #include <optional>
 
@@ -76,8 +74,7 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
     S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
-                              /*Pascal=*/false, StrTy, &StrLocs[0],
-                              StrLocs.size());
+                              /*Pascal=*/false, StrTy, StrLocs);
   }
 
   return BuildObjCStringLiteral(AtLocs[0], S);
@@ -305,7 +302,7 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(SemaObjC &S, SourceLocation Loc,
         ParmVarDecl::Create(S.SemaRef.Context, Method, SourceLocation(),
                             SourceLocation(), &CX.Idents.get("value"),
                             NumberType, /*TInfo=*/nullptr, SC_None, nullptr);
-    Method->setMethodParams(S.SemaRef.Context, value, std::nullopt);
+    Method->setMethodParams(S.SemaRef.Context, value, {});
   }
 
   if (!validateBoxingMethod(S.SemaRef, Loc, S.NSNumberDecl, Sel, Method))
@@ -551,9 +548,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
             const llvm::UTF8 *StrEnd = Str.bytes_end();
             // Check that this is a valid UTF-8 string.
             if (llvm::isLegalUTF8String(&StrBegin, StrEnd)) {
-              BoxedType = Context.getAttributedType(
-                  AttributedType::getNullabilityAttrKind(
-                      NullabilityKind::NonNull),
+              BoxedType = Context.getAttributedType(NullabilityKind::NonNull,
                   NSStringPointer, NSStringPointer);
               return new (Context) ObjCBoxedExpr(CE, BoxedType, nullptr, SR);
             }
@@ -588,7 +583,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
                                 Context.getPointerType(ConstCharType),
                                 /*TInfo=*/nullptr,
                                 SC_None, nullptr);
-          M->setMethodParams(Context, value, std::nullopt);
+          M->setMethodParams(Context, value, {});
           BoxingMethod = M;
         }
 
@@ -605,9 +600,8 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       std::optional<NullabilityKind> Nullability =
           BoxingMethod->getReturnType()->getNullability();
       if (Nullability)
-        BoxedType = Context.getAttributedType(
-            AttributedType::getNullabilityAttrKind(*Nullability), BoxedType,
-            BoxedType);
+        BoxedType =
+            Context.getAttributedType(*Nullability, BoxedType, BoxedType);
     }
   } else if (ValueType->isBuiltinType()) {
     // The other types we support are numeric, char and BOOL/bool. We could also
@@ -644,15 +638,14 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
     // Look for the appropriate method within NSNumber.
     BoxingMethod = getNSNumberFactoryMethod(*this, Loc, ValueType);
     BoxedType = NSNumberPointer;
-  } else if (const EnumType *ET = ValueType->getAs<EnumType>()) {
-    if (!ET->getDecl()->isComplete()) {
+  } else if (const auto *ED = ValueType->getAsEnumDecl()) {
+    if (!ED->isComplete()) {
       Diag(Loc, diag::err_objc_incomplete_boxed_expression_type)
         << ValueType << ValueExpr->getSourceRange();
       return ExprError();
     }
 
-    BoxingMethod = getNSNumberFactoryMethod(*this, Loc,
-                                            ET->getDecl()->getIntegerType());
+    BoxingMethod = getNSNumberFactoryMethod(*this, Loc, ED->getIntegerType());
     BoxedType = NSNumberPointer;
   } else if (ValueType->isObjCBoxableRecordType()) {
     // Support for structure types, that marked as objc_boxable
@@ -713,7 +706,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
                             SC_None, nullptr);
         Params.push_back(type);
 
-        M->setMethodParams(Context, Params, std::nullopt);
+        M->setMethodParams(Context, Params, {});
         BoxingMethod = M;
       }
 
@@ -843,7 +836,7 @@ ExprResult SemaObjC::BuildObjCArrayLiteral(SourceRange SR,
                                              /*TInfo=*/nullptr, SC_None,
                                              nullptr);
       Params.push_back(cnt);
-      Method->setMethodParams(Context, Params, std::nullopt);
+      Method->setMethodParams(Context, Params, {});
     }
 
     if (!validateBoxingMethod(SemaRef, Loc, NSArrayDecl, Sel, Method))
@@ -1012,7 +1005,7 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
                                              /*TInfo=*/nullptr, SC_None,
                                              nullptr);
       Params.push_back(cnt);
-      Method->setMethodParams(Context, Params, std::nullopt);
+      Method->setMethodParams(Context, Params, {});
     }
 
     if (!validateBoxingMethod(SemaRef, SR.getBegin(), NSDictionaryDecl, Sel,
@@ -1444,10 +1437,8 @@ static QualType stripObjCInstanceType(ASTContext &Context, QualType T) {
   QualType origType = T;
   if (auto nullability = AttributedType::stripOuterNullability(T)) {
     if (T == Context.getObjCInstanceType()) {
-      return Context.getAttributedType(
-               AttributedType::getNullabilityAttrKind(*nullability),
-               Context.getObjCIdType(),
-               Context.getObjCIdType());
+      return Context.getAttributedType(*nullability, Context.getObjCIdType(),
+                                       Context.getObjCIdType());
     }
 
     return origType;
@@ -1485,10 +1476,7 @@ static QualType getBaseMessageSendResultType(Sema &S,
       (void)AttributedType::stripOuterNullability(type);
 
       // Form a new attributed type using the method result type's nullability.
-      return Context.getAttributedType(
-               AttributedType::getNullabilityAttrKind(*nullability),
-               type,
-               type);
+      return Context.getAttributedType(*nullability, type, type);
     }
 
     return type;
@@ -1559,9 +1547,8 @@ QualType SemaObjC::getMessageSendResultType(const Expr *Receiver,
         QualType NewResultType = Context.getObjCObjectPointerType(
             Context.getObjCInterfaceType(MD->getClassInterface()));
         if (auto Nullability = resultType->getNullability())
-          NewResultType = Context.getAttributedType(
-              AttributedType::getNullabilityAttrKind(*Nullability),
-              NewResultType, NewResultType);
+          NewResultType = Context.getAttributedType(*Nullability, NewResultType,
+                                                    NewResultType);
         return NewResultType;
       }
     }
@@ -1623,9 +1610,7 @@ QualType SemaObjC::getMessageSendResultType(const Expr *Receiver,
   if (newResultNullabilityIdx > 0) {
     auto newNullability
       = static_cast<NullabilityKind>(newResultNullabilityIdx-1);
-    return Context.getAttributedType(
-             AttributedType::getNullabilityAttrKind(newNullability),
-             resultType, resultType);
+    return Context.getAttributedType(newNullability, resultType, resultType);
   }
 
   return resultType;
@@ -1907,7 +1892,7 @@ bool SemaObjC::CheckMessageArgumentTypes(
         continue;
 
       ExprResult Arg = SemaRef.DefaultVariadicArgumentPromotion(
-          Args[i], Sema::VariadicMethod, nullptr);
+          Args[i], VariadicCallType::Method, nullptr);
       IsError |= Arg.isInvalid();
       Args[i] = Arg.get();
     }
@@ -1993,6 +1978,7 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
     SourceLocation SuperLoc, QualType SuperType, bool Super) {
   ASTContext &Context = getASTContext();
   const ObjCInterfaceType *IFaceT = OPT->getInterfaceType();
+  assert(IFaceT && "Expected an Interface");
   ObjCInterfaceDecl *IFace = IFaceT->getDecl();
 
   if (!MemberName.isIdentifier()) {
@@ -2116,7 +2102,8 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
   DeclFilterCCC<ObjCPropertyDecl> CCC{};
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           DeclarationNameInfo(MemberName, MemberLoc), Sema::LookupOrdinaryName,
-          nullptr, nullptr, CCC, Sema::CTK_ErrorRecovery, IFace, false, OPT)) {
+          nullptr, nullptr, CCC, CorrectTypoKind::ErrorRecovery, IFace, false,
+          OPT)) {
     DeclarationName TypoResult = Corrected.getCorrection();
     if (TypoResult.isIdentifier() &&
         TypoResult.getAsIdentifierInfo() == Member) {
@@ -2310,7 +2297,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   SemaRef.LookupName(Result, S);
 
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     // Normal name lookup didn't find anything. If we're in an
     // Objective-C method, look for ivars. If we find one, we're done!
     // FIXME: This is a hack. Ivar lookup should be part of normal
@@ -2330,14 +2317,14 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     // Break out; we'll perform typo correction below.
     break;
 
-  case LookupResult::NotFoundInCurrentInstantiation:
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
-  case LookupResult::Ambiguous:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
+  case LookupResultKind::Ambiguous:
     Result.suppressDiagnostics();
     return ObjCInstanceMessage;
 
-  case LookupResult::Found: {
+  case LookupResultKind::Found: {
     // If the identifier is a class or not, and there is a trailing dot,
     // it's an instance message.
     if (HasTrailingDot)
@@ -2349,10 +2336,10 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     if (ObjCInterfaceDecl *Class = dyn_cast<ObjCInterfaceDecl>(ND))
       T = Context.getObjCInterfaceType(Class);
     else if (TypeDecl *Type = dyn_cast<TypeDecl>(ND)) {
-      T = Context.getTypeDeclType(Type);
       SemaRef.DiagnoseUseOfDecl(Type, NameLoc);
-    }
-    else
+      T = Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                  /*Qualifier=*/std::nullopt, Type);
+    } else
       return ObjCInstanceMessage;
 
     //  We have a class message, and T is the type we're
@@ -2366,7 +2353,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   ObjCInterfaceOrSuperCCC CCC(SemaRef.getCurMethodDecl());
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           Result.getLookupNameInfo(), Result.getLookupKind(), S, nullptr, CCC,
-          Sema::CTK_ErrorRecovery, nullptr, false, nullptr, false)) {
+          CorrectTypoKind::ErrorRecovery, nullptr, false, nullptr, false)) {
     if (Corrected.isKeyword()) {
       // If we've found the keyword "super" (the only keyword that would be
       // returned by CorrectTypo), this is a send to super.
@@ -3859,7 +3846,8 @@ static inline T *getObjCBridgeAttr(const TypedefType *TD) {
   if (QT->isPointerType()) {
     QT = QT->getPointeeType();
     if (const RecordType *RT = QT->getAs<RecordType>()) {
-      for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
+      for (auto *Redecl :
+           RT->getOriginalDecl()->getMostRecentDecl()->redecls()) {
         if (auto *attr = Redecl->getAttr<T>())
           return attr;
       }
@@ -4388,7 +4376,7 @@ bool SemaObjC::CheckObjCBridgeRelatedConversions(SourceLocation Loc,
 
         ExprResult msg = BuildInstanceMessageImplicit(
             SrcExpr, SrcType, InstanceMethod->getLocation(),
-            InstanceMethod->getSelector(), InstanceMethod, std::nullopt);
+            InstanceMethod->getSelector(), InstanceMethod, {});
         SrcExpr = msg.get();
       }
       return true;
@@ -4401,7 +4389,7 @@ SemaObjC::ARCConversionResult
 SemaObjC::CheckObjCConversion(SourceRange castRange, QualType castType,
                               Expr *&castExpr, CheckedConversionKind CCK,
                               bool Diagnose, bool DiagnoseCFAudited,
-                              BinaryOperatorKind Opc) {
+                              BinaryOperatorKind Opc, bool IsReinterpretCast) {
   ASTContext &Context = getASTContext();
   QualType castExprType = castExpr->getType();
 
@@ -4461,13 +4449,17 @@ SemaObjC::CheckObjCConversion(SourceRange castRange, QualType castType,
   // must be explicit.
   // Allow conversions between pointers to lifetime types and coreFoundation
   // pointers too, but only when the conversions are explicit.
+  // Allow conversions requested with a reinterpret_cast that converts an
+  // expression of type T* to type U*.
   if (exprACTC == ACTC_indirectRetainable &&
       (castACTC == ACTC_voidPtr ||
-       (castACTC == ACTC_coreFoundation && SemaRef.isCast(CCK))))
+       (castACTC == ACTC_coreFoundation && SemaRef.isCast(CCK)) ||
+       (IsReinterpretCast && effCastType->isAnyPointerType())))
     return ACR_okay;
   if (castACTC == ACTC_indirectRetainable &&
-      (exprACTC == ACTC_voidPtr || exprACTC == ACTC_coreFoundation) &&
-      SemaRef.isCast(CCK))
+      (((exprACTC == ACTC_voidPtr || exprACTC == ACTC_coreFoundation) &&
+        SemaRef.isCast(CCK)) ||
+       (IsReinterpretCast && castExprType->isAnyPointerType())))
     return ACR_okay;
 
   switch (ARCCastChecker(Context, exprACTC, castACTC, false).Visit(castExpr)) {
@@ -5162,7 +5154,8 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     SourceLocation RParen) {
   ASTContext &Context = getASTContext();
   auto FindSpecVersion =
-      [&](StringRef Platform) -> std::optional<VersionTuple> {
+      [&](StringRef Platform,
+          const llvm::Triple::OSType &OS) -> std::optional<VersionTuple> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
       return Spec.getPlatform() == Platform;
     });
@@ -5175,12 +5168,16 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     }
     if (Spec == AvailSpecs.end())
       return std::nullopt;
-    return Spec->getVersion();
+
+    return llvm::Triple::getCanonicalVersionForOS(
+        OS, Spec->getVersion(),
+        llvm::Triple::isValidVersionForOS(OS, Spec->getVersion()));
   };
 
   VersionTuple Version;
   if (auto MaybeVersion =
-          FindSpecVersion(Context.getTargetInfo().getPlatformName()))
+          FindSpecVersion(Context.getTargetInfo().getPlatformName(),
+                          Context.getTargetInfo().getTriple().getOS()))
     Version = *MaybeVersion;
 
   // The use of `@available` in the enclosing context should be analyzed to

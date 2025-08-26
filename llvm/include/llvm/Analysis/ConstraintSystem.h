@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <string>
@@ -108,12 +109,14 @@ public:
   }
 
   /// Returns true if there may be a solution for the constraints in the system.
-  bool mayHaveSolution();
+  LLVM_ABI bool mayHaveSolution();
 
   static SmallVector<int64_t, 8> negate(SmallVector<int64_t, 8> R) {
     // The negated constraint R is obtained by multiplying by -1 and adding 1 to
     // the constant.
-    R[0] += 1;
+    if (AddOverflow(R[0], int64_t(1), R[0]))
+      return {};
+
     return negateOrEqual(R);
   }
 
@@ -141,7 +144,7 @@ public:
     return R;
   }
 
-  bool isConditionImplied(SmallVector<int64_t, 8> R) const;
+  LLVM_ABI bool isConditionImplied(SmallVector<int64_t, 8> R) const;
 
   SmallVector<int64_t> getLastConstraint() const {
     assert(!Constraints.empty() && "Constraint system is empty");
@@ -161,7 +164,7 @@ public:
   unsigned size() const { return Constraints.size(); }
 
   /// Print the constraints in the system.
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 } // namespace llvm
 

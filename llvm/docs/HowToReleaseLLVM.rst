@@ -38,8 +38,8 @@ Releases should be tagged on Tuesdays.
 =============================== =========================
 Release                         Approx. Date
 =============================== =========================
-*release branch: even releases* *4th Tue in January*
-*release branch: odd releases*  *4th Tue in July*
+*release branch: even releases* *2nd Tue in January*
+*release branch: odd releases*  *2nd Tue in July*
 X.1.0-rc1                       3 days after branch.
 X.1.0-rc2                       2 weeks after branch.
 X.1.0-rc3                       4 weeks after branch
@@ -49,7 +49,11 @@ X.1.0-rc3                       4 weeks after branch
 **X.1.3**                       **12 weeks after branch**
 **X.1.4**                       **14 weeks after branch**
 **X.1.5**                       **16 weeks after branch**
-**X.1.6 (if necessary)**        **18 weeks after branch**
+**X.1.6**                       **18 weeks after branch**
+**X.1.7**                       **20 weeks after branch**
+**X.1.8**                       **22 weeks after branch**
+**X.1.9** (If necessary)        **24 weeks after branch**
+**Next release branches**       **~25 weeks after branch**
 =============================== =========================
 
 Release Process Summary
@@ -97,8 +101,8 @@ release process to begin.  Specifically, it involves:
 
 * Tagging release candidates for the release team to begin testing.
 
-Create Release Branch
-^^^^^^^^^^^^^^^^^^^^^
+Create Release Branch and Update LLVM Version
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Branch the Git trunk using the following procedure:
 
@@ -110,14 +114,16 @@ Branch the Git trunk using the following procedure:
 #. Verify that the current git trunk is in decent shape by
    examining nightly tester and buildbot results.
 
-#. Bump the version in trunk to N.0.0git and tag the commit with llvmorg-N-init.
+#. Bump the version in trunk to N.0.0git with the script in
+   ``llvm/utils/release/bump-version.py``, and tag the commit with llvmorg-N-init.
    If ``X`` is the version to be released, then ``N`` is ``X + 1``.
 
 ::
 
   $ git tag -sa llvmorg-N-init
 
-#. Clear the release notes in trunk.
+4. Clear the release notes in trunk with the script in
+   ``llvm/utils/release/clear-release-notes.py``.
 
 #. Create the release branch from the last known good revision from before the
    version bump.  The branch's name is release/X.x where ``X`` is the major version
@@ -128,12 +134,6 @@ Branch the Git trunk using the following procedure:
 
 #. All tags and branches need to be created in both the llvm/llvm-project and
    llvm/llvm-test-suite repos.
-
-Update LLVM Version
-^^^^^^^^^^^^^^^^^^^
-
-After creating the LLVM release branch, update the release branches'
-version with the script in ``llvm/utils/release/bump-version.py``.
 
 Tagging the LLVM Release Candidates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -341,16 +341,15 @@ Below are the rules regarding patching the release branch:
    was created.  As with all phases, release managers and maintainers can reject
    patches that are deemed too invasive.
 
-#. *Before RC2* Patches should be limited to bug fixes or backend specific
+#. *Before RC2/RC3* Patches should be limited to bug fixes or backend specific
    improvements that are determined to be very safe.
 
-#. *Before RC3/Final Major Release* Patches should be limited to critical
+#. *Before Final Major Release* Patches should be limited to critical
    bugs or regressions.
 
 #. *Bug fix releases* Patches should be limited to bug fixes or very safe
    and critical performance improvements.  Patches must maintain both API and
-   ABI compatibility with the previous major release.
-
+   ABI compatibility with the X.1.0 release.
 
 Release Final Tasks
 -------------------

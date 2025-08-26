@@ -61,7 +61,7 @@ define <2 x i8> @test_uadd_vector_no_sat(<2 x i8> %a) {
 
 define <2 x i8> @test_uadd_vector_sat(<2 x i8> %a) {
 ; CHECK-LABEL: @test_uadd_vector_sat(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
 ;
   %x = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 100, i8 200>, <2 x i8> <i8 250, i8 100>)
   ret <2 x i8> %x
@@ -77,7 +77,7 @@ define <2 x i8> @test_sadd_vector_no_sat(<2 x i8> %a) {
 
 define <2 x i8> @test_sadd_vector_sat_pos(<2 x i8> %a) {
 ; CHECK-LABEL: @test_sadd_vector_sat_pos(
-; CHECK-NEXT:    ret <2 x i8> <i8 127, i8 127>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 127)
 ;
   %x = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 100, i8 10>, <2 x i8> <i8 30, i8 120>)
   ret <2 x i8> %x
@@ -85,7 +85,7 @@ define <2 x i8> @test_sadd_vector_sat_pos(<2 x i8> %a) {
 
 define <2 x i8> @test_sadd_vector_sat_neg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_sadd_vector_sat_neg(
-; CHECK-NEXT:    ret <2 x i8> <i8 -128, i8 -128>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 -128)
 ;
   %x = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 -100, i8 -10>, <2 x i8> <i8 -30, i8 -120>)
   ret <2 x i8> %x
@@ -157,7 +157,7 @@ define <2 x i8> @test_ssub_vector_no_sat(<2 x i8> %a) {
 
 define <2 x i8> @test_ssub_vector_sat_pos(<2 x i8> %a) {
 ; CHECK-LABEL: @test_ssub_vector_sat_pos(
-; CHECK-NEXT:    ret <2 x i8> <i8 127, i8 127>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 127)
 ;
   %x = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> <i8 100, i8 10>, <2 x i8> <i8 -30, i8 -120>)
   ret <2 x i8> %x
@@ -165,7 +165,7 @@ define <2 x i8> @test_ssub_vector_sat_pos(<2 x i8> %a) {
 
 define <2 x i8> @test_ssub_vector_sat_neg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_ssub_vector_sat_neg(
-; CHECK-NEXT:    ret <2 x i8> <i8 -128, i8 -128>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 -128)
 ;
   %x = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> <i8 -100, i8 -10>, <2 x i8> <i8 30, i8 120>)
   ret <2 x i8> %x
@@ -271,7 +271,7 @@ define <2 x i8> @test_ssub_vector_both_undef_splat() {
 
 define <2 x i8> @test_uadd_vector_op2_undef_splat() {
 ; CHECK-LABEL: @test_uadd_vector_op2_undef_splat(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
 ;
   %x = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 10, i8 20>, <2 x i8> undef)
   ret <2 x i8> %x
@@ -279,7 +279,7 @@ define <2 x i8> @test_uadd_vector_op2_undef_splat() {
 
 define <2 x i8> @test_sadd_vector_op1_undef_splat() {
 ; CHECK-LABEL: @test_sadd_vector_op1_undef_splat(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
 ;
   %x = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> undef, <2 x i8> <i8 10, i8 20>)
   ret <2 x i8> %x
@@ -311,7 +311,7 @@ define <2 x i8> @test_uadd_vector_op2_undef_mix1() {
 
 define <2 x i8> @test_uadd_vector_op2_undef_mix2() {
 ; CHECK-LABEL: @test_uadd_vector_op2_undef_mix2(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
 ;
   %x = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 10, i8 undef>, <2 x i8> <i8 undef, i8 20>)
   ret <2 x i8> %x
@@ -327,7 +327,7 @@ define <2 x i8> @test_sadd_vector_op1_undef_mix1() {
 
 define <2 x i8> @test_sadd_vector_op1_undef_mix2() {
 ; CHECK-LABEL: @test_sadd_vector_op1_undef_mix2(
-; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
 ;
   %x = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 undef, i8 10>, <2 x i8> <i8 20, i8 undef>)
   ret <2 x i8> %x

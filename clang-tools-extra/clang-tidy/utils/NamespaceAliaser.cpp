@@ -16,14 +16,15 @@
 namespace clang::tidy::utils {
 
 using namespace ast_matchers;
+namespace {
+AST_MATCHER_P(NamespaceAliasDecl, hasTargetNamespace,
+              ast_matchers::internal::Matcher<NamespaceDecl>, InnerMatcher) {
+  return InnerMatcher.matches(*Node.getNamespace(), Finder, Builder);
+}
+} // namespace
 
 NamespaceAliaser::NamespaceAliaser(const SourceManager &SourceMgr)
     : SourceMgr(SourceMgr) {}
-
-AST_MATCHER_P(NamespaceAliasDecl, hasTargetNamespace,
-              ast_matchers::internal::Matcher<NamespaceDecl>, innerMatcher) {
-  return innerMatcher.matches(*Node.getNamespace(), Finder, Builder);
-}
 
 std::optional<FixItHint>
 NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,

@@ -8,7 +8,6 @@
 
 #include "CommandObjectDWIMPrint.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
@@ -19,6 +18,7 @@
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -87,9 +87,10 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   DumpValueObjectOptions dump_options = m_varobj_options.GetAsDumpOptions(
       m_expr_options.m_verbosity, m_format_options.GetFormat());
-  dump_options.SetHideRootName(suppress_result);
+  dump_options.SetHideRootName(suppress_result)
+      .SetExpandPointerTypeFlags(lldb::eTypeIsObjC);
 
-  bool is_po = m_varobj_options.use_objc;
+  bool is_po = m_varobj_options.use_object_desc;
 
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 
@@ -101,6 +102,10 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   // Add a hint if object description was requested, but no description
   // function was implemented.
   auto maybe_add_hint = [&](llvm::StringRef output) {
+    static bool note_shown = false;
+    if (note_shown)
+      return;
+
     // Identify the default output of object description for Swift and
     // Objective-C
     // "<Name: 0x...>. The regex is:
@@ -110,21 +115,18 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     // - Followed by 5 or more hex digits.
     // - Followed by ">".
     // - End with zero or more whitespace characters.
-    const std::regex swift_class_regex("^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
+    static const std::regex swift_class_regex(
+        "^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
 
     if (GetDebugger().GetShowDontUsePoHint() && target_ptr &&
         (language == lldb::eLanguageTypeSwift ||
          language == lldb::eLanguageTypeObjC) &&
         std::regex_match(output.data(), swift_class_regex)) {
 
-      static bool note_shown = false;
-      if (note_shown)
-        return;
-
-      result.GetOutputStream()
-          << "note: object description requested, but type doesn't implement "
-             "a custom object description. Consider using \"p\" instead of "
-             "\"po\" (this note will only be shown once per debug session).\n";
+      result.AppendNote(
+          "object description requested, but type doesn't implement "
+          "a custom object description. Consider using \"p\" instead of "
+          "\"po\" (this note will only be shown once per debug session).\n");
       note_shown = true;
     }
   };
@@ -148,13 +150,29 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         return;
       }
     }
+    m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
+                                           m_cmd_name);
     result.SetStatus(eReturnStatusSuccessFinishResult);
   };
 
-  // First, try `expr` as the name of a frame variable.
-  if (frame) {
-    auto valobj_sp = frame->FindVariable(ConstString(expr));
-    if (valobj_sp && valobj_sp->GetError().Success()) {
+  // First, try `expr` as a _limited_ frame variable expression path: only the
+  // dot operator (`.`) is permitted for this case.
+  //
+  // This is limited to support only unambiguous expression paths. Of note,
+  // expression paths are not attempted if the expression contain either the
+  // arrow operator (`->`) or the subscript operator (`[]`). This is because
+  // both operators can be overloaded in C++, and could result in ambiguity in
+  // how the expression is handled. Additionally, `*` and `&` are not supported.
+  const bool try_variable_path =
+      expr.find_first_of("*&->[]") == StringRef::npos;
+  if (frame && try_variable_path) {
+    VariableSP var_sp;
+    Status status;
+    auto valobj_sp = frame->GetValueForVariableExpressionPath(
+        expr, eval_options.GetUseDynamic(),
+        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp,
+        status);
+    if (valobj_sp && status.Success() && valobj_sp->GetError().Success()) {
       if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())
           valobj_sp = persisted_valobj;
@@ -164,8 +182,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         StringRef flags;
         if (args.HasArgs())
           flags = args.GetArgString();
-        result.AppendMessageWithFormatv("note: ran `frame variable {0}{1}`",
-                                        flags, expr);
+        result.AppendNoteWithFormatv("ran `frame variable {0}{1}`", flags,
+                                     expr);
       }
 
       dump_val_object(*valobj_sp);
@@ -190,6 +208,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
     ExpressionResults expr_result = target.EvaluateExpression(
         expr, exe_scope, valobj_sp, eval_options, &fixed_expression);
+
+    if (valobj_sp)
+      result.GetValueObjectList().Append(valobj_sp);
 
     // Record the position of the expression in the command.
     std::optional<uint16_t> indent;
@@ -224,14 +245,13 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       StringRef flags;
       if (args.HasArgs())
         flags = args.GetArgStringWithDelimiter();
-      result.AppendMessageWithFormatv("note: ran `expression {0}{1}`", flags,
-                                      expr);
+      result.AppendNoteWithFormatv("ran `expression {0}{1}`", flags, expr);
     }
 
     if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
       dump_val_object(*valobj_sp);
     else
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
 
     if (suppress_result)
       if (auto result_var_sp =

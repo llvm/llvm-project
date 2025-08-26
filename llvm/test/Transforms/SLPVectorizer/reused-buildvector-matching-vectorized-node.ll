@@ -22,12 +22,12 @@ define void @blam(ptr %arg, double %load2, i1 %fcmp3) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> <double 0.000000e+00, double poison>, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP10]], <2 x double> [[TMP11]], <2 x double> [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = fcmp olt <2 x double> [[TMP13]], zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = select <2 x i1> [[TMP14]], <2 x double> zeroinitializer, <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP15:%.*]] = select <2 x i1> [[TMP14]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP16:%.*]] = fcmp ogt <2 x double> [[TMP15]], zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[TMP16]], <2 x double> zeroinitializer, <2 x double> [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fcmp olt <2 x double> [[TMP18]], zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = select <2 x i1> [[TMP19]], <2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x double> zeroinitializer
+; CHECK-NEXT:    [[TMP20:%.*]] = select <2 x i1> [[TMP19]], <2 x double> splat (double 1.000000e+00), <2 x double> zeroinitializer
 ; CHECK-NEXT:    store <2 x double> [[TMP20]], ptr [[GETELEMENTPTR13]], align 8
 ; CHECK-NEXT:    ret void
 ;

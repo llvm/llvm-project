@@ -20,10 +20,11 @@ class Value;
 
 /// Parameters (see the expansion example below):
 /// (the builder, %addr, %loaded, %new_val, ordering,
-///  /* OUT */ %success, /* OUT */ %new_loaded)
-using CreateCmpXchgInstFun =
-    function_ref<void(IRBuilderBase &, Value *, Value *, Value *, Align,
-                      AtomicOrdering, SyncScope::ID, Value *&, Value *&)>;
+///  /* OUT */ %success, /* OUT */ %new_loaded,
+/// %MetadataSrc)
+using CreateCmpXchgInstFun = function_ref<void(
+    IRBuilderBase &, Value *, Value *, Value *, Align, AtomicOrdering,
+    SyncScope::ID, Value *&, Value *&, Instruction *)>;
 
 /// Expand an atomic RMW instruction into a loop utilizing
 /// cmpxchg. You'll want to make sure your target machine likes cmpxchg
@@ -34,8 +35,7 @@ using CreateCmpXchgInstFun =
 /// instructions directly into a platform specific intrinsics (because, say,
 /// those intrinsics don't exist). If such a pass is able to expand cmpxchg
 /// instructions directly however, then, with this function, it could avoid two
-/// extra module passes (avoiding passes by `-atomic-expand` and itself). A
-/// specific example would be PNaCl's `RewriteAtomics` pass.
+/// extra module passes (avoiding passes by `-atomic-expand` and itself).
 ///
 /// Given: atomicrmw some_op iN* %addr, iN %incr ordering
 ///

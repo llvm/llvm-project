@@ -2,14 +2,14 @@
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @f_w4_i2
-define void @f_w4_i2() {
+define void @f_w4_i2(i1 %arg) {
 entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i16 [ 0, %entry ], [ %inc, %for.body ]
   call void @llvm.dbg.value(metadata i16 %i.0, metadata !32, metadata !DIExpression()), !dbg !31
-  br i1 undef, label %for.body, label %for.cond.cleanup
+  br i1 %arg, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
   ret void

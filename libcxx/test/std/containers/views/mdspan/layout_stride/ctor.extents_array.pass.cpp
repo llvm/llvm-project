@@ -27,11 +27,11 @@
 // Effects: Direct-non-list-initializes extents_ with e, and for all d in the range [0, rank_),
 //         direct-non-list-initializes strides_[d] with as_const(s[d]).
 
-#include <mdspan>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
-#include <span> // dynamic_extent
+#include <mdspan>
 #include <type_traits>
 
 #include "test_macros.h"

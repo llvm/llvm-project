@@ -55,7 +55,11 @@ void testSimpleExecution(void) {
       ctx, mlirStringRefCreateFromCString(
                // clang-format off
 "module {                                                                    \n"
+#ifdef __s390__
+"  func.func @add(%arg0 : i32) -> (i32 {llvm.signext}) attributes { llvm.emit_c_interface } {     \n"
+#else
 "  func.func @add(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {     \n"
+#endif
 "    %res = arith.addi %arg0, %arg0 : i32                                        \n"
 "    return %res : i32                                                           \n"
 "  }                                                                             \n"

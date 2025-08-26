@@ -8,7 +8,6 @@
 
 #include "src/string/strlcat.h"
 #include "test/UnitTest/Test.h"
-#include <stdlib.h>
 
 TEST(LlvmLibcStrlcatTest, TooBig) {
   const char *str = "cd";
@@ -25,6 +24,15 @@ TEST(LlvmLibcStrlcatTest, Smaller) {
 
   EXPECT_EQ(LIBC_NAMESPACE::strlcat(buf, str, 7), size_t(4));
   EXPECT_STREQ(buf, "abcd");
+}
+
+TEST(LlvmLibcStrlcatTest, SmallerNoOverwriteAfter0) {
+  const char *str = "cd";
+  char buf[8]{"ab\0\0efg"};
+
+  EXPECT_EQ(LIBC_NAMESPACE::strlcat(buf, str, 8), size_t(4));
+  EXPECT_STREQ(buf, "abcd");
+  EXPECT_STREQ(buf + 5, "fg");
 }
 
 TEST(LlvmLibcStrlcatTest, No0) {

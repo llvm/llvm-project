@@ -25,7 +25,7 @@ void fn2(Obj O[4]) { }
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'Obj[4]' <HLSLArrayRValue>
 
 void call2() {
-  Obj Arr[4] = {};
+  Obj Arr[4] = {0, 0, 0, 0, 0, 0, 0, 0};
   fn2(Arr);
 }
 
@@ -75,17 +75,17 @@ void template_fn(T Val) {}
 // CHECK: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float[2])' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'void (float[2])' lvalue Function {{.*}} 'template_fn' 'void (float[2])' (FunctionTemplate {{.*}} 'template_fn')
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[2]' <LValueToRValue>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[2]' <HLSLArrayRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float[2]' lvalue ParmVar {{.*}} 'FA2' 'float[2]'
 // CHECK-NEXT: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float[4])' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'void (float[4])' lvalue Function {{.*}} 'template_fn' 'void (float[4])' (FunctionTemplate {{.*}} 'template_fn')
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[4]' <LValueToRValue>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[4]' <HLSLArrayRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float[4]' lvalue ParmVar {{.*}} 'FA4' 'float[4]'
 // CHECK-NEXT: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(int[3])' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'void (int[3])' lvalue Function {{.*}} 'template_fn' 'void (int[3])' (FunctionTemplate {{.*}} 'template_fn')
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int[3]' <LValueToRValue>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int[3]' <HLSLArrayRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int[3]' lvalue ParmVar {{.*}} 'IA3' 'int[3]'
 
 void call(float FA2[2], float FA4[4], int IA3[3]) {

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CycleAnalysis.h"
-#include "llvm/ADT/GenericCycleImpl.h"
 #include "llvm/IR/CFG.h" // for successors found by ADL in GenericCycleImpl.h
 #include "llvm/InitializePasses.h"
 
@@ -53,9 +52,7 @@ PreservedAnalyses CycleInfoVerifierPass::run(Function &F,
 
 char CycleInfoWrapperPass::ID = 0;
 
-CycleInfoWrapperPass::CycleInfoWrapperPass() : FunctionPass(ID) {
-  initializeCycleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+CycleInfoWrapperPass::CycleInfoWrapperPass() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(CycleInfoWrapperPass, "cycles", "Cycle Info Analysis",
                       true, true)

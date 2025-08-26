@@ -20,6 +20,6 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]] = hlfir.minloc %[[VAL_1]]#0
 ! CHECK:  %[[VAL_3:.*]] = hlfir.shape_of %[[VAL_2]]
 ! CHECK:  %[[VAL_4:.*]]:3 = hlfir.associate %[[VAL_2]](%[[VAL_3]]) {adapt.valuebyref}
-! CHECK:  fir.call @_QPtakes_array_arg(%[[VAL_4]]#1)
+! CHECK:  fir.call @_QPtakes_array_arg(%[[VAL_4]]#0)
 ! CHECK:  hlfir.end_associate %[[VAL_4]]#1, %[[VAL_4]]#2 : !fir.ref<!fir.array<2xi32>>, i1
 ! CHECK:  hlfir.destroy %[[VAL_2]] : !hlfir.expr<2xi32>

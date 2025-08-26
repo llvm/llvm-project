@@ -49,11 +49,10 @@ public:
 /// of struct bar.
 static bool evenFlexibleArraySize(ASTContext &Ctx, CharUnits RegionSize,
                                   CharUnits TypeSize, QualType ToPointeeTy) {
-  const RecordType *RT = ToPointeeTy->getAs<RecordType>();
-  if (!RT)
+  const auto *RD = ToPointeeTy->getAsRecordDecl();
+  if (!RD)
     return false;
 
-  const RecordDecl *RD = RT->getDecl();
   RecordDecl::field_iterator Iter(RD->field_begin());
   RecordDecl::field_iterator End(RD->field_end());
   const FieldDecl *Last = nullptr;
@@ -62,6 +61,8 @@ static bool evenFlexibleArraySize(ASTContext &Ctx, CharUnits RegionSize,
   assert(Last && "empty structs should already be handled");
 
   const Type *ElemType = Last->getType()->getArrayElementTypeNoTypeQual();
+  if (!ElemType)
+    return false;
   CharUnits FlexSize;
   if (const ConstantArrayType *ArrayTy =
         Ctx.getAsConstantArrayType(Last->getType())) {

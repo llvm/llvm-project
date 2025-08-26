@@ -101,6 +101,9 @@ TEST_F(FormatTestTableGen, BangOperators) {
                "                                  \"zerozero\",\n"
                "                                  true:  // default\n"
                "                                  \"positivepositive\");\n"
+               "  let CondOpe3WithCommentAfterLParen = !cond(\n"
+               "      // comment\n"
+               "      !eq(/* comment */ x, 0): \"zero\");\n"
                "}");
 }
 
@@ -215,6 +218,13 @@ TEST_F(FormatTestTableGen, PasteOperator) {
                "  string Z = [\"Traring\", \"Paste\", \"Traring\", \"Paste\",\n"
                "              \"Traring\", \"Paste\"]#;\n"
                "}");
+
+  verifyFormat("def x#x {}", "def x\n"
+                             "#x {}");
+  verifyFormat("def x#x {}", "def x\n"
+                             "#\n"
+                             "x {}");
+  verifyFormat("def x#x");
 }
 
 TEST_F(FormatTestTableGen, ClassDefinition) {

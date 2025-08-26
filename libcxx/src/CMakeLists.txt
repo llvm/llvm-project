@@ -1,5 +1,3 @@
-set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}"  PARENT_SCOPE)
-
 # Get sources
 set(LIBCXX_SOURCES
   algorithm.cpp
@@ -32,7 +30,6 @@ set(LIBCXX_SOURCES
   include/ryu/ryu.h
   include/to_chars_floating_point.h
   include/from_chars_floating_point.h
-  legacy_pointer_safety.cpp
   memory.cpp
   memory_resource.cpp
   new_handler.cpp
@@ -178,7 +175,7 @@ include(FindLibcCommonUtils)
 # Build the shared library.
 add_library(cxx_shared SHARED ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(cxx_shared PUBLIC cxx-headers libcxx-libc-shared
+target_link_libraries(cxx_shared PUBLIC cxx-headers runtimes-libc-shared
                                   PRIVATE ${LIBCXX_LIBRARIES}
                                   PRIVATE llvm-libc-common-utilities)
 set_target_properties(cxx_shared
@@ -251,25 +248,25 @@ if (LIBCXX_ENABLE_SHARED)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
 endif()
 
-  if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
-    # Since we most likely do not have a mt.exe replacement, disable the
-    # manifest bundling.  This allows a normal cmake invocation to pass which
-    # will attempt to use the manifest tool to generate the bundled manifest
-    if (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC")
-      set_target_properties(cxx_shared PROPERTIES
-                            APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
-    else()
-      set_target_properties(cxx_shared PROPERTIES
-                            APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
-    endif()
+if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
+  # Since we most likely do not have a mt.exe replacement, disable the
+  # manifest bundling.  This allows a normal cmake invocation to pass which
+  # will attempt to use the manifest tool to generate the bundled manifest
+  if (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC")
+    set_target_properties(cxx_shared PROPERTIES
+                          APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+  else()
+    set_target_properties(cxx_shared PROPERTIES
+                          APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
   endif()
+endif()
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 
 # Build the static library.
 add_library(cxx_static STATIC ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(cxx_static PUBLIC cxx-headers libcxx-libc-static
+target_link_libraries(cxx_static PUBLIC cxx-headers runtimes-libc-static
                                   PRIVATE ${LIBCXX_LIBRARIES}
                                   PRIVATE libcxx-abi-static
                                   PRIVATE llvm-libc-common-utilities)
@@ -312,6 +309,7 @@ add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 # Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
+  experimental/log_hardening_failure.cpp
   )
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")

@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_ISDOPCODES_H
 
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -66,6 +67,15 @@ enum NodeType {
   /// NOTE: In case of the source value (or any vector element value) is
   /// poisoned the assertion will not be true for that value.
   AssertAlign,
+
+  /// AssertNoFPClass - These nodes record if a register contains a float
+  /// value that is known to be not some type.
+  /// This node takes two operands.  The first is the node that is known
+  /// never to be some float types; the second is a constant value with
+  /// the value of FPClassTest (casted to uint32_t).
+  /// NOTE: In case of the source value (or any vector element value) is
+  /// poisoned the assertion will not be true for that value.
+  AssertNoFPClass,
 
   /// Various leaf nodes.
   BasicBlock,
@@ -216,6 +226,9 @@ enum NodeType {
 
   /// UNDEF - An undefined node.
   UNDEF,
+
+  /// POISON - A poison node.
+  POISON,
 
   /// FREEZE - FREEZE(VAL) returns an arbitrary value if VAL is UNDEF (or
   /// is evaluated to UNDEF), or returns VAL otherwise. Note that each
@@ -587,17 +600,25 @@ enum NodeType {
   /// vector, but not the other way around.
   EXTRACT_SUBVECTOR,
 
-  /// VECTOR_DEINTERLEAVE(VEC1, VEC2) - Returns two vectors with all input and
-  /// output vectors having the same type. The first output contains the even
-  /// indices from CONCAT_VECTORS(VEC1, VEC2), with the second output
-  /// containing the odd indices. The relative order of elements within an
-  /// output match that of the concatenated input.
+  /// VECTOR_DEINTERLEAVE(VEC1, VEC2, ...) - Returns N vectors from N input
+  /// vectors, where N is the factor to deinterleave. All input and output
+  /// vectors must have the same type.
+  ///
+  /// Each output contains the deinterleaved indices for a specific field from
+  /// CONCAT_VECTORS(VEC1, VEC2, ...):
+  ///
+  /// Result[I][J] = CONCAT_VECTORS(...)[I + N * J]
   VECTOR_DEINTERLEAVE,
 
-  /// VECTOR_INTERLEAVE(VEC1, VEC2) - Returns two vectors with all input and
-  /// output vectors having the same type. The first output contains the
-  /// result of interleaving the low half of CONCAT_VECTORS(VEC1, VEC2), with
-  /// the second output containing the result of interleaving the high half.
+  /// VECTOR_INTERLEAVE(VEC1, VEC2, ...) - Returns N vectors from N input
+  /// vectors, where N is the factor to interleave. All input and
+  /// output vectors must have the same type.
+  ///
+  /// All input vectors are interleaved into one wide vector, which is then
+  /// chunked into equal sized parts:
+  ///
+  /// Interleaved[I] = VEC(I % N)[I / N]
+  /// Result[J] = EXTRACT_SUBVECTOR(Interleaved, J * getVectorMinNumElements())
   VECTOR_INTERLEAVE,
 
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
@@ -1021,13 +1042,20 @@ enum NodeType {
   LRINT,
   LLRINT,
 
-  /// FMINNUM/FMAXNUM - Perform floating-point minimum or maximum on two
-  /// values.
+  /// FMINNUM/FMAXNUM - Perform floating-point minimum maximum on two values,
+  /// following IEEE-754 definitions except for signed zero behavior.
   ///
-  /// In the case where a single input is a NaN (either signaling or quiet),
-  /// the non-NaN input is returned.
+  /// If one input is a signaling NaN, returns a quiet NaN. This matches
+  /// IEEE-754 2008's minNum/maxNum behavior for signaling NaNs (which differs
+  /// from 2019).
   ///
-  /// The return value of (FMINNUM 0.0, -0.0) could be either 0.0 or -0.0.
+  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
+  /// 2019's minimumNumber/maximumNumber.
+  ///
+  /// Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
+  /// so arithmetic feeding into a minnum/maxnum can produce inconsistent
+  /// results. FMAXIMUN/FMINIMUM or FMAXIMUMNUM/FMINIMUMNUM may be better choice
+  /// for non-distinction of sNaN/qNaN handling.
   FMINNUM,
   FMAXNUM,
 
@@ -1041,6 +1069,9 @@ enum NodeType {
   ///
   /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
   /// 2019's minimumNumber/maximumNumber.
+  ///
+  /// Deprecated, and will be removed soon, as FMINNUM/FMAXNUM have the same
+  /// semantics now.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
@@ -1057,6 +1088,14 @@ enum NodeType {
 
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
+
+  /// FSINCOSPI - Compute both the sine and cosine times pi more accurately
+  /// than FSINCOS(pi*x), especially for large x.
+  FSINCOSPI,
+
+  /// FMODF - Decomposes the operand into integral and fractional parts, each
+  /// having the same type and sign as the operand.
+  FMODF,
 
   /// Gets the current floating-point environment. The first operand is a token
   /// chain. The results are FP environment, represented by an integer value,
@@ -1346,6 +1385,8 @@ enum NodeType {
   ATOMIC_LOAD_FSUB,
   ATOMIC_LOAD_FMAX,
   ATOMIC_LOAD_FMIN,
+  ATOMIC_LOAD_FMAXIMUM,
+  ATOMIC_LOAD_FMINIMUM,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
   ATOMIC_LOAD_USUB_COND,
@@ -1451,6 +1492,25 @@ enum NodeType {
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
 
+  // PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
+  // The partial reduction nodes sign or zero extend Input1 and Input2
+  // (with the extension kind noted below) to the element type of
+  // Accumulator before multiplying their results.
+  // This result is concatenated to the Accumulator, and this is then reduced,
+  // using addition, to the result type.
+  // The output is only expected to either be given to another partial reduction
+  // operation or an equivalent vector reduce operation, so the order in which
+  // the elements are reduced is deliberately not specified.
+  // Input1 and Input2 must be the same type. Accumulator and the output must be
+  // the same type.
+  // The number of elements in Input1 and Input2 must be a positive integer
+  // multiple of the number of elements in the Accumulator / output type.
+  // Input1 and Input2 must have an element type which is the same as or smaller
+  // than the element type of the Accumulator and output.
+  PARTIAL_REDUCE_SMLA,  // sext, sext
+  PARTIAL_REDUCE_UMLA,  // zext, zext
+  PARTIAL_REDUCE_SUMLA, // sext, zext
+
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
   // Outputs: output chain, glue
@@ -1461,6 +1521,11 @@ enum NodeType {
   //   <numArgs>, cc, ...
   // Outputs: [rv], output chain, glue
   PATCHPOINT,
+
+  // PTRADD represents pointer arithmetic semantics, for targets that opt in
+  // using shouldPreservePtrArith().
+  // ptr = PTRADD ptr, offset
+  PTRADD,
 
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
@@ -1480,6 +1545,19 @@ enum NodeType {
   // Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  // Finds the index of the last active mask element
+  // Operands: Mask
+  VECTOR_FIND_LAST_ACTIVE,
+
+  // GET_ACTIVE_LANE_MASK - this corrosponds to the llvm.get.active.lane.mask
+  // intrinsic. It creates a mask representing active and inactive vector
+  // lanes, active while Base + index < Trip Count. As with the intrinsic,
+  // the operands Base and Trip Count have the same scalar integer type and
+  // the internal addition of Base + index cannot overflow. However, the ISD
+  // node supports result types which are wider than i1, where the high
+  // bits conform to getBooleanContents similar to the SETCC operator.
+  GET_ACTIVE_LANE_MASK,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain
@@ -1490,46 +1568,40 @@ enum NodeType {
   BUILTIN_OP_END
 };
 
-/// FIRST_TARGET_STRICTFP_OPCODE - Target-specific pre-isel operations
-/// which cannot raise FP exceptions should be less than this value.
-/// Those that do must not be less than this value.
-static const int FIRST_TARGET_STRICTFP_OPCODE = BUILTIN_OP_END + 400;
-
-/// FIRST_TARGET_MEMORY_OPCODE - Target-specific pre-isel operations
-/// which do not reference a specific memory location should be less than
-/// this value. Those that do must not be less than this value, and can
-/// be used with SelectionDAG::getMemIntrinsicNode.
-static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END + 500;
-
 /// Whether this is bitwise logic opcode.
 inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
 
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
+/// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
+LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
+
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
-NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
+LLVM_ABI NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
 
 /// Whether this is a vector-predicated Opcode.
-bool isVPOpcode(unsigned Opcode);
+LLVM_ABI bool isVPOpcode(unsigned Opcode);
 
 /// Whether this is a vector-predicated binary operation opcode.
-bool isVPBinaryOp(unsigned Opcode);
+LLVM_ABI bool isVPBinaryOp(unsigned Opcode);
 
 /// Whether this is a vector-predicated reduction opcode.
-bool isVPReduction(unsigned Opcode);
+LLVM_ABI bool isVPReduction(unsigned Opcode);
 
 /// The operand position of the vector mask.
-std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
+LLVM_ABI std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
 
 /// The operand position of the explicit vector length parameter.
-std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
+LLVM_ABI std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 
 /// Translate this VP Opcode to its corresponding non-VP Opcode.
-std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
+LLVM_ABI std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode,
+                                                    bool hasFPExcept);
 
 /// Translate this non-VP Opcode to its corresponding VP Opcode.
-std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);
+LLVM_ABI std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed
@@ -1594,7 +1666,7 @@ enum LoadExtType { NON_EXTLOAD = 0, EXTLOAD, SEXTLOAD, ZEXTLOAD };
 
 static const int LAST_LOADEXT_TYPE = ZEXTLOAD + 1;
 
-NodeType getExtForLoadExtType(bool IsFP, LoadExtType);
+LLVM_ABI NodeType getExtForLoadExtType(bool IsFP, LoadExtType);
 
 //===--------------------------------------------------------------------===//
 /// ISD::CondCode enum - These are ordered carefully to make the bitfields
@@ -1679,7 +1751,7 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation.
-CondCode getSetCCInverse(CondCode Operation, EVT Type);
+LLVM_ABI CondCode getSetCCInverse(CondCode Operation, EVT Type);
 
 inline bool isExtOpcode(unsigned Opcode) {
   return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||
@@ -1699,22 +1771,22 @@ namespace GlobalISel {
 /// this distinction. As such we need to be told whether the comparison is
 /// floating point or integer-like. Pointers should use integer-like
 /// comparisons.
-CondCode getSetCCInverse(CondCode Operation, bool isIntegerLike);
+LLVM_ABI CondCode getSetCCInverse(CondCode Operation, bool isIntegerLike);
 } // end namespace GlobalISel
 
 /// Return the operation corresponding to (Y op X) when given the operation
 /// for (X op Y).
-CondCode getSetCCSwappedOperands(CondCode Operation);
+LLVM_ABI CondCode getSetCCSwappedOperands(CondCode Operation);
 
 /// Return the result of a logical OR between different comparisons of
 /// identical values: ((X op1 Y) | (X op2 Y)). This function returns
 /// SETCC_INVALID if it is not possible to represent the resultant comparison.
-CondCode getSetCCOrOperation(CondCode Op1, CondCode Op2, EVT Type);
+LLVM_ABI CondCode getSetCCOrOperation(CondCode Op1, CondCode Op2, EVT Type);
 
 /// Return the result of a logical AND between different comparisons of
 /// identical values: ((X op1 Y) & (X op2 Y)). This function returns
 /// SETCC_INVALID if it is not possible to represent the resultant comparison.
-CondCode getSetCCAndOperation(CondCode Op1, CondCode Op2, EVT Type);
+LLVM_ABI CondCode getSetCCAndOperation(CondCode Op1, CondCode Op2, EVT Type);
 
 } // namespace ISD
 

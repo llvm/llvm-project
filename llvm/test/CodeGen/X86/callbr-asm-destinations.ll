@@ -10,7 +10,7 @@ define i32 @duplicate_normal_and_indirect_dest(i32 %a) {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB0_1: # Block address taken
+; CHECK-NEXT:  .LBB0_1: # Inline asm indirect target
 ; CHECK-NEXT:    # %fail
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $1, %eax
@@ -35,7 +35,7 @@ define i32 @duplicate_indirect_dest(i32 %a) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.1: # %normal
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_2: # Block address taken
+; CHECK-NEXT:  .LBB1_2: # Inline asm indirect target
 ; CHECK-NEXT:    # %fail
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $1, %eax

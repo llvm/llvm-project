@@ -25,6 +25,8 @@ builtin_check_c_compiler_flag(-fconvergent-functions COMPILER_RT_HAS_FCONVERGENT
 builtin_check_c_compiler_flag("-Xclang -mcode-object-version=none" COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG)
 builtin_check_c_compiler_flag(-Wbuiltin-declaration-mismatch COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG)
 builtin_check_c_compiler_flag(/Zl COMPILER_RT_HAS_ZL_FLAG)
+builtin_check_c_compiler_flag(-fcf-protection=full COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
+builtin_check_c_compiler_flag(-nostdinc++          COMPILER_RT_HAS_NOSTDINCXX_FLAG)
 
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ATOMIC_KEYWORD
 "
@@ -43,8 +45,27 @@ asm(\"cas w0, w1, [x2]\");
 builtin_check_c_compiler_source(COMPILER_RT_HAS_AARCH64_SME
 "
 void foo(void)  __arm_streaming_compatible {
-  asm(\".arch armv9-a+sme\");
-  asm(\"smstart\");
+  asm(\".arch armv9-a+sme2\\n\"
+      \"smstart\\n\"
+      \"ldr zt0, [sp]\");
+}
+")
+
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ARM_UNALIGNED
+"
+void foo() {
+#ifndef __ARM_FEATURE_UNALIGNED
+#error \"Unaligned accesses unsupported\"
+#endif
+}
+")
+
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ARM_FP
+"
+void foo() {
+#ifndef __ARM_FP
+#error \"No floating-point support\"
+#endif
 }
 ")
 
@@ -57,7 +78,7 @@ else()
 endif()
 
 set(AMDGPU amdgcn)
-set(ARM64 aarch64)
+set(ARM64 aarch64 arm64ec)
 set(ARM32 arm armhf armv4t armv5te armv6 armv6m armv7m armv7em armv7 armv7s armv7k armv8m.base armv8m.main armv8.1m.main)
 set(AVR avr)
 set(HEXAGON hexagon)
@@ -71,6 +92,7 @@ set(PPC32 powerpc powerpcspe)
 set(PPC64 powerpc64 powerpc64le)
 set(RISCV32 riscv32)
 set(RISCV64 riscv64)
+set(S390X s390x)
 set(SPARC sparc)
 set(SPARCV9 sparcv9)
 set(WASM32 wasm32)
@@ -86,7 +108,7 @@ endif()
 set(ALL_BUILTIN_SUPPORTED_ARCH
   ${X86} ${X86_64} ${AMDGPU} ${ARM32} ${ARM64} ${AVR}
   ${HEXAGON} ${MIPS32} ${MIPS64} ${NVPTX} ${PPC32} ${PPC64}
-  ${RISCV32} ${RISCV64} ${SPARC} ${SPARCV9}
+  ${RISCV32} ${RISCV64} ${S390X} ${SPARC} ${SPARCV9}
   ${WASM32} ${WASM64} ${VE} ${LOONGARCH64})
 
 include(CompilerRTUtils)

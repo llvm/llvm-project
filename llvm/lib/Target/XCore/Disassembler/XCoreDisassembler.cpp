@@ -15,13 +15,16 @@
 #include "XCore.h"
 #include "XCoreRegisterInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "xcore-disassembler"
 
@@ -71,58 +74,6 @@ static unsigned getReg(const MCDisassembler *D, unsigned RC, unsigned RegNo) {
   return *(RegInfo->getRegClass(RC).begin() + RegNo);
 }
 
-static DecodeStatus DecodeGRRegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                              uint64_t Address,
-                                              const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeRRegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                             uint64_t Address,
-                                             const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeBitpOperand(MCInst &Inst, unsigned Val,
-                                      uint64_t Address,
-                                      const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeNegImmOperand(MCInst &Inst, unsigned Val,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder);
-
-static DecodeStatus Decode2RInstruction(MCInst &Inst, unsigned Insn,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder);
-
-static DecodeStatus Decode2RImmInstruction(MCInst &Inst, unsigned Insn,
-                                           uint64_t Address,
-                                           const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeR2RInstruction(MCInst &Inst, unsigned Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder);
-
-static DecodeStatus Decode2RSrcDstInstruction(MCInst &Inst, unsigned Insn,
-                                              uint64_t Address,
-                                              const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeRUSInstruction(MCInst &Inst, unsigned Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeRUSBitpInstruction(MCInst &Inst, unsigned Insn,
-                                             uint64_t Address,
-                                             const MCDisassembler *Decoder);
-
-static DecodeStatus
-DecodeRUSSrcDstBitpInstruction(MCInst &Inst, unsigned Insn, uint64_t Address,
-                               const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeL2RInstruction(MCInst &Inst, unsigned Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeLR2RInstruction(MCInst &Inst, unsigned Insn,
-                                          uint64_t Address,
-                                          const MCDisassembler *Decoder);
-
 static DecodeStatus Decode3RInstruction(MCInst &Inst, unsigned Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
@@ -130,7 +81,6 @@ static DecodeStatus Decode3RInstruction(MCInst &Inst, unsigned Insn,
 static DecodeStatus Decode3RImmInstruction(MCInst &Inst, unsigned Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
-
 static DecodeStatus Decode2RUSInstruction(MCInst &Inst, unsigned Insn,
                                           uint64_t Address,
                                           const MCDisassembler *Decoder);
@@ -154,24 +104,6 @@ static DecodeStatus DecodeL2RUSInstruction(MCInst &Inst, unsigned Insn,
 static DecodeStatus DecodeL2RUSBitpInstruction(MCInst &Inst, unsigned Insn,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeL6RInstruction(MCInst &Inst, unsigned Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeL5RInstruction(MCInst &Inst, unsigned Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeL4RSrcDstInstruction(MCInst &Inst, unsigned Insn,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder);
-
-static DecodeStatus
-DecodeL4RSrcDstSrcDstInstruction(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
-
-#include "XCoreGenDisassemblerTables.inc"
 
 static DecodeStatus DecodeGRRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Address,
@@ -710,6 +642,8 @@ DecodeL4RSrcDstSrcDstInstruction(MCInst &Inst, unsigned Insn, uint64_t Address,
   return S;
 }
 
+#include "XCoreGenDisassemblerTables.inc"
+
 MCDisassembler::DecodeStatus
 XCoreDisassembler::getInstruction(MCInst &instr, uint64_t &Size,
                                   ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -750,7 +684,8 @@ static MCDisassembler *createXCoreDisassembler(const Target &T,
   return new XCoreDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeXCoreDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheXCoreTarget(),
                                          createXCoreDisassembler);

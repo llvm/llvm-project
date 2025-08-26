@@ -26,6 +26,7 @@ class UseUsingCheck : public ClangTidyCheck {
 
   std::string FirstTypedefType;
   std::string FirstTypedefName;
+  SourceLocation MainTypeEndLoc;
 
 public:
   UseUsingCheck(StringRef Name, ClangTidyContext *Context);

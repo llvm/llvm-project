@@ -9,6 +9,10 @@ PythonObject SWIGBridge::ToSWIGWrapper(std::unique_ptr<lldb::SBValue> value_sb) 
   return ToSWIGHelper(value_sb.release(), SWIGTYPE_p_lldb__SBValue);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(std::unique_ptr<lldb::SBCommandReturnObject> result_up) {
+  return ToSWIGHelper(result_up.release(), SWIGTYPE_p_lldb__SBCommandReturnObject);
+}
+
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::ValueObjectSP value_sp) {
   return ToSWIGWrapper(std::unique_ptr<lldb::SBValue>(new lldb::SBValue(value_sp)));
 }
@@ -21,6 +25,11 @@ PythonObject SWIGBridge::ToSWIGWrapper(lldb::TargetSP target_sp) {
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::ProcessSP process_sp) {
   return ToSWIGHelper(new lldb::SBProcess(std::move(process_sp)),
                       SWIGTYPE_p_lldb__SBProcess);
+}
+
+PythonObject SWIGBridge::ToSWIGWrapper(lldb::ModuleSP module_sp) {
+  return ToSWIGHelper(new lldb::SBModule(std::move(module_sp)),
+                      SWIGTYPE_p_lldb__SBModule);
 }
 
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp) {

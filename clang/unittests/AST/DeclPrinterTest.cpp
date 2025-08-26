@@ -356,42 +356,40 @@ TEST(DeclPrinter, TestCXXRecordDecl11) {
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl12) {
-  ASSERT_TRUE(
-      PrintedDeclCXX98Matches("struct S { int x; };"
-                              "namespace NS { class C {};}"
-                              "void foo() {using namespace NS; C c;}",
-                              "foo",
-                              "void foo() {\nusing namespace NS;\nclass "
-                              "NS::C c;\n}\n",
-                              [](PrintingPolicy &Policy) {
-                                Policy.SuppressTagKeyword = false;
-                                Policy.SuppressScope = true;
-                                Policy.TerseOutput = false;
-                              }));
+  ASSERT_TRUE(PrintedDeclCXX98Matches("struct S { int x; };"
+                                      "namespace NS { class C {};}"
+                                      "void foo() {using namespace NS; C c;}",
+                                      "foo",
+                                      "void foo() {\nusing namespace NS;\n"
+                                      "C c;\n}\n",
+                                      [](PrintingPolicy &Policy) {
+                                        Policy.SuppressTagKeyword = false;
+                                        Policy.SuppressScope = true;
+                                        Policy.TerseOutput = false;
+                                      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl13) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-      "struct S { int x; };"
-      "S s1;"
-      "S foo() {return s1;}",
-      "foo", "struct S foo() {\nreturn s1;\n}\n", [](PrintingPolicy &Policy) {
-        Policy.SuppressTagKeyword = false;
-        Policy.SuppressScope = true;
-        Policy.TerseOutput = false;
-      }));
+  ASSERT_TRUE(PrintedDeclCXX98Matches("struct S { int x; };"
+                                      "S s1;"
+                                      "S foo() {return s1;}",
+                                      "foo", "S foo() {\nreturn s1;\n}\n",
+                                      [](PrintingPolicy &Policy) {
+                                        Policy.SuppressTagKeyword = false;
+                                        Policy.SuppressScope = true;
+                                        Policy.TerseOutput = false;
+                                      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl14) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches(
-      "struct S { int x; };"
-      "S foo(S s1) {return s1;}",
-      "foo", "struct S foo(struct S s1) {\nreturn s1;\n}\n",
-      [](PrintingPolicy &Policy) {
-        Policy.SuppressTagKeyword = false;
-        Policy.SuppressScope = true;
-        Policy.TerseOutput = false;
-      }));
+  ASSERT_TRUE(PrintedDeclCXX98Matches("struct S { int x; };"
+                                      "S foo(S s1) {return s1;}",
+                                      "foo", "S foo(S s1) {\nreturn s1;\n}\n",
+                                      [](PrintingPolicy &Policy) {
+                                        Policy.SuppressTagKeyword = false;
+                                        Policy.SuppressScope = true;
+                                        Policy.TerseOutput = false;
+                                      }));
 }
 TEST(DeclPrinter, TestCXXRecordDecl15) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
@@ -399,8 +397,8 @@ TEST(DeclPrinter, TestCXXRecordDecl15) {
       "namespace NS { class C {};}"
       "S foo(S s1, NS::C c1) {using namespace NS; C c; return s1;}",
       "foo",
-      "struct S foo(struct S s1, class NS::C c1) {\nusing namespace NS;\nclass "
-      "NS::C c;\nreturn s1;\n}\n",
+      "S foo(S s1, NS::C c1) {\nusing namespace NS;\n"
+      "C c;\nreturn s1;\n}\n",
       [](PrintingPolicy &Policy) {
         Policy.SuppressTagKeyword = false;
         Policy.SuppressScope = true;
@@ -1196,21 +1194,21 @@ TEST(DeclPrinter, TestUnnamedTemplateParameters) {
 }
 
 TEST(DeclPrinter, TestUnnamedTemplateParametersPacks) {
-  ASSERT_TRUE(PrintedDeclCXX17Matches(
-      "template <typename ..., int ...,"
-      " template <typename ..., bool ...> class ...> void A();",
-      functionTemplateDecl(hasName("A")).bind("id"),
-      "template <typename ..., int ...,"
-      " template <typename ..., bool ...> class ...> void A()"));
+  ASSERT_TRUE(
+      PrintedDeclCXX17Matches("template <typename ..., int ...,"
+                              " template <typename ...> class ...> void A();",
+                              functionTemplateDecl(hasName("A")).bind("id"),
+                              "template <typename ..., int ...,"
+                              " template <typename ...> class ...> void A()"));
 }
 
 TEST(DeclPrinter, TestNamedTemplateParametersPacks) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "template <typename ...T, int ...I,"
-      " template <typename ...X, bool ...B> class ...Z> void A();",
+      " template <typename ...X> class ...Z> void A();",
       functionTemplateDecl(hasName("A")).bind("id"),
       "template <typename ...T, int ...I,"
-      " template <typename ...X, bool ...B> class ...Z> void A()"));
+      " template <typename ...X> class ...Z> void A()"));
 }
 
 TEST(DeclPrinter, TestTemplateTemplateParameterWrittenWithTypename) {

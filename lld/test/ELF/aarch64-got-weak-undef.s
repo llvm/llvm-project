@@ -1,5 +1,5 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64-none-freebsd %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-readelf -r %t | FileCheck --check-prefix=RELOC %s
 // RUN: llvm-readelf -x .got %t | FileCheck %s

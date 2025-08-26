@@ -10,15 +10,30 @@
 // only defines the ARM register context constants when building on
 // an arm system.  We're creating fake corefiles, and might be
 // creating them on an intel system.
+#ifndef ARM_THREAD_STATE
 #define ARM_THREAD_STATE 1
+#endif
+#ifndef ARM_THREAD_STATE_COUNT
 #define ARM_THREAD_STATE_COUNT 17
+#endif
+#ifndef ARM_EXCEPTION_STATE
 #define ARM_EXCEPTION_STATE 3
+#endif
+#ifndef ARM_EXCEPTION_STATE_COUNT
 #define ARM_EXCEPTION_STATE_COUNT 3
+#endif
+#ifndef ARM_THREAD_STATE64
 #define ARM_THREAD_STATE64 6
+#endif
+#ifndef ARM_THREAD_STATE64_COUNT
 #define ARM_THREAD_STATE64_COUNT 68
+#endif
+#ifndef ARM_EXCEPTION_STATE64
 #define ARM_EXCEPTION_STATE64 7
+#endif
+#ifndef ARM_EXCEPTION_STATE64_COUNT
 #define ARM_EXCEPTION_STATE64_COUNT 4
-
+#endif
 
 union uint32_buf {
   uint8_t bytebuf[4];
@@ -129,6 +144,27 @@ std::vector<uint8_t> arm64_lc_thread_load_command() {
   return data;
 }
 
+std::vector<uint8_t> lc_segment(uint32_t fileoff,
+                                uint32_t lc_segment_data_size) {
+  std::vector<uint8_t> data;
+  // 0x000e0000 is the value of $sp in the armv7 LC_THREAD
+  uint32_t start_vmaddr = 0x000e0000 - (lc_segment_data_size / 2);
+  add_uint32(data, LC_SEGMENT);                     // segment_command.cmd
+  add_uint32(data, sizeof(struct segment_command)); // segment_command.cmdsize
+  for (int i = 0; i < 16; i++)
+    data.push_back(0);                    // segment_command.segname[16]
+  add_uint32(data, start_vmaddr);         // segment_command.vmaddr
+  add_uint32(data, lc_segment_data_size); // segment_command.vmsize
+  add_uint32(data, fileoff);              // segment_command.fileoff
+  add_uint32(data, lc_segment_data_size); // segment_command.filesize
+  add_uint32(data, 3);                    // segment_command.maxprot
+  add_uint32(data, 3);                    // segment_command.initprot
+  add_uint32(data, 0);                    // segment_command.nsects
+  add_uint32(data, 0);                    // segment_command.flags
+
+  return data;
+}
+
 enum arch { unspecified, armv7, arm64 };
 
 int main(int argc, char **argv) {
@@ -157,10 +193,12 @@ int main(int argc, char **argv) {
 
   // First add all the load commands / payload so we can figure out how large
   // the load commands will actually be.
-  if (arch == armv7)
+  if (arch == armv7) {
     load_commands.push_back(armv7_lc_thread_load_command());
-  else if (arch == arm64)
+    load_commands.push_back(lc_segment(0, 0));
+  } else if (arch == arm64) {
     load_commands.push_back(arm64_lc_thread_load_command());
+  }
 
   int size_of_load_commands = 0;
   for (const auto &lc : load_commands)
@@ -174,19 +212,33 @@ int main(int argc, char **argv) {
   load_commands.clear();
   payload.clear();
 
-  if (arch == armv7)
+  int payload_fileoff = (header_and_load_cmd_room + 4096 - 1) & ~(4096 - 1);
+
+  const int lc_segment_data_size = 64;
+  if (arch == armv7) {
     load_commands.push_back(armv7_lc_thread_load_command());
-  else if (arch == arm64)
+    load_commands.push_back(lc_segment(payload_fileoff, lc_segment_data_size));
+  } else if (arch == arm64) {
     load_commands.push_back(arm64_lc_thread_load_command());
+  }
+
+  if (arch == armv7)
+    for (int i = 0; i < lc_segment_data_size;
+         i++) // from segment_command.filesize
+      payload.push_back(i);
 
   struct mach_header_64 mh;
-  mh.magic = MH_MAGIC_64;
+  int header_size;
   if (arch == armv7) {
+    mh.magic = MH_MAGIC;
     mh.cputype = CPU_TYPE_ARM;
     mh.cpusubtype = CPU_SUBTYPE_ARM_V7M;
+    header_size = sizeof(struct mach_header);
   } else if (arch == arm64) {
+    mh.magic = MH_MAGIC_64;
     mh.cputype = CPU_TYPE_ARM64;
     mh.cpusubtype = CPU_SUBTYPE_ARM64_ALL;
+    header_size = sizeof(struct mach_header_64);
   }
   mh.filetype = MH_CORE;
   mh.ncmds = load_commands.size();
@@ -201,12 +253,12 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  fwrite(&mh, sizeof(struct mach_header_64), 1, f);
+  fwrite(&mh, header_size, 1, f);
 
   for (const auto &lc : load_commands)
     fwrite(lc.data(), lc.size(), 1, f);
 
-  fseek(f, header_and_load_cmd_room, SEEK_SET);
+  fseek(f, payload_fileoff, SEEK_SET);
 
   fwrite(payload.data(), payload.size(), 1, f);
 

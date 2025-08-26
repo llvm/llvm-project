@@ -24,7 +24,7 @@ LIBC_CONFIGURE_OPTIONS = [
     # Documentation in libc/src/string/memory_utils/...
     # "LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY",
     # "LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE",
-    # "LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING",
+    "LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING",
     "LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING",
 
     # Documentation in libc/docs/dev/printf_behavior.rst
@@ -46,4 +46,10 @@ LIBC_CONFIGURE_OPTIONS = [
 
     # Documentation in libc/src/__support/libc_assert.h
     # "LIBC_COPT_USE_C_ASSERT",
+
+    # Documentation in libc/docs/configure.rst
+    "LIBC_THREAD_MODE=LIBC_THREAD_MODE_PLATFORM",
+
+    # Documentation in libc/src/__support/libc_errno.h
+    "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM_INLINE",
 ]

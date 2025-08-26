@@ -7,26 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/array.h"
-#include "src/errno/libc_errno.h"
 #include "src/math/fabs.h"
 #include "src/sys/random/getrandom.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcGetRandomTest, InvalidFlag) {
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcGetRandomTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcGetRandomTest, InvalidFlag) {
   LIBC_NAMESPACE::cpp::array<char, 10> buffer;
-  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::getrandom(buffer.data(), buffer.size(), -1),
-              LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails(EINVAL));
+              Fails(EINVAL));
 }
 
-TEST(LlvmLibcGetRandomTest, InvalidBuffer) {
-  LIBC_NAMESPACE::libc_errno = 0;
-  ASSERT_THAT(LIBC_NAMESPACE::getrandom(nullptr, 65536, 0),
-              LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails(EFAULT));
+TEST_F(LlvmLibcGetRandomTest, InvalidBuffer) {
+  ASSERT_THAT(LIBC_NAMESPACE::getrandom(nullptr, 65536, 0), Fails(EFAULT));
 }
 
-TEST(LlvmLibcGetRandomTest, ReturnsSize) {
+TEST_F(LlvmLibcGetRandomTest, ReturnsSize) {
   LIBC_NAMESPACE::cpp::array<char, 10> buffer;
   for (size_t i = 0; i < buffer.size(); ++i) {
     // Without GRND_RANDOM set this should never fail.
@@ -35,7 +35,7 @@ TEST(LlvmLibcGetRandomTest, ReturnsSize) {
   }
 }
 
-TEST(LlvmLibcGetRandomTest, CheckValue) {
+TEST_F(LlvmLibcGetRandomTest, CheckValue) {
   // Probability of picking one particular value amongst 256 possibilities a
   // hundred times in a row is (1/256)^100 = 1.49969681e-241.
   LIBC_NAMESPACE::cpp::array<char, 100> buffer;

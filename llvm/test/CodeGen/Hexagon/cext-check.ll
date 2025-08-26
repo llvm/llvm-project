@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-eif=0 -ifcvt-limit=0 -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-eif=0 -ifcvt-limit=0 -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 ; Check that we constant extended instructions only when necessary.
 
 define i32 @cext_test1(ptr %a) nounwind {

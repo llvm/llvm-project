@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 ; This tests how LLVM handles IR which puts very high
 ; presure on the PTRREGS class for the register allocator.

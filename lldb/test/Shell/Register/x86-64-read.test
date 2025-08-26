@@ -1,4 +1,3 @@
-# UNSUPPORTED: lldb-repro
 # XFAIL: system-windows
 # REQUIRES: native && target-x86_64
 # RUN: %clangxx_host %p/Inputs/x86-64-read.cpp -o %t

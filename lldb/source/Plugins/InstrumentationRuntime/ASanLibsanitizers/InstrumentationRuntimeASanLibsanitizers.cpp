@@ -90,17 +90,9 @@ void InstrumentationRuntimeASanLibsanitizers::Activate() {
   if (!process_sp)
     return;
 
-  lldb::ModuleSP module_sp = GetRuntimeModuleSP();
-
   Breakpoint *breakpoint = ReportRetriever::SetupBreakpoint(
-      module_sp, process_sp, ConstString("sanitizers_address_on_report"));
-
-  if (!breakpoint) {
-    breakpoint = ReportRetriever::SetupBreakpoint(
-        module_sp, process_sp,
-        ConstString("_Z22raise_sanitizers_error23sanitizer_error_context"));
-  }
-
+      GetRuntimeModuleSP(), process_sp,
+      ConstString("sanitizers_address_on_report"));
   if (!breakpoint)
     return;
 

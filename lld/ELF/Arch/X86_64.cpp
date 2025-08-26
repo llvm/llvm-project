@@ -11,7 +11,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
+#include "TargetImpl.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
@@ -50,6 +50,7 @@ public:
   bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+  void applyBranchToBranchOpt() const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -99,8 +100,11 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
 
 int X86_64::getTlsGdRelaxSkip(RelType type) const {
   // TLSDESC relocations are processed separately. See relaxTlsGdToLe below.
-  return type == R_X86_64_GOTPC32_TLSDESC || type == R_X86_64_TLSDESC_CALL ? 1
-                                                                           : 2;
+  return type == R_X86_64_GOTPC32_TLSDESC ||
+                 type == R_X86_64_CODE_4_GOTPC32_TLSDESC ||
+                 type == R_X86_64_TLSDESC_CALL
+             ? 1
+             : 2;
 }
 
 // Opcodes for the different X86_64 jmp instructions.
@@ -316,6 +320,8 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 bool X86_64::relaxOnce(int pass) const {
   uint64_t minVA = UINT64_MAX, maxVA = 0;
   for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_ALLOC))
+      continue;
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
@@ -390,12 +396,15 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_GOT64:
     return R_GOTPLT;
   case R_X86_64_GOTPC32_TLSDESC:
+  case R_X86_64_CODE_4_GOTPC32_TLSDESC:
     return R_TLSDESC_PC;
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_REX2_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
+  case R_X86_64_CODE_6_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
     return R_GOTPLTREL;
@@ -407,8 +416,8 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_NONE:
     return R_NONE;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -486,18 +495,26 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     // The original code used a pc relative relocation and so we have to
     // compensate for the -4 in had in the addend.
     write32le(loc + 8, val + 4);
-  } else if (rel.type == R_X86_64_GOTPC32_TLSDESC) {
+  } else if (rel.type == R_X86_64_GOTPC32_TLSDESC ||
+             rel.type == R_X86_64_CODE_4_GOTPC32_TLSDESC) {
     // Convert leaq x@tlsdesc(%rip), %REG to movq $x@tpoff, %REG.
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLoc(ctx, loc - 3) +
-                  "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG");
+      Err(ctx) << getErrorLoc(ctx, (rel.type == R_X86_64_GOTPC32_TLSDESC)
+                                       ? loc - 3
+                                       : loc - 4)
+               << "R_X86_64_GOTPC32_TLSDESC/R_X86_64_CODE_4_GOTPC32_TLSDESC "
+                  "must be used in leaq x@tlsdesc(%rip), %REG";
       return;
     }
-    loc[-3] = 0x48 | ((loc[-3] >> 2) & 1);
+    if (rel.type == R_X86_64_GOTPC32_TLSDESC) {
+      loc[-3] = 0x48 | ((loc[-3] >> 2) & 1);
+    } else {
+      loc[-3] = (loc[-3] & ~0x44) | ((loc[-3] & 0x44) >> 2);
+    }
     loc[-2] = 0xc7;
     loc[-1] = 0xc0 | ((loc[-1] >> 3) & 7);
+
     write32le(loc, val + 4);
   } else {
     // Convert call *x@tlsdesc(%REG) to xchg ax, ax.
@@ -527,14 +544,16 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     // Both code sequences are PC relatives, but since we are moving the
     // constant forward by 8 bytes we have to subtract the value by 8.
     write32le(loc + 8, val - 8);
-  } else if (rel.type == R_X86_64_GOTPC32_TLSDESC) {
+  } else if (rel.type == R_X86_64_GOTPC32_TLSDESC ||
+             rel.type == R_X86_64_CODE_4_GOTPC32_TLSDESC) {
     // Convert leaq x@tlsdesc(%rip), %REG to movq x@gottpoff(%rip), %REG.
-    assert(rel.type == R_X86_64_GOTPC32_TLSDESC);
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLoc(ctx, loc - 3) +
-                  "R_X86_64_GOTPC32_TLSDESC must be used "
-                  "in leaq x@tlsdesc(%rip), %REG");
+      Err(ctx) << getErrorLoc(ctx, (rel.type == R_X86_64_GOTPC32_TLSDESC)
+                                       ? loc - 3
+                                       : loc - 4)
+               << "R_X86_64_GOTPC32_TLSDESC/R_X86_64_CODE_4_GOTPC32_TLSDESC "
+                  "must be used in leaq x@tlsdesc(%rip), %REG";
       return;
     }
     loc[-2] = 0x8b;
@@ -547,43 +566,105 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-// In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
-// R_X86_64_TPOFF32 so that it does not use GOT.
+// In some conditions,
+// R_X86_64_GOTTPOFF/R_X86_64_CODE_4_GOTTPOFF/R_X86_64_CODE_6_GOTTPOFF
+// relocation can be optimized to R_X86_64_TPOFF32 so that it does not use GOT.
 void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
                             uint64_t val) const {
   uint8_t *inst = loc - 3;
   uint8_t reg = loc[-1] >> 3;
   uint8_t *regSlot = loc - 1;
 
-  // Note that ADD with RSP or R12 is converted to ADD instead of LEA
-  // because LEA with these registers needs 4 bytes to encode and thus
-  // wouldn't fit the space.
+  if (rel.type == R_X86_64_GOTTPOFF) {
+    // Note that ADD with RSP or R12 is converted to ADD instead of LEA
+    // because LEA with these registers needs 4 bytes to encode and thus
+    // wouldn't fit the space.
 
-  if (memcmp(inst, "\x48\x03\x25", 3) == 0) {
-    // "addq foo@gottpoff(%rip),%rsp" -> "addq $foo,%rsp"
-    memcpy(inst, "\x48\x81\xc4", 3);
-  } else if (memcmp(inst, "\x4c\x03\x25", 3) == 0) {
-    // "addq foo@gottpoff(%rip),%r12" -> "addq $foo,%r12"
-    memcpy(inst, "\x49\x81\xc4", 3);
-  } else if (memcmp(inst, "\x4c\x03", 2) == 0) {
-    // "addq foo@gottpoff(%rip),%r[8-15]" -> "leaq foo(%r[8-15]),%r[8-15]"
-    memcpy(inst, "\x4d\x8d", 2);
-    *regSlot = 0x80 | (reg << 3) | reg;
-  } else if (memcmp(inst, "\x48\x03", 2) == 0) {
-    // "addq foo@gottpoff(%rip),%reg -> "leaq foo(%reg),%reg"
-    memcpy(inst, "\x48\x8d", 2);
-    *regSlot = 0x80 | (reg << 3) | reg;
-  } else if (memcmp(inst, "\x4c\x8b", 2) == 0) {
-    // "movq foo@gottpoff(%rip),%r[8-15]" -> "movq $foo,%r[8-15]"
-    memcpy(inst, "\x49\xc7", 2);
+    if (memcmp(inst, "\x48\x03\x25", 3) == 0) {
+      // "addq foo@gottpoff(%rip),%rsp" -> "addq $foo,%rsp"
+      memcpy(inst, "\x48\x81\xc4", 3);
+    } else if (memcmp(inst, "\x4c\x03\x25", 3) == 0) {
+      // "addq foo@gottpoff(%rip),%r12" -> "addq $foo,%r12"
+      memcpy(inst, "\x49\x81\xc4", 3);
+    } else if (memcmp(inst, "\x4c\x03", 2) == 0) {
+      // "addq foo@gottpoff(%rip),%r[8-15]" -> "leaq foo(%r[8-15]),%r[8-15]"
+      memcpy(inst, "\x4d\x8d", 2);
+      *regSlot = 0x80 | (reg << 3) | reg;
+    } else if (memcmp(inst, "\x48\x03", 2) == 0) {
+      // "addq foo@gottpoff(%rip),%reg -> "leaq foo(%reg),%reg"
+      memcpy(inst, "\x48\x8d", 2);
+      *regSlot = 0x80 | (reg << 3) | reg;
+    } else if (memcmp(inst, "\x4c\x8b", 2) == 0) {
+      // "movq foo@gottpoff(%rip),%r[8-15]" -> "movq $foo,%r[8-15]"
+      memcpy(inst, "\x49\xc7", 2);
+      *regSlot = 0xc0 | reg;
+    } else if (memcmp(inst, "\x48\x8b", 2) == 0) {
+      // "movq foo@gottpoff(%rip),%reg" -> "movq $foo,%reg"
+      memcpy(inst, "\x48\xc7", 2);
+      *regSlot = 0xc0 | reg;
+    } else {
+      Err(ctx)
+          << getErrorLoc(ctx, loc - 3)
+          << "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only";
+    }
+  } else if (rel.type == R_X86_64_CODE_4_GOTTPOFF) {
+    if (loc[-4] != 0xd5) {
+      Err(ctx) << getErrorLoc(ctx, loc - 4)
+               << "invalid prefix with R_X86_64_CODE_4_GOTTPOFF!";
+      return;
+    }
+    const uint8_t rex = loc[-3];
+    loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
     *regSlot = 0xc0 | reg;
-  } else if (memcmp(inst, "\x48\x8b", 2) == 0) {
-    // "movq foo@gottpoff(%rip),%reg" -> "movq $foo,%reg"
-    memcpy(inst, "\x48\xc7", 2);
-    *regSlot = 0xc0 | reg;
+
+    if (loc[-2] == 0x8b) {
+      // "movq foo@gottpoff(%rip),%r[16-31]" -> "movq $foo,%r[16-31]"
+      loc[-2] = 0xc7;
+    } else if (loc[-2] == 0x03) {
+      // "addq foo@gottpoff(%rip),%r[16-31]" -> "addq $foo,%r[16-31]"
+      loc[-2] = 0x81;
+    } else {
+      Err(ctx) << getErrorLoc(ctx, loc - 4)
+               << "R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ "
+                  "instructions only";
+    }
+  } else if (rel.type == R_X86_64_CODE_6_GOTTPOFF) {
+    if (loc[-6] != 0x62) {
+      Err(ctx) << getErrorLoc(ctx, loc - 6)
+               << "invalid prefix with R_X86_64_CODE_6_GOTTPOFF!";
+      return;
+    }
+    // Check bits are satisfied:
+    //   loc[-5]: X==1 (inverted polarity), (loc[-5] & 0x7) == 0x4
+    //   loc[-4]: W==1, X2==1 (inverted polarity), pp==0b00(NP)
+    //   loc[-3]: NF==1 or ND==1
+    //   loc[-2]: opcode==0x1 or opcode==0x3
+    //   loc[-1]: Mod==0b00, RM==0b101
+    if (((loc[-5] & 0x47) == 0x44) && ((loc[-4] & 0x87) == 0x84) &&
+        ((loc[-3] & 0x14) != 0) && (loc[-2] == 0x1 || loc[-2] == 0x3) &&
+        ((loc[-1] & 0xc7) == 0x5)) {
+      // "addq %reg1, foo@GOTTPOFF(%rip), %reg2" -> "addq $foo, %reg1, %reg2"
+      // "addq foo@GOTTPOFF(%rip), %reg1, %reg2" -> "addq $foo, %reg1, %reg2"
+      // "{nf} addq %reg1, foo@GOTTPOFF(%rip), %reg2"
+      //   -> "{nf} addq $foo, %reg1, %reg2"
+      // "{nf} addq name@GOTTPOFF(%rip), %reg1, %reg2"
+      //    -> "{nf} addq $foo, %reg1, %reg2"
+      // "{nf} addq name@GOTTPOFF(%rip), %reg" -> "{nf} addq $foo, %reg"
+      loc[-2] = 0x81;
+      // Move R bits to B bits in EVEX payloads and ModRM byte.
+      const uint8_t evexPayload0 = loc[-5];
+      if ((evexPayload0 & (1 << 7)) == 0)
+        loc[-5] = (evexPayload0 | (1 << 7)) & ~(1 << 5);
+      if ((evexPayload0 & (1 << 4)) == 0)
+        loc[-5] = evexPayload0 | (1 << 4) | (1 << 3);
+      *regSlot = 0xc0 | reg;
+    } else {
+      Err(ctx) << getErrorLoc(ctx, loc - 6)
+               << "R_X86_64_CODE_6_GOTTPOFF must be used in ADDQ instructions "
+                  "with NDD/NF/NDD+NF only";
+    }
   } else {
-    error(getErrorLoc(ctx, loc - 3) +
-          "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
+    llvm_unreachable("Unsupported relocation type!");
   }
 
   // The original code used a PC relative relocation.
@@ -627,8 +708,9 @@ void X86_64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
     return;
   }
 
-  error(getErrorLoc(ctx, loc - 3) +
-        "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD");
+  ErrAlways(ctx)
+      << getErrorLoc(ctx, loc - 3)
+      << "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD";
 }
 
 // A JumpInstrMod at a specific offset indicates that the jump instruction
@@ -736,9 +818,11 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_REX2_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
   case R_X86_64_PC32:
   case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
+  case R_X86_64_CODE_6_GOTTPOFF:
   case R_X86_64_PLT32:
   case R_X86_64_TLSGD:
   case R_X86_64_TLSLD:
@@ -766,8 +850,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
@@ -820,7 +903,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_REX2_GOTPCRELX:
+  case R_X86_64_CODE_4_GOTPCRELX:
     if (rel.expr != R_GOT_PC) {
       relaxGot(loc, rel, val);
     } else {
@@ -829,6 +912,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     }
     break;
   case R_X86_64_GOTPC32_TLSDESC:
+  case R_X86_64_CODE_4_GOTPC32_TLSDESC:
   case R_X86_64_TLSDESC_CALL:
   case R_X86_64_TLSGD:
     if (rel.expr == R_RELAX_TLS_GD_TO_LE) {
@@ -849,6 +933,8 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     }
     break;
   case R_X86_64_GOTTPOFF:
+  case R_X86_64_CODE_4_GOTTPOFF:
+  case R_X86_64_CODE_6_GOTTPOFF:
     if (rel.expr == R_RELAX_TLS_IE_TO_LE) {
       relaxTlsIeToLe(loc, rel, val);
     } else {
@@ -872,13 +958,13 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
 RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
                                 const uint8_t *loc) const {
-  // Only R_X86_64_[REX_]|[REX2_]GOTPCRELX can be relaxed. GNU as may emit
+  // Only R_X86_64_[REX_]|[CODE_4_]GOTPCRELX can be relaxed. GNU as may emit
   // GOTPCRELX with addend != -4. Such an instruction does not load the full GOT
   // entry, so we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip),
   // %rax (addend=0) loads the high 32 bits of the GOT entry.
   if (!ctx.arg.relax || addend != -4 ||
       (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX &&
-       type != R_X86_64_REX2_GOTPCRELX))
+       type != R_X86_64_CODE_4_GOTPCRELX))
     return R_GOT_PC;
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
@@ -1000,8 +1086,9 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (op != 0xff) {
     // We are relaxing a rip relative to an absolute, so compensate
     // for the old -4 addend.
-    assert(!ctx.arg.isPic);
-    relaxGotNoPic(loc, val + 4, op, modRm, rel.type == R_X86_64_REX2_GOTPCRELX);
+    assert(!rel.sym->file->ctx.arg.isPic);
+    relaxGotNoPic(loc, val + 4, op, modRm,
+                  rel.type == R_X86_64_CODE_4_GOTPCRELX);
     return;
   }
 
@@ -1031,7 +1118,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
 bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                               uint8_t stOther) const {
   if (!ctx.arg.is64) {
-    error("target doesn't support split stacks");
+    ErrAlways(ctx) << "target doesn't support split stacks";
     return false;
   }
 
@@ -1076,6 +1163,72 @@ void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     applyJumpInstrMod(buf + sec.jumpInstrMod->offset,
                       sec.jumpInstrMod->original, sec.jumpInstrMod->size);
   }
+}
+
+static std::optional<uint64_t> getControlTransferAddend(InputSection &is,
+                                                        Relocation &r) {
+  // Identify a control transfer relocation for the branch-to-branch
+  // optimization. A "control transfer relocation" usually means a CALL or JMP
+  // target but it also includes relative vtable relocations for example.
+  //
+  // We require the relocation type to be PLT32. With a relocation type of PLT32
+  // the value may be assumed to be used for branching directly to the symbol
+  // and the addend is only used to produce the relocated value (hence the
+  // effective addend is always 0). This is because if a PLT is needed the
+  // addend will be added to the address of the PLT, and it doesn't make sense
+  // to branch into the middle of a PLT. For example, relative vtable
+  // relocations use PLT32 and 0 or a positive value as the addend but still are
+  // used to branch to the symbol.
+  //
+  // STT_SECTION symbols are a special case on x86 because the LLVM assembler
+  // uses them for branches to local symbols which are assembled as referring to
+  // the section symbol with the addend equal to the symbol value - 4.
+  if (r.type == R_X86_64_PLT32) {
+    if (r.sym->isSection())
+      return r.addend + 4;
+    return 0;
+  }
+  return std::nullopt;
+}
+
+static std::pair<Relocation *, uint64_t>
+getBranchInfoAtTarget(InputSection &is, uint64_t offset) {
+  auto content = is.contentMaybeDecompress();
+  if (content.size() > offset && content[offset] == 0xe9) { // JMP immediate
+    auto *i = llvm::partition_point(
+        is.relocations, [&](Relocation &r) { return r.offset < offset + 1; });
+    // Unlike with getControlTransferAddend() it is valid to accept a PC32
+    // relocation here because we know that this is actually a JMP and not some
+    // other reference, so the interpretation is that we add 4 to the addend and
+    // use that as the effective addend.
+    if (i != is.relocations.end() && i->offset == offset + 1 &&
+        (i->type == R_X86_64_PC32 || i->type == R_X86_64_PLT32)) {
+      return {i, i->addend + 4};
+    }
+  }
+  return {nullptr, 0};
+}
+
+static void redirectControlTransferRelocations(Relocation &r1,
+                                               const Relocation &r2) {
+  // The isSection() check handles the STT_SECTION case described above.
+  // In that case the original addend is irrelevant because it referred to an
+  // offset within the original target section so we overwrite it.
+  //
+  // The +4 is here to compensate for r2.addend which will likely be -4,
+  // but may also be addend-4 in case of a PC32 branch to symbol+addend.
+  if (r1.sym->isSection())
+    r1.addend = r2.addend;
+  else
+    r1.addend += r2.addend + 4;
+  r1.expr = r2.expr;
+  r1.sym = r2.sym;
+}
+
+void X86_64::applyBranchToBranchOpt() const {
+  applyBranchToBranchOptImpl(ctx, getControlTransferAddend,
+                             getBranchInfoAtTarget,
+                             redirectControlTransferRelocations);
 }
 
 // If Intel Indirect Branch Tracking is enabled, we have to emit special PLT

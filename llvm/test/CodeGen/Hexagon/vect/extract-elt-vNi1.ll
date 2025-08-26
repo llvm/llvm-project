@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Make sure that element no.1 extracted from <2 x i1> translates to extracting
 ; bit no.4 from the predicate register.

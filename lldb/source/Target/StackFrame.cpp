@@ -13,9 +13,6 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -25,6 +22,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrameRecognizer.h"
@@ -33,6 +31,12 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/ValueObject/DILEval.h"
+#include "lldb/ValueObject/DILLexer.h"
+#include "lldb/ValueObject/DILParser.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "lldb/lldb-enumerations.h"
 
@@ -57,8 +61,9 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
-      m_id(pc, cfa, nullptr), m_frame_code_addr(pc), m_sc(), m_flags(),
-      m_frame_base(), m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
+      m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
+      m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
+      m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
       m_stack_frame_kind(kind),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
@@ -67,7 +72,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
   // recursive functions properly aren't confused with one another on a history
   // stack.
   if (IsHistorical() && !m_cfa_is_valid) {
-    m_id.SetCFA(m_frame_index);
+    m_id.SetCFA(m_frame_index, thread_sp->GetProcess().get());
   }
 
   if (sc_ptr != nullptr) {
@@ -83,7 +88,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index),
-      m_reg_context_sp(reg_context_sp), m_id(pc, cfa, nullptr),
+      m_reg_context_sp(reg_context_sp),
+      m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular),
@@ -111,7 +117,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp),
       m_id(pc_addr.GetLoadAddress(thread_sp->CalculateTarget().get()), cfa,
-           nullptr),
+           nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular),
@@ -508,6 +514,63 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
     VariableSP &var_sp, Status &error) {
+  ExecutionContext exe_ctx;
+  CalculateExecutionContext(exe_ctx);
+  bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
+  if (use_DIL)
+    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                var_sp, error);
+
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
+}
+
+ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+    uint32_t options, lldb::VariableSP &var_sp, Status &error) {
+
+  const bool check_ptr_vs_member =
+      (options & eExpressionPathOptionCheckPtrVsMember) != 0;
+  const bool no_fragile_ivar =
+      (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
+  const bool no_synth_child =
+      (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
+
+  // Lex the expression.
+  auto lex_or_err = dil::DILLexer::Create(var_expr);
+  if (!lex_or_err) {
+    error = Status::FromError(lex_or_err.takeError());
+    return ValueObjectConstResult::Create(nullptr, std::move(error));
+  }
+
+  // Parse the expression.
+  auto tree_or_error = dil::DILParser::Parse(
+      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic,
+      !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
+  if (!tree_or_error) {
+    error = Status::FromError(tree_or_error.takeError());
+    return ValueObjectConstResult::Create(nullptr, std::move(error));
+  }
+
+  // Evaluate the parsed expression.
+  lldb::TargetSP target = this->CalculateTarget();
+  dil::Interpreter interpreter(target, var_expr, shared_from_this(),
+                               use_dynamic, !no_synth_child, !no_fragile_ivar,
+                               check_ptr_vs_member);
+
+  auto valobj_or_error = interpreter.Evaluate((*tree_or_error).get());
+  if (!valobj_or_error) {
+    error = Status::FromError(valobj_or_error.takeError());
+    return ValueObjectConstResult::Create(nullptr, std::move(error));
+  }
+
+  var_sp = (*valobj_or_error)->GetVariable();
+  return *valobj_or_error;
+}
+
+ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
+    VariableSP &var_sp, Status &error) {
   llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
   if (IsHistorical())
@@ -646,29 +709,25 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         }
       }
 
-      // If we have a non pointer type with a sythetic value then lets check if
-      // we have an sythetic dereference specified.
+      // If we have a non-pointer type with a synthetic value then lets check if
+      // we have a synthetic dereference specified.
       if (!valobj_sp->IsPointerType() && valobj_sp->HasSyntheticValue()) {
         Status deref_error;
-        if (valobj_sp->GetCompilerType().IsReferenceType()) {
-          valobj_sp = valobj_sp->GetSyntheticValue()->Dereference(deref_error);
-          if (!valobj_sp || deref_error.Fail()) {
-            error = Status::FromErrorStringWithFormatv(
-                "Failed to dereference reference type: {0}", deref_error);
-            return ValueObjectSP();
-          }
+        if (ValueObjectSP synth_deref_sp =
+                valobj_sp->GetSyntheticValue()->Dereference(deref_error);
+            synth_deref_sp && deref_error.Success()) {
+          valobj_sp = std::move(synth_deref_sp);
         }
-
-        valobj_sp = valobj_sp->Dereference(deref_error);
         if (!valobj_sp || deref_error.Fail()) {
           error = Status::FromErrorStringWithFormatv(
-              "Failed to dereference sythetic value: {0}", deref_error);
+              "Failed to dereference synthetic value: {0}", deref_error);
           return ValueObjectSP();
         }
+
         // Some synthetic plug-ins fail to set the error in Dereference
         if (!valobj_sp) {
           error =
-              Status::FromErrorString("Failed to dereference sythetic value");
+              Status::FromErrorString("Failed to dereference synthetic value");
           return ValueObjectSP();
         }
         expr_is_ptr = false;
@@ -1070,6 +1129,12 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   if (valobj_sp) {
     if (deref) {
       ValueObjectSP deref_valobj_sp(valobj_sp->Dereference(error));
+      if (!deref_valobj_sp && !no_synth_child) {
+        if (ValueObjectSP synth_obj_sp = valobj_sp->GetSyntheticValue()) {
+          error.Clear();
+          deref_valobj_sp = synth_obj_sp->Dereference(error);
+        }
+      }
       valobj_sp = deref_valobj_sp;
     } else if (address_of) {
       ValueObjectSP address_of_valobj_sp(valobj_sp->AddressOf(error));
@@ -1097,8 +1162,7 @@ llvm::Error StackFrame::GetFrameBaseValue(Scalar &frame_base) {
       addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
       if (!m_sc.function->GetFrameBaseExpression().IsAlwaysValidSingleExpr())
         loclist_base_addr =
-            m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
-                exe_ctx.GetTargetPtr());
+            m_sc.function->GetAddress().GetLoadAddress(exe_ctx.GetTargetPtr());
 
       llvm::Expected<Value> expr_value =
           m_sc.function->GetFrameBaseExpression().Evaluate(
@@ -1205,6 +1269,71 @@ bool StackFrame::IsHidden() {
   if (auto recognized_frame_sp = GetRecognizedFrame())
     return recognized_frame_sp->ShouldHide();
   return false;
+}
+
+StructuredData::ObjectSP StackFrame::GetLanguageSpecificData() {
+  auto process_sp = CalculateProcess();
+  SourceLanguage language = GetLanguage();
+  if (!language)
+    return {};
+  if (auto runtime_sp =
+          process_sp->GetLanguageRuntime(language.AsLanguageType()))
+    return runtime_sp->GetLanguageSpecificData(
+        GetSymbolContext(eSymbolContextFunction));
+  return {};
+}
+
+const char *StackFrame::GetFunctionName() {
+  const char *name = nullptr;
+  SymbolContext sc = GetSymbolContext(
+      eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
+  if (sc.block) {
+    Block *inlined_block = sc.block->GetContainingInlinedBlock();
+    if (inlined_block) {
+      const InlineFunctionInfo *inlined_info =
+          inlined_block->GetInlinedFunctionInfo();
+      if (inlined_info)
+        name = inlined_info->GetName().AsCString();
+    }
+  }
+
+  if (name == nullptr) {
+    if (sc.function)
+      name = sc.function->GetName().GetCString();
+  }
+
+  if (name == nullptr) {
+    if (sc.symbol)
+      name = sc.symbol->GetName().GetCString();
+  }
+
+  return name;
+}
+
+const char *StackFrame::GetDisplayFunctionName() {
+  const char *name = nullptr;
+  SymbolContext sc = GetSymbolContext(
+      eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
+  if (sc.block) {
+    Block *inlined_block = sc.block->GetContainingInlinedBlock();
+    if (inlined_block) {
+      const InlineFunctionInfo *inlined_info =
+          inlined_block->GetInlinedFunctionInfo();
+      if (inlined_info)
+        name = inlined_info->GetDisplayName().AsCString();
+    }
+  }
+
+  if (name == nullptr) {
+    if (sc.function)
+      name = sc.function->GetDisplayName().GetCString();
+  }
+
+  if (name == nullptr) {
+    if (sc.symbol)
+      name = sc.symbol->GetDisplayName().GetCString();
+  }
+  return name;
 }
 
 SourceLanguage StackFrame::GetLanguage() {
@@ -1316,11 +1445,13 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   const bool force_live_memory = true;
 
-  DisassemblerSP disassembler_sp =
-      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, force_live_memory);
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      target_arch, plugin_name, flavor, cpu, features, *target_sp, pc_range,
+      force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1390,7 +1521,9 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
 namespace {
 ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
                                 int64_t offset) {
-  if (offset < 0 || uint64_t(offset) >= parent->GetByteSize()) {
+  if (offset < 0 ||
+      uint64_t(offset) >=
+          llvm::expectedToOptional(parent->GetByteSize()).value_or(0)) {
     return ValueObjectSP();
   }
 
@@ -1407,7 +1540,8 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
     }
 
     int64_t child_offset = child_sp->GetByteOffset();
-    int64_t child_size = child_sp->GetByteSize().value_or(0);
+    int64_t child_size =
+        llvm::expectedToOptional(child_sp->GetByteSize()).value_or(0);
 
     if (offset >= child_offset && offset < (child_offset + child_size)) {
       return GetValueForOffset(frame, child_sp, offset - child_offset);
@@ -1439,9 +1573,13 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
     return ValueObjectSP();
   }
 
-  if (offset >= 0 && uint64_t(offset) >= pointee->GetByteSize()) {
-    int64_t index = offset / pointee->GetByteSize().value_or(1);
-    offset = offset % pointee->GetByteSize().value_or(1);
+  if (offset >= 0 &&
+      uint64_t(offset) >=
+          llvm::expectedToOptional(pointee->GetByteSize()).value_or(0)) {
+    uint64_t size =
+        llvm::expectedToOptional(pointee->GetByteSize()).value_or(1);
+    int64_t index = offset / size;
+    offset = offset % size;
     const bool can_create = true;
     pointee = base->GetSyntheticArrayMember(index, can_create);
   }
@@ -1580,13 +1718,14 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
         break;
       case Instruction::Operand::Type::Immediate: {
         SymbolContext sc;
-        Address load_address;
-        if (!frame.CalculateTarget()->ResolveLoadAddress(
-                operands[0].m_immediate, load_address)) {
+        if (!pc.GetModule())
           break;
-        }
+        Address address(operands[0].m_immediate,
+                        pc.GetModule()->GetSectionList());
+        if (!address.IsValid())
+          break;
         frame.CalculateTarget()->GetImages().ResolveSymbolContextForAddress(
-            load_address, eSymbolContextFunction, sc);
+            address, eSymbolContextFunction, sc);
         if (!sc.function) {
           break;
         }
@@ -1685,22 +1824,20 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
     return ValueObjectSP();
   }
 
-  AddressRange pc_range = function->GetAddressRange();
-
-  if (GetFrameCodeAddress().GetFileAddress() <
-          pc_range.GetBaseAddress().GetFileAddress() ||
-      GetFrameCodeAddress().GetFileAddress() -
-              pc_range.GetBaseAddress().GetFileAddress() >=
-          pc_range.GetByteSize()) {
+  AddressRange unused_range;
+  if (!function->GetRangeContainingLoadAddress(
+          GetFrameCodeAddress().GetLoadAddress(target_sp.get()), *target_sp,
+          unused_range))
     return ValueObjectSP();
-  }
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   const bool force_live_memory = true;
-  DisassemblerSP disassembler_sp =
-      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, force_live_memory);
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      target_arch, plugin_name, flavor, cpu, features, *target_sp,
+      function->GetAddressRanges(), force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1803,12 +1940,15 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
   ExecutionContext exe_ctx(shared_from_this());
 
   const FormatEntity::Entry *frame_format = nullptr;
+  FormatEntity::Entry format_entry;
   Target *target = exe_ctx.GetTargetPtr();
   if (target) {
     if (show_unique) {
-      frame_format = target->GetDebugger().GetFrameFormatUnique();
+      format_entry = target->GetDebugger().GetFrameFormatUnique();
+      frame_format = &format_entry;
     } else {
-      frame_format = target->GetDebugger().GetFrameFormat();
+      format_entry = target->GetDebugger().GetFrameFormat();
+      frame_format = &format_entry;
     }
   }
   if (!DumpUsingFormat(*strm, frame_format, frame_marker)) {
@@ -1857,7 +1997,9 @@ void StackFrame::UpdatePreviousFrameFromCurrentFrame(StackFrame &curr_frame) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   assert(GetStackID() ==
          curr_frame.GetStackID());     // TODO: remove this after some testing
-  m_id.SetPC(curr_frame.m_id.GetPC()); // Update the Stack ID PC value
+  m_id.SetPC(
+      curr_frame.m_id.GetPC(),
+      curr_frame.CalculateProcess().get()); // Update the Stack ID PC value
   assert(GetThread() == curr_frame.GetThread());
   m_frame_index = curr_frame.m_frame_index;
   m_concrete_frame_index = curr_frame.m_concrete_frame_index;
@@ -1899,8 +2041,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
   if (show_source) {
     ExecutionContext exe_ctx(shared_from_this());
     bool have_source = false, have_debuginfo = false;
-    Debugger::StopDisassemblyType disasm_display =
-        Debugger::eStopDisassemblyTypeNever;
+    lldb::StopDisassemblyType disasm_display = lldb::eStopDisassemblyTypeNever;
     Target *target = exe_ctx.GetTargetPtr();
     if (target) {
       Debugger &debugger = target->GetDebugger();
@@ -1914,49 +2055,39 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       if (m_sc.comp_unit && m_sc.line_entry.IsValid()) {
         have_debuginfo = true;
         if (source_lines_before > 0 || source_lines_after > 0) {
+          SupportFileSP source_file_sp = m_sc.line_entry.file_sp;
           uint32_t start_line = m_sc.line_entry.line;
           if (!start_line && m_sc.function) {
-            FileSpec source_file;
-            m_sc.function->GetStartLineSourceInfo(source_file, start_line);
+            m_sc.function->GetStartLineSourceInfo(source_file_sp, start_line);
           }
 
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.file_sp, start_line, m_sc.line_entry.column,
+                  source_file_sp, start_line, m_sc.line_entry.column,
                   source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.
-          if (!m_sc.line_entry.line) {
-            ConstString fn_name = m_sc.GetFunctionName();
-
-            if (!fn_name.IsEmpty())
-              strm.Printf(
-                  "Note: this address is compiler-generated code in function "
-                  "%s that has no source code associated with it.",
-                  fn_name.AsCString());
-            else
-              strm.Printf("Note: this address is compiler-generated code that "
-                          "has no source code associated with it.");
-            strm.EOL();
-          }
+          if (!m_sc.line_entry.line)
+            strm << "note: This address is not associated with a specific line "
+                    "of code. This may be due to compiler optimizations.\n";
         }
       }
       switch (disasm_display) {
-      case Debugger::eStopDisassemblyTypeNever:
+      case lldb::eStopDisassemblyTypeNever:
         break;
 
-      case Debugger::eStopDisassemblyTypeNoDebugInfo:
+      case lldb::eStopDisassemblyTypeNoDebugInfo:
         if (have_debuginfo)
           break;
         [[fallthrough]];
 
-      case Debugger::eStopDisassemblyTypeNoSource:
+      case lldb::eStopDisassemblyTypeNoSource:
         if (have_source)
           break;
         [[fallthrough]];
 
-      case Debugger::eStopDisassemblyTypeAlways:
+      case lldb::eStopDisassemblyTypeAlways:
         if (target) {
           const uint32_t disasm_lines = debugger.GetDisassemblyLineCount();
           if (disasm_lines > 0) {
@@ -1966,6 +2097,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
             const bool mixed_source_and_assembly = false;
             Disassembler::Disassemble(
                 target->GetDebugger(), target_arch, plugin_name, flavor,
+                target->GetDisassemblyCPU(), target->GetDisassemblyFeatures(),
                 exe_ctx, GetFrameCodeAddress(),
                 {Disassembler::Limit::Instructions, disasm_lines},
                 mixed_source_and_assembly, 0,

@@ -62,7 +62,7 @@ define void @scalarize_v2i64_ones_mask(ptr %p, <2 x i64> %data) {
 ; CHECK-LE-NEXT:    ret void
 ;
 ; CHECK-SVE-LE-LABEL: @scalarize_v2i64_ones_mask(
-; CHECK-SVE-LE-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[DATA:%.*]], ptr [[P:%.*]], i32 8, <2 x i1> <i1 true, i1 true>)
+; CHECK-SVE-LE-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[DATA:%.*]], ptr [[P:%.*]], i32 8, <2 x i1> splat (i1 true))
 ; CHECK-SVE-LE-NEXT:    ret void
 ;
 ; CHECK-BE-LABEL: @scalarize_v2i64_ones_mask(

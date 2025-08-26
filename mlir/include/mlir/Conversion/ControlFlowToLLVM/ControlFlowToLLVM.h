@@ -20,6 +20,7 @@ class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
+class SymbolTableCollection;
 
 #define GEN_PASS_DECL_CONVERTCONTROLFLOWTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -29,15 +30,19 @@ namespace cf {
 /// Collect the patterns to convert from the ControlFlow dialect to LLVM. The
 /// conversion patterns capture the LLVMTypeConverter by reference meaning the
 /// references have to remain alive during the entire pattern lifetime.
+///
+/// Note: This function does not populate the default cf.assert lowering. That
+/// is because some platforms have a custom cf.assert lowering. The default
+/// lowering can be populated with `populateAssertToLLVMConversionPattern`.
 void populateControlFlowToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns);
 
 /// Populate the cf.assert to LLVM conversion pattern. If `abortOnFailure` is
 /// set to false, the program execution continues when a condition is
 /// unsatisfied.
-void populateAssertToLLVMConversionPattern(const LLVMTypeConverter &converter,
-                                           RewritePatternSet &patterns,
-                                           bool abortOnFailure = true);
+void populateAssertToLLVMConversionPattern(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    bool abortOnFailure = true, SymbolTableCollection *symbolTables = nullptr);
 
 void registerConvertControlFlowToLLVMInterface(DialectRegistry &registry);
 

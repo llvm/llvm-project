@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 ; CHECK: r{{[0-9]*}} = memw(r{{[0-9]+}}++#-4:circ(m0))
 
 

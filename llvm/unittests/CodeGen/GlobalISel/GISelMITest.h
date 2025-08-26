@@ -74,7 +74,7 @@ parseMIR(LLVMContext &Context, std::unique_ptr<MIRParser> &MIR,
   return M;
 }
 static std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
-createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
+createDummyModule(LLVMContext &Context, const TargetMachine &TM,
                   StringRef MIRString, const char *FuncName) {
   std::unique_ptr<MIRParser> MIR;
   auto MMI = std::make_unique<MachineModuleInfo>(&TM);
@@ -102,8 +102,8 @@ class GISelMITest : public ::testing::Test {
 protected:
   GISelMITest() : ::testing::Test() {}
 
-  /// Prepare a target specific LLVMTargetMachine.
-  virtual std::unique_ptr<LLVMTargetMachine> createTargetMachine() const = 0;
+  /// Prepare a target specific TargetMachine.
+  virtual std::unique_ptr<TargetMachine> createTargetMachine() const = 0;
 
   /// Get the stub sample MIR test function.
   virtual void getTargetTestModuleString(SmallString<512> &S,
@@ -127,7 +127,7 @@ protected:
   }
 
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   MachineFunction *MF;
   std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
       ModuleMMIPair;
@@ -138,13 +138,13 @@ protected:
 };
 
 class AArch64GISelMITest : public GISelMITest {
-  std::unique_ptr<LLVMTargetMachine> createTargetMachine() const override;
+  std::unique_ptr<TargetMachine> createTargetMachine() const override;
   void getTargetTestModuleString(SmallString<512> &S,
                                  StringRef MIRFunc) const override;
 };
 
 class AMDGPUGISelMITest : public GISelMITest {
-  std::unique_ptr<LLVMTargetMachine> createTargetMachine() const override;
+  std::unique_ptr<TargetMachine> createTargetMachine() const override;
   void getTargetTestModuleString(SmallString<512> &S,
                                  StringRef MIRFunc) const override;
 };

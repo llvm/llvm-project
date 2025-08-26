@@ -118,8 +118,6 @@ def Debug : Package<"debug">, Hidden;
 
 def CloneDetectionAlpha : Package<"clone">, ParentPackage<Alpha>;
 
-def NonDeterminismAlpha : Package<"nondeterminism">, ParentPackage<Alpha>;
-
 def Fuchsia : Package<"fuchsia">;
 def FuchsiaAlpha : Package<"fuchsia">, ParentPackage<Alpha>;
 
@@ -208,16 +206,15 @@ def CallAndMessageChecker : Checker<"CallAndMessage">,
   Documentation<HasDocumentation>,
   Dependencies<[CallAndMessageModeling]>;
 
-def DereferenceChecker : Checker<"NullDereference">,
-  HelpText<"Check for dereferences of null pointers">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "SuppressAddressSpaces",
-                  "Suppresses warning when pointer dereferences an address space",
-                  "true",
-                  Released>
-  ]>,
-  Documentation<HasDocumentation>;
+def FixedAddressDereferenceChecker
+    : Checker<"FixedAddressDereference">,
+      HelpText<"Check for dereferences of fixed addresses">,
+      Documentation<HasDocumentation>;
+
+def NullDereferenceChecker
+    : Checker<"NullDereference">,
+      HelpText<"Check for dereferences of null pointers">,
+      Documentation<HasDocumentation>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "
@@ -236,15 +233,11 @@ def UndefResultChecker : Checker<"UndefinedBinaryOperatorResult">,
   HelpText<"Check for undefined results of binary operators">,
   Documentation<HasDocumentation>;
 
-def StackAddrEscapeBase : Checker<"StackAddrEscapeBase">,
-  HelpText<"Generate information about stack address escapes.">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def StackAddrEscapeChecker : Checker<"StackAddressEscape">,
-  HelpText<"Check that addresses to stack memory do not escape the function">,
-  Dependencies<[StackAddrEscapeBase]>,
-  Documentation<HasDocumentation>;
+def StackAddrEscapeChecker
+    : Checker<"StackAddressEscape">,
+      HelpText<
+          "Check that addresses to stack memory do not escape the function">,
+      Documentation<HasDocumentation>;
 
 def DynamicTypePropagation : Checker<"DynamicTypePropagation">,
   HelpText<"Generate dynamic type information">,
@@ -277,10 +270,6 @@ def ConversionChecker : Checker<"Conversion">,
   HelpText<"Loss of sign/precision in implicit conversions">,
   Documentation<HasDocumentation>;
 
-def IdenticalExprChecker : Checker<"IdenticalExpr">,
-  HelpText<"Warn about unintended use of identical expressions in operators">,
-  Documentation<HasDocumentation>;
-
 def FixedAddressChecker : Checker<"FixedAddr">,
   HelpText<"Check for assignment of a fixed address to a pointer">,
   Documentation<HasDocumentation>;
@@ -295,14 +284,22 @@ def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
            "Either the comparison is useless or there is division by zero.">,
   Documentation<HasDocumentation>;
 
-def DynamicTypeChecker : Checker<"DynamicTypeChecker">,
-  HelpText<"Check for cases where the dynamic and the static type of an object "
-           "are unrelated.">,
-  Documentation<HasDocumentation>;
+def DynamicTypeChecker
+    : Checker<"DynamicTypeChecker">,
+      HelpText<"Check for cases where the dynamic and the static type of an "
+               "object are unrelated.">,
+      Dependencies<[DynamicTypePropagation]>,
+      Documentation<HasDocumentation>;
 
-def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
-  HelpText<"Check that addresses to stack memory do not escape the function">,
-  Dependencies<[StackAddrEscapeBase]>,
+def StackAddrAsyncEscapeChecker
+    : Checker<"StackAddressAsyncEscape">,
+      HelpText<
+          "Check that addresses to stack memory do not escape the function">,
+      Documentation<HasDocumentation>;
+
+def StoreToImmutableChecker : Checker<"StoreToImmutable">,
+  HelpText<"Check for writes to immutable memory regions. "
+           "This implements part of SEI CERT Rule ENV30-C.">,
   Documentation<HasDocumentation>;
 
 def PthreadLockBase : Checker<"PthreadLockBase">,
@@ -327,39 +324,34 @@ def StdVariantChecker : Checker<"StdVariant">,
 
 let ParentPackage = Nullability in {
 
-def NullabilityBase : Checker<"NullabilityBase">,
-  HelpText<"Stores information during the analysis about nullability.">,
-  Documentation<NotDocumented>,
-  Hidden;
+  def NullPassedToNonnullChecker
+      : Checker<"NullPassedToNonnull">,
+        HelpText<"Warns when a null pointer is passed to a pointer which has a "
+                 "_Nonnull type.">,
+        Documentation<HasDocumentation>;
 
-def NullPassedToNonnullChecker : Checker<"NullPassedToNonnull">,
-  HelpText<"Warns when a null pointer is passed to a pointer which has a "
-           "_Nonnull type.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<HasDocumentation>;
+  def NullReturnedFromNonnullChecker
+      : Checker<"NullReturnedFromNonnull">,
+        HelpText<"Warns when a null pointer is returned from a function that "
+                 "has _Nonnull return type.">,
+        Documentation<HasDocumentation>;
 
-def NullReturnedFromNonnullChecker : Checker<"NullReturnedFromNonnull">,
-  HelpText<"Warns when a null pointer is returned from a function that has "
-           "_Nonnull return type.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<HasDocumentation>;
+  def NullableDereferencedChecker
+      : Checker<"NullableDereferenced">,
+        HelpText<"Warns when a nullable pointer is dereferenced.">,
+        Documentation<HasDocumentation>;
 
-def NullableDereferencedChecker : Checker<"NullableDereferenced">,
-  HelpText<"Warns when a nullable pointer is dereferenced.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<HasDocumentation>;
+  def NullablePassedToNonnullChecker
+      : Checker<"NullablePassedToNonnull">,
+        HelpText<"Warns when a nullable pointer is passed to a pointer which "
+                 "has a _Nonnull type.">,
+        Documentation<HasDocumentation>;
 
-def NullablePassedToNonnullChecker : Checker<"NullablePassedToNonnull">,
-  HelpText<"Warns when a nullable pointer is passed to a pointer which has a "
-           "_Nonnull type.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<HasDocumentation>;
-
-def NullableReturnedFromNonnullChecker : Checker<"NullableReturnedFromNonnull">,
-  HelpText<"Warns when a nullable pointer is returned from a function that has "
-           "_Nonnull return type.">,
-  Dependencies<[NullabilityBase]>,
-  Documentation<NotDocumented>;
+  def NullableReturnedFromNonnullChecker
+      : Checker<"NullableReturnedFromNonnull">,
+        HelpText<"Warns when a nullable pointer is returned from a function "
+                 "that has _Nonnull return type.">,
+        Documentation<NotDocumented>;
 
 } // end "nullability"
 
@@ -386,7 +378,7 @@ def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
 } // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
-// Evaluate "builtin" functions.
+// Evaluate "builtin" functions and assumptions.
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = CoreBuiltin in {
@@ -398,6 +390,10 @@ def NoReturnFunctionChecker : Checker<"NoReturnFunctions">,
 
 def BuiltinFunctionChecker : Checker<"BuiltinFunctions">,
   HelpText<"Evaluate compiler builtin functions (e.g., alloca())">,
+  Documentation<NotDocumented>;
+
+def AssumeModeling : Checker<"AssumeModeling">,
+  HelpText<"Model compiler builtin assume functions and the assume attribute">,
   Documentation<NotDocumented>;
 
 } // end "core.builtin"
@@ -459,6 +455,12 @@ def CStringModeling : Checker<"CStringModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
+def CStringNotNullTerm : Checker<"NotNullTerminated">,
+  HelpText<"Check for arguments passed to C string functions which are not "
+           "null-terminated strings">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
+
 def CStringNullArg : Checker<"NullArg">,
   HelpText<"Check for null pointers being passed as arguments to C string "
            "functions">,
@@ -482,11 +484,6 @@ def CStringOutOfBounds : Checker<"OutOfBounds">,
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
-  Dependencies<[CStringModeling]>,
-  Documentation<HasDocumentation>;
-
-def CStringNotNullTerm : Checker<"NotNullTerminated">,
-  HelpText<"Check for arguments which are not null-terminating strings">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
@@ -600,13 +597,13 @@ def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">,
   Documentation<HasDocumentation>;
 
-} // end "unix"
-
-let ParentPackage = UnixAlpha in {
-
 def ChrootChecker : Checker<"Chroot">,
   HelpText<"Check improper use of chroot">,
   Documentation<HasDocumentation>;
+
+} // end "unix"
+
+let ParentPackage = UnixAlpha in {
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
@@ -690,15 +687,11 @@ def MoveChecker: Checker<"Move">,
   ]>,
   Documentation<HasDocumentation>;
 
-def VirtualCallModeling : Checker<"VirtualCallModeling">,
-  HelpText<"Auxiliary modeling for the virtual method call checkers">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def PureVirtualCallChecker : Checker<"PureVirtualCall">,
-  HelpText<"Check pure virtual function calls during construction/destruction">,
-  Dependencies<[VirtualCallModeling]>,
-  Documentation<HasDocumentation>;
+def PureVirtualCallChecker
+    : Checker<"PureVirtualCall">,
+      HelpText<
+          "Check pure virtual function calls during construction/destruction">,
+      Documentation<HasDocumentation>;
 } // end: "cplusplus"
 
 let ParentPackage = CplusplusOptIn in {
@@ -746,24 +739,13 @@ def UninitializedObjectChecker: Checker<"UninitializedObject">,
   ]>,
   Documentation<HasDocumentation>;
 
-def VirtualCallChecker : Checker<"VirtualCall">,
-  HelpText<"Check virtual function calls during construction/destruction">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "ShowFixIts",
-                  "Enable fix-it hints for this checker",
-                  "false",
-                  InAlpha>,
-    CmdLineOption<Boolean,
-                  "PureOnly",
-                  "Disables the checker. Keeps cplusplus.PureVirtualCall "
-                  "enabled. This option is only provided for backwards "
-                  "compatibility.",
-                  "false",
-                  InAlpha>
-  ]>,
-  Dependencies<[VirtualCallModeling]>,
-  Documentation<HasDocumentation>;
+def VirtualCallChecker
+    : Checker<"VirtualCall">,
+      HelpText<"Check virtual function calls during construction/destruction">,
+      CheckerOptions<[CmdLineOption<Boolean, "ShowFixIts",
+                                    "Enable fix-it hints for this checker",
+                                    "false", InAlpha>]>,
+      Documentation<HasDocumentation>;
 
 } // end: "optin.cplusplus"
 
@@ -988,30 +970,41 @@ def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
 
 let ParentPackage = Security in {
 
-def FloatLoopCounter : Checker<"FloatLoopCounter">,
-  HelpText<"Warn on using a floating point value as a loop counter (CERT: "
-           "FLP30-C, FLP30-CPP)">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def ArrayBoundChecker : Checker<"ArrayBound">,
+                          HelpText<"Warn about out of bounds access to memory">,
+                          Documentation<HasDocumentation>;
 
-def MmapWriteExecChecker : Checker<"MmapWriteExec">,
-  HelpText<"Warn on mmap() calls with both writable and executable access">,
-  Documentation<HasDocumentation>;
+  def FloatLoopCounter
+      : Checker<"FloatLoopCounter">,
+        HelpText<
+            "Warn on using a floating point value as a loop counter (CERT: "
+            "FLP30-C, FLP30-CPP)">,
+        Dependencies<[SecuritySyntaxChecker]>,
+        Documentation<HasDocumentation>;
 
-def PointerSubChecker : Checker<"PointerSub">,
-  HelpText<"Check for pointer subtractions on two pointers pointing to "
-           "different memory chunks">,
-  Documentation<HasDocumentation>;
+  def MmapWriteExecChecker
+      : Checker<"MmapWriteExec">,
+        HelpText<
+            "Warn on mmap() calls with both writable and executable access">,
+        Documentation<HasDocumentation>;
 
-def PutenvStackArray : Checker<"PutenvStackArray">,
-  HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
-           "an automatic (stack-allocated) array as the argument.">,
-  Documentation<HasDocumentation>;
+  def PointerSubChecker
+      : Checker<"PointerSub">,
+        HelpText<"Check for pointer subtractions on two pointers pointing to "
+                 "different memory chunks">,
+        Documentation<HasDocumentation>;
 
-def SetgidSetuidOrderChecker : Checker<"SetgidSetuidOrder">,
-  HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
-           "'setuid(getuid())' (CERT: POS36-C)">,
-  Documentation<HasDocumentation>;
+  def PutenvStackArray
+      : Checker<"PutenvStackArray">,
+        HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
+                 "an automatic (stack-allocated) array as the argument.">,
+        Documentation<HasDocumentation>;
+
+  def SetgidSetuidOrderChecker
+      : Checker<"SetgidSetuidOrder">,
+        HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
+                 "'setuid(getuid())' (CERT: POS36-C)">,
+        Documentation<HasDocumentation>;
 
 } // end "security"
 
@@ -1034,14 +1027,6 @@ let ParentPackage = ENV in {
 
 let ParentPackage = SecurityAlpha in {
 
-def ArrayBoundChecker : Checker<"ArrayBound">,
-  HelpText<"Warn about buffer overflows (older checker)">,
-  Documentation<HasDocumentation>;
-
-def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
-  HelpText<"Warn about buffer overflows (newer checker)">,
-  Documentation<HasDocumentation>;
-
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
   HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
@@ -1063,11 +1048,6 @@ def RetainCountBase : Checker<"RetainCountBase">,
 } // end "osx.cocoa"
 
 let ParentPackage = OSX in {
-
-def NSOrCFErrorDerefChecker : Checker<"NSOrCFErrorDerefChecker">,
-  HelpText<"Implementation checker for NSErrorChecker and CFErrorChecker">,
-  Documentation<NotDocumented>,
-  Hidden;
 
 def NumberObjectConversionChecker : Checker<"NumberObjectConversion">,
   HelpText<"Check for erroneous conversions of objects representing numbers "
@@ -1166,9 +1146,8 @@ def ObjCSuperCallChecker : Checker<"MissingSuperCall">,
   Documentation<NotDocumented>;
 
 def NSErrorChecker : Checker<"NSError">,
-  HelpText<"Check usage of NSError** parameters">,
-  Dependencies<[NSOrCFErrorDerefChecker]>,
-  Documentation<HasDocumentation>;
+                     HelpText<"Check usage of NSError** parameters">,
+                     Documentation<HasDocumentation>;
 
 def RetainCountChecker : Checker<"RetainCount">,
   HelpText<"Check for leaks and improper reference count management">,
@@ -1270,9 +1249,8 @@ def CFRetainReleaseChecker : Checker<"CFRetainRelease">,
   Documentation<HasDocumentation>;
 
 def CFErrorChecker : Checker<"CFError">,
-  HelpText<"Check usage of CFErrorRef* parameters">,
-  Dependencies<[NSOrCFErrorDerefChecker]>,
-  Documentation<HasDocumentation>;
+                     HelpText<"Check usage of CFErrorRef* parameters">,
+                     Documentation<HasDocumentation>;
 
 } // end "osx.coreFoundation"
 
@@ -1667,8 +1645,8 @@ def CloneChecker : Checker<"CloneChecker">,
 let ParentPackage = PortabilityOptIn in {
 
 def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
-  HelpText<"Finds implementation-defined behavior in UNIX/Posix functions">,
-  Documentation<NotDocumented>;
+  HelpText<"Finds dynamic memory allocation with size zero">,
+  Documentation<HasDocumentation>;
 
 } // end optin.portability
 
@@ -1710,22 +1688,6 @@ def TaintedDivChecker: Checker<"TaintedDiv">,
   Documentation<HasDocumentation>;
 
 } // end "optin.taint"
-
-//===----------------------------------------------------------------------===//
-// NonDeterminism checkers.
-//===----------------------------------------------------------------------===//
-
-let ParentPackage = NonDeterminismAlpha in {
-
-def PointerIterationChecker : Checker<"PointerIteration">,
-  HelpText<"Checks for non-determinism caused by iteration of unordered containers of pointers">,
-  Documentation<HasDocumentation>;
-
-def PointerSortingChecker : Checker<"PointerSorting">,
-  HelpText<"Check for non-determinism caused by sorting of pointers">,
-  Documentation<HasDocumentation>;
-
-} // end alpha.nondeterminism
 
 //===----------------------------------------------------------------------===//
 // Fuchsia checkers.
@@ -1770,16 +1732,52 @@ def UncountedLambdaCapturesChecker : Checker<"UncountedLambdaCapturesChecker">,
 
 let ParentPackage = WebKitAlpha in {
 
+def ForwardDeclChecker : Checker<"ForwardDeclChecker">,
+  HelpText<"Check for forward declared local or member variables and function arguments">,
+  Documentation<HasDocumentation>;
+
+def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
+  HelpText<"Check for memory unsafe casts from base type to derived type.">,
+  Documentation<HasDocumentation>;
+
 def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
   HelpText<"Check for no unchecked member variables.">,
+  Documentation<HasDocumentation>;
+
+def NoUnretainedMemberChecker : Checker<"NoUnretainedMemberChecker">,
+  HelpText<"Check for no unretained member variables.">,
+  Documentation<HasDocumentation>;
+
+def UnretainedLambdaCapturesChecker : Checker<"UnretainedLambdaCapturesChecker">,
+  HelpText<"Check unretained lambda captures.">,
   Documentation<HasDocumentation>;
 
 def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
   HelpText<"Check uncounted call arguments.">,
   Documentation<HasDocumentation>;
 
+def UncheckedCallArgsChecker : Checker<"UncheckedCallArgsChecker">,
+  HelpText<"Check unchecked call arguments.">,
+  Documentation<HasDocumentation>;
+
+def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
+  HelpText<"Check unretained call arguments.">,
+  Documentation<HasDocumentation>;
+
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
+  Documentation<HasDocumentation>;
+
+def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
+  HelpText<"Check unchecked local variables.">,
+  Documentation<HasDocumentation>;
+
+def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
+  HelpText<"Check unretained local variables.">,
+  Documentation<HasDocumentation>;
+
+def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
+  HelpText<"Check for correct use of RetainPtr constructor, adoptNS, and adoptCF">,
   Documentation<HasDocumentation>;
 
 } // end alpha.webkit
