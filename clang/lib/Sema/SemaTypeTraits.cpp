@@ -556,13 +556,11 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   }
 }
 
-static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
+static bool HasNoThrowOperator(CXXRecordDecl *RD, OverloadedOperatorKind Op,
                                Sema &Self, SourceLocation KeyLoc, ASTContext &C,
                                bool (CXXRecordDecl::*HasTrivial)() const,
                                bool (CXXRecordDecl::*HasNonTrivial)() const,
                                bool (CXXMethodDecl::*IsDesiredOp)() const) {
-  CXXRecordDecl *RD =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
   if ((RD->*HasTrivial)() && !(RD->*HasNonTrivial)())
     return true;
 
@@ -1007,8 +1005,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C) || T->isObjCLifetimeType())
       return true;
 
-    if (const RecordType *RT = T->getAs<RecordType>())
-      return HasNoThrowOperator(RT, OO_Equal, Self, KeyLoc, C,
+    if (auto *RD = T->getAsCXXRecordDecl())
+      return HasNoThrowOperator(RD, OO_Equal, Self, KeyLoc, C,
                                 &CXXRecordDecl::hasTrivialCopyAssignment,
                                 &CXXRecordDecl::hasNonTrivialCopyAssignment,
                                 &CXXMethodDecl::isCopyAssignmentOperator);
@@ -1020,8 +1018,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C))
       return true;
 
-    if (const RecordType *RT = C.getBaseElementType(T)->getAs<RecordType>())
-      return HasNoThrowOperator(RT, OO_Equal, Self, KeyLoc, C,
+    if (auto *RD = C.getBaseElementType(T)->getAsCXXRecordDecl())
+      return HasNoThrowOperator(RD, OO_Equal, Self, KeyLoc, C,
                                 &CXXRecordDecl::hasTrivialMoveAssignment,
                                 &CXXRecordDecl::hasNonTrivialMoveAssignment,
                                 &CXXMethodDecl::isMoveAssignmentOperator);
