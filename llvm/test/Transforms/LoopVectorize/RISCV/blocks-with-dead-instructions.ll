@@ -458,12 +458,13 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_6(ptr %src, i1 %
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i16, ptr [[SRC]], <vscale x 8 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 8 x i16> @llvm.vp.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr> align 2 [[TMP20]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP27]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq <vscale x 8 x i16> [[WIDE_MASKED_GATHER]], zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = select <vscale x 8 x i1> [[TMP15]], <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP19:%.*]] = select <vscale x 8 x i1> [[TMP18]], <vscale x 8 x i1> [[TMP8]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP29:%.*]] = select <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> [[TMP8]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP19:%.*]] = select <vscale x 8 x i1> [[TMP15]], <vscale x 8 x i1> [[TMP29]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP28:%.*]] = xor <vscale x 8 x i1> [[TMP17]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP21:%.*]] = select <vscale x 8 x i1> [[TMP15]], <vscale x 8 x i1> [[TMP28]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = or <vscale x 8 x i1> [[TMP19]], [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = select <vscale x 8 x i1> [[TMP18]], <vscale x 8 x i1> [[BROADCAST_SPLAT]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = select <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> [[BROADCAST_SPLAT]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = select <vscale x 8 x i1> [[TMP15]], <vscale x 8 x i1> [[TMP18]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP24:%.*]] = or <vscale x 8 x i1> [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x ptr> align 2 [[TMP20]], <vscale x 8 x i1> [[TMP24]], i32 [[TMP27]])
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext i32 [[TMP27]] to i64
