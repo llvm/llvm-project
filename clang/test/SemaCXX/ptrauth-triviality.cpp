@@ -74,7 +74,7 @@ static_assert(__is_trivially_destructible(S3));
 static_assert(!__is_trivially_copyable(S3));
 static_assert(!__is_trivially_relocatable(S3)); // expected-warning{{deprecated}}
 //FIXME
-static_assert(__builtin_is_cpp_trivially_relocatable(S3));
+static_assert(!__builtin_is_cpp_trivially_relocatable(S3));
 static_assert(!__is_trivially_equality_comparable(S3));
 
 
@@ -84,7 +84,7 @@ static_assert(!__is_trivially_assignable(Holder<S3>, const Holder<S3>&));
 static_assert(__is_trivially_destructible(Holder<S3>));
 static_assert(!__is_trivially_copyable(Holder<S3>));
 static_assert(!__is_trivially_relocatable(Holder<S3>)); // expected-warning{{deprecated}}
-static_assert(__builtin_is_cpp_trivially_relocatable(Holder<S3>));
+static_assert(!__builtin_is_cpp_trivially_relocatable(Holder<S3>));
 static_assert(!__is_trivially_equality_comparable(Holder<S3>));
 
 struct IA S4 {
@@ -207,7 +207,7 @@ template <class T> struct UnionWrapper trivially_relocatable_if_eligible {
   } u;
 };
 
-static_assert(test_is_trivially_relocatable_v<AddressDiscriminatedPolymorphicBase>);
+static_assert(!test_is_trivially_relocatable_v<AddressDiscriminatedPolymorphicBase>);
 static_assert(test_is_trivially_relocatable_v<NoAddressDiscriminatedPolymorphicBase>);
 static_assert(inheritance_relocatability_matches_bases_v<AddressDiscriminatedPolymorphicBase, NoAddressDiscriminatedPolymorphicBase>);
 static_assert(inheritance_relocatability_matches_bases_v<NoAddressDiscriminatedPolymorphicBase, AddressDiscriminatedPolymorphicBase>);
