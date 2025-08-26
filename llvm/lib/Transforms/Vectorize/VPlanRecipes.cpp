@@ -3200,10 +3200,17 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // TODO: Using the original IR may not be accurate.
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
-    const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
-    Type *PtrTy = toVectorTy(Ptr->getType(), VF);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
+
+    const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+    Type *PtrTy = Ptr->getType();
+
+    // If the address value is uniform across all lanes, then the address can be
+    // calculated with scalar type and broadcast.
+    if (!vputils::isSingleScalar(getAddr()))
+      PtrTy = toVectorTy(PtrTy, VF);
+
     return Ctx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
                                              Ctx.CostKind) +
            Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
