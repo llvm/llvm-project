@@ -1745,12 +1745,12 @@ ExpectedType ASTNodeImporter::VisitTagType(const TagType *T) {
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
 
-  // If there is a definition of the 'OriginalDecl', it should be imported to
-  // have all information for the type in the "To" AST. (In rare cases no other
-  // reference may exist to the definition and it would not be imported
-  // otherwise.)
-  if (TagDecl *DefDecl = DeclForType->getDefinition()) {
-    Expected<TagDecl *> ToDefDeclOrErr = import(DefDecl);
+  if (DeclForType->isUsed()) {
+    // If there is a definition of the 'OriginalDecl', it should be imported to
+    // have all information for the type in the "To" AST. (In some cases no
+    // other reference may exist to the definition decl and it would not be
+    // imported otherwise.)
+    Expected<TagDecl *> ToDefDeclOrErr = import(DeclForType->getDefinition());
     if (!ToDefDeclOrErr)
       return ToDefDeclOrErr.takeError();
   }

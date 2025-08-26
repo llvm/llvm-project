@@ -2,7 +2,10 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cc1 -emit-pch -o %t/import.ast %t/import.c
+// RUN: %clang_cc1 -emit-pch -o %t/import.c.ast %t/import.c
+
+// RUN: %clang_extdef_map -- -x c %t/import.c >> %t/externalDefMap.txt
+// RUN: sed -i 's/$/.ast/' %t/externalDefMap.txt
 
 // RUN: %clang_cc1 -analyze \
 // RUN:   -analyzer-checker=core \
@@ -38,6 +41,3 @@ unsigned long f_import(struct X_s *xPtr) {
   }
   return 0;
 }
-
-//--- externalDefMap.txt
-13:c:@F@f_import import.ast
