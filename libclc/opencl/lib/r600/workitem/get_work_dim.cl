@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/workitem/get_work_dim.h>
 
 _CLC_DEF _CLC_OVERLOAD uint get_work_dim(void) {
   __attribute__((address_space(7))) uint *ptr =

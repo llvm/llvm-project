@@ -204,7 +204,7 @@ MetadataStreamerMsgPackV4::getWorkGroupDimensions(MDNode *Node) const {
 
   for (auto &Op : Node->operands())
     Dims.push_back(Dims.getDocument()->getNode(
-        uint64_t(mdconst::extract<ConstantInt>(Op)->getZExtValue())));
+        mdconst::extract<ConstantInt>(Op)->getZExtValue()));
   return Dims;
 }
 

@@ -1146,9 +1146,9 @@ void PathDiagnostic::FullProfile(llvm::FoldingSetNodeID &ID) const {
 
 LLVM_DUMP_METHOD void PathPieces::dump() const {
   unsigned index = 0;
-  for (PathPieces::const_iterator I = begin(), E = end(); I != E; ++I) {
+  for (const PathDiagnosticPieceRef &Piece : *this) {
     llvm::errs() << "[" << index++ << "]  ";
-    (*I)->dump();
+    Piece->dump();
     llvm::errs() << "\n";
   }
 }

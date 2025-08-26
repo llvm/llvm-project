@@ -22,7 +22,6 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContext_x86.cpp
   RegisterContextDarwin_arm.cpp
   RegisterContextDarwin_arm64.cpp
-  RegisterContextDarwin_i386.cpp
   RegisterContextDarwin_riscv32.cpp
   RegisterContextDarwin_x86_64.cpp
   RegisterContextDummy.cpp
@@ -35,7 +34,6 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextLinux_x86_64.cpp
   RegisterContextLinux_s390x.cpp
   RegisterContextMach_arm.cpp
-  RegisterContextMach_i386.cpp
   RegisterContextMach_x86_64.cpp
   RegisterContextMemory.cpp
   RegisterContextNetBSD_i386.cpp

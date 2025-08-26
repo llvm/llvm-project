@@ -25,6 +25,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Frontend/OpenMP/DirectiveNameParser.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include <optional>
@@ -37,48 +38,6 @@ using namespace llvm::omp;
 //===----------------------------------------------------------------------===//
 
 namespace {
-enum OpenMPDirectiveKindEx {
-  OMPD_cancellation = llvm::omp::Directive_enumSize + 1,
-  OMPD_data,
-  OMPD_declare,
-  OMPD_end,
-  OMPD_end_declare,
-  OMPD_enter,
-  OMPD_exit,
-  OMPD_point,
-  OMPD_reduction,
-  OMPD_target_enter,
-  OMPD_target_exit,
-  OMPD_update,
-  OMPD_distribute_parallel,
-  OMPD_teams_distribute_parallel,
-  OMPD_target_teams_distribute_parallel,
-  OMPD_mapper,
-  OMPD_variant,
-  OMPD_begin,
-  OMPD_begin_declare,
-};
-
-// Helper to unify the enum class OpenMPDirectiveKind with its extension
-// the OpenMPDirectiveKindEx enum which allows to use them together as if they
-// are unsigned values.
-struct OpenMPDirectiveKindExWrapper {
-  OpenMPDirectiveKindExWrapper(unsigned Value) : Value(Value) {}
-  OpenMPDirectiveKindExWrapper(OpenMPDirectiveKind DK) : Value(unsigned(DK)) {}
-  bool operator==(OpenMPDirectiveKindExWrapper V) const {
-    return Value == V.Value;
-  }
-  bool operator!=(OpenMPDirectiveKindExWrapper V) const {
-    return Value != V.Value;
-  }
-  bool operator==(OpenMPDirectiveKind V) const { return Value == unsigned(V); }
-  bool operator!=(OpenMPDirectiveKind V) const { return Value != unsigned(V); }
-  bool operator<(OpenMPDirectiveKind V) const { return Value < unsigned(V); }
-  operator unsigned() const { return Value; }
-  operator OpenMPDirectiveKind() const { return OpenMPDirectiveKind(Value); }
-  unsigned Value;
-};
-
 class DeclDirectiveListParserHelper final {
   SmallVector<Expr *, 4> Identifiers;
   Parser *P;
@@ -97,130 +56,52 @@ public:
 };
 } // namespace
 
-// Map token string to extended OMP token kind that are
-// OpenMPDirectiveKind + OpenMPDirectiveKindEx.
-static unsigned getOpenMPDirectiveKindEx(StringRef S) {
-  OpenMPDirectiveKindExWrapper DKind = getOpenMPDirectiveKind(S);
-  if (DKind != OMPD_unknown)
-    return DKind;
+static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
+                                                    SourceLocation Loc,
+                                                    OpenMPDirectiveKind Kind,
+                                                    StringRef Name) {
+  unsigned Version = P.getLangOpts().OpenMP;
+  auto [D, VR] = getOpenMPDirectiveKindAndVersions(Name);
+  assert(D == Kind && "Directive kind mismatch");
+  // Ignore the case Version > VR.Max: In OpenMP 6.0 all prior spellings
+  // are explicitly allowed.
+  if (static_cast<int>(Version) < VR.Min)
+    P.Diag(Loc, diag::warn_omp_future_directive_spelling) << Name;
 
-  return llvm::StringSwitch<OpenMPDirectiveKindExWrapper>(S)
-      .Case("cancellation", OMPD_cancellation)
-      .Case("data", OMPD_data)
-      .Case("declare", OMPD_declare)
-      .Case("end", OMPD_end)
-      .Case("enter", OMPD_enter)
-      .Case("exit", OMPD_exit)
-      .Case("point", OMPD_point)
-      .Case("reduction", OMPD_reduction)
-      .Case("update", OMPD_update)
-      .Case("mapper", OMPD_mapper)
-      .Case("variant", OMPD_variant)
-      .Case("begin", OMPD_begin)
-      .Default(OMPD_unknown);
+  return Kind;
 }
 
-static OpenMPDirectiveKindExWrapper parseOpenMPDirectiveKind(Parser &P) {
-  // Array of foldings: F[i][0] F[i][1] ===> F[i][2].
-  // E.g.: OMPD_for OMPD_simd ===> OMPD_for_simd
-  // TODO: add other combined directives in topological order.
-  static const OpenMPDirectiveKindExWrapper F[][3] = {
-      {OMPD_begin, OMPD_declare, OMPD_begin_declare},
-      {OMPD_begin, OMPD_assumes, OMPD_begin_assumes},
-      {OMPD_end, OMPD_declare, OMPD_end_declare},
-      {OMPD_end, OMPD_assumes, OMPD_end_assumes},
-      {OMPD_cancellation, OMPD_point, OMPD_cancellation_point},
-      {OMPD_declare, OMPD_reduction, OMPD_declare_reduction},
-      {OMPD_declare, OMPD_mapper, OMPD_declare_mapper},
-      {OMPD_declare, OMPD_simd, OMPD_declare_simd},
-      {OMPD_declare, OMPD_target, OMPD_declare_target},
-      {OMPD_declare, OMPD_variant, OMPD_declare_variant},
-      {OMPD_begin_declare, OMPD_target, OMPD_begin_declare_target},
-      {OMPD_begin_declare, OMPD_variant, OMPD_begin_declare_variant},
-      {OMPD_end_declare, OMPD_variant, OMPD_end_declare_variant},
-      {OMPD_distribute, OMPD_parallel, OMPD_distribute_parallel},
-      {OMPD_distribute_parallel, OMPD_for, OMPD_distribute_parallel_for},
-      {OMPD_distribute_parallel_for, OMPD_simd,
-       OMPD_distribute_parallel_for_simd},
-      {OMPD_distribute, OMPD_simd, OMPD_distribute_simd},
-      {OMPD_end_declare, OMPD_target, OMPD_end_declare_target},
-      {OMPD_target, OMPD_data, OMPD_target_data},
-      {OMPD_target, OMPD_enter, OMPD_target_enter},
-      {OMPD_target, OMPD_exit, OMPD_target_exit},
-      {OMPD_target, OMPD_update, OMPD_target_update},
-      {OMPD_target_enter, OMPD_data, OMPD_target_enter_data},
-      {OMPD_target_exit, OMPD_data, OMPD_target_exit_data},
-      {OMPD_for, OMPD_simd, OMPD_for_simd},
-      {OMPD_parallel, OMPD_for, OMPD_parallel_for},
-      {OMPD_parallel_for, OMPD_simd, OMPD_parallel_for_simd},
-      {OMPD_parallel, OMPD_loop, OMPD_parallel_loop},
-      {OMPD_parallel, OMPD_sections, OMPD_parallel_sections},
-      {OMPD_taskloop, OMPD_simd, OMPD_taskloop_simd},
-      {OMPD_target, OMPD_parallel, OMPD_target_parallel},
-      {OMPD_target, OMPD_simd, OMPD_target_simd},
-      {OMPD_target_parallel, OMPD_loop, OMPD_target_parallel_loop},
-      {OMPD_target_parallel, OMPD_for, OMPD_target_parallel_for},
-      {OMPD_target_parallel_for, OMPD_simd, OMPD_target_parallel_for_simd},
-      {OMPD_teams, OMPD_distribute, OMPD_teams_distribute},
-      {OMPD_teams_distribute, OMPD_simd, OMPD_teams_distribute_simd},
-      {OMPD_teams_distribute, OMPD_parallel, OMPD_teams_distribute_parallel},
-      {OMPD_teams_distribute_parallel, OMPD_for,
-       OMPD_teams_distribute_parallel_for},
-      {OMPD_teams_distribute_parallel_for, OMPD_simd,
-       OMPD_teams_distribute_parallel_for_simd},
-      {OMPD_teams, OMPD_loop, OMPD_teams_loop},
-      {OMPD_target, OMPD_teams, OMPD_target_teams},
-      {OMPD_target_teams, OMPD_distribute, OMPD_target_teams_distribute},
-      {OMPD_target_teams, OMPD_loop, OMPD_target_teams_loop},
-      {OMPD_target_teams_distribute, OMPD_parallel,
-       OMPD_target_teams_distribute_parallel},
-      {OMPD_target_teams_distribute, OMPD_simd,
-       OMPD_target_teams_distribute_simd},
-      {OMPD_target_teams_distribute_parallel, OMPD_for,
-       OMPD_target_teams_distribute_parallel_for},
-      {OMPD_target_teams_distribute_parallel_for, OMPD_simd,
-       OMPD_target_teams_distribute_parallel_for_simd},
-      {OMPD_master, OMPD_taskloop, OMPD_master_taskloop},
-      {OMPD_masked, OMPD_taskloop, OMPD_masked_taskloop},
-      {OMPD_master_taskloop, OMPD_simd, OMPD_master_taskloop_simd},
-      {OMPD_masked_taskloop, OMPD_simd, OMPD_masked_taskloop_simd},
-      {OMPD_parallel, OMPD_master, OMPD_parallel_master},
-      {OMPD_parallel, OMPD_masked, OMPD_parallel_masked},
-      {OMPD_parallel_master, OMPD_taskloop, OMPD_parallel_master_taskloop},
-      {OMPD_parallel_masked, OMPD_taskloop, OMPD_parallel_masked_taskloop},
-      {OMPD_parallel_master_taskloop, OMPD_simd,
-       OMPD_parallel_master_taskloop_simd},
-      {OMPD_parallel_masked_taskloop, OMPD_simd,
-       OMPD_parallel_masked_taskloop_simd}};
-  enum { CancellationPoint = 0, DeclareReduction = 1, TargetData = 2 };
+static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
+  static const DirectiveNameParser DirParser;
+
+  const DirectiveNameParser::State *S = DirParser.initial();
+
   Token Tok = P.getCurToken();
-  OpenMPDirectiveKindExWrapper DKind =
-      Tok.isAnnotation()
-          ? static_cast<unsigned>(OMPD_unknown)
-          : getOpenMPDirectiveKindEx(P.getPreprocessor().getSpelling(Tok));
-  if (DKind == OMPD_unknown)
+  if (Tok.isAnnotation())
     return OMPD_unknown;
 
-  for (const auto &I : F) {
-    if (DKind != I[0])
-      continue;
+  std::string Concat = P.getPreprocessor().getSpelling(Tok);
+  SourceLocation Loc = Tok.getLocation();
 
+  S = DirParser.consume(S, Concat);
+  if (S == nullptr)
+    return OMPD_unknown;
+
+  while (!Tok.isAnnotation()) {
+    OpenMPDirectiveKind DKind = S->Value;
     Tok = P.getPreprocessor().LookAhead(0);
-    OpenMPDirectiveKindExWrapper SDKind =
-        Tok.isAnnotation()
-            ? static_cast<unsigned>(OMPD_unknown)
-            : getOpenMPDirectiveKindEx(P.getPreprocessor().getSpelling(Tok));
-    if (SDKind == OMPD_unknown)
-      continue;
-
-    if (SDKind == I[1]) {
+    if (!Tok.isAnnotation()) {
+      std::string TS = P.getPreprocessor().getSpelling(Tok);
+      S = DirParser.consume(S, TS);
+      if (S == nullptr)
+        return checkOpenMPDirectiveName(P, Loc, DKind, Concat);
+      Concat += ' ' + TS;
       P.ConsumeToken();
-      DKind = I[2];
     }
   }
-  return unsigned(DKind) < llvm::omp::Directive_enumSize
-             ? static_cast<OpenMPDirectiveKind>(DKind)
-             : OMPD_unknown;
+
+  assert(S && "Should have exited early");
+  return checkOpenMPDirectiveName(P, Loc, S->Value, Concat);
 }
 
 static DeclarationName parseOpenMPReductionId(Parser &P) {
@@ -2309,6 +2190,9 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     SourceLocation DTLoc = ConsumeAnyToken();
     bool HasClauses = Tok.isNot(tok::annot_pragma_openmp_end);
     SemaOpenMP::DeclareTargetContextInfo DTCI(DKind, DTLoc);
+    if (DKind == OMPD_declare_target && !HasClauses &&
+        getLangOpts().OpenMP >= 52)
+      Diag(DTLoc, diag::warn_omp_deprecated_declare_target_delimited_form);
     if (HasClauses)
       ParseOMPDeclareTargetClauses(DTCI);
     bool HasImplicitMappings = DKind == OMPD_begin_declare_target ||
@@ -2629,10 +2513,6 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     Diag(Tok, diag::err_omp_unknown_directive);
     return StmtError();
   }
-  if (!(getDirectiveLanguages(DKind) & SourceLanguage::C)) {
-    // Treat directives that are not allowed in C/C++ as unknown.
-    DKind = OMPD_unknown;
-  }
 
   StmtResult Directive = StmtError();
 
@@ -2824,7 +2704,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     // If no match is found and no otherwise clause is present, skip
     // OMP5.2 Chapter 7.4: If no otherwise clause is specified the effect is as
     // if one was specified without an associated directive variant.
-    if (BestIdx == -1 && Idx == 1) {
+    if (BestIdx == -1 && Idx > 0) {
       assert(Tok.is(tok::annot_pragma_openmp_end) &&
              "Expecting the end of the pragma here");
       ConsumeAnnotationToken();
@@ -3503,9 +3383,9 @@ ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
     return ExprError();
 
   SourceLocation ELoc = Tok.getLocation();
-  ExprResult LHS(ParseCastExpression(CastParseKind::AnyCastExpr,
-                                     IsAddressOfOperand,
-                                     TypeCastState::NotTypeCast));
+  ExprResult LHS(
+      ParseCastExpression(CastParseKind::AnyCastExpr, IsAddressOfOperand,
+                          TypoCorrectionTypeBehavior::AllowNonTypes));
   ExprResult Val(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
   Val = Actions.ActOnFinishFullExpr(Val.get(), ELoc, /*DiscardedValue*/ false);
 
@@ -4014,7 +3894,7 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
     KLoc.push_back(Tok.getLocation());
     TentativeParsingAction TPA(*this);
     auto DK = parseOpenMPDirectiveKind(*this);
-    Arg.push_back(DK);
+    Arg.push_back(static_cast<unsigned>(DK));
     if (DK != OMPD_unknown) {
       ConsumeToken();
       if (Tok.is(tok::colon) && getLangOpts().OpenMP > 40) {
@@ -4036,8 +3916,9 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
                           Kind == OMPC_num_threads;
   if (NeedAnExpression) {
     SourceLocation ELoc = Tok.getLocation();
-    ExprResult LHS(ParseCastExpression(CastParseKind::AnyCastExpr, false,
-                                       TypeCastState::NotTypeCast));
+    ExprResult LHS(
+        ParseCastExpression(CastParseKind::AnyCastExpr, false,
+                            TypoCorrectionTypeBehavior::AllowNonTypes));
     Val = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
     Val =
         Actions.ActOnFinishFullExpr(Val.get(), ELoc, /*DiscardedValue*/ false);

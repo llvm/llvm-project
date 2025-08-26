@@ -15,6 +15,7 @@
 #ifndef LLVM_MC_MCINST_H
 #define LLVM_MC_MCINST_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
@@ -27,6 +28,7 @@
 
 namespace llvm {
 
+class MCContext;
 class MCExpr;
 class MCInst;
 class MCInstPrinter;
@@ -175,8 +177,7 @@ public:
     return Op;
   }
 
-  LLVM_ABI void print(raw_ostream &OS,
-                      const MCRegisterInfo *RegInfo = nullptr) const;
+  LLVM_ABI void print(raw_ostream &OS, const MCContext *Ctx = nullptr) const;
   LLVM_ABI void dump() const;
   LLVM_ABI bool isBareSymbolRef() const;
   LLVM_ABI bool evaluateAsConstantImm(int64_t &Imm) const;
@@ -210,7 +211,11 @@ public:
   MCOperand &getOperand(unsigned i) { return Operands[i]; }
   unsigned getNumOperands() const { return Operands.size(); }
 
+  ArrayRef<MCOperand> getOperands() const { return Operands; }
   void addOperand(const MCOperand Op) { Operands.push_back(Op); }
+  void setOperands(ArrayRef<MCOperand> Ops) {
+    Operands.assign(Ops.begin(), Ops.end());
+  }
 
   using iterator = SmallVectorImpl<MCOperand>::iterator;
   using const_iterator = SmallVectorImpl<MCOperand>::const_iterator;
@@ -228,8 +233,7 @@ public:
     return Operands.insert(I, Op);
   }
 
-  LLVM_ABI void print(raw_ostream &OS,
-                      const MCRegisterInfo *RegInfo = nullptr) const;
+  LLVM_ABI void print(raw_ostream &OS, const MCContext *Ctx = nullptr) const;
   LLVM_ABI void dump() const;
 
   /// Dump the MCInst as prettily as possible using the additional MC
@@ -238,10 +242,10 @@ public:
   LLVM_ABI void dump_pretty(raw_ostream &OS,
                             const MCInstPrinter *Printer = nullptr,
                             StringRef Separator = " ",
-                            const MCRegisterInfo *RegInfo = nullptr) const;
+                            const MCContext *Ctx = nullptr) const;
   LLVM_ABI void dump_pretty(raw_ostream &OS, StringRef Name,
                             StringRef Separator = " ",
-                            const MCRegisterInfo *RegInfo = nullptr) const;
+                            const MCContext *Ctx = nullptr) const;
 };
 
 inline raw_ostream& operator<<(raw_ostream &OS, const MCOperand &MO) {

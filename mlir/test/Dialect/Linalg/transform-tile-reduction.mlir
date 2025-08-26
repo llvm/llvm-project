@@ -555,6 +555,7 @@ func.func @reduction_tile_parallel_using_tile_sizes(
 }
 //  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 ceildiv 5)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 5)>
+//  CHECK-DAG: #[[MAP2:.*]] = affine_map<()[s0] -> (s0 floordiv 5)>
 //      CHECK: func @reduction_tile_parallel_using_tile_sizes(%[[ARG0:.+]]: tensor<?x?xf32>, %[[ARG1:.+]]: tensor<?xf32>
 //  CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //  CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
@@ -566,7 +567,7 @@ func.func @reduction_tile_parallel_using_tile_sizes(
 // CHECK-SAME:      outs(%[[E]] :
 //      CHECK:   %[[L:.*]] = scf.forall (%[[IV:.+]]) = (0) to (%[[D1]]) step (5) shared_outs(%[[ARG3:.+]] = %[[F]])
 //  CHECK-DAG:     %[[TS0:.+]] = affine.min #[[MAP1]](%[[IV]])[%[[D1]]]
-//  CHECK-DAG:     %[[INIT_OFFSET:.+]] = affine.apply #[[MAP0]]()[%[[IV]]]
+//  CHECK-DAG:     %[[INIT_OFFSET:.+]] = affine.apply #[[MAP2]]()[%[[IV]]]
 //  CHECK-DAG:     %[[INCHUNK:.+]] = tensor.extract_slice %[[ARG0]][0, %[[IV]]] [%[[D0]], %[[TS0]]] [1, 1]
 //  CHECK-DAG:     %[[ET:.+]] = tensor.extract_slice %[[ARG3]][0, %[[INIT_OFFSET]]] [%[[D0]], 1] [1, 1]
 //      CHECK:     %[[PARTIAL:.+]] = linalg.generic
@@ -619,7 +620,7 @@ module {
     }
   }
 }
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 ceildiv 64)>
+//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 floordiv 64)>
 //      CHECK: func @reduction_using_forall_tile_single_of_multiple_reduction_inner(%[[ARG0:.+]]: tensor<86x128xf32>, %[[ARG1:.+]]: tensor<4096x86x128xf32>, %[[ARG2:.+]]: tensor<4096xf32>)
 //      CHECK:   %[[E:.*]] = tensor.empty() : tensor<4096x2xf32>
 //      CHECK:   %[[F:.*]] = linalg.fill
@@ -671,7 +672,7 @@ module {
     }
   }
 }
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 ceildiv 64)>
+//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 floordiv 64)>
 //      CHECK: func @reduction_using_forall_tilesize_0_of_multiple_reduction_inner(%[[ARG0:.+]]: tensor<86x128xf32>, %[[ARG1:.+]]: tensor<4096x86x128xf32>, %[[ARG2:.+]]: tensor<4096xf32>)
 //      CHECK:   %[[E:.*]] = tensor.empty() : tensor<4096x2xf32>
 //      CHECK:   %[[F:.*]] = linalg.fill

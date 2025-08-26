@@ -812,15 +812,10 @@ public:
   LLVM_ABI CallInst *CreateFPMinimumReduce(Value *Src);
 
   /// Create a lifetime.start intrinsic.
-  ///
-  /// If the pointer isn't i8* it will be converted.
-  LLVM_ABI CallInst *CreateLifetimeStart(Value *Ptr,
-                                         ConstantInt *Size = nullptr);
+  LLVM_ABI CallInst *CreateLifetimeStart(Value *Ptr);
 
   /// Create a lifetime.end intrinsic.
-  ///
-  /// If the pointer isn't i8* it will be converted.
-  LLVM_ABI CallInst *CreateLifetimeEnd(Value *Ptr, ConstantInt *Size = nullptr);
+  LLVM_ABI CallInst *CreateLifetimeEnd(Value *Ptr);
 
   /// Create a call to invariant.start intrinsic.
   ///
@@ -960,7 +955,7 @@ public:
                                               const Twine &Name = "");
 
   /// Create a call to llvm.vscale.<Ty>().
-  LLVM_ABI Value *CreateVScale(Type *Ty, const Twine &Name = "") {
+  Value *CreateVScale(Type *Ty, const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vscale, {Ty}, {}, {}, Name);
   }
 
@@ -1575,10 +1570,14 @@ public:
     return Accum;
   }
 
-  Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "",
+                  bool IsDisjoint = false) {
     if (auto *V = Folder.FoldBinOp(Instruction::Or, LHS, RHS))
       return V;
-    return Insert(BinaryOperator::CreateOr(LHS, RHS), Name);
+    return Insert(
+        IsDisjoint ? BinaryOperator::CreateDisjoint(Instruction::Or, LHS, RHS)
+                   : BinaryOperator::CreateOr(LHS, RHS),
+        Name);
   }
 
   Value *CreateOr(Value *LHS, const APInt &RHS, const Twine &Name = "") {
@@ -2188,7 +2187,10 @@ public:
     return CreateCast(Instruction::FPExt, V, DestTy, Name, FPMathTag,
                       FMFSource);
   }
-
+  Value *CreatePtrToAddr(Value *V, const Twine &Name = "") {
+    return CreateCast(Instruction::PtrToInt, V,
+                      BB->getDataLayout().getAddressType(V->getType()), Name);
+  }
   Value *CreatePtrToInt(Value *V, Type *DestTy,
                         const Twine &Name = "") {
     return CreateCast(Instruction::PtrToInt, V, DestTy, Name);
@@ -2609,6 +2611,9 @@ public:
                              const Twine &Name = "") {
     return CreateShuffleVector(V, PoisonValue::get(V->getType()), Mask, Name);
   }
+
+  LLVM_ABI Value *CreateVectorInterleave(ArrayRef<Value *> Ops,
+                                         const Twine &Name = "");
 
   Value *CreateExtractValue(Value *Agg, ArrayRef<unsigned> Idxs,
                             const Twine &Name = "") {

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/shared/max.h>
 #include <clc/shared/clc_max.h>
 
 #define __CLC_BODY <max.inc>

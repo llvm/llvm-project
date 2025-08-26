@@ -598,6 +598,9 @@ public:
     if (APSIntBitwidth == 1 && Ty.isNull())
       return {Int.extend(Ctx.getTypeSize(Ctx.BoolTy)),
               getAPSIntType(Ctx, NewInt)};
+    else if (APSIntBitwidth == 1 && !Ty.isNull())
+      return {Int.extend(Ctx.getTypeSize(getAPSIntType(Ctx, Int))),
+              getAPSIntType(Ctx, NewInt)};
     if (llvm::isPowerOf2_32(APSIntBitwidth) || Ty.isNull())
       return {Int, Ty};
     return {Int.extend(Ctx.getTypeSize(Ty)), Ty};

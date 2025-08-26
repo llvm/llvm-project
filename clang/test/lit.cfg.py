@@ -117,6 +117,29 @@ if config.clang_examples:
     config.available_features.add("examples")
 
 
+def have_host_out_of_process_jit_feature_support():
+    clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
+
+    if not clang_repl_exe:
+        return False
+
+    testcode = b"\n".join([b"int i = 0;", b"%quit"])
+
+    try:
+        clang_repl_cmd = subprocess.run(
+            [clang_repl_exe, "-orc-runtime", "-oop-executor"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            input=testcode,
+        )
+    except OSError:
+        return False
+
+    if clang_repl_cmd.returncode == 0:
+        return True
+
+    return False
+
 def have_host_jit_feature_support(feature_name):
     clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
 
@@ -169,15 +192,17 @@ if have_host_jit_feature_support('jit'):
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
 
+    if have_host_out_of_process_jit_feature_support():
+        config.available_features.add("host-supports-out-of-process-jit")
+
 if config.clang_staticanalyzer:
     config.available_features.add("staticanalyzer")
     tools.append("clang-check")
 
     if config.clang_staticanalyzer_z3:
         config.available_features.add("z3")
-        config.substitutions.append(
-            ("%z3_include_dir", config.clang_staticanalyzer_z3_include_dir)
-        )
+        if config.clang_staticanalyzer_z3_mock:
+            config.available_features.add("z3-mock")
     else:
         config.available_features.add("no-z3")
 
@@ -222,9 +247,6 @@ config.substitutions.append(
         ),
     )
 )
-
-config.substitutions.append(("%host_cc", config.host_cc))
-config.substitutions.append(("%host_cxx", config.host_cxx))
 
 # Determine whether the test target is compatible with execution on the host.
 if "aarch64" in config.host_arch:
@@ -294,7 +316,7 @@ if re.match(r".*-(windows-msvc)$", config.target_triple):
 
 # [PR8833] LLP64-incompatible tests
 if not re.match(
-    r"^(aarch64|x86_64).*-(windows-msvc|windows-gnu)$", config.target_triple
+    r"^(aarch64|arm64ec|x86_64).*-(windows-msvc|windows-gnu)$", config.target_triple
 ):
     config.available_features.add("LP64")
 
@@ -388,3 +410,13 @@ if "system-aix" in config.available_features:
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+if lit_config.update_tests:
+    import sys
+    import os
+
+    utilspath = os.path.join(config.llvm_src_root, "utils")
+    sys.path.append(utilspath)
+    from update_any_test_checks import utc_lit_plugin
+
+    lit_config.test_updaters.append(utc_lit_plugin)

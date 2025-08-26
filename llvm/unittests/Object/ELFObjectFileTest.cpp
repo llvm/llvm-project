@@ -177,10 +177,10 @@ TEST(ELFObjectFileTest, MachineTestForPPC) {
 }
 
 TEST(ELFObjectFileTest, MachineTestForRISCV) {
-  std::array<StringRef, 4> Formats = {"elf32-littleriscv", "elf32-littleriscv",
-                                      "elf64-littleriscv", "elf64-littleriscv"};
-  std::array<Triple::ArchType, 4> Archs = {Triple::riscv32, Triple::riscv32,
-                                           Triple::riscv64, Triple::riscv64};
+  std::array<StringRef, 4> Formats = {"elf32-littleriscv", "elf32-bigriscv",
+                                      "elf64-littleriscv", "elf64-bigriscv"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::riscv32, Triple::riscv32be,
+                                           Triple::riscv64, Triple::riscv64be};
   for (auto [Idx, Data] : enumerate(generateData(ELF::EM_RISCV)))
     checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
@@ -680,7 +680,7 @@ Sections:
               - AddressOffset:   0x0
                 Size:            0x1
                 Metadata:        0x2
-                CallsiteOffsets: [ 0x1 ]
+                CallsiteEndOffsets: [ 0x1 ]
 )";
 
   {
@@ -713,7 +713,7 @@ Sections:
                 AddressOffset:   0x0
                 Size:            0x1
                 Metadata:        0x2
-                CallsiteOffsets: [ 0x1 , 0x1 ]
+                CallsiteEndOffsets: [ 0x1 , 0x1 ]
   - Name: .llvm_bb_addr_map_2
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 1
@@ -737,7 +737,7 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 2
     Entries:
-      - Version: 1
+      - Version: 2
         BBRanges:
           - BaseAddress: 0x33333
             BBEntries:
@@ -904,7 +904,7 @@ Sections:
   SmallString<128> UnsupportedLowVersionYamlString(CommonYamlString);
   UnsupportedLowVersionYamlString += R"(
       - Version: 1
-        Feature: 0x4
+        Feature: 0x0
         BBRanges:
           - BBEntries:
               - AddressOffset: 0x0
@@ -915,8 +915,7 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedLowVersionYamlString,
-            "version should be >= 2 for SHT_LLVM_BB_ADDR_MAP when PGO features "
-            "are enabled: version = 1 feature = 4");
+            "unsupported SHT_LLVM_BB_ADDR_MAP version: 1");
   }
 
   // Check that we fail when function entry count is enabled but not provided.

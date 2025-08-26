@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/AsmParser/Parser.h"
@@ -16,6 +17,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -909,16 +911,16 @@ TEST(ValueTracking, propagatesPoison) {
       {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
       {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
       {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
-      {false, "call float @llvm.sqrt.f32(float %fx)", 0},
-      {false, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
-      {false, "call float @llvm.sin.f32(float %fx)", 0},
-      {false, "call float @llvm.cos.f32(float %fx)", 0},
-      {false, "call float @llvm.pow.f32(float %fx, float %fy)", 0},
-      {false, "call float @llvm.exp.f32(float %fx)", 0},
-      {false, "call float @llvm.exp2.f32(float %fx)", 0},
-      {false, "call float @llvm.log.f32(float %fx)", 0},
-      {false, "call float @llvm.log10.f32(float %fx)", 0},
-      {false, "call float @llvm.log2.f32(float %fx)", 0},
+      {true, "call float @llvm.sqrt.f32(float %fx)", 0},
+      {true, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
+      {true, "call float @llvm.sin.f32(float %fx)", 0},
+      {true, "call float @llvm.cos.f32(float %fx)", 0},
+      {true, "call float @llvm.pow.f32(float %fx, float %fy)", 0},
+      {true, "call float @llvm.exp.f32(float %fx)", 0},
+      {true, "call float @llvm.exp2.f32(float %fx)", 0},
+      {true, "call float @llvm.log.f32(float %fx)", 0},
+      {true, "call float @llvm.log10.f32(float %fx)", 0},
+      {true, "call float @llvm.log2.f32(float %fx)", 0},
       {false, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)", 0},
       {false, "call float @llvm.fabs.f32(float %fx)", 0},
       {false, "call float @llvm.minnum.f32(float %fx, float %fy)", 0},
@@ -926,17 +928,17 @@ TEST(ValueTracking, propagatesPoison) {
       {false, "call float @llvm.minimum.f32(float %fx, float %fy)", 0},
       {false, "call float @llvm.maximum.f32(float %fx, float %fy)", 0},
       {false, "call float @llvm.copysign.f32(float %fx, float %fy)", 0},
-      {false, "call float @llvm.floor.f32(float %fx)", 0},
-      {false, "call float @llvm.ceil.f32(float %fx)", 0},
-      {false, "call float @llvm.trunc.f32(float %fx)", 0},
-      {false, "call float @llvm.rint.f32(float %fx)", 0},
-      {false, "call float @llvm.nearbyint.f32(float %fx)", 0},
-      {false, "call float @llvm.round.f32(float %fx)", 0},
-      {false, "call float @llvm.roundeven.f32(float %fx)", 0},
+      {true, "call float @llvm.floor.f32(float %fx)", 0},
+      {true, "call float @llvm.ceil.f32(float %fx)", 0},
+      {true, "call float @llvm.trunc.f32(float %fx)", 0},
+      {true, "call float @llvm.rint.f32(float %fx)", 0},
+      {true, "call float @llvm.nearbyint.f32(float %fx)", 0},
+      {true, "call float @llvm.round.f32(float %fx)", 0},
+      {true, "call float @llvm.roundeven.f32(float %fx)", 0},
       {false, "call i32 @llvm.lround.f32(float %fx)", 0},
       {false, "call i64 @llvm.llround.f32(float %fx)", 0},
-      {false, "call i32 @llvm.lrint.f32(float %fx)", 0},
-      {false, "call i64 @llvm.llrint.f32(float %fx)", 0},
+      {true, "call i32 @llvm.lrint.f32(float %fx)", 0},
+      {true, "call i64 @llvm.llrint.f32(float %fx)", 0},
       {false, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)",
        0}};
 
@@ -2205,6 +2207,41 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
     EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
     EXPECT_TRUE(PartiallyPoison.SignBit);
   }
+}
+
+TEST_F(ComputeKnownFPClassTest, fcmpImpliesClass_fabs_zero) {
+  parseAssembly("define float @test(float %x) {\n"
+                "  %A = call float @llvm.fabs.f32(float %x)\n"
+                "  ret float %A\n"
+                "}\n");
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OEQ, *F, A, fcZero)),
+            fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UEQ, *F, A, fcZero)),
+            fcZero | fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UNE, *F, A, fcZero)),
+            ~fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ONE, *F, A, fcZero)),
+            ~fcNan & ~fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ORD, *F, A, fcZero)),
+            ~fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UNO, *F, A, fcZero)),
+            fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OGT, *F, A, fcZero)),
+            fcSubnormal | fcNormal | fcInf);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UGT, *F, A, fcZero)),
+            fcSubnormal | fcNormal | fcInf | fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OGE, *F, A, fcZero)),
+            ~fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UGE, *F, A, fcZero)),
+            fcAllFlags);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OLT, *F, A, fcZero)),
+            fcNone);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ULT, *F, A, fcZero)),
+            fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OLE, *F, A, fcZero)),
+            fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ULE, *F, A, fcZero)),
+            fcZero | fcNan);
 }
 
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {

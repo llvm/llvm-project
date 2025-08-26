@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
@@ -53,6 +52,35 @@ static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
     cl::desc("webassembly: disables the fix "
              " irreducible control flow optimization pass"),
     cl::init(false));
+
+// Exception handling & setjmp-longjmp handling related options.
+
+// Emscripten's asm.js-style exception handling
+cl::opt<bool> WebAssembly::WasmEnableEmEH(
+    "enable-emscripten-cxx-exceptions",
+    cl::desc("WebAssembly Emscripten-style exception handling"),
+    cl::init(false));
+// Emscripten's asm.js-style setjmp/longjmp handling
+cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
+    "enable-emscripten-sjlj",
+    cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
+    cl::init(false));
+// Exception handling using wasm EH instructions
+cl::opt<bool>
+    WebAssembly::WasmEnableEH("wasm-enable-eh",
+                              cl::desc("WebAssembly exception handling"));
+// setjmp/longjmp handling using wasm EH instrutions
+cl::opt<bool> WebAssembly::WasmEnableSjLj(
+    "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
+// If true, use the legacy Wasm EH proposal:
+// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/legacy/Exceptions.md
+// And if false, use the standardized Wasm EH proposal:
+// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md
+// Currently set to true by default because not all major web browsers turn on
+// the new standard proposal by default, but will later change to false.
+cl::opt<bool> WebAssembly::WasmUseLegacyEH(
+    "wasm-use-legacy-eh", cl::desc("WebAssembly exception handling (legacy)"),
+    cl::init(true));
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeWebAssemblyTarget() {
@@ -111,6 +139,57 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM,
   return *RM;
 }
 
+using WebAssembly::WasmEnableEH;
+using WebAssembly::WasmEnableEmEH;
+using WebAssembly::WasmEnableEmSjLj;
+using WebAssembly::WasmEnableSjLj;
+
+static void basicCheckForEHAndSjLj(TargetMachine *TM) {
+
+  // You can't enable two modes of EH at the same time
+  if (WasmEnableEmEH && WasmEnableEH)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
+  // You can't enable two modes of SjLj at the same time
+  if (WasmEnableEmSjLj && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
+  // You can't mix Emscripten EH with Wasm SjLj.
+  if (WasmEnableEmEH && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
+
+  if (TM->Options.ExceptionModel == ExceptionHandling::None) {
+    // FIXME: These flags should be removed in favor of directly using the
+    // generically configured ExceptionsType
+    if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
+      TM->Options.ExceptionModel = ExceptionHandling::Wasm;
+  }
+
+  // Basic Correctness checking related to -exception-model
+  if (TM->Options.ExceptionModel != ExceptionHandling::None &&
+      TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+    report_fatal_error("-exception-model should be either 'none' or 'wasm'");
+  if (WasmEnableEmEH && TM->Options.ExceptionModel == ExceptionHandling::Wasm)
+    report_fatal_error("-exception-model=wasm not allowed with "
+                       "-enable-emscripten-cxx-exceptions");
+  if (WasmEnableEH && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+    report_fatal_error(
+        "-wasm-enable-eh only allowed with -exception-model=wasm");
+  if (WasmEnableSjLj && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+    report_fatal_error(
+        "-wasm-enable-sjlj only allowed with -exception-model=wasm");
+  if ((!WasmEnableEH && !WasmEnableSjLj) &&
+      TM->Options.ExceptionModel == ExceptionHandling::Wasm)
+    report_fatal_error(
+        "-exception-model=wasm only allowed with at least one of "
+        "-wasm-enable-eh or -wasm-enable-sjlj");
+
+  // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
+  // measure, but some code will error out at compile time in this combination.
+  // See WebAssemblyLowerEmscriptenEHSjLj pass for details.
+}
+
 /// Create an WebAssembly architecture model.
 ///
 WebAssemblyTargetMachine::WebAssemblyTargetMachine(
@@ -149,7 +228,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.UniqueSectionNames = true;
 
   initAsmInfo();
-
+  basicCheckForEHAndSjLj(this);
   // Note that we don't use setRequiresStructuredCFG(true). It disables
   // optimizations than we're ok with, and want, such as critical edge
   // splitting and tail merging.
@@ -400,61 +479,6 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr; // No reg alloc
 }
 
-using WebAssembly::WasmEnableEH;
-using WebAssembly::WasmEnableEmEH;
-using WebAssembly::WasmEnableEmSjLj;
-using WebAssembly::WasmEnableSjLj;
-
-static void basicCheckForEHAndSjLj(TargetMachine *TM) {
-
-  // You can't enable two modes of EH at the same time
-  if (WasmEnableEmEH && WasmEnableEH)
-    report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
-  // You can't enable two modes of SjLj at the same time
-  if (WasmEnableEmSjLj && WasmEnableSjLj)
-    report_fatal_error(
-        "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
-  // You can't mix Emscripten EH with Wasm SjLj.
-  if (WasmEnableEmEH && WasmEnableSjLj)
-    report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
-
-  // Here we make sure TargetOptions.ExceptionModel is the same as
-  // MCAsmInfo.ExceptionsType. Normally these have to be the same, because clang
-  // stores the exception model info in LangOptions, which is later transferred
-  // to TargetOptions and MCAsmInfo. But when clang compiles bitcode directly,
-  // clang's LangOptions is not used and thus the exception model info is not
-  // correctly transferred to TargetOptions and MCAsmInfo, so we make sure we
-  // have the correct exception model in WebAssemblyMCAsmInfo constructor. But
-  // in this case TargetOptions is still not updated, so we make sure they are
-  // the same.
-  TM->Options.ExceptionModel = TM->getMCAsmInfo()->getExceptionHandlingType();
-
-  // Basic Correctness checking related to -exception-model
-  if (TM->Options.ExceptionModel != ExceptionHandling::None &&
-      TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model should be either 'none' or 'wasm'");
-  if (WasmEnableEmEH && TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model=wasm not allowed with "
-                       "-enable-emscripten-cxx-exceptions");
-  if (WasmEnableEH && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error(
-        "-wasm-enable-eh only allowed with -exception-model=wasm");
-  if (WasmEnableSjLj && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error(
-        "-wasm-enable-sjlj only allowed with -exception-model=wasm");
-  if ((!WasmEnableEH && !WasmEnableSjLj) &&
-      TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error(
-        "-exception-model=wasm only allowed with at least one of "
-        "-wasm-enable-eh or -wasm-enable-sjlj");
-
-  // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
-  // measure, but some code will error out at compile time in this combination.
-  // See WebAssemblyLowerEmscriptenEHSjLj pass for details.
-}
-
 //===----------------------------------------------------------------------===//
 // The following functions are called from lib/CodeGen/Passes.cpp to modify
 // the CodeGen pass sequence.
@@ -474,8 +498,6 @@ void WebAssemblyPassConfig::addIRPasses() {
   // Optimize "returned" function attributes.
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturned());
-
-  basicCheckForEHAndSjLj(TM);
 
   // If exception handling is not enabled and setjmp/longjmp handling is
   // enabled, we lower invokes into calls and delete unreachable landingpad

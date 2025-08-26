@@ -39,7 +39,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -2317,7 +2317,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     for (unsigned i = 0; i != Info.ParsedOperands.size(); ++i) {
       if (i != 0)
         OS << ", ";
-      Info.ParsedOperands[i]->print(OS);
+      Info.ParsedOperands[i]->print(OS, MAI);
     }
     OS << "]";
 
@@ -3009,8 +3009,8 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
     return false;
   }
 
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
-
+  auto *Sym =
+      static_cast<MCSymbolCOFF *>(getContext().getOrCreateSymbol(Var.Name));
   const MCConstantExpr *PrevValue =
       Sym->isVariable()
           ? dyn_cast_or_null<MCConstantExpr>(Sym->getVariableValue())
@@ -4228,8 +4228,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     // Check whether we should use optimal code alignment for this align
     // directive.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
-    assert(Section && "must have section to emit alignment");
-    if (Section->useCodeAlign()) {
+    if (MAI.useCodeAlign(*Section)) {
       getStreamer().emitCodeAlignment(Align(Alignment),
                                       &getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);
@@ -4522,7 +4521,8 @@ bool MasmParser::parseDirectiveExtern() {
       KnownType[Name.lower()] = Type;
     }
 
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    auto *Sym =
+        static_cast<MCSymbolCOFF *>(getContext().getOrCreateSymbol(Name));
     Sym->setExternal(true);
     getStreamer().emitSymbolAttribute(Sym, MCSA_Extern);
 

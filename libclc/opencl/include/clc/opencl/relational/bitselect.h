@@ -6,7 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_RELATIONAL_BITSELECT_H__
+#define __CLC_OPENCL_RELATIONAL_BITSELECT_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define __CLC_BODY <clc/opencl/relational/bitselect.inc>
 #include <clc/math/gentype.inc>
 #define __CLC_BODY <clc/opencl/relational/bitselect.inc>
 #include <clc/integer/gentype.inc>
+
+#endif // __CLC_OPENCL_RELATIONAL_BITSELECT_H__

@@ -41,6 +41,10 @@ def err_ast_file_langopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in 
     "precompiled file '%3' but is currently %select{disabled|enabled}2">;
 def err_ast_file_langopt_value_mismatch : Error<
   "%0 differs in precompiled file '%1' vs. current file">;
+def err_ast_file_codegenopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "
+  "precompiled file '%3' but is currently %select{disabled|enabled}2">;
+def err_ast_file_codegenopt_value_mismatch
+    : Error<"%0 differs in precompiled file '%1' vs. current file">;
 def err_ast_file_diagopt_mismatch : Error<"%0 is currently enabled, but was not in "
   "the precompiled file '%1'">;
 def err_ast_file_modulecache_mismatch : Error<"precompiled file '%2' was compiled with module cache "

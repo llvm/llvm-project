@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_round.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/round.h>
 
-#define FUNCTION round
+#define __CLC_FUNCTION round
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

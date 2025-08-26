@@ -859,7 +859,7 @@ static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
   case ARMCP::GOT_PREL:
     return ARM::S_GOT_PREL;
   case ARMCP::SECREL:
-    return MCSymbolRefExpr::VK_SECREL;
+    return ARM::S_COFF_SECREL;
   }
   llvm_unreachable("Invalid ARMCPModifier!");
 }
@@ -2040,12 +2040,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
     break;
-  }
-  case ARM::TRAPNaCl: {
-    uint32_t Val = 0xe7fedef0UL;
-    OutStreamer->AddComment("trap");
-    ATS.emitInst(Val);
-    return;
   }
   case ARM::tTRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.

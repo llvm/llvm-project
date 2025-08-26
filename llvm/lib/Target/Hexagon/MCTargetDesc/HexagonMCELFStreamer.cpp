@@ -32,7 +32,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HexagonAttributes.h"
@@ -96,7 +95,7 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
   getAssembler().registerSymbol(*Symbol);
   StringRef sbss[4] = {".sbss.1", ".sbss.2", ".sbss.4", ".sbss.8"};
 
-  auto ELFSymbol = cast<MCSymbolELF>(Symbol);
+  auto ELFSymbol = static_cast<MCSymbolELF *>(Symbol);
   if (!ELFSymbol->isBindingSet())
     ELFSymbol->setBinding(ELF::STB_GLOBAL);
 
@@ -143,20 +142,62 @@ void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol,
                                                           Align ByteAlignment,
                                                           unsigned AccessSize) {
   getAssembler().registerSymbol(*Symbol);
-  auto ELFSymbol = cast<MCSymbolELF>(Symbol);
+  auto ELFSymbol = static_cast<const MCSymbolELF *>(Symbol);
   ELFSymbol->setBinding(ELF::STB_LOCAL);
-  ELFSymbol->setExternal(false);
   HexagonMCEmitCommonSymbol(Symbol, Size, ByteAlignment, AccessSize);
+}
+
+static unsigned featureToArchVersion(unsigned Feature) {
+  switch (Feature) {
+  case Hexagon::ArchV5:
+    return 5;
+  case Hexagon::ArchV55:
+    return 55;
+  case Hexagon::ArchV60:
+  case Hexagon::ExtensionHVXV60:
+    return 60;
+  case Hexagon::ArchV62:
+  case Hexagon::ExtensionHVXV62:
+    return 62;
+  case Hexagon::ArchV65:
+  case Hexagon::ExtensionHVXV65:
+    return 65;
+  case Hexagon::ArchV66:
+  case Hexagon::ExtensionHVXV66:
+    return 66;
+  case Hexagon::ArchV67:
+  case Hexagon::ExtensionHVXV67:
+    return 67;
+  case Hexagon::ArchV68:
+  case Hexagon::ExtensionHVXV68:
+    return 68;
+  case Hexagon::ArchV69:
+  case Hexagon::ExtensionHVXV69:
+    return 69;
+  case Hexagon::ArchV71:
+  case Hexagon::ExtensionHVXV71:
+    return 71;
+  case Hexagon::ArchV73:
+  case Hexagon::ExtensionHVXV73:
+    return 73;
+  case Hexagon::ArchV75:
+  case Hexagon::ExtensionHVXV75:
+    return 75;
+  case Hexagon::ArchV79:
+  case Hexagon::ExtensionHVXV79:
+    return 79;
+  }
+  llvm_unreachable("Expected valid arch feature");
+  return 0;
 }
 
 void HexagonTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   auto Features = STI.getFeatureBits();
-  unsigned Arch = Hexagon_MC::getArchVersionAttribute(Features).value_or(0);
-  std::optional<unsigned> HVXArch =
-      Hexagon_MC::getHVXVersionAttribute(Features);
+  unsigned Arch = featureToArchVersion(Hexagon_MC::getArchVersion(Features));
+  std::optional<unsigned> HVXArch = Hexagon_MC::getHVXVersion(Features);
   emitAttribute(HexagonAttrs::ARCH, Arch);
   if (HVXArch)
-    emitAttribute(HexagonAttrs::HVXARCH, *HVXArch);
+    emitAttribute(HexagonAttrs::HVXARCH, featureToArchVersion(*HVXArch));
   if (Features.test(Hexagon::ExtensionHVXIEEEFP))
     emitAttribute(HexagonAttrs::HVXIEEEFP, 1);
   if (Features.test(Hexagon::ExtensionHVXQFloat))

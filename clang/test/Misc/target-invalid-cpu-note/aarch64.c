@@ -75,6 +75,7 @@
 // CHECK-SAME: {{^}}, exynos-m5
 // CHECK-SAME: {{^}}, falkor
 // CHECK-SAME: {{^}}, fujitsu-monaka
+// CHECK-SAME: {{^}}, gb10
 // CHECK-SAME: {{^}}, generic
 // CHECK-SAME: {{^}}, grace
 // CHECK-SAME: {{^}}, kryo

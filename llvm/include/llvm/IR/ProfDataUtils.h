@@ -22,11 +22,12 @@
 
 namespace llvm {
 struct MDProfLabels {
-  static const char *BranchWeights;
-  static const char *ValueProfile;
-  static const char *FunctionEntryCount;
-  static const char *SyntheticFunctionEntryCount;
-  static const char *ExpectedBranchWeights;
+  LLVM_ABI static const char *BranchWeights;
+  LLVM_ABI static const char *ValueProfile;
+  LLVM_ABI static const char *FunctionEntryCount;
+  LLVM_ABI static const char *SyntheticFunctionEntryCount;
+  LLVM_ABI static const char *ExpectedBranchWeights;
+  LLVM_ABI static const char *UnknownBranchWeightsMarker;
 };
 
 /// Checks if an Instruction has MD_prof Metadata
@@ -34,6 +35,9 @@ LLVM_ABI bool hasProfMD(const Instruction &I);
 
 /// Checks if an MDNode contains Branch Weight Metadata
 LLVM_ABI bool isBranchWeightMD(const MDNode *ProfileData);
+
+/// Checks if an MDNode contains value profiling Metadata
+LLVM_ABI bool isValueProfileMD(const MDNode *ProfileData);
 
 /// Checks if an instructions has Branch Weight Metadata
 ///
@@ -139,6 +143,45 @@ LLVM_ABI bool extractProfTotalWeight(const Instruction &I,
 /// \param IsExpected were these weights added from an llvm.expect* intrinsic.
 LLVM_ABI void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
                                bool IsExpected);
+
+/// downscale the given weights preserving the ratio. If the maximum value is
+/// not already known and not provided via \param KnownMaxCount , it will be
+/// obtained from \param Weights.
+LLVM_ABI SmallVector<uint32_t>
+downscaleWeights(ArrayRef<uint64_t> Weights,
+                 std::optional<uint64_t> KnownMaxCount = std::nullopt);
+
+/// Calculate what to divide by to scale counts.
+///
+/// Given the maximum count, calculate a divisor that will scale all the
+/// weights to strictly less than std::numeric_limits<uint32_t>::max().
+inline uint64_t calculateCountScale(uint64_t MaxCount) {
+  return MaxCount < std::numeric_limits<uint32_t>::max()
+             ? 1
+             : MaxCount / std::numeric_limits<uint32_t>::max() + 1;
+}
+
+/// Scale an individual branch count.
+///
+/// Scale a 64-bit weight down to 32-bits using \c Scale.
+///
+inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
+  uint64_t Scaled = Count / Scale;
+  assert(Scaled <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
+  return Scaled;
+}
+
+/// Specify that the branch weights for this terminator cannot be known at
+/// compile time. This should only be called by passes, and never as a default
+/// behavior in e.g. MDBuilder. The goal is to use this info to validate passes
+/// do not accidentally drop profile info, and this API is called in cases where
+/// the pass explicitly cannot provide that info. Defaulting it in would hide
+/// bugs where the pass forgets to transfer over or otherwise specify profile
+/// info.
+LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I);
+
+LLVM_ABI bool isExplicitlyUnknownBranchWeightsMetadata(const MDNode &MD);
+LLVM_ABI bool hasExplicitlyUnknownBranchWeights(const Instruction &I);
 
 /// Scaling the profile data attached to 'I' using the ratio of S/T.
 LLVM_ABI void scaleProfData(Instruction &I, uint64_t S, uint64_t T);

@@ -166,6 +166,9 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyDisableLangRuntimeUnwindPlans,
+        [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
   }
 
   m_experimental_properties_up =
@@ -278,6 +281,15 @@ void ProcessProperties::SetDisableLangRuntimeUnwindPlans(bool disable) {
   const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
   SetPropertyAtIndex(idx, disable);
   m_process->Flush();
+}
+
+void ProcessProperties::DisableLanguageRuntimeUnwindPlansCallback() {
+  if (!m_process)
+    return;
+  for (auto thread_sp : m_process->Threads()) {
+    thread_sp->ClearStackFrames();
+    thread_sp->DiscardThreadPlans(/*force*/ true);
+  }
 }
 
 bool ProcessProperties::GetDetachKeepsStopped() const {
@@ -1271,7 +1283,7 @@ uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
 }
 
 StateType Process::GetState() {
-  if (CurrentThreadIsPrivateStateThread())
+  if (CurrentThreadPosesAsPrivateStateThread())
     return m_private_state.GetValue();
   else
     return m_public_state.GetValue();
@@ -3144,16 +3156,19 @@ void Process::CompleteAttach() {
     }
   }
 
-  if (!m_os_up) {
+  // If we don't have an operating system plugin loaded yet, see if
+  // LoadOperatingSystemPlugin can find one (and stuff it in m_os_up).
+  if (!m_os_up)
     LoadOperatingSystemPlugin(false);
-    if (m_os_up) {
-      // Somebody might have gotten threads before now, but we need to force the
-      // update after we've loaded the OperatingSystem plugin or it won't get a
-      // chance to process the threads.
-      m_thread_list.Clear();
-      UpdateThreadListIfNeeded();
-    }
+
+  if (m_os_up) {
+    // Somebody might have gotten threads before we loaded the OS Plugin above,
+    // so we need to force the update now or the newly loaded plugin won't get
+    // a chance to process the threads.
+    m_thread_list.Clear();
+    UpdateThreadListIfNeeded();
   }
+
   // Figure out which one is the executable, and set that in our target:
   ModuleSP new_executable_module_sp;
   for (ModuleSP module_sp : GetTarget().GetImages().Modules()) {
@@ -5856,6 +5871,13 @@ bool Process::CurrentThreadIsPrivateStateThread()
   return m_private_state_thread.EqualsThread(Host::GetCurrentThread());
 }
 
+bool Process::CurrentThreadPosesAsPrivateStateThread() {
+  // If we haven't started up the private state thread yet, then whatever thread
+  // is fetching this event should be temporarily the private state thread.
+  if (!m_private_state_thread.HasThread())
+    return true;
+  return m_private_state_thread.EqualsThread(Host::GetCurrentThread());
+}
 
 void Process::Flush() {
   m_thread_list.Flush();

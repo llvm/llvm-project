@@ -1049,3 +1049,8 @@
 // CHECK-NOSIMD-NOT: #define __ARM_NEON 1
 // CHECK-NOSIMD-NOT: #define __ARM_NEON_FP 0x6
 // CHECK-NOSIMD-NOT: #define __ARM_NEON__ 1
+
+// Check that disabling SVE, as set by armv9-a, does not define __ARM_FEATURE_SVE* macros.
+// RUN:  %clang -target aarch64 -march=armv9-a+nosve -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-NOSVE %s
+// CHECK-NOSVE-NOT: #define __ARM_FEATURE_SVE 1
+// CHECK-NOSVE-NOT: #define __ARM_FEATURE_SVE2 1

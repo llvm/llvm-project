@@ -45,6 +45,7 @@ add_flang_library(flangFrontend
   LINK_COMPONENTS
   Passes
   Analysis
+  BitReader
   Extensions
   IRPrinter
   IRReader

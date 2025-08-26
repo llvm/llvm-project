@@ -6,6 +6,10 @@ module globals
   real, device, allocatable :: a_device(:)
   real, managed, allocatable :: a_managed(:)
   real, pinned, allocatable :: a_pinned(:)
+  type :: t1
+    integer :: a
+    real, dimension(:), allocatable, device :: b
+  end type
 end module
 
 ! CHECK-LABEL: fir.global @_QMglobalsEa_device {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
@@ -222,3 +226,12 @@ end
 ! CHECK: %[[FALSE:.*]] = arith.constant false
 ! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
 ! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#0 : !fir.ref<!fir.logical<4>>
+
+subroutine cuda_component()
+  use globals
+  type(t1), pointer, dimension(:) :: d
+  allocate(d(10))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPcuda_component()
+! CHECK: cuf.allocate

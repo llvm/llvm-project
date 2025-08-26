@@ -371,5 +371,5 @@ END_COMPILERRT_FUNCTION(__arm_sme_restore)
 
 NO_EXEC_STACK_DIRECTIVE
 
-// GNU property note for BTI and PAC
-GNU_PROPERTY_BTI_PAC
+// GNU property note for BTI, PAC, and GCS
+GNU_PROPERTY_BTI_PAC_GCS

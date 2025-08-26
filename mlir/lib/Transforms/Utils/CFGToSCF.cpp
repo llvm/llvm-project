@@ -115,14 +115,12 @@
 
 #include "mlir/Transforms/CFGToSCF.h"
 
-#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 

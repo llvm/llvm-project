@@ -314,6 +314,16 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_common_reference",
+            "values": {"c++20": 202302},
+            "headers": ["type_traits"],
+        },
+        {
+            "name": "__cpp_lib_common_reference_wrapper",
+            "values": {"c++20": 202302},
+            "headers": ["functional"],
+        },
+        {
             "name": "__cpp_lib_complex_udls",
             "values": {"c++14": 201309},
             "headers": ["complex"],
@@ -432,11 +442,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_constrained_equality",
             "values": {
-                # "c++26": 202403,  # P2944R3: Comparisons for reference_wrapper
                 "c++26": 202411,  # P3379R0: Constrain std::expected equality operators
             },
             "headers": ["expected", "optional", "tuple", "utility", "variant"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_containers_ranges",
@@ -1004,7 +1012,6 @@ feature_test_macros = [
             "name": "__cpp_lib_optional_range_support",
             "values": {"c++26": 202406},  # P3168R2 Give std::optional Range Support
             "headers": ["optional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_out_ptr",
@@ -1872,7 +1879,6 @@ def produce_tests():
 {cxx_tests}
 
 // clang-format on
-
 """.format(
             script_name=script_name,
             header=h,

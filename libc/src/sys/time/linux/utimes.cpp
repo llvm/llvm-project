@@ -59,8 +59,10 @@ LLVM_LIBC_FUNCTION(int, utimes,
     ts[1].tv_sec = times[1].tv_sec;
 
     // convert u-seconds to nanoseconds
-    ts[0].tv_nsec = times[0].tv_usec * 1000;
-    ts[1].tv_nsec = times[1].tv_usec * 1000;
+    ts[0].tv_nsec =
+        static_cast<decltype(ts[0].tv_nsec)>(times[0].tv_usec * 1000);
+    ts[1].tv_nsec =
+        static_cast<decltype(ts[1].tv_nsec)>(times[1].tv_usec * 1000);
 
     ts_ptr = ts;
   }

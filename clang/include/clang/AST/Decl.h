@@ -20,7 +20,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExternalASTSource.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -565,8 +565,28 @@ public:
   static bool classofKind(Kind K) { return K == Label; }
 };
 
+/// Represents C++ namespaces and their aliases.
+///
+/// FIXME: Move `NamespaceBaseDecl` and `NamespaceDecl` to "DeclCXX.h" or
+/// explain why not moving.
+class NamespaceBaseDecl : public NamedDecl {
+protected:
+  using NamedDecl::NamedDecl;
+
+public:
+  NamespaceDecl *getNamespace();
+  const NamespaceDecl *getNamespace() const {
+    return const_cast<NamespaceBaseDecl *>(this)->getNamespace();
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) {
+    return K >= firstNamespaceBase && K <= lastNamespaceBase;
+  }
+};
+
 /// Represent a C++ namespace.
-class NamespaceDecl : public NamedDecl,
+class NamespaceDecl : public NamespaceBaseDecl,
                       public DeclContext,
                       public Redeclarable<NamespaceDecl> {
   /// The starting location of the source range, pointing
@@ -813,9 +833,9 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the name of this
   /// declaration, if it was present in the source.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return hasExtInfo() ? getExtInfo()->QualifierLoc.getNestedNameSpecifier()
-                        : nullptr;
+                        : std::nullopt;
   }
 
   /// Retrieve the nested-name-specifier (with source-location
@@ -888,13 +908,17 @@ struct EvaluatedStmt {
   bool HasICEInit : 1;
   bool CheckedForICEInit : 1;
 
+  bool HasSideEffects : 1;
+  bool CheckedForSideEffects : 1;
+
   LazyDeclStmtPtr Value;
   APValue Evaluated;
 
   EvaluatedStmt()
       : WasEvaluated(false), IsEvaluating(false),
         HasConstantInitialization(false), HasConstantDestruction(false),
-        HasICEInit(false), CheckedForICEInit(false) {}
+        HasICEInit(false), CheckedForICEInit(false), HasSideEffects(false),
+        CheckedForSideEffects(false) {}
 };
 
 /// Represents a variable declaration or definition.
@@ -1086,6 +1110,11 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsCXXCondDecl : 1;
+
+    /// Whether this variable is the implicit __range variable in a for-range
+    /// loop.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsCXXForRangeImplicitVar : 1;
   };
 
   union {
@@ -1353,9 +1382,11 @@ public:
     return const_cast<VarDecl *>(this)->getInitializingDeclaration();
   }
 
-  /// Checks whether this declaration has an initializer with side effects,
-  /// without triggering deserialization if the initializer is not yet
-  /// deserialized.
+  /// Checks whether this declaration has an initializer with side effects.
+  /// The result is cached. If the result hasn't been computed this can trigger
+  /// deserialization and constant evaluation. By running this during
+  /// serialization and serializing the result all clients can safely call this
+  /// without triggering further deserialization.
   bool hasInitWithSideEffects() const;
 
   /// Determine whether this variable's value might be usable in a
@@ -1583,6 +1614,19 @@ public:
   void setCXXCondDecl() {
     assert(!isa<ParmVarDecl>(this));
     NonParmVarDeclBits.IsCXXCondDecl = true;
+  }
+
+  /// Whether this variable is the implicit '__range' variable in C++
+  /// range-based for loops.
+  bool isCXXForRangeImplicitVar() const {
+    return isa<ParmVarDecl>(this) ? false
+                                  : NonParmVarDeclBits.IsCXXForRangeImplicitVar;
+  }
+
+  void setCXXForRangeImplicitVar(bool FRV) {
+    assert(!isa<ParmVarDecl>(this) &&
+           "Cannot set IsCXXForRangeImplicitVar on ParmVarDecl");
+    NonParmVarDeclBits.IsCXXForRangeImplicitVar = FRV;
   }
 
   /// Determines if this variable's alignment is dependent.
@@ -3228,6 +3272,11 @@ public:
     return hasInClassInitializer() ? InitAndBitWidth->BitWidth : BitWidth;
   }
 
+  /// Determines whether the bit width of this field is a constant integer.
+  /// This may not always be the case, such as inside template-dependent
+  /// expressions.
+  bool hasConstantIntegerBitWidth() const;
+
   /// Computes the bit width of this field, if this is a bit field.
   /// May not be called on non-bitfields.
   /// Note that in order to successfully use this function, the bitwidth
@@ -3477,10 +3526,16 @@ protected:
 public:
   // Low-level accessor. If you just want the type defined by this node,
   // check out ASTContext::getTypeDeclType or one of
-  // ASTContext::getTypedefType, ASTContext::getRecordType, etc. if you
+  // ASTContext::getTypedefType, ASTContext::getTagType, etc. if you
   // already know the specific kind of node this is.
-  const Type *getTypeForDecl() const { return TypeForDecl; }
-  void setTypeForDecl(const Type *TD) { TypeForDecl = TD; }
+  const Type *getTypeForDecl() const {
+    assert(!isa<TagDecl>(this));
+    return TypeForDecl;
+  }
+  void setTypeForDecl(const Type *TD) {
+    assert(!isa<TagDecl>(this));
+    TypeForDecl = TD;
+  }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return LocStart; }
   void setLocStart(SourceLocation L) { LocStart = L; }
@@ -3585,6 +3640,10 @@ public:
       return MaybeModedTInfo.getInt() & 0x2;
     return isTransparentTagSlow();
   }
+
+  // These types are created lazily, use the ASTContext methods to obtain them.
+  const Type *getTypeForDecl() const = delete;
+  void setTypeForDecl(const Type *TD) = delete;
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -3705,14 +3764,6 @@ protected:
   /// True if this decl is currently being defined.
   void setBeingDefined(bool V = true) { TagDeclBits.IsBeingDefined = V; }
 
-  /// Indicates whether it is possible for declarations of this kind
-  /// to have an out-of-date definition.
-  ///
-  /// This option is only enabled when modules are enabled.
-  void setMayHaveOutOfDateDef(bool V = true) {
-    TagDeclBits.MayHaveOutOfDateDef = V;
-  }
-
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -3793,12 +3844,6 @@ public:
     TagDeclBits.IsFreeStanding = isFreeStanding;
   }
 
-  /// Indicates whether it is possible for declarations of this kind
-  /// to have an out-of-date definition.
-  ///
-  /// This option is only enabled when modules are enabled.
-  bool mayHaveOutOfDateDef() const { return TagDeclBits.MayHaveOutOfDateDef; }
-
   /// Whether this declaration declares a type that is
   /// dependent, i.e., a type that somehow depends on template
   /// parameters.
@@ -3838,6 +3883,19 @@ public:
   ///  This method returns NULL if there is no TagDecl that defines
   ///  the struct/union/class/enum.
   TagDecl *getDefinition() const;
+
+  TagDecl *getDefinitionOrSelf() const {
+    if (TagDecl *Def = getDefinition())
+      return Def;
+    return const_cast<TagDecl *>(this);
+  }
+
+  /// Determines whether this entity is in the process of being defined.
+  bool isEntityBeingDefined() const {
+    if (const TagDecl *Def = getDefinition())
+      return Def->isBeingDefined();
+    return false;
+  }
 
   StringRef getKindName() const {
     return TypeWithKeyword::getTagTypeKindName(getTagKind());
@@ -3885,9 +3943,9 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the name of this
   /// declaration, if it was present in the source.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return hasExtInfo() ? getExtInfo()->QualifierLoc.getNestedNameSpecifier()
-                        : nullptr;
+                        : std::nullopt;
   }
 
   /// Retrieve the nested-name-specifier (with source-location
@@ -3908,6 +3966,10 @@ public:
     assert(i < getNumTemplateParameterLists());
     return getExtInfo()->TemplParamLists[i];
   }
+
+  // These types are created lazily, use the ASTContext methods to obtain them.
+  const Type *getTypeForDecl() const = delete;
+  void setTypeForDecl(const Type *TD) = delete;
 
   using TypeDecl::printName;
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
@@ -4036,6 +4098,10 @@ public:
 
   EnumDecl *getDefinition() const {
     return cast_or_null<EnumDecl>(TagDecl::getDefinition());
+  }
+
+  EnumDecl *getDefinitionOrSelf() const {
+    return cast_or_null<EnumDecl>(TagDecl::getDefinitionOrSelf());
   }
 
   static EnumDecl *Create(ASTContext &C, DeclContext *DC,
@@ -4396,21 +4462,6 @@ public:
 
   void reorderDecls(const SmallVectorImpl<Decl *> &Decls);
 
-  /// Determines whether this declaration represents the
-  /// injected class name.
-  ///
-  /// The injected class name in C++ is the name of the class that
-  /// appears inside the class itself. For example:
-  ///
-  /// \code
-  /// struct C {
-  ///   // C is implicitly declared here as a synonym for the class name.
-  /// };
-  ///
-  /// C::C c; // same as "C c;"
-  /// \endcode
-  bool isInjectedClassName() const;
-
   /// Determine whether this record is a class describing a lambda
   /// function object.
   bool isLambda() const;
@@ -4433,6 +4484,10 @@ public:
   ///  no RecordDecl that defines the struct/union/tag.
   RecordDecl *getDefinition() const {
     return cast_or_null<RecordDecl>(TagDecl::getDefinition());
+  }
+
+  RecordDecl *getDefinitionOrSelf() const {
+    return cast_or_null<RecordDecl>(TagDecl::getDefinitionOrSelf());
   }
 
   /// Returns whether this record is a union, or contains (at any nesting level)
@@ -5265,6 +5320,8 @@ void Redeclarable<decl_type>::setPreviousDecl(decl_type *PrevDecl) {
 /// We use this function to break a cycle between the inline definitions in
 /// Type.h and Decl.h.
 inline bool IsEnumDeclComplete(EnumDecl *ED) {
+  if (const auto *Def = ED->getDefinition())
+    return Def->isComplete();
   return ED->isComplete();
 }
 

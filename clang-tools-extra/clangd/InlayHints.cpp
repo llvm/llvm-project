@@ -33,7 +33,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/identity.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -56,18 +55,24 @@ void stripLeadingUnderscores(StringRef &Name) { Name = Name.ltrim('_'); }
 
 // getDeclForType() returns the decl responsible for Type's spelling.
 // This is the inverse of ASTContext::getTypeDeclType().
-template <typename Ty, typename = decltype(((Ty *)nullptr)->getDecl())>
-const NamedDecl *getDeclForTypeImpl(const Ty *T) {
-  return T->getDecl();
-}
-const NamedDecl *getDeclForTypeImpl(const void *T) { return nullptr; }
 const NamedDecl *getDeclForType(const Type *T) {
   switch (T->getTypeClass()) {
-#define ABSTRACT_TYPE(TY, BASE)
-#define TYPE(TY, BASE)                                                         \
-  case Type::TY:                                                               \
-    return getDeclForTypeImpl(llvm::cast<TY##Type>(T));
-#include "clang/AST/TypeNodes.inc"
+  case Type::Enum:
+  case Type::Record:
+  case Type::InjectedClassName:
+    return cast<TagType>(T)->getOriginalDecl();
+  case Type::TemplateSpecialization:
+    return cast<TemplateSpecializationType>(T)
+        ->getTemplateName()
+        .getAsTemplateDecl(/*IgnoreDeduced=*/true);
+  case Type::Typedef:
+    return cast<TypedefType>(T)->getDecl();
+  case Type::UnresolvedUsing:
+    return cast<UnresolvedUsingType>(T)->getDecl();
+  case Type::Using:
+    return cast<UsingType>(T)->getDecl();
+  default:
+    return nullptr;
   }
   llvm_unreachable("Unknown TypeClass enum");
 }
@@ -82,8 +87,6 @@ llvm::StringRef getSimpleName(const NamedDecl &D) {
   return getSimpleName(D.getDeclName());
 }
 llvm::StringRef getSimpleName(QualType T) {
-  if (const auto *ET = llvm::dyn_cast<ElaboratedType>(T))
-    return getSimpleName(ET->getNamedType());
   if (const auto *BT = llvm::dyn_cast<BuiltinType>(T)) {
     PrintingPolicy PP(LangOptions{});
     PP.adjustForCPlusPlus();
@@ -339,53 +342,6 @@ QualType maybeDesugar(ASTContext &AST, QualType QT) {
   return QT;
 }
 
-// Given a callee expression `Fn`, if the call is through a function pointer,
-// try to find the declaration of the corresponding function pointer type,
-// so that we can recover argument names from it.
-// FIXME: This function is mostly duplicated in SemaCodeComplete.cpp; unify.
-static FunctionProtoTypeLoc getPrototypeLoc(Expr *Fn) {
-  TypeLoc Target;
-  Expr *NakedFn = Fn->IgnoreParenCasts();
-  if (const auto *T = NakedFn->getType().getTypePtr()->getAs<TypedefType>()) {
-    Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
-  } else if (const auto *DR = dyn_cast<DeclRefExpr>(NakedFn)) {
-    const auto *D = DR->getDecl();
-    if (const auto *const VD = dyn_cast<VarDecl>(D)) {
-      Target = VD->getTypeSourceInfo()->getTypeLoc();
-    }
-  }
-
-  if (!Target)
-    return {};
-
-  // Unwrap types that may be wrapping the function type
-  while (true) {
-    if (auto P = Target.getAs<PointerTypeLoc>()) {
-      Target = P.getPointeeLoc();
-      continue;
-    }
-    if (auto A = Target.getAs<AttributedTypeLoc>()) {
-      Target = A.getModifiedLoc();
-      continue;
-    }
-    if (auto P = Target.getAs<ParenTypeLoc>()) {
-      Target = P.getInnerLoc();
-      continue;
-    }
-    break;
-  }
-
-  if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {
-    // In some edge cases the AST can contain a "trivial" FunctionProtoTypeLoc
-    // which has null parameters. Avoid these as they don't contain useful
-    // information.
-    if (llvm::all_of(F.getParams(), llvm::identity<ParmVarDecl *>()))
-      return F;
-  }
-
-  return {};
-}
-
 ArrayRef<const ParmVarDecl *>
 maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   if (!Params.empty() && Params.front()->isExplicitObjectParameter())
@@ -514,7 +470,8 @@ public:
       Callee.Decl = FD;
     else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(CalleeDecls[0]))
       Callee.Decl = FTD->getTemplatedDecl();
-    else if (FunctionProtoTypeLoc Loc = getPrototypeLoc(E->getCallee()))
+    else if (FunctionProtoTypeLoc Loc =
+                 Resolver->getFunctionProtoTypeLoc(E->getCallee()))
       Callee.Loc = Loc;
     else
       return true;

@@ -70,8 +70,6 @@ MCRegisterInfo *createHexagonMCRegisterInfo(StringRef TT);
 namespace Hexagon_MC {
   StringRef selectHexagonCPU(StringRef CPU);
 
-  /// Return a set of extra features to set. The returned set is not a
-  /// transitive closure.
   FeatureBitset completeHVXFeatures(const FeatureBitset &FB);
   /// Create a Hexagon MCSubtargetInfo instance. This is exposed so Asm parser,
   /// etc. do not need to go through TargetRegistry.
@@ -84,10 +82,9 @@ namespace Hexagon_MC {
 
   llvm::ArrayRef<MCPhysReg> GetVectRegRev();
 
-  std::optional<unsigned>
-  getArchVersionAttribute(const FeatureBitset &Features);
+  std::optional<unsigned> getHVXVersion(const FeatureBitset &Features);
 
-  std::optional<unsigned> getHVXVersionAttribute(const FeatureBitset &Features);
+  unsigned getArchVersion(const FeatureBitset &Features);
   } // namespace Hexagon_MC
 
 MCCodeEmitter *createHexagonMCCodeEmitter(const MCInstrInfo &MCII,

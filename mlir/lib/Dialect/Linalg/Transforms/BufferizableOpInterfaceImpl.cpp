@@ -8,11 +8,9 @@
 
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
@@ -186,9 +184,9 @@ struct SoftmaxOpInterface
         getBuffer(rewriter, softmaxOp.getOutput(), options, state);
     if (failed(outputBuffer))
       return failure();
-    rewriter.create<linalg::SoftmaxOp>(softmaxOp.getLoc(),
-                                       /*result=*/TypeRange(), *inputBuffer,
-                                       *outputBuffer, softmaxOp.getDimension());
+    linalg::SoftmaxOp::create(rewriter, softmaxOp.getLoc(),
+                              /*result=*/TypeRange(), *inputBuffer,
+                              *outputBuffer, softmaxOp.getDimension());
     replaceOpWithBufferizedValues(rewriter, op, *outputBuffer);
     return success();
   }

@@ -392,6 +392,7 @@ __int64 _InterlockedAdd64_nf(__int64 volatile *, __int64);
 __int64 _InterlockedAdd64_rel(__int64 volatile *, __int64);
 __int64 _ReadStatusReg(int);
 void _WriteStatusReg(int, __int64);
+unsigned int __sys(int, __int64);
 
 unsigned short __cdecl _byteswap_ushort(unsigned short val);
 unsigned long __cdecl _byteswap_ulong (unsigned long val);

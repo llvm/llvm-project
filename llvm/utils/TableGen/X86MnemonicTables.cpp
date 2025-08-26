@@ -40,7 +40,7 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   // Hold all instructions grouped by mnemonic
   StringMap<SmallVector<const CodeGenInstruction *, 0>> MnemonicToCGInstrMap;
 
-  for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue()) {
+  for (const CodeGenInstruction *I : Target.getInstructions()) {
     const Record *Def = I->TheDef;
     // Filter non-X86 instructions.
     if (!Def->isSubClassOf("X86Inst"))

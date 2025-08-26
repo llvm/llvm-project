@@ -8,8 +8,11 @@
 
 #include "Serialize.h"
 #include "BitcodeWriter.h"
+
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
+#include "clang/AST/DeclFriend.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
@@ -403,6 +406,7 @@ std::string serialize(std::unique_ptr<Info> &I) {
     return serialize(*static_cast<ConceptInfo *>(I.get()));
   case InfoType::IT_variable:
     return serialize(*static_cast<VarInfo *>(I.get()));
+  case InfoType::IT_friend:
   case InfoType::IT_typedef:
   case InfoType::IT_default:
     return "";
@@ -491,7 +495,8 @@ static void InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
 
 static void InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
   Scope.Records.emplace_back(Info.USR, Info.Name, InfoType::IT_record,
-                             Info.Name, getInfoRelativePath(Info.Namespace));
+                             Info.Name, getInfoRelativePath(Info.Namespace),
+                             Info.MangledName);
 }
 
 static void InsertChild(ScopeChildren &Scope, EnumInfo Info) {
@@ -556,6 +561,7 @@ static std::unique_ptr<Info> makeAndInsertIntoParent(ChildType Child) {
   case InfoType::IT_typedef:
   case InfoType::IT_concept:
   case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   }
   llvm_unreachable("Invalid reference type for parent namespace");
@@ -763,6 +769,23 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
     I.DefLoc = Loc;
   else
     I.Loc.emplace_back(Loc);
+
+  auto *Mangler = ItaniumMangleContext::create(
+      D->getASTContext(), D->getASTContext().getDiagnostics());
+  std::string MangledName;
+  llvm::raw_string_ostream MangledStream(MangledName);
+  if (auto *CXXD = dyn_cast<CXXRecordDecl>(D))
+    Mangler->mangleCXXVTable(CXXD, MangledStream);
+  else
+    MangledStream << D->getNameAsString();
+  if (MangledName.size() > 255)
+    // File creation fails if the mangled name is too long, so default to the
+    // USR. We should look for a better check since filesystems differ in
+    // maximum filename length
+    I.MangledName = llvm::toStringRef(llvm::toHex(I.USR));
+  else
+    I.MangledName = MangledName;
+  delete Mangler;
 }
 
 static void
@@ -878,9 +901,8 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
   if (!D->isThisDeclarationADefinition())
     return;
   for (const CXXBaseSpecifier &B : D->bases()) {
-    if (const RecordType *Ty = B.getType()->getAs<RecordType>()) {
-      if (const CXXRecordDecl *Base =
-              cast_or_null<CXXRecordDecl>(Ty->getDecl()->getDefinition())) {
+    if (const auto *Base = B.getType()->getAsCXXRecordDecl()) {
+      if (Base->isCompleteDefinition()) {
         // Initialized without USR and name, this will be set in the following
         // if-else stmt.
         BaseRecordInfo BI(
@@ -947,6 +969,55 @@ emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc,
   return {std::move(NSI), makeAndInsertIntoParent<const NamespaceInfo &>(*NSI)};
 }
 
+static void parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
+  if (!D->hasDefinition() || !D->hasFriends())
+    return;
+
+  for (const FriendDecl *FD : D->friends()) {
+    if (FD->isUnsupportedFriend())
+      continue;
+
+    FriendInfo F(InfoType::IT_friend, getUSRForDecl(FD));
+    const auto *ActualDecl = FD->getFriendDecl();
+    if (!ActualDecl) {
+      const auto *FriendTypeInfo = FD->getFriendType();
+      if (!FriendTypeInfo)
+        continue;
+      ActualDecl = FriendTypeInfo->getType()->getAsCXXRecordDecl();
+
+      if (!ActualDecl)
+        continue;
+      F.IsClass = true;
+    }
+
+    if (const auto *ActualTD = dyn_cast_or_null<TemplateDecl>(ActualDecl)) {
+      if (isa<RecordDecl>(ActualTD->getTemplatedDecl()))
+        F.IsClass = true;
+      F.Template.emplace();
+      for (const auto *Param : ActualTD->getTemplateParameters()->asArray())
+        F.Template->Params.emplace_back(
+            getSourceCode(Param, Param->getSourceRange()));
+      ActualDecl = ActualTD->getTemplatedDecl();
+    }
+
+    if (auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(ActualDecl)) {
+      FunctionInfo TempInfo;
+      parseParameters(TempInfo, FuncDecl);
+      F.Params.emplace();
+      F.Params = std::move(TempInfo.Params);
+      F.ReturnType = getTypeInfoForType(FuncDecl->getReturnType(),
+                                        FuncDecl->getLangOpts());
+    }
+
+    F.Ref =
+        Reference(getUSRForDecl(ActualDecl), ActualDecl->getNameAsString(),
+                  InfoType::IT_default, ActualDecl->getQualifiedNameAsString(),
+                  getInfoRelativePath(ActualDecl));
+
+    RI.Friends.push_back(std::move(F));
+  }
+}
+
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly) {
@@ -970,6 +1041,7 @@ emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
     // TODO: remove first call to parseBases, that function should be deleted
     parseBases(*RI, C);
     parseBases(*RI, C, /*IsFileInRootDir=*/true, PublicOnly, /*IsParent=*/true);
+    parseFriends(*RI, C);
   }
   RI->Path = getInfoRelativePath(RI->Namespace);
 

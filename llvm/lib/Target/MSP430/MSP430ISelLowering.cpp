@@ -208,7 +208,6 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
     }
-    setLibcallCallingConv(RTLIB::MUL_I64, CallingConv::MSP430_BUILTIN);
   }
 
   setMinFunctionAlignment(Align(2));
@@ -378,6 +377,7 @@ static void AnalyzeArguments(CCState &State,
   for (unsigned i = 0, e = ArgsParts.size(); i != e; i++) {
     MVT ArgVT = Args[ValNo].VT;
     ISD::ArgFlagsTy ArgFlags = Args[ValNo].Flags;
+    Type *OrigTy = Args[ValNo].OrigTy;
     MVT LocVT = ArgVT;
     CCValAssign::LocInfo LocInfo = CCValAssign::Full;
 
@@ -412,7 +412,8 @@ static void AnalyzeArguments(CCState &State,
       RegsLeft -= 1;
 
       UsedStack = true;
-      CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, State);
+      CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, OrigTy,
+                            State);
     } else if (Parts <= RegsLeft) {
       for (unsigned j = 0; j < Parts; j++) {
         MCRegister Reg = State.AllocateReg(RegList);
@@ -422,7 +423,8 @@ static void AnalyzeArguments(CCState &State,
     } else {
       UsedStack = true;
       for (unsigned j = 0; j < Parts; j++)
-        CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, State);
+        CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, OrigTy,
+                              State);
     }
   }
 }
@@ -768,9 +770,8 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
   // flag operands which copy the outgoing args into registers.  The InGlue in
   // necessary since all emitted instructions must be stuck together.
   SDValue InGlue;
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                             RegsToPass[i].second, InGlue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
 
@@ -790,9 +791,8 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
-                                  RegsToPass[i].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   if (InGlue.getNode())
     Ops.push_back(InGlue);
@@ -1143,9 +1143,6 @@ SDValue MSP430TargetLowering::LowerRETURNADDR(SDValue Op,
                                               SelectionDAG &DAG) const {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);

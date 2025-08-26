@@ -19,7 +19,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -1351,6 +1350,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         isa<ScalableVectorType>(I->getType()))
       break;
 
+    unsigned NumElts = DemandedElts.getBitWidth();
+    bool IsLE = Q.DL.isLittleEndian();
     // Look through a cast from narrow vector elements to wider type.
     // Examples: v4i32 -> v2i64, v3i8 -> v24
     unsigned SubBitWidth = SrcVecTy->getScalarSizeInBits();
@@ -1369,7 +1370,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
       //
       // The known bits of each sub-element are then inserted into place
       // (dependent on endian) to form the full result of known bits.
-      unsigned NumElts = DemandedElts.getBitWidth();
       unsigned SubScale = BitWidth / SubBitWidth;
       APInt SubDemandedElts = APInt::getZero(NumElts * SubScale);
       for (unsigned i = 0; i != NumElts; ++i) {
@@ -1381,8 +1381,30 @@ static void computeKnownBitsFromOperator(const Operator *I,
       for (unsigned i = 0; i != SubScale; ++i) {
         computeKnownBits(I->getOperand(0), SubDemandedElts.shl(i), KnownSrc, Q,
                          Depth + 1);
-        unsigned ShiftElt = Q.DL.isLittleEndian() ? i : SubScale - 1 - i;
+        unsigned ShiftElt = IsLE ? i : SubScale - 1 - i;
         Known.insertBits(KnownSrc, ShiftElt * SubBitWidth);
+      }
+    }
+    // Look through a cast from wider vector elements to narrow type.
+    // Examples: v2i64 -> v4i32
+    if (SubBitWidth % BitWidth == 0) {
+      unsigned SubScale = SubBitWidth / BitWidth;
+      KnownBits KnownSrc(SubBitWidth);
+      APInt SubDemandedElts =
+          APIntOps::ScaleBitMask(DemandedElts, NumElts / SubScale);
+      computeKnownBits(I->getOperand(0), SubDemandedElts, KnownSrc, Q,
+                       Depth + 1);
+
+      Known.Zero.setAllBits();
+      Known.One.setAllBits();
+      for (unsigned i = 0; i != NumElts; ++i) {
+        if (DemandedElts[i]) {
+          unsigned Shifts = IsLE ? i : NumElts - 1 - i;
+          unsigned Offset = (Shifts % SubScale) * BitWidth;
+          Known = Known.intersectWith(KnownSrc.extractBits(BitWidth, Offset));
+          if (Known.isUnknown())
+            break;
+        }
       }
     }
     break;
@@ -3036,14 +3058,12 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return isKnownNonZero(TI->getOperand(0), DemandedElts, Q, Depth);
     break;
 
+  // Iff x - y != 0, then x ^ y != 0
+  // Therefore we can do the same exact checks
+  case Instruction::Xor:
   case Instruction::Sub:
     return isNonZeroSub(DemandedElts, Q, BitWidth, I->getOperand(0),
                         I->getOperand(1), Depth);
-  case Instruction::Xor:
-    // (X ^ (X != 0)) is non zero
-    if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
-      return true;
-    break;
   case Instruction::Or:
     // (X | (X != 0)) is non zero
     if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
@@ -6335,27 +6355,6 @@ llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
   return nullptr;
 }
 
-bool llvm::isGEPBasedOnPointerToString(const GEPOperator *GEP,
-                                       unsigned CharSize) {
-  // Make sure the GEP has exactly three arguments.
-  if (GEP->getNumOperands() != 3)
-    return false;
-
-  // Make sure the index-ee is a pointer to array of \p CharSize integers.
-  // CharSize.
-  ArrayType *AT = dyn_cast<ArrayType>(GEP->getSourceElementType());
-  if (!AT || !AT->getElementType()->isIntegerTy(CharSize))
-    return false;
-
-  // Check to make sure that the first operand of the GEP is an integer and
-  // has value 0 so that we are sure we're indexing into the initializer.
-  const ConstantInt *FirstIdx = dyn_cast<ConstantInt>(GEP->getOperand(1));
-  if (!FirstIdx || !FirstIdx->isZero())
-    return false;
-
-  return true;
-}
-
 // If V refers to an initialized global constant, set Slice either to
 // its initializer if the size of its elements equals ElementSize, or,
 // for ElementSize == 8, to its representation as an array of unsiged
@@ -7394,8 +7393,10 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::fshr:
       case Intrinsic::smax:
       case Intrinsic::smin:
+      case Intrinsic::scmp:
       case Intrinsic::umax:
       case Intrinsic::umin:
+      case Intrinsic::ucmp:
       case Intrinsic::ptrmask:
       case Intrinsic::fptoui_sat:
       case Intrinsic::fptosi_sat:
@@ -7764,7 +7765,7 @@ bool llvm::mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
 
   // The set of all recursive users we've visited (which are assumed to all be
   // poison because of said visit)
-  SmallSet<const Value *, 16> KnownPoison;
+  SmallPtrSet<const Value *, 16> KnownPoison;
   SmallVector<const Instruction*, 16> Worklist;
   Worklist.push_back(Root);
   while (!Worklist.empty()) {
@@ -7879,6 +7880,81 @@ bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,
   llvm_unreachable("Instruction not contained in its own parent basic block.");
 }
 
+bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
+  switch (IID) {
+  // TODO: Add more intrinsics.
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::smul_with_overflow:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::umul_with_overflow:
+    // If an input is a vector containing a poison element, the
+    // two output vectors (calculated results, overflow bits)'
+    // corresponding lanes are poison.
+    return true;
+  case Intrinsic::ctpop:
+  case Intrinsic::ctlz:
+  case Intrinsic::cttz:
+  case Intrinsic::abs:
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+  case Intrinsic::scmp:
+  case Intrinsic::is_fpclass:
+  case Intrinsic::ptrmask:
+  case Intrinsic::ucmp:
+  case Intrinsic::bitreverse:
+  case Intrinsic::bswap:
+  case Intrinsic::sadd_sat:
+  case Intrinsic::ssub_sat:
+  case Intrinsic::sshl_sat:
+  case Intrinsic::uadd_sat:
+  case Intrinsic::usub_sat:
+  case Intrinsic::ushl_sat:
+  case Intrinsic::smul_fix:
+  case Intrinsic::smul_fix_sat:
+  case Intrinsic::umul_fix:
+  case Intrinsic::umul_fix_sat:
+  case Intrinsic::pow:
+  case Intrinsic::powi:
+  case Intrinsic::sin:
+  case Intrinsic::sinh:
+  case Intrinsic::cos:
+  case Intrinsic::cosh:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
+  case Intrinsic::tan:
+  case Intrinsic::tanh:
+  case Intrinsic::asin:
+  case Intrinsic::acos:
+  case Intrinsic::atan:
+  case Intrinsic::atan2:
+  case Intrinsic::canonicalize:
+  case Intrinsic::sqrt:
+  case Intrinsic::exp:
+  case Intrinsic::exp2:
+  case Intrinsic::exp10:
+  case Intrinsic::log:
+  case Intrinsic::log2:
+  case Intrinsic::log10:
+  case Intrinsic::modf:
+  case Intrinsic::floor:
+  case Intrinsic::ceil:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::round:
+  case Intrinsic::roundeven:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool llvm::propagatesPoison(const Use &PoisonOp) {
   const Operator *I = cast<Operator>(PoisonOp.getUser());
   switch (I->getOpcode()) {
@@ -7889,38 +7965,8 @@ bool llvm::propagatesPoison(const Use &PoisonOp) {
   case Instruction::Select:
     return PoisonOp.getOperandNo() == 0;
   case Instruction::Call:
-    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      switch (II->getIntrinsicID()) {
-      // TODO: Add more intrinsics.
-      case Intrinsic::sadd_with_overflow:
-      case Intrinsic::ssub_with_overflow:
-      case Intrinsic::smul_with_overflow:
-      case Intrinsic::uadd_with_overflow:
-      case Intrinsic::usub_with_overflow:
-      case Intrinsic::umul_with_overflow:
-        // If an input is a vector containing a poison element, the
-        // two output vectors (calculated results, overflow bits)'
-        // corresponding lanes are poison.
-        return true;
-      case Intrinsic::ctpop:
-      case Intrinsic::ctlz:
-      case Intrinsic::cttz:
-      case Intrinsic::abs:
-      case Intrinsic::smax:
-      case Intrinsic::smin:
-      case Intrinsic::umax:
-      case Intrinsic::umin:
-      case Intrinsic::bitreverse:
-      case Intrinsic::bswap:
-      case Intrinsic::sadd_sat:
-      case Intrinsic::ssub_sat:
-      case Intrinsic::sshl_sat:
-      case Intrinsic::uadd_sat:
-      case Intrinsic::usub_sat:
-      case Intrinsic::ushl_sat:
-        return true;
-      }
-    }
+    if (auto *II = dyn_cast<IntrinsicInst>(I))
+      return intrinsicPropagatesPoison(II->getIntrinsicID());
     return false;
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -8074,8 +8120,8 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
 
   // Set of instructions that we have proved will yield poison if Inst
   // does.
-  SmallSet<const Value *, 16> YieldsPoison;
-  SmallSet<const BasicBlock *, 4> Visited;
+  SmallPtrSet<const Value *, 16> YieldsPoison;
+  SmallPtrSet<const BasicBlock *, 4> Visited;
 
   YieldsPoison.insert(V);
   Visited.insert(BB);
@@ -9081,7 +9127,8 @@ static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
     return false;
 
   for (unsigned I = 0; I != 2; ++I) {
-    if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I))) {
+    if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
+        Operation && Operation->getNumOperands() >= 2) {
       Value *LHS = Operation->getOperand(0);
       Value *RHS = Operation->getOperand(1);
       if (LHS != PN && RHS != PN)
@@ -9274,9 +9321,9 @@ isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
     return Res;
   if (LPred.hasSameSign() ^ RPred.hasSameSign()) {
     LPred = LPred.hasSameSign() ? ICmpInst::getFlippedSignednessPredicate(LPred)
-                                : static_cast<CmpInst::Predicate>(LPred);
+                                : LPred.dropSameSign();
     RPred = RPred.hasSameSign() ? ICmpInst::getFlippedSignednessPredicate(RPred)
-                                : static_cast<CmpInst::Predicate>(RPred);
+                                : RPred.dropSameSign();
     return CRImpliesPred(ConstantRange::makeAllowedICmpRegion(LPred, LCR),
                          RPred);
   }

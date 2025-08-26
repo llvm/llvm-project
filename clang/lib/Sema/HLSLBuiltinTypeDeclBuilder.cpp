@@ -313,9 +313,6 @@ TemplateParameterListBuilder::finalizeTemplateArgs(ConceptDecl *CD) {
   Builder.Record->getDeclContext()->addDecl(Builder.Template);
   Params.clear();
 
-  QualType T = Builder.Template->getInjectedClassNameSpecialization();
-  T = AST.getInjectedClassNameType(Builder.Record, T);
-
   return Builder;
 }
 
@@ -351,7 +348,7 @@ BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
   ASTContext &AST = DB.SemaRef.getASTContext();
   if (IsCtor) {
     Name = AST.DeclarationNames.getCXXConstructorName(
-        DB.Record->getTypeForDecl()->getCanonicalTypeUnqualified());
+        AST.getCanonicalTagType(DB.Record));
   } else {
     const IdentifierInfo &II =
         AST.Idents.get(NameStr, tok::TokenKind::identifier);
@@ -553,9 +550,9 @@ BuiltinTypeDeclBuilder::BuiltinTypeDeclBuilder(Sema &SemaRef,
     return;
   }
 
-  Record = CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
-                                 SourceLocation(), SourceLocation(), &II,
-                                 PrevDecl, true);
+  Record =
+      CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
+                            SourceLocation(), SourceLocation(), &II, PrevDecl);
   Record->setImplicit(true);
   Record->setLexicalDeclContext(HLSLNamespace);
   Record->setHasExternalLexicalStorage();
@@ -568,18 +565,6 @@ BuiltinTypeDeclBuilder::BuiltinTypeDeclBuilder(Sema &SemaRef,
 BuiltinTypeDeclBuilder::~BuiltinTypeDeclBuilder() {
   if (HLSLNamespace && !Template && Record->getDeclContext() == HLSLNamespace)
     HLSLNamespace->addDecl(Record);
-}
-
-CXXRecordDecl *BuiltinTypeDeclBuilder::finalizeForwardDeclaration() {
-  // Force the QualType to be generated for the record declaration. In most
-  // cases this will happen naturally when something uses the type the
-  // QualType gets lazily created. Unfortunately, with our injected types if a
-  // type isn't used in a translation unit the QualType may not get
-  // automatically generated before a PCH is generated. To resolve this we
-  // just force that the QualType is generated after we create a forward
-  // declaration.
-  (void)Record->getASTContext().getRecordType(Record);
-  return Record;
 }
 
 BuiltinTypeDeclBuilder &
@@ -697,7 +682,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
-  addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+  if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
+    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+
   return *this;
 }
 
@@ -714,7 +701,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   return *this;
 }
 
-FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() {
+FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() const {
   auto I = Fields.find("__handle");
   assert(I != Fields.end() &&
          I->second->getType()->isHLSLAttributedResourceType() &&
@@ -736,6 +723,12 @@ QualType BuiltinTypeDeclBuilder::getHandleElementType() {
     return getFirstTemplateTypeParam();
   // TODO: Should we default to VoidTy? Using `i8` is arguably ambiguous.
   return SemaRef.getASTContext().Char8Ty;
+}
+
+HLSLAttributedResourceType::Attributes
+BuiltinTypeDeclBuilder::getResourceAttrs() const {
+  QualType HandleType = getResourceHandleField()->getType();
+  return cast<HLSLAttributedResourceType>(HandleType)->getAttrs();
 }
 
 // BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::startDefinition() {

@@ -18,7 +18,6 @@
 
 namespace mlir::bufferization {
 struct BufferizationOptions;
-class BufferizationState;
 class BufferLikeType;
 } // namespace mlir::bufferization
 

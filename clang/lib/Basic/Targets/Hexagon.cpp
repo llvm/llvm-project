@@ -18,19 +18,6 @@
 using namespace clang;
 using namespace clang::targets;
 
-namespace {
-
-constexpr llvm::StringLiteral CpuValsTextArray[] = {
-    "hexagonv5",  "hexagonv55",  "hexagonv60",  "hexagonv62", "hexagonv65",
-    "hexagonv66", "hexagonv67",  "hexagonv67t", "hexagonv68", "hexagonv69",
-    "hexagonv71", "hexagonv71t", "hexagonv73",  "hexagonv75", "hexagonv79",
-};
-
-} // namespace
-
-const llvm::ArrayRef<llvm::StringLiteral>
-    HexagonTargetInfo::CpuValsText(CpuValsTextArray);
-
 void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   Builder.defineMacro("__qdsp6__", "1");
@@ -162,7 +149,7 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAudio = true;
   }
   if (CPU.compare("hexagonv68") >= 0) {
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
   }
   return true;
@@ -252,6 +239,22 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
+struct CPUSuffix {
+  llvm::StringLiteral Name;
+  llvm::StringLiteral Suffix;
+};
+
+static constexpr CPUSuffix Suffixes[] = {
+    {{"hexagonv5"}, {"5"}},   {{"hexagonv55"}, {"55"}},
+    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"}, {"62"}},
+    {{"hexagonv65"}, {"65"}}, {{"hexagonv66"}, {"66"}},
+    {{"hexagonv67"}, {"67"}}, {{"hexagonv67t"}, {"67t"}},
+    {{"hexagonv68"}, {"68"}}, {{"hexagonv69"}, {"69"}},
+    {{"hexagonv71"}, {"71"}}, {{"hexagonv71t"}, {"71t"}},
+    {{"hexagonv73"}, {"73"}}, {{"hexagonv75"}, {"75"}},
+    {{"hexagonv79"}, {"79"}},
+};
+
 std::optional<unsigned> HexagonTargetInfo::getHexagonCPURev(StringRef Name) {
   StringRef Arch = Name;
   Arch.consume_front("hexagonv");
@@ -264,10 +267,18 @@ std::optional<unsigned> HexagonTargetInfo::getHexagonCPURev(StringRef Name) {
   return std::nullopt;
 }
 
+const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {
+  const CPUSuffix *Item = llvm::find_if(
+      Suffixes, [Name](const CPUSuffix &S) { return S.Name == Name; });
+  if (Item == std::end(Suffixes))
+    return nullptr;
+  return Item->Suffix.data();
+}
+
 void HexagonTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
-  for (const llvm::StringLiteral &I : CpuValsText)
-    Values.push_back(I);
+  for (const CPUSuffix &Suffix : Suffixes)
+    Values.push_back(Suffix.Name);
 }
 
 llvm::SmallVector<Builtin::InfosShard>

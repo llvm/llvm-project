@@ -1229,6 +1229,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
 // This is an operator-precedence parser to parse a linker
 // script expression.
 Expr ScriptParser::readExpr() {
+  if (atEOF())
+    return []() { return 0; };
   // Our lexer is context-aware. Set the in-expression bit so that
   // they apply different tokenization rules.
   SaveAndRestore saved(lexState, State::Expr);

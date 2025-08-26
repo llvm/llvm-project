@@ -12,7 +12,6 @@
 
 #include "AArch64SelectionDAGInfo.h"
 #include "AArch64MachineFunctionInfo.h"
-#include "AArch64TargetMachine.h"
 
 #define GET_SDNODE_DESC
 #include "AArch64GenSDNodeInfo.inc"
@@ -33,10 +32,29 @@ AArch64SelectionDAGInfo::AArch64SelectionDAGInfo()
 
 void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                                const SDNode *N) const {
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+
 #ifndef NDEBUG
+  // Some additional checks not yet implemented by verifyTargetNode.
+  constexpr MVT FlagsVT = MVT::i32;
   switch (N->getOpcode()) {
-  default:
-    return SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+  case AArch64ISD::SUBS:
+    assert(N->getValueType(1) == FlagsVT);
+    break;
+  case AArch64ISD::ADC:
+  case AArch64ISD::SBC:
+    assert(N->getOperand(2).getValueType() == FlagsVT);
+    break;
+  case AArch64ISD::ADCS:
+  case AArch64ISD::SBCS:
+    assert(N->getValueType(1) == FlagsVT);
+    assert(N->getOperand(2).getValueType() == FlagsVT);
+    break;
+  case AArch64ISD::CSEL:
+  case AArch64ISD::CSINC:
+  case AArch64ISD::BRCOND:
+    assert(N->getOperand(3).getValueType() == FlagsVT);
+    break;
   case AArch64ISD::SADDWT:
   case AArch64ISD::SADDWB:
   case AArch64ISD::UADDWT:
@@ -164,37 +182,25 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
   const AArch64TargetLowering *TLI = STI.getTargetLowering();
-  TargetLowering::ArgListEntry DstEntry;
-  DstEntry.Ty = PointerType::getUnqual(*DAG.getContext());
-  DstEntry.Node = Dst;
   TargetLowering::ArgListTy Args;
-  Args.push_back(DstEntry);
+  Args.emplace_back(Dst, PointerType::getUnqual(*DAG.getContext()));
 
   RTLIB::Libcall NewLC;
   switch (LC) {
   case RTLIB::MEMCPY: {
     NewLC = RTLIB::SC_MEMCPY;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-    Entry.Node = Src;
-    Args.push_back(Entry);
+    Args.emplace_back(Src, PointerType::getUnqual(*DAG.getContext()));
     break;
   }
   case RTLIB::MEMMOVE: {
     NewLC = RTLIB::SC_MEMMOVE;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-    Entry.Node = Src;
-    Args.push_back(Entry);
+    Args.emplace_back(Src, PointerType::getUnqual(*DAG.getContext()));
     break;
   }
   case RTLIB::MEMSET: {
     NewLC = RTLIB::SC_MEMSET;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
-    Src = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
-    Entry.Node = Src;
-    Args.push_back(Entry);
+    Args.emplace_back(DAG.getZExtOrTrunc(Src, DL, MVT::i32),
+                      Type::getInt32Ty(*DAG.getContext()));
     break;
   }
   default:
@@ -203,10 +209,7 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
 
   EVT PointerVT = TLI->getPointerTy(DAG.getDataLayout());
   SDValue Symbol = DAG.getExternalSymbol(TLI->getLibcallName(NewLC), PointerVT);
-  TargetLowering::ArgListEntry SizeEntry;
-  SizeEntry.Node = Size;
-  SizeEntry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
-  Args.push_back(SizeEntry);
+  Args.emplace_back(Size, DAG.getDataLayout().getIntPtrType(*DAG.getContext()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());

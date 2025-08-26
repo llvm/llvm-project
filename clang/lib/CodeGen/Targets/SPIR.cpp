@@ -58,7 +58,7 @@ public:
               const SmallVector<int32_t> *Packoffsets = nullptr) const override;
   llvm::Type *getSPIRVImageTypeFromHLSLResource(
       const HLSLAttributedResourceType::Attributes &attributes,
-      llvm::Type *ElementType, llvm::LLVMContext &Ctx) const;
+      QualType SampledType, CodeGenModule &CGM) const;
   void
   setOCLKernelStubCallingConvention(const FunctionType *&FT) const override;
 };
@@ -118,11 +118,9 @@ ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
   if (!isAggregateTypeForABI(RetTy) || getRecordArgABI(RetTy, getCXXABI()))
     return DefaultABIInfo::classifyReturnType(RetTy);
 
-  if (const RecordType *RT = RetTy->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
-    if (RD->hasFlexibleArrayMember())
-      return DefaultABIInfo::classifyReturnType(RetTy);
-  }
+  if (const auto *RD = RetTy->getAsRecordDecl();
+      RD && RD->hasFlexibleArrayMember())
+    return DefaultABIInfo::classifyReturnType(RetTy);
 
   // TODO: The AMDGPU ABI is non-trivial to represent in SPIR-V; in order to
   // avoid encoding various architecture specific bits here we return everything
@@ -186,11 +184,9 @@ ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                    RAA == CGCXXABI::RAA_DirectInMemory);
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
-    if (RD->hasFlexibleArrayMember())
-      return DefaultABIInfo::classifyArgumentType(Ty);
-  }
+  if (const auto *RD = Ty->getAsRecordDecl();
+      RD && RD->hasFlexibleArrayMember())
+    return DefaultABIInfo::classifyArgumentType(Ty);
 
   return ABIArgInfo::getDirect(CGT.ConvertType(Ty), 0u, nullptr, false);
 }
@@ -322,9 +318,9 @@ static llvm::Type *getSPIRVImageType(llvm::LLVMContext &Ctx, StringRef BaseType,
   // Choose the dimension of the image--this corresponds to the Dim enum in
   // SPIR-V (first integer parameter of OpTypeImage).
   if (OpenCLName.starts_with("image2d"))
-    IntParams[0] = 1; // 1D
+    IntParams[0] = 1;
   else if (OpenCLName.starts_with("image3d"))
-    IntParams[0] = 2; // 2D
+    IntParams[0] = 2;
   else if (OpenCLName == "image1d_buffer")
     IntParams[0] = 5; // Buffer
   else
@@ -421,20 +417,17 @@ static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
     case SpirvOperandKind::ConstantId: {
       llvm::Type *IntegralType =
           CGM.getTypes().ConvertType(Operand.getResultType());
-      llvm::APInt Value = Operand.getValue();
 
-      Result = getInlineSpirvConstant(CGM, IntegralType, Value);
+      Result = getInlineSpirvConstant(CGM, IntegralType, Operand.getValue());
       break;
     }
     case SpirvOperandKind::Literal: {
-      llvm::APInt Value = Operand.getValue();
-      Result = getInlineSpirvConstant(CGM, nullptr, Value);
+      Result = getInlineSpirvConstant(CGM, nullptr, Operand.getValue());
       break;
     }
     case SpirvOperandKind::TypeId: {
       QualType TypeOperand = Operand.getResultType();
-      if (auto *RT = TypeOperand->getAs<RecordType>()) {
-        auto *RD = RT->getDecl();
+      if (const auto *RD = TypeOperand->getAsRecordDecl()) {
         assert(RD->isCompleteDefinition() &&
                "Type completion should have been required in Sema");
 
@@ -487,12 +480,12 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     assert(!ResAttrs.IsROV &&
            "Rasterizer order views not implemented for SPIR-V yet");
 
-    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     if (!ResAttrs.RawBuffer) {
       // convert element type
-      return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);
+      return getSPIRVImageTypeFromHLSLResource(ResAttrs, ContainedTy, CGM);
     }
 
+    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
     uint32_t StorageClass = /* StorageBuffer storage class */ 12;
     bool IsWritable = ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
@@ -520,13 +513,18 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
 }
 
 llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
-    const HLSLAttributedResourceType::Attributes &attributes,
-    llvm::Type *ElementType, llvm::LLVMContext &Ctx) const {
+    const HLSLAttributedResourceType::Attributes &attributes, QualType Ty,
+    CodeGenModule &CGM) const {
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
 
-  if (ElementType->isVectorTy())
-    ElementType = ElementType->getScalarType();
+  Ty = Ty->getCanonicalTypeUnqualified();
+  if (const VectorType *V = dyn_cast<VectorType>(Ty))
+    Ty = V->getElementType();
+  assert(!Ty->isVectorType() && "We still have a vector type.");
 
-  assert((ElementType->isIntegerTy() || ElementType->isFloatingPointTy()) &&
+  llvm::Type *SampledType = CGM.getTypes().ConvertTypeForMem(Ty);
+
+  assert((SampledType->isIntegerTy() || SampledType->isFloatingPointTy()) &&
          "The element type for a SPIR-V resource must be a scalar integer or "
          "floating point type.");
 
@@ -534,6 +532,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   // instruction. See
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpTypeImage.
   SmallVector<unsigned, 6> IntParams(6, 0);
+
+  const char *Name =
+      Ty->isSignedIntegerType() ? "spirv.SignedImage" : "spirv.Image";
 
   // Dim
   // For now we assume everything is a buffer.
@@ -557,7 +558,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   // Setting to unknown for now.
   IntParams[5] = 0;
 
-  return llvm::TargetExtType::get(Ctx, "spirv.Image", {ElementType}, IntParams);
+  llvm::TargetExtType *ImageType =
+      llvm::TargetExtType::get(Ctx, Name, {SampledType}, IntParams);
+  return ImageType;
 }
 
 std::unique_ptr<TargetCodeGenInfo>

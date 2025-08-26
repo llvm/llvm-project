@@ -90,9 +90,9 @@ public:
   void Leave(const parser::OpenMPDeclarativeAssumes &);
   void Enter(const parser::OpenMPBlockConstruct &);
   void Leave(const parser::OpenMPBlockConstruct &);
-  void Leave(const parser::OmpBeginBlockDirective &);
-  void Enter(const parser::OmpEndBlockDirective &);
-  void Leave(const parser::OmpEndBlockDirective &);
+  void Leave(const parser::OmpBeginDirective &);
+  void Enter(const parser::OmpEndDirective &);
+  void Leave(const parser::OmpEndDirective &);
 
   void Enter(const parser::OpenMPSectionsConstruct &);
   void Leave(const parser::OpenMPSectionsConstruct &);
@@ -126,6 +126,8 @@ public:
   void Leave(const parser::OpenMPAllocatorsConstruct &);
   void Enter(const parser::OpenMPRequiresConstruct &);
   void Leave(const parser::OpenMPRequiresConstruct &);
+  void Enter(const parser::OpenMPGroupprivate &);
+  void Leave(const parser::OpenMPGroupprivate &);
   void Enter(const parser::OpenMPThreadprivate &);
   void Leave(const parser::OpenMPThreadprivate &);
 
@@ -162,11 +164,9 @@ public:
 
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
-  bool IsVariableListItem(const Symbol &sym);
-  bool IsExtendedListItem(const Symbol &sym);
-  bool IsCommonBlock(const Symbol &sym);
-  std::optional<bool> IsContiguous(const parser::OmpObject &object);
   void CheckVariableListItem(const SymbolSourceMap &symbols);
+  void CheckDirectiveSpelling(
+      parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
@@ -181,8 +181,8 @@ private:
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
   // specific clause related
-  void CheckAllowedMapTypes(const parser::OmpMapType::Value &,
-      const std::list<parser::OmpMapType::Value> &);
+  void CheckAllowedMapTypes(
+      parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
 
   const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
       const parser::OmpTraitSelector &);
@@ -215,10 +215,6 @@ private:
       typename IterTy = decltype(std::declval<RangeTy>().begin())>
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
-  const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-  const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
-  std::optional<parser::CharBlock> GetObjectSource(
-      const parser::OmpObject &object);
   void CheckDependList(const parser::DataRef &);
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
@@ -228,8 +224,9 @@ private:
       const parser::OmpObject &obj, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
-  void CheckThreadprivateOrDeclareTargetVar(
-      const parser::OmpObjectList &objList);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
   void CheckSymbolNames(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
@@ -248,6 +245,7 @@ private:
       llvmOmpClause clause, const parser::OmpObjectList &ompObjectList);
   bool CheckTargetBlockOnlyTeams(const parser::Block &);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
+  void CheckWorkdistributeBlockStmts(const parser::Block &, parser::CharBlock);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);
@@ -273,8 +271,10 @@ private:
       const evaluate::Assignment &read, parser::CharBlock source);
   void CheckAtomicWriteAssignment(
       const evaluate::Assignment &write, parser::CharBlock source);
-  void CheckAtomicUpdateAssignment(
+  std::optional<evaluate::Assignment> CheckAtomicUpdateAssignment(
       const evaluate::Assignment &update, parser::CharBlock source);
+  std::pair<bool, bool> CheckAtomicUpdateAssignmentRhs(const SomeExpr &atom,
+      const SomeExpr &rhs, parser::CharBlock source, bool suppressDiagnostics);
   void CheckAtomicConditionalUpdateAssignment(const SomeExpr &cond,
       parser::CharBlock condSource, const evaluate::Assignment &assign,
       parser::CharBlock assignSource);
@@ -327,7 +327,6 @@ private:
       const parser::OmpObjectList &ompObjectList);
   void CheckIfContiguous(const parser::OmpObject &object);
   const parser::Name *GetObjectName(const parser::OmpObject &object);
-  const parser::OmpObjectList *GetOmpObjectList(const parser::OmpClause &);
   void CheckPredefinedAllocatorRestriction(const parser::CharBlock &source,
       const parser::OmpObjectList &ompObjectList);
   void CheckPredefinedAllocatorRestriction(

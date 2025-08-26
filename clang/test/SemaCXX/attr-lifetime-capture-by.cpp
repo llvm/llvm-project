@@ -8,7 +8,7 @@ struct S {
 ///////////////////////////
 // Test for valid usages.
 ///////////////////////////
-[[clang::lifetime_capture_by(unknown)]] // expected-error {{'lifetime_capture_by' attribute only applies to parameters and implicit object parameters}}
+[[clang::lifetime_capture_by(unknown)]] // expected-error {{'clang::lifetime_capture_by' attribute only applies to parameters and implicit object parameters}}
 void nonMember(
     const int &x1 [[clang::lifetime_capture_by(s, t)]],
     S &s,

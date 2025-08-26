@@ -1,4 +1,4 @@
-//===-- ProtocolServerMCPTest.cpp -----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,47 +6,61 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
-#include "Plugins/Protocol/MCP/ProtocolServerMCP.h"
-#include "TestingSupport/Host/SocketTestUtilities.h"
+#include "TestingSupport/Host/JSONTransportTestUtilities.h"
+#include "TestingSupport/Host/PipeTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
-#include "lldb/Core/ProtocolServer.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/JSONTransport.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Protocol/MCP/MCPError.h"
+#include "lldb/Protocol/MCP/Protocol.h"
+#include "lldb/Protocol/MCP/Resource.h"
+#include "lldb/Protocol/MCP/Server.h"
+#include "lldb/Protocol/MCP/Tool.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::mcp::protocol;
+using namespace lldb_protocol::mcp;
+using testing::_;
 
 namespace {
-class TestProtocolServerMCP : public lldb_private::mcp::ProtocolServerMCP {
+class TestMCPTransport final : public MCPTransport {
 public:
-  using ProtocolServerMCP::AddNotificationHandler;
-  using ProtocolServerMCP::AddRequestHandler;
-  using ProtocolServerMCP::AddTool;
-  using ProtocolServerMCP::GetSocket;
-  using ProtocolServerMCP::ProtocolServerMCP;
+  TestMCPTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
+      : lldb_protocol::mcp::MCPTransport(in, out, "unittest") {}
+
+  using MCPTransport::Write;
+
+  void Log(llvm::StringRef message) override {
+    log_messages.emplace_back(message);
+  }
+
+  std::vector<std::string> log_messages;
 };
 
-class TestJSONTransport : public lldb_private::JSONRPCTransport {
+class TestServer : public Server {
 public:
-  using JSONRPCTransport::JSONRPCTransport;
-  using JSONRPCTransport::ReadImpl;
-  using JSONRPCTransport::WriteImpl;
+  using Server::Server;
 };
 
 /// Test tool that returns it argument as text.
-class TestTool : public mcp::Tool {
+class TestTool : public Tool {
 public:
-  using mcp::Tool::Tool;
+  using Tool::Tool;
 
-  virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const ToolArguments &args) override {
+  llvm::Expected<TextResult> Call(const ToolArguments &args) override {
     std::string argument;
     if (const json::Object *args_obj =
             std::get<json::Value>(args).getAsObject()) {
@@ -55,199 +69,203 @@ public:
       }
     }
 
-    mcp::protocol::TextResult text_result;
-    text_result.content.emplace_back(mcp::protocol::TextContent{{argument}});
+    TextResult text_result;
+    text_result.content.emplace_back(TextContent{{argument}});
     return text_result;
   }
 };
 
-/// Test tool that returns an error.
-class ErrorTool : public mcp::Tool {
-public:
-  using mcp::Tool::Tool;
+class TestResourceProvider : public ResourceProvider {
+  using ResourceProvider::ResourceProvider;
 
-  virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const ToolArguments &args) override {
+  std::vector<Resource> GetResources() const override {
+    std::vector<Resource> resources;
+
+    Resource resource;
+    resource.uri = "lldb://foo/bar";
+    resource.name = "name";
+    resource.description = "description";
+    resource.mimeType = "application/json";
+
+    resources.push_back(resource);
+    return resources;
+  }
+
+  llvm::Expected<ResourceResult>
+  ReadResource(llvm::StringRef uri) const override {
+    if (uri != "lldb://foo/bar")
+      return llvm::make_error<UnsupportedURI>(uri.str());
+
+    ResourceContents contents;
+    contents.uri = "lldb://foo/bar";
+    contents.mimeType = "application/json";
+    contents.text = "foobar";
+
+    ResourceResult result;
+    result.contents.push_back(contents);
+    return result;
+  }
+};
+
+/// Test tool that returns an error.
+class ErrorTool : public Tool {
+public:
+  using Tool::Tool;
+
+  llvm::Expected<TextResult> Call(const ToolArguments &args) override {
     return llvm::createStringError("error");
   }
 };
 
 /// Test tool that fails but doesn't return an error.
-class FailTool : public mcp::Tool {
+class FailTool : public Tool {
 public:
-  using mcp::Tool::Tool;
+  using Tool::Tool;
 
-  virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const ToolArguments &args) override {
-    mcp::protocol::TextResult text_result;
-    text_result.content.emplace_back(mcp::protocol::TextContent{{"failed"}});
+  llvm::Expected<TextResult> Call(const ToolArguments &args) override {
+    TextResult text_result;
+    text_result.content.emplace_back(TextContent{{"failed"}});
     text_result.isError = true;
     return text_result;
   }
 };
 
-class ProtocolServerMCPTest : public ::testing::Test {
+class ProtocolServerMCPTest : public PipePairTest {
 public:
-  SubsystemRAII<FileSystem, HostInfo, PlatformRemoteMacOSX, Socket> subsystems;
-  DebuggerSP m_debugger_sp;
+  SubsystemRAII<FileSystem, HostInfo, Socket> subsystems;
 
-  lldb::IOObjectSP m_io_sp;
-  std::unique_ptr<TestJSONTransport> m_transport_up;
-  std::unique_ptr<TestProtocolServerMCP> m_server_up;
-
-  static constexpr llvm::StringLiteral k_localhost = "localhost";
+  std::unique_ptr<TestMCPTransport> transport_up;
+  std::unique_ptr<TestServer> server_up;
+  MainLoop loop;
+  MockMessageHandler<Request, Response, Notification> message_handler;
 
   llvm::Error Write(llvm::StringRef message) {
-    return m_transport_up->WriteImpl(llvm::formatv("{0}\n", message).str());
+    llvm::Expected<json::Value> value = json::parse(message);
+    if (!value)
+      return value.takeError();
+    return transport_up->Write(*value);
   }
 
-  llvm::Expected<std::string> Read() {
-    return m_transport_up->ReadImpl(std::chrono::milliseconds(100));
+  /// Run the transport MainLoop and return any messages received.
+  llvm::Error
+  Run(std::chrono::milliseconds timeout = std::chrono::milliseconds(200)) {
+    loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                     timeout);
+    auto handle = transport_up->RegisterMessageHandler(loop, message_handler);
+    if (!handle)
+      return handle.takeError();
+
+    return server_up->Run();
   }
 
-  void SetUp() {
-    // Create a debugger.
-    ArchSpec arch("arm64-apple-macosx-");
-    Platform::SetHostPlatform(
-        PlatformRemoteMacOSX::CreateInstance(true, &arch));
-    m_debugger_sp = Debugger::CreateInstance();
+  void SetUp() override {
+    PipePairTest::SetUp();
 
-    // Create & start the server.
-    ProtocolServer::Connection connection;
-    connection.protocol = Socket::SocketProtocol::ProtocolTcp;
-    connection.name = llvm::formatv("{0}:0", k_localhost).str();
-    m_server_up = std::make_unique<TestProtocolServerMCP>();
-    m_server_up->AddTool(std::make_unique<TestTool>("test", "test tool"));
-    ASSERT_THAT_ERROR(m_server_up->Start(connection), llvm::Succeeded());
+    transport_up = std::make_unique<TestMCPTransport>(
+        std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
+                                     File::eOpenOptionReadOnly,
+                                     NativeFile::Unowned),
+        std::make_shared<NativeFile>(output.GetWriteFileDescriptor(),
+                                     File::eOpenOptionWriteOnly,
+                                     NativeFile::Unowned));
 
-    // Connect to the server over a TCP socket.
-    auto connect_socket_up = std::make_unique<TCPSocket>(true);
-    ASSERT_THAT_ERROR(connect_socket_up
-                          ->Connect(llvm::formatv("{0}:{1}", k_localhost,
-                                                  static_cast<TCPSocket *>(
-                                                      m_server_up->GetSocket())
-                                                      ->GetLocalPortNumber())
-                                        .str())
-                          .ToError(),
-                      llvm::Succeeded());
-
-    // Set up JSON transport for the client.
-    m_io_sp = std::move(connect_socket_up);
-    m_transport_up = std::make_unique<TestJSONTransport>(m_io_sp, m_io_sp);
-  }
-
-  void TearDown() {
-    // Stop the server.
-    ASSERT_THAT_ERROR(m_server_up->Stop(), llvm::Succeeded());
+    server_up = std::make_unique<TestServer>(
+        "lldb-mcp", "0.1.0",
+        std::make_unique<TestMCPTransport>(
+            std::make_shared<NativeFile>(output.GetReadFileDescriptor(),
+                                         File::eOpenOptionReadOnly,
+                                         NativeFile::Unowned),
+            std::make_shared<NativeFile>(input.GetWriteFileDescriptor(),
+                                         File::eOpenOptionWriteOnly,
+                                         NativeFile::Unowned)),
+        loop);
   }
 };
 
 } // namespace
 
-TEST_F(ProtocolServerMCPTest, Intialization) {
+TEST_F(ProtocolServerMCPTest, Initialization) {
   llvm::StringLiteral request =
-      R"json({"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lldb-unit","version":"0.1.0"}},"jsonrpc":"2.0","id":0})json";
+      R"json({"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lldb-unit","version":"0.1.0"}},"jsonrpc":"2.0","id":1})json";
   llvm::StringLiteral response =
-      R"json({"jsonrpc":"2.0","id":0,"result":{"capabilities":{"tools":{"listChanged":true}},"protocolVersion":"2024-11-05","serverInfo":{"name":"lldb-mcp","version":"0.1.0"}}})json";
+      R"json({"id":1,"jsonrpc":"2.0","result":{"capabilities":{"resources":{"listChanged":false,"subscribe":false},"tools":{"listChanged":true}},"protocolVersion":"2024-11-05","serverInfo":{"name":"lldb-mcp","version":"0.1.0"}}})json";
 
-  ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-
-  llvm::Expected<std::string> response_str = Read();
-  ASSERT_THAT_EXPECTED(response_str, llvm::Succeeded());
-
-  llvm::Expected<json::Value> response_json = json::parse(*response_str);
-  ASSERT_THAT_EXPECTED(response_json, llvm::Succeeded());
-
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-
-  EXPECT_EQ(*response_json, *expected_json);
+  ASSERT_THAT_ERROR(Write(request), Succeeded());
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsList) {
+  server_up->AddTool(std::make_unique<TestTool>("test", "test tool"));
+
   llvm::StringLiteral request =
-      R"json({"method":"tools/list","params":{},"jsonrpc":"2.0","id":1})json";
-  llvm::StringLiteral response =
-      R"json( {"id":1,"jsonrpc":"2.0","result":{"tools":[{"description":"test tool","inputSchema":{"type":"object"},"name":"test"},{"description":"List debugger instances with their debugger_id.","inputSchema":{"type":"object"},"name":"lldb_debugger_list"},{"description":"Run an lldb command.","inputSchema":{"properties":{"arguments":{"type":"string"},"debugger_id":{"type":"number"}},"required":["debugger_id"],"type":"object"},"name":"lldb_command"}]}})json";
+      R"json({"method":"tools/list","params":{},"jsonrpc":"2.0","id":"one"})json";
+
+  ToolDefinition test_tool;
+  test_tool.name = "test";
+  test_tool.description = "test tool";
+  test_tool.inputSchema = json::Object{{"type", "object"}};
+
+  Response response;
+  response.id = "one";
+  response.result = json::Object{
+      {"tools", json::Array{std::move(test_tool)}},
+  };
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-
-  llvm::Expected<std::string> response_str = Read();
-  ASSERT_THAT_EXPECTED(response_str, llvm::Succeeded());
-
-  llvm::Expected<json::Value> response_json = json::parse(*response_str);
-  ASSERT_THAT_EXPECTED(response_json, llvm::Succeeded());
-
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-
-  EXPECT_EQ(*response_json, *expected_json);
+  EXPECT_CALL(message_handler, Received(response));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ResourcesList) {
+  server_up->AddResourceProvider(std::make_unique<TestResourceProvider>());
+
   llvm::StringLiteral request =
       R"json({"method":"resources/list","params":{},"jsonrpc":"2.0","id":2})json";
   llvm::StringLiteral response =
-      R"json({"error":{"code":1,"message":"no handler for request: resources/list"},"id":2,"jsonrpc":"2.0"})json";
+      R"json({"id":2,"jsonrpc":"2.0","result":{"resources":[{"description":"description","mimeType":"application/json","name":"name","uri":"lldb://foo/bar"}]}})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-
-  llvm::Expected<std::string> response_str = Read();
-  ASSERT_THAT_EXPECTED(response_str, llvm::Succeeded());
-
-  llvm::Expected<json::Value> response_json = json::parse(*response_str);
-  ASSERT_THAT_EXPECTED(response_json, llvm::Succeeded());
-
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-
-  EXPECT_EQ(*response_json, *expected_json);
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCall) {
+  server_up->AddTool(std::make_unique<TestTool>("test", "test tool"));
+
   llvm::StringLiteral request =
       R"json({"method":"tools/call","params":{"name":"test","arguments":{"arguments":"foo","debugger_id":0}},"jsonrpc":"2.0","id":11})json";
   llvm::StringLiteral response =
       R"json({"id":11,"jsonrpc":"2.0","result":{"content":[{"text":"foo","type":"text"}],"isError":false}})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-
-  llvm::Expected<std::string> response_str = Read();
-  ASSERT_THAT_EXPECTED(response_str, llvm::Succeeded());
-
-  llvm::Expected<json::Value> response_json = json::parse(*response_str);
-  ASSERT_THAT_EXPECTED(response_json, llvm::Succeeded());
-
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-
-  EXPECT_EQ(*response_json, *expected_json);
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCallError) {
-  m_server_up->AddTool(std::make_unique<ErrorTool>("error", "error tool"));
+  server_up->AddTool(std::make_unique<ErrorTool>("error", "error tool"));
 
   llvm::StringLiteral request =
       R"json({"method":"tools/call","params":{"name":"error","arguments":{"arguments":"foo","debugger_id":0}},"jsonrpc":"2.0","id":11})json";
   llvm::StringLiteral response =
-      R"json({"error":{"code":-1,"message":"error"},"id":11,"jsonrpc":"2.0"})json";
+      R"json({"error":{"code":-32603,"message":"error"},"id":11,"jsonrpc":"2.0"})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-
-  llvm::Expected<std::string> response_str = Read();
-  ASSERT_THAT_EXPECTED(response_str, llvm::Succeeded());
-
-  llvm::Expected<json::Value> response_json = json::parse(*response_str);
-  ASSERT_THAT_EXPECTED(response_json, llvm::Succeeded());
-
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-
-  EXPECT_EQ(*response_json, *expected_json);
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, ToolsCallFail) {
-  m_server_up->AddTool(std::make_unique<FailTool>("fail", "fail tool"));
+  server_up->AddTool(std::make_unique<FailTool>("fail", "fail tool"));
 
   llvm::StringLiteral request =
       R"json({"method":"tools/call","params":{"name":"fail","arguments":{"arguments":"foo","debugger_id":0}},"jsonrpc":"2.0","id":11})json";
@@ -255,17 +273,10 @@ TEST_F(ProtocolServerMCPTest, ToolsCallFail) {
       R"json({"id":11,"jsonrpc":"2.0","result":{"content":[{"text":"failed","type":"text"}],"isError":true}})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-
-  llvm::Expected<std::string> response_str = Read();
-  ASSERT_THAT_EXPECTED(response_str, llvm::Succeeded());
-
-  llvm::Expected<json::Value> response_json = json::parse(*response_str);
-  ASSERT_THAT_EXPECTED(response_json, llvm::Succeeded());
-
-  llvm::Expected<json::Value> expected_json = json::parse(response);
-  ASSERT_THAT_EXPECTED(expected_json, llvm::Succeeded());
-
-  EXPECT_EQ(*response_json, *expected_json);
+  llvm::Expected<Response> expected_resp = json::parse<Response>(response);
+  ASSERT_THAT_EXPECTED(expected_resp, llvm::Succeeded());
+  EXPECT_CALL(message_handler, Received(*expected_resp));
+  EXPECT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
@@ -273,20 +284,13 @@ TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
   std::condition_variable cv;
   std::mutex mutex;
 
-  m_server_up->AddNotificationHandler(
+  server_up->AddNotificationHandler(
       "notifications/initialized",
-      [&](const mcp::protocol::Notification &notification) {
-        {
-          std::lock_guard<std::mutex> lock(mutex);
-          handler_called = true;
-        }
-        cv.notify_all();
-      });
+      [&](const Notification &notification) { handler_called = true; });
   llvm::StringLiteral request =
       R"json({"method":"notifications/initialized","jsonrpc":"2.0"})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
-
-  std::unique_lock<std::mutex> lock(mutex);
-  cv.wait(lock, [&] { return handler_called; });
+  EXPECT_THAT_ERROR(Run(), Succeeded());
+  EXPECT_TRUE(handler_called);
 }

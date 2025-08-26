@@ -19,7 +19,7 @@ module m2
   use m1
   type, extends(absBase) :: ext
    contains
-    !WARNING: Override of PRIVATE DEFERRED 'deferredtbp' should appear in its module
+    !WARNING: Override of PRIVATE DEFERRED 'deferredtbp' should appear in its module [-Winaccessible-deferred-override]
     procedure :: deferredTbp => implTbp
   end type
  contains

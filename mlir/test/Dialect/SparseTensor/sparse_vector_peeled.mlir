@@ -23,6 +23,7 @@
 // CHECK-DAG:   %[[c0:.*]] = arith.constant 0 : index
 // CHECK-DAG:   %[[c1:.*]] = arith.constant 1 : index
 // CHECK-DAG:   %[[c16:.*]] = arith.constant 16 : index
+// CHECK-DAG:   %[[mask:.*]] = arith.constant dense<true> : vector<16xi1>
 // CHECK:       %[[p:.*]] = memref.load %{{.*}}[%[[c0]]] : memref<?xi32>
 // CHECK:       %[[a:.*]] = arith.extui %[[p]] : i32 to i64
 // CHECK:       %[[q:.*]] = arith.index_cast %[[a]] : i64 to index
@@ -31,7 +32,6 @@
 // CHECK:       %[[s:.*]] = arith.index_cast %[[b]] : i64 to index
 // CHECK:       %[[boundary:.*]] = affine.apply #[[$map0]]()[%[[q]], %[[s]]]
 // CHECK:       scf.for %[[i:.*]] = %[[q]] to %[[boundary]] step %[[c16]] {
-// CHECK:         %[[mask:.*]] = vector.constant_mask [16] : vector<16xi1>
 // CHECK:         %[[li:.*]] = vector.load %{{.*}}[%[[i]]] : memref<?xi32>, vector<16xi32>
 // CHECK:         %[[zi:.*]] = arith.extui %[[li]] : vector<16xi32> to vector<16xi64>
 // CHECK:         %[[la:.*]] = vector.load %{{.*}}[%[[i]]] : memref<?xf32>, vector<16xf32>

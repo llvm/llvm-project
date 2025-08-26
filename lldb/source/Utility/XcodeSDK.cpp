@@ -243,50 +243,6 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
   return false;
 }
 
-bool XcodeSDK::SupportsSwift() const {
-  XcodeSDK::Info info = Parse();
-  switch (info.type) {
-  case Type::MacOSX:
-    return info.version.empty() || info.version >= llvm::VersionTuple(10, 10);
-  case Type::iPhoneOS:
-  case Type::iPhoneSimulator:
-    return info.version.empty() || info.version >= llvm::VersionTuple(8);
-  case Type::AppleTVSimulator:
-  case Type::AppleTVOS:
-    return info.version.empty() || info.version >= llvm::VersionTuple(9);
-  case Type::WatchSimulator:
-  case Type::watchOS:
-    return info.version.empty() || info.version >= llvm::VersionTuple(2);
-  case Type::XROS:
-  case Type::XRSimulator:
-  case Type::Linux:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool XcodeSDK::SDKSupportsBuiltinModules(const llvm::Triple &target_triple,
-                                         llvm::VersionTuple sdk_version) {
-  using namespace llvm;
-
-  switch (target_triple.getOS()) {
-  case Triple::OSType::MacOSX:
-    return sdk_version >= VersionTuple(15U);
-  case Triple::OSType::IOS:
-    return sdk_version >= VersionTuple(18U);
-  case Triple::OSType::TvOS:
-    return sdk_version >= VersionTuple(18U);
-  case Triple::OSType::WatchOS:
-    return sdk_version >= VersionTuple(11U);
-  case Triple::OSType::XROS:
-    return sdk_version >= VersionTuple(2U);
-  default:
-    // New SDKs support builtin modules from the start.
-    return true;
-  }
-}
-
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
                                   const FileSpec &sdk_path) {
   ConstString last_path_component = sdk_path.GetFilename();

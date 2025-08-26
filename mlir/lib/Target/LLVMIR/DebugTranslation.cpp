@@ -221,7 +221,9 @@ llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
 llvm::DILabel *DebugTranslation::translateImpl(DILabelAttr attr) {
   return llvm::DILabel::get(llvmCtx, translate(attr.getScope()),
                             getMDStringOrNull(attr.getName()),
-                            translate(attr.getFile()), attr.getLine());
+                            translate(attr.getFile()), attr.getLine(),
+                            /*Column=*/0, /*IsArtificial=*/false,
+                            /*CoroSuspendIdx=*/std::nullopt);
 }
 
 llvm::DILexicalBlock *DebugTranslation::translateImpl(DILexicalBlockAttr attr) {

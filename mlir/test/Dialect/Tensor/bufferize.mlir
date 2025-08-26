@@ -615,6 +615,21 @@ func.func @tensor.splat(%f: f32) -> tensor<10x2x4xf32> {
 
 // -----
 
+// CHECK-LABEL:   func @tensor.splat_other(
+// CHECK-SAME:        %[[F:.*]]: !test.memref_element)
+// CHECK-DAG:       %[[ALLOC:.*]] = memref.alloc() {{.*}} : memref<10x2x4x!test.memref_element>
+// CHECK:           %[[ALLOC_T:.*]] = bufferization.to_tensor %[[ALLOC]]
+// CHECK:           %[[MAPPED:.*]] = linalg.map
+// CHECK:                 outs(%[[ALLOC_T]] : tensor<10x2x4x!test.memref_element>)
+// CHECK:             linalg.yield %[[F]]
+// CHECK:           return %[[MAPPED]] : tensor<10x2x4x!test.memref_element>
+func.func @tensor.splat_other(%f: !test.memref_element) -> tensor<10x2x4x!test.memref_element> {
+  %t = tensor.splat %f : tensor<10x2x4x!test.memref_element>
+  return %t : tensor<10x2x4x!test.memref_element>
+}
+
+// -----
+
 // CHECK-LABEL:   func @tensor.concat(
 // CHECK-SAME:        %[[F:.*]]: tensor<8xf32>)
 // CHECK:           %[[F_MEMREF:.*]] = bufferization.to_buffer %[[F]]

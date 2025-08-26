@@ -194,6 +194,14 @@ List only the plugin 'foo' matching a fully qualified name exactly
 
   Options *GetOptions() override { return &m_options; }
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eManagedPluginCompletion, request,
+        nullptr);
+  }
+
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     size_t argc = command.GetArgumentCount();
@@ -293,6 +301,14 @@ public:
     AddSimpleArgumentList(eArgTypeManagedPlugin);
   }
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eManagedPluginCompletion, request,
+        nullptr);
+  }
+
   ~CommandObjectPluginEnable() override = default;
 
 protected:
@@ -307,6 +323,14 @@ public:
       : CommandObjectParsed(interpreter, "plugin disable",
                             "Disable registered LLDB plugins.", nullptr) {
     AddSimpleArgumentList(eArgTypeManagedPlugin);
+  }
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eManagedPluginCompletion, request,
+        nullptr);
   }
 
   ~CommandObjectPluginDisable() override = default;

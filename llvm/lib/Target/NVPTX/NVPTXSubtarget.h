@@ -116,6 +116,8 @@ public:
 
     return HasTcgen05 && PTXVersion >= 86;
   }
+  // f32x2 instructions in Blackwell family
+  bool hasF32x2Instructions() const;
 
   // TMA G2S copy with cta_group::1/2 support
   bool hasCpAsyncBulkTensorCTAGroupSupport() const {

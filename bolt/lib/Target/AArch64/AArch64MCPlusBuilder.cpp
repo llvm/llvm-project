@@ -22,7 +22,6 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
@@ -383,10 +382,9 @@ public:
     // the list of successors of this basic block as appropriate.
 
     // Any of the above code sequences assume the fall-through basic block
-    // is a dead-end BRK instruction (any immediate operand is accepted).
+    // is a dead-end trap instruction.
     const BinaryBasicBlock *BreakBB = BB.getFallthrough();
-    if (!BreakBB || BreakBB->empty() ||
-        BreakBB->front().getOpcode() != AArch64::BRK)
+    if (!BreakBB || BreakBB->empty() || !isTrap(BreakBB->front()))
       return std::nullopt;
 
     // Iterate over the instructions of BB in reverse order, matching opcodes
@@ -1206,8 +1204,7 @@ public:
       OI = Inst.begin() + 2;
     }
 
-    *OI = MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
+    *OI = MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
 
   /// Matches indirect branch patterns in AArch64 related to a jump table (JT),
@@ -1633,8 +1630,7 @@ public:
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                           .addImm(AArch64CC::EQ)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Code;
   }
 
@@ -1656,8 +1652,7 @@ public:
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                           .addImm(AArch64CC::NE)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Code;
   }
 
@@ -1746,6 +1741,34 @@ public:
     Inst.setOpcode(AArch64::HINT);
     Inst.clear();
     Inst.addOperand(MCOperand::createImm(0));
+  }
+
+  bool isTrap(const MCInst &Inst) const override {
+    if (Inst.getOpcode() != AArch64::BRK)
+      return false;
+    // Only match the immediate values that are likely to indicate this BRK
+    // instruction is emitted to terminate the program immediately and not to
+    // be handled by a SIGTRAP handler, for example.
+    switch (Inst.getOperand(0).getImm()) {
+    case 0xc470:
+    case 0xc471:
+    case 0xc472:
+    case 0xc473:
+      // Explicit Pointer Authentication check failed, see
+      // AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue().
+      return true;
+    case 0x1:
+      // __builtin_trap(), as emitted by Clang.
+      return true;
+    case 0x3e8: // decimal 1000
+      // __builtin_trap(), as emitted by GCC.
+      return true;
+    default:
+      // Some constants may indicate intentionally recoverable break-points.
+      // This is the case at least for 0xf000, which is used by
+      // __builtin_debugtrap() supported by Clang.
+      return false;
+    }
   }
 
   bool isStorePair(const MCInst &Inst) const {
@@ -1957,8 +1980,7 @@ public:
     Inst.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-        Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        *Ctx, 0)));
+        Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
     if (IsTailCall)
       convertJmpToTailCall(Inst);
   }
@@ -2228,9 +2250,8 @@ public:
                           MCContext *Ctx) const override {
     Inst.setOpcode(AArch64::B);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-        Inst, MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx),
-        *Ctx, 0)));
+    Inst.addOperand(MCOperand::createExpr(
+        getTargetExprFor(Inst, MCSymbolRefExpr::create(TBB, *Ctx), *Ctx, 0)));
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {
@@ -2562,7 +2583,7 @@ public:
     else if (Fixup.getKind() ==
              MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
       RelType = ELF::R_AARCH64_JUMP26;
-    else if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+    else if (Fixup.isPCRel()) {
       switch (FKI.TargetSize) {
       default:
         return std::nullopt;

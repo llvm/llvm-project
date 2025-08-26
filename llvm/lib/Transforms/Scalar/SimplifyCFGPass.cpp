@@ -194,8 +194,7 @@ static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
     // Calls to experimental_deoptimize must be followed by a return
     // of the value computed by experimental_deoptimize.
     // I.e., we can not change `ret` to `br` for this block.
-    if (auto *CI =
-            dyn_cast_or_null<CallInst>(Term->getPrevNonDebugInstruction())) {
+    if (auto *CI = dyn_cast_or_null<CallInst>(Term->getPrevNode())) {
       if (Function *F = CI->getCalledFunction())
         if (Intrinsic::ID ID = F->getIntrinsicID())
           if (ID == Intrinsic::experimental_deoptimize)

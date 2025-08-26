@@ -6,4 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_DECL _CLC_OVERLOAD size_t get_num_groups(uint dim);
+#ifndef __CLC_OPENCL_WORKITEM_GET_NUM_GROUPS_H__
+#define __CLC_OPENCL_WORKITEM_GET_NUM_GROUPS_H__
+
+#include <clc/opencl/opencl-base.h>
+
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL size_t get_num_groups(uint dim);
+
+#endif // __CLC_OPENCL_WORKITEM_GET_NUM_GROUPS_H__

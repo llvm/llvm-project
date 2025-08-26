@@ -19,7 +19,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -97,7 +96,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
   MCRegister Reg = MI->getOperand(0).getReg();
   auto Name = getSPIRVStringOperand(*MI, 1);
-  auto Set = getExtInstSetFromString(Name);
+  auto Set = getExtInstSetFromString(std::move(Name));
   ExtInstSetIDs.insert({Reg, Set});
 }
 
@@ -211,6 +210,7 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         case SPIRV::OpConstantF:
           // The last fixed operand along with any variadic operands that follow
           // are part of the variable value.
+          assert(NumFixedOps > 0 && "Expected at least one fixed operand");
           printOpConstantVarOps(MI, NumFixedOps - 1, OS);
           break;
         case SPIRV::OpCooperativeMatrixMulAddKHR: {
@@ -369,31 +369,26 @@ void SPIRVInstPrinter::printUnknownType(const MCInst *MI, raw_ostream &O) {
   printRemainingVariableOps(MI, NumFixedOps, O, true);
 }
 
-static void printExpr(const MCExpr *Expr, raw_ostream &O) {
-#ifndef NDEBUG
-  const MCSymbolRefExpr *SRE;
-
-  if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(Expr))
-    SRE = cast<MCSymbolRefExpr>(BE->getLHS());
-  else
-    SRE = cast<MCSymbolRefExpr>(Expr);
-  assert(SRE->getSpecifier() == 0);
-#endif
-  O << *Expr;
-}
-
 void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
       O << '%' << (getIDFromRegister(Op.getReg().id()) + 1);
-    else if (Op.isImm())
-      O << formatImm((int64_t)Op.getImm());
-    else if (Op.isDFPImm())
+    else if (Op.isImm()) {
+      int64_t Imm = Op.getImm();
+      // For OpVectorShuffle:
+      // A Component literal may also be FFFFFFFF, which means the corresponding
+      // result component has no source and is undefined.
+      // LLVM representation of poison/undef becomes -1 when lowered to MI.
+      if (MI->getOpcode() == SPIRV::OpVectorShuffle && Imm == -1)
+        O << "0xFFFFFFFF";
+      else
+        O << formatImm(Imm);
+    } else if (Op.isDFPImm())
       O << formatImm((double)Op.getDFPImm());
     else if (Op.isExpr())
-      printExpr(Op.getExpr(), O);
+      MAI.printExpr(O, *Op.getExpr());
     else
       llvm_unreachable("Unexpected operand type");
   }

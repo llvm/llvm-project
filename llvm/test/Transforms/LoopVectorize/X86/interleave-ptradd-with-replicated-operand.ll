@@ -52,7 +52,6 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[NEXT_GEP13]], i64 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[NEXT_GEP14]], i64 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[NEXT_GEP15]], i64 4
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[NEXT_GEP16]], i64 4
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[TMP27]], i32 -4
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP28]], i32 -4
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP29]], i32 -4
@@ -109,7 +108,7 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[TMP56:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP56]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[M]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL26:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
@@ -126,9 +125,9 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[PTR_IV]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[IV]], 100
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[P_4_LCSSA:%.*]] = phi ptr [ [[P_4]], %[[LOOP]] ], [ [[TMP31]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[P_4_LCSSA:%.*]] = phi ptr [ [[P_4]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret ptr [[P_4_LCSSA]]
 ;
 entry:

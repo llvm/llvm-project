@@ -205,9 +205,8 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
     Builder.SetInsertPoint(Inst);
 
   Value *Offset = EmitGEPOffset(GEP);
-  // If a non-trivial GEP has other uses, rewrite it to avoid duplicating
-  // the offset arithmetic.
-  if (Inst && !GEP->hasOneUse() && !GEP->hasAllConstantIndices() &&
+  // Rewrite non-trivial GEPs to avoid duplicating the offset arithmetic.
+  if (Inst && !GEP->hasAllConstantIndices() &&
       !GEP->getSourceElementType()->isIntegerTy(8)) {
     replaceInstUsesWith(
         *Inst, Builder.CreateGEP(Builder.getInt8Ty(), GEP->getPointerOperand(),
@@ -220,18 +219,64 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
 Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
                                         GEPNoWrapFlags NW, Type *IdxTy,
                                         bool RewriteGEPs) {
-  Value *Sum = nullptr;
-  for (GEPOperator *GEP : reverse(GEPs)) {
-    Value *Offset = EmitGEPOffset(GEP, RewriteGEPs);
-    if (Offset->getType() != IdxTy)
-      Offset = Builder.CreateVectorSplat(
-          cast<VectorType>(IdxTy)->getElementCount(), Offset);
+  auto Add = [&](Value *Sum, Value *Offset) -> Value * {
     if (Sum)
-      Sum = Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
-                              NW.isInBounds());
+      return Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
+                               NW.isInBounds());
     else
-      Sum = Offset;
+      return Offset;
+  };
+
+  Value *Sum = nullptr;
+  Value *OneUseSum = nullptr;
+  Value *OneUseBase = nullptr;
+  GEPNoWrapFlags OneUseFlags = GEPNoWrapFlags::all();
+  for (GEPOperator *GEP : reverse(GEPs)) {
+    Value *Offset;
+    {
+      // Expand the offset at the point of the previous GEP to enable rewriting.
+      // However, use the original insertion point for calculating Sum.
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      auto *Inst = dyn_cast<Instruction>(GEP);
+      if (RewriteGEPs && Inst)
+        Builder.SetInsertPoint(Inst);
+
+      Offset = llvm::emitGEPOffset(&Builder, DL, GEP);
+      if (Offset->getType() != IdxTy)
+        Offset = Builder.CreateVectorSplat(
+            cast<VectorType>(IdxTy)->getElementCount(), Offset);
+      if (GEP->hasOneUse()) {
+        // Offsets of one-use GEPs will be merged into the next multi-use GEP.
+        OneUseSum = Add(OneUseSum, Offset);
+        OneUseFlags = OneUseFlags.intersectForOffsetAdd(GEP->getNoWrapFlags());
+        if (!OneUseBase)
+          OneUseBase = GEP->getPointerOperand();
+        continue;
+      }
+
+      if (OneUseSum)
+        Offset = Add(OneUseSum, Offset);
+
+      // Rewrite the GEP to reuse the computed offset. This also includes
+      // offsets from preceding one-use GEPs.
+      if (RewriteGEPs && Inst &&
+          !(GEP->getSourceElementType()->isIntegerTy(8) &&
+            GEP->getOperand(1) == Offset)) {
+        replaceInstUsesWith(
+            *Inst,
+            Builder.CreatePtrAdd(
+                OneUseBase ? OneUseBase : GEP->getPointerOperand(), Offset, "",
+                OneUseFlags.intersectForOffsetAdd(GEP->getNoWrapFlags())));
+        eraseInstFromFunction(*Inst);
+      }
+    }
+
+    Sum = Add(Sum, Offset);
+    OneUseSum = OneUseBase = nullptr;
+    OneUseFlags = GEPNoWrapFlags::all();
   }
+  if (OneUseSum)
+    Sum = Add(Sum, OneUseSum);
   if (!Sum)
     return Constant::getNullValue(IdxTy);
   return Sum;
@@ -1418,24 +1463,17 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
   }
 
   // Update pre-existing debug value uses.
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
+  llvm::findDbgValues(I, DbgVariableRecords);
 
-  auto InvertDbgValueUse = [&](auto *DbgVal) {
+  for (DbgVariableRecord *DbgVal : DbgVariableRecords) {
     SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_not};
     for (unsigned Idx = 0, End = DbgVal->getNumVariableLocationOps();
          Idx != End; ++Idx)
       if (DbgVal->getVariableLocationOp(Idx) == I)
         DbgVal->setExpression(
             DIExpression::appendOpsToArg(DbgVal->getExpression(), Ops, Idx));
-  };
-
-  for (DbgValueInst *DVI : DbgValues)
-    InvertDbgValueUse(DVI);
-
-  for (DbgVariableRecord *DVR : DbgVariableRecords)
-    InvertDbgValueUse(DVR);
+  }
 }
 
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
@@ -1956,6 +1994,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
       }
       Clone = InsertNewInstBefore(Clone, OpBB->getTerminator()->getIterator());
       Clones.insert({OpBB, Clone});
+      // We may have speculated the instruction.
+      Clone->dropUBImplyingAttrsAndMetadata();
     }
 
     NewPhiValues[OpIndex] = Clone;
@@ -1971,12 +2011,17 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
 
   if (IdenticalUsers) {
-    for (User *U : make_early_inc_range(PN->users())) {
+    // Collect and deduplicate users up-front to avoid iterator invalidation.
+    SmallSetVector<Instruction *, 4> ToReplace;
+    for (User *U : PN->users()) {
       Instruction *User = cast<Instruction>(U);
       if (User == &I)
         continue;
-      replaceInstUsesWith(*User, NewPN);
-      eraseInstFromFunction(*User);
+      ToReplace.insert(User);
+    }
+    for (Instruction *I : ToReplace) {
+      replaceInstUsesWith(*I, NewPN);
+      eraseInstFromFunction(*I);
     }
     OneUse = true;
   }
@@ -1989,7 +2034,114 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
   return replaceInstUsesWith(I, NewPN);
 }
 
+Instruction *InstCombinerImpl::foldBinopWithRecurrence(BinaryOperator &BO) {
+  if (!BO.isAssociative())
+    return nullptr;
+
+  // Find the interleaved binary ops.
+  auto Opc = BO.getOpcode();
+  auto *BO0 = dyn_cast<BinaryOperator>(BO.getOperand(0));
+  auto *BO1 = dyn_cast<BinaryOperator>(BO.getOperand(1));
+  if (!BO0 || !BO1 || !BO0->hasNUses(2) || !BO1->hasNUses(2) ||
+      BO0->getOpcode() != Opc || BO1->getOpcode() != Opc ||
+      !BO0->isAssociative() || !BO1->isAssociative() ||
+      BO0->getParent() != BO1->getParent())
+    return nullptr;
+
+  assert(BO.isCommutative() && BO0->isCommutative() && BO1->isCommutative() &&
+         "Expected commutative instructions!");
+
+  // Find the matching phis, forming the recurrences.
+  PHINode *PN0, *PN1;
+  Value *Start0, *Step0, *Start1, *Step1;
+  if (!matchSimpleRecurrence(BO0, PN0, Start0, Step0) || !PN0->hasOneUse() ||
+      !matchSimpleRecurrence(BO1, PN1, Start1, Step1) || !PN1->hasOneUse() ||
+      PN0->getParent() != PN1->getParent())
+    return nullptr;
+
+  assert(PN0->getNumIncomingValues() == 2 && PN1->getNumIncomingValues() == 2 &&
+         "Expected PHIs with two incoming values!");
+
+  // Convert the start and step values to constants.
+  auto *Init0 = dyn_cast<Constant>(Start0);
+  auto *Init1 = dyn_cast<Constant>(Start1);
+  auto *C0 = dyn_cast<Constant>(Step0);
+  auto *C1 = dyn_cast<Constant>(Step1);
+  if (!Init0 || !Init1 || !C0 || !C1)
+    return nullptr;
+
+  // Fold the recurrence constants.
+  auto *Init = ConstantFoldBinaryInstruction(Opc, Init0, Init1);
+  auto *C = ConstantFoldBinaryInstruction(Opc, C0, C1);
+  if (!Init || !C)
+    return nullptr;
+
+  // Create the reduced PHI.
+  auto *NewPN = PHINode::Create(PN0->getType(), PN0->getNumIncomingValues(),
+                                "reduced.phi");
+
+  // Create the new binary op.
+  auto *NewBO = BinaryOperator::Create(Opc, NewPN, C);
+  if (Opc == Instruction::FAdd || Opc == Instruction::FMul) {
+    // Intersect FMF flags for FADD and FMUL.
+    FastMathFlags Intersect = BO0->getFastMathFlags() &
+                              BO1->getFastMathFlags() & BO.getFastMathFlags();
+    NewBO->setFastMathFlags(Intersect);
+  } else {
+    OverflowTracking Flags;
+    Flags.AllKnownNonNegative = false;
+    Flags.AllKnownNonZero = false;
+    Flags.mergeFlags(*BO0);
+    Flags.mergeFlags(*BO1);
+    Flags.mergeFlags(BO);
+    Flags.applyFlags(*NewBO);
+  }
+  NewBO->takeName(&BO);
+
+  for (unsigned I = 0, E = PN0->getNumIncomingValues(); I != E; ++I) {
+    auto *V = PN0->getIncomingValue(I);
+    auto *BB = PN0->getIncomingBlock(I);
+    if (V == Init0) {
+      assert(((PN1->getIncomingValue(0) == Init1 &&
+               PN1->getIncomingBlock(0) == BB) ||
+              (PN1->getIncomingValue(1) == Init1 &&
+               PN1->getIncomingBlock(1) == BB)) &&
+             "Invalid incoming block!");
+      NewPN->addIncoming(Init, BB);
+    } else if (V == BO0) {
+      assert(((PN1->getIncomingValue(0) == BO1 &&
+               PN1->getIncomingBlock(0) == BB) ||
+              (PN1->getIncomingValue(1) == BO1 &&
+               PN1->getIncomingBlock(1) == BB)) &&
+             "Invalid incoming block!");
+      NewPN->addIncoming(NewBO, BB);
+    } else
+      llvm_unreachable("Unexpected incoming value!");
+  }
+
+  LLVM_DEBUG(dbgs() << "  Combined " << *PN0 << "\n           " << *BO0
+                    << "\n      with " << *PN1 << "\n           " << *BO1
+                    << '\n');
+
+  // Insert the new recurrence and remove the old (dead) ones.
+  InsertNewInstWith(NewPN, PN0->getIterator());
+  InsertNewInstWith(NewBO, BO0->getIterator());
+
+  eraseInstFromFunction(
+      *replaceInstUsesWith(*BO0, PoisonValue::get(BO0->getType())));
+  eraseInstFromFunction(
+      *replaceInstUsesWith(*BO1, PoisonValue::get(BO1->getType())));
+  eraseInstFromFunction(*PN0);
+  eraseInstFromFunction(*PN1);
+
+  return replaceInstUsesWith(BO, NewBO);
+}
+
 Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
+  // Attempt to fold binary operators whose operands are simple recurrences.
+  if (auto *NewBO = foldBinopWithRecurrence(BO))
+    return NewBO;
+
   // TODO: This should be similar to the incoming values check in foldOpIntoPhi:
   //       we are guarding against replicating the binop in >1 predecessor.
   //       This could miss matching a phi with 2 constant incoming values.
@@ -2507,9 +2659,18 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   APInt NewOffset = TypeSize * *C2 + *C1;
   if (NewOffset.isZero() ||
       (Src->hasOneUse() && GEP.getOperand(1)->hasOneUse())) {
+    GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
+    if (GEP.hasNoUnsignedWrap() &&
+        cast<GEPOperator>(Src)->hasNoUnsignedWrap() &&
+        match(GEP.getOperand(1), m_NUWAddLike(m_Value(), m_Value()))) {
+      Flags |= GEPNoWrapFlags::noUnsignedWrap();
+      if (GEP.isInBounds() && cast<GEPOperator>(Src)->isInBounds())
+        Flags |= GEPNoWrapFlags::inBounds();
+    }
+
     Value *GEPConst =
-        IC.Builder.CreatePtrAdd(Base, IC.Builder.getInt(NewOffset));
-    return GetElementPtrInst::Create(BaseType, GEPConst, VarIndex);
+        IC.Builder.CreatePtrAdd(Base, IC.Builder.getInt(NewOffset), "", Flags);
+    return GetElementPtrInst::Create(BaseType, GEPConst, VarIndex, Flags);
   }
 
   return nullptr;
@@ -2631,6 +2792,12 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     Indices.append(Src->op_begin()+1, Src->op_end());
     Indices.append(GEP.idx_begin()+1, GEP.idx_end());
   }
+
+  // Don't create GEPs with more than one variable index.
+  unsigned NumVarIndices =
+      count_if(Indices, [](Value *Idx) { return !isa<Constant>(Idx); });
+  if (NumVarIndices > 1)
+    return nullptr;
 
   if (!Indices.empty())
     return replaceInstUsesWith(
@@ -3031,7 +3198,16 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // If we are using a wider index than needed for this platform, shrink
       // it to what we need.  If narrower, sign-extend it to what we need.
       // This explicit cast can make subsequent optimizations more obvious.
-      *I = Builder.CreateIntCast(*I, NewIndexType, true);
+      if (IndexTy->getScalarSizeInBits() <
+          NewIndexType->getScalarSizeInBits()) {
+        if (GEP.hasNoUnsignedWrap() && GEP.hasNoUnsignedSignedWrap())
+          *I = Builder.CreateZExt(*I, NewIndexType, "", /*IsNonNeg=*/true);
+        else
+          *I = Builder.CreateSExt(*I, NewIndexType);
+      } else {
+        *I = Builder.CreateTrunc(*I, NewIndexType, "", GEP.hasNoUnsignedWrap(),
+                                 GEP.hasNoUnsignedSignedWrap());
+      }
       MadeChange = true;
     }
   }
@@ -3052,6 +3228,14 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *NewGEP =
         Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
     return replaceInstUsesWith(GEP, NewGEP);
+  }
+
+  // Strip trailing zero indices.
+  auto *LastIdx = dyn_cast<Constant>(Indices.back());
+  if (LastIdx && LastIdx->isNullValue() && !LastIdx->getType()->isVectorTy()) {
+    return replaceInstUsesWith(
+        GEP, Builder.CreateGEP(GEP.getSourceElementType(), PtrOp,
+                               drop_end(Indices), "", GEP.getNoWrapFlags()));
   }
 
   // Scalarize vector operands; prefer splat-of-gep.as canonical form.
@@ -3078,6 +3262,30 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       Res = Builder.CreateVectorSplat(EC, Res);
     }
     return replaceInstUsesWith(GEP, Res);
+  }
+
+  bool SeenVarIndex = false;
+  for (auto [IdxNum, Idx] : enumerate(Indices)) {
+    if (isa<Constant>(Idx))
+      continue;
+
+    if (!SeenVarIndex) {
+      SeenVarIndex = true;
+      continue;
+    }
+
+    // GEP has multiple variable indices: Split it.
+    ArrayRef<Value *> FrontIndices = ArrayRef(Indices).take_front(IdxNum);
+    Value *FrontGEP =
+        Builder.CreateGEP(GEPEltType, PtrOp, FrontIndices,
+                          GEP.getName() + ".split", GEP.getNoWrapFlags());
+
+    SmallVector<Value *> BackIndices;
+    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
+    append_range(BackIndices, drop_begin(Indices, IdxNum));
+    return GetElementPtrInst::Create(
+        GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
+        BackIndices, GEP.getNoWrapFlags());
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -3464,11 +3672,10 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
-  SmallVector<DbgVariableIntrinsic *, 8> DVIs;
   SmallVector<DbgVariableRecord *, 8> DVRs;
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
-    findDbgUsers(DVIs, &MI, &DVRs);
+    findDbgUsers(&MI, DVRs);
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
@@ -3538,9 +3745,6 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
                             ConstantInt::get(Type::getInt1Ty(C->getContext()),
                                              C->isFalseWhenEqual()));
       } else if (auto *SI = dyn_cast<StoreInst>(I)) {
-        for (auto *DVI : DVIs)
-          if (DVI->isAddressOfVariable())
-            ConvertDebugDeclareToDebugValue(DVI, SI, *DIB);
         for (auto *DVR : DVRs)
           if (DVR->isAddressOfVariable())
             ConvertDebugDeclareToDebugValue(DVR, SI, *DIB);
@@ -3593,9 +3797,6 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     //
     // FIXME: the Assignment Tracking project has now likely made this
     // redundant (and it's sometimes harmful).
-    for (auto *DVI : DVIs)
-      if (DVI->isAddressOfVariable() || DVI->getExpression()->startsWithDeref())
-        DVI->eraseFromParent();
     for (auto *DVR : DVRs)
       if (DVR->isAddressOfVariable() || DVR->getExpression()->startsWithDeref())
         DVR->eraseFromParent();
@@ -3784,7 +3985,7 @@ bool InstCombinerImpl::removeInstructionsBeforeUnreachable(Instruction &I) {
   // This includes instructions like stores and "llvm.assume" that may not get
   // removed by simple dead code elimination.
   bool Changed = false;
-  while (Instruction *Prev = I.getPrevNonDebugInstruction()) {
+  while (Instruction *Prev = I.getPrevNode()) {
     // While we theoretically can erase EH, that would result in a block that
     // used to start with an EH no longer starting with EH, which is invalid.
     // To make it valid, we'd need to fixup predecessors to no longer refer to
@@ -4760,62 +4961,68 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
 Value *
 InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   // Try to push freeze through instructions that propagate but don't produce
-  // poison as far as possible.  If an operand of freeze follows three
-  // conditions 1) one-use, 2) does not produce poison, and 3) has all but one
-  // guaranteed-non-poison operands then push the freeze through to the one
-  // operand that is not guaranteed non-poison.  The actual transform is as
-  // follows.
-  //   Op1 = ...                        ; Op1 can be posion
-  //   Op0 = Inst(Op1, NonPoisonOps...) ; Op0 has only one use and only have
-  //                                    ; single guaranteed-non-poison operands
+  // poison as far as possible. If an operand of freeze does not produce poison
+  // then push the freeze through to the operands that are not guaranteed
+  // non-poison. The actual transform is as follows.
+  //   Op1 = ...                        ; Op1 can be poison
+  //   Op0 = Inst(Op1, NonPoisonOps...)
   //   ... = Freeze(Op0)
   // =>
   //   Op1 = ...
   //   Op1.fr = Freeze(Op1)
   //   ... = Inst(Op1.fr, NonPoisonOps...)
-  auto *OrigOp = OrigFI.getOperand(0);
-  auto *OrigOpInst = dyn_cast<Instruction>(OrigOp);
 
-  // While we could change the other users of OrigOp to use freeze(OrigOp), that
-  // potentially reduces their optimization potential, so let's only do this iff
-  // the OrigOp is only used by the freeze.
-  if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp))
-    return nullptr;
+  auto CanPushFreeze = [](Value *V) {
+    if (!isa<Instruction>(V) || isa<PHINode>(V))
+      return false;
 
-  // We can't push the freeze through an instruction which can itself create
-  // poison.  If the only source of new poison is flags, we can simply
-  // strip them (since we know the only use is the freeze and nothing can
-  // benefit from them.)
-  if (canCreateUndefOrPoison(cast<Operator>(OrigOp),
-                             /*ConsiderFlagsAndMetadata*/ false))
-    return nullptr;
+    // We can't push the freeze through an instruction which can itself create
+    // poison.  If the only source of new poison is flags, we can simply
+    // strip them (since we know the only use is the freeze and nothing can
+    // benefit from them.)
+    return !canCreateUndefOrPoison(cast<Operator>(V),
+                                   /*ConsiderFlagsAndMetadata*/ false);
+  };
 
-  // If operand is guaranteed not to be poison, there is no need to add freeze
-  // to the operand. So we first find the operand that is not guaranteed to be
-  // poison.
-  Use *MaybePoisonOperand = nullptr;
-  for (Use &U : OrigOpInst->operands()) {
-    if (isa<MetadataAsValue>(U.get()) ||
-        isGuaranteedNotToBeUndefOrPoison(U.get()))
+  // Pushing freezes up long instruction chains can be expensive. Instead,
+  // we directly push the freeze all the way to the leaves. However, we leave
+  // deduplication of freezes on the same value for freezeOtherUses().
+  Use *OrigUse = &OrigFI.getOperandUse(0);
+  SmallPtrSet<Instruction *, 8> Visited;
+  SmallVector<Use *, 8> Worklist;
+  Worklist.push_back(OrigUse);
+  while (!Worklist.empty()) {
+    auto *U = Worklist.pop_back_val();
+    Value *V = U->get();
+    if (!CanPushFreeze(V)) {
+      // If we can't push through the original instruction, abort the transform.
+      if (U == OrigUse)
+        return nullptr;
+
+      auto *UserI = cast<Instruction>(U->getUser());
+      Builder.SetInsertPoint(UserI);
+      Value *Frozen = Builder.CreateFreeze(V, V->getName() + ".fr");
+      U->set(Frozen);
       continue;
-    if (!MaybePoisonOperand)
-      MaybePoisonOperand = &U;
-    else
-      return nullptr;
+    }
+
+    auto *I = cast<Instruction>(V);
+    if (!Visited.insert(I).second)
+      continue;
+
+    // reverse() to emit freezes in a more natural order.
+    for (Use &Op : reverse(I->operands())) {
+      Value *OpV = Op.get();
+      if (isa<MetadataAsValue>(OpV) || isGuaranteedNotToBeUndefOrPoison(OpV))
+        continue;
+      Worklist.push_back(&Op);
+    }
+
+    I->dropPoisonGeneratingAnnotations();
+    this->Worklist.add(I);
   }
 
-  OrigOpInst->dropPoisonGeneratingAnnotations();
-
-  // If all operands are guaranteed to be non-poison, we can drop freeze.
-  if (!MaybePoisonOperand)
-    return OrigOp;
-
-  Builder.SetInsertPoint(OrigOpInst);
-  auto *FrozenMaybePoisonOperand = Builder.CreateFreeze(
-      MaybePoisonOperand->get(), MaybePoisonOperand->get()->getName() + ".fr");
-
-  replaceUse(*MaybePoisonOperand, FrozenMaybePoisonOperand);
-  return OrigOp;
+  return OrigUse->get();
 }
 
 Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
@@ -5146,11 +5353,8 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // maximise the range variables have location for. If we cannot salvage, then
   // mark the location undef: we know it was supposed to receive a new location
   // here, but that computation has been sunk.
-  SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
-  findDbgUsers(DbgUsers, I, &DbgVariableRecords);
-  if (!DbgUsers.empty())
-    tryToSinkInstructionDbgValues(I, InsertPos, SrcBlock, DestBlock, DbgUsers);
+  findDbgUsers(I, DbgVariableRecords);
   if (!DbgVariableRecords.empty())
     tryToSinkInstructionDbgVariableRecords(I, InsertPos, SrcBlock, DestBlock,
                                            DbgVariableRecords);
@@ -5167,71 +5371,12 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   return true;
 }
 
-void InstCombinerImpl::tryToSinkInstructionDbgValues(
-    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
-    BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers) {
-  // For all debug values in the destination block, the sunk instruction
-  // will still be available, so they do not need to be dropped.
-  SmallVector<DbgVariableIntrinsic *, 2> DbgUsersToSalvage;
-  for (auto &DbgUser : DbgUsers)
-    if (DbgUser->getParent() != DestBlock)
-      DbgUsersToSalvage.push_back(DbgUser);
-
-  // Process the sinking DbgUsersToSalvage in reverse order, as we only want
-  // to clone the last appearing debug intrinsic for each given variable.
-  SmallVector<DbgVariableIntrinsic *, 2> DbgUsersToSink;
-  for (DbgVariableIntrinsic *DVI : DbgUsersToSalvage)
-    if (DVI->getParent() == SrcBlock)
-      DbgUsersToSink.push_back(DVI);
-  llvm::sort(DbgUsersToSink,
-             [](auto *A, auto *B) { return B->comesBefore(A); });
-
-  SmallVector<DbgVariableIntrinsic *, 2> DIIClones;
-  SmallSet<DebugVariable, 4> SunkVariables;
-  for (auto *User : DbgUsersToSink) {
-    // A dbg.declare instruction should not be cloned, since there can only be
-    // one per variable fragment. It should be left in the original place
-    // because the sunk instruction is not an alloca (otherwise we could not be
-    // here).
-    if (isa<DbgDeclareInst>(User))
-      continue;
-
-    DebugVariable DbgUserVariable =
-        DebugVariable(User->getVariable(), User->getExpression(),
-                      User->getDebugLoc()->getInlinedAt());
-
-    if (!SunkVariables.insert(DbgUserVariable).second)
-      continue;
-
-    // Leave dbg.assign intrinsics in their original positions and there should
-    // be no need to insert a clone.
-    if (isa<DbgAssignIntrinsic>(User))
-      continue;
-
-    DIIClones.emplace_back(cast<DbgVariableIntrinsic>(User->clone()));
-    if (isa<DbgDeclareInst>(User) && isa<CastInst>(I))
-      DIIClones.back()->replaceVariableLocationOp(I, I->getOperand(0));
-    LLVM_DEBUG(dbgs() << "CLONE: " << *DIIClones.back() << '\n');
-  }
-
-  // Perform salvaging without the clones, then sink the clones.
-  if (!DIIClones.empty()) {
-    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, {});
-    // The clones are in reverse order of original appearance, reverse again to
-    // maintain the original order.
-    for (auto &DIIClone : llvm::reverse(DIIClones)) {
-      DIIClone->insertBefore(InsertPos);
-      LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
-    }
-  }
-}
-
 void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
     Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
     BasicBlock *DestBlock,
     SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
-  // Implementation of tryToSinkInstructionDbgValues, but for the
-  // DbgVariableRecord of variable assignments rather than dbg.values.
+  // For all debug values in the destination block, the sunk instruction
+  // will still be available, so they do not need to be dropped.
 
   // Fetch all DbgVariableRecords not already in the destination.
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecordsToSalvage;
@@ -5336,7 +5481,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
   if (DVRClones.empty())
     return;
 
-  salvageDebugInfoForDbgValues(*I, {}, DbgVariableRecordsToSalvage);
+  salvageDebugInfoForDbgValues(*I, DbgVariableRecordsToSalvage);
 
   // The clones are in reverse order of original appearance. Assert that the
   // head bit is set on the iterator as we _should_ have received it via

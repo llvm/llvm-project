@@ -1412,11 +1412,13 @@ static bool DumpModuleSymbolFile(Stream &strm, Module *module) {
 }
 
 static bool GetSeparateDebugInfoList(StructuredData::Array &list,
-                                     Module *module, bool errors_only) {
+                                     Module *module, bool errors_only,
+                                     bool load_all_debug_info) {
   if (module) {
     if (SymbolFile *symbol_file = module->GetSymbolFile(/*can_create=*/true)) {
       StructuredData::Dictionary d;
-      if (symbol_file->GetSeparateDebugInfo(d, errors_only)) {
+      if (symbol_file->GetSeparateDebugInfo(d, errors_only,
+                                            load_all_debug_info)) {
         list.AddItem(
             std::make_shared<StructuredData::Dictionary>(std::move(d)));
         return true;
@@ -2522,6 +2524,10 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      case 'f':
+        m_load_all_debug_info.SetCurrentValue(true);
+        m_load_all_debug_info.SetOptionWasSet();
+        break;
       case 'j':
         m_json.SetCurrentValue(true);
         m_json.SetOptionWasSet();
@@ -2539,6 +2545,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_json.Clear();
       m_errors_only.Clear();
+      m_load_all_debug_info.Clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2547,6 +2554,7 @@ public:
 
     OptionValueBoolean m_json = false;
     OptionValueBoolean m_errors_only = false;
+    OptionValueBoolean m_load_all_debug_info = false;
   };
 
 protected:
@@ -2578,7 +2586,8 @@ protected:
 
         if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
                                      module_sp.get(),
-                                     bool(m_options.m_errors_only)))
+                                     bool(m_options.m_errors_only),
+                                     bool(m_options.m_load_all_debug_info)))
           num_dumped++;
       }
     } else {
@@ -2599,7 +2608,8 @@ protected:
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
-                                         module, bool(m_options.m_errors_only)))
+                                         module, bool(m_options.m_errors_only),
+                                         bool(m_options.m_load_all_debug_info)))
               num_dumped++;
           }
         } else
@@ -4086,8 +4096,6 @@ protected:
     // Dump all sections for all modules images
 
     if (command.GetArgumentCount() == 0) {
-      ModuleSP current_module;
-
       // Where it is possible to look in the current symbol context first,
       // try that.  If this search was successful and --all was not passed,
       // don't print anything else.
@@ -4110,8 +4118,7 @@ protected:
       }
 
       for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-        if (module_sp != current_module &&
-            LookupInModule(m_interpreter, module_sp.get(), result,
+        if (LookupInModule(m_interpreter, module_sp.get(), result,
                            syntax_error)) {
           result.GetOutputStream().EOL();
           num_successful_lookups++;

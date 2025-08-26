@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -fexceptions -fcxx-exceptions -target-feature +reference-types -target-feature +exception-handling -target-feature +multivalue -exception-model=wasm -emit-llvm -o - %s | FileCheck %s
+// REQUIRES: webassembly-registered-target
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -fexceptions -fcxx-exceptions -target-feature +reference-types -target-feature +exception-handling -target-feature +multivalue -mllvm -wasm-enable-eh -exception-model=wasm -emit-llvm -o - %s | FileCheck %s
 
 // Check if __builtin_wasm_throw and __builtin_wasm_rethrow are correctly
 // invoked when placed in try-catch.

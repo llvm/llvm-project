@@ -13,7 +13,6 @@
 #include "llvm/Support/Format.h"
 #include <cassert>
 #include <cstdint>
-#include <vector>
 
 using namespace llvm;
 using namespace dwarf;

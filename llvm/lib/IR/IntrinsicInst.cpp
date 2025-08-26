@@ -448,6 +448,7 @@ VPIntrinsic::getMemoryPointerParamPos(Intrinsic::ID VPID) {
   case Intrinsic::experimental_vp_strided_store:
     return 1;
   case Intrinsic::vp_load:
+  case Intrinsic::vp_load_ff:
   case Intrinsic::vp_gather:
   case Intrinsic::experimental_vp_strided_load:
     return 0;
@@ -670,6 +671,10 @@ Function *VPIntrinsic::getOrInsertDeclarationForParams(
   case Intrinsic::vp_load:
     VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType()});
+    break;
+  case Intrinsic::vp_load_ff:
+    VPFunc = Intrinsic::getOrInsertDeclaration(
+        M, VPID, {ReturnType->getStructElementType(0), Params[0]->getType()});
     break;
   case Intrinsic::experimental_vp_strided_load:
     VPFunc = Intrinsic::getOrInsertDeclaration(

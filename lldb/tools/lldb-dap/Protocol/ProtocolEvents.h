@@ -41,6 +41,21 @@ struct CapabilitiesEventBody {
 };
 llvm::json::Value toJSON(const CapabilitiesEventBody &);
 
+/// The event indicates that some information about a module has changed.
+struct ModuleEventBody {
+  enum Reason : unsigned { eReasonNew, eReasonChanged, eReasonRemoved };
+
+  /// The new, changed, or removed module. In case of `removed` only the module
+  /// id is used.
+  Module module;
+
+  /// The reason for the event.
+  /// Values: 'new', 'changed', 'removed'
+  Reason reason;
+};
+llvm::json::Value toJSON(const ModuleEventBody::Reason &);
+llvm::json::Value toJSON(const ModuleEventBody &);
+
 } // end namespace lldb_dap::protocol
 
 #endif

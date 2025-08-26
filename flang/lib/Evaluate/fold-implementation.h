@@ -1321,8 +1321,8 @@ public:
               *charLength_, std::move(elements_), ConstantSubscripts{n}}};
         }
       } else {
-        return Expr<T>{
-            Constant<T>{std::move(elements_), ConstantSubscripts{n}}};
+        return Expr<T>{Constant<T>{
+            std::move(elements_), ConstantSubscripts{n}, resultInfo_}};
       }
     }
     return Expr<T>{std::move(array)};
@@ -1342,6 +1342,11 @@ private:
       if constexpr (T::category == TypeCategory::Character) {
         if (!knownCharLength_) {
           charLength_ = std::max(c->LEN(), charLength_.value_or(-1));
+        }
+      } else if constexpr (T::category == TypeCategory::Real ||
+          T::category == TypeCategory::Complex) {
+        if (c->result().isFromInexactLiteralConversion()) {
+          resultInfo_.set_isFromInexactLiteralConversion();
         }
       }
       return true;
@@ -1395,6 +1400,7 @@ private:
   std::vector<Scalar<T>> elements_;
   std::optional<ConstantSubscript> charLength_;
   bool knownCharLength_{false};
+  typename Constant<T>::Result resultInfo_;
 };
 
 template <typename T>
@@ -2192,7 +2198,14 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       }
       return Expr<T>{Constant<T>{power.power}};
     } else {
-      if (auto callable{GetHostRuntimeWrapper<T, T, T>("pow")}) {
+      if (folded->first.IsZero()) {
+        if (folded->second.IsZero()) {
+          context.messages().Say(common::UsageWarning::FoldingException,
+              "REAL/COMPLEX 0**0 is not defined"_warn_en_US);
+        } else {
+          return Expr<T>(Constant<T>{folded->first}); // 0. ** nonzero -> 0.
+        }
+      } else if (auto callable{GetHostRuntimeWrapper<T, T, T>("pow")}) {
         return Expr<T>{
             Constant<T>{(*callable)(context, folded->first, folded->second)}};
       } else if (context.languageFeatures().ShouldWarn(

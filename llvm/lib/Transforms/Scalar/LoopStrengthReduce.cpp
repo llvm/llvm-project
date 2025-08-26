@@ -521,6 +521,8 @@ struct Formula {
 
   bool hasZeroEnd() const;
 
+  bool countsDownToZero() const;
+
   size_t getNumRegs() const;
   Type *getType() const;
 
@@ -703,6 +705,16 @@ bool Formula::hasZeroEnd() const {
   if (BaseRegs.size() != 1 || ScaledReg)
     return false;
   return true;
+}
+
+bool Formula::countsDownToZero() const {
+  if (!hasZeroEnd())
+    return false;
+  assert(BaseRegs.size() == 1 && "hasZeroEnd should mean one BaseReg");
+  const APInt *StepInt;
+  if (!match(BaseRegs[0], m_scev_AffineAddRec(m_SCEV(), m_scev_APInt(StepInt))))
+    return false;
+  return StepInt->isNegative();
 }
 
 /// Return the total number of register operands used by this formula. This does
@@ -923,10 +935,11 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
 /// If S involves the addition of a constant integer value, return that integer
 /// value, and mutate S to point to a new SCEV with that value excluded.
 static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
-  if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S)) {
-    if (C->getAPInt().getSignificantBits() <= 64) {
-      S = SE.getConstant(C->getType(), 0);
-      return Immediate::getFixed(C->getValue()->getSExtValue());
+  const APInt *C;
+  if (match(S, m_scev_APInt(C))) {
+    if (C->getSignificantBits() <= 64) {
+      S = SE.getConstant(S->getType(), 0);
+      return Immediate::getFixed(C->getSExtValue());
     }
   } else if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     SmallVector<const SCEV *, 8> NewOps(Add->operands());
@@ -942,14 +955,10 @@ static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
                            SCEV::FlagAnyWrap);
     return Result;
-  } else if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S)) {
-    if (EnableVScaleImmediates && M->getNumOperands() == 2) {
-      if (const SCEVConstant *C = dyn_cast<SCEVConstant>(M->getOperand(0)))
-        if (isa<SCEVVScale>(M->getOperand(1))) {
-          S = SE.getConstant(M->getType(), 0);
-          return Immediate::getScalable(C->getValue()->getSExtValue());
-        }
-    }
+  } else if (EnableVScaleImmediates &&
+             match(S, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale()))) {
+    S = SE.getConstant(S->getType(), 0);
+    return Immediate::getScalable(C->getSExtValue());
   }
   return Immediate::getZero();
 }
@@ -1133,23 +1142,22 @@ static bool isHighCostExpansion(const SCEV *S,
     return false;
   }
 
-  if (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(S)) {
-    if (Mul->getNumOperands() == 2) {
-      // Multiplication by a constant is ok
-      if (isa<SCEVConstant>(Mul->getOperand(0)))
-        return isHighCostExpansion(Mul->getOperand(1), Processed, SE);
+  const SCEV *Op0, *Op1;
+  if (match(S, m_scev_Mul(m_SCEV(Op0), m_SCEV(Op1)))) {
+    // Multiplication by a constant is ok
+    if (isa<SCEVConstant>(Op0))
+      return isHighCostExpansion(Op1, Processed, SE);
 
-      // If we have the value of one operand, check if an existing
-      // multiplication already generates this expression.
-      if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(Mul->getOperand(1))) {
-        Value *UVal = U->getValue();
-        for (User *UR : UVal->users()) {
-          // If U is a constant, it may be used by a ConstantExpr.
-          Instruction *UI = dyn_cast<Instruction>(UR);
-          if (UI && UI->getOpcode() == Instruction::Mul &&
-              SE.isSCEVable(UI->getType())) {
-            return SE.getSCEV(UI) == Mul;
-          }
+    // If we have the value of one operand, check if an existing
+    // multiplication already generates this expression.
+    if (const auto *U = dyn_cast<SCEVUnknown>(Op1)) {
+      Value *UVal = U->getValue();
+      for (User *UR : UVal->users()) {
+        // If U is a constant, it may be used by a ConstantExpr.
+        Instruction *UI = dyn_cast<Instruction>(UR);
+        if (UI && UI->getOpcode() == Instruction::Mul &&
+            SE.isSCEVable(UI->getType())) {
+          return SE.getSCEV(UI) == S;
         }
       }
     }
@@ -1231,10 +1239,9 @@ public:
     return C.NumRegs == ~0u;
   }
 
-  void RateFormula(const Formula &F,
-                   SmallPtrSetImpl<const SCEV *> &Regs,
-                   const DenseSet<const SCEV *> &VisitedRegs,
-                   const LSRUse &LU,
+  void RateFormula(const Formula &F, SmallPtrSetImpl<const SCEV *> &Regs,
+                   const DenseSet<const SCEV *> &VisitedRegs, const LSRUse &LU,
+                   bool HardwareLoopProfitable,
                    SmallPtrSetImpl<const SCEV *> *LoserRegs = nullptr);
 
   void print(raw_ostream &OS) const;
@@ -1242,9 +1249,11 @@ public:
 
 private:
   void RateRegister(const Formula &F, const SCEV *Reg,
-                    SmallPtrSetImpl<const SCEV *> &Regs);
+                    SmallPtrSetImpl<const SCEV *> &Regs, const LSRUse &LU,
+                    bool HardwareLoopProfitable);
   void RatePrimaryRegister(const Formula &F, const SCEV *Reg,
                            SmallPtrSetImpl<const SCEV *> &Regs,
+                           const LSRUse &LU, bool HardwareLoopProfitable,
                            SmallPtrSetImpl<const SCEV *> *LoserRegs);
 };
 
@@ -1387,7 +1396,8 @@ static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
 
 /// Tally up interesting quantities from the given register.
 void Cost::RateRegister(const Formula &F, const SCEV *Reg,
-                        SmallPtrSetImpl<const SCEV *> &Regs) {
+                        SmallPtrSetImpl<const SCEV *> &Regs, const LSRUse &LU,
+                        bool HardwareLoopProfitable) {
   if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Reg)) {
     // If this is an addrec for another loop, it should be an invariant
     // with respect to L since L is the innermost loop (at least
@@ -1423,13 +1433,18 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
              SE->isLoopInvariant(Start, L)))
           LoopCost = 0;
     }
+    // If the loop counts down to zero and we'll be using a hardware loop then
+    // the addrec will be combined into the hardware loop instruction.
+    if (LU.Kind == LSRUse::ICmpZero && F.countsDownToZero() &&
+        HardwareLoopProfitable)
+      LoopCost = 0;
     C.AddRecCost += LoopCost;
 
     // Add the step value register, if it needs one.
     // TODO: The non-affine case isn't precisely modeled here.
     if (!AR->isAffine() || !isa<SCEVConstant>(AR->getOperand(1))) {
       if (!Regs.count(AR->getOperand(1))) {
-        RateRegister(F, AR->getOperand(1), Regs);
+        RateRegister(F, AR->getOperand(1), Regs, LU, HardwareLoopProfitable);
         if (isLoser())
           return;
       }
@@ -1452,22 +1467,22 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 /// one of those regs an instant loser.
 void Cost::RatePrimaryRegister(const Formula &F, const SCEV *Reg,
                                SmallPtrSetImpl<const SCEV *> &Regs,
+                               const LSRUse &LU, bool HardwareLoopProfitable,
                                SmallPtrSetImpl<const SCEV *> *LoserRegs) {
   if (LoserRegs && LoserRegs->count(Reg)) {
     Lose();
     return;
   }
   if (Regs.insert(Reg).second) {
-    RateRegister(F, Reg, Regs);
+    RateRegister(F, Reg, Regs, LU, HardwareLoopProfitable);
     if (LoserRegs && isLoser())
       LoserRegs->insert(Reg);
   }
 }
 
-void Cost::RateFormula(const Formula &F,
-                       SmallPtrSetImpl<const SCEV *> &Regs,
+void Cost::RateFormula(const Formula &F, SmallPtrSetImpl<const SCEV *> &Regs,
                        const DenseSet<const SCEV *> &VisitedRegs,
-                       const LSRUse &LU,
+                       const LSRUse &LU, bool HardwareLoopProfitable,
                        SmallPtrSetImpl<const SCEV *> *LoserRegs) {
   if (isLoser())
     return;
@@ -1481,7 +1496,8 @@ void Cost::RateFormula(const Formula &F,
       Lose();
       return;
     }
-    RatePrimaryRegister(F, ScaledReg, Regs, LoserRegs);
+    RatePrimaryRegister(F, ScaledReg, Regs, LU, HardwareLoopProfitable,
+                        LoserRegs);
     if (isLoser())
       return;
   }
@@ -1490,7 +1506,8 @@ void Cost::RateFormula(const Formula &F,
       Lose();
       return;
     }
-    RatePrimaryRegister(F, BaseReg, Regs, LoserRegs);
+    RatePrimaryRegister(F, BaseReg, Regs, LU, HardwareLoopProfitable,
+                        LoserRegs);
     if (isLoser())
       return;
   }
@@ -2116,6 +2133,7 @@ class LSRInstance {
   TTI::AddressingModeKind AMK;
   mutable SCEVExpander Rewriter;
   bool Changed = false;
+  bool HardwareLoopProfitable = false;
 
   /// This is the insert position that the current loop's induction variable
   /// increment should be placed. In simple loops, this is the latch block's
@@ -2563,8 +2581,10 @@ ICmpInst *LSRInstance::OptimizeMax(ICmpInst *Cond, IVStrideUse* &CondUse) {
   Instruction *Cmp = cast<Instruction>(Sel->getOperand(0));
   Cond->eraseFromParent();
   Sel->eraseFromParent();
-  if (Cmp->use_empty())
+  if (Cmp->use_empty()) {
+    salvageDebugInfo(*Cmp);
     Cmp->eraseFromParent();
+  }
   return NewCond;
 }
 
@@ -2685,7 +2705,7 @@ LSRInstance::OptimizeLoopTermCond() {
     // It's possible for the setcc instruction to be anywhere in the loop, and
     // possible for it to have multiple users.  If it is not immediately before
     // the exiting block branch, move it.
-    if (Cond->getNextNonDebugInstruction() != TermBr) {
+    if (Cond->getNextNode() != TermBr) {
       if (Cond->hasOneUse()) {
         Cond->moveBefore(TermBr->getIterator());
       } else {
@@ -3333,14 +3353,11 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
     IncOffset = Immediate::getFixed(IncConst->getValue()->getSExtValue());
   } else {
     // Look for mul(vscale, constant), to detect a scalable offset.
-    auto *IncVScale = dyn_cast<SCEVMulExpr>(IncExpr);
-    if (!IncVScale || IncVScale->getNumOperands() != 2 ||
-        !isa<SCEVVScale>(IncVScale->getOperand(1)))
+    const APInt *C;
+    if (!match(IncExpr, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale())) ||
+        C->getSignificantBits() > 64)
       return false;
-    auto *Scale = dyn_cast<SCEVConstant>(IncVScale->getOperand(0));
-    if (!Scale || Scale->getType()->getScalarSizeInBits() > 64)
-      return false;
-    IncOffset = Immediate::getScalable(Scale->getValue()->getSExtValue());
+    IncOffset = Immediate::getScalable(C->getSExtValue());
   }
 
   if (!isAddressUse(TTI, UserInst, Operand))
@@ -3597,7 +3614,8 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     if (!VisitedLSRUse.count(LUIdx) && !LF.isUseFullyOutsideLoop(L)) {
       Formula F;
       F.initialMatch(S, L, SE);
-      BaselineCost.RateFormula(F, Regs, VisitedRegs, LU);
+      BaselineCost.RateFormula(F, Regs, VisitedRegs, LU,
+                               HardwareLoopProfitable);
       VisitedLSRUse.insert(LUIdx);
     }
 
@@ -3767,10 +3785,15 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
         // Ignore icmp instructions which are already being analyzed.
         if (const ICmpInst *ICI = dyn_cast<ICmpInst>(UserInst)) {
           unsigned OtherIdx = !U.getOperandNo();
-          Value *OtherOp = const_cast<Value *>(ICI->getOperand(OtherIdx));
+          Value *OtherOp = ICI->getOperand(OtherIdx);
           if (SE.hasComputableLoopEvolution(SE.getSCEV(OtherOp), L))
             continue;
         }
+
+        // Do not consider uses inside lifetime intrinsics. These are not
+        // actually materialized.
+        if (UserInst->isLifetimeStartOrEnd())
+          continue;
 
         std::pair<size_t, Immediate> P =
             getUse(S, LSRUse::Basic, MemAccessTy());
@@ -3818,6 +3841,8 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
     return nullptr;
   }
   const SCEV *Start, *Step;
+  const SCEVConstant *Op0;
+  const SCEV *Op1;
   if (match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step)))) {
     // Split a non-zero base out of an addrec.
     if (Start->isZero())
@@ -3839,19 +3864,13 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
                               // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
                               SCEV::FlagAnyWrap);
     }
-  } else if (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(S)) {
+  } else if (match(S, m_scev_Mul(m_SCEVConstant(Op0), m_SCEV(Op1)))) {
     // Break (C * (a + b + c)) into C*a + C*b + C*c.
-    if (Mul->getNumOperands() != 2)
-      return S;
-    if (const SCEVConstant *Op0 =
-        dyn_cast<SCEVConstant>(Mul->getOperand(0))) {
-      C = C ? cast<SCEVConstant>(SE.getMulExpr(C, Op0)) : Op0;
-      const SCEV *Remainder =
-        CollectSubexprs(Mul->getOperand(1), C, Ops, L, SE, Depth+1);
-      if (Remainder)
-        Ops.push_back(SE.getMulExpr(C, Remainder));
-      return nullptr;
-    }
+    C = C ? cast<SCEVConstant>(SE.getMulExpr(C, Op0)) : Op0;
+    const SCEV *Remainder = CollectSubexprs(Op1, C, Ops, L, SE, Depth + 1);
+    if (Remainder)
+      Ops.push_back(SE.getMulExpr(C, Remainder));
+    return nullptr;
   }
   return S;
 }
@@ -4739,7 +4758,8 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
       // the corresponding bad register from the Regs set.
       Cost CostF(L, SE, TTI, AMK);
       Regs.clear();
-      CostF.RateFormula(F, Regs, VisitedRegs, LU, &LoserRegs);
+      CostF.RateFormula(F, Regs, VisitedRegs, LU, HardwareLoopProfitable,
+                        &LoserRegs);
       if (CostF.isLoser()) {
         // During initial formula generation, undesirable formulae are generated
         // by uses within other loops that have some non-trivial address mode or
@@ -4772,7 +4792,8 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
 
         Cost CostBest(L, SE, TTI, AMK);
         Regs.clear();
-        CostBest.RateFormula(Best, Regs, VisitedRegs, LU);
+        CostBest.RateFormula(Best, Regs, VisitedRegs, LU,
+                             HardwareLoopProfitable);
         if (CostF.isLess(CostBest))
           std::swap(F, Best);
         LLVM_DEBUG(dbgs() << "  Filtering out formula "; F.print(dbgs());
@@ -5030,9 +5051,9 @@ void LSRInstance::NarrowSearchSpaceByFilterFormulaWithSameScaledReg() {
       Cost CostFA(L, SE, TTI, AMK);
       Cost CostFB(L, SE, TTI, AMK);
       Regs.clear();
-      CostFA.RateFormula(FA, Regs, VisitedRegs, LU);
+      CostFA.RateFormula(FA, Regs, VisitedRegs, LU, HardwareLoopProfitable);
       Regs.clear();
-      CostFB.RateFormula(FB, Regs, VisitedRegs, LU);
+      CostFB.RateFormula(FB, Regs, VisitedRegs, LU, HardwareLoopProfitable);
       return CostFA.isLess(CostFB);
     };
 
@@ -5437,7 +5458,7 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
     // the current best, prune the search at that point.
     NewCost = CurCost;
     NewRegs = CurRegs;
-    NewCost.RateFormula(F, NewRegs, VisitedRegs, LU);
+    NewCost.RateFormula(F, NewRegs, VisitedRegs, LU, HardwareLoopProfitable);
     if (NewCost.isLess(SolutionCost)) {
       Workspace.push_back(&F);
       if (Workspace.size() != Uses.size()) {
@@ -6142,6 +6163,12 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
              L->getHeader()->printAsOperand(dbgs(), /*PrintType=*/false);
              dbgs() << ":\n");
 
+  // Check if we expect this loop to use a hardware loop instruction, which will
+  // be used when calculating the costs of formulas.
+  HardwareLoopInfo HWLoopInfo(L);
+  HardwareLoopProfitable =
+      TTI.isHardwareLoopProfitable(L, SE, AC, &TLI, HWLoopInfo);
+
   // Configure SCEVExpander already now, so the correct mode is used for
   // isSafeToExpand() checks.
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -6479,10 +6506,6 @@ struct SCEVDbgValueBuilder {
   /// Chain (non-affine) SCEVs are not supported.
   bool SCEVToValueExpr(const llvm::SCEVAddRecExpr &SAR, ScalarEvolution &SE) {
     assert(SAR.isAffine() && "Expected affine SCEV");
-    // TODO: Is this check needed?
-    if (isa<SCEVAddRecExpr>(SAR.getStart()))
-      return false;
-
     const SCEV *Start = SAR.getStart();
     const SCEV *Stride = SAR.getStepRecurrence(SE);
 
@@ -6550,11 +6573,6 @@ struct SCEVDbgValueBuilder {
   bool SCEVToIterCountExpr(const llvm::SCEVAddRecExpr &SAR,
                            ScalarEvolution &SE) {
     assert(SAR.isAffine() && "Expected affine SCEV");
-    if (isa<SCEVAddRecExpr>(SAR.getStart())) {
-      LLVM_DEBUG(dbgs() << "scev-salvage: IV SCEV. Unsupported nested AddRec: "
-                        << SAR << '\n');
-      return false;
-    }
     const SCEV *Start = SAR.getStart();
     const SCEV *Stride = SAR.getStepRecurrence(SE);
 
@@ -6617,13 +6635,10 @@ struct SCEVDbgValueBuilder {
 /// Holds all the required data to salvage a dbg.value using the pre-LSR SCEVs
 /// and DIExpression.
 struct DVIRecoveryRec {
-  DVIRecoveryRec(DbgValueInst *DbgValue)
-      : DbgRef(DbgValue), Expr(DbgValue->getExpression()),
-        HadLocationArgList(false) {}
   DVIRecoveryRec(DbgVariableRecord *DVR)
       : DbgRef(DVR), Expr(DVR->getExpression()), HadLocationArgList(false) {}
 
-  PointerUnion<DbgValueInst *, DbgVariableRecord *> DbgRef;
+  DbgVariableRecord *DbgRef;
   DIExpression *Expr;
   bool HadLocationArgList;
   SmallVector<WeakVH, 2> LocationOps;
@@ -6682,44 +6697,38 @@ static void updateDVIWithLocations(T &DbgVal,
 }
 
 /// Write the new expression and new location ops for the dbg.value. If possible
-/// reduce the szie of the dbg.value intrinsic by omitting DIArglist. This
+/// reduce the szie of the dbg.value by omitting DIArglist. This
 /// can be omitted if:
 /// 1. There is only a single location, refenced by a single DW_OP_llvm_arg.
 /// 2. The DW_OP_LLVM_arg is the first operand in the expression.
-static void UpdateDbgValueInst(DVIRecoveryRec &DVIRec,
-                               SmallVectorImpl<Value *> &NewLocationOps,
-                               SmallVectorImpl<uint64_t> &NewExpr) {
-  auto UpdateDbgValueInstImpl = [&](auto *DbgVal) {
-    unsigned NumLLVMArgs = numLLVMArgOps(NewExpr);
-    if (NumLLVMArgs == 0) {
-      // Location assumed to be on the stack.
-      updateDVIWithLocation(*DbgVal, NewLocationOps[0], NewExpr);
-    } else if (NumLLVMArgs == 1 && NewExpr[0] == dwarf::DW_OP_LLVM_arg) {
-      // There is only a single DW_OP_llvm_arg at the start of the expression,
-      // so it can be omitted along with DIArglist.
-      assert(NewExpr[1] == 0 &&
-             "Lone LLVM_arg in a DIExpression should refer to location-op 0.");
-      llvm::SmallVector<uint64_t, 6> ShortenedOps(llvm::drop_begin(NewExpr, 2));
-      updateDVIWithLocation(*DbgVal, NewLocationOps[0], ShortenedOps);
-    } else {
-      // Multiple DW_OP_llvm_arg, so DIArgList is strictly necessary.
-      updateDVIWithLocations(*DbgVal, NewLocationOps, NewExpr);
-    }
+static void UpdateDbgValue(DVIRecoveryRec &DVIRec,
+                           SmallVectorImpl<Value *> &NewLocationOps,
+                           SmallVectorImpl<uint64_t> &NewExpr) {
+  DbgVariableRecord *DbgVal = DVIRec.DbgRef;
+  unsigned NumLLVMArgs = numLLVMArgOps(NewExpr);
+  if (NumLLVMArgs == 0) {
+    // Location assumed to be on the stack.
+    updateDVIWithLocation(*DbgVal, NewLocationOps[0], NewExpr);
+  } else if (NumLLVMArgs == 1 && NewExpr[0] == dwarf::DW_OP_LLVM_arg) {
+    // There is only a single DW_OP_llvm_arg at the start of the expression,
+    // so it can be omitted along with DIArglist.
+    assert(NewExpr[1] == 0 &&
+           "Lone LLVM_arg in a DIExpression should refer to location-op 0.");
+    llvm::SmallVector<uint64_t, 6> ShortenedOps(llvm::drop_begin(NewExpr, 2));
+    updateDVIWithLocation(*DbgVal, NewLocationOps[0], ShortenedOps);
+  } else {
+    // Multiple DW_OP_llvm_arg, so DIArgList is strictly necessary.
+    updateDVIWithLocations(*DbgVal, NewLocationOps, NewExpr);
+  }
 
-    // If the DIExpression was previously empty then add the stack terminator.
-    // Non-empty expressions have only had elements inserted into them and so
-    // the terminator should already be present e.g. stack_value or fragment.
-    DIExpression *SalvageExpr = DbgVal->getExpression();
-    if (!DVIRec.Expr->isComplex() && SalvageExpr->isComplex()) {
-      SalvageExpr =
-          DIExpression::append(SalvageExpr, {dwarf::DW_OP_stack_value});
-      DbgVal->setExpression(SalvageExpr);
-    }
-  };
-  if (isa<DbgValueInst *>(DVIRec.DbgRef))
-    UpdateDbgValueInstImpl(cast<DbgValueInst *>(DVIRec.DbgRef));
-  else
-    UpdateDbgValueInstImpl(cast<DbgVariableRecord *>(DVIRec.DbgRef));
+  // If the DIExpression was previously empty then add the stack terminator.
+  // Non-empty expressions have only had elements inserted into them and so
+  // the terminator should already be present e.g. stack_value or fragment.
+  DIExpression *SalvageExpr = DbgVal->getExpression();
+  if (!DVIRec.Expr->isComplex() && SalvageExpr->isComplex()) {
+    SalvageExpr = DIExpression::append(SalvageExpr, {dwarf::DW_OP_stack_value});
+    DbgVal->setExpression(SalvageExpr);
+  }
 }
 
 /// Cached location ops may be erased during LSR, in which case a poison is
@@ -6733,39 +6742,34 @@ static Value *getValueOrPoison(WeakVH &VH, LLVMContext &C) {
 
 /// Restore the DVI's pre-LSR arguments. Substitute undef for any erased values.
 static void restorePreTransformState(DVIRecoveryRec &DVIRec) {
-  auto RestorePreTransformStateImpl = [&](auto *DbgVal) {
-    LLVM_DEBUG(dbgs() << "scev-salvage: restore dbg.value to pre-LSR state\n"
-                      << "scev-salvage: post-LSR: " << *DbgVal << '\n');
-    assert(DVIRec.Expr && "Expected an expression");
-    DbgVal->setExpression(DVIRec.Expr);
+  DbgVariableRecord *DbgVal = DVIRec.DbgRef;
+  LLVM_DEBUG(dbgs() << "scev-salvage: restore dbg.value to pre-LSR state\n"
+                    << "scev-salvage: post-LSR: " << *DbgVal << '\n');
+  assert(DVIRec.Expr && "Expected an expression");
+  DbgVal->setExpression(DVIRec.Expr);
 
-    // Even a single location-op may be inside a DIArgList and referenced with
-    // DW_OP_LLVM_arg, which is valid only with a DIArgList.
-    if (!DVIRec.HadLocationArgList) {
-      assert(DVIRec.LocationOps.size() == 1 &&
-             "Unexpected number of location ops.");
-      // LSR's unsuccessful salvage attempt may have added DIArgList, which in
-      // this case was not present before, so force the location back to a
-      // single uncontained Value.
-      Value *CachedValue =
-          getValueOrPoison(DVIRec.LocationOps[0], DbgVal->getContext());
-      DbgVal->setRawLocation(ValueAsMetadata::get(CachedValue));
-    } else {
-      SmallVector<ValueAsMetadata *, 3> MetadataLocs;
-      for (WeakVH VH : DVIRec.LocationOps) {
-        Value *CachedValue = getValueOrPoison(VH, DbgVal->getContext());
-        MetadataLocs.push_back(ValueAsMetadata::get(CachedValue));
-      }
-      auto ValArrayRef = llvm::ArrayRef<llvm::ValueAsMetadata *>(MetadataLocs);
-      DbgVal->setRawLocation(
-          llvm::DIArgList::get(DbgVal->getContext(), ValArrayRef));
+  // Even a single location-op may be inside a DIArgList and referenced with
+  // DW_OP_LLVM_arg, which is valid only with a DIArgList.
+  if (!DVIRec.HadLocationArgList) {
+    assert(DVIRec.LocationOps.size() == 1 &&
+           "Unexpected number of location ops.");
+    // LSR's unsuccessful salvage attempt may have added DIArgList, which in
+    // this case was not present before, so force the location back to a
+    // single uncontained Value.
+    Value *CachedValue =
+        getValueOrPoison(DVIRec.LocationOps[0], DbgVal->getContext());
+    DbgVal->setRawLocation(ValueAsMetadata::get(CachedValue));
+  } else {
+    SmallVector<ValueAsMetadata *, 3> MetadataLocs;
+    for (WeakVH VH : DVIRec.LocationOps) {
+      Value *CachedValue = getValueOrPoison(VH, DbgVal->getContext());
+      MetadataLocs.push_back(ValueAsMetadata::get(CachedValue));
     }
-    LLVM_DEBUG(dbgs() << "scev-salvage: pre-LSR: " << *DbgVal << '\n');
-  };
-  if (isa<DbgValueInst *>(DVIRec.DbgRef))
-    RestorePreTransformStateImpl(cast<DbgValueInst *>(DVIRec.DbgRef));
-  else
-    RestorePreTransformStateImpl(cast<DbgVariableRecord *>(DVIRec.DbgRef));
+    auto ValArrayRef = llvm::ArrayRef<llvm::ValueAsMetadata *>(MetadataLocs);
+    DbgVal->setRawLocation(
+        llvm::DIArgList::get(DbgVal->getContext(), ValArrayRef));
+  }
+  LLVM_DEBUG(dbgs() << "scev-salvage: pre-LSR: " << *DbgVal << '\n');
 }
 
 static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
@@ -6773,9 +6777,7 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
                        const SCEV *SCEVInductionVar,
                        SCEVDbgValueBuilder IterCountExpr) {
 
-  if (isa<DbgValueInst *>(DVIRec.DbgRef)
-          ? !cast<DbgValueInst *>(DVIRec.DbgRef)->isKillLocation()
-          : !cast<DbgVariableRecord *>(DVIRec.DbgRef)->isKillLocation())
+  if (!DVIRec.DbgRef->isKillLocation())
     return false;
 
   // LSR may have caused several changes to the dbg.value in the failed salvage
@@ -6869,13 +6871,8 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
     DbgBuilder->appendToVectors(NewExpr, NewLocationOps);
   }
 
-  UpdateDbgValueInst(DVIRec, NewLocationOps, NewExpr);
-  if (isa<DbgValueInst *>(DVIRec.DbgRef))
-    LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: "
-                      << *cast<DbgValueInst *>(DVIRec.DbgRef) << "\n");
-  else
-    LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: "
-                      << *cast<DbgVariableRecord *>(DVIRec.DbgRef) << "\n");
+  UpdateDbgValue(DVIRec, NewLocationOps, NewExpr);
+  LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: " << *DVIRec.DbgRef << "\n");
   return true;
 }
 
@@ -6921,21 +6918,23 @@ static void DbgRewriteSalvageableDVIs(
 /// cacheing and salvaging.
 static void DbgGatherSalvagableDVI(
     Loop *L, ScalarEvolution &SE,
-    SmallVector<std::unique_ptr<DVIRecoveryRec>, 2> &SalvageableDVISCEVs,
-    SmallSet<AssertingVH<DbgValueInst>, 2> &DVIHandles) {
+    SmallVector<std::unique_ptr<DVIRecoveryRec>, 2> &SalvageableDVISCEVs) {
   for (const auto &B : L->getBlocks()) {
     for (auto &I : *B) {
-      auto ProcessDbgValue = [&](auto *DbgVal) -> bool {
+      for (DbgVariableRecord &DbgVal : filterDbgVars(I.getDbgRecordRange())) {
+        if (!DbgVal.isDbgValue() && !DbgVal.isDbgAssign())
+          continue;
+
         // Ensure that if any location op is undef that the dbg.vlue is not
         // cached.
-        if (DbgVal->isKillLocation())
-          return false;
+        if (DbgVal.isKillLocation())
+          continue;
 
         // Check that the location op SCEVs are suitable for translation to
         // DIExpression.
         const auto &HasTranslatableLocationOps =
-            [&](const auto *DbgValToTranslate) -> bool {
-          for (const auto LocOp : DbgValToTranslate->location_ops()) {
+            [&](const DbgVariableRecord &DbgValToTranslate) -> bool {
+          for (const auto LocOp : DbgValToTranslate.location_ops()) {
             if (!LocOp)
               return false;
 
@@ -6950,31 +6949,21 @@ static void DbgGatherSalvagableDVI(
         };
 
         if (!HasTranslatableLocationOps(DbgVal))
-          return false;
+          continue;
 
         std::unique_ptr<DVIRecoveryRec> NewRec =
-            std::make_unique<DVIRecoveryRec>(DbgVal);
+            std::make_unique<DVIRecoveryRec>(&DbgVal);
         // Each location Op may need a SCEVDbgValueBuilder in order to recover
         // it. Pre-allocating a vector will enable quick lookups of the builder
         // later during the salvage.
-        NewRec->RecoveryExprs.resize(DbgVal->getNumVariableLocationOps());
-        for (const auto LocOp : DbgVal->location_ops()) {
+        NewRec->RecoveryExprs.resize(DbgVal.getNumVariableLocationOps());
+        for (const auto LocOp : DbgVal.location_ops()) {
           NewRec->SCEVs.push_back(SE.getSCEV(LocOp));
           NewRec->LocationOps.push_back(LocOp);
-          NewRec->HadLocationArgList = DbgVal->hasArgList();
+          NewRec->HadLocationArgList = DbgVal.hasArgList();
         }
         SalvageableDVISCEVs.push_back(std::move(NewRec));
-        return true;
-      };
-      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
-        if (DVR.isDbgValue() || DVR.isDbgAssign())
-          ProcessDbgValue(&DVR);
       }
-      auto DVI = dyn_cast<DbgValueInst>(&I);
-      if (!DVI)
-        continue;
-      if (ProcessDbgValue(DVI))
-        DVIHandles.insert(DVI);
     }
   }
 }
@@ -7023,8 +7012,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   // Debug preservation - before we start removing anything identify which DVI
   // meet the salvageable criteria and store their DIExpression and SCEVs.
   SmallVector<std::unique_ptr<DVIRecoveryRec>, 2> SalvageableDVIRecords;
-  SmallSet<AssertingVH<DbgValueInst>, 2> DVIHandles;
-  DbgGatherSalvagableDVI(L, SE, SalvageableDVIRecords, DVIHandles);
+  DbgGatherSalvagableDVI(L, SE, SalvageableDVIRecords);
 
   bool Changed = false;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
@@ -7092,7 +7080,6 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   for (auto &Rec : SalvageableDVIRecords)
     Rec->clear();
   SalvageableDVIRecords.clear();
-  DVIHandles.clear();
   return Changed;
 }
 

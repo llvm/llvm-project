@@ -21,7 +21,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 class QualType;
@@ -41,6 +40,7 @@ template <class Emitter> class LoopScope;
 template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
 template <class Emitter> class StmtExprScope;
+template <class Emitter> class LocOverrideScope;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -254,12 +254,10 @@ protected:
   /// If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  std::optional<PrimType> classify(const Expr *E) const {
-    return Ctx.classify(E);
-  }
-  std::optional<PrimType> classify(QualType Ty) const {
-    return Ctx.classify(Ty);
-  }
+  OptPrimType classify(const Expr *E) const { return Ctx.classify(E); }
+  OptPrimType classify(QualType Ty) const { return Ctx.classify(Ty); }
+  bool canClassify(const Expr *E) const { return Ctx.canClassify(E); }
+  bool canClassify(QualType T) const { return Ctx.canClassify(T); }
 
   /// Classifies a known primitive type.
   PrimType classifyPrim(QualType Ty) const {
@@ -284,6 +282,7 @@ protected:
   /// been created. visitInitializer() then relies on a pointer to this
   /// variable being on top of the stack.
   bool visitInitializer(const Expr *E);
+  bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
   /// Just pass evaluation on to \p E. This leaves all the parsing flags
@@ -306,8 +305,9 @@ protected:
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
-                          std::optional<PrimType> InitT);
-  bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl);
+                          OptPrimType InitT);
+  bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl,
+                     bool Activate, bool IsOperatorCall);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
@@ -316,11 +316,11 @@ protected:
                                   bool IsConstexprUnknown = false);
 
   /// Allocates a space storing a local given its type.
-  std::optional<unsigned>
-  allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
-                const ValueDecl *ExtendingDecl = nullptr,
-                ScopeKind = ScopeKind::Block, bool IsConstexprUnknown = false);
-  std::optional<unsigned> allocateTemporary(const Expr *E);
+  UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+                               const ValueDecl *ExtendingDecl = nullptr,
+                               ScopeKind = ScopeKind::Block,
+                               bool IsConstexprUnknown = false);
+  UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
@@ -337,17 +337,20 @@ private:
   friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
   friend class StmtExprScope<Emitter>;
+  friend class LocOverrideScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
   bool visitZeroArrayInitializer(QualType T, const Expr *E);
+  bool visitAssignment(const Expr *LHS, const Expr *RHS, const Expr *E);
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
+  bool emitConst(const llvm::APInt &Value, PrimType Ty, const Expr *E);
   bool emitConst(const llvm::APSInt &Value, const Expr *E);
   bool emitConst(const llvm::APInt &Value, const Expr *E) {
-    return emitConst(static_cast<llvm::APSInt>(Value), E);
+    return emitConst(Value, classifyPrim(E), E);
   }
 
   /// Emits an integer constant.
@@ -403,6 +406,8 @@ private:
   bool checkLiteralType(const Expr *E);
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
+  bool refersToUnion(const Expr *E);
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;
@@ -423,6 +428,7 @@ protected:
   bool DiscardResult = false;
 
   bool InStmtExpr = false;
+  bool ToLValue = false;
 
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
@@ -433,7 +439,7 @@ protected:
   bool InitStackActive = false;
 
   /// Type of the expression returned by the function.
-  std::optional<PrimType> ReturnType;
+  OptPrimType ReturnType;
 
   /// Switch case mapping.
   CaseMap CaseLabels;
@@ -448,6 +454,8 @@ protected:
   OptLabelTy ContinueLabel;
   /// Default case label.
   OptLabelTy DefaultLabel;
+
+  const FunctionDecl *CompilingFunction = nullptr;
 };
 
 extern template class Compiler<ByteCodeEmitter>;
@@ -560,7 +568,7 @@ public:
 
   void addLocal(const Scope::Local &Local) override {
     if (!Idx) {
-      Idx = this->Ctx->Descriptors.size();
+      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
       this->Ctx->emitInitScope(*Idx, {});
     }
@@ -574,17 +582,17 @@ public:
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : llvm::reverse(this->Ctx->Descriptors[*Idx])) {
-      if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
-        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
-          return false;
+      if (Local.Desc->hasTrivialDtor())
+        continue;
+      if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
+        return false;
 
-        if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
-          return false;
+      if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
+        return false;
 
-        if (!this->Ctx->emitPopPtr(E))
-          return false;
-        removeIfStoredOpaqueValue(Local);
-      }
+      if (!this->Ctx->emitPopPtr(E))
+        return false;
+      removeIfStoredOpaqueValue(Local);
     }
     return true;
   }
@@ -608,7 +616,7 @@ public:
   }
 
   /// Index of the scope in the chain.
-  std::optional<unsigned> Idx;
+  UnsignedOrNone Idx = std::nullopt;
 };
 
 /// Scope for storage declared in a compound statement.
