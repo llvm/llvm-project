@@ -31,6 +31,50 @@
 namespace llvm {
 namespace mca {
 
+// This class provides the callbacks that occur when parsing input assembly.
+class MCStreamerWrapper : public MCStreamer {
+protected:
+  CodeRegions &Regions;
+  std::optional<InstAnnotation> CurrentAnnotation;
+
+public:
+  MCStreamerWrapper(MCContext &Context, mca::CodeRegions &R)
+      : MCStreamer(Context), Regions(R) {}
+
+  // We only want to intercept the emission of new instructions.
+  void emitInstruction(const MCInst &Inst,
+                       const MCSubtargetInfo & /* unused */) override {
+    Regions.addInstruction(Inst);
+    if (CurrentAnnotation) {
+      Regions.Annotate(Inst.getLoc(), *CurrentAnnotation);
+      CurrentAnnotation = {};
+    }
+  }
+
+  void AddLatencyAnnotation(unsigned Lat) {
+    if (!CurrentAnnotation) CurrentAnnotation = InstAnnotation();
+    CurrentAnnotation->Latency = Lat;
+  }
+
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
+    return true;
+  }
+
+  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                        Align ByteAlignment) override {}
+  void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
+                    uint64_t Size = 0, Align ByteAlignment = Align(1),
+                    SMLoc Loc = SMLoc()) override {}
+  void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
+  void emitCOFFSymbolStorageClass(int StorageClass) override {}
+  void emitCOFFSymbolType(int Type) override {}
+  void endCOFFSymbolDef() override {}
+
+  ArrayRef<MCInst> GetInstructionSequence(unsigned Index) const {
+    return Regions.getInstructionSequence(Index);
+  }
+};
+
 class MCACommentConsumer : public AsmCommentConsumer {
 protected:
   bool FoundError = false;
@@ -44,9 +88,10 @@ public:
 /// A comment consumer that parses strings.  The only valid tokens are strings.
 class AnalysisRegionCommentConsumer : public MCACommentConsumer {
   AnalysisRegions &Regions;
+  MCStreamerWrapper &Streamer;
 
 public:
-  AnalysisRegionCommentConsumer(AnalysisRegions &R) : Regions(R) {}
+  AnalysisRegionCommentConsumer(AnalysisRegions &R, MCStreamerWrapper &S) : Regions(R), Streamer(S) {}
 
   /// Parses a comment. It begins a new region if it is of the form
   /// LLVM-MCA-BEGIN. It ends a region if it is of the form LLVM-MCA-END.
@@ -80,40 +125,6 @@ public:
   void HandleComment(SMLoc Loc, StringRef CommentText) override;
 
   InstrumentManager &getInstrumentManager() { return IM; }
-};
-
-// This class provides the callbacks that occur when parsing input assembly.
-class MCStreamerWrapper : public MCStreamer {
-protected:
-  CodeRegions &Regions;
-
-public:
-  MCStreamerWrapper(MCContext &Context, mca::CodeRegions &R)
-      : MCStreamer(Context), Regions(R) {}
-
-  // We only want to intercept the emission of new instructions.
-  void emitInstruction(const MCInst &Inst,
-                       const MCSubtargetInfo & /* unused */) override {
-    Regions.addInstruction(Inst);
-  }
-
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
-    return true;
-  }
-
-  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        Align ByteAlignment) override {}
-  void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, Align ByteAlignment = Align(1),
-                    SMLoc Loc = SMLoc()) override {}
-  void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
-  void emitCOFFSymbolStorageClass(int StorageClass) override {}
-  void emitCOFFSymbolType(int Type) override {}
-  void endCOFFSymbolDef() override {}
-
-  ArrayRef<MCInst> GetInstructionSequence(unsigned Index) const {
-    return Regions.getInstructionSequence(Index);
-  }
 };
 
 class InstrumentMCStreamer : public MCStreamerWrapper {
@@ -210,15 +221,15 @@ public:
 
 class AsmAnalysisRegionGenerator final : public AnalysisRegionGenerator,
                                          public AsmCodeRegionGenerator {
-  AnalysisRegionCommentConsumer CC;
   MCStreamerWrapper Streamer;
+  AnalysisRegionCommentConsumer CC;
 
 public:
   AsmAnalysisRegionGenerator(const Target &T, llvm::SourceMgr &SM, MCContext &C,
                              const MCAsmInfo &A, const MCSubtargetInfo &S,
                              const MCInstrInfo &I)
       : AnalysisRegionGenerator(SM), AsmCodeRegionGenerator(T, C, A, S, I),
-        CC(Regions), Streamer(Ctx, Regions) {}
+        Streamer(Ctx, Regions), CC(Regions, Streamer) {}
 
   MCACommentConsumer *getCommentConsumer() override { return &CC; };
   CodeRegions &getRegions() override { return Regions; };

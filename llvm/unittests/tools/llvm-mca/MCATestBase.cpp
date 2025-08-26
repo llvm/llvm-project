@@ -61,7 +61,8 @@ void MCATestBase::SetUp() {
 
 Error MCATestBase::runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
                                   ArrayRef<mca::View *> Views,
-                                  const mca::PipelineOptions *PO) {
+                                  const mca::PipelineOptions *PO,
+                                  Builder B) {
   mca::Context MCA(*MRI, *STI);
 
   // Default InstrumentManager
@@ -72,7 +73,7 @@ Error MCATestBase::runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
   SmallVector<std::unique_ptr<mca::Instruction>> LoweredInsts;
   for (const auto &MCI : Insts) {
     Expected<std::unique_ptr<mca::Instruction>> Inst =
-        IB.createInstruction(MCI, Instruments);
+        B ? B(IB, MCI, Instruments) : IB.createInstruction(MCI, Instruments);
     if (!Inst) {
       if (auto NewE =
               handleErrors(Inst.takeError(),

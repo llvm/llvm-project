@@ -25,6 +25,7 @@
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include <functional>
 
 namespace llvm {
 namespace mca {
@@ -78,6 +79,10 @@ class InstrBuilder {
   DenseMap<std::pair<hash_code, unsigned>, std::unique_ptr<const InstrDesc>>
       VariantDescriptors;
 
+  // These descriptors are customized for particular instructions and cannot
+  // be reused
+  SmallVector<std::unique_ptr<const InstrDesc>> CustomDescriptors;
+
   bool FirstCallInst;
   bool FirstReturnInst;
   unsigned CallLatency;
@@ -87,7 +92,8 @@ class InstrBuilder {
 
   Expected<unsigned> getVariantSchedClassID(const MCInst &MCI, unsigned SchedClassID);
   Expected<const InstrDesc &>
-  createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
+  createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
+                      std::function<void(InstrDesc&)> Customizer = {});
   Expected<const InstrDesc &>
   getOrCreateInstrDesc(const MCInst &MCI,
                        const SmallVector<Instrument *> &IVec);
@@ -116,7 +122,8 @@ public:
   void setInstRecycleCallback(InstRecycleCallback CB) { InstRecycleCB = CB; }
 
   LLVM_ABI Expected<std::unique_ptr<Instruction>>
-  createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
+  createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
+                    std::function<void(InstrDesc&)> Customizer = {});
 };
 } // namespace mca
 } // namespace llvm

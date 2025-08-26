@@ -95,6 +95,18 @@ void AnalysisRegionCommentConsumer::HandleComment(SMLoc Loc,
     return;
 
   Comment = Comment.drop_front(Position);
+  if (Comment.starts_with("LLVM-MCA-LATENCY")) {
+      auto Parts = Comment.split(':');
+      Position = Parts.second.find_first_not_of(" \t");
+      if (Position >= Parts.second.size())
+        return;
+      auto LatStr = Parts.second.drop_front(Position);
+      unsigned Latency = 0;
+      if (!LatStr.getAsInteger(10, Latency))
+        Streamer.AddLatencyAnnotation(Latency);
+      return;
+  }
+
   if (Comment.consume_front("LLVM-MCA-END")) {
     // Skip spaces and tabs.
     Position = Comment.find_first_not_of(" \t");

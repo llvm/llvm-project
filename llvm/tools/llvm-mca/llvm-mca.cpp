@@ -633,7 +633,11 @@ int main(int argc, char **argv) {
       const SmallVector<mca::Instrument *> Instruments =
           InstrumentRegions.getActiveInstruments(Loc);
 
-      Expected<std::unique_ptr<mca::Instruction>> Inst =
+      auto Latency = Regions.getExplicitLatency(Loc);
+      Expected<std::unique_ptr<mca::Instruction>> Inst = Latency ?
+          IB.createInstruction(MCI, Instruments, [=](llvm::mca::InstrDesc& ID) {
+            for (auto& W : ID.Writes) W.Latency = *Latency;
+            ID.MaxLatency = *Latency; }) :
           IB.createInstruction(MCI, Instruments);
       if (!Inst) {
         if (auto NewE = handleErrors(
