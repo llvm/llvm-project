@@ -6961,12 +6961,15 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::ADD64ri32_DB:
     MIB->setDesc(get(X86::OR64ri32));
     break;
+
   case X86::CTSELECT64rr:
   case X86::CTSELECT32rr:
   case X86::CTSELECT16rr:
   case X86::CTSELECT64rm:
   case X86::CTSELECT32rm:
   case X86::CTSELECT16rm:
+    // These CTSELECT pseudos are only selected when CMOV is available
+    // Pattern matching ensures we use CTSELECT_I386 when CMOV is not available
     return expandCtSelectWithCMOV(MI);
 
   // non-cmov CTSELECT expansion (post-RA, constant-time)
@@ -6995,6 +6998,11 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::CTSELECT_V4F64:
   case X86::CTSELECT_V8F32:
     return expandCtSelectVector(MI);
+
+  // i386-specific CTSELECT expansion (post-RA, constant-time)
+  case X86::CTSELECT_I386_GR16rr:
+  case X86::CTSELECT_I386_GR32rr:
+    return expandCtSelectI386(MI);
   }
   return false;
 }

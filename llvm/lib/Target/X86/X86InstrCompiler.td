@@ -724,14 +724,9 @@ let isPseudo = 1, isNotDuplicable = 1 in {
 
   multiclass CTSELECT_NOCMOV<RegisterClass RC, ValueType VT> {
     let hasNoSchedulingInfo = 1 in {
-      def rr  : PseudoI<(outs RC:$dst),
-                        (ins RC:$src1, RC:$src2, i8imm:$cond),
-                        [(set RC:$dst, ( VT (X86ctselect RC:$src1, RC:$src2, timm:$cond, EFLAGS)))]>;
-
-      // TODO: Do we need register-memory variant??
-      //def rm : PseudoI<(outs t.RegClass:$dst),
-      //                 (ins t.RegClass:$src1, t.MemOperand:$src2, i8imm:$cond),
-      //                 [(set t.RegClass:$dst, (X86ctselect t.RegClass:$src1, (t.LoadNode addr:$src2), timm:$cond, EFLAGS))]>;
+      def rr : PseudoI<(outs RC:$dst), (ins RC:$src1, RC:$src2, i8imm:$cond),
+                       [(set RC:$dst, (VT(X86ctselect RC:$src1, RC:$src2,
+                                          timm:$cond, EFLAGS)))]>;
     }
   }
 }
@@ -771,7 +766,6 @@ let usesCustomInserter = 1,
   let Predicates = [HasMMX] in
     defm CTSELECT_VR64   : CTSELECT_NOCMOV<VR64, x86mmx>;
 }
-
 
 // Pattern matching for non-native-CMOV CTSELECT (routes to custom inserter for condition materialization)
 // NoNativeCMOV ensures these patterns are used when actual CMOV instruction is not available
