@@ -1,23 +1,11 @@
 #ifndef STDINT_H
 #define STDINT_H
 
-#ifdef __INT8_TYPE__
-typedef __INT8_TYPE__ int8_t;
-#endif
-typedef unsigned char uint8_t;
-
-#ifdef __INT16_TYPE__
-typedef __INT16_TYPE__ int16_t;
-typedef unsigned __INT16_TYPE__ uint16_t;
-#endif
-
 #ifdef __INT32_TYPE__
-typedef __INT32_TYPE__ int32_t;
 typedef unsigned __INT32_TYPE__ uint32_t;
 #endif
 
 #ifdef __INT64_TYPE__
-typedef __INT64_TYPE__ int64_t;
 typedef unsigned __INT64_TYPE__ uint64_t;
 #endif
 
