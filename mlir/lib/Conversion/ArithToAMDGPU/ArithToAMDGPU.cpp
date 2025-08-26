@@ -690,8 +690,8 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
 
 void mlir::arith::populateArithToAMDGPUConversionPatterns(
     RewritePatternSet &patterns, bool convertFP8Arithmetic,
-    bool saturateFP8Truncf, bool allowPackedF16Rtz, Chipset chipset,
-    PatternBenefit benefit) {
+    bool saturateFP8Truncf, bool allowPackedF16Rtz, bool supportsScaledExtTrunc,
+    Chipset chipset, PatternBenefit benefit) {
 
   if (convertFP8Arithmetic) {
     patterns.add<ExtFOnFloat8RewritePattern>(patterns.getContext(), chipset,
@@ -702,7 +702,7 @@ void mlir::arith::populateArithToAMDGPUConversionPatterns(
   if (allowPackedF16Rtz)
     patterns.add<TruncfToFloat16RewritePattern>(patterns.getContext(), benefit);
 
-  if (chipset == kGfx950) {
+  if (supportsScaledExtTrunc) {
     patterns.add<ScalingExtFRewritePattern>(patterns.getContext(), benefit);
     patterns.add<ScalingTruncFRewritePattern>(patterns.getContext(), benefit);
   }
@@ -720,9 +720,10 @@ void ArithToAMDGPUConversionPass::runOnOperation() {
 
   bool convertFP8Arithmetic =
       *maybeChipset == kGfx942 || hasOcpFp8(*maybeChipset);
+  bool supportsScaledExtTrunc = *maybeChipset == kGfx950;
   arith::populateArithToAMDGPUConversionPatterns(
       patterns, convertFP8Arithmetic, saturateFP8Truncf, allowPackedF16Rtz,
-      *maybeChipset);
+      supportsScaledExtTrunc, *maybeChipset);
   if (failed(applyPatternsGreedily(op, std::move(patterns))))
     return signalPassFailure();
 }
