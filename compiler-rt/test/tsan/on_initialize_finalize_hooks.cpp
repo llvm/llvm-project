@@ -1,4 +1,3 @@
-// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clang_tsan -O1 %s -DBUILD_LIB=1 -fno-sanitize=thread -shared -fPIC -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clang_tsan -O1 %s -o %t %ld_flags_rpath_exe
 // RUN: %run %t | FileCheck %s
