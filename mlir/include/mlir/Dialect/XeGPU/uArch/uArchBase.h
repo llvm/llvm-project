@@ -1,4 +1,4 @@
-//===--- uArch.h ---------------------------------------*- C++ -*-===//
+//===--- uArch.h ------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file
-/// Base uArch definition for different architectures.
-///
+// \file
+// Base uArch definition for different architectures.
+//
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_DIALECT_XEGPU_UARCH_BASE_H
-#define MLIR_DIALECT_XEGPU_UARCH_BASE_H
+#ifndef MLIR_DIALECT_XEGPU_UARCH_UARCHBASE_H
+#define MLIR_DIALECT_XEGPU_UARCH_UARCHBASE_H
 
 #include <any>
 #include <functional>
@@ -263,4 +263,4 @@ private:
 } // namespace xegpu
 } // namespace mlir
 
-#endif // MLIR_DIALECT_XEGPU_UARCH_BASE_H
+#endif // MLIR_DIALECT_XEGPU_UARCH_UARCHBASE_H
