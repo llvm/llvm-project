@@ -20,7 +20,7 @@
 
 namespace lldb_protocol::mcp {
 
-class MCPTransport final
+class MCPTransport
     : public lldb_private::JSONRPCTransport<Request, Response, Notification> {
 public:
   using LogCallback = std::function<void(llvm::StringRef message)>;
@@ -69,8 +69,8 @@ protected:
 
   llvm::Expected<std::optional<Message>> HandleData(llvm::StringRef data);
 
-  llvm::Expected<Response> Handle(Request request);
-  void Handle(Notification notification);
+  llvm::Expected<Response> Handle(const Request &request);
+  void Handle(const Notification &notification);
 
   llvm::Expected<Response> InitializeHandler(const Request &);
 
@@ -87,8 +87,6 @@ protected:
   void OnClosed() override;
 
   void TerminateLoop();
-
-  std::mutex m_mutex;
 
 private:
   const std::string m_name;

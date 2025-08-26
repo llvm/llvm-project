@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-class _LIBCPP_EXPORTED_FROM_ABI file_status {
+class file_status {
 public:
   // constructors
   _LIBCPP_HIDE_FROM_ABI file_status() noexcept : file_status(file_type::none) {}

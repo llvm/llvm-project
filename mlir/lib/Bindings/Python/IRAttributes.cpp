@@ -1092,11 +1092,10 @@ private:
                                     "when the type is not a shaped type.");
       }
       return *bulkLoadElementType;
-    } else {
-      MlirAttribute encodingAttr = mlirAttributeGetNull();
-      return mlirRankedTensorTypeGet(shape.size(), shape.data(),
-                                     *bulkLoadElementType, encodingAttr);
     }
+    MlirAttribute encodingAttr = mlirAttributeGetNull();
+    return mlirRankedTensorTypeGet(shape.size(), shape.data(),
+                                   *bulkLoadElementType, encodingAttr);
   }
 
   static MlirAttribute getAttributeFromBuffer(
