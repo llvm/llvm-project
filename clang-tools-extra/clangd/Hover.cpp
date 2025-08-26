@@ -1274,10 +1274,10 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     HoverCountMetric.record(1, "include");
     HoverInfo HI;
     HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
-    // FIXME: We don't have a fitting value for Kind.
     HI.Definition =
         URIForFile::canonicalize(Inc.Resolved, AST.tuPath()).file().str();
     HI.DefinitionLanguage = "";
+    HI.Kind = index::SymbolKind::IncludeDirective;
     maybeAddUsedSymbols(AST, HI, Inc);
     return HI;
   }
@@ -1483,10 +1483,6 @@ void HoverInfo::sizeToMarkupParagraph(markup::Paragraph &P) const {
 }
 
 markup::Document HoverInfo::presentDoxygen() const {
-  // NOTE: this function is currently almost identical to presentDefault().
-  // This is to have a minimal change when introducing the doxygen parser.
-  // This function will be changed when rearranging the output for doxygen
-  // parsed documentation.
 
   markup::Document Output;
   // Header contains a text of the form:
@@ -1502,11 +1498,31 @@ markup::Document HoverInfo::presentDoxygen() const {
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
-  if (Kind != index::SymbolKind::Unknown)
+  if (Kind != index::SymbolKind::Unknown &&
+      Kind != index::SymbolKind::IncludeDirective)
     Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
   assert(!Name.empty() && "hover triggered on a nameless symbol");
 
-  Header.appendCode(Name);
+  if (Kind == index::SymbolKind::IncludeDirective) {
+    Header.appendCode(Name);
+
+    if (!Definition.empty())
+      Output.addParagraph().appendCode(Definition);
+
+    if (!UsedSymbolNames.empty()) {
+      Output.addRuler();
+      usedSymbolNamesToMarkup(Output);
+    }
+
+    return Output;
+  }
+
+  if (!Definition.empty()) {
+    Output.addRuler();
+    definitionScopeToMarkup(Output);
+  } else {
+    Header.appendCode(Name);
+  }
 
   if (!Provider.empty()) {
     providerToMarkupParagraph(Output);
@@ -1514,33 +1530,76 @@ markup::Document HoverInfo::presentDoxygen() const {
 
   // Put a linebreak after header to increase readability.
   Output.addRuler();
-  // Print Types on their own lines to reduce chances of getting line-wrapped by
-  // editor, as they might be long.
-  if (ReturnType) {
-    // For functions we display signature in a list form, e.g.:
-    // → `x`
-    // Parameters:
-    // - `bool param1`
-    // - `int param2 = 5`
-    Output.addParagraph().appendText("→ ").appendCode(
-        llvm::to_string(*ReturnType));
-  }
 
   SymbolDocCommentVisitor SymbolDoc(Documentation, CommentOpts);
 
+  if (SymbolDoc.hasBriefCommand()) {
+    SymbolDoc.briefToMarkup(Output.addParagraph());
+    Output.addRuler();
+  }
+
+  // For functions we display signature in a list form, e.g.:
+  // Template Parameters:
+  // - `typename T` - description
+  // Parameters:
+  // - `bool param1` - description
+  // - `int param2 = 5` - description
+  // Returns
+  // `type` - description
+  if (TemplateParameters && !TemplateParameters->empty()) {
+    Output.addParagraph().appendBoldText("Template Parameters:");
+    markup::BulletList &L = Output.addBulletList();
+    for (const auto &Param : *TemplateParameters) {
+      markup::Paragraph &P = L.addItem().addParagraph();
+      P.appendCode(llvm::to_string(Param));
+      if (SymbolDoc.isTemplateTypeParmDocumented(llvm::to_string(Param.Name))) {
+        P.appendText(" - ");
+        SymbolDoc.templateTypeParmDocToMarkup(llvm::to_string(Param.Name), P);
+      }
+    }
+    Output.addRuler();
+  }
+
   if (Parameters && !Parameters->empty()) {
-    Output.addParagraph().appendText("Parameters:");
+    Output.addParagraph().appendBoldText("Parameters:");
     markup::BulletList &L = Output.addBulletList();
     for (const auto &Param : *Parameters) {
       markup::Paragraph &P = L.addItem().addParagraph();
       P.appendCode(llvm::to_string(Param));
 
       if (SymbolDoc.isParameterDocumented(llvm::to_string(Param.Name))) {
-        P.appendText(" -");
+        P.appendText(" - ");
         SymbolDoc.parameterDocToMarkup(llvm::to_string(Param.Name), P);
       }
     }
+    Output.addRuler();
   }
+
+  // Print Types on their own lines to reduce chances of getting line-wrapped by
+  // editor, as they might be long.
+  if (ReturnType &&
+      ((ReturnType->Type != "void" && !ReturnType->AKA.has_value()) ||
+       (ReturnType->AKA.has_value() && ReturnType->AKA != "void"))) {
+    Output.addParagraph().appendBoldText("Returns:");
+    markup::Paragraph &P = Output.addParagraph();
+    P.appendCode(llvm::to_string(*ReturnType));
+
+    if (SymbolDoc.hasReturnCommand()) {
+      P.appendText(" - ");
+      SymbolDoc.returnToMarkup(P);
+    }
+    Output.addRuler();
+  }
+
+  // add specially handled doxygen commands.
+  SymbolDoc.warningsToMarkup(Output);
+  SymbolDoc.notesToMarkup(Output);
+
+  // add any other documentation.
+  SymbolDoc.docToMarkup(Output);
+
+  Output.addRuler();
+
   // Don't print Type after Parameters or ReturnType as this will just duplicate
   // the information
   if (Type && !ReturnType && !Parameters)
@@ -1559,13 +1618,6 @@ markup::Document HoverInfo::presentDoxygen() const {
 
   if (CalleeArgInfo) {
     calleeArgInfoToMarkupParagraph(Output.addParagraph());
-  }
-
-  SymbolDoc.docToMarkup(Output);
-
-  if (!Definition.empty()) {
-    Output.addRuler();
-    definitionScopeToMarkup(Output);
   }
 
   if (!UsedSymbolNames.empty()) {
@@ -1591,7 +1643,8 @@ markup::Document HoverInfo::presentDefault() const {
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
-  if (Kind != index::SymbolKind::Unknown)
+  if (Kind != index::SymbolKind::Unknown &&
+      Kind != index::SymbolKind::IncludeDirective)
     Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
   assert(!Name.empty() && "hover triggered on a nameless symbol");
   Header.appendCode(Name);
@@ -1615,7 +1668,7 @@ markup::Document HoverInfo::presentDefault() const {
   }
 
   if (Parameters && !Parameters->empty()) {
-    Output.addParagraph().appendText("Parameters: ");
+    Output.addParagraph().appendText("Parameters:");
     markup::BulletList &L = Output.addBulletList();
     for (const auto &Param : *Parameters)
       L.addItem().addParagraph().appendCode(llvm::to_string(Param));
