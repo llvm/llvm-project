@@ -5861,7 +5861,7 @@ unsigned AMDGPUKernelTy::computeAchievedOccupancy(GenericDeviceTy &Device,
 }
 
 /// Enable profiling of HSA queues
-void setQueueProfiling(void *Device, int Enable) {
+void setHSAQueueProfiling(void *Device, int Enable) {
   reinterpret_cast<AMDGPUDeviceTy *>(Device)->setHSAQueueProfiling(Enable);
 }
 
@@ -5875,15 +5875,14 @@ namespace llvm::omp::target::plugin {
 
 /// Enable/disable kernel profiling for the given device.
 void setOmptQueueProfile(void *Device, int Enable) {
-  reinterpret_cast<llvm::omp::target::plugin::AMDGPUDeviceTy *>(Device)
-      ->setHSAQueueProfiling(Enable);
+  setHSAQueueProfiling(Device, Enable);
 }
 
 } // namespace llvm::omp::target::plugin
 
 /// Enable/disable kernel profiling for the given device.
 void setGlobalOmptKernelProfile(void *Device, int Enable) {
-  llvm::omp::target::plugin::setQueueProfiling(Device, Enable);
+  llvm::omp::target::plugin::setHSAQueueProfiling(Device, Enable);
 }
 
 #endif
