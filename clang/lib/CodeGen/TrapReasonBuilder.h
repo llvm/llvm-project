@@ -18,7 +18,7 @@ namespace clang {
 namespace CodeGen {
 
 /// Helper class for \class TrapReasonBuilder. \class TrapReason stores the
-/// "trap reason" built by \class RuntimeTrapDiagnosticBuilder. This consists of
+/// "trap reason" built by \class TrapReasonBuilder. This consists of
 /// a trap message and trap category.
 ///
 /// It is intended that this object be allocated on the stack.
