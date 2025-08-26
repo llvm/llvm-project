@@ -729,17 +729,17 @@ size_t PyMlirContext::clearLiveOperations() {
 }
 
 void PyMlirContext::clearOperation(MlirOperation op) {
-  PyOperation *py_op;
+  PyOperation *pyOp;
   {
     nb::ft_lock_guard lock(liveOperationsMutex);
     auto it = liveOperations.find(op.ptr);
     if (it == liveOperations.end()) {
       return;
     }
-    py_op = it->second.second;
+    pyOp = it->second.second;
     liveOperations.erase(it);
   }
-  py_op->setInvalid();
+  pyOp->setInvalid();
 }
 
 void PyMlirContext::clearOperationsInside(PyOperationBase &op) {
