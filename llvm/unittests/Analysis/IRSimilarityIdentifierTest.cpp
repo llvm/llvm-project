@@ -737,10 +737,10 @@ TEST(IRInstructionMapper, StoreDifferentAtomic) {
 // different unsigned integers.
 TEST(IRInstructionMapper, AtomicRMWDifferentType) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i64* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %1 = atomicrmw add i32* %a, i32 1 acquire
-                             %2 = atomicrmw add i64* %b, i64 1 acquire
+                             %1 = atomicrmw add ptr %a, i32 1 acquire
+                             %2 = atomicrmw add ptr %b, i64 1 acquire
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -763,10 +763,10 @@ TEST(IRInstructionMapper, AtomicRMWDifferentType) {
 // unsigned integers.
 TEST(IRInstructionMapper, AtomicRMWDifferentAlign) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %1 = atomicrmw add i32* %a, i32 1 acquire, align 4
-                             %2 = atomicrmw add i32* %b, i32 1 acquire, align 8
+                             %1 = atomicrmw add ptr %a, i32 1 acquire, align 4
+                             %2 = atomicrmw add ptr %b, i32 1 acquire, align 8
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -789,10 +789,10 @@ TEST(IRInstructionMapper, AtomicRMWDifferentAlign) {
 // different unsigned integers.
 TEST(IRInstructionMapper, AtomicRMWDifferentVolatile) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %1 = atomicrmw volatile add i32* %a, i32 1 acquire
-                             %2 = atomicrmw add i32* %b, i32 1 acquire
+                             %1 = atomicrmw volatile add ptr %a, i32 1 acquire
+                             %2 = atomicrmw add ptr %b, i32 1 acquire
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -815,10 +815,10 @@ TEST(IRInstructionMapper, AtomicRMWDifferentVolatile) {
 // different unsigned integers.
 TEST(IRInstructionMapper, AtomicCmpXchgDifferentType) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i64* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %1 = cmpxchg i32* %a, i32 0, i32 1 monotonic monotonic
-                             %2 = cmpxchg i64* %b, i64 0, i64 1 monotonic monotonic
+                             %1 = cmpxchg ptr %a, i32 0, i32 1 monotonic monotonic
+                             %2 = cmpxchg ptr %b, i64 0, i64 1 monotonic monotonic
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -841,10 +841,10 @@ TEST(IRInstructionMapper, AtomicCmpXchgDifferentType) {
 // unsigned integers.
 TEST(IRInstructionMapper, AtomicCmpXchgDifferentAlign) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %1 = cmpxchg i32* %a, i32 0, i32 1 monotonic monotonic, align 4
-                             %2 = cmpxchg i32* %b, i32 0, i32 1 monotonic monotonic, align 8
+                             %1 = cmpxchg ptr %a, i32 0, i32 1 monotonic monotonic, align 4
+                             %2 = cmpxchg ptr %b, i32 0, i32 1 monotonic monotonic, align 8
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -867,10 +867,10 @@ TEST(IRInstructionMapper, AtomicCmpXchgDifferentAlign) {
 // different unsigned integers.
 TEST(IRInstructionMapper, AtomicCmpXchgDifferentVolatile) {
   StringRef ModuleString = R"(
-                          define i32 @f(i32* %a, i32* %b) {
+                          define i32 @f(ptr %a, ptr %b) {
                           bb0:
-                             %1 = cmpxchg volatile i32* %a, i32 0, i32 1 monotonic monotonic
-                             %2 = cmpxchg i32* %b, i32 0, i32 1 monotonic monotonic
+                             %1 = cmpxchg volatile ptr %a, i32 0, i32 1 monotonic monotonic
+                             %2 = cmpxchg ptr %b, i32 0, i32 1 monotonic monotonic
                              ret i32 0
                           })";
   LLVMContext Context;
