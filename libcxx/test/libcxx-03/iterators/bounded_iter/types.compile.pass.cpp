@@ -11,9 +11,7 @@
 //
 // Nested types
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__iterator/bounded_iter.h>
+#include <__cxx03/__iterator/bounded_iter.h>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
