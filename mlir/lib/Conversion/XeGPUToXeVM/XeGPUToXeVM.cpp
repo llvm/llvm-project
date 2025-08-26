@@ -55,7 +55,6 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   case xegpu::MemorySpace::SLM:
     return static_cast<int>(xevm::AddrSpace::SHARED);
   }
-  llvm_unreachable("Unknown XeGPU memory space.");
 }
 
 // Get same bitwidth flat vector type of new element type.
@@ -689,7 +688,6 @@ class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
     case xegpu::FenceScope::GPU:
       memScope = xevm::MemScope::DEVICE;
       break;
-      llvm_unreachable("Unknown XeGPU fence scope.");
     }
     xevm::AddrSpace addrSpace{xevm::AddrSpace::GLOBAL};
     switch (op.getMemoryKind()) {
@@ -699,7 +697,6 @@ class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
     case xegpu::MemorySpace::SLM:
       addrSpace = xevm::AddrSpace::SHARED;
       break;
-      llvm_unreachable("Unknown XeGPU fence scope.");
     }
     xevm::MemfenceOp::create(rewriter, loc, memScope, addrSpace);
     rewriter.eraseOp(op);
