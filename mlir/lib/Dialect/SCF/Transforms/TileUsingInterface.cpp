@@ -1936,7 +1936,7 @@ getUntiledConsumerFromSlice(RewriterBase &rewriter,
   }
 
   // 2. Check that the loop is perfectly nested.
-  if (!mlir::isPerfectlyNestedForLoops(loops)) {
+  if (!isPerfectlyNestedForLoops(loops)) {
     return rewriter.notifyMatchFailure(
         candidateSliceOp, "expected passed loops to be perfectly nested.");
   }
