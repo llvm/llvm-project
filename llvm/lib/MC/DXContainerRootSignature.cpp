@@ -76,11 +76,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
   support::endian::write(BOS, RootParameterOffset, llvm::endianness::little);
   support::endian::write(BOS, NumSamplers, llvm::endianness::little);
-  uint32_t SSO = StaticSamplersOffset;
-  if (NumSamplers > 0)
-    SSO = writePlaceholder(BOS);
-  else
-    support::endian::write(BOS, SSO, llvm::endianness::little);
+  uint32_t SSO = writePlaceholder(BOS);
   support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
@@ -144,23 +140,21 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     }
     }
   }
-  if (NumSamplers > 0) {
-    rewriteOffsetToCurrentByte(BOS, SSO);
-    for (const auto &S : StaticSamplers) {
-      support::endian::write(BOS, S.Filter, llvm::endianness::little);
-      support::endian::write(BOS, S.AddressU, llvm::endianness::little);
-      support::endian::write(BOS, S.AddressV, llvm::endianness::little);
-      support::endian::write(BOS, S.AddressW, llvm::endianness::little);
-      support::endian::write(BOS, S.MipLODBias, llvm::endianness::little);
-      support::endian::write(BOS, S.MaxAnisotropy, llvm::endianness::little);
-      support::endian::write(BOS, S.ComparisonFunc, llvm::endianness::little);
-      support::endian::write(BOS, S.BorderColor, llvm::endianness::little);
-      support::endian::write(BOS, S.MinLOD, llvm::endianness::little);
-      support::endian::write(BOS, S.MaxLOD, llvm::endianness::little);
-      support::endian::write(BOS, S.ShaderRegister, llvm::endianness::little);
-      support::endian::write(BOS, S.RegisterSpace, llvm::endianness::little);
-      support::endian::write(BOS, S.ShaderVisibility, llvm::endianness::little);
-    }
+  rewriteOffsetToCurrentByte(BOS, SSO);
+  for (const auto &S : StaticSamplers) {
+    support::endian::write(BOS, S.Filter, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressU, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressV, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressW, llvm::endianness::little);
+    support::endian::write(BOS, S.MipLODBias, llvm::endianness::little);
+    support::endian::write(BOS, S.MaxAnisotropy, llvm::endianness::little);
+    support::endian::write(BOS, S.ComparisonFunc, llvm::endianness::little);
+    support::endian::write(BOS, S.BorderColor, llvm::endianness::little);
+    support::endian::write(BOS, S.MinLOD, llvm::endianness::little);
+    support::endian::write(BOS, S.MaxLOD, llvm::endianness::little);
+    support::endian::write(BOS, S.ShaderRegister, llvm::endianness::little);
+    support::endian::write(BOS, S.RegisterSpace, llvm::endianness::little);
+    support::endian::write(BOS, S.ShaderVisibility, llvm::endianness::little);
   }
   assert(Storage.size() == getSize());
   OS.write(Storage.data(), Storage.size());
