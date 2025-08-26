@@ -336,11 +336,29 @@ def github_get_metrics(
                 name_suffix = GITHUB_JOB_TO_TRACK[name_prefix][job.name]
             metric_name = name_prefix + "_" + name_suffix
 
+            ag_metric_name = None
+            if libcxx_testing:
+                job_key = None
+                if job.name.find("stage1") != -1:
+                    job_key = "stage1"
+                elif job.name.find("stage2") != -1:
+                    job_key = "stage2"
+                elif job.name.find("stage3") != -1:
+                    job_key = "stage3"
+                if job_key:
+                    ag_name = (
+                        name_prefix + "_" + GITHUB_JOB_TO_TRACK[name_prefix][job_key]
+                    )
+
             if task.status != "completed":
                 if job.status == "queued":
                     queued_count[metric_name] += 1
+                    if libcxx_testing:
+                        queued_count[ag_name] += 1
                 elif job.status == "in_progress":
                     running_count[metric_name] += 1
+                    if libcxx_testing:
+                        running_count[ag_name] += 1
                 continue
 
             job_result = int(job.conclusion == "success" or job.conclusion == "skipped")

@@ -2861,9 +2861,8 @@ VarDecl::needsDestruction(const ASTContext &Ctx) const {
 
 bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
-  auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty ||
-      !Ty->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
+  auto *D = getType()->getAsRecordDecl();
+  if (!D || !D->hasFlexibleArrayMember())
     return false;
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List)
@@ -2877,11 +2876,8 @@ bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
 
 CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
-  auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty)
-    return CharUnits::Zero();
-  const RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
-  if (!Ty || !RD->hasFlexibleArrayMember())
+  auto *RD = getType()->getAsRecordDecl();
+  if (!RD || !RD->hasFlexibleArrayMember())
     return CharUnits::Zero();
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List || List->getNumInits() == 0)
@@ -4738,7 +4734,7 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   // MS ABI: has nonzero size if it is a class type with class type fields,
   // whether or not they have nonzero size
   return !llvm::any_of(CXXRD->fields(), [](const FieldDecl *Field) {
-    return Field->getType()->getAs<RecordType>();
+    return Field->getType()->isRecordType();
   });
 }
 
@@ -5274,10 +5270,8 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
     if (I->getIdentifier())
       return I;
 
-    if (const auto *RT = I->getType()->getAs<RecordType>())
-      if (const FieldDecl *NamedDataMember = RT->getOriginalDecl()
-                                                 ->getDefinitionOrSelf()
-                                                 ->findFirstNamedDataMember())
+    if (const auto *RD = I->getType()->getAsRecordDecl())
+      if (const FieldDecl *NamedDataMember = RD->findFirstNamedDataMember())
         return NamedDataMember;
   }
 

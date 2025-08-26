@@ -142,10 +142,9 @@ static bool TypeHasMayAlias(QualType QTy) {
 
 /// Check if the given type is a valid base type to be used in access tags.
 static bool isValidBaseType(QualType QTy) {
-  if (const RecordType *TTy = QTy->getAs<RecordType>()) {
-    const RecordDecl *RD = TTy->getOriginalDecl()->getDefinition();
+  if (const auto *RD = QTy->getAsRecordDecl()) {
     // Incomplete types are not valid base access types.
-    if (!RD)
+    if (!RD->isCompleteDefinition())
       return false;
     if (RD->hasFlexibleArrayMember())
       return false;

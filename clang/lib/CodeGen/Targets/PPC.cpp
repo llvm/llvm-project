@@ -294,10 +294,7 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
     ASTContext &Context = D->getASTContext();
     unsigned Alignment = Context.toBits(Context.getDeclAlign(D)) / 8;
     const auto *Ty = VarD->getType().getTypePtr();
-    const RecordDecl *RDecl =
-        Ty->isRecordType()
-            ? Ty->getAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf()
-            : nullptr;
+    const RecordDecl *RDecl = Ty->getAsRecordDecl();
 
     bool EmitDiagnostic = UserSpecifiedTOC && GV->hasExternalLinkage();
     auto reportUnsupportedWarning = [&](bool ShouldEmitWarning, StringRef Msg) {

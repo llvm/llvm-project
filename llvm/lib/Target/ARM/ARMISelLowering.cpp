@@ -3403,7 +3403,7 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
   // position-independent addressing modes.
   if (Subtarget->genExecuteOnly()) {
     auto AFI = DAG.getMachineFunction().getInfo<ARMFunctionInfo>();
-    auto T = const_cast<Type*>(CP->getType());
+    auto *T = CP->getType();
     auto C = const_cast<Constant*>(CP->getConstVal());
     auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
@@ -21380,11 +21380,11 @@ bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
 }
 
 bool ARMTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  return Subtarget->hasV6T2Ops();
+  return Subtarget->hasV5TOps() && !Subtarget->isThumb1Only();
 }
 
 bool ARMTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget->hasV6T2Ops();
+  return Subtarget->hasV5TOps() && !Subtarget->isThumb1Only();
 }
 
 bool ARMTargetLowering::isMaskAndCmp0FoldingBeneficial(

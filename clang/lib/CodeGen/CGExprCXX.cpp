@@ -1973,9 +1973,7 @@ static bool EmitObjectDelete(CodeGenFunction &CGF,
   // Find the destructor for the type, if applicable.  If the
   // destructor is virtual, we'll just emit the vcall and return.
   const CXXDestructorDecl *Dtor = nullptr;
-  if (const RecordType *RT = ElementType->getAs<RecordType>()) {
-    auto *RD =
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+  if (const auto *RD = ElementType->getAsCXXRecordDecl()) {
     if (RD->hasDefinition() && !RD->hasTrivialDestructor()) {
       Dtor = RD->getDestructor();
 

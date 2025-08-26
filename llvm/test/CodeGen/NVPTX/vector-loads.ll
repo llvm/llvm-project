@@ -154,7 +154,7 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-NEXT:    .reg .b32 %r<8>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [foo_complex_param_0];
@@ -166,11 +166,12 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
 ; CHECK-NEXT:    shl.b32 %r6, %r1, 1;
 ; CHECK-NEXT:    or.b32 %r7, %r5, %r6;
 ; CHECK-NEXT:    cvt.u64.u32 %rd2, %r7;
-; CHECK-NEXT:    mad.wide.u32 %rd3, %r3, 131072, %rd1;
-; CHECK-NEXT:    add.s64 %rd4, %rd3, %rd2;
-; CHECK-NEXT:    ld.v2.b8 {%rs1, %rs2}, [%rd4+128];
+; CHECK-NEXT:    mul.wide.u32 %rd3, %r3, 131072;
+; CHECK-NEXT:    add.s64 %rd4, %rd1, %rd3;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd2;
+; CHECK-NEXT:    ld.v2.b8 {%rs1, %rs2}, [%rd5+128];
 ; CHECK-NEXT:    max.u16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    st.b8 [%rd4+129], %rs3;
+; CHECK-NEXT:    st.b8 [%rd5+129], %rs3;
 ; CHECK-NEXT:    ret;
   %t0 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x(), !range !1
   %t1 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()

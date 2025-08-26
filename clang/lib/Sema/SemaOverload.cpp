@@ -1058,13 +1058,12 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
   if (isa<CXXMethodDecl>(EqFD)) {
     // If F is a class member, search scope is class type of first operand.
     QualType RHS = FirstOperand->getType();
-    auto *RHSRec = RHS->getAs<RecordType>();
+    auto *RHSRec = RHS->getAsCXXRecordDecl();
     if (!RHSRec)
       return true;
     LookupResult Members(S, NotEqOp, OpLoc,
                          Sema::LookupNameKind::LookupMemberName);
-    S.LookupQualifiedName(Members,
-                          RHSRec->getOriginalDecl()->getDefinitionOrSelf());
+    S.LookupQualifiedName(Members, RHSRec);
     Members.suppressAccessDiagnostics();
     for (NamedDecl *Op : Members)
       if (FunctionsCorrespond(S.Context, EqFD, Op->getAsFunction()))
@@ -1802,7 +1801,7 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
   //   constructor (i.e., a user-defined conversion function) is
   //   called for those cases.
   QualType FromType = From->getType();
-  if (ToType->getAs<RecordType>() && FromType->getAs<RecordType>() &&
+  if (ToType->isRecordType() &&
       (S.Context.hasSameUnqualifiedType(FromType, ToType) ||
        S.IsDerivedFrom(From->getBeginLoc(), FromType, ToType))) {
     ICS.setStandard();
@@ -3979,7 +3978,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     //   that class. The argument list is the expression-list within
     //   the parentheses of the initializer.
     if (S.Context.hasSameUnqualifiedType(ToType, From->getType()) ||
-        (From->getType()->getAs<RecordType>() &&
+        (From->getType()->isRecordType() &&
          S.IsDerivedFrom(From->getBeginLoc(), From->getType(), ToType)))
       ConstructorsOnly = true;
 
@@ -8742,10 +8741,9 @@ void Sema::AddMemberOperatorCandidates(OverloadedOperatorKind Op,
   //        defined, the set of member candidates is the result of the
   //        qualified lookup of T1::operator@ (13.3.1.1.1); otherwise,
   //        the set of member candidates is empty.
-  if (const RecordType *T1Rec = T1->getAs<RecordType>()) {
+  if (T1->isRecordType()) {
     bool IsComplete = isCompleteType(OpLoc, T1);
-    CXXRecordDecl *T1RD =
-        cast<CXXRecordDecl>(T1Rec->getOriginalDecl())->getDefinition();
+    auto *T1RD = T1->getAsCXXRecordDecl();
     // Complete the type if it can be completed.
     // If the type is neither complete nor being defined, bail out now.
     if (!T1RD || (!IsComplete && !T1RD->isBeingDefined()))
@@ -9054,8 +9052,8 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
   Ty = Ty.getLocalUnqualifiedType();
 
   // Flag if we ever add a non-record type.
-  const RecordType *TyRec = Ty->getAs<RecordType>();
-  HasNonRecordTypes = HasNonRecordTypes || !TyRec;
+  bool TyIsRec = Ty->isRecordType();
+  HasNonRecordTypes = HasNonRecordTypes || !TyIsRec;
 
   // Flag if we encounter an arithmetic type.
   HasArithmeticOrEnumeralTypes =
@@ -9090,13 +9088,14 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     MatrixTypes.insert(Ty);
   } else if (Ty->isNullPtrType()) {
     HasNullPtrType = true;
-  } else if (AllowUserConversions && TyRec) {
+  } else if (AllowUserConversions && TyIsRec) {
     // No conversion functions in incomplete types.
     if (!SemaRef.isCompleteType(Loc, Ty))
       return;
 
     auto *ClassDecl =
-        cast<CXXRecordDecl>(TyRec->getOriginalDecl())->getDefinitionOrSelf();
+        cast<CXXRecordDecl>(Ty->getAs<RecordType>()->getOriginalDecl())
+            ->getDefinitionOrSelf();
     for (NamedDecl *D : ClassDecl->getVisibleConversionFunctions()) {
       if (isa<UsingShadowDecl>(D))
         D = cast<UsingShadowDecl>(D)->getTargetDecl();

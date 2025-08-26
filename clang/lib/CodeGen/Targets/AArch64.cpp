@@ -493,10 +493,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     auto ContainsOnlyPointers = [&](const auto &Self, QualType Ty) {
       if (isEmptyRecord(getContext(), Ty, true))
         return false;
-      const RecordType *RT = Ty->getAs<RecordType>();
-      if (!RT)
+      const auto *RD = Ty->getAsRecordDecl();
+      if (!RD)
         return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
         for (const auto &I : CXXRD->bases())
           if (!Self(Self, I.getType()))

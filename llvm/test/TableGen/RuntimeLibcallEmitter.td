@@ -176,9 +176,9 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 
 // CHECK: iota_range<RTLIB::LibcallImpl> RTLIB::RuntimeLibcallsInfo::lookupLibcallImplNameImpl(StringRef Name) {
 // CHECK: static constexpr uint16_t HashTableNameToEnum[16] = {
-// CHECK: 2, // 0x000000705301b8, ___memset
+// CHECK: 2,
 // CHECK: 0,
-// CHECK: 6, // 0x0000001417a2af, calloc
+// CHECK: 6,
 // CHECK: 0,
 // CHECK: };
 

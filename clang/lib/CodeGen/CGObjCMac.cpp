@@ -3353,9 +3353,8 @@ static bool hasWeakMember(QualType type) {
     return true;
   }
 
-  if (auto recType = type->getAs<RecordType>()) {
-    for (auto *field :
-         recType->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
+  if (auto *RD = type->getAsRecordDecl()) {
+    for (auto *field : RD->fields()) {
       if (hasWeakMember(field->getType()))
         return true;
     }

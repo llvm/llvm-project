@@ -9436,6 +9436,18 @@ def dxc_rootsig_ver :
   Alias<fdx_rootsignature_version>,
   Group<dxc_Group>,
   Visibility<[DXCOption]>;
+def fdx_rootsignature_define :
+  Joined<["-"], "fdx-rootsignature-define=">,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"HLSLRootSigOverride">, "\"\"">,
+  HelpText<"Override entry function root signature with root signature at "
+           "given macro name.">;
+def dxc_rootsig_define :
+  Separate<["-"], "rootsig-define">,
+  Alias<fdx_rootsignature_define>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Visibility<[ClangOption, CC1Option]>,

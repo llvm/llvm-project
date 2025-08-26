@@ -30,14 +30,14 @@ Bootstrap Builds
 ================
 
 The Clang CMake build system supports bootstrap (aka multi-stage) builds. At a
-high level a multi-stage build is a chain of builds that pass data from one
+high level, a multi-stage build is a chain of builds that pass data from one
 stage into the next. The most common and simple version of this is a traditional
 bootstrap build.
 
 In a simple two-stage bootstrap build, we build clang using the system compiler,
 then use that just-built clang to build clang again. In CMake this simplest form
 of a bootstrap build can be configured with a single option,
-CLANG_ENABLE_BOOTSTRAP.
+``CLANG_ENABLE_BOOTSTRAP``.
 
 .. code-block:: console
 
@@ -52,9 +52,9 @@ configurations for each stage. The next series of examples utilize CMake cache
 scripts to provide more complex options.
 
 By default, only a few CMake options will be passed between stages.
-The list, called _BOOTSTRAP_DEFAULT_PASSTHROUGH, is defined in clang/CMakeLists.txt.
-To force the passing of the variables between stages, use the -DCLANG_BOOTSTRAP_PASSTHROUGH
-CMake option, each variable separated by a ";". As example:
+The list, called _BOOTSTRAP_DEFAULT_PASSTHROUGH, is defined in ``clang/CMakeLists.txt``.
+To force the passing of the variables between stages, use the ``-DCLANG_BOOTSTRAP_PASSTHROUGH``
+CMake option, each variable separated by a ";". For example:
 
 .. code-block:: console
 
@@ -65,9 +65,9 @@ CMake option, each variable separated by a ";". As example:
       <path to source>/llvm
   $ ninja stage2
 
-CMake options starting by ``BOOTSTRAP_`` will be passed only to the stage2 build.
+CMake options starting with ``BOOTSTRAP_`` will be passed only to the stage2 build.
 This gives the opportunity to use Clang specific build flags.
-For example, the following CMake call will enabled '-fno-addrsig' only during
+For example, the following CMake call will enable ``-fno-addrsig`` only during
 the stage2 build for C and C++.
 
 .. code-block:: console
@@ -77,7 +77,7 @@ the stage2 build for C and C++.
 The clang build system refers to builds as stages. A stage1 build is a standard
 build using the compiler installed on the host, and a stage2 build is built
 using the stage1 compiler. This nomenclature holds up to more stages too. In
-general a stage*n* build is built using the output from stage*n-1*.
+general, a stage*n* build is built using the output from stage*n-1*.
 
 Apple Clang Builds (A More Complex Bootstrap)
 =============================================
@@ -90,7 +90,7 @@ compiler is a balance of optimization vs build time because it is a throwaway.
 The stage2 compiler is the fully optimized compiler intended to ship to users.
 
 Setting up these compilers requires a lot of options. To simplify the
-configuration the Apple Clang build settings are contained in CMake Cache files.
+configuration, the Apple Clang build settings are contained in CMake Cache files.
 You can build an Apple Clang compiler using the following commands:
 
 .. code-block:: console
@@ -99,7 +99,7 @@ You can build an Apple Clang compiler using the following commands:
   $ ninja stage2-distribution
 
 This CMake invocation configures the stage1 host compiler, and sets
-CLANG_BOOTSTRAP_CMAKE_ARGS to pass the Apple-stage2.cmake cache script to the
+``CLANG_BOOTSTRAP_CMAKE_ARGS`` to pass the Apple-stage2.cmake cache script to the
 stage2 configuration step.
 
 When you build the stage2-distribution target it builds the minimal stage1
@@ -113,16 +113,16 @@ build configurations.
 Multi-stage PGO
 ===============
 
-Profile-Guided Optimizations (PGO) is a really great way to optimize the code
+Profile-Guided Optimization (PGO) is a really great way to optimize the code
 clang generates. Our multi-stage PGO builds are a workflow for generating PGO
 profiles that can be used to optimize clang.
 
 At a high level, the way PGO works is that you build an instrumented compiler,
 then you run the instrumented compiler against sample source files. While the
 instrumented compiler runs it will output a bunch of files containing
-performance counters (.profraw files). After generating all the profraw files
+performance counters (``.profraw`` files). After generating all the profraw files
 you use llvm-profdata to merge the files into a single profdata file that you
-can feed into the LLVM_PROFDATA_FILE option.
+can feed into the ``LLVM_PROFDATA_FILE`` option.
 
 Our PGO.cmake cache automates that whole process. You can use it for
 configuration with CMake with the following command:
@@ -133,11 +133,11 @@ configuration with CMake with the following command:
       <path to source>/llvm
 
 There are several additional options that the cache file also accepts to modify
-the build, particularly the PGO_INSTRUMENT_LTO option. Setting this option to
+the build, particularly the ``PGO_INSTRUMENT_LTO`` option. Setting this option to
 Thin or Full will enable ThinLTO or full LTO respectively, further enhancing
 the performance gains from a PGO build by enabling interprocedural
 optimizations. For example, to run a CMake configuration for a PGO build
-that also enables ThinTLO, use the following command:
+that also enables ThinLTO, use the following command:
 
 .. code-block:: console
 
@@ -149,10 +149,10 @@ By default, clang will generate profile data by compiling a simple
 hello world program.  You can also tell clang use an external
 project for generating profile data that may be a better fit for your
 use case.  The project you specify must either be a lit test suite
-(use the CLANG_PGO_TRAINING_DATA option) or a CMake project (use the
-CLANG_PERF_TRAINING_DATA_SOURCE_DIR option).
+(use the ``CLANG_PGO_TRAINING_DATA`` option) or a CMake project (use the
+``CLANG_PERF_TRAINING_DATA_SOURCE_DIR`` option).
 
-For example, If you wanted to use the
+For example, if you wanted to use the
 `LLVM Test Suite <https://github.com/llvm/llvm-test-suite/>`_ to generate
 profile data you would use the following command:
 
@@ -162,8 +162,8 @@ profile data you would use the following command:
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=<path to llvm-test-suite> \
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DEPS=runtimes
 
-The BOOTSTRAP\_ prefixes tells CMake to pass the variables on to the instrumented
-stage two build.  And the CLANG_PGO_TRAINING_DEPS option let's you specify
+The ``BOOTSTRAP\_`` prefix tells CMake to pass the variables on to the instrumented
+stage two build.  And the ``CLANG_PGO_TRAINING_DEPS`` option let's you specify
 additional build targets to build before building the external project.  The
 LLVM Test Suite requires compiler-rt to build, so we need to add the
 `runtimes` target as a dependency.
@@ -182,7 +182,7 @@ build directory. This takes a really long time because it builds clang twice,
 and you *must* have compiler-rt in your build tree.
 
 This process uses any source files under the perf-training directory as training
-data as long as the source files are marked up with LIT-style RUN lines.
+data as long as the source files are marked up with LIT-style ``RUN`` lines.
 
 After it finishes you can use :code:`find . -name clang.profdata` to find it, but it
 should be at a path something like:
@@ -191,7 +191,7 @@ should be at a path something like:
 
   <build dir>/tools/clang/stage2-instrumented-bins/utils/perf-training/clang.profdata
 
-You can feed that file into the LLVM_PROFDATA_FILE option when you build your
+You can feed that file into the ``LLVM_PROFDATA_FILE`` option when you build your
 optimized compiler.
 
 It may be necessary to build additional targets before running perf training, such as
@@ -214,7 +214,7 @@ The PGO cache generates the following additional targets:
 
 **stage2-instrumented-generate-profdata**
   Depends on stage2-instrumented and will use the instrumented compiler to
-  generate profdata based on the training files in clang/utils/perf-training
+  generate profdata based on the training files in ``clang/utils/perf-training``
 
 **stage2**
   Depends on stage2-instrumented-generate-profdata and will use the stage1
@@ -257,11 +257,11 @@ Then, build the BOLT-optimized binary by running the following ninja command:
   $ ninja clang-bolt
 
 If you're seeing errors in the build process, try building with a recent
-version of Clang/LLVM by setting the CMAKE_C_COMPILER and
-CMAKE_CXX_COMPILER flags to the appropriate values.
+version of Clang/LLVM by setting the ``CMAKE_C_COMPILER`` and
+``CMAKE_CXX_COMPILER`` flags to the appropriate values.
 
 It is also possible to use BOLT on top of PGO and (Thin)LTO for an even more
-significant runtime speedup. To configure a three stage PGO build with ThinLTO
+significant runtime speedup. To configure a three-stage PGO build with ThinLTO
 that optimizes the resulting binary with BOLT, use the following CMake
 configuration command:
 
@@ -282,14 +282,14 @@ Then, to build the final optimized binary, build the stage2-clang-bolt target:
 3-Stage Non-Determinism
 =======================
 
-In the ancient lore of compilers non-determinism is like the multi-headed hydra.
+In the ancient lore of compilers, non-determinism is like the multi-headed hydra.
 Whenever its head pops up, terror and chaos ensue.
 
-Historically one of the tests to verify that a compiler was deterministic would
-be a three stage build. The idea of a three stage build is you take your sources
+Historically, one of the tests to verify that a compiler was deterministic would
+be a three-stage build. The idea of a three-stage build is that you take your sources
 and build a compiler (stage1), then use that compiler to rebuild the sources
 (stage2), then you use that compiler to rebuild the sources a third time
-(stage3) with an identical configuration to the stage2 build. At the end of
+(stage3) with a configuration identical to the stage2 build. At the end of
 this, you have a stage2 and stage3 compiler that should be bit-for-bit
 identical.
 
@@ -301,4 +301,4 @@ following commands:
   $ cmake -G Ninja -C <path to source>/clang/cmake/caches/3-stage.cmake <path to source>/llvm
   $ ninja stage3
 
-After the build you can compare the stage2 and stage3 compilers.
+After the build, you can compare the stage2 and stage3 compilers.

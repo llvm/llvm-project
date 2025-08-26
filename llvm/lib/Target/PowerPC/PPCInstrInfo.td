@@ -3235,7 +3235,8 @@ def PPC32GOT: PPCEmitTimePseudo<(outs gprc:$rD), (ins), "#PPC32GOT",
 
 // Get the _GLOBAL_OFFSET_TABLE_ in PIC mode.
 // This uses two output registers, the first as the real output, the second as a
-// temporary register, used internally in code generation.
+// temporary register, used internally in code generation. A "bl" also clobbers LR.
+let Defs = [LR] in
 def PPC32PICGOT: PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins), "#PPC32PICGOT",
                 []>, NoEncode<"$rT">;
 

@@ -103,15 +103,6 @@ static DecodeStatus DecodeGR16RegisterClass(MCInst &MI, uint64_t RegNo,
 }
 
 static DecodeStatus DecodeCGImm(MCInst &MI, uint64_t Bits, uint64_t Address,
-                                const MCDisassembler *Decoder);
-
-static DecodeStatus DecodeMemOperand(MCInst &MI, uint64_t Bits,
-                                     uint64_t Address,
-                                     const MCDisassembler *Decoder);
-
-#include "MSP430GenDisassemblerTables.inc"
-
-static DecodeStatus DecodeCGImm(MCInst &MI, uint64_t Bits, uint64_t Address,
                                 const MCDisassembler *Decoder) {
   int64_t Imm;
   switch (Bits) {
@@ -141,6 +132,8 @@ static DecodeStatus DecodeMemOperand(MCInst &MI, uint64_t Bits,
   MI.addOperand(MCOperand::createImm((int16_t)Imm));
   return MCDisassembler::Success;
 }
+
+#include "MSP430GenDisassemblerTables.inc"
 
 enum AddrMode {
   amInvalid = 0,

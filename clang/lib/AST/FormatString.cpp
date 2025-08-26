@@ -655,7 +655,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         // to Objective-C objects.  Since the compiler doesn't know which
         // structs can be toll-free bridged, we just accept them all.
         QualType pointee = PT->getPointeeType();
-        if (pointee->getAsStructureType() || pointee->isVoidType())
+        if (pointee->isStructureType() || pointee->isVoidType())
           return Match;
       }
       return NoMatch;

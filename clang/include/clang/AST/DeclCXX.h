@@ -3825,7 +3825,9 @@ public:
   void setEnumType(TypeSourceInfo *TSI) { EnumType = TSI; }
 
 public:
-  EnumDecl *getEnumDecl() const { return cast<EnumDecl>(EnumType->getType()->getAsTagDecl()); }
+  EnumDecl *getEnumDecl() const {
+    return cast<clang::EnumType>(EnumType->getType())->getOriginalDecl();
+  }
 
   static UsingEnumDecl *Create(ASTContext &C, DeclContext *DC,
                                SourceLocation UsingL, SourceLocation EnumL,

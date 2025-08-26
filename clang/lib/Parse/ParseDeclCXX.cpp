@@ -4944,33 +4944,20 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
     return std::nullopt;
   };
 
-  auto StrLiteral = ProcessStringLiteral();
-  if (!StrLiteral.has_value()) {
+  auto Signature = ProcessStringLiteral();
+  if (!Signature.has_value()) {
     Diag(Tok, diag::err_expected_string_literal)
-        << /*in attributes...*/ 4 << RootSignatureIdent->getName();
-    SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
-    T.consumeClose();
+        << /*in attributes...*/ 4 << "RootSignature";
     return;
   }
 
   // Construct our identifier
-  StringLiteral *Signature = StrLiteral.value();
-  auto [DeclIdent, Found] =
-      Actions.HLSL().ActOnStartRootSignatureDecl(Signature->getString());
-  // If we haven't found an already defined DeclIdent then parse the root
-  // signature string and construct the in-memory elements
-  if (!Found) {
-    // Invoke the root signature parser to construct the in-memory constructs
-    hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, Signature,
-                                     PP);
-    if (Parser.parse()) {
-      T.consumeClose();
-      return;
-    }
-
-    // Construct the declaration.
-    Actions.HLSL().ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
-                                                Parser.getElements());
+  IdentifierInfo *DeclIdent = hlsl::ParseHLSLRootSignature(
+      Actions, getLangOpts().HLSLRootSigVer, *Signature);
+  if (!DeclIdent) {
+    SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
+    T.consumeClose();
+    return;
   }
 
   // Create the arg for the ParsedAttr

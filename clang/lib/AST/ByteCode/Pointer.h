@@ -103,9 +103,7 @@ public:
   Pointer(uint64_t Address, const Descriptor *Desc, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Int), Int{Desc, Address} {}
   Pointer(const Function *F, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Fn), Fn(F) {
-    Fn = FunctionPointer(F);
-  }
+      : Offset(Offset), StorageKind(Storage::Fn), Fn(F) {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Typeid) {
     Typeid.TypePtr = TypePtr;
