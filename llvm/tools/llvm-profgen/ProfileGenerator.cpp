@@ -543,6 +543,7 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   populateBodySamplesForAllFunctions(SC.RangeCounter);
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
+  populateTypeSamplesForAllFunctions(SC.DataAccessCounter);
 
   updateFunctionSamples();
 }
@@ -609,8 +610,8 @@ void ProfileGenerator::populateBoundarySamplesWithProbesForAllFunctions(
           getLeafProfileAndAddTotalSamples(FrameVec, 0);
       FunctionProfile.addCalledTargetSamples(
           FrameVec.back().Location.LineOffset,
-          FrameVec.back().Location.Discriminator,
-          FunctionId(CalleeName), Count);
+          FrameVec.back().Location.Discriminator, FunctionId(CalleeName),
+          Count);
     }
   }
 }
@@ -633,8 +634,7 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
         getBaseDiscriminator(FrameVec[I - 1].Location.Discriminator));
     FunctionSamplesMap &SamplesMap =
         FunctionProfile->functionSamplesAt(Callsite);
-    auto Ret =
-        SamplesMap.emplace(FrameVec[I].Func, FunctionSamples());
+    auto Ret = SamplesMap.emplace(FrameVec[I].Func, FunctionSamples());
     if (Ret.second) {
       SampleContext Context(FrameVec[I].Func);
       Ret.first->second.setContext(Context);
@@ -746,6 +746,26 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
     FunctionSamples &CalleeProfile =
         getTopLevelFunctionProfile(FunctionId(CalleeName));
     CalleeProfile.addHeadSamples(Count);
+  }
+}
+
+void ProfileGenerator::populateTypeSamplesForAllFunctions(
+    const DataAccessSample &DataAccessSamples) {
+  // For each instruction with vtable accesses, get its symbolized inline
+  // stack, and add the vtable counters to the function samples.
+  for (const auto &[IpData, Count] : DataAccessSamples) {
+    uint64_t InstAddr = IpData.first;
+    const SampleContextFrameVector &FrameVec =
+        Binary->getCachedFrameLocationStack(InstAddr,
+                                            /* UseProbeDiscriminator= */ false);
+    if (!FrameVec.empty()) {
+      FunctionSamples &FunctionProfile =
+          getLeafProfileAndAddTotalSamples(FrameVec, /* Count= */ 0);
+      LineLocation Loc(
+          FrameVec.back().Location.LineOffset,
+          getBaseDiscriminator(FrameVec.back().Location.Discriminator));
+      FunctionProfile.addTypeSamplesAt(Loc, FunctionId(IpData.second), Count);
+    }
   }
 }
 
