@@ -793,27 +793,27 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
     auto layoutName = xegpu::getLayoutName(op->getResult(0));
     auto attr = op->getAttr(layoutName);
 
-    xegpu::DistributeLayoutAttr layoutAttr = nullptr;
+    xegpu::DistributeLayoutAttr layout = nullptr;
     if (auto trySlice = dyn_cast_if_present<xegpu::SliceAttr>(attr)) {
-      layoutAttr = trySlice;
+      layout = trySlice;
     } else if (auto tryLayout = dyn_cast_if_present<xegpu::LayoutAttr>(attr)) {
-      layoutAttr = tryLayout;
+      layout = tryLayout;
     }
 
-    if (!layoutAttr)
+    if (!layout)
       return failure();
 
     Location loc = op.getLoc();
     VectorType type = op.getResult().getType();
     auto wgShape = type.getShape();
     std::optional<SmallVector<int64_t>> sgShape =
-        getSgShapeAndCount(wgShape, layoutAttr).first;
+        getSgShapeAndCount(wgShape, layout).first;
     if (!sgShape)
       return failure();
 
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-    auto maybeOffsets = layoutAttr.getOffsets(rewriter, loc, sgId, wgShape);
+    auto maybeOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
     if (failed(maybeOffsets))
       return failure();
 
