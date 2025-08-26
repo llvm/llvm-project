@@ -75,9 +75,8 @@ enum class SchedGroupMask {
   DS_READ = 1u << 8,
   DS_WRITE = 1u << 9,
   TRANS = 1u << 10,
-  INLINE_ASM = 1u << 11,
   ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE | TRANS | INLINE_ASM,
+        DS_READ | DS_WRITE | TRANS,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
@@ -2392,6 +2391,16 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   if (MI.isMetaInstruction())
     Result = false;
 
+  else if (MI.isInlineAsm()) {
+    std::string Text = MI.getOperand(0).getSymbolName();
+    if (Text.find("SGMASK:") != std::string::npos) {
+      Text = Text.substr(Text.find("SGMASK:") + strlen("SGMASK:"));
+      Text = Text.substr(0, Text.find_first_of(" \t\r\n"));
+      unsigned long InlineAsmMask = std::stoul(Text, nullptr, 0);
+      Result = ((unsigned long)SGMask & InlineAsmMask) != 0;
+    }
+  }
+
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
            (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI) ||
             TII->isTRANS(MI)))
@@ -2439,10 +2448,6 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 
   else if (((SGMask & SchedGroupMask::TRANS) != SchedGroupMask::NONE) &&
            TII->isTRANS(MI))
-    Result = true;
-
-  else if (((SGMask & SchedGroupMask::INLINE_ASM) != SchedGroupMask::NONE) &&
-           MI.isInlineAsm())
     Result = true;
 
   LLVM_DEBUG(
