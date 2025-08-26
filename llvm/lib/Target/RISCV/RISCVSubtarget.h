@@ -90,19 +90,19 @@ public:
     Quadratic,
     NLog2N,
   };
-  // clang-format on
-
-  enum class ZicfilpLabelSchemeEnum {
-    Disabled,
-    Unlabeled,
-    FuncSig,
+  enum RISCVZicfilpCFISchemeEnum : uint8_t {
+    ZicfilpDisabled,
+    ZicfilpUnlabeled,
+    ZicfilpFuncSig,
   };
+  // clang-format on
 
 private:
   virtual void anchor();
 
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
+  RISCVZicfilpCFISchemeEnum RISCVZicfilpCFIScheme = ZicfilpDisabled;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool ATTRIBUTE = DEFAULT;
@@ -193,15 +193,11 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
-  ZicfilpLabelSchemeEnum getZicfilpLabelScheme() const {
-    if (hasZicfilpFuncSig())
-      return ZicfilpLabelSchemeEnum::FuncSig;
-    if (hasZicfilpUnlabeled())
-      return ZicfilpLabelSchemeEnum::Unlabeled;
-    return ZicfilpLabelSchemeEnum::Disabled;
+  RISCVZicfilpCFISchemeEnum getZicfilpCFIScheme() const {
+    return RISCVZicfilpCFIScheme;
   }
   bool hasZicfilpCFI() const {
-    return getZicfilpLabelScheme() != ZicfilpLabelSchemeEnum::Disabled;
+    return getZicfilpCFIScheme() != ZicfilpDisabled;
   }
 
   bool hasConditionalMoveFusion() const {

@@ -1804,11 +1804,11 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
 // Zicfilp-based CFI
 def FeatureZicfilpUnlabeled
     : SubtargetFeature<
-          "zicfilp-unlabeled", "HasZicfilpUnlabeled", "true",
+          "zicfilp-unlabeled", "RISCVZicfilpCFIScheme", "ZicfilpUnlabeled",
           "Enforce forward-edge control-flow integrity with ZICFILP-unlabeled">;
 def FeatureZicfilpFuncSig
     : SubtargetFeature<
-          "zicfilp-func-sig", "HasZicfilpFuncSig", "true",
+          "zicfilp-func-sig", "RISCVZicfilpCFIScheme", "ZicfilpFuncSig",
           "Enforce forward-edge control-flow integrity with ZICFILP-func-sig">;
 def HasZicfilpCFI : Predicate<"Subtarget->hasZicfilpCFI()">;
 def NoZicfilpCFI : Predicate<"!Subtarget->hasZicfilpCFI()">;

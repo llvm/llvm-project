@@ -287,11 +287,11 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
         reportFatalUsageError("missing cf-branch-label-scheme module flag");
       }
 
-      using ZicfilpLabelSchemeEnum = RISCVSubtarget::ZicfilpLabelSchemeEnum;
-      const ZicfilpLabelSchemeEnum SupportedScheme = I->getZicfilpLabelScheme();
-      if ((SupportedScheme != ZicfilpLabelSchemeEnum::FuncSig &&
+      using CFISchemeEnum = RISCVSubtarget::RISCVZicfilpCFISchemeEnum;
+      const CFISchemeEnum SupportedScheme = I->getZicfilpCFIScheme();
+      if ((SupportedScheme != CFISchemeEnum::ZicfilpFuncSig &&
            LabelScheme == "func-sig") ||
-          (SupportedScheme != ZicfilpLabelSchemeEnum::Unlabeled &&
+          (SupportedScheme != CFISchemeEnum::ZicfilpUnlabeled &&
            LabelScheme == "unlabeled"))
         reportFatalUsageError(
             "require target feature (+zicfilp-" + LabelScheme +

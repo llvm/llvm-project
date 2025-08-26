@@ -69,8 +69,7 @@ bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
 
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
 
-  if (Subtarget.getZicfilpLabelScheme() !=
-      RISCVSubtarget::ZicfilpLabelSchemeEnum::Unlabeled)
+  if (Subtarget.getZicfilpCFIScheme() != RISCVSubtarget::ZicfilpUnlabeled)
     reportFatalUsageError(
         "only cf-branch-label-scheme=unlabeled is supported for now");
 
