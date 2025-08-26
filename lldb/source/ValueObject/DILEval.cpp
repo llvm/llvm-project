@@ -348,45 +348,46 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
 
     if (!m_use_synthetic && is_objc_pointer) {
       std::string err_msg =
-          llvm::formatv("\"(%s) %s\" is an Objective-C pointer, and cannot be "
+          llvm::formatv("\"({0}) {1}\" is an Objective-C pointer, and cannot be "
                         "subscripted",
                         base->GetTypeName().AsCString("<invalid type>"),
                         var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                   node->GetLocation());
-    } else if (is_objc_pointer) {
+    }
+    if (is_objc_pointer) {
       lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
       if (!synthetic || synthetic == base) {
         std::string err_msg =
-            llvm::formatv("\"(%s) %s\" is not an array type",
+            llvm::formatv("\"({0}) {1}\" is not an array type",
                           base->GetTypeName().AsCString("<invalid type>"),
                           var_expr_path_strm.GetData());
         return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                     node->GetLocation());
-      } else if (static_cast<uint32_t>(child_idx) >=
-                 synthetic->GetNumChildrenIgnoringErrors()) {
+      }
+      if (static_cast<uint32_t>(child_idx) >=
+          synthetic->GetNumChildrenIgnoringErrors()) {
         std::string err_msg = llvm::formatv(
-            "array index %ld is not valid for \"(%s) %s\"", child_idx,
+            "array index {0} is not valid for \"({1}) {2}\"", child_idx,
             base->GetTypeName().AsCString("<invalid type>"),
             var_expr_path_strm.GetData());
         return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                     node->GetLocation());
-      } else {
-        child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
-        if (!child_valobj_sp) {
-          std::string err_msg = llvm::formatv(
-              "array index %ld is not valid for \"(%s) %s\"", child_idx,
-              base->GetTypeName().AsCString("<invalid type>"),
-              var_expr_path_strm.GetData());
-          return llvm::make_error<DILDiagnosticError>(
-              m_expr, std::move(err_msg), node->GetLocation());
-        }
-        if (m_use_dynamic != lldb::eNoDynamicValues) {
-          if (auto dynamic_sp = child_valobj_sp->GetDynamicValue(m_use_dynamic))
-            child_valobj_sp = std::move(dynamic_sp);
-        }
-        return child_valobj_sp;
       }
+      child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
+      if (!child_valobj_sp) {
+        std::string err_msg = llvm::formatv(
+            "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+            base->GetTypeName().AsCString("<invalid type>"),
+            var_expr_path_strm.GetData());
+        return llvm::make_error<DILDiagnosticError>(
+            m_expr, std::move(err_msg), node->GetLocation());
+      }
+      if (m_use_dynamic != lldb::eNoDynamicValues) {
+        if (auto dynamic_sp = child_valobj_sp->GetDynamicValue(m_use_dynamic))
+          child_valobj_sp = std::move(dynamic_sp);
+      }
+      return child_valobj_sp;
     }
 
     child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
