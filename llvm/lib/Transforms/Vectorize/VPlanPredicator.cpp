@@ -67,8 +67,8 @@ class VPPredicator {
     return EdgeMaskCache[{Src, Dst}] = Mask;
   }
 
-  /// Given a widened phi \p PhiR, try to see if its incoming blocks all share a
-  /// common edge and return its mask.
+  /// Given a phi \p PhiR, try to see if its incoming blocks all share a common
+  /// edge and return its mask.
   VPValue *findCommonEdgeMask(const VPPhi *PhiR) const;
 
 public:
