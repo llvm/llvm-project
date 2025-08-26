@@ -64,11 +64,10 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               // analyzed by expression analysis.
               auto source{structureComponent.component.source};
               if (const auto *expr{GetExpr(context_, allocateObject)}) {
-                if (const Symbol *
-                        symbol{structureComponent.component.symbol
-                                ? &structureComponent.component.symbol
-                                       ->GetUltimate()
-                                : nullptr};
+                if (const Symbol *symbol{structureComponent.component.symbol
+                            ? &structureComponent.component.symbol
+                                  ->GetUltimate()
+                            : nullptr};
                     !IsAllocatableOrObjectPointer(symbol)) { // F'2023 C936
                   context_.Say(source,
                       "Component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);

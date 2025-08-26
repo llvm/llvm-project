@@ -117,7 +117,7 @@ private:
 
   using PairOfValues = std::pair<std::optional<Value>, std::optional<Value>>;
   PairOfValues ComputeBounds(const parser::CaseValueRange &range) {
-    return common::visit(
+    return common::visit( //
         common::visitors{
             [&](const parser::CaseValue &x) {
               auto value{GetValue(x)};

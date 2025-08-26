@@ -104,7 +104,7 @@ Symbol *Scope::FindComponent(SourceName name) const {
   auto found{find(name)};
   if (found != end()) {
     return &*found->second;
-  } else if (const Scope * parent{GetDerivedTypeParent()}) {
+  } else if (const Scope *parent{GetDerivedTypeParent()}) {
     return parent->FindComponent(name);
   } else {
     return nullptr;
@@ -220,7 +220,7 @@ const DeclTypeSpec *Scope::GetType(const SomeExpr &expr) {
       case TypeCategory::Complex:
         return &MakeNumericType(dyType->category(), KindExpr{dyType->kind()});
       case TypeCategory::Character:
-        if (const ParamValue * lenParam{dyType->charLengthParamValue()}) {
+        if (const ParamValue *lenParam{dyType->charLengthParamValue()}) {
           return &MakeCharacterType(
               ParamValue{*lenParam}, KindExpr{dyType->kind()});
         } else {
@@ -332,8 +332,8 @@ void Scope::AddSourceRange(parser::CharBlock source) {
       const auto describe{[&](parser::CharBlock src) {
         if (auto range{allCookedSources.GetProvenanceRange(src)}) {
           std::size_t offset;
-          if (const parser::SourceFile *
-              file{allSources.GetSourceFile(range->start(), &offset)}) {
+          if (const parser::SourceFile *file{
+                  allSources.GetSourceFile(range->start(), &offset)}) {
             return "'"s + file->path() + "' at " + std::to_string(offset) +
                 " for " + std::to_string(range->size());
           } else {
@@ -414,7 +414,7 @@ template <common::TypeParamAttr ParamAttr> struct IsTypeParamHelper<ParamAttr> {
 template <common::TypeParamAttr... ParamAttr>
 static bool IsParameterizedDerivedTypeHelper(const Scope &scope) {
   if (scope.IsDerivedType()) {
-    if (const Scope * parent{scope.GetDerivedTypeParent()}) {
+    if (const Scope *parent{scope.GetDerivedTypeParent()}) {
       if (IsParameterizedDerivedTypeHelper<ParamAttr...>(*parent)) {
         return true;
       }
@@ -451,8 +451,8 @@ const DeclTypeSpec *Scope::FindInstantiatedDerivedType(
 }
 
 const Scope *Scope::GetDerivedTypeParent() const {
-  if (const Symbol * symbol{GetSymbol()}) {
-    if (const DerivedTypeSpec * parent{symbol->GetParentTypeSpec(this)}) {
+  if (const Symbol *symbol{GetSymbol()}) {
+    if (const DerivedTypeSpec *parent{symbol->GetParentTypeSpec(this)}) {
       return parent->scope();
     }
   }
@@ -462,7 +462,7 @@ const Scope *Scope::GetDerivedTypeParent() const {
 const Scope &Scope::GetDerivedTypeBase() const {
   const Scope *child{this};
   for (const Scope *parent{GetDerivedTypeParent()}; parent != nullptr;
-       parent = child->GetDerivedTypeParent()) {
+      parent = child->GetDerivedTypeParent()) {
     child = parent;
   }
   return *child;

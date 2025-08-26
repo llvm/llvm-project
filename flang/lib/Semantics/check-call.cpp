@@ -43,7 +43,7 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
     } else if (type->IsUnlimitedPolymorphic()) {
       messages.Say(
           "Unlimited polymorphic actual argument requires an explicit interface"_err_en_US);
-    } else if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(type)}) {
+    } else if (const DerivedTypeSpec *derived{GetDerivedTypeSpec(type)}) {
       if (!derived->parameters().empty()) {
         messages.Say(
             "Parameterized derived type actual argument requires an explicit interface"_err_en_US);
@@ -56,7 +56,7 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
-    if (const Symbol * base{GetFirstSymbol(*expr)};
+    if (const Symbol *base{GetFirstSymbol(*expr)};
         base && IsFunctionResult(*base)) {
       context.NoteDefinedSymbol(*base);
     }
@@ -92,7 +92,7 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
               "Non-intrinsic ELEMENTAL procedure '%s' may not be passed as an actual argument"_err_en_US,
               argProcSymbol->name());
         } else if (const auto *subp{argProcSymbol->GetUltimate()
-                                        .detailsIf<SubprogramDetails>()}) {
+                           .detailsIf<SubprogramDetails>()}) {
           if (subp->stmtFunction()) {
             evaluate::SayWithDeclaration(messages, *argProcSymbol,
                 "Statement function '%s' may not be passed as an actual argument"_err_en_US,
@@ -480,10 +480,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             "Actual argument associated with TYPE(*) %s may not have a parameterized derived type"_err_en_US,
             dummyName);
       }
-      if (const Symbol *
-          tbp{FindImmediateComponent(*actualDerived, [](const Symbol &symbol) {
-            return symbol.has<ProcBindingDetails>();
-          })}) { // 15.5.2.4(2)
+      if (const Symbol *tbp{
+              FindImmediateComponent(*actualDerived, [](const Symbol &symbol) {
+                return symbol.has<ProcBindingDetails>();
+              })}) { // 15.5.2.4(2)
         evaluate::SayWithDeclaration(messages, *tbp,
             "Actual argument associated with TYPE(*) %s may not have type-bound procedure '%s'"_err_en_US,
             dummyName, tbp->name());
@@ -509,8 +509,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         }
       }
       const Symbol &coarray{actualCoarrayRef->GetLastSymbol()};
-      if (const DeclTypeSpec * type{coarray.GetType()}) { // C1537
-        if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+      if (const DeclTypeSpec *type{coarray.GetType()}) { // C1537
+        if (const DerivedTypeSpec *derived{type->AsDerived()}) {
           if (auto bad{semantics::FindPointerUltimateComponent(*derived)}) {
             evaluate::SayWithDeclaration(messages, coarray,
                 "Coindexed object '%s' with POINTER ultimate component '%s' cannot be associated with %s"_err_en_US,
@@ -764,7 +764,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     } else if (dummy.intent != common::Intent::In ||
         (dummyIsPointer && !actualIsPointer)) {
       if (auto named{evaluate::ExtractNamedEntity(actual)}) {
-        if (const Symbol & base{named->GetFirstSymbol()};
+        if (const Symbol &base{named->GetFirstSymbol()};
             IsFunctionResult(base)) {
           context.NoteDefinedSymbol(base);
         }
@@ -1104,7 +1104,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
   parser::ContextualMessages &messages{foldingContext.messages()};
   parser::CharBlock location{arg.sourceLocation().value_or(messages.at())};
   auto restorer{messages.SetLocation(location)};
-  const characteristics::Procedure &interface { dummy.procedure.value() };
+  const characteristics::Procedure &interface{dummy.procedure.value()};
   if (const auto *expr{arg.UnwrapExpr()}) {
     bool dummyIsPointer{
         dummy.attrs.test(characteristics::DummyProcedure::Attr::Pointer)};
@@ -1343,8 +1343,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                     messages.Say(
                         "Actual argument associated with %s is a NULL() pointer without a MOLD= to provide a character length"_err_en_US,
                         dummyName);
-                  } else if (const DerivedTypeSpec *
-                      derived{GetDerivedTypeSpec(object.type.type())}) {
+                  } else if (const DerivedTypeSpec *derived{
+                                 GetDerivedTypeSpec(object.type.type())}) {
                     for (const auto &[pName, pValue] : derived->parameters()) {
                       if (pValue.isAssumed()) {
                         messages.Say(
@@ -1870,7 +1870,7 @@ static void CheckFree(evaluate::ActualArguments &arguments,
     messages.Say("FREE expects a single argument"_err_en_US);
   }
   auto arg = arguments[0];
-  if (const Symbol * symbol{evaluate::UnwrapWholeSymbolDataRef(arg)};
+  if (const Symbol *symbol{evaluate::UnwrapWholeSymbolDataRef(arg)};
       !symbol || !symbol->test(Symbol::Flag::CrayPointer)) {
     messages.Say("FREE should only be used with Cray pointers"_warn_en_US);
   }
@@ -1904,8 +1904,8 @@ static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
   }
   if (arguments.size() >= 2 && arguments[0] && arguments[1]) {
     for (int j{0}; j < 2; ++j) {
-      if (const Symbol *
-              whole{UnwrapWholeSymbolOrComponentDataRef(arguments[j])};
+      if (const Symbol *whole{
+              UnwrapWholeSymbolOrComponentDataRef(arguments[j])};
           !whole || !IsAllocatable(whole->GetUltimate())) {
         messages.Say(*arguments[j]->sourceLocation(),
             "Argument #%d to MOVE_ALLOC must be allocatable"_err_en_US, j + 1);
@@ -2136,8 +2136,8 @@ static void CheckTransfer(evaluate::ActualArguments &arguments,
       }
     }
     if (arguments.size() > 2) { // SIZE=
-      if (const Symbol *
-          whole{UnwrapWholeSymbolOrComponentDataRef(arguments[2])}) {
+      if (const Symbol *whole{
+              UnwrapWholeSymbolOrComponentDataRef(arguments[2])}) {
         if (IsOptional(*whole)) {
           messages.Say(
               "SIZE= argument may not be the optional dummy argument '%s'"_err_en_US,
@@ -2307,7 +2307,7 @@ bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
       for (const auto &pair : derived->parameters()) {
         if (pair.first == "element_kind") {
           auto vecElemKind{Fortran::evaluate::ToInt64(pair.second.GetExplicit())
-                               .value_or(0)};
+                  .value_or(0)};
           auto numElem{vecElemKind == 0 ? 0 : (16 / vecElemKind)};
           return CheckArgumentIsConstantExprInRange(
               actuals, 1, 0, numElem - 1, messages);

@@ -203,7 +203,7 @@ bool IsDeviceAllocatable(const Symbol &symbol);
 
 inline bool IsCUDADeviceContext(const Scope *scope) {
   if (scope) {
-    if (const Symbol * symbol{scope->symbol()}) {
+    if (const Symbol *symbol{scope->symbol()}) {
       if (const auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
         if (auto attrs{subp->cudaSubprogramAttrs()}) {
           return *attrs != common::CUDASubprogramAttrs::Host;
@@ -305,7 +305,7 @@ const Symbol *FindExternallyVisibleObject(const A &, const Scope &) {
 template <typename T>
 const Symbol *FindExternallyVisibleObject(
     const evaluate::Designator<T> &designator, const Scope &scope) {
-  if (const Symbol * symbol{designator.GetBaseObject().symbol()}) {
+  if (const Symbol *symbol{designator.GetBaseObject().symbol()}) {
     return FindExternallyVisibleObject(*symbol, scope, false);
   } else if (std::holds_alternative<evaluate::CoarrayRef>(designator.u)) {
     // Coindexed values are visible even if their image-local objects are not.
@@ -670,8 +670,8 @@ public:
   LabelEnforce(SemanticsContext &context, std::set<parser::Label> &&labels,
       parser::CharBlock constructSourcePosition, const char *construct)
       : context_{context}, labels_{labels},
-        constructSourcePosition_{constructSourcePosition}, construct_{
-                                                               construct} {}
+        constructSourcePosition_{constructSourcePosition},
+        construct_{construct} {}
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> bool Pre(const parser::Statement<T> &statement) {
     currentStatementSourcePosition_ = statement.source;

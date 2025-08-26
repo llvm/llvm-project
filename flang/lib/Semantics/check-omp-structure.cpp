@@ -2616,8 +2616,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
                                                         &objs,
                                                     std::string clause) {
             for (const auto &obj : objs.v) {
-              if (const parser::Name *
-                  objName{parser::Unwrap<parser::Name>(obj)}) {
+              if (const parser::Name *objName{
+                      parser::Unwrap<parser::Name>(obj)}) {
                 if (&objName->symbol->GetUltimate() == eventHandleSym) {
                   context_.Say(GetContext().clauseSource,
                       "A variable: `%s` that appears in a DETACH clause cannot appear on %s clause on the same construct"_err_en_US,
@@ -3216,7 +3216,8 @@ void OmpStructureChecker::CheckReductionModifier(
   if (modifier.v == ReductionModifier::Value::Task) {
     // "Task" is only allowed on worksharing or "parallel" directive.
     static llvm::omp::Directive worksharing[]{
-        llvm::omp::Directive::OMPD_do, llvm::omp::Directive::OMPD_scope,
+        llvm::omp::Directive::OMPD_do, //
+        llvm::omp::Directive::OMPD_scope, //
         llvm::omp::Directive::OMPD_sections,
         // There are more worksharing directives, but they do not apply:
         // "for" is C++ only,
