@@ -200,8 +200,7 @@ bool verifyRegisterOverflow(uint64_t Register, uint32_t NumDescriptors) {
 
 uint64_t updateAppendingRegister(uint64_t AppendingRegister,
                                  uint64_t NumDescriptors, uint64_t Offset) {
-  if (NumDescriptors == ~0U)
-    return (uint64_t)~0U + (uint64_t)1ULL;
+
   return Offset == ~0U ? AppendingRegister + NumDescriptors
                        : Offset + NumDescriptors;
 }
