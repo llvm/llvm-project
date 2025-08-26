@@ -623,7 +623,7 @@ bool SwitchMatcher::addMatcher(Matcher &Candidate) {
 }
 
 void SwitchMatcher::finalize() {
-  assert(Condition.get() == nullptr && "Already finalized");
+  assert(Condition == nullptr && "Already finalized");
   assert(Values.size() == Matchers.size() && "Broken SwitchMatcher");
   if (empty())
     return;
@@ -662,7 +662,7 @@ void SwitchMatcher::emit(MatchTable &Table) {
   assert(Values.size() == Matchers.size() && "Broken SwitchMatcher");
   if (empty())
     return;
-  assert(Condition.get() != nullptr &&
+  assert(Condition != nullptr &&
          "Broken SwitchMatcher, hasn't been finalized?");
 
   std::vector<unsigned> LabelIDs(Values.size());
