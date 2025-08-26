@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
 #include "ErrorHandling.h"
-#include "PerfReader.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
 #include "llvm/ADT/SmallString.h"

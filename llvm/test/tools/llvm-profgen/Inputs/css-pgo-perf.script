@@ -1,4 +1,4 @@
-PERF_RECORD_MMAP2 21450/21450: [0x260000(0x153000) @ 0x5f000 fd:01 21193997 0]: r-xp /usr/local/google/home/mingmingl/llvm-sdp/llvm-project/llvm/test/tools/llvm-profgen/Inputs/dap.bin
+PERF_RECORD_MMAP2 21450/21450: [0x260000(0x153000) @ 0x5f000 fd:01 21193997 0]: r-xp /path/to/dap.bin
 PERF_RECORD_MMAP2 21450/21450: [0x7ff768d52000(0x2000) @ 0 00:00 0 0]: r-xp [vdso]
 
 	          26090f
