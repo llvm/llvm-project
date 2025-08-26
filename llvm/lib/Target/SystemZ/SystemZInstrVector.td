@@ -1299,6 +1299,46 @@ let Predicates = [FeatureVectorEnhancements3] in {
             (VMNLQ VR128:$x, VR128:$y)>;
 }
 
+// Instantiate packs/packu: recognize a saturating truncation and convert
+// into the corresponding packs/packu instruction.
+multiclass SignedSaturatingTruncate<ValueType input, ValueType output,
+                                    Instruction packs> {
+  def : Pat<
+    (output (z_pack
+      (smin (smax (input VR128:$a), ssat_trunc_min_vec), ssat_trunc_max_vec),
+      (smin (smax (input VR128:$b), ssat_trunc_min_vec), ssat_trunc_max_vec)
+    )),
+    (packs VR128:$a, VR128:$b)
+  >;
+
+  def : Pat<
+    (output (z_pack
+      (smax (smin (input VR128:$a), ssat_trunc_max_vec), ssat_trunc_min_vec),
+      (smax (smin (input VR128:$b), ssat_trunc_max_vec), ssat_trunc_min_vec)
+    )),
+    (packs VR128:$a, VR128:$b)
+  >;
+}
+
+defm : SignedSaturatingTruncate<v8i16, v16i8, VPKSH>;
+defm : SignedSaturatingTruncate<v4i32, v8i16, VPKSF>;
+defm : SignedSaturatingTruncate<v2i64, v4i32, VPKSG>;
+
+multiclass UnsignedSaturatingTruncate<ValueType input, ValueType output,
+                                      Instruction packu> {
+  def : Pat<
+    (output (z_pack
+      (umin (input VR128:$a), usat_trunc_max_vec),
+      (umin (input VR128:$b), usat_trunc_max_vec)
+    )),
+    (packu VR128:$a, VR128:$b)
+  >;
+}
+
+defm : UnsignedSaturatingTruncate<v8i16, v16i8, VPKLSH>;
+defm : UnsignedSaturatingTruncate<v4i32, v8i16, VPKLSF>;
+defm : UnsignedSaturatingTruncate<v2i64, v4i32, VPKLSG>;
+
 // Instantiate comparison patterns to recognize VACC/VSCBI for TYPE.
 multiclass IntegerComputeCarryOrBorrow<ValueType type,
                                        Instruction vacc, Instruction vscbi> {
