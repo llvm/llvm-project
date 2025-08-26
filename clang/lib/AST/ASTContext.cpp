@@ -5855,8 +5855,10 @@ QualType ASTContext::getOverflowBehaviorType(
   }
 
   QualType Canonical;
-  if (!Underlying.isCanonical()) {
-    Canonical = getOverflowBehaviorType(Kind, getCanonicalType(Underlying));
+  if (!Underlying.isCanonical() || Underlying.hasLocalQualifiers()) {
+    SplitQualType canonSplit = getCanonicalType(Underlying).split();
+    Canonical = getOverflowBehaviorType(Kind, QualType(canonSplit.Ty, 0));
+    Canonical = getQualifiedType(Canonical, canonSplit.Quals);
     [[maybe_unused]] OverflowBehaviorType *NewOBT =
         OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewOBT && "Shouldn't be in the map!");

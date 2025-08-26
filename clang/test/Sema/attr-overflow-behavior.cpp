@@ -130,3 +130,17 @@ void cpp_constexpr_bracket_initialization() {
   // expected-warning@-1 {{implicit conversion from '__no_wrap int' to 'const short' changes value from 100000 to -31072}}
   // expected-note@-2 {{insert an explicit cast to silence this issue}}
 }
+
+// ensure that all qualifier placements result in the same canonical type
+void test_qualifier_placements() {
+  using ConstInt = const int;
+  using WrapConstInt1 = ConstInt __attribute__((overflow_behavior(wrap)));
+  using WrapConstInt2 = const int __attribute__((overflow_behavior(wrap)));
+  typedef const int __wrap const_int_wrap;
+  typedef int __wrap const int_wrap_const;
+  typedef int __no_wrap const int_no_wrap_const;
+
+  static_assert(__is_same(WrapConstInt1, WrapConstInt2));
+  static_assert(__is_same(const_int_wrap, int_wrap_const));
+  static_assert(!__is_same(const_int_wrap, int_no_wrap_const));
+}
