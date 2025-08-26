@@ -33,10 +33,6 @@
 
 #include "llvm/TargetParser/Host.h"
 
-extern "C" {
-extern char **environ;
-}
-
 namespace lldb_private {
 class ProcessLaunchInfo;
 }
@@ -240,8 +236,6 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   process_info.Clear();
   return false;
 }
-
-Environment Host::GetEnvironment() { return Environment(environ); }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return Status::FromErrorString("unimplemented");

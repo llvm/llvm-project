@@ -28,7 +28,7 @@ Packaged builds for other platforms may eventually be provided, but we need volu
 [Legacy] Using Packaged Builds
 ------------------------------
 
-To use the legacy pacakge builds, simply unpack it anywhere. If the build archive has the name **``checker-XXX.tar.bz2``** then the archive will expand to a directory called **``checker-XXX``**. You do not need to place this directory or the contents of this directory in any special place. Uninstalling the analyzer is as simple as deleting this directory.
+To use the legacy package builds, simply unpack it anywhere. If the build archive has the name **``checker-XXX.tar.bz2``** then the archive will expand to a directory called **``checker-XXX``**. You do not need to place this directory or the contents of this directory in any special place. Uninstalling the analyzer is as simple as deleting this directory.
 
 Most of the files in the **``checker-XXX``** directory will be supporting files for the analyzer that you can simply ignore. Most users will only care about two files, which are located at the top of the **``checker-XXX``** directory:
 

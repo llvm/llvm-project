@@ -54,16 +54,18 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
   Size = scudo::roundUp(Size, MinAlignment);
-  if (Allocator->useMemoryTaggingTestOnly())
+  if (Allocator->useMemoryTaggingTestOnly()) {
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();
           reinterpret_cast<char *>(P)[-1] = 'A';
         },
         "");
+  }
   if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
           ? Allocator->useMemoryTaggingTestOnly()
-          : Alignment == MinAlignment) {
+          : Alignment == MinAlignment &&
+                AllocatorT::SecondaryT::getGuardPageSize() > 0) {
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();
@@ -210,6 +212,47 @@ struct TestConditionVariableConfig {
   };
   template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
 };
+
+struct TestNoCacheConfig {
+  static const bool MaySupportMemoryTagging = true;
+  template <class A>
+  using TSDRegistryT =
+      scudo::TSDRegistrySharedT<A, 8U, 4U>; // Shared, max 8 TSDs.
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr RegionSizeLog = 28U;
+    typedef scudo::u32 CompactPtrT;
+    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const scudo::uptr GroupSizeLog = 20U;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#else
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    typedef scudo::uptr CompactPtrT;
+#endif
+    static const bool EnableBlockCache = false;
+    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+  };
+
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
 } // namespace scudo
 
 #if SCUDO_FUCHSIA
@@ -219,7 +262,8 @@ struct TestConditionVariableConfig {
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, DefaultConfig)                          \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidConfig)                          \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConditionVariableConfig)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConditionVariableConfig)            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestNoCacheConfig)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
@@ -579,23 +623,23 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, Stats) {
   auto *Allocator = this->Allocator.get();
 
-  scudo::uptr BufferSize = 8192;
-  std::vector<char> Buffer(BufferSize);
-  scudo::uptr ActualSize = Allocator->getStats(Buffer.data(), BufferSize);
-  while (ActualSize > BufferSize) {
-    BufferSize = ActualSize + 1024;
-    Buffer.resize(BufferSize);
-    ActualSize = Allocator->getStats(Buffer.data(), BufferSize);
+  std::string Stats(10000, '\0');
+  scudo::uptr ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  if (ActualSize > Stats.size()) {
+    Stats.resize(ActualSize);
+    ActualSize = Allocator->getStats(Stats.data(), Stats.size());
   }
-  std::string Stats(Buffer.begin(), Buffer.end());
+  EXPECT_GE(Stats.size(), ActualSize);
+
   // Basic checks on the contents of the statistics output, which also allows us
   // to verify that we got it all.
   EXPECT_NE(Stats.find("Stats: SizeClassAllocator"), std::string::npos);
   EXPECT_NE(Stats.find("Stats: MapAllocator"), std::string::npos);
-  EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
+  // Do not explicitly check for quarantine stats since a config can disable
+  // them. Other tests verify this (QuarantineEnabled/QuarantineDisabled).
 }
 
-SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, CacheDrain) {
+SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, Drain) {
   using AllocatorT = typename BaseT::AllocatorT;
   auto *Allocator = this->Allocator.get();
 
@@ -610,9 +654,9 @@ SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, CacheDrain) {
 
   typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
       *Allocator->getTSDRegistry());
-  EXPECT_TRUE(!TSD->getCache().isEmpty());
-  TSD->getCache().drain();
-  EXPECT_TRUE(TSD->getCache().isEmpty());
+  EXPECT_TRUE(!TSD->getSizeClassAllocator().isEmpty());
+  TSD->getSizeClassAllocator().drain();
+  EXPECT_TRUE(TSD->getSizeClassAllocator().isEmpty());
 }
 
 SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, ForceCacheDrain) {
@@ -633,7 +677,7 @@ SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, ForceCacheDrain) {
 
   typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
       *Allocator->getTSDRegistry());
-  EXPECT_TRUE(TSD->getCache().isEmpty());
+  EXPECT_TRUE(TSD->getSizeClassAllocator().isEmpty());
   EXPECT_EQ(TSD->getQuarantineCache().getSize(), 0U);
   EXPECT_TRUE(Allocator->getQuarantine()->isEmpty());
 }
@@ -1025,10 +1069,95 @@ TEST(ScudoCombinedTest, BasicTrustyConfig) {
   bool UnlockRequired;
   typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
       *Allocator->getTSDRegistry());
-  TSD->getCache().drain();
+  TSD->getSizeClassAllocator().drain();
 
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
 }
 
 #endif
 #endif
+
+struct TestQuarantineSizeClassConfig {
+  static const scudo::uptr NumBits = 1;
+  static const scudo::uptr MinSizeLog = 10;
+  static const scudo::uptr MidSizeLog = 10;
+  static const scudo::uptr MaxSizeLog = 13;
+  static const scudo::u16 MaxNumCachedHint = 8;
+  static const scudo::uptr MaxBytesCachedLog = 12;
+  static const scudo::uptr SizeDelta = 0;
+};
+
+struct TestQuarantineConfig {
+  static const bool MaySupportMemoryTagging = false;
+
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
+
+  struct Primary {
+    // Tiny allocator, its Primary only serves chunks of four sizes.
+    using SizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
+    static const scudo::uptr RegionSizeLog = DeathRegionSizeLog;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const scudo::uptr GroupSizeLog = 18;
+  };
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+// Verify that the quarantine exists by default.
+TEST(ScudoCombinedTest, QuarantineEnabled) {
+  using AllocatorT = scudo::Allocator<TestQuarantineConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  const scudo::uptr Size = 1000U;
+  void *P = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P, nullptr);
+  Allocator->deallocate(P, Origin);
+
+  std::string Stats(10000, '\0');
+  scudo::uptr ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  if (ActualSize > Stats.size()) {
+    Stats.resize(ActualSize);
+    ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  }
+  EXPECT_GE(Stats.size(), ActualSize);
+
+  // Quarantine stats should be present.
+  EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
+}
+
+struct TestQuarantineDisabledConfig : TestQuarantineConfig {
+  static const bool QuarantineDisabled = true;
+};
+
+TEST(ScudoCombinedTest, QuarantineDisabled) {
+  using AllocatorT = scudo::Allocator<TestQuarantineDisabledConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  const scudo::uptr Size = 1000U;
+  void *P = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P, nullptr);
+  Allocator->deallocate(P, Origin);
+
+  std::string Stats(10000, '\0');
+  scudo::uptr ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  if (ActualSize > Stats.size()) {
+    Stats.resize(ActualSize);
+    ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  }
+  EXPECT_GE(Stats.size(), ActualSize);
+
+  // No quarantine stats should not be present.
+  EXPECT_EQ(Stats.find("Stats: Quarantine"), std::string::npos);
+}

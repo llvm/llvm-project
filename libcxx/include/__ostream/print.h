@@ -11,15 +11,15 @@
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__fwd/ostream.h>
 #  include <__iterator/ostreambuf_iterator.h>
 #  include <__ostream/basic_ostream.h>
 #  include <format>
 #  include <ios>
-#  include <locale>
 #  include <print>
+#  include <streambuf>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -49,21 +49,11 @@ __vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args, bool _
     if (__write_nl)
       __o += '\n';
 
-    const char* __str = __o.data();
-    size_t __len      = __o.size();
-
 #    if _LIBCPP_HAS_EXCEPTIONS
     try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
-      typedef ostreambuf_iterator<char> _Ip;
-      if (std::__pad_and_output(
-              _Ip(__os),
-              __str,
-              (__os.flags() & ios_base::adjustfield) == ios_base::left ? __str + __len : __str,
-              __str + __len,
-              __os,
-              __os.fill())
-              .failed())
+      if (auto __rdbuf = __os.rdbuf();
+          !__rdbuf || __rdbuf->sputn(__o.data(), __o.size()) != static_cast<streamsize>(__o.size()))
         __os.setstate(ios_base::badbit | ios_base::failbit);
 
 #    if _LIBCPP_HAS_EXCEPTIONS
@@ -94,7 +84,7 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(ostream& __os, string_view _
 // is determined in the same way as the print(FILE*, ...) overloads.
 _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os);
 
-#    ifndef _LIBCPP_HAS_NO_UNICODE
+#    if _LIBCPP_HAS_UNICODE
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, format_args __args, bool __write_nl) {
 #      if _LIBCPP_AVAILABILITY_HAS_PRINT == 0
@@ -122,7 +112,7 @@ _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, fo
     if (__s) {
 #        ifndef _LIBCPP_WIN32API
       __print::__vprint_unicode_posix(__file, __fmt, __args, __write_nl, true);
-#        elif !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+#        elif _LIBCPP_HAS_WIDE_CHARACTERS
     __print::__vprint_unicode_windows(__file, __fmt, __args, __write_nl, true);
 #        else
 #          error "Windows builds with wchar_t disabled are not supported."
@@ -141,23 +131,23 @@ template <class = void> // TODO PRINT template or availability markup fires too 
 _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(ostream& __os, string_view __fmt, format_args __args) {
   std::__vprint_unicode(__os, __fmt, __args, false);
 }
-#    endif // _LIBCPP_HAS_NO_UNICODE
+#    endif // _LIBCPP_HAS_UNICODE
 
 template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void print(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
-#    ifndef _LIBCPP_HAS_NO_UNICODE
+#    if _LIBCPP_HAS_UNICODE
   if constexpr (__print::__use_unicode_execution_charset)
     std::__vprint_unicode(__os, __fmt.get(), std::make_format_args(__args...), false);
   else
     std::__vprint_nonunicode(__os, __fmt.get(), std::make_format_args(__args...), false);
-#    else  // _LIBCPP_HAS_NO_UNICODE
+#    else  // _LIBCPP_HAS_UNICODE
   std::__vprint_nonunicode(__os, __fmt.get(), std::make_format_args(__args...), false);
-#    endif // _LIBCPP_HAS_NO_UNICODE
+#    endif // _LIBCPP_HAS_UNICODE
 }
 
 template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void println(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
-#    ifndef _LIBCPP_HAS_NO_UNICODE
+#    if _LIBCPP_HAS_UNICODE
   // Note the wording in the Standard is inefficient. The output of
   // std::format is a std::string which is then copied. This solution
   // just appends a newline at the end of the output.
@@ -165,9 +155,9 @@ _LIBCPP_HIDE_FROM_ABI void println(ostream& __os, format_string<_Args...> __fmt,
     std::__vprint_unicode(__os, __fmt.get(), std::make_format_args(__args...), true);
   else
     std::__vprint_nonunicode(__os, __fmt.get(), std::make_format_args(__args...), true);
-#    else  // _LIBCPP_HAS_NO_UNICODE
+#    else  // _LIBCPP_HAS_UNICODE
   std::__vprint_nonunicode(__os, __fmt.get(), std::make_format_args(__args...), true);
-#    endif // _LIBCPP_HAS_NO_UNICODE
+#    endif // _LIBCPP_HAS_UNICODE
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
@@ -179,6 +169,6 @@ _LIBCPP_HIDE_FROM_ABI inline void println(ostream& __os) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP___OSTREAM_PRINT_H

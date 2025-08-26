@@ -34,24 +34,21 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
 ; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = add i32 30, [[DOTCAST]]
-; STRIDED-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; STRIDED-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; STRIDED-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], 2
 ; STRIDED-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; STRIDED-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], [[TMP1]]
-; STRIDED-NEXT:    [[TMP7:%.*]] = mul i64 0, [[TMP1]]
-; STRIDED-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX2]], [[TMP7]]
 ; STRIDED-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP1]]
 ; STRIDED-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX2]], [[TMP9]]
 ; STRIDED-NEXT:    [[TMP11:%.*]] = mul i64 2, [[TMP1]]
 ; STRIDED-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX2]], [[TMP11]]
 ; STRIDED-NEXT:    [[TMP13:%.*]] = mul i64 3, [[TMP1]]
 ; STRIDED-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX2]], [[TMP13]]
-; STRIDED-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr null, i64 [[TMP8]]
+; STRIDED-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr null, i64 [[OFFSET_IDX2]]
 ; STRIDED-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr null, i64 [[TMP10]]
 ; STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr null, i64 [[TMP12]]
 ; STRIDED-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr null, i64 [[TMP14]]
-; STRIDED-NEXT:    [[TMP19:%.*]] = getelementptr ptr, ptr [[CALL:%.*]], i32 [[TMP3]]
+; STRIDED-NEXT:    [[TMP19:%.*]] = getelementptr ptr, ptr [[CALL:%.*]], i32 [[OFFSET_IDX]]
 ; STRIDED-NEXT:    [[TMP20:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[TMP4]]
 ; STRIDED-NEXT:    [[TMP21:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[TMP5]]
 ; STRIDED-NEXT:    [[TMP22:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[TMP6]]
@@ -63,7 +60,7 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4294967264
 ; STRIDED-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; STRIDED:       middle.block:
-; STRIDED-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; STRIDED-NEXT:    br label [[SCALAR_PH]]
 ; STRIDED:       scalar.ph:
 ; STRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ -2, [[MIDDLE_BLOCK]] ], [ 30, [[ENTRY:%.*]] ]
 ; STRIDED-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ null, [[ENTRY]] ]
@@ -76,7 +73,7 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    store ptr [[P_0]], ptr [[ARRAYIDX]], align 4
 ; STRIDED-NEXT:    [[INC]] = add i32 [[TMP24]], 1
 ; STRIDED-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP24]], 0
-; STRIDED-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END]], label [[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
+; STRIDED-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END:%.*]], label [[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
 ; STRIDED:       for.end:
 ; STRIDED-NEXT:    ret void
 ;

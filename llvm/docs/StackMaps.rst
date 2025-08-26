@@ -112,8 +112,9 @@ Operands:
 
 The first operand is an ID to be encoded within the stack map. The
 second operand is the number of shadow bytes following the
-intrinsic. The variable number of operands that follow are the ``live
-values`` for which locations will be recorded in the stack map.
+intrinsic. These first two operands should be immediate, e.g. cannot
+be passed as variables. The variable number of operands that follow are
+the ``live values`` for which locations will be recorded in the stack map.
 
 To use this intrinsic as a bare-bones stack map, with no code patching
 support, the number of shadow bytes can be set to zero.
@@ -143,7 +144,7 @@ destructive patching could overwrite program text or data outside the
 current function. We disallow overlapping stack map shadows so that
 the runtime does not need to consider this corner case.
 
-For example, a stack map with 8 byte shadow:
+For example, a stack map with 8-byte shadow:
 
 .. code-block:: llvm
 

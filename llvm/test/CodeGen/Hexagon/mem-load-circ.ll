@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: f0:
 ; CHECK: r{{[1-9]+:[0-9]+}} = memd(r{{[0-9]*}}++#{{[0-9]}}:circ(m{{[01]}}))

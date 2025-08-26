@@ -319,7 +319,7 @@ void test() {
       static_assert(sizeof(double) == 8);
       for (unsigned n = 0; n < get_maximal_order<Real>(); ++n) {
         // Q: Why n=111 and x=300?
-        // A: Both are chosen s.t. the first overlow occurs for some `n<get_maximal_order<Real>()`.
+        // A: Both are chosen s.t. the first overflow occurs for some `n<get_maximal_order<Real>()`.
         if (n < 111) {
           assert(std::isfinite(std::hermite(n, +300.0)));
           assert(std::isfinite(std::hermite(n, -300.0)));
@@ -350,7 +350,9 @@ struct TestInt {
   }
 };
 
-int main() {
+int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::type_list<short, int, long, long long>(), TestInt());
+
+  return 0;
 }

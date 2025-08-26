@@ -47,7 +47,7 @@ CHECK1:      Section     : .text
 CHECK1:      IsSimple    : 1
 CHECK1:      BB Count    : 5
 CHECK1:      Exec Count  : 20
-CHECK1:      Branch Count: 640
+CHECK1:      Sample Count: 640
 CHECK1:    }
 
 ## Verify block counts.
@@ -77,10 +77,10 @@ CHECK2:  pre-processing profile using YAML profile reader
 CHECK2:  applying profile inference for "SolveCubic"
 CHECK2:  Matched yaml block (bid = 0) with hash 4600940a609c0000 to BB (index = 0) with hash 4600940a609c0000
 CHECK2-NEXT:  exact match
-CHECK2:  Matched yaml block (bid = 1) with hash 167a1f084f130088 to BB (index = 1) with hash 167a1f084f130088
-CHECK2-NEXT:  exact match
 CHECK2:  Matched yaml block (bid = 13) with hash a8d50000f81902a7 to BB (index = 13) with hash a8d5aa43f81902a7
 CHECK2-NEXT:  loose match
+CHECK2:  Matched yaml block (bid = 1) with hash 167a1f084f130088 to BB (index = 1) with hash 167a1f084f130088
+CHECK2-NEXT:  exact match
 CHECK2:  Matched yaml block (bid = 3) with hash c516000073dc00a0 to BB (index = 3) with hash c516b1c973dc00a0
 CHECK2-NEXT:  loose match
 CHECK2:  Matched yaml block (bid = 5) with hash 6446e1ea500111 to BB (index = 5) with hash 6446e1ea500111
@@ -95,7 +95,7 @@ CHECK2:      Section     : .text
 CHECK2:      IsSimple    : 1
 CHECK2:      BB Count    : 18
 CHECK2:      Exec Count  : 151
-CHECK2:      Branch Count: 552
+CHECK2:      Sample Count: 552
 
 ## Verify block counts.
 CHECK2:    .LBB00 (43 instructions, align : 1)

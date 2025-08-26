@@ -295,9 +295,8 @@ define void @masked_scatter_v2i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    cmeq v1.2s, v0.2s, #0
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    cmeq v1.2d, v0.2d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d]
@@ -434,11 +433,10 @@ define void @masked_scatter_v1i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @masked_scatter_v2i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    cmeq v1.2d, v0.2d, #0
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <2 x i64>, ptr %a

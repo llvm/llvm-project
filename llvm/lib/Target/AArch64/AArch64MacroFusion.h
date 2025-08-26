@@ -20,7 +20,7 @@ namespace llvm {
 
 /// Note that you have to add:
 ///   DAG.addMutation(createAArch64MacroFusionDAGMutation());
-/// to AArch64PassConfig::createMachineScheduler() to have an effect.
+/// to AArch64TargetMachine::createMachineScheduler() to have an effect.
 std::unique_ptr<ScheduleDAGMutation> createAArch64MacroFusionDAGMutation();
 
 } // llvm

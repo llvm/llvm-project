@@ -999,5 +999,87 @@ loop.latch:
   br label %loop
 }
 
+define i1 @not_cond(i1 %c) {
+; CHECK-LABEL: @not_cond(
+; CHECK-NEXT:    [[C_NOT:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    br i1 [[C_NOT]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+  %c.not = xor i1 %c, true
+  br i1 %c.not, label %if, label %else
+
+if:
+  ret i1 %c
+
+else:
+  ret i1 %c
+}
+
+define i32 @not_cond_icmp(i32 %x) {
+; CHECK-LABEL: @not_cond_icmp(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i32 [[X]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i32 42
+;
+  %cmp = icmp eq i32 %x, 42
+  %cmp.not = xor i1 %cmp, true
+  br i1 %cmp.not, label %if, label %else
+
+if:
+  ret i32 %x
+
+else:
+  ret i32 %x
+}
+
+define i1 @not_cond_logic1(i1 %c, i1 %d) {
+; CHECK-LABEL: @not_cond_logic1(
+; CHECK-NEXT:    [[C_NOT:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_NOT]], [[D:%.*]]
+; CHECK-NEXT:    br i1 [[AND]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c.not = xor i1 %c, true
+  %and = and i1 %c.not, %d
+  br i1 %and, label %if, label %else
+
+if:
+  ret i1 %c
+
+else:
+  ret i1 %c
+}
+
+define i1 @not_cond_logic2(i1 %c, i1 %d) {
+; CHECK-LABEL: @not_cond_logic2(
+; CHECK-NEXT:    [[C_NOT:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_NOT]], [[D:%.*]]
+; CHECK-NEXT:    br i1 [[AND]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i1 [[C]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+  %c.not = xor i1 %c, true
+  %or = or i1 %c.not, %d
+  br i1 %or, label %if, label %else
+
+if:
+  ret i1 %c
+
+else:
+  ret i1 %c
+}
+
 declare void @use_bool(i1)
 declare void @use_ptr(ptr)

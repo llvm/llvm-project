@@ -298,7 +298,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  2      10    1.00    *                   rsqrtps	(%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00                        rsqrtss	%xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   rsqrtss	(%rax), %xmm2
-# CHECK-NEXT:  2      2     0.33    *      *      U     sfence
+# CHECK-NEXT:  2      1     1.00    *      *      U     sfence
 # CHECK-NEXT:  1      1     1.00                        shufps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  2      7     1.00    *                   shufps	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      12    3.00                        sqrtps	%xmm0, %xmm2
@@ -333,7 +333,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     24.00  66.83  27.83  32.00  32.00  8.00   33.83  0.50   3.00
+# CHECK-NEXT:  -     24.00  66.58  27.58  32.17  32.17  9.00   33.58  0.25   2.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -441,7 +441,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     rsqrtps	(%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     rsqrtss	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     rsqrtss	(%rax), %xmm2
-# CHECK-NEXT:  -      -     0.25   0.25   0.33   0.33    -     0.25   0.25   0.33   sfence
+# CHECK-NEXT:  -      -      -      -     0.50   0.50   1.00    -      -      -     sfence
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     shufps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     shufps	$1, (%rax), %xmm2
 # CHECK-NEXT:  -     3.00   1.00    -      -      -      -      -      -      -     sqrtps	%xmm0, %xmm2

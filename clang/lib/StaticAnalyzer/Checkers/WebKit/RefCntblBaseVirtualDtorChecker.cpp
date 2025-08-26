@@ -10,7 +10,7 @@
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/CXXInheritance.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -113,10 +113,6 @@ public:
         auto CastType = Cast->getType();
         if (auto *PtrType = dyn_cast<PointerType>(CastType)) {
           auto PointeeType = PtrType->getPointeeType();
-          while (auto *ET = dyn_cast<ElaboratedType>(PointeeType)) {
-            if (ET->isSugared())
-              PointeeType = ET->desugar();
-          }
           if (auto *ParmType = dyn_cast<TemplateTypeParmType>(PointeeType)) {
             if (ArgList) {
               auto ParmIndex = ParmType->getIndex();
@@ -125,13 +121,13 @@ public:
                 return true;
             }
           } else if (auto *RD = dyn_cast<RecordType>(PointeeType)) {
-            if (RD->getDecl() == ClassDecl)
+            if (declaresSameEntity(RD->getOriginalDecl(), ClassDecl))
               return true;
           } else if (auto *ST =
                          dyn_cast<SubstTemplateTypeParmType>(PointeeType)) {
             auto Type = ST->getReplacementType();
             if (auto *RD = dyn_cast<RecordType>(Type)) {
-              if (RD->getDecl() == ClassDecl)
+              if (declaresSameEntity(RD->getOriginalDecl(), ClassDecl))
                 return true;
             }
           }
@@ -173,17 +169,16 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+    struct LocalVisitor : DynamicRecursiveASTVisitor {
       const RefCntblBaseVirtualDtorChecker *Checker;
       explicit LocalVisitor(const RefCntblBaseVirtualDtorChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = false;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool VisitCXXRecordDecl(const CXXRecordDecl *RD) {
+      bool VisitCXXRecordDecl(CXXRecordDecl *RD) override {
         if (!RD->hasDefinition())
           return true;
 
@@ -202,6 +197,13 @@ public:
           const CXXRecordDecl *C = T->getAsCXXRecordDecl();
           if (!C)
             continue;
+
+          bool isExempt = T.getAsString() == "NoVirtualDestructorBase" &&
+                          safeGetName(C->getParent()) == "WTF";
+          if (isExempt || ExemptDecls.contains(C)) {
+            ExemptDecls.insert(RD);
+            continue;
+          }
 
           if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(C)) {
             for (auto &Arg : CTSD->getTemplateArgs().asArray()) {
@@ -224,12 +226,13 @@ public:
 
       llvm::SetVector<const CXXRecordDecl *> Decls;
       llvm::DenseSet<const CXXRecordDecl *> CRTPs;
+      llvm::DenseSet<const CXXRecordDecl *> ExemptDecls;
     };
 
     LocalVisitor visitor(this);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
     for (auto *RD : visitor.Decls) {
-      if (visitor.CRTPs.contains(RD))
+      if (visitor.CRTPs.contains(RD) || visitor.ExemptDecls.contains(RD))
         continue;
       visitCXXRecordDecl(RD);
     }

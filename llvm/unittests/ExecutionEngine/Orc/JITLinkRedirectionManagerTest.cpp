@@ -26,6 +26,8 @@ public:
 
 protected:
   void SetUp() override {
+    OrcNativeTarget::initialize();
+
     auto JTMB = JITTargetMachineBuilder::detectHost();
     // Bail out if we can not detect the host.
     if (!JTMB) {
@@ -46,12 +48,18 @@ protected:
     if (Triple.isPPC())
       GTEST_SKIP();
 
+    auto PageSize = sys::Process::getPageSize();
+    if (!PageSize) {
+      consumeError(PageSize.takeError());
+      GTEST_SKIP();
+    }
+
     ES = std::make_unique<ExecutionSession>(
         std::make_unique<UnsupportedExecutorProcessControl>(
-            nullptr, nullptr, JTMB->getTargetTriple().getTriple()));
+            nullptr, nullptr, JTMB->getTargetTriple().getTriple(), *PageSize));
     JD = &ES->createBareJITDylib("main");
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(16384));
+        *ES, std::make_unique<InProcessMemoryManager>(*PageSize));
     DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
   }
   JITDylib *JD{nullptr};
@@ -61,51 +69,39 @@ protected:
 };
 
 TEST_F(JITLinkRedirectionManagerTest, BasicRedirectionOperation) {
-  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer, *JD);
+  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer);
   // Bail out if we can not create
   if (!RM) {
     consumeError(RM.takeError());
     GTEST_SKIP();
   }
 
-  auto DefineTarget = [&](StringRef TargetName, ExecutorAddr Addr) {
-    SymbolStringPtr Target = ES->intern(TargetName);
-    cantFail(JD->define(std::make_unique<SimpleMaterializationUnit>(
-        SymbolFlagsMap({{Target, JITSymbolFlags::Exported}}),
-        [&](std::unique_ptr<MaterializationResponsibility> R) -> void {
-          // No dependencies registered, can't fail.
-          cantFail(
-              R->notifyResolved({{Target, {Addr, JITSymbolFlags::Exported}}}));
-          cantFail(R->notifyEmitted({}));
-        })));
-    return cantFail(ES->lookup({JD}, TargetName));
+  auto MakeTarget = [](int (*Fn)()) {
+    return ExecutorSymbolDef(ExecutorAddr::fromPtr(Fn),
+                             JITSymbolFlags::Exported |
+                                 JITSymbolFlags::Callable);
   };
 
-  auto InitialTarget =
-      DefineTarget("InitialTarget", ExecutorAddr::fromPtr(&initialTarget));
-  auto MiddleTarget =
-      DefineTarget("MiddleTarget", ExecutorAddr::fromPtr(&middleTarget));
-  auto FinalTarget =
-      DefineTarget("FinalTarget", ExecutorAddr::fromPtr(&finalTarget));
-
   auto RedirectableSymbol = ES->intern("RedirectableTarget");
-  EXPECT_THAT_ERROR(
-      (*RM)->createRedirectableSymbols(JD->getDefaultResourceTracker(),
-                                       {{RedirectableSymbol, InitialTarget}}),
-      Succeeded());
-  auto RTDef = cantFail(ES->lookup({JD}, RedirectableSymbol));
+  EXPECT_THAT_ERROR((*RM)->createRedirectableSymbols(
+                        JD->getDefaultResourceTracker(),
+                        {{RedirectableSymbol, MakeTarget(initialTarget)}}),
+                    Succeeded());
 
+  auto RTDef = cantFail(ES->lookup({JD}, RedirectableSymbol));
   auto RTPtr = RTDef.getAddress().toPtr<int (*)()>();
   auto Result = RTPtr();
   EXPECT_EQ(Result, 42) << "Failed to call initial target";
 
-  EXPECT_THAT_ERROR((*RM)->redirect(*JD, {{RedirectableSymbol, MiddleTarget}}),
-                    Succeeded());
+  EXPECT_THAT_ERROR(
+      (*RM)->redirect(*JD, {{RedirectableSymbol, MakeTarget(middleTarget)}}),
+      Succeeded());
   Result = RTPtr();
   EXPECT_EQ(Result, 13) << "Failed to call middle redirected target";
 
-  EXPECT_THAT_ERROR((*RM)->redirect(*JD, {{RedirectableSymbol, FinalTarget}}),
-                    Succeeded());
+  EXPECT_THAT_ERROR(
+      (*RM)->redirect(*JD, {{RedirectableSymbol, MakeTarget(finalTarget)}}),
+      Succeeded());
   Result = RTPtr();
   EXPECT_EQ(Result, 53) << "Failed to call redirected target";
 }

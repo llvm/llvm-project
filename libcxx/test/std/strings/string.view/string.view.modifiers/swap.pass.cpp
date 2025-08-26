@@ -12,8 +12,9 @@
 
 // void swap(basic_string_view& _other) noexcept
 
-#include <string_view>
 #include <cassert>
+#include <cstddef>
+#include <string_view>
 
 #include "test_macros.h"
 

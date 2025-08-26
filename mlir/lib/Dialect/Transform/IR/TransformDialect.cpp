@@ -14,10 +14,14 @@
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.cpp.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
 
 #ifndef NDEBUG
 void transform::detail::checkImplementsTransformOpInterface(
@@ -66,6 +70,10 @@ void transform::TransformDialect::initialize() {
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
   initializeTypes();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
+      >();
   initializeLibraryModule();
 }
 

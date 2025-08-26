@@ -10,15 +10,16 @@
 # so that we have time to investigate the issue without losing postcommit CI.
 # UNSUPPORTED: system-windows
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o %t.o
 
 ## For an executable, --export-dynamic-symbol exports a symbol if it is non-local and defined.
-# RUN: ld.lld -pie --export-dynamic-symbol foo --export-dynamic-symbol qux %t.o -o %t
-# RUN: llvm-nm -D -p %t | FileCheck %s
+# RUN: ld.lld -pie --export-dynamic-symbol foo --export-dynamic-symbol qux %t.o -o out
+# RUN: llvm-nm -D -p out | FileCheck %s
 # RUN: echo '{ foo; };' > %t1.list
 # RUN: echo '{ foo; qux; };' > %t2.list
-# RUN: ld.lld -pie --export-dynamic-symbol-list=%t2.list %t.o -o %t
-# RUN: llvm-nm -D -p %t | FileCheck %s
+# RUN: ld.lld -pie --export-dynamic-symbol-list=%t2.list %t.o -o out
+# RUN: llvm-nm -D -p out | FileCheck %s
 
 ## --export-dynamic exports all non-local defined symbols.
 ## --export-dynamic-symbol is shadowed.
@@ -53,6 +54,20 @@
 # RUN: ld.lld -shared -Bsymbolic --export-dynamic-symbol-list %t1.list %t.o -o %t.preempt
 # RUN: llvm-objdump -d %t.preempt | FileCheck --check-prefix=PLT1 %s
 
+## Hidden symbols cannot be exported by --export-dynamic-symbol family options.
+# RUN: llvm-mc -filetype=obj -triple=x86_64 hidden.s -o hidden.o
+# RUN: ld.lld -pie %t.o hidden.o --dynamic-list hidden.list -o out.hidden
+# RUN: llvm-readelf -s out.hidden | FileCheck %s --check-prefix=HIDDEN
+
+# HIDDEN:      '.dynsym' contains 2 entries:
+# HIDDEN:      NOTYPE GLOBAL DEFAULT [[#]] _end
+# HIDDEN:      '.symtab' contains 6 entries:
+# HIDDEN:      FUNC    LOCAL  HIDDEN  [[#]] foo
+# HIDDEN-NEXT: NOTYPE  LOCAL  HIDDEN  [[#]] _DYNAMIC
+# HIDDEN-NEXT: NOTYPE  GLOBAL DEFAULT [[#]] _start
+# HIDDEN-NEXT: FUNC    GLOBAL DEFAULT [[#]] qux
+# HIDDEN-NEXT: NOTYPE  GLOBAL DEFAULT [[#]] _end
+
 ## 'nomatch' does not match any symbol. Don't warn.
 # RUN: ld.lld --fatal-warnings -shared -Bsymbolic-functions --export-dynamic-symbol nomatch %t.o -o %t.nopreempt2
 # RUN: llvm-objdump -d %t.nopreempt2 | FileCheck --check-prefix=NOPLT %s
@@ -80,6 +95,7 @@
 # NOPLT-NOT: <foo@plt>
 # NOPLT-NOT: <qux@plt>
 
+#--- a.s
 .global _start, foo, qux
 .type foo, @function
 .type qux, @function
@@ -88,3 +104,13 @@ _start:
   call qux
 foo:
 qux:
+
+#--- hidden.s
+.hidden foo
+
+.data
+.quad _DYNAMIC
+.quad _end
+
+#--- hidden.list
+{foo;_end;_DYNAMIC;};

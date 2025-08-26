@@ -173,4 +173,21 @@ A false_negatives(std::span<int> span_pt, span<A> span_A) {
   return *a2; // TODO: Can cause OOB if span_pt is empty
 
 }
+
+void test_incomplete_type(std::span<char> S) {
+  (struct IncompleteStruct *)S.data(); // expected-warning{{unsafe invocation of 'data'}}
+  (class IncompleteClass *)S.data();   // expected-warning{{unsafe invocation of 'data'}}
+  (union IncompleteUnion *)S.data();   // expected-warning{{unsafe invocation of 'data'}}
+}
+
+void test_complete_type(std::span<long> S) {
+  (struct CompleteStruct *)S.data(); // no warn as the struct size is smaller than long
+  (class CompleteClass *)S.data();   // no warn as the class size is smaller than long
+  (union CompleteUnion *)S.data();   // no warn as the union size is smaller than long
+
+  struct CompleteStruct {};
+  class CompleteClass {};
+  union CompleteUnion {};
+}
+
 #endif

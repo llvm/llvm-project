@@ -11,10 +11,10 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "OutputSections.h"
+#include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 #include <cstring>
@@ -48,7 +48,7 @@ static std::string maybeDemangleSymbol(Ctx &ctx, StringRef symName) {
   return ctx.arg.demangle ? demangle(symName.str()) : symName.str();
 }
 
-std::string lld::toString(const elf::Symbol &sym) {
+std::string elf::toStr(Ctx &ctx, const elf::Symbol &sym) {
   StringRef name = sym.getName();
   std::string ret = maybeDemangleSymbol(ctx, name);
 
@@ -56,6 +56,11 @@ std::string lld::toString(const elf::Symbol &sym) {
   if (*suffix == '@')
     ret += suffix;
   return ret;
+}
+
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
+                                     const Symbol *sym) {
+  return s << toStr(s.ctx, *sym);
 }
 
 static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
@@ -120,8 +125,8 @@ static uint64_t getSymVA(Ctx &ctx, const Symbol &sym, int64_t addend) {
       // for Android relocation packing requires knowing TLS symbol addresses
       // during section finalization.)
       if (!ctx.tlsPhdr || !ctx.tlsPhdr->firstSec) {
-        errorOrWarn(toString(d.file) +
-                    " has an STT_TLS symbol but doesn't have a PT_TLS segment");
+        Err(ctx) << d.file
+                 << " has an STT_TLS symbol but doesn't have a PT_TLS segment";
         return 0;
       }
       return va - ctx.tlsPhdr->firstSec->addr;
@@ -243,15 +248,14 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
   // if the symbol has a local version as it won't be in the dynamic
   // symbol table.
   if (ctx.arg.shared && versionId != VER_NDX_LOCAL)
-    error(toString(file) + ": symbol " + s + " has undefined version " +
-          verstr);
+    ErrAlways(ctx) << file << ": symbol " << s << " has undefined version "
+                   << verstr;
 }
 
 void Symbol::extract(Ctx &ctx) const {
-  if (file->lazy) {
-    file->lazy = false;
-    parseFile(ctx, file);
-  }
+  assert(file->lazy);
+  file->lazy = false;
+  parseFile(ctx, file);
 }
 
 uint8_t Symbol::computeBinding(Ctx &ctx) const {
@@ -261,19 +265,6 @@ uint8_t Symbol::computeBinding(Ctx &ctx) const {
   if (binding == STB_GNU_UNIQUE && !ctx.arg.gnuUnique)
     return STB_GLOBAL;
   return binding;
-}
-
-bool Symbol::includeInDynsym(Ctx &ctx) const {
-  if (computeBinding(ctx) == STB_LOCAL)
-    return false;
-  if (!isDefined() && !isCommon())
-    // This should unconditionally return true, unfortunately glibc -static-pie
-    // expects undefined weak symbols not to exist in .dynsym, e.g.
-    // __pthread_mutex_lock reference in _dl_add_to_namespace_list,
-    // __pthread_initialize_minimal reference in csu/libc-start.c.
-    return !(isUndefWeak() && ctx.arg.noDynamicLinker);
-
-  return exportDynamic || inDynamicList;
 }
 
 // Print out a log message for --trace-symbol.
@@ -290,12 +281,12 @@ void elf::printTraceSymbol(const Symbol &sym, StringRef name) {
   else
     s = ": definition of ";
 
-  message(toString(sym.file) + s + name);
+  Msg(sym.file->ctx) << sym.file << s << name;
 }
 
 static void recordWhyExtract(Ctx &ctx, const InputFile *reference,
                              const InputFile &extracted, const Symbol &sym) {
-  ctx.whyExtractRecords.emplace_back(toString(reference), &extracted, sym);
+  ctx.whyExtractRecords.emplace_back(toStr(ctx, reference), &extracted, sym);
 }
 
 void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
@@ -315,7 +306,7 @@ void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
   const InputFile *file = sym->file;
   auto *d = dyn_cast<Defined>(sym);
 
-  auto report = [&](StringRef s) { warn(toString(file) + s + sym->getName()); };
+  auto report = [&](StringRef s) { Warn(ctx) << file << s << sym->getName(); };
 
   if (sym->isUndefined()) {
     if (cast<Undefined>(sym)->discardedSecIdx)
@@ -339,13 +330,16 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
 
   // Only symbols with default visibility that appear in dynsym can be
   // preempted. Symbols with protected visibility cannot be preempted.
-  if (!sym.includeInDynsym(ctx) || sym.visibility() != STV_DEFAULT)
+  if (sym.visibility() != STV_DEFAULT)
     return false;
 
-  // At this point copy relocations have not been created yet, so any
-  // symbol that is not defined locally is preemptible.
+  // At this point copy relocations have not been created yet.
+  // Shared symbols are preemptible. Undefined symbols are preemptible
+  // when zDynamicUndefined (default in dynamic linking). Weakness is not
+  // checked, though undefined non-weak would typically trigger relocation
+  // errors unless options like -z undefs are used.
   if (!sym.isDefined())
-    return true;
+    return !sym.isUndefined() || ctx.arg.zDynamicUndefined;
 
   if (!ctx.arg.shared)
     return false;
@@ -364,15 +358,34 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
   return true;
 }
 
+void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
+  // Symbol themselves might know their versions because symbols
+  // can contain versions in the form of <name>@<version>.
+  // Let them parse and update their names to exclude version suffix.
+  // In addition, compute isExported and isPreemptible.
+  for (Symbol *sym : ctx.symtab->getSymbols()) {
+    if (sym->hasVersionSuffix)
+      sym->parseSymbolVersion(ctx);
+    if (sym->computeBinding(ctx) == STB_LOCAL) {
+      sym->isExported = false;
+      continue;
+    }
+    if (!sym->isDefined() && !sym->isCommon()) {
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
+    } else if (ctx.arg.exportDynamic &&
+               (sym->isUsedInRegularObj || !sym->ltoCanOmit)) {
+      sym->isExported = true;
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
+    }
+  }
+}
+
 // Merge symbol properties.
 //
 // When we have many symbols of the same name, we choose one of them,
 // and that's the result of symbol resolution. However, symbols that
 // were not chosen still affect some symbol properties.
 void Symbol::mergeProperties(const Symbol &other) {
-  if (other.exportDynamic)
-    exportDynamic = true;
-
   // DSO symbols do not affect visibility in the output.
   if (!other.isShared() && other.visibility() != STV_DEFAULT) {
     uint8_t v = visibility(), ov = other.visibility();
@@ -458,8 +471,7 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // A forms group 0. B form group 1. C and D (including their member object
     // files) form group 2. E forms group 3. I think that you can see how this
     // group assignment rule simulates the traditional linker's semantics.
-    bool backref = ctx.arg.warnBackrefs && other.file &&
-                   file->groupId < other.file->groupId;
+    bool backref = ctx.arg.warnBackrefs && file->groupId < other.file->groupId;
     extract(ctx);
 
     if (!ctx.arg.whyExtract.empty())
@@ -472,7 +484,7 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     // sandwich), where def2 may or may not be the same as def1. We don't want
     // to warn for this case, so dismiss the warning if we see a subsequent lazy
     // definition. this->file needs to be saved because in the case of LTO it
-    // may be reset to nullptr or be replaced with a file named lto.tmp.
+    // may be reset to internalFile or be replaced with a file named lto.tmp.
     if (backref && !isWeak())
       ctx.backwardReferences.try_emplace(this,
                                          std::make_pair(other.file, file));
@@ -480,7 +492,7 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
   }
 
   // Undefined symbols in a SharedFile do not change the binding.
-  if (isa_and_nonnull<SharedFile>(other.file))
+  if (isa<SharedFile>(other.file))
     return;
 
   if (isUndefined() || isShared()) {
@@ -496,7 +508,7 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
 bool Symbol::shouldReplace(Ctx &ctx, const Defined &other) const {
   if (LLVM_UNLIKELY(isCommon())) {
     if (ctx.arg.warnCommon)
-      warn("common " + getName() + " is overridden");
+      Warn(ctx) << "common " << getName() << " is overridden";
     return !other.isWeak();
   }
   if (!isDefined())
@@ -525,8 +537,8 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
   if (!d->section && !errSec && errOffset && d->value == errOffset)
     return;
   if (!d->section || !errSec) {
-    errorOrWarn("duplicate symbol: " + toString(sym) + "\n>>> defined in " +
-                toString(sym.file) + "\n>>> defined in " + toString(newFile));
+    Err(ctx) << "duplicate symbol: " << &sym << "\n>>> defined in " << sym.file
+             << "\n>>> defined in " << newFile;
     return;
   }
 
@@ -538,19 +550,18 @@ void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
   //   >>> defined at baz.c:563
   //   >>>            baz.o in archive libbaz.a
   auto *sec1 = cast<InputSectionBase>(d->section);
-  std::string src1 = sec1->getSrcMsg(sym, d->value);
-  std::string obj1 = sec1->getObjMsg(d->value);
-  std::string src2 = errSec->getSrcMsg(sym, errOffset);
-  std::string obj2 = errSec->getObjMsg(errOffset);
-
-  std::string msg = "duplicate symbol: " + toString(sym) + "\n>>> defined at ";
-  if (!src1.empty())
-    msg += src1 + "\n>>>            ";
-  msg += obj1 + "\n>>> defined at ";
-  if (!src2.empty())
-    msg += src2 + "\n>>>            ";
-  msg += obj2;
-  errorOrWarn(msg);
+  auto diag = Err(ctx);
+  diag << "duplicate symbol: " << &sym << "\n>>> defined at ";
+  auto tell = diag.tell();
+  diag << sec1->getSrcMsg(sym, d->value);
+  if (tell != diag.tell())
+    diag << "\n>>>            ";
+  diag << sec1->getObjMsg(d->value) << "\n>>> defined at ";
+  tell = diag.tell();
+  diag << errSec->getSrcMsg(sym, errOffset);
+  if (tell != diag.tell())
+    diag << "\n>>>            ";
+  diag << errSec->getObjMsg(errOffset);
 }
 
 void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {
@@ -561,21 +572,19 @@ void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {
 }
 
 void Symbol::resolve(Ctx &ctx, const CommonSymbol &other) {
-  if (other.exportDynamic)
-    exportDynamic = true;
   if (other.visibility() != STV_DEFAULT) {
     uint8_t v = visibility(), ov = other.visibility();
     setVisibility(v == STV_DEFAULT ? ov : std::min(v, ov));
   }
   if (isDefined() && !isWeak()) {
     if (ctx.arg.warnCommon)
-      warn("common " + getName() + " is overridden");
+      Warn(ctx) << "common " << getName() << " is overridden";
     return;
   }
 
   if (CommonSymbol *oldSym = dyn_cast<CommonSymbol>(this)) {
     if (ctx.arg.warnCommon)
-      warn("multiple common of " + getName());
+      Warn(ctx) << "multiple common of " << getName();
     oldSym->alignment = std::max(oldSym->alignment, other.alignment);
     if (oldSym->size < other.size) {
       oldSym->file = other.file;
@@ -599,8 +608,6 @@ void Symbol::resolve(Ctx &ctx, const CommonSymbol &other) {
 }
 
 void Symbol::resolve(Ctx &ctx, const Defined &other) {
-  if (other.exportDynamic)
-    exportDynamic = true;
   if (other.visibility() != STV_DEFAULT) {
     uint8_t v = visibility(), ov = other.visibility();
     setVisibility(v == STV_DEFAULT ? ov : std::min(v, ov));
@@ -615,20 +622,18 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
     return;
   }
 
-  // For common objects, we want to look for global or weak definitions that
-  // should be extracted as the canonical definition instead.
-  if (LLVM_UNLIKELY(isCommon()) && ctx.arg.fortranCommon &&
-      other.file->shouldExtractForCommon(getName())) {
-    ctx.backwardReferences.erase(this);
-    other.overwrite(*this);
-    other.extract(ctx);
-    return;
-  }
-
-  if (!isUndefined()) {
-    // See the comment in resolveUndefined().
-    if (isDefined())
+  if (LLVM_UNLIKELY(!isUndefined())) {
+    // See the comment in resolve(Ctx &, const Undefined &).
+    if (isDefined()) {
       ctx.backwardReferences.erase(this);
+    } else if (isCommon() && ctx.arg.fortranCommon &&
+               other.file->shouldExtractForCommon(getName())) {
+      // For common objects, we want to look for global or weak definitions that
+      // should be extracted as the canonical definition instead.
+      ctx.backwardReferences.erase(this);
+      other.overwrite(*this);
+      other.extract(ctx);
+    }
     return;
   }
 
@@ -649,7 +654,7 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
 }
 
 void Symbol::resolve(Ctx &ctx, const SharedSymbol &other) {
-  exportDynamic = true;
+  isExported = true;
   if (isPlaceholder()) {
     other.overwrite(*this);
     return;

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/fcntl/openat.h"
 #include "src/unistd/close.h"
@@ -14,7 +14,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 
 TEST(LlvmLibcUniStd, OpenAndReadTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
@@ -24,7 +24,7 @@ TEST(LlvmLibcUniStd, OpenAndReadTest) {
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(dir_fd, 0);
   constexpr const char TEST_MSG[] = "openat test";
-  constexpr int TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
+  constexpr ssize_t TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
 
   int read_fd = LIBC_NAMESPACE::openat(dir_fd, TEST_FILE, O_RDONLY);
   ASSERT_ERRNO_SUCCESS();

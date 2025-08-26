@@ -11,11 +11,11 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/VirtualOutputBackend.h"
 #include "llvm/Support/VirtualOutputConfig.h"
 #include "llvm/Support/raw_ostream.h"
+#include <mutex>
 
 namespace llvm::vfs {
 
@@ -26,7 +26,7 @@ private:
   SmallVector<char> Buffer;
   raw_svector_ostream OS;
 
-  using HashBuilderT = HashBuilder<HasherT, support::endianness::native>;
+  using HashBuilderT = HashBuilder<HasherT, endianness::native>;
   HashBuilderT Builder;
 
   void write_impl(const char *Ptr, size_t Size) override {
@@ -55,6 +55,7 @@ template <typename HasherT> class HashingOutputBackend : public OutputBackend {
 private:
   friend class HashingOutputFile<HasherT>;
   void addOutputFile(StringRef Path, StringRef Hash) {
+    std::lock_guard<std::mutex> Lock(OutputHashLock);
     OutputHashes[Path] = std::string(Hash);
   }
 
@@ -82,6 +83,7 @@ public:
   }
 
 private:
+  std::mutex OutputHashLock;
   StringMap<std::string> OutputHashes;
 };
 

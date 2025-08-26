@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -81,6 +82,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   unsigned CalleeSavedStackSize = 0;
   unsigned SVECalleeSavedStackSize = 0;
   bool HasCalleeSavedStackSize = false;
+  bool HasSVECalleeSavedStackSize = false;
 
   /// Number of TLS accesses using the special (combinable)
   /// _TLS_MODULE_BASE_ symbol.
@@ -177,6 +179,11 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
   bool SignWithBKey = false;
 
+  /// HasELFSignedGOT is true if the target binary format is ELF and the IR
+  /// module containing the corresponding function has "ptrauth-elf-got" flag
+  /// set to 1.
+  bool HasELFSignedGOT = false;
+
   /// SigningInstrOffset captures the offset of the PAC-RET signing instruction
   /// within the prologue, so it can be re-used for authentication in the
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
@@ -206,9 +213,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// or return type
   bool IsSVECC = false;
 
-  /// The frame-index for the TPIDR2 object used for lazy saves.
-  TPIDR2Object TPIDR2;
-
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
 
@@ -224,13 +228,25 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
+  // true if PStateSMReg is used.
+  bool PStateSMRegUsed = false;
+
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
   unsigned PredicateRegForFillSpill = 0;
 
-  // The stack slots where VG values are stored to.
-  int64_t VGIdx = std::numeric_limits<int>::max();
-  int64_t StreamingVGIdx = std::numeric_limits<int>::max();
+  // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
+  SMEAttrs SMEFnAttrs;
+
+  // Note: The following properties are only used for the old SME ABI lowering:
+  /// The frame-index for the TPIDR2 object used for lazy saves.
+  TPIDR2Object TPIDR2;
+  // Holds a pointer to a buffer that is large enough to represent
+  // all SME ZA state and any additional state required by the
+  // __arm_sme_save/restore support routines.
+  Register SMESaveBufferAddr = MCRegister::NoRegister;
+  // true if SMESaveBufferAddr is used.
+  bool SMESaveBufferUsed = false;
 
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
@@ -239,6 +255,13 @@ public:
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
+
+  // Old SME ABI lowering state getters/setters:
+  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
+  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
+  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
+  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
+  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void setPredicateRegForFillSpill(unsigned Reg) {
     PredicateRegForFillSpill = Reg;
@@ -250,16 +273,11 @@ public:
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
 
-  int64_t getVGIdx() const { return VGIdx; };
-  void setVGIdx(unsigned Idx) { VGIdx = Idx; };
-
-  int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
-  void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
+  unsigned isPStateSMRegUsed() const { return PStateSMRegUsed; };
+  void setPStateSMRegUsed(bool Used = true) { PStateSMRegUsed = Used; };
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
-
-  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
@@ -283,7 +301,10 @@ public:
     StackSizeSVE = S;
   }
 
-  uint64_t getStackSizeSVE() const { return StackSizeSVE; }
+  uint64_t getStackSizeSVE() const {
+    assert(hasCalculatedStackSizeSVE());
+    return StackSizeSVE;
+  }
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }
@@ -377,8 +398,11 @@ public:
   // Saves the CalleeSavedStackSize for SVE vectors in 'scalable bytes'
   void setSVECalleeSavedStackSize(unsigned Size) {
     SVECalleeSavedStackSize = Size;
+    HasSVECalleeSavedStackSize = true;
   }
   unsigned getSVECalleeSavedStackSize() const {
+    assert(HasSVECalleeSavedStackSize &&
+           "SVECalleeSavedStackSize has not been calculated");
     return SVECalleeSavedStackSize;
   }
 
@@ -430,6 +454,8 @@ public:
     StackHazardCSRSlotIndex = Index;
   }
 
+  SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
+
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
 
@@ -476,8 +502,22 @@ public:
   /// Add a LOH directive of this @p Kind and this @p Args.
   void addLOHDirective(MCLOHType Kind, MILOHArgs Args) {
     LOHContainerSet.push_back(MILOHDirective(Kind, Args));
-    LOHRelated.insert(Args.begin(), Args.end());
+    LOHRelated.insert_range(Args);
   }
+
+  size_t
+  clearLinkerOptimizationHints(const SmallPtrSetImpl<MachineInstr *> &MIs) {
+    size_t InitialSize = LOHContainerSet.size();
+    erase_if(LOHContainerSet, [&](const auto &D) {
+      return any_of(D.getArgs(), [&](auto *Arg) { return MIs.contains(Arg); });
+    });
+    // In theory there could be an LOH with one label in MIs and another label
+    // outside MIs, however we don't know if the label outside MIs is used in
+    // any other LOHs, so we can't remove them from LOHRelated. In that case, we
+    // might produce a few extra labels, but it won't break anything.
+    LOHRelated.remove_if([&](auto *MI) { return MIs.contains(MI); });
+    return InitialSize - LOHContainerSet.size();
+  };
 
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
     return ForwardedMustTailRegParms;
@@ -508,6 +548,8 @@ public:
   bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
+
+  bool hasELFSignedGOT() const { return HasELFSignedGOT; }
 
   MCSymbol *getSigningInstrLabel() const { return SignInstrLabel; }
   void setSigningInstrLabel(MCSymbol *Label) { SignInstrLabel = Label; }
@@ -551,6 +593,7 @@ private:
 namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<bool> HasRedZone;
+  std::optional<uint64_t> StackSizeSVE;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
@@ -562,6 +605,7 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<AArch64FunctionInfo> {
   static void mapping(IO &YamlIO, AArch64FunctionInfo &MFI) {
     YamlIO.mapOptional("hasRedZone", MFI.HasRedZone);
+    YamlIO.mapOptional("stackSizeSVE", MFI.StackSizeSVE);
   }
 };
 

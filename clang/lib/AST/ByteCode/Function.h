@@ -17,9 +17,9 @@
 
 #include "Descriptor.h"
 #include "Source.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,7 +28,7 @@ namespace interp {
 class Program;
 class ByteCodeEmitter;
 class Pointer;
-enum PrimType : uint32_t;
+enum PrimType : uint8_t;
 
 /// Describes a scope block.
 ///
@@ -49,6 +49,11 @@ public:
 
   llvm::iterator_range<LocalVectorTy::const_iterator> locals() const {
     return llvm::make_range(Descriptors.begin(), Descriptors.end());
+  }
+
+  llvm::iterator_range<LocalVectorTy::const_reverse_iterator>
+  locals_reverse() const {
+    return llvm::reverse(Descriptors);
   }
 
 private:
@@ -80,6 +85,14 @@ using FunctionDeclTy =
 ///
 class Function final {
 public:
+  enum class FunctionKind {
+    Normal,
+    Ctor,
+    Dtor,
+    LambdaStaticInvoker,
+    LambdaCallOperator,
+    CopyOrMoveOperator,
+  };
   using ParamDescriptor = std::pair<PrimType, Descriptor *>;
 
   /// Returns the size of the function's local stack.
@@ -94,15 +107,15 @@ public:
 
   /// Returns the original FunctionDecl.
   const FunctionDecl *getDecl() const {
-    return Source.dyn_cast<const FunctionDecl *>();
+    return dyn_cast<const FunctionDecl *>(Source);
   }
   const BlockExpr *getExpr() const {
-    return Source.dyn_cast<const BlockExpr *>();
+    return dyn_cast<const BlockExpr *>(Source);
   }
 
   /// Returns the name of the function decl this code
   /// was generated for.
-  const std::string getName() const {
+  std::string getName() const {
     if (!Source || !getDecl())
       return "<<expr>>";
 
@@ -137,47 +150,41 @@ public:
   /// Returns the source information at a given PC.
   SourceInfo getSource(CodePtr PC) const;
 
-  /// Checks if the function is valid to call in constexpr.
-  bool isConstexpr() const { return IsValid || isLambdaStaticInvoker(); }
+  /// Checks if the function is valid to call.
+  bool isValid() const { return IsValid || isLambdaStaticInvoker(); }
 
   /// Checks if the function is virtual.
-  bool isVirtual() const;
+  bool isVirtual() const { return Virtual; };
+  bool isImmediate() const { return Immediate; }
+  bool isConstexpr() const { return Constexpr; }
 
   /// Checks if the function is a constructor.
-  bool isConstructor() const {
-    return isa_and_nonnull<CXXConstructorDecl>(
-        Source.dyn_cast<const FunctionDecl *>());
-  }
+  bool isConstructor() const { return Kind == FunctionKind::Ctor; }
   /// Checks if the function is a destructor.
-  bool isDestructor() const {
-    return isa_and_nonnull<CXXDestructorDecl>(
-        Source.dyn_cast<const FunctionDecl *>());
-  }
-
-  /// Returns the parent record decl, if any.
-  const CXXRecordDecl *getParentDecl() const {
-    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            Source.dyn_cast<const FunctionDecl *>()))
-      return MD->getParent();
-    return nullptr;
+  bool isDestructor() const { return Kind == FunctionKind::Dtor; }
+  /// Checks if the function is copy or move operator.
+  bool isCopyOrMoveOperator() const {
+    return Kind == FunctionKind::CopyOrMoveOperator;
   }
 
   /// Returns whether this function is a lambda static invoker,
   /// which we generate custom byte code for.
   bool isLambdaStaticInvoker() const {
-    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            Source.dyn_cast<const FunctionDecl *>()))
-      return MD->isLambdaStaticInvoker();
-    return false;
+    return Kind == FunctionKind::LambdaStaticInvoker;
   }
 
   /// Returns whether this function is the call operator
   /// of a lambda record decl.
   bool isLambdaCallOperator() const {
+    return Kind == FunctionKind::LambdaCallOperator;
+  }
+
+  /// Returns the parent record decl, if any.
+  const CXXRecordDecl *getParentDecl() const {
     if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            Source.dyn_cast<const FunctionDecl *>()))
-      return clang::isLambdaCallOperator(MD);
-    return false;
+            dyn_cast<const FunctionDecl *>(Source)))
+      return MD->getParent();
+    return nullptr;
   }
 
   /// Checks if the function is fully done compiling.
@@ -193,12 +200,6 @@ public:
 
   bool isVariadic() const { return Variadic; }
 
-  unsigned getBuiltinID() const { return BuiltinID; }
-
-  bool isBuiltin() const { return getBuiltinID() != 0; }
-
-  bool isUnevaluatedBuiltin() const;
-
   unsigned getNumParams() const { return ParamTypes.size(); }
 
   /// Returns the number of parameter this function takes when it's called,
@@ -213,7 +214,7 @@ public:
 
   bool isThisPointerExplicit() const {
     if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            Source.dyn_cast<const FunctionDecl *>()))
+            dyn_cast<const FunctionDecl *>(Source)))
       return MD->isExplicitObjectMemberFunction();
     return false;
   }
@@ -232,10 +233,10 @@ private:
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO, unsigned BuiltinID);
+           bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
-  void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
+  void setCode(unsigned NewFrameSize, llvm::SmallVector<std::byte> &&NewCode,
                SourceMap &&NewSrcMap, llvm::SmallVector<Scope, 2> &&NewScopes,
                bool NewHasBody) {
     FrameSize = NewFrameSize;
@@ -252,9 +253,12 @@ private:
 private:
   friend class Program;
   friend class ByteCodeEmitter;
+  friend class Context;
 
   /// Program reference.
   Program &P;
+  /// Function Kind.
+  FunctionKind Kind;
   /// Declaration this function was compiled from.
   FunctionDeclTy Source;
   /// Local area size: storage + metadata.
@@ -262,7 +266,7 @@ private:
   /// Size of the argument stack.
   unsigned ArgSize;
   /// Program code.
-  std::vector<std::byte> Code;
+  llvm::SmallVector<std::byte> Code;
   /// Opcode-to-expression mapping.
   SourceMap SrcMap;
   /// List of block descriptors.
@@ -274,22 +278,34 @@ private:
   /// List of parameter offsets.
   llvm::SmallVector<unsigned, 8> ParamOffsets;
   /// Flag to indicate if the function is valid.
-  bool IsValid = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsValid : 1;
   /// Flag to indicate if the function is done being
   /// compiled to bytecode.
-  bool IsFullyCompiled = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsFullyCompiled : 1;
   /// Flag indicating if this function takes the this pointer
   /// as the first implicit argument
-  bool HasThisPointer = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasThisPointer : 1;
   /// Whether this function has Return Value Optimization, i.e.
   /// the return value is constructed in the caller's stack frame.
   /// This is done for functions that return non-primive values.
-  bool HasRVO = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasRVO : 1;
   /// If we've already compiled the function's body.
-  bool HasBody = false;
-  bool Defined = false;
-  bool Variadic = false;
-  unsigned BuiltinID = 0;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasBody : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Defined : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Variadic : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Virtual : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Immediate : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Constexpr : 1;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

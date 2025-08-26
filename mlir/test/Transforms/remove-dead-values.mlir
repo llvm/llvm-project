@@ -1,12 +1,15 @@
 // RUN: mlir-opt %s -remove-dead-values -split-input-file -verify-diagnostics | FileCheck %s
 
-// The IR remains untouched because of the presence of a non-function-like
-// symbol op inside the module (const @__dont_touch_unacceptable_ir).
+// The IR is updated regardless of memref.global private constant
 //
 module {
-// expected-error @+1 {{cannot optimize an IR with non-function symbol ops, non-call symbol user ops or branch ops}}
-  memref.global "private" constant @__dont_touch_unacceptable_ir : memref<i32> = dense<0>
+  // CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
+  memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
   func.func @main(%arg0: i32) -> i32 {
+    %0 = tensor.empty() : tensor<10xbf16>
+    // CHECK-NOT: memref.get_global
+    %1 = memref.get_global @__constant_4xi32 : memref<4xi32>
+    // CHECK-NOT: tensor.empty
     return %arg0 : i32
   }
 }
@@ -25,18 +28,73 @@ module @named_module_acceptable {
 
 // -----
 
-// The IR remains untouched because of the presence of a branch op `cf.cond_br`.
+// The IR contains both conditional and unconditional branches with a loop
+// in which the last cf.cond_br is referncing the first cf.br
 //
-func.func @dont_touch_unacceptable_ir_has_cleanable_simple_op_with_branch_op(%arg0: i1) {
+func.func @acceptable_ir_has_cleanable_loop_of_conditional_and_branch_op(%arg0: i1) {
   %non_live = arith.constant 0 : i32
-  // expected-error @+1 {{cannot optimize an IR with non-function symbol ops, non-call symbol user ops or branch ops}}
-  cf.cond_br %arg0, ^bb1(%non_live : i32), ^bb2(%non_live : i32)
-^bb1(%non_live_0 : i32):
-  cf.br ^bb3
-^bb2(%non_live_1 : i32):
-  cf.br ^bb3
-^bb3:
+  // CHECK-NOT: arith.constant
+  cf.br ^bb1(%non_live : i32)
+  // CHECK: cf.br ^[[BB1:bb[0-9]+]]
+^bb1(%non_live_1 : i32):
+  // CHECK: ^[[BB1]]:
+  %non_live_5 = arith.constant 1 : i32
+  cf.br ^bb3(%non_live_1, %non_live_5 : i32, i32)
+  // CHECK: cf.br ^[[BB3:bb[0-9]+]]
+  // CHECK-NOT: i32
+^bb3(%non_live_2 : i32, %non_live_6 : i32):
+  // CHECK: ^[[BB3]]:
+  cf.cond_br %arg0, ^bb1(%non_live_2 : i32), ^bb4(%non_live_2 : i32)
+  // CHECK: cf.cond_br %arg0, ^[[BB1]], ^[[BB4:bb[0-9]+]]
+^bb4(%non_live_4 : i32):
+  // CHECK: ^[[BB4]]:
   return
+}
+
+// -----
+
+// Checking that iter_args are properly handled
+//
+func.func @cleanable_loop_iter_args_value(%arg0: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %non_live = arith.constant 0 : index
+  // CHECK: [[RESULT:%.+]] = scf.for [[ARG_1:%.*]] = %c0 to %c10 step %c1 iter_args([[ARG_2:%.*]] = %arg0) -> (index) {
+  %result, %result_non_live = scf.for %i = %c0 to %c10 step %c1 iter_args(%live_arg = %arg0, %non_live_arg = %non_live) -> (index, index) {
+    // CHECK: [[SUM:%.+]] = arith.addi [[ARG_2]], [[ARG_1]] : index
+    %new_live = arith.addi %live_arg, %i : index
+    // CHECK: scf.yield [[SUM:%.+]]
+    scf.yield %new_live, %non_live_arg : index, index
+  }
+  // CHECK: return [[RESULT]] : index
+  return %result : index
+}
+
+// -----
+
+// Checking that the arguments of linalg.generic are properly handled
+// All code below is removed as a result of the pass
+//
+#map = affine_map<(d0, d1, d2) -> (0, d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+module {
+  func.func @main() {
+    %cst_3 = arith.constant dense<54> : tensor<1x25x13xi32>
+    %cst_7 = arith.constant dense<11> : tensor<1x25x13xi32>
+    // CHECK-NOT: arith.constant
+    %0 = tensor.empty() : tensor<1x25x13xi32>
+    // CHECK-NOT: tensor
+    %1 = linalg.generic {indexing_maps = [#map, #map, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%cst_3, %cst_7 : tensor<1x25x13xi32>, tensor<1x25x13xi32>) outs(%0 : tensor<1x25x13xi32>) {
+    // CHECK-NOT: linalg.generic
+    ^bb0(%in: i32, %in_15: i32, %out: i32):
+      %29 = arith.xori %in, %in_15 : i32
+      // CHECK-NOT: arith.xori
+      linalg.yield %29 : i32
+      // CHECK-NOT: linalg.yield
+    } -> tensor<1x25x13xi32>
+    return
+  }
 }
 
 // -----
@@ -350,6 +408,22 @@ func.func @main(%arg3 : i32, %arg4 : i1) {
 
 // -----
 
+// The scf.if operation represents an if-then-else construct for conditionally
+// executing two regions of code. The 'the' region has exactly 1 block, and
+// the 'else' region may have 0 or 1 block. This case is to ensure 'else' region
+// with 0 block not crash.
+
+// CHECK-LABEL: func.func @clean_region_branch_op_with_empty_region
+func.func @clean_region_branch_op_with_empty_region(%arg0: i1, %arg1: memref<f32>) {
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.if %arg0 {
+    memref.store %cst, %arg1[] : memref<f32>
+  }
+  return
+}
+
+// -----
+
 #map = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
 func.func @kernel(%arg0: memref<18xf32>) {
   %c1 = arith.constant 1 : index
@@ -372,5 +446,149 @@ func.func @kernel(%arg0: memref<18xf32>) {
 
 // -----
 
+
+// CHECK-LABEL: llvm_unreachable
+// CHECK-LABEL: @fn_with_llvm_unreachable
+// CHECK-LABEL: @main
+// CHECK: llvm.return
+module @llvm_unreachable {
+  func.func private @fn_with_llvm_unreachable(%arg0: tensor<4x4xf32>) -> tensor<4x4xi1> {
+    llvm.unreachable
+  }
+  func.func private @main(%arg0: tensor<4x4xf32>) {
+    %0 = call @fn_with_llvm_unreachable(%arg0) : (tensor<4x4xf32>) -> tensor<4x4xi1>
+    llvm.return
+  }
+}
+
 // CHECK: func.func private @no_block_func_declaration()
 func.func private @no_block_func_declaration() -> ()
+
+// -----
+
+// CHECK: llvm.func @no_block_external_func()
+llvm.func @no_block_external_func() attributes {sym_visibility = "private"}
+
+// -----
+
+// Check that yielded values aren't incorrectly removed in gpu regions
+gpu.module @test_module_3 {
+  gpu.func @gpu_all_reduce_region() {
+    %arg0 = arith.constant 1 : i32
+    %result = gpu.all_reduce %arg0 uniform {
+    ^bb(%lhs : i32, %rhs : i32):
+      %xor = arith.xori %lhs, %rhs : i32
+      "gpu.yield"(%xor) : (i32) -> ()
+    } : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+// CHECK-LABEL: func @gpu_all_reduce_region()
+// CHECK: %[[yield:.*]] = arith.xori %{{.*}}, %{{.*}} : i32
+// CHECK: gpu.yield %[[yield]] : i32
+
+// -----
+
+// Check that yielded values aren't incorrectly removed in linalg regions
+module {
+  func.func @linalg_red_add(%arg0: tensor<?xf32>, %arg1: tensor<1xf32>) -> tensor<1xf32> {
+    %0 = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (0)>],
+      iterator_types = ["reduction"]
+    } ins(%arg0 : tensor<?xf32>) outs(%arg1 : tensor<1xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %1 = arith.addf %in, %out : f32
+      %2 = arith.subf %1, %out : f32 // this should still be removed
+      linalg.yield %1 : f32
+    } -> tensor<1xf32>
+    return %0 : tensor<1xf32>
+  }
+}
+
+// CHECK-LABEL: func @linalg_red_add
+// CHECK: %[[yield:.*]] = arith.addf %{{.*}}, %{{.*}} : f32
+// CHECK: linalg.yield %[[yield]] : f32
+// CHECK-NOT: arith.subf
+
+
+// -----
+
+// check that ops with zero operands are correctly handled
+
+module {
+  func.func @test_zero_operands(%I: memref<10xindex>, %I2: memref<10xf32>) {
+    %v0 = arith.constant 0 : index
+    %result = memref.alloca_scope -> index {
+      %c = arith.addi %v0, %v0 : index
+      memref.store %c, %I[%v0] : memref<10xindex>
+      memref.alloca_scope.return %c: index
+    }
+    func.return
+  }
+}
+
+// CHECK-LABEL: func @test_zero_operands
+// CHECK: memref.alloca_scope
+// CHECK: memref.store
+// CHECK-NOT: memref.alloca_scope.return
+
+// -----
+
+// CHECK-LABEL: func.func @test_atomic_yield
+func.func @test_atomic_yield(%I: memref<10xf32>, %idx : index) {
+  // CHECK: memref.generic_atomic_rmw
+  %x = memref.generic_atomic_rmw %I[%idx] : memref<10xf32> {
+  ^bb0(%current_value : f32):
+    // CHECK: arith.constant
+    %c1 = arith.constant 1.0 : f32
+    // CHECK: memref.atomic_yield
+    memref.atomic_yield %c1 : f32
+  }
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: module @return_void_with_unused_argument
+module @return_void_with_unused_argument {
+  // CHECK-LABEL: func.func private @fn_return_void_with_unused_argument
+  // CHECK-SAME: (%[[ARG0_FN:.*]]: i32)
+  func.func private @fn_return_void_with_unused_argument(%arg0: i32, %arg1: memref<4xi32>) -> () {
+    %sum = arith.addi %arg0, %arg0 : i32
+    %c0 = arith.constant 0 : index
+    %buf = memref.alloc() : memref<1xi32>
+    memref.store %sum, %buf[%c0] : memref<1xi32>
+    return
+  }
+  // CHECK-LABEL: func.func @main
+  // CHECK-SAME: (%[[ARG0_MAIN:.*]]: i32)
+  // CHECK: call @fn_return_void_with_unused_argument(%[[ARG0_MAIN]]) : (i32) -> ()
+  func.func @main(%arg0: i32) -> memref<4xi32> {
+    %unused = memref.alloc() : memref<4xi32>
+    call @fn_return_void_with_unused_argument(%arg0, %unused) : (i32, memref<4xi32>) -> ()
+    return %unused : memref<4xi32>
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @dynamically_unreachable
+module @dynamically_unreachable {
+  func.func @dynamically_unreachable() {
+    // This value is used by an operation in a dynamically unreachable block.
+    %zero = arith.constant 0 : i64
+
+    // Dataflow analysis knows from the constant condition that
+    // ^bb1 is unreachable
+    %false = arith.constant false
+    cf.cond_br %false, ^bb1, ^bb4
+  ^bb1:
+    // This unreachable operation should be removed.
+    // CHECK-NOT: arith.cmpi
+    %3 = arith.cmpi eq, %zero, %zero : i64
+    cf.br ^bb1
+  ^bb4:
+    return
+  }
+}

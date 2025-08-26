@@ -464,16 +464,16 @@ Error OnDiskOutputFile::keep() {
     while (1) {
       // Attempt to lock the output file.
       // Only one process is allowed to append to this file at a time.
-      llvm::LockFileManager Locked(OutputPath);
-      switch (Locked) {
-      case llvm::LockFileManager::LFS_Error: {
+      llvm::LockFileManager Lock(OutputPath);
+      bool Owned;
+      if (Error Err = Lock.tryLock().moveInto(Owned)) {
         // If we error acquiring a lock, we cannot ensure appends
         // to the trace file are atomic - cannot ensure output correctness.
-        Locked.unsafeRemoveLockFile();
+        Lock.unsafeMaybeUnlock();
         return convertToOutputError(
             OutputPath, std::make_error_code(std::errc::no_lock_available));
       }
-      case llvm::LockFileManager::LFS_Owned: {
+      if (Owned) {
         // Lock acquired, perform the write and release the lock.
         std::error_code EC;
         llvm::raw_fd_ostream Out(OutputPath, EC, llvm::sys::fs::OF_Append);
@@ -481,34 +481,31 @@ Error OnDiskOutputFile::keep() {
           return convertToOutputError(OutputPath, EC);
         Out << (*Content)->getBuffer();
         Out.close();
-        Locked.unsafeRemoveLockFile();
+        Lock.unsafeMaybeUnlock();
         if (Out.has_error())
           return convertToOutputError(OutputPath, Out.error());
         // Remove temp file and done.
         (void)sys::fs::remove(*TempPath);
         return Error::success();
       }
-      case llvm::LockFileManager::LFS_Shared: {
-        // Someone else owns the lock on this file, wait.
-        switch (Locked.waitForUnlock(256)) {
-        case llvm::LockFileManager::Res_Success:
-          LLVM_FALLTHROUGH;
-        case llvm::LockFileManager::Res_OwnerDied: {
-          continue; // try again to get the lock.
-        }
-        case llvm::LockFileManager::Res_Timeout: {
-          // We could error on timeout to avoid potentially hanging forever, but
-          // it may be more likely that an interrupted process failed to clear
-          // the lock, causing other waiting processes to time-out. Let's clear
-          // the lock and try again right away. If we do start seeing compiler
-          // hangs in this location, we will need to re-consider.
-          Locked.unsafeRemoveLockFile();
-          continue;
-        }
-        }
-        break;
+      // Someone else owns the lock on this file, wait.
+      switch (Lock.waitForUnlockFor(std::chrono::seconds(256))) {
+      case WaitForUnlockResult::Success:
+        LLVM_FALLTHROUGH;
+      case WaitForUnlockResult::OwnerDied: {
+        continue; // try again to get the lock.
+      }
+      case WaitForUnlockResult::Timeout: {
+        // We could error on timeout to avoid potentially hanging forever, but
+        // it may be more likely that an interrupted process failed to clear
+        // the lock, causing other waiting processes to time-out. Let's clear
+        // the lock and try again right away. If we do start seeing compiler
+        // hangs in this location, we will need to re-consider.
+        Lock.unsafeMaybeUnlock();
+        continue;
       }
       }
+      break;
     }
   }
 

@@ -8,6 +8,7 @@
 #define COMMENT !
 #define OMP_START !$omp
 #define OMP_CONT !$omp&
+#define EMPTY
 
 module m
  contains
@@ -50,6 +51,11 @@ OMP_CONT do &
 OMP_CONT reduction(+:x)
     do j3 = 1, n
     end do
+
+EMPTY !$omp parallel &
+EMPTY !$omp do
+    do j4 = 1, n
+    end do
   end
 
 COMMENT &
@@ -70,14 +76,17 @@ end module
 !CHECK:   !DIR$ IGNORE_TKR x5
 !CHECK:   !DIR$ IGNORE_TKR x6
 !CHECK:   STOP 1_4
-!CHECK: !$OMP PARALLEL DO  REDUCTION(+:x)
+!CHECK: !$OMP PARALLEL DO  REDUCTION(+: x)
 !CHECK:   DO j1=1_4,n
 !CHECK:   END DO
-!CHECK: !$OMP PARALLEL DO  REDUCTION(+:x)
+!CHECK: !$OMP PARALLEL DO  REDUCTION(+: x)
 !CHECK:   DO j2=1_4,n
 !CHECK:   END DO
-!CHECK: !$OMP PARALLEL DO  REDUCTION(+:x)
+!CHECK: !$OMP PARALLEL DO  REDUCTION(+: x)
 !CHECK:   DO j3=1_4,n
+!CHECK:   END DO
+!CHECK: !$OMP PARALLEL DO
+!CHECK:   DO j4=1_4,n
 !CHECK:   END DO
 !CHECK:  END SUBROUTINE
 !CHECK:  SUBROUTINE s2

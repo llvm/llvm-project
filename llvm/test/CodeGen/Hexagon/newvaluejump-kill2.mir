@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-nvj -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-nvj -verify-machineinstrs %s -o - | FileCheck %s
 # CHECK: J4_cmpgtu_t_jumpnv_t killed $r3, killed $r1, %bb.1, implicit-def $pc
 
 ---

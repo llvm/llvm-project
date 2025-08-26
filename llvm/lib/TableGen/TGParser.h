@@ -131,7 +131,7 @@ public:
   }
 
   void addVar(StringRef Name, const Init *I) {
-    bool Ins = Vars.insert(std::make_pair(std::string(Name), I)).second;
+    bool Ins = Vars.try_emplace(Name.str(), I).second;
     (void)Ins;
     assert(Ins && "Local variable already exists");
   }
@@ -161,15 +161,15 @@ class TGParser {
   // Record tracker
   RecordKeeper &Records;
 
-  // A "named boolean" indicating how to parse identifiers.  Usually
+  // A "named boolean" indicating how to parse identifiers. Usually
   // identifiers map to some existing object but in special cases
   // (e.g. parsing def names) no such object exists yet because we are
-  // in the middle of creating in.  For those situations, allow the
+  // in the middle of creating in. For those situations, allow the
   // parser to ignore missing object errors.
   enum IDParseMode {
-    ParseValueMode,   // We are parsing a value we expect to look up.
-    ParseNameMode,    // We are parsing a name of an object that does not yet
-                      // exist.
+    ParseValueMode, // We are parsing a value we expect to look up.
+    ParseNameMode,  // We are parsing a name of an object that does not yet
+                    // exist.
   };
 
   bool NoWarnOnUnusedTemplateArgs = false;
@@ -183,7 +183,7 @@ public:
         NoWarnOnUnusedTemplateArgs(NoWarnOnUnusedTemplateArgs),
         TrackReferenceLocs(TrackReferenceLocs) {}
 
-  /// ParseFile - Main entrypoint for parsing a tblgen file.  These parser
+  /// ParseFile - Main entrypoint for parsing a tblgen file. These parser
   /// routines return true on error, or false on success.
   bool ParseFile();
 
@@ -191,9 +191,7 @@ public:
     PrintError(L, Msg);
     return true;
   }
-  bool TokError(const Twine &Msg) const {
-    return Error(Lex.getLoc(), Msg);
-  }
+  bool TokError(const Twine &Msg) const { return Error(Lex.getLoc(), Msg); }
   const TGLexer::DependenciesSetTy &getDependencies() const {
     return Lex.getDependencies();
   }
@@ -248,16 +246,16 @@ private: // Semantic analysis methods.
 
   using ArgValueHandler = std::function<void(const Init *, const Init *)>;
   bool resolveArguments(
-      Record *Rec, ArrayRef<const ArgumentInit *> ArgValues, SMLoc Loc,
+      const Record *Rec, ArrayRef<const ArgumentInit *> ArgValues, SMLoc Loc,
       ArgValueHandler ArgValueHandler = [](const Init *, const Init *) {});
-  bool resolveArgumentsOfClass(MapResolver &R, Record *Rec,
+  bool resolveArgumentsOfClass(MapResolver &R, const Record *Rec,
                                ArrayRef<const ArgumentInit *> ArgValues,
                                SMLoc Loc);
   bool resolveArgumentsOfMultiClass(SubstStack &Substs, MultiClass *MC,
                                     ArrayRef<const ArgumentInit *> ArgValues,
                                     const Init *DefmName, SMLoc Loc);
 
-private:  // Parser methods.
+private: // Parser methods.
   bool consume(tgtok::TokKind K);
   bool ParseObjectList(MultiClass *MC = nullptr);
   bool ParseObject(MultiClass *MC);
@@ -296,7 +294,8 @@ private:  // Parser methods.
   void ParseValueList(SmallVectorImpl<const Init *> &Result, Record *CurRec,
                       const RecTy *ItemType = nullptr);
   bool ParseTemplateArgValueList(SmallVectorImpl<const ArgumentInit *> &Result,
-                                 Record *CurRec, Record *ArgsRec);
+                                 SmallVectorImpl<SMLoc> &ArgLocs,
+                                 Record *CurRec, const Record *ArgsRec);
   void ParseDagArgList(
       SmallVectorImpl<std::pair<const Init *, const StringInit *>> &Result,
       Record *CurRec);
@@ -316,12 +315,13 @@ private:  // Parser methods.
   const Init *ParseOperationCond(Record *CurRec, const RecTy *ItemType);
   const RecTy *ParseOperatorType();
   const Init *ParseObjectName(MultiClass *CurMultiClass);
-  Record *ParseClassID();
+  const Record *ParseClassID();
   MultiClass *ParseMultiClassID();
   bool ApplyLetStack(Record *CurRec);
   bool ApplyLetStack(RecordsEntry &Entry);
   bool CheckTemplateArgValues(SmallVectorImpl<const ArgumentInit *> &Values,
-                              SMLoc Loc, Record *ArgsRec);
+                              ArrayRef<SMLoc> ValuesLocs,
+                              const Record *ArgsRec);
 };
 
 } // end namespace llvm

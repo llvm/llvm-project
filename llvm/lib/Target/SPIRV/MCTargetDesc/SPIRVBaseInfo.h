@@ -37,6 +37,11 @@ namespace Capability {
 #include "SPIRVGenTables.inc"
 } // namespace Capability
 
+namespace Environment {
+#define GET_Environment_DECL
+#include "SPIRVGenTables.inc"
+} // namespace Environment
+
 namespace SourceLanguage {
 #define GET_SourceLanguage_DECL
 #include "SPIRVGenTables.inc"
@@ -56,6 +61,11 @@ namespace MemoryModel {
 #define GET_MemoryModel_DECL
 #include "SPIRVGenTables.inc"
 } // namespace MemoryModel
+
+namespace MatrixMultiplyAccumulateOperands {
+#define GET_MatrixMultiplyAccumulateOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace MatrixMultiplyAccumulateOperands
 
 namespace ExecutionMode {
 #define GET_ExecutionMode_DECL
@@ -207,15 +217,36 @@ namespace Opcode {
 #include "SPIRVGenTables.inc"
 } // namespace Opcode
 
+namespace CooperativeMatrixLayout {
+#define GET_CooperativeMatrixLayout_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixLayout
+
+namespace CooperativeMatrixOperands {
+#define GET_CooperativeMatrixOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixOperands
+
+namespace SpecConstantOpOperands {
+#define GET_SpecConstantOpOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace SpecConstantOpOperands
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
   uint32_t Number;
 };
+
+enum InstFlags {
+  // It is a half type
+  INST_PRINTER_WIDTH16 = 1
+};
 } // namespace SPIRV
 
 using CapabilityList = SmallVector<SPIRV::Capability::Capability, 8>;
 using ExtensionList = SmallVector<SPIRV::Extension::Extension, 8>;
+using EnvironmentList = SmallVector<SPIRV::Environment::Environment, 8>;
 
 std::string
 getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
@@ -229,6 +260,8 @@ getSymbolicOperandMaxVersion(SPIRV::OperandCategory::OperandCategory Category,
 CapabilityList
 getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
                                uint32_t Value);
+EnvironmentList getSymbolicOperandAllowedEnvironments(
+    SPIRV::OperandCategory::OperandCategory Category, uint32_t Value);
 CapabilityList
 getCapabilitiesEnabledByExtension(SPIRV::Extension::Extension Extension);
 ExtensionList

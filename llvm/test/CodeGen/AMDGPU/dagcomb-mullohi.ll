@@ -150,9 +150,9 @@ define i32 @mul_one_bit_hi_hi_u32_lshr_ashr(i32 %arg, i32 %arg1, ptr %arg2) {
 ; CHECK-LABEL: mul_one_bit_hi_hi_u32_lshr_ashr:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mul_hi_u32 v4, v1, v0
-; CHECK-NEXT:    v_ashrrev_i64 v[0:1], 33, v[3:4]
-; CHECK-NEXT:    flat_store_dword v[2:3], v4
+; CHECK-NEXT:    v_mul_hi_u32 v0, v1, v0
+; CHECK-NEXT:    flat_store_dword v[2:3], v0
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, 1, v0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:

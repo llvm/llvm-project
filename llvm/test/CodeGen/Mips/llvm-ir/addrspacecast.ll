@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s -check-prefix=ALL
+; RUN: llc < %s -mtriple=mips -mcpu=mips2 | FileCheck %s -check-prefix=ALL
 
 ; Address spaces 1-255 are software defined.
 define ptr @cast(ptr %arg) {

@@ -1,0 +1,18 @@
+functions:
+  htonl:
+    in-latest-posix: ''
+  htons:
+    in-latest-posix: ''
+  inet_addr:
+    in-latest-posix: ''
+  inet_ntoa:
+    in-latest-posix: ''
+  inet_ntop:
+    in-latest-posix: ''
+  inet_pton:
+    in-latest-posix: ''
+  ntohl:
+    in-latest-posix: ''
+  ntohs:
+    in-latest-posix: ''
+

@@ -48,12 +48,49 @@ std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubA
   return {};
 }
 
-uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
-  uint64_t FeaturesMask = 0;
-  for (const StringRef &FeatureStr : FeatureStrs) {
-    if (auto Ext = parseFMVExtension(FeatureStr))
-      FeaturesMask |= (1ULL << Ext->Bit);
+std::optional<AArch64::FMVInfo> lookupFMVByID(AArch64::ArchExtKind ExtID) {
+  for (const AArch64::FMVInfo &Info : AArch64::getFMVInfo())
+    if (Info.ID == ExtID)
+      return Info;
+  return {};
+}
+
+APInt AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
+  // Transitively enable the Arch Extensions which correspond to each feature.
+  ExtensionSet FeatureBits;
+  for (const StringRef Feature : Features) {
+    std::optional<FMVInfo> FMV = parseFMVExtension(Feature);
+    if (!FMV && Feature.starts_with('+')) {
+      if (std::optional<ExtensionInfo> Info = targetFeatureToExtension(Feature))
+        FMV = lookupFMVByID(Info->ID);
+    }
+    if (FMV && FMV->ID)
+      FeatureBits.enable(*FMV->ID);
   }
+
+  // Construct a bitmask for all the transitively enabled Arch Extensions.
+  APInt PriorityMask = APInt::getZero(128);
+  for (const FMVInfo &Info : getFMVInfo())
+    if (Info.ID && FeatureBits.Enabled.test(*Info.ID))
+      PriorityMask.setBit(Info.PriorityBit);
+
+  return PriorityMask;
+}
+
+APInt AArch64::getCpuSupportsMask(ArrayRef<StringRef> Features) {
+  // Transitively enable the Arch Extensions which correspond to each feature.
+  ExtensionSet FeatureBits;
+  for (const StringRef Feature : Features)
+    if (std::optional<FMVInfo> Info = parseFMVExtension(Feature))
+      if (Info->ID)
+        FeatureBits.enable(*Info->ID);
+
+  // Construct a bitmask for all the transitively enabled Arch Extensions.
+  APInt FeaturesMask = APInt::getZero(128);
+  for (const FMVInfo &Info : getFMVInfo())
+    if (Info.ID && FeatureBits.Enabled.test(*Info.ID))
+      FeaturesMask.setBit(Info.FeatureBit);
+
   return FeaturesMask;
 }
 
@@ -144,7 +181,8 @@ std::optional<AArch64::FMVInfo> AArch64::parseFMVExtension(StringRef FMVExt) {
 std::optional<AArch64::ExtensionInfo>
 AArch64::targetFeatureToExtension(StringRef TargetFeature) {
   for (const auto &E : Extensions)
-    if (TargetFeature == E.PosTargetFeature)
+    if (TargetFeature == E.PosTargetFeature ||
+        TargetFeature == E.NegTargetFeature)
       return E;
   return {};
 }
@@ -251,6 +289,32 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
     disable(AEK_SHA2);
     disable(AEK_SHA3);
     disable(AEK_SM4);
+  }
+
+  // sve2-aes was historically associated with both FEAT_SVE2 and FEAT_SVE_AES,
+  // the latter is now associated with sve-aes and sve2-aes has become shorthand
+  // for +sve2+sve-aes. For backwards compatibility, when we disable sve2-aes we
+  // must also disable sve-aes.
+  if (E == AEK_SVE2AES)
+    disable(AEK_SVEAES);
+
+  // sve2-sm4 was historically associated with both FEAT_SVE2 and
+  // FEAT_SVE_SM4, the latter is now associated with sve-sm4 and sve2-sm4 has
+  // become shorthand for +sve2+sve-sm4. For backwards compatibility, when we
+  // disable sve2-sm4 we must also disable sve-sm4.
+  if (E == AEK_SVE2SM4)
+    disable(AEK_SVESM4);
+
+  // sve2-sha3 was historically associated with both FEAT_SVE2 and
+  // FEAT_SVE_SHA3, the latter is now associated with sve-sha3 and sve2-sha3 has
+  // become shorthand for +sve2+sve-sha3. For backwards compatibility, when we
+  // disable sve2-sha3 we must also disable sve-sha3.
+  if (E == AEK_SVE2SHA3)
+    disable(AEK_SVESHA3);
+
+  if (E == AEK_SVE2BITPERM){
+    disable(AEK_SVEBITPERM);
+    disable(AEK_SVE2);
   }
 
   if (!Enabled.test(E))

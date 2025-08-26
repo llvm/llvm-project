@@ -44,6 +44,7 @@
 #ifndef LLVM_ADT_HASHING_H
 #define LLVM_ADT_HASHING_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -135,7 +136,7 @@ namespace detail {
 
 inline uint64_t fetch64(const char *p) {
   uint64_t result;
-  memcpy(&result, p, sizeof(result));
+  std::memcpy(&result, p, sizeof(result));
   if (sys::IsBigEndianHost)
     sys::swapByteOrder(result);
   return result;
@@ -143,7 +144,7 @@ inline uint64_t fetch64(const char *p) {
 
 inline uint32_t fetch32(const char *p) {
   uint32_t result;
-  memcpy(&result, p, sizeof(result));
+  std::memcpy(&result, p, sizeof(result));
   if (sys::IsBigEndianHost)
     sys::swapByteOrder(result);
   return result;
@@ -378,7 +379,7 @@ bool store_and_advance(char *&buffer_ptr, char *buffer_end, const T& value,
   if (buffer_ptr + store_size > buffer_end)
     return false;
   const char *value_data = reinterpret_cast<const char *>(&value);
-  memcpy(buffer_ptr, value_data + offset, store_size);
+  std::memcpy(buffer_ptr, value_data + offset, store_size);
   buffer_ptr += store_size;
   return true;
 }
@@ -469,6 +470,10 @@ hash_code hash_combine_range(InputIteratorT first, InputIteratorT last) {
   return ::llvm::hashing::detail::hash_combine_range_impl(first, last);
 }
 
+// A wrapper for hash_combine_range above.
+template <typename RangeT> hash_code hash_combine_range(RangeT &&R) {
+  return hash_combine_range(adl_begin(R), adl_end(R));
+}
 
 // Implementation details for hash_combine.
 namespace hashing {
@@ -508,7 +513,7 @@ public:
       // with the variadic combine because that formation can have varying
       // argument types.
       size_t partial_store_size = buffer_end - buffer_ptr;
-      memcpy(buffer_ptr, &data, partial_store_size);
+      std::memcpy(buffer_ptr, &data, partial_store_size);
 
       // If the store fails, our buffer is full and ready to hash. We have to
       // either initialize the hash state (on the first full buffer) or mix
@@ -644,7 +649,7 @@ template <typename... Ts> hash_code hash_value(const std::tuple<Ts...> &arg) {
 // infrastructure is available.
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
-  return hash_combine_range(arg.begin(), arg.end());
+  return hash_combine_range(arg);
 }
 
 template <typename T> hash_code hash_value(const std::optional<T> &arg) {

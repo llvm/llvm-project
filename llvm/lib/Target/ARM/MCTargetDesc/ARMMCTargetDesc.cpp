@@ -27,6 +27,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -77,8 +78,8 @@ static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 static bool getMRCDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                   std::string &Info) {
   if (STI.hasFeature(llvm::ARM::HasV7Ops) &&
-      ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
-       (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
+      ((MI.getOperand(1).isImm() && MI.getOperand(1).getImm() == 10) ||
+       (MI.getOperand(1).isImm() && MI.getOperand(1).getImm() == 11))) {
     Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
            "point instructions";
     return true;
@@ -149,12 +150,6 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
     if (!ARMArchFeature.empty())
       ARMArchFeature += ",";
     ARMArchFeature += "+thumb-mode,+v4t";
-  }
-
-  if (TT.isOSNaCl()) {
-    if (!ARMArchFeature.empty())
-      ARMArchFeature += ",";
-    ARMArchFeature += "+nacl-trap";
   }
 
   if (TT.isOSWindows()) {
@@ -431,6 +426,10 @@ public:
   std::optional<uint64_t>
   evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
                                uint64_t Addr, uint64_t Size) const override;
+
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const MCSubtargetInfo &STI) const override;
 };
 
 } // namespace
@@ -621,6 +620,138 @@ std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
   }
 }
 
+template <typename T, size_t N>
+static bool instructionsMatch(const T (&Insns)[N], const uint8_t *Buf,
+                              llvm::endianness E) {
+  for (size_t I = 0; I < N; ++I) {
+    T Val = support::endian::read<T>(Buf + I * sizeof(T), E);
+    if (Val != Insns[I])
+      return false;
+  }
+  return true;
+}
+
+std::vector<std::pair<uint64_t, uint64_t>>
+ARMMCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
+                                   ArrayRef<uint8_t> PltContents,
+                                   const MCSubtargetInfo &STI) const {
+  llvm::endianness DataEndianness = STI.getTargetTriple().isLittleEndian()
+                                        ? endianness::little
+                                        : endianness::big;
+  llvm::endianness InstrEndianness =
+      STI.checkFeatures("+big-endian-instructions") ? endianness::big
+                                                    : endianness::little;
+
+  // Do a lightweight parsing of PLT entries.
+  std::vector<std::pair<uint64_t, uint64_t>> Result;
+  if (STI.checkFeatures("+thumb-mode")) {
+    for (uint64_t Byte = 0, End = PltContents.size(); Byte + 12 < End;
+         Byte += 16) {
+      // Expected instruction sequence:
+      //
+      // movw ip, #lower16
+      // movt ip, #upper16
+      // add ip, pc
+      // ldr.w pc, [ip]
+      // b . -4
+
+      uint32_t MovwPart1 =
+          support::endian::read16(PltContents.data() + Byte, InstrEndianness);
+      if ((MovwPart1 & 0xffb0) != 0xf200)
+        continue;
+
+      uint32_t MovwPart2 = support::endian::read16(
+          PltContents.data() + Byte + 2, InstrEndianness);
+      if ((MovwPart2 & 0x8f00) != 0xc00)
+        continue;
+
+      uint64_t OffsetLower = (MovwPart2 & 0xff) + ((MovwPart2 & 0x7000) >> 4) +
+                             ((MovwPart1 & 0x400) << 1) +
+                             ((MovwPart1 & 0xf) << 12);
+
+      uint32_t MovtPart1 = support::endian::read16(
+          PltContents.data() + Byte + 4, InstrEndianness);
+      if ((MovtPart1 & 0xfbf0) != 0xf2c0)
+        continue;
+
+      uint32_t MovtPart2 = support::endian::read16(
+          PltContents.data() + Byte + 6, InstrEndianness);
+      if ((MovtPart2 & 0x8f00) != 0xc00)
+        continue;
+
+      uint64_t OffsetHigher =
+          ((MovtPart2 & 0xff) << 16) + ((MovtPart2 & 0x7000) << 12) +
+          ((MovtPart1 & 0x400) << 17) + ((MovtPart1 & 0xf) << 28);
+
+      const uint16_t Insns[] = {
+          0x44fc,         // add ip, pc
+          0xf8dc, 0xf000, // ldr.w pc, [ip]
+          0xe7fc,         // b . -4
+      };
+
+      if (!instructionsMatch(Insns, PltContents.data() + Byte + 8,
+                             InstrEndianness))
+        continue;
+
+      // add ip, pc at Byte + 8 + thumb-pc-bias = 12
+      uint64_t Offset = (PltSectionVA + Byte + 12) + OffsetLower + OffsetHigher;
+      Result.emplace_back(PltSectionVA + Byte, Offset);
+    }
+  } else {
+    const uint32_t LongEntryInsns[] = {
+        0xe59fc004, //     ldr ip, L2
+        0xe08cc00f, // L1: add ip, ip, pc
+        0xe59cf000, // ldr pc, [ip]
+    };
+
+    for (uint64_t Byte = 0, End = PltContents.size(); Byte + 12 < End;
+         Byte += 4) {
+      // Is it a long entry?
+      if (instructionsMatch(LongEntryInsns, PltContents.data() + Byte,
+                            InstrEndianness)) {
+        // Expected instruction sequence:
+        //
+        //     ldr ip, L2
+        // L1: add ip, ip, pc
+        //     ldr pc, [ip]
+        // L2: .word   Offset(&(.got.plt) - L1 - 8
+
+        uint64_t Offset = (PltSectionVA + Byte + 12) +
+                          support::endian::read32(
+                              PltContents.data() + Byte + 12, DataEndianness);
+        Result.emplace_back(PltSectionVA + Byte, Offset);
+        Byte += 12;
+      } else {
+        // Expected instruction sequence:
+        //
+        // L1: add ip, pc,  #0x0NN00000  Offset(&(.got.plt) - L1 - 8
+        //     add ip, ip,  #0x000NN000  Offset(&(.got.plt) - L1 - 8
+        //     ldr pc, [ip, #0x00000NNN] Offset(&(.got.plt) - L1 - 8
+
+        uint32_t Add1 =
+            support::endian::read32(PltContents.data() + Byte, InstrEndianness);
+        if ((Add1 & 0xe28fc600) != 0xe28fc600)
+          continue;
+        uint32_t Add2 = support::endian::read32(PltContents.data() + Byte + 4,
+                                                InstrEndianness);
+        if ((Add2 & 0xe28cca00) != 0xe28cca00)
+          continue;
+        uint32_t Ldr = support::endian::read32(PltContents.data() + Byte + 8,
+                                               InstrEndianness);
+        if ((Ldr & 0xe5bcf000) != 0xe5bcf000)
+          continue;
+
+        // add ip, pc, #offset at Byte + 0 + arm-pc-bias = 8
+        uint64_t Offset = (PltSectionVA + Byte + 8) + ((Add1 & 0xff) << 20) +
+                          ((Add2 & 0xff) << 12) + (Ldr & 0xfff);
+        Result.emplace_back(PltSectionVA + Byte, Offset);
+        Byte += 8;
+      }
+    }
+  }
+  return Result;
+}
+
 static MCInstrAnalysis *createARMMCInstrAnalysis(const MCInstrInfo *Info) {
   return new ARMMCInstrAnalysis(Info);
 }
@@ -634,7 +765,7 @@ bool ARM::isCDECoproc(size_t Coproc, const MCSubtargetInfo &STI) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTargetMC() {
   for (Target *T : {&getTheARMLETarget(), &getTheARMBETarget(),
                     &getTheThumbLETarget(), &getTheThumbBETarget()}) {
     // Register the MC asm info.

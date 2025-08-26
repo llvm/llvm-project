@@ -21,7 +21,6 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HexagonAttributeParser.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -310,6 +309,8 @@ static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
     return "v71";
   case 73:
     return "v73";
+  case 75:
+    return "v75";
   default:
     return {};
   }
@@ -544,12 +545,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx90a";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:
     return "gfx90c";
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX940:
-    return "gfx940";
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX941:
-    return "gfx941";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:
     return "gfx942";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:
+    return "gfx950";
 
   // AMDGCN GFX10.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
@@ -590,16 +589,22 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1151";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152:
     return "gfx1152";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153:
+    return "gfx1153";
 
   // AMDGCN GFX12.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:
     return "gfx1200";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201:
     return "gfx1201";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250:
+    return "gfx1250";
 
   // Generic AMDGCN targets
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:
     return "gfx9-generic";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:
+    return "gfx9-4-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:
     return "gfx10-1-generic";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:
@@ -615,7 +620,9 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
 
 StringRef ELFObjectFileBase::getNVPTXCPUName() const {
   assert(getEMachine() == ELF::EM_CUDA);
-  unsigned SM = getPlatformFlags() & ELF::EF_CUDA_SM;
+  unsigned SM = getEIdentABIVersion() == ELF::ELFABIVERSION_CUDA_V1
+                    ? getPlatformFlags() & ELF::EF_CUDA_SM
+                    : getPlatformFlags() & ELF::EF_CUDA_SM_MASK;
 
   switch (SM) {
   // Fermi architecture.
@@ -674,7 +681,27 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
 
   // Hopper architecture.
   case ELF::EF_CUDA_SM90:
-    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_90a" : "sm_90";
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS_V1 ? "sm_90a"
+                                                             : "sm_90";
+
+  // Blackwell architecture.
+  case ELF::EF_CUDA_SM100:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_100a"
+                                                          : "sm_100";
+  case ELF::EF_CUDA_SM101:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_101a"
+                                                          : "sm_101";
+  case ELF::EF_CUDA_SM103:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_103a"
+                                                          : "sm_103";
+
+  // Rubin architecture.
+  case ELF::EF_CUDA_SM120:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_120a"
+                                                          : "sm_120";
+  case ELF::EF_CUDA_SM121:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_121a"
+                                                          : "sm_121";
   default:
     llvm_unreachable("Unknown EF_CUDA_SM value");
   }
@@ -733,8 +760,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     case ARMBuildAttrs::v7: {
       std::optional<unsigned> ArchProfileAttr =
           Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
-      if (ArchProfileAttr &&
-          *ArchProfileAttr == ARMBuildAttrs::MicroControllerProfile)
+      if (ArchProfileAttr == ARMBuildAttrs::MicroControllerProfile)
         Triple += "v7m";
       else
         Triple += "v7";
@@ -775,10 +801,11 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   TheTriple.setArchName(Triple);
 }
 
-std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
+std::vector<ELFPltEntry>
+ELFObjectFileBase::getPltEntries(const MCSubtargetInfo &STI) const {
   std::string Err;
   const auto Triple = makeTriple();
-  const auto *T = TargetRegistry::lookupTarget(Triple.str(), Err);
+  const auto *T = TargetRegistry::lookupTarget(Triple, Err);
   if (!T)
     return {};
   uint32_t JumpSlotReloc = 0, GlobDatReloc = 0;
@@ -794,6 +821,20 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
     case Triple::aarch64:
     case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
+      break;
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::thumb:
+    case Triple::thumbeb:
+      JumpSlotReloc = ELF::R_ARM_JUMP_SLOT;
+      break;
+    case Triple::hexagon:
+      JumpSlotReloc = ELF::R_HEX_JMP_SLOT;
+      GlobDatReloc = ELF::R_HEX_GLOB_DAT;
+      break;
+    case Triple::riscv32:
+    case Triple::riscv64:
+      JumpSlotReloc = ELF::R_RISCV_JUMP_SLOT;
       break;
     default:
       return {};
@@ -829,7 +870,7 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
       llvm::append_range(
           PltEntries,
           MIA->findPltEntries(Section.getAddress(),
-                              arrayRefFromStringRef(*PltContents), Triple));
+                              arrayRefFromStringRef(*PltContents), STI));
     }
   }
 
@@ -889,8 +930,7 @@ Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
 
   const auto &Sections = cantFail(EF.sections());
   auto IsMatch = [&](const Elf_Shdr &Sec) -> Expected<bool> {
-    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP &&
-        Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP_V0)
+    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP)
       return false;
     if (!TextSectionIndex)
       return true;

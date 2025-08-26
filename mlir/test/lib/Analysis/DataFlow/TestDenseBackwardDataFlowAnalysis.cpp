@@ -13,9 +13,8 @@
 #include "TestDenseDataFlowAnalysis.h"
 #include "TestDialect.h"
 #include "TestOps.h"
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
@@ -75,6 +74,11 @@ public:
   void setToExitState(NextAccess *lattice) override {
     propagateIfChanged(lattice, lattice->setKnownToUnknown());
   }
+
+  /// Visit an operation. If this analysis can confirm that lattice content
+  /// of lattice anchors around operation are necessarily identical, join
+  /// them into the same equivalent class.
+  void buildOperationEquivalentLatticeAnchor(Operation *op) override;
 
   const bool assumeFuncReads;
 };
@@ -139,6 +143,13 @@ LogicalResult NextAccessAnalysis::visitOperation(Operation *op,
   }
   propagateIfChanged(before, result);
   return success();
+}
+
+void NextAccessAnalysis::buildOperationEquivalentLatticeAnchor(Operation *op) {
+  if (isMemoryEffectFree(op)) {
+    unionLatticeAnchors<NextAccess>(getProgramPointBefore(op),
+                                    getProgramPointAfter(op));
+  }
 }
 
 void NextAccessAnalysis::visitCallControlFlowTransfer(
@@ -271,9 +282,8 @@ struct TestNextAccessPass
 
     auto config = DataFlowConfig().setInterprocedural(interprocedural);
     DataFlowSolver solver(config);
-    solver.load<DeadCodeAnalysis>();
+    loadBaselineAnalyses(solver);
     solver.load<NextAccessAnalysis>(symbolTable, assumeFuncReads);
-    solver.load<SparseConstantPropagation>();
     solver.load<UnderlyingValueAnalysis>();
     if (failed(solver.initializeAndRun(op))) {
       emitError(op->getLoc(), "dataflow solver failed");

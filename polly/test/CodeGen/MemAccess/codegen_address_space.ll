@@ -40,4 +40,4 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; CHECK: %polly.access.A = getelementptr i32, ptr addrspace(5) %A, i64 0
-; CHECK: %tmp2_p_scalar_ = load i32, ptr addrspace(5) %polly.access.A, align 4, !alias.scope !0, !noalias !3
+; CHECK: %tmp2_p_scalar_ = load i32, ptr addrspace(5) %polly.access.A, align 4, !alias.scope !2, !noalias !5

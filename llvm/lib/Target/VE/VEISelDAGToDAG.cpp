@@ -12,12 +12,8 @@
 
 #include "VE.h"
 #include "VETargetMachine.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "ve-isel"
@@ -253,7 +249,6 @@ bool VEDAGToDAGISel::matchADDRri(SDValue Addr, SDValue &Base, SDValue &Offset) {
 }
 
 void VEDAGToDAGISel::Select(SDNode *N) {
-  SDLoc dl(N);
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);
     return; // Already selected.

@@ -44,6 +44,36 @@ module iso_fortran_env_impl
     int128 = merge(selectedInt128, merge(-2, -1, selectedInt128 >= 0), &
                    digits(int(0,kind=safeInt128)) == 127)
 
+  ! UNSIGNED types
+  integer, parameter, public :: &
+    selectedUInt8 = selected_unsigned_kind(2), &
+    selectedUInt16 = selected_unsigned_kind(4), &
+    selectedUInt32 = selected_unsigned_kind(9), &
+    selectedUInt64 = selected_unsigned_kind(18),&
+    selectedUInt128 = selected_unsigned_kind(38), &
+    safeUInt8 = merge(selectedUInt8, selected_unsigned_kind(0), &
+                     selectedUInt8 >= 0), &
+    safeUInt16 = merge(selectedUInt16, selected_unsigned_kind(0), &
+                      selectedUInt16 >= 0), &
+    safeUInt32 = merge(selectedUInt32, selected_unsigned_kind(0), &
+                      selectedUInt32 >= 0), &
+    safeUInt64 = merge(selectedUInt64, selected_unsigned_kind(0), &
+                      selectedUInt64 >= 0), &
+    safeUInt128 = merge(selectedUInt128, selected_unsigned_kind(0), &
+                       selectedUInt128 >= 0)
+
+  integer, parameter, public :: &
+    uint8 = merge(selectedUInt8, merge(-2, -1, selectedUInt8 >= 0), &
+                 digits(uint(0,kind=safeUInt8)) == 8), &
+    uint16 = merge(selectedUInt16, merge(-2, -1, selectedUInt16 >= 0), &
+                  digits(uint(0,kind=safeUInt16)) == 16), &
+    uint32 = merge(selectedUInt32, merge(-2, -1, selectedUInt32 >= 0), &
+                  digits(uint(0,kind=safeUInt32)) == 32), &
+    uint64 = merge(selectedUInt64, merge(-2, -1, selectedUInt64 >= 0), &
+                  digits(uint(0,kind=safeUInt64)) == 64), &
+    uint128 = merge(selectedUInt128, merge(-2, -1, selectedUInt128 >= 0), &
+                   digits(uint(0,kind=safeUInt128)) == 128)
+
   integer, parameter, dimension(*), public :: __builtin_integer_kinds = [ &
       selected_int_kind(0), &
       [(pack([selected_int_kind(k)], &

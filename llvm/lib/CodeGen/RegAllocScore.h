@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_REGALLOCSCORE_H_
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -52,9 +53,9 @@ public:
   void onCheapRemat(double Freq) { CheapRematCounts += Freq; }
 
   RegAllocScore &operator+=(const RegAllocScore &Other);
-  bool operator==(const RegAllocScore &Other) const;
+  LLVM_ABI_FOR_TEST bool operator==(const RegAllocScore &Other) const;
   bool operator!=(const RegAllocScore &Other) const;
-  double getScore() const;
+  LLVM_ABI_FOR_TEST double getScore() const;
 };
 
 /// Calculate a score. When comparing 2 scores for the same function but
@@ -64,7 +65,7 @@ RegAllocScore calculateRegAllocScore(const MachineFunction &MF,
                                      const MachineBlockFrequencyInfo &MBFI);
 
 /// Implementation of the above, which is also more easily unittestable.
-RegAllocScore calculateRegAllocScore(
+LLVM_ABI_FOR_TEST RegAllocScore calculateRegAllocScore(
     const MachineFunction &MF,
     llvm::function_ref<double(const MachineBasicBlock &)> GetBBFreq,
     llvm::function_ref<bool(const MachineInstr &)> IsTriviallyRematerializable);

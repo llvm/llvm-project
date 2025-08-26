@@ -11,10 +11,9 @@
 #define _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
 
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__memory/unique_temporary_buffer.h>
 #include <__utility/pair.h>
-#include <cstddef>
-#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

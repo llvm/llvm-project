@@ -91,12 +91,14 @@ __device__ inline void operator delete[](void *ptr,
 #endif
 
 // Device overrides for placement new and delete.
+#if !(_LIBCPP_STD_VER >= 26 || __cpp_lib_constexpr_new >= 202406L)
 __device__ inline void *operator new(__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
   return __ptr;
 }
 __device__ inline void *operator new[](__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
   return __ptr;
 }
+#endif
 __device__ inline void operator delete(void *, void *) CUDA_NOEXCEPT {}
 __device__ inline void operator delete[](void *, void *) CUDA_NOEXCEPT {}
 

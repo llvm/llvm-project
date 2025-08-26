@@ -1,7 +1,7 @@
 ; Check that a callee-saved register will be saved correctly if
 ; the predicate-to-GPR spilling code uses it.
 ;
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 ;
 ; We expect to spill p0 into a general-purpose register and keep it there,
 ; without adding an extra spill of that register.

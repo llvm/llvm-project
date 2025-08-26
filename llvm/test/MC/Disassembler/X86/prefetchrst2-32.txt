@@ -1,0 +1,26 @@
+# RUN: llvm-mc --disassemble %s -triple=i386 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=i386 --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:   prefetchrst2  268435456(%esp,%esi,8)
+# INTEL: prefetchrst2 byte ptr [esp + 8*esi + 268435456]
+0x0f,0x18,0xa4,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:   prefetchrst2  291(%edi,%eax,4)
+# INTEL: prefetchrst2 byte ptr [edi + 4*eax + 291]
+0x0f,0x18,0xa4,0x87,0x23,0x01,0x00,0x00
+
+# ATT:   prefetchrst2  (%eax)
+# INTEL: prefetchrst2 byte ptr [eax]
+0x0f,0x18,0x20
+
+# ATT:   prefetchrst2  -32(,%ebp,2)
+# INTEL: prefetchrst2 byte ptr [2*ebp - 32]
+0x0f,0x18,0x24,0x6d,0xe0,0xff,0xff,0xff
+
+# ATT:   prefetchrst2  127(%ecx)
+# INTEL: prefetchrst2 byte ptr [ecx + 127]
+0x0f,0x18,0x61,0x7f
+
+# ATT:   prefetchrst2  -128(%edx)
+# INTEL: prefetchrst2 byte ptr [edx - 128]
+0x0f,0x18,0x62,0x80

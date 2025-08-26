@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+f -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+f -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
-# RUN: llvm-mc %s -triple riscv64 -mattr=+f -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple riscv64 -mattr=+f -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+f < %s \
 # RUN:     | llvm-objdump --mattr=+f -M no-aliases -d -r - \
@@ -146,12 +146,12 @@ target:
 # CHECK-OBJ: fmadd.s fa0, fa1, fa2, fa3, rne
 .insn r4 MADD,  0,  0, fa0, fa1, fa2, fa3
 
-# CHECK-ASM: .insn i 3, 5, t1, -2048(t2)
-# CHECK-ASM: encoding: [0x03,0xd3,0x03,0x80]
+# CHECK-ASM: .insn i 3, 5, t1, %lo(2048)(t2)
+# CHECK-ASM: encoding: [0x03,0xd3,0bAAAA0011,A]
 # CHECK-OBJ: lhu t1, -0x800(t2)
 .insn i 0x3, 0x5, x6, %lo(2048)(x7)
-# CHECK-ASM: .insn i 3, 5, t1, -2048(t2)
-# CHECK-ASM: encoding: [0x03,0xd3,0x03,0x80]
+# CHECK-ASM: .insn i 3, 5, t1, %lo(2048)(t2)
+# CHECK-ASM: encoding: [0x03,0xd3,0bAAAA0011,A]
 # CHECK-OBJ: lhu t1, -0x800(t2)
 .insn i LOAD, 0x5, x6, %lo(2048)(x7)
 

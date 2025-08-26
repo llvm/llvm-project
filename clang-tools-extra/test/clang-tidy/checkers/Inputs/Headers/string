@@ -60,6 +60,8 @@ struct basic_string {
   _Type& insert(size_type pos, const C* s);
   _Type& insert(size_type pos, const C* s, size_type n);
 
+  _Type substr(size_type pos = 0, size_type count = npos) const;
+
   constexpr bool starts_with(std::basic_string_view<C, T> sv) const noexcept;
   constexpr bool starts_with(C ch) const noexcept;
   constexpr bool starts_with(const C* s) const;
@@ -134,10 +136,6 @@ bool operator==(const std::string&, const std::string&);
 bool operator==(const std::string&, const char*);
 bool operator==(const char*, const std::string&);
 
-bool operator!=(const std::string&, const std::string&);
-bool operator!=(const std::string&, const char*);
-bool operator!=(const char*, const std::string&);
-
 bool operator==(const std::wstring&, const std::wstring&);
 bool operator==(const std::wstring&, const wchar_t*);
 bool operator==(const wchar_t*, const std::wstring&);
@@ -146,9 +144,15 @@ bool operator==(const std::string_view&, const std::string_view&);
 bool operator==(const std::string_view&, const char*);
 bool operator==(const char*, const std::string_view&);
 
+#if __cplusplus < 202002L
+bool operator!=(const std::string&, const std::string&);
+bool operator!=(const std::string&, const char*);
+bool operator!=(const char*, const std::string&);
+
 bool operator!=(const std::string_view&, const std::string_view&);
 bool operator!=(const std::string_view&, const char*);
 bool operator!=(const char*, const std::string_view&);
+#endif
 
 size_t strlen(const char* str);
 }

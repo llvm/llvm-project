@@ -170,51 +170,6 @@ declare <2 x i32> @llvm.aarch64.neon.raddhn.v2i32(<2 x i64>, <2 x i64>) nounwind
 declare <4 x i16> @llvm.aarch64.neon.raddhn.v4i16(<4 x i32>, <4 x i32>) nounwind readnone
 declare <8 x i8> @llvm.aarch64.neon.raddhn.v8i8(<8 x i16>, <8 x i16>) nounwind readnone
 
-define <8 x i16> @saddl8h(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: saddl8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    saddl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    ret
-        %tmp1 = load <8 x i8>, ptr %A
-        %tmp2 = load <8 x i8>, ptr %B
-  %tmp3 = sext <8 x i8> %tmp1 to <8 x i16>
-  %tmp4 = sext <8 x i8> %tmp2 to <8 x i16>
-  %tmp5 = add <8 x i16> %tmp3, %tmp4
-        ret <8 x i16> %tmp5
-}
-
-define <4 x i32> @saddl4s(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: saddl4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    saddl v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ret
-        %tmp1 = load <4 x i16>, ptr %A
-        %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = sext <4 x i16> %tmp1 to <4 x i32>
-  %tmp4 = sext <4 x i16> %tmp2 to <4 x i32>
-  %tmp5 = add <4 x i32> %tmp3, %tmp4
-        ret <4 x i32> %tmp5
-}
-
-define <2 x i64> @saddl2d(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: saddl2d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    saddl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    ret
-        %tmp1 = load <2 x i32>, ptr %A
-        %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = sext <2 x i32> %tmp1 to <2 x i64>
-  %tmp4 = sext <2 x i32> %tmp2 to <2 x i64>
-  %tmp5 = add <2 x i64> %tmp3, %tmp4
-        ret <2 x i64> %tmp5
-}
-
 define <8 x i16> @saddl2_8h(<16 x i8> %a, <16 x i8> %b) nounwind  {
 ; CHECK-LABEL: saddl2_8h:
 ; CHECK:       // %bb.0:
@@ -265,52 +220,6 @@ define <2 x i64> @saddl2_2d(<4 x i32> %a, <4 x i32> %b) nounwind  {
   %add.i = add <2 x i64> %vmovl.i.i.i, %vmovl.i.i5.i
   ret <2 x i64> %add.i
 }
-
-define <8 x i16> @uaddl8h(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: uaddl8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    ret
-  %tmp1 = load <8 x i8>, ptr %A
-  %tmp2 = load <8 x i8>, ptr %B
-  %tmp3 = zext <8 x i8> %tmp1 to <8 x i16>
-  %tmp4 = zext <8 x i8> %tmp2 to <8 x i16>
-  %tmp5 = add <8 x i16> %tmp3, %tmp4
-  ret <8 x i16> %tmp5
-}
-
-define <4 x i32> @uaddl4s(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: uaddl4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    uaddl v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ret
-  %tmp1 = load <4 x i16>, ptr %A
-  %tmp2 = load <4 x i16>, ptr %B
-  %tmp3 = zext <4 x i16> %tmp1 to <4 x i32>
-  %tmp4 = zext <4 x i16> %tmp2 to <4 x i32>
-  %tmp5 = add <4 x i32> %tmp3, %tmp4
-  ret <4 x i32> %tmp5
-}
-
-define <2 x i64> @uaddl2d(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: uaddl2d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    ret
-  %tmp1 = load <2 x i32>, ptr %A
-  %tmp2 = load <2 x i32>, ptr %B
-  %tmp3 = zext <2 x i32> %tmp1 to <2 x i64>
-  %tmp4 = zext <2 x i32> %tmp2 to <2 x i64>
-  %tmp5 = add <2 x i64> %tmp3, %tmp4
-  ret <2 x i64> %tmp5
-}
-
 
 define <8 x i16> @uaddl2_8h(<16 x i8> %a, <16 x i8> %b) nounwind  {
 ; CHECK-LABEL: uaddl2_8h:
@@ -1516,4 +1425,67 @@ define <4 x i32> @subhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
         %narrowed = trunc <2 x i64> %high_bits to <2 x i32>
         %res = shufflevector <2 x i32> %low, <2 x i32> %narrowed, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
         ret <4 x i32> %res
+}
+
+define <16 x i8> @neg_narrow_i8(<16 x i16> %a) {
+; CHECK-SD-LABEL: neg_narrow_i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    subhn v0.8b, v2.8h, v0.8h
+; CHECK-SD-NEXT:    subhn2 v0.16b, v2.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_narrow_i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
+; CHECK-GI-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-GI-NEXT:    shrn2 v0.16b, v1.8h, #8
+; CHECK-GI-NEXT:    ret
+  %not.i = xor <16 x i16> %a, splat (i16 -1)
+  %s = lshr <16 x i16> %not.i, splat (i16 8)
+  %vshrn_n = trunc nuw <16 x i16> %s to <16 x i8>
+  ret <16 x i8> %vshrn_n
+}
+
+define <8 x i16> @neg_narrow_i16(<8 x i32> %a) {
+; CHECK-SD-LABEL: neg_narrow_i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    subhn v0.4h, v2.4s, v0.4s
+; CHECK-SD-NEXT:    subhn2 v0.8h, v2.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_narrow_i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
+; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #16
+; CHECK-GI-NEXT:    ret
+  %not.i = xor <8 x i32> %a, splat (i32 -1)
+  %s = lshr <8 x i32> %not.i, splat (i32 16)
+  %vshrn_n = trunc nuw <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %vshrn_n
+}
+
+define <4 x i32> @neg_narrow_i32(<4 x i64> %a) {
+; CHECK-SD-LABEL: neg_narrow_i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    subhn v0.2s, v2.2d, v0.2d
+; CHECK-SD-NEXT:    subhn2 v0.4s, v2.2d, v1.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_narrow_i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
+; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-GI-NEXT:    shrn2 v0.4s, v1.2d, #32
+; CHECK-GI-NEXT:    ret
+  %not.i = xor <4 x i64> %a, splat (i64 -1)
+  %s = lshr <4 x i64> %not.i, splat (i64 32)
+  %vshrn_n = trunc nuw <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %vshrn_n
 }

@@ -1,24 +1,24 @@
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK32
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK64
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST32
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST32
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64
 
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy -O0  | FileCheck %s --check-prefix CHECK32
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy -O0 | FileCheck %s --check-prefix CHECK64-NOOPT
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST32
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST64
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST32
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST64
 
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK32LARGE
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST32LARGE
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST32LARGE
 
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK64LARGE
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64LARGE
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64LARGE
 
 ; Global variables i and f have the toc-data attribute.
 ; In the following functions, those writing to or reading from

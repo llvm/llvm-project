@@ -2,7 +2,7 @@
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %p/Inputs/shared.s -o lib.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %p/Inputs/shared.s -o lib.o
 # RUN: ld.lld -shared lib.o -soname lib.so -o lib.so
 
 ## Checks if got access to dynamic objects is done through a got relative
@@ -13,7 +13,7 @@
 
 #--- small.s
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux small.s -o small.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 small.s -o small.o
 # RUN: ld.lld lib.so small.o -o small
 # RUN: llvm-readobj -r small | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-objdump -d --no-show-raw-insn small | FileCheck --check-prefix=DIS-SMALL %s
@@ -30,7 +30,7 @@ _start:
 
 #--- tiny.s
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux tiny.s -o tiny.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 tiny.s -o tiny.o
 # RUN: ld.lld lib.so tiny.o -o tiny
 # RUN: llvm-readobj -r tiny | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-objdump -d --no-show-raw-insn tiny | FileCheck --check-prefix=DIS-TINY %s

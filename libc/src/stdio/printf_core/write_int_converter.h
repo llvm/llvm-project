@@ -19,7 +19,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-LIBC_INLINE int convert_write_int(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_write_int(Writer<write_mode> *writer,
                                   const FormatSection &to_conv) {
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS

@@ -689,6 +689,13 @@ TEST_F(FormatTestCSharp, CSharpNewOperator) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, NewModifier) {
+  verifyFormat("public new class NestedC {\n"
+               "  public int x = 100;\n"
+               "}",
+               getLLVMStyle(FormatStyle::LK_CSharp));
+}
+
 TEST_F(FormatTestCSharp, CSharpLambdas) {
   FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
   FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
@@ -1315,6 +1322,12 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
                "}",
                Style);
 
+  verifyFormat("namespace A {\n"
+               "  delegate T MyDelegate<T>()\n"
+               "      where T : new();\n"
+               "}",
+               Style);
+
   // When the "where" line is not to be formatted, following lines should not
   // take on its indentation.
   verifyFormat("class ItemFactory<T>\n"
@@ -1689,15 +1702,25 @@ TEST_F(FormatTestCSharp, BrokenBrackets) {
 }
 
 TEST_F(FormatTestCSharp, GotoCaseLabel) {
-  verifyNoCrash("switch (i) {\n"
-                "case 0:\n"
-                "  goto case 1;\n"
-                "case 1:\n"
-                "  j = 0;\n"
-                "  {\n"
-                "    break;\n"
-                "  }\n"
-                "}");
+  verifyFormat("switch (i)\n"
+               "{\n"
+               "case 0:\n"
+               "    goto case 1;\n"
+               "case 1:\n"
+               "    j = 0;\n"
+               "    {\n"
+               "        break;\n"
+               "    }\n"
+               "}",
+               "switch (i) {\n"
+               "case 0:\n"
+               "  goto case 1;\n"
+               "case 1:\n"
+               "  j = 0;\n"
+               "  {\n"
+               "    break;\n"
+               "  }\n"
+               "}");
 }
 
 } // namespace

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-avoid-bind %t
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++14-or-later %s modernize-avoid-bind %t
 
 namespace std {
 inline namespace impl {
@@ -46,7 +46,7 @@ struct D {
   operator bool() const { return true; }
 
   void MemberFunction(int x) {}
-  int MemberFunctionWithReturn(int x) {}
+  int MemberFunctionWithReturn(int x) { return 0; }
 
   static D *create();
 };
@@ -342,7 +342,7 @@ void testCapturedSubexpressions() {
 
 struct E {
   void MemberFunction(int x) {}
-  int MemberFunctionWithReturn(int x) {}
+  int MemberFunctionWithReturn(int x) { return 0; }
   int operator()(int x, int y) const { return x + y; }
 
   void testMemberFunctions() {

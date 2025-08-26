@@ -7,9 +7,7 @@
 // RUN: %run %t 4 2>&1 | FileCheck %s --check-prefix=CHECK-4
 // RUN: %run %t 5 2>&1 | FileCheck %s --check-prefix=CHECK-5
 // RUN: %run %t 6 2>&1 | FileCheck %s --check-prefix=CHECK-6
-// FIXME: %run %t 7 2>&1 | FileCheck %s --check-prefix=CHECK-7
-// FIXME: not %run %t 8 2>&1 | FileCheck %s --check-prefix=CHECK-8
-// RUN: not %run %t 9 2>&1 | FileCheck %s --check-prefix=CHECK-9
+// RUN: %run %t 7 2>&1 | FileCheck %s --check-prefix=CHECK-7
 
 // Issue #41838
 // XFAIL: sparc-target-arch && target={{.*solaris.*}}
@@ -17,41 +15,41 @@
 // This test assumes float and double are IEEE-754 single- and double-precision.
 
 #if defined(__APPLE__)
-# include <machine/endian.h>
-# define BYTE_ORDER __DARWIN_BYTE_ORDER
-# define BIG_ENDIAN __DARWIN_BIG_ENDIAN
-# define LITTLE_ENDIAN __DARWIN_LITTLE_ENDIAN
+#  include <machine/endian.h>
+#  define BYTE_ORDER __DARWIN_BYTE_ORDER
+#  define BIG_ENDIAN __DARWIN_BIG_ENDIAN
+#  define LITTLE_ENDIAN __DARWIN_LITTLE_ENDIAN
 #elif defined(__FreeBSD__) || defined(__NetBSD__)
-# include <sys/endian.h>
-# ifndef BYTE_ORDER
-#  define BYTE_ORDER _BYTE_ORDER
-# endif
-# ifndef BIG_ENDIAN
-#  define BIG_ENDIAN _BIG_ENDIAN
-# endif
-# ifndef LITTLE_ENDIAN
-#  define LITTLE_ENDIAN _LITTLE_ENDIAN
-# endif
+#  include <sys/endian.h>
+#  ifndef BYTE_ORDER
+#    define BYTE_ORDER _BYTE_ORDER
+#  endif
+#  ifndef BIG_ENDIAN
+#    define BIG_ENDIAN _BIG_ENDIAN
+#  endif
+#  ifndef LITTLE_ENDIAN
+#    define LITTLE_ENDIAN _LITTLE_ENDIAN
+#  endif
 #elif defined(__sun__) && defined(__svr4__)
 // Solaris provides _BIG_ENDIAN/_LITTLE_ENDIAN selector in sys/types.h.
-# include <sys/types.h>
-# define BIG_ENDIAN 4321
-# define LITTLE_ENDIAN 1234
-# if defined(_BIG_ENDIAN)
-#  define BYTE_ORDER BIG_ENDIAN
-# else
-#  define BYTE_ORDER LITTLE_ENDIAN
-# endif
+#  include <sys/types.h>
+#  define BIG_ENDIAN 4321
+#  define LITTLE_ENDIAN 1234
+#  if defined(_BIG_ENDIAN)
+#    define BYTE_ORDER BIG_ENDIAN
+#  else
+#    define BYTE_ORDER LITTLE_ENDIAN
+#  endif
 #elif defined(_WIN32)
-# define BYTE_ORDER 0
-# define BIG_ENDIAN 1
-# define LITTLE_ENDIAN 0
+#  define BYTE_ORDER 0
+#  define BIG_ENDIAN 1
+#  define LITTLE_ENDIAN 0
 #else
-# include <endian.h>
-# define BYTE_ORDER __BYTE_ORDER
-# define BIG_ENDIAN __BIG_ENDIAN
-# define LITTLE_ENDIAN __LITTLE_ENDIAN
-#endif  // __APPLE__
+#  include <endian.h>
+#  define BYTE_ORDER __BYTE_ORDER
+#  define BIG_ENDIAN __BIG_ENDIAN
+#  define LITTLE_ENDIAN __LITTLE_ENDIAN
+#endif // __APPLE__
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -61,7 +59,7 @@ float NaN;
 
 int main(int argc, char **argv) {
   float MaxFloatRepresentableAsInt = 0x7fffff80;
-  (int)MaxFloatRepresentableAsInt; // ok
+  (int)MaxFloatRepresentableAsInt;  // ok
   (int)-MaxFloatRepresentableAsInt; // ok
 
   float MinFloatRepresentableAsInt = -0x7fffffff - 1;
@@ -80,18 +78,18 @@ int main(int argc, char **argv) {
 
   // Build a '+Inf'.
 #if BYTE_ORDER == LITTLE_ENDIAN
-  unsigned char InfVal[] = { 0x00, 0x00, 0x80, 0x7f };
+  unsigned char InfVal[] = {0x00, 0x00, 0x80, 0x7f};
 #else
-  unsigned char InfVal[] = { 0x7f, 0x80, 0x00, 0x00 };
+  unsigned char InfVal[] = {0x7f, 0x80, 0x00, 0x00};
 #endif
   float Inf;
   memcpy(&Inf, InfVal, 4);
 
   // Build a 'NaN'.
 #if BYTE_ORDER == LITTLE_ENDIAN
-  unsigned char NaNVal[] = { 0x01, 0x00, 0x80, 0x7f };
+  unsigned char NaNVal[] = {0x01, 0x00, 0x80, 0x7f};
 #else
-  unsigned char NaNVal[] = { 0x7f, 0x80, 0x00, 0x01 };
+  unsigned char NaNVal[] = {0x7f, 0x80, 0x00, 0x01};
 #endif
   float NaN;
   memcpy(&NaN, NaNVal, 4);
@@ -109,7 +107,7 @@ int main(int argc, char **argv) {
     static int test_int = MaxFloatRepresentableAsInt + 0x80;
     // CHECK-0: SUMMARY: {{.*}}Sanitizer: float-cast-overflow {{.*}}cast-overflow.cpp:[[@LINE-1]]
     return 0;
-    }
+  }
   case '1': {
     // CHECK-1: {{.*}}cast-overflow.cpp:[[@LINE+1]]:27: runtime error: -2.14748{{.*}} is outside the range of representable values of type 'int'
     static int test_int = MinFloatRepresentableAsInt - 0x100;
@@ -137,34 +135,26 @@ int main(int argc, char **argv) {
     static int test_int = NaN;
     return 0;
   }
-
-    // Integer -> floating point overflow.
+  // Integer -> floating point overflow.
   case '6': {
     // CHECK-6: cast-overflow.cpp:[[@LINE+2]]:{{27: runtime error: 3.40282e\+38 is outside the range of representable values of type 'int'| __int128 not supported}}
 #if defined(__SIZEOF_INT128__) && !defined(_WIN32)
     static int test_int = (float)(FloatMaxAsUInt128 + 1);
     return 0;
 #else
-    // Print the same line as the check above. That way the test is robust to
-    // line changes around it
+    // Print the same line as the check above.
+    // That way the test is robust to line changes around it
     printf("%s:%d: __int128 not supported", __FILE__, __LINE__ - 5);
     return 0;
 #endif
   }
-  // FIXME: The backend cannot lower __fp16 operations on x86 yet.
-  //case '7':
-  //  (__fp16)65504; // ok
-  //  // CHECK-7: runtime error: 65505 is outside the range of representable values of type '__fp16'
-  //  return (__fp16)65505;
-
-    // Floating point -> floating point overflow.
-  case '8':
-    // CHECK-8: {{.*}}cast-overflow.cpp:[[@LINE+1]]:19: runtime error: 1e+39 is outside the range of representable values of type 'float'
-    return (float)1e39;
-  case '9':
+  case '7': {
     volatile long double ld = 300.0;
-    // CHECK-9: {{.*}}cast-overflow.cpp:[[@LINE+1]]:14: runtime error: 300 is outside the range of representable values of type 'char'
+    // CHECK-7: {{.*}}cast-overflow.cpp:[[@LINE+1]]:14: runtime error: 300 is outside the range of representable values of type 'char'
     char c = ld;
-    return c;
+    // `c` is allowed to contain UNDEF, thus we should not use
+    // its value as an exit code.
+    return 0;
+  }
   }
 }

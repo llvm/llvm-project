@@ -82,6 +82,10 @@ class DwarfCompileUnit final : public DwarfUnit {
   // List of abstract local scopes (either DISubprogram or DILexicalBlock).
   DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
 
+  // List of inlined lexical block scopes that belong to subprograms within this
+  // CU.
+  DenseMap<const DILocalScope *, SmallVector<DIE *, 2>> InlinedLocalScopeDIEs;
+
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
   /// DWO ID for correlating skeleton and split units.
@@ -152,6 +156,8 @@ public:
 
   bool includeMinimalInlineScopes() const;
 
+  bool emitFuncLineTableOffsets() const;
+
   void initStmtList();
 
   /// Apply the DW_AT_stmt_list from this compile unit to the specified DIE.
@@ -207,10 +213,10 @@ public:
   void attachLowHighPC(DIE &D, const MCSymbol *Begin, const MCSymbol *End);
 
   /// Find DIE for the given subprogram and attach appropriate
-  /// DW_AT_low_pc and DW_AT_high_pc attributes. If there are global
-  /// variables in this scope then create and insert DIEs for these
-  /// variables.
-  DIE &updateSubprogramScopeDIE(const DISubprogram *SP);
+  /// DW_AT_low_pc, DW_AT_high_pc and DW_AT_LLVM_stmt_sequence attributes.
+  /// If there are global variables in this scope then create and insert DIEs
+  /// for these variables.
+  DIE &updateSubprogramScopeDIE(const DISubprogram *SP, MCSymbol *LineTableSym);
 
   void constructScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
@@ -254,8 +260,8 @@ public:
   DIE *getOrCreateContextDIE(const DIScope *Ty) override;
 
   /// Construct a DIE for this subprogram scope.
-  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
-                                   LexicalScope *Scope);
+  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope,
+                                   MCSymbol *LineTableSym);
 
   DIE *createAndAddScopeChildren(LexicalScope *Scope, DIE &ScopeDIE);
 
@@ -283,7 +289,8 @@ public:
   /// the \p CallReg is set to 0.
   DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram *CalleeSP,
                                  bool IsTail, const MCSymbol *PCAddr,
-                                 const MCSymbol *CallAddr, unsigned CallReg);
+                                 const MCSymbol *CallAddr, unsigned CallReg,
+                                 DIType *AllocSiteTy);
   /// Construct call site parameter DIEs for the \p CallSiteDIE. The \p Params
   /// were collected by the \ref collectCallSiteParameters.
   /// Note: The order of parameters does not matter, since debuggers recognize
@@ -297,6 +304,7 @@ public:
 
   void finishSubprogramDefinition(const DISubprogram *SP);
   void finishEntityDefinition(const DbgEntity *Entity);
+  void attachLexicalScopesAbstractOrigins();
 
   /// Find abstract variable associated with Var.
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;

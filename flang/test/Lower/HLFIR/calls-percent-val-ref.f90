@@ -43,7 +43,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_ref_1(
 ! CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_ref_1Ex"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           fir.call @_QPref1(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
+! CHECK:           fir.call @_QPref1(%[[VAL_1]]#0) fastmath<contract> : (!fir.ref<i32>) -> ()
 
 subroutine test_ref_2(x)
   complex, pointer :: x

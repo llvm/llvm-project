@@ -325,7 +325,7 @@ def M7Ex1ReadNoFastBypass : SchedReadAdvance<-1, [WriteLd, M7LoadLatency1]>;
 def : InstRW<[WriteALUsi, M7Ex1ReadNoFastBypass, M7Read_ISS],
              (instregex "t2(ADC|ADDS|ADD|BIC|EOR|ORN|ORR|RSBS|RSB|SBC|SUBS)rs$",
                         "t2(SUB|CMP|CMNz|TEQ|TST)rs$",
-                        "t2MOVsr(a|l)")>;
+                        "t2(A|L)SRs1$")>;
 def : InstRW<[WriteALUsi, M7Read_ISS],
              (instregex "t2MVNs")>;
 
@@ -335,7 +335,7 @@ def : InstRW<[WriteALUsi, M7Read_ISS],
 // but the results prove to be better than trying to get them exact.
 
 def : InstRW<[M7WriteShift2, M7Read_ISS], (instregex "t2RRX$")>;
-def : InstRW<[WriteALUsi], (instregex "(t|t2)(LSL|LSR|ASR|ROR)")>;
+def : InstRW<[WriteALUsi], (instregex "(t|t2)(LSL|LSR|ASR|ROR)r", "tROR")>;
 
 // Instructions that use the shifter, but have normal timing.
 

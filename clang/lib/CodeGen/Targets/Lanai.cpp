@@ -72,15 +72,17 @@ ABIArgInfo LanaiABIInfo::getIndirectResult(QualType Ty, bool ByVal,
       --State.FreeRegs; // Non-byval indirects just use one pointer.
       return getNaturalAlignIndirectInReg(Ty);
     }
-    return getNaturalAlignIndirect(Ty, false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   false);
   }
 
   // Compute the byval alignment.
   const unsigned MinABIStackAlignInBytes = 4;
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
-  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), /*ByVal=*/true,
-                                 /*Realign=*/TypeAlign >
-                                     MinABIStackAlignInBytes);
+  return ABIArgInfo::getIndirect(
+      CharUnits::fromQuantity(4),
+      /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(), /*ByVal=*/true,
+      /*Realign=*/TypeAlign > MinABIStackAlignInBytes);
 }
 
 ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
@@ -92,13 +94,16 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
     if (RAA == CGCXXABI::RAA_Indirect) {
       return getIndirectResult(Ty, /*ByVal=*/false, State);
     } else if (RAA == CGCXXABI::RAA_DirectInMemory) {
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+      return getNaturalAlignIndirect(
+          Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+          /*ByVal=*/true);
     }
   }
 
   if (isAggregateTypeForABI(Ty)) {
     // Structures with flexible arrays are always indirect.
-    if (RT && RT->getDecl()->hasFlexibleArrayMember())
+    if (RT &&
+        RT->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
       return getIndirectResult(Ty, /*ByVal=*/true, State);
 
     // Ignore empty structs/unions.
@@ -120,8 +125,8 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
   }
 
   // Treat an enum type as its underlying type.
-  if (const auto *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   bool InReg = shouldUseInReg(Ty, State);
 

@@ -1,10 +1,10 @@
 ; RUN: opt -passes=loop-rotate -verify-memoryssa -S %s | FileCheck %s
 ; REQUIRES: asserts
 
-; CHECK-LABEL: @func_35()
-define void @func_35() {
+; CHECK-LABEL: @func_35(i1 %arg)
+define void @func_35(i1 %arg) {
 entry:
-  br i1 undef, label %for.cond1704.preheader, label %return
+  br i1 %arg, label %for.cond1704.preheader, label %return
 
 for.cond1704.preheader:                           ; preds = %entry
   br label %for.cond1704
@@ -17,7 +17,7 @@ for.body1707:                                     ; preds = %for.cond1704
   br label %for.cond1704
 
 for.body1102:                                     ; preds = %for.body1102
-  br i1 undef, label %for.body1102, label %return
+  br i1 %arg, label %for.body1102, label %return
 
 return.loopexit:                                  ; preds = %for.cond1704
   br label %return

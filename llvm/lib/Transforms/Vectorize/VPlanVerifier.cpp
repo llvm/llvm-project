@@ -16,10 +16,10 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
-#include "llvm/ADT/DepthFirstIterator.h"
+#include "VPlanHelpers.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -28,6 +28,8 @@ using namespace llvm;
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
+  VPTypeAnalysis &TypeInfo;
+  bool VerifyLate;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -60,7 +62,9 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
+  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo,
+                bool VerifyLate)
+      : VPDT(VPDT), TypeInfo(TypeInfo), VerifyLate(VerifyLate) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -70,14 +74,13 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
   auto RecipeI = VPBB->begin();
   auto End = VPBB->end();
   unsigned NumActiveLaneMaskPhiRecipes = 0;
-  const VPRegionBlock *ParentR = VPBB->getParent();
-  bool IsHeaderVPBB = ParentR && !ParentR->isReplicator() &&
-                      ParentR->getEntryBasicBlock() == VPBB;
+  bool IsHeaderVPBB = VPBlockUtils::isHeader(VPBB, VPDT);
   while (RecipeI != End && RecipeI->isPhi()) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
 
-    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI)) {
+    if (IsHeaderVPBB &&
+        !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(*RecipeI)) {
       errs() << "Found non-header PHI recipe in header VPBB";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
@@ -95,10 +98,22 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
+    // Check if the recipe operands match the number of predecessors.
+    // TODO Extend to other phi-like recipes.
+    if (auto *PhiIRI = dyn_cast<VPIRPhi>(&*RecipeI)) {
+      if (PhiIRI->getNumOperands() != VPBB->getNumPredecessors()) {
+        errs() << "Phi-like recipe with different number of operands and "
+                  "predecessors.\n";
+        // TODO: Print broken recipe. At the moment printing an ill-formed
+        // phi-like recipe may crash.
+        return false;
+      }
+    }
+
     RecipeI++;
   }
 
-  if (NumActiveLaneMaskPhiRecipes > 1) {
+  if (!VerifyLate && NumActiveLaneMaskPhiRecipes > 1) {
     errs() << "There should be no more than one VPActiveLaneMaskPHIRecipe";
     return false;
   }
@@ -136,68 +151,86 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
     }
     return true;
   };
-  for (const VPUser *U : EVL.users()) {
-    if (!TypeSwitch<const VPUser *, bool>(U)
-             .Case<VPWidenIntrinsicRecipe>(
-                 [&](const VPWidenIntrinsicRecipe *S) {
-                   return VerifyEVLUse(*S, S->getNumOperands() - 1);
-                 })
-             .Case<VPWidenStoreEVLRecipe>([&](const VPWidenStoreEVLRecipe *S) {
-               return VerifyEVLUse(*S, 2);
-             })
-             .Case<VPWidenLoadEVLRecipe>([&](const VPWidenLoadEVLRecipe *L) {
-               return VerifyEVLUse(*L, 1);
-             })
-             .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
-               return VerifyEVLUse(
-                   *W, Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
-             })
-             .Case<VPReductionEVLRecipe>([&](const VPReductionEVLRecipe *R) {
-               return VerifyEVLUse(*R, 2);
-             })
-             .Case<VPScalarCastRecipe>(
-                 [&](const VPScalarCastRecipe *S) { return true; })
-             .Case<VPInstruction>([&](const VPInstruction *I) {
-               if (I->getOpcode() != Instruction::Add) {
-                 errs()
-                     << "EVL is used as an operand in non-VPInstruction::Add\n";
-                 return false;
-               }
-               if (I->getNumUsers() != 1) {
-                 errs() << "EVL is used in VPInstruction:Add with multiple "
-                           "users\n";
-                 return false;
-               }
-               if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
-                 errs() << "Result of VPInstruction::Add with EVL operand is "
-                           "not used by VPEVLBasedIVPHIRecipe\n";
-                 return false;
-               }
-               return true;
-             })
-             .Default([&](const VPUser *U) {
-               errs() << "EVL has unexpected user\n";
-               return false;
-             })) {
-      return false;
-    }
-  }
-  return true;
+  return all_of(EVL.users(), [this, &VerifyEVLUse](VPUser *U) {
+    return TypeSwitch<const VPUser *, bool>(U)
+        .Case<VPWidenIntrinsicRecipe>([&](const VPWidenIntrinsicRecipe *S) {
+          return VerifyEVLUse(*S, S->getNumOperands() - 1);
+        })
+        .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
+              VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
+            [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
+        .Case<VPScalarIVStepsRecipe>([&](auto *R) {
+          if (R->getNumOperands() != 3) {
+            errs() << "Unrolling with EVL tail folding not yet supported\n";
+            return false;
+          }
+          return VerifyEVLUse(*R, 2);
+        })
+        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
+            [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
+        .Case<VPInstructionWithType>(
+            [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
+        .Case<VPInstruction>([&](const VPInstruction *I) {
+          if (I->getOpcode() == Instruction::PHI ||
+              I->getOpcode() == Instruction::ICmp ||
+              I->getOpcode() == Instruction::Sub)
+            return VerifyEVLUse(*I, 1);
+          switch (I->getOpcode()) {
+          case Instruction::Add:
+            break;
+          case Instruction::UIToFP:
+          case Instruction::Trunc:
+          case Instruction::ZExt:
+          case Instruction::Mul:
+          case Instruction::FMul:
+          case VPInstruction::Broadcast:
+            // Opcodes above can only use EVL after wide inductions have been
+            // expanded.
+            if (!VerifyLate) {
+              errs() << "EVL used by unexpected VPInstruction\n";
+              return false;
+            }
+            break;
+          default:
+            errs() << "EVL used by unexpected VPInstruction\n";
+            return false;
+          }
+          // EVLIVIncrement is only used by EVLIV & BranchOnCount.
+          // Having more than two users is unexpected.
+          if ((I->getNumUsers() != 1) &&
+              (I->getNumUsers() != 2 || none_of(I->users(), [&I](VPUser *U) {
+                 using namespace llvm::VPlanPatternMatch;
+                 return match(U, m_BranchOnCount(m_Specific(I), m_VPValue()));
+               }))) {
+            errs() << "EVL is used in VPInstruction with multiple users\n";
+            return false;
+          }
+          if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
+            errs() << "Result of VPInstruction::Add with EVL operand is "
+                      "not used by VPEVLBasedIVPHIRecipe\n";
+            return false;
+          }
+          return true;
+        })
+        .Default([&](const VPUser *U) {
+          errs() << "EVL has unexpected user\n";
+          return false;
+        });
+  });
 }
 
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
 
-  // Verify that defs in VPBB dominate all their uses. The current
-  // implementation is still incomplete.
+  // Verify that defs in VPBB dominate all their uses.
   DenseMap<const VPRecipeBase *, unsigned> RecipeNumbering;
   unsigned Cnt = 0;
   for (const VPRecipeBase &R : *VPBB)
     RecipeNumbering[&R] = Cnt++;
 
   for (const VPRecipeBase &R : *VPBB) {
-    if (isa<VPIRInstruction>(&R) ^ isa<VPIRBasicBlock>(VPBB)) {
+    if (isa<VPIRInstruction>(&R) && !isa<VPIRBasicBlock>(VPBB)) {
       errs() << "VPIRInstructions ";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       R.dump();
@@ -207,27 +240,60 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       return false;
     }
     for (const VPValue *V : R.definedValues()) {
+      // Verify that we can infer a scalar type for each defined value. With
+      // assertions enabled, inferScalarType will perform some consistency
+      // checks during type inference.
+      if (!TypeInfo.inferScalarType(V)) {
+        errs() << "Failed to infer scalar type!\n";
+        return false;
+      }
+
       for (const VPUser *U : V->users()) {
-        auto *UI = dyn_cast<VPRecipeBase>(U);
-        // TODO: check dominance of incoming values for phis properly.
-        if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI))
+        auto *UI = cast<VPRecipeBase>(U);
+        if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
+          for (const auto &[IncomingVPV, IncomingVPBB] :
+               Phi->incoming_values_and_blocks()) {
+            if (IncomingVPV != V)
+              continue;
+
+            if (VPDT.dominates(VPBB, IncomingVPBB))
+              continue;
+
+            errs() << "Incoming def does not dominate incoming block!\n";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+            VPSlotTracker Tracker(VPBB->getPlan());
+            IncomingVPV->getDefiningRecipe()->print(errs(), "  ", Tracker);
+            errs() << "\n  does not dominate " << IncomingVPBB->getName()
+                   << " for\n";
+            UI->print(errs(), "  ", Tracker);
+#endif
+            return false;
+          }
+          continue;
+        }
+        // TODO: Also verify VPPredInstPHIRecipe.
+        if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
         // block.
         if (UI->getParent() == VPBB) {
-          if (RecipeNumbering[UI] < RecipeNumbering[&R]) {
-            errs() << "Use before def!\n";
-            return false;
-          }
-          continue;
+          if (RecipeNumbering[UI] >= RecipeNumbering[&R])
+            continue;
+        } else {
+          if (VPDT.dominates(VPBB, UI->getParent()))
+            continue;
         }
 
-        if (!VPDT.dominates(VPBB, UI->getParent())) {
-          errs() << "Use before def!\n";
-          return false;
-        }
+        errs() << "Use before def!\n";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+        VPSlotTracker Tracker(VPBB->getPlan());
+        UI->print(errs(), "  ", Tracker);
+        errs() << "\n  before\n";
+        R.print(errs(), "  ", Tracker);
+        errs() << "\n";
+#endif
+        return false;
       }
     }
     if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {
@@ -248,14 +314,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     return false;
   }
 
-  VPBlockBase *MiddleBB =
-      IRBB->getPlan()->getVectorLoopRegion()->getSingleSuccessor();
-  if (IRBB != IRBB->getPlan()->getPreheader() &&
-      IRBB->getSinglePredecessor() != MiddleBB) {
-    errs() << "VPIRBasicBlock can only be used as pre-header or a successor of "
-              "middle-block at the moment!\n";
-    return false;
-  }
   return true;
 }
 
@@ -273,18 +331,20 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
-  if (VPB->getNumSuccessors() > 1 ||
-      (VPBB && VPBB->getParent() && VPBB->isExiting() &&
-       !VPBB->getParent()->isReplicator())) {
-    if (!VPBB || !VPBB->getTerminator()) {
-      errs() << "Block has multiple successors but doesn't "
-                "have a proper branch recipe!\n";
-      return false;
-    }
-  } else {
-    if (VPBB && VPBB->getTerminator()) {
-      errs() << "Unexpected branch recipe!\n";
-      return false;
+  if (!isa<VPIRBasicBlock>(VPB)) {
+    if (VPB->getNumSuccessors() > 1 ||
+        (VPBB && VPBB->getParent() && VPBB->isExiting() &&
+         !VPBB->getParent()->isReplicator())) {
+      if (!VPBB || !VPBB->getTerminator()) {
+        errs() << "Block has multiple successors but doesn't "
+                  "have a proper branch recipe!\n";
+        return false;
+      }
+    } else {
+      if (VPBB && VPBB->getTerminator()) {
+        errs() << "Unexpected branch recipe!\n";
+        return false;
+      }
     }
   }
 
@@ -380,6 +440,10 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
 
   const VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  // TODO: Verify all blocks using vp_depth_first_deep iterators.
+  if (!TopRegion)
+    return true;
+
   if (!verifyRegionRec(TopRegion))
     return false;
 
@@ -420,18 +484,13 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
   }
 
-  for (const auto &KV : Plan.getLiveOuts())
-    if (KV.second->getNumOperands() != 1) {
-      errs() << "live outs must have a single operand\n";
-      return false;
-    }
-
   return true;
 }
 
-bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
+bool llvm::verifyVPlanIsValid(const VPlan &Plan, bool VerifyLate) {
   VPDominatorTree VPDT;
   VPDT.recalculate(const_cast<VPlan &>(Plan));
-  VPlanVerifier Verifier(VPDT);
+  VPTypeAnalysis TypeInfo(Plan);
+  VPlanVerifier Verifier(VPDT, TypeInfo, VerifyLate);
   return Verifier.verify(Plan);
 }

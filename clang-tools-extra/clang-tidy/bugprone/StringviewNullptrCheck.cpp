@@ -8,10 +8,8 @@
 
 #include "StringviewNullptrCheck.h"
 #include "../utils/TransformerClangTidyCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
@@ -35,23 +33,23 @@ AST_MATCHER(clang::VarDecl, isDirectInitialization) {
 
 } // namespace
 
-RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
-  auto construction_warning =
+static RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
+  auto ConstructionWarning =
       cat("constructing basic_string_view from null is undefined; replace with "
           "the default constructor");
-  auto static_cast_warning =
+  auto StaticCastWarning =
       cat("casting to basic_string_view from null is undefined; replace with "
           "the empty string");
-  auto argument_construction_warning =
+  auto ArgumentConstructionWarning =
       cat("passing null as basic_string_view is undefined; replace with the "
           "empty string");
-  auto assignment_warning =
+  auto AssignmentWarning =
       cat("assignment to basic_string_view from null is undefined; replace "
           "with the default constructor");
-  auto relative_comparison_warning =
+  auto RelativeComparisonWarning =
       cat("comparing basic_string_view to null is undefined; replace with the "
           "empty string");
-  auto equality_comparison_warning =
+  auto EqualityComparisonWarning =
       cat("comparing basic_string_view to null is undefined; replace with the "
           "emptiness query");
 
@@ -84,7 +82,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
   auto HandleTemporaryCXXFunctionalCastExpr =
       makeRule(cxxFunctionalCastExpr(hasSourceExpression(
                    BasicStringViewConstructingFromNullExpr)),
-               remove(node("null_arg_expr")), construction_warning);
+               remove(node("null_arg_expr")), ConstructionWarning);
 
   // `std::string_view{null_arg_expr}` and `(std::string_view){null_arg_expr}`
   auto HandleTemporaryCXXTemporaryObjectExprAndCompoundLiteralExpr = makeRule(
@@ -93,28 +91,28 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
           hasAnyArgument(/* `hasArgument` would skip over parens */ anyOf(
               NullLiteral, NullInitList, EmptyInitList)),
           has(expr().bind("null_arg_expr")))),
-      remove(node("null_arg_expr")), construction_warning);
+      remove(node("null_arg_expr")), ConstructionWarning);
 
   // `(std::string_view) null_arg_expr`
-  auto HandleTemporaryCStyleCastExpr = makeRule(
-      cStyleCastExpr(
-          hasSourceExpression(BasicStringViewConstructingFromNullExpr)),
-      changeTo(node("null_arg_expr"), cat("{}")), construction_warning);
+  auto HandleTemporaryCStyleCastExpr =
+      makeRule(cStyleCastExpr(hasSourceExpression(
+                   BasicStringViewConstructingFromNullExpr)),
+               changeTo(node("null_arg_expr"), cat("{}")), ConstructionWarning);
 
   // `static_cast<std::string_view>(null_arg_expr)`
-  auto HandleTemporaryCXXStaticCastExpr = makeRule(
-      cxxStaticCastExpr(
-          hasSourceExpression(BasicStringViewConstructingFromNullExpr)),
-      changeTo(node("null_arg_expr"), cat("\"\"")), static_cast_warning);
+  auto HandleTemporaryCXXStaticCastExpr =
+      makeRule(cxxStaticCastExpr(hasSourceExpression(
+                   BasicStringViewConstructingFromNullExpr)),
+               changeTo(node("null_arg_expr"), cat("\"\"")), StaticCastWarning);
 
   // `std::string_view sv = null_arg_expr;`
-  auto HandleStackCopyInitialization = makeRule(
-      varDecl(HasBasicStringViewType,
-              hasInitializer(ignoringImpCasts(
-                  cxxConstructExpr(BasicStringViewConstructingFromNullExpr,
-                                   unless(isListInitialization())))),
-              unless(isDirectInitialization())),
-      changeTo(node("null_arg_expr"), cat("{}")), construction_warning);
+  auto HandleStackCopyInitialization =
+      makeRule(varDecl(HasBasicStringViewType,
+                       hasInitializer(ignoringImpCasts(cxxConstructExpr(
+                           BasicStringViewConstructingFromNullExpr,
+                           unless(isListInitialization())))),
+                       unless(isDirectInitialization())),
+               changeTo(node("null_arg_expr"), cat("{}")), ConstructionWarning);
 
   // `std::string_view sv = {null_arg_expr};`
   auto HandleStackCopyListInitialization =
@@ -123,7 +121,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                            BasicStringViewConstructingFromNullExpr,
                            isListInitialization())),
                        unless(isDirectInitialization())),
-               remove(node("null_arg_expr")), construction_warning);
+               remove(node("null_arg_expr")), ConstructionWarning);
 
   // `std::string_view sv(null_arg_expr);`
   auto HandleStackDirectInitialization =
@@ -134,7 +132,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                        isDirectInitialization())
                    .bind("var_decl"),
                changeTo(node("construct_expr"), cat(name("var_decl"))),
-               construction_warning);
+               ConstructionWarning);
 
   // `std::string_view sv{null_arg_expr};`
   auto HandleStackDirectListInitialization =
@@ -143,7 +141,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                            BasicStringViewConstructingFromNullExpr,
                            isListInitialization())),
                        isDirectInitialization()),
-               remove(node("null_arg_expr")), construction_warning);
+               remove(node("null_arg_expr")), ConstructionWarning);
 
   // `struct S { std::string_view sv = null_arg_expr; };`
   auto HandleFieldInClassCopyInitialization = makeRule(
@@ -151,7 +149,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                 hasInClassInitializer(ignoringImpCasts(
                     cxxConstructExpr(BasicStringViewConstructingFromNullExpr,
                                      unless(isListInitialization()))))),
-      changeTo(node("null_arg_expr"), cat("{}")), construction_warning);
+      changeTo(node("null_arg_expr"), cat("{}")), ConstructionWarning);
 
   // `struct S { std::string_view sv = {null_arg_expr}; };` and
   // `struct S { std::string_view sv{null_arg_expr}; };`
@@ -160,7 +158,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                 hasInClassInitializer(ignoringImpCasts(
                     cxxConstructExpr(BasicStringViewConstructingFromNullExpr,
                                      isListInitialization())))),
-      remove(node("null_arg_expr")), construction_warning);
+      remove(node("null_arg_expr")), ConstructionWarning);
 
   // `class C { std::string_view sv; C() : sv(null_arg_expr) {} };`
   auto HandleConstructorDirectInitialization =
@@ -168,7 +166,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                                   withInitializer(cxxConstructExpr(
                                       BasicStringViewConstructingFromNullExpr,
                                       unless(isListInitialization())))),
-               remove(node("null_arg_expr")), construction_warning);
+               remove(node("null_arg_expr")), ConstructionWarning);
 
   // `class C { std::string_view sv; C() : sv{null_arg_expr} {} };`
   auto HandleConstructorDirectListInitialization =
@@ -176,15 +174,15 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                                   withInitializer(cxxConstructExpr(
                                       BasicStringViewConstructingFromNullExpr,
                                       isListInitialization()))),
-               remove(node("null_arg_expr")), construction_warning);
+               remove(node("null_arg_expr")), ConstructionWarning);
 
   // `void f(std::string_view sv = null_arg_expr);`
-  auto HandleDefaultArgumentCopyInitialization = makeRule(
-      parmVarDecl(HasBasicStringViewType,
-                  hasInitializer(ignoringImpCasts(
-                      cxxConstructExpr(BasicStringViewConstructingFromNullExpr,
-                                       unless(isListInitialization()))))),
-      changeTo(node("null_arg_expr"), cat("{}")), construction_warning);
+  auto HandleDefaultArgumentCopyInitialization =
+      makeRule(parmVarDecl(HasBasicStringViewType,
+                           hasInitializer(ignoringImpCasts(cxxConstructExpr(
+                               BasicStringViewConstructingFromNullExpr,
+                               unless(isListInitialization()))))),
+               changeTo(node("null_arg_expr"), cat("{}")), ConstructionWarning);
 
   // `void f(std::string_view sv = {null_arg_expr});`
   auto HandleDefaultArgumentCopyListInitialization =
@@ -192,21 +190,21 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                            hasInitializer(cxxConstructExpr(
                                BasicStringViewConstructingFromNullExpr,
                                isListInitialization()))),
-               remove(node("null_arg_expr")), construction_warning);
+               remove(node("null_arg_expr")), ConstructionWarning);
 
   // `new std::string_view(null_arg_expr)`
   auto HandleHeapDirectInitialization = makeRule(
       cxxNewExpr(has(cxxConstructExpr(BasicStringViewConstructingFromNullExpr,
                                       unless(isListInitialization()))),
                  unless(isArray()), unless(hasAnyPlacementArg(anything()))),
-      remove(node("null_arg_expr")), construction_warning);
+      remove(node("null_arg_expr")), ConstructionWarning);
 
   // `new std::string_view{null_arg_expr}`
   auto HandleHeapDirectListInitialization = makeRule(
       cxxNewExpr(has(cxxConstructExpr(BasicStringViewConstructingFromNullExpr,
                                       isListInitialization())),
                  unless(isArray()), unless(hasAnyPlacementArg(anything()))),
-      remove(node("null_arg_expr")), construction_warning);
+      remove(node("null_arg_expr")), ConstructionWarning);
 
   // `function(null_arg_expr)`
   auto HandleFunctionArgumentInitialization =
@@ -214,22 +212,21 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                             BasicStringViewConstructingFromNullExpr)),
                         unless(cxxOperatorCallExpr())),
                changeTo(node("construct_expr"), cat("\"\"")),
-               argument_construction_warning);
+               ArgumentConstructionWarning);
 
   // `sv = null_arg_expr`
   auto HandleAssignment = makeRule(
       cxxOperatorCallExpr(hasOverloadedOperatorName("="),
                           hasRHS(materializeTemporaryExpr(
                               has(BasicStringViewConstructingFromNullExpr)))),
-      changeTo(node("construct_expr"), cat("{}")), assignment_warning);
+      changeTo(node("construct_expr"), cat("{}")), AssignmentWarning);
 
   // `sv < null_arg_expr`
   auto HandleRelativeComparison = makeRule(
       cxxOperatorCallExpr(hasAnyOverloadedOperatorName("<", "<=", ">", ">="),
                           hasEitherOperand(ignoringImpCasts(
                               BasicStringViewConstructingFromNullExpr))),
-      changeTo(node("construct_expr"), cat("\"\"")),
-      relative_comparison_warning);
+      changeTo(node("construct_expr"), cat("\"\"")), RelativeComparisonWarning);
 
   // `sv == null_arg_expr`
   auto HandleEmptyEqualityComparison = makeRule(
@@ -240,7 +237,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                                expr().bind("instance"))))
           .bind("root"),
       changeTo(node("root"), cat(access("instance", cat("empty")), "()")),
-      equality_comparison_warning);
+      EqualityComparisonWarning);
 
   // `sv != null_arg_expr`
   auto HandleNonEmptyEqualityComparison = makeRule(
@@ -251,13 +248,13 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                                expr().bind("instance"))))
           .bind("root"),
       changeTo(node("root"), cat("!", access("instance", cat("empty")), "()")),
-      equality_comparison_warning);
+      EqualityComparisonWarning);
 
   // `return null_arg_expr;`
   auto HandleReturnStatement = makeRule(
       returnStmt(hasReturnValue(
           ignoringImpCasts(BasicStringViewConstructingFromNullExpr))),
-      changeTo(node("construct_expr"), cat("{}")), construction_warning);
+      changeTo(node("construct_expr"), cat("{}")), ConstructionWarning);
 
   // `T(null_arg_expr)`
   auto HandleConstructorInvocation =
@@ -267,7 +264,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                                       BasicStringViewConstructingFromNullExpr)),
                    unless(HasBasicStringViewType)),
                changeTo(node("construct_expr"), cat("\"\"")),
-               argument_construction_warning);
+               ArgumentConstructionWarning);
 
   return applyFirst(
       {HandleTemporaryCXXFunctionalCastExpr,
@@ -297,7 +294,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
 
 StringviewNullptrCheck::StringviewNullptrCheck(StringRef Name,
                                                ClangTidyContext *Context)
-    : utils::TransformerClangTidyCheck(StringviewNullptrCheckImpl(), Name,
+    : utils::TransformerClangTidyCheck(stringviewNullptrCheckImpl(), Name,
                                        Context) {}
 
 } // namespace clang::tidy::bugprone

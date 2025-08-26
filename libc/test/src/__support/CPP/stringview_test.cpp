@@ -109,8 +109,6 @@ TEST(LlvmLibcStringViewTest, Observer) {
   ASSERT_EQ(ABC.back(), 'c');
 }
 
-bool isDigit(char c) { return c >= '0' && c <= '9'; }
-
 TEST(LlvmLibcStringViewTest, FindFirstOf) {
   string_view Tmp("abca");
   ASSERT_TRUE(Tmp.find_first_of('a') == 0);
@@ -236,6 +234,9 @@ TEST(LlvmLibcStringViewTest, FindFirstNotOf) {
 
 TEST(LlvmLibcStringViewTest, Contains) {
   string_view Empty;
+  static_assert(
+      'a' < 'z',
+      "This test only supports character encodings where 'a' is below 'z'");
   for (char c = 'a'; c < 'z'; ++c)
     EXPECT_FALSE(Empty.contains(c));
 

@@ -172,8 +172,8 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   // We don't add a fix-it as changing the type can easily break code,
   // e.g. when a function requires a 'long' argument on all platforms.
   // QualTypes are printed with implicit quotes.
-  diag(Loc, "consider replacing %0 with '%1'") << BuiltinLoc.getType()
-                                               << Replacement;
+  diag(Loc, "consider replacing %0 with '%1'")
+      << BuiltinLoc.getType() << Replacement;
 }
 
 } // namespace tidy::google::runtime

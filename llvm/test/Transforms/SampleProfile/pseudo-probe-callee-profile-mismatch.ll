@@ -1,6 +1,6 @@
 ; REQUIRES: x86_64-linux
 ; REQUIRES: asserts
-; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline  -sample-profile-file=%S/Inputs/pseudo-probe-callee-profile-mismatch.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl  -pass-remarks=inline 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline  -sample-profile-file=%S/Inputs/pseudo-probe-callee-profile-mismatch.prof --salvage-stale-profile --salvage-unused-profile=false -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl  -pass-remarks=inline 2>&1 | FileCheck %s
 
 ; There is no profile-checksum-mismatch attr, even the checksum is mismatched in the pseudo_probe_desc, it doesn't run the matching.
 ; CHECK-NOT: Run stale profile matching for main

@@ -20,6 +20,7 @@
 #include <__config>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
+#include <__format/fmt_pair_like.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
 #include <__format/formatter.h>
@@ -39,7 +40,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _CharT = char>
   requires same_as<remove_cvref_t<_Tp>, _Tp> && formattable<_Tp, _CharT>
-struct _LIBCPP_TEMPLATE_VIS range_formatter {
+struct range_formatter {
   _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) noexcept {
     __separator_ = __separator;
   }

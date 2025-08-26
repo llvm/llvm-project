@@ -200,8 +200,8 @@ define i32 @f16_i8(half %in) {
 define <2 x i64> @v2f32_i32(<2 x float> %in) {
 ; CHECK-BASE-LABEL: @v2f32_i32(
 ; CHECK-BASE-NEXT:    [[CONV:%.*]] = fptosi <2 x float> [[IN:%.*]] to <2 x i64>
-; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <2 x i64> @llvm.smin.v2i64(<2 x i64> [[CONV]], <2 x i64> <i64 2147483647, i64 2147483647>)
-; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <2 x i64> @llvm.smax.v2i64(<2 x i64> [[MIN]], <2 x i64> <i64 -2147483648, i64 -2147483648>)
+; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <2 x i64> @llvm.smin.v2i64(<2 x i64> [[CONV]], <2 x i64> splat (i64 2147483647))
+; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <2 x i64> @llvm.smax.v2i64(<2 x i64> [[MIN]], <2 x i64> splat (i64 -2147483648))
 ; CHECK-BASE-NEXT:    ret <2 x i64> [[MAX]]
 ;
 ; CHECK-MVEFP-LABEL: @v2f32_i32(
@@ -223,8 +223,8 @@ define <2 x i64> @v2f32_i32(<2 x float> %in) {
 define <4 x i64> @v4f32_i32(<4 x float> %in) {
 ; CHECK-BASE-LABEL: @v4f32_i32(
 ; CHECK-BASE-NEXT:    [[CONV:%.*]] = fptosi <4 x float> [[IN:%.*]] to <4 x i64>
-; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[CONV]], <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
-; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[MIN]], <4 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>)
+; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[CONV]], <4 x i64> splat (i64 2147483647))
+; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[MIN]], <4 x i64> splat (i64 -2147483648))
 ; CHECK-BASE-NEXT:    ret <4 x i64> [[MAX]]
 ;
 ; CHECK-MVEFP-LABEL: @v4f32_i32(
@@ -246,8 +246,8 @@ define <4 x i64> @v4f32_i32(<4 x float> %in) {
 define <8 x i64> @v8f32_i32(<8 x float> %in) {
 ; CHECK-BASE-LABEL: @v8f32_i32(
 ; CHECK-BASE-NEXT:    [[CONV:%.*]] = fptosi <8 x float> [[IN:%.*]] to <8 x i64>
-; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <8 x i64> @llvm.smin.v8i64(<8 x i64> [[CONV]], <8 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
-; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <8 x i64> @llvm.smax.v8i64(<8 x i64> [[MIN]], <8 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>)
+; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <8 x i64> @llvm.smin.v8i64(<8 x i64> [[CONV]], <8 x i64> splat (i64 2147483647))
+; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <8 x i64> @llvm.smax.v8i64(<8 x i64> [[MIN]], <8 x i64> splat (i64 -2147483648))
 ; CHECK-BASE-NEXT:    ret <8 x i64> [[MAX]]
 ;
 ; CHECK-MVEFP-LABEL: @v8f32_i32(
@@ -269,8 +269,8 @@ define <8 x i64> @v8f32_i32(<8 x float> %in) {
 define <4 x i32> @v4f16_i16(<4 x half> %in) {
 ; CHECK-BASE-LABEL: @v4f16_i16(
 ; CHECK-BASE-NEXT:    [[CONV:%.*]] = fptosi <4 x half> [[IN:%.*]] to <4 x i32>
-; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[CONV]], <4 x i32> <i32 32767, i32 32767, i32 32767, i32 32767>)
-; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[MIN]], <4 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768>)
+; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[CONV]], <4 x i32> splat (i32 32767))
+; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[MIN]], <4 x i32> splat (i32 -32768))
 ; CHECK-BASE-NEXT:    ret <4 x i32> [[MAX]]
 ;
 ; CHECK-MVEFP-LABEL: @v4f16_i16(
@@ -292,8 +292,8 @@ define <4 x i32> @v4f16_i16(<4 x half> %in) {
 define <8 x i32> @v8f16_i16(<8 x half> %in) {
 ; CHECK-BASE-LABEL: @v8f16_i16(
 ; CHECK-BASE-NEXT:    [[CONV:%.*]] = fptosi <8 x half> [[IN:%.*]] to <8 x i32>
-; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[CONV]], <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>)
-; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[MIN]], <8 x i32> <i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768, i32 -32768>)
+; CHECK-BASE-NEXT:    [[MIN:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[CONV]], <8 x i32> splat (i32 32767))
+; CHECK-BASE-NEXT:    [[MAX:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[MIN]], <8 x i32> splat (i32 -32768))
 ; CHECK-BASE-NEXT:    ret <8 x i32> [[MAX]]
 ;
 ; CHECK-MVEFP-LABEL: @v8f16_i16(

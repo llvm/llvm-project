@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_TASKDISPATCH_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,7 +33,7 @@ namespace llvm {
 namespace orc {
 
 /// Represents an abstract task for ORC to run.
-class Task : public RTTIExtends<Task, RTTIRoot> {
+class LLVM_ABI Task : public RTTIExtends<Task, RTTIRoot> {
 public:
   static char ID;
 
@@ -51,8 +52,8 @@ private:
 /// Base class for generic tasks.
 class GenericNamedTask : public RTTIExtends<GenericNamedTask, Task> {
 public:
-  static char ID;
-  static const char *DefaultDescription;
+  LLVM_ABI static char ID;
+  LLVM_ABI static const char *DefaultDescription;
 };
 
 /// Generic task implementation.
@@ -92,8 +93,18 @@ makeGenericNamedTask(FnT &&Fn, const char *Desc = nullptr) {
                                                      Desc);
 }
 
+/// IdleTask can be used as the basis for low-priority tasks, e.g. speculative
+/// lookup.
+class LLVM_ABI IdleTask : public RTTIExtends<IdleTask, Task> {
+public:
+  static char ID;
+
+private:
+  void anchor() override;
+};
+
 /// Abstract base for classes that dispatch ORC Tasks.
-class TaskDispatcher {
+class LLVM_ABI TaskDispatcher {
 public:
   virtual ~TaskDispatcher();
 
@@ -105,7 +116,7 @@ public:
 };
 
 /// Runs all tasks on the current thread.
-class InPlaceTaskDispatcher : public TaskDispatcher {
+class LLVM_ABI InPlaceTaskDispatcher : public TaskDispatcher {
 public:
   void dispatch(std::unique_ptr<Task> T) override;
   void shutdown() override;
@@ -113,22 +124,27 @@ public:
 
 #if LLVM_ENABLE_THREADS
 
-class DynamicThreadPoolTaskDispatcher : public TaskDispatcher {
+class LLVM_ABI DynamicThreadPoolTaskDispatcher : public TaskDispatcher {
 public:
   DynamicThreadPoolTaskDispatcher(
       std::optional<size_t> MaxMaterializationThreads)
       : MaxMaterializationThreads(MaxMaterializationThreads) {}
+
   void dispatch(std::unique_ptr<Task> T) override;
   void shutdown() override;
 private:
+  bool canRunMaterializationTaskNow();
+  bool canRunIdleTaskNow();
+
   std::mutex DispatchMutex;
-  bool Running = true;
+  bool Shutdown = false;
   size_t Outstanding = 0;
   std::condition_variable OutstandingCV;
 
   std::optional<size_t> MaxMaterializationThreads;
   size_t NumMaterializationThreads = 0;
   std::deque<std::unique_ptr<Task>> MaterializationTaskQueue;
+  std::deque<std::unique_ptr<Task>> IdleTaskQueue;
 };
 
 #endif // LLVM_ENABLE_THREADS

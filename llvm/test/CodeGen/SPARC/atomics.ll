@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=sparc -mcpu=v9 -verify-machineinstrs | FileCheck %s --check-prefixes=SPARC
-; RUN: llc < %s -march=sparcv9 -verify-machineinstrs | FileCheck %s --check-prefixes=SPARC64
+; RUN: llc < %s -mtriple=sparc -mcpu=v9 -verify-machineinstrs | FileCheck %s --check-prefixes=SPARC
+; RUN: llc < %s -mtriple=sparcv9 -verify-machineinstrs | FileCheck %s --check-prefixes=SPARC64
 
 ; SPARC-LABEL: test_atomic_i8
 ; SPARC:       ldub [%o0]

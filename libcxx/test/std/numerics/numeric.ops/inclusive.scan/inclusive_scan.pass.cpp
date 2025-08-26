@@ -16,12 +16,11 @@
 //                                   OutputIterator result, T init);
 //
 
-#include <numeric>
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <functional>
-#include <iterator>
+#include <cstddef>
+#include <numeric>
 
 #include "test_macros.h"
 #include "test_iterators.h"

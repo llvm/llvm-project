@@ -11,18 +11,18 @@ template<typename T> struct S {
 
 // expected-error@+3{{atomic constraint must be of type 'bool' (found 'S<int>')}}
 // expected-note@#FINST{{while checking constraint satisfaction}}
-// expected-note@#FINST{{in instantiation of function template specialization}}
+// expected-note@#FINST{{while substituting deduced template arguments into function template 'f' [with T = int]}}
 template<typename T> requires (S<T>{})
 void f(T);
-void f(int);
+void f(long);
 
 // Ensure this applies to operator && as well.
 // expected-error@+3{{atomic constraint must be of type 'bool' (found 'S<int>')}}
 // expected-note@#F2INST{{while checking constraint satisfaction}}
-// expected-note@#F2INST{{in instantiation of function template specialization}}
+// expected-note@#F2INST{{while substituting deduced template arguments into function template 'f2' [with T = int]}}
 template<typename T> requires (S<T>{} && true)
 void f2(T);
-void f2(int);
+void f2(long);
 
 template<typename T> requires requires {
   requires S<T>{};
@@ -32,16 +32,16 @@ template<typename T> requires requires {
   // expected-note@-4{{while checking the satisfaction}}
   // expected-note@-6{{while substituting template arguments}}
   // expected-note@#F3INST{{while checking constraint satisfaction}}
-  // expected-note@#F3INST{{in instantiation of function template specialization}}
+  // expected-note@#F3INST{{while substituting deduced template arguments into function template 'f3' [with T = int]}}
   //
 }
 void f3(T);
-void f3(int);
+void f3(long);
 
 // Doesn't diagnose, since this is no longer a compound requirement.
 template<typename T> requires (bool(1 && 2))
 void f4(T);
-void f4(int);
+void f4(long);
 
 void g() {
   f(0); // #FINST

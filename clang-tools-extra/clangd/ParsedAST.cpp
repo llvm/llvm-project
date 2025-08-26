@@ -20,7 +20,6 @@
 #include "Feature.h"
 #include "FeatureModule.h"
 #include "Headers.h"
-#include "HeuristicResolver.h"
 #include "IncludeCleaner.h"
 #include "IncludeFixer.h"
 #include "Preamble.h"
@@ -53,6 +52,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Diagnostic.h"
@@ -342,7 +342,7 @@ void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
       if (Enable) {
         if (Diags.getDiagnosticLevel(ID, SourceLocation()) <
             DiagnosticsEngine::Warning) {
-          auto Group = DiagnosticIDs::getGroupForDiag(ID);
+          auto Group = Diags.getDiagnosticIDs()->getGroupForDiag(ID);
           if (!Group || !EnabledGroups(*Group))
             continue;
           Diags.setSeverity(ID, diag::Severity::Warning, SourceLocation());
@@ -381,8 +381,9 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code,
     Findings.MissingIncludes.clear();
   if (SuppressUnused)
     Findings.UnusedIncludes.clear();
-  return issueIncludeCleanerDiagnostics(AST, Code, Findings, TFS,
-                                        Cfg.Diagnostics.Includes.IgnoreHeader);
+  return issueIncludeCleanerDiagnostics(
+      AST, Code, Findings, TFS, Cfg.Diagnostics.Includes.IgnoreHeader,
+      Cfg.Style.AngledHeaders, Cfg.Style.QuotedHeaders);
 }
 
 tidy::ClangTidyCheckFactories
@@ -556,7 +557,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
         *AllCTFactories, Cfg.Diagnostics.ClangTidy.FastCheckFilter);
     CTContext.emplace(std::make_unique<tidy::DefaultOptionsProvider>(
         tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
-    CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
+    // The lifetime of DiagnosticOptions is managed by \c Clang.
+    CTContext->setDiagnosticsEngine(nullptr, &Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);
@@ -585,8 +587,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
       if (Cfg.Diagnostics.SuppressAll ||
-          isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress,
-                                        Clang->getLangOpts()))
+          isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress,
+                                 Clang->getLangOpts()))
         return DiagnosticsEngine::Ignored;
 
       auto It = OverriddenSeverity.find(Info.getID());
@@ -639,7 +641,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
           getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS, false);
       auto Inserter = std::make_shared<IncludeInserter>(
           Filename, Inputs.Contents, Style, BuildDir.get(),
-          &Clang->getPreprocessor().getHeaderSearchInfo());
+          &Clang->getPreprocessor().getHeaderSearchInfo(),
+          Cfg.Style.QuotedHeaders, Cfg.Style.AngledHeaders);
       ArrayRef<Inclusion> MainFileIncludes;
       if (Preamble) {
         MainFileIncludes = Preamble->Includes.MainFileIncludes;

@@ -449,7 +449,7 @@ void SLSHardeningInserter::convertBLRToBL(
 
   // Now copy the implicit operands from BLR to BL and copy other necessary
   // info.
-  // However, both BLR and BL instructions implictly use SP and implicitly
+  // However, both BLR and BL instructions implicitly use SP and implicitly
   // define LR. Blindly copying implicit operands would result in SP and LR
   // operands to be present multiple times. While this may not be too much of
   // an issue, let's avoid that for cleanliness, by removing those implicit
@@ -475,7 +475,7 @@ void SLSHardeningInserter::convertBLRToBL(
   BL->removeOperand(SecondOpIdxToRemove);
   // Now copy over the implicit operands from the original BLR
   BL->copyImplicitOps(MF, BLR);
-  MF.moveCallSiteInfo(&BLR, BL);
+  MF.moveAdditionalCallInfo(&BLR, BL);
   // Also add the register operands of the original BLR* instruction
   // as being used in the called thunk.
   for (unsigned OpIdx = 0; OpIdx < NumRegOperands; ++OpIdx) {

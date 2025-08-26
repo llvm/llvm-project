@@ -35,5 +35,4 @@ add_header_library(
   DEPENDS
     .config
     .optimization
-    .sanitizer
 )

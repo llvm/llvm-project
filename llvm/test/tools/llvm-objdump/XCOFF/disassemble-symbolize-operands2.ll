@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc-ibm-aix-xcoff %s -filetype=obj -o %t
+; RUN: llc -mcpu=ppc -mtriple=powerpc-ibm-aix-xcoff %s -filetype=obj -o %t
 ; RUN: llvm-objdump %t -r -d --symbolize-operands --no-show-raw-insn \
 ; RUN:   | FileCheck %s
 

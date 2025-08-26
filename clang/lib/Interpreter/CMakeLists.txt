@@ -10,21 +10,27 @@ set(LLVM_LINK_COMPONENTS
    Support
    Target
    TargetParser
-  )
+   TransformUtils
+   )
 
 if (EMSCRIPTEN AND "lld" IN_LIST LLVM_ENABLE_PROJECTS)
   set(WASM_SRC Wasm.cpp)
+  set(WASM_LINK lldWasm)
+  set(COMMON_LINK lldCommon)
 endif()
 
 add_clang_library(clangInterpreter
   DeviceOffload.cpp
   CodeCompletion.cpp
+  IncrementalAction.cpp
   IncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp
   InterpreterValuePrinter.cpp
   InterpreterUtils.cpp
+  RemoteJITUtils.cpp
   Value.cpp
+  InterpreterValuePrinter.cpp
   ${WASM_SRC}
   PARTIAL_SOURCES_INTENDED
 
@@ -44,6 +50,8 @@ add_clang_library(clangInterpreter
   clangParse
   clangSema
   clangSerialization
+  ${WASM_LINK}
+  ${COMMON_LINK}
   )
 
 if ((MINGW OR CYGWIN) AND BUILD_SHARED_LIBS)

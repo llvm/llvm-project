@@ -179,14 +179,14 @@ size_t SymbolFileSymtab::ParseFunctions(CompileUnit &comp_unit) {
               }
             }
 
-            FunctionSP func_sp(
-                new Function(&comp_unit,
-                             symbol_idx,       // UserID is the DIE offset
-                             LLDB_INVALID_UID, // We don't have any type info
-                                               // for this function
-                             curr_symbol->GetMangled(), // Linker/mangled name
-                             nullptr, // no return type for a code symbol...
-                             func_range)); // first address range
+            FunctionSP func_sp(new Function(
+                &comp_unit,
+                symbol_idx,                // UserID is the DIE offset
+                LLDB_INVALID_UID,          // We don't have any type info
+                                           // for this function
+                curr_symbol->GetMangled(), // Linker/mangled name
+                nullptr, // no return type for a code symbol...
+                curr_symbol->GetAddress(), AddressRanges{func_range}));
 
             if (func_sp.get() != nullptr) {
               comp_unit.AddFunction(func_sp);

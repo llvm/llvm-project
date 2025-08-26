@@ -16,7 +16,6 @@
 
 #include <mmintrin.h>
 
-typedef int __v4si __attribute__((__vector_size__(16)));
 typedef float __v4sf __attribute__((__vector_size__(16)));
 typedef float __m128 __attribute__((__vector_size__(16), __aligned__(16)));
 
@@ -24,6 +23,7 @@ typedef float __m128_u __attribute__((__vector_size__(16), __aligned__(1)));
 
 /* Unsigned types */
 typedef unsigned int __v4su __attribute__((__vector_size__(16)));
+typedef unsigned short __v8hu __attribute__((__vector_size__(16)));
 
 /* This header should only be included in a hosted environment as it depends on
  * a standard library to provide allocation routines. */
@@ -1688,7 +1688,7 @@ _mm_cvtsi64_ss(__m128 __a, long long __b) {
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    converted value of the second operand. The upper 64 bits are copied from
 ///    the upper 64 bits of the first operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi32_ps(__m128 __a, __m64 __b)
 {
   return (__m128)__builtin_shufflevector(
@@ -1714,7 +1714,7 @@ _mm_cvtpi32_ps(__m128 __a, __m64 __b)
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    converted value from the second operand. The upper 64 bits are copied
 ///    from the upper 64 bits of the first operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvt_pi2ps(__m128 __a, __m64 __b)
 {
   return _mm_cvtpi32_ps(__a, __b);
@@ -2198,8 +2198,9 @@ _mm_storer_ps(float *__p, __m128 __a)
 #define _MM_HINT_NTA 0
 
 #ifndef _MSC_VER
-/* FIXME: We have to #define this because "sel" must be a constant integer, and
-   Sema doesn't do any form of constant propagation yet. */
+// If _MSC_VER is defined, we use the builtin variant of _mm_prefetch.
+// Otherwise, we provide this macro, which includes a cast, allowing the user
+// to pass a pointer of any time. The _mm_prefetch accepts char to match MSVC.
 
 /// Loads one cache line of data from the specified address to a location
 ///    closer to the processor.
@@ -2446,11 +2447,11 @@ _mm_movemask_pi8(__m64 __a)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the products of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_mulhi_pu16(__m64 __a, __m64 __b)
 {
-  return __trunc64(__builtin_ia32_pmulhuw128((__v8hi)__anyext128(__a),
-                                             (__v8hi)__anyext128(__b)));
+  return __trunc64(__builtin_ia32_pmulhuw128((__v8hu)__zext128(__a),
+                                             (__v8hu)__zext128(__b)));
 }
 
 /// Shuffles the 4 16-bit integers from a 64-bit integer vector to the
@@ -2872,7 +2873,7 @@ _mm_movelh_ps(__m128 __a, __m128 __b) {
 ///    from the corresponding elements in this operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi16_ps(__m64 __a)
 {
   return __builtin_convertvector((__v4hi)__a, __v4sf);
@@ -2890,7 +2891,7 @@ _mm_cvtpi16_ps(__m64 __a)
 ///    destination are copied from the corresponding elements in this operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpu16_ps(__m64 __a)
 {
   return __builtin_convertvector((__v4hu)__a, __v4sf);
@@ -2908,7 +2909,7 @@ _mm_cvtpu16_ps(__m64 __a)
 ///    from the corresponding lower 4 elements in this operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi8_ps(__m64 __a)
 {
   return __builtin_convertvector(
@@ -2929,7 +2930,7 @@ _mm_cvtpi8_ps(__m64 __a)
 ///    operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the source operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpu8_ps(__m64 __a)
 {
   return __builtin_convertvector(
@@ -2953,7 +2954,7 @@ _mm_cvtpu8_ps(__m64 __a)
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    copied and converted values from the first operand. The upper 64 bits
 ///    contain the copied and converted values from the second operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi32x2_ps(__m64 __a, __m64 __b)
 {
   return __builtin_convertvector(

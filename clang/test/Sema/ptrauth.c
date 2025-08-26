@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s -fexperimental-new-constant-interpreter
 
-#if __has_feature(ptrauth_intrinsics)
-#warning Pointer authentication enabled!
-// expected-warning@-1 {{Pointer authentication enabled!}}
+#if !__has_feature(ptrauth_intrinsics)
+// This error means that the __ptrauth intrinsics availability test says that
+// they are not available. This error is not expected in the output of this
+// test, if it is seen there is a feature detection regression.
+#error __ptrauth intrinsics not enabled
 #endif
 
 #if __aarch64__
@@ -55,7 +57,7 @@ void test_string_discriminator(const char *str) {
   __builtin_ptrauth_string_discriminator(str); // expected-error {{argument must be a string literal}}
   __builtin_ptrauth_string_discriminator(L"wide test"); // expected-error {{argument must be a string literal}} expected-warning {{incompatible pointer types passing 'int[10]' to parameter of type 'const char *'}}
 
-  void *mismatch = __builtin_ptrauth_string_discriminator("test string"); // expected-error {{incompatible integer to pointer conversion initializing 'void *' with an expression of type 'unsigned long'}}
+  void *mismatch = __builtin_ptrauth_string_discriminator("test string"); // expected-error {{incompatible integer to pointer conversion initializing 'void *' with an expression of type '__size_t'}}
 }
 
 

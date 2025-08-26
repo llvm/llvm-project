@@ -4,10 +4,12 @@ set(LLVM_LINK_COMPONENTS
   Core
   Instrumentation
   Passes
+  ProfileData
   Support
 )
 
 add_llvm_unittest(InstrumentationTests
+  MemProfUseTest.cpp
   PGOInstrumentationTest.cpp
   )
 

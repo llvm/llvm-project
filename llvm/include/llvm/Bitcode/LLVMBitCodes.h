@@ -307,8 +307,8 @@ enum GlobalValueSummarySymtabCodes {
   // [valueid, n x stackidindex]
   FS_PERMODULE_CALLSITE_INFO = 26,
   // Summary of per-module allocation memprof metadata.
-  // [nummib, nummib x (alloc type, numstackids, numstackids x stackidindex),
-  // [nummib x total size]?]
+  // [nummib, nummib x (alloc type, context radix tree index),
+  // [nummib x (numcontext x total size)]?]
   FS_PERMODULE_ALLOC_INFO = 27,
   // Summary of combined index memprof callsite metadata.
   // [valueid, numstackindices, numver,
@@ -316,10 +316,30 @@ enum GlobalValueSummarySymtabCodes {
   FS_COMBINED_CALLSITE_INFO = 28,
   // Summary of combined index allocation memprof metadata.
   // [nummib, numver,
-  //  nummib x (alloc type, numstackids, numstackids x stackidindex),
-  //  numver x version, [nummib x total size]?]
+  //  nummib x (alloc type, context radix tree index),
+  //  numver x version]
   FS_COMBINED_ALLOC_INFO = 29,
+  // List of all stack ids referenced by index in the callsite and alloc infos.
+  // [n x stack id]
   FS_STACK_IDS = 30,
+  // List of all full stack id pairs corresponding to the total sizes recorded
+  // at the end of the alloc info when reporting of hinted bytes is enabled.
+  // We use a fixed-width array, which is more efficient as these ids typically
+  // are close to 64 bits in size. The max fixed width value supported is 32
+  // bits so each 64-bit context id hash is recorded as a pair (upper 32 bits
+  // first). This record must immediately precede the associated alloc info, and
+  // the entries must be in the exact same order as the corresponding sizes.
+  // [nummib x (numcontext x full stack id)]
+  FS_ALLOC_CONTEXT_IDS = 31,
+  // Linearized radix tree of allocation contexts. See the description above the
+  // CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
+  // [n x entry]
+  FS_CONTEXT_RADIX_TREE_ARRAY = 32,
+  // Summary of combined index allocation memprof metadata, without context.
+  // [nummib, numver,
+  //  nummib x alloc type,
+  //  numver x version]
+  FS_COMBINED_ALLOC_INFO_NO_CONTEXT = 33,
 };
 
 enum MetadataCodes {
@@ -370,6 +390,8 @@ enum MetadataCodes {
   METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
   METADATA_ARG_LIST = 46,         // [n x [type num, value num]]
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
+  METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
+  METADATA_FIXED_POINT_TYPE = 49, // [distinct, ...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -434,7 +456,8 @@ enum CastOpcodes {
   CAST_PTRTOINT = 9,
   CAST_INTTOPTR = 10,
   CAST_BITCAST = 11,
-  CAST_ADDRSPACECAST = 12
+  CAST_ADDRSPACECAST = 12,
+  CAST_PTRTOADDR = 13,
 };
 
 /// UnaryOpcodes - These are values used in the bitcode files to encode which
@@ -487,7 +510,9 @@ enum RMWOperations {
   RMW_UINC_WRAP = 15,
   RMW_UDEC_WRAP = 16,
   RMW_USUB_COND = 17,
-  RMW_USUB_SAT = 18
+  RMW_USUB_SAT = 18,
+  RMW_FMAXIMUM = 19,
+  RMW_FMINIMUM = 20,
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -768,10 +793,13 @@ enum AttributeKindCodes {
   ATTR_KIND_INITIALIZES = 94,
   ATTR_KIND_HYBRID_PATCHABLE = 95,
   ATTR_KIND_SANITIZE_REALTIME = 96,
-  ATTR_KIND_SANITIZE_REALTIME_UNSAFE = 97,
+  ATTR_KIND_SANITIZE_REALTIME_BLOCKING = 97,
   ATTR_KIND_CORO_ELIDE_SAFE = 98,
   ATTR_KIND_NO_EXT = 99,
   ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
+  ATTR_KIND_SANITIZE_TYPE = 101,
+  ATTR_KIND_CAPTURES = 102,
+  ATTR_KIND_DEAD_ON_RETURN = 103,
 };
 
 enum ComdatSelectionKindCodes {

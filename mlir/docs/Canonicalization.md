@@ -71,7 +71,7 @@ For example, a pattern that transform
       outs(%init1 : tensor<2x1x3xf32>)
       dimensions = [1, 0, 2]
   %out = linalg.transpose
-      ins(%tranpose: tensor<2x1x3xf32>)
+      ins(%transpose: tensor<2x1x3xf32>)
       outs(%init2 : tensor<3x1x2xf32>)
       permutation = [2, 1, 0]
 ```
@@ -275,3 +275,8 @@ Operation *MyDialect::materializeConstant(OpBuilder &builder, Attribute value,
   ...
 }
 ```
+
+### When to use the `fold` method vs `RewriterPattern`s for canonicalizations
+
+A canonicalization should always be implemented as a `fold` method if it can
+be, otherwise it should be implemented as a `RewritePattern`.

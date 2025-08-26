@@ -55,6 +55,7 @@ func.func @buffer_forwarding_conflict_with_different_element_type(%arg0: tensor<
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "none"]
   %cst = arith.constant 0.000000e+00 : f32
+  //      CHECK: bufferization.alloc_tensor(%arg1)
   %0 = tensor.empty(%arg1) : tensor<?xf32>
 
   //      CHECK: bufferization.alloc_tensor(%arg1)

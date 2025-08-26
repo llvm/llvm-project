@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel < %s | FileCheck %s
-; RUN: llc -march=bpfel -mcpu=v3 < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v3 < %s | FileCheck %s
 ;
 ; Source code:
 ;   /* set aligned 4 to minimize the number of loads */

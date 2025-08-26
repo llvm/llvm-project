@@ -16,7 +16,6 @@
 #include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -26,26 +25,21 @@
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <map>
 #include <memory>
 #include <set>
-#include <sstream>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -193,7 +187,8 @@ void ento::createHTMLDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, true));
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
+                                                   OutputDir, PP, true));
 }
 
 void ento::createHTMLSingleFileDiagnosticConsumer(
@@ -208,7 +203,8 @@ void ento::createHTMLSingleFileDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, false));
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
+                                                   OutputDir, PP, false));
 }
 
 void ento::createPlistHTMLDiagnosticConsumer(
@@ -899,7 +895,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
   SourceManager &SM = R.getSourceMgr();
   assert(&Pos.getManager() == &SM && "SourceManagers are different!");
-  std::pair<FileID, unsigned> LPosInfo = SM.getDecomposedExpansionLoc(Pos);
+  FileIDAndOffset LPosInfo = SM.getDecomposedExpansionLoc(Pos);
 
   if (LPosInfo.first != BugFileID)
     return;
@@ -1038,7 +1034,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
       FullSourceLoc L = MP->getLocation().asLocation().getExpansionLoc();
       assert(L.isFileID());
       StringRef BufferInfo = L.getBufferData();
-      std::pair<FileID, unsigned> LocInfo = L.getDecomposedLoc();
+      FileIDAndOffset LocInfo = L.getDecomposedLoc();
       const char* MacroName = LocInfo.second + BufferInfo.data();
       Lexer rawLexer(SM.getLocForStartOfFile(LocInfo.first), PP.getLangOpts(),
                      BufferInfo.begin(), MacroName, BufferInfo.end());

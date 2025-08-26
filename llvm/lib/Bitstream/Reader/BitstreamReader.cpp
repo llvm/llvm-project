@@ -334,7 +334,8 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
 
     // Figure out where the end of this blob will be including tail padding.
     size_t CurBitPos = GetCurrentBitNo();
-    const size_t NewEnd = CurBitPos + alignTo(NumElts, 4) * 8;
+    const size_t NewEnd =
+        CurBitPos + static_cast<uint64_t>(alignTo(NumElts, 4)) * 8;
 
     // Make sure the bitstream is large enough to contain the blob.
     if (!canSkipToPos(NewEnd/8))

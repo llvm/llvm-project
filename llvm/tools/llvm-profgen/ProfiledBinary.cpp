@@ -9,6 +9,7 @@
 #include "ProfiledBinary.h"
 #include "ErrorHandling.h"
 #include "MissingFrameInferrer.h"
+#include "Options.h"
 #include "ProfileGenerator.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Demangle/Demangle.h"
@@ -24,46 +25,51 @@
 
 #define DEBUG_TYPE "load-binary"
 
-using namespace llvm;
-using namespace sampleprof;
+namespace llvm {
+
+using namespace object;
 
 cl::opt<bool> ShowDisassemblyOnly("show-disassembly-only",
-                                  cl::desc("Print disassembled code."));
+                                  cl::desc("Print disassembled code."),
+                                  cl::cat(ProfGenCategory));
 
 cl::opt<bool> ShowSourceLocations("show-source-locations",
-                                  cl::desc("Print source locations."));
+                                  cl::desc("Print source locations."),
+                                  cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     ShowCanonicalFnName("show-canonical-fname",
-                        cl::desc("Print canonical function name."));
+                        cl::desc("Print canonical function name."),
+                        cl::cat(ProfGenCategory));
 
 static cl::opt<bool> ShowPseudoProbe(
     "show-pseudo-probe",
-    cl::desc("Print pseudo probe section and disassembled info."));
+    cl::desc("Print pseudo probe section and disassembled info."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool> UseDwarfCorrelation(
     "use-dwarf-correlation",
     cl::desc("Use dwarf for profile correlation even when binary contains "
-             "pseudo probe."));
+             "pseudo probe."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<std::string>
     DWPPath("dwp", cl::init(""),
             cl::desc("Path of .dwp file. When not specified, it will be "
-                     "<binary>.dwp in the same directory as the main binary."));
+                     "<binary>.dwp in the same directory as the main binary."),
+            cl::cat(ProfGenCategory));
 
 static cl::list<std::string> DisassembleFunctions(
     "disassemble-functions", cl::CommaSeparated,
     cl::desc("List of functions to print disassembly for. Accept demangled "
-             "names only. Only work with show-disassembly-only"));
+             "names only. Only work with show-disassembly-only"),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     KernelBinary("kernel",
-                 cl::desc("Generate the profile for Linux kernel binary."));
+                 cl::desc("Generate the profile for Linux kernel binary."),
+                 cl::cat(ProfGenCategory));
 
-extern cl::opt<bool> ShowDetailedWarning;
-extern cl::opt<bool> InferMissingFrames;
-
-namespace llvm {
 namespace sampleprof {
 
 static const Target *getTarget(const ObjectFile *Obj) {
@@ -242,8 +248,7 @@ void ProfiledBinary::load() {
     loadSymbolsFromDWARF(*cast<ObjectFile>(&ExeBinary));
   }
 
-  DisassembleFunctionSet.insert(DisassembleFunctions.begin(),
-                                DisassembleFunctions.end());
+  DisassembleFunctionSet.insert_range(DisassembleFunctions);
 
   if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj)) {
     checkPseudoProbe(ELFObj);
@@ -410,17 +415,18 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
       FuncStartAddresses = SymbolStartAddrs;
     } else {
       for (auto &F : DisassembleFunctionSet) {
-        auto GUID = Function::getGUID(F.first());
+        auto GUID = Function::getGUIDAssumingExternalLinkage(F.first());
         if (auto StartAddr = SymbolStartAddrs.lookup(GUID)) {
           FuncStartAddresses[GUID] = StartAddr;
           FuncRange &Range = StartAddrToFuncRangeMap[StartAddr];
-          GuidFilter.insert(Function::getGUID(Range.getFuncName()));
+          GuidFilter.insert(
+              Function::getGUIDAssumingExternalLinkage(Range.getFuncName()));
         }
       }
     }
   } else {
     for (auto *F : ProfiledFunctions) {
-      GuidFilter.insert(Function::getGUID(F->FuncName));
+      GuidFilter.insert(Function::getGUIDAssumingExternalLinkage(F->FuncName));
       for (auto &Range : F->Ranges) {
         auto GUIDs = StartAddrToSymMap.equal_range(Range.first);
         for (const auto &[StartAddr, Func] : make_range(GUIDs))
@@ -775,7 +781,7 @@ void ProfiledBinary::populateElfSymbolAddressList(
   for (const SymbolRef &Symbol : Obj->symbols()) {
     const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
     const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
-    uint64_t GUID = Function::getGUID(Name);
+    uint64_t GUID = Function::getGUIDAssumingExternalLinkage(Name);
     SymbolStartAddrs[GUID] = Addr;
     StartAddrToSymMap.emplace(Addr, GUID);
   }

@@ -82,6 +82,10 @@ ISA naming string. Currently supported profiles:
 * ``rva20s64``
 * ``rva22u64``
 * ``rva22s64``
+* ``rva23u64``
+* ``rva23s64``
+* ``rvb23u64``
+* ``rvb23s64``
 
 Note that you can also append additional extension names to be enabled, e.g.
 ``rva20u64_zicond`` will enable the ``zicond`` extension in addition to those
@@ -91,10 +95,6 @@ Profiles that are not yet ratified cannot be used unless
 ``-menable-experimental-extensions`` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
-* ``rva23u64``
-* ``rva23s64``
-* ``rvb23u64``
-* ``rvb23s64``
 * ``rvm23u32``
 
 .. _riscv-extensions:
@@ -119,16 +119,24 @@ on support follow.
      ``E``             Supported (`See note <#riscv-rve-note>`__)
      ``H``             Assembly Support
      ``M``             Supported
+     ``Q``             Assembly Support
+     ``Sha``           Supported
      ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shlcofideleg``  Supported
      ``Shtvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shvsatpa``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
      ``Smcdeleg``      Supported
+     ``Smcntrpmf``     Supported
      ``Smcsrind``      Supported
+     ``Smdbltrp``      Supported
      ``Smepmp``        Supported
+     ``Smmpm``         Supported
+     ``Smnpm``         Supported
+     ``Smrnmi``        Supported
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
      ``Ssccfg``        Supported
@@ -136,6 +144,9 @@ on support follow.
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscsrind``      Supported
+     ``Ssdbltrp``      Supported
+     ``Ssnpm``         Supported
+     ``Sspm``          Supported
      ``Ssqosid``       Assembly Support
      ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -143,12 +154,14 @@ on support follow.
      ``Sstvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sstvecd``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssu64xl``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Supm``          Supported
      ``Svade``         Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Svadu``         Assembly Support
      ``Svbare``        Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Svinval``       Assembly Support
      ``Svnapot``       Assembly Support
      ``Svpbmt``        Supported
+     ``Svvptc``        Supported
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -169,6 +182,7 @@ on support follow.
      ``Zcb``           Supported
      ``Zcd``           Supported
      ``Zcf``           Supported
+     ``Zclsd``         Assembly Support
      ``Zcmop``         Supported
      ``Zcmp``          Supported
      ``Zcmt``          Assembly Support
@@ -185,6 +199,7 @@ on support follow.
      ``Zicbop``        Supported
      ``Zicboz``        Assembly Support
      ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccamoc``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -195,6 +210,7 @@ on support follow.
      ``Zihintntl``     Supported
      ``Zihintpause``   Assembly Support
      ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zilsd``         Supported
      ``Zimop``         Supported
      ``Zkn``           Supported
      ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
@@ -285,13 +301,13 @@ Supported
 
 .. _riscv-profiles-extensions-note:
 
-``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
+``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccamoc``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 .. _riscv-zacas-note:
 
 ``Zacas``
-  The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
+  The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibility. These can only be used in the assembler.
 
 Atomics ABIs
 ============
@@ -307,9 +323,6 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
-``experimental-ssnpm``, ``experimental-smnpm``, ``experimental-smmpm``, ``experimental-sspm``, ``experimental-supm``
-  LLVM implements the `v1.0.0-rc2 specification <https://github.com/riscv/riscv-j-extension/releases/tag/pointer-masking-v1.0.0-rc2>`__.
-
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
 
@@ -319,8 +332,17 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvbc32e``, ``experimental-zvkgs``
   LLVM implements the `0.7 release specification <https://github.com/user-attachments/files/16450464/riscv-crypto-spec-vector-extra_v0.0.7.pdf>`__.
 
+``experimental-sdext``, ``experimental-sdtrig``
+  LLVM implements the `1.0-rc4 specification <https://github.com/riscv/riscv-debug-spec/releases/download/1.0.0-rc4/riscv-debug-specification.pdf>`__.
+
 ``experimental-smctr``, ``experimental-ssctr``
   LLVM implements the `1.0-rc3 specification <https://github.com/riscv/riscv-control-transfer-records/releases/tag/v1.0_rc3>`__.
+
+``experimental-svukte``
+  LLVM implements the `0.3 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
+
+``experimental-zvqdotq``
+  LLVM implements the `0.0.1 draft specification <https://github.com/riscv/riscv-dot-product/releases/tag/v0.0.1>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -329,7 +351,7 @@ Vendor Extensions
 
 Vendor extensions are extensions which are not standardized by RISC-V International, and are instead defined by a hardware vendor.  The term vendor extension roughly parallels the definition of a `non-standard` extension from Section 1.3 of the Volume I: RISC-V Unprivileged ISA specification.  In particular, we expect to eventually accept both `custom` extensions and `non-conforming` extensions.
 
-Inclusion of a vendor extension will be considered on a case by case basis.  All proposals should be brought to the bi-weekly RISCV sync calls for discussion.  For a general idea of the factors likely to be considered, please see the `Clang documentation <https://clang.llvm.org/get_involved.html>`__.
+Inclusion of a vendor extension will be considered on a case by case basis.  All proposals should be brought to the bi-weekly RISC-V sync calls for discussion.  For a general idea of the factors likely to be considered, please see the `Clang documentation <https://clang.llvm.org/get_involved.html>`__.
 
 It is our intention to follow the naming conventions described in `riscv-non-isa/riscv-toolchain-conventions <https://github.com/riscv-non-isa/riscv-toolchain-conventions#conventions-for-vendor-extensions>`__.  Exceptions to this naming will need to be strongly motivated.
 
@@ -370,6 +392,9 @@ The current vendor extensions supported are:
 
 ``XVentanaCondOps``
   LLVM implements `version 1.0.0 of the VTx-family custom instructions specification <https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf>`__ by Ventana Micro Systems.  All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above.  These instructions are only available for riscv64 at this time.
+
+``Xsfmm*``
+  LLVM implements `version 0.6 of the Xsfmm Family of Attached Matrix Extensions Specification <https://www.sifive.com/document-file/xsfmm-matrix-extensions-specification>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification.
 
 ``XSfvcp``
   LLVM implements `version 1.1.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/Zn3m1R5LeNNTwnLS_vcix-spec-software-v1p1.pdf>`__ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
@@ -415,6 +440,100 @@ The current vendor extensions supported are:
 
 ``Xwchc``
   LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
+
+``experimental-Xqccmp``
+  LLVM implements `version 0.3 of the 16-bit Push/Pop instructions and double-moves extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqccmp_extension-0.3.0>`__ by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
+
+``experimental-Xqcia``
+  LLVM implements `version 0.7 of the Qualcomm uC Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqciac``
+  LLVM implements `version 0.3 of the Qualcomm uC Load-Store Address Calculation extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcibi``
+  LLVM implements `version 0.2 of the Qualcomm uC Branch Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcibm``
+  LLVM implements `version 0.8 of the Qualcomm uC Bit Manipulation extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcicli``
+  LLVM implements `version 0.3 of the Qualcomm uC Conditional Load Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcicm``
+  LLVM implements `version 0.2 of the Qualcomm uC Conditional Move extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcics``
+  LLVM implements `version 0.2 of the Qualcomm uC Conditional Select extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcicsr``
+  LLVM implements `version 0.4 of the Qualcomm uC CSR extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqciint``
+  LLVM implements `version 0.10 of the Qualcomm uC Interrupts extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqciio``
+  LLVM implements `version 0.1 of the Qualcomm uC External Input Output extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcilb``
+  LLVM implements `version 0.2 of the Qualcomm uC Long Branch extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcili``
+  LLVM implements `version 0.2 of the Qualcomm uC Load Large Immediate extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcilia``
+  LLVM implements `version 0.2 of the Qualcomm uC Large Immediate Arithmetic extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcilo``
+  LLVM implements `version 0.3 of the Qualcomm uC Large Offset Load Store extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcilsm``
+  LLVM implements `version 0.6 of the Qualcomm uC Load Store Multiple extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcisim``
+  LLVM implements `version 0.2 of the Qualcomm uC Simulation Hint extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcisls``
+  LLVM implements `version 0.2 of the Qualcomm uC Scaled Load Store extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``experimental-Xqcisync``
+  LLVM implements `version 0.3 of the Qualcomm uC Sync Delay extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
+
+``Xmipscbop``
+  LLVM implements MIPS prefetch extension `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
+
+``Xmipscmov``
+  LLVM implements conditional move for the `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
+
+``Xmipslsp``
+  LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
+
+``experimental-XRivosVisni``
+  LLVM implements `version 0.1 of the Rivos Vector Integer Small New Instructions extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
+
+``experimental-XRivosVizip``
+  LLVM implements `version 0.1 of the Rivos Vector Register Zips extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
+
+``XAndesPerf``
+  LLVM implements `version 5.0.0 of the Andes Performance Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XAndesBFHCvt``
+  LLVM implements `version 5.0.0 of the Andes Scalar BFLOAT16 Conversion Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XAndesVBFHCvt``
+  LLVM implements `version 5.0.0 of the Andes Vector BFLOAT16 Conversion Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XAndesVSINTLoad``
+  LLVM implements `version 5.0.0 of the Andes Vector INT4 Load Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XAndesVPackFPH``
+  LLVM implements `version 5.0.0 of the Andes Vector Packed FP16 Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XAndesVDot``
+  LLVM implements `version 5.0.0 of the Andes Vector Dot Product Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XSMTVDot``
+  SpacemiT defines `Intrinsic Matrix Extension (IME) specification <https://github.com/space-mit/riscv-ime-extension-spec/releases/tag/v0429>`__.
+  LLVM implement the hardware-adapted subset for SpacemiT X60, defined in the `feature document <https://developer.spacemit.com/documentation?token=BWbGwbx7liGW21kq9lucSA6Vnpb#2.1>`__ by SpacemiT. All instructions are prefixed with `smt.` as described in the implementation guide. Note that this implemented subset is `version 1.0.0 of the SpacemiT Vector Dot Product Extension specification`, which is strictly a subset of the full IME specification to reflect the capabilities of SpacemiT X60 hardware correctly.
 
 Experimental C Intrinsics
 =========================
