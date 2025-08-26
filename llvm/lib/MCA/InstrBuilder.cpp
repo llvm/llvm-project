@@ -559,7 +559,7 @@ Expected<unsigned> InstrBuilder::getVariantSchedClassID(const MCInst &MCI,
 Expected<const InstrDesc &>
 InstrBuilder::createInstrDescImpl(const MCInst &MCI,
                                   const SmallVector<Instrument *> &IVec,
-                                  std::function<void(InstrDesc&)> Customizer) {
+                                  std::function<void(InstrDesc &)> Customizer) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -638,7 +638,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
     Customizer(*ID);
     return *CustomDescriptors.emplace_back(std::move(ID));
   }
-  
+
   bool IsVariadic = MCDesc.isVariadic();
   if ((ID->IsRecyclable = !IsVariadic && !IsVariant)) {
     auto DKey = std::make_pair(MCI.getOpcode(), SchedClassID);
@@ -683,9 +683,10 @@ STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
                                 const SmallVector<Instrument *> &IVec,
-                                std::function<void(InstrDesc&)> Customizer) {
-  Expected<const InstrDesc &> DescOrErr = Customizer? createInstrDescImpl(MCI, IVec, Customizer) :
-      getOrCreateInstrDesc(MCI, IVec);
+                                std::function<void(InstrDesc &)> Customizer) {
+  Expected<const InstrDesc &> DescOrErr =
+      Customizer ? createInstrDescImpl(MCI, IVec, Customizer)
+                 : getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;
