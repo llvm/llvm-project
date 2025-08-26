@@ -732,8 +732,9 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
 
   mlir::Value length = emitArrayLength(arrayType, type, addr);
 
+  QualType elementType = arrayType->getElementType();
   CharUnits elementAlign = addr.getAlignment().alignmentOfArrayElement(
-      getContext().getTypeSizeInChars(type));
+      getContext().getTypeSizeInChars(elementType));
 
   auto constantCount = length.getDefiningOp<cir::ConstantOp>();
   if (!constantCount) {
@@ -749,7 +750,7 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
 
   mlir::Value begin = addr.getPointer();
   mlir::Value end; // This will be used for future non-constant counts.
-  emitArrayDestroy(begin, end, type, elementAlign, destroyer);
+  emitArrayDestroy(begin, end, elementType, elementAlign, destroyer);
 
   // If the array destroy didn't use the length op, we can erase it.
   if (constantCount.use_empty())
