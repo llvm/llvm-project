@@ -550,11 +550,10 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
     dxbc::DescriptorRangeType RangeType =
         static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
 
-    uint64_t StartSlot = AppendingRegister;
     if (Range.OffsetInDescriptorsFromTableStart != ~0U)
-      StartSlot = Range.OffsetInDescriptorsFromTableStart;
+      AppendingRegister = Range.OffsetInDescriptorsFromTableStart;
 
-    if (verifyOffsetOverflow(StartSlot))
+    if (verifyOffsetOverflow(AppendingRegister))
       return make_error<OffsetOverflowError>(
           RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
@@ -562,12 +561,12 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
       return make_error<ShaderRegisterOverflowError>(
           RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
-    if (verifyRegisterOverflow(StartSlot, Range.NumDescriptors))
+    if (verifyRegisterOverflow(AppendingRegister, Range.NumDescriptors))
       return make_error<DescriptorRangeOverflowError>(
           RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
     AppendingRegister =
-        updateAppendingRegister(StartSlot, Range.NumDescriptors,
+        updateAppendingRegister(AppendingRegister, Range.NumDescriptors,
                                 Range.OffsetInDescriptorsFromTableStart);
   }
 
