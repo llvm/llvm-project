@@ -567,26 +567,26 @@ define void @vabd_loop_u32(ptr nocapture readonly %x, ptr nocapture readonly %y,
 ; CHECK-NEXT:    vmov r4, r5, d12
 ; CHECK-NEXT:    vmov q2[3], q2[1], r3, r12
 ; CHECK-NEXT:    vmov r3, r12, d10
-; CHECK-NEXT:    subs r3, r4, r3
+; CHECK-NEXT:    cmp r4, r3
 ; CHECK-NEXT:    vmov r4, r6, d13
 ; CHECK-NEXT:    sbcs.w r3, r5, r12
 ; CHECK-NEXT:    csetm r5, lt
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    bfi r3, r5, #0, #4
 ; CHECK-NEXT:    vmov r5, r12, d11
-; CHECK-NEXT:    subs r4, r4, r5
-; CHECK-NEXT:    sbcs.w r6, r6, r12
+; CHECK-NEXT:    cmp r4, r5
 ; CHECK-NEXT:    vmov r4, r5, d8
+; CHECK-NEXT:    sbcs.w r6, r6, r12
 ; CHECK-NEXT:    csetm r6, lt
 ; CHECK-NEXT:    bfi r3, r6, #4, #4
 ; CHECK-NEXT:    vmov r6, r12, d6
-; CHECK-NEXT:    subs r4, r4, r6
+; CHECK-NEXT:    cmp r4, r6
 ; CHECK-NEXT:    sbcs.w r6, r5, r12
 ; CHECK-NEXT:    vmov r4, r5, d9
 ; CHECK-NEXT:    csetm r6, lt
 ; CHECK-NEXT:    bfi r3, r6, #8, #4
 ; CHECK-NEXT:    vmov r6, r12, d7
-; CHECK-NEXT:    subs r4, r4, r6
+; CHECK-NEXT:    cmp r4, r6
 ; CHECK-NEXT:    sbcs.w r6, r5, r12
 ; CHECK-NEXT:    csetm r6, lt
 ; CHECK-NEXT:    bfi r3, r6, #12, #4
