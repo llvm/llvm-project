@@ -139,8 +139,4 @@ NB_MODULE(_mlir, m) {
   auto passModule =
       m.def_submodule("passmanager", "MLIR Pass Management Bindings");
   populatePassManagerSubmodule(passModule);
-
-  m.def("test_raise_exception", []() {
-    throw std::runtime_error("wtfbbq");
-  });
 }
