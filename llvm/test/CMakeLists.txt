@@ -259,10 +259,43 @@ add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   )
 set_target_properties(check-llvm PROPERTIES FOLDER "LLVM/Tests")
 
+# Note, exclude TableGen and FileCheck directories as we define handle
+# them with a reduced set of dependencies below.
 add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS}
   FOLDER "Tests/Subdirectories"
+  EXCLUDE_DIR TableGen
+  EXCLUDE_DIR FileCheck
+  )
+
+# Subset of dependencies for TableGen lit test.
+set(LLVM_TEST_TABLEGEN_DEPENDS
+    FileCheck
+    count
+    llvm-config
+    llvm-tblgen
+    not
+  )
+
+add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
+  ${exclude_from_check_all}
+  DEPENDS ${LLVM_TEST_TABLEGEN_DEPENDS}
+  FOLDER "Tests/Subdirectories"
+  INCLUDE_DIR TableGen
+  )
+
+# Subset of dependencies for FileCheck lit test.
+set(LLVM_TEST_FILECHECK_DEPENDS
+    FileCheck
+    not
+  )
+
+add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
+  ${exclude_from_check_all}
+  DEPENDS ${LLVM_TEST_FILECHECK_DEPENDS}
+  FOLDER "Tests/Subdirectories"
+  INCLUDE_DIR FileCheck
   )
 
 # Setup an alias for 'check-all'.

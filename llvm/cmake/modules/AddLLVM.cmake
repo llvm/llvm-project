@@ -2192,12 +2192,38 @@ endfunction()
 
 function(add_lit_testsuites project directory)
   if (NOT LLVM_ENABLE_IDE)
-    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER;BINARY_DIR" "PARAMS;DEPENDS;ARGS" ${ARGN})
+    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER;BINARY_DIR"
+                          "PARAMS;DEPENDS;ARGS;EXCLUDE_DIR;INCLUDE_DIR" ${ARGN})
 
     if (NOT ARG_FOLDER)
       get_subproject_title(subproject_title)
       set(ARG_FOLDER "${subproject_title}/Tests/LIT Testsuites")
     endif()
+
+    # Create a list of excluded paths. If not empty, any directory that begins
+    # with one of the excluded paths will excluded, others will be included.
+    set(excluded_dirs "")
+    if (ARG_EXCLUDE_DIR)
+      foreach(path ${ARG_EXCLUDE_DIR})
+        list(APPEND excluded_dirs ${path})
+      endforeach()
+    endif()
+
+    # Create a list of included paths. If not empty, any directory that begins
+    # with any of the included paths will included, others will be excluded.
+    # If both included and excluded lists are empty, all directories will be
+    # included.
+    set(included_dirs "")
+    if (ARG_INCLUDE_DIR)
+      foreach(path ${ARG_INCLUDE_DIR})
+        list(APPEND included_dirs ${path})
+      endforeach()
+    endif()
+
+    if (excluded_dirs AND included_dirs)
+      message(FATAL_ERROR, "Cannot specify both include and exclude directories")
+    endif()
+
 
     # Search recursively for test directories by assuming anything not
     # in a directory called Inputs contains tests.
@@ -2214,24 +2240,56 @@ function(add_lit_testsuites project directory)
 
       # Create a check- target for the directory.
       string(REPLACE "${directory}/" "" name_slash ${lit_suite})
-      if (name_slash)
-        set(filter ${name_slash})
-        string(REPLACE "/" "-" name_slash ${name_slash})
-        string(REPLACE "\\" "-" name_dashes ${name_slash})
-        string(TOLOWER "${project}-${name_dashes}" name_var)
-        set(lit_args ${lit_suite})
-        if (ARG_BINARY_DIR)
-          set(lit_args ${ARG_BINARY_DIR} --filter=${filter})
-        endif()
-        add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
-          ${lit_args}
-          ${EXCLUDE_FROM_CHECK_ALL}
-          PARAMS ${ARG_PARAMS}
-          DEPENDS ${ARG_DEPENDS}
-          ARGS ${ARG_ARGS}
-        )
-        set_target_properties(check-${name_var} PROPERTIES FOLDER ${ARG_FOLDER})
+      if (NOT name_slash)
+        continue()
       endif()
+
+      # Determine whether to skip this directory.
+      if (excluded_dirs)
+        # Include by default, unless in the exclude list.
+        set(is_skipped false)
+        foreach (excluded_dir ${excluded_dirs})
+          string(FIND "${name_slash}" "${excluded_dir}" exclude_index)
+          if (exclude_index EQUAL 0)
+            set(is_skipped true)
+            break()
+          endif()
+        endforeach()
+      elseif(included_dirs)
+        # Exclude by default, unless in the include list.
+        set(is_skipped true)
+        foreach (included_dir ${included_dirs})
+          string(FIND "${name_slash}" "${included_dir}" include_index)
+          if (include_index EQUAL 0)
+            set(is_skipped false)
+            break()
+          endif()
+        endforeach()
+      else()
+        # Neither include nor exclude list specified. Include
+        set(is_skipped false)
+      endif()
+
+      if (is_skipped)
+        continue()
+      endif()
+
+      set(filter ${name_slash})
+      string(REPLACE "/" "-" name_slash ${name_slash})
+      string(REPLACE "\\" "-" name_dashes ${name_slash})
+      string(TOLOWER "${project}-${name_dashes}" name_var)
+      set(lit_args ${lit_suite})
+      if (ARG_BINARY_DIR)
+        set(lit_args ${ARG_BINARY_DIR} --filter=${filter})
+      endif()
+      add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
+        ${lit_args}
+        ${EXCLUDE_FROM_CHECK_ALL}
+        PARAMS ${ARG_PARAMS}
+        DEPENDS ${ARG_DEPENDS}
+        ARGS ${ARG_ARGS}
+      )
+      set_target_properties(check-${name_var} PROPERTIES FOLDER ${ARG_FOLDER})
     endforeach()
   endif()
 endfunction()
