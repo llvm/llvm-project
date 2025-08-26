@@ -36,14 +36,14 @@ void add_reg_value(CoreSpec &spec, std::vector<uint8_t> &buf,
   const auto it = find_by_name(registers.begin(), registers.end(), regname);
   if (it != registers.end()) {
     if (regsize == 8)
-      add_uint64(spec, buf, it->value);
+      add_uint64(buf, it->value);
     else
-      add_uint32(spec, buf, it->value);
+      add_uint32(buf, it->value);
   } else {
     if (regsize == 8)
-      add_uint64(spec, buf, 0);
+      add_uint64(buf, 0);
     else
-      add_uint32(spec, buf, 0);
+      add_uint32(buf, 0);
   }
 }
 
@@ -62,12 +62,12 @@ void add_lc_threads_armv7(CoreSpec &spec,
     cmdsize += 4 * 2 * th.regsets.size(); // flavor, count (per register flavor)
     cmdsize += size_of_all_flavors;       // size of all the register set data
 
-    add_uint32(spec, lc, llvm::MachO::LC_THREAD); // thread_command.cmd
-    add_uint32(spec, lc, cmdsize);                // thread_command.cmdsize
+    add_uint32(lc, llvm::MachO::LC_THREAD); // thread_command.cmd
+    add_uint32(lc, cmdsize);                // thread_command.cmdsize
     for (const RegisterSet &rs : th.regsets) {
       if (rs.flavor == RegisterFlavor::GPR) {
-        add_uint32(spec, lc, ARM_THREAD_STATE);       // thread_command.flavor
-        add_uint32(spec, lc, ARM_THREAD_STATE_COUNT); // thread_command.count
+        add_uint32(lc, ARM_THREAD_STATE);       // thread_command.flavor
+        add_uint32(lc, ARM_THREAD_STATE_COUNT); // thread_command.count
         const char *names[] = {"r0",  "r1", "r2", "r3", "r4",   "r5",
                                "r6",  "r7", "r8", "r9", "r10",  "r11",
                                "r12", "sp", "lr", "pc", "cpsr", nullptr};
@@ -75,8 +75,8 @@ void add_lc_threads_armv7(CoreSpec &spec,
           add_reg_value(spec, lc, rs.registers, names[i], 4);
       }
       if (rs.flavor == RegisterFlavor::EXC) {
-        add_uint32(spec, lc, ARM_EXCEPTION_STATE); // thread_command.flavor
-        add_uint32(spec, lc, ARM_EXCEPTION_STATE_COUNT); // thread_command.count
+        add_uint32(lc, ARM_EXCEPTION_STATE); // thread_command.flavor
+        add_uint32(lc, ARM_EXCEPTION_STATE_COUNT); // thread_command.count
         const char *names[] = {"far", "esr", "exception", nullptr};
         for (int i = 0; names[i]; i++)
           add_reg_value(spec, lc, rs.registers, names[i], 4);
@@ -106,13 +106,13 @@ void add_lc_threads_arm64(CoreSpec &spec,
     cmdsize += 4 * 2 * th.regsets.size(); // flavor, count (per register flavor)
     cmdsize += size_of_all_flavors;       // size of all the register set data
 
-    add_uint32(spec, lc, llvm::MachO::LC_THREAD); // thread_command.cmd
-    add_uint32(spec, lc, cmdsize);                // thread_command.cmdsize
+    add_uint32(lc, llvm::MachO::LC_THREAD); // thread_command.cmd
+    add_uint32(lc, cmdsize);                // thread_command.cmdsize
 
     for (const RegisterSet &rs : th.regsets) {
       if (rs.flavor == RegisterFlavor::GPR) {
-        add_uint32(spec, lc, ARM_THREAD_STATE64);       // thread_command.flavor
-        add_uint32(spec, lc, ARM_THREAD_STATE64_COUNT); // thread_command.count
+        add_uint32(lc, ARM_THREAD_STATE64);       // thread_command.flavor
+        add_uint32(lc, ARM_THREAD_STATE64_COUNT); // thread_command.count
         const char *names[] = {"x0",  "x1",  "x2",  "x3",  "x4",  "x5",   "x6",
                                "x7",  "x8",  "x9",  "x10", "x11", "x12",  "x13",
                                "x14", "x15", "x16", "x17", "x18", "x19",  "x20",
@@ -124,11 +124,11 @@ void add_lc_threads_arm64(CoreSpec &spec,
         // cpsr is a 4-byte reg
         add_reg_value(spec, lc, rs.registers, "cpsr", 4);
         // the 4 bytes of zeroes
-        add_uint32(spec, lc, 0);
+        add_uint32(lc, 0);
       }
       if (rs.flavor == RegisterFlavor::EXC) {
-        add_uint32(spec, lc, ARM_EXCEPTION_STATE64); // thread_command.flavor
-        add_uint32(spec, lc,
+        add_uint32(lc, ARM_EXCEPTION_STATE64); // thread_command.flavor
+        add_uint32(lc,
                    ARM_EXCEPTION_STATE64_COUNT); // thread_command.count
         add_reg_value(spec, lc, rs.registers, "far", 8);
         add_reg_value(spec, lc, rs.registers, "esr", 4);
@@ -155,12 +155,12 @@ void add_lc_threads_riscv(CoreSpec &spec,
     cmdsize += 4 * 2 * th.regsets.size(); // flavor, count (per register flavor)
     cmdsize += size_of_all_flavors;       // size of all the register set data
 
-    add_uint32(spec, lc, llvm::MachO::LC_THREAD); // thread_command.cmd
-    add_uint32(spec, lc, cmdsize);                // thread_command.cmdsize
+    add_uint32(lc, llvm::MachO::LC_THREAD); // thread_command.cmd
+    add_uint32(lc, cmdsize);                // thread_command.cmdsize
     for (const RegisterSet &rs : th.regsets) {
       if (rs.flavor == RegisterFlavor::GPR) {
-        add_uint32(spec, lc, RV32_THREAD_STATE);       // thread_command.flavor
-        add_uint32(spec, lc, RV32_THREAD_STATE_COUNT); // thread_command.count
+        add_uint32(lc, RV32_THREAD_STATE);       // thread_command.flavor
+        add_uint32(lc, RV32_THREAD_STATE_COUNT); // thread_command.count
         const char *names[] = {"zero", "ra", "sp", "gp", "tp", "t0",   "t1",
                                "t2",   "fp", "s1", "a0", "a1", "a2",   "a3",
                                "a4",   "a5", "a6", "a7", "s2", "s3",   "s4",

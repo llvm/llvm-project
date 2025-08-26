@@ -11,7 +11,6 @@
 #include "MemoryWriter.h"
 #include "ThreadWriter.h"
 #include "Utility.h"
-#include "yaml2corespec.h"
 
 #include "llvm/BinaryFormat/MachO.h"
 
@@ -181,17 +180,17 @@ int main(int argc, char **argv) {
   std::vector<uint8_t> mh;
   // Write the fields of a mach_header_64 struct
   if (spec.wordsize == 8)
-    add_uint32(spec, mh, llvm::MachO::MH_MAGIC_64); // magic
+    add_uint32(mh, llvm::MachO::MH_MAGIC_64); // magic
   else
-    add_uint32(spec, mh, llvm::MachO::MH_MAGIC); // magic
-  add_uint32(spec, mh, spec.cputype);            // cputype
-  add_uint32(spec, mh, spec.cpusubtype);         // cpusubtype
-  add_uint32(spec, mh, llvm::MachO::MH_CORE);    // filetype
-  add_uint32(spec, mh, load_commands.size());    // ncmds
-  add_uint32(spec, mh, size_of_load_commands);   // sizeofcmds
-  add_uint32(spec, mh, 0);                       // flags
+    add_uint32(mh, llvm::MachO::MH_MAGIC); // magic
+  add_uint32(mh, spec.cputype);            // cputype
+  add_uint32(mh, spec.cpusubtype);         // cpusubtype
+  add_uint32(mh, llvm::MachO::MH_CORE);    // filetype
+  add_uint32(mh, load_commands.size());    // ncmds
+  add_uint32(mh, size_of_load_commands);   // sizeofcmds
+  add_uint32(mh, 0);                       // flags
   if (spec.wordsize == 8)
-    add_uint32(spec, mh, 0); // reserved
+    add_uint32(mh, 0); // reserved
 
   fwrite(mh.data(), mh.size(), 1, f);
 

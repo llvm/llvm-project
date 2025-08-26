@@ -1,10 +1,10 @@
 add_lldb_tool(yaml2macho-core
-    main.cpp
-    yaml2corespec.cpp
+    CoreSpec.cpp
     LCNoteWriter.cpp
     MemoryWriter.cpp
     ThreadWriter.cpp
     Utility.cpp
+    yaml2macho.cpp
 
     LINK_COMPONENTS
       Support

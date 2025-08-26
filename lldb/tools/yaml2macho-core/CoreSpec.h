@@ -1,4 +1,4 @@
-//===-- CoreSpec.h --------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,5 +51,7 @@ struct CoreSpec {
 
   CoreSpec() : cputype(0), cpusubtype(0), wordsize(0) {}
 };
+
+CoreSpec from_yaml(char *buf, size_t len);
 
 #endif
