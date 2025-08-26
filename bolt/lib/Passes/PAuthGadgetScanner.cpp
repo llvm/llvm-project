@@ -533,7 +533,7 @@ public:
     std::vector<MCInstReference> Result;
     for (const MCInst *Inst : lastWritingInsts(S, ClobberedReg)) {
       MCInstReference Ref = MCInstReference::get(Inst, BF);
-      assert(Ref && "Expected Inst to be found");
+      assert(!Ref.empty() && "Expected Inst to be found");
       Result.push_back(Ref);
     }
     return Result;
@@ -1105,7 +1105,7 @@ public:
     std::vector<MCInstReference> Result;
     for (const MCInst *Inst : firstLeakingInsts(S, LeakedReg)) {
       MCInstReference Ref = MCInstReference::get(Inst, BF);
-      assert(Ref && "Expected Inst to be found");
+      assert(!Ref.empty() && "Expected Inst to be found");
       Result.push_back(Ref);
     }
     return Result;
@@ -1743,9 +1743,11 @@ static void printRelatedInstrs(raw_ostream &OS, const MCInstReference Location,
   const BinaryFunction &BF = *Location.getFunction();
   const BinaryContext &BC = BF.getBinaryContext();
 
-  // Sort the references to make output deterministic.
+  // Sort by address to ensure output is deterministic.
   SmallVector<MCInstReference> RI(RelatedInstrs);
-  llvm::sort(RI);
+  llvm::sort(RI, [](const MCInstReference &A, const MCInstReference &B) {
+    return getAddress(A) < getAddress(B);
+  });
   for (unsigned I = 0; I < RI.size(); ++I) {
     MCInstReference InstRef = RI[I];
     OS << "  " << (I + 1) << ". ";

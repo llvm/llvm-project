@@ -11,7 +11,6 @@
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include <map>
-#include <tuple>
 #include <variant>
 
 namespace llvm {
@@ -112,6 +111,7 @@ public:
   }
 
   const MCInst &getMCInst() const {
+    assert(!empty() && "Empty reference");
     if (auto *Ref = tryGetRefInBB())
       return *Ref->It;
     return getRefInBF().It->second;
@@ -119,23 +119,23 @@ public:
 
   operator const MCInst &() const { return getMCInst(); }
 
-  operator bool() const {
+  bool empty() const {
     if (auto *Ref = tryGetRefInBB())
-      return Ref->BB != nullptr;
-    return getRefInBF().BF != nullptr;
+      return Ref->BB == nullptr;
+    return getRefInBF().BF == nullptr;
   }
 
-  bool hasCFG() const {
-    return static_cast<bool>(*this) && tryGetRefInBB() != nullptr;
-  }
+  bool hasCFG() const { return !empty() && tryGetRefInBB() != nullptr; }
 
   const BinaryFunction *getFunction() const {
+    assert(!empty() && "Empty reference");
     if (auto *Ref = tryGetRefInBB())
       return Ref->BB->getFunction();
     return getRefInBF().BF;
   }
 
   const BinaryBasicBlock *getBasicBlock() const {
+    assert(!empty() && "Empty reference");
     if (auto *Ref = tryGetRefInBB())
       return Ref->BB;
     return nullptr;
