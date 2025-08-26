@@ -4146,7 +4146,10 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
   llvm::StringRef TrapMessage;
   llvm::StringRef TrapCategory;
-  if (TR && !TR->isEmpty()) {
+  auto DebugTrapReasonKind = CGM.getCodeGenOpts().getSanitizeDebugTrapReasons();
+  if (TR && !TR->isEmpty() &&
+      DebugTrapReasonKind ==
+          CodeGenOptions::SanitizeDebugTrapReasonKind::Detailed) {
     TrapMessage = TR->getMessage();
     TrapCategory = TR->getCategory();
   } else {
@@ -4155,7 +4158,9 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   }
 
   if (getDebugInfo() && !TrapMessage.empty() &&
-      CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
+      DebugTrapReasonKind !=
+          CodeGenOptions::SanitizeDebugTrapReasonKind::None &&
+      TrapLocation) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
         TrapLocation, TrapCategory, TrapMessage);
   }
