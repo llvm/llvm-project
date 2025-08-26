@@ -65,7 +65,7 @@ jobs:
           # several test suites in a row and discard statistics that we want
           # to save in the end.
           export SCCACHE_IDLE_TIMEOUT=0
-          sccache --start-server
+          SCCACHE_LOG=info SCCACHE_ERROR_LOG=artifacts/sccache.log sccache --start-server
 
           ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}" "${enable_cir}"
       - name: Upload Artifacts
@@ -117,7 +117,7 @@ jobs:
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of
           # these environment variables.
-          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; sccache --start-server; .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\""
+          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; SCCACHE_LOG=info SCCACHE_ERROR_LOG=artifacts/sccache.log sccache --start-server; .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\""
       - name: Upload Artifacts
         # In some cases, Github will fail to upload the artifact. We want to
         # continue anyways as a failed artifact upload is an infra failure, not
