@@ -2264,7 +2264,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
   // For Trunc/FPTrunc, get the context from the only user.
   if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
-    static auto GetOnlyUser = [](const VPSingleDefRecipe *R) -> VPRecipeBase * {
+    auto GetOnlyUser = [](const VPSingleDefRecipe *R) -> VPRecipeBase * {
       if (R->hasMoreThanOneUniqueUser() || R->getNumUsers() == 0)
         return nullptr;
       return dyn_cast<VPRecipeBase>(*R->user_begin());
