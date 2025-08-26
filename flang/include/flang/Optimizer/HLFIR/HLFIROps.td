@@ -348,6 +348,26 @@ def hlfir_ConcatOp : hlfir_Op<"concat",
   let hasVerifier = 1;
 }
 
+def hlfir_CmpCharOp : hlfir_Op<"cmpchar",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "compare two characters";
+  let description = [{
+    Compare two character strings of a same character kind.
+  }];
+
+  let arguments = (ins Arith_CmpIPredicateAttr:$predicate,
+                AnyScalarCharacterEntity:$lchr,
+                AnyScalarCharacterEntity:$rchr);
+
+  let results = (outs I1);
+
+  let assemblyFormat = [{
+      $predicate $lchr $rchr attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_AllOp : hlfir_Op<"all", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "ALL transformational intrinsic";
   let description = [{
