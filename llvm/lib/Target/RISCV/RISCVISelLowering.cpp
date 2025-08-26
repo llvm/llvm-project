@@ -16065,7 +16065,7 @@ static SDValue combineOrOfCZERO(SDNode *N, SDValue N0, SDValue N1,
   return DAG.getNode(ISD::XOR, DL, VT, NewOr, TrueV.getOperand(1));
 }
 
-// (xor X, (and(xor X, Y), C2))
+// (xor X, (xor (and X, C2), Y))
 // ->(qc_insb X, (sra Y, ShAmt), Width, ShAmt)
 // where C2 is a shifted mask with width = Width and shift = ShAmt
 // qc_insb might become qc.insb or qc.insbi depending on the operands.
@@ -16093,7 +16093,7 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 
   SDLoc DL(N);
 
-  // `Inserted` needs to be right - shifted before it is put into the
+  // `Inserted` needs to be right shifted before it is put into the
   // instruction.
   Inserted = DAG.getNode(ISD::SRA, DL, MVT::i32, Inserted,
                          DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
