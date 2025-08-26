@@ -315,7 +315,7 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
       Cmds += Arg;
     }
 
-    clangd::vlog("Failed to compile {0} with command: {1}.", ModuleUnitFileName,
+    clangd::vlog("Failed to compile {0} with command: {1}", ModuleUnitFileName,
                  Cmds);
 
     std::string BuiltModuleFilesStr = BuiltModuleFiles.getAsString();
