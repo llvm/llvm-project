@@ -62,6 +62,8 @@ Deprecations and Removals
 Potentially breaking changes
 ----------------------------
 
+- The algorithm for ``multi{map,set}::find`` has been modified such that it doesn't necessarily return an iterator to the first equal element in the container. This was never guaranteed by the Standard, but libc++ previously happened to always return the first equal element, like other implementations do. Starting with this release, code relying on the first element being returned from ``find`` will be broken, and ``lower_bound`` or ``equal_range`` should be used instead.
+
 Announcements About Future Releases
 -----------------------------------
 
