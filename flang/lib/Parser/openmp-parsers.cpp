@@ -1921,7 +1921,7 @@ TYPE_PARSER(sourced(construct<OpenMPSectionsConstruct>(
             construct<OpenMPSectionConstruct>(maybe(sectionDir), block))),
         many(construct<OpenMPConstruct>(
             sourced(construct<OpenMPSectionConstruct>(sectionDir, block))))),
-    Parser<OmpEndSectionsDirective>{} / endOmpLine)))
+    maybe(Parser<OmpEndSectionsDirective>{} / endOmpLine))))
 
 static bool IsExecutionPart(const OmpDirectiveName &name) {
   return name.IsExecutionPart();

@@ -4893,8 +4893,11 @@ struct OpenMPSectionsConstruct {
   CharBlock source;
   // Each of the OpenMPConstructs in the list below contains an
   // OpenMPSectionConstruct. This is guaranteed by the parser.
+  // The end sections directive is optional here because it is difficult to
+  // generate helpful error messages for a missing end directive within the
+  // parser. Semantics will generate an error if this is absent.
   std::tuple<OmpBeginSectionsDirective, std::list<OpenMPConstruct>,
-      OmpEndSectionsDirective>
+      std::optional<OmpEndSectionsDirective>>
       t;
 };
 
