@@ -383,14 +383,13 @@ define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %
 ; RV32-NEXT:    vmsne.vi v0, v10, 0
 ; RV32-NEXT:    vle32.v v10, (a0), v0.t
 ; RV32-NEXT:    li a2, 32
-; RV32-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; RV32-NEXT:    vnsrl.wx v13, v10, a2
 ; RV32-NEXT:    vnsrl.wi v12, v10, 0
-; RV32-NEXT:    vmv.x.s a2, v10
+; RV32-NEXT:    vmv.x.s a1, v10
 ; RV32-NEXT:    vmv1r.v v0, v8
-; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; RV32-NEXT:    vsseg2e32.v v12, (a0), v0.t
-; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: masked_load_store_factor2_v2_shared_mask_extract:
