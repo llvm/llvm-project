@@ -33,7 +33,7 @@ Visibility Macros
   this macro applies `dllimport`/`dllexport` to the symbol, and on other
   platforms it gives the symbol default visibility. This macro should never be
   used on class templates. On classes it should only be used if the vtable
-  should be in the shared library.
+  lives in the built library.
 
 **_LIBCPP_OVERRIDABLE_FUNC_VIS**
   Mark a symbol as being exported by the libc++ library, but allow it to be
