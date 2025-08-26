@@ -72,7 +72,7 @@ protected:
   void SetUp() override;
 
   using Builder = std::function<Expected<std::unique_ptr<mca::Instruction>>(
-      mca::InstrBuilder&, const MCInst&,
+      mca::InstrBuilder &, const MCInst &,
       const SmallVector<mca::Instrument *> &)>;
 
   /// Utility function to run MCA with (nearly) the same configuration as the
