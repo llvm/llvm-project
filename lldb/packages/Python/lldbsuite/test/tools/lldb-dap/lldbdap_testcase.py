@@ -477,9 +477,21 @@ class DAPTestCaseBase(TestBase):
         if expectFailure:
             return response
         if not (response and response["success"]):
-            self.assertTrue(
-                response["success"], "attach failed (%s)" % (response["message"])
-            )
+            error_msg = "attach failed"
+            if response:
+                if "message" in response:
+                    error_msg += " (%s)" % response["message"]
+                elif "body" in response and "error" in response["body"]:
+                    if "format" in response["body"]["error"]:
+                        error_msg += " (%s)" % response["body"]["error"]["format"]
+                    else:
+                        error_msg += " (error in body)"
+                else:
+                    error_msg += " (no error details available)"
+            else:
+                error_msg += " (no response)"
+            self.assertTrue(response and response["success"], error_msg)
+
 
     def launch(
         self,
