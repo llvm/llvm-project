@@ -11,10 +11,29 @@
 // RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-config \
 // RUN:     unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes=true
+// RUN: %clang_analyze_cc1 -std=c++20 -analyzer-checker=cplusplus.NewDeleteLeaks -verify %s
 
 #include "Inputs/system-header-simulator-for-malloc.h"
 
-#include <utility>
+// Minimal move, no headers needed, C++11+
+namespace nstd {
+
+template <class T>
+struct remove_reference { using type = T; };
+template <class T>
+struct remove_reference<T&> { using type = T; };
+template <class T>
+struct remove_reference<T&&> { using type = T; };
+
+template <class T>
+constexpr typename remove_reference<T>::type&& move(T&& t) noexcept {
+    using U = typename remove_reference<T>::type;
+    return static_cast<U&&>(t);
+}
+
+} // namespace nstd
+
+
 
 //===----------------------------------------------------------------------===//
 // Report for which we expect NoOwnershipChangeVisitor to add a new note.
@@ -222,9 +241,6 @@ void caller() {
 } // namespace symbol_reaper_lifetime
 
 
-// RUN: %clang_analyze_cc1 -std=c++20 -analyzer-checker=cplusplus.NewDeleteLeaks -verify %s
-
-
 // Minimal RAII class that properly deletes its pointer.
 class Bar {
 public:
@@ -267,7 +283,7 @@ struct FooWithConstructor {
   Bar a;
   Bar b;
   FooWithConstructor(Bar &&original_a, Bar &&original_b)
-      : a(std::move(original_a)), b(std::move(original_b)) {}
+      : a(nstd::move(original_a)), b(nstd::move(original_b)) {}
 };
 
 //===----------------------------------------------------------------------===//
