@@ -535,7 +535,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
         continue;
 
       VPBuilder Builder(RepR);
-      if (RepR->getNumUsers() == 0) {
+      if (RepR->getNumUses() == 0) {
         if (isa<StoreInst>(RepR->getUnderlyingInstr()) &&
             vputils::isSingleScalar(RepR->getOperand(1))) {
           // Stores to invariant addresses need to store the last lane only.

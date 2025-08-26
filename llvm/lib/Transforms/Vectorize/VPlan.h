@@ -4204,7 +4204,7 @@ public:
   /// Resets the trip count for the VPlan. The caller must make sure all uses of
   /// the original trip count have been replaced.
   void resetTripCount(VPValue *NewTripCount) {
-    assert(TripCount && NewTripCount && TripCount->getNumUsers() == 0 &&
+    assert(TripCount && NewTripCount && TripCount->getNumUses() == 0 &&
            "TripCount must be set when resetting");
     TripCount = NewTripCount;
   }

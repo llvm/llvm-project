@@ -316,7 +316,7 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       });
 
       // Remove phi recipes that are unused after merging the regions.
-      if (Phi1ToMove.getVPSingleValue()->getNumUsers() == 0) {
+      if (Phi1ToMove.getVPSingleValue()->getNumUses() == 0) {
         Phi1ToMove.eraseFromParent();
         continue;
       }
@@ -363,7 +363,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
 
   VPPredInstPHIRecipe *PHIRecipe = nullptr;
-  if (PredRecipe->getNumUsers() != 0) {
+  if (PredRecipe->getNumUses() != 0) {
     PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask,
                                         RecipeWithoutMask->getDebugLoc());
     PredRecipe->replaceAllUsesWith(PHIRecipe);
@@ -547,7 +547,7 @@ static bool isDeadRecipe(VPRecipeBase &R) {
 
   // Recipe is dead if no user keeps the recipe alive.
   return all_of(R.definedValues(),
-                [](VPValue *V) { return V->getNumUsers() == 0; });
+                [](VPValue *V) { return V->getNumUses() == 0; });
 }
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
@@ -563,11 +563,11 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
 
       // Check if R is a dead VPPhi <-> update cycle and remove it.
       auto *PhiR = dyn_cast<VPPhi>(&R);
-      if (!PhiR || PhiR->getNumOperands() != 2 || PhiR->getNumUsers() != 1)
+      if (!PhiR || PhiR->getNumOperands() != 2 || PhiR->getNumUses() != 1)
         continue;
       VPValue *Incoming = PhiR->getOperand(1);
       if (*PhiR->user_begin() != Incoming->getDefiningRecipe() ||
-          Incoming->getNumUsers() != 1)
+          Incoming->getNumUses() != 1)
         continue;
       PhiR->replaceAllUsesWith(PhiR->getOperand(0));
       PhiR->eraseFromParent();
@@ -658,7 +658,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(U);
       // Skip recipes that shouldn't be narrowed.
       if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
-          Def->getNumUsers() == 0 || !Def->getUnderlyingValue() ||
+          Def->getNumUses() == 0 || !Def->getUnderlyingValue() ||
           (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
         continue;
 
@@ -1344,7 +1344,7 @@ static void simplifyBlends(VPlan &Plan) {
         // TODO: Find the most expensive mask that can be deadcoded, or a mask
         // that's used by multiple blends where it can be removed from them all.
         VPValue *Mask = Blend->getMask(I);
-        if (Mask->getNumUsers() == 1 && !match(Mask, m_False())) {
+        if (Mask->getNumUses() == 1 && !match(Mask, m_False())) {
           StartIndex = I;
           break;
         }
@@ -1380,7 +1380,7 @@ static void simplifyBlends(VPlan &Plan) {
         NewBlend->setOperand(0, Inc1);
         NewBlend->setOperand(1, Inc0);
         NewBlend->setOperand(2, NewMask);
-        if (OldMask->getNumUsers() == 0)
+        if (OldMask->getNumUses() == 0)
           cast<VPInstruction>(OldMask)->eraseFromParent();
       }
     }
@@ -2467,7 +2467,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     ToErase.push_back(CurRecipe);
   }
   // Remove dead EVL mask.
-  if (EVLMask->getNumUsers() == 0)
+  if (EVLMask->getNumUses() == 0)
     ToErase.push_back(EVLMask->getDefiningRecipe());
 
   for (VPRecipeBase *R : reverse(ToErase)) {
@@ -3445,7 +3445,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 #endif
 
   SmallVector<VPValue *> VPValues;
-  if (Plan.getOrCreateBackedgeTakenCount()->getNumUsers() > 0)
+  if (Plan.getOrCreateBackedgeTakenCount()->getNumUses() > 0)
     VPValues.push_back(Plan.getOrCreateBackedgeTakenCount());
   append_range(VPValues, Plan.getLiveIns());
   for (VPRecipeBase &R : *Plan.getEntry())
@@ -3514,7 +3514,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
 void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
                                                     VPBasicBlock *VectorPH) {
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  if (BTC->getNumUsers() == 0)
+  if (BTC->getNumUses() == 0)
     return;
 
   VPBuilder Builder(VectorPH, VectorPH->begin());
@@ -3580,7 +3580,7 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   assert(VectorTC.isLiveIn() && "vector-trip-count must be a live-in");
   // There's nothing to do if there are no users of the vector trip count or its
   // IR value has already been set.
-  if (VectorTC.getNumUsers() == 0 || VectorTC.getLiveInIRValue())
+  if (VectorTC.getNumUses() == 0 || VectorTC.getLiveInIRValue())
     return;
 
   VPValue *TC = Plan.getTripCount();
@@ -3645,7 +3645,7 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
 
   // If there are no users of the runtime VF, compute VFxUF by constant folding
   // the multiplication of VF and UF.
-  if (VF.getNumUsers() == 0) {
+  if (VF.getNumUses() == 0) {
     VPValue *RuntimeVFxUF =
         Builder.createElementCount(TCTy, VFEC * Plan.getUF());
     VFxUF.replaceAllUsesWith(RuntimeVFxUF);

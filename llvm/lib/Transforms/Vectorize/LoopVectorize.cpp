@@ -4207,7 +4207,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           // divisors.
           case Instruction::Select: {
             VPValue *VPV = VPI->getVPSingleValue();
-            if (VPV->getNumUsers() == 1) {
+            if (VPV->getNumUses() == 1) {
               if (auto *WR = dyn_cast<VPWidenRecipe>(*VPV->user_begin())) {
                 switch (WR->getOpcode()) {
                 case Instruction::UDiv:

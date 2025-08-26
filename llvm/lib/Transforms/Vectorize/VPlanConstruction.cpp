@@ -885,7 +885,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     if (VecV == RdxResult)
       continue;
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
-      if (DerivedIV->getNumUsers() == 1 &&
+      if (DerivedIV->getNumUses() == 1 &&
           DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
         auto *NewSel = Builder.createSelect(AnyNaN, Plan.getCanonicalIV(),
                                             &Plan.getVectorTripCount());

@@ -1056,25 +1056,25 @@ const VPRegionBlock *VPlan::getVectorLoopRegion() const {
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  if (VF.getNumUsers() > 0) {
+  if (VF.getNumUses() > 0) {
     O << "\nLive-in ";
     VF.printAsOperand(O, SlotTracker);
     O << " = VF";
   }
 
-  if (VFxUF.getNumUsers() > 0) {
+  if (VFxUF.getNumUses() > 0) {
     O << "\nLive-in ";
     VFxUF.printAsOperand(O, SlotTracker);
     O << " = VF * UF";
   }
 
-  if (VectorTripCount.getNumUsers() > 0) {
+  if (VectorTripCount.getNumUses() > 0) {
     O << "\nLive-in ";
     VectorTripCount.printAsOperand(O, SlotTracker);
     O << " = vector-trip-count";
   }
 
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
+  if (BackedgeTakenCount && BackedgeTakenCount->getNumUses()) {
     O << "\nLive-in ";
     BackedgeTakenCount->printAsOperand(O, SlotTracker);
     O << " = backedge-taken count";
@@ -1416,7 +1416,7 @@ void VPValue::replaceUsesWithIf(
   if (this == New)
     return;
 
-  for (unsigned J = 0; J < getNumUsers();) {
+  for (unsigned J = 0; J < getNumUses();) {
     VPUser *User = Users[J];
     bool RemovedUser = false;
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
@@ -1492,9 +1492,9 @@ void VPSlotTracker::assignName(const VPValue *V) {
 }
 
 void VPSlotTracker::assignNames(const VPlan &Plan) {
-  if (Plan.VF.getNumUsers() > 0)
+  if (Plan.VF.getNumUses() > 0)
     assignName(&Plan.VF);
-  if (Plan.VFxUF.getNumUsers() > 0)
+  if (Plan.VFxUF.getNumUses() > 0)
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
