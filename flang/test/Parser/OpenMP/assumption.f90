@@ -13,10 +13,12 @@ subroutine sub1
   !$omp end assume
 
   !$omp assume absent(allocate), contains(workshare, task)
-  !$omp end assume
+  block ! strictly-structured-block
+  end block
 
   !$omp assume holds(1.eq.1)
-  !$omp end assume
+  block
+  end block
   print *, r
 end subroutine sub1
 
@@ -29,9 +31,11 @@ end subroutine sub1
 !UNPARSE: !$OMP ASSUME NO_OPENMP_ROUTINES
 !UNPARSE: !$OMP END ASSUME
 !UNPARSE: !$OMP ASSUME ABSENT(ALLOCATE) CONTAINS(WORKSHARE,TASK)
-!UNPARSE: !$OMP END ASSUME
+!UNPARSE:  BLOCK
+!UNPARSE:  END BLOCK
 !UNPARSE: !$OMP ASSUME HOLDS(1==1)
-!UNPARSE: !$OMP END ASSUME
+!UNPARSE:  BLOCK
+!UNPARSE:  END BLOCK
 !UNPARSE:  PRINT *, r
 !UNPARSE: END SUBROUTINE sub1
 
@@ -73,10 +77,12 @@ end subroutine sub1
 !PARSE-TREE: | | llvm::omp::Directive = task
 !PARSE-TREE: | | Flags = None
 !PARSE-TREE: | Block
-!PARSE-TREE: | OmpEndDirective
-!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
-!PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> BlockConstruct
+!PARSE-TREE: | | | BlockStmt ->
+!PARSE-TREE: | | | BlockSpecificationPart -> SpecificationPart
+!PARSE-TREE: | | | | ImplicitPart ->
+!PARSE-TREE: | | | Block
+!PARSE-TREE: | | | EndBlockStmt ->
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAssumeConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
@@ -85,10 +91,12 @@ end subroutine sub1
 !PARSE-TREE: | | | Expr -> LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | | Flags = None
 !PARSE-TREE: | Block
-!PARSE-TREE: | OmpEndDirective
-!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = assume
-!PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> BlockConstruct
+!PARSE-TREE: | | | BlockStmt ->
+!PARSE-TREE: | | | BlockSpecificationPart -> SpecificationPart
+!PARSE-TREE: | | | | ImplicitPart ->
+!PARSE-TREE: | | | Block
+!PARSE-TREE: | | | EndBlockStmt ->
 
 
 subroutine sub2
