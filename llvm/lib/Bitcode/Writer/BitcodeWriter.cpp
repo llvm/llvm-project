@@ -1495,14 +1495,11 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   // compute the maximum alignment value.
   std::map<std::string, unsigned> SectionMap;
   std::map<std::string, unsigned> GCMap;
-  MaybeAlign MaxAlignment;
+  MaybeAlign MaxGVarAlignment;
   unsigned MaxGlobalType = 0;
-  const auto UpdateMaxAlignment = [&MaxAlignment](const MaybeAlign A) {
-    if (A)
-      MaxAlignment = !MaxAlignment ? *A : std::max(*MaxAlignment, *A);
-  };
   for (const GlobalVariable &GV : M.globals()) {
-    UpdateMaxAlignment(GV.getAlign());
+    if (MaybeAlign A = GV.getAlign())
+      MaxGVarAlignment = !MaxGVarAlignment ? *A : std::max(*MaxGVarAlignment, *A);
     MaxGlobalType = std::max(MaxGlobalType, VE.getTypeID(GV.getValueType()));
     if (GV.hasSection()) {
       // Give section names unique ID's.
@@ -1515,7 +1512,6 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     }
   }
   for (const Function &F : M) {
-    UpdateMaxAlignment(F.getAlign());
     if (F.hasSection()) {
       // Give section names unique ID's.
       unsigned &Entry = SectionMap[std::string(F.getSection())];
@@ -1551,10 +1547,10 @@ void ModuleBitcodeWriter::writeModuleInfo() {
                                                            //| constant
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // Initializer.
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // Linkage.
-    if (!MaxAlignment)                                     // Alignment.
+    if (!MaxGVarAlignment)                                 // Alignment.
       Abbv->Add(BitCodeAbbrevOp(0));
     else {
-      unsigned MaxEncAlignment = getEncodedAlign(MaxAlignment);
+      unsigned MaxEncAlignment = getEncodedAlign(MaxGVarAlignment);
       Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
                                Log2_32_Ceil(MaxEncAlignment+1)));
     }
