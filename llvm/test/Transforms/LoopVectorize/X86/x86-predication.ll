@@ -136,12 +136,10 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; SINK-GATHER-NEXT:    [[TMP49:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP47]])
 ; SINK-GATHER-NEXT:    br label [[FOR_END:%.*]]
 ; SINK-GATHER:       scalar.ph:
-; SINK-GATHER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; SINK-GATHER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; SINK-GATHER-NEXT:    br label [[FOR_BODY:%.*]]
 ; SINK-GATHER:       for.body:
-; SINK-GATHER-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; SINK-GATHER-NEXT:    [[R:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[T7:%.*]], [[FOR_INC]] ]
+; SINK-GATHER-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; SINK-GATHER-NEXT:    [[R:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[T7:%.*]], [[FOR_INC]] ]
 ; SINK-GATHER-NEXT:    [[T0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; SINK-GATHER-NEXT:    [[T1:%.*]] = load i32, ptr [[T0]], align 4
 ; SINK-GATHER-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[FOR_INC]]

@@ -22,7 +22,7 @@ body:             |
     ; CHECK: renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
     ; CHECK: renamable $q1 = MVE_VMOVimmi32 1, 0, $noreg, $noreg, undef renamable $q1
     ; CHECK: renamable $q2 = MVE_VADD_qr_i32 renamable $q1, renamable $r1, 0, $noreg, $noreg, undef renamable $q2
-    ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q0, implicit-def $d0, implicit-def $s0, implicit-def $s1, implicit-def $d1, implicit-def $s2, implicit-def $s3, implicit killed $q0, implicit $q1, implicit killed $q2 {
+    ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q0, implicit killed $q0, implicit $q1, implicit killed $q2 {
     ; CHECK:   MVE_VPTv4u32 8, renamable $q0, renamable $q1, 8, implicit-def $vpr
     ; CHECK:   renamable $q0 = MVE_VORR killed renamable $q0, killed renamable $q2, 1, internal killed renamable $vpr, $noreg, renamable $q0
     ; CHECK: }

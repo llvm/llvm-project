@@ -23,8 +23,6 @@ define i32 @cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:  entry:
 ; IF-EVL-OUTLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-OUTLOOP:       vector.ph:
-; IF-EVL-OUTLOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-OUTLOOP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START]], i32 0
 ; IF-EVL-OUTLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL-OUTLOOP:       vector.body:
@@ -68,8 +66,6 @@ define i32 @cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:  entry:
 ; IF-EVL-INLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-INLOOP:       vector.ph:
-; IF-EVL-INLOOP-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-INLOOP-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 4
 ; IF-EVL-INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL-INLOOP:       vector.body:
 ; IF-EVL-INLOOP-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -110,7 +106,7 @@ define i32 @cond_add(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-VP-OUTLOOP-NEXT:  entry:
 ; NO-VP-OUTLOOP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-OUTLOOP-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
+; NO-VP-OUTLOOP-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; NO-VP-OUTLOOP-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-OUTLOOP-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-OUTLOOP:       vector.ph:
@@ -158,7 +154,7 @@ define i32 @cond_add(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-VP-INLOOP-NEXT:  entry:
 ; NO-VP-INLOOP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-INLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; NO-VP-INLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-INLOOP:       vector.ph:
@@ -226,8 +222,6 @@ define i32 @cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:  entry:
 ; IF-EVL-OUTLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-OUTLOOP:       vector.ph:
-; IF-EVL-OUTLOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-OUTLOOP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START]], i32 0
 ; IF-EVL-OUTLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL-OUTLOOP:       vector.body:
@@ -280,8 +274,6 @@ define i32 @cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:  entry:
 ; IF-EVL-INLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-INLOOP:       vector.ph:
-; IF-EVL-INLOOP-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-INLOOP-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 4
 ; IF-EVL-INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL-INLOOP:       vector.body:
 ; IF-EVL-INLOOP-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -325,7 +317,7 @@ define i32 @cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
 ; NO-VP-OUTLOOP-NEXT:  entry:
 ; NO-VP-OUTLOOP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-OUTLOOP-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
+; NO-VP-OUTLOOP-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; NO-VP-OUTLOOP-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-OUTLOOP-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-OUTLOOP:       vector.ph:
@@ -377,7 +369,7 @@ define i32 @cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
 ; NO-VP-INLOOP-NEXT:  entry:
 ; NO-VP-INLOOP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-INLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; NO-VP-INLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-INLOOP:       vector.ph:
@@ -455,8 +447,6 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:  entry:
 ; IF-EVL-OUTLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-OUTLOOP:       vector.ph:
-; IF-EVL-OUTLOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-OUTLOOP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START]], i32 0
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP11:%.*]] = mul <vscale x 4 x i32> [[TMP10]], splat (i32 1)
@@ -468,8 +458,7 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; IF-EVL-OUTLOOP-NEXT:    [[TMP13:%.*]] = mul i32 1, [[TMP12]]
-; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP13]], i64 0
+; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP12]], i64 0
 ; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV1]]
 ; IF-EVL-OUTLOOP-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -509,8 +498,6 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:  entry:
 ; IF-EVL-INLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-INLOOP:       vector.ph:
-; IF-EVL-INLOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-INLOOP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-INLOOP-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-INLOOP-NEXT:    [[TMP10:%.*]] = mul <vscale x 4 x i32> [[TMP9]], splat (i32 1)
 ; IF-EVL-INLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP10]]
@@ -521,8 +508,7 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-INLOOP-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-INLOOP-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; IF-EVL-INLOOP-NEXT:    [[TMP12:%.*]] = mul i32 1, [[TMP11]]
-; IF-EVL-INLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP12]], i64 0
+; IF-EVL-INLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
 ; IF-EVL-INLOOP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-INLOOP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV1]]
 ; IF-EVL-INLOOP-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
@@ -560,7 +546,7 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
 ; NO-VP-OUTLOOP-NEXT:  entry:
 ; NO-VP-OUTLOOP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-OUTLOOP-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
+; NO-VP-OUTLOOP-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; NO-VP-OUTLOOP-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-OUTLOOP-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-OUTLOOP:       vector.ph:
@@ -573,8 +559,7 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT:    [[TMP14:%.*]] = mul <vscale x 4 x i32> [[TMP12]], splat (i32 1)
 ; NO-VP-OUTLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP14]]
 ; NO-VP-OUTLOOP-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP7]] to i32
-; NO-VP-OUTLOOP-NEXT:    [[TMP17:%.*]] = mul i32 1, [[TMP16]]
-; NO-VP-OUTLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP17]], i64 0
+; NO-VP-OUTLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP16]], i64 0
 ; NO-VP-OUTLOOP-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-OUTLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP-OUTLOOP:       vector.body:
@@ -618,7 +603,7 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
 ; NO-VP-INLOOP-NEXT:  entry:
 ; NO-VP-INLOOP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-INLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; NO-VP-INLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-INLOOP:       vector.ph:
@@ -630,8 +615,7 @@ define i32 @step_cond_add(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i32> [[TMP6]], splat (i32 1)
 ; NO-VP-INLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP8]]
 ; NO-VP-INLOOP-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP3]] to i32
-; NO-VP-INLOOP-NEXT:    [[TMP11:%.*]] = mul i32 1, [[TMP10]]
-; NO-VP-INLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
+; NO-VP-INLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP10]], i64 0
 ; NO-VP-INLOOP-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP-INLOOP:       vector.body:
@@ -697,8 +681,6 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:  entry:
 ; IF-EVL-OUTLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-OUTLOOP:       vector.ph:
-; IF-EVL-OUTLOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-OUTLOOP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START]], i32 0
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP13:%.*]] = mul <vscale x 4 x i32> [[TMP10]], splat (i32 1)
@@ -710,13 +692,10 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    [[VEC_IND2:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION1]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT7:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP14]], i64 0
-; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-OUTLOOP-NEXT:    [[TMP11:%.*]] = mul i32 1, [[TMP14]]
-; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
+; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP14]], i64 0
 ; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
-; IF-EVL-OUTLOOP-NEXT:    [[TMP18:%.*]] = icmp ult <vscale x 4 x i32> [[TMP12]], [[BROADCAST_SPLAT4]]
+; IF-EVL-OUTLOOP-NEXT:    [[TMP18:%.*]] = icmp ult <vscale x 4 x i32> [[TMP12]], [[BROADCAST_SPLAT2]]
 ; IF-EVL-OUTLOOP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-OUTLOOP-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[ARRAYIDX]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP14]])
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP21:%.*]] = icmp sle <vscale x 4 x i32> [[VP_OP_LOAD]], [[VEC_IND2]]
@@ -760,8 +739,6 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:  entry:
 ; IF-EVL-INLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-INLOOP:       vector.ph:
-; IF-EVL-INLOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-INLOOP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-INLOOP-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-INLOOP-NEXT:    [[TMP10:%.*]] = mul <vscale x 4 x i32> [[TMP9]], splat (i32 1)
 ; IF-EVL-INLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP10]]
@@ -772,8 +749,7 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-INLOOP-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-INLOOP-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; IF-EVL-INLOOP-NEXT:    [[TMP12:%.*]] = mul i32 1, [[TMP11]]
-; IF-EVL-INLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP12]], i64 0
+; IF-EVL-INLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
 ; IF-EVL-INLOOP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-INLOOP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-INLOOP-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[ARRAYIDX]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
@@ -814,7 +790,7 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
 ; NO-VP-OUTLOOP-NEXT:  entry:
 ; NO-VP-OUTLOOP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-OUTLOOP-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
+; NO-VP-OUTLOOP-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; NO-VP-OUTLOOP-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-OUTLOOP-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-OUTLOOP:       vector.ph:
@@ -827,8 +803,7 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT:    [[TMP14:%.*]] = mul <vscale x 4 x i32> [[TMP12]], splat (i32 1)
 ; NO-VP-OUTLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP14]]
 ; NO-VP-OUTLOOP-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP7]] to i32
-; NO-VP-OUTLOOP-NEXT:    [[TMP17:%.*]] = mul i32 1, [[TMP16]]
-; NO-VP-OUTLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP17]], i64 0
+; NO-VP-OUTLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP16]], i64 0
 ; NO-VP-OUTLOOP-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-OUTLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP-OUTLOOP:       vector.body:
@@ -876,7 +851,7 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
 ; NO-VP-INLOOP-NEXT:  entry:
 ; NO-VP-INLOOP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; NO-VP-INLOOP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-INLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; NO-VP-INLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-INLOOP:       vector.ph:
@@ -888,8 +863,7 @@ define i32 @step_cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i32> [[TMP6]], splat (i32 1)
 ; NO-VP-INLOOP-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP8]]
 ; NO-VP-INLOOP-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP3]] to i32
-; NO-VP-INLOOP-NEXT:    [[TMP11:%.*]] = mul i32 1, [[TMP10]]
-; NO-VP-INLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP11]], i64 0
+; NO-VP-INLOOP-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP10]], i64 0
 ; NO-VP-INLOOP-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP-INLOOP:       vector.body:

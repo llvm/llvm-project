@@ -246,6 +246,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                    MVT::v2f64})
       setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
 
+    setOperationAction(ISD::AVGCEILU, {MVT::v8i16, MVT::v16i8}, Legal);
+
     // Custom lowering since wasm shifts must have a scalar shift amount
     for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})
@@ -1320,18 +1322,21 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // signature They are necessary to match callee and caller signature for
   // indirect call.
   if (CallConv == CallingConv::Swift) {
+    Type *PtrTy = PointerType::getUnqual(*DAG.getContext());
     if (!HasSwiftSelfArg) {
       NumFixedArgs++;
-      ISD::OutputArg Arg;
-      Arg.Flags.setSwiftSelf();
+      ISD::ArgFlagsTy Flags;
+      Flags.setSwiftSelf();
+      ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
       CLI.Outs.push_back(Arg);
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
       CLI.OutVals.push_back(ArgVal);
     }
     if (!HasSwiftErrorArg) {
       NumFixedArgs++;
-      ISD::OutputArg Arg;
-      Arg.Flags.setSwiftError();
+      ISD::ArgFlagsTy Flags;
+      Flags.setSwiftError();
+      ISD::OutputArg Arg(Flags, PtrVT, EVT(PtrVT), PtrTy, 0, 0);
       CLI.Outs.push_back(Arg);
       SDValue ArgVal = DAG.getUNDEF(PtrVT);
       CLI.OutVals.push_back(ArgVal);
@@ -3426,7 +3431,8 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                    DL, MVT::i32),
                    Cmp});
 
-  return DAG.getSetCC(DL, VT, Intr, DAG.getConstant(0, DL, MVT::i32), CC);
+  return DAG.getSetCC(DL, VT, Intr, DAG.getConstant(0, DL, MVT::i32),
+                      ISD::SETNE);
 }
 
 static SDValue performSETCCCombine(SDNode *N,

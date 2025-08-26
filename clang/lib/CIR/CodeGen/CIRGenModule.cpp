@@ -103,6 +103,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   PtrDiffTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
 
+  std::optional<cir::SourceLanguage> sourceLanguage = getCIRSourceLanguage();
+  if (sourceLanguage)
+    theModule->setAttr(
+        cir::CIRDialect::getSourceLanguageAttrName(),
+        cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
 
@@ -438,13 +443,27 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
     errorNYI(funcDecl->getSourceRange(), "deferredAnnotations");
 }
 
+void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
+  VarDecl::DefinitionKind dk = vd->isThisDeclarationADefinition();
+  if (dk == VarDecl::Definition && vd->hasAttr<DLLImportAttr>())
+    return;
+
+  TemplateSpecializationKind tsk = vd->getTemplateSpecializationKind();
+  // If we have a definition, this might be a deferred decl. If the
+  // instantiation is explicit, make sure we emit it at the end.
+  if (vd->getDefinition() && tsk == TSK_ExplicitInstantiationDefinition)
+    getAddrOfGlobalVar(vd);
+
+  emitTopLevelDecl(vd);
+}
+
 mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
   return mlir::SymbolTable::lookupSymbolIn(theModule, name);
 }
 
 cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
                                            mlir::Location loc, StringRef name,
-                                           mlir::Type t,
+                                           mlir::Type t, bool isConstant,
                                            mlir::Operation *insertPoint) {
   cir::GlobalOp g;
   CIRGenBuilderTy &builder = cgm.getBuilder();
@@ -465,7 +484,7 @@ cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
         builder.setInsertionPointToStart(cgm.getModule().getBody());
     }
 
-    g = builder.create<cir::GlobalOp>(loc, name, t);
+    g = builder.create<cir::GlobalOp>(loc, name, t, isConstant);
     if (!insertPoint)
       cgm.lastGlobalOp = g;
 
@@ -494,6 +513,24 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   assert(!cir::MissingFeatures::opFuncSection());
 
   assert(!cir::MissingFeatures::setTargetAttributes());
+}
+
+std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
+  using ClangStd = clang::LangStandard;
+  using CIRLang = cir::SourceLanguage;
+  auto opts = getLangOpts();
+
+  if (opts.CPlusPlus)
+    return CIRLang::CXX;
+  if (opts.C99 || opts.C11 || opts.C17 || opts.C23 || opts.C2y ||
+      opts.LangStd == ClangStd::lang_c89 ||
+      opts.LangStd == ClangStd::lang_gnu89)
+    return CIRLang::C;
+
+  // TODO(cir): support remaining source languages.
+  assert(!cir::MissingFeatures::sourceLanguageCases());
+  errorNYI("CIR does not yet support the given source language");
+  return std::nullopt;
 }
 
 static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
@@ -567,7 +604,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
   cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(*this, loc, mangledName, ty,
+      CIRGenModule::createGlobalOp(*this, loc, mangledName, ty, false,
                                    /*insertPoint=*/entry.getOperation());
 
   // This is the first use or definition of a mangled name.  If there is a
@@ -811,7 +848,7 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
         emitGlobalFunctionDefinition(gd, op);
 
       if (method->isVirtual())
-        errorNYI(method->getSourceRange(), "virtual member function");
+        getVTables().emitThunks(gd);
 
       return;
     }
@@ -1040,8 +1077,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &astContext,
     if (astContext.isAlignmentRequired(varType))
       return true;
 
-    if (const auto *rt = varType->getAs<RecordType>()) {
-      const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
+    if (const auto *rd = varType->getAsRecordDecl()) {
       for (const FieldDecl *fd : rd->fields()) {
         if (fd->isBitField())
           continue;
@@ -1225,8 +1261,8 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
-  cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(cgm, loc, globalName, c.getType());
+  cir::GlobalOp gv = CIRGenModule::createGlobalOp(
+      cgm, loc, globalName, c.getType(), !cgm.getLangOpts().WritableStrings);
 
   // Set up extra information and add to the module
   gv.setAlignmentAttr(cgm.getSize(alignment));
@@ -1302,6 +1338,19 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
   assert(!cir::MissingFeatures::sanitizers());
 
   return gv;
+}
+
+/// Return a pointer to a constant array for the given string literal.
+cir::GlobalViewAttr
+CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
+                                                 StringRef name) {
+  cir::GlobalOp gv = getGlobalForStringLiteral(s, name);
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(gv.getSymType());
+  assert(arrayTy && "String literal must be array");
+  assert(!cir::MissingFeatures::addressSpace());
+  cir::PointerType ptrTy = getBuilder().getPointerTo(arrayTy.getElementType());
+
+  return builder.getGlobalViewAttr(ptrTy, gv);
 }
 
 void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
@@ -2102,6 +2151,18 @@ bool CIRGenModule::verifyModule() const {
   // check the structural properties of the IR and invoke any specific
   // verifiers we have on the CIR operations.
   return mlir::verify(theModule).succeeded();
+}
+
+mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
+                                                      QualType ty, bool forEh) {
+  // Return a bogus pointer if RTTI is disabled, unless it's for EH.
+  // FIXME: should we even be calling this method if RTTI is disabled
+  // and it's not for EH?
+  if (!shouldEmitRTTI(forEh))
+    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+
+  errorNYI(loc, "getAddrOfRTTIDescriptor");
+  return mlir::Attribute();
 }
 
 // TODO(cir): this can be shared with LLVM codegen.

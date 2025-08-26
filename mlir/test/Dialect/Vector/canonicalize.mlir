@@ -625,40 +625,40 @@ func.func @insert_extract_transpose_2d(
 // -----
 
 // CHECK-LABEL: insert_extract_chain
-//  CHECK-SAME: %[[V234:[a-zA-Z0-9]*]]: vector<2x3x4xf32>
+//  CHECK-SAME: %[[V334:[a-zA-Z0-9]*]]: vector<3x3x4xf32>
 //  CHECK-SAME: %[[V34:[a-zA-Z0-9]*]]: vector<3x4xf32>
 //  CHECK-SAME: %[[V4:[a-zA-Z0-9]*]]: vector<4xf32>
-func.func @insert_extract_chain(%v234: vector<2x3x4xf32>, %v34: vector<3x4xf32>, %v4: vector<4xf32>)
+func.func @insert_extract_chain(%v334: vector<3x3x4xf32>, %v34: vector<3x4xf32>, %v4: vector<4xf32>)
     -> (vector<4xf32>, vector<4xf32>, vector<3x4xf32>, vector<3x4xf32>) {
   // CHECK-NEXT: %[[A34:.*]] = vector.insert
-  %A34 = vector.insert %v34, %v234[0]: vector<3x4xf32> into vector<2x3x4xf32>
+  %A34 = vector.insert %v34, %v334[0]: vector<3x4xf32> into vector<3x3x4xf32>
   // CHECK-NEXT: %[[B34:.*]] = vector.insert
-  %B34 = vector.insert %v34, %A34[1]: vector<3x4xf32> into vector<2x3x4xf32>
+  %B34 = vector.insert %v34, %A34[1]: vector<3x4xf32> into vector<3x3x4xf32>
   // CHECK-NEXT: %[[A4:.*]] = vector.insert
-  %A4 = vector.insert %v4, %B34[1, 0]: vector<4xf32> into vector<2x3x4xf32>
+  %A4 = vector.insert %v4, %B34[1, 0]: vector<4xf32> into vector<3x3x4xf32>
   // CHECK-NEXT: %[[B4:.*]] = vector.insert
-  %B4 = vector.insert %v4, %A4[1, 1]: vector<4xf32> into vector<2x3x4xf32>
+  %B4 = vector.insert %v4, %A4[1, 1]: vector<4xf32> into vector<3x3x4xf32>
 
   // Case 2.a. [1, 1] == insertpos ([1, 1])
   // Match %A4 insertionpos and fold to its source(i.e. %V4).
-   %r0 = vector.extract %B4[1, 1]: vector<4xf32> from vector<2x3x4xf32>
+   %r0 = vector.extract %B4[1, 1]: vector<4xf32> from vector<3x3x4xf32>
 
   // Case 3.a. insertpos ([1]) is a prefix of [1, 0].
   // Traverse %B34 to its source(i.e. %V34@[*0*]).
   // CHECK-NEXT: %[[R1:.*]] = vector.extract %[[V34]][0]
-   %r1 = vector.extract %B34[1, 0]: vector<4xf32> from vector<2x3x4xf32>
+   %r1 = vector.extract %B34[1, 0]: vector<4xf32> from vector<3x3x4xf32>
 
   // Case 4. [1] is a prefix of insertpos ([1, 1]).
   // Cannot traverse %B4.
   // CHECK-NEXT: %[[R2:.*]] = vector.extract %[[B4]][1]
-   %r2 = vector.extract %B4[1]: vector<3x4xf32> from vector<2x3x4xf32>
+   %r2 = vector.extract %B4[1]: vector<3x4xf32> from vector<3x3x4xf32>
 
   // Case 5. [0] is disjoint from insertpos ([1, 1]).
   // Traverse %B4 to its dest(i.e. %A4@[0]).
   // Traverse %A4 to its dest(i.e. %B34@[0]).
   // Traverse %B34 to its dest(i.e. %A34@[0]).
   // Match %A34 insertionpos and fold to its source(i.e. %V34).
-   %r3 = vector.extract %B4[0]: vector<3x4xf32> from vector<2x3x4xf32>
+   %r3 = vector.extract %B4[0]: vector<3x4xf32> from vector<3x3x4xf32>
 
   // CHECK: return %[[V4]], %[[R1]], %[[R2]], %[[V34]]
   return %r0, %r1, %r2, %r3:
@@ -1057,8 +1057,8 @@ func.func @insert_fold_same_rank(%v: vector<2x2xf32>) -> vector<2x2xf32> {
 
 // CHECK-LABEL: func @insert_no_fold_scalar_to_0d(
 //  CHECK-SAME:     %[[v:.*]]: vector<f32>)
-//       CHECK:   %[[extract:.*]] = vector.insert %{{.*}}, %[[v]] [] : f32 into vector<f32>
-//       CHECK:   return %[[extract]]
+//       CHECK:   %[[cst:.*]] = arith.constant dense<0.000000e+00> : vector<f32>
+//       CHECK:   return %[[cst]]
 func.func @insert_no_fold_scalar_to_0d(%v: vector<f32>) -> vector<f32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = vector.insert %cst, %v [] : f32 into vector<f32>
@@ -2666,6 +2666,112 @@ func.func @insert_2d_constant() -> (vector<2x3xi32>, vector<2x3xi32>, vector<2x3
   %d = vector.insert %cst_1d, %vcst[1] : vector<3xi32> into vector<2x3xi32>
   return %a, %b, %c, %d : vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>
 }
+
+// -----
+
+// +---------------------------------------------------------------------------
+// Tests for InsertChainFullyInitialized .
+// +---------------------------------------------------------------------------
+// This pattern should fire when all vector elements are overwritten by vector.insert
+// at static positions, replacing the insert chain with vector.from_elements.
+// CHECK-LABEL: func.func @fully_insert_scalar_to_vector(
+//  CHECK-SAME: %[[DEST:.+]]: vector<2xi64>, %[[SRC1:.+]]: i64, %[[SRC2:.+]]: i64)
+//       CHECK: %[[RES:.+]] = vector.from_elements %[[SRC1]], %[[SRC2]] : vector<2xi64>
+//  CHECK-NEXT: return %[[RES]]
+func.func @fully_insert_scalar_to_vector(%dest : vector<2xi64>, %src1 : i64, %src2 : i64) -> vector<2xi64> {
+  %v1 = vector.insert %src1, %dest[0] : i64 into vector<2xi64>
+  %v2 = vector.insert %src2, %v1[1] : i64 into vector<2xi64>
+  return %v2 : vector<2xi64>
+}
+
+// -----
+
+// Same as the above test, but with vector insertions.
+// CHECK-LABEL: func.func @fully_insert_vector_to_vector(
+//  CHECK-SAME: %[[DEST:.+]]: vector<2x2xi64>, %[[SRC1:.+]]: vector<2xi64>, %[[SRC2:.+]]: vector<2xi64>)
+//       CHECK: %[[ELE1:.+]]:2 = vector.to_elements %[[SRC1]] : vector<2xi64>
+//       CHECK: %[[ELE2:.+]]:2 = vector.to_elements %[[SRC2]] : vector<2xi64>
+//       CHECK: %[[RES:.+]] = vector.from_elements %[[ELE1]]#0, %[[ELE1]]#1, %[[ELE2]]#0, %[[ELE2]]#1 : vector<2x2xi64>
+//  CHECK-NEXT: return %[[RES]]
+func.func @fully_insert_vector_to_vector(%dest : vector<2x2xi64>, %src1 : vector<2xi64>, %src2 : vector<2xi64>) -> vector<2x2xi64> {
+  %v1 = vector.insert %src1, %dest[0] : vector<2xi64> into vector<2x2xi64>
+  %v2 = vector.insert %src2, %v1[1] : vector<2xi64> into vector<2x2xi64>
+  return %v2 : vector<2x2xi64>
+}
+
+// -----
+
+// Test InsertChainFullyInitialized pattern with overlapping insertions.
+// 1. The first op inserts %src2 at [0,0].
+// 2. The second op inserts %src1 at [0,0], [0,1], overwriting %src2 at [0,0].
+// 3. The third op inserts %src1 at [1,0], [1,1].
+// 4. The fourth op inserts %src2 at [1,1], overwriting the existing value at [1,1].
+// CHECK-LABEL: func.func @fully_insert_to_vector_overlap_1(
+//  CHECK-SAME: %[[DEST:.+]]: vector<2x2xi64>, %[[SRC1:.+]]: vector<2xi64>, %[[SRC2:.+]]: i64)
+//       CHECK: %[[ELE1:.+]]:2 = vector.to_elements %[[SRC1]] : vector<2xi64>
+//       CHECK: %[[ELE2:.+]]:2 = vector.to_elements %[[SRC1]] : vector<2xi64>
+//       CHECK: %[[RES:.+]] = vector.from_elements %[[ELE1]]#0, %[[ELE1]]#1, %[[ELE2]]#0, %[[SRC2]] : vector<2x2xi64>
+//  CHECK-NEXT: return %[[RES]]
+func.func @fully_insert_to_vector_overlap_1(%dest : vector<2x2xi64>, %src1 : vector<2xi64>, %src2 : i64) -> vector<2x2xi64> {
+  %v0 = vector.insert %src2, %dest[0, 0] : i64 into vector<2x2xi64>
+  %v1 = vector.insert %src1, %v0[0] : vector<2xi64> into vector<2x2xi64>
+  %v2 = vector.insert %src1, %v1[1] : vector<2xi64> into vector<2x2xi64>
+  %v3 = vector.insert %src2, %v2[1, 1] : i64 into vector<2x2xi64>
+  return %v3 : vector<2x2xi64>
+}
+
+// -----
+
+// Test InsertChainFullyInitialized pattern with overlapping insertions.
+// The vector inserted at last should overwrite the previously inserted scalars.
+// CHECK-LABEL: func.func @fully_insert_to_vector_overlap_2(
+//  CHECK-SAME: %[[DEST:.+]]: vector<2x2xi64>, %[[SRC1:.+]]: i64, %[[SRC2:.+]]: i64, %[[SRC3:.+]]: vector<2xi64>, %[[SRC4:.+]]: vector<2xi64>)
+//       CHECK: %[[ELE1:.+]]:2 = vector.to_elements %[[SRC3]] : vector<2xi64>
+//       CHECK: %[[ELE2:.+]]:2 = vector.to_elements %[[SRC4]] : vector<2xi64>
+//       CHECK: %[[RES:.+]] = vector.from_elements %[[ELE1]]#0, %[[ELE1]]#1, %[[ELE2]]#0, %[[ELE2]]#1 : vector<2x2xi64>
+//  CHECK-NEXT: return %[[RES]]
+func.func @fully_insert_to_vector_overlap_2(%dest : vector<2x2xi64>, %src1 : i64, %src2 : i64, %src3 : vector<2xi64>, %src4 : vector<2xi64>) -> vector<2x2xi64> {
+  %v0 = vector.insert %src1, %dest[0, 0] : i64 into vector<2x2xi64>
+  %v1 = vector.insert %src2, %v0[0, 1] : i64 into vector<2x2xi64>
+  %v2 = vector.insert %src3, %v1[0] : vector<2xi64> into vector<2x2xi64>
+  %v3 = vector.insert %src4, %v2[1] : vector<2xi64> into vector<2x2xi64>
+  return %v3 : vector<2x2xi64>
+}
+
+// -----
+
+// Negative test for InsertChainFullyInitialized pattern when only some elements are overwritten.
+// CHECK-LABEL: func.func @negative_partially_insert_vector_to_vector(
+//  CHECK-SAME: %[[DEST:.+]]: vector<2x2xi64>, %[[SRC1:.+]]: vector<2xi64>, %[[SRC2:.+]]: i64)
+//       CHECK: %[[V0:.+]] = vector.insert %[[SRC1]], %[[DEST]] [0] : vector<2xi64> into vector<2x2xi64>
+//       CHECK: %[[V1:.+]] = vector.insert %[[SRC2]], %[[V0]] [0, 0] : i64 into vector<2x2xi64>
+//       CHECK: return %[[V1]]
+func.func @negative_partially_insert_vector_to_vector(%dest : vector<2x2xi64>, %src1 : vector<2xi64>, %src2 : i64) -> vector<2x2xi64> {
+  %v1 = vector.insert %src1, %dest[0] : vector<2xi64> into vector<2x2xi64>
+  %v2 = vector.insert %src2, %v1[0, 0] : i64 into vector<2x2xi64>
+  return %v2 : vector<2x2xi64>
+}
+
+// -----
+
+// Negative test when intermediate results have more than one user.
+// CHECK-LABEL: func.func @negative_intermediate_insert_multiple_users(
+//  CHECK-SAME: %[[DEST:.+]]: vector<3xi64>, %[[SRC1:.+]]: i64, %[[SRC2:.+]]: i64, %[[SRC3:.+]]: i64, %[[SRC4:.+]]: i64)
+//       CHECK: %[[V0:.+]] = vector.insert %[[SRC1]], %[[DEST]] [0] : i64 into vector<3xi64>
+//       CHECK: %[[V1:.+]] = vector.insert %[[SRC2]], %[[V0]] [1] : i64 into vector<3xi64>
+//       CHECK: %[[V2:.+]] = vector.insert %[[SRC3]], %[[V1]] [2] : i64 into vector<3xi64>
+//       CHECK: %[[V3:.+]] = vector.insert %[[SRC4]], %[[V1]] [2] : i64 into vector<3xi64>
+func.func @negative_intermediate_insert_multiple_users(%dest : vector<3xi64>, %src1 : i64, %src2 : i64, %src3 : i64, %src4 : i64) -> (vector<3xi64>, vector<3xi64>) {
+  %v1 = vector.insert %src1, %dest[0] : i64 into vector<3xi64>
+  %v2 = vector.insert %src2, %v1[1] : i64 into vector<3xi64>
+  %v3_0 = vector.insert %src3, %v2[2] : i64 into vector<3xi64>
+  %v3_1 = vector.insert %src4, %v2[2] : i64 into vector<3xi64>
+  return %v3_0, %v3_1 : vector<3xi64>, vector<3xi64>
+}
+
+// +---------------------------------------------------------------------------
+// End of  Tests For InsertChainFullyInitialized.
+// +---------------------------------------------------------------------------
 
 // -----
 

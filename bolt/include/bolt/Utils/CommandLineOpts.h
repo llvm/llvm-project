@@ -15,6 +15,12 @@
 
 #include "llvm/Support/CommandLine.h"
 
+namespace llvm {
+namespace bolt {
+class BinaryFunction;
+}
+} // namespace llvm
+
 namespace opts {
 
 enum HeatmapModeKind {
@@ -99,6 +105,9 @@ extern llvm::cl::opt<unsigned> Verbosity;
 
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
+
+/// Return true if we should dump dot graphs for the given function.
+bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
 
 enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
 

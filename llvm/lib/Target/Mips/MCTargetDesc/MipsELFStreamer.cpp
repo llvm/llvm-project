@@ -18,7 +18,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 

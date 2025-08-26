@@ -12,8 +12,6 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP9]], 4
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]
@@ -46,7 +44,7 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; NO-VP-LABEL: @iv32(
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP0]], 4
+; NO-VP-NEXT:    [[TMP10:%.*]] = shl nuw i32 [[TMP0]], 2
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[TMP10]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:

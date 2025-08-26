@@ -45,6 +45,10 @@ public:
   // objects returned by the `fdes()` function.
   uint64_t getAbsoluteStartAddress(typename FDERange::iterator FDE) const;
 
+  // Returns the offset (in the SFrame section) of the given FDE, which must be
+  // one of the objects returned by the `fdes()` function.
+  uint64_t offsetOf(typename FDERange::iterator FDE) const;
+
   struct FrameRowEntry {
     uint32_t StartAddress;
     sframe::FREInfo<endianness::native> Info;

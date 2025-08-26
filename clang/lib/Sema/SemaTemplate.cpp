@@ -19,6 +19,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -315,6 +316,12 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
                                      : TNK_Type_template;
     }
   }
+
+  if (isPackProducingBuiltinTemplateName(Template) &&
+      S->getTemplateParamParent() == nullptr)
+    Diag(Name.getBeginLoc(), diag::err_builtin_pack_outside_template) << TName;
+  // Recover by returning the template, even though we would never be able to
+  // substitute it.
 
   TemplateResult = TemplateTy::make(Template);
   return TemplateKind;
@@ -917,7 +924,7 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
   }
 
   case ParsedTemplateArgument::NonType: {
-    Expr *E = static_cast<Expr *>(Arg.getAsExpr());
+    Expr *E = Arg.getAsExpr();
     return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
   }
 
@@ -2078,14 +2085,19 @@ DeclResult Sema::CheckClassTemplate(
         // If we have a prior definition that is not visible, treat this as
         // simply making that previous definition visible.
         NamedDecl *Hidden = nullptr;
-        if (SkipBody && !hasVisibleDefinition(Def, &Hidden)) {
+        bool HiddenDefVisible = false;
+        if (SkipBody &&
+            isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible)) {
           SkipBody->ShouldSkip = true;
           SkipBody->Previous = Def;
-          auto *Tmpl = cast<CXXRecordDecl>(Hidden)->getDescribedClassTemplate();
-          assert(Tmpl && "original definition of a class template is not a "
-                         "class template?");
-          makeMergedDefinitionVisible(Hidden);
-          makeMergedDefinitionVisible(Tmpl);
+          if (!HiddenDefVisible && Hidden) {
+            auto *Tmpl =
+                cast<CXXRecordDecl>(Hidden)->getDescribedClassTemplate();
+            assert(Tmpl && "original definition of a class template is not a "
+                           "class template?");
+            makeMergedDefinitionVisible(Hidden);
+            makeMergedDefinitionVisible(Tmpl);
+          }
         } else {
           Diag(NameLoc, diag::err_redefinition) << Name;
           Diag(Def->getLocation(), diag::note_previous_definition);
@@ -3472,6 +3484,28 @@ static QualType checkBuiltinTemplateIdType(
 
     return Context.getHLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
   }
+  case BTK__builtin_dedup_pack: {
+    assert(Converted.size() == 1 && "__builtin_dedup_pack should be given "
+                                    "a parameter pack");
+    TemplateArgument Ts = Converted[0];
+    // Delay the computation until we can compute the final result. We choose
+    // not to remove the duplicates upfront before substitution to keep the code
+    // simple.
+    if (Ts.isDependent())
+      return QualType();
+    assert(Ts.getKind() == clang::TemplateArgument::Pack);
+    llvm::SmallVector<TemplateArgument> OutArgs;
+    llvm::SmallDenseSet<QualType> Seen;
+    // Synthesize a new template argument list, removing duplicates.
+    for (auto T : Ts.getPackAsArray()) {
+      assert(T.getKind() == clang::TemplateArgument::Type);
+      if (!Seen.insert(T.getAsType().getCanonicalType()).second)
+        continue;
+      OutArgs.push_back(T);
+    }
+    return Context.getSubstBuiltinTemplatePack(
+        TemplateArgument::CreatePackCopy(Context, OutArgs));
+  }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
 }
@@ -4053,7 +4087,7 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
 
   // Check the tag kind
   if (const RecordType *RT = Result->getAs<RecordType>()) {
-    RecordDecl *D = RT->getOriginalDecl()->getDefinitionOrSelf();
+    RecordDecl *D = RT->getOriginalDecl();
 
     IdentifierInfo *Id = D->getIdentifier();
     assert(Id && "templated class must have an identifier");
@@ -5834,6 +5868,29 @@ bool Sema::CheckTemplateArgumentList(
       }
     }
 
+    // Check for builtins producing template packs in this context, we do not
+    // support them yet.
+    if (const NonTypeTemplateParmDecl *NTTP =
+            dyn_cast<NonTypeTemplateParmDecl>(*Param);
+        NTTP && NTTP->isPackExpansion()) {
+      auto TL = NTTP->getTypeSourceInfo()
+                    ->getTypeLoc()
+                    .castAs<PackExpansionTypeLoc>();
+      llvm::SmallVector<UnexpandedParameterPack> Unexpanded;
+      collectUnexpandedParameterPacks(TL.getPatternLoc(), Unexpanded);
+      for (const auto &UPP : Unexpanded) {
+        auto *TST = UPP.first.dyn_cast<const TemplateSpecializationType *>();
+        if (!TST)
+          continue;
+        assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
+        // Expanding a built-in pack in this context is not yet supported.
+        Diag(TL.getEllipsisLoc(),
+             diag::err_unsupported_builtin_template_pack_expansion)
+            << TST->getTemplateName();
+        return true;
+      }
+    }
+
     if (ArgIdx < NumArgs) {
       TemplateArgumentLoc &ArgLoc = NewArgs[ArgIdx];
       bool NonPackParameter =
@@ -6288,6 +6345,11 @@ bool UnnamedLocalNoLinkageFinder::VisitTemplateTypeParmType(
 
 bool UnnamedLocalNoLinkageFinder::VisitSubstTemplateTypeParmPackType(
                                         const SubstTemplateTypeParmPackType *) {
+  return false;
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitSubstBuiltinTemplatePackType(
+    const SubstBuiltinTemplatePackType *) {
   return false;
 }
 
@@ -8956,10 +9018,13 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   if (TUK == TagUseKind::Definition) {
     RecordDecl *Def = Specialization->getDefinition();
     NamedDecl *Hidden = nullptr;
-    if (Def && SkipBody && !hasVisibleDefinition(Def, &Hidden)) {
+    bool HiddenDefVisible = false;
+    if (Def && SkipBody &&
+        isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible)) {
       SkipBody->ShouldSkip = true;
       SkipBody->Previous = Def;
-      makeMergedDefinitionVisible(Hidden);
+      if (!HiddenDefVisible && Hidden)
+        makeMergedDefinitionVisible(Hidden);
     } else if (Def) {
       SourceRange Range(TemplateNameLoc, RAngleLoc);
       Diag(TemplateNameLoc, diag::err_redefinition) << Specialization << Range;

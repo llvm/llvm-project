@@ -50,12 +50,10 @@ define i16 @test_access_size_not_multiple_of_align(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i16 @llvm.vector.reduce.add.v2i16(<2 x i16> [[TMP15]])
 ; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[ACCUM:%.*]] = phi i16 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[LATCH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[TEST_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TEST_BASE]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_T:%.*]] = load i8, ptr [[TEST_ADDR]], align 1
@@ -146,12 +144,10 @@ define i32 @test_access_size_multiple_of_align_but_offset_by_1(i64 %len, ptr %te
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP15]])
 ; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[LATCH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[TEST_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TEST_BASE]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_T:%.*]] = load i8, ptr [[TEST_ADDR]], align 1
@@ -376,10 +372,9 @@ define void @test_rev_loops_deref_loads(ptr nocapture noundef writeonly %dest) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1023, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1023, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_CMP]], i64 0, i64 [[IV]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp eq i32 [[TMP19]], 3
@@ -488,10 +483,9 @@ define void @test_rev_loops_non_deref_loads(ptr nocapture noundef writeonly %des
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1023, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1023, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_CMP]], i64 0, i64 [[OFF]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -582,12 +576,10 @@ define i16 @test_strided_access(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i16 @llvm.vector.reduce.add.v2i16(<2 x i16> [[TMP13]])
 ; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[ACCUM:%.*]] = phi i16 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[LATCH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[TEST_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TEST_BASE]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_T:%.*]] = load i8, ptr [[TEST_ADDR]], align 1
@@ -691,10 +683,9 @@ define void @test_rev_loops_strided_deref_loads(ptr nocapture noundef writeonly 
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 511, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 511, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_CMP]], i64 0, i64 [[IV]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp eq i32 [[TMP21]], 3

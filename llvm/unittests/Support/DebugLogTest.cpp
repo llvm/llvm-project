@@ -115,8 +115,18 @@ TEST(DebugLogTest, StreamPrefix) {
     ldbg_osA << "5";
     EXPECT_EQ(os.str(), expected);
   }
-  // After destructors, there was a pending newline for stream B.
-  EXPECT_EQ(os.str(), expected + "PrefixB ");
+  EXPECT_EQ(os.str(), expected);
+}
+
+TEST(DebugLogTest, DestructorPrefix) {
+  llvm::DebugFlag = true;
+  std::string str;
+  raw_string_ostream os(str);
+  {
+    llvm::impl::raw_ldbg_ostream ldbg_osB("PrefixB ", os);
+  }
+  // After destructors, nothing should have been printed.
+  EXPECT_EQ(os.str(), "");
 }
 #else
 TEST(DebugLogTest, Basic) {

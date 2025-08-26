@@ -26,7 +26,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -277,10 +276,10 @@ void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
 
 void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
     const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
-    const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
-    const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
-    const MCSymbol *HasDynamicallySizedStack, const MCSymbol *HasRecursion,
-    const MCSymbol *HasIndirectCall) {
+    const MCSymbol *NumExplicitSGPR, const MCSymbol *NumNamedBarrier,
+    const MCSymbol *PrivateSegmentSize, const MCSymbol *UsesVCC,
+    const MCSymbol *UsesFlatScratch, const MCSymbol *HasDynamicallySizedStack,
+    const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) {
 #define PRINT_RES_INFO(ARG)                                                    \
   OS << "\t.set ";                                                             \
   ARG->print(OS, getContext().getAsmInfo());                                   \
@@ -291,6 +290,7 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
   PRINT_RES_INFO(NumVGPR);
   PRINT_RES_INFO(NumAGPR);
   PRINT_RES_INFO(NumExplicitSGPR);
+  PRINT_RES_INFO(NumNamedBarrier);
   PRINT_RES_INFO(PrivateSegmentSize);
   PRINT_RES_INFO(UsesVCC);
   PRINT_RES_INFO(UsesFlatScratch);
@@ -396,9 +396,17 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   EmitMCExpr(KD.kernarg_size);
   OS << '\n';
 
-  PrintField(
-      KD.compute_pgm_rsrc2, amdhsa::COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_SHIFT,
-      amdhsa::COMPUTE_PGM_RSRC2_USER_SGPR_COUNT, ".amdhsa_user_sgpr_count");
+  if (isGFX1250(STI)) {
+    PrintField(KD.compute_pgm_rsrc2,
+               amdhsa::COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
+               amdhsa::COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT,
+               ".amdhsa_user_sgpr_count");
+  } else {
+    PrintField(KD.compute_pgm_rsrc2,
+               amdhsa::COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_SHIFT,
+               amdhsa::COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT,
+               ".amdhsa_user_sgpr_count");
+  }
 
   if (!hasArchitectedFlatScratch(STI))
     PrintField(
@@ -507,6 +515,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     OS << '\n';
   }
 
+  if (AMDGPU::isGFX1250(STI))
+    PrintField(KD.compute_pgm_rsrc3,
+               amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
+               amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+               ".amdhsa_named_barrier_count");
+
   OS << "\t\t.amdhsa_reserve_vcc ";
   EmitMCExpr(ReserveVCC);
   OS << '\n';
@@ -563,11 +577,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PrintField(KD.compute_pgm_rsrc3,
                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, ".amdhsa_tg_split");
-  if (IVersion.Major >= 10) {
+  if (AMDGPU::supportsWGP(STI))
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
                ".amdhsa_workgroup_processor_mode");
+  if (IVersion.Major >= 10) {
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED,
@@ -885,7 +900,7 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
   if (!SymbolELF->isBindingSet())
     SymbolELF->setBinding(ELF::STB_GLOBAL);
 
-  if (SymbolELF->declareCommon(Size, Alignment, true)) {
+  if (SymbolELF->declareCommon(Size, Alignment)) {
     report_fatal_error("Symbol: " + Symbol->getName() +
                        " redeclared as different type");
   }

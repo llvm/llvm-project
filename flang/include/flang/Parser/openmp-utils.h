@@ -95,7 +95,8 @@ struct DirectiveNameScope {
           std::is_same_v<T, OpenMPDepobjConstruct> ||
           std::is_same_v<T, OpenMPFlushConstruct> ||
           std::is_same_v<T, OpenMPInteropConstruct> ||
-          std::is_same_v<T, OpenMPSimpleStandaloneConstruct>) {
+          std::is_same_v<T, OpenMPSimpleStandaloneConstruct> ||
+          std::is_same_v<T, OpenMPGroupprivate>) {
         return x.v.DirName();
       } else {
         return GetOmpDirectiveName(x.v);
@@ -156,6 +157,8 @@ struct DirectiveNameScope {
 template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
   return detail::DirectiveNameScope::GetOmpDirectiveName(x);
 }
+
+const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
 
 } // namespace Fortran::parser::omp
 

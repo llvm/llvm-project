@@ -197,6 +197,9 @@ private:
   /// Whether the \p ObjectTypeQualifiers field is active.
   bool HasObjectTypeQualifiers;
 
+  // Whether the member function is using an explicit object parameter
+  bool IsExplicitObjectMemberFunction;
+
   /// The selector that we prefer.
   Selector PreferredSelector;
 
@@ -218,8 +221,8 @@ public:
                          LookupFilter Filter = nullptr)
       : SemaRef(SemaRef), Allocator(Allocator), CCTUInfo(CCTUInfo),
         Filter(Filter), AllowNestedNameSpecifiers(false),
-        HasObjectTypeQualifiers(false), CompletionContext(CompletionContext),
-        ObjCImplementation(nullptr) {
+        HasObjectTypeQualifiers(false), IsExplicitObjectMemberFunction(false),
+        CompletionContext(CompletionContext), ObjCImplementation(nullptr) {
     // If this is an Objective-C instance method definition, dig out the
     // corresponding implementation.
     switch (CompletionContext.getKind()) {
@@ -273,6 +276,10 @@ public:
     ObjectTypeQualifiers = Quals;
     ObjectKind = Kind;
     HasObjectTypeQualifiers = true;
+  }
+
+  void setExplicitObjectMemberFn(bool IsExplicitObjectFn) {
+    IsExplicitObjectMemberFunction = IsExplicitObjectFn;
   }
 
   /// Set the preferred selector.
@@ -1428,10 +1435,27 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
 
   AdjustResultPriorityForDecl(R);
 
+  // Account for explicit object parameter
+  const auto GetQualifiers = [&](const CXXMethodDecl *MethodDecl) {
+    if (MethodDecl->isExplicitObjectMemberFunction())
+      return MethodDecl->getFunctionObjectParameterType().getQualifiers();
+    else
+      return MethodDecl->getMethodQualifiers();
+  };
+
+  if (IsExplicitObjectMemberFunction &&
+      R.Kind == CodeCompletionResult::RK_Declaration &&
+      (isa<CXXMethodDecl>(R.Declaration) || isa<FieldDecl>(R.Declaration))) {
+    // If result is a member in the context of an explicit-object member
+    // function, drop it because it must be accessed through the object
+    // parameter
+    return;
+  }
+
   if (HasObjectTypeQualifiers)
     if (const auto *Method = dyn_cast<CXXMethodDecl>(R.Declaration))
       if (Method->isInstance()) {
-        Qualifiers MethodQuals = Method->getMethodQualifiers();
+        Qualifiers MethodQuals = GetQualifiers(Method);
         if (ObjectTypeQualifiers == MethodQuals)
           R.Priority += CCD_ObjectQualifierMatch;
         else if (ObjectTypeQualifiers - MethodQuals) {
@@ -3410,40 +3434,55 @@ static void AddQualifierToCompletionString(CodeCompletionBuilder &Result,
     Result.AddTextChunk(Result.getAllocator().CopyString(PrintedNNS));
 }
 
-static void
-AddFunctionTypeQualsToCompletionString(CodeCompletionBuilder &Result,
-                                       const FunctionDecl *Function) {
-  const auto *Proto = Function->getType()->getAs<FunctionProtoType>();
-  if (!Proto || !Proto->getMethodQuals())
-    return;
-
+static void AddFunctionTypeQuals(CodeCompletionBuilder &Result,
+                                 const Qualifiers Quals) {
   // FIXME: Add ref-qualifier!
 
   // Handle single qualifiers without copying
-  if (Proto->getMethodQuals().hasOnlyConst()) {
+  if (Quals.hasOnlyConst()) {
     Result.AddInformativeChunk(" const");
     return;
   }
 
-  if (Proto->getMethodQuals().hasOnlyVolatile()) {
+  if (Quals.hasOnlyVolatile()) {
     Result.AddInformativeChunk(" volatile");
     return;
   }
 
-  if (Proto->getMethodQuals().hasOnlyRestrict()) {
+  if (Quals.hasOnlyRestrict()) {
     Result.AddInformativeChunk(" restrict");
     return;
   }
 
   // Handle multiple qualifiers.
   std::string QualsStr;
-  if (Proto->isConst())
+  if (Quals.hasConst())
     QualsStr += " const";
-  if (Proto->isVolatile())
+  if (Quals.hasVolatile())
     QualsStr += " volatile";
-  if (Proto->isRestrict())
+  if (Quals.hasRestrict())
     QualsStr += " restrict";
   Result.AddInformativeChunk(Result.getAllocator().CopyString(QualsStr));
+}
+
+static void
+AddFunctionTypeQualsToCompletionString(CodeCompletionBuilder &Result,
+                                       const FunctionDecl *Function) {
+  if (auto *CxxMethodDecl = llvm::dyn_cast_if_present<CXXMethodDecl>(Function);
+      CxxMethodDecl && CxxMethodDecl->hasCXXExplicitFunctionObjectParameter()) {
+    // if explicit object method, infer quals from the object parameter
+    const auto Quals = CxxMethodDecl->getFunctionObjectParameterType();
+    if (!Quals.hasQualifiers())
+      return;
+
+    AddFunctionTypeQuals(Result, Quals.getQualifiers());
+  } else {
+    const auto *Proto = Function->getType()->getAs<FunctionProtoType>();
+    if (!Proto || !Proto->getMethodQuals())
+      return;
+
+    AddFunctionTypeQuals(Result, Proto->getMethodQuals());
+  }
 }
 
 static void
@@ -4636,12 +4675,19 @@ void SemaCodeCompletion::CodeCompleteOrdinaryName(
     break;
   }
 
-  // If we are in a C++ non-static member function, check the qualifiers on
-  // the member function to filter/prioritize the results list.
   auto ThisType = SemaRef.getCurrentThisType();
-  if (!ThisType.isNull())
+  if (ThisType.isNull()) {
+    // check if function scope is an explicit object function
+    if (auto *MethodDecl = llvm::dyn_cast_if_present<CXXMethodDecl>(
+            SemaRef.getCurFunctionDecl()))
+      Results.setExplicitObjectMemberFn(
+          MethodDecl->isExplicitObjectMemberFunction());
+  } else {
+    // If we are in a C++ non-static member function, check the qualifiers on
+    // the member function to filter/prioritize the results list.
     Results.setObjectTypeQualifiers(ThisType->getPointeeType().getQualifiers(),
                                     VK_LValue);
+  }
 
   CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext);
   SemaRef.LookupVisibleDecls(S, SemaRef.LookupOrdinaryName, Consumer,

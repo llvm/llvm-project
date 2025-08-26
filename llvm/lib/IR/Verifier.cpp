@@ -55,7 +55,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -4636,7 +4635,7 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
     }
 
     // The edge may exit from zero or more nested pads.
-    SmallSet<Value *, 8> Seen;
+    SmallPtrSet<Value *, 8> Seen;
     for (;; FromPad = getParentPad(FromPad)) {
       Check(FromPad != ToPad,
             "EH pad cannot handle exceptions raised within it", FromPad, TI);
@@ -4764,7 +4763,7 @@ void Verifier::visitFuncletPadInst(FuncletPadInst &FPI) {
   User *FirstUser = nullptr;
   Value *FirstUnwindPad = nullptr;
   SmallVector<FuncletPadInst *, 8> Worklist({&FPI});
-  SmallSet<FuncletPadInst *, 8> Seen;
+  SmallPtrSet<FuncletPadInst *, 8> Seen;
 
   while (!Worklist.empty()) {
     FuncletPadInst *CurrentPad = Worklist.pop_back_val();
@@ -6637,6 +6636,36 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "Value for inactive lanes must be a function argument", &Call);
     Check(!cast<Argument>(Call.getArgOperand(InactiveIdx))->hasInRegAttr(),
           "Value for inactive lanes must be a VGPR function argument", &Call);
+    break;
+  }
+  case Intrinsic::amdgcn_call_whole_wave: {
+    auto F = dyn_cast<Function>(Call.getArgOperand(0));
+    Check(F, "Indirect whole wave calls are not allowed", &Call);
+
+    CallingConv::ID CC = F->getCallingConv();
+    Check(CC == CallingConv::AMDGPU_Gfx_WholeWave,
+          "Callee must have the amdgpu_gfx_whole_wave calling convention",
+          &Call);
+
+    Check(!F->isVarArg(), "Variadic whole wave calls are not allowed", &Call);
+
+    Check(Call.arg_size() == F->arg_size(),
+          "Call argument count must match callee argument count", &Call);
+
+    // The first argument of the call is the callee, and the first argument of
+    // the callee is the active mask. The rest of the arguments must match.
+    Check(F->arg_begin()->getType()->isIntegerTy(1),
+          "Callee must have i1 as its first argument", &Call);
+    for (auto [CallArg, FuncArg] :
+         drop_begin(zip_equal(Call.args(), F->args()))) {
+      Check(CallArg->getType() == FuncArg.getType(),
+            "Argument types must match", &Call);
+
+      // Check that inreg attributes match between call site and function
+      Check(Call.paramHasAttr(FuncArg.getArgNo(), Attribute::InReg) ==
+                FuncArg.hasInRegAttr(),
+            "Argument inreg attributes must match", &Call);
+    }
     break;
   }
   case Intrinsic::amdgcn_s_prefetch_data: {

@@ -81,7 +81,7 @@ func.func @gather_memref_1d_i32_index(%base: memref<?xf32>, %v: vector<2xi32>, %
 // CHECK-SAME:      %[[PASS:.*]]: vector<2x[3]xf32>
 // CHECK:         %[[C0:.*]] = arith.constant 0 : index
 // CHECK:         %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[INIT:.*]] = arith.constant dense<0.000000e+00> : vector<2x[3]xf32>
+// CHECK:         %[[INIT:.*]] = ub.poison : vector<2x[3]xf32>
 // CHECK:         %[[IDXVEC0:.*]] = vector.extract %[[IDXVEC]][0] : vector<[3]xindex> from vector<2x[3]xindex>
 // CHECK:         %[[MASK0:.*]] = vector.extract %[[MASK]][0] : vector<[3]xi1> from vector<2x[3]xi1>
 // CHECK:         %[[PASS0:.*]] = vector.extract %[[PASS]][0] : vector<[3]xf32> from vector<2x[3]xf32>
@@ -198,7 +198,7 @@ func.func @gather_memref_non_unit_stride_read_more_than_1_element(%base: memref<
 // CANON-NOT:     scf.if
 // CANON:         tensor.extract
 // CANON:         tensor.extract
-// CANON:         [[FINAL:%.+]] = vector.insert %{{.+}}, %{{.+}} [1] : f32 into vector<2xf32>
+// CANON:         [[FINAL:%.+]] = vector.from_elements %{{.+}}, %{{.+}} : vector<2xf32>
 // CANON-NEXT:    return [[FINAL]] : vector<2xf32>
 func.func @gather_tensor_1d_all_set(%base: tensor<?xf32>, %v: vector<2xindex>, %pass_thru: vector<2xf32>) -> vector<2xf32> {
   %mask = arith.constant dense <true> : vector<2xi1>

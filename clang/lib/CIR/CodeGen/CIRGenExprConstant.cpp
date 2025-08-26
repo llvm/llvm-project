@@ -285,7 +285,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
                   mlir::Type commonElementType, unsigned arrayBound,
                   SmallVectorImpl<mlir::TypedAttr> &elements,
                   mlir::TypedAttr filler) {
-  const CIRGenBuilderTy &builder = cgm.getBuilder();
+  CIRGenBuilderTy &builder = cgm.getBuilder();
 
   unsigned nonzeroLength = arrayBound;
   if (elements.size() < nonzeroLength && builder.isNullValue(filler))
@@ -306,6 +306,33 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
   if (trailingZeroes >= 8) {
     assert(elements.size() >= nonzeroLength &&
            "missing initializer for non-zero element");
+
+    if (commonElementType && nonzeroLength >= 8) {
+      // If all the elements had the same type up to the trailing zeroes and
+      // there are eight or more nonzero elements, emit a struct of two arrays
+      // (the nonzero data and the zeroinitializer).
+      SmallVector<mlir::Attribute, 4> eles;
+      eles.reserve(nonzeroLength);
+      for (const auto &element : elements)
+        eles.push_back(element);
+      auto initial = cir::ConstArrayAttr::get(
+          cir::ArrayType::get(commonElementType, nonzeroLength),
+          mlir::ArrayAttr::get(builder.getContext(), eles));
+      elements.resize(2);
+      elements[0] = initial;
+    } else {
+      // Otherwise, emit a struct with individual elements for each nonzero
+      // initializer, followed by a zeroinitializer array filler.
+      elements.resize(nonzeroLength + 1);
+    }
+
+    mlir::Type fillerType =
+        commonElementType
+            ? commonElementType
+            : mlir::cast<cir::ArrayType>(desiredType).getElementType();
+    fillerType = cir::ArrayType::get(fillerType, trailingZeroes);
+    elements.back() = cir::ZeroAttr::get(fillerType);
+    commonElementType = nullptr;
   } else if (elements.size() != arrayBound) {
     elements.resize(arrayBound, filler);
 
@@ -325,8 +352,13 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
         mlir::ArrayAttr::get(builder.getContext(), eles));
   }
 
-  cgm.errorNYI("array with different type elements");
-  return {};
+  SmallVector<mlir::Attribute, 4> eles;
+  eles.reserve(elements.size());
+  for (auto const &element : elements)
+    eles.push_back(element);
+
+  auto arrAttr = mlir::ArrayAttr::get(builder.getContext(), eles);
+  return builder.getAnonConstRecord(arrAttr, /*isPacked=*/true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -388,11 +420,20 @@ private:
   /// Return GEP-like value offset
   mlir::ArrayAttr getOffset(mlir::Type ty) {
     int64_t offset = value.getLValueOffset().getQuantity();
-    if (offset == 0)
-      return {};
+    cir::CIRDataLayout layout(cgm.getModule());
+    SmallVector<int64_t, 3> idxVec;
+    cgm.getBuilder().computeGlobalViewIndicesFromFlatOffset(offset, ty, layout,
+                                                            idxVec);
 
-    cgm.errorNYI("ConstantLValueEmitter: global view with offset");
-    return {};
+    llvm::SmallVector<mlir::Attribute, 3> indices;
+    for (int64_t i : idxVec) {
+      mlir::IntegerAttr intAttr = cgm.getBuilder().getI32IntegerAttr(i);
+      indices.push_back(intAttr);
+    }
+
+    if (indices.empty())
+      return {};
+    return cgm.getBuilder().getArrayAttr(indices);
   }
 
   /// Apply the value offset to the given constant.
@@ -400,10 +441,11 @@ private:
     // Handle attribute constant LValues.
     if (auto attr = mlir::dyn_cast<mlir::Attribute>(c.value)) {
       if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(attr)) {
-        if (value.getLValueOffset().getQuantity() == 0)
-          return gv;
-        cgm.errorNYI("ConstantLValue: global view with offset");
-        return {};
+        auto baseTy = mlir::cast<cir::PointerType>(gv.getType()).getPointee();
+        mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+        assert(!gv.getIndices() && "Global view is already indexed");
+        return cir::GlobalViewAttr::get(destTy, gv.getSymbol(),
+                                        getOffset(baseTy));
       }
       llvm_unreachable("Unsupported attribute type to offset");
     }
@@ -536,8 +578,7 @@ ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitStringLiteral(const StringLiteral *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: string literal");
-  return {};
+  return cgm.getAddrOfConstantStringFromLiteral(e);
 }
 
 ConstantLValue
@@ -700,6 +741,16 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
   return (c ? emitForMemory(c, destType) : nullptr);
 }
 
+mlir::Attribute ConstantEmitter::emitAbstract(const Expr *e,
+                                              QualType destType) {
+  AbstractStateRAII state{*this, true};
+  mlir::Attribute c = mlir::cast<mlir::Attribute>(tryEmitPrivate(e, destType));
+  if (!c)
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitAbstract failed, emit null constaant");
+  return c;
+}
+
 mlir::Attribute ConstantEmitter::emitAbstract(SourceLocation loc,
                                               const APValue &value,
                                               QualType destType) {
@@ -719,6 +770,32 @@ mlir::Attribute ConstantEmitter::emitForMemory(mlir::Attribute c,
   }
 
   return c;
+}
+
+mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *e,
+                                                QualType destType) {
+  assert(!destType->isVoidType() && "can't emit a void constant");
+
+  if (mlir::Attribute c =
+          ConstExprEmitter(*this).Visit(const_cast<Expr *>(e), destType))
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+
+  Expr::EvalResult result;
+
+  bool success = false;
+
+  if (destType->isReferenceType())
+    success = e->EvaluateAsLValue(result, cgm.getASTContext());
+  else
+    success =
+        e->EvaluateAsRValue(result, cgm.getASTContext(), inConstantContext);
+
+  if (success && !result.hasSideEffects()) {
+    mlir::Attribute c = tryEmitPrivate(result.Val, destType);
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+  }
+
+  return nullptr;
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
@@ -872,7 +949,7 @@ mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
     errorNYI("CIRGenModule::emitNullConstant ConstantArrayType");
   }
 
-  if (t->getAs<RecordType>())
+  if (t->isRecordType())
     errorNYI("CIRGenModule::emitNullConstant RecordType");
 
   assert(t->isMemberDataPointerType() &&

@@ -13,6 +13,7 @@
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 
 #define DEBUG_TYPE "flang-lower-cuda"
 
@@ -154,4 +155,13 @@ cuf::DataAttributeAttr Fortran::lower::translateSymbolCUFDataAttribute(
   std::optional<Fortran::common::CUDADataAttr> cudaAttr =
       Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
   return cuf::getDataAttribute(mlirContext, cudaAttr);
+}
+
+bool Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
+  if (auto elOp = mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp()))
+    if (llvm::hasSingleElement(elOp.getBody()->getOps<hlfir::DesignateOp>()) &&
+        llvm::hasSingleElement(elOp.getBody()->getOps<fir::LoadOp>()) == 1 &&
+        llvm::hasSingleElement(elOp.getBody()->getOps<fir::ConvertOp>()) == 1)
+      return true;
+  return false;
 }

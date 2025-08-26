@@ -654,9 +654,9 @@ comments::FullComment *ASTContext::getCommentForDecl(
       // does not have one of its own.
       QualType QT = TD->getUnderlyingType();
       if (const auto *TT = QT->getAs<TagType>())
-        if (const Decl *TD = TT->getOriginalDecl())
-          if (comments::FullComment *FC = getCommentForDecl(TD, PP))
-            return cloneFullComment(FC, D);
+        if (comments::FullComment *FC =
+                getCommentForDecl(TT->getOriginalDecl(), PP))
+          return cloneFullComment(FC, D);
     }
     else if (const auto *IC = dyn_cast<ObjCInterfaceDecl>(D)) {
       while (IC->getSuperClass()) {
@@ -1933,12 +1933,9 @@ TypeInfoChars ASTContext::getTypeInfoDataSizeInChars(QualType T) const {
   // of a base-class subobject.  We decide whether that's possible
   // during class layout, so here we can just trust the layout results.
   if (getLangOpts().CPlusPlus) {
-    if (const auto *RT = T->getAs<RecordType>()) {
-      const auto *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (!RD->isInvalidDecl()) {
-        const ASTRecordLayout &layout = getASTRecordLayout(RD);
-        Info.Width = layout.getDataSize();
-      }
+    if (const auto *RD = T->getAsCXXRecordDecl(); RD && !RD->isInvalidDecl()) {
+      const ASTRecordLayout &layout = getASTRecordLayout(RD);
+      Info.Width = layout.getDataSize();
     }
   }
 
@@ -2694,9 +2691,7 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   if (!Target->allowsLargerPreferedTypeAlignment())
     return ABIAlign;
 
-  if (const auto *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-
+  if (const auto *RD = T->getAsRecordDecl()) {
     // When used as part of a typedef, or together with a 'packed' attribute,
     // the 'aligned' attribute can be used to decrease alignment. Note that the
     // 'packed' case is already taken into consideration when computing the
@@ -2887,12 +2882,10 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
 static std::optional<int64_t>
 getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context,
                        bool CheckIfTriviallyCopyable) {
-  if (Field->getType()->isRecordType()) {
-    const RecordDecl *RD = Field->getType()->getAsRecordDecl();
-    if (!RD->isUnion())
-      return structHasUniqueObjectRepresentations(Context, RD,
-                                                  CheckIfTriviallyCopyable);
-  }
+  if (const auto *RD = Field->getType()->getAsRecordDecl();
+      RD && !RD->isUnion())
+    return structHasUniqueObjectRepresentations(Context, RD,
+                                                CheckIfTriviallyCopyable);
 
   // A _BitInt type may not be unique if it has padding bits
   // but if it is a bitfield the padding bits are not used.
@@ -3047,10 +3040,7 @@ bool ASTContext::hasUniqueObjectRepresentations(
   if (const auto *MPT = Ty->getAs<MemberPointerType>())
     return !ABI->getMemberPointerInfo(MPT).HasPadding;
 
-  if (Ty->isRecordType()) {
-    const RecordDecl *Record =
-        Ty->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
-
+  if (const auto *Record = Ty->getAsRecordDecl()) {
     if (Record->isInvalidDecl())
       return false;
 
@@ -4306,6 +4296,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::DependentTemplateSpecialization:
   case Type::TemplateTypeParm:
   case Type::SubstTemplateTypeParmPack:
+  case Type::SubstBuiltinTemplatePack:
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
   case Type::PackExpansion:
@@ -5128,10 +5119,12 @@ QualType ASTContext::getFunctionTypeInternal(
       EPI.ExceptionSpec.Type, EPI.ExceptionSpec.Exceptions.size());
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
+      FunctionType::FunctionTypeExtraAttributeInfo,
       FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
       Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers,
       FunctionEffect, EffectConditionExpr>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
+      EPI.requiresFunctionProtoTypeExtraAttributeInfo(),
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,
@@ -5846,7 +5839,6 @@ QualType ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
   return QualType(SubstParm, 0);
 }
 
-/// Retrieve a
 QualType
 ASTContext::getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                              unsigned Index, bool Final,
@@ -5883,6 +5875,34 @@ ASTContext::getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
   Types.push_back(SubstParm);
   SubstTemplateTypeParmPackTypes.InsertNode(SubstParm, InsertPos);
   return QualType(SubstParm, 0);
+}
+
+QualType
+ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
+  assert(llvm::all_of(ArgPack.pack_elements(),
+                      [](const auto &P) {
+                        return P.getKind() == TemplateArgument::Type;
+                      }) &&
+         "Pack contains a non-type");
+
+  llvm::FoldingSetNodeID ID;
+  SubstBuiltinTemplatePackType::Profile(ID, ArgPack);
+
+  void *InsertPos = nullptr;
+  if (auto *T =
+          SubstBuiltinTemplatePackTypes.FindNodeOrInsertPos(ID, InsertPos))
+    return QualType(T, 0);
+
+  QualType Canon;
+  TemplateArgument CanonArgPack = getCanonicalTemplateArgument(ArgPack);
+  if (!CanonArgPack.structurallyEquals(ArgPack))
+    Canon = getSubstBuiltinTemplatePack(CanonArgPack);
+
+  auto *PackType = new (*this, alignof(SubstBuiltinTemplatePackType))
+      SubstBuiltinTemplatePackType(Canon, ArgPack);
+  Types.push_back(PackType);
+  SubstBuiltinTemplatePackTypes.InsertNode(PackType, InsertPos);
+  return QualType(PackType, 0);
 }
 
 /// Retrieve the template type parameter type for a template
@@ -11552,6 +11572,11 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     if (lproto->getMethodQuals() != rproto->getMethodQuals())
       return {};
 
+    // Function protos with different 'cfi_salt' values aren't compatible.
+    if (lproto->getExtraAttributeInfo().CFISalt !=
+        rproto->getExtraAttributeInfo().CFISalt)
+      return {};
+
     // Function effects are handled similarly to noreturn, see above.
     FunctionEffectsRef LHSFX = lproto->getFunctionEffects();
     FunctionEffectsRef RHSFX = rproto->getFunctionEffects();
@@ -13092,6 +13117,14 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   if (D->hasAttr<WeakRefAttr>())
     return false;
 
+  // SYCL device compilation requires that functions defined with the
+  // sycl_kernel_entry_point or sycl_external attributes be emitted. All
+  // other entities are emitted only if they are used by a function
+  // defined with one of those attributes.
+  if (LangOpts.SYCLIsDevice)
+    return isa<FunctionDecl>(D) && (D->hasAttr<SYCLKernelEntryPointAttr>() ||
+                                    D->hasAttr<SYCLExternalAttr>());
+
   // Aliases and used decls are required.
   if (D->hasAttr<AliasAttr>() || D->hasAttr<UsedAttr>())
     return true;
@@ -13100,15 +13133,6 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     // Forward declarations aren't required.
     if (!FD->doesThisDeclarationHaveABody())
       return FD->doesDeclarationForceExternallyVisibleDefinition();
-
-    // Function definitions with the sycl_kernel_entry_point attribute are
-    // required during device compilation so that SYCL kernel caller offload
-    // entry points are emitted.
-    if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
-      return true;
-
-    // FIXME: Functions declared with SYCL_EXTERNAL are required during
-    // device compilation.
 
     // Constructors and destructors are required.
     if (FD->hasAttr<ConstructorAttr>() || FD->hasAttr<DestructorAttr>())
@@ -14038,6 +14062,7 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(BitInt)
     SUGAR_FREE_TYPE(ObjCInterface)
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
+    SUGAR_FREE_TYPE(SubstBuiltinTemplatePack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
     SUGAR_FREE_TYPE(HLSLAttributedResource)
     SUGAR_FREE_TYPE(HLSLInlineSpirv)

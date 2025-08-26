@@ -61,11 +61,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    sltu t3, a4, t3
 ; RV32-NEXT:    and t3, t4, t3
 ; RV32-NEXT:    or t4, a1, a3
-; RV32-NEXT:    slti t4, t4, 0
+; RV32-NEXT:    srli t4, t4, 31
 ; RV32-NEXT:    or t4, t5, t4
 ; RV32-NEXT:    or t5, a1, a5
 ; RV32-NEXT:    sltu t1, a6, t1
-; RV32-NEXT:    slti t5, t5, 0
+; RV32-NEXT:    srli t5, t5, 31
 ; RV32-NEXT:    or t3, t3, t5
 ; RV32-NEXT:    or t3, t4, t3
 ; RV32-NEXT:    or t1, t1, t3
@@ -186,14 +186,14 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-NEXT:    slli t3, t2, 1
 ; RV64P670-NEXT:    and s0, s0, s1
 ; RV64P670-NEXT:    or s1, a1, a3
-; RV64P670-NEXT:    slti s1, s1, 0
+; RV64P670-NEXT:    srli s1, s1, 63
 ; RV64P670-NEXT:    or t6, s0, s1
 ; RV64P670-NEXT:    sltu s1, a0, t5
 ; RV64P670-NEXT:    sltu s0, a4, t4
 ; RV64P670-NEXT:    mv t5, a0
 ; RV64P670-NEXT:    and s0, s0, s1
 ; RV64P670-NEXT:    or s1, a1, a5
-; RV64P670-NEXT:    slti s1, s1, 0
+; RV64P670-NEXT:    srli s1, s1, 63
 ; RV64P670-NEXT:    or s0, s0, s1
 ; RV64P670-NEXT:    li s1, 32
 ; RV64P670-NEXT:    maxu s1, t3, s1
@@ -321,12 +321,12 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    or s2, a1, a3
 ; RV64X60-NEXT:    sltu s0, a0, t5
 ; RV64X60-NEXT:    sltu s1, a4, t3
-; RV64X60-NEXT:    slti t3, s2, 0
+; RV64X60-NEXT:    srli t3, s2, 63
 ; RV64X60-NEXT:    and s0, s0, s1
 ; RV64X60-NEXT:    or s1, a1, a5
 ; RV64X60-NEXT:    or t4, t4, t3
 ; RV64X60-NEXT:    slli t3, t2, 1
-; RV64X60-NEXT:    slti s1, s1, 0
+; RV64X60-NEXT:    srli s1, s1, 63
 ; RV64X60-NEXT:    or s0, s0, s1
 ; RV64X60-NEXT:    maxu s1, t3, t6
 ; RV64X60-NEXT:    or s0, t4, s0
@@ -461,10 +461,10 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:    sltu t5, a4, t5
 ; RV64-NEXT:    and t5, t6, t5
 ; RV64-NEXT:    or t6, a1, a3
-; RV64-NEXT:    slti t6, t6, 0
+; RV64-NEXT:    srli t6, t6, 63
 ; RV64-NEXT:    or t6, s0, t6
 ; RV64-NEXT:    or s0, a1, a5
-; RV64-NEXT:    slti s0, s0, 0
+; RV64-NEXT:    srli s0, s0, 63
 ; RV64-NEXT:    or t5, t5, s0
 ; RV64-NEXT:    or t5, t6, t5
 ; RV64-NEXT:    sltu t4, a6, t4

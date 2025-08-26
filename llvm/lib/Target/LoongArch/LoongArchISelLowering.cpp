@@ -22,6 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -339,6 +340,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
          {MVT::v16i8, MVT::v8i8, MVT::v4i8, MVT::v2i8, MVT::v8i16, MVT::v4i16,
           MVT::v2i16, MVT::v4i32, MVT::v2i32, MVT::v2i64}) {
       setOperationAction(ISD::TRUNCATE, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
     }
   }
 
@@ -376,6 +378,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
       setOperationAction(ISD::ABDS, VT, Legal);
       setOperationAction(ISD::ABDU, VT, Legal);
+      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
     }
     for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -521,8 +524,60 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFP_TO_BF16(Op, DAG);
   case ISD::BF16_TO_FP:
     return lowerBF16_TO_FP(Op, DAG);
+  case ISD::VECREDUCE_ADD:
+    return lowerVECREDUCE_ADD(Op, DAG);
   }
   return SDValue();
+}
+
+// Lower vecreduce_add using vhaddw instructions.
+// For Example:
+//  call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)
+// can be lowered to:
+//  VHADDW_D_W    vr0, vr0, vr0
+//  VHADDW_Q_D    vr0, vr0, vr0
+//  VPICKVE2GR_D  a0,  vr0, 0
+//  ADDI_W        a0,  a0,  0
+SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+
+  SDLoc DL(Op);
+  MVT OpVT = Op.getSimpleValueType();
+  SDValue Val = Op.getOperand(0);
+
+  unsigned NumEles = Val.getSimpleValueType().getVectorNumElements();
+  unsigned EleBits = Val.getSimpleValueType().getScalarSizeInBits();
+
+  unsigned LegalVecSize = 128;
+  bool isLASX256Vector =
+      Subtarget.hasExtLASX() && Val.getValueSizeInBits() == 256;
+
+  // Ensure operand type legal or enable it legal.
+  while (!isTypeLegal(Val.getSimpleValueType())) {
+    Val = DAG.WidenVector(Val, DL);
+  }
+
+  // NumEles is designed for iterations count, v4i32 for LSX
+  // and v8i32 for LASX should have the same count.
+  if (isLASX256Vector) {
+    NumEles /= 2;
+    LegalVecSize = 256;
+  }
+
+  for (unsigned i = 1; i < NumEles; i *= 2, EleBits *= 2) {
+    MVT IntTy = MVT::getIntegerVT(EleBits);
+    MVT VecTy = MVT::getVectorVT(IntTy, LegalVecSize / EleBits);
+    Val = DAG.getNode(LoongArchISD::VHADDW, DL, VecTy, Val, Val);
+  }
+
+  if (isLASX256Vector) {
+    SDValue Tmp = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, Val,
+                              DAG.getConstant(2, DL, MVT::i64));
+    Val = DAG.getNode(ISD::ADD, DL, MVT::v4i64, Tmp, Val);
+  }
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Val,
+                     DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
 }
 
 SDValue LoongArchTargetLowering::lowerPREFETCH(SDValue Op,
@@ -2786,7 +2841,7 @@ SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
   EVT RetVT = Op.getValueType();
   RTLIB::Libcall LC = RTLIB::getUINTTOFP(OpVT, RetVT);
   MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT);
   SDValue Chain = SDValue();
   SDValue Result;
   std::tie(Result, Chain) =
@@ -2811,7 +2866,7 @@ SDValue LoongArchTargetLowering::lowerSINT_TO_FP(SDValue Op,
   EVT RetVT = Op.getValueType();
   RTLIB::Libcall LC = RTLIB::getSINTTOFP(OpVT, RetVT);
   MakeLibCallOptions CallOptions;
-  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT);
   SDValue Chain = SDValue();
   SDValue Result;
   std::tie(Result, Chain) =
@@ -3037,10 +3092,7 @@ SDValue LoongArchTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 
   // Prepare argument list to generate call.
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Load;
-  Entry.Ty = CallTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Load, CallTy);
 
   // Setup call to __tls_get_addr.
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -4107,7 +4159,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     LC = RTLIB::getFPTOSINT(Src.getValueType(), VT);
     MakeLibCallOptions CallOptions;
     EVT OpVT = Src.getValueType();
-    CallOptions.setTypeListBeforeSoften(OpVT, VT, true);
+    CallOptions.setTypeListBeforeSoften(OpVT, VT);
     SDValue Chain = SDValue();
     SDValue Result;
     std::tie(Result, Chain) =
@@ -4360,7 +4412,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     RTLIB::Libcall LC =
         OpVT == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
     MakeLibCallOptions CallOptions;
-    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64);
     SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
     Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
     Results.push_back(Result);
@@ -6042,17 +6094,20 @@ static MachineBasicBlock *
 emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
                      const LoongArchSubtarget &Subtarget) {
   unsigned InsOp;
+  unsigned BroadcastOp;
   unsigned HalfSize;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
   case LoongArch::PseudoXVINSGR2VR_B:
     HalfSize = 16;
-    InsOp = LoongArch::VINSGR2VR_B;
+    BroadcastOp = LoongArch::XVREPLGR2VR_B;
+    InsOp = LoongArch::XVEXTRINS_B;
     break;
   case LoongArch::PseudoXVINSGR2VR_H:
     HalfSize = 8;
-    InsOp = LoongArch::VINSGR2VR_H;
+    BroadcastOp = LoongArch::XVREPLGR2VR_H;
+    InsOp = LoongArch::XVEXTRINS_H;
     break;
   }
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -6066,37 +6121,41 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
   Register Elt = MI.getOperand(2).getReg();
   unsigned Idx = MI.getOperand(3).getImm();
 
-  Register ScratchReg1 = XSrc;
-  if (Idx >= HalfSize) {
-    ScratchReg1 = MRI.createVirtualRegister(RC);
-    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_D), ScratchReg1)
+  if (XSrc.isVirtual() && MRI.getVRegDef(XSrc)->isImplicitDef() &&
+      Idx < HalfSize) {
+    Register ScratchSubReg1 = MRI.createVirtualRegister(SubRC);
+    Register ScratchSubReg2 = MRI.createVirtualRegister(SubRC);
+
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::COPY), ScratchSubReg1)
+        .addReg(XSrc, 0, LoongArch::sub_128);
+    BuildMI(*BB, MI, DL,
+            TII->get(HalfSize == 8 ? LoongArch::VINSGR2VR_H
+                                   : LoongArch::VINSGR2VR_B),
+            ScratchSubReg2)
+        .addReg(ScratchSubReg1)
+        .addReg(Elt)
+        .addImm(Idx);
+
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::SUBREG_TO_REG), XDst)
+        .addImm(0)
+        .addReg(ScratchSubReg2)
+        .addImm(LoongArch::sub_128);
+  } else {
+    Register ScratchReg1 = MRI.createVirtualRegister(RC);
+    Register ScratchReg2 = MRI.createVirtualRegister(RC);
+
+    BuildMI(*BB, MI, DL, TII->get(BroadcastOp), ScratchReg1).addReg(Elt);
+
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), ScratchReg2)
+        .addReg(ScratchReg1)
         .addReg(XSrc)
-        .addImm(14);
-  }
+        .addImm(Idx >= HalfSize ? 48 : 18);
 
-  Register ScratchSubReg1 = MRI.createVirtualRegister(SubRC);
-  Register ScratchSubReg2 = MRI.createVirtualRegister(SubRC);
-  BuildMI(*BB, MI, DL, TII->get(LoongArch::COPY), ScratchSubReg1)
-      .addReg(ScratchReg1, 0, LoongArch::sub_128);
-  BuildMI(*BB, MI, DL, TII->get(InsOp), ScratchSubReg2)
-      .addReg(ScratchSubReg1)
-      .addReg(Elt)
-      .addImm(Idx >= HalfSize ? Idx - HalfSize : Idx);
-
-  Register ScratchReg2 = XDst;
-  if (Idx >= HalfSize)
-    ScratchReg2 = MRI.createVirtualRegister(RC);
-
-  BuildMI(*BB, MI, DL, TII->get(LoongArch::SUBREG_TO_REG), ScratchReg2)
-      .addImm(0)
-      .addReg(ScratchSubReg2)
-      .addImm(LoongArch::sub_128);
-
-  if (Idx >= HalfSize)
-    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), XDst)
+    BuildMI(*BB, MI, DL, TII->get(InsOp), XDst)
         .addReg(XSrc)
         .addReg(ScratchReg2)
-        .addImm(2);
+        .addImm((Idx >= HalfSize ? Idx - HalfSize : Idx) * 17);
+  }
 
   MI.eraseFromParent();
   return BB;
@@ -6654,6 +6713,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(XVMSKGEZ)
     NODE_NAME_CASE(XVMSKEQZ)
     NODE_NAME_CASE(XVMSKNEZ)
+    NODE_NAME_CASE(VHADDW)
   }
 #undef NODE_NAME_CASE
   return nullptr;
@@ -7127,6 +7187,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     llvm_unreachable("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::PreserveMost:
     break;
   case CallingConv::GHC:
     if (!MF.getSubtarget().hasFeature(LoongArch::FeatureBasicF) ||

@@ -156,6 +156,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_Allocating:                                              \
   case ParsedAttr::AT_Regparm:                                                 \
   case ParsedAttr::AT_CFIUncheckedCallee:                                      \
+  case ParsedAttr::AT_CFISalt:                                                 \
   case ParsedAttr::AT_CmseNSCall:                                              \
   case ParsedAttr::AT_ArmStreaming:                                            \
   case ParsedAttr::AT_ArmStreamingCompatible:                                  \
@@ -2114,12 +2115,10 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
     return QualType();
   }
 
-  if (const RecordType *EltTy = T->getAs<RecordType>()) {
+  if (const auto *RD = T->getAsRecordDecl()) {
     // If the element type is a struct or union that contains a variadic
     // array, accept it as a GNU extension: C99 6.7.2.1p2.
-    if (EltTy->getOriginalDecl()
-            ->getDefinitionOrSelf()
-            ->hasFlexibleArrayMember())
+    if (RD->hasFlexibleArrayMember())
       Diag(Loc, diag::ext_flexible_array_in_array) << T;
   } else if (T->isObjCObjectType()) {
     Diag(Loc, diag::err_objc_array_of_interfaces) << T;
@@ -3974,10 +3973,7 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
     if (numNormalPointers == 0)
       return PointerDeclaratorKind::NonPointer;
 
-    if (auto recordType = type->getAs<RecordType>()) {
-      RecordDecl *recordDecl =
-          recordType->getOriginalDecl()->getDefinitionOrSelf();
-
+    if (auto *recordDecl = type->getAsRecordDecl()) {
       // If this is CFErrorRef*, report it as such.
       if (numNormalPointers == 2 && numTypeSpecifierPointers < 2 &&
           S.ObjC().isCFError(recordDecl)) {
@@ -7983,6 +7979,36 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     FunctionType::ExtInfo EI =
       unwrapped.get()->getExtInfo().withRegParm(value);
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
+
+  if (attr.getKind() == ParsedAttr::AT_CFISalt) {
+    if (attr.getNumArgs() != 1)
+      return true;
+
+    StringRef Argument;
+    if (!S.checkStringLiteralArgumentAttr(attr, 0, Argument))
+      return true;
+
+    // Delay if this is not a function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    const auto *FnTy = unwrapped.get()->getAs<FunctionProtoType>();
+    if (!FnTy) {
+      S.Diag(attr.getLoc(), diag::err_attribute_wrong_decl_type)
+          << attr << attr.isRegularKeywordAttribute()
+          << ExpectedFunctionWithProtoType;
+      attr.setInvalid();
+      return true;
+    }
+
+    FunctionProtoType::ExtProtoInfo EPI = FnTy->getExtProtoInfo();
+    EPI.ExtraAttributeInfo.CFISalt = Argument;
+
+    QualType newtype = S.Context.getFunctionType(FnTy->getReturnType(),
+                                                 FnTy->getParamTypes(), EPI);
+    type = unwrapped.wrap(S, newtype->getAs<FunctionType>());
     return true;
   }
 

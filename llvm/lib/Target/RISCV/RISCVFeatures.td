@@ -234,7 +234,7 @@ def FeatureStdExtZtso
 def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZtso()">,
                     AssemblerPredicate<(all_of FeatureStdExtZtso),
                         "'Ztso' (Memory Model - Total Store Order)">;
-def NotHasStdExtZtso : Predicate<"!Subtarget->hasStdExtZtso()">;
+def NoStdExtZtso : Predicate<"!Subtarget->hasStdExtZtso()">;
 
 def FeatureStdExtZa64rs
     : RISCVExtension<1, 0, "Reservation Set Size of at Most 64 Bytes">;
@@ -473,7 +473,7 @@ def FeatureStdExtZba
 def HasStdExtZba : Predicate<"Subtarget->hasStdExtZba()">,
                    AssemblerPredicate<(all_of FeatureStdExtZba),
                                       "'Zba' (Address Generation Instructions)">;
-def NotHasStdExtZba : Predicate<"!Subtarget->hasStdExtZba()">;
+def NoStdExtZba : Predicate<"!Subtarget->hasStdExtZba()">;
 
 def FeatureStdExtZbb
     : RISCVExtension<1, 0, "Basic Bit-Manipulation">,
@@ -1055,13 +1055,13 @@ def FeatureStdExtSupm
                      "Indicates User-mode Pointer Masking">;
 
 def FeatureStdExtSmctr
-    : RISCVExperimentalExtension<1, 0,
-                                 "Control Transfer Records Machine Level",
-                                 [FeatureStdExtSscsrind]>;
+    : RISCVExtension<1, 0,
+                     "Control Transfer Records Machine Level",
+                     [FeatureStdExtSscsrind]>;
 def FeatureStdExtSsctr
-    : RISCVExperimentalExtension<1, 0,
-                                 "Control Transfer Records Supervisor Level",
-                                 [FeatureStdExtSscsrind]>;
+    : RISCVExtension<1, 0,
+                     "Control Transfer Records Supervisor Level",
+                     [FeatureStdExtSscsrind]>;
 def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
                             AssemblerPredicate<(any_of FeatureStdExtSmctr, FeatureStdExtSsctr),
                                "'Smctr' (Control Transfer Records Machine Level) or "
@@ -1069,7 +1069,7 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 
 // Packed SIMD Extensions
 def FeatureStdExtP
-    : RISCVExperimentalExtension<0, 14,
+    : RISCVExperimentalExtension<0, 15,
                                  "'Base P' (Packed SIMD)">;
 def HasStdExtP : Predicate<"Subtarget->hasStdExtP()">,
                  AssemblerPredicate<(all_of FeatureStdExtP),
@@ -1408,7 +1408,7 @@ def HasVendorXMIPSCBOP
     : Predicate<"Subtarget->hasVendorXMIPSCBOP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSCBOP),
                          "'Xmipscbop' (MIPS hardware prefetch)">;
-def NotHasVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
+def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 
@@ -1641,6 +1641,14 @@ def HasVendorXAndesVDot
     : Predicate<"Subtarget->hasVendorXAndesVDot()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesVDot),
                          "'XAndesVDot' (Andes Vector Dot Product Extension)">;
+
+def FeatureVendorXSMTVDot
+    : RISCVExtension<1, 0, "SpacemiT Vector Dot Product Extension",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSMTVDot
+    : Predicate<"Subtarget->hasVendorXSMTVDot()">,
+      AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
+                         "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
