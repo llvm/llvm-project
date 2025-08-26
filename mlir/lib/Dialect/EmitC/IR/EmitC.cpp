@@ -1602,11 +1602,10 @@ static LogicalResult verifyLoopRegions(Operation &op, Region &condition,
                           "'emitc.yield', but got ")
            << last.getName();
 
-  if (condYield.getNumOperands() != 1) {
+  if (condYield.getNumOperands() != 1)
     return op.emitOpError("expected condition region to return 1 value, but "
                           "it returns ")
            << condYield.getNumOperands() << " values";
-  }
 
   if (condYield.getOperand(0) != exprOp.getResult())
     return op.emitError("'emitc.yield' must return result of "
@@ -1636,9 +1635,8 @@ static ParseResult parseLoop(OpAsmParser &parser, OperationState &res,
   Region *firstRegion = res.addRegion();
   Region *secondRegion = res.addRegion();
 
-  if (parser.parseRegion(*firstRegion))
-    return failure();
-  if (parser.parseKeyword(midKeyword) || parser.parseRegion(*secondRegion))
+  if (parser.parseRegion(*firstRegion) || parser.parseKeyword(midKeyword) ||
+      parser.parseRegion(*secondRegion))
     return failure();
 
   return parser.parseOptionalAttrDictWithKeyword(res.attributes);
