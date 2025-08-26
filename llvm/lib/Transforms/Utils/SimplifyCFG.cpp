@@ -6983,11 +6983,16 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   bool UseSwitchConditionAsTableIndex = shouldUseSwitchConditionAsTableIndex(
       *MinCaseVal, *MaxCaseVal, HasDefaultResults, ResultTypes, DL, TTI);
   uint64_t TableSize;
-  if (UseSwitchConditionAsTableIndex)
+  ConstantInt *TableIndexOffset;
+  if (UseSwitchConditionAsTableIndex) {
     TableSize = MaxCaseVal->getLimitedValue() + 1;
-  else
+    TableIndexOffset = ConstantInt::get(MaxCaseVal->getIntegerType(), 0);
+  } else {
     TableSize =
         (MaxCaseVal->getValue() - MinCaseVal->getValue()).getLimitedValue() + 1;
+
+    TableIndexOffset = MinCaseVal;
+  }
 
   // If the default destination is unreachable, or if the lookup table covers
   // all values of the conditional variable, branch directly to the lookup table
@@ -7038,12 +7043,9 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // Compute the table index value.
   Builder.SetInsertPoint(SI);
   Value *TableIndex;
-  ConstantInt *TableIndexOffset;
   if (UseSwitchConditionAsTableIndex) {
-    TableIndexOffset = ConstantInt::get(MaxCaseVal->getIntegerType(), 0);
     TableIndex = SI->getCondition();
   } else {
-    TableIndexOffset = MinCaseVal;
     // If the default is unreachable, all case values are s>= MinCaseVal. Then
     // we can try to attach nsw.
     bool MayWrap = true;
