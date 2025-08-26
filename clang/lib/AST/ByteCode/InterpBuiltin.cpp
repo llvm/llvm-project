@@ -2518,9 +2518,9 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
-                                            const CallExpr *Call,
-                                            unsigned BuiltinID) {
+static bool interp__builtin_elementwise_int_binop(InterpState &S, CodePtr OpPC,
+                                                  const CallExpr *Call,
+                                                  unsigned BuiltinID) {
   assert(Call->getNumArgs() == 2);
 
   // Single integer case.
@@ -3276,7 +3276,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psrlv4di:
   case clang::X86::BI__builtin_ia32_psrlv4si:
   case clang::X86::BI__builtin_ia32_psrlv8si:
-    return interp__builtin_elementwise_sat(S, OpPC, Call, BuiltinID);
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min:
