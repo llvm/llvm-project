@@ -2490,6 +2490,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   // Create a table containing the LLT objects needed by the matcher and an enum
   // for the matcher to reference them with.
   std::vector<LLTCodeGen> TypeObjects;
+  TypeObjects.reserve(KnownTypes.size());
   append_range(TypeObjects, KnownTypes);
   llvm::sort(TypeObjects);
 

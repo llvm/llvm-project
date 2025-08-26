@@ -158,10 +158,12 @@ static void addBlockAndPredsToSet(BasicBlock *InputBB, BasicBlock *StopBlock,
   Worklist.push_back(InputBB);
   do {
     BasicBlock *BB = Worklist.pop_back_val();
-    if (Blocks.insert(BB).second && BB != StopBlock)
+    if (Blocks.insert(BB).second && BB != StopBlock) {
       // If BB is not already processed and it is not a stop block then
       // insert its predecessor in the work list
+      Worklist.reserve(Worklist.size() + pred_size(BB));
       append_range(Worklist, predecessors(BB));
+    }
   } while (!Worklist.empty());
 }
 

@@ -1158,6 +1158,7 @@ static bool inferInitializes(Argument &A, Function &F) {
     if (UPB != UsesPerBlock.end()) {
       // Sort uses in this block by instruction order.
       SmallVector<std::pair<Instruction *, ArgumentAccessInfo>, 2> Insts;
+      Insts.reserve(UPB->second.Insts.size());
       append_range(Insts, UPB->second.Insts);
       sort(Insts, [](std::pair<Instruction *, ArgumentAccessInfo> &LHS,
                      std::pair<Instruction *, ArgumentAccessInfo> &RHS) {
