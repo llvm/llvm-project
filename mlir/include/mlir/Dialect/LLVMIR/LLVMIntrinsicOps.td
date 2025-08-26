@@ -696,21 +696,15 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr", [
     DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
   let llvmBuilder = [{
-    // Debug intrinsics without debug locations are invalid.
+    // Debug records without debug locations are invalid.
     if(!builder.getCurrentDebugLocation())
       return success();
-    llvm::Function *parentFn = builder.GetInsertBlock()->getParent();
-    llvm::DILocalScope *scope;
-    if (auto scopeLoc =
-            opInst.getLoc()->findInstanceOf<FusedLocWith<LLVM::DIScopeAttr>>())
-      scope = llvm::cast<llvm::DILocalScope>(
-          moduleTranslation.translateDebugInfo(scopeLoc.getMetadata()));
-    else
-      scope = parentFn->getSubprogram();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
 
     llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::DIBuilder DB(*module);
-    DB.insertDeclare(moduleTranslation.lookupValue(opInst.getOperand(0)),
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertDeclare(moduleTranslation.lookupValue(opInst.getOperand(0)),
                      llvm::cast<llvm::DILocalVariable>(
                          moduleTranslation.translateDebugInfo($varInfo)),
                      moduleTranslation.translateExpression($locationExpr),
@@ -728,21 +722,15 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
     DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
   let llvmBuilder = [{
-    // Debug intrinsics without debug locations are invalid.
+    // Debug records without debug locations are invalid.
     if(!builder.getCurrentDebugLocation())
       return success();
-    llvm::Function *parentFn = builder.GetInsertBlock()->getParent();
-    llvm::DILocalScope *scope;
-    if (auto scopeLoc =
-            opInst.getLoc()->findInstanceOf<FusedLocWith<LLVM::DIScopeAttr>>())
-      scope = llvm::cast<llvm::DILocalScope>(
-          moduleTranslation.translateDebugInfo(scopeLoc.getMetadata()));
-    else
-      scope = parentFn->getSubprogram();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
 
     llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::DIBuilder DB(*module);
-    DB.insertDbgValueIntrinsic(
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertDbgValueIntrinsic(
         moduleTranslation.lookupValue(opInst.getOperand(0)),
         llvm::cast<llvm::DILocalVariable>(
             moduleTranslation.translateDebugInfo($varInfo)),
@@ -756,21 +744,15 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
   let summary = "Relates the program to a debug information label.";
   let arguments = (ins LLVM_DILabelAttr:$label);
   let llvmBuilder = [{
-    // Debug intrinsics without debug locations are invalid.
+    // Debug records without debug locations are invalid.
     if(!builder.getCurrentDebugLocation())
       return success();
-    llvm::Function *parentFn = builder.GetInsertBlock()->getParent();
-    llvm::DILocalScope *scope;
-    if (auto scopeLoc =
-            opInst.getLoc()->findInstanceOf<FusedLocWith<LLVM::DIScopeAttr>>())
-      scope = llvm::cast<llvm::DILocalScope>(
-          moduleTranslation.translateDebugInfo(scopeLoc.getMetadata()));
-    else
-      scope = parentFn->getSubprogram();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
 
     llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::DIBuilder DB(*module);
-    DB.insertLabel(
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertLabel(
         llvm::cast<llvm::DILabel>(moduleTranslation.translateDebugInfo($label)),
         moduleTranslation.translateLoc(opInst.getLoc(), scope),
         builder.GetInsertPoint());
