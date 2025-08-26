@@ -16,6 +16,14 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_deadlock_detector_interface.h"
 
+#if SANITIZER_APPLE
+enum LockDuringWriteSetting {
+  kLockDuringAllWrites,
+  kNoLockDuringWritesCurrentProcess,
+  kNoLockDuringWritesAllProcesses,
+};
+#endif
+
 namespace __tsan {
 
 struct Flags : DDFlags {
