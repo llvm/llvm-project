@@ -198,6 +198,11 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
+static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
+    "max-jump-threading-live-blocks", cl::Hidden, cl::init(24),
+    cl::desc("Limit number of blocks a define in a threaded block is allowed "
+             "to be live in"));
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -286,6 +291,7 @@ class SimplifyCFGOpt {
   bool simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder);
   bool simplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder);
   bool simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder);
+  bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI);
 
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                              IRBuilder<> &Builder);
@@ -559,8 +565,22 @@ struct ConstantComparesGatherer {
   /// Number of comparisons matched in the and/or chain
   unsigned UsedICmps = 0;
 
+  /// If the elements in Vals matches the comparisons
+  bool IsEq = false;
+
+  // Used to check if the first matched CompValue shall be the Extra check.
+  bool IgnoreFirstMatch = false;
+  bool MultipleMatches = false;
+
   /// Construct and compute the result for the comparison instruction Cond
   ConstantComparesGatherer(Instruction *Cond, const DataLayout &DL) : DL(DL) {
+    gather(Cond);
+    if (CompValue || !MultipleMatches)
+      return;
+    Extra = nullptr;
+    Vals.clear();
+    UsedICmps = 0;
+    IgnoreFirstMatch = true;
     gather(Cond);
   }
 
@@ -572,10 +592,16 @@ private:
   /// Try to set the current value used for the comparison, it succeeds only if
   /// it wasn't set before or if the new value is the same as the old one
   bool setValueOnce(Value *NewVal) {
-    if (CompValue && CompValue != NewVal)
+    if (IgnoreFirstMatch) {
+      IgnoreFirstMatch = false;
       return false;
+    }
+    if (CompValue && CompValue != NewVal) {
+      MultipleMatches = true;
+      return false;
+    }
     CompValue = NewVal;
-    return (CompValue != nullptr);
+    return true;
   }
 
   /// Try to match Instruction "I" as a comparison against a constant and
@@ -686,7 +712,7 @@ private:
 
       UsedICmps++;
       Vals.push_back(C);
-      return ICI->getOperand(0);
+      return true;
     }
 
     // If we have "x ult 3", for example, then we can add 0,1,2 to the set.
@@ -730,23 +756,23 @@ private:
   /// vector.
   /// One "Extra" case is allowed to differ from the other.
   void gather(Value *V) {
-    bool isEQ = match(V, m_LogicalOr(m_Value(), m_Value()));
-
+    Value *Op0, *Op1;
+    if (match(V, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
+      IsEq = true;
+    else if (match(V, m_LogicalAnd(m_Value(Op0), m_Value(Op1))))
+      IsEq = false;
+    else
+      return;
     // Keep a stack (SmallVector for efficiency) for depth-first traversal
-    SmallVector<Value *, 8> DFT;
-    SmallPtrSet<Value *, 8> Visited;
-
-    // Initialize
-    Visited.insert(V);
-    DFT.push_back(V);
+    SmallVector<Value *, 8> DFT{Op0, Op1};
+    SmallPtrSet<Value *, 8> Visited{V, Op0, Op1};
 
     while (!DFT.empty()) {
       V = DFT.pop_back_val();
 
       if (Instruction *I = dyn_cast<Instruction>(V)) {
         // If it is a || (or && depending on isEQ), process the operands.
-        Value *Op0, *Op1;
-        if (isEQ ? match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1)))
+        if (IsEq ? match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1)))
                  : match(I, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
           if (Visited.insert(Op1).second)
             DFT.push_back(Op1);
@@ -757,7 +783,7 @@ private:
         }
 
         // Try to match the current instruction
-        if (matchInstruction(I, isEQ))
+        if (matchInstruction(I, IsEq))
           // Match succeed, continue the loop
           continue;
       }
@@ -805,11 +831,15 @@ Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
     if (!SI->getParent()->hasNPredecessorsOrMore(128 / SI->getNumSuccessors()))
       CV = SI->getCondition();
   } else if (BranchInst *BI = dyn_cast<BranchInst>(TI))
-    if (BI->isConditional() && BI->getCondition()->hasOneUse())
+    if (BI->isConditional() && BI->getCondition()->hasOneUse()) {
       if (ICmpInst *ICI = dyn_cast<ICmpInst>(BI->getCondition())) {
         if (ICI->isEquality() && getConstantInt(ICI->getOperand(1), DL))
           CV = ICI->getOperand(0);
+      } else if (auto *Trunc = dyn_cast<TruncInst>(BI->getCondition())) {
+        if (Trunc->hasNoUnsignedWrap())
+          CV = Trunc->getOperand(0);
       }
+    }
 
   // Unwrap any lossless ptrtoint cast.
   if (CV) {
@@ -835,11 +865,20 @@ BasicBlock *SimplifyCFGOpt::getValueEqualityComparisonCases(
   }
 
   BranchInst *BI = cast<BranchInst>(TI);
-  ICmpInst *ICI = cast<ICmpInst>(BI->getCondition());
-  BasicBlock *Succ = BI->getSuccessor(ICI->getPredicate() == ICmpInst::ICMP_NE);
-  Cases.push_back(ValueEqualityComparisonCase(
-      getConstantInt(ICI->getOperand(1), DL), Succ));
-  return BI->getSuccessor(ICI->getPredicate() == ICmpInst::ICMP_EQ);
+  Value *Cond = BI->getCondition();
+  ICmpInst::Predicate Pred;
+  ConstantInt *C;
+  if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
+    Pred = ICI->getPredicate();
+    C = getConstantInt(ICI->getOperand(1), DL);
+  } else {
+    Pred = ICmpInst::ICMP_NE;
+    auto *Trunc = cast<TruncInst>(Cond);
+    C = ConstantInt::get(cast<IntegerType>(Trunc->getOperand(0)->getType()), 0);
+  }
+  BasicBlock *Succ = BI->getSuccessor(Pred == ICmpInst::ICMP_NE);
+  Cases.push_back(ValueEqualityComparisonCase(C, Succ));
+  return BI->getSuccessor(Pred == ICmpInst::ICMP_EQ);
 }
 
 /// Given a vector of bb/value pairs, remove any entries
@@ -1101,7 +1140,10 @@ static void getBranchWeights(Instruction *TI,
   // default weight to be the first entry.
   if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
     assert(Weights.size() == 2);
-    ICmpInst *ICI = cast<ICmpInst>(BI->getCondition());
+    auto *ICI = dyn_cast<ICmpInst>(BI->getCondition());
+    if (!ICI)
+      return;
+
     if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
       std::swap(Weights.front(), Weights.back());
   }
@@ -2227,16 +2269,6 @@ static bool canSinkInstructions(
       return I->getOperand(OI) == I0->getOperand(OI);
     };
     if (!all_of(Insts, SameAsI0)) {
-      // SROA can't speculate lifetime markers of selects/phis, and the
-      // backend may handle such lifetimes incorrectly as well (#104776).
-      // Don't sink lifetimes if it would introduce a phi on the pointer
-      // argument.
-      if (isa<LifetimeIntrinsic>(I0) && OI == 1 &&
-          any_of(Insts, [](const Instruction *I) {
-            return isa<AllocaInst>(I->getOperand(1)->stripPointerCasts());
-          }))
-        return false;
-
       if ((isa<Constant>(Op) && !replacingOperandWithVariableIsCheap(I0, OI)) ||
           !canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
@@ -3326,12 +3358,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     //   %merge = select %cond, %two, %one
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
-    auto replaceVariable = [OrigV, S](auto *DbgAssign) {
+    for (DbgVariableRecord *DbgAssign :
+         at::getDVRAssignmentMarkers(SpeculatedStore))
       if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
         DbgAssign->replaceVariableLocationOp(OrigV, S);
-    };
-    for_each(at::getAssignmentMarkers(SpeculatedStore), replaceVariable);
-    for_each(at::getDVRAssignmentMarkers(SpeculatedStore), replaceVariable);
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -3400,8 +3430,27 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   return true;
 }
 
+using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
+
+// Return false if number of blocks searched is too much.
+static bool findReaching(BasicBlock *BB, BasicBlock *DefBB,
+                         BlocksSet &ReachesNonLocalUses) {
+  if (BB == DefBB)
+    return true;
+  if (!ReachesNonLocalUses.insert(BB).second)
+    return true;
+
+  if (ReachesNonLocalUses.size() > MaxJumpThreadingLiveBlocks)
+    return false;
+  for (BasicBlock *Pred : predecessors(BB))
+    if (!findReaching(Pred, DefBB, ReachesNonLocalUses))
+      return false;
+  return true;
+}
+
 /// Return true if we can thread a branch across this block.
-static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
+static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
+                                               BlocksSet &NonLocalUseBlocks) {
   int Size = 0;
   EphemeralValueTracker EphTracker;
 
@@ -3421,12 +3470,16 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
         return false; // Don't clone large BB's.
     }
 
-    // We can only support instructions that do not define values that are
-    // live outside of the current basic block.
+    // Record blocks with non-local uses of values defined in the current basic
+    // block.
     for (User *U : I.users()) {
       Instruction *UI = cast<Instruction>(U);
-      if (UI->getParent() != BB || isa<PHINode>(UI))
-        return false;
+      BasicBlock *UsedInBB = UI->getParent();
+      if (UsedInBB == BB) {
+        if (isa<PHINode>(UI))
+          return false;
+      } else
+        NonLocalUseBlocks.insert(UsedInBB);
     }
 
     // Looks ok, continue checking.
@@ -3485,18 +3538,37 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     return false;
 
   // Now we know that this block has multiple preds and two succs.
-  // Check that the block is small enough and values defined in the block are
-  // not used outside of it.
-  if (!blockIsSimpleEnoughToThreadThrough(BB))
+  // Check that the block is small enough and record which non-local blocks use
+  // values defined in the block.
+
+  BlocksSet NonLocalUseBlocks;
+  BlocksSet ReachesNonLocalUseBlocks;
+  if (!blockIsSimpleEnoughToThreadThrough(BB, NonLocalUseBlocks))
     return false;
 
+  // Jump-threading can only be done to destinations where no values defined
+  // in BB are live.
+
+  // Quickly check if both destinations have uses.  If so, jump-threading cannot
+  // be done.
+  if (NonLocalUseBlocks.contains(BI->getSuccessor(0)) &&
+      NonLocalUseBlocks.contains(BI->getSuccessor(1)))
+    return false;
+
+  // Search backward from NonLocalUseBlocks to find which blocks
+  // reach non-local uses.
+  for (BasicBlock *UseBB : NonLocalUseBlocks)
+    // Give up if too many blocks are searched.
+    if (!findReaching(UseBB, BB, ReachesNonLocalUseBlocks))
+      return false;
+
   for (const auto &Pair : KnownValues) {
-    // Okay, we now know that all edges from PredBB should be revectored to
-    // branch to RealDest.
     ConstantInt *CB = Pair.first;
     ArrayRef<BasicBlock *> PredBBs = Pair.second.getArrayRef();
     BasicBlock *RealDest = BI->getSuccessor(!CB->getZExtValue());
 
+    // Okay, we now know that all edges from PredBB should be revectored to
+    // branch to RealDest.
     if (RealDest == BB)
       continue; // Skip self loops.
 
@@ -3504,6 +3576,10 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     if (any_of(PredBBs, [](BasicBlock *PredBB) {
           return isa<IndirectBrInst>(PredBB->getTerminator());
         }))
+      continue;
+
+    // Only revector to RealDest if no values defined in BB are live.
+    if (ReachesNonLocalUseBlocks.contains(RealDest))
       continue;
 
     LLVM_DEBUG({
@@ -3614,15 +3690,19 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   return false;
 }
 
-static bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
-                                                    DomTreeUpdater *DTU,
-                                                    const DataLayout &DL,
-                                                    AssumptionCache *AC) {
+bool SimplifyCFGOpt::foldCondBranchOnValueKnownInPredecessor(BranchInst *BI) {
+  // Note: If BB is a loop header then there is a risk that threading introduces
+  // a non-canonical loop by moving a back edge. So we avoid this optimization
+  // for loop headers if NeedCanonicalLoop is set.
+  if (Options.NeedCanonicalLoop && is_contained(LoopHeaders, BI->getParent()))
+    return false;
+
   std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, AC);
+    Result =
+        foldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, Options.AC);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
@@ -5043,6 +5123,7 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   Value *CompVal = ConstantCompare.CompValue;
   unsigned UsedICmps = ConstantCompare.UsedICmps;
   Value *ExtraCase = ConstantCompare.Extra;
+  bool TrueWhenEqual = ConstantCompare.IsEq;
 
   // If we didn't have a multiply compared value, fail.
   if (!CompVal)
@@ -5051,8 +5132,6 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   // Avoid turning single icmps into a switch.
   if (UsedICmps <= 1)
     return false;
-
-  bool TrueWhenEqual = match(Cond, m_LogicalOr(m_Value(), m_Value()));
 
   // There might be duplicate constants in the list, which the switch
   // instruction can't handle, remove them now.
@@ -6600,16 +6679,20 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
   }
   case ArrayKind: {
     Type *IndexTy = DL.getIndexType(Array->getType());
+    auto *ArrayTy = cast<ArrayType>(Array->getValueType());
 
-    if (Index->getType() != IndexTy)
+    if (Index->getType() != IndexTy) {
+      unsigned OldBitWidth = Index->getType()->getIntegerBitWidth();
       Index = Builder.CreateZExtOrTrunc(Index, IndexTy);
+      if (auto *Zext = dyn_cast<ZExtInst>(Index))
+        Zext->setNonNeg(
+            isUIntN(OldBitWidth - 1, ArrayTy->getNumElements() - 1));
+    }
 
     Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
-    Value *GEP = Builder.CreateInBoundsGEP(Array->getValueType(), Array,
-                                           GEPIndices, "switch.gep");
-    return Builder.CreateLoad(
-        cast<ArrayType>(Array->getValueType())->getElementType(), GEP,
-        "switch.load");
+    Value *GEP =
+        Builder.CreateInBoundsGEP(ArrayTy, Array, GEPIndices, "switch.gep");
+    return Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
   }
   }
   llvm_unreachable("Unknown lookup table kind!");
@@ -8040,7 +8123,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this is a branch on something for which we know the constant value in
   // predecessors (e.g. a phi node in the current block), thread control
   // through this block.
-  if (foldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, Options.AC))
+  if (foldCondBranchOnValueKnownInPredecessor(BI))
     return requestResimplify();
 
   // Scan predecessor blocks for conditional branches.

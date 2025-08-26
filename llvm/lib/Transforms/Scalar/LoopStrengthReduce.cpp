@@ -3785,10 +3785,15 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
         // Ignore icmp instructions which are already being analyzed.
         if (const ICmpInst *ICI = dyn_cast<ICmpInst>(UserInst)) {
           unsigned OtherIdx = !U.getOperandNo();
-          Value *OtherOp = const_cast<Value *>(ICI->getOperand(OtherIdx));
+          Value *OtherOp = ICI->getOperand(OtherIdx);
           if (SE.hasComputableLoopEvolution(SE.getSCEV(OtherOp), L))
             continue;
         }
+
+        // Do not consider uses inside lifetime intrinsics. These are not
+        // actually materialized.
+        if (UserInst->isLifetimeStartOrEnd())
+          continue;
 
         std::pair<size_t, Immediate> P =
             getUse(S, LSRUse::Basic, MemAccessTy());

@@ -23,8 +23,8 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
   std::function<Value(AffineExpr)> buildExpr = [&](AffineExpr e) -> Value {
     switch (e.getKind()) {
     case AffineExprKind::Constant:
-      return b.create<ConstantIndexOp>(loc,
-                                       cast<AffineConstantExpr>(e).getValue());
+      return ConstantIndexOp::create(b, loc,
+                                     cast<AffineConstantExpr>(e).getValue());
     case AffineExprKind::DimId:
       return operands[cast<AffineDimExpr>(e).getPosition()];
     case AffineExprKind::SymbolId:
@@ -32,28 +32,28 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
                       map.getNumDims()];
     case AffineExprKind::Add: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<AddIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                              buildExpr(binaryExpr.getRHS()));
+      return AddIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                            buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::Mul: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<MulIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                              buildExpr(binaryExpr.getRHS()));
+      return MulIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                            buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::FloorDiv: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<DivSIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                               buildExpr(binaryExpr.getRHS()));
+      return DivSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                             buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::CeilDiv: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<CeilDivSIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                                   buildExpr(binaryExpr.getRHS()));
+      return CeilDivSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                                 buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::Mod: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<RemSIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                               buildExpr(binaryExpr.getRHS()));
+      return RemSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                             buildExpr(binaryExpr.getRHS()));
     }
     }
     llvm_unreachable("unsupported AffineExpr kind");
@@ -89,10 +89,10 @@ FailureOr<OpFoldResult> mlir::arith::reifyValueBound(
            "expected dynamic dim");
     if (isa<RankedTensorType>(value.getType())) {
       // A tensor dimension is used: generate a tensor.dim.
-      operands.push_back(b.create<tensor::DimOp>(loc, value, *dim));
+      operands.push_back(tensor::DimOp::create(b, loc, value, *dim));
     } else if (isa<MemRefType>(value.getType())) {
       // A memref dimension is used: generate a memref.dim.
-      operands.push_back(b.create<memref::DimOp>(loc, value, *dim));
+      operands.push_back(memref::DimOp::create(b, loc, value, *dim));
     } else {
       llvm_unreachable("cannot generate DimOp for unsupported shaped type");
     }

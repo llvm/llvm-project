@@ -647,7 +647,7 @@ define i32 @select_add_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: select_add_1:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    negw a0, a0
+; RV64IM-NEXT:    neg a0, a0
 ; RV64IM-NEXT:    and a0, a0, a1
 ; RV64IM-NEXT:    addw a0, a2, a0
 ; RV64IM-NEXT:    ret

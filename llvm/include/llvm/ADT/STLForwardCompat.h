@@ -55,21 +55,13 @@ using type_identity_t // NOLINT(readability-identifier-naming)
 
 // TODO: Remove this in favor of std::optional<T>::transform once we switch to
 // C++23.
-template <typename T, typename Function>
-auto transformOptional(const std::optional<T> &O, const Function &F)
-    -> std::optional<decltype(F(*O))> {
-  if (O)
-    return F(*O);
-  return std::nullopt;
-}
-
-// TODO: Remove this in favor of std::optional<T>::transform once we switch to
-// C++23.
-template <typename T, typename Function>
-auto transformOptional(std::optional<T> &&O, const Function &F)
-    -> std::optional<decltype(F(*std::move(O)))> {
-  if (O)
-    return F(*std::move(O));
+template <typename Optional, typename Function,
+          typename Value = typename llvm::remove_cvref_t<Optional>::value_type>
+std::optional<std::invoke_result_t<Function, Value>>
+transformOptional(Optional &&O, Function &&F) {
+  if (O) {
+    return F(*std::forward<Optional>(O));
+  }
   return std::nullopt;
 }
 

@@ -17,15 +17,12 @@
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/Cpp/CppEmitter.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <stack>
-#include <utility>
 
 #define DEBUG_TYPE "translate-to-cpp"
 
@@ -336,7 +333,8 @@ private:
 /// Determine whether expression \p op should be emitted in a deferred way.
 static bool hasDeferredEmission(Operation *op) {
   return isa_and_nonnull<emitc::GetGlobalOp, emitc::LiteralOp, emitc::MemberOp,
-                         emitc::MemberOfPtrOp, emitc::SubscriptOp>(op);
+                         emitc::MemberOfPtrOp, emitc::SubscriptOp,
+                         emitc::GetFieldOp>(op);
 }
 
 /// Determine whether expression \p expressionOp should be emitted inline, i.e.
@@ -784,9 +782,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
   os << applyOp.getApplicableOperator();
-  os << emitter.getOrCreateName(applyOp.getOperand());
-
-  return success();
+  return emitter.emitOperand(applyOp.getOperand());
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -903,8 +899,7 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::ForOp forOp) {
   // inlined, and as such should be wrapped in parentheses in order to guarantee
   // its precedence and associativity.
   auto requiresParentheses = [&](Value value) {
-    auto expressionOp =
-        dyn_cast_if_present<ExpressionOp>(value.getDefiningOp());
+    auto expressionOp = value.getDefiningOp<ExpressionOp>();
     if (!expressionOp)
       return false;
     return shouldBeInlined(expressionOp);
@@ -1053,25 +1048,17 @@ static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
 
 static LogicalResult printOperation(CppEmitter &emitter, FieldOp fieldOp) {
   raw_ostream &os = emitter.ostream();
-  if (failed(emitter.emitType(fieldOp->getLoc(), fieldOp.getType())))
+  if (failed(emitter.emitVariableDeclaration(
+          fieldOp->getLoc(), fieldOp.getType(), fieldOp.getSymName())))
     return failure();
-  os << " " << fieldOp.getSymName() << ";";
-  return success();
-}
+  std::optional<Attribute> initialValue = fieldOp.getInitialValue();
+  if (initialValue) {
+    os << " = ";
+    if (failed(emitter.emitAttribute(fieldOp->getLoc(), *initialValue)))
+      return failure();
+  }
 
-static LogicalResult printOperation(CppEmitter &emitter,
-                                    GetFieldOp getFieldOp) {
-  raw_indented_ostream &os = emitter.ostream();
-
-  Value result = getFieldOp.getResult();
-  if (failed(emitter.emitType(getFieldOp->getLoc(), result.getType())))
-    return failure();
-  os << " ";
-  if (failed(emitter.emitOperand(result)))
-    return failure();
-  os << " = ";
-
-  os << getFieldOp.getFieldName().str();
+  os << ";";
   return success();
 }
 
@@ -1208,7 +1195,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   os << ") {\n";
   if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
     return failure();
-  os << "}\n";
+  os << "}";
 
   return success();
 }
@@ -1249,7 +1236,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   os << ") {\n";
   if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
     return failure();
-  os << "}\n";
+  os << "}";
 
   return success();
 }
@@ -1458,7 +1445,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
   }
   if (auto dense = dyn_cast<DenseIntElementsAttr>(attr)) {
     if (auto iType = dyn_cast<IntegerType>(
-            cast<TensorType>(dense.getType()).getElementType())) {
+            cast<ShapedType>(dense.getType()).getElementType())) {
       os << '{';
       interleaveComma(dense, os, [&](const APInt &val) {
         printInt(val, shouldMapToUnsigned(iType.getSignedness()));
@@ -1467,7 +1454,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
       return success();
     }
     if (auto iType = dyn_cast<IndexType>(
-            cast<TensorType>(dense.getType()).getElementType())) {
+            cast<ShapedType>(dense.getType()).getElementType())) {
       os << '{';
       interleaveComma(dense, os,
                       [&](const APInt &val) { printInt(val, false); });
@@ -1545,7 +1532,7 @@ LogicalResult CppEmitter::emitOperand(Value value) {
     return success();
   }
 
-  auto expressionOp = dyn_cast_if_present<ExpressionOp>(value.getDefiningOp());
+  auto expressionOp = value.getDefiningOp<ExpressionOp>();
   if (expressionOp && shouldBeInlined(expressionOp))
     return emitExpression(expressionOp);
 
@@ -1704,12 +1691,11 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
                 emitc::DeclareFuncOp, emitc::DivOp, emitc::ExpressionOp,
                 emitc::FieldOp, emitc::FileOp, emitc::ForOp, emitc::FuncOp,
-                emitc::GetFieldOp, emitc::GlobalOp, emitc::IfOp,
-                emitc::IncludeOp, emitc::LoadOp, emitc::LogicalAndOp,
-                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
-                emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
-                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::GlobalOp, emitc::IfOp, emitc::IncludeOp, emitc::LoadOp,
+                emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
+                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
+                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
+                emitc::VariableOp, emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
@@ -1717,6 +1703,10 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
               [&](auto op) { return printOperation(*this, op); })
           .Case<emitc::GetGlobalOp>([&](auto op) {
             cacheDeferredOpResult(op.getResult(), op.getName());
+            return success();
+          })
+          .Case<emitc::GetFieldOp>([&](auto op) {
+            cacheDeferredOpResult(op.getResult(), op.getFieldName());
             return success();
           })
           .Case<emitc::LiteralOp>([&](auto op) {

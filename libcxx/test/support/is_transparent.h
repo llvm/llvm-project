@@ -36,6 +36,17 @@ struct transparent_less_not_referenceable
     using is_transparent = void () const &;  // it's a type; a weird one, but a type
 };
 
+// Prevent regression when empty base class optimization is not suitable.
+// See https://github.com/llvm/llvm-project/issues/152543.
+struct transparent_less_nonempty {
+  template <class T, class U>
+  constexpr bool operator()(T&& t, U&& u) const {
+    return std::forward<T>(t) < std::forward<U>(u);
+  }
+  struct is_transparent {
+  } pad_; // making this comparator non-empty
+};
+
 struct transparent_less_no_type
 {
     template <class T, class U>

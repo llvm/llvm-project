@@ -107,18 +107,6 @@ class VOP1_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   VOP_DPP_Pseudo <OpName, P, pattern> {
 }
 
-class getVOP1Pat <SDPatternOperator node, VOPProfile P> : LetDummies {
-  list<dag> ret =
-    !if(P.HasModifiers,
-        [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3Mods P.Src0VT:$src0, i32:$src0_modifiers))))],
-        !if(P.HasOMod,
-            [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3OMods P.Src0VT:$src0,
-                                                  i1:$clamp, i32:$omod))))],
-            [(set P.DstVT:$vdst, (node (P.Src0VT P.Src0RC32:$src0)))]
-        )
-    );
-}
-
 multiclass VOP1Inst <string opName, VOPProfile P,
                      SDPatternOperator node = null_frag, int VOPDOp = -1> {
   // We only want to set this on the basic, non-SDWA or DPP forms.
@@ -718,7 +706,6 @@ def V_CVT_F16_F8_Fake16_Profile : VOP3_Profile_Fake16<V_CVT_F16_F8_Profile>;
 
 let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts],
     mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
-  // FIXME: This differs from downstream due to changes that haven't been upstreamed yet.
   let SubtargetPredicate = isGFX12PlusNot12_50 in
     defm V_CVT_F32_FP8_OP_SEL    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>>;
   let SubtargetPredicate = isGFX125xOnly in
@@ -743,7 +730,6 @@ class Cvt_F_F8_Pat_ByteSel<SDPatternOperator node, VOP3_Pseudo inst, bit HasOpSe
 >;
 
 let OtherPredicates = [HasFP8ConversionInsts] in {
-  // FIXME: This differs from downstream due to changes that haven't been upstreamed yet.
   let SubtargetPredicate = isGFX12PlusNot12_50 in
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_fp8, V_CVT_F32_FP8_OP_SEL_e64>;
   let SubtargetPredicate = isGFX125xOnly in {
@@ -752,7 +738,6 @@ let OtherPredicates = [HasFP8ConversionInsts] in {
     def : GCNPat<(int_amdgcn_cvt_f32_fp8_e5m3 i32:$src0, timm:$byte_sel),
                  (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.ENABLE, (as_i32timm $byte_sel))>;
   }
-  // FIXME: This differs from downstream due to changes that haven't been upstreamed yet.
   let SubtargetPredicate = isGFX12Plus in
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_bf8, V_CVT_F32_BF8_OP_SEL_e64>;
 }
@@ -803,6 +788,9 @@ let SubtargetPredicate = isGFX1250Plus in {
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_fp8, V_CVT_F16_FP8_fake16_e64, 1>;
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_fake16_e64, 1>;
   }
+
+  defm V_SAT_PK4_I4_I8 : VOP1Inst_t16<"v_sat_pk4_i4_i8", VOP1_I16_I32, int_amdgcn_sat_pk4_i4_i8>;
+  defm V_SAT_PK4_U4_U8 : VOP1Inst_t16<"v_sat_pk4_u4_u8", VOP1_I16_I32, int_amdgcn_sat_pk4_u4_u8>;
 } // End SubtargetPredicate = isGFX1250Plus
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -1067,17 +1055,19 @@ multiclass VOP1Only_Real_gfx11_gfx12<bits<9> op> :
 multiclass VOP1_Real_FULL_gfx11_gfx12<bits<9> op> :
   VOP1_Real_FULL<GFX11Gen, op>, VOP1_Real_FULL<GFX12Gen, op>;
 
-multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
-                                             string opName, string asmName> :
-  VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
-  VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
-
 multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250<
     bits<9> op, string asmName = !tolower(NAME), string opName = NAME> {
   defm opName#"_t16" :
        VOP1_Real_FULL_with_name<GFX1250Gen, op, opName#"_t16", asmName>;
   defm opName#"_fake16":
        VOP1_Real_FULL_with_name<GFX1250Gen, op, opName#"_fake16", asmName>;
+}
+
+multiclass VOP1_Real_OpSelIsDPP_gfx1250<bits<9> op> : VOP1_Real_e32<GFX1250Gen, op> {
+   defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+   def _e64_gfx1250 :
+        VOP3_Real_Gen<ps, GFX1250Gen>,
+        VOP3OpSelIsDPP_gfx12<{0, 1, 1, op{6-0}}, ps.Pfl>;
 }
 
 defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX12Not12_50Gen, 0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
@@ -1147,8 +1137,12 @@ defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
 
 defm V_TANH_F32              : VOP1_Real_FULL<GFX1250Gen, 0x01e>;
 defm V_TANH_F16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x01f>;
+defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250<0x049>;
 defm V_TANH_BF16             : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x04a>;
+defm V_PRNG_B32              : VOP1_Real_FULL<GFX1250Gen, 0x04b>;
 defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_cvt_f32_bf16", "V_CVT_F32_BF16_gfx1250">;
+defm V_SAT_PK4_I4_I8         : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x073>;
+defm V_SAT_PK4_U4_U8         : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x074>;
 defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x075>;
 defm V_CVT_PK_F16_BF8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x076>;
 defm V_CVT_F16_FP8           : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x077>;

@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Clang-18 fixed some spurious clang diagnostics. Once clang-18 is the
-// minumum required version these obsolete tests can be removed.
-// TODO(LLVM-20) remove spurious clang diagnostic tests.
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // With clang-cl, some warnings have a 'which is a Microsoft extension' suffix
@@ -60,13 +56,13 @@ void test() {
   {
     std::expected<void, int> e;
     e.transform_error(return_unexpected<int&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
-    // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
+    // expected-error-re@*:* 0-1 {{no matching constructor for initialization of{{.*}}}}
     // expected-error-re@*:* {{static assertion failed {{.*}}A program that instantiates expected<T, E> with a E that is not a valid argument for unexpected<E> is ill-formed}}
     // expected-error-re@*:* 0-1 {{call to deleted constructor of {{.*}}}}
     // expected-error-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}}}
 
     e.transform_error(return_no_object<int&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
-    // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
+    // expected-error-re@*:* 0-1 {{no matching constructor for initialization of{{.*}}}}
     // expected-error-re@*:* {{static assertion failed {{.*}}A program that instantiates expected<T, E> with a E that is not a valid argument for unexpected<E> is ill-formed}}
     // expected-warning-re@*:* 0-1 {{union member {{.*}} has reference type {{.*}}, which is a Microsoft extension}}
   }
@@ -75,9 +71,9 @@ void test() {
   {
     const std::expected<void, int> e;
     e.transform_error(return_unexpected<const int &>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
-    // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
+    // expected-error-re@*:* 0-1 {{no matching constructor for initialization of{{.*}}}}
     e.transform_error(return_no_object<const int &>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
-    // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
+    // expected-error-re@*:* 0-1 {{no matching constructor for initialization of{{.*}}}}
     // expected-error-re@*:* 0-1 {{call to deleted constructor of {{.*}}}}
   }
 
@@ -85,18 +81,18 @@ void test() {
   {
     std::expected<void, int> e;
     std::move(e).transform_error(return_unexpected<int&&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
-    // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
+    // expected-error-re@*:* 0-1 {{no matching constructor for initialization of{{.*}}}}
     std::move(e).transform_error(return_no_object<int&&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
-    // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
+    // expected-error-re@*:* 0-1 {{no matching constructor for initialization of{{.*}}}}
   }
 
   // Test const&& overload
   {
     const std::expected<void, int> e;
     std::move(e).transform_error(return_unexpected<const int&&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
-    // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
+    // expected-error-re@*:* 0-1 {{no matching constructor for initialization of{{.*}}}}
     std::move(e).transform_error(return_no_object<const int&&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
-    // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
+    // expected-error-re@*:* 0-1 {{no matching constructor for initialization of{{.*}}}}
   }
 }
 // clang-format on

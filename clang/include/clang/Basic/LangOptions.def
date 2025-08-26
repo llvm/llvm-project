@@ -136,6 +136,8 @@ LANGOPT(PointerAuthObjcInterfaceSel, 1, 0, NotCompatible, "authentication of SEL
 LANGOPT(PointerAuthObjcInterfaceSelKey, 16, 0, NotCompatible, "authentication key for SEL fields of ObjC interfaces")
 LANGOPT(PointerAuthObjcClassROPointers, 1, 0, Benign, "class_ro_t pointer authentication")
 
+LANGOPT(PointerAuthBlockDescriptorPointers, 1, 0, NotCompatible, "enable signed block descriptors")
+
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, NotCompatible, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, NotCompatible, "experimental late parsing of attributes")
 
@@ -490,6 +492,8 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
         "be used in a constant expression.")
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
+
+LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 

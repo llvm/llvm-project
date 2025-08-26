@@ -78,9 +78,6 @@ class StdStringViewDataFormatterTestCase(TestBase):
             "u32_string", type="std::u32string_view", summary='U"🍄🍅🍆🍌"'
         )
         self.expect_var_path("u32_empty", type="std::u32string_view", summary='U""')
-        self.expect_var_path(
-            "oops", type="std::string_view", summary='"Hellooo World\\n"'
-        )
 
         # GetSummary returns None so can't be checked by expect_var_path, so we
         # use the str representation instead
@@ -162,4 +159,9 @@ class StdStringViewDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
         self.do_test()

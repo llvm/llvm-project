@@ -256,9 +256,17 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
   // Precompute the set of registers that are unused, so that we can insert
   // drops to their defs.
+  // And unstackify any stackified registers that don't have any uses, so that
+  // they can be dropped later. This can happen when transformations after
+  // RegStackify remove instructions using stackified registers.
   BitVector UseEmpty(MRI.getNumVirtRegs());
-  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I)
-    UseEmpty[I] = MRI.use_empty(Register::index2VirtReg(I));
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    if (MRI.use_empty(Reg)) {
+      UseEmpty[I] = true;
+      MFI.unstackifyVReg(Reg);
+    }
+  }
 
   // Visit each instruction in the function.
   for (MachineBasicBlock &MBB : MF) {

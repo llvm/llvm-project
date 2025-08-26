@@ -657,8 +657,14 @@ private:
   AnalysisManagerT *InnerAM;
 };
 
+// NOTE: The LLVM_ABI annotation cannot be used here because MSVC disallows
+// storage-class specifiers on class members outside of the class declaration
+// (C2720). LLVM_ATTRIBUTE_VISIBILITY_DEFAULT only applies to non-Windows
+// targets so it is used instead. Without this annotation, compiling LLVM as a
+// shared library with -fvisibility=hidden using GCC fails to export the symbol
+// even though InnerAnalysisManagerProxy is already annotated with LLVM_ABI.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-AnalysisKey
+LLVM_ATTRIBUTE_VISIBILITY_DEFAULT AnalysisKey
     InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::Key;
 
 /// Provide the \c FunctionAnalysisManager to \c Module proxy.

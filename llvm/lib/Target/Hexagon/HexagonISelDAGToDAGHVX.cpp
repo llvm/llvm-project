@@ -1987,7 +1987,7 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
   // times). In such cases it will be impossible to complete this to a
   // perfect shuffle.
   SmallVector<uint32_t, 8> Sorted(Worklist);
-  llvm::sort(Sorted.begin(), Sorted.end());
+  llvm::sort(Sorted);
 
   for (unsigned I = 0, E = Sorted.size(); I != E;) {
     unsigned P = Sorted[I], Count = 1;

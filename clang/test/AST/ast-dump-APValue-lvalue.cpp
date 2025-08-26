@@ -67,6 +67,10 @@ void Test(int (&arr)[10]) {
   // CHECK-NEXT:  |   |-value: LValue Base=TypeInfoLValue typeid(int), Null=0, Offset=0, HasPath=1, PathLength=0, Path=()
 
   constexpr int(MP::*pmi) = (int MP::*)&P::x;
-  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pmi 'int (MP::*const)' constexpr cinit
-  // CHECK-NEXT:      |-value: MemberPointer MP::x
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pmi 'int (MP::*const)' constexpr cinit
+  // CHECK-NEXT:  |   |-value: MemberPointer MP::x
+
+  constexpr int(MP::*pmn) = (int MP::*)nullptr;
+  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pmn 'int (MP::*const)' constexpr cinit
+  // CHECK-NEXT:      |-value: MemberPointer null
 }

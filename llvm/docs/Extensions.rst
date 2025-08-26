@@ -410,8 +410,8 @@ two years old). Each function entry starts with a version byte which specifies
 the encoding version to use. This is followed by a feature byte which specifies
 the features specific to this particular entry. The function base address is
 stored as a full address. Other addresses in the entry (block begin and end
-addresses and callsite addresses) are stored in a running-offset fashion, as
-offsets relative to prior addresses.
+addresses and callsite end addresses) are stored in a running-offset fashion,
+as offsets relative to prior addresses.
 
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
@@ -438,8 +438,8 @@ Example:
    .byte     1                            # BB_1 ID
    .uleb128  .LBB0_1-.LBB_END0_0          # BB_1 offset relative to the end of last block (BB_0).
    .byte     2                            # number of callsites in this block
-   .uleb128  .LBB0_1_CS0-.LBB0_1          # offset of callsite relative to the previous offset (.LBB0_1)
-   .uleb128  .LBB0_1_CS1-.LBB0_1_CS0      # offset of callsite relative to the previous offset (.LBB0_1_CS0)
+   .uleb128  .LBB0_1_CS0-.LBB0_1          # offset of callsite end relative to the previous offset (.LBB0_1)
+   .uleb128  .LBB0_1_CS1-.LBB0_1_CS0      # offset of callsite end relative to the previous offset (.LBB0_1_CS0)
    .uleb128  .LBB_END0_1-.LBB0_1_CS1      # BB_1 size offset (Offset of the block end relative to the previous offset).
    .byte     y                            # BB_1 metadata
 
@@ -580,6 +580,26 @@ or shared library.
 This section stores pairs of (jump table address, number of entries).
 This information is useful for tools that need to statically reconstruct
 the control flow of executables.
+
+``SHT_LLVM_CFI_JUMP_TABLE`` Section (CFI jump table)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section contains the instructions that make up a `CFI jump table`_.
+It is expected to be ``SHF_ALLOC`` and may be laid out like a normal
+section. The ``SHT_LLVM_CFI_JUMP_TABLE`` section type gives the linker
+permission to modify the section in ways that would not normally be
+permitted, in order to optimize calls via the jump table.
+
+Each ``sh_entsize`` sized slice of a section of this type containing
+exactly one relocation may be considered to be a jump table entry
+that branches to the target of the relocation. This allows the linker
+to replace the jump table entry with the function body if it is small
+enough, or if the function is the last function in the jump table.
+
+A section of this type does not have to be placed according to its
+name. The linker may place the section in whichever output section it
+sees fit (generally the section that would provide the best locality).
+
+.. _CFI jump table: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html#forward-edge-cfi-for-indirect-function-calls
 
 CodeView-Dependent
 ------------------

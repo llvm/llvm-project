@@ -34,6 +34,39 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+// Given a parser for a single element, and a parser for a list of elements
+// of the same type, create a parser that constructs the entire list by having
+// the single element be the head of the list, and the rest be the tail.
+template <typename ParserH, typename ParserT> struct ConsParser {
+  static_assert(std::is_same_v<std::list<typename ParserH::resultType>,
+      typename ParserT::resultType>);
+
+  using resultType = typename ParserT::resultType;
+  constexpr ConsParser(ParserH h, ParserT t) : head_(h), tail_(t) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    if (auto &&first{head_.Parse(state)}) {
+      if (auto rest{tail_.Parse(state)}) {
+        rest->push_front(std::move(*first));
+        return std::move(*rest);
+      }
+    }
+    return std::nullopt;
+  }
+
+private:
+  const ParserH head_;
+  const ParserT tail_;
+};
+
+template <typename ParserH, typename ParserT,
+    typename ValueH = typename ParserH::resultType,
+    typename ValueT = typename ParserT::resultType,
+    typename = std::enable_if_t<std::is_same_v<std::list<ValueH>, ValueT>>>
+constexpr auto cons(ParserH head, ParserT tail) {
+  return ConsParser<ParserH, ParserT>(head, tail);
+}
+
 // Given a parser P for a wrapper class, invoke P, and if it succeeds return
 // the wrapped object.
 template <typename Parser> struct UnwrapParser {
@@ -274,6 +307,10 @@ TYPE_PARSER( //
     construct<OmpTypeSpecifier>(Parser<DeclarationTypeSpec>{}) ||
     construct<OmpTypeSpecifier>(Parser<TypeSpec>{}))
 
+// 2.15.3.6 REDUCTION (reduction-identifier: variable-name-list)
+TYPE_PARSER(construct<OmpReductionIdentifier>(Parser<DefinedOperator>{}) ||
+    construct<OmpReductionIdentifier>(Parser<ProcedureDesignator>{}))
+
 TYPE_PARSER(construct<OmpReductionSpecifier>( //
     Parser<OmpReductionIdentifier>{},
     ":"_tok >> nonemptyList(Parser<OmpTypeSpecifier>{}),
@@ -432,6 +469,9 @@ TYPE_PARSER(sourced(construct<OmpContextSelectorSpecification>(
 
 // --- Parsers for clause modifiers -----------------------------------
 
+TYPE_PARSER(construct<OmpAccessGroup>( //
+    "CGROUP" >> pure(OmpAccessGroup::Value::Cgroup)))
+
 TYPE_PARSER(construct<OmpAlignment>(scalarIntExpr))
 
 TYPE_PARSER(construct<OmpAlignModifier>( //
@@ -442,8 +482,20 @@ TYPE_PARSER(construct<OmpAllocatorComplexModifier>(
 
 TYPE_PARSER(construct<OmpAllocatorSimpleModifier>(scalarIntExpr))
 
+TYPE_PARSER(construct<OmpAlwaysModifier>( //
+    "ALWAYS" >> pure(OmpAlwaysModifier::Value::Always)))
+
+TYPE_PARSER(construct<OmpAutomapModifier>(
+    "AUTOMAP" >> pure(OmpAutomapModifier::Value::Automap)))
+
 TYPE_PARSER(construct<OmpChunkModifier>( //
     "SIMD" >> pure(OmpChunkModifier::Value::Simd)))
+
+TYPE_PARSER(construct<OmpCloseModifier>( //
+    "CLOSE" >> pure(OmpCloseModifier::Value::Close)))
+
+TYPE_PARSER(construct<OmpDeleteModifier>( //
+    "DELETE" >> pure(OmpDeleteModifier::Value::Delete)))
 
 TYPE_PARSER(construct<OmpDependenceType>(
     "SINK" >> pure(OmpDependenceType::Value::Sink) ||
@@ -452,6 +504,8 @@ TYPE_PARSER(construct<OmpDependenceType>(
 TYPE_PARSER(construct<OmpDeviceModifier>(
     "ANCESTOR" >> pure(OmpDeviceModifier::Value::Ancestor) ||
     "DEVICE_NUM" >> pure(OmpDeviceModifier::Value::Device_Num)))
+
+TYPE_PARSER(construct<OmpDirectiveNameModifier>(OmpDirectiveNameParser{}))
 
 TYPE_PARSER(construct<OmpExpectation>( //
     "PRESENT" >> pure(OmpExpectation::Value::Present)))
@@ -502,25 +556,15 @@ TYPE_PARSER(construct<OmpLinearModifier>( //
 TYPE_PARSER(construct<OmpMapper>( //
     "MAPPER"_tok >> parenthesized(Parser<ObjectName>{})))
 
-// map-type -> ALLOC | DELETE | FROM | RELEASE | TO | TOFROM
+// map-type -> ALLOC | DELETE | FROM | RELEASE | STORAGE | TO | TOFROM
 TYPE_PARSER(construct<OmpMapType>( //
     "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
-    "DELETE" >> pure(OmpMapType::Value::Delete) ||
+    // Parse "DELETE" as OmpDeleteModifier
     "FROM" >> pure(OmpMapType::Value::From) ||
     "RELEASE" >> pure(OmpMapType::Value::Release) ||
+    "STORAGE" >> pure(OmpMapType::Value::Storage) ||
     "TO"_id >> pure(OmpMapType::Value::To) ||
     "TOFROM" >> pure(OmpMapType::Value::Tofrom)))
-
-// map-type-modifier -> ALWAYS | CLOSE | OMPX_HOLD | PRESENT
-TYPE_PARSER(construct<OmpMapTypeModifier>(
-    "ALWAYS" >> pure(OmpMapTypeModifier::Value::Always) ||
-    "CLOSE" >> pure(OmpMapTypeModifier::Value::Close) ||
-    "OMPX_HOLD" >> pure(OmpMapTypeModifier::Value::Ompx_Hold) ||
-    "PRESENT" >> pure(OmpMapTypeModifier::Value::Present)))
-
-// 2.15.3.6 REDUCTION (reduction-identifier: variable-name-list)
-TYPE_PARSER(construct<OmpReductionIdentifier>(Parser<DefinedOperator>{}) ||
-    construct<OmpReductionIdentifier>(Parser<ProcedureDesignator>{}))
 
 TYPE_PARSER(construct<OmpOrderModifier>(
     "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
@@ -532,12 +576,24 @@ TYPE_PARSER(construct<OmpOrderingModifier>(
     "SIMD" >> pure(OmpOrderingModifier::Value::Simd)))
 
 TYPE_PARSER(construct<OmpPrescriptiveness>(
-    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict)))
+    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict) ||
+    "FALLBACK" >> pure(OmpPrescriptiveness::Value::Fallback)))
+
+TYPE_PARSER(construct<OmpPresentModifier>( //
+    "PRESENT" >> pure(OmpPresentModifier::Value::Present)))
 
 TYPE_PARSER(construct<OmpReductionModifier>(
     "INSCAN" >> pure(OmpReductionModifier::Value::Inscan) ||
     "TASK" >> pure(OmpReductionModifier::Value::Task) ||
     "DEFAULT" >> pure(OmpReductionModifier::Value::Default)))
+
+TYPE_PARSER(construct<OmpRefModifier>( //
+    "REF_PTEE" >> pure(OmpRefModifier::Value::Ref_Ptee) ||
+    "REF_PTR"_id >> pure(OmpRefModifier::Value::Ref_Ptr) ||
+    "REF_PTR_PTEE" >> pure(OmpRefModifier::Value::Ref_Ptr_Ptee)))
+
+TYPE_PARSER(construct<OmpSelfModifier>( //
+    "SELF" >> pure(OmpSelfModifier::Value::Self)))
 
 TYPE_PARSER(construct<OmpStepComplexModifier>( //
     "STEP" >> parenthesized(scalarIntExpr)))
@@ -558,6 +614,9 @@ TYPE_PARSER(construct<OmpVariableCategory>(
     "ALLOCATABLE" >> pure(OmpVariableCategory::Value::Allocatable) ||
     "POINTER" >> pure(OmpVariableCategory::Value::Pointer) ||
     "SCALAR" >> pure(OmpVariableCategory::Value::Scalar)))
+
+TYPE_PARSER(construct<OmpxHoldModifier>( //
+    "OMPX_HOLD" >> pure(OmpxHoldModifier::Value::Ompx_Hold)))
 
 // This could be auto-generated.
 TYPE_PARSER(
@@ -581,8 +640,17 @@ TYPE_PARSER(sourced(construct<OmpDependClause::TaskDep::Modifier>(sourced(
     construct<OmpDependClause::TaskDep::Modifier>(
         Parser<OmpTaskDependenceType>{})))))
 
+TYPE_PARSER( //
+    sourced(construct<OmpDynGroupprivateClause::Modifier>(
+        Parser<OmpAccessGroup>{})) ||
+    sourced(construct<OmpDynGroupprivateClause::Modifier>(
+        Parser<OmpPrescriptiveness>{})))
+
 TYPE_PARSER(
     sourced(construct<OmpDeviceClause::Modifier>(Parser<OmpDeviceModifier>{})))
+
+TYPE_PARSER(
+    sourced(construct<OmpEnterClause::Modifier>(Parser<OmpAutomapModifier>{})))
 
 TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
     sourced(construct<OmpFromClause::Modifier>(Parser<OmpExpectation>{}) ||
@@ -592,7 +660,8 @@ TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
 TYPE_PARSER(sourced(
     construct<OmpGrainsizeClause::Modifier>(Parser<OmpPrescriptiveness>{})))
 
-TYPE_PARSER(sourced(construct<OmpIfClause::Modifier>(OmpDirectiveNameParser{})))
+TYPE_PARSER(sourced(
+    construct<OmpIfClause::Modifier>(Parser<OmpDirectiveNameModifier>{})))
 
 TYPE_PARSER(sourced(
     construct<OmpInitClause::Modifier>(
@@ -611,10 +680,16 @@ TYPE_PARSER(sourced(
     construct<OmpLinearClause::Modifier>(Parser<OmpStepSimpleModifier>{})))
 
 TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
-    sourced(construct<OmpMapClause::Modifier>(Parser<OmpMapTypeModifier>{}) ||
+    sourced(construct<OmpMapClause::Modifier>(Parser<OmpAlwaysModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpCloseModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpDeleteModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpPresentModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpRefModifier>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpSelfModifier>{}) ||
         construct<OmpMapClause::Modifier>(Parser<OmpMapper>{}) ||
         construct<OmpMapClause::Modifier>(Parser<OmpIterator>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpMapType>{})))))
+        construct<OmpMapClause::Modifier>(Parser<OmpMapType>{}) ||
+        construct<OmpMapClause::Modifier>(Parser<OmpxHoldModifier>{})))))
 
 TYPE_PARSER(
     sourced(construct<OmpOrderClause::Modifier>(Parser<OmpOrderModifier>{})))
@@ -711,6 +786,14 @@ TYPE_PARSER(construct<OmpDefaultClause>(
     construct<OmpDefaultClause>(
         Parser<OmpDefaultClause::DataSharingAttribute>{}) ||
     construct<OmpDefaultClause>(indirect(Parser<OmpDirectiveSpecification>{}))))
+
+TYPE_PARSER(construct<OmpDynGroupprivateClause>(
+    maybe(nonemptyList(Parser<OmpDynGroupprivateClause::Modifier>{}) / ":"),
+    scalarIntExpr))
+
+TYPE_PARSER(construct<OmpEnterClause>(
+    maybe(nonemptyList(Parser<OmpEnterClause::Modifier>{}) / ":"),
+    Parser<OmpObjectList>{}))
 
 TYPE_PARSER(construct<OmpFailClause>(
     "ACQ_REL" >> pure(common::OmpMemoryOrderType::Acq_Rel) ||
@@ -999,8 +1082,11 @@ TYPE_PARSER( //
         construct<OmpClause>(parenthesized(Parser<OmpDoacrossClause>{})) ||
     "DYNAMIC_ALLOCATORS" >>
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
+    "DYN_GROUPPRIVATE" >>
+        construct<OmpClause>(construct<OmpClause::DynGroupprivate>(
+            parenthesized(Parser<OmpDynGroupprivateClause>{}))) ||
     "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
-                   parenthesized(Parser<OmpObjectList>{}))) ||
+                   parenthesized(Parser<OmpEnterClause>{}))) ||
     "EXCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Exclusive>(
                        parenthesized(Parser<OmpObjectList>{}))) ||
     "FAIL" >> construct<OmpClause>(construct<OmpClause::Fail>(
@@ -1185,6 +1271,61 @@ TYPE_PARSER(sourced(
         maybe(Parser<OmpClauseList>{}),
         pure(OmpDirectiveSpecification::Flags::None))))
 
+static bool IsFortranBlockConstruct(const ExecutionPartConstruct &epc) {
+  // ExecutionPartConstruct -> ExecutableConstruct
+  //   -> Indirection<BlockConstruct>
+  if (auto *ec{std::get_if<ExecutableConstruct>(&epc.u)}) {
+    return std::holds_alternative<common::Indirection<BlockConstruct>>(ec->u);
+  } else {
+    return false;
+  }
+}
+
+struct StrictlyStructuredBlockParser {
+  using resultType = Block;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    // Detect BLOCK construct without parsing the entire thing.
+    if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
+      if (auto epc{Parser<ExecutionPartConstruct>{}.Parse(state)}) {
+        if (IsFortranBlockConstruct(*epc)) {
+          Block block;
+          block.emplace_back(std::move(*epc));
+          return std::move(block);
+        }
+      }
+    }
+    return std::nullopt;
+  }
+};
+
+struct LooselyStructuredBlockParser {
+  using resultType = Block;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    // Detect BLOCK construct without parsing the entire thing.
+    if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
+      return std::nullopt;
+    }
+    Block body;
+    if (auto epc{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
+      if (!IsFortranBlockConstruct(*epc)) {
+        body.emplace_back(std::move(*epc));
+        if (auto &&blk{attempt(block).Parse(state)}) {
+          for (auto &&s : *blk) {
+            body.emplace_back(std::move(s));
+          }
+        }
+      } else {
+        // Fail if the first construct is BLOCK.
+        return std::nullopt;
+      }
+    }
+    // Empty body is ok.
+    return std::move(body);
+  }
+};
+
 TYPE_PARSER(sourced(construct<OmpNothingDirective>("NOTHING" >> ok)))
 
 TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
@@ -1257,16 +1398,41 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
 TYPE_PARSER(sourced(construct<OmpBeginLoopDirective>(
     sourced(Parser<OmpLoopDirective>{}), Parser<OmpClauseList>{})))
 
+static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
+  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
+}
+
+struct OmpBeginDirectiveParser {
+  using resultType = OmpDirectiveSpecification;
+
+  constexpr OmpBeginDirectiveParser(llvm::omp::Directive dir) : dir_(dir) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto &&p{predicated(Parser<OmpDirectiveName>{}, IsDirective(dir_)) >=
+        Parser<OmpDirectiveSpecification>{}};
+    return p.Parse(state);
+  }
+
+private:
+  llvm::omp::Directive dir_;
+};
+
 struct OmpEndDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
   constexpr OmpEndDirectiveParser(llvm::omp::Directive dir) : dir_(dir) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
-    if ((startOmpLine >> "END"_sptok).Parse(state)) {
-      auto &&dirSpec{Parser<OmpDirectiveSpecification>{}.Parse(state)};
-      if (dirSpec && dirSpec->DirId() == dir_) {
-        return std::move(dirSpec);
+    if (startOmpLine.Parse(state)) {
+      if (auto endToken{verbatim("END"_sptok).Parse(state)}) {
+        if (auto &&dirSpec{OmpBeginDirectiveParser(dir_).Parse(state)}) {
+          // Extend the "source" on both the OmpDirectiveName and the
+          // OmpDirectiveNameSpecification.
+          CharBlock &nameSource{std::get<OmpDirectiveName>(dirSpec->t).source};
+          nameSource.ExtendToCover(endToken->source);
+          dirSpec->source.ExtendToCover(endToken->source);
+          return std::move(*dirSpec);
+        }
       }
     }
     return std::nullopt;
@@ -1276,57 +1442,81 @@ private:
   llvm::omp::Directive dir_;
 };
 
-struct OmpAllocatorsConstructParser {
-  using resultType = OpenMPAllocatorsConstruct;
+struct OmpStatementConstructParser {
+  using resultType = OmpBlockConstruct;
+
+  constexpr OmpStatementConstructParser(llvm::omp::Directive dir) : dir_(dir) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
-    auto dirSpec{Parser<OmpDirectiveSpecification>{}.Parse(state)};
-    if (!dirSpec || dirSpec->DirId() != llvm::omp::Directive::OMPD_allocators) {
-      return std::nullopt;
-    }
+    if (auto begin{OmpBeginDirectiveParser(dir_).Parse(state)}) {
+      Block body;
+      if (auto stmt{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
+        body.emplace_back(std::move(*stmt));
+      }
+      // Allow empty block. Check for this in semantics.
 
-    // This should be an allocate-stmt. That will be checked in semantics.
-    Block block;
-    if (auto stmt{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
-      block.emplace_back(std::move(*stmt));
+      auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
+      return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
+          std::move(body),
+          llvm::transformOptional(std::move(*end),
+              [](auto &&s) { return OmpEndDirective(std::move(s)); })};
     }
-    // Allow empty block. Check for this in semantics.
-
-    auto end{OmpEndDirectiveParser{llvm::omp::Directive::OMPD_allocators}};
-    return OpenMPAllocatorsConstruct{
-        std::move(*dirSpec), std::move(block), *maybe(end).Parse(state)};
+    return std::nullopt;
   }
+
+private:
+  llvm::omp::Directive dir_;
 };
 
-TYPE_PARSER(sourced( //
-    construct<OpenMPAllocatorsConstruct>(
-        "ALLOCATORS"_tok >= OmpAllocatorsConstructParser{})))
+struct OmpBlockConstructParser {
+  using resultType = OmpBlockConstruct;
 
-struct OmpDispatchConstructParser {
-  using resultType = OpenMPDispatchConstruct;
+  constexpr OmpBlockConstructParser(llvm::omp::Directive dir) : dir_(dir) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
-    auto dirSpec{Parser<OmpDirectiveSpecification>{}.Parse(state)};
-    if (!dirSpec || dirSpec->DirId() != llvm::omp::Directive::OMPD_dispatch) {
-      return std::nullopt;
-    }
+    if (auto &&begin{OmpBeginDirectiveParser(dir_).Parse(state)}) {
+      if (auto &&body{attempt(StrictlyStructuredBlockParser{}).Parse(state)}) {
+        // Try strictly-structured block with an optional end-directive
+        auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
+        return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
+            std::move(*body),
+            llvm::transformOptional(std::move(*end),
+                [](auto &&s) { return OmpEndDirective(std::move(s)); })};
+      } else if (auto &&body{
+                     attempt(LooselyStructuredBlockParser{}).Parse(state)}) {
+        // Try loosely-structured block with a mandatory end-directive.
+        auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
+        // Dereference outer optional (maybe() always succeeds) and look at the
+        // inner optional.
+        bool endPresent{end->has_value()};
 
-    // This should be a function call. That will be checked in semantics.
-    Block block;
-    if (auto stmt{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
-      block.emplace_back(std::move(*stmt));
-    }
-    // Allow empty block. Check for this in semantics.
+        // ORDERED is special. We do need to return failure here so that the
+        // standalone ORDERED construct can be distinguished from the block
+        // associated construct.
+        if (!endPresent && dir_ == llvm::omp::Directive::OMPD_ordered) {
+          return std::nullopt;
+        }
 
-    auto end{OmpEndDirectiveParser{llvm::omp::Directive::OMPD_dispatch}};
-    return OpenMPDispatchConstruct{
-        std::move(*dirSpec), std::move(block), *maybe(end).Parse(state)};
+        // Delay the error for a missing end-directive until semantics so that
+        // we have better control over the output.
+        return OmpBlockConstruct{OmpBeginDirective(std::move(*begin)),
+            std::move(*body),
+            llvm::transformOptional(std::move(*end),
+                [](auto &&s) { return OmpEndDirective(std::move(s)); })};
+      }
+    }
+    return std::nullopt;
   }
+
+private:
+  llvm::omp::Directive dir_;
 };
 
-TYPE_PARSER(sourced( //
-    construct<OpenMPDispatchConstruct>(
-        "DISPATCH"_tok >= OmpDispatchConstructParser{})))
+TYPE_PARSER(sourced(construct<OpenMPAllocatorsConstruct>(
+    OmpStatementConstructParser{llvm::omp::Directive::OMPD_allocators})))
+
+TYPE_PARSER(sourced(construct<OpenMPDispatchConstruct>(
+    OmpStatementConstructParser{llvm::omp::Directive::OMPD_dispatch})))
 
 // Parser for an arbitrary OpenMP ATOMIC construct.
 //
@@ -1391,8 +1581,10 @@ struct OmpAtomicConstructParser {
         }
       }
       recursing_ = false;
-      return OpenMPAtomicConstruct{
-          std::move(*dirSpec), std::move(tail.first), std::move(tail.second)};
+      return OpenMPAtomicConstruct{OmpBeginDirective(std::move(*dirSpec)),
+          std::move(tail.first),
+          llvm::transformOptional(std::move(tail.second),
+              [](auto &&s) { return OmpEndDirective(std::move(s)); })};
     }
 
     recursing_ = false;
@@ -1458,20 +1650,6 @@ bool OmpAtomicConstructParser::recursing_{false};
 TYPE_PARSER(sourced( //
     construct<OpenMPAtomicConstruct>(OmpAtomicConstructParser{})))
 
-// 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
-//        memory-order-clause ->
-//                               acq_rel
-//                               acquire
-//                               relaxed
-//                               release
-//                               seq_cst
-TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
-    sourced("ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
-        "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
-        "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>()) ||
-        "RELEASE" >> construct<OmpClause>(construct<OmpClause::Release>()) ||
-        "SEQ_CST" >> construct<OmpClause>(construct<OmpClause::SeqCst>())))))
-
 static bool IsSimpleStandalone(const OmpDirectiveName &name) {
   switch (name.v) {
   case llvm::omp::Directive::OMPD_barrier:
@@ -1492,10 +1670,6 @@ TYPE_PARSER(sourced( //
     construct<OpenMPSimpleStandaloneConstruct>(
         predicated(OmpDirectiveNameParser{}, IsSimpleStandalone) >=
         Parser<OmpDirectiveSpecification>{})))
-
-static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
-  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
-}
 
 TYPE_PARSER(sourced( //
     construct<OpenMPFlushConstruct>(
@@ -1546,36 +1720,6 @@ TYPE_PARSER(
         construct<OpenMPStandaloneConstruct>(
             Parser<OpenMPInteropConstruct>{})) /
     endOfLine)
-
-// Directives enclosing structured-block
-TYPE_PARSER(
-    // In this context "TARGET UPDATE" can be parsed as a TARGET directive
-    // followed by an UPDATE clause. This is the only combination at the
-    // moment, exclude it explicitly.
-    (!("TARGET UPDATE"_sptok || "TARGET_UPDATE"_sptok)) >=
-    construct<OmpBlockDirective>(first(
-        "MASKED" >> pure(llvm::omp::Directive::OMPD_masked),
-        "MASTER" >> pure(llvm::omp::Directive::OMPD_master),
-        "ORDERED" >> pure(llvm::omp::Directive::OMPD_ordered),
-        "PARALLEL MASKED" >> pure(llvm::omp::Directive::OMPD_parallel_masked),
-        "PARALLEL MASTER" >> pure(llvm::omp::Directive::OMPD_parallel_master),
-        "PARALLEL WORKSHARE" >>
-            pure(llvm::omp::Directive::OMPD_parallel_workshare),
-        "PARALLEL" >> pure(llvm::omp::Directive::OMPD_parallel),
-        "SCOPE" >> pure(llvm::omp::Directive::OMPD_scope),
-        "SINGLE" >> pure(llvm::omp::Directive::OMPD_single),
-        "TARGET DATA" >> pure(llvm::omp::Directive::OMPD_target_data),
-        "TARGET_DATA" >> pure(llvm::omp::Directive::OMPD_target_data),
-        "TARGET PARALLEL" >> pure(llvm::omp::Directive::OMPD_target_parallel),
-        "TARGET TEAMS" >> pure(llvm::omp::Directive::OMPD_target_teams),
-        "TARGET" >> pure(llvm::omp::Directive::OMPD_target),
-        "TASK"_id >> pure(llvm::omp::Directive::OMPD_task),
-        "TASKGROUP" >> pure(llvm::omp::Directive::OMPD_taskgroup),
-        "TEAMS" >> pure(llvm::omp::Directive::OMPD_teams),
-        "WORKSHARE" >> pure(llvm::omp::Directive::OMPD_workshare))))
-
-TYPE_PARSER(sourced(construct<OmpBeginBlockDirective>(
-    sourced(Parser<OmpBlockDirective>{}), Parser<OmpClauseList>{})))
 
 TYPE_PARSER(construct<OmpInitializerProc>(Parser<ProcedureDesignator>{},
     parenthesized(many(maybe(","_tok) >> Parser<ActualArgSpec>{}))))
@@ -1645,17 +1789,8 @@ TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
     construct<OmpReductionCombiner>(Parser<FunctionReference>{}))
 
-// 2.13.2 OMP CRITICAL
-TYPE_PARSER(startOmpLine >>
-    sourced(construct<OmpEndCriticalDirective>(
-        verbatim("END CRITICAL"_tok), maybe(parenthesized(name)))) /
-        endOmpLine)
-TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
-                maybe(parenthesized(name)), Parser<OmpClauseList>{})) /
-    endOmpLine)
-
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
-    Parser<OmpCriticalDirective>{}, block, Parser<OmpEndCriticalDirective>{}))
+    OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical}))
 
 // 2.11.3 Executable Allocate directive
 TYPE_PARSER(
@@ -1668,6 +1803,12 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
     verbatim("DECLARE SIMD"_tok) || verbatim("DECLARE_SIMD"_tok),
     maybe(parenthesized(name)), Parser<OmpClauseList>{})))
+
+TYPE_PARSER(sourced( //
+    construct<OpenMPGroupprivate>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_groupprivate)) >=
+        Parser<OmpDirectiveSpecification>{})))
 
 // 2.4 Requires construct
 TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
@@ -1705,6 +1846,8 @@ TYPE_PARSER(
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OpenMPDeclarativeAllocate>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPGroupprivate>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
                                 Parser<OpenMPRequiresConstruct>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OpenMPThreadprivate>{}) ||
@@ -1726,9 +1869,31 @@ TYPE_PARSER(sourced(
         block, maybe(Parser<OmpEndAssumeDirective>{} / endOmpLine))))
 
 // Block Construct
-TYPE_PARSER(construct<OpenMPBlockConstruct>(
-    Parser<OmpBeginBlockDirective>{} / endOmpLine, block,
-    Parser<OmpEndBlockDirective>{} / endOmpLine))
+#define MakeBlockConstruct(dir) \
+  construct<OpenMPBlockConstruct>(OmpBlockConstructParser{dir})
+TYPE_PARSER( //
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_masked) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_master) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_ordered) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel_masked) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel_master) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel_workshare) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_parallel) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_scope) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_single) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_target_data) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_target_parallel) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_target_teams) ||
+    MakeBlockConstruct(
+        llvm::omp::Directive::OMPD_target_teams_workdistribute) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_target) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_task) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_taskgroup) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_teams) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_teams_workdistribute) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_workshare) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_workdistribute))
+#undef MakeBlockConstruct
 
 // OMP SECTIONS Directive
 TYPE_PARSER(construct<OmpSectionsDirective>(first(
@@ -1743,19 +1908,20 @@ TYPE_PARSER(
                         sourced("END"_tok >> Parser<OmpSectionsDirective>{}),
                         Parser<OmpClauseList>{})))
 
-// OMP SECTION-BLOCK
-
-TYPE_PARSER(construct<OpenMPSectionConstruct>(block))
-
-TYPE_PARSER(maybe(startOmpLine >> "SECTION"_tok / endOmpLine) >>
-    construct<OmpSectionBlocks>(nonemptySeparated(
-        construct<OpenMPConstruct>(sourced(Parser<OpenMPSectionConstruct>{})),
-        startOmpLine >> "SECTION"_tok / endOmpLine)))
+static constexpr auto sectionDir{
+    startOmpLine >> (predicated(OmpDirectiveNameParser{},
+                         IsDirective(llvm::omp::Directive::OMPD_section)) >=
+                        Parser<OmpDirectiveSpecification>{})};
 
 // OMP SECTIONS (OpenMP 5.0 - 2.8.1), PARALLEL SECTIONS (OpenMP 5.0 - 2.13.3)
-TYPE_PARSER(construct<OpenMPSectionsConstruct>(
+TYPE_PARSER(sourced(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
-    Parser<OmpSectionBlocks>{}, Parser<OmpEndSectionsDirective>{} / endOmpLine))
+    cons( //
+        construct<OpenMPConstruct>(sourced(
+            construct<OpenMPSectionConstruct>(maybe(sectionDir), block))),
+        many(construct<OpenMPConstruct>(
+            sourced(construct<OpenMPSectionConstruct>(sectionDir, block))))),
+    Parser<OmpEndSectionsDirective>{} / endOmpLine)))
 
 static bool IsExecutionPart(const OmpDirectiveName &name) {
   return name.IsExecutionPart();
@@ -1781,12 +1947,6 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAssumeConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{}))))
-
-// END OMP Block directives
-TYPE_PARSER(
-    startOmpLine >> sourced(construct<OmpEndBlockDirective>(
-                        sourced("END"_tok >> Parser<OmpBlockDirective>{}),
-                        Parser<OmpClauseList>{})))
 
 // END OMP Loop directives
 TYPE_PARSER(

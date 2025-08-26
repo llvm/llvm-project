@@ -79,7 +79,7 @@ good_explicit_check:
         autia   x0, x1
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc470
 1:
         ret
         .size good_explicit_check, .-good_explicit_check
@@ -373,7 +373,7 @@ good_explicit_check_multi_bb:
 1:
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 2f
-        brk     0x1234
+        brk     0xc470
 2:
         cbz     x1, 3f
         nop
@@ -685,8 +685,7 @@ good_address_arith_nocfg:
         .globl  good_explicit_check_unrelated_reg
         .type   good_explicit_check_unrelated_reg,@function
 good_explicit_check_unrelated_reg:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function good_explicit_check_unrelated_reg, basic block {{[^,]+}}, at address
-        // FIXME: The below instruction is not an authentication oracle
+// CHECK-NOT: good_explicit_check_unrelated_reg
         autia   x2, x3    // One of possible execution paths after this instruction
                           // ends at BRK below, thus BRK used as a trap instruction
                           // should formally "check everything" not to introduce
@@ -694,7 +693,7 @@ good_explicit_check_unrelated_reg:
         autia   x0, x1
         eor     x16, x0, x0, lsl #1
         tbz     x16, #62, 1f
-        brk     0x1234
+        brk     0xc470
 1:
         ldr     x4, [x2]  // Right before this instruction X2 is checked - this
                           // should be propagated to the basic block ending with
