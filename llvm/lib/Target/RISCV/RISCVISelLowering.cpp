@@ -9280,10 +9280,10 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         }
       }
 
-      auto getCost = [&](APInt Delta, APInt Addend) {
+      auto getCost = [&](const APInt &Delta, const APInt &Addend) {
         const int DeltaCost = RISCVMatInt::getIntMatCost(
             Delta, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
-        // Dos the addend folds into an ADDI
+        // Does the addend folds into an ADDI
         if (Addend.isSignedIntN(12))
           return DeltaCost;
         const int AddendCost = RISCVMatInt::getIntMatCost(
