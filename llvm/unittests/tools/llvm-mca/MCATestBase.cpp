@@ -61,8 +61,7 @@ void MCATestBase::SetUp() {
 
 Error MCATestBase::runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
                                   ArrayRef<mca::View *> Views,
-                                  const mca::PipelineOptions *PO,
-                                  Builder B) {
+                                  const mca::PipelineOptions *PO, Builder B) {
   mca::Context MCA(*MRI, *STI);
 
   // Default InstrumentManager
