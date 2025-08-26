@@ -176,10 +176,6 @@ namespace DependentTemplateName {
   struct HasMember {
     template <class T> struct Member;
   };
-
-  void test() {
-    getWithIdentifier<HasMember>();
-  }
 }
 
 namespace ClassTemplateCycle {
