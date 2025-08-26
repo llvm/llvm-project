@@ -17,4 +17,6 @@ target_include_directories(BOLTTargetPowerPCTests PRIVATE
   ${LLVM_SOURCE_DIR}/bolt/include
   ${LLVM_BINARY_DIR}/tools/bolt/include
   ${CMAKE_SOURCE_DIR}
+  ${LLVM_MAIN_SRC_DIR}/lib/Target/PowerPC
+  ${LLVM_BINARY_DIR}/lib/Target/PowerPC
 )

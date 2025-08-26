@@ -1,29 +1,33 @@
+set(LLVM_LINK_COMPONENTS
+  MC
+  MCDisassembler
+  Support
+  PowerPCDesc
+)
+
+if(BOLT_BUILT_STANDALONE)
+  set(LLVM_TARGET_DEFINITIONS ${LLVM_MAIN_SRC_DIR}/lib/Target/PowerPC/PPC.td)
+  list(APPEND LLVM_TABLEGEN_FLAGS -I ${LLVM_MAIN_SRC_DIR}/lib/Target/PowerPC)
+  tablegen(LLVM PPCGenInstrInfo.inc      -gen-instr-info)
+  tablegen(LLVM PPCGenRegisterInfo.inc   -gen-register-info)
+  tablegen(LLVM PPCGenSubtargetInfo.inc  -gen-subtarget)
+  add_public_tablegen_target(PowerPCCommonTableGen)
+  include_directories(${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
 add_llvm_library(LLVMBOLTTargetPowerPC
-    PPCMCPlusBuilder.cpp
+  PPCMCPlusBuilder.cpp
+
+  NO_EXPORT
+  DISABLE_LLVM_LINK_LLVM_DYLIB
+
+  DEPENDS
+  PowerPCCommonTableGen
 )
 
-target_include_directories(LLVMBOLTTargetPowerPC PRIVATE
-    ${LLVM_BINARY_DIR}/include
-    ${LLVM_SOURCE_DIR}/include
-)
+target_link_libraries(LLVMBOLTTargetPowerPC PRIVATE LLVMBOLTCore)
 
-file(MAKE_DIRECTORY "${LLVM_BINARY_DIR}/include/llvm/Target/PowerPC")
-
-foreach(incfile IN ITEMS
-    PPCGenInstrInfo.inc
-    PPCGenRegisterInfo.inc
+include_directories(
+  ${LLVM_MAIN_SRC_DIR}/lib/Target/PowerPC
+  ${LLVM_BINARY_DIR}/lib/Target/PowerPC
 )
-    add_custom_command(
-        OUTPUT "${LLVM_BINARY_DIR}/include/llvm/Target/PowerPC/${incfile}"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${LLVM_BINARY_DIR}/lib/Target/PowerPC/${incfile}"
-            "${LLVM_BINARY_DIR}/include/llvm/Target/PowerPC/${incfile}"
-        DEPENDS "${LLVM_BINARY_DIR}/lib/Target/PowerPC/${incfile}"
-        COMMENT "Copying ${incfile} to include directory"
-    )
-    add_custom_target(
-        "BoltCopy${incfile}" ALL
-        DEPENDS "${LLVM_BINARY_DIR}/include/llvm/Target/PowerPC/${incfile}"
-    )
-    add_dependencies(LLVMBOLTTargetPowerPC "BoltCopy${incfile}")
-endforeach()

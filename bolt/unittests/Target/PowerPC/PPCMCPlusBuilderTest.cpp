@@ -8,13 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Target/PowerPC/PPCMCPlusBuilder.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/MC/MCInst.h"
 #include "gtest/gtest.h"
-#define GET_INSTRINFO_ENUM
-#include "llvm/Target/PowerPC/PPCGenInstrInfo.inc"
-#define GET_REGINFO_ENUM
-#include "llvm/Target/PowerPC/PPCGenRegisterInfo.inc"
 
 using namespace llvm;
 using namespace bolt;

@@ -11,20 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Target/PowerPC/PPCMCPlusBuilder.h"
-#include "bolt/Core/MCPlusBuilder.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#define GET_INSTRINFO_ENUM
-#include "llvm/Target/PowerPC/PPCGenInstrInfo.inc"
-#define GET_REGINFO_ENUM
-#include "llvm/Target/PowerPC/PPCGenRegisterInfo.inc"
 
-namespace llvm {
-namespace bolt {
+using namespace llvm;
+using namespace bolt;
 
 // Create instructions to push two registers onto the stack
 void PPCMCPlusBuilder::createPushRegisters(MCInst &Inst1, MCInst &Inst2,
                                            MCPhysReg Reg1, MCPhysReg /*Reg2*/) {
+
   Inst1.clear();
   Inst1.setOpcode(PPC::STDU);
   Inst1.addOperand(MCOperand::createReg(PPC::R1)); // destination (SP)
@@ -37,6 +34,9 @@ void PPCMCPlusBuilder::createPushRegisters(MCInst &Inst1, MCInst &Inst2,
   Inst2.addOperand(MCOperand::createReg(PPC::R1)); // base (SP)
   Inst2.addOperand(MCOperand::createImm(0));       // offset
 }
+
+namespace llvm {
+namespace bolt {
 
 MCPlusBuilder *createPowerPCMCPlusBuilder(const MCInstrAnalysis *Analysis,
                                           const MCInstrInfo *Info,
