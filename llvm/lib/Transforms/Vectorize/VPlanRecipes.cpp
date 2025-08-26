@@ -3802,6 +3802,9 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
       InsertPos->getOpcode(), WideVecTy, IG->getFactor(), Indices,
       IG->getAlign(), AS, Ctx.CostKind, getMask(), NeedsMaskForGaps);
 
+  // Add the address computation cost.
+  Cost += Ctx.TTI.getAddressComputationCost(WideVecTy);
+
   if (!IG->isReverse())
     return Cost;
 
