@@ -29,12 +29,12 @@ define <vscale x 2 x i64> @exact_evl_vscale_mul(<vscale x 2 x i64> %x, <vscale x
 ; CHECK-LABEL: define <vscale x 2 x i64> @exact_evl_vscale_mul(
 ; CHECK-SAME: <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64> [[Y:%.*]], <vscale x 2 x i1> [[M:%.*]]) {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[EVL:%.*]] = mul i32 [[VSCALE]], 2
+; CHECK-NEXT:    [[EVL:%.*]] = mul nuw i32 [[VSCALE]], 2
 ; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 2 x i64> @llvm.vp.add.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i1> [[M]], i32 [[EVL]])
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[ADD]]
 ;
   %vscale = call i32 @llvm.vscale()
-  %evl = mul i32 %vscale, 2
+  %evl = mul nuw i32 %vscale, 2
   %add = call <vscale x 2 x i64> @llvm.vp.add(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %add
 }
@@ -43,12 +43,12 @@ define <vscale x 2 x i64> @exact_evl_vscale_shl(<vscale x 2 x i64> %x, <vscale x
 ; CHECK-LABEL: define <vscale x 2 x i64> @exact_evl_vscale_shl(
 ; CHECK-SAME: <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64> [[Y:%.*]], <vscale x 2 x i1> [[M:%.*]]) {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[EVL:%.*]] = shl i32 [[VSCALE]], 1
+; CHECK-NEXT:    [[EVL:%.*]] = shl nuw i32 [[VSCALE]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 2 x i64> @llvm.vp.add.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i1> [[M]], i32 [[EVL]])
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[ADD]]
 ;
   %vscale = call i32 @llvm.vscale()
-  %evl = shl i32 %vscale, 1
+  %evl = shl nuw i32 %vscale, 1
   %add = call <vscale x 2 x i64> @llvm.vp.add(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %add
 }
@@ -57,13 +57,13 @@ define <vscale x 2 x i64> @exact_evl_vscale_mul_trunc(<vscale x 2 x i64> %x, <vs
 ; CHECK-LABEL: define <vscale x 2 x i64> @exact_evl_vscale_mul_trunc(
 ; CHECK-SAME: <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64> [[Y:%.*]], <vscale x 2 x i1> [[M:%.*]]) {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[SHL:%.*]] = mul i64 [[VSCALE]], 2
+; CHECK-NEXT:    [[SHL:%.*]] = mul nuw i64 [[VSCALE]], 2
 ; CHECK-NEXT:    [[EVL:%.*]] = trunc nuw i64 [[SHL]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 2 x i64> @llvm.vp.add.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i1> [[M]], i32 [[EVL]])
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[ADD]]
 ;
   %vscale = call i64 @llvm.vscale()
-  %shl = mul i64 %vscale, 2
+  %shl = mul nuw i64 %vscale, 2
   %evl = trunc nuw i64 %shl to i32
   %add = call <vscale x 2 x i64> @llvm.vp.add(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %add
@@ -74,13 +74,13 @@ define <vscale x 2 x i64> @exact_evl_vscale_shl_trunc(<vscale x 2 x i64> %x, <vs
 ; CHECK-LABEL: define <vscale x 2 x i64> @exact_evl_vscale_shl_trunc(
 ; CHECK-SAME: <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64> [[Y:%.*]], <vscale x 2 x i1> [[M:%.*]]) {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[VSCALE]], 1
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 [[VSCALE]], 1
 ; CHECK-NEXT:    [[EVL:%.*]] = trunc nuw i64 [[SHL]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 2 x i64> @llvm.vp.add.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i1> [[M]], i32 [[EVL]])
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[ADD]]
 ;
   %vscale = call i64 @llvm.vscale()
-  %shl = shl i64 %vscale, 1
+  %shl = shl nuw i64 %vscale, 1
   %evl = trunc nuw i64 %shl to i32
   %add = call <vscale x 2 x i64> @llvm.vp.add(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %add
@@ -90,7 +90,7 @@ define <vscale x 2 x i64> @exact_evl_vscale_shl_trunc_no_nuw(<vscale x 2 x i64> 
 ; CHECK-LABEL: define <vscale x 2 x i64> @exact_evl_vscale_shl_trunc_no_nuw(
 ; CHECK-SAME: <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64> [[Y:%.*]], <vscale x 2 x i1> [[M:%.*]]) {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[VSCALE]], 1
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 [[VSCALE]], 1
 ; CHECK-NEXT:    [[EVL:%.*]] = trunc i64 [[SHL]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i32(i32 0, i32 [[EVL]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 2 x i1> [[TMP1]], [[M]]
@@ -100,7 +100,7 @@ define <vscale x 2 x i64> @exact_evl_vscale_shl_trunc_no_nuw(<vscale x 2 x i64> 
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[ADD]]
 ;
   %vscale = call i64 @llvm.vscale()
-  %shl = shl i64 %vscale, 1
+  %shl = shl nuw i64 %vscale, 1
   %evl = trunc i64 %shl to i32
   %add = call <vscale x 2 x i64> @llvm.vp.add(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %add
