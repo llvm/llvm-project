@@ -1448,16 +1448,13 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
     // Derived-to-base conversions.
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
-      // TODO: Support accesses to members of base classes in TBAA. For now, we
-      // conservatively pretend that the complete object is of the base class
-      // type.
-      if (TBAAInfo)
-        *TBAAInfo = CGF.CGM.getTBAAAccessInfo(E->getType());
       Address Addr = CGF.EmitPointerWithAlignment(
-          CE->getSubExpr(), BaseInfo, nullptr,
+          CE->getSubExpr(), BaseInfo, TBAAInfo,
           (KnownNonNull_t)(IsKnownNonNull ||
                            CE->getCastKind() == CK_UncheckedDerivedToBase));
       auto Derived = CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
+      if (TBAAInfo && Derived->getNumVBases() > 0)
+        *TBAAInfo = CGF.CGM.getTBAAAccessInfo(E->getType()->getPointeeType());
       return CGF.GetAddressOfBaseClass(
           Addr, Derived, CE->path_begin(), CE->path_end(),
           CGF.ShouldNullCheckClassCastValue(CE), CE->getExprLoc());
@@ -5307,6 +5304,9 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
     // one for this base lvalue.
     FieldTBAAInfo = base.getTBAAInfo();
     if (!FieldTBAAInfo.BaseType) {
+      if (FieldTBAAInfo.AccessType)
+        FieldTBAAInfo.BaseType = FieldTBAAInfo.AccessType;
+      else
         FieldTBAAInfo.BaseType = CGM.getTBAABaseTypeInfo(base.getType());
         assert(!FieldTBAAInfo.Offset &&
                "Nonzero offset for an access with no base type!");
@@ -5737,11 +5737,10 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
         This, DerivedClassDecl, E->path_begin(), E->path_end(),
         /*NullCheckValue=*/false, E->getExprLoc());
 
-    // TODO: Support accesses to members of base classes in TBAA. For now, we
-    // conservatively pretend that the complete object is of the base class
-    // type.
     return MakeAddrLValue(Base, E->getType(), LV.getBaseInfo(),
-                          CGM.getTBAAInfoForSubobject(LV, E->getType()));
+                          DerivedClassDecl->getNumVBases() == 0
+                              ? LV.getTBAAInfo()
+                              : CGM.getTBAAInfoForSubobject(LV, E->getType()));
   }
   case CK_ToUnion:
     return EmitAggExprToLValue(E);
