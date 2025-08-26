@@ -86,7 +86,7 @@ void ExternalNameConversionPass::runOnOperation() {
       // block and get its mangled name.
       if (auto funcOp = llvm::dyn_cast<mlir::func::FuncOp>(funcOrGlobal)) {
         if (funcOp.isPrivate()) {
-          auto mangledName =
+          std::string mangledName =
               mangleExternalName(deconstructedName, appendUnderscoreOpt);
           auto mod = funcOp->getParentOfType<mlir::ModuleOp>();
           bool hasConflictingCommonBlock = false;
@@ -106,10 +106,11 @@ void ExternalNameConversionPass::runOnOperation() {
           // specifications)
           if (hasConflictingCommonBlock) {
             bool isDirectlyCalled = false;
-            auto uses = funcOp.getSymbolUses(mod);
+            std::optional<SymbolTable::UseRange> uses =
+                funcOp.getSymbolUses(mod);
             if (uses.has_value()) {
               for (auto use : *uses) {
-                auto *user = use.getUser();
+                mlir::Operation *user = use.getUser();
                 if (mlir::isa<fir::CallOp>(user) ||
                     mlir::isa<mlir::func::CallOp>(user)) {
                   isDirectlyCalled = true;
@@ -117,9 +118,8 @@ void ExternalNameConversionPass::runOnOperation() {
                 }
               }
             }
-            if (!isDirectlyCalled) {
+            if (!isDirectlyCalled)
               return;
-            }
           }
         }
       }
