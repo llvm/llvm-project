@@ -66,7 +66,7 @@ struct images {
     return images_.at(__index);
   }
 
-  /** Image representing the main program (nullptr if we couldn't figure that out) */
+  /** Image representing the main program, or nullptr if we couldn't find it */
   _LIBCPP_HIDE_FROM_ABI image* main_prog_image() {
     for (size_t __i = 1; __i < count_ - 1; __i++) {
       auto& __image = images_[__i];

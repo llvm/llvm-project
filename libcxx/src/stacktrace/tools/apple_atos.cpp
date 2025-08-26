@@ -43,7 +43,7 @@ void atos::parse(__stacktrace::entry_base& entry, std::string_view view) const {
   size_t i = 0;
   while (i < view.size() && !isspace(view[i])) { ++i; }
   auto& base = (__stacktrace::entry_base&)entry;
-  base.assign_desc(base_.__strings_.create()).assign(view.substr(0, i));
+  base.assign_desc(base_.__create_str()).assign(view.substr(0, i));
 
   view = lstrip(ldrop(view, i));
 
@@ -55,7 +55,7 @@ void atos::parse(__stacktrace::entry_base& entry, std::string_view view) const {
   view = drop_suffix(view, ")");  // simple.o0.nosplit.pass.cpp:19
   pos = view.find_last_of(":");   //                           ^here
   if (pos == std::string_view::npos) { return; }
-  base.assign_file(base_.__strings_.create()).assign(view.substr(0, pos));
+  base.assign_file(base_.__create_str()).assign(view.substr(0, pos));
   auto lineno = view.substr(pos + 1);
   base.__line_ = lineno.empty() ? 0 : stoi(string(lineno));
 }
@@ -69,7 +69,7 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<atos>(base& base) {
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  auto line = base.__strings_.create();
+  auto line = base.__create_str();
   line.reserve(entry_base::__max_file_len + entry_base::__max_sym_len);
 
   auto entry_iter = base.__entry_iters_().begin();  // position at first entry

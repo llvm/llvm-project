@@ -60,7 +60,7 @@ struct base {
   constexpr static size_t __default_max_depth  = 64;
   constexpr static size_t __absolute_max_depth = 256;
 
-  str_heap __strings_;
+  str_alloc<char> __string_alloc_;
 
   using _EntryIters _LIBCPP_NODEBUG = iters<stacktrace_entry, entry_base>;
   function<_EntryIters()> __entry_iters_;
@@ -69,7 +69,7 @@ struct base {
   template <class _Allocator>
   _LIBCPP_HIDE_FROM_ABI
   base(_Allocator const& __alloc, function<_EntryIters()> __entry_iters, function<entry_base&()> __entry_append)
-      : __strings_(std::move(str_heap::create(__alloc))),
+      : __string_alloc_(std::move(str_alloc<char>::make(__alloc))),
         __entry_iters_(__entry_iters),
         __entry_append_(__entry_append) {}
 
@@ -81,6 +81,8 @@ struct base {
 
   _LIBCPP_EXPORTED_FROM_ABI ostream& write_to(ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
+
+  _LIBCPP_EXPORTED_FROM_ABI str __create_str() { return str(__string_alloc_); }
 };
 
 } // namespace __stacktrace

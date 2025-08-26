@@ -92,7 +92,7 @@ void base::find_images() {
     if (auto& image = images[i]) {
       entry.__image_ = &image;
       // While we're in this loop, get the executable's path, and tentatively use this for source file.
-      entry.assign_file(__strings_.create()).assign(image.name_);
+      entry.assign_file(__create_str()).assign(image.name_);
     }
   }
 }

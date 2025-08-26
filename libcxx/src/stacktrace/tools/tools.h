@@ -54,7 +54,7 @@ struct tool_base {
 
   _LIBCPP_HIDE_FROM_ABI void push_arg(std::string_view sv) {
     _LIBCPP_ASSERT(argc_ < k_max_argv_ - 1, "too many args");
-    auto arg = base_.__strings_.create();
+    auto arg = base_.__create_str();
     arg.assign(sv);
     push_arg(std::move(arg));
   }
@@ -67,7 +67,7 @@ struct tool_base {
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-security")
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
     auto sz           = snprintf(nullptr, 0, format, args...);
-    auto arg          = base_.__strings_.create();
+    auto arg          = base_.__create_str();
     auto overwrite_cb = [&](char* buf, size_t) -> size_t { return snprintf(buf, sz + 1, format, args...); };
     arg.resize_and_overwrite(sz + 1, overwrite_cb);
     push_arg(std::move(arg));

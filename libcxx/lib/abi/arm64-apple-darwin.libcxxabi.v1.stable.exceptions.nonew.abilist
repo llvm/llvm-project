@@ -993,6 +993,7 @@
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace24__has_working_executableINS0_15llvm_symbolizerEEEbv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace24__has_working_executableINS0_4atosEEEbv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace24__has_working_executableINS0_9addr2lineEEEbv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__112__stacktrace4base12__create_strEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace4base12current_implEmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace6imagesC1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace6imagesC2Ev', 'type': 'FUNC'}

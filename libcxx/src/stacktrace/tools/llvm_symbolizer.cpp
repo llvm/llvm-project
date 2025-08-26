@@ -63,7 +63,7 @@ void llvm_symbolizer::parse(entry_base** iter, std::string_view view) const {
 
     if (view != "??") {
       auto& base = (__stacktrace::entry_base&)entry;
-      base.assign_desc(base_.__strings_.create()).assign(view);
+      base.assign_desc(base_.__create_str()).assign(view);
     }
 
   } else if (view.starts_with("  Filename:")) {
@@ -71,7 +71,7 @@ void llvm_symbolizer::parse(entry_base** iter, std::string_view view) const {
     auto tmp    = view.substr(view.find_first_of(":") + 2); // skip ": "
     if (tmp != "??") { 
       auto& base = (__stacktrace::entry_base&)entry;
-      base.assign_file(base_.__strings_.create()).assign(tmp);
+      base.assign_file(base_.__create_str()).assign(tmp);
     }
 
   } else if (view.starts_with("  Line:")) {
@@ -92,7 +92,7 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base& base
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  auto line = base.__strings_.create();
+  auto line = base.__create_str();
   line.reserve(entry_base::__max_file_len + entry_base::__max_sym_len);
 
   auto iter = base.__entry_iters_().begin() - 1;  // "before first" entry

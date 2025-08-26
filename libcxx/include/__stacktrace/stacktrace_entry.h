@@ -40,34 +40,16 @@ namespace __stacktrace {
 
 struct str;
 
-struct str_heap {
-  // Lambdas wrap the caller's allocator (re-bound to allocate `chars`).
-  function<char*(size_t)> __alloc_;
-  function<void(char*, size_t)> __dealloc_;
-
-  template <class _A, // some allocator; can be of any type
-            class _AT = allocator_traits<_A>,
-            class _CA = typename _AT::template rebind_alloc<char>>
-    requires __is_allocator<_A>::value
-
-  _LIBCPP_HIDE_FROM_ABI static str_heap create(_A const& __a) {
-    auto __ca      = _CA(__a);
-    auto __alloc   = [__ca](size_t __n) mutable -> char* { return __ca.allocate(__n); };
-    auto __dealloc = [__ca](char* __p, size_t __n) mutable { __ca.deallocate(__p, __n); };
-    return {__alloc, __dealloc};
-  }
-
-  _LIBCPP_EXPORTED_FROM_ABI str create();
-};
-
 template <class _Tp>
 struct str_alloc {
-  // These are copied from the `str_heap` passed to constructor, since the str_heap
-  // itself may be destroyed before the string using this allocator.
+  using result_t _LIBCPP_NODEBUG = allocation_result<_Tp*, size_t>;
+
+  // Lambdas wrap the caller's allocator, re-bound so we can deal with `chars`.
   function<char*(size_t)> __alloc_;
+  function<result_t(size_t)> __atleast_;
   function<void(char*, size_t)> __dealloc_;
 
-  // This only works with chars
+  // This only works with chars or other 1-byte things.
   static_assert(sizeof(_Tp) == 1);
 
   using value_type = _Tp;
@@ -82,9 +64,25 @@ struct str_alloc {
   str_alloc(str_alloc&&)                 = default;
   str_alloc& operator=(const str_alloc&) = default;
   str_alloc& operator=(str_alloc&&)      = default;
-  explicit str_alloc(str_heap& __heap) : __alloc_(__heap.__alloc_), __dealloc_(__heap.__dealloc_) {}
+
+  str_alloc(function<char*(size_t)> __alloc,
+            function<result_t(size_t)> __atleast,
+            function<void(char*, size_t)> __dealloc)
+      : __alloc_(std::move(__alloc)), __atleast_(std::move(__atleast)), __dealloc_(std::move(__dealloc)) {}
+
+  template <class _A0, // some allocator; can be of any type
+            class _AT = allocator_traits<_A0>,
+            class _CA = typename _AT::template rebind_alloc<char>>
+    requires __is_allocator<_A0>::value
+  static str_alloc make(_A0 __a) {
+    auto __ca = _CA(__a);
+    return {[__ca](size_t __n) mutable -> char* { return __ca.allocate(__n); },
+            [__ca](size_t __n) mutable -> result_t { return __ca.allocate_at_least(__n); },
+            [__ca](char* __p, size_t __n) mutable { __ca.deallocate(__p, __n); }};
+  }
 
   _Tp* allocate(size_t __n) { return __alloc_(__n); }
+  result_t allocate_at_least(size_t __n) { return __atleast_(__n); }
   void deallocate(_Tp* __p, size_t __n) { __dealloc_(__p, __n); }
   bool operator==(str_alloc<_Tp> const& __rhs) const { return std::addressof(__rhs) == this; }
 };
