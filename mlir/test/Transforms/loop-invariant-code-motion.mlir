@@ -1480,8 +1480,8 @@ func.func @move_single_resource_write_dominant() attributes {} {
 
 // -----
 
-// CHECK-LABEL func.func @move_single_resource_read_dominant_negative
-func.func @move_single_resource_read_dominant_negative() attributes {} {
+// CHECK-LABEL func.func @move_single_resource_read_dominant
+func.func @move_single_resource_read_dominant() attributes {} {
   %c0_i32 = arith.constant 0 : i32
   %c1_i32 = arith.constant 10 : i32
   %c2_i32 = arith.constant 1 : i32
@@ -1530,8 +1530,8 @@ func.func @move_single_resource_basic_conflict() attributes {} {
 
 // -----
 
-// CHECK-LABEL func.func @move_single_resource_if_region_negative
-func.func @move_single_resource_if_region_negative() attributes {} {
+// CHECK-LABEL func.func @move_single_resource_if_region
+func.func @move_single_resource_if_region() attributes {} {
   %c0_i32 = arith.constant 0 : i32
   %c1_i32 = arith.constant 10 : i32
   %c2_i32 = arith.constant 1 : i32
@@ -1637,6 +1637,39 @@ func.func @move_multi_resource_comprehensive() attributes {} {
       "test.test_effects_write_F"() : () -> ()
       // CHECK: "test.test_effects_read_F"() : () -> ()
       "test.test_effects_read_F"() : () -> ()
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL func.func @move_single_resource_dead_loops
+func.func @move_single_resource_dead_loops() attributes {} {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 10 : i32
+  %c2_i32 = arith.constant 1 : i32
+  %c3_i32 = arith.constant -1 : i32
+  
+  scf.for %arg0 = %c0_i32 to %c1_i32 step %c3_i32  : i32 {
+    // CHECK: "test.test_effects_write_C"() : () -> ()
+    "test.test_effects_write_C"() : () -> ()
+
+    scf.for %arg1 = %c1_i32 to %c0_i32 step %c2_i32  : i32 {
+      // CHECK: "test.test_effects_write_B"() : () -> ()
+      "test.test_effects_write_B"() : () -> ()
+
+      scf.for %arg2 = %c0_i32 to %c0_i32 step %c0_i32  : i32 {
+        // CHECK: "test.test_effects_write_A"() : () -> ()
+        "test.test_effects_write_A"() : () -> ()
+
+        // CHECK: "test.test_effects_write_EF"() : () -> ()
+        scf.for %arg3 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
+          "test.test_effects_write_EF"() : () -> ()
+          // CHECK: "test.test_effects_read_EF"() : () -> ()
+          "test.test_effects_read_EF"() : () -> ()
+        }
+      }
     }
   }
   return

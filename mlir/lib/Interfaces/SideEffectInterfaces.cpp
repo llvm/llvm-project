@@ -8,10 +8,9 @@
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include <unordered_set>
 #include <utility>
 
 using namespace mlir;
@@ -22,6 +21,13 @@ using namespace mlir;
 
 /// Include the definitions of the side effect interfaces.
 #include "mlir/Interfaces/SideEffectInterfaces.cpp.inc"
+
+// //===----------------------------------------------------------------------===//
+// // LoopLike Interfaces
+// //===----------------------------------------------------------------------===//
+
+// /// Include the definitions of the loop like interfaces.
+// #include "mlir/Interfaces/LoopLikeInterface.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // MemoryEffects
@@ -315,6 +321,33 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
+std::optional<bool> mlir::isZeroTrip(mlir::LoopLikeOpInterface loop) {
+  auto lbs = loop.getLoopLowerBounds();
+  auto ubs = loop.getLoopUpperBounds();
+  auto steps = loop.getLoopSteps();
+
+  if (!lbs || !ubs || !steps)
+    return std::nullopt;
+
+  if (lbs->size() != ubs->size() || ubs->size() != steps->size())
+    return std::nullopt;
+
+  for (size_t i = 0; i < steps->size(); ++i) {
+    auto lb = getConstantIntValue((*lbs)[i]);
+    auto ub = getConstantIntValue((*ubs)[i]);
+    auto st = getConstantIntValue((*steps)[i]);
+
+    if (!lb || !ub || !st)
+      return std::nullopt; // non-constant -> unknown
+
+    if (*st >= 0 && *lb >= *ub)
+      return true;
+    if (*st < 0 && *lb <= *ub)
+      return true;
+  }
+  return false;
+}
+
 bool mlir::isMemoryEffectMovable(Operation *op) {
   if (isMemoryEffectFree(op))
     return true;
@@ -358,6 +391,19 @@ bool mlir::isMemoryEffectConflictFree(Operation *op) {
   // shouldn't be flagged as movable to be conservative
   if (!memInterface) return false;
 
+  // check parent loop to make sure it's not dead
+  Operation *parent = op->getParentOp();
+  if (!parent)
+    return false;
+
+  auto loopInterface = dyn_cast<LoopLikeOpInterface>(parent);
+  if (!loopInterface)
+    return false;
+
+  auto isDead = isZeroTrip(loopInterface);
+  if (!isDead.has_value() || isDead.value())
+    return false;
+
   // gather all effects on op
   llvm::SmallVector<MemoryEffects::EffectInstance> effects;
   memInterface.getEffects(effects);
@@ -376,8 +422,6 @@ bool mlir::isMemoryEffectConflictFree(Operation *op) {
     resourceCounts.try_emplace(effect.getResource()->getResourceID(), 0);
   }
 
-  // op itself is good, need to check rest of its parent region
-  Operation *parent = op->getParentOp();
   mlir::DominanceInfo dom(parent);
 
   for (Region &region : parent->getRegions())

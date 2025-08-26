@@ -14,8 +14,9 @@
 #ifndef MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 #define MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 
 namespace mlir {
 namespace SideEffects {
@@ -423,6 +424,15 @@ bool isOpTriviallyDead(Operation *op);
 /// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
 
+/// Returns TRUE if the loop is dead/zero-trip,
+/// FALSE if loop has constant bounds/steps and has at least 1 iteration
+/// on every dimension, returns nullopt otherwise
+///
+/// Can only infer if loop is dead if it has constant loop bounds/steps.
+/// Otherwise we assume that it's dead to be conservative.
+///
+std::optional<bool> isZeroTrip(mlir::LoopLikeOpInterface loop);
+
 /// Returns true if the given operation is allowed to be moved under the
 /// memory effects interface.
 ///
@@ -449,13 +459,15 @@ bool isMemoryEffectFree(Operation *op);
 /// Returns true if the given operation has conflict-free write effects
 ///
 /// An operation is conflict free:
-/// (1) all of its memory effects are of type Write
-/// (2) there are no other ops with Alloc/Free/Write effects on the same
-/// resources within the ops parent region
-/// (3) all ops in the parent region with Read effects on the same resources
-/// are dominated by the operation
+/// (1) Parent is a loop with the LoopLikeOpInterface
+/// (2) Parent loop is not a zero trip loop and has constant bounds/steps
+/// (3) all of the op's memory effects are of type Write
+/// (4) there are no other ops with Alloc/Free/Write effects on the same
+/// resources within the op's parent loop region
+/// (5) all ops in the parent loop region with Read effects on the same
+/// resources are dominated by the operation
 ///
-/// If the operation meets all 3 criteria, then it is conflict free
+/// If the operation meets all criteria, then it is conflict free
 bool isMemoryEffectConflictFree(Operation *op);
 
 /// Returns true if op and/or any operations within its nested regions
