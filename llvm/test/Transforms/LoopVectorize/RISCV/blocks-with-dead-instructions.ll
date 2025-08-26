@@ -454,7 +454,7 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_6(ptr %src, i1 %
 ; CHECK-NEXT:    [[TMP22:%.*]] = or <vscale x 8 x i1> [[TMP19]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = select <vscale x 8 x i1> [[TMP18]], <vscale x 8 x i1> [[BROADCAST_SPLAT]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP24:%.*]] = or <vscale x 8 x i1> [[TMP22]], [[TMP23]]
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x ptr> align 2 [[TMP20]], <vscale x 8 x i1> [[TMP24]], i32 [[TMP27]])
+; CHECK-NEXT:    call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x ptr> [[TMP20]], i32 2, <vscale x 8 x i1> [[TMP24]])
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext i32 [[TMP27]] to i64
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP25]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[DOTSPLAT]]

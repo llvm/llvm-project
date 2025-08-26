@@ -48,7 +48,7 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 8 x i1> [[TMP21]], i32 0
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP23]], i64 poison, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i16, ptr [[ARG]], i64 [[PREDPHI]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv8i16.p0(<vscale x 8 x i16> zeroinitializer, ptr align 2 [[TMP24]], <vscale x 8 x i1> [[TMP22]], i32 [[TMP25]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> zeroinitializer, ptr [[TMP24]], i32 2, <vscale x 8 x i1> [[TMP22]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP25]] to i64
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP26]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP26]]
