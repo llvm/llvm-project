@@ -6449,7 +6449,8 @@ public:
 
   /// Build instructions with Builder to retrieve the value at
   /// the position given by Index in the lookup table.
-  Value *buildLookup(Value *Index, IRBuilder<> &Builder, const DataLayout &DL);
+  Value *buildLookup(Value *Index, IRBuilder<> &Builder, const DataLayout &DL,
+                     Function *Func);
 
   /// Return true if a table with TableSize elements of
   /// type ElementType would fit in a target-legal register.
@@ -6479,6 +6480,9 @@ private:
     ArrayKind
   } Kind;
 
+  // The type of the output values.
+  Type *ValueType;
+
   // For SingleValueKind, this is the single value.
   Constant *SingleValue = nullptr;
 
@@ -6493,6 +6497,8 @@ private:
 
   // For ArrayKind, this is the array.
   GlobalVariable *Array = nullptr;
+  ArrayType *ArrayTy = nullptr;
+  Constant *Initializer = nullptr;
 };
 
 } // end anonymous namespace
@@ -6507,7 +6513,7 @@ SwitchLookupTable::SwitchLookupTable(
   // If all values in the table are equal, this is that value.
   SingleValue = Values.begin()->second;
 
-  Type *ValueType = Values.begin()->second->getType();
+  ValueType = Values.begin()->second->getType();
 
   // Build up the table contents.
   SmallVector<Constant *, 64> TableContents(TableSize);
@@ -6622,21 +6628,14 @@ SwitchLookupTable::SwitchLookupTable(
   }
 
   // Store the table in an array.
-  ArrayType *ArrayTy = ArrayType::get(ValueType, TableSize);
-  Constant *Initializer = ConstantArray::get(ArrayTy, TableContents);
+  ArrayTy = ArrayType::get(ValueType, TableSize);
+  Initializer = ConstantArray::get(ArrayTy, TableContents);
 
-  Array = new GlobalVariable(M, ArrayTy, /*isConstant=*/true,
-                             GlobalVariable::PrivateLinkage, Initializer,
-                             "switch.table." + FuncName);
-  Array->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  // Set the alignment to that of an array items. We will be only loading one
-  // value out of it.
-  Array->setAlignment(DL.getPrefTypeAlign(ValueType));
   Kind = ArrayKind;
 }
 
 Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
-                                      const DataLayout &DL) {
+                                      const DataLayout &DL, Function *Func) {
   switch (Kind) {
   case SingleValueKind:
     return SingleValue;
@@ -6678,6 +6677,15 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
     return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
   }
   case ArrayKind: {
+    // Only build lookup table when we have a target that supports it or the
+    // attribute is not set.
+    Array = new GlobalVariable(*Func->getParent(), ArrayTy, /*isConstant=*/true,
+                               GlobalVariable::PrivateLinkage, Initializer,
+                               "switch.table." + Func->getName());
+    Array->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+    // Set the alignment to that of an array items. We will be only loading one
+    // value out of it.
+    Array->setAlignment(DL.getPrefTypeAlign(ValueType));
     Type *IndexTy = DL.getIndexType(Array->getType());
     auto *ArrayTy = cast<ArrayType>(Array->getValueType());
 
@@ -7181,7 +7189,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
     auto TableInfo = PhiToTableMap.at(PHI);
-    auto *Result = TableInfo.Table.buildLookup(TableIndex, Builder, DL);
+    auto *Result = TableInfo.Table.buildLookup(TableIndex, Builder, DL, Fn);
     // Do a small peephole optimization: re-use the switch table compare if
     // possible.
     if (!TableHasHoles && HasDefaultResults && RangeCheckBranch) {
