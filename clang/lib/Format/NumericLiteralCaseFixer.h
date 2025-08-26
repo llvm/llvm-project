@@ -1,4 +1,4 @@
-//===--- NumericLiteralCaseFixer.h -------------------------*- C++ -*-===//
+//===--- NumericLiteralCaseFixer.h ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file declares NumericLiteralCaseFixer that standardizes character case
-/// within numeric literal constants.
+/// within numeric literals.
 ///
 //===----------------------------------------------------------------------===//
 

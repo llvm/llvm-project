@@ -1,4 +1,4 @@
-//===--- NumericLiteralCaseFixer.cpp -----------------------*- C++ -*-===//
+//===--- NumericLiteralCaseFixer.cpp ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file implements NumericLiteralCaseFixer that standardizes character
-/// case within numeric literal constants.
+/// case within numeric literals.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -72,9 +72,9 @@ static bool matchesReservedSuffix(StringRef Suffix) {
   return *entry == Suffix;
 }
 
-static std::string format(StringRef IntegerLiteral, const FormatStyle &Style) {
+static std::string format(StringRef NumericLiteral, const FormatStyle &Style) {
   const char Separator = Style.isCpp() ? '\'' : '_';
-  const NumericLiteralInfo Info{IntegerLiteral, Separator};
+  const NumericLiteralInfo Info(NumericLiteral, Separator);
   const bool HasBaseLetter = Info.BaseLetterPos != llvm::StringRef::npos;
   const bool HasExponent = Info.ExponentLetterPos != llvm::StringRef::npos;
   const bool HasSuffix = Info.SuffixPos != llvm::StringRef::npos;
@@ -83,28 +83,28 @@ static std::string format(StringRef IntegerLiteral, const FormatStyle &Style) {
 
   if (HasBaseLetter) {
     Formatted +=
-        transformComponent(IntegerLiteral.take_front(1 + Info.BaseLetterPos),
+        transformComponent(NumericLiteral.take_front(1 + Info.BaseLetterPos),
                            Style.NumericLiteralCase.Prefix);
   }
   // Reformat this slice as HexDigit whether or not the digit has hexadecimal
   // characters because binary/decimal/octal digits are unchanged.
   Formatted += transformComponent(
-      IntegerLiteral.slice(HasBaseLetter ? 1 + Info.BaseLetterPos : 0,
+      NumericLiteral.slice(HasBaseLetter ? 1 + Info.BaseLetterPos : 0,
                            HasExponent ? Info.ExponentLetterPos
                            : HasSuffix ? Info.SuffixPos
-                                       : IntegerLiteral.size()),
+                                       : NumericLiteral.size()),
       Style.NumericLiteralCase.HexDigit);
 
   if (HasExponent) {
     Formatted += transformComponent(
-        IntegerLiteral.slice(Info.ExponentLetterPos,
+        NumericLiteral.slice(Info.ExponentLetterPos,
                              HasSuffix ? Info.SuffixPos
-                                       : IntegerLiteral.size()),
+                                       : NumericLiteral.size()),
         Style.NumericLiteralCase.ExponentLetter);
   }
 
   if (HasSuffix) {
-    StringRef Suffix = IntegerLiteral.drop_front(Info.SuffixPos);
+    StringRef Suffix = NumericLiteral.drop_front(Info.SuffixPos);
     if (matchesReservedSuffix(Suffix) || Suffix.front() == '_') {
       // In C++, it is idiomatic, but NOT standardized to define user-defined
       // literals with a leading '_'. Omit user defined literals and standard
