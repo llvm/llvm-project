@@ -3040,7 +3040,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     SmallVector<Type *, 4> Tys;
     for (VPValue *ArgOp : drop_end(operands()))
       Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
-
     Type *ResultTy = Ctx.Types.inferScalarType(this);
     InstructionCost ScalarCallCost =
         Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
@@ -3063,8 +3062,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       }
       // Skip operands that do not require extraction/scalarization and do not
       // incur any overhead.
-      SmallVector<Type *> Tys;
       SmallPtrSet<const VPValue *, 4> UniqueOperands;
+      Tys.clear();
       for (auto *Op : drop_end(operands())) {
         if (Op->isLiveIn() || isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op) ||
             !UniqueOperands.insert(Op).second)
