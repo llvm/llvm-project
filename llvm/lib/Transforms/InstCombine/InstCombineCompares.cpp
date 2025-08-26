@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <bitset>
+#include <utility>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -7611,6 +7613,208 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
   return nullptr;
 }
 
+enum class SignType {
+  Positive,
+  NonPositive,
+  Negative,
+  NonNegative,
+};
+
+/// Check signess of a constant integer or vector of integers
+///
+/// \param C constant to check for signedness
+/// \param SignType the sign type to check against
+///
+/// \return whether constant is signess corresponds with the requesed requested
+/// sign
+static bool checkConstantSignType(const Constant *C, SignType Sign) {
+  auto Check = [Sign](const ConstantInt *CI) {
+    switch (Sign) {
+    case SignType::Positive:
+      return !CI->isNegative() && !CI->isZero();
+    case SignType::NonPositive:
+      return CI->isNegative() || CI->isZero();
+    case SignType::Negative:
+      return CI->isNegative();
+    case SignType::NonNegative:
+      return !CI->isNegative();
+    default:
+      llvm_unreachable("Unknown sign type");
+    }
+  };
+
+  if (auto *CI = dyn_cast<ConstantInt>(C))
+    return Check(CI);
+
+  // Check every element for vector
+  if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
+    for (std::size_t i{}; i != CDV->getNumElements(); ++i) {
+      auto *CI = dyn_cast<ConstantInt>(CDV->getElementAsConstant(i));
+      if (!CI || !Check(CI))
+        return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+/// Cast ConstantInt to an appropriate APFloat instance
+///
+/// \param CI ConstantInt instance to cast
+/// \param FPType floating point type to cast to
+/// \param Addend addend to add to constant before casting
+///
+/// \return pair {cast status, APFloat result}
+static std::pair<APFloatBase::opStatus, APFloat>
+castCIToAPF(const ConstantInt *CI, const Type *FPType, int Addend) {
+  APFloat FVal{FPType->isFloatTy() ? APFloat::IEEEsingle()
+                                   : APFloat::IEEEdouble()};
+  APInt CIAPIntValue{CI->getValue()};
+
+  if (CIAPIntValue.isMaxSignedValue() && Addend > 0)
+    return std::make_pair(APFloatBase::opStatus::opOverflow, FVal);
+
+  if (CIAPIntValue.isMinSignedValue() && Addend < 0)
+    return std::make_pair(APFloatBase::opStatus::opUnderflow, FVal);
+
+  APFloatBase::opStatus Status{FVal.convertFromAPInt(
+      CI->getValue() + Addend, true, APFloat::rmNearestTiesToEven)};
+  return std::make_pair(Status, FVal);
+}
+
+/// Cast ConstantDataVector<ConstantInt> to ConstantVector<ConstantFP>
+///
+/// \param CDV ConstantInt datavector to cast
+/// \param FPType floating point type to cast to
+/// \param Addend addend to add before casting
+/// \param Context context to use
+///
+/// \return result constant
+static Constant *castCIDVToCFPDV(const ConstantDataVector *CDV, Type *FPType,
+                                 int Addend, LLVMContext &Context) {
+  SmallVector<Constant *, 16> Elts;
+  for (std::size_t i{}; i != CDV->getNumElements(); ++i) {
+    ConstantInt *CI = dyn_cast<ConstantInt>(CDV->getElementAsConstant(i));
+    if (!CI)
+      return nullptr;
+
+    auto ConverstionResult = castCIToAPF(CI, FPType, Addend);
+    if (ConverstionResult.first != APFloat::opOK)
+      return nullptr;
+
+    Elts.push_back(ConstantFP::get(FPType, ConverstionResult.second));
+  }
+  return ConstantVector::get(Elts);
+}
+
+/// Cast integral constant (either scalar or vector) to an appropriate vector
+/// one
+///
+/// \param C integral contsant to cast
+/// \param FPType floating point type to cast to
+/// \param Addend addend to add before casting
+///
+/// \return result constant
+static Constant *castIntegralConstantToFloat(const Constant *C, Type *FPType,
+                                             int Addend) {
+  Type *InnerType;
+  if (FPType->isFloatingPointTy())
+    InnerType = FPType;
+  else if (FPType->isVectorTy())
+    InnerType = llvm::cast<llvm::VectorType>(FPType)->getElementType();
+  else
+    return nullptr;
+
+  if (!InnerType || !InnerType->isFloatingPointTy())
+    return nullptr;
+
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
+    auto ConverstionResult = castCIToAPF(CI, FPType, Addend);
+    if (ConverstionResult.first != APFloat::opOK)
+      return nullptr;
+
+    return ConstantFP::get(FPType, ConverstionResult.second);
+  }
+
+  const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(C);
+  if (!CDV)
+    return nullptr;
+
+  LLVMContext &Ctx = C->getContext();
+
+  return castCIDVToCFPDV(CDV, InnerType, Addend, Ctx);
+}
+
+/// Fold icmp (fptosi %arg) C -> fcmp $arg
+/// Folds:
+///  - icmp sgt %arg <negative> -> fcmp ogt %arg <negative>
+///  - icmp sgt %arg <non-negative> -> fcmp oge %arg (<non-negative> + 1)
+///  - icmp slt %arg <positive> -> fcmp olt %arg <positive>
+///  - icmp slt %arg <non-positive> -> fcmp ole %arg (<non-positive> - 1)
+///
+/// \param ICmp icmp instruction
+/// \param IC InstCombiner isntance
+///
+/// \return folded instruction or nullptr, if failed to combine instructions
+static Instruction *foldICmpFToSIToFCmp(ICmpInst &ICmp, InstCombiner &IC) {
+  if (ICmp.getPredicate() != ICmpInst::ICMP_SGT &&
+      ICmp.getPredicate() != ICmpInst::ICMP_SLT)
+    return nullptr;
+
+  // Expect that canonical form: first argument is fptosi
+  auto *FToSI = dyn_cast<FPToSIInst>(ICmp.getOperand(0));
+  if (!FToSI)
+    return nullptr;
+
+  Value *FloatOp = FToSI->getOperand(0);
+  if (!FloatOp)
+    return nullptr;
+
+  // And the second must be constant
+  Constant *C = dyn_cast<Constant>(ICmp.getOperand(1));
+  if (!C)
+    return nullptr;
+
+  FCmpInst::Predicate FCmpPredicate;
+  Constant *FCmpConstant{};
+
+  switch (ICmp.getPredicate()) {
+  case ICmpInst::ICMP_SGT:
+    if (checkConstantSignType(C, SignType::Negative)) {
+      // icmp sgt %arg <negative> -> fcmp ogt %arg <negative>
+      FCmpPredicate = FCmpInst::FCMP_OGT;
+      FCmpConstant = castIntegralConstantToFloat(C, FloatOp->getType(), 0);
+    } else if (checkConstantSignType(C, SignType::NonNegative)) {
+      // icmp sgt %arg <non-negative> -> fcmp oge %arg (<non-negative> + 1)
+      FCmpPredicate = FCmpInst::FCMP_OGE;
+      FCmpConstant = castIntegralConstantToFloat(C, FloatOp->getType(), 1);
+    }
+    break;
+  case ICmpInst::ICMP_SLT:
+    if (checkConstantSignType(C, SignType::Positive)) {
+      // icmp slt %arg <positive> -> fcmp olt %arg <positive>
+      FCmpPredicate = FCmpInst::FCMP_OLE;
+      FCmpConstant = castIntegralConstantToFloat(C, FloatOp->getType(), 0);
+    } else if (checkConstantSignType(C, SignType::NonPositive)) {
+      // icmp slt %arg <non-positive> -> fcmp ole %arg (<non-positive> - 1)
+      FCmpPredicate = FCmpInst::FCMP_OLT;
+      FCmpConstant = castIntegralConstantToFloat(C, FloatOp->getType(), -1);
+    }
+    break;
+  default:
+    llvm_unreachable("Unknown icmp comparator");
+  }
+  if (!FCmpConstant)
+    return nullptr;
+
+  IRBuilder<> B(&ICmp);
+  Value *New;
+  // fcmp FCmpPredicate %arg C
+  New = B.CreateFCmp(FCmpPredicate, FloatOp, FCmpConstant);
+  return IC.replaceInstUsesWith(ICmp, New);
+}
+
 Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
@@ -7747,6 +7951,8 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
   if (Instruction *Res =
           foldICmpCommutative(I.getSwappedCmpPredicate(), Op1, Op0, I))
+    return Res;
+  if (Instruction *Res = foldICmpFToSIToFCmp(I, *this))
     return Res;
 
   if (I.isCommutative()) {
