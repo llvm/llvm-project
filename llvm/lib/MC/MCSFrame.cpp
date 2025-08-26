@@ -75,8 +75,9 @@ struct SFrameFDE {
                                 MCFixup::getDataKindForSize(4)));
     S.emitInt32(0);
 
-    // sfde_func_start_num_fres
-    S.emitInt32(FREs.size());
+    // sfde_func_num_fres
+    // TODO: When we actually emit fres, replace 0 with FREs.size()
+    S.emitInt32(0);
 
     // sfde_func_info word
     FDEInfo<endianness::native> I;
@@ -121,7 +122,7 @@ class SFrameEmitterImpl {
     }
     Streamer.getContext().reportWarning(
         I.getLoc(), "Canonical Frame Address not in stack- or frame-pointer. "
-                    "Omitting SFrame unwind info.");
+                    "Omitting SFrame unwind info for this function.");
     FDE.Invalid = true;
     return false;
   }
@@ -132,8 +133,8 @@ class SFrameEmitterImpl {
       return true;
 
     Streamer.getContext().reportWarning(
-        I.getLoc(), "skipping SFrame FDE; .cfi_def_cfa_offset "
-                      "without CFA base register in effect");
+        I.getLoc(), "Adjusting CFA offset without a base register. "
+                    "Omitting SFrame unwind info for this function.");
     FDE.Invalid = true;
     return false;
   }
@@ -241,11 +242,11 @@ public:
     // sets the DF.RAReg.
     // FIXME: This also prevents providing a proper location for the error.
     // LLVM doesn't change the return column itself, so this was
-    // externally-generated assembly.
+    // hand-written assembly.
     if (DF.RAReg != RAReg) {
       Streamer.getContext().reportWarning(
-          SMLoc(),
-          "skipping SFrame FDE; non-default RA register " + Twine(DF.RAReg));
+          SMLoc(), "Non-default RA register " + Twine(DF.RAReg) +
+                       ". Omitting SFrame unwind info for this function.");
       // Continue with the FDE to find any addtional errors. Discard it at
       // the end.
       FDE.Invalid = true;
@@ -308,8 +309,8 @@ public:
     Streamer.emitInt32(FDEs.size());
     // shf_num_fres
     uint32_t TotalFREs = 0;
-    for (auto &FDE : FDEs)
-      TotalFREs += FDE.FREs.size();
+    //    for (auto &FDE : FDEs)
+    // TotalFREs += FDE.FREs.size();
     Streamer.emitInt32(TotalFREs);
 
     // shf_fre_len
