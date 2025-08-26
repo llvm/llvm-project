@@ -1872,6 +1872,17 @@ public:
                                                        LParenLoc, Num);
   }
 
+  /// Build a new OpenMP 'nowait' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPNowaitClause(Expr *Condition, SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPNowaitClause(StartLoc, EndLoc,
+                                                      LParenLoc, Condition);
+  }
+
   /// Build a new OpenMP 'private' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -10650,8 +10661,14 @@ TreeTransform<Derived>::TransformOMPDetachClause(OMPDetachClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPNowaitClause(OMPNowaitClause *C) {
-  // No need to rebuild this clause, no template-dependent parameters.
-  return C;
+  ExprResult Cond;
+  if (auto *Condition = C->getCondition()) {
+    Cond = getDerived().TransformExpr(Condition);
+    if (Cond.isInvalid())
+      return nullptr;
+  }
+  return getDerived().RebuildOMPNowaitClause(Cond.get(), C->getBeginLoc(),
+                                             C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
