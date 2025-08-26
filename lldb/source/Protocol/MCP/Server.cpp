@@ -33,7 +33,7 @@ void Server::AddRequestHandlers() {
                                                 this, std::placeholders::_1));
 }
 
-llvm::Expected<Response> Server::Handle(Request request) {
+llvm::Expected<Response> Server::Handle(const Request &request) {
   auto it = m_request_handlers.find(request.method);
   if (it != m_request_handlers.end()) {
     llvm::Expected<Response> response = it->second(request);
@@ -47,7 +47,7 @@ llvm::Expected<Response> Server::Handle(Request request) {
       llvm::formatv("no handler for request: {0}", request.method).str());
 }
 
-void Server::Handle(Notification notification) {
+void Server::Handle(const Notification &notification) {
   auto it = m_notification_handlers.find(notification.method);
   if (it != m_notification_handlers.end()) {
     it->second(notification);
@@ -55,49 +55,7 @@ void Server::Handle(Notification notification) {
   }
 }
 
-llvm::Expected<std::optional<Message>>
-Server::HandleData(llvm::StringRef data) {
-  auto message = llvm::json::parse<Message>(/*JSON=*/data);
-  if (!message)
-    return message.takeError();
-
-  if (const Request *request = std::get_if<Request>(&(*message))) {
-    llvm::Expected<Response> response = Handle(*request);
-
-    // Handle failures by converting them into an Error message.
-    if (!response) {
-      Error protocol_error;
-      llvm::handleAllErrors(
-          response.takeError(),
-          [&](const MCPError &err) { protocol_error = err.toProtocolError(); },
-          [&](const llvm::ErrorInfoBase &err) {
-            protocol_error.code = MCPError::kInternalError;
-            protocol_error.message = err.message();
-          });
-      Response error_response;
-      error_response.id = request->id;
-      error_response.result = std::move(protocol_error);
-      return error_response;
-    }
-
-    return *response;
-  }
-
-  if (const Notification *notification =
-          std::get_if<Notification>(&(*message))) {
-    Handle(*notification);
-    return std::nullopt;
-  }
-
-  if (std::get_if<Response>(&(*message)))
-    return llvm::createStringError("unexpected MCP message: response");
-
-  llvm_unreachable("all message types handled");
-}
-
 void Server::AddTool(std::unique_ptr<Tool> tool) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-
   if (!tool)
     return;
   m_tools[tool->GetName()] = std::move(tool);
@@ -105,21 +63,17 @@ void Server::AddTool(std::unique_ptr<Tool> tool) {
 
 void Server::AddResourceProvider(
     std::unique_ptr<ResourceProvider> resource_provider) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-
   if (!resource_provider)
     return;
   m_resource_providers.push_back(std::move(resource_provider));
 }
 
 void Server::AddRequestHandler(llvm::StringRef method, RequestHandler handler) {
-  std::lock_guard<std::mutex> guard(m_mutex);
   m_request_handlers[method] = std::move(handler);
 }
 
 void Server::AddNotificationHandler(llvm::StringRef method,
                                     NotificationHandler handler) {
-  std::lock_guard<std::mutex> guard(m_mutex);
   m_notification_handlers[method] = std::move(handler);
 }
 
@@ -185,7 +139,6 @@ llvm::Expected<Response> Server::ResourcesListHandler(const Request &request) {
 
   llvm::json::Array resources;
 
-  std::lock_guard<std::mutex> guard(m_mutex);
   for (std::unique_ptr<ResourceProvider> &resource_provider_up :
        m_resource_providers) {
     for (const Resource &resource : resource_provider_up->GetResources())
@@ -214,7 +167,6 @@ llvm::Expected<Response> Server::ResourcesReadHandler(const Request &request) {
   if (uri_str.empty())
     return llvm::createStringError("no resource uri");
 
-  std::lock_guard<std::mutex> guard(m_mutex);
   for (std::unique_ptr<ResourceProvider> &resource_provider_up :
        m_resource_providers) {
     llvm::Expected<ResourceResult> result =

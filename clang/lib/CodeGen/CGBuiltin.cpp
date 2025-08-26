@@ -997,9 +997,8 @@ static const FieldDecl *FindFlexibleArrayMemberField(CodeGenFunction &CGF,
             /*IgnoreTemplateOrMacroSubstitution=*/true))
       return FD;
 
-    if (auto RT = FD->getType()->getAs<RecordType>())
-      if (const FieldDecl *FD =
-              FindFlexibleArrayMemberField(CGF, Ctx, RT->getAsRecordDecl()))
+    if (const auto *RD = FD->getType()->getAsRecordDecl())
+      if (const FieldDecl *FD = FindFlexibleArrayMemberField(CGF, Ctx, RD))
         return FD;
   }
 
@@ -1025,8 +1024,8 @@ static bool GetFieldOffset(ASTContext &Ctx, const RecordDecl *RD,
       return true;
     }
 
-    if (auto RT = Field->getType()->getAs<RecordType>()) {
-      if (GetFieldOffset(Ctx, RT->getAsRecordDecl(), FD, Offset)) {
+    if (const auto *RD = Field->getType()->getAsRecordDecl()) {
+      if (GetFieldOffset(Ctx, RD, FD, Offset)) {
         Offset += Layout.getFieldOffset(FieldNo);
         return true;
       }

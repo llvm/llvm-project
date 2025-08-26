@@ -466,6 +466,9 @@ enum bitAttr_t {
 /// decide what further remaining bits to look at.
 
 class FilterChooser {
+  // TODO: Unfriend by providing the necessary accessors.
+  friend class DecoderTableBuilder;
+
   // Vector of encodings to choose our filter.
   ArrayRef<InstructionEncoding> Encodings;
 
@@ -578,30 +581,6 @@ private:
   // decoded bits in order to verify that the instruction matches the Opcode.
   std::vector<Island> getIslands(const KnownBits &EncodingBits) const;
 
-  // Emits code to check the Predicates member of an instruction are true.
-  // Returns true if predicate matches were emitted, false otherwise.
-  bool emitPredicateMatch(raw_ostream &OS, unsigned EncodingID) const;
-  bool emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
-                             raw_ostream &OS) const;
-
-  bool doesOpcodeNeedPredicate(unsigned EncodingID) const;
-  unsigned getPredicateIndex(DecoderTableInfo &TableInfo, StringRef P) const;
-  void emitPredicateTableEntry(DecoderTableInfo &TableInfo,
-                               unsigned EncodingID) const;
-
-  void emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
-                              unsigned EncodingID) const;
-
-  // Emits table entries to decode the singleton.
-  void emitSingletonTableEntry(DecoderTableInfo &TableInfo,
-                               unsigned EncodingID) const;
-
-  void emitBinaryParser(raw_ostream &OS, indent Indent,
-                        const OperandInfo &OpInfo) const;
-
-  void emitDecoder(raw_ostream &OS, indent Indent, unsigned EncodingID) const;
-  unsigned getDecoderIndex(DecoderSet &Decoders, unsigned EncodingID) const;
-
   // reportRegion is a helper function for filterProcessor to mark a region as
   // eligible for use as a filter region.
   void reportRegion(std::vector<std::unique_ptr<Filter>> &Filters, bitAttr_t RA,
@@ -622,10 +601,49 @@ private:
   void doFilter();
 
 public:
-  /// Emits state machine entries to decode our share of instructions.
-  void emitTableEntries(DecoderTableInfo &TableInfo) const;
-
   void dump() const;
+};
+
+class DecoderTableBuilder {
+  const CodeGenTarget &Target;
+  ArrayRef<InstructionEncoding> Encodings;
+  DecoderTableInfo &TableInfo;
+
+public:
+  DecoderTableBuilder(const CodeGenTarget &Target,
+                      ArrayRef<InstructionEncoding> Encodings,
+                      DecoderTableInfo &TableInfo)
+      : Target(Target), Encodings(Encodings), TableInfo(TableInfo) {}
+
+  void buildTable(const FilterChooser &FC) const {
+    emitTableEntries(FC);
+    assert(TableInfo.FixupStack.empty() && "Fixup stack phasing error!");
+  }
+
+private:
+  void emitBinaryParser(raw_ostream &OS, indent Indent,
+                        const OperandInfo &OpInfo) const;
+
+  void emitDecoder(raw_ostream &OS, indent Indent, unsigned EncodingID) const;
+
+  unsigned getDecoderIndex(unsigned EncodingID) const;
+
+  unsigned getPredicateIndex(StringRef P) const;
+
+  bool emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
+                             raw_ostream &OS) const;
+
+  bool emitPredicateMatch(raw_ostream &OS, unsigned EncodingID) const;
+
+  bool doesOpcodeNeedPredicate(unsigned EncodingID) const;
+
+  void emitPredicateTableEntry(unsigned EncodingID) const;
+
+  void emitSoftFailTableEntry(unsigned EncodingID) const;
+
+  void emitSingletonTableEntry(const FilterChooser &FC) const;
+
+  void emitTableEntries(const FilterChooser &FC) const;
 };
 
 } // end anonymous namespace
@@ -1062,8 +1080,8 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
   return Islands;
 }
 
-void FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
-                                     const OperandInfo &OpInfo) const {
+void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
+                                           const OperandInfo &OpInfo) const {
   const std::string &Decoder = OpInfo.Decoder;
 
   bool UseInsertBits = OpInfo.numFields() != 1 || OpInfo.InitValue != 0;
@@ -1098,8 +1116,8 @@ void FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
   }
 }
 
-void FilterChooser::emitDecoder(raw_ostream &OS, indent Indent,
-                                unsigned EncodingID) const {
+void DecoderTableBuilder::emitDecoder(raw_ostream &OS, indent Indent,
+                                      unsigned EncodingID) const {
   const InstructionEncoding &Encoding = Encodings[EncodingID];
 
   // If a custom instruction decoder was specified, use that.
@@ -1117,8 +1135,7 @@ void FilterChooser::emitDecoder(raw_ostream &OS, indent Indent,
       emitBinaryParser(OS, Indent, Op);
 }
 
-unsigned FilterChooser::getDecoderIndex(DecoderSet &Decoders,
-                                        unsigned EncodingID) const {
+unsigned DecoderTableBuilder::getDecoderIndex(unsigned EncodingID) const {
   // Build up the predicate string.
   SmallString<256> Decoder;
   // FIXME: emitDecoder() function can take a buffer directly rather than
@@ -1134,6 +1151,7 @@ unsigned FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   // overkill for now, though.
 
   // Make sure the predicate is in the table.
+  DecoderSet &Decoders = TableInfo.Decoders;
   Decoders.insert(CachedHashString(Decoder));
   // Now figure out the index for when we write out the table.
   DecoderSet::const_iterator P = find(Decoders, Decoder.str());
@@ -1141,8 +1159,9 @@ unsigned FilterChooser::getDecoderIndex(DecoderSet &Decoders,
 }
 
 // If ParenIfBinOp is true, print a surrounding () if Val uses && or ||.
-bool FilterChooser::emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
-                                          raw_ostream &OS) const {
+bool DecoderTableBuilder::emitPredicateMatchAux(const Init &Val,
+                                                bool ParenIfBinOp,
+                                                raw_ostream &OS) const {
   if (const auto *D = dyn_cast<DefInit>(&Val)) {
     if (!D->getDef()->isSubClassOf("SubtargetFeature"))
       return true;
@@ -1173,8 +1192,8 @@ bool FilterChooser::emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
   return true;
 }
 
-bool FilterChooser::emitPredicateMatch(raw_ostream &OS,
-                                       unsigned EncodingID) const {
+bool DecoderTableBuilder::emitPredicateMatch(raw_ostream &OS,
+                                             unsigned EncodingID) const {
   const ListInit *Predicates =
       Encodings[EncodingID].getRecord()->getValueAsListInit("Predicates");
   bool IsFirstEmission = true;
@@ -1196,7 +1215,7 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &OS,
   return !Predicates->empty();
 }
 
-bool FilterChooser::doesOpcodeNeedPredicate(unsigned EncodingID) const {
+bool DecoderTableBuilder::doesOpcodeNeedPredicate(unsigned EncodingID) const {
   const ListInit *Predicates =
       Encodings[EncodingID].getRecord()->getValueAsListInit("Predicates");
   for (unsigned i = 0; i < Predicates->size(); ++i) {
@@ -1210,8 +1229,7 @@ bool FilterChooser::doesOpcodeNeedPredicate(unsigned EncodingID) const {
   return false;
 }
 
-unsigned FilterChooser::getPredicateIndex(DecoderTableInfo &TableInfo,
-                                          StringRef Predicate) const {
+unsigned DecoderTableBuilder::getPredicateIndex(StringRef Predicate) const {
   // Using the full predicate string as the key value here is a bit
   // heavyweight, but is effective. If the string comparisons become a
   // performance concern, we can implement a mangling of the predicate
@@ -1225,8 +1243,7 @@ unsigned FilterChooser::getPredicateIndex(DecoderTableInfo &TableInfo,
   return (unsigned)(P - TableInfo.Predicates.begin());
 }
 
-void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
-                                            unsigned EncodingID) const {
+void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
   if (!doesOpcodeNeedPredicate(EncodingID))
     return;
 
@@ -1239,7 +1256,7 @@ void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
 
   // Figure out the index into the predicate table for the predicate just
   // computed.
-  unsigned PIdx = getPredicateIndex(TableInfo, PS.str());
+  unsigned PIdx = getPredicateIndex(PS.str());
 
   const MCD::DecoderOps DecoderOp = TableInfo.isOutermostScope()
                                         ? MCD::OPC_CheckPredicateOrFail
@@ -1253,8 +1270,7 @@ void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
   }
 }
 
-void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
-                                           unsigned EncodingID) const {
+void DecoderTableBuilder::emitSoftFailTableEntry(unsigned EncodingID) const {
   const InstructionEncoding &Encoding = Encodings[EncodingID];
   const KnownBits &InstBits = Encoding.getInstBits();
   const APInt &SFBits = Encoding.getSoftFailBits();
@@ -1290,19 +1306,20 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
 }
 
 // Emits table entries to decode the singleton.
-void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
-                                            unsigned EncodingID) const {
+void DecoderTableBuilder::emitSingletonTableEntry(
+    const FilterChooser &FC) const {
+  unsigned EncodingID = *FC.SingletonEncodingID;
   const InstructionEncoding &Encoding = Encodings[EncodingID];
   KnownBits EncodingBits = Encoding.getMandatoryBits();
 
   // Look for islands of undecoded bits of the singleton.
-  std::vector<Island> Islands = getIslands(EncodingBits);
+  std::vector<FilterChooser::Island> Islands = FC.getIslands(EncodingBits);
 
   // Emit the predicate table entry if one is needed.
-  emitPredicateTableEntry(TableInfo, EncodingID);
+  emitPredicateTableEntry(EncodingID);
 
   // Check any additional encoding fields needed.
-  for (const Island &Ilnd : reverse(Islands)) {
+  for (const FilterChooser::Island &Ilnd : reverse(Islands)) {
     const MCD::DecoderOps DecoderOp = TableInfo.isOutermostScope()
                                           ? MCD::OPC_CheckFieldOrFail
                                           : MCD::OPC_CheckField;
@@ -1321,9 +1338,9 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   }
 
   // Check for soft failure of the match.
-  emitSoftFailTableEntry(TableInfo, EncodingID);
+  emitSoftFailTableEntry(EncodingID);
 
-  unsigned DIdx = getDecoderIndex(TableInfo.Decoders, EncodingID);
+  unsigned DIdx = getDecoderIndex(EncodingID);
 
   // Produce OPC_Decode or OPC_TryDecode opcode based on the information
   // whether the instruction decoder is complete or not. If it is complete
@@ -1641,33 +1658,33 @@ void FilterChooser::dump() const {
   }
 }
 
-void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
+void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
   // If there are other encodings that could match if those with all bits
   // known don't, enter a scope so that they have a chance.
-  if (VariableFC)
+  if (FC.VariableFC)
     TableInfo.pushScope();
 
-  if (SingletonEncodingID) {
-    assert(FilterChooserMap.empty());
+  if (FC.SingletonEncodingID) {
+    assert(FC.FilterChooserMap.empty());
     // There is only one encoding in which all bits in the filtered range are
     // fully defined, but we still need to check if the remaining (unfiltered)
     // bits are valid for this encoding. We also need to check predicates etc.
-    emitSingletonTableEntry(TableInfo, *SingletonEncodingID);
+    emitSingletonTableEntry(FC);
   } else {
     // The general case: emit a switch over the field value.
     DecoderTable &Table = TableInfo.Table;
     Table.insertOpcode(MCD::OPC_ExtractField);
-    Table.insertULEB128(StartBit);
-    Table.insertUInt8(NumBits);
+    Table.insertULEB128(FC.StartBit);
+    Table.insertUInt8(FC.NumBits);
 
     // Emit switch cases for all but the last element.
-    for (const auto &[FilterVal, Delegate] : drop_end(FilterChooserMap)) {
+    for (const auto &[FilterVal, Delegate] : drop_end(FC.FilterChooserMap)) {
       Table.insertOpcode(MCD::OPC_FilterValue);
       Table.insertULEB128(FilterVal);
       size_t FixupPos = Table.insertNumToSkip();
 
       // Emit table entries for this case.
-      Delegate->emitTableEntries(TableInfo);
+      emitTableEntries(*Delegate);
 
       // Patch the previous OPC_FilterValue to fall through to the next case.
       Table.patchNumToSkip(FixupPos, Table.size());
@@ -1675,7 +1692,7 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
 
     // Emit a switch case for the last element. It never falls through;
     // if it doesn't match, we leave the current scope.
-    const auto &[FilterVal, Delegate] = *FilterChooserMap.rbegin();
+    const auto &[FilterVal, Delegate] = *FC.FilterChooserMap.rbegin();
     Table.insertOpcode(!TableInfo.isOutermostScope()
                            ? MCD::OPC_FilterValue
                            : MCD::OPC_FilterValueOrFail);
@@ -1684,12 +1701,12 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
       TableInfo.FixupStack.back().push_back(Table.insertNumToSkip());
 
     // Emit table entries for the last case.
-    Delegate->emitTableEntries(TableInfo);
+    emitTableEntries(*Delegate);
   }
 
-  if (VariableFC) {
+  if (FC.VariableFC) {
     TableInfo.popScope();
-    VariableFC->emitTableEntries(TableInfo);
+    emitTableEntries(*FC.VariableFC);
   }
 }
 
@@ -2538,6 +2555,7 @@ namespace {
   }
 
   DecoderTableInfo TableInfo;
+  DecoderTableBuilder TableBuilder(Target, Encodings, TableInfo);
   unsigned OpcodeMask = 0;
 
   for (const auto &[Key, EncodingIDs] : EncMap) {
@@ -2550,8 +2568,7 @@ namespace {
     // predicates and decoders themselves, however, are shared across all
     // decoders to give more opportunities for uniqueing.
     TableInfo.Table.clear();
-    FC.emitTableEntries(TableInfo);
-    assert(TableInfo.isOutermostScope() && "fixup stack phasing error!");
+    TableBuilder.buildTable(FC);
 
     // Print the table to the output stream.
     OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,

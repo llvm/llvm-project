@@ -5404,7 +5404,7 @@ public:
 
   /// FinalizeVarWithDestructor - Prepare for calling destructor on the
   /// constructed variable.
-  void FinalizeVarWithDestructor(VarDecl *VD, const RecordType *DeclInitType);
+  void FinalizeVarWithDestructor(VarDecl *VD, CXXRecordDecl *DeclInit);
 
   /// Helper class that collects exception specifications for
   /// implicitly-declared special member functions.
