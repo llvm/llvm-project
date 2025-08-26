@@ -3509,7 +3509,6 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   BasicBlock *EntryBB = Entry->getIRBasicBlock();
   DenseMap<const SCEV *, Value *> ExpandedSCEVs;
-  VPBasicBlock::iterator InsertPt;
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
     if (isa<VPIRInstruction, VPIRPhi>(&R))
       continue;
@@ -3524,16 +3523,21 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
     ExpSCEV->replaceAllUsesWith(Exp);
     if (Plan.getTripCount() == ExpSCEV)
       Plan.resetTripCount(Exp);
-    InsertPt = std::next(ExpSCEV->getIterator());
     ExpSCEV->eraseFromParent();
   }
   assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
          "VPExpandSCEVRecipes must be at the beginning of the entry block, "
          "after any VPIRInstructions");
-  for (Instruction &I : *EntryBB) {
-    if (!Expander.isInsertedInstruction(&I) || isa<PHINode>(I))
+  // Add IR instructions in the entry basic block but not in the VPIRBasicBlock
+  // to the VPIRBasicBlock.
+  auto EI = Entry->begin();
+  for (Instruction &I : drop_end(*EntryBB)) {
+    if (EI != Entry->end() && isa<VPIRInstruction>(*EI) &&
+        &cast<VPIRInstruction>(&*EI)->getInstruction() == &I) {
+      EI++;
       continue;
-    VPIRInstruction::create(I)->insertBefore(*Entry, InsertPt);
+    }
+    VPIRInstruction::create(I)->insertBefore(*Entry, EI);
   }
 
   return ExpandedSCEVs;
