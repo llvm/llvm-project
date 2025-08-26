@@ -326,55 +326,55 @@ def ptxas_add_isa_features(major_version, minor_version):
         raise RuntimeError(
             f"ptxas {ptxas_executable} does not support ISA version listing"
         )
-    # Use a more pythonic approach: define a list of (major, minor, feature) tuples and iterate.
-    isa_features = [
-        (12, 9, "ptxas-isa-8.8"),
-        (12, 8, "ptxas-isa-8.7"),
-        (12, 7, "ptxas-isa-8.6"),
-        (12, 6, "ptxas-isa-8.5"),
-        (12, 5, "ptxas-isa-8.5"),
-        (12, 4, "ptxas-isa-8.4"),
-        (12, 3, "ptxas-isa-8.3"),
-        (12, 2, "ptxas-isa-8.2"),
-        (12, 1, "ptxas-isa-8.1"),
-        (12, 0, "ptxas-isa-8.0"),
-        (11, 8, "ptxas-isa-7.8"),
-        (11, 7, "ptxas-isa-7.7"),
-        (11, 6, "ptxas-isa-7.6"),
-        (11, 5, "ptxas-isa-7.5"),
-        (11, 4, "ptxas-isa-7.4"),
-        (11, 3, "ptxas-isa-7.3"),
-        (11, 2, "ptxas-isa-7.2"),
-        (11, 1, "ptxas-isa-7.1"),
-        (11, 0, "ptxas-isa-7.0"),
-        (10, 2, "ptxas-isa-6.5"),
-        (10, 1, "ptxas-isa-6.4"),
-        (10, 0, "ptxas-isa-6.3"),
-        (9, 2, "ptxas-isa-6.2"),
-        (9, 1, "ptxas-isa-6.1"),
-        (9, 0, "ptxas-isa-6.0"),
-        (8, 0, "ptxas-isa-5.0"),
-        (7, 5, "ptxas-isa-4.3"),
-        (7, 0, "ptxas-isa-4.2"),
-        (6, 5, "ptxas-isa-4.1"),
-        (6, 0, "ptxas-isa-4.0"),
-        (5, 5, "ptxas-isa-3.2"),
-        (5, 0, "ptxas-isa-3.1"),
-        (4, 1, "ptxas-isa-3.0"),
-        (4, 0, "ptxas-isa-2.3"),
-        (3, 2, "ptxas-isa-2.2"),
-        (3, 1, "ptxas-isa-2.1"),
-        (3, 0, "ptxas-isa-2.0"),
-        (3, 0, "ptxas-isa-1.5"),
-        (2, 2, "ptxas-isa-1.4"),
-        (2, 1, "ptxas-isa-1.3"),
-        (2, 0, "ptxas-isa-1.2"),
-        (1, 1, "ptxas-isa-1.1"),
-        (1, 0, "ptxas-isa-1.0"),
+
+    cuda_version_to_isa_version = [
+        (12, 9, "8.8"),
+        (12, 8, "8.7"),
+        (12, 7, "8.6"),
+        (12, 6, "8.5"),
+        (12, 5, "8.5"),
+        (12, 4, "8.4"),
+        (12, 3, "8.3"),
+        (12, 2, "8.2"),
+        (12, 1, "8.1"),
+        (12, 0, "8.0"),
+        (11, 8, "7.8"),
+        (11, 7, "7.7"),
+        (11, 6, "7.6"),
+        (11, 5, "7.5"),
+        (11, 4, "7.4"),
+        (11, 3, "7.3"),
+        (11, 2, "7.2"),
+        (11, 1, "7.1"),
+        (11, 0, "7.0"),
+        (10, 2, "6.5"),
+        (10, 1, "6.4"),
+        (10, 0, "6.3"),
+        (9, 2, "6.2"),
+        (9, 1, "6.1"),
+        (9, 0, "6.0"),
+        (8, 0, "5.0"),
+        (7, 5, "4.3"),
+        (7, 0, "4.2"),
+        (6, 5, "4.1"),
+        (6, 0, "4.0"),
+        (5, 5, "3.2"),
+        (5, 0, "3.1"),
+        (4, 1, "3.0"),
+        (4, 0, "2.3"),
+        (3, 2, "2.2"),
+        (3, 1, "2.1"),
+        (3, 0, "2.0"),
+        (3, 0, "1.5"),
+        (2, 2, "1.4"),
+        (2, 1, "1.3"),
+        (2, 0, "1.2"),
+        (1, 1, "1.1"),
+        (1, 0, "1.0"),
     ]
-    for major, minor, feature in isa_features:
-        if major_version >= major and minor_version >= minor:
-            config.available_features.add(feature)
+    for major, minor, isa_version in cuda_version_to_isa_version:
+        if major < major_version or (major == major_version and minor <= minor_version):
+            config.available_features.add(f"ptxas-isa-{isa_version}")
 
 
 def ptxas_supported_sms(ptxas_executable):
@@ -384,17 +384,11 @@ def ptxas_supported_sms(ptxas_executable):
         text=True,
         check=True,
     )
-    
-    # Look for the --gpu-arch option section and extract SM variants from the allowed values
-    gpu_arch_section = re.search(
-        r'Allowed values for this option:(.*?)--',
-        result.stdout,
-        re.DOTALL
-    )
-    # Extract SM variants from the allowed values subsection
+
+    gpu_arch_section = re.search(r"--gpu-name(.*?)--", result.stdout, re.DOTALL)
     allowed_values = gpu_arch_section.group(1)
     supported_sms = re.findall(r"'sm_(\d+(?:[af]?))'", allowed_values)
-    
+
     if not supported_sms:
         raise RuntimeError("No SM architecture values found in ptxas help output")
     return supported_sms
