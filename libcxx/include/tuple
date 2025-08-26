@@ -324,12 +324,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Ret __tuple_compare_three_way(const _Tp& __x, c
 #    endif // _LIBCPP_STD_VER >= 20
 
 #    if _LIBCPP_STD_VER >= 23
-template <class>
-inline constexpr bool __is_tuple_v = false;
-
-template <class... _Tp>
-inline constexpr bool __is_tuple_v<tuple<_Tp...>> = true;
-
 template <class _Tp>
 concept __tuple_like_no_tuple = __tuple_like<_Tp> && !__is_tuple_v<_Tp>;
 
