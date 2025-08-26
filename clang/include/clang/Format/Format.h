@@ -62,12 +62,42 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
+  /*
+  /// Different styles for aligning after open brackets.
+  /// This is **deprecated**. For backward compatibility only.
+  enum BracketAlignmentStyle : int8_t {
+    /// Align parameters on the open bracket, e.g.:
+    /// \code
+    ///   someLongFunction(argument1,
+    ///                    argument2);
+    /// \endcode
+    BAS_Align,
+    /// Don't align, instead use ``ContinuationIndentWidth``, e.g.:
+    /// \code
+    ///   someLongFunction(argument1,
+    ///       argument2);
+    /// \endcode
+    BAS_DontAlign,
+    /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+    BAS_AlwaysBreak,
+    /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+    /// in combination with ``BreakBeforeCloseBracketBracedList``,
+    /// ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
+    /// ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
+    BAS_BlockIndent,
+  };
+  */
+  LLVM_YAML_STRONG_TYPEDEF(bool, BracketAlignmentStyle)
+
   /// If ``true``, horizontally aligns arguments after an open bracket.
   ///
   /// This applies to round brackets (parentheses), angle brackets and square
   /// brackets.
   /// \version 3.8
-  LLVM_YAML_STRONG_TYPEDEF(bool, BracketAlignmentStyle)
   BracketAlignmentStyle AlignAfterOpenBracket;
 
   /// Different style for aligning array initializers.
