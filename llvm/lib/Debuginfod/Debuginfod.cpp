@@ -568,9 +568,9 @@ Expected<std::string> DebuginfodCollection::findDebugBinaryPath(BuildIDRef ID) {
 }
 
 Error DebuginfodServer::init(DebuginfodLog &Log,
-                                   DebuginfodCollection &Collection) {
+                             DebuginfodCollection &Collection) {
 
-  Error Errd =
+  Error Err =
       Server.get(R"(/buildid/(.*)/debuginfo)", [&](HTTPServerRequest Request) {
         Log.push("GET " + Request.UrlPath);
         std::string IDString;
@@ -588,10 +588,10 @@ Error DebuginfodServer::init(DebuginfodLog &Log,
         }
         streamFile(Request, *PathOrErr);
       });
-  if (Errd) {
-    return std::move(Errd);
-  }
-  Error Erre =
+  if (Err)
+    return std::move(Err);
+
+  Err =
       Server.get(R"(/buildid/(.*)/executable)", [&](HTTPServerRequest Request) {
         Log.push("GET " + Request.UrlPath);
         std::string IDString;
@@ -609,18 +609,16 @@ Error DebuginfodServer::init(DebuginfodLog &Log,
         }
         streamFile(Request, *PathOrErr);
       });
-  if (Erre) {
-    return std::move(Erre);
-  }
+  if (Err)
+    return std::move(Err);
   return Error::success();
 }
 
 Expected<DebuginfodServer>
 DebuginfodServer::create(DebuginfodLog &Log, DebuginfodCollection &Collection) {
   DebuginfodServer Serverd;
-  llvm::Error Err = Serverd.init(Log, Collection);
-  if (Err)
-    return std::move(Err);
+  if (llvm::Error Err = Serverd.init(Log, Collection))
+    std::move(Err);
   return std::move(Serverd);
 }
 

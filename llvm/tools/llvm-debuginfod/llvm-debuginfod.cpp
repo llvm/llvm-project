@@ -131,12 +131,8 @@ int llvm_debuginfod_main(int argc, char **argv, const llvm::ToolContext &) {
   DefaultThreadPool Pool(hardware_concurrency(MaxConcurrency));
   DebuginfodLog Log;
   DebuginfodCollection Collection(Paths, Log, Pool, MinInterval);
-  auto ExpServer = DebuginfodServer::create(Log, Collection);
-  if (!ExpServer) {
-    llvm::errs() << ExpServer.takeError();
-    return 1;
-  }
-  DebuginfodServer &Server = ExpServer.get();
+  DebuginfodServer Server =
+      ExitOnErr(DebuginfodServer::create(Log, Collection));
   if (!Port)
     Port = ExitOnErr(Server.Server.bind(HostInterface.c_str()));
   else
