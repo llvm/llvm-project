@@ -16,7 +16,7 @@ define i32 @addri1(i32 %a, i32 %b) {
 ;
 ; T2-LABEL: addri1:
 ; T2:       @ %bb.0: @ %entry
-; T2-NEXT:    adds r0, #3
+; T2-NEXT:    cmn.w r0, #3
 ; T2-NEXT:    mov.w r0, #5
 ; T2-NEXT:    it eq
 ; T2-NEXT:    moveq r0, #4
@@ -47,7 +47,7 @@ define i32 @addri2(i32 %a, i32 %b) {
 ;
 ; T2-LABEL: addri2:
 ; T2:       @ %bb.0: @ %entry
-; T2-NEXT:    adds r0, #254
+; T2-NEXT:    cmn.w r0, #254
 ; T2-NEXT:    mov.w r0, #5
 ; T2-NEXT:    it eq
 ; T2-NEXT:    moveq r0, #4

@@ -5,7 +5,7 @@
 define i32 @test(i64 %arg1) {
 ; LE-LABEL: test:
 ; LE:       @ %bb.0: @ %entry
-; LE-NEXT:    subs r0, r0, #1
+; LE-NEXT:    cmp r0, #1
 ; LE-NEXT:    mov r2, #0
 ; LE-NEXT:    sbcs r0, r1, #0
 ; LE-NEXT:    vldr s0, .LCPI0_0
@@ -25,7 +25,7 @@ define i32 @test(i64 %arg1) {
 ;
 ; BE-LABEL: test:
 ; BE:       @ %bb.0: @ %entry
-; BE-NEXT:    subs r1, r1, #1
+; BE-NEXT:    cmp r1, #1
 ; BE-NEXT:    mov r2, #0
 ; BE-NEXT:    sbcs r0, r0, #0
 ; BE-NEXT:    vldr s0, .LCPI0_0

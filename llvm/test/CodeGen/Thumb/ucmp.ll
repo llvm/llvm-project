@@ -119,13 +119,13 @@ define i8 @ucmp_8_64(i64 %x, i64 %y) nounwind {
 ;
 ; THUMB2-LABEL: ucmp_8_64:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    subs.w r12, r0, r2
+; THUMB2-NEXT:    cmp r0, r2
 ; THUMB2-NEXT:    mov.w r9, #0
 ; THUMB2-NEXT:    sbcs.w r12, r1, r3
 ; THUMB2-NEXT:    mov.w r12, #0
 ; THUMB2-NEXT:    it lo
 ; THUMB2-NEXT:    movlo.w r12, #1
-; THUMB2-NEXT:    subs r0, r2, r0
+; THUMB2-NEXT:    cmp r2, r0
 ; THUMB2-NEXT:    sbcs.w r0, r3, r1
 ; THUMB2-NEXT:    it lo
 ; THUMB2-NEXT:    movlo.w r9, #1
@@ -134,10 +134,10 @@ define i8 @ucmp_8_64(i64 %x, i64 %y) nounwind {
 ;
 ; V81M-LABEL: ucmp_8_64:
 ; V81M:       @ %bb.0:
-; V81M-NEXT:    subs.w r12, r0, r2
+; V81M-NEXT:    cmp r0, r2
 ; V81M-NEXT:    sbcs.w r12, r1, r3
 ; V81M-NEXT:    cset r12, lo
-; V81M-NEXT:    subs r0, r2, r0
+; V81M-NEXT:    cmp r2, r0
 ; V81M-NEXT:    sbcs.w r0, r3, r1
 ; V81M-NEXT:    cset r0, lo
 ; V81M-NEXT:    sub.w r0, r0, r12
@@ -198,14 +198,14 @@ define i8 @ucmp_8_128(i128 %x, i128 %y) nounwind {
 ; THUMB2-NEXT:    ldr r4, [sp, #28]
 ; THUMB2-NEXT:    movs r5, #0
 ; THUMB2-NEXT:    ldm.w lr, {r9, r12, lr}
-; THUMB2-NEXT:    subs.w r6, r0, r9
+; THUMB2-NEXT:    cmp r0, r9
 ; THUMB2-NEXT:    sbcs.w r6, r1, r12
 ; THUMB2-NEXT:    sbcs.w r6, r2, lr
 ; THUMB2-NEXT:    sbcs.w r6, r3, r4
 ; THUMB2-NEXT:    mov.w r6, #0
 ; THUMB2-NEXT:    it lo
 ; THUMB2-NEXT:    movlo r6, #1
-; THUMB2-NEXT:    subs.w r0, r9, r0
+; THUMB2-NEXT:    cmp r9, r0
 ; THUMB2-NEXT:    sbcs.w r0, r12, r1
 ; THUMB2-NEXT:    sbcs.w r0, lr, r2
 ; THUMB2-NEXT:    sbcs.w r0, r4, r3
@@ -220,12 +220,12 @@ define i8 @ucmp_8_128(i128 %x, i128 %y) nounwind {
 ; V81M-NEXT:    push {r4, r5, r6, lr}
 ; V81M-NEXT:    ldrd r5, r4, [sp, #16]
 ; V81M-NEXT:    ldrd lr, r12, [sp, #24]
-; V81M-NEXT:    subs r6, r0, r5
+; V81M-NEXT:    cmp r0, r5
 ; V81M-NEXT:    sbcs.w r6, r1, r4
 ; V81M-NEXT:    sbcs.w r6, r2, lr
 ; V81M-NEXT:    sbcs.w r6, r3, r12
 ; V81M-NEXT:    cset r6, lo
-; V81M-NEXT:    subs r0, r5, r0
+; V81M-NEXT:    cmp r5, r0
 ; V81M-NEXT:    sbcs.w r0, r4, r1
 ; V81M-NEXT:    sbcs.w r0, lr, r2
 ; V81M-NEXT:    sbcs.w r0, r12, r3
@@ -292,13 +292,13 @@ define i32 @ucmp_32_64(i64 %x, i64 %y) nounwind {
 ;
 ; THUMB2-LABEL: ucmp_32_64:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    subs.w r12, r0, r2
+; THUMB2-NEXT:    cmp r0, r2
 ; THUMB2-NEXT:    mov.w r9, #0
 ; THUMB2-NEXT:    sbcs.w r12, r1, r3
 ; THUMB2-NEXT:    mov.w r12, #0
 ; THUMB2-NEXT:    it lo
 ; THUMB2-NEXT:    movlo.w r12, #1
-; THUMB2-NEXT:    subs r0, r2, r0
+; THUMB2-NEXT:    cmp r2, r0
 ; THUMB2-NEXT:    sbcs.w r0, r3, r1
 ; THUMB2-NEXT:    it lo
 ; THUMB2-NEXT:    movlo.w r9, #1
@@ -307,10 +307,10 @@ define i32 @ucmp_32_64(i64 %x, i64 %y) nounwind {
 ;
 ; V81M-LABEL: ucmp_32_64:
 ; V81M:       @ %bb.0:
-; V81M-NEXT:    subs.w r12, r0, r2
+; V81M-NEXT:    cmp r0, r2
 ; V81M-NEXT:    sbcs.w r12, r1, r3
 ; V81M-NEXT:    cset r12, lo
-; V81M-NEXT:    subs r0, r2, r0
+; V81M-NEXT:    cmp r2, r0
 ; V81M-NEXT:    sbcs.w r0, r3, r1
 ; V81M-NEXT:    cset r0, lo
 ; V81M-NEXT:    sub.w r0, r0, r12
@@ -346,13 +346,13 @@ define i64 @ucmp_64_64(i64 %x, i64 %y) nounwind {
 ;
 ; THUMB2-LABEL: ucmp_64_64:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    subs.w r12, r0, r2
+; THUMB2-NEXT:    cmp r0, r2
 ; THUMB2-NEXT:    mov.w r9, #0
 ; THUMB2-NEXT:    sbcs.w r12, r1, r3
 ; THUMB2-NEXT:    mov.w r12, #0
 ; THUMB2-NEXT:    it lo
 ; THUMB2-NEXT:    movlo.w r12, #1
-; THUMB2-NEXT:    subs r0, r2, r0
+; THUMB2-NEXT:    cmp r2, r0
 ; THUMB2-NEXT:    sbcs.w r0, r3, r1
 ; THUMB2-NEXT:    it lo
 ; THUMB2-NEXT:    movlo.w r9, #1
@@ -362,10 +362,10 @@ define i64 @ucmp_64_64(i64 %x, i64 %y) nounwind {
 ;
 ; V81M-LABEL: ucmp_64_64:
 ; V81M:       @ %bb.0:
-; V81M-NEXT:    subs.w r12, r0, r2
+; V81M-NEXT:    cmp r0, r2
 ; V81M-NEXT:    sbcs.w r12, r1, r3
 ; V81M-NEXT:    cset r12, lo
-; V81M-NEXT:    subs r0, r2, r0
+; V81M-NEXT:    cmp r2, r0
 ; V81M-NEXT:    sbcs.w r0, r3, r1
 ; V81M-NEXT:    cset r0, lo
 ; V81M-NEXT:    sub.w r0, r0, r12

@@ -78,7 +78,7 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    ldrexd r0, r1, [r12]
 ; CHECK-NEXT:    adds r6, r0, #1
 ; CHECK-NEXT:    adc r7, r1, #0
-; CHECK-NEXT:    subs r4, r0, r2
+; CHECK-NEXT:    cmp r0, r2
 ; CHECK-NEXT:    sbcs r4, r1, r3
 ; CHECK-NEXT:    movwhs r7, #0
 ; CHECK-NEXT:    movwhs r6, #0
@@ -173,7 +173,7 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrexd r4, r5, [r0]
 ; CHECK-NEXT:    mov r12, #0
-; CHECK-NEXT:    subs r1, r2, r4
+; CHECK-NEXT:    cmp r2, r4
 ; CHECK-NEXT:    sbcs r1, r3, r5
 ; CHECK-NEXT:    orr r1, r4, r5
 ; CHECK-NEXT:    clz r1, r1

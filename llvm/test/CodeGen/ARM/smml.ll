@@ -166,7 +166,7 @@ define void @test_used_flags(i32 %in1, i32 %in2) {
 ; CHECK-V6-NEXT:    push {r11, lr}
 ; CHECK-V6-NEXT:    smull r1, r2, r0, r1
 ; CHECK-V6-NEXT:    mov r0, #56
-; CHECK-V6-NEXT:    subs r1, r1, #1
+; CHECK-V6-NEXT:    cmp r1, #1
 ; CHECK-V6-NEXT:    sbcs r1, r2, #0
 ; CHECK-V6-NEXT:    movlt r0, #42
 ; CHECK-V6-NEXT:    bl opaque
@@ -178,7 +178,7 @@ define void @test_used_flags(i32 %in1, i32 %in2) {
 ; CHECK-V7-NEXT:    push {r11, lr}
 ; CHECK-V7-NEXT:    smull r1, r2, r0, r1
 ; CHECK-V7-NEXT:    mov r0, #56
-; CHECK-V7-NEXT:    subs r1, r1, #1
+; CHECK-V7-NEXT:    cmp r1, #1
 ; CHECK-V7-NEXT:    sbcs r1, r2, #0
 ; CHECK-V7-NEXT:    movwlt r0, #42
 ; CHECK-V7-NEXT:    bl opaque
@@ -248,7 +248,7 @@ define void @test_used_flags(i32 %in1, i32 %in2) {
 ; CHECK-THUMBV7-NEXT:    push {r7, lr}
 ; CHECK-THUMBV7-NEXT:    smull r1, r2, r0, r1
 ; CHECK-THUMBV7-NEXT:    movs r0, #56
-; CHECK-THUMBV7-NEXT:    subs r1, #1
+; CHECK-THUMBV7-NEXT:    cmp r1, #1
 ; CHECK-THUMBV7-NEXT:    sbcs r1, r2, #0
 ; CHECK-THUMBV7-NEXT:    it lt
 ; CHECK-THUMBV7-NEXT:    movlt r0, #42
@@ -261,7 +261,7 @@ define void @test_used_flags(i32 %in1, i32 %in2) {
 ; CHECK-THUMBV7M-NEXT:    push {r7, lr}
 ; CHECK-THUMBV7M-NEXT:    smull r1, r2, r0, r1
 ; CHECK-THUMBV7M-NEXT:    movs r0, #56
-; CHECK-THUMBV7M-NEXT:    subs r1, #1
+; CHECK-THUMBV7M-NEXT:    cmp r1, #1
 ; CHECK-THUMBV7M-NEXT:    sbcs r1, r2, #0
 ; CHECK-THUMBV7M-NEXT:    it lt
 ; CHECK-THUMBV7M-NEXT:    movlt r0, #42
@@ -274,7 +274,7 @@ define void @test_used_flags(i32 %in1, i32 %in2) {
 ; CHECK-THUMBV7EM-NEXT:    push {r7, lr}
 ; CHECK-THUMBV7EM-NEXT:    smull r1, r2, r0, r1
 ; CHECK-THUMBV7EM-NEXT:    movs r0, #56
-; CHECK-THUMBV7EM-NEXT:    subs r1, #1
+; CHECK-THUMBV7EM-NEXT:    cmp r1, #1
 ; CHECK-THUMBV7EM-NEXT:    sbcs r1, r2, #0
 ; CHECK-THUMBV7EM-NEXT:    it lt
 ; CHECK-THUMBV7EM-NEXT:    movlt r0, #42

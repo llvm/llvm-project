@@ -31,6 +31,7 @@ add_llvm_target(ARMCodeGen
   ARMCallLowering.cpp
   ARMConstantIslandPass.cpp
   ARMConstantPoolValue.cpp
+  ARMConvertToComparesPass.cpp
   ARMExpandPseudoInsts.cpp
   ARMFastISel.cpp
   ARMFixCortexA57AES1742098Pass.cpp

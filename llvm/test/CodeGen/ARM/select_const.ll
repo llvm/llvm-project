@@ -763,7 +763,7 @@ define i64 @opaque_constant2(i1 %cond, i64 %x) {
 define i64 @func(i64 %arg) {
 ; ARM-LABEL: func:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    adds r0, r0, #1
+; ARM-NEXT:    cmn r0, #1
 ; ARM-NEXT:    mov r2, #0
 ; ARM-NEXT:    adcs r0, r1, #0
 ; ARM-NEXT:    mov r1, #0
@@ -773,7 +773,7 @@ define i64 @func(i64 %arg) {
 ;
 ; THUMB2-LABEL: func:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    adds r0, #1
+; THUMB2-NEXT:    cmn.w r0, #1
 ; THUMB2-NEXT:    mov.w r2, #0
 ; THUMB2-NEXT:    adcs r0, r1, #0
 ; THUMB2-NEXT:    mov.w r1, #0

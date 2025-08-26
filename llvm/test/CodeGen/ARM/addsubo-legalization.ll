@@ -18,7 +18,7 @@ define <2 x i1> @uaddo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    vmov r6, r7, d19
 ; CHECK-NEXT:    vmov lr, r12, d16
 ; CHECK-NEXT:    vmov r4, r5, d17
-; CHECK-NEXT:    subs.w r3, lr, r3
+; CHECK-NEXT:    cmp lr, r3
 ; CHECK-NEXT:    sbcs.w r2, r12, r2
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    it lo
@@ -26,7 +26,7 @@ define <2 x i1> @uaddo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r2, #-1
-; CHECK-NEXT:    subs r3, r4, r6
+; CHECK-NEXT:    cmp r4, r6
 ; CHECK-NEXT:    sbcs.w r3, r5, r7
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    movlo r1, #1
@@ -57,7 +57,7 @@ define <2 x i1> @usubo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    vmov r4, r5, d19
 ; CHECK-NEXT:    vmov r3, r2, d16
 ; CHECK-NEXT:    vmov r6, r7, d17
-; CHECK-NEXT:    subs.w r3, lr, r3
+; CHECK-NEXT:    cmp lr, r3
 ; CHECK-NEXT:    sbcs.w r2, r12, r2
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    it lo
@@ -65,7 +65,7 @@ define <2 x i1> @usubo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r2, #-1
-; CHECK-NEXT:    subs r3, r4, r6
+; CHECK-NEXT:    cmp r4, r6
 ; CHECK-NEXT:    sbcs.w r3, r5, r7
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    movlo r1, #1
