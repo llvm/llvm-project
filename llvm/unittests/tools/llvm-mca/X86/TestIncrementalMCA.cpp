@@ -236,7 +236,7 @@ TEST_F(X86TestBase, TestVariantInstructionsSameAddress) {
 }
 
 TEST_F(X86TestBase, TestInstructionCustomization) {
-  const unsigned ExplicitLatency = 100;  
+  const unsigned ExplicitLatency = 100;
   SmallVector<MCInst> MCIs;
   MCInst InstructionToAdd = MCInstBuilder(X86::XOR64rr)
                                 .addReg(X86::RAX)
@@ -247,13 +247,15 @@ TEST_F(X86TestBase, TestInstructionCustomization) {
   // Run the baseline.
   json::Object BaselineResult;
   auto E = runBaselineMCA(BaselineResult, MCIs, {}, nullptr,
-      [=](InstrBuilder& IB, const MCInst& MCI, const SmallVector<Instrument*>& Instruments) {
-        return IB.createInstruction(MCI, Instruments,
-          [=](InstrDesc& ID) {
-            for (auto& W : ID.Writes) W.Latency = ExplicitLatency;
-            ID.MaxLatency = ExplicitLatency;
-          });
-      });
+                          [=](InstrBuilder &IB, const MCInst &MCI,
+                              const SmallVector<Instrument *> &Instruments) {
+                            return IB.createInstruction(
+                                MCI, Instruments, [=](InstrDesc &ID) {
+                                  for (auto &W : ID.Writes)
+                                    W.Latency = ExplicitLatency;
+                                  ID.MaxLatency = ExplicitLatency;
+                                });
+                          });
   auto *BaselineObj = BaselineResult.getObject("SummaryView");
   auto V = BaselineObj->getInteger("TotalCycles");
   ASSERT_TRUE(V);
