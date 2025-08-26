@@ -3559,7 +3559,7 @@ static bool isSimpleTemplateIdType(QualType T) {
   //
   // This only arises during class template argument deduction for a copy
   // deduction candidate, where it permits slicing.
-  if (T->getAs<InjectedClassNameType>())
+  if (isa<InjectedClassNameType>(T.getCanonicalType()))
     return true;
 
   return false;

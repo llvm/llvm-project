@@ -1265,17 +1265,11 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
   case SD_Static:
   case SD_Thread: {
     CXXDestructorDecl *referenceTemporaryDtor = nullptr;
-    if (const clang::RecordType *rt = e->getType()
-                                          ->getBaseElementTypeUnsafe()
-                                          ->getAs<clang::RecordType>()) {
+    if (const auto *classDecl =
+            e->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+        classDecl && !classDecl->hasTrivialDestructor())
       // Get the destructor for the reference temporary.
-      if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
-              rt->getOriginalDecl()->getDefinitionOrSelf())) {
-        if (!classDecl->hasTrivialDestructor())
-          referenceTemporaryDtor =
-              classDecl->getDefinitionOrSelf()->getDestructor();
-      }
-    }
+      referenceTemporaryDtor = classDecl->getDestructor();
 
     if (!referenceTemporaryDtor)
       return;
