@@ -1,10 +1,10 @@
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/DebugLog.h"
 #include <algorithm>
-#include <iostream>
-#include <string>
 #include <vector>
+
+#define DEBUG_TYPE "xegpu-uarch"
 
 using namespace mlir::xegpu::uArch;
 using namespace mlir::xegpu::uArch::Xe2Plus;
@@ -80,51 +80,26 @@ bool DPASInstruction::checkSupportedTypes(mlir::Type AType, mlir::Type BType,
   if (AType.isF16() || BType.isF16()) {
     if (AType != BType || (CType && (!CType.isF32() && !CType.isF16())) ||
         (!DType.isF32() && !DType.isF16())) {
-      llvm::errs()
-          << "Unsupported dpas combinations of Dst, Acc, A and B matrices, "
-          << "Supported types are:\n"
-          << "  Dst    |   Acc   |   A   |  B  \n"
-          << " f, hf   |  f, hf  |   hf  |  hf \n"
-          << "AType: " << AType << " BType: " << BType << " CType: " << CType
-          << " DType: " << DType;
+      LDBG() << "Unsupported dpas combinations of Dst, Acc, A and B matrices.";
       return false;
     }
   } else if (AType.isBF16() || BType.isBF16()) {
     if (AType != BType || (CType && (!CType.isF32() && !CType.isBF16())) ||
         (!DType.isF32() && !DType.isBF16())) {
-      llvm::errs()
-          << "Unsupported dpas combinations of Dst, Acc, A and B matrices, "
-          << "Supported types are:\n"
-          << "  Dst    |   Acc   |   A   |  B  \n"
-          << " f, bf   |  f, bf  |   bf  |  bf \n"
-          << "AType: " << AType << " BType: " << BType << " CType: " << CType
-          << " DType: " << DType;
+      LDBG() << "Unsupported dpas combinations of Dst, Acc, A and B matrices.";
       return false;
     }
   } else if (AType.isTF32() || BType.isTF32()) {
     if (AType != BType || (CType && (!CType.isF32() && !DType.isF32())) ||
         (!DType.isF32())) {
-      llvm::errs()
-          << "Unsupported dpas combinations of Dst, Acc, A and B matrices, "
-          << "Supported types are:\n"
-          << "  Dst    |   Acc   |   A    |   B  \n"
-          << "   f     |    f    |  tf32  |  tf32 \n"
-          << "AType: " << AType << " BType: " << BType << " CType: " << CType
-          << " DType: " << DType;
+      LDBG() << "Unsupported dpas combinations of Dst, Acc, A and B matrices.";
       return false;
     }
   } else if (!(AType.isInteger(2) || AType.isInteger(4) ||
                AType.isInteger(8)) &&
              !(BType.isInteger(2) || BType.isInteger(4) ||
                BType.isInteger(8))) {
-    llvm::errs()
-        << "Unsupported dpas combinations of Dst, Acc, A and B matrices, "
-        << "Supported types are:\n"
-        << "  Dst     |   Acc    |         A           |         B          "
-           " \n"
-        << " ud, d    |  ud,d    |  ub,b,u4,s4,u2,s2   |  ub,b,u4,s4,u2,s2  "
-        << "AType: " << AType << " BType: " << BType << " CType: " << CType
-        << " DType: " << DType;
+    LDBG() << "Unsupported dpas combinations of Dst, Acc, A and B matrices.";
     return false;
   }
 

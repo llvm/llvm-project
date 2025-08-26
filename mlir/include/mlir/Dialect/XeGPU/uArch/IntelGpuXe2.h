@@ -1,4 +1,4 @@
-//===--- IntelGpuXe2.h ---------------------------------------*- C++ -*-===//
+//===--- IntelGpuXe2.h ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file
-/// Xe2 uArch definition.
-///
+// \file
+// Xe2 uArch definition. Xe2 is the second generation of Intel Xe GPUs.
+// This file defines the uArch details for Xe2 and its derived architectures.
+// This includes Ponte Vecchio (PVC) and Battlemage (BMG) architectures.
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_DIALECT_XEGPU_UARCH_INTEL_GPU_XE2_H
-#define MLIR_DIALECT_XEGPU_UARCH_INTEL_GPU_XE2_H
+#ifndef MLIR_DIALECT_XEGPU_UARCH_INTELGPUXE2_H
+#define MLIR_DIALECT_XEGPU_UARCH_INTELGPUXE2_H
 
 #include "mlir/Dialect/XeGPU/uArch/uArchInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -179,4 +180,4 @@ struct BMGuArch : public Xe2Plus {
 } // namespace xegpu
 } // namespace mlir
 
-#endif // MLIR_DIALECT_XEGPU_UARCH_INTEL_GPU_XE2_H
+#endif // MLIR_DIALECT_XEGPU_UARCH_INTELGPUXE2H
