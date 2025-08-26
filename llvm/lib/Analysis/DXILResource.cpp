@@ -786,7 +786,7 @@ StringRef dxil::getResourceNameFromBindingCall(CallInst *CI) {
     llvm_unreachable("unexpected handle creation intrinsic");
   case Intrinsic::dx_resource_handlefrombinding:
   case Intrinsic::dx_resource_handlefromimplicitbinding:
-    Op = CI->getArgOperand(5);
+    Op = CI->getArgOperand(4);
     break;
   }
 
@@ -1010,7 +1010,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           int32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-          Value *Name = CI->getArgOperand(5);
+          Value *Name = CI->getArgOperand(4);
 
           // negative size means unbounded resource array;
           // upper bound register overflow should be detected in Sema

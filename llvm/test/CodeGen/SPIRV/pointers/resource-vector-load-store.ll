@@ -19,7 +19,7 @@ define void @main() "hlsl.shader"="pixel"  {
 ; CHECK-NEXT:          OpReturn
 ; CHECK-NEXT:          OpFunctionEnd
 entry:
-  %0 = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+  %0 = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %1 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 0) %0, i32 0)
   %2 = load <4 x float>, ptr addrspace(11) %1, align 16
   %3 = extractelement <4 x float> %2, i64 0

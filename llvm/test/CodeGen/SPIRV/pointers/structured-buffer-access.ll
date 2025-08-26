@@ -48,8 +48,8 @@ define void @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    OpReturn
 ; CHECK-NEXT:    OpFunctionEnd
 entry:
-  %0 = tail call target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(i32 0, i32 1, i32 1, i32 0, i1 false, ptr nonnull @.str)
-  %1 = tail call target("spirv.VulkanBuffer", [0 x %struct.S2], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S2s_12_1t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str.2)
+  %0 = tail call target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str)
+  %1 = tail call target("spirv.VulkanBuffer", [0 x %struct.S2], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S2s_12_1t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str.2)
   %2 = tail call i32 @llvm.spv.flattened.thread.id.in.group()
   %3 = tail call noundef align 1 dereferenceable(32) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) %0, i32 %2)
   %f.i = getelementptr inbounds nuw i8, ptr addrspace(11) %3, i64 16
