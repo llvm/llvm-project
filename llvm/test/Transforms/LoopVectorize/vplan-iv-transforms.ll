@@ -89,15 +89,14 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK:      VPlan 'Final VPlan for VF={8},UF={1}'
 ; CHECK:      ir-bb<vector.ph>:
-; CHECK-NEXT:     IR   %n.mod.vf = urem i64 %n, 8
-; CHECK-NEXT:     IR   %n.vec = sub i64 %n, %n.mod.vf
+; CHECK-NEXT:     EMIT vp<%n.mod.vf> = urem ir<%n>, ir<8>
+; CHECK-NEXT:     EMIT vp<%n.vec> = sub ir<%n>, vp<%n.mod.vf>
 ; CHECK-NEXT:     EMIT vp<[[STEP_VECTOR:%.+]]> = step-vector
 ; CHECK-NEXT:     EMIT vp<[[BROADCAST_0:%.+]]> = broadcast ir<0>
 ; CHECK-NEXT:     EMIT vp<[[BROADCAST_1:%.+]]> = broadcast ir<1>
 ; CHECK-NEXT:     EMIT vp<[[MUL:%.+]]> = mul vp<[[STEP_VECTOR]]>, vp<[[BROADCAST_1]]>
 ; CHECK-NEXT:     EMIT vp<[[INDUCTION:%.+]]> = add vp<[[BROADCAST_0]]>, vp<[[MUL]]>
-; CHECK-NEXT:     EMIT vp<[[INC:%.+]]> = mul ir<1>, ir<8>
-; CHECK-NEXT:     EMIT vp<[[BROADCAST_INC:%.+]]> = broadcast vp<[[INC]]>
+; CHECK-NEXT:     EMIT vp<[[BROADCAST_INC:%.+]]> = broadcast ir<8>
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
@@ -109,7 +108,7 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT:   WIDEN store ir<%q>, ir<%y>
 ; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<[[SCALAR_PHI]]>, ir<8>
 ; CHECK-NEXT:   EMIT vp<%vec.ind.next> = add ir<%iv>, vp<[[BROADCAST_INC]]>
-; CHECK-NEXT:   EMIT branch-on-count vp<%index.next>, ir<%n.vec>
+; CHECK-NEXT:   EMIT branch-on-count vp<%index.next>, vp<%n.vec>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 entry:
   br label %loop

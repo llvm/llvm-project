@@ -1,27 +1,27 @@
 #include "benchmarks/gpu/LibcGpuBenchmark.h"
 
+#include "hdr/stdint_proxy.h"
 #include "src/math/atan2.h"
-#include "src/stdlib/rand.h"
 
 #if defined(NVPTX_MATH_FOUND) || defined(AMDGPU_MATH_FOUND)
 #include "platform.h"
 #endif
 
-#define BM_TWO_RANDOM_INPUT(T, Func, MIN_EXP, MAX_EXP, N)                      \
-  []() {                                                                       \
+#define BM_RANDOM_INPUTS(T, Func, MinExp, MaxExp, N)                           \
+  [](uint32_t call_index) {                                                    \
     return LIBC_NAMESPACE::benchmarks::MathPerf<T>::run_throughput_in_range<   \
-        N>(Func, MIN_EXP, MAX_EXP, MIN_EXP, MAX_EXP);                          \
+        N>(Func, MinExp, MaxExp, MinExp, MaxExp, call_index);                  \
   }
 
-#define BENCH(T, Name, Func, MIN_EXP, MAX_EXP)                                 \
+#define BENCH(T, Name, Func, MinExp, MaxExp)                                   \
   SINGLE_WAVE_BENCHMARK(LlvmLibcAtan2GpuBenchmark, Name##_1,                   \
-                        BM_TWO_RANDOM_INPUT(T, Func, MIN_EXP, MAX_EXP, 1));    \
+                        BM_RANDOM_INPUTS(T, Func, MinExp, MaxExp, 1));         \
   SINGLE_WAVE_BENCHMARK(LlvmLibcAtan2GpuBenchmark, Name##_128,                 \
-                        BM_TWO_RANDOM_INPUT(T, Func, MIN_EXP, MAX_EXP, 128));  \
+                        BM_RANDOM_INPUTS(T, Func, MinExp, MaxExp, 128));       \
   SINGLE_WAVE_BENCHMARK(LlvmLibcAtan2GpuBenchmark, Name##_1024,                \
-                        BM_TWO_RANDOM_INPUT(T, Func, MIN_EXP, MAX_EXP, 1024)); \
+                        BM_RANDOM_INPUTS(T, Func, MinExp, MaxExp, 1024));      \
   SINGLE_WAVE_BENCHMARK(LlvmLibcAtan2GpuBenchmark, Name##_4096,                \
-                        BM_TWO_RANDOM_INPUT(T, Func, MIN_EXP, MAX_EXP, 4096))
+                        BM_RANDOM_INPUTS(T, Func, MinExp, MaxExp, 4096))
 
 BENCH(double, Atan2, LIBC_NAMESPACE::atan2, -1023, 1023);
 BENCH(double, Atan2TwoPi, LIBC_NAMESPACE::atan2, -10, 3);

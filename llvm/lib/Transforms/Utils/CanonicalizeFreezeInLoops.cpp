@@ -32,7 +32,6 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -193,7 +192,7 @@ bool CanonicalizeFreezeInLoopsImpl::run() {
   if (Candidates.empty())
     return false;
 
-  SmallSet<PHINode *, 8> ProcessedPHIs;
+  SmallPtrSet<PHINode *, 8> ProcessedPHIs;
   for (const auto &Info : Candidates) {
     PHINode *PHI = Info.PHI;
     if (!ProcessedPHIs.insert(Info.PHI).second)

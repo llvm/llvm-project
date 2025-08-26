@@ -191,6 +191,9 @@ void PreferMemberInitializerCheck::check(
     if (!AssignmentToMember)
       continue;
     const FieldDecl *Field = AssignmentToMember->Field;
+    // Skip if the field is inherited from a base class.
+    if (Field->getParent() != Class)
+      continue;
     const Expr *InitValue = AssignmentToMember->Init;
     updateAssignmentLevel(Field, InitValue, Ctor, AssignedFields);
     if (!canAdvanceAssignment(AssignedFields[Field]))

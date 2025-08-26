@@ -2590,6 +2590,9 @@ private:
     if (!Tok.Previous || Tok.isNot(tok::identifier) || Tok.is(TT_ClassHeadName))
       return false;
 
+    if (Tok.endsSequence(Keywords.kw_final, TT_ClassHeadName))
+      return false;
+
     if ((Style.isJavaScript() || Style.isJava()) && Tok.is(Keywords.kw_extends))
       return false;
 
@@ -4513,16 +4516,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Left.is(tok::hash);
   if (Left.isOneOf(tok::hashhash, tok::hash))
     return Right.is(tok::hash);
-  if (Left.is(BK_Block) && Right.is(tok::r_brace) &&
-      Right.MatchingParen == &Left && Line.Children.empty()) {
-    return Style.SpaceInEmptyBlock;
-  }
   if (Style.SpacesInParens == FormatStyle::SIPO_Custom) {
-    if ((Left.is(tok::l_paren) && Right.is(tok::r_paren)) ||
-        (Left.is(tok::l_brace) && Left.isNot(BK_Block) &&
-         Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
+    if (Left.is(tok::l_paren) && Right.is(tok::r_paren))
       return Style.SpacesInParensOptions.InEmptyParentheses;
-    }
     if (Style.SpacesInParensOptions.ExceptDoubleParentheses &&
         Left.is(tok::r_paren) && Right.is(tok::r_paren)) {
       auto *InnerLParen = Left.MatchingParen;
@@ -4800,8 +4796,6 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         Right.is(TT_ArraySubscriptLSquare))) {
     return false;
   }
-  if (Left.is(tok::l_brace) && Right.is(tok::r_brace))
-    return !Left.Children.empty(); // No spaces in "{}".
   if ((Left.is(tok::l_brace) && Left.isNot(BK_Block)) ||
       (Right.is(tok::r_brace) && Right.MatchingParen &&
        Right.MatchingParen->isNot(BK_Block))) {
@@ -4982,6 +4976,17 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   // of comment.
   if (Left.is(tok::star) && Right.is(tok::comment))
     return true;
+
+  if (Left.is(tok::l_brace) && Right.is(tok::r_brace) &&
+      Left.Children.empty()) {
+    if (Left.is(BK_Block))
+      return Style.SpaceInEmptyBraces != FormatStyle::SIEB_Never;
+    if (Style.Cpp11BracedListStyle) {
+      return Style.SpacesInParens == FormatStyle::SIPO_Custom &&
+             Style.SpacesInParensOptions.InEmptyParentheses;
+    }
+    return Style.SpaceInEmptyBraces == FormatStyle::SIEB_Always;
+  }
 
   const auto *BeforeLeft = Left.Previous;
 
@@ -6269,7 +6274,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   }
 
   if (Right.is(tok::colon) &&
-      !Right.isOneOf(TT_CtorInitializerColon, TT_InlineASMColon)) {
+      !Right.isOneOf(TT_CtorInitializerColon, TT_InlineASMColon,
+                     TT_BitFieldColon)) {
     return false;
   }
   if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {

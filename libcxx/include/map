@@ -593,6 +593,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__memory/unique_ptr.h>
 #  include <__memory_resource/polymorphic_allocator.h>
 #  include <__node_handle>
+#  include <__ranges/access.h>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
@@ -691,12 +692,12 @@ public:
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2>
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _K2& __x, const _CP& __y) const {
-    return __comp_(__x, __y.__get_value().first);
+    return __comp_(__x, __y.first);
   }
 
   template <typename _K2>
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _K2& __y) const {
-    return __comp_(__x.__get_value().first, __y);
+    return __comp_(__x.first, __y);
   }
 #  endif
 };
@@ -741,9 +742,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void operator()(pointer __p) _NOEXCEPT {
     if (__second_constructed)
-      __alloc_traits::destroy(__na_, std::addressof(__p->__value_.second));
+      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().second));
     if (__first_constructed)
-      __alloc_traits::destroy(__na_, std::addressof(__p->__value_.first));
+      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().first));
     if (__p)
       __alloc_traits::deallocate(__na_, __p, 1);
   }
@@ -978,11 +979,11 @@ public:
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI map(map&& __m) noexcept(is_nothrow_move_constructible<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI map(map&& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI map(map&& __m, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) noexcept(is_nothrow_move_assignable<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI map(initializer_list<value_type> __il, const key_compare& __comp = key_compare())
       : __tree_(__vc(__comp)) {
@@ -1389,7 +1390,8 @@ map<_Key, _Tp, _Compare, _Allocator>::map(map&& __m, const allocator_type& __a)
   if (__a != __m.get_allocator()) {
     const_iterator __e = cend();
     while (!__m.empty()) {
-      __tree_.__insert_unique_from_orphaned_node(__e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__value_));
+      __tree_.__insert_unique_from_orphaned_node(
+          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
     }
   }
 }
@@ -1419,9 +1421,9 @@ typename map<_Key, _Tp, _Compare, _Allocator>::__node_holder
 map<_Key, _Tp, _Compare, _Allocator>::__construct_node_with_key(const key_type& __k) {
   __node_allocator& __na = __tree_.__node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, std::addressof(__h->__value_.first), __k);
+  __node_traits::construct(__na, std::addressof(__h->__get_value().first), __k);
   __h.get_deleter().__first_constructed = true;
-  __node_traits::construct(__na, std::addressof(__h->__value_.second));
+  __node_traits::construct(__na, std::addressof(__h->__get_value().second));
   __h.get_deleter().__second_constructed = true;
   return __h;
 }
@@ -1436,7 +1438,7 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
     __tree_.__insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
     __r = __h.release();
   }
-  return __r->__value_.second;
+  return __r->__get_value().second;
 }
 
 #  endif // _LIBCPP_CXX03_LANG
@@ -1447,7 +1449,7 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) {
   __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
-  return static_cast<__node_pointer>(__child)->__value_.second;
+  return static_cast<__node_pointer>(__child)->__get_value().second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
@@ -1456,7 +1458,7 @@ const _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const {
   __node_base_pointer __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
-  return static_cast<__node_pointer>(__child)->__value_.second;
+  return static_cast<__node_pointer>(__child)->__get_value().second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
@@ -1645,12 +1647,11 @@ public:
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m) noexcept(is_nothrow_move_constructible<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI multimap&
-  operator=(multimap&& __m) noexcept(is_nothrow_move_assignable<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI multimap& operator=(multimap&& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI multimap(initializer_list<value_type> __il, const key_compare& __comp = key_compare())
       : __tree_(__vc(__comp)) {
@@ -1749,17 +1750,13 @@ public:
 
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
-    for (const_iterator __e = cend(); __f != __l; ++__f)
-      __tree_.__emplace_hint_multi(__e.__i_, *__f);
+    __tree_.__insert_range_multi(__f, __l);
   }
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
-    const_iterator __end = cend();
-    for (auto&& __element : __range) {
-      __tree_.__emplace_hint_multi(__end.__i_, std::forward<decltype(__element)>(__element));
-    }
+    __tree_.__insert_range_multi(ranges::begin(__range), ranges::end(__range));
   }
 #  endif
 
@@ -1959,7 +1956,8 @@ multimap<_Key, _Tp, _Compare, _Allocator>::multimap(multimap&& __m, const alloca
   if (__a != __m.get_allocator()) {
     const_iterator __e = cend();
     while (!__m.empty())
-      __tree_.__insert_multi_from_orphaned_node(__e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__value_));
+      __tree_.__insert_multi_from_orphaned_node(
+          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
   }
 }
 #  endif

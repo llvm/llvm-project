@@ -1074,7 +1074,7 @@ bool DependenceInfo::isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
 
 /// Compare to see if S is less than Size, using
 ///
-///    isKnownNegative(S - max(Size, 1))
+///    isKnownNegative(S - Size)
 ///
 /// with some extra checking if S is an AddRec and we can prove less-than using
 /// the loop bounds.
@@ -1090,21 +1090,34 @@ bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
   Size = SE->getTruncateOrZeroExtend(Size, MaxType);
 
   // Special check for addrecs using BE taken count
-  const SCEV *Bound = SE->getMinusSCEV(S, Size);
-  if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Bound)) {
-    if (AddRec->isAffine()) {
+  if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S))
+    if (AddRec->isAffine() && AddRec->hasNoSignedWrap()) {
       const SCEV *BECount = SE->getBackedgeTakenCount(AddRec->getLoop());
-      if (!isa<SCEVCouldNotCompute>(BECount)) {
-        const SCEV *Limit = AddRec->evaluateAtIteration(BECount, *SE);
-        if (SE->isKnownNegative(Limit))
-          return true;
-      }
+      const SCEV *Start = AddRec->getStart();
+      const SCEV *Step = AddRec->getStepRecurrence(*SE);
+      const SCEV *End = AddRec->evaluateAtIteration(BECount, *SE);
+      const SCEV *Diff0 = SE->getMinusSCEV(Start, Size);
+      const SCEV *Diff1 = SE->getMinusSCEV(End, Size);
+
+      // If the value of Step is non-negative and the AddRec is non-wrap, it
+      // reaches its maximum at the last iteration. So it's enouth to check
+      // whether End - Size is negative.
+      if (SE->isKnownNonNegative(Step) && SE->isKnownNegative(Diff1))
+        return true;
+
+      // If the value of Step is non-positive and the AddRec is non-wrap, the
+      // initial value is its maximum.
+      if (SE->isKnownNonPositive(Step) && SE->isKnownNegative(Diff0))
+        return true;
+
+      // Even if we don't know the sign of Step, either Start or End must be
+      // the maximum value of the AddRec since it is non-wrap.
+      if (SE->isKnownNegative(Diff0) && SE->isKnownNegative(Diff1))
+        return true;
     }
-  }
 
   // Check using normal isKnownNegative
-  const SCEV *LimitedBound =
-      SE->getMinusSCEV(S, SE->getSMaxExpr(Size, SE->getOne(Size->getType())));
+  const SCEV *LimitedBound = SE->getMinusSCEV(S, Size);
   return SE->isKnownNegative(LimitedBound);
 }
 
@@ -1518,6 +1531,62 @@ static APInt ceilingOfQuotient(const APInt &A, const APInt &B) {
     return Q;
 }
 
+/// Given an affine expression of the form A*k + B, where k is an arbitrary
+/// integer, infer the possible range of k based on the known range of the
+/// affine expression. If we know A*k + B is non-negative, i.e.,
+///
+///   A*k + B >= 0
+///
+/// we can derive the following inequalities for k when A is positive:
+///
+///   k >= -B / A
+///
+/// Since k is an integer, it means k is greater than or equal to the
+/// ceil(-B / A).
+///
+/// If the upper bound of the affine expression \p UB is passed, the following
+/// inequality can be derived as well:
+///
+///   A*k + B <= UB
+///
+/// which leads to:
+///
+///   k <= (UB - B) / A
+///
+/// Again, as k is an integer, it means k is less than or equal to the
+/// floor((UB - B) / A).
+///
+/// The similar logic applies when A is negative, but the inequalities sign flip
+/// while working with them.
+///
+/// Preconditions: \p A is non-zero, and we know A*k + B is non-negative.
+static std::pair<std::optional<APInt>, std::optional<APInt>>
+inferDomainOfAffine(const APInt &A, const APInt &B,
+                    const std::optional<APInt> &UB) {
+  assert(A != 0 && "A must be non-zero");
+  std::optional<APInt> TL, TU;
+  if (A.sgt(0)) {
+    TL = ceilingOfQuotient(-B, A);
+    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << *TL << "\n");
+    // New bound check - modification to Banerjee's e3 check
+    if (UB) {
+      // TODO?: Overflow check for UB - B
+      TU = floorOfQuotient(*UB - B, A);
+      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << *TU << "\n");
+    }
+  } else {
+    TU = floorOfQuotient(-B, A);
+    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << *TU << "\n");
+    // New bound check - modification to Banerjee's e3 check
+    if (UB) {
+      // TODO?: Overflow check for UB - B
+      TL = ceilingOfQuotient(*UB - B, A);
+      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << *TL << "\n");
+    }
+  }
+  return std::make_pair(TL, TU);
+}
+
 // exactSIVtest -
 // When we have a pair of subscripts of the form [c1 + a1*i] and [c2 + a2*i],
 // where i is an induction variable, c1 and c2 are loop invariant, and a1
@@ -1577,14 +1646,12 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction normalizes, LM = 0
-  APInt UM(Bits, 1, true);
-  bool UMValid = false;
+  std::optional<APInt> UM;
   // UM is perhaps unavailable, let's check
   if (const SCEVConstant *CUB =
           collectConstantUpperBound(CurLoop, Delta->getType())) {
     UM = CUB->getAPInt();
-    LLVM_DEBUG(dbgs() << "\t    UM = " << UM << "\n");
-    UMValid = true;
+    LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
   }
 
   APInt TU(APInt::getSignedMaxValue(Bits));
@@ -1596,44 +1663,33 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
   LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
 
-  SmallVector<APInt, 2> TLVec, TUVec;
   APInt TB = BM.sdiv(G);
-  if (TB.sgt(0)) {
-    TLVec.push_back(ceilingOfQuotient(-TX, TB));
-    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    // New bound check - modification to Banerjee's e3 check
-    if (UMValid) {
-      TUVec.push_back(floorOfQuotient(UM - TX, TB));
-      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    }
-  } else {
-    TUVec.push_back(floorOfQuotient(-TX, TB));
-    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    // New bound check - modification to Banerjee's e3 check
-    if (UMValid) {
-      TLVec.push_back(ceilingOfQuotient(UM - TX, TB));
-      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    }
-  }
-
   APInt TA = AM.sdiv(G);
-  if (TA.sgt(0)) {
-    if (UMValid) {
-      TUVec.push_back(floorOfQuotient(UM - TY, TA));
-      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    }
-    // New bound check - modification to Banerjee's e3 check
-    TLVec.push_back(ceilingOfQuotient(-TY, TA));
-    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-  } else {
-    if (UMValid) {
-      TLVec.push_back(ceilingOfQuotient(UM - TY, TA));
-      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    }
-    // New bound check - modification to Banerjee's e3 check
-    TUVec.push_back(floorOfQuotient(-TY, TA));
-    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-  }
+
+  // At this point, we have the following equations:
+  //
+  //   TA*i0 - TB*i1 = TC
+  //
+  // Also, we know that the all pairs of (i0, i1) can be expressed as:
+  //
+  //   (TX + k*TB, TY + k*TA)
+  //
+  // where k is an arbitrary integer.
+  auto [TL0, TU0] = inferDomainOfAffine(TB, TX, UM);
+  auto [TL1, TU1] = inferDomainOfAffine(TA, TY, UM);
+
+  auto CreateVec = [](const std::optional<APInt> &V0,
+                      const std::optional<APInt> &V1) {
+    SmallVector<APInt, 2> Vec;
+    if (V0)
+      Vec.push_back(*V0);
+    if (V1)
+      Vec.push_back(*V1);
+    return Vec;
+  };
+
+  SmallVector<APInt, 2> TLVec = CreateVec(TL0, TL1);
+  SmallVector<APInt, 2> TUVec = CreateVec(TU0, TU1);
 
   LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
   LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
@@ -1954,24 +2010,20 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction seems to normalize, LM = 0
-  APInt SrcUM(Bits, 1, true);
-  bool SrcUMvalid = false;
+  std::optional<APInt> SrcUM;
   // SrcUM is perhaps unavailable, let's check
   if (const SCEVConstant *UpperBound =
           collectConstantUpperBound(SrcLoop, Delta->getType())) {
     SrcUM = UpperBound->getAPInt();
-    LLVM_DEBUG(dbgs() << "\t    SrcUM = " << SrcUM << "\n");
-    SrcUMvalid = true;
+    LLVM_DEBUG(dbgs() << "\t    SrcUM = " << *SrcUM << "\n");
   }
 
-  APInt DstUM(Bits, 1, true);
-  bool DstUMvalid = false;
+  std::optional<APInt> DstUM;
   // UM is perhaps unavailable, let's check
   if (const SCEVConstant *UpperBound =
           collectConstantUpperBound(DstLoop, Delta->getType())) {
     DstUM = UpperBound->getAPInt();
-    LLVM_DEBUG(dbgs() << "\t    DstUM = " << DstUM << "\n");
-    DstUMvalid = true;
+    LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
   }
 
   APInt TU(APInt::getSignedMaxValue(Bits));
@@ -1983,46 +2035,38 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
   LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
 
-  SmallVector<APInt, 2> TLVec, TUVec;
   APInt TB = BM.sdiv(G);
-  if (TB.sgt(0)) {
-    TLVec.push_back(ceilingOfQuotient(-TX, TB));
-    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    if (SrcUMvalid) {
-      TUVec.push_back(floorOfQuotient(SrcUM - TX, TB));
-      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    }
-  } else {
-    TUVec.push_back(floorOfQuotient(-TX, TB));
-    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    if (SrcUMvalid) {
-      TLVec.push_back(ceilingOfQuotient(SrcUM - TX, TB));
-      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    }
-  }
-
   APInt TA = AM.sdiv(G);
-  if (TA.sgt(0)) {
-    TLVec.push_back(ceilingOfQuotient(-TY, TA));
-    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    if (DstUMvalid) {
-      TUVec.push_back(floorOfQuotient(DstUM - TY, TA));
-      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    }
-  } else {
-    TUVec.push_back(floorOfQuotient(-TY, TA));
-    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
-    if (DstUMvalid) {
-      TLVec.push_back(ceilingOfQuotient(DstUM - TY, TA));
-      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
-    }
-  }
 
-  if (TLVec.empty() || TUVec.empty())
-    return false;
+  // At this point, we have the following equations:
+  //
+  //   TA*i - TB*j = TC
+  //
+  // Also, we know that the all pairs of (i, j) can be expressed as:
+  //
+  //   (TX + k*TB, TY + k*TA)
+  //
+  // where k is an arbitrary integer.
+  auto [TL0, TU0] = inferDomainOfAffine(TB, TX, SrcUM);
+  auto [TL1, TU1] = inferDomainOfAffine(TA, TY, DstUM);
 
   LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
   LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
+
+  auto CreateVec = [](const std::optional<APInt> &V0,
+                      const std::optional<APInt> &V1) {
+    SmallVector<APInt, 2> Vec;
+    if (V0)
+      Vec.push_back(*V0);
+    if (V1)
+      Vec.push_back(*V1);
+    return Vec;
+  };
+
+  SmallVector<APInt, 2> TLVec = CreateVec(TL0, TL1);
+  SmallVector<APInt, 2> TUVec = CreateVec(TU0, TU1);
+  if (TLVec.empty() || TUVec.empty())
+    return false;
 
   TL = APIntOps::smax(TLVec.front(), TLVec.back());
   TU = APIntOps::smin(TUVec.front(), TUVec.back());
@@ -2332,6 +2376,43 @@ static std::optional<APInt> getConstantPart(const SCEV *Expr) {
   return std::nullopt;
 }
 
+bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
+                                               const Loop *CurLoop,
+                                               const SCEV *&CurLoopCoeff,
+                                               APInt &RunningGCD) const {
+  // If RunningGCD is already 1, exit early.
+  // TODO: It might be better to continue the recursion to find CurLoopCoeff.
+  if (RunningGCD == 1)
+    return true;
+
+  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
+  if (!AddRec) {
+    assert(isLoopInvariant(Expr, CurLoop) &&
+           "Expected loop invariant expression");
+    return true;
+  }
+
+  assert(AddRec->isAffine() && "Unexpected Expr");
+  const SCEV *Start = AddRec->getStart();
+  const SCEV *Step = AddRec->getStepRecurrence(*SE);
+  if (AddRec->getLoop() == CurLoop) {
+    CurLoopCoeff = Step;
+  } else {
+    std::optional<APInt> ConstCoeff = getConstantPart(Step);
+
+    // If the coefficient is the product of a constant and other stuff, we can
+    // use the constant in the GCD computation.
+    if (!ConstCoeff)
+      return false;
+
+    // TODO: What happens if ConstCoeff is the "most negative" signed number
+    // (e.g. -128 for 8 bit wide APInt)?
+    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
+  }
+
+  return accumulateCoefficientsGCD(Start, CurLoop, CurLoopCoeff, RunningGCD);
+}
+
 //===----------------------------------------------------------------------===//
 // gcdMIVtest -
 // Tests an MIV subscript pair for dependence.
@@ -2451,40 +2532,11 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     RunningGCD = ExtraGCD;
     const SCEV *SrcCoeff = AddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = SE->getMinusSCEV(SrcCoeff, SrcCoeff);
-    const SCEV *Inner = Src;
-    while (RunningGCD != 1 && isa<SCEVAddRecExpr>(Inner)) {
-      AddRec = cast<SCEVAddRecExpr>(Inner);
-      const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-      if (CurLoop == AddRec->getLoop())
-        ; // SrcCoeff == Coeff
-      else {
-        // If the coefficient is the product of a constant and other stuff,
-        // we can use the constant in the GCD computation.
-        std::optional<APInt> ConstCoeff = getConstantPart(Coeff);
-        if (!ConstCoeff)
-          return false;
-        RunningGCD =
-            APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-      }
-      Inner = AddRec->getStart();
-    }
-    Inner = Dst;
-    while (RunningGCD != 1 && isa<SCEVAddRecExpr>(Inner)) {
-      AddRec = cast<SCEVAddRecExpr>(Inner);
-      const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-      if (CurLoop == AddRec->getLoop())
-        DstCoeff = Coeff;
-      else {
-        // If the coefficient is the product of a constant and other stuff,
-        // we can use the constant in the GCD computation.
-        std::optional<APInt> ConstCoeff = getConstantPart(Coeff);
-        if (!ConstCoeff)
-          return false;
-        RunningGCD =
-            APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-      }
-      Inner = AddRec->getStart();
-    }
+
+    if (!accumulateCoefficientsGCD(Src, CurLoop, SrcCoeff, RunningGCD) ||
+        !accumulateCoefficientsGCD(Dst, CurLoop, DstCoeff, RunningGCD))
+      return false;
+
     Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.

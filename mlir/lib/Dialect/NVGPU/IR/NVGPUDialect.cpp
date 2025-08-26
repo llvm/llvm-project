@@ -422,6 +422,12 @@ std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
                            << descMemref << " != " << dstMemref;
   }
 
+  int lastDimBytes =
+      descMemref.getShape().back() * descMemref.getElementTypeBitWidth() / 8;
+  if (lastDimBytes % 16 != 0) {
+    return op->emitError() << "the bytes in the last dimension of the tensor "
+                              "map must be a multiple of 16";
+  }
   return std::nullopt;
 }
 
