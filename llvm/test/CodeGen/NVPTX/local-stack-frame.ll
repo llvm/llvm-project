@@ -114,14 +114,15 @@ define void @foo3(i32 %a) {
 ; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
 ; PTX64-NEXT:    .reg .b32 %r<2>;
-; PTX64-NEXT:    .reg .b64 %rd<3>;
+; PTX64-NEXT:    .reg .b64 %rd<4>;
 ; PTX64-EMPTY:
 ; PTX64-NEXT:  // %bb.0:
 ; PTX64-NEXT:    mov.b64 %SPL, __local_depot2;
 ; PTX64-NEXT:    ld.param.b32 %r1, [foo3_param_0];
 ; PTX64-NEXT:    add.u64 %rd1, %SPL, 0;
-; PTX64-NEXT:    mad.wide.s32 %rd2, %r1, 4, %rd1;
-; PTX64-NEXT:    st.local.b32 [%rd2], %r1;
+; PTX64-NEXT:    mul.wide.s32 %rd2, %r1, 4;
+; PTX64-NEXT:    add.s64 %rd3, %rd1, %rd2;
+; PTX64-NEXT:    st.local.b32 [%rd3], %r1;
 ; PTX64-NEXT:    ret;
   %local = alloca [3 x i32], align 4
   %1 = getelementptr inbounds i32, ptr %local, i32 %a
