@@ -921,8 +921,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
   if (ILE->isTransparent())
     return;
 
-  if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
-    const RecordDecl *RDecl = RType->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *RDecl = ILE->getType()->getAsRecordDecl()) {
     if (RDecl->isUnion() && ILE->getInitializedFieldInUnion()) {
       FillInEmptyInitForField(0, ILE->getInitializedFieldInUnion(), Entity, ILE,
                               RequiresSecondPass, FillWithNoInit);
@@ -5718,64 +5717,60 @@ static void TryValueInitialization(Sema &S,
   //     -- if T is an array type, then each element is value-initialized;
   T = S.Context.getBaseElementType(T);
 
-  if (const RecordType *RT = T->getAs<RecordType>()) {
-    if (CXXRecordDecl *ClassDecl =
-            dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
-      ClassDecl = ClassDecl->getDefinitionOrSelf();
-      bool NeedZeroInitialization = true;
-      // C++98:
-      // -- if T is a class type (clause 9) with a user-declared constructor
-      //    (12.1), then the default constructor for T is called (and the
-      //    initialization is ill-formed if T has no accessible default
-      //    constructor);
-      // C++11:
-      // -- if T is a class type (clause 9) with either no default constructor
-      //    (12.1 [class.ctor]) or a default constructor that is user-provided
-      //    or deleted, then the object is default-initialized;
-      //
-      // Note that the C++11 rule is the same as the C++98 rule if there are no
-      // defaulted or deleted constructors, so we just use it unconditionally.
-      CXXConstructorDecl *CD = S.LookupDefaultConstructor(ClassDecl);
-      if (!CD || !CD->getCanonicalDecl()->isDefaulted() || CD->isDeleted())
-        NeedZeroInitialization = false;
+  if (auto *ClassDecl = T->getAsCXXRecordDecl()) {
+    bool NeedZeroInitialization = true;
+    // C++98:
+    // -- if T is a class type (clause 9) with a user-declared constructor
+    //    (12.1), then the default constructor for T is called (and the
+    //    initialization is ill-formed if T has no accessible default
+    //    constructor);
+    // C++11:
+    // -- if T is a class type (clause 9) with either no default constructor
+    //    (12.1 [class.ctor]) or a default constructor that is user-provided
+    //    or deleted, then the object is default-initialized;
+    //
+    // Note that the C++11 rule is the same as the C++98 rule if there are no
+    // defaulted or deleted constructors, so we just use it unconditionally.
+    CXXConstructorDecl *CD = S.LookupDefaultConstructor(ClassDecl);
+    if (!CD || !CD->getCanonicalDecl()->isDefaulted() || CD->isDeleted())
+      NeedZeroInitialization = false;
 
-      // -- if T is a (possibly cv-qualified) non-union class type without a
-      //    user-provided or deleted default constructor, then the object is
-      //    zero-initialized and, if T has a non-trivial default constructor,
-      //    default-initialized;
-      // The 'non-union' here was removed by DR1502. The 'non-trivial default
-      // constructor' part was removed by DR1507.
-      if (NeedZeroInitialization)
-        Sequence.AddZeroInitializationStep(Entity.getType());
+    // -- if T is a (possibly cv-qualified) non-union class type without a
+    //    user-provided or deleted default constructor, then the object is
+    //    zero-initialized and, if T has a non-trivial default constructor,
+    //    default-initialized;
+    // The 'non-union' here was removed by DR1502. The 'non-trivial default
+    // constructor' part was removed by DR1507.
+    if (NeedZeroInitialization)
+      Sequence.AddZeroInitializationStep(Entity.getType());
 
-      // C++03:
-      // -- if T is a non-union class type without a user-declared constructor,
-      //    then every non-static data member and base class component of T is
-      //    value-initialized;
-      // [...] A program that calls for [...] value-initialization of an
-      // entity of reference type is ill-formed.
-      //
-      // C++11 doesn't need this handling, because value-initialization does not
-      // occur recursively there, and the implicit default constructor is
-      // defined as deleted in the problematic cases.
-      if (!S.getLangOpts().CPlusPlus11 &&
-          ClassDecl->hasUninitializedReferenceMember()) {
-        Sequence.SetFailed(InitializationSequence::FK_TooManyInitsForReference);
-        return;
-      }
-
-      // If this is list-value-initialization, pass the empty init list on when
-      // building the constructor call. This affects the semantics of a few
-      // things (such as whether an explicit default constructor can be called).
-      Expr *InitListAsExpr = InitList;
-      MultiExprArg Args(&InitListAsExpr, InitList ? 1 : 0);
-      bool InitListSyntax = InitList;
-
-      // FIXME: Instead of creating a CXXConstructExpr of array type here,
-      // wrap a class-typed CXXConstructExpr in an ArrayInitLoopExpr.
-      return TryConstructorInitialization(
-          S, Entity, Kind, Args, T, Entity.getType(), Sequence, InitListSyntax);
+    // C++03:
+    // -- if T is a non-union class type without a user-declared constructor,
+    //    then every non-static data member and base class component of T is
+    //    value-initialized;
+    // [...] A program that calls for [...] value-initialization of an
+    // entity of reference type is ill-formed.
+    //
+    // C++11 doesn't need this handling, because value-initialization does not
+    // occur recursively there, and the implicit default constructor is
+    // defined as deleted in the problematic cases.
+    if (!S.getLangOpts().CPlusPlus11 &&
+        ClassDecl->hasUninitializedReferenceMember()) {
+      Sequence.SetFailed(InitializationSequence::FK_TooManyInitsForReference);
+      return;
     }
+
+    // If this is list-value-initialization, pass the empty init list on when
+    // building the constructor call. This affects the semantics of a few
+    // things (such as whether an explicit default constructor can be called).
+    Expr *InitListAsExpr = InitList;
+    MultiExprArg Args(&InitListAsExpr, InitList ? 1 : 0);
+    bool InitListSyntax = InitList;
+
+    // FIXME: Instead of creating a CXXConstructExpr of array type here,
+    // wrap a class-typed CXXConstructExpr in an ArrayInitLoopExpr.
+    return TryConstructorInitialization(
+        S, Entity, Kind, Args, T, Entity.getType(), Sequence, InitListSyntax);
   }
 
   Sequence.AddZeroInitializationStep(Entity.getType());
@@ -5917,10 +5912,8 @@ static void TryOrBuildParenListInitialization(
           AT->getElementType(), llvm::APInt(/*numBits=*/32, ArrayLength),
           /*SizeExpr=*/nullptr, ArraySizeModifier::Normal, 0);
     }
-  } else if (auto *RT = Entity.getType()->getAs<RecordType>()) {
-    bool IsUnion = RT->isUnionType();
-    const auto *RD =
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+  } else if (auto *RD = Entity.getType()->getAsCXXRecordDecl()) {
+    bool IsUnion = RD->isUnion();
     if (RD->isInvalidDecl()) {
       // Exit early to avoid confusion when processing members.
       // We do the same for braced list initialization in
@@ -6237,7 +6230,7 @@ static void TryUserDefinedConversion(Sema &S,
   Sequence.AddUserConversionStep(Function, Best->FoundDecl, ConvType,
                                  HadMultipleCandidates);
 
-  if (ConvType->getAs<RecordType>()) {
+  if (ConvType->isRecordType()) {
     //   The call is used to direct-initialize [...] the object that is the
     //   destination of the copy-initialization.
     //
@@ -7180,10 +7173,7 @@ static ExprResult CopyObject(Sema &S,
     return CurInit;
   // Determine which class type we're copying to.
   Expr *CurInitExpr = (Expr *)CurInit.get();
-  CXXRecordDecl *Class = nullptr;
-  if (const RecordType *Record = T->getAs<RecordType>())
-    Class =
-        cast<CXXRecordDecl>(Record->getOriginalDecl())->getDefinitionOrSelf();
+  auto *Class = T->getAsCXXRecordDecl();
   if (!Class)
     return CurInit;
 
@@ -7328,7 +7318,7 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
                                            Expr *CurInitExpr) {
   assert(S.getLangOpts().CPlusPlus11);
 
-  const RecordType *Record = CurInitExpr->getType()->getAs<RecordType>();
+  auto *Record = CurInitExpr->getType()->getAsCXXRecordDecl();
   if (!Record)
     return;
 
@@ -7338,8 +7328,7 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
 
   // Find constructors which would have been considered.
   OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
-  DeclContext::lookup_result Ctors = S.LookupConstructors(
-      cast<CXXRecordDecl>(Record->getOriginalDecl())->getDefinitionOrSelf());
+  DeclContext::lookup_result Ctors = S.LookupConstructors(Record);
 
   // Perform overload resolution.
   OverloadCandidateSet::iterator Best;
@@ -7803,7 +7792,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
         DiagID = diag::ext_default_init_const;
 
       S.Diag(Kind.getLocation(), DiagID)
-          << DestType << (bool)DestType->getAs<RecordType>()
+          << DestType << DestType->isRecordType()
           << FixItHint::CreateInsertion(ZeroInitializationFixitLoc,
                                         ZeroInitializationFixit);
     }
@@ -9242,8 +9231,7 @@ bool InitializationSequence::Diagnose(Sema &S,
             S.Diag(Entity.getDecl()->getLocation(),
                    diag::note_member_declared_at);
 
-            if (const RecordType *Record
-                                 = Entity.getType()->getAs<RecordType>())
+            if (const auto *Record = Entity.getType()->getAs<RecordType>())
               S.Diag(Record->getOriginalDecl()->getLocation(),
                      diag::note_previous_decl)
                   << S.Context.getCanonicalTagType(Record->getOriginalDecl());
@@ -9326,7 +9314,7 @@ bool InitializationSequence::Diagnose(Sema &S,
           << VD;
     } else {
       S.Diag(Kind.getLocation(), diag::err_default_init_const)
-          << DestType << (bool)DestType->getAs<RecordType>();
+          << DestType << DestType->isRecordType();
     }
     break;
 
@@ -10021,7 +10009,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         // dependent. e.g.
         //   using AliasFoo = Foo<bool>;
         if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(
-                RT->getAsCXXRecordDecl()))
+                RT->getOriginalDecl()))
           Template = CTSD->getSpecializedTemplate();
       }
     }
