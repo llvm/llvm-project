@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=gnu99 -verify -Wimplicit-fallthrough %s
 // RUN: %clang_cc1 -fsyntax-only -std=c99 -verify -Wimplicit-fallthrough %s
 // RUN: %clang_cc1 -fsyntax-only -std=c11 -verify -Wimplicit-fallthrough %s
+// RUN: %clang_cc1 -fsyntax-only -std=c11 -verify -Wextra %s
 // RUN: %clang_cc1 -fsyntax-only -std=c2x -DC2X -verify -Wimplicit-fallthrough %s
 
 int fallthrough_attribute_spelling(int n) {
