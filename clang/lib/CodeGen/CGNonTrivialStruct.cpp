@@ -39,7 +39,7 @@ template <class Derived> struct StructVisitor {
 
   template <class... Ts>
   void visitStructFields(QualType QT, CharUnits CurStructOffset, Ts... Args) {
-    const RecordDecl *RD = QT->castAs<RecordType>()->getDecl();
+    const auto *RD = QT->castAsRecordDecl();
 
     // Iterate over the fields of the struct.
     for (const FieldDecl *FD : RD->fields()) {
@@ -464,7 +464,8 @@ template <class Derived> struct GenFuncBase {
 
       if (WrongType) {
         std::string FuncName = std::string(F->getName());
-        SourceLocation Loc = QT->castAs<RecordType>()->getDecl()->getLocation();
+        SourceLocation Loc =
+            QT->castAs<RecordType>()->getOriginalDecl()->getLocation();
         CGM.Error(Loc, "special function " + FuncName +
                            " for non-trivial C struct has incorrect type");
         return nullptr;
@@ -560,7 +561,8 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
       if (FD->isZeroLengthBitField())
         return;
 
-      QualType RT = QualType(FD->getParent()->getTypeForDecl(), 0);
+      CanQualType RT =
+          this->CGF->getContext().getCanonicalTagType(FD->getParent());
       llvm::Type *Ty = this->CGF->ConvertType(RT);
       Address DstAddr = this->getAddrWithOffset(Addrs[DstIdx], Offset);
       LValue DstBase =

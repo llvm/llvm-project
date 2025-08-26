@@ -8,10 +8,8 @@
 
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/ADT/DynamicAPInt.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -20,8 +18,24 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+static cl::opt<int64_t>
+    DefaultFunctionEntryCount("profcheck-default-function-entry-count",
+                              cl::init(1000));
+static cl::opt<bool>
+    AnnotateSelect("profcheck-annotate-select", cl::init(true),
+                   cl::desc("Also inject (if missing) and verify MD_prof for "
+                            "`select` instructions"));
+static cl::opt<uint32_t> SelectTrueWeight(
+    "profcheck-default-select-true-weight", cl::init(2U),
+    cl::desc("When annotating `select` instructions, this value will be used "
+             "for the first ('true') case."));
+static cl::opt<uint32_t> SelectFalseWeight(
+    "profcheck-default-select-false-weight", cl::init(3U),
+    cl::desc("When annotating `select` instructions, this value will be used "
+             "for the second ('false') case."));
 namespace {
 class ProfileInjector {
   Function &F;
@@ -63,8 +77,28 @@ bool ProfileInjector::inject() {
   // will get the same BPI it does if the injector wasn't running.
   auto &BPI = FAM.getResult<BranchProbabilityAnalysis>(F);
 
+  // Inject a function count if there's none. It's reasonable for a pass to
+  // want to clear the MD_prof of a function with zero entry count. If the
+  // original profile (iFDO or AFDO) is empty for a function, it's simpler to
+  // require assigning it the 0-entry count explicitly than to mark every branch
+  // as cold (we do want some explicit information in the spirit of what this
+  // verifier wants to achieve - make dropping / corrupting MD_prof
+  // unit-testable)
+  if (!F.getEntryCount(/*AllowSynthetic=*/true))
+    F.setEntryCount(DefaultFunctionEntryCount);
+  // If there is an entry count that's 0, then don't bother injecting. We won't
+  // verify these either.
+  if (F.getEntryCount(/*AllowSynthetic=*/true)->getCount() == 0)
+    return false;
   bool Changed = false;
   for (auto &BB : F) {
+    if (AnnotateSelect) {
+      for (auto &I : BB) {
+        if (isa<SelectInst>(I) && !I.getMetadata(LLVMContext::MD_prof))
+          setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
+                           /*IsExpected=*/false);
+      }
+    }
     auto *Term = getTerminatorBenefitingFromMDProf(BB);
     if (!Term || Term->getMetadata(LLVMContext::MD_prof))
       continue;
@@ -119,11 +153,26 @@ PreservedAnalyses ProfileInjectorPass::run(Function &F,
 
 PreservedAnalyses ProfileVerifierPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  for (const auto &BB : F)
+  const auto EntryCount = F.getEntryCount(/*AllowSynthetic=*/true);
+  if (!EntryCount) {
+    F.getContext().emitError("Profile verification failed: function entry "
+                             "count missing (set to 0 if cold)");
+    return PreservedAnalyses::all();
+  }
+  if (EntryCount->getCount() == 0)
+    return PreservedAnalyses::all();
+  for (const auto &BB : F) {
+    if (AnnotateSelect) {
+      for (const auto &I : BB)
+        if (isa<SelectInst>(I) && !I.getMetadata(LLVMContext::MD_prof))
+          F.getContext().emitError(
+              "Profile verification failed: select annotation missing");
+    }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))
       if (!Term->getMetadata(LLVMContext::MD_prof))
-        F.getContext().emitError("Profile verification failed");
-
-  return PreservedAnalyses::none();
+        F.getContext().emitError(
+            "Profile verification failed: branch annotation missing");
+  }
+  return PreservedAnalyses::all();
 }

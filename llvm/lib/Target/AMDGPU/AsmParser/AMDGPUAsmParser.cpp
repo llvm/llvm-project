@@ -178,6 +178,10 @@ public:
     ImmTyBitOp3,
     ImmTyMatrixAFMT,
     ImmTyMatrixBFMT,
+    ImmTyMatrixAScale,
+    ImmTyMatrixBScale,
+    ImmTyMatrixAScaleFmt,
+    ImmTyMatrixBScaleFmt,
     ImmTyMatrixAReuse,
     ImmTyMatrixBReuse,
     ImmTyScaleSel,
@@ -428,6 +432,10 @@ public:
   bool isIndexKey32bit() const { return isImmTy(ImmTyIndexKey32bit); }
   bool isMatrixAFMT() const { return isImmTy(ImmTyMatrixAFMT); }
   bool isMatrixBFMT() const { return isImmTy(ImmTyMatrixBFMT); }
+  bool isMatrixAScale() const { return isImmTy(ImmTyMatrixAScale); }
+  bool isMatrixBScale() const { return isImmTy(ImmTyMatrixBScale); }
+  bool isMatrixAScaleFmt() const { return isImmTy(ImmTyMatrixAScaleFmt); }
+  bool isMatrixBScaleFmt() const { return isImmTy(ImmTyMatrixBScaleFmt); }
   bool isMatrixAReuse() const { return isImmTy(ImmTyMatrixAReuse); }
   bool isMatrixBReuse() const { return isImmTy(ImmTyMatrixBReuse); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
@@ -999,7 +1007,7 @@ public:
   bool isEndpgm() const;
 
   auto getPredicate(std::function<bool(const AMDGPUOperand &Op)> P) const {
-    return [=](){ return P(*this); };
+    return [this, P]() { return P(*this); };
   }
 
   StringRef getToken() const {
@@ -1183,6 +1191,10 @@ public:
     case ImmTyBitOp3: OS << "BitOp3"; break;
     case ImmTyMatrixAFMT: OS << "ImmTyMatrixAFMT"; break;
     case ImmTyMatrixBFMT: OS << "ImmTyMatrixBFMT"; break;
+    case ImmTyMatrixAScale: OS << "ImmTyMatrixAScale"; break;
+    case ImmTyMatrixBScale: OS << "ImmTyMatrixBScale"; break;
+    case ImmTyMatrixAScaleFmt: OS << "ImmTyMatrixAScaleFmt"; break;
+    case ImmTyMatrixBScaleFmt: OS << "ImmTyMatrixBScaleFmt"; break;
     case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
@@ -1608,6 +1620,10 @@ public:
     return getFeatureBits()[AMDGPU::FeaturePartialNSAEncoding];
   }
 
+  bool hasGloballyAddressableScratch() const {
+    return getFeatureBits()[AMDGPU::FeatureGloballyAddressableScratch];
+  }
+
   unsigned getNSAMaxSize(bool HasSampler = false) const {
     return AMDGPU::getNSAMaxSize(getSTI(), HasSampler);
   }
@@ -1728,6 +1744,14 @@ public:
                                 AMDGPUOperand::ImmTy Type);
   ParseStatus parseMatrixAFMT(OperandVector &Operands);
   ParseStatus parseMatrixBFMT(OperandVector &Operands);
+  ParseStatus tryParseMatrixScale(OperandVector &Operands, StringRef Name,
+                                  AMDGPUOperand::ImmTy Type);
+  ParseStatus parseMatrixAScale(OperandVector &Operands);
+  ParseStatus parseMatrixBScale(OperandVector &Operands);
+  ParseStatus tryParseMatrixScaleFmt(OperandVector &Operands, StringRef Name,
+                                     AMDGPUOperand::ImmTy Type);
+  ParseStatus parseMatrixAScaleFmt(OperandVector &Operands);
+  ParseStatus parseMatrixBScaleFmt(OperandVector &Operands);
 
   ParseStatus parseDfmtNfmt(int64_t &Format);
   ParseStatus parseUfmt(int64_t &Format);
@@ -2739,46 +2763,48 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
 
 static MCRegister getSpecialRegForName(StringRef RegName) {
   return StringSwitch<unsigned>(RegName)
-    .Case("exec", AMDGPU::EXEC)
-    .Case("vcc", AMDGPU::VCC)
-    .Case("flat_scratch", AMDGPU::FLAT_SCR)
-    .Case("xnack_mask", AMDGPU::XNACK_MASK)
-    .Case("shared_base", AMDGPU::SRC_SHARED_BASE)
-    .Case("src_shared_base", AMDGPU::SRC_SHARED_BASE)
-    .Case("shared_limit", AMDGPU::SRC_SHARED_LIMIT)
-    .Case("src_shared_limit", AMDGPU::SRC_SHARED_LIMIT)
-    .Case("private_base", AMDGPU::SRC_PRIVATE_BASE)
-    .Case("src_private_base", AMDGPU::SRC_PRIVATE_BASE)
-    .Case("private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
-    .Case("src_private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
-    .Case("pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
-    .Case("src_pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
-    .Case("lds_direct", AMDGPU::LDS_DIRECT)
-    .Case("src_lds_direct", AMDGPU::LDS_DIRECT)
-    .Case("m0", AMDGPU::M0)
-    .Case("vccz", AMDGPU::SRC_VCCZ)
-    .Case("src_vccz", AMDGPU::SRC_VCCZ)
-    .Case("execz", AMDGPU::SRC_EXECZ)
-    .Case("src_execz", AMDGPU::SRC_EXECZ)
-    .Case("scc", AMDGPU::SRC_SCC)
-    .Case("src_scc", AMDGPU::SRC_SCC)
-    .Case("tba", AMDGPU::TBA)
-    .Case("tma", AMDGPU::TMA)
-    .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
-    .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
-    .Case("xnack_mask_lo", AMDGPU::XNACK_MASK_LO)
-    .Case("xnack_mask_hi", AMDGPU::XNACK_MASK_HI)
-    .Case("vcc_lo", AMDGPU::VCC_LO)
-    .Case("vcc_hi", AMDGPU::VCC_HI)
-    .Case("exec_lo", AMDGPU::EXEC_LO)
-    .Case("exec_hi", AMDGPU::EXEC_HI)
-    .Case("tma_lo", AMDGPU::TMA_LO)
-    .Case("tma_hi", AMDGPU::TMA_HI)
-    .Case("tba_lo", AMDGPU::TBA_LO)
-    .Case("tba_hi", AMDGPU::TBA_HI)
-    .Case("pc", AMDGPU::PC_REG)
-    .Case("null", AMDGPU::SGPR_NULL)
-    .Default(AMDGPU::NoRegister);
+      .Case("exec", AMDGPU::EXEC)
+      .Case("vcc", AMDGPU::VCC)
+      .Case("flat_scratch", AMDGPU::FLAT_SCR)
+      .Case("xnack_mask", AMDGPU::XNACK_MASK)
+      .Case("shared_base", AMDGPU::SRC_SHARED_BASE)
+      .Case("src_shared_base", AMDGPU::SRC_SHARED_BASE)
+      .Case("shared_limit", AMDGPU::SRC_SHARED_LIMIT)
+      .Case("src_shared_limit", AMDGPU::SRC_SHARED_LIMIT)
+      .Case("private_base", AMDGPU::SRC_PRIVATE_BASE)
+      .Case("src_private_base", AMDGPU::SRC_PRIVATE_BASE)
+      .Case("private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
+      .Case("src_private_limit", AMDGPU::SRC_PRIVATE_LIMIT)
+      .Case("src_flat_scratch_base_lo", AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)
+      .Case("src_flat_scratch_base_hi", AMDGPU::SRC_FLAT_SCRATCH_BASE_HI)
+      .Case("pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
+      .Case("src_pops_exiting_wave_id", AMDGPU::SRC_POPS_EXITING_WAVE_ID)
+      .Case("lds_direct", AMDGPU::LDS_DIRECT)
+      .Case("src_lds_direct", AMDGPU::LDS_DIRECT)
+      .Case("m0", AMDGPU::M0)
+      .Case("vccz", AMDGPU::SRC_VCCZ)
+      .Case("src_vccz", AMDGPU::SRC_VCCZ)
+      .Case("execz", AMDGPU::SRC_EXECZ)
+      .Case("src_execz", AMDGPU::SRC_EXECZ)
+      .Case("scc", AMDGPU::SRC_SCC)
+      .Case("src_scc", AMDGPU::SRC_SCC)
+      .Case("tba", AMDGPU::TBA)
+      .Case("tma", AMDGPU::TMA)
+      .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
+      .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
+      .Case("xnack_mask_lo", AMDGPU::XNACK_MASK_LO)
+      .Case("xnack_mask_hi", AMDGPU::XNACK_MASK_HI)
+      .Case("vcc_lo", AMDGPU::VCC_LO)
+      .Case("vcc_hi", AMDGPU::VCC_HI)
+      .Case("exec_lo", AMDGPU::EXEC_LO)
+      .Case("exec_hi", AMDGPU::EXEC_HI)
+      .Case("tma_lo", AMDGPU::TMA_LO)
+      .Case("tma_hi", AMDGPU::TMA_HI)
+      .Case("tba_lo", AMDGPU::TBA_LO)
+      .Case("tba_hi", AMDGPU::TBA_HI)
+      .Case("pc", AMDGPU::PC_REG)
+      .Case("null", AMDGPU::SGPR_NULL)
+      .Default(AMDGPU::NoRegister);
 }
 
 bool AMDGPUAsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
@@ -4907,6 +4933,43 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
       return false;
   }
 
+  // Packed math FP32 instructions typically accept SGPRs or VGPRs as source
+  // operands. On gfx12+, if a source operand uses SGPRs, the HW can only read
+  // the first SGPR and use it for both the low and high operations.
+  if (isPackedFP32Inst(Opc) && isGFX12Plus()) {
+    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    int OpSelHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi);
+
+    const MCOperand &Src0 = Inst.getOperand(Src0Idx);
+    const MCOperand &Src1 = Inst.getOperand(Src1Idx);
+    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+    unsigned OpSelHi = Inst.getOperand(OpSelHiIdx).getImm();
+
+    const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+
+    auto VerifyOneSGPR = [OpSel, OpSelHi](unsigned Index) -> bool {
+      unsigned Mask = 1U << Index;
+      return ((OpSel & Mask) == 0) && ((OpSelHi & Mask) == 0);
+    };
+
+    if (Src0.isReg() && isSGPR(Src0.getReg(), TRI) &&
+        !VerifyOneSGPR(/*Index=*/0))
+      return false;
+    if (Src1.isReg() && isSGPR(Src1.getReg(), TRI) &&
+        !VerifyOneSGPR(/*Index=*/1))
+      return false;
+
+    int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+    if (Src2Idx != -1) {
+      const MCOperand &Src2 = Inst.getOperand(Src2Idx);
+      if (Src2.isReg() && isSGPR(Src2.getReg(), TRI) &&
+          !VerifyOneSGPR(/*Index=*/2))
+        return false;
+    }
+  }
+
   return true;
 }
 
@@ -4989,11 +5052,13 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
   if (DppCtrlIdx >= 0) {
     unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
-    if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl) &&
-        AMDGPU::isDPALU_DPP(MII.get(Opc))) {
-      // DP ALU DPP is supported for row_newbcast only on GFX9*
+    if (!AMDGPU::isLegalDPALU_DPPControl(getSTI(), DppCtrl) &&
+        AMDGPU::isDPALU_DPP(MII.get(Opc), getSTI())) {
+      // DP ALU DPP is supported for row_newbcast only on GFX9* and row_share
+      // only on GFX12.
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
-      Error(S, "DP ALU dpp only supports row_newbcast");
+      Error(S, isGFX12() ? "DP ALU dpp only supports row_share"
+                         : "DP ALU dpp only supports row_newbcast");
       return false;
     }
   }
@@ -5921,6 +5986,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   SMRange VGPRRange;
   const MCExpr *NextFreeVGPR = ZeroExpr;
   const MCExpr *AccumOffset = MCConstantExpr::create(0, getContext());
+  const MCExpr *NamedBarCnt = ZeroExpr;
   uint64_t SharedVGPRCount = 0;
   uint64_t PreloadLength = 0;
   uint64_t PreloadOffset = 0;
@@ -6143,6 +6209,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       if (!isGFX90A())
         return Error(IDRange.Start, "directive requires gfx90a+", IDRange);
       AccumOffset = ExprVal;
+    } else if (ID == ".amdhsa_named_barrier_count") {
+      if (!isGFX1250())
+        return Error(IDRange.Start, "directive requires gfx1250+", IDRange);
+      NamedBarCnt = ExprVal;
     } else if (ID == ".amdhsa_reserve_vcc") {
       if (EvaluatableExpr && !isUInt<1>(Val))
         return OutOfRangeError(ValRange);
@@ -6205,8 +6275,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3, COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                        ExprVal, ValRange);
     } else if (ID == ".amdhsa_workgroup_processor_mode") {
-      if (IVersion.Major < 10)
-        return Error(IDRange.Start, "directive requires gfx10+", IDRange);
+      if (!supportsWGP(getSTI()))
+        return Error(IDRange.Start,
+                     "directive unsupported on " + getSTI().getCPU(), IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, ExprVal,
                        ValRange);
@@ -6339,12 +6410,24 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError("amdgpu_user_sgpr_count smaller than than implied by "
                     "enabled user SGPRs");
 
-  if (!isUInt<COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
-    return TokError("too many user SGPRs enabled");
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT, getContext());
+  if (isGFX1250()) {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT, getContext());
+  } else {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(
+            UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT, getContext());
+  }
 
   int64_t IVal = 0;
   if (!KD.kernarg_size->evaluateAsAbsolute(IVal))
@@ -6381,6 +6464,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                                  COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
                                  getContext());
   }
+
+  if (isGFX1250())
+    MCKernelDescriptor::bits_set(KD.compute_pgm_rsrc3, NamedBarCnt,
+                                 COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT,
+                                 COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+                                 getContext());
 
   if (IVersion.Major >= 10 && IVersion.Major < 12) {
     // SharedVGPRCount < 16 checked by PARSE_ENTRY_BITS
@@ -6724,6 +6813,9 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case SRC_PRIVATE_LIMIT_LO:
   case SRC_PRIVATE_LIMIT:
     return isGFX9Plus();
+  case SRC_FLAT_SCRATCH_BASE_LO:
+  case SRC_FLAT_SCRATCH_BASE_HI:
+    return hasGloballyAddressableScratch();
   case SRC_POPS_EXITING_WAVE_ID:
     return isGFX9Plus() && !isGFX11Plus();
   case TBA:
@@ -7354,6 +7446,42 @@ ParseStatus AMDGPUAsmParser::parseMatrixAFMT(OperandVector &Operands) {
 ParseStatus AMDGPUAsmParser::parseMatrixBFMT(OperandVector &Operands) {
   return tryParseMatrixFMT(Operands, "matrix_b_fmt",
                            AMDGPUOperand::ImmTyMatrixBFMT);
+}
+
+ParseStatus AMDGPUAsmParser::tryParseMatrixScale(OperandVector &Operands,
+                                                 StringRef Name,
+                                                 AMDGPUOperand::ImmTy Type) {
+  return parseStringOrIntWithPrefix(
+      Operands, Name, {"MATRIX_SCALE_ROW0", "MATRIX_SCALE_ROW1"}, Type);
+}
+
+ParseStatus AMDGPUAsmParser::parseMatrixAScale(OperandVector &Operands) {
+  return tryParseMatrixScale(Operands, "matrix_a_scale",
+                             AMDGPUOperand::ImmTyMatrixAScale);
+}
+
+ParseStatus AMDGPUAsmParser::parseMatrixBScale(OperandVector &Operands) {
+  return tryParseMatrixScale(Operands, "matrix_b_scale",
+                             AMDGPUOperand::ImmTyMatrixBScale);
+}
+
+ParseStatus AMDGPUAsmParser::tryParseMatrixScaleFmt(OperandVector &Operands,
+                                                    StringRef Name,
+                                                    AMDGPUOperand::ImmTy Type) {
+  return parseStringOrIntWithPrefix(
+      Operands, Name,
+      {"MATRIX_SCALE_FMT_E8", "MATRIX_SCALE_FMT_E5M3", "MATRIX_SCALE_FMT_E4M3"},
+      Type);
+}
+
+ParseStatus AMDGPUAsmParser::parseMatrixAScaleFmt(OperandVector &Operands) {
+  return tryParseMatrixScaleFmt(Operands, "matrix_a_scale_fmt",
+                                AMDGPUOperand::ImmTyMatrixAScaleFmt);
+}
+
+ParseStatus AMDGPUAsmParser::parseMatrixBScaleFmt(OperandVector &Operands) {
+  return tryParseMatrixScaleFmt(Operands, "matrix_b_scale_fmt",
+                                AMDGPUOperand::ImmTyMatrixBScaleFmt);
 }
 
 // dfmt and nfmt (in a tbuffer instruction) are parsed as one to allow their
@@ -9487,6 +9615,34 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   if (MatrixBFMTIdx != -1) {
     addOptionalImmOperand(Inst, Operands, OptIdx,
                           AMDGPUOperand::ImmTyMatrixBFMT, 0);
+  }
+
+  int MatrixAScaleIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_scale);
+  if (MatrixAScaleIdx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixAScale, 0);
+  }
+
+  int MatrixBScaleIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_scale);
+  if (MatrixBScaleIdx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixBScale, 0);
+  }
+
+  int MatrixAScaleFmtIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_scale_fmt);
+  if (MatrixAScaleFmtIdx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixAScaleFmt, 0);
+  }
+
+  int MatrixBScaleFmtIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_scale_fmt);
+  if (MatrixBScaleFmtIdx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixBScaleFmt, 0);
   }
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_a_reuse))

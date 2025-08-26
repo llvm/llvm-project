@@ -1053,6 +1053,14 @@ def VOP3_PERMLANE_VAR_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, untyped
   let HasExtDPP = 0;
 }
 
+class VOP3_PERMLANE_NOOPSEL_Profile<VOPProfile P> : VOP3_Profile<P> {
+  let Ins64 = !con((ins VRegSrc_32:$src0, SSrc_b32:$src1),
+                   !if(P.HasSrc2, (ins SSrc_b32:$src2), (ins)));
+  let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
+}
+
 def opsel_i1timm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(
       N->getZExtValue() ? SISrcMods::OP_SEL_0 : SISrcMods::NONE,
@@ -1134,6 +1142,18 @@ class PermlaneVarPat<SDPatternOperator permlane,
             timm:$fi, timm:$bc),
   (inst (opsel_i1timm $fi), VGPR_32:$src0, (opsel_i1timm $bc),
         VGPR_32:$src1, VGPR_32:$vdst_in)
+>;
+
+class PermlaneNoDppPat3Src<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$src0, i32:$src1, i32:$src2),
+  (inst VGPR_32:$src0, SCSrc_b32:$src1, SCSrc_b32:$src2)
+>;
+
+class PermlaneNoDppPat2Src<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$src0, i32:$src1),
+  (inst VGPR_32:$src0, SCSrc_b32:$src1)
 >;
 
 class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f> {
@@ -1522,6 +1542,20 @@ let SubtargetPredicate = isGFX12Plus in {
 
 } // End SubtargetPredicate = isGFX12Plus
 
+let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
+  defm V_PERMLANE_BCAST_B32   : VOP3Inst<"v_permlane_bcast_b32",   VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+  defm V_PERMLANE_UP_B32      : VOP3Inst<"v_permlane_up_b32",      VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+  defm V_PERMLANE_DOWN_B32    : VOP3Inst<"v_permlane_down_b32",    VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+  defm V_PERMLANE_XOR_B32     : VOP3Inst<"v_permlane_xor_b32",     VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
+  defm V_PERMLANE_IDX_GEN_B32 : VOP3Inst<"v_permlane_idx_gen_b32", VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32>>;
+
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_bcast,   V_PERMLANE_BCAST_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_up,      V_PERMLANE_UP_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64>;
+  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64>;
+  def : PermlaneNoDppPat2Src<int_amdgcn_permlane_idx_gen, V_PERMLANE_IDX_GEN_B32_e64>;
+} // End SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32
+
 let HasClamp = 0, HasModifiers = 1 in {
 def BitOp3_B16_Profile : VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>;
 def BitOp3_B16_t16_Profile : VOP3_Profile_True16<BitOp3_B16_Profile>;
@@ -1692,6 +1726,12 @@ multiclass VOP3CvtScaleSelInst<string OpName, VOPProfile P, SDPatternOperator no
    }
 }
 
+let HasExtVOP3DPP = 0, HasModifiers = 0 in {
+def VOP3_V2I32_I32_I32_V2I32 : VOP3_Profile<VOPProfile<[v2i32, i32, i32, v2i32]>>;
+def VOP3_V3I32_I32_I64_V2I32 : VOP3_Profile<VOPProfile<[v3i32, i32, i64, v2i32]>>;
+def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>>;
+}
+
 let Src0RC64 = VSrc_NoInline_v2f16 in {
 def VOP3_CVT_PK_F8_F16_Profile : VOP3_Profile<VOP_I16_V2F16>;
 def VOP3_CVT_PK_F8_F16_True16_Profile : VOP3_Profile_True16<VOP3_CVT_PK_F8_F16_Profile>;
@@ -1737,12 +1777,56 @@ let SubtargetPredicate = isGFX1250Plus in {
       defm V_CVT_SCALE_PK8_BF16_BF8  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_bf8",  VOP_V8BF16_V2I32_I32,  int_amdgcn_cvt_scale_pk8_bf16_bf8>;
       defm V_CVT_SCALE_PK8_F32_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_fp8>;
       defm V_CVT_SCALE_PK8_F32_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_bf8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_bf8>;
+      defm V_CVT_SCALE_PK16_F16_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f16_fp6",  VOP_V16F16_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f16_fp6>;
+      defm V_CVT_SCALE_PK16_BF16_FP6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_bf16_fp6", VOP_V16BF16_V3I32_I32, int_amdgcn_cvt_scale_pk16_bf16_fp6>;
+      defm V_CVT_SCALE_PK16_F16_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f16_bf6",  VOP_V16F16_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f16_bf6>;
+      defm V_CVT_SCALE_PK16_BF16_BF6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_bf16_bf6", VOP_V16BF16_V3I32_I32, int_amdgcn_cvt_scale_pk16_bf16_bf6>;
+      defm V_CVT_SCALE_PK16_F32_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f32_fp6",  VOP_V16F32_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f32_fp6>;
+      defm V_CVT_SCALE_PK16_F32_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk16_f32_bf6",  VOP_V16F32_V3I32_I32,  int_amdgcn_cvt_scale_pk16_f32_bf6>;
     } // End Constraints = "@earlyclobber $vdst"
 
     defm V_CVT_SCALE_PK8_F16_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp4",   VOP_V8F16_I32_I32,     int_amdgcn_cvt_scale_pk8_f16_fp4>;
     defm V_CVT_SCALE_PK8_BF16_FP4  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp4",  VOP_V8BF16_I32_I32,    int_amdgcn_cvt_scale_pk8_bf16_fp4>;
     defm V_CVT_SCALE_PK8_F32_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp4",   VOP_V8F32_I32_I32,     int_amdgcn_cvt_scale_pk8_f32_fp4>;
   } // End ReadsModeReg = 0
+
+  let Constraints = "@earlyclobber $vdst" in {
+    let WaveSizePredicate = isWave32 in {
+      defm V_CVT_SCALEF32_PK8_FP8_BF16   : VOP3Inst<"v_cvt_scalef32_pk8_fp8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_F32>,  int_amdgcn_cvt_scalef32_pk8_fp8_bf16>;
+      defm V_CVT_SCALEF32_PK8_BF8_BF16   : VOP3Inst<"v_cvt_scalef32_pk8_bf8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_F32>,  int_amdgcn_cvt_scalef32_pk8_bf8_bf16>;
+      defm V_CVT_SCALEF32_PK8_FP8_F16    : VOP3Inst<"v_cvt_scalef32_pk8_fp8_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F16_F32>,   int_amdgcn_cvt_scalef32_pk8_fp8_f16>;
+      defm V_CVT_SCALEF32_PK8_BF8_F16    : VOP3Inst<"v_cvt_scalef32_pk8_bf8_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F16_F32>,   int_amdgcn_cvt_scalef32_pk8_bf8_f16>;
+      defm V_CVT_SCALEF32_PK8_FP8_F32    : VOP3Inst<"v_cvt_scalef32_pk8_fp8_f32",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F32_F32>,   int_amdgcn_cvt_scalef32_pk8_fp8_f32>;
+      defm V_CVT_SCALEF32_PK8_BF8_F32    : VOP3Inst<"v_cvt_scalef32_pk8_bf8_f32",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F32_F32>,   int_amdgcn_cvt_scalef32_pk8_bf8_f32>;
+      defm V_CVT_SCALEF32_PK8_FP4_F32    : VOP3Inst<"v_cvt_scalef32_pk8_fp4_f32",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F32_F32>,     int_amdgcn_cvt_scalef32_pk8_fp4_f32>;
+      defm V_CVT_SCALEF32_PK8_FP4_F16    : VOP3Inst<"v_cvt_scalef32_pk8_fp4_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F16_F32>,     int_amdgcn_cvt_scalef32_pk8_fp4_f16>;
+      defm V_CVT_SCALEF32_PK8_FP4_BF16   : VOP3Inst<"v_cvt_scalef32_pk8_fp4_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8BF16_F32>,    int_amdgcn_cvt_scalef32_pk8_fp4_bf16>;
+    } // End WaveSizePredicate = isWave32
+    defm V_CVT_SCALEF32_PK16_FP6_F32   : VOP3Inst<"v_cvt_scalef32_pk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_F32>,  int_amdgcn_cvt_scalef32_pk16_fp6_f32>;
+    defm V_CVT_SCALEF32_PK16_BF6_F32   : VOP3Inst<"v_cvt_scalef32_pk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_F32>,  int_amdgcn_cvt_scalef32_pk16_bf6_f32>;
+    defm V_CVT_SCALEF32_PK16_FP6_F16   : VOP3Inst<"v_cvt_scalef32_pk16_fp6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_F32>,  int_amdgcn_cvt_scalef32_pk16_fp6_f16>;
+    defm V_CVT_SCALEF32_PK16_BF6_F16   : VOP3Inst<"v_cvt_scalef32_pk16_bf6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_F32>,  int_amdgcn_cvt_scalef32_pk16_bf6_f16>;
+    defm V_CVT_SCALEF32_PK16_FP6_BF16  : VOP3Inst<"v_cvt_scalef32_pk16_fp6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16BF16_F32>, int_amdgcn_cvt_scalef32_pk16_fp6_bf16>;
+    defm V_CVT_SCALEF32_PK16_BF6_BF16  : VOP3Inst<"v_cvt_scalef32_pk16_bf6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16BF16_F32>, int_amdgcn_cvt_scalef32_pk16_bf6_bf16>;
+
+    let WaveSizePredicate = isWave32 in {
+      defm V_CVT_SCALEF32_SR_PK8_FP8_BF16  : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk8_fp8_bf16>;
+      defm V_CVT_SCALEF32_SR_PK8_BF8_BF16  : VOP3Inst<"v_cvt_scalef32_sr_pk8_bf8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk8_bf8_bf16>;
+      defm V_CVT_SCALEF32_SR_PK8_FP8_F16   : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp8_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F16_I32_F32>,   int_amdgcn_cvt_scalef32_sr_pk8_fp8_f16>;
+      defm V_CVT_SCALEF32_SR_PK8_BF8_F16   : VOP3Inst<"v_cvt_scalef32_sr_pk8_bf8_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F16_I32_F32>,   int_amdgcn_cvt_scalef32_sr_pk8_bf8_f16>;
+      defm V_CVT_SCALEF32_SR_PK8_FP8_F32   : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp8_f32",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F32_I32_F32>,   int_amdgcn_cvt_scalef32_sr_pk8_fp8_f32>;
+      defm V_CVT_SCALEF32_SR_PK8_BF8_F32   : VOP3Inst<"v_cvt_scalef32_sr_pk8_bf8_f32",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F32_I32_F32>,   int_amdgcn_cvt_scalef32_sr_pk8_bf8_f32>;
+      defm V_CVT_SCALEF32_SR_PK8_FP4_F32   : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp4_f32",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F32_I32_F32>,     int_amdgcn_cvt_scalef32_sr_pk8_fp4_f32>;
+      defm V_CVT_SCALEF32_SR_PK8_FP4_F16   : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp4_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F16_I32_F32>,     int_amdgcn_cvt_scalef32_sr_pk8_fp4_f16>;
+      defm V_CVT_SCALEF32_SR_PK8_FP4_BF16  : VOP3Inst<"v_cvt_scalef32_sr_pk8_fp4_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8BF16_I32_F32>,    int_amdgcn_cvt_scalef32_sr_pk8_fp4_bf16>;
+    } // End WaveSizePredicate = isWave32
+    defm V_CVT_SCALEF32_SR_PK16_BF6_BF16 : VOP3Inst<"v_cvt_scalef32_sr_pk16_bf6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16BF16_I32_F32>, int_amdgcn_cvt_scalef32_sr_pk16_bf6_bf16>;
+    defm V_CVT_SCALEF32_SR_PK16_BF6_F16  : VOP3Inst<"v_cvt_scalef32_sr_pk16_bf6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_bf6_f16>;
+    defm V_CVT_SCALEF32_SR_PK16_BF6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_bf6_f32>;
+    defm V_CVT_SCALEF32_SR_PK16_FP6_BF16 : VOP3Inst<"v_cvt_scalef32_sr_pk16_fp6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16BF16_I32_F32>, int_amdgcn_cvt_scalef32_sr_pk16_fp6_bf16>;
+    defm V_CVT_SCALEF32_SR_PK16_FP6_F16  : VOP3Inst<"v_cvt_scalef32_sr_pk16_fp6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F16_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_fp6_f16>;
+    defm V_CVT_SCALEF32_SR_PK16_FP6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_fp6_f32>;
+  } // End Constraints = "@earlyclobber $vdst"
 
   let True16Predicate = UseRealTrue16Insts in {
     def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f16, V_CVT_SR_FP8_F16_t16_e64, f16>;
@@ -1753,6 +1837,12 @@ let SubtargetPredicate = isGFX1250Plus in {
     def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_fake16_e64, f16>;
   }
 } // End SubtargetPredicate = isGFX1250Plus
+
+let SubtargetPredicate = HasTensorCvtLutInsts in {
+  defm V_PERM_PK16_B4_U4 : VOP3Inst<"v_perm_pk16_b4_u4", VOP3_V2I32_I32_I32_V2I32, int_amdgcn_perm_pk16_b4_u4>;
+  defm V_PERM_PK16_B6_U4 : VOP3Inst<"v_perm_pk16_b6_u4", VOP3_V3I32_I32_I64_V2I32, int_amdgcn_perm_pk16_b6_u4>;
+  defm V_PERM_PK16_B8_U4 : VOP3Inst<"v_perm_pk16_b8_u4", VOP3_V4I32_I64_I64_V2I32, int_amdgcn_perm_pk16_b8_u4>;
+} // End SubtargetPredicate = HasTensorCvtLutInsts
 
 class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
     (DstTy (node DstTy:$vdst_in, f32:$src0, i32:$src1, timm:$word_sel)),
@@ -1973,6 +2063,11 @@ defm V_ADD_MAX_I32 : VOP3Only_Realtriple_gfx1250<0x25e>;
 defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1250<0x25f>;
 defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1250<0x260>;
 defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1250<0x261>;
+defm V_PERMLANE_BCAST_B32   : VOP3Only_Real_Base_gfx12<0x270>;
+defm V_PERMLANE_UP_B32      : VOP3Only_Real_Base_gfx12<0x271>;
+defm V_PERMLANE_DOWN_B32    : VOP3Only_Real_Base_gfx12<0x272>;
+defm V_PERMLANE_XOR_B32     : VOP3Only_Real_Base_gfx12<0x273>;
+defm V_PERMLANE_IDX_GEN_B32 : VOP3Only_Real_Base_gfx12<0x314>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12
@@ -1988,6 +2083,9 @@ multiclass VOP3_Realtriple_gfx11_gfx12<bits<10> op> :
 
 multiclass VOP3_Real_Base_gfx11_gfx12<bits<10> op> :
   VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Gen, op>;
+
+multiclass VOP3_Real_Base_gfx11_gfx12_not_gfx1250<bits<10> op> :
+  VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Not12_50Gen, op>;
 
 multiclass VOP3_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
                                                  string asmName> :
@@ -2116,9 +2214,9 @@ defm V_MUL_F64             : VOP3_Real_Base_gfx11<0x328>;
 defm V_MIN_F64             : VOP3_Real_Base_gfx11<0x329>;
 defm V_MAX_F64             : VOP3_Real_Base_gfx11<0x32a>;
 defm V_LDEXP_F64           : VOP3_Real_Base_gfx11_gfx12<0x32b>;
-defm V_MUL_LO_U32          : VOP3_Real_Base_gfx11_gfx12<0x32c>;
-defm V_MUL_HI_U32          : VOP3_Real_Base_gfx11_gfx12<0x32d>;
-defm V_MUL_HI_I32          : VOP3_Real_Base_gfx11_gfx12<0x32e>;
+defm V_MUL_LO_U32          : VOP3_Real_Base_gfx11_gfx12_not_gfx1250<0x32c>;
+defm V_MUL_HI_U32          : VOP3_Real_Base_gfx11_gfx12_not_gfx1250<0x32d>;
+defm V_MUL_HI_I32          : VOP3_Real_Base_gfx11_gfx12_not_gfx1250<0x32e>;
 defm V_TRIG_PREOP_F64      : VOP3_Real_Base_gfx11_gfx12<0x32f>;
 defm V_LSHLREV_B16         : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x338, "v_lshlrev_b16">;
 defm V_LSHRREV_B16         : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x339, "v_lshrrev_b16">;
@@ -2147,6 +2245,13 @@ let AssemblerPredicate = isGFX11Plus in {
 }
 
 // These instructions differ from GFX12 variant by supporting DPP:
+defm V_MUL_LO_U32                    : VOP3Only_Realtriple_gfx1250<0x32c>;
+defm V_MUL_HI_U32                    : VOP3Only_Realtriple_gfx1250<0x32d>;
+defm V_MUL_HI_I32                    : VOP3Only_Realtriple_gfx1250<0x32e>;
+
+defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1250<0x23f>;
+defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1250<0x242>;
+defm V_PERM_PK16_B8_U4               : VOP3Only_Real_Base_gfx1250<0x243>;
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
 defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_gfx1250<0x290>;
 defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_gfx1250<0x291>;
@@ -2159,6 +2264,42 @@ defm V_CVT_SCALE_PK8_F32_FP8         : VOP3Only_ScaleSel_Real_gfx1250<0x2aa>;
 defm V_CVT_SCALE_PK8_F16_BF8         : VOP3Only_ScaleSel_Real_gfx1250<0x2ab>;
 defm V_CVT_SCALE_PK8_BF16_BF8        : VOP3Only_ScaleSel_Real_gfx1250<0x2ac>;
 defm V_CVT_SCALE_PK8_F32_BF8         : VOP3Only_ScaleSel_Real_gfx1250<0x2ad>;
+defm V_CVT_SCALEF32_PK8_FP4_F32      : VOP3Only_Real_Base_gfx1250<0x2b0>;
+defm V_CVT_SCALEF32_PK8_FP4_F16      : VOP3Only_Real_Base_gfx1250<0x2b3>;
+defm V_CVT_SCALEF32_PK8_FP8_BF16     : VOP3Only_Real_Base_gfx1250<0x2b4>;
+defm V_CVT_SCALEF32_PK8_BF8_BF16     : VOP3Only_Real_Base_gfx1250<0x2b5>;
+defm V_CVT_SCALEF32_PK8_FP4_BF16     : VOP3Only_Real_Base_gfx1250<0x2b8>;
+defm V_CVT_SCALEF32_PK8_FP8_F32      : VOP3Only_Real_Base_gfx1250<0x2c3>;
+defm V_CVT_SCALEF32_PK8_FP8_F16      : VOP3Only_Real_Base_gfx1250<0x2c4>;
+defm V_CVT_SCALEF32_PK8_BF8_F32      : VOP3Only_Real_Base_gfx1250<0x2c5>;
+defm V_CVT_SCALEF32_PK8_BF8_F16      : VOP3Only_Real_Base_gfx1250<0x2c6>;
+defm V_CVT_SCALE_PK16_F16_FP6        : VOP3Only_ScaleSel_Real_gfx1250<0x2c7>;
+defm V_CVT_SCALE_PK16_BF16_FP6       : VOP3Only_ScaleSel_Real_gfx1250<0x2c8>;
+defm V_CVT_SCALE_PK16_F32_FP6        : VOP3Only_ScaleSel_Real_gfx1250<0x2c9>;
+defm V_CVT_SCALE_PK16_F16_BF6        : VOP3Only_ScaleSel_Real_gfx1250<0x2ca>;
+defm V_CVT_SCALE_PK16_BF16_BF6       : VOP3Only_ScaleSel_Real_gfx1250<0x2cb>;
+defm V_CVT_SCALE_PK16_F32_BF6        : VOP3Only_ScaleSel_Real_gfx1250<0x2cc>;
+defm V_CVT_SCALEF32_PK16_FP6_F32     : VOP3Only_Real_Base_gfx1250<0x2cd>;
+defm V_CVT_SCALEF32_PK16_BF6_F32     : VOP3Only_Real_Base_gfx1250<0x2ce>;
+defm V_CVT_SCALEF32_PK16_FP6_F16     : VOP3Only_Real_Base_gfx1250<0x2cf>;
+defm V_CVT_SCALEF32_PK16_BF6_F16     : VOP3Only_Real_Base_gfx1250<0x2d0>;
+defm V_CVT_SCALEF32_PK16_FP6_BF16    : VOP3Only_Real_Base_gfx1250<0x2d1>;
+defm V_CVT_SCALEF32_PK16_BF6_BF16    : VOP3Only_Real_Base_gfx1250<0x2d2>;
+defm V_CVT_SCALEF32_SR_PK16_FP6_F32  : VOP3Only_Real_Base_gfx1250<0x2d3>;
+defm V_CVT_SCALEF32_SR_PK16_BF6_F32  : VOP3Only_Real_Base_gfx1250<0x2d4>;
+defm V_CVT_SCALEF32_SR_PK16_FP6_F16  : VOP3Only_Real_Base_gfx1250<0x2d5>;
+defm V_CVT_SCALEF32_SR_PK16_BF6_F16  : VOP3Only_Real_Base_gfx1250<0x2d6>;
+defm V_CVT_SCALEF32_SR_PK16_FP6_BF16 : VOP3Only_Real_Base_gfx1250<0x2d7>;
+defm V_CVT_SCALEF32_SR_PK16_BF6_BF16 : VOP3Only_Real_Base_gfx1250<0x2d8>;
+defm V_CVT_SCALEF32_SR_PK8_FP4_F32   : VOP3Only_Real_Base_gfx1250<0x297>;
+defm V_CVT_SCALEF32_SR_PK8_FP8_F32   : VOP3Only_Real_Base_gfx1250<0x298>;
+defm V_CVT_SCALEF32_SR_PK8_BF8_F32   : VOP3Only_Real_Base_gfx1250<0x299>;
+defm V_CVT_SCALEF32_SR_PK8_FP4_F16   : VOP3Only_Real_Base_gfx1250<0x2b9>;
+defm V_CVT_SCALEF32_SR_PK8_FP4_BF16  : VOP3Only_Real_Base_gfx1250<0x2bc>;
+defm V_CVT_SCALEF32_SR_PK8_FP8_F16   : VOP3Only_Real_Base_gfx1250<0x2bf>;
+defm V_CVT_SCALEF32_SR_PK8_FP8_BF16  : VOP3Only_Real_Base_gfx1250<0x2c0>;
+defm V_CVT_SCALEF32_SR_PK8_BF8_F16   : VOP3Only_Real_Base_gfx1250<0x2c1>;
+defm V_CVT_SCALEF32_SR_PK8_BF8_BF16  : VOP3Only_Real_Base_gfx1250<0x2c2>;
 defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250<0x36d>;
 defm V_CVT_SR_PK_BF16_F32            : VOP3Only_Realtriple_gfx1250<0x36e>;
 defm V_CVT_PK_F16_F32                : VOP3Only_Realtriple_gfx1250<0x36f>;

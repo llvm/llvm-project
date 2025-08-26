@@ -285,6 +285,9 @@ enum CGDataVersion {
   // Version 3 adds the total size of the Names in the stable function map so
   // we can skip reading them into the memory for non-assertion builds.
   Version3 = 3,
+  // Version 4 adjusts the structure of stable function merging map for
+  // efficient lazy loading support.
+  Version4 = 4,
   CurrentVersion = CG_DATA_INDEX_VERSION
 };
 const uint64_t Version = CGDataVersion::CurrentVersion;

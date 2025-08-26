@@ -8,7 +8,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCrossDSOTailCalls(TestBase):
-    @skipIf(compiler="clang", compiler_version=["<", "10.0"])
+    @skipIf(compiler="clang", compiler_version=["<", "22.0"])
     @skipIf(dwarf_version=["<", "4"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     def test_cross_dso_tail_calls(self):

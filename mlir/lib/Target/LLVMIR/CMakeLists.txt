@@ -1,4 +1,5 @@
 add_subdirectory(Dialect)
+add_subdirectory(Transforms)
 
 set(LLVM_OPTIONAL_SOURCES
   ConvertFromLLVMIR.cpp

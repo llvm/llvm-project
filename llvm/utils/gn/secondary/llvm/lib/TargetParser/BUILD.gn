@@ -20,5 +20,6 @@ static_library("TargetParser") {
     "TargetParser.cpp",
     "Triple.cpp",
     "X86TargetParser.cpp",
+    "XtensaTargetParser.cpp",
   ]
 }

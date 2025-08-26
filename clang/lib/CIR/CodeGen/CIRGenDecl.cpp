@@ -154,15 +154,19 @@ void CIRGenFunction::emitAutoVarInit(
     initializeWhatIsTechnicallyUninitialized(addr);
     LValue lv = makeAddrLValue(addr, type, AlignmentSource::Decl);
     emitExprAsInit(init, &d, lv);
-    // In case lv has uses it means we indeed initialized something
-    // out of it while trying to build the expression, mark it as such.
-    mlir::Value val = lv.getAddress().getPointer();
-    assert(val && "Should have an address");
-    auto allocaOp = dyn_cast_or_null<cir::AllocaOp>(val.getDefiningOp());
-    assert(allocaOp && "Address should come straight out of the alloca");
 
-    if (!allocaOp.use_empty())
-      allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+    if (!emission.wasEmittedAsOffloadClause()) {
+      // In case lv has uses it means we indeed initialized something
+      // out of it while trying to build the expression, mark it as such.
+      mlir::Value val = lv.getAddress().getPointer();
+      assert(val && "Should have an address");
+      auto allocaOp = val.getDefiningOp<cir::AllocaOp>();
+      assert(allocaOp && "Address should come straight out of the alloca");
+
+      if (!allocaOp.use_empty())
+        allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+    }
+
     return;
   }
 
@@ -293,7 +297,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   mlir::Attribute init = builder.getZeroInitAttr(convertType(ty));
 
   cir::GlobalOp gv = builder.createVersionedGlobal(
-      getModule(), getLoc(d.getLocation()), name, lty, linkage);
+      getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
   // TODO(cir): infer visibility from linkage in global op builder.
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
   gv.setInitialValueAttr(init);
@@ -412,7 +416,8 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   // TODO(cir): we should have a way to represent global ops as values without
   // having to emit a get global op. Sometimes these emissions are not used.
   mlir::Value addr = builder.createGetGlobal(globalOp);
-  auto getAddrOp = mlir::cast<cir::GetGlobalOp>(addr.getDefiningOp());
+  auto getAddrOp = addr.getDefiningOp<cir::GetGlobalOp>();
+  assert(getAddrOp && "expected cir::GetGlobalOp");
 
   CharUnits alignment = getContext().getDeclAlign(&d);
 
@@ -665,6 +670,12 @@ struct DestroyObject final : EHScopeStack::Cleanup {
 
   void emit(CIRGenFunction &cgf) override {
     cgf.emitDestroy(addr, type, destroyer);
+  }
+
+  // This is a placeholder until EHCleanupScope is implemented.
+  size_t getSize() const override {
+    assert(!cir::MissingFeatures::ehCleanupScope());
+    return sizeof(DestroyObject);
   }
 };
 } // namespace

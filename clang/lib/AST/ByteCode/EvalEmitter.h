@@ -95,6 +95,7 @@ protected:
   ParamOffset LambdaThisCapture{0, false};
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
+  std::optional<SourceInfo> LocOverride = std::nullopt;
 
 private:
   /// Current compilation context.
