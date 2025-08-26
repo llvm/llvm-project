@@ -5197,7 +5197,9 @@ Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
     const auto *AlignAA = A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(II),
                                               DepClassTy::NONE);
     if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
-      Align ConstAlign(1 << ConstVals->getAssumedMinTrailingZeros());
+      unsigned ShiftValue =
+          std::min(ConstVals->getAssumedMinTrailingZeros(), (unsigned)63);
+      Align ConstAlign(1 << ShiftValue);
       if (ConstAlign >= AlignAA->getKnownAlign())
         return Align(1);
     }
@@ -5222,8 +5224,11 @@ Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
     const auto *AlignAA =
         A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II.getOperand(0))),
                             DepClassTy::REQUIRED);
-    if (ConstVals && ConstVals->isValidState())
-      Alignment = Align(1 << ConstVals->getAssumedMinTrailingZeros());
+    if (ConstVals && ConstVals->isValidState()) {
+      unsigned ShiftValue =
+          std::min(ConstVals->getAssumedMinTrailingZeros(), (unsigned)63);
+      Alignment = Align(1 << ShiftValue);
+    }
     if (AlignAA && AlignAA->isValidState())
       Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
 
