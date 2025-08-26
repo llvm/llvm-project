@@ -1077,8 +1077,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &astContext,
     if (astContext.isAlignmentRequired(varType))
       return true;
 
-    if (const auto *rt = varType->getAs<RecordType>()) {
-      const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
+    if (const auto *rd = varType->getAsRecordDecl()) {
       for (const FieldDecl *fd : rd->fields()) {
         if (fd->isBitField())
           continue;
