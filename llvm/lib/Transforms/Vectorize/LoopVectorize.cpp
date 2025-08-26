@@ -514,7 +514,8 @@ public:
 
   /// Creates a basic block for the scalar preheader. Both
   /// EpilogueVectorizerMainLoop and EpilogueVectorizerEpilogueLoop overwrite
-  /// the method to create blocks and checks needed for epilogue vectorization.
+  /// the method to create additional blocks and checks needed for epilogue
+  /// vectorization.
   virtual BasicBlock *createVectorizedLoopSkeleton();
 
   /// Fix the vectorized code, taking care of header phi's, and more.
@@ -697,7 +698,7 @@ public:
                                        BFI, PSI, Check, Plan, EPI.MainLoopVF,
                                        EPI.MainLoopVF, EPI.MainLoopUF) {}
   /// Implements the interface for creating a vectorized skeleton using the
-  /// *main loop* strategy (ie the first pass of vplan execution).
+  /// *main loop* strategy (i.e., the first pass of VPlan execution).
   BasicBlock *createVectorizedLoopSkeleton() final;
 
 protected:
@@ -729,7 +730,7 @@ public:
     TripCount = EPI.TripCount;
   }
   /// Implements the interface for creating a vectorized skeleton using the
-  /// *epilogue loop* strategy (ie the second pass of vplan execution).
+  /// *epilogue loop* strategy (i.e., the second pass of VPlan execution).
   BasicBlock *createVectorizedLoopSkeleton() final;
 
 protected:
@@ -2428,7 +2429,6 @@ static void addFullyUnrolledInstructionsToIgnore(
 BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // Create a new IR basic block for the scalar preheader.
   createScalarPreheader("");
-
   return LoopVectorPreHeader;
 }
 
@@ -9431,7 +9431,7 @@ static bool processLoopInVPlanNativePath(
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, /*UF=*/1,
                                  VF.MinProfitableTripCount);
 
-    LVP.executePlan(VF.Width, 1, BestPlan, LB, DT, false);
+    LVP.executePlan(VF.Width, /*UF=*/1, BestPlan, LB, DT, false);
   }
 
   reportVectorization(ORE, L, VF, 1);
