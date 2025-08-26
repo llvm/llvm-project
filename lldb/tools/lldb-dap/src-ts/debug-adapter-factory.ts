@@ -69,6 +69,42 @@ async function findDAPExecutable(): Promise<string | undefined> {
 }
 
 /**
+ * Validates the DAP environment provided in the debug configuration.
+ * It must be a dictionary of string keys and values OR an array of string values.
+ *
+ * @param debugConfigEnv The supposed DAP environment that will be validated
+ * @returns Whether or not the DAP environment is valid
+ */
+function validateDAPEnv(debugConfigEnv: any): boolean {
+  // If the env is an object, it should have string keys and values.
+  if (
+    typeof debugConfigEnv === "object" &&
+    Object.keys(debugConfigEnv).findIndex(
+      (entry) => typeof entry !== "string",
+    ) !== -1 &&
+    Object.values(debugConfigEnv).findIndex(
+      (entry) => typeof entry !== "string",
+    ) !== -1
+  ) {
+    return false;
+  }
+
+  // If the env is an array, it should have string values which match the regex.
+  if (
+    Array.isArray(debugConfigEnv) &&
+    debugConfigEnv.findIndex(
+      (entry) =>
+        typeof entry !== "string" || !/^((\\w+=.*)|^\\w+)$/.test(entry),
+    ) !== -1
+  ) {
+    return false;
+  }
+
+  // The env is valid.
+  return true;
+}
+
+/**
  * Retrieves the lldb-dap executable path either from settings or the provided
  * {@link vscode.DebugConfiguration}.
  *
@@ -172,23 +208,13 @@ async function getDAPEnvironment(
 ): Promise<{ [key: string]: string }> {
   const debugConfigEnv = configuration.debugAdapterEnv;
   if (debugConfigEnv) {
-    if (
-      (typeof debugConfigEnv !== "object" ||
-
-        Object.values(debugConfigEnv).findIndex(
-          (entry) => typeof entry !== "string",
-        ) !== -1) &&
-      (!Array.isArray(debugConfigEnv) ||
-        debugConfigEnv.findIndex(
-          (entry) =>
-            typeof entry !== "string" || !/^((\\w+=.*)|^\\w+)$/.test(entry),
-        ) !== -1)
-    ) {
+    if (validateDAPEnv(debugConfigEnv) === false) {
       throw new ErrorWithNotification(
         "The debugAdapterEnv property must be a dictionary of string keys and values OR an array of string values. Please update your launch configuration",
         new ConfigureButton(),
       );
     }
+
     // Transform, so that the returned value is always a dictionary.
     if (Array.isArray(debugConfigEnv)) {
       const ret: { [key: string]: string } = {};
@@ -237,7 +263,9 @@ export async function createDebugAdapterExecutable(
   if (log_path) {
     env["LLDBDAP_LOG"] = log_path;
   } else if (
-    vscode.workspace.getConfiguration("lldb-dap").get("captureSessionLogs", false)
+    vscode.workspace
+      .getConfiguration("lldb-dap")
+      .get("captureSessionLogs", false)
   ) {
     env["LLDBDAP_LOG"] = logFilePath.get(LogType.DEBUG_SESSION);
   }
