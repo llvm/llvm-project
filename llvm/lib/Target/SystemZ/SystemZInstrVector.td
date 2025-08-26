@@ -680,19 +680,19 @@ let Predicates = [FeatureVector] in {
   let isCommutable = 1 in {
     // Maximum.
     def VMX  : BinaryVRRcGeneric<"vmx", 0xE7FF>;
-    def VMXB : BinaryVRRc<"vmxb", 0xE7FF, null_frag, v128b, v128b, 0>;
-    def VMXH : BinaryVRRc<"vmxh", 0xE7FF, null_frag, v128h, v128h, 1>;
-    def VMXF : BinaryVRRc<"vmxf", 0xE7FF, null_frag, v128f, v128f, 2>;
-    def VMXG : BinaryVRRc<"vmxg", 0xE7FF, null_frag, v128g, v128g, 3>;
+    def VMXB : BinaryVRRc<"vmxb", 0xE7FF, smax, v128b, v128b, 0>;
+    def VMXH : BinaryVRRc<"vmxh", 0xE7FF, smax, v128h, v128h, 1>;
+    def VMXF : BinaryVRRc<"vmxf", 0xE7FF, smax, v128f, v128f, 2>;
+    def VMXG : BinaryVRRc<"vmxg", 0xE7FF, smax, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
       def VMXQ : BinaryVRRc<"vmxq", 0xE7FF, null_frag, v128q, v128q, 4>;
 
     // Maximum logical.
     def VMXL  : BinaryVRRcGeneric<"vmxl", 0xE7FD>;
-    def VMXLB : BinaryVRRc<"vmxlb", 0xE7FD, null_frag, v128b, v128b, 0>;
-    def VMXLH : BinaryVRRc<"vmxlh", 0xE7FD, null_frag, v128h, v128h, 1>;
-    def VMXLF : BinaryVRRc<"vmxlf", 0xE7FD, null_frag, v128f, v128f, 2>;
-    def VMXLG : BinaryVRRc<"vmxlg", 0xE7FD, null_frag, v128g, v128g, 3>;
+    def VMXLB : BinaryVRRc<"vmxlb", 0xE7FD, umax, v128b, v128b, 0>;
+    def VMXLH : BinaryVRRc<"vmxlh", 0xE7FD, umax, v128h, v128h, 1>;
+    def VMXLF : BinaryVRRc<"vmxlf", 0xE7FD, umax, v128f, v128f, 2>;
+    def VMXLG : BinaryVRRc<"vmxlg", 0xE7FD, umax, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
       def VMXLQ : BinaryVRRc<"vmxlq", 0xE7FD, null_frag, v128q, v128q, 4>;
   }
@@ -700,19 +700,19 @@ let Predicates = [FeatureVector] in {
   let isCommutable = 1 in {
     // Minimum.
     def VMN  : BinaryVRRcGeneric<"vmn", 0xE7FE>;
-    def VMNB : BinaryVRRc<"vmnb", 0xE7FE, null_frag, v128b, v128b, 0>;
-    def VMNH : BinaryVRRc<"vmnh", 0xE7FE, null_frag, v128h, v128h, 1>;
-    def VMNF : BinaryVRRc<"vmnf", 0xE7FE, null_frag, v128f, v128f, 2>;
-    def VMNG : BinaryVRRc<"vmng", 0xE7FE, null_frag, v128g, v128g, 3>;
+    def VMNB : BinaryVRRc<"vmnb", 0xE7FE, smin, v128b, v128b, 0>;
+    def VMNH : BinaryVRRc<"vmnh", 0xE7FE, smin, v128h, v128h, 1>;
+    def VMNF : BinaryVRRc<"vmnf", 0xE7FE, smin, v128f, v128f, 2>;
+    def VMNG : BinaryVRRc<"vmng", 0xE7FE, smin, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
       def VMNQ : BinaryVRRc<"vmnq", 0xE7FE, null_frag, v128q, v128q, 4>;
 
     // Minimum logical.
     def VMNL  : BinaryVRRcGeneric<"vmnl", 0xE7FC>;
-    def VMNLB : BinaryVRRc<"vmnlb", 0xE7FC, null_frag, v128b, v128b, 0>;
-    def VMNLH : BinaryVRRc<"vmnlh", 0xE7FC, null_frag, v128h, v128h, 1>;
-    def VMNLF : BinaryVRRc<"vmnlf", 0xE7FC, null_frag, v128f, v128f, 2>;
-    def VMNLG : BinaryVRRc<"vmnlg", 0xE7FC, null_frag, v128g, v128g, 3>;
+    def VMNLB : BinaryVRRc<"vmnlb", 0xE7FC, umin, v128b, v128b, 0>;
+    def VMNLH : BinaryVRRc<"vmnlh", 0xE7FC, umin, v128h, v128h, 1>;
+    def VMNLF : BinaryVRRc<"vmnlf", 0xE7FC, umin, v128f, v128f, 2>;
+    def VMNLG : BinaryVRRc<"vmnlg", 0xE7FC, umin, v128g, v128g, 3>;
     let Predicates = [FeatureVectorEnhancements3] in
       def VMNLQ : BinaryVRRc<"vmnlq", 0xE7FC, null_frag, v128q, v128q, 4>;
   }
