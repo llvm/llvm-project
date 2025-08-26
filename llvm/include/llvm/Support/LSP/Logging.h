@@ -9,13 +9,12 @@
 #ifndef MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
 #define MLIR_TOOLS_LSPSERVERSUPPORT_LOGGING_H
 
-#include "mlir/Support/LLVM.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <memory>
 #include <mutex>
 
-namespace mlir {
+namespace llvm {
 namespace lsp {
 
 /// This class represents the main interface for logging, and allows for

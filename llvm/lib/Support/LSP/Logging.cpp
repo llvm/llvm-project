@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace mlir;
-using namespace mlir::lsp;
+using namespace llvm;
+using namespace llvm::lsp;
 
 void Logger::setLogLevel(Level logLevel) { get().logLevel = logLevel; }
 

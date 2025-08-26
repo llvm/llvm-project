@@ -23,17 +23,21 @@
 #ifndef MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H
 #define MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H
 
-#include "mlir/Support/LLVM.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
-namespace mlir {
+// This file is using the LSP syntax for identifier names which is different
+// from the LLVM coding standard. To avoid the clang-tidy warnings, we're
+// disabling one check here.
+// NOLINTBEGIN(readability-identifier-naming)
+
+namespace llvm {
 namespace lsp {
 
 enum class ErrorCode {
@@ -1241,12 +1245,12 @@ struct CodeAction {
 llvm::json::Value toJSON(const CodeAction &);
 
 } // namespace lsp
-} // namespace mlir
+} // namespace llvm
 
 namespace llvm {
 template <>
-struct format_provider<mlir::lsp::Position> {
-  static void format(const mlir::lsp::Position &pos, raw_ostream &os,
+struct format_provider<llvm::lsp::Position> {
+  static void format(const llvm::lsp::Position &pos, raw_ostream &os,
                      StringRef style) {
     assert(style.empty() && "style modifiers for this type are not supported");
     os << pos;
@@ -1255,3 +1259,5 @@ struct format_provider<mlir::lsp::Position> {
 } // namespace llvm
 
 #endif
+
+// NOLINTEND(readability-identifier-naming)

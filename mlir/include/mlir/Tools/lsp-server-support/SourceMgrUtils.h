@@ -14,12 +14,14 @@
 #ifndef MLIR_TOOLS_LSPSERVERSUPPORT_SOURCEMGRUTILS_H
 #define MLIR_TOOLS_LSPSERVERSUPPORT_SOURCEMGRUTILS_H
 
-#include "mlir/Tools/lsp-server-support/Protocol.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
 
 namespace mlir {
 namespace lsp {
+using namespace llvm::lsp;
 //===----------------------------------------------------------------------===//
 // Utils
 //===----------------------------------------------------------------------===//

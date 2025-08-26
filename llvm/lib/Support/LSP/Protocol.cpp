@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Tools/lsp-server-support/Protocol.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -19,8 +19,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace mlir;
-using namespace mlir::lsp;
+using namespace llvm;
+using namespace llvm::lsp;
 
 // Helper that doesn't treat `null` and absent fields as failures.
 template <typename T>
@@ -239,7 +239,7 @@ void URIForFile::registerSupportedScheme(StringRef scheme) {
   getSupportedSchemes().insert(scheme);
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, URIForFile &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, URIForFile &result,
                          llvm::json::Path path) {
   if (std::optional<StringRef> str = value.getAsString()) {
     llvm::Expected<URIForFile> expectedURI = URIForFile::fromURI(*str);
@@ -254,11 +254,11 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value, URIForFile &result,
   return false;
 }
 
-llvm::json::Value mlir::lsp::toJSON(const URIForFile &value) {
+llvm::json::Value llvm::lsp::toJSON(const URIForFile &value) {
   return value.uri();
 }
 
-raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const URIForFile &value) {
+raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const URIForFile &value) {
   return os << value.uri();
 }
 
@@ -266,7 +266,7 @@ raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const URIForFile &value) {
 // ClientCapabilities
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          ClientCapabilities &result, llvm::json::Path path) {
   const llvm::json::Object *o = value.getAsObject();
   if (!o) {
@@ -297,7 +297,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // ClientInfo
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, ClientInfo &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, ClientInfo &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   if (!o || !o.map("name", result.name))
@@ -312,7 +312,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value, ClientInfo &result,
 // InitializeParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, TraceLevel &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, TraceLevel &result,
                          llvm::json::Path path) {
   if (std::optional<StringRef> str = value.getAsString()) {
     if (*str == "off") {
@@ -331,7 +331,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value, TraceLevel &result,
   return false;
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          InitializeParams &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   if (!o)
@@ -348,7 +348,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // TextDocumentItem
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          TextDocumentItem &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("uri", result.uri) &&
@@ -360,11 +360,11 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // TextDocumentIdentifier
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const TextDocumentIdentifier &value) {
+llvm::json::Value llvm::lsp::toJSON(const TextDocumentIdentifier &value) {
   return llvm::json::Object{{"uri", value.uri}};
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          TextDocumentIdentifier &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
@@ -376,14 +376,14 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 //===----------------------------------------------------------------------===//
 
 llvm::json::Value
-mlir::lsp::toJSON(const VersionedTextDocumentIdentifier &value) {
+llvm::lsp::toJSON(const VersionedTextDocumentIdentifier &value) {
   return llvm::json::Object{
       {"uri", value.uri},
       {"version", value.version},
   };
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          VersionedTextDocumentIdentifier &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
@@ -394,21 +394,21 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // Position
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, Position &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, Position &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("line", result.line) &&
          o.map("character", result.character);
 }
 
-llvm::json::Value mlir::lsp::toJSON(const Position &value) {
+llvm::json::Value llvm::lsp::toJSON(const Position &value) {
   return llvm::json::Object{
       {"line", value.line},
       {"character", value.character},
   };
 }
 
-raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const Position &value) {
+raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const Position &value) {
   return os << value.line << ':' << value.character;
 }
 
@@ -416,20 +416,20 @@ raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const Position &value) {
 // Range
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, Range &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, Range &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("start", result.start) && o.map("end", result.end);
 }
 
-llvm::json::Value mlir::lsp::toJSON(const Range &value) {
+llvm::json::Value llvm::lsp::toJSON(const Range &value) {
   return llvm::json::Object{
       {"start", value.start},
       {"end", value.end},
   };
 }
 
-raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const Range &value) {
+raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const Range &value) {
   return os << value.start << '-' << value.end;
 }
 
@@ -437,20 +437,20 @@ raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const Range &value) {
 // Location
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, Location &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, Location &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("uri", result.uri) && o.map("range", result.range);
 }
 
-llvm::json::Value mlir::lsp::toJSON(const Location &value) {
+llvm::json::Value llvm::lsp::toJSON(const Location &value) {
   return llvm::json::Object{
       {"uri", value.uri},
       {"range", value.range},
   };
 }
 
-raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const Location &value) {
+raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const Location &value) {
   return os << value.range << '@' << value.uri;
 }
 
@@ -458,7 +458,7 @@ raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const Location &value) {
 // TextDocumentPositionParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          TextDocumentPositionParams &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
@@ -470,13 +470,13 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // ReferenceParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          ReferenceContext &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.mapOptional("includeDeclaration", result.includeDeclaration);
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          ReferenceParams &result, llvm::json::Path path) {
   TextDocumentPositionParams &base = result;
   llvm::json::ObjectMapper o(value, path);
@@ -488,7 +488,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // DidOpenTextDocumentParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          DidOpenTextDocumentParams &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
@@ -499,7 +499,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // DidCloseTextDocumentParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          DidCloseTextDocumentParams &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
@@ -540,7 +540,7 @@ LogicalResult TextDocumentContentChangeEvent::applyTo(
   return success();
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          TextDocumentContentChangeEvent &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
@@ -548,7 +548,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
          o.map("rangeLength", result.rangeLength) && o.map("text", result.text);
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          DidChangeTextDocumentParams &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
@@ -570,11 +570,11 @@ static llvm::StringRef toTextKind(MarkupKind kind) {
   llvm_unreachable("Invalid MarkupKind");
 }
 
-raw_ostream &mlir::lsp::operator<<(raw_ostream &os, MarkupKind kind) {
+raw_ostream &llvm::lsp::operator<<(raw_ostream &os, MarkupKind kind) {
   return os << toTextKind(kind);
 }
 
-llvm::json::Value mlir::lsp::toJSON(const MarkupContent &mc) {
+llvm::json::Value llvm::lsp::toJSON(const MarkupContent &mc) {
   if (mc.value.empty())
     return nullptr;
 
@@ -588,7 +588,7 @@ llvm::json::Value mlir::lsp::toJSON(const MarkupContent &mc) {
 // Hover
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const Hover &hover) {
+llvm::json::Value llvm::lsp::toJSON(const Hover &hover) {
   llvm::json::Object result{{"contents", toJSON(hover.contents)}};
   if (hover.range)
     result["range"] = toJSON(*hover.range);
@@ -599,7 +599,7 @@ llvm::json::Value mlir::lsp::toJSON(const Hover &hover) {
 // DocumentSymbol
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const DocumentSymbol &symbol) {
+llvm::json::Value llvm::lsp::toJSON(const DocumentSymbol &symbol) {
   llvm::json::Object result{{"name", symbol.name},
                             {"kind", static_cast<int>(symbol.kind)},
                             {"range", symbol.range},
@@ -616,7 +616,7 @@ llvm::json::Value mlir::lsp::toJSON(const DocumentSymbol &symbol) {
 // DocumentSymbolParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          DocumentSymbolParams &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("textDocument", result.textDocument);
@@ -626,7 +626,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // DiagnosticRelatedInformation
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          DiagnosticRelatedInformation &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
@@ -634,7 +634,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
          o.map("message", result.message);
 }
 
-llvm::json::Value mlir::lsp::toJSON(const DiagnosticRelatedInformation &info) {
+llvm::json::Value llvm::lsp::toJSON(const DiagnosticRelatedInformation &info) {
   return llvm::json::Object{
       {"location", info.location},
       {"message", info.message},
@@ -645,11 +645,11 @@ llvm::json::Value mlir::lsp::toJSON(const DiagnosticRelatedInformation &info) {
 // Diagnostic
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(DiagnosticTag tag) {
+llvm::json::Value llvm::lsp::toJSON(DiagnosticTag tag) {
   return static_cast<int>(tag);
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, DiagnosticTag &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, DiagnosticTag &result,
                          llvm::json::Path path) {
   if (std::optional<int64_t> i = value.getAsInteger()) {
     result = (DiagnosticTag)*i;
@@ -659,7 +659,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value, DiagnosticTag &result,
   return false;
 }
 
-llvm::json::Value mlir::lsp::toJSON(const Diagnostic &diag) {
+llvm::json::Value llvm::lsp::toJSON(const Diagnostic &diag) {
   llvm::json::Object result{
       {"range", diag.range},
       {"severity", (int)diag.severity},
@@ -676,7 +676,7 @@ llvm::json::Value mlir::lsp::toJSON(const Diagnostic &diag) {
   return std::move(result);
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, Diagnostic &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, Diagnostic &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   if (!o)
@@ -698,7 +698,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value, Diagnostic &result,
 // PublishDiagnosticsParams
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const PublishDiagnosticsParams &params) {
+llvm::json::Value llvm::lsp::toJSON(const PublishDiagnosticsParams &params) {
   return llvm::json::Object{
       {"uri", params.uri},
       {"diagnostics", params.diagnostics},
@@ -710,20 +710,20 @@ llvm::json::Value mlir::lsp::toJSON(const PublishDiagnosticsParams &params) {
 // TextEdit
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, TextEdit &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, TextEdit &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("range", result.range) && o.map("newText", result.newText);
 }
 
-llvm::json::Value mlir::lsp::toJSON(const TextEdit &value) {
+llvm::json::Value llvm::lsp::toJSON(const TextEdit &value) {
   return llvm::json::Object{
       {"range", value.range},
       {"newText", value.newText},
   };
 }
 
-raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const TextEdit &value) {
+raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const TextEdit &value) {
   os << value.range << " => \"";
   llvm::printEscapedString(value.newText, os);
   return os << '"';
@@ -733,7 +733,7 @@ raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const TextEdit &value) {
 // CompletionItemKind
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          CompletionItemKind &result, llvm::json::Path path) {
   if (std::optional<int64_t> intValue = value.getAsInteger()) {
     if (*intValue < static_cast<int>(CompletionItemKind::Text) ||
@@ -745,7 +745,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
   return false;
 }
 
-CompletionItemKind mlir::lsp::adjustKindToCapability(
+CompletionItemKind llvm::lsp::adjustKindToCapability(
     CompletionItemKind kind,
     CompletionItemKindBitset &supportedCompletionItemKinds) {
   size_t kindVal = static_cast<size_t>(kind);
@@ -767,7 +767,7 @@ CompletionItemKind mlir::lsp::adjustKindToCapability(
   }
 }
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          CompletionItemKindBitset &result,
                          llvm::json::Path path) {
   if (const llvm::json::Array *arrayValue = value.getAsArray()) {
@@ -785,7 +785,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // CompletionItem
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const CompletionItem &value) {
+llvm::json::Value llvm::lsp::toJSON(const CompletionItem &value) {
   assert(!value.label.empty() && "completion item label is required");
   llvm::json::Object result{{"label", value.label}};
   if (value.kind != CompletionItemKind::Missing)
@@ -813,12 +813,12 @@ llvm::json::Value mlir::lsp::toJSON(const CompletionItem &value) {
   return std::move(result);
 }
 
-raw_ostream &mlir::lsp::operator<<(raw_ostream &os,
+raw_ostream &llvm::lsp::operator<<(raw_ostream &os,
                                    const CompletionItem &value) {
   return os << value.label << " - " << toJSON(value);
 }
 
-bool mlir::lsp::operator<(const CompletionItem &lhs,
+bool llvm::lsp::operator<(const CompletionItem &lhs,
                           const CompletionItem &rhs) {
   return (lhs.sortText.empty() ? lhs.label : lhs.sortText) <
          (rhs.sortText.empty() ? rhs.label : rhs.sortText);
@@ -828,7 +828,7 @@ bool mlir::lsp::operator<(const CompletionItem &lhs,
 // CompletionList
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const CompletionList &value) {
+llvm::json::Value llvm::lsp::toJSON(const CompletionList &value) {
   return llvm::json::Object{
       {"isIncomplete", value.isIncomplete},
       {"items", llvm::json::Array(value.items)},
@@ -839,7 +839,7 @@ llvm::json::Value mlir::lsp::toJSON(const CompletionList &value) {
 // CompletionContext
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          CompletionContext &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   int triggerKind;
@@ -854,7 +854,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // CompletionParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          CompletionParams &result, llvm::json::Path path) {
   if (!fromJSON(value, static_cast<TextDocumentPositionParams &>(result), path))
     return false;
@@ -867,7 +867,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // ParameterInformation
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const ParameterInformation &value) {
+llvm::json::Value llvm::lsp::toJSON(const ParameterInformation &value) {
   assert((value.labelOffsets || !value.labelString.empty()) &&
          "parameter information label is required");
   llvm::json::Object result;
@@ -885,7 +885,7 @@ llvm::json::Value mlir::lsp::toJSON(const ParameterInformation &value) {
 // SignatureInformation
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const SignatureInformation &value) {
+llvm::json::Value llvm::lsp::toJSON(const SignatureInformation &value) {
   assert(!value.label.empty() && "signature information label is required");
   llvm::json::Object result{
       {"label", value.label},
@@ -896,7 +896,7 @@ llvm::json::Value mlir::lsp::toJSON(const SignatureInformation &value) {
   return std::move(result);
 }
 
-raw_ostream &mlir::lsp::operator<<(raw_ostream &os,
+raw_ostream &llvm::lsp::operator<<(raw_ostream &os,
                                    const SignatureInformation &value) {
   return os << value.label << " - " << toJSON(value);
 }
@@ -905,7 +905,7 @@ raw_ostream &mlir::lsp::operator<<(raw_ostream &os,
 // SignatureHelp
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const SignatureHelp &value) {
+llvm::json::Value llvm::lsp::toJSON(const SignatureHelp &value) {
   assert(value.activeSignature >= 0 &&
          "Unexpected negative value for number of active signatures.");
   assert(value.activeParameter >= 0 &&
@@ -921,7 +921,7 @@ llvm::json::Value mlir::lsp::toJSON(const SignatureHelp &value) {
 // DocumentLinkParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          DocumentLinkParams &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("textDocument", result.textDocument);
@@ -931,7 +931,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // DocumentLink
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const DocumentLink &value) {
+llvm::json::Value llvm::lsp::toJSON(const DocumentLink &value) {
   return llvm::json::Object{
       {"range", value.range},
       {"target", value.target},
@@ -942,7 +942,7 @@ llvm::json::Value mlir::lsp::toJSON(const DocumentLink &value) {
 // InlayHintsParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          InlayHintsParams &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("textDocument", result.textDocument) &&
@@ -953,23 +953,23 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // InlayHint
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value mlir::lsp::toJSON(const InlayHint &value) {
+llvm::json::Value llvm::lsp::toJSON(const InlayHint &value) {
   return llvm::json::Object{{"position", value.position},
                             {"kind", (int)value.kind},
                             {"label", value.label},
                             {"paddingLeft", value.paddingLeft},
                             {"paddingRight", value.paddingRight}};
 }
-bool mlir::lsp::operator==(const InlayHint &lhs, const InlayHint &rhs) {
+bool llvm::lsp::operator==(const InlayHint &lhs, const InlayHint &rhs) {
   return std::tie(lhs.position, lhs.kind, lhs.label) ==
          std::tie(rhs.position, rhs.kind, rhs.label);
 }
-bool mlir::lsp::operator<(const InlayHint &lhs, const InlayHint &rhs) {
+bool llvm::lsp::operator<(const InlayHint &lhs, const InlayHint &rhs) {
   return std::tie(lhs.position, lhs.kind, lhs.label) <
          std::tie(rhs.position, rhs.kind, rhs.label);
 }
 
-llvm::raw_ostream &mlir::lsp::operator<<(llvm::raw_ostream &os,
+llvm::raw_ostream &llvm::lsp::operator<<(llvm::raw_ostream &os,
                                          InlayHintKind value) {
   switch (value) {
   case InlayHintKind::Parameter:
@@ -984,7 +984,7 @@ llvm::raw_ostream &mlir::lsp::operator<<(llvm::raw_ostream &os,
 // CodeActionContext
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          CodeActionContext &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   if (!o || !o.map("diagnostics", result.diagnostics))
@@ -997,7 +997,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // CodeActionParams
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value,
                          CodeActionParams &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("textDocument", result.textDocument) &&
@@ -1008,13 +1008,13 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 // WorkspaceEdit
 //===----------------------------------------------------------------------===//
 
-bool mlir::lsp::fromJSON(const llvm::json::Value &value, WorkspaceEdit &result,
+bool llvm::lsp::fromJSON(const llvm::json::Value &value, WorkspaceEdit &result,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("changes", result.changes);
 }
 
-llvm::json::Value mlir::lsp::toJSON(const WorkspaceEdit &value) {
+llvm::json::Value llvm::lsp::toJSON(const WorkspaceEdit &value) {
   llvm::json::Object fileChanges;
   for (auto &change : value.changes)
     fileChanges[change.first] = llvm::json::Array(change.second);
@@ -1029,7 +1029,7 @@ const llvm::StringLiteral CodeAction::kQuickFix = "quickfix";
 const llvm::StringLiteral CodeAction::kRefactor = "refactor";
 const llvm::StringLiteral CodeAction::kInfo = "info";
 
-llvm::json::Value mlir::lsp::toJSON(const CodeAction &value) {
+llvm::json::Value llvm::lsp::toJSON(const CodeAction &value) {
   llvm::json::Object codeAction{{"title", value.title}};
   if (value.kind)
     codeAction["kind"] = *value.kind;

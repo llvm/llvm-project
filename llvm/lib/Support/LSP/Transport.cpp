@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Tools/lsp-server-support/Transport.h"
-#include "mlir/Support/ToolUtilities.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Protocol.h"
+#include "llvm/Support/LSP/Transport.h"
+#include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 #include <system_error>
 #include <utility>
+#include <atomic>
 
-using namespace mlir;
-using namespace mlir::lsp;
+using namespace llvm;
+using namespace llvm::lsp;
 
 //===----------------------------------------------------------------------===//
 // Reply
@@ -357,7 +357,7 @@ JSONTransportInputOverFile::readDelimitedMessage(std::string &json) {
     StringRef lineRef = line.str().trim();
     if (lineRef.starts_with("//")) {
       // Found a delimiter for the message.
-      if (lineRef == kDefaultSplitMarker)
+      if (lineRef == "// -----")
         break;
       continue;
     }

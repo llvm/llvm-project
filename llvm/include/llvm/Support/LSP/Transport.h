@@ -15,19 +15,25 @@
 #ifndef MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
 #define MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
 
-#include "mlir/Support/DebugStringHelper.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Protocol.h"
+#include "llvm/Support/LSP/Logging.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include "llvm/Support/raw_ostream.h"
-#include <atomic>
+#include <memory>
 
-namespace mlir {
+namespace llvm {
+// Simple helper function that returns a string as printed from a op.
+template <typename T>
+static std::string debugString(T &&op) {
+  std::string instrStr;
+  llvm::raw_string_ostream os(instrStr);
+  os << op;
+  return os.str();
+  }
 namespace lsp {
 class MessageHandler;
 
