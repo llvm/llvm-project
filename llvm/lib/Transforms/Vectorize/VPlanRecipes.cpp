@@ -3068,7 +3068,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     InstructionCost ScalarizationCost = 0;
     if (VF.isVector()) {
       if (!ResultTy->isVoidTy()) {
-        for (Type *VectorTy : getContainedTypes(toVectorizedTy(ResultTy, VF))) {
+        for (Type *VectorTy :
+             to_vector(getContainedTypes(toVectorizedTy(ResultTy, VF)))) {
           ScalarizationCost += Ctx.TTI.getScalarizationOverhead(
               cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
               /*Insert=*/true,
