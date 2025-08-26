@@ -212,8 +212,8 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
     // For backward compatibility.
     IO.enumCase(Value, "true", FormatStyle::BAS_Align);
     IO.enumCase(Value, "false", FormatStyle::BAS_DontAlign);
-    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BAS_ABDeprecated);
-    IO.enumCase(Value, "BlockIndent", FormatStyle::BAS_BIDeprecated);
+    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BAS_AlwaysBreak);
+    IO.enumCase(Value, "BlockIndent", FormatStyle::BAS_BlockIndent);
   }
 };
 
@@ -1280,7 +1280,7 @@ template <> struct MappingTraits<FormatStyle> {
     // If AlwaysBreak or BlockIndent were specified but individual
     // options for BreakAfterOpenBracket* (CloseAfterOpenBracket*),
     // initialize the latter to preserve backwards compatibility.
-    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_ABDeprecated) {
+    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak) {
       if (!Style.BreakAfterOpenBracketBracedList &&
           !Style.BreakAfterOpenBracketFunction &&
           !Style.BreakAfterOpenBracketIf && !Style.BreakAfterOpenBracketLoop &&
@@ -1290,7 +1290,7 @@ template <> struct MappingTraits<FormatStyle> {
         Style.BreakAfterOpenBracketIf = true;
       }
       Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
-    } else if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BIDeprecated) {
+    } else if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
       if (!Style.BreakAfterOpenBracketBracedList &&
           !Style.BreakAfterOpenBracketFunction &&
           !Style.BreakAfterOpenBracketIf && !Style.BreakAfterOpenBracketLoop &&
