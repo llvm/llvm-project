@@ -2,29 +2,6 @@
 
 
 
-// Test for omitting OperandType::OPERAND_UNKNOWN
-
-// ADDXri: ADD Xd, Xn, #imm{, shift}
-# RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=latency --benchmark-phase=prepare-and-assemble-snippet --opcode-name=ADDXri 2>&1 | FileCheck %s --check-prefix=ADDXri_latency
-# ADDXri_latency-NOT: Not all operands were initialized by the snippet generator for ADDXri opcode
-# ADDXri_latency:      ---
-# ADDXri_latency-NEXT: mode: latency
-# ADDXri_latency-NEXT: key:
-# ADDXri_latency-NEXT:   instructions:
-# ADDXri_latency-NEXT:     ADDXri [[REG1:X[0-9]+|LR]] [[REG2:X[0-9]+|LR]] i_0x0 i_0x0
-# ADDXri_latency: ...
-
-# RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=inverse_throughput --benchmark-phase=prepare-and-assemble-snippet --opcode-name=ADDXri 2>&1 | FileCheck %s --check-prefix=ADDXri_throughput
-# ADDXri_throughput-NOT: Not all operands were initialized by the snippet generator for ADDXri opcode
-# ADDXri_throughput:      ---
-# ADDXri_throughput-NEXT: mode: inverse_throughput
-# ADDXri_throughput-NEXT: key:
-# ADDXri_throughput-NEXT:   instructions:
-# ADDXri_throughput-NEXT:     ADDXri [[REG1:X[0-9]+|LR]] [[REG2:X[0-9]+|LR]] i_0x0 i_0x0
-# ADDXri_throughput: ...
-
-
-
 // Test for omitting OperandType::OPERAND_MSL_SHIFT_4S
 
 // MOVIv2s_msl: MOVI vd, #imm{, shift}

@@ -173,13 +173,9 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
   //   encodings or unreliable benchmark results for these system-level
   //   instructions.
   switch (OperandType) {
-  case MCOI::OperandType::OPERAND_UNKNOWN: {
-    AssignedValue = MCOperand::createImm(0);
-    return Error::success();
-  }
   // MSL (Masking Shift Left) imm operand for 32-bit splatted SIMD constants
   // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s()
-  case llvm::AArch64::OPERAND_MSL_SHIFT: {
+  case llvm::AArch64::OPERAND_SHIFT_MSL: {
     // There are two valid encodings:
     //   - Type 7: imm at [15:8], [47:40], shift = 264 (0x108) → msl #8
     //   - Type 8: imm at [23:16], [55:48], shift = 272 (0x110) → msl #16
@@ -189,8 +185,8 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     AssignedValue = MCOperand::createImm(264);
     return Error::success();
   }
+  case llvm::AArch64::OPERAND_IMPLICIT_IMM_0:
   case MCOI::OperandType::OPERAND_PCREL:
-  case MCOI::OperandType::OPERAND_FIRST_TARGET:
     AssignedValue = MCOperand::createImm(0);
     return Error::success();
   default:

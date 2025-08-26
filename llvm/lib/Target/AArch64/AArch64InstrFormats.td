@@ -1238,17 +1238,6 @@ def timm32_0_255 : Operand<i32>, TImmLeaf<i32, [{
 
 } // let OperandType = "OPERAND_IMMEDIATE"
 
-let OperandType = "OPERAND_MSL_SHIFT" in {
-  // A vector move shifter operand:
-  //  {0} - imm1: #8 or #16
-  def move_vec_shift : Operand<i32> {
-    let PrintMethod = "printShifter";
-    let OperandNamespace = "AArch64";
-    let EncoderMethod = "getMoveVecShifterOpValue";
-    let ParserMatchClass = MoveVecShifterOperand;
-  }
-} // let OperandType = "OPERAND_MSL_SHIFT"
-
 // An arithmetic shifter operand:
 //  {7-6} - shift type: 00 = lsl, 01 = lsr, 10 = asr
 //  {5-0} - imm6
@@ -1325,6 +1314,16 @@ def logical_vec_hw_shift : Operand<i32> {
   let PrintMethod = "printShifter";
   let EncoderMethod = "getVecShifterOpValue";
   let ParserMatchClass = LogicalVecHalfWordShifterOperand;
+}
+
+// A vector move shifter operand:
+//  {0} - imm1: #8 or #16
+def move_vec_shift : Operand<i32> {
+  let PrintMethod = "printShifter";
+  let EncoderMethod = "getMoveVecShifterOpValue";
+  let ParserMatchClass = MoveVecShifterOperand;
+  let OperandType = "OPERAND_SHIFT_MSL";
+  let OperandNamespace = "AArch64";
 }
 
 let DiagnosticType = "AddSubSecondSource" in {
