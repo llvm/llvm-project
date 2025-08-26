@@ -6955,7 +6955,8 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
                         Results, DL, TTI))
       return false;
 
-    // Append the result from this case to the list for each phi.
+    // Append the result  and result types from this case to the list for each
+    // phi.
     for (const auto &I : Results) {
       PHINode *PHI = I.first;
       Constant *Value = I.second;
@@ -6963,15 +6964,9 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
       if (Inserted)
         PHIs.push_back(PHI);
       It->second.push_back(std::make_pair(CaseVal, Value));
+      ResultTypes[PHI] = ResultLists[PHI][0].second->getType();
     }
   }
-
-  // Keep track of the result types.
-  for (PHINode *PHI : PHIs) {
-    ResultTypes[PHI] = ResultLists[PHI][0].second->getType();
-  }
-
-  uint64_t NumResults = ResultLists[PHIs[0]].size();
 
   // If the table has holes, we need a constant result for the default case
   // or a bitmask that fits in a register.
@@ -6979,7 +6974,6 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   bool HasDefaultResults =
       getCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest,
                      DefaultResultsList, DL, TTI);
-
   for (const auto &I : DefaultResultsList) {
     PHINode *PHI = I.first;
     Constant *Result = I.second;
@@ -6998,6 +6992,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // If the default destination is unreachable, or if the lookup table covers
   // all values of the conditional variable, branch directly to the lookup table
   // BB. Otherwise, check that the condition is within the case range.
+  uint64_t NumResults = ResultLists[PHIs[0]].size();
   bool DefaultIsReachable = !SI->defaultDestUnreachable();
 
   bool TableHasHoles = (NumResults < TableSize);
