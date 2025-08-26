@@ -4286,6 +4286,25 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           if (!VPI)
             continue;
           switch (VPI->getOpcode()) {
+          // Selects are only modelled in the legacy cost model for safe
+          // divisors.
+          case Instruction::Select: {
+            VPValue *VPV = VPI->getVPSingleValue();
+            if (VPV->getNumUsers() == 1) {
+              if (auto *WR = dyn_cast<VPWidenRecipe>(*VPV->user_begin())) {
+                switch (WR->getOpcode()) {
+                case Instruction::UDiv:
+                case Instruction::SDiv:
+                case Instruction::URem:
+                case Instruction::SRem:
+                  continue;
+                default:
+                  break;
+                }
+              }
+            }
+            [[fallthrough]];
+          }
           case VPInstruction::ActiveLaneMask:
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
