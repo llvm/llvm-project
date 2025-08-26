@@ -67,7 +67,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -501,10 +500,11 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   return S;
 }
 
-const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC) {
+const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC,
+                                             SCEV::NoWrapFlags Flags) {
   const SCEV *Res = getConstant(Ty, EC.getKnownMinValue());
   if (EC.isScalable())
-    Res = getMulExpr(Res, getVScale(Ty));
+    Res = getMulExpr(Res, getVScale(Ty), Flags);
   return Res;
 }
 

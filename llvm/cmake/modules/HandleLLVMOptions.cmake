@@ -183,7 +183,7 @@ CHECK_CXX_SOURCE_COMPILES("
 int main() { return 0; }
 " LLVM_USES_LIBSTDCXX)
 
-option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" OFF)
+option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" ON)
 
 if (LLVM_USES_LIBSTDCXX)
   if (GLIBCXX_USE_CXX11_ABI)

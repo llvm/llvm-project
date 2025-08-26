@@ -74,6 +74,10 @@ LLVMInitializeRISCVDisassembler() {
                                          createRISCVDisassembler);
   TargetRegistry::RegisterMCDisassembler(getTheRISCV64Target(),
                                          createRISCVDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheRISCV32beTarget(),
+                                         createRISCVDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheRISCV64beTarget(),
+                                         createRISCVDisassembler);
 }
 
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
@@ -554,16 +558,6 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
   return decodeZcmpRlist(Inst, Imm, Address, Decoder);
 }
 
-static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder);
-
-static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder);
-
-#include "RISCVGenDisassemblerTables.inc"
-
 static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
@@ -603,6 +597,8 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 
   return S;
 }
+
+#include "RISCVGenDisassemblerTables.inc"
 
 // Add implied SP operand for C.*SP compressed instructions. The SP operand
 // isn't explicitly encoded in the instruction.

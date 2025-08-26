@@ -3185,7 +3185,7 @@ def CIR_ComplexSubOp : CIR_Op<"complex.sub", [
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexMulOp
+// ComplexMulOp & ComplexDivOp
 //===----------------------------------------------------------------------===//
 
 def CIR_ComplexRangeKind : CIR_I32EnumAttr<
@@ -3204,18 +3204,61 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
 
-    Range is used to select the implementation used when the operation
-    is lowered to the LLVM dialect. For multiplication, 'improved',
-    'promoted', and 'basic' are all handled equivalently, producing the
-    algebraic formula with no special handling for NaN value. If 'full' is
-    used, a runtime-library function is called if one of the intermediate
-    calculations produced a NaN value.
+    For complex types with floating-point components, the `range` attribute
+    specifies the algorithm to be used when the operation is lowered to
+    the LLVM dialect. For multiplication, 'improved', 'promoted', and 'basic'
+    are all handled equivalently, producing the algebraic formula with no
+    special handling for NaN value. If 'full' is used, a runtime-library
+    function is called if one of the intermediate calculations produced
+    a NaN value.
 
     Example:
 
     ```mlir
     %2 = cir.complex.mul %0, %1 range(basic) : !cir.complex<!cir.float>
     %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_ComplexType:$lhs,
+    CIR_ComplexType:$rhs,
+    CIR_ComplexRangeKind:$range
+  );
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_ComplexDivOp : CIR_Op<"complex.div", [
+  Pure, SameOperandsAndResultType
+]> {
+  let summary = "Complex division";
+  let description = [{
+    The `cir.complex.div` operation takes two complex numbers and returns
+    their quotient.
+
+    For complex types with floating-point components, the `range` attribute
+    specifies the algorithm to be used when the operation is lowered to
+    the LLVM dialect. For division, 'improved' produces Smith's algorithms for
+    Complex division with no additional handling for NaN values. If 'promoted'
+    is used, the values are promoted to a higher precision type, if possible,
+    and the calculation is performed using the algebraic formula, with
+    no additional handling for NaN values. We fall back on Smith's algorithm
+    when the target doesn't support a higher precision type. If 'full' is used,
+    a runtime-library function is called if one of the intermediate
+    calculations produced a NaN value. and for 'basic' algebraic formula with
+    no additional handling for the NaN value will be used. For integers types
+    `range` attribute will be ignored.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.div %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
 
