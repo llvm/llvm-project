@@ -398,30 +398,6 @@ add_header_library(
     libc.src.__support.macros.attributes
 )
 
-add_header_library(
-  aba_ptr
-  HDRS
-    aba_ptr.h
-  DEPENDS
-    libc.hdr.types.size_t
-    libc.src.__support.common
-    libc.src.__support.threads.sleep
-)
-
-add_header_library(
-  mpmc_stack
-  HDRS
-    mpmc_stack.h
-  DEPENDS
-    libc.src.__support.aba_ptr
-    libc.src.__support.common
-    libc.src.__support.CPP.atomic
-    libc.src.__support.CPP.new
-    libc.src.__support.CPP.optional
-    libc.src.__support.CPP.type_traits
-)
-
-
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)

@@ -23,7 +23,6 @@ add_header_library(
     libc.src.__support.OSUtil.linux.vdso
     libc.src.__support.OSUtil.osutil
     libc.src.__support.macros.config
-    libc.src.__support.mpmc_stack
     libc.src.__support.threads.callonce
     libc.src.__support.threads.linux.raw_mutex
     libc.src.sys.auxv.getauxval # TODO: remove public entrypoint dependency
