@@ -20,7 +20,6 @@ using namespace llvm::remarks;
 Expected<Format> llvm::remarks::parseFormat(StringRef FormatStr) {
   auto Result = StringSwitch<Format>(FormatStr)
                     .Cases("", "yaml", Format::YAML)
-                    .Case("yaml-strtab", Format::YAMLStrTab)
                     .Case("bitstream", Format::Bitstream)
                     .Default(Format::Unknown);
 
@@ -36,12 +35,29 @@ Expected<Format> llvm::remarks::magicToFormat(StringRef MagicStr) {
   auto Result =
       StringSwitch<Format>(MagicStr)
           .StartsWith("--- ", Format::YAML) // This is only an assumption.
-          .StartsWith(remarks::Magic, Format::YAMLStrTab)
+          .StartsWith(remarks::Magic,
+                      Format::YAML) // Needed for remark meta section
           .StartsWith(remarks::ContainerMagic, Format::Bitstream)
           .Default(Format::Unknown);
 
   if (Result == Format::Unknown)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Unknown remark magic: '%s'", MagicStr.data());
+                             "Automatic detection of remark format failed. "
+                             "Unknown magic number: '%.4s'",
+                             MagicStr.data());
   return Result;
+}
+
+Expected<Format> llvm::remarks::detectFormat(Format Selected,
+                                             StringRef MagicStr) {
+  if (Selected == Format::Unknown)
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Unknown remark parser format.");
+  if (Selected != Format::Auto)
+    return Selected;
+
+  // Empty files are valid bitstream files
+  if (MagicStr.empty())
+    return Format::Bitstream;
+  return magicToFormat(MagicStr);
 }

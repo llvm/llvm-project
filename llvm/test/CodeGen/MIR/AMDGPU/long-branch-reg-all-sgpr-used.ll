@@ -17,6 +17,8 @@
 ; CHECK-NEXT:   waveLimiter:     false
 ; CHECK-NEXT:   hasSpilledSGPRs: false
 ; CHECK-NEXT:   hasSpilledVGPRs: false
+; CHECK-NEXT:   numWaveDispatchSGPRs: 0
+; CHECK-NEXT:   numWaveDispatchVGPRs: 0
 ; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
 ; CHECK-NEXT:   frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT:   stackPtrOffsetReg: '$sgpr32'
@@ -44,7 +46,9 @@
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_used_all_sgprs(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:
@@ -285,6 +289,8 @@
 ; CHECK-NEXT:   waveLimiter:     false
 ; CHECK-NEXT:   hasSpilledSGPRs: false
 ; CHECK-NEXT:   hasSpilledVGPRs: false
+; CHECK-NEXT:   numWaveDispatchSGPRs: 0
+; CHECK-NEXT:   numWaveDispatchVGPRs: 0
 ; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
 ; CHECK-NEXT:   frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT:   stackPtrOffsetReg: '$sgpr32'
@@ -312,7 +318,9 @@
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_high_num_sgprs_used(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:

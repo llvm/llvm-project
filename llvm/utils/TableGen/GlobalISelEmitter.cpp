@@ -129,7 +129,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
       OS << " AddressSpaces=[";
 
       StringRef AddrSpaceSeparator;
-      for (const Init *Val : AddrSpaces->getValues()) {
+      for (const Init *Val : AddrSpaces->getElements()) {
         const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           continue;
@@ -321,6 +321,7 @@ public:
   void emitAdditionalImpl(raw_ostream &OS) override;
 
   void emitMIPredicateFns(raw_ostream &OS) override;
+  void emitLeafPredicateFns(raw_ostream &OS) override;
   void emitI64ImmPredicateFns(raw_ostream &OS) override;
   void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
   void emitAPIntImmPredicateFns(raw_ostream &OS) override;
@@ -600,7 +601,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
     if (const ListInit *AddrSpaces = Predicate.getAddressSpaces()) {
       SmallVector<unsigned, 4> ParsedAddrSpaces;
 
-      for (const Init *Val : AddrSpaces->getValues()) {
+      for (const Init *Val : AddrSpaces->getElements()) {
         const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           return failedImport("Address space is not an integer");
@@ -756,9 +757,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     if (isa<IntInit>(SrcInit)) {
       InsnMatcher.addPredicate<InstructionOpcodeMatcher>(
           &Target.getInstruction(RK.getDef("G_CONSTANT")));
-    } else
+    } else {
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+    }
   } else {
     SrcGIEquivOrNull = findNodeEquiv(Src.getOperator());
     if (!SrcGIEquivOrNull)
@@ -848,11 +850,12 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     const Init *SrcInit = Src.getLeafValue();
     if (const IntInit *SrcIntInit = dyn_cast<IntInit>(SrcInit)) {
       OperandMatcher &OM =
-          InsnMatcher.addOperand(OpIdx++, Src.getName(), TempOpIdx);
+          InsnMatcher.addOperand(OpIdx++, Src.getName().str(), TempOpIdx);
       OM.addPredicate<LiteralIntOperandMatcher>(SrcIntInit->getValue());
-    } else
+    } else {
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+    }
   } else {
     assert(SrcGIOrNull &&
            "Expected to have already found an equivalent Instruction");
@@ -881,13 +884,13 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
         if (!CCDef || !CCDef->isSubClassOf("CondCode"))
           return failedImport("Unable to handle CondCode");
 
-        OperandMatcher &OM =
-            InsnMatcher.addOperand(OpIdx++, SrcChild.getName(), TempOpIdx);
+        OperandMatcher &OM = InsnMatcher.addOperand(
+            OpIdx++, SrcChild.getName().str(), TempOpIdx);
         StringRef PredType = IsFCmp ? CCDef->getValueAsString("FCmpPredicate")
                                     : CCDef->getValueAsString("ICmpPredicate");
 
         if (!PredType.empty()) {
-          OM.addPredicate<CmpPredicateOperandMatcher>(std::string(PredType));
+          OM.addPredicate<CmpPredicateOperandMatcher>(PredType.str());
           // Process the other 2 operands normally.
           --NumChildren;
         }
@@ -928,8 +931,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
         // For G_INTRINSIC/G_INTRINSIC_W_SIDE_EFFECTS, the operand immediately
         // following the defs is an intrinsic ID.
         if (I == 0) {
-          OperandMatcher &OM =
-              InsnMatcher.addOperand(OpIdx++, SrcChild.getName(), TempOpIdx);
+          OperandMatcher &OM = InsnMatcher.addOperand(
+              OpIdx++, SrcChild.getName().str(), TempOpIdx);
           OM.addPredicate<IntrinsicIDOperandMatcher>(II);
           continue;
         }
@@ -988,12 +991,12 @@ Error GlobalISelEmitter::importChildMatcher(
     bool OperandIsImmArg, unsigned OpIdx, unsigned &TempOpIdx) {
 
   const Record *PhysReg = nullptr;
-  std::string SrcChildName = std::string(getSrcChildName(SrcChild, PhysReg));
+  std::string SrcChildName = getSrcChildName(SrcChild, PhysReg).str();
   if (!SrcChild.isLeaf() &&
       SrcChild.getOperator()->isSubClassOf("ComplexPattern")) {
     // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
     // "MY_PAT:op1:op2" and the ones with same "name" represent same operand.
-    std::string PatternName = std::string(SrcChild.getOperator()->getName());
+    std::string PatternName = SrcChild.getOperator()->getName().str();
     for (const TreePatternNode &Child : SrcChild.children()) {
       PatternName += ":";
       PatternName += Child.getName();
@@ -1108,8 +1111,16 @@ Error GlobalISelEmitter::importChildMatcher(
     return Error::success();
   }
 
-  if (SrcChild.hasAnyPredicate())
-    return failedImport("Src pattern child has unsupported predicate");
+  if (SrcChild.hasAnyPredicate()) {
+    for (const TreePredicateCall &Call : SrcChild.getPredicateCalls()) {
+      const TreePredicateFn &Predicate = Call.Fn;
+
+      if (!Predicate.hasGISelLeafPredicateCode())
+        return failedImport("Src pattern child has unsupported predicate");
+      OM.addPredicate<OperandLeafPredicateMatcher>(Predicate);
+    }
+    return Error::success();
+  }
 
   // Check for constant immediates.
   if (auto *ChildInt = dyn_cast<IntInit>(SrcChild.getLeafValue())) {
@@ -1331,7 +1342,7 @@ Error GlobalISelEmitter::importLeafNodeRenderer(
     }
 
     if (R->isSubClassOf("SubRegIndex")) {
-      const CodeGenSubRegIndex *SubRegIndex = CGRegs.getSubRegIdx(R);
+      const CodeGenSubRegIndex *SubRegIndex = CGRegs.findSubRegIdx(R);
       MIBuilder.addRenderer<ImmRenderer>(SubRegIndex->EnumValue);
       return Error::success();
     }
@@ -1604,7 +1615,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     if (!SubRegInit)
       return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
 
-    CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
+    const CodeGenSubRegIndex *SubIdx =
+        CGRegs.findSubRegIdx(SubRegInit->getDef());
     const TreePatternNode &ValChild = Dst.getChild(0);
     if (!ValChild.isLeaf()) {
       // We really have to handle the source instruction, and then insert a
@@ -1673,7 +1685,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
       if (const DefInit *SubRegInit =
               dyn_cast<DefInit>(SubRegChild.getLeafValue())) {
-        CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
+        const CodeGenSubRegIndex *SubIdx =
+            CGRegs.findSubRegIdx(SubRegInit->getDef());
 
         if (Error Err = importNodeRenderer(M, DstMIBuilder, ValChild, InsertPt))
           return Err;
@@ -2002,11 +2015,11 @@ const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClass(
   const DefInit *SubRegInit = dyn_cast<DefInit>(SubRegIdxNode.getLeafValue());
   if (!SubRegInit)
     return nullptr;
-  const CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
+  const CodeGenSubRegIndex *SubIdx = CGRegs.findSubRegIdx(SubRegInit->getDef());
 
   // Use the information we found above to find a minimal register class which
   // supports the subregister and type we want.
-  return Target.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), CGRegs, SubIdx,
+  return CGRegs.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), SubIdx,
                                      /*MustBeAllocatable=*/true);
 }
 
@@ -2032,7 +2045,7 @@ const CodeGenSubRegIndex *GlobalISelEmitter::inferSubRegIndexForNode(
   const DefInit *SubRegInit = dyn_cast<DefInit>(SubRegIdxNode.getLeafValue());
   if (!SubRegInit)
     return nullptr;
-  return CGRegs.getSubRegIdx(SubRegInit->getDef());
+  return CGRegs.findSubRegIdx(SubRegInit->getDef());
 }
 
 Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
@@ -2273,10 +2286,10 @@ void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 return !R->getValueAsString("GISelPredicateCode").empty();
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return !R->getValueAsString("GISelPredicateCode").empty();
+                });
   emitMIPredicateFnsImpl<const Record *>(
       OS,
       "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
@@ -2289,15 +2302,36 @@ void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
       "PatFrag predicates.");
 }
 
+void GlobalISelEmitter::emitLeafPredicateFns(raw_ostream &OS) {
+  std::vector<const Record *> MatchedRecords;
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return (!R->getValueAsOptionalString("GISelLeafPredicateCode")
+                               .value_or(std::string())
+                               .empty());
+                });
+  emitLeafPredicateFnsImpl<const Record *>(
+      OS,
+      "  const auto &Operands = State.RecordedOperands;\n"
+      "  Register Reg = MO.getReg();\n"
+      "  (void)Operands;\n"
+      "  (void)Reg;",
+      ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
+      [](const Record *R) {
+        return R->getValueAsString("GISelLeafPredicateCode");
+      },
+      "PatFrag predicates.");
+}
+
 void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 bool Unset;
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
-                        !R->getValueAsBit("IsAPInt");
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  bool Unset;
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
+                         !R->getValueAsBit("IsAPInt");
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "I64", "int64_t", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,
@@ -2307,12 +2341,12 @@ void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 bool Unset;
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        R->getValueAsBitOrUnset("IsAPFloat", Unset);
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  bool Unset;
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         R->getValueAsBitOrUnset("IsAPFloat", Unset);
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "APFloat", "const APFloat &",
       ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
@@ -2322,11 +2356,11 @@ void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitAPIntImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        R->getValueAsBit("IsAPInt");
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         R->getValueAsBit("IsAPInt");
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "APInt", "const APInt &", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,

@@ -81,17 +81,6 @@ public:
   CreateStructuredDataFromScriptObject(ScriptObject obj) override;
 
   StructuredData::GenericSP
-  CreateScriptedBreakpointResolver(const char *class_name,
-                                   const StructuredDataImpl &args_data,
-                                   lldb::BreakpointSP &bkpt_sp) override;
-  bool ScriptedBreakpointResolverSearchCallback(
-      StructuredData::GenericSP implementor_sp,
-      SymbolContext *sym_ctx) override;
-
-  lldb::SearchDepth ScriptedBreakpointResolverSearchDepth(
-      StructuredData::GenericSP implementor_sp) override;
-
-  StructuredData::GenericSP
   CreateFrameRecognizer(const char *class_name) override;
 
   lldb::ValueObjectListSP
@@ -104,6 +93,9 @@ public:
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
   lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
+
+  lldb::ScriptedBreakpointInterfaceSP
+  CreateScriptedBreakpointInterface() override;
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 
@@ -128,8 +120,9 @@ public:
   GetChildAtIndex(const StructuredData::ObjectSP &implementor,
                   uint32_t idx) override;
 
-  int GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
-                              const char *child_name) override;
+  llvm::Expected<int>
+  GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
+                          const char *child_name) override;
 
   bool UpdateSynthProviderInstance(
       const StructuredData::ObjectSP &implementor) override;
@@ -482,7 +475,7 @@ public:
         StreamString run_string;
         run_string.Printf("run_python_interpreter (%s)",
                           m_python->GetDictionaryName());
-        PyRun_SimpleString(run_string.GetData());
+        python::RunSimpleString(run_string.GetData());
       }
     }
     SetIsDone(true);

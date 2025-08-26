@@ -62,7 +62,7 @@ elseif( CMAKE_HOST_UNIX )
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
   endif()
-  if( UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS" )
+  if( UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" )
     set(system_libs ${system_libs} kstat socket)
   endif()
   if( FUCHSIA )
@@ -112,7 +112,7 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
   if((LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$") OR LLVM_ENABLE_RPMALLOC)
     add_compile_definitions(ENABLE_OVERRIDE ENABLE_PRELOAD)
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
-    set(delayload_flags "${delayload_flags} ${WL}-INCLUDE:malloc")
+    list(APPEND delayload_flags "${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/snmalloc/override/new.cc")
     set(system_libs ${system_libs} "mincore.lib" "${WL}-INCLUDE:malloc")
@@ -130,7 +130,7 @@ endif()
 # unistd.h and it is guarded by _ALL_SOURCE, so we remove the _XOPEN_SOURCE
 # guard here. We should remove the guards all together once AIX cleans up
 # the system headers.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   remove_definitions("-D_XOPEN_SOURCE=700")
 endif()
 
@@ -182,6 +182,7 @@ add_llvm_component_library(LLVMSupport
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
+  DXILABI.cpp
   DynamicAPInt.cpp
   ELFAttributes.cpp
   ELFAttrParserCompact.cpp
@@ -257,6 +258,7 @@ add_llvm_component_library(LLVMSupport
   SuffixTree.cpp
   SystemUtils.cpp
   TarWriter.cpp
+  TextEncoding.cpp
   ThreadPool.cpp
   TimeProfiler.cpp
   Timer.cpp
@@ -295,6 +297,7 @@ add_llvm_component_library(LLVMSupport
   Path.cpp
   Process.cpp
   Program.cpp
+  ProgramStack.cpp
   RWMutex.cpp
   Signals.cpp
   Threading.cpp
@@ -314,6 +317,14 @@ add_llvm_component_library(LLVMSupport
   LINK_COMPONENTS
   Demangle
   )
+
+# Link ICU library if it is an external library.
+if(ICU_FOUND)
+  target_link_libraries(LLVMSupport
+  PRIVATE
+  ${ICU_LIBRARIES}
+  )
+endif()
 
 set(llvm_system_libs ${system_libs})
 
@@ -369,3 +380,8 @@ if(LLVM_WITH_Z3)
     ${Z3_INCLUDE_DIR}
     )
 endif()
+
+target_include_directories(LLVMSupport
+  PRIVATE
+  ${LLVM_THIRD_PARTY_DIR}/siphash/include
+)

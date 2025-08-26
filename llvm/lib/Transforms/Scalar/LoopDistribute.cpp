@@ -58,6 +58,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -111,6 +112,8 @@ static cl::opt<bool> EnableLoopDistribute(
     "enable-loop-distribute", cl::Hidden,
     cl::desc("Enable the new, experimental LoopDistribution Pass"),
     cl::init(false));
+
+static const char *DistributedMetaData = "llvm.loop.isdistributed";
 
 STATISTIC(NumLoopsDistributed, "Number of loops distributed");
 
@@ -224,6 +227,7 @@ public:
     // Delete the instructions backwards, as it has a reduced likelihood of
     // having to update as many def-use and use-def chains.
     for (auto *Inst : reverse(Unused)) {
+      salvageDebugInfo(*Inst);
       if (!Inst->use_empty())
         Inst->replaceAllUsesWith(PoisonValue::get(Inst->getType()));
       Inst->eraseFromParent();
@@ -500,8 +504,10 @@ public:
     SmallVector<int, 8> PtrToPartitions(N);
     for (unsigned I = 0; I < N; ++I) {
       Value *Ptr = RtPtrCheck->Pointers[I].PointerValue;
-      auto Instructions =
-          LAI.getInstructionsForAccess(Ptr, RtPtrCheck->Pointers[I].IsWritePtr);
+      auto Instructions = LAI.getInstructionsForAccess(Ptr, /* IsWrite */ true);
+      auto ReadInstructions =
+          LAI.getInstructionsForAccess(Ptr, /* IsWrite */ false);
+      Instructions.append(ReadInstructions.begin(), ReadInstructions.end());
 
       int &Partition = PtrToPartitions[I];
       // First set it to uninitialized.
@@ -822,6 +828,8 @@ public:
           {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
           "llvm.loop.distribute.", true);
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
+      addStringMetadataToLoop(LVer.getNonVersionedLoop(), DistributedMetaData,
+                              true);
     }
 
     // Create identical copies of the original loop for each partition and hook
@@ -981,6 +989,13 @@ static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
   bool Changed = false;
   for (Loop *L : Worklist) {
     LoopDistributeForLoop LDL(L, &F, LI, DT, SE, LAIs, ORE);
+
+    // Do not reprocess loops we already distributed
+    if (getOptionalBoolLoopAttribute(L, DistributedMetaData).value_or(false)) {
+      LLVM_DEBUG(
+          dbgs() << "LDist: Distributed loop guarded for reprocessing\n");
+      continue;
+    }
 
     // If distribution was forced for the specific loop to be
     // enabled/disabled, follow that.  Otherwise use the global flag.

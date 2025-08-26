@@ -154,11 +154,14 @@ public:
     warnOnNonstandardUsage_ = x;
     return *this;
   }
+  SemanticsContext &set_maxErrors(size_t x) {
+    maxErrors_ = x;
+    return *this;
+  }
   SemanticsContext &set_warningsAreErrors(bool x) {
     warningsAreErrors_ = x;
     return *this;
   }
-
   SemanticsContext &set_debugModuleWriter(bool x) {
     debugModuleWriter_ = x;
     return *this;
@@ -166,6 +169,8 @@ public:
 
   const DeclTypeSpec &MakeNumericType(TypeCategory, int kind = 0);
   const DeclTypeSpec &MakeLogicalType(int kind = 0);
+
+  std::size_t maxErrors() const { return maxErrors_; }
 
   bool AnyFatalError() const;
 
@@ -212,6 +217,8 @@ public:
     CHECK(location_);
     return Warn(warning, *location_, std::forward<A>(args)...);
   }
+
+  void EmitMessages(llvm::raw_ostream &);
 
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
@@ -322,6 +329,7 @@ private:
   Scope *currentHermeticModuleFileScope_{nullptr};
   ScopeIndex scopeIndex_;
   parser::Messages messages_;
+  std::size_t maxErrors_{0};
   evaluate::FoldingContext foldingContext_;
   ConstructStack constructStack_;
   struct IndexVarInfo {

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AttrOrTypeFormatGen.h"
+#include "CppGenUtilities.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
@@ -131,6 +132,12 @@ private:
   void emitTraitMethod(const InterfaceMethod &method);
 
   //===--------------------------------------------------------------------===//
+  // OpAsm{Type,Attr}Interface Default Method Emission
+
+  /// Emit 'getAlias' method using mnemonic as alias.
+  void emitMnemonicAliasMethod();
+
+  //===--------------------------------------------------------------------===//
   // Storage Class Emission
   void emitStorageClass();
   /// Generate the storage class constructor.
@@ -215,6 +222,9 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     emitAccessors();
   // Emit trait interface methods
   emitInterfaceMethods();
+  // Emit OpAsm{Type,Attr}Interface default methods
+  if (def.genMnemonicAlias())
+    emitMnemonicAliasMethod();
   defCls.finalize();
   // Emit a storage class if one is needed
   if (storageCls && def.genStorageClass())
@@ -229,11 +239,22 @@ void DefGen::createParentWithTraits() {
                                  ? strfmt("{0}::{1}", def.getStorageNamespace(),
                                           def.getStorageClassName())
                                  : strfmt("::mlir::{0}Storage", valueType));
-  for (auto &trait : def.getTraits()) {
-    defParent.addTemplateParam(
-        isa<NativeTrait>(&trait)
-            ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
-            : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName());
+  SmallVector<std::string> traitNames =
+      llvm::to_vector(llvm::map_range(def.getTraits(), [](auto &trait) {
+        return isa<NativeTrait>(&trait)
+                   ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
+                   : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName();
+      }));
+  for (auto &traitName : traitNames)
+    defParent.addTemplateParam(traitName);
+
+  // Add OpAsmInterface::Trait if we automatically generate mnemonic alias
+  // method.
+  std::string opAsmInterfaceTraitName =
+      strfmt("::mlir::OpAsm{0}Interface::Trait", defType);
+  if (def.genMnemonicAlias() &&
+      !llvm::is_contained(traitNames, opAsmInterfaceTraitName)) {
+    defParent.addTemplateParam(opAsmInterfaceTraitName);
   }
   defCls.addParent(std::move(defParent));
 }
@@ -474,7 +495,7 @@ void DefGen::emitCheckedBuilder() {
   MethodBody &body = m->body().indent();
   auto scope = body.scope("return Base::getChecked(emitError, context", ");");
   for (const auto &param : params)
-    body << ", " << param.getName();
+    body << ", std::move(" << param.getName() << ")";
 }
 
 static SmallVector<MethodParameter>
@@ -578,6 +599,22 @@ void DefGen::emitTraitMethod(const InterfaceMethod &method) {
 }
 
 //===----------------------------------------------------------------------===//
+// OpAsm{Type,Attr}Interface Default Method Emission
+
+void DefGen::emitMnemonicAliasMethod() {
+  // If the mnemonic is not set, there is nothing to do.
+  if (!def.getMnemonic())
+    return;
+
+  // Emit the mnemonic alias method.
+  SmallVector<MethodParameter> params{{"::llvm::raw_ostream &", "os"}};
+  Method *m = defCls.addMethod<Method::Const>("::mlir::OpAsmAliasResult",
+                                              "getAlias", std::move(params));
+  m->body().indent() << strfmt("os << \"{0}\";\n", *def.getMnemonic())
+                     << "return ::mlir::OpAsmAliasResult::OverridableAlias;\n";
+}
+
+//===----------------------------------------------------------------------===//
 // Storage Class Emission
 //===----------------------------------------------------------------------===//
 
@@ -631,10 +668,10 @@ void DefGen::emitHashKey() {
 }
 
 void DefGen::emitConstruct() {
-  Method *construct = storageCls->addMethod<Method::Inline>(
+  Method *construct = storageCls->addMethod(
       strfmt("{0} *", def.getStorageClassName()), "construct",
       def.hasStorageCustomConstructor() ? Method::StaticDeclaration
-                                        : Method::Static,
+                                        : Method::StaticInline,
       MethodParameter(strfmt("::mlir::{0}StorageAllocator &", valueType),
                       "allocator"),
       MethodParameter("KeyTy &&", "tblgenKey"));
@@ -775,8 +812,14 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
     NamespaceEmitter nsEmitter(os, defs.front().getDialect());
 
     // Declare all the def classes first (in case they reference each other).
-    for (const AttrOrTypeDef &def : defs)
+    for (const AttrOrTypeDef &def : defs) {
+      std::string comments = tblgen::emitSummaryAndDescComments(
+          def.getSummary(), def.getDescription());
+      if (!comments.empty()) {
+        os << comments << "\n";
+      }
       os << "class " << def.getCppClassName() << ";\n";
+    }
 
     // Emit the declarations.
     for (const AttrOrTypeDef &def : defs)
@@ -1038,15 +1081,15 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 }
 
 //===----------------------------------------------------------------------===//
-// Type Constraints
+// Constraints
 //===----------------------------------------------------------------------===//
 
 /// Find all type constraints for which a C++ function should be generated.
-static std::vector<Constraint>
-getAllTypeConstraints(const RecordKeeper &records) {
+static std::vector<Constraint> getAllCppConstraints(const RecordKeeper &records,
+                                                    StringRef constraintKind) {
   std::vector<Constraint> result;
   for (const Record *def :
-       records.getAllDerivedDefinitionsIfDefined("TypeConstraint")) {
+       records.getAllDerivedDefinitionsIfDefined(constraintKind)) {
     // Ignore constraints defined outside of the top-level file.
     if (llvm::SrcMgr.FindBufferContainingLoc(def->getLoc()[0]) !=
         llvm::SrcMgr.getMainFileID())
@@ -1060,30 +1103,72 @@ getAllTypeConstraints(const RecordKeeper &records) {
   return result;
 }
 
+static std::vector<Constraint>
+getAllCppTypeConstraints(const RecordKeeper &records) {
+  return getAllCppConstraints(records, "TypeConstraint");
+}
+
+static std::vector<Constraint>
+getAllCppAttrConstraints(const RecordKeeper &records) {
+  return getAllCppConstraints(records, "AttrConstraint");
+}
+
+/// Emit the declarations for the given constraints, of the form:
+/// `bool <constraintCppFunctionName>(<parameterTypeName> <parameterName>);`
+static void emitConstraintDecls(const std::vector<Constraint> &constraints,
+                                raw_ostream &os, StringRef parameterTypeName,
+                                StringRef parameterName) {
+  static const char *const constraintDecl = "bool {0}({1} {2});\n";
+  for (Constraint constr : constraints)
+    os << strfmt(constraintDecl, *constr.getCppFunctionName(),
+                 parameterTypeName, parameterName);
+}
+
 static void emitTypeConstraintDecls(const RecordKeeper &records,
                                     raw_ostream &os) {
-  static const char *const typeConstraintDecl = R"(
-bool {0}(::mlir::Type type);
+  emitConstraintDecls(getAllCppTypeConstraints(records), os, "::mlir::Type",
+                      "type");
+}
+
+static void emitAttrConstraintDecls(const RecordKeeper &records,
+                                    raw_ostream &os) {
+  emitConstraintDecls(getAllCppAttrConstraints(records), os,
+                      "::mlir::Attribute", "attr");
+}
+
+/// Emit the definitions for the given constraints, of the form:
+/// `bool <constraintCppFunctionName>(<parameterTypeName> <parameterName>) {
+///   return (<condition>); }`
+/// where `<condition>` is the condition template with the `self` variable
+/// replaced with the `selfName` parameter.
+static void emitConstraintDefs(const std::vector<Constraint> &constraints,
+                               raw_ostream &os, StringRef parameterTypeName,
+                               StringRef selfName) {
+  static const char *const constraintDef = R"(
+bool {0}({1} {2}) {
+return ({3});
+}
 )";
 
-  for (Constraint constr : getAllTypeConstraints(records))
-    os << strfmt(typeConstraintDecl, *constr.getCppFunctionName());
+  for (Constraint constr : constraints) {
+    FmtContext ctx;
+    ctx.withSelf(selfName);
+    std::string condition = tgfmt(constr.getConditionTemplate(), &ctx);
+    os << strfmt(constraintDef, *constr.getCppFunctionName(), parameterTypeName,
+                 selfName, condition);
+  }
 }
 
 static void emitTypeConstraintDefs(const RecordKeeper &records,
                                    raw_ostream &os) {
-  static const char *const typeConstraintDef = R"(
-bool {0}(::mlir::Type type) {
-  return ({1});
+  emitConstraintDefs(getAllCppTypeConstraints(records), os, "::mlir::Type",
+                     "type");
 }
-)";
 
-  for (Constraint constr : getAllTypeConstraints(records)) {
-    FmtContext ctx;
-    ctx.withSelf("type");
-    std::string condition = tgfmt(constr.getConditionTemplate(), &ctx);
-    os << strfmt(typeConstraintDef, *constr.getCppFunctionName(), condition);
-  }
+static void emitAttrConstraintDefs(const RecordKeeper &records,
+                                   raw_ostream &os) {
+  emitConstraintDefs(getAllCppAttrConstraints(records), os, "::mlir::Attribute",
+                     "attr");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1112,6 +1197,21 @@ static mlir::GenRegistration
                    AttrDefGenerator generator(records, os);
                    return generator.emitDecls(attrDialect);
                  });
+
+static mlir::GenRegistration
+    genAttrConstrDefs("gen-attr-constraint-defs",
+                      "Generate attribute constraint definitions",
+                      [](const RecordKeeper &records, raw_ostream &os) {
+                        emitAttrConstraintDefs(records, os);
+                        return false;
+                      });
+static mlir::GenRegistration
+    genAttrConstrDecls("gen-attr-constraint-decls",
+                       "Generate attribute constraint declarations",
+                       [](const RecordKeeper &records, raw_ostream &os) {
+                         emitAttrConstraintDecls(records, os);
+                         return false;
+                       });
 
 //===----------------------------------------------------------------------===//
 // TypeDef

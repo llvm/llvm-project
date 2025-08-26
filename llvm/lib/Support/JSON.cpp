@@ -516,7 +516,7 @@ bool Parser::parseNumber(char First, Value &Out) {
   errno = 0;
   int64_t I = std::strtoll(S.c_str(), &End, 10);
   if (End == S.end() && errno != ERANGE) {
-    Out = int64_t(I);
+    Out = I;
     return true;
   }
   // strtroull has a special handling for negative numbers, but in this

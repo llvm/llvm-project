@@ -113,8 +113,7 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
   if (SrcAS != DstAS) {
     QualType DstTy = DtorDecl->getThisType();
     llvm::Type *NewType = CGM.getTypes().ConvertType(DstTy);
-    This = getTargetHooks().performAddrSpaceCast(*this, This, SrcAS, DstAS,
-                                                 NewType);
+    This = getTargetHooks().performAddrSpaceCast(*this, This, SrcAS, NewType);
   }
 
   CallArgList Args;
@@ -182,7 +181,7 @@ static CXXRecordDecl *getCXXRecord(const Expr *E) {
   if (const PointerType *PTy = T->getAs<PointerType>())
     T = PTy->getPointeeType();
   const RecordType *Ty = T->castAs<RecordType>();
-  return cast<CXXRecordDecl>(Ty->getDecl());
+  return cast<CXXRecordDecl>(Ty->getOriginalDecl())->getDefinitionOrSelf();
 }
 
 // Note: This function also emit constructor calls to support a MSVC
@@ -207,7 +206,7 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
   }
 
   bool HasQualifier = ME->hasQualifier();
-  NestedNameSpecifier *Qualifier = HasQualifier ? ME->getQualifier() : nullptr;
+  NestedNameSpecifier Qualifier = ME->getQualifier();
   bool IsArrow = ME->isArrow();
   const Expr *Base = ME->getBase();
 
@@ -218,7 +217,7 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
 
 RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
-    bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,
+    bool HasQualifier, NestedNameSpecifier Qualifier, bool IsArrow,
     const Expr *Base, llvm::CallBase **CallOrInvoke) {
   assert(isa<CXXMemberCallExpr>(CE) || isa<CXXOperatorCallExpr>(CE));
 
@@ -362,7 +361,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (sanitizePerformTypeCheck())
     EmitTypeCheck(CodeGenFunction::TCK_MemberCall, CallLoc,
                   This.emitRawPointer(*this),
-                  C.getRecordType(CalleeDecl->getParent()),
+                  C.getCanonicalTagType(CalleeDecl->getParent()),
                   /*Alignment=*/CharUnits::Zero(), SkippedChecks);
 
   // C++ [class.virtual]p12:
@@ -374,7 +373,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   bool UseVirtualCall = CanUseVirtualCall && !DevirtualizedMethod;
 
   if (const CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl)) {
-    assert(CE->arg_begin() == CE->arg_end() &&
+    assert(CE->arguments().empty() &&
            "Destructor shouldn't have explicit parameters");
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
     if (UseVirtualCall) {
@@ -462,9 +461,9 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   else
     This = EmitLValue(BaseExpr, KnownNonNull).getAddress();
 
-  EmitTypeCheck(
-      TCK_MemberCall, E->getExprLoc(), This.emitRawPointer(*this),
-      QualType(MPT->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0));
+  CanQualType ClassType = CGM.getContext().getCanonicalTagType(RD);
+  EmitTypeCheck(TCK_MemberCall, E->getExprLoc(), This.emitRawPointer(*this),
+                ClassType);
 
   // Get the member function pointer.
   llvm::Value *MemFnPtr = EmitScalarExpr(MemFnExpr);
@@ -477,8 +476,7 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   CallArgList Args;
 
-  QualType ThisType =
-    getContext().getPointerType(getContext().getTagDeclType(RD));
+  QualType ThisType = getContext().getPointerType(ClassType);
 
   // Push the this ptr.
   Args.add(RValue::get(ThisPtrForCall), ThisType);
@@ -499,7 +497,7 @@ RValue CodeGenFunction::EmitCXXOperatorMemberCallExpr(
   assert(MD->isImplicitObjectMemberFunction() &&
          "Trying to emit a member call expr on a static method!");
   return EmitCXXMemberOrOperatorMemberCallExpr(
-      E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
+      E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/std::nullopt,
       /*IsArrow=*/false, E->getArg(0), CallOrInvoke);
 }
 
@@ -1238,11 +1236,12 @@ void CodeGenFunction::EmitNewArrayInitializer(
   // usually use memset.
   if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
     if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
-      if (RType->getDecl()->isStruct()) {
+      const RecordDecl *RD = RType->getOriginalDecl()->getDefinitionOrSelf();
+      if (RD->isStruct()) {
         unsigned NumElements = 0;
-        if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RType->getDecl()))
+        if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
           NumElements = CXXRD->getNumBases();
-        for (auto *Field : RType->getDecl()->fields())
+        for (auto *Field : RD->fields())
           if (!Field->isUnnamedBitField())
             ++NumElements;
         // FIXME: Recurse into nested InitListExprs.
@@ -1447,8 +1446,6 @@ namespace {
     unsigned NumPlacementArgs : 30;
     LLVM_PREFERRED_TYPE(AlignedAllocationMode)
     unsigned PassAlignmentToPlacementDelete : 1;
-    LLVM_PREFERRED_TYPE(TypeAwareAllocationMode)
-    unsigned PassTypeToPlacementDelete : 1;
     const FunctionDecl *OperatorDelete;
     RValueTy TypeIdentity;
     ValueTy Ptr;
@@ -1690,9 +1687,11 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
       QualType AlignValT = sizeType;
       if (allocatorType->getNumParams() > IndexOfAlignArg) {
         AlignValT = allocatorType->getParamType(IndexOfAlignArg);
-        assert(getContext().hasSameUnqualifiedType(
-                   AlignValT->castAs<EnumType>()->getDecl()->getIntegerType(),
-                   sizeType) &&
+        assert(getContext().hasSameUnqualifiedType(AlignValT->castAs<EnumType>()
+                                                       ->getOriginalDecl()
+                                                       ->getDefinitionOrSelf()
+                                                       ->getIntegerType(),
+                                                   sizeType) &&
                "wrong type for alignment parameter");
         ++ParamsToSkip;
       } else {
@@ -1974,8 +1973,7 @@ static bool EmitObjectDelete(CodeGenFunction &CGF,
   // Find the destructor for the type, if applicable.  If the
   // destructor is virtual, we'll just emit the vcall and return.
   const CXXDestructorDecl *Dtor = nullptr;
-  if (const RecordType *RT = ElementType->getAs<RecordType>()) {
-    CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+  if (const auto *RD = ElementType->getAsCXXRecordDecl()) {
     if (RD->hasDefinition() && !RD->hasTrivialDestructor()) {
       Dtor = RD->getDestructor();
 
@@ -2149,30 +2147,9 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
     return;
   }
 
-  // We might be deleting a pointer to array.  If so, GEP down to the
-  // first non-array element.
-  // (this assumes that A(*)[3][7] is converted to [3 x [7 x %A]]*)
-  if (DeleteTy->isConstantArrayType()) {
-    llvm::Value *Zero = Builder.getInt32(0);
-    SmallVector<llvm::Value*,8> GEP;
-
-    GEP.push_back(Zero); // point at the outermost array
-
-    // For each layer of array type we're pointing at:
-    while (const ConstantArrayType *Arr
-             = getContext().getAsConstantArrayType(DeleteTy)) {
-      // 1. Unpeel the array type.
-      DeleteTy = Arr->getElementType();
-
-      // 2. GEP to the first element of the array.
-      GEP.push_back(Zero);
-    }
-
-    Ptr = Builder.CreateInBoundsGEP(Ptr, GEP, ConvertTypeForMem(DeleteTy),
-                                    Ptr.getAlignment(), "del.first");
-  }
-
-  assert(ConvertTypeForMem(DeleteTy) == Ptr.getElementType());
+  // We might be deleting a pointer to array.
+  DeleteTy = getContext().getBaseElementType(DeleteTy);
+  Ptr = Ptr.withElementType(ConvertTypeForMem(DeleteTy));
 
   if (E->isArrayForm()) {
     EmitArrayDelete(*this, E, Ptr, DeleteTy);
@@ -2231,8 +2208,7 @@ llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
   auto MaybeASCast = [=](auto &&TypeInfo) {
     if (GlobAS == LangAS::Default)
       return TypeInfo;
-    return getTargetHooks().performAddrSpaceCast(CGM,TypeInfo, GlobAS,
-                                                 LangAS::Default, PtrTy);
+    return getTargetHooks().performAddrSpaceCast(CGM, TypeInfo, GlobAS, PtrTy);
   };
 
   if (E->isTypeOperand()) {
@@ -2317,7 +2293,20 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   bool IsExact = !IsDynamicCastToVoid &&
                  CGM.getCodeGenOpts().OptimizationLevel > 0 &&
                  DestRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
-                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy);
+                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy) &&
+                 !getLangOpts().PointerAuthCalls;
+
+  std::optional<CGCXXABI::ExactDynamicCastInfo> ExactCastInfo;
+  if (IsExact) {
+    ExactCastInfo = CGM.getCXXABI().getExactDynamicCastInfo(SrcRecordTy, DestTy,
+                                                            DestRecordTy);
+    if (!ExactCastInfo) {
+      llvm::Value *NullValue = EmitDynamicCastToNull(*this, DestTy);
+      if (!Builder.GetInsertBlock())
+        EmitBlock(createBasicBlock("dynamic_cast.unreachable"));
+      return NullValue;
+    }
+  }
 
   // C++ [expr.dynamic.cast]p4:
   //   If the value of v is a null pointer value in the pointer case, the result
@@ -2346,7 +2335,8 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
     // If the destination type is effectively final, this pointer points to the
     // right type if and only if its vptr has the right value.
     Value = CGM.getCXXABI().emitExactDynamicCast(
-        *this, ThisAddr, SrcRecordTy, DestTy, DestRecordTy, CastEnd, CastNull);
+        *this, ThisAddr, SrcRecordTy, DestTy, DestRecordTy, *ExactCastInfo,
+        CastEnd, CastNull);
   } else {
     assert(DestRecordTy->isRecordType() &&
            "destination type must be a record type!");

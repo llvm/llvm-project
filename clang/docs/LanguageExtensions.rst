@@ -15,6 +15,7 @@ Clang Language Extensions
    AutomaticReferenceCounting
    PointerAuthentication
    MatrixTypes
+   CXXTypeAwareAllocators
 
 Introduction
 ============
@@ -66,6 +67,9 @@ It can be used like this:
 
   ``__has_builtin`` should not be used to detect support for a builtin macro;
   use ``#ifdef`` instead.
+
+  When compiling with target offloading, ``__has_builtin`` only considers the
+  currently active target.
 
 ``__has_constexpr_builtin``
 ---------------------------
@@ -137,7 +141,7 @@ for support for non-standardized features, i.e. features not prefixed ``c_``,
 ``cxx_`` or ``objc_``.
 
 Another use of ``__has_feature`` is to check for compiler features not related
-to the language standard, such as e.g. :doc:`AddressSanitizer
+to the language standard, such as :doc:`AddressSanitizer
 <AddressSanitizer>`.
 
 If the ``-pedantic-errors`` option is given, ``__has_extension`` is equivalent
@@ -376,8 +380,8 @@ Builtin Macros
 
 ``__FILE_NAME__``
   Clang-specific extension that functions similar to ``__FILE__`` but only
-  renders the last path component (the filename) instead of an invocation
-  dependent full path to that file.
+  renders the last path component (the filename) instead of an
+  invocation-dependent full path to that file.
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
@@ -497,7 +501,7 @@ __const, __const__, __volatile, __volatile__, __restrict, __restrict__
 ----------------------------------------------------------------------
 
 These are alternate spellings for their non-underscore counterparts, but are
-available in all langauge modes.
+available in all language modes.
 
 __decltype
 ----------
@@ -526,7 +530,7 @@ __typeof, __typeof__, __typeof_unqual, __typeof_unqual__
 --------------------------------------------------------
 
 ``__typeof`` and ``__typeof__`` are alternate spellings for ``typeof``, but are
-available in all langauge modes. These spellings result in the operand,
+available in all language modes. These spellings result in the operand,
 retaining all qualifiers.
 
 ``__typeof_unqual`` and ``__typeof_unqual__`` are alternate spellings for the
@@ -631,11 +635,12 @@ C and C++.  For example:
     return v;
   }
 
+
 Boolean vectors are a Clang extension of the ext vector type.  Boolean vectors
 are intended, though not guaranteed, to map to vector mask registers.  The size
 parameter of a boolean vector type is the number of bits in the vector.  The
 boolean vector is dense and each bit in the boolean vector is one vector
-element.
+element. Query for this feature with ``__has_feature(ext_vector_type_boolean)``.
 
 The semantics of boolean vectors borrows from C bit-fields with the following
 differences:
@@ -652,6 +657,16 @@ differences:
 The size and alignment are both the number of bits rounded up to the next power
 of two, but the alignment is at most the maximum vector alignment of the
 target.
+
+A boolean vector can be used in a ternary `?:` operator to select vector
+elements of a different type.
+
+.. code-block:: c++
+
+  typedef int int4 __attribute__((ext_vector_type(4)));
+  typedef bool bool4 __attribute__((ext_vector_type(4)));
+
+  int4 blend(bool4 cond, int4 a, int4 b) { return cond ? a : b; }
 
 
 Vector Literals
@@ -715,7 +730,7 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
   a NEON vector or an SVE vector, it's only available in C++ and uses normal bool
   conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
-  And it selects base on signedness of the condition operands (OpenCL v1.1 s6.3.9).
+  And it selects based on signedness of the condition operands (OpenCL v1.1 s6.3.9).
 .. [#] sizeof can only be used on vector length specific SVE types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
@@ -753,9 +768,12 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
-The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
+The elementwise intrinsics ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
-``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
+``__builtin_elementwise_sub_sat``, ``__builtin_elementwise_max``,
+``__builtin_elementwise_min``, ``__builtin_elementwise_abs``,
+``__builtin_elementwise_ctlz``, ``__builtin_elementwise_cttz``, and
+``__builtin_elementwise_fma`` can be called in a ``constexpr`` context.
 
 No implicit promotion of integer types takes place. The mixing of integer types
 of different sizes and signs is forbidden in binary and ternary builtins.
@@ -847,6 +865,31 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 semantics, see `LangRef
                                                 <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                                 for the comparison.
+ T __builtin_elementwise_maximumnum(T x, T y)   return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minimumnum(T x, T y)   return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                left by z, and the most significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
+
+T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Concatenate x and y (x is the most       integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                right by z, and the least significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
+ T __builtin_elementwise_ctlz(T x[, T y])       return the number of leading 0 bits in the first argument. If          integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. It is undefined behaviour if the
+                                                first argument is 0 and no second argument is provided.
+ T __builtin_elementwise_cttz(T x[, T y])       return the number of trailing 0 bits in the first argument. If         integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. It is undefined behaviour if the
+                                                first argument is 0 and no second argument is provided.
 ============================================== ====================================================================== =========================================
 
 
@@ -856,7 +899,7 @@ Each builtin returns a scalar equivalent to applying the specified
 operation(x, y) as recursive even-odd pairwise reduction to all vector
 elements. ``operation(x, y)`` is repeatedly applied to each non-overlapping
 even-odd element pair with indices ``i * 2`` and ``i * 2 + 1`` with
-``i in [0, Number of elements / 2)``. If the numbers of elements is not a
+``i in [0, Number of elements / 2)``. If the number of elements is not a
 power of 2, the vector is widened with neutral elements for the reduction
 at the end to the next power of 2.
 
@@ -898,6 +941,24 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
                                          <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                          for the comparison.
 ======================================= ====================================================================== ==================================
+
+*Masked Builtins*
+
+Each builtin accesses memory according to a provided boolean mask. These are
+provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
+argument is always boolean mask vector.
+
+Example:
+
+.. code-block:: c++
+
+    using v8b = bool [[clang::ext_vector_type(8)]];
+    using v8i = int [[clang::ext_vector_type(8)]];
+
+    v8i load(v8b m, v8i *p) { return __builtin_masked_load(m, p); }
+
+    void store(v8b m, v8i v, v8i *p) { __builtin_masked_store(m, v, p); }
+
 
 Matrix Types
 ============
@@ -1001,6 +1062,7 @@ to ``float``; see below for more information on this emulation.
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
   * SystemZ (emulated)
+  * LoongArch (emulated)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
 
@@ -1008,6 +1070,7 @@ to ``float``; see below for more information on this emulation.
   * 64-bit ARM (AArch64)
   * RISC-V
   * X86 (when SSE2 is available)
+  * LoongArch
 
 (For X86, SSE2 is available on 64-bit and all recent 32-bit processors.)
 
@@ -1488,7 +1551,7 @@ C++14 digit separators
 
 Use ``__cpp_digit_separators`` to determine if support for digit separators
 using single quotes (for instance, ``10'000``) is enabled. At this time, there
-is no corresponding ``__has_feature`` name
+is no corresponding ``__has_feature`` name.
 
 C++14 generalized lambda capture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1537,6 +1600,13 @@ C++14 variable templates
 Use ``__has_feature(cxx_variable_templates)`` or
 ``__has_extension(cxx_variable_templates)`` to determine if support for
 templated variable declarations is enabled.
+
+C++ type aware allocators
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use ``__has_extension(cxx_type_aware_allocators)`` to determine the existence of
+support for the future C++2d type aware allocator feature. For full details, see
+:doc:`C++ Type Aware Allocators <CXXTypeAwareAllocators>` for additional details.
 
 C11
 ---
@@ -1633,7 +1703,7 @@ Modules
 Use ``__has_feature(modules)`` to determine if Modules have been enabled.
 For example, compiling code with ``-fmodules`` enables the use of Modules.
 
-More information could be found `here <https://clang.llvm.org/docs/Modules.html>`_.
+More information can be found `here <https://clang.llvm.org/docs/Modules.html>`_.
 
 Language Extensions Back-ported to Previous Standards
 =====================================================
@@ -1680,13 +1750,44 @@ Static assert with user-generated message     __cpp_static_assert >= 202306L   C
 Pack Indexing                                 __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``        __cpp_deleted_function           C++26         C++03
 Variadic Friends                              __cpp_variadic_friend            C++26         C++03
+Trivial Relocatability                        __cpp_trivial_relocatability     C++26         C++03
 --------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                 C99           C89
+``_Complex`` (N693)                                                            C99           C89, C++
+``_Bool`` (N815)                                                               C99           C89
+Variable-length arrays (N683)                                                  C99           C89, C++
+Flexible array members                                                         C99           C89, C++
+static and type quals in arrays                                                C99           C89
+``long long`` (N601)                                                           C99           C89
+Hexadecimal floating constants (N308)                                          C99           C89
+Compound literals (N716)                                                       C99           C89, C++
+``//`` comments (N644)                                                         C99           C89
+Mixed declarations and code (N740)                                             C99           C89
+init-statement in for (N740)                                                   C99           C89
+Variadic macros (N707)                                                         C99           C89
+Empty macro arguments (N570)                                                   C99           C89
+Trailing comma in enum declaration                                             C99           C89
+Implicit ``return 0`` in ``main``                                              C99           C89
+``__func__`` (N611)                                                            C99           C89
+``_Generic`` (N1441)                                                           C11           C89, C++
+``_Static_assert`` (N1330)                                                     C11           C89, C++
+``_Atomic`` (N1485)                                                            C11           C89, C++
+``_Thread_local`` (N1364)                                                      C11           C89, C++
 Array & element qualification (N2607)                                          C23           C89
 Attributes (N2335)                                                             C23           C89
 ``#embed`` (N3017)                                                             C23           C89, C++
+Enum with fixed underlying type (N3030)                                        C23           C89
+``#warning`` (N2686)                                                           C23           C89
+``_BitInt`` (N3035)                                                            C23           C89, C++
+Binary literals (N2549)                                                        C23           C89
+Unnamed parameters in a function definition                                    C23           C89
+Free positioning of labels (N2508)                                             C23           C89
+``#elifdef`` (N2645)                                                           C23           C89
+``__has_include`` (N2799)                                                      C23           C89
 Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
 ``_Countof`` (N3369, N3469)                                                    C2y           C89
+``_Generic`` with a type operand (N3260)                                       C2y           C89, C++
+``++``/``--`` on ``_Complex`` value (N3259)                                    C2y           C89, C++
 ============================================= ================================ ============= =============
 
 Builtin type aliases
@@ -1728,6 +1829,37 @@ __make_integer_seq
   using __make_integer_seq = ...;
 
 This alias returns ``IntSeq`` instantiated with ``IntSeqT = T``and ``Ints`` being the pack ``0, ..., N - 1``.
+
+__builtin_dedup_pack
+--------------------
+
+.. code-block:: c++
+
+  template <class... Ts>
+  using __builtin_dedup_pack = ...;
+
+This alias takes a template parameter pack ``Ts`` and produces a new unexpanded pack containing the unique types
+from ``Ts``, with the order of the first occurrence of each type preserved.
+It is useful in template metaprogramming to normalize type lists.
+
+The resulting pack can be expanded in contexts like template argument lists or base specifiers.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  template <typename...> struct TypeList;
+
+  // The resulting type is TypeList<int, double, char>
+  template <typename ...ExtraTypes>
+  using MyTypeList = TypeList<__builtin_dedup_pack<int, double, int, char, double, ExtraTypes...>...>;
+
+**Limitations**:
+
+* This builtin can only be used inside a template.
+* The resulting pack is currently only supported for expansion in template argument lists and base specifiers.
+* This builtin cannot be assigned to a template template parameter.
+
 
 Type Trait Primitives
 =====================
@@ -1858,11 +1990,24 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_trivially_constructible`` (C++, GNU, Microsoft)
 * ``__is_trivially_copyable`` (C++, GNU, Microsoft)
 * ``__is_trivially_destructible`` (C++, MSVC 2013)
-* ``__is_trivially_relocatable`` (Clang): Returns true if moving an object
+* ``__is_trivially_relocatable`` (Clang) (Deprecated,
+  use ``__builtin_is_cpp_trivially_relocatable`` instead).
+  Returns true if moving an object
   of the given type, and then destroying the source object, is known to be
   functionally equivalent to copying the underlying bytes and then dropping the
-  source object on the floor. This is true of trivial types and types which
+  source object on the floor. This is true of trivial types,
+  C++26 relocatable types, and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
+  This trait is deprecated and should be replaced by
+  ``__builtin_is_cpp_trivially_relocatable``. Note, however, that it is generally
+  unsafe to relocate a C++-relocatable type with ``memcpy`` or ``memmove``;
+  use ``__builtin_trivially_relocate``.
+* ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if an object
+  is trivially relocatable, as defined by the C++26 standard [meta.unary.prop].
+  Note that when relocating the caller code should ensure that if the object is polymorphic,
+  the dynamic type is of the most derived type. Padding bytes should not be copied.
+* ``__builtin_is_replaceable`` (C++): Returns true if an object
+  is replaceable, as defined by the C++26 standard [meta.unary.prop].
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
   object representations. Note that types containing padding bytes are never
@@ -1983,7 +2128,7 @@ even if there is no valid ``std::tuple_element`` specialization or suitable
 Blocks
 ======
 
-The syntax and high level language feature description is in
+The syntax and high-level language feature description is in
 :doc:`BlockLanguageSpec<BlockLanguageSpec>`. Implementation and ABI details for
 the clang implementation are in :doc:`Block-ABI-Apple<Block-ABI-Apple>`.
 
@@ -2028,8 +2173,19 @@ references can be used instead of numeric references.
       return -1;
   }
 
+ASM Goto versus Branch Target Enforcement
+=========================================
 
-Constexpr strings in GNU ASM statememts
+Some target architectures implement branch target enforcement, by requiring
+indirect (register-controlled) branch instructions to jump only to locations
+marked by a special instruction (such as AArch64 ``bti``).
+
+The assembler code inside an ``asm goto`` statement is expected not to use a
+branch instruction of that kind to transfer control to any of its destination
+labels. Therefore, using a label in an ``asm goto`` statement does not cause
+clang to put a ``bti`` or equivalent instruction at the label.
+
+Constexpr strings in GNU ASM statements
 =======================================
 
 In C++11 mode (and greater), Clang supports specifying the template,
@@ -2042,7 +2198,7 @@ producing an object with the following member functions
   constexpr size_t size() const;
 
 such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
-This mechanism follow the same rules as ``static_assert`` messages in
+This mechanism follows the same rules as ``static_assert`` messages in
 C++26, see ``[dcl.pre]/p12``.
 
 Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
@@ -2289,7 +2445,7 @@ Objective-C Autosynthesis of Properties
 
 Clang provides support for autosynthesis of declared properties.  Using this
 feature, clang provides default synthesis of those properties not declared
-@dynamic and not having user provided backing getter and setter methods.
+@dynamic and not having user-provided backing getter and setter methods.
 ``__has_feature(objc_default_synthesize_properties)`` checks for availability
 of this feature in version of clang being used.
 
@@ -2303,7 +2459,7 @@ In Objective-C, functions and methods are generally assumed to follow the
 <https://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html>`_
 conventions for ownership of object arguments and
 return values. However, there are exceptions, and so Clang provides attributes
-to allow these exceptions to be documented. This are used by ARC and the
+to allow these exceptions to be documented. These are used by ARC and the
 `static analyzer <https://clang-analyzer.llvm.org>`_ Some exceptions may be
 better described using the ``objc_method_family`` attribute instead.
 
@@ -2529,7 +2685,7 @@ Such functionality is not conformant and does not guarantee to compile
 correctly in any circumstances. It can be used if:
 
 - the kernel source does not contain call expressions to (member-) function
-  pointers, or virtual functions. For example this extension can be used in
+  pointers, or virtual functions. For example, this extension can be used in
   metaprogramming algorithms to be able to specify/detect types generically.
 
 - the generated kernel binary does not contain indirect calls because they
@@ -2567,7 +2723,7 @@ functions with variadic prototypes do not get generated in binary e.g. the
 variadic prototype is used to specify a function type with any number of
 arguments in metaprogramming algorithms in C++ for OpenCL.
 
-This extensions can also be used when the kernel code is intended for targets
+This extension can also be used when the kernel code is intended for targets
 supporting the variadic arguments e.g. majority of CPU targets.
 
 **Example of Use**:
@@ -2656,7 +2812,7 @@ address space qualifiers, therefore, other type qualifiers such as
 Legacy 1.x atomics with generic address space
 ---------------------------------------------
 
-Clang allows use of atomic functions from the OpenCL 1.x standards
+Clang allows the use of atomic functions from the OpenCL 1.x standards
 with the generic address space pointer in C++ for OpenCL mode.
 
 This is a non-portable feature and might not be supported by all
@@ -2787,7 +2943,7 @@ to a possibly overlapping destination region. It takes five arguments.
 The first argument is the destination WebAssembly table, and the second
 argument is the source WebAssembly table. The third argument is the
 destination index from where the copy starts, the fourth argument is the
-source index from there the copy starts, and the fifth and last argument
+source index from where the copy starts, and the fifth and last argument
 is the number of elements to copy. It returns nothing.
 
 .. code-block:: c++
@@ -3048,11 +3204,46 @@ following way:
 
 Query for this feature with ``__has_builtin(__builtin_offsetof)``.
 
+``__builtin_get_vtable_pointer``
+--------------------------------
+
+``__builtin_get_vtable_pointer`` loads and authenticates the primary vtable
+pointer from an instance of a polymorphic C++ class. This builtin is needed
+for directly loading the vtable pointer when on platforms using
+:doc:`PointerAuthentication`.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_get_vtable_pointer(PolymorphicClass*)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  struct PolymorphicClass {
+    virtual ~PolymorphicClass();
+  };
+
+  PolymorphicClass anInstance;
+  const void* vtablePointer = __builtin_get_vtable_pointer(&anInstance);
+
+**Description**:
+
+The ``__builtin_get_vtable_pointer`` builtin loads the primary vtable
+pointer from a polymorphic C++ type. If the target platform authenticates
+vtable pointers, this builtin will perform the authentication and produce
+the underlying raw pointer. The object being queried must be polymorphic,
+and so must also be a complete type.
+
+Query for this feature with ``__has_builtin(__builtin_get_vtable_pointer)``.
+
 ``__builtin_call_with_static_chain``
 ------------------------------------
 
 ``__builtin_call_with_static_chain`` is used to perform a static call while
-setting updating the static chain register.
+updating the static chain register.
 
 **Syntax**:
 
@@ -3164,7 +3355,7 @@ Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
 The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
 features specified in string argument. It returns a positive integer if all
 features are supported and 0 otherwise. Feature names are target specific. On
-AArch64 features are combined using ``+`` like this
+AArch64, features are combined using ``+`` like this
 ``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
 If a feature name is not supported, Clang will issue a warning and replace
 builtin by the constant 0.
@@ -3384,7 +3575,7 @@ Query for this feature with ``__has_builtin(__builtin_convertvector)``.
 **Description**:
 
 The '``__builtin_bitreverse``' family of builtins is used to reverse
-the bitpattern of an integer value; for example ``0b10110110`` becomes
+the bitpattern of an integer value; for example, ``0b10110110`` becomes
 ``0b01101101``. These builtins can be used within constant expressions.
 
 ``__builtin_rotateleft``
@@ -3722,6 +3913,32 @@ Query for this feature with ``__has_builtin(__builtin_operator_new)`` or
     replaceable global (de)allocation functions, but do support calling at least
     ``::operator new(size_t)`` and ``::operator delete(void*)``.
 
+
+``__builtin_trivially_relocate``
+-----------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+  T* __builtin_trivially_relocate(T* dest, T* src, size_t count)
+
+Trivially relocates ``count`` objects of relocatable, complete type ``T``
+from ``src`` to ``dest`` and returns ``dest``.
+This builtin is used to implement ``std::trivially_relocate``.
+
+``__builtin_invoke``
+--------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  template <class Callee, class... Args>
+  decltype(auto) __builtin_invoke(Callee&& callee, Args&&... args);
+
+``__builtin_invoke`` is equivalent to ``std::invoke``.
+
 ``__builtin_preserve_access_index``
 -----------------------------------
 
@@ -3863,7 +4080,7 @@ the debugging experience.
 
 ``__builtin_allow_runtime_check`` returns true if the check at the current
 program location should be executed. It is expected to be used to implement
-``assert`` like checks which can be safely removed by optimizer.
+``assert`` like checks which can be safely removed by the optimizer.
 
 **Syntax**:
 
@@ -4223,7 +4440,7 @@ fall into one of the specified floating-point classes.
 
   if (__builtin_isfpclass(x, 448)) {
      // `x` is positive finite value
-	 ...
+         ...
   }
 
 **Description**:
@@ -4383,7 +4600,7 @@ It is undefined behavior to call this function on an already initialized
 A builtin function for the target-specific ``va_start`` function-like macro,
 available only in C23 and later. The builtin accepts zero or one argument for
 the ellipsis (``...``). If such an argument is provided, it should be the name
-of the parameter preceeding the ellipsis, which is used for compatibility with
+of the parameter preceding the ellipsis, which is used for compatibility with
 C versions before C23. It is an error to provide two or more variadic arguments.
 This function initializes the given ``__builtin_va_list`` object. It is
 undefined behavior to call this function on an already initialized
@@ -6425,3 +6642,77 @@ qualifications.
 Note, Clang does not allow an ``_Atomic`` function type because
 of explicit constraints against atomically qualified (arrays and) function
 types.
+
+
+Underspecified Object Declarations in C
+=======================================
+
+C23 introduced the notion of `underspecified object declarations <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
+(note, the final standards text is different from WG14 N3006 due to changes
+during national body comment review). When an object is declared with the
+``constexpr`` storage class specifier or has a deduced type (with the ``auto``
+specifier), it is said to be "underspecified". Underspecified declarations have
+different requirements than non-underspecified declarations. In particular, the
+identifier being declared cannot be used in its initialization. e.g.,
+
+.. code-block:: c
+
+  auto x = x; // Invalid
+  constexpr int y = y; // Invalid
+
+The standard leaves it implementation-defined whether an underspecified
+declaration may introduce additional identifiers as part of the declaration.
+
+Clang allows additional identifiers to be declared in the following cases:
+
+* A compound literal may introduce a new type. e.g.,
+
+.. code-block:: c
+
+  auto x = (struct S { int x, y; }){ 1, 2 };      // Accepted by Clang
+  constexpr int i = (struct T { int x; }){ 1 }.x; // Accepted by Clang
+
+* The type specifier for a ``constexpr`` declaration may define a new type.
+  e.g.,
+
+.. code-block:: c
+
+  constexpr struct S { int x; } s = { 1 }; // Accepted by Clang
+
+* A function declarator may be declared with parameters, including parameters
+  which introduce a new type. e.g.,
+
+.. code-block:: c
+
+  constexpr int (*fp)(int x) = nullptr;              // Accepted by Clang
+  auto f = (void (*)(struct S { int x; } s))nullptr; // Accepted by Clang
+
+* The initializer may contain a GNU statement expression which defines new
+  types or objects. e.g.,
+
+.. code-block:: c
+
+  constexpr int i = ({                              // Accepted by Clang
+    constexpr int x = 12;
+    constexpr struct S { int x; } s = { x };
+    s.x;
+  });
+  auto x = ({ struct S { int x; } s = { 0 }; s; }); // Accepted by Clang
+
+Clang intentionally does not implement the changed scoping rules from C23
+for underspecified declarations. Doing so would significantly complicate the
+implementation in order to get reasonable diagnostic behavior and also means
+Clang fails to reject some code that should be rejected. e.g.,
+
+.. code-block:: c
+
+  // This should be rejected because 'x' is not in scope within the initializer
+  // of an underspecified declaration. Clang accepts because it treats the scope
+  // of the identifier as beginning immediately after the declarator, same as with
+  // a non-underspecified declaration.
+  constexpr int x = sizeof(x);
+
+  // Clang rejects this code with a diagnostic about using the variable within its
+  // own initializer rather than rejecting the code with an undeclared identifier
+  // diagnostic.
+  auto x = x;

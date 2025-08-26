@@ -1162,8 +1162,8 @@ void LiveRangeUpdater::print(raw_ostream &OS) const {
   for (const auto &S : make_range(LR->begin(), WriteI))
     OS << ' ' << S;
   OS << "\n  Spills:";
-  for (unsigned I = 0, E = Spills.size(); I != E; ++I)
-    OS << ' ' << Spills[I];
+  for (const LiveRange::Segment &Spill : Spills)
+    OS << ' ' << Spill;
   OS << "\n  Area 2:";
   for (const auto &S : make_range(ReadI, LR->end()))
     OS << ' ' << S;

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcSubtarget.h"
+#include "SparcSelectionDAGInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
@@ -52,7 +53,15 @@ SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
       ReserveRegister(TM.getMCRegisterInfo()->getNumRegs()),
       TargetTriple(TM.getTargetTriple()), Is64Bit(is64Bit),
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
-      TLInfo(TM, *this), FrameLowering(*this) {}
+      TLInfo(TM, *this), FrameLowering(*this) {
+  TSInfo = std::make_unique<SparcSelectionDAGInfo>();
+}
+
+SparcSubtarget::~SparcSubtarget() = default;
+
+const SelectionDAGTargetInfo *SparcSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}
 
 int SparcSubtarget::getAdjustedFrameSize(int frameSize) const {
 

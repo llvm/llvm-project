@@ -17,7 +17,6 @@
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVTargetMachine.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
@@ -83,6 +82,14 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   }
   OpenCLVersion = VersionTuple(2, 2);
 
+  // Set the environment based on the target triple.
+  if (TargetTriple.getOS() == Triple::Vulkan)
+    Env = Shader;
+  else if (TargetTriple.getEnvironment() == Triple::OpenCL)
+    Env = Kernel;
+  else
+    Env = Unknown;
+
   // The order of initialization is important.
   initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
@@ -92,8 +99,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
   RegBankInfo = std::make_unique<SPIRVRegisterBankInfo>();
-  InstSelector.reset(
-      createSPIRVInstructionSelector(TM, *this, *RegBankInfo.get()));
+  InstSelector.reset(createSPIRVInstructionSelector(TM, *this, *RegBankInfo));
 }
 
 SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
@@ -113,10 +119,10 @@ bool SPIRVSubtarget::canUseExtInstSet(
 
 SPIRV::InstructionSet::InstructionSet
 SPIRVSubtarget::getPreferredInstructionSet() const {
-  if (isOpenCLEnv())
-    return SPIRV::InstructionSet::OpenCL_std;
-  else
+  if (isShader())
     return SPIRV::InstructionSet::GLSL_std_450;
+  else
+    return SPIRV::InstructionSet::OpenCL_std;
 }
 
 bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
@@ -124,7 +130,7 @@ bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
 }
 
 bool SPIRVSubtarget::isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const {
-  if (!isOpenCLEnv())
+  if (isShader())
     return false;
   return isAtLeastVer(OpenCLVersion, VerToCompareTo);
 }
@@ -147,7 +153,7 @@ void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
 // Must have called initAvailableExtensions first.
 void SPIRVSubtarget::initAvailableExtInstSets() {
   AvailableExtInstSets.clear();
-  if (!isOpenCLEnv())
+  if (isShader())
     AvailableExtInstSets.insert(SPIRV::InstructionSet::GLSL_std_450);
   else
     AvailableExtInstSets.insert(SPIRV::InstructionSet::OpenCL_std);
@@ -160,7 +166,13 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
 void SPIRVSubtarget::initAvailableExtensions(
     const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
   AvailableExtensions.clear();
-  AvailableExtensions.insert_range(AllowedExtIds);
+  const std::set<SPIRV::Extension::Extension> &ValidExtensions =
+      SPIRVExtensionsParser::getValidExtensions(TargetTriple);
+
+  for (const auto &Ext : AllowedExtIds) {
+    if (ValidExtensions.count(Ext))
+      AvailableExtensions.insert(Ext);
+  }
 
   accountForAMDShaderTrinaryMinmax();
 }

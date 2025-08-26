@@ -822,7 +822,6 @@ protected:
 
     // We passed the sanity check for the command. Proceed to set the
     // watchpoint now.
-    lldb::addr_t addr = 0;
     size_t size = 0;
 
     VariableSP var_sp;
@@ -861,19 +860,7 @@ protected:
 
     CompilerType compiler_type;
 
-    if (valobj_sp) {
-      AddressType addr_type;
-      addr = valobj_sp->GetAddressOf(false, &addr_type);
-      if (addr_type == eAddressTypeLoad) {
-        // We're in business.
-        // Find out the size of this variable.
-        size =
-            m_option_watchpoint.watch_size.GetCurrentValue() == 0
-                ? llvm::expectedToOptional(valobj_sp->GetByteSize()).value_or(0)
-                : m_option_watchpoint.watch_size.GetCurrentValue();
-      }
-      compiler_type = valobj_sp->GetCompilerType();
-    } else {
+    if (!valobj_sp) {
       const char *error_cstr = error.AsCString(nullptr);
       if (error_cstr)
         result.AppendError(error_cstr);
@@ -883,6 +870,16 @@ protected:
                                      command.GetArgumentAtIndex(0));
       return;
     }
+    auto [addr, addr_type] = valobj_sp->GetAddressOf(false);
+    if (addr_type == eAddressTypeLoad) {
+      // We're in business.
+      // Find out the size of this variable.
+      size =
+          m_option_watchpoint.watch_size.GetCurrentValue() == 0
+              ? llvm::expectedToOptional(valobj_sp->GetByteSize()).value_or(0)
+              : m_option_watchpoint.watch_size.GetCurrentValue();
+    }
+    compiler_type = valobj_sp->GetCompilerType();
 
     // Now it's time to create the watchpoint.
     uint32_t watch_type = 0;

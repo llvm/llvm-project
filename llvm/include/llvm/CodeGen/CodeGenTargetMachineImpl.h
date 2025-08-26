@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CODEGEN_CODEGENTARGETMACHINEIMPL_H
 #define LLVM_CODEGEN_CODEGENTARGETMACHINEIMPL_H
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -20,7 +21,7 @@ namespace llvm {
 /// for targets that make use of the independent code generator (CodeGen)
 /// library. Must not be used directly in code unless to inherit its
 /// implementation.
-class CodeGenTargetMachineImpl : public TargetMachine {
+class LLVM_ABI CodeGenTargetMachineImpl : public TargetMachine {
 protected: // Can only create subclasses.
   CodeGenTargetMachineImpl(const Target &T, StringRef DataLayoutString,
                            const Triple &TT, StringRef CPU, StringRef FS,
@@ -82,9 +83,9 @@ getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
   if (CM) {
     // By default, targets do not support the tiny and kernel models.
     if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel", false);
+      reportFatalUsageError("Target does not support the tiny CodeModel");
     if (*CM == CodeModel::Kernel)
-      report_fatal_error("Target does not support the kernel CodeModel", false);
+      reportFatalUsageError("Target does not support the kernel CodeModel");
     return *CM;
   }
   return Default;

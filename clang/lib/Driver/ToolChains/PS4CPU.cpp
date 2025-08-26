@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PS4CPU.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
@@ -380,8 +379,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       !Relocatable &&
       !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib);
 
-  auto AddCRTObject = [&](const char *Name) {
-    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(Name)));
+  auto AddCRTObject = [&](StringRef Name) {
+    // CRT objects can be found on user supplied library paths. This is
+    // an entrenched expectation on PlayStation.
+    CmdArgs.push_back(Args.MakeArgString("-l:" + Name));
   };
 
   if (AddStartFiles) {

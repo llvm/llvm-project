@@ -33,7 +33,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObject *m_start = nullptr;
@@ -52,7 +52,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   CompilerType m_bool_type;
@@ -126,17 +126,15 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
 }
 
 static ValueObjectSP GetDataPointer(ValueObject &root) {
-  if (auto cap_sp = root.GetChildMemberWithName("__cap_"))
-    return cap_sp;
-
-  ValueObjectSP cap_sp = root.GetChildMemberWithName("__end_cap_");
+  auto [cap_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
+      root, /*anon_struct_idx=*/2, "__cap_", "__end_cap_");
   if (!cap_sp)
     return nullptr;
 
-  if (!isOldCompressedPairLayout(*cap_sp))
-    return nullptr;
+  if (is_compressed_pair)
+    return GetFirstValueOfLibCXXCompressedPair(*cap_sp);
 
-  return GetFirstValueOfLibCXXCompressedPair(*cap_sp);
+  return cap_sp;
 }
 
 lldb::ChildCacheState
@@ -164,11 +162,18 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_start || !m_finish)
-    return UINT32_MAX;
-  return ExtractIndexFromString(name.GetCString());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return *optional_idx;
 }
 
 lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
@@ -260,14 +265,21 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_count || !m_base_data_address)
-    return UINT32_MAX;
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  uint32_t idx = *optional_idx;
+  if (idx >= CalculateNumChildrenIgnoringErrors())
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   return idx;
 }
 

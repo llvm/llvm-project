@@ -6,14 +6,13 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include <cassert>
-#include <lldb/Utility/Flags.h>
-#include <stddef.h>
-
+#include "RegisterInfoPOSIX_riscv64.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterInfoPOSIX_riscv64.h"
+#include <cassert>
+#include <stddef.h>
 
 #define GPR_OFFSET(idx) ((idx)*8 + 0)
 #define FPR_OFFSET(idx) ((idx)*8 + sizeof(RegisterInfoPOSIX_riscv64::GPR))

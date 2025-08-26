@@ -426,12 +426,9 @@ int main(int argc, const char **argv) {
   OffloadBundler Bundler(BundlerConfig);
 
   return doWork([&]() {
-    if (Unbundle) {
-      if (BundlerConfig.FilesType == "a")
-        return Bundler.UnbundleArchive();
-      else
-        return Bundler.UnbundleFiles();
-    } else
-      return Bundler.BundleFiles();
+    if (Unbundle)
+      return (BundlerConfig.FilesType == "a") ? Bundler.UnbundleArchive()
+                                              : Bundler.UnbundleFiles();
+    return Bundler.BundleFiles();
   });
 }

@@ -303,21 +303,21 @@ define float @lower_constantpool(float %a) nounwind {
 ; RV64FINX-SMALL-LABEL: lower_constantpool:
 ; RV64FINX-SMALL:       # %bb.0:
 ; RV64FINX-SMALL-NEXT:    lui a1, 260097
-; RV64FINX-SMALL-NEXT:    addiw a1, a1, -2048
+; RV64FINX-SMALL-NEXT:    addi a1, a1, -2048
 ; RV64FINX-SMALL-NEXT:    fadd.s a0, a0, a1
 ; RV64FINX-SMALL-NEXT:    ret
 ;
 ; RV64FINX-MEDIUM-LABEL: lower_constantpool:
 ; RV64FINX-MEDIUM:       # %bb.0:
 ; RV64FINX-MEDIUM-NEXT:    lui a1, 260097
-; RV64FINX-MEDIUM-NEXT:    addiw a1, a1, -2048
+; RV64FINX-MEDIUM-NEXT:    addi a1, a1, -2048
 ; RV64FINX-MEDIUM-NEXT:    fadd.s a0, a0, a1
 ; RV64FINX-MEDIUM-NEXT:    ret
 ;
 ; RV64FINX-LARGE-LABEL: lower_constantpool:
 ; RV64FINX-LARGE:       # %bb.0:
 ; RV64FINX-LARGE-NEXT:    lui a1, 260097
-; RV64FINX-LARGE-NEXT:    addiw a1, a1, -2048
+; RV64FINX-LARGE-NEXT:    addi a1, a1, -2048
 ; RV64FINX-LARGE-NEXT:    fadd.s a0, a0, a1
 ; RV64FINX-LARGE-NEXT:    ret
   %1 = fadd float %a, 1.000244140625

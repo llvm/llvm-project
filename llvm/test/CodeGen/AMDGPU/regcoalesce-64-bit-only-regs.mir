@@ -1,0 +1,57 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -start-before=register-coalescer -show-mc-encoding -o - %s | FileCheck %s
+
+# FIXME: These SRC_*_HI registers do not exist, although defined in the register file
+#        and happily used by the coalescer. The resulting encoding is in fact belong
+#        to the 64-bit register and corresponding *_LO 32-bit part of it.
+
+# CHECK-LABEL: src_private_base:
+# CHECK: s_subb_u32 s0, SRC_PRIVATE_BASE_HI, s1  ; encoding: [0xed,0x01,0x80,0x82]
+---
+name:            src_private_base
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_64 = COPY $src_private_base
+    %1:sreg_64 = IMPLICIT_DEF
+    $scc = IMPLICIT_DEF
+    %2:sreg_32 = S_SUBB_U32 killed %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
+...
+
+# CHECK-LABEL: src_private_limit:
+# CHECK: s_subb_u32 s0, SRC_PRIVATE_LIMIT_HI, s1  ; encoding: [0xee,0x01,0x80,0x82]
+---
+name:            src_private_limit
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_64 = COPY $src_private_limit
+    %1:sreg_64 = IMPLICIT_DEF
+    $scc = IMPLICIT_DEF
+    %2:sreg_32 = S_SUBB_U32 killed %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
+...
+
+# CHECK-LABEL: src_shared_base:
+# CHECK: s_subb_u32 s0, SRC_SHARED_BASE_HI, s1  ; encoding: [0xeb,0x01,0x80,0x82]
+---
+name:            src_shared_base
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_64 = COPY $src_shared_base
+    %1:sreg_64 = IMPLICIT_DEF
+    $scc = IMPLICIT_DEF
+    %2:sreg_32 = S_SUBB_U32 killed %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
+...
+
+# CHECK-LABEL: src_shared_limit:
+# CHECK: s_subb_u32 s0, SRC_SHARED_LIMIT_HI, s1  ; encoding: [0xec,0x01,0x80,0x82]
+---
+name:            src_shared_limit
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_64 = COPY $src_shared_limit
+    %1:sreg_64 = IMPLICIT_DEF
+    $scc = IMPLICIT_DEF
+    %2:sreg_32 = S_SUBB_U32 killed %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
+...

@@ -2,7 +2,6 @@
 ; RUN: opt -S -mcpu=gfx900 -amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 ; RUN: opt -S -mcpu=gfx900 -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 ;; memcpy
@@ -1722,5 +1721,23 @@ define void @memset_pattern_unknown(ptr addrspace(7) inreg %ptr, i32 inreg %leng
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.experimental.memset.pattern.p7.i32.i32(ptr addrspace(7) %ptr, i32 1, i32 %length, i1 false)
+  ret void
+}
+
+;;; Buffer load to LDS
+
+declare void @llvm.amdgcn.load.to.lds.p7(ptr addrspace(7), ptr addrspace(3), i32 immarg, i32 immarg, i32 immarg)
+
+define void @llvm_amdgcn_load_to_lds(ptr addrspace(7) inreg %p, ptr addrspace(3) inreg %l, i32 %idx) {
+; CHECK-LABEL: define void @llvm_amdgcn_load_to_lds(
+; CHECK-SAME: { ptr addrspace(8), i32 } inreg [[P:%.*]], ptr addrspace(3) inreg [[L:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[P_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 0
+; CHECK-NEXT:    [[P_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 1
+; CHECK-NEXT:    [[Q:%.*]] = add i32 [[P_OFF]], [[IDX]]
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) [[P_RSRC]], ptr addrspace(3) [[L]], i32 4, i32 [[Q]], i32 0, i32 16, i32 0)
+; CHECK-NEXT:    ret void
+;
+  %q = getelementptr i8, ptr addrspace(7) %p, i32 %idx
+  call void @llvm.amdgcn.load.to.lds.p7(ptr addrspace(7) %q, ptr addrspace(3) %l, i32 4, i32 16, i32 0)
   ret void
 }

@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_SMALLVECTOR_H
 #define LLVM_ADT_SMALLVECTOR_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
@@ -66,13 +67,13 @@ protected:
   /// This is a helper for \a grow() that's out of line to reduce code
   /// duplication.  This function will report a fatal error if it can't grow at
   /// least to \p MinSize.
-  void *mallocForGrow(void *FirstEl, size_t MinSize, size_t TSize,
-                      size_t &NewCapacity);
+  LLVM_ABI void *mallocForGrow(void *FirstEl, size_t MinSize, size_t TSize,
+                               size_t &NewCapacity);
 
   /// This is an implementation of the grow() method which only works
   /// on POD-like data types and is out of line to reduce code duplication.
   /// This function will report a fatal error if it cannot increase capacity.
-  void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
+  LLVM_ABI void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
 
 public:
   size_t size() const { return Size; }
@@ -517,7 +518,7 @@ protected:
     // use memcpy here. Note that I and E are iterators and thus might be
     // invalid for memcpy if they are equal.
     if (I != E)
-      memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+      std::memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
   }
 
   /// Double the size of the allocated memory, guaranteeing space for at
@@ -560,7 +561,7 @@ protected:
 public:
   void push_back(ValueParamT Elt) {
     const T *EltPtr = reserveForParamAndGetAddress(Elt);
-    memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
+    std::memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
     this->set_size(this->size() + 1);
   }
 
@@ -1318,6 +1319,26 @@ extern template class llvm::SmallVectorBase<uint32_t>;
 #if SIZE_MAX > UINT32_MAX
 extern template class llvm::SmallVectorBase<uint64_t>;
 #endif
+
+// Provide DenseMapInfo for SmallVector of a type which has info.
+template <typename T, unsigned N> struct DenseMapInfo<llvm::SmallVector<T, N>> {
+  static SmallVector<T, N> getEmptyKey() {
+    return {DenseMapInfo<T>::getEmptyKey()};
+  }
+
+  static SmallVector<T, N> getTombstoneKey() {
+    return {DenseMapInfo<T>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const SmallVector<T, N> &V) {
+    return static_cast<unsigned>(hash_combine_range(V));
+  }
+
+  static bool isEqual(const SmallVector<T, N> &LHS,
+                      const SmallVector<T, N> &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // end namespace llvm
 

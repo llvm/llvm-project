@@ -421,8 +421,8 @@ static const PassInfo *getPassInfo(StringRef PassName) {
   const PassRegistry &PR = *PassRegistry::getPassRegistry();
   const PassInfo *PI = PR.getPassInfo(PassName);
   if (!PI)
-    report_fatal_error(Twine('\"') + Twine(PassName) +
-                       Twine("\" pass is not registered."));
+    reportFatalUsageError(Twine('\"') + Twine(PassName) +
+                          Twine("\" pass is not registered."));
   return PI;
 }
 
@@ -438,7 +438,7 @@ getPassNameAndInstanceNum(StringRef PassName) {
 
   unsigned InstanceNum = 0;
   if (!InstanceNumStr.empty() && InstanceNumStr.getAsInteger(10, InstanceNum))
-    report_fatal_error("invalid pass instance specifier " + PassName);
+    reportFatalUsageError("invalid pass instance specifier " + PassName);
 
   return std::make_pair(Name, InstanceNum);
 }
@@ -465,11 +465,11 @@ void TargetPassConfig::setStartStopPasses() {
   StopBefore = getPassIDFromName(StopBeforeName);
   StopAfter = getPassIDFromName(StopAfterName);
   if (StartBefore && StartAfter)
-    report_fatal_error(Twine(StartBeforeOptName) + Twine(" and ") +
-                       Twine(StartAfterOptName) + Twine(" specified!"));
+    reportFatalUsageError(Twine(StartBeforeOptName) + Twine(" and ") +
+                          Twine(StartAfterOptName) + Twine(" specified!"));
   if (StopBefore && StopAfter)
-    report_fatal_error(Twine(StopBeforeOptName) + Twine(" and ") +
-                       Twine(StopAfterOptName) + Twine(" specified!"));
+    reportFatalUsageError(Twine(StopBeforeOptName) + Twine(" and ") +
+                          Twine(StopAfterOptName) + Twine(" specified!"));
   Started = (StartAfter == nullptr) && (StartBefore == nullptr);
 }
 
@@ -635,9 +635,9 @@ CodeGenTargetMachineImpl::createPassConfig(PassManagerBase &PM) {
 
 TargetPassConfig::TargetPassConfig()
   : ImmutablePass(ID) {
-  report_fatal_error("Trying to construct TargetPassConfig without a target "
-                     "machine. Scheduling a CodeGen pass without a target "
-                     "triple set?");
+  reportFatalUsageError("trying to construct TargetPassConfig without a target "
+                        "machine. Scheduling a CodeGen pass without a target "
+                        "triple set?");
 }
 
 bool TargetPassConfig::willCompleteCodeGenPipeline() {
@@ -738,7 +738,7 @@ void TargetPassConfig::addPass(Pass *P) {
   if (StartAfter == PassID && StartAfterCount++ == StartAfterInstanceNum)
     Started = true;
   if (Stopped && !Started)
-    report_fatal_error("Cannot stop compilation after pass that is not run");
+    reportFatalUsageError("Cannot stop compilation after pass that is not run");
 }
 
 /// Add a CodeGen pass at this point in the pipeline after checking for target
@@ -893,6 +893,9 @@ void TargetPassConfig::addIRPasses() {
 
   if (EnableGlobalMergeFunc)
     addPass(createGlobalMergeFuncPass());
+
+  if (TM->getTargetTriple().isOSWindows())
+    addPass(createWindowsSecureHotPatchingPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
@@ -1408,7 +1411,8 @@ bool TargetPassConfig::isCustomizedRegAlloc() {
 bool TargetPassConfig::addRegAssignAndRewriteFast() {
   if (RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator &&
       RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator)
-    report_fatal_error("Must use fast (default) register allocator for unoptimized regalloc.");
+    reportFatalUsageError(
+        "Must use fast (default) register allocator for unoptimized regalloc.");
 
   addPass(createRegAllocPass(false));
 

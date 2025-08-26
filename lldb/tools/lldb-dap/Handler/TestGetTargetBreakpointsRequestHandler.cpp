@@ -20,7 +20,7 @@ void TestGetTargetBreakpointsRequestHandler::operator()(
   llvm::json::Array response_breakpoints;
   for (uint32_t i = 0; dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
     auto bp = Breakpoint(dap, dap.target.GetBreakpointAtIndex(i));
-    AppendBreakpoint(&bp, response_breakpoints);
+    response_breakpoints.push_back(bp.ToProtocolBreakpoint());
   }
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));

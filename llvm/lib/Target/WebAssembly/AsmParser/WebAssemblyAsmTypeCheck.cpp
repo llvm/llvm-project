@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
-#include "MCTargetDesc/WebAssemblyMCExpr.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
@@ -126,8 +126,8 @@ SmallVector<WebAssemblyAsmTypeCheck::StackType, 4>
 WebAssemblyAsmTypeCheck::valTypesToStackTypes(
     ArrayRef<wasm::ValType> ValTypes) {
   SmallVector<StackType, 4> Types(ValTypes.size());
-  std::transform(ValTypes.begin(), ValTypes.end(), Types.begin(),
-                 [](wasm::ValType Val) -> StackType { return Val; });
+  llvm::transform(ValTypes, Types.begin(),
+                  [](wasm::ValType Val) -> StackType { return Val; });
   return Types;
 }
 
@@ -258,7 +258,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
   const MCSymbolRefExpr *SymRef;
   if (getSymRef(ErrorLoc, GlobalOp, SymRef))
     return true;
-  const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+  auto *WasmSym = static_cast<const MCSymbolWasm *>(&SymRef->getSymbol());
   switch (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA)) {
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
     Type = static_cast<wasm::ValType>(WasmSym->getGlobalType().Type);
@@ -286,7 +286,7 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
   const MCSymbolRefExpr *SymRef;
   if (getSymRef(ErrorLoc, TableOp, SymRef))
     return true;
-  const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+  auto *WasmSym = static_cast<const MCSymbolWasm *>(&SymRef->getSymbol());
   if (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA) !=
       wasm::WASM_SYMBOL_TYPE_TABLE)
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
@@ -302,7 +302,7 @@ bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
   const MCSymbolRefExpr *SymRef = nullptr;
   if (getSymRef(ErrorLoc, SigOp, SymRef))
     return true;
-  const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+  auto *WasmSym = static_cast<const MCSymbolWasm *>(&SymRef->getSymbol());
   Sig = WasmSym->getSignature();
 
   if (!Sig || WasmSym->getType() != Type) {

@@ -116,6 +116,8 @@ def err_drv_cuda_host_arch : Error<
   "unsupported architecture '%0' for host compilation">;
 def err_drv_mix_cuda_hip : Error<
   "mixed CUDA and HIP compilation is not supported">;
+def err_drv_mix_offload : Error<
+  "mixed %0 and %1 offloading compilation is not supported">;
 def err_drv_bad_target_id : Error<
   "invalid target ID '%0'; format is a processor name followed by an optional "
   "colon-delimited list of features followed by an enable/disable sign (e.g., "
@@ -143,8 +145,8 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
-def warn_openmp_experimental : Warning<
-  "OpenMP support in flang is still experimental">,
+def warn_openmp_incomplete : Warning<
+  "OpenMP support for version %0 in flang is still incomplete">,
   InGroup<ExperimentalOption>;
 
 def err_drv_invalid_thread_model_for_target : Error<
@@ -206,6 +208,9 @@ def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
   "invalid version number in '%0'">;
+def err_drv_invalid_version_number_inferred
+    : Error<"invalid version number '%0' inferred from '%1'">;
+def err_drv_missing_version_number : Error<"missing version number in '%0'">;
 def err_drv_kcfi_arity_unsupported_target : Error<
   "target '%0' is unsupported by -fsanitize-kcfi-arity">;
 def err_drv_no_linker_llvm_support : Error<
@@ -389,6 +394,8 @@ def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
 
+def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
+
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
 
@@ -478,6 +485,9 @@ def warn_ignoring_ftabstop_value : Warning<
 def warn_drv_overriding_option : Warning<
   "overriding '%0' option with '%1'">,
   InGroup<DiagGroup<"overriding-option">>;
+def warn_drv_overriding_deployment_version
+    : Warning<"overriding deployment version from '%0' to '%1'">,
+      InGroup<DiagGroup<"overriding-deployment-version">>;
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
@@ -570,6 +580,13 @@ def err_drv_reduced_module_output_overrided : Warning<
   "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
+
+def remark_found_cxx20_module_usage : Remark<
+  "found C++20 module usage in file '%0'">,
+  InGroup<ModulesDriver>;
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">,
+  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -669,6 +686,10 @@ def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
 def note_drv_verify_prefix_spelling : Note<
   "-verify prefixes must start with a letter and contain only alphanumeric"
   " characters, hyphens, and underscores">;
+
+def note_command_line_code_loc_requirement
+    : Note<"-code-completion-at=<file>:<line>:<column> requires <line> and "
+           "<column> to be integers greater than zero">;
 
 def warn_drv_global_isel_incomplete : Warning<
   "-fglobal-isel support for the '%0' architecture is incomplete">,
@@ -837,6 +858,9 @@ def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
 def err_drv_multilib_custom_error : Error<
   "multilib configuration error: %0">;
+def warn_drv_multilib_not_available_for_target: Warning<
+  "no multilib structure encoded for Arm, Aarch64 and PPC targets">,
+  InGroup<DiagGroup<"multilib-not-found">>;
 
 def err_drv_experimental_crel : Error<
   "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "
@@ -861,4 +885,9 @@ def warn_drv_openacc_without_cir
     : Warning<"OpenACC directives will result in no runtime behavior; use "
               "-fclangir to enable runtime effect">,
       InGroup<SourceUsesOpenACC>;
+
+def warn_drv_gcc_install_dir_libstdcxx : Warning<
+    "future releases of the clang compiler will prefer GCC installations "
+    "containing libstdc++ include directories; '%0' would be chosen over '%1'">,
+    InGroup<DiagGroup<"gcc-install-dir-libstdcxx">>;
 }

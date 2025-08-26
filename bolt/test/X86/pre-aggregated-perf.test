@@ -11,12 +11,15 @@ REQUIRES: system-linux
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated.txt -w %t.new \
-RUN:   --show-density \
+RUN:   --show-density --heatmap %t.hm \
 RUN:   --profile-density-threshold=9 --profile-density-cutoff-hot=970000 \
 RUN:   --profile-use-dfs | FileCheck %s --check-prefix=CHECK-P2B
+RUN: FileCheck --input-file %t.hm-section-hotness.csv --check-prefix=CHECK-HM %s
 
+CHECK-P2B: HEATMAP: building heat map
 CHECK-P2B: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
 CHECK-P2B: BOLT-INFO: Functions with density >= 21.7 account for 97.00% total sample counts.
+CHECK-HM: .text, 0x400680, 0x401232, 100.0000, 4.2553, 0.0426
 
 RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated.txt -w %t.new \
 RUN:   --show-density \
@@ -33,37 +36,48 @@ RUN: llvm-bolt %t.exe -p %p/Inputs/pre-aggregated.txt --pa -o %t.null | FileChec
 
 CHECK: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
 
-RUN: cat %t | sort | FileCheck %s -check-prefix=PERF2BOLT
-RUN: cat %t.new | FileCheck %s -check-prefix=NEWFORMAT
+RUN: FileCheck %s -check-prefix=PERF2BOLT --input-file %t
+RUN: FileCheck %s -check-prefix=NEWFORMAT --input-file %t.new
 
 ## Test --profile-format option with perf2bolt
 RUN: perf2bolt %t.exe -o %t.fdata --pa -p %p/Inputs/pre-aggregated.txt \
 RUN:   --profile-format=fdata
-RUN: cat %t.fdata | sort | FileCheck %s -check-prefix=PERF2BOLT
+RUN: FileCheck %s -check-prefix=PERF2BOLT --input-file %t.fdata
 
 RUN: perf2bolt %t.exe -o %t.yaml --pa -p %p/Inputs/pre-aggregated.txt \
 RUN:   --profile-format=yaml --profile-use-dfs
-RUN: cat %t.yaml | FileCheck %s -check-prefix=NEWFORMAT
+RUN: FileCheck %s -check-prefix=NEWFORMAT --input-file %t.yaml
 
 ## Test --profile-format option with llvm-bolt --aggregate-only
 RUN: llvm-bolt %t.exe -o %t.bolt.fdata --pa -p %p/Inputs/pre-aggregated.txt \
 RUN:   --aggregate-only --profile-format=fdata
-RUN: cat %t.bolt.fdata | sort | FileCheck %s -check-prefix=PERF2BOLT
+RUN: FileCheck %s -check-prefix=PERF2BOLT --input-file %t.bolt.fdata
 
 RUN: llvm-bolt %t.exe -o %t.bolt.yaml --pa -p %p/Inputs/pre-aggregated.txt \
 RUN:   --aggregate-only --profile-format=yaml --profile-use-dfs
-RUN: cat %t.bolt.yaml | FileCheck %s -check-prefix=NEWFORMAT
+RUN: FileCheck %s -check-prefix=NEWFORMAT --input-file %t.bolt.yaml
 
-PERF2BOLT: 0 [unknown] 7f36d18d60c0 1 main 53c 0 2
-PERF2BOLT: 1 main 451 1 SolveCubic 0 0 2
-PERF2BOLT: 1 main 490 0 [unknown] 4005f0 0 1
-PERF2BOLT: 1 main 537 0 [unknown] 400610 0 1
-PERF2BOLT: 1 usqrt 30 1 usqrt 32 0 22
-PERF2BOLT: 1 usqrt 30 1 usqrt 39 4 33
-PERF2BOLT: 1 usqrt 35 1 usqrt 39 0 22
-PERF2BOLT: 1 usqrt 3d 1 usqrt 10 0 58
-PERF2BOLT: 1 usqrt 3d 1 usqrt 3f 0 22
-PERF2BOLT: 1 usqrt a 1 usqrt 10 0 22
+## Test pre-aggregated basic profile
+RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated-basic.txt -o %t.ba \
+RUN:   2>&1 | FileCheck %s --check-prefix=BASIC-ERROR
+RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated-basic.txt -o %t.ba.nl \
+RUN:   -nl 2>&1 | FileCheck %s --check-prefix=BASIC-SUCCESS
+RUN: FileCheck %s --input-file %t.ba.nl --check-prefix CHECK-BASIC-NL
+BASIC-ERROR: BOLT-INFO: 0 out of 7 functions in the binary (0.0%) have non-empty execution profile
+BASIC-SUCCESS: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
+CHECK-BASIC-NL: no_lbr cycles
+
+PERF2BOLT: 1 frame_dummy/1 1e 1 frame_dummy/1 0 0 1
+PERF2BOLT-NEXT: 1 main 451 1 SolveCubic 0 0 2
+PERF2BOLT-NEXT: 1 main 490 0 [unknown] 0 0 1
+PERF2BOLT-NEXT: 1 main 537 0 [unknown] 0 0 1
+PERF2BOLT-NEXT: 0 [unknown] 0 1 main 53c 0 2
+PERF2BOLT-NEXT: 1 usqrt a 1 usqrt 10 0 22
+PERF2BOLT-NEXT: 1 usqrt 30 1 usqrt 32 0 22
+PERF2BOLT-NEXT: 1 usqrt 30 1 usqrt 39 4 33
+PERF2BOLT-NEXT: 1 usqrt 35 1 usqrt 39 0 22
+PERF2BOLT-NEXT: 1 usqrt 3d 1 usqrt 10 0 58
+PERF2BOLT-NEXT: 1 usqrt 3d 1 usqrt 3f 0 22
 
 NEWFORMAT:  - name:            'frame_dummy/1'
 NEWFORMAT:    fid:             3

@@ -21,6 +21,27 @@
 #error "huh?"
 #endif
 
+
+inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p; }
+namespace std {
+  using size_t = decltype(sizeof(0));
+  template<typename T> struct allocator {
+    constexpr T *allocate(size_t N) {
+      return (T*)__builtin_operator_new(sizeof(T) * N); // #alloc
+    }
+    constexpr void deallocate(void *p, __SIZE_TYPE__) {
+      __builtin_operator_delete(p);
+    }
+  };
+template<typename T, typename... Args>
+constexpr T* construct_at(T* p, Args&&... args) { return ::new((void*)p) T(static_cast<Args&&>(args)...); }
+
+  template<typename T>
+  constexpr void destroy_at(T* p) {
+    p->~T();
+  }
+}
+
 extern "C" {
   typedef decltype(sizeof(int)) size_t;
   extern size_t wcslen(const wchar_t *p);
@@ -48,10 +69,10 @@ static_assert(test_address_of_incomplete_array_type() == 1234, ""); // both-erro
     constexpr NonTrivial(const NonTrivial &) : n(1) {}
     int n;
   };
-  constexpr bool test_nontrivial_memcpy() { // ref-error {{never produces a constant}}
+  constexpr bool test_nontrivial_memcpy() { // both-error {{never produces a constant}}
     NonTrivial arr[3] = {};
     __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // both-note {{non-trivially-copyable}} \
-                                                        // ref-note {{non-trivially-copyable}}
+                                                        // both-note {{non-trivially-copyable}}
     return true;
   }
   static_assert(test_nontrivial_memcpy()); // both-error {{constant}} \
@@ -208,7 +229,7 @@ namespace nan {
 
   constexpr double NaN3 = __builtin_nan("foo"); // both-error {{must be initialized by a constant expression}}
   constexpr float NaN4 = __builtin_nanf("");
-  //constexpr long double NaN5 = __builtin_nanf128("");
+  constexpr long double NaN5 = __builtin_nanf128("");
 
   /// FIXME: This should be accepted by the current interpreter as well.
   constexpr char f[] = {'0', 'x', 'A', 'E', '\0'};
@@ -655,8 +676,6 @@ void test_noexcept(int *i) {
 } // end namespace test_launder
 
 
-/// FIXME: The commented out tests here use a IntAP value and fail.
-/// This currently means we will leak the IntAP value since nothing cleans it up.
 namespace clz {
   char clz1[__builtin_clz(1) == BITSIZE(int) - 1 ? 1 : -1];
   char clz2[__builtin_clz(7) == BITSIZE(int) - 3 ? 1 : -1];
@@ -709,7 +728,7 @@ namespace clz {
   char clz48[__builtin_clzg(1ULL << (BITSIZE(long long) - 1)) == 0 ? 1 : -1];
   char clz49[__builtin_clzg(1ULL << (BITSIZE(long long) - 1), 42) == 0 ? 1 : -1];
 #ifdef __SIZEOF_INT128__
-  // int clz50 = __builtin_clzg((unsigned __int128)0);
+  int clz50 = __builtin_clzg((unsigned __int128)0);
   char clz51[__builtin_clzg((unsigned __int128)0, 42) == 42 ? 1 : -1];
   char clz52[__builtin_clzg((unsigned __int128)0x1) == BITSIZE(__int128) - 1 ? 1 : -1];
   char clz53[__builtin_clzg((unsigned __int128)0x1, 42) == BITSIZE(__int128) - 1 ? 1 : -1];
@@ -717,7 +736,7 @@ namespace clz {
   char clz55[__builtin_clzg((unsigned __int128)0xf, 42) == BITSIZE(__int128) - 4 ? 1 : -1];
 #endif
 #ifndef __AVR__
-  // int clz58 = __builtin_clzg((unsigned _BitInt(128))0);
+  int clz58 = __builtin_clzg((unsigned _BitInt(128))0);
   char clz59[__builtin_clzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
   char clz60[__builtin_clzg((unsigned _BitInt(128))0x1) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
   char clz61[__builtin_clzg((unsigned _BitInt(128))0x1, 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
@@ -775,7 +794,7 @@ namespace ctz {
   char ctz46[__builtin_ctzg(1ULL << (BITSIZE(long long) - 1)) == BITSIZE(long long) - 1 ? 1 : -1];
   char ctz47[__builtin_ctzg(1ULL << (BITSIZE(long long) - 1), 42) == BITSIZE(long long) - 1 ? 1 : -1];
 #ifdef __SIZEOF_INT128__
-  // int ctz48 = __builtin_ctzg((unsigned __int128)0);
+  int ctz48 = __builtin_ctzg((unsigned __int128)0);
   char ctz49[__builtin_ctzg((unsigned __int128)0, 42) == 42 ? 1 : -1];
   char ctz50[__builtin_ctzg((unsigned __int128)0x1) == 0 ? 1 : -1];
   char ctz51[__builtin_ctzg((unsigned __int128)0x1, 42) == 0 ? 1 : -1];
@@ -785,7 +804,7 @@ namespace ctz {
   char ctz55[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1), 42) == BITSIZE(__int128) - 1 ? 1 : -1];
 #endif
 #ifndef __AVR__
-  // int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0);
+  int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0);
   char ctz57[__builtin_ctzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
   char ctz58[__builtin_ctzg((unsigned _BitInt(128))0x1) == 0 ? 1 : -1];
   char ctz59[__builtin_ctzg((unsigned _BitInt(128))0x1, 42) == 0 ? 1 : -1];
@@ -1383,7 +1402,19 @@ namespace BuiltinMemcpy {
   static_assert(type_pun(0x3f800000) == 1.0f); // both-error {{constant}} \
                                                // both-note {{in call}}
 
-
+  struct Base { int a; };
+  struct Derived : Base { int b; };
+  constexpr int test_derived_to_base(int n) {
+    Derived arr[2] = {1, 2, 3, 4};
+    Base *p = &arr[0];
+    Base *q = &arr[1];
+    __builtin_memcpy(p, q, sizeof(Base) * n); // both-note {{source is not a contiguous array of at least 2 elements of type 'BuiltinMemcpy::Base'}}
+    return arr[0].a * 1000 + arr[0].b * 100 + arr[1].a * 10 + arr[1].b;
+  }
+  static_assert(test_derived_to_base(0) == 1234);
+  static_assert(test_derived_to_base(1) == 3234);
+  static_assert(test_derived_to_base(2) == 3434); // both-error {{constant}} \
+                                                  // both-note {{in call}}
 }
 
 namespace Memcmp {
@@ -1504,7 +1535,7 @@ namespace Memchr {
   extern struct Incomplete incomplete;
   static_assert(__builtin_memchr(&incomplete, 0, 0u) == nullptr);
   static_assert(__builtin_memchr(&incomplete, 0, 1u) == nullptr); // both-error {{not an integral constant}} \
-                                                                  // ref-note {{read of incomplete type 'struct Incomplete'}}
+                                                                  // both-note {{read of incomplete type 'struct Incomplete'}}
 
   const unsigned char &u1 = 0xf0;
   auto &&i1 = (const signed char []){-128};
@@ -1687,6 +1718,15 @@ namespace WMemMove {
                                                                      // both-note {{source of 'wmemmove' is nullptr}}
   static_assert(__builtin_wmemmove(null, &global, sizeof(wchar_t))); // both-error {{}} \
                                                                      // both-note {{destination of 'wmemmove' is nullptr}}
+
+  // Check that a pointer to an incomplete array is rejected.
+  constexpr int test_address_of_incomplete_array_type() { // both-error {{never produces a constant}}
+    extern int arr[];
+    __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0])); // both-note 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int[]'}}
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  static_assert(test_address_of_incomplete_array_type() == 1234); // both-error {{constant}} \
+                                                                  // both-note {{in call}}
 }
 
 namespace Invalid {
@@ -1697,3 +1737,102 @@ namespace Invalid {
   static_assert(test() == 0); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
 }
+
+#if __cplusplus >= 202002L
+namespace WithinLifetime {
+  constexpr int a = 10;
+  static_assert(__builtin_is_within_lifetime(&a));
+
+  consteval int IsActive(bool ReadB) {
+    union {
+      int a, b;
+    } A;
+    A.a = 10;
+    if (ReadB)
+      return __builtin_is_within_lifetime(&A.b);
+    return __builtin_is_within_lifetime(&A.a);
+  }
+  static_assert(IsActive(false));
+  static_assert(!IsActive(true));
+
+  static_assert(__builtin_is_within_lifetime((void*)nullptr)); // both-error {{not an integral constant expression}} \
+                                                               // both-note {{'__builtin_is_within_lifetime' cannot be called with a null pointer}}
+
+  constexpr int i = 2;
+  constexpr int arr[2]{};
+  void f() {
+    __builtin_is_within_lifetime(&i + 1); // both-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                          // both-note {{'__builtin_is_within_lifetime' cannot be called with a one-past-the-end pointer}} \
+                                          // both-warning {{expression result unused}}
+    __builtin_is_within_lifetime(arr + 2); // both-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                           // both-note {{'__builtin_is_within_lifetime' cannot be called with a one-past-the-end pointer}} \
+                                           // both-warning {{expression result unused}}
+  }
+
+
+  constexpr bool self = __builtin_is_within_lifetime(&self); // both-error {{must be initialized by a constant expression}} \
+                                                             // both-note {{'__builtin_is_within_lifetime' cannot be called with a pointer to an object whose lifetime has not yet begun}} \
+                                                             // ref-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                                             // ref-note {{initializer of 'self' is not a constant expression}} \
+                                                             // ref-note {{declared here}}
+
+  int nontCE(int p) { // both-note {{declared here}}
+    return __builtin_is_within_lifetime(&p); // both-error {{call to consteval function}} \
+                                             // both-note {{function parameter 'p' with unknown value cannot be used in a constant expression}}
+  }
+
+
+  struct XStd {
+    consteval XStd() {
+      __builtin_is_within_lifetime(this); // both-note {{cannot be called with a pointer to an object whose lifetime has not yet begun}}
+    }
+  } xstd; // both-error {{is not a constant expression}} \
+          // both-note {{in call to}}
+
+  /// FIXME: We do not have per-element lifetime information for primitive arrays.
+  /// See https://github.com/llvm/llvm-project/issues/147528
+  consteval bool test_dynamic(bool read_after_deallocate) {
+    std::allocator<int> a;
+    int* p = a.allocate(1); // expected-note 2{{allocation performed here was not deallocated}}
+    // a.allocate starts the lifetime of an array,
+    // the complete object of *p has started its lifetime
+    if (__builtin_is_within_lifetime(p))
+      return false;
+    std::construct_at(p);
+    if (!__builtin_is_within_lifetime(p))
+      return false;
+    std::destroy_at(p);
+    if (__builtin_is_within_lifetime(p))
+      return false;
+    a.deallocate(p, 1);
+    if (read_after_deallocate)
+      __builtin_is_within_lifetime(p); // ref-note {{read of heap allocated object that has been deleted}}
+    return true;
+  }
+  static_assert(test_dynamic(false)); // expected-error {{not an integral constant expression}}
+  static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
+                                     // ref-note {{in call to}}
+}
+
+#ifdef __SIZEOF_INT128__
+namespace I128Mul {
+  constexpr int mul() {
+    __int128 A = 10;
+    __int128 B = 10;
+    __int128 R;
+    __builtin_mul_overflow(A, B, &R);
+    return 1;
+  }
+  static_assert(mul() == 1);
+}
+#endif
+
+namespace InitParam {
+  constexpr int foo(int a) {
+      __builtin_mul_overflow(20, 10, &a);
+      return a;
+  }
+  static_assert(foo(10) == 200);
+}
+
+#endif

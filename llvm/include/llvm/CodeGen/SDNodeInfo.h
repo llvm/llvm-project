@@ -55,12 +55,14 @@ struct SDTypeConstraint {
   MVT::SimpleValueType VT;
 };
 
+using SDNodeTSFlags = uint32_t;
+
 struct SDNodeDesc {
   uint16_t NumResults;
   int16_t NumOperands;
   uint32_t Properties;
   uint32_t Flags;
-  uint32_t TSFlags;
+  SDNodeTSFlags TSFlags;
   unsigned NameOffset;
   unsigned ConstraintOffset;
   unsigned ConstraintCount;

@@ -276,6 +276,9 @@ def err_expected_while : Error<"expected 'while' in do/while loop">;
 
 def err_expected_semi_after_stmt : Error<"expected ';' after %0 statement">;
 def err_expected_semi_after_expr : Error<"expected ';' after expression">;
+def warn_attr_in_secondary_block : ExtWarn<
+  "ISO C does not allow an attribute list to appear here">,
+  InGroup<DiagGroup<"c-attribute-extension">>;
 def err_extraneous_token_before_semi : Error<"extraneous '%0' before ';'">;
 
 def err_expected_semi_after_method_proto : Error<
@@ -474,9 +477,6 @@ def err_bool_redeclaration : Error<
 def warn_cxx98_compat_static_assert : Warning<
   "'static_assert' declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_ms_static_assert : ExtWarn<
-  "use of 'static_assert' without inclusion of <assert.h> is a Microsoft "
-  "extension">, InGroup<MicrosoftStaticAssert>;
 def ext_cxx_static_assert_no_message : ExtWarn<
   "'static_assert' with no message is a C++17 extension">, InGroup<CXX17>;
 def ext_c_static_assert_no_message : ExtWarn<
@@ -830,6 +830,9 @@ def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
   "property declaration cannot have a default member initializer">;
+def ext_invalid_attribute_argument
+    : Extension<"'%0' is not allowed in an attribute argument list">,
+    InGroup<DiagGroup<"attribute-preprocessor-tokens">>;
 
 def err_assume_attr_expects_cond_expr : Error<
   "use of this expression in an %0 attribute requires parentheses">;
@@ -930,6 +933,10 @@ def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
 def warn_missing_dependent_template_keyword : ExtWarn<
   "use 'template' keyword to treat '%0' as a dependent template name">;
+
+def err_cxx26_template_template_params
+    : Error<"%select{variable template|concept}0 template parameter is a C++2c "
+            "extension">;
 
 def ext_extern_template : Extension<
   "extern templates are a C++11 extension">, InGroup<CXX11>;
@@ -1065,11 +1072,23 @@ def ext_ms_abstract_keyword : ExtWarn<
   "'abstract' keyword is a Microsoft extension">,
   InGroup<MicrosoftAbstract>;
 
+def ext_relocatable_keyword : ExtWarn<
+  "'%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0' "
+  "keyword is a C++2c extension">,
+  InGroup<CXX26>;
+def warn_relocatable_keyword  : Warning<
+  "'%select{trivially_relocatable|replaceable}0_if_eligible' "
+  "keyword is incompatible with standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
 def err_access_specifier_interface : Error<
   "interface types cannot specify '%select{private|protected}0' access">;
 
 def err_duplicate_class_virt_specifier : Error<
   "class already marked '%0'">;
+
+def err_duplicate_class_relocation_specifier : Error<
+  "class already marked '%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0'">;
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
@@ -1444,6 +1463,9 @@ def err_acc_unexpected_directive
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
 def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;
+def warn_acc_unsupported_extension_clause
+    : Warning<"unsupported OpenACC extension clause %0">,
+      InGroup<DiagGroup<"unknown-acc-extension-clause">>;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
 def err_acc_invalid_open_paren
     : Error<"expected clause-list or newline in OpenACC directive">;
@@ -1457,7 +1479,8 @@ def err_acc_expected_reduction_operator
 def err_acc_invalid_reduction_operator
     : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
             "'&', '|', '^', '&&', or '||'">;
-def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
+def err_acc_incorrect_bind_arg
+    : Error<"expected identifier or string literal in OpenACC 'bind' clause">;
 def err_acc_modifier
     : Error<"%enum_select<ACCModifier>{%Unknown{unknown}|%Duplicate{duplicate}}"
             "0 modifier %1 in OpenACC modifier-list on '%2' clause">;
@@ -1472,6 +1495,9 @@ def err_omp_multiple_step_or_linear_modifier : Error<
   "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
 def err_omp_deprecate_old_syntax: Error<
   "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
+def warn_omp_future_directive_spelling: Warning<
+  "directive spelling '%0' is introduced in a later OpenMP version">,
+  InGroup<OpenMPFuture>;
 def warn_pragma_expected_colon_r_paren : Warning<
   "missing ':' or ')' after %0 - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unknown_directive : Error<
@@ -1555,6 +1581,9 @@ def err_omp_declare_target_multiple : Error<
   "%0 appears multiple times in clauses on the same declare target directive">;
 def err_omp_declare_target_indirect_device_type: Error<
   "only 'device_type(any)' clause is allowed with indirect clause">;
+def warn_omp_deprecated_declare_target_delimited_form :
+  Warning<"the delimited form of '#pragma omp declare target' without clauses is deprecated; use '#pragma omp begin declare target' instead">,
+  InGroup<Deprecated>;
 def err_omp_expected_clause: Error<
   "expected at least one clause on '#pragma omp %0' directive">;
 def err_omp_mapper_illegal_identifier : Error<
@@ -1565,11 +1594,16 @@ def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
 def err_omp_unexpected_execution_modifier : Error<
   "unexpected 'execution' modifier in non-executable context">;
-def err_omp_unknown_adjust_args_op : Error<
-  "incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'">;
+def err_omp_unknown_adjust_args_op
+    : Error<
+          "incorrect 'adjust_args' type, expected 'need_device_ptr'%select{|, "
+          "'need_device_addr',}0 or 'nothing'">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
+def err_omp_non_by_ref_need_device_addr_modifier_argument
+    : Error<"expected reference type argument on 'adjust_args' clause with "
+            "'need_device_addr' modifier">;
 def err_omp_declare_variant_duplicate_nested_trait : Error<
   "nested OpenMP context selector contains duplicated trait '%0'"
   " in selector '%1' and set '%2' with different score">;
@@ -1668,6 +1702,8 @@ def err_omp_expected_colon : Error<"missing ':' in %0">;
 def err_omp_missing_comma : Error< "missing ',' after %0">;
 def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
+def warn_omp_default_deprecated : Warning<"'default' clause for"
+  " 'metadirective' is deprecated; use 'otherwise' instead">, InGroup<Deprecated>;
 def err_omp_requires_out_inout_depend_type : Error<
   "reserved locator 'omp_all_memory' requires 'out' or 'inout' "
   "dependency types">;
@@ -1837,10 +1873,14 @@ def err_hlsl_virtual_inheritance
     : Error<"virtual inheritance is unsupported in HLSL">;
 
 // HLSL Root Signature Parser Diagnostics
-def err_hlsl_unexpected_end_of_params
-    : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
+def err_hlsl_invalid_token : Error<"invalid %select{parameter|value}0 of %1">;
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
-def err_hlsl_number_literal_overflow : Error<"integer literal is too large to be represented as a 32-bit %select{signed |}0 integer type">;
+def err_hlsl_number_literal_overflow : Error<
+  "%select{integer|float}0 literal is too large to be represented as a "
+  "%select{32-bit %select{signed|}1 integer|float}0 type">;
+def err_hlsl_number_literal_underflow : Error<
+  "float literal has a magnitude that is too small to be represented as a float type">;
+def err_hlsl_rootsig_non_zero_flag : Error<"flag value is neither a literal 0 nor a named value">;
 
 } // end of Parser diagnostics

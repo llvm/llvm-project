@@ -186,9 +186,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -236,7 +238,7 @@ cl::opt<LoweringKind> LoweringKindLoc(
                    "Lower via mixture of above strategies")));
 
 template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
-  llvm::sort(V.begin(), V.end(), [](const auto *L, const auto *R) {
+  llvm::sort(V, [](const auto *L, const auto *R) {
     return L->getName() < R->getName();
   });
   return {std::move(V)};
@@ -572,7 +574,7 @@ public:
 
       if (OrderedKernels.size() > UINT32_MAX) {
         // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
-        report_fatal_error("Unimplemented LDS lowering for > 2**32 kernels");
+        reportFatalUsageError("unimplemented LDS lowering for > 2**32 kernels");
       }
 
       for (size_t i = 0; i < OrderedKernels.size(); i++) {
@@ -632,7 +634,8 @@ public:
         if (K.second.size() == 1) {
           KernelAccessVariables.insert(GV);
         } else {
-          report_fatal_error(
+          // FIXME: This should use DiagnosticInfo
+          reportFatalUsageError(
               "cannot lower LDS '" + GV->getName() +
               "' to kernel access as it is reachable from multiple kernels");
         }
@@ -781,7 +784,7 @@ public:
       // backend) difficult to use. This does mean that llvm test cases need
       // to name the kernels.
       if (!Func.hasName()) {
-        report_fatal_error("Anonymous kernels cannot use LDS variables");
+        reportFatalUsageError("anonymous kernels cannot use LDS variables");
       }
 
       std::string VarName =
@@ -877,7 +880,7 @@ public:
         if (KernelsThatIndirectlyAllocateDynamicLDS.contains(func)) {
           assert(isKernelLDS(func));
           if (!func->hasName()) {
-            report_fatal_error("Anonymous kernels cannot use LDS variables");
+            reportFatalUsageError("anonymous kernels cannot use LDS variables");
           }
 
           GlobalVariable *N =
@@ -954,6 +957,7 @@ public:
       Module &M, LDSUsesInfoTy &LDSUsesInfo,
       VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
     bool Changed = false;
+    const DataLayout &DL = M.getDataLayout();
     // The 1st round: give module-absolute assignments
     int NumAbsolutes = 0;
     std::vector<GlobalVariable *> OrderedGVs;
@@ -975,8 +979,11 @@ public:
     }
     OrderedGVs = sortByName(std::move(OrderedGVs));
     for (GlobalVariable *GV : OrderedGVs) {
-      int BarId = ++NumAbsolutes;
       unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+      unsigned BarId = NumAbsolutes + 1;
+      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+      NumAbsolutes += BarCnt;
+
       // 4 bits for alignment, 5 bits for the barrier num,
       // 3 bits for the barrier scope
       unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
@@ -1014,12 +1021,11 @@ public:
         // create a new GV used only by this kernel and its function.
         auto NewGV = uniquifyGVPerKernel(M, GV, F);
         Changed |= (NewGV != GV);
-        int BarId = (NumAbsolutes + 1);
-        if (Kernel2BarId.find(F) != Kernel2BarId.end()) {
-          BarId = (Kernel2BarId[F] + 1);
-        }
-        Kernel2BarId[F] = BarId;
         unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+        unsigned BarId = Kernel2BarId[F];
+        BarId += NumAbsolutes + 1;
+        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        Kernel2BarId[F] += BarCnt;
         unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
         recordLDSAbsoluteAddress(&M, NewGV, Offset);
       }
@@ -1441,6 +1447,8 @@ private:
     if (!MaxDepth || (A == 1 && !AliasScope))
       return;
 
+    ScopedNoAliasAAResult ScopedNoAlias;
+
     for (User *U : Ptr->users()) {
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (AliasScope && I->mayReadOrWriteMemory()) {
@@ -1450,7 +1458,34 @@ private:
           I->setMetadata(LLVMContext::MD_alias_scope, AS);
 
           MDNode *NA = I->getMetadata(LLVMContext::MD_noalias);
-          NA = (NA ? MDNode::intersect(NA, NoAlias) : NoAlias);
+
+          // Scoped aliases can originate from two different domains.
+          // First domain would be from LDS domain (created by this pass).
+          // All entries (LDS vars) into LDS struct will have same domain.
+
+          // Second domain could be existing scoped aliases that are the
+          // results of noalias params and subsequent optimizations that
+          // may alter thesse sets.
+
+          // We need to be careful how we create new alias sets, and
+          // have right scopes and domains for loads/stores of these new
+          // LDS variables. We intersect NoAlias set if alias sets belong
+          // to the same domain. This is the case if we have memcpy using
+          // LDS variables. Both src and dst of memcpy would belong to
+          // LDS struct, they donot alias.
+          // On the other hand, if one of the domains is LDS and other is
+          // existing domain prior to LDS, we need to have a union of all
+          // these aliases set to preserve existing aliasing information.
+
+          SmallPtrSet<const MDNode *, 16> ExistingDomains, LDSDomains;
+          ScopedNoAlias.collectScopedDomains(NA, ExistingDomains);
+          ScopedNoAlias.collectScopedDomains(NoAlias, LDSDomains);
+          auto Intersection = set_intersection(ExistingDomains, LDSDomains);
+          if (Intersection.empty()) {
+            NA = NA ? MDNode::concatenate(NA, NoAlias) : NoAlias;
+          } else {
+            NA = NA ? MDNode::intersect(NA, NoAlias) : NoAlias;
+          }
           I->setMetadata(LLVMContext::MD_noalias, NA);
         }
       }

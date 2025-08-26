@@ -207,6 +207,21 @@ add_generic_entrypoint_object(
 )
 
 add_generic_entrypoint_object(
+  perror
+  SRCS
+    perror.cpp
+  HDRS
+    ../perror.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.StringUtil.error_to_string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.File.platform_stderr
+)
+
+add_generic_entrypoint_object(
   fputs
   SRCS
     fputs.cpp

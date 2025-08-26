@@ -15,14 +15,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-namespace {
-
 // Determine if the result of an expression is "stored" in some way.
 // It is true if the value is stored into a variable or used as initialization
 // or passed to a function or constructor.
 // For this use case compound assignments are not counted as a "store" (the 'E'
 // expression should have pointer type).
-bool isExprValueStored(const Expr *E, ASTContext &C) {
+static bool isExprValueStored(const Expr *E, ASTContext &C) {
   E = E->IgnoreParenCasts();
   // Get first non-paren, non-cast parent.
   ParentMapContext &PMap = C.getParentMapContext();
@@ -49,7 +47,7 @@ bool isExprValueStored(const Expr *E, ASTContext &C) {
   return isa<CallExpr, CXXConstructExpr>(ParentE);
 }
 
-} // namespace
+namespace {
 
 AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
@@ -74,6 +72,8 @@ AST_MATCHER(CXXNewExpr, mayThrow) {
   return !OperatorNew->getType()->castAs<FunctionProtoType>()->isNothrow();
 }
 
+} // namespace
+
 void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
   auto BadAllocType =
       recordType(hasDeclaration(cxxRecordDecl(hasName("::std::bad_alloc"))));
@@ -95,16 +95,14 @@ void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       callExpr(
-          hasAnyArgument(
-              expr(HasNewExpr1).bind("arg1")),
+          hasAnyArgument(expr(HasNewExpr1).bind("arg1")),
           hasAnyArgument(
               expr(HasNewExpr2, unless(equalsBoundNode("arg1"))).bind("arg2")),
           hasAncestor(BadAllocCatchingTryBlock)),
       this);
   Finder->addMatcher(
       cxxConstructExpr(
-          hasAnyArgument(
-              expr(HasNewExpr1).bind("arg1")),
+          hasAnyArgument(expr(HasNewExpr1).bind("arg1")),
           hasAnyArgument(
               expr(HasNewExpr2, unless(equalsBoundNode("arg1"))).bind("arg2")),
           unless(isListInitialization()),

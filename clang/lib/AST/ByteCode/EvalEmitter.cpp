@@ -20,7 +20,7 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
     : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
 
 EvalEmitter::~EvalEmitter() {
-  for (auto &[K, V] : Locals) {
+  for (auto &V : Locals) {
     Block *B = reinterpret_cast<Block *>(V.get());
     if (B->isInitialized())
       B->invokeDtor();
@@ -53,6 +53,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
   S.EvaluatingDecl = VD;
+  S.setEvalLocation(VD->getLocation());
   EvalResult.setSource(VD);
 
   if (const Expr *Init = VD->getAnyInitializer()) {
@@ -70,6 +71,34 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
   S.EvaluatingDecl = nullptr;
   updateGlobalTemporaries();
   return std::move(this->EvalResult);
+}
+
+EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
+                                                 PtrCallback PtrCB) {
+
+  S.setEvalLocation(E->getExprLoc());
+  this->ConvertResultToRValue = false;
+  this->CheckFullyInitialized = false;
+  this->PtrCB = PtrCB;
+  EvalResult.setSource(E);
+
+  if (!this->visitExpr(E, /*DestroyToplevelScope=*/true)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
+    EvalResult.setInvalid();
+  }
+
+  return std::move(this->EvalResult);
+}
+
+bool EvalEmitter::interpretCall(const FunctionDecl *FD, const Expr *E) {
+  // Add parameters to the parameter map. The values in the ParamOffset don't
+  // matter in this case as reading from them can't ever work.
+  for (const ParmVarDecl *PD : FD->parameters()) {
+    this->Params.insert({PD, {0, false}});
+  }
+
+  return this->visitExpr(E, /*DestroyToplevelScope=*/false);
 }
 
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
@@ -94,7 +123,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
 
   // Register the local.
   unsigned Off = Locals.size();
-  Locals.insert({Off, std::move(Memory)});
+  Locals.push_back(std::move(Memory));
   return {Off, D};
 }
 
@@ -170,6 +199,10 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     return true;
   }
 
+  // If we're returning a raw pointer, call our callback.
+  if (this->PtrCB)
+    return (*this->PtrCB)(Ptr);
+
   if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
@@ -180,10 +213,8 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     if (!Ptr.isZero() && !Ptr.isDereferencable())
       return false;
 
-    if (S.getLangOpts().CPlusPlus11 && Ptr.isBlockPointer() &&
-        !CheckFinalLoad(S, OpPC, Ptr)) {
+    if (!Ptr.isZero() && !CheckFinalLoad(S, OpPC, Ptr))
       return false;
-    }
 
     // Never allow reading from a non-const pointer, unless the memory
     // has been created in this evaluation.
@@ -198,6 +229,14 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
+    // If this is pointing to a local variable, just return
+    // the result, even if the pointer is dead.
+    // This will later be diagnosed by CheckLValueConstantExpression.
+    if (Ptr.isBlockPointer() && !Ptr.block()->isStatic()) {
+      EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
+      return true;
+    }
+
     if (!Ptr.isLive() && !Ptr.isTemporary())
       return false;
 
@@ -247,6 +286,10 @@ bool EvalEmitter::emitGetLocal(uint32_t I, const SourceInfo &Info) {
   using T = typename PrimConv<OpType>::T;
 
   Block *B = getLocal(I);
+
+  if (!CheckLocalLoad(S, OpPC, B))
+    return false;
+
   S.Stk.push<T>(*reinterpret_cast<T *>(B->data()));
   return true;
 }
@@ -289,7 +332,7 @@ void EvalEmitter::updateGlobalTemporaries() {
       const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
       APValue *Cached = Temp->getOrCreateValue(true);
 
-      if (std::optional<PrimType> T = Ctx.classify(E->getType())) {
+      if (OptPrimType T = Ctx.classify(E->getType())) {
         TYPE_SWITCH(
             *T, { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
       } else {

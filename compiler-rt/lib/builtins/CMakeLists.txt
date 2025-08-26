@@ -6,7 +6,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.20.0)
 
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  project(CompilerRTBuiltins C ASM)
+  project(CompilerRTBuiltins C CXX ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
   set(COMPILER_RT_BUILTINS_STANDALONE_BUILD TRUE)
 
@@ -63,6 +63,8 @@ include(CMakePushCheckState)
 
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
+
+include_directories(../../../third-party/siphash/include)
 
 # TODO: Need to add a mechanism for logging errors when builtin source files are
 # added to a sub-directory and not this CMakeLists file.
@@ -230,6 +232,9 @@ set(GENERIC_TF_SOURCES
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
+option(COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS
+  "Skip the standard C library provided arm aeabi builtins from compiler-rt)"
+  Off)
 
 if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD AND NOT COMPILER_RT_GPU_BUILD)
   set(GENERIC_SOURCES
@@ -450,7 +455,7 @@ set(thumb1_base_SOURCES
   ${GENERIC_SOURCES}
 )
 
-set(arm_EABI_SOURCES
+set(arm_EABI_RT_SOURCES
   arm/aeabi_cdcmp.S
   arm/aeabi_cdcmpeq_check_nan.c
   arm/aeabi_cfcmp.S
@@ -462,13 +467,28 @@ set(arm_EABI_SOURCES
   arm/aeabi_frsub.c
   arm/aeabi_idivmod.S
   arm/aeabi_ldivmod.S
+  arm/aeabi_uidivmod.S
+  arm/aeabi_uldivmod.S
+)
+
+set(arm_EABI_CLIB_SOURCES
   arm/aeabi_memcmp.S
   arm/aeabi_memcpy.S
   arm/aeabi_memmove.S
   arm/aeabi_memset.S
-  arm/aeabi_uidivmod.S
-  arm/aeabi_uldivmod.S
 )
+
+if(NOT COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS)
+  set(arm_EABI_SOURCES
+    ${arm_EABI_RT_SOURCES}
+    ${arm_EABI_CLIB_SOURCES}
+  )
+else()
+  message(STATUS "COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS is ON, so skipping __aeabi_memcmp, __aeabi_memcpy, __aeabi_memmove and __aeabi_memset Sources")
+  set(arm_EABI_SOURCES
+    ${arm_EABI_RT_SOURCES}
+  )
+endif()
 
 set(arm_Thumb1_JT_SOURCES
   arm/switch16.S
@@ -574,6 +594,13 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
+# Append sources specific to AArch64 targets that aren't supported by cl.exe
+if(CLANG_CL OR NOT MSVC)
+  list(APPEND aarch64_SOURCES
+    aarch64/emupac.cpp
+  )
+endif()
+
 set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR APPLE))
 
 if (COMPILER_RT_HAS_AARCH64_SME)
@@ -582,9 +609,18 @@ if (COMPILER_RT_HAS_AARCH64_SME)
     set_source_files_properties(aarch64/arm_apple_sme_abi.s PROPERTIES COMPILE_FLAGS -march=armv8a+sme)
     message(STATUS "AArch64 Apple SME ABI routines enabled")
   elseif (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
-    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-assert.c aarch64/sme-libc-routines.c)
+    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-assert.c)
+    if(COMPILER_RT_HAS_ARM_UNALIGNED AND COMPILER_RT_HAS_ARM_FP)
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S)
+    elseif(COMPILER_RT_HAS_ARM_UNALIGNED)
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-opt-memcpy-memmove.S)
+      message(WARNING "AArch64 SME ABI assembly-optimized memset/memchr disabled: target does not have hardware floating-point support.")
+    else()
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-memcpy-memmove.c)
+      message(WARNING "AArch64 SME ABI assembly-optimized routines disabled: target does not support unaligned accesses.")
+    endif()
     message(STATUS "AArch64 SME ABI routines enabled")
-    set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
+    set_source_files_properties(aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-memcpy-memmove.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
   else()
     if(COMPILER_RT_DISABLE_AARCH64_FMV)
       message(WARNING "AArch64 SME ABI routines require function multiversioning support.")
@@ -650,6 +686,7 @@ set(armv7k_SOURCES ${arm_SOURCES})
 set(arm64_SOURCES ${aarch64_SOURCES})
 set(arm64e_SOURCES ${aarch64_SOURCES})
 set(arm64_32_SOURCES ${aarch64_SOURCES})
+set(arm64ec_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})
@@ -808,7 +845,7 @@ else ()
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full BUILTIN_CFLAGS)
   endif()
 
-  append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ BUILTIN_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
 
   # Don't embed directives for picking any specific CRT
@@ -856,7 +893,11 @@ else ()
   if(COMPILER_RT_DISABLE_AARCH64_FMV)
     list(APPEND BUILTIN_DEFS DISABLE_AARCH64_FMV)
   elseif(COMPILER_RT_BAREMETAL_BUILD)
-    list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+    foreach (arch ${BUILTIN_SUPPORTED_ARCH})
+      if("${arch}" MATCHES "arm64|aarch64")
+        list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+      endif()
+    endforeach ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
@@ -926,6 +967,8 @@ else ()
                               SOURCES ${${arch}_SOURCES}
                               DEFS ${BUILTIN_DEFS}
                               CFLAGS ${BUILTIN_CFLAGS_${arch}}
+                              C_STANDARD 11
+                              CXX_STANDARD 17
                               PARENT_TARGET builtins)
       cmake_pop_check_state()
     endif ()

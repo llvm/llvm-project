@@ -52,12 +52,11 @@ void RedundantStringCStrCheck::registerMatchers(
   const auto StringConstructorExpr = expr(anyOf(
       cxxConstructExpr(argumentCountIs(1),
                        hasDeclaration(cxxMethodDecl(hasName("basic_string")))),
-      cxxConstructExpr(
-          argumentCountIs(2),
-          hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
-          // If present, the second argument is the alloc object which must not
-          // be present explicitly.
-          hasArgument(1, cxxDefaultArgExpr()))));
+      cxxConstructExpr(argumentCountIs(2),
+                       hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
+                       // If present, the second argument is the alloc object
+                       // which must not be present explicitly.
+                       hasArgument(1, cxxDefaultArgExpr()))));
 
   // Match string constructor.
   const auto StringViewConstructorExpr = cxxConstructExpr(
@@ -105,8 +104,9 @@ void RedundantStringCStrCheck::registerMatchers(
 
   // Detect: 'dst.append(str.c_str())'  ->  'dst.append(str)'
   Finder->addMatcher(
-      cxxMemberCallExpr(on(StringExpr), callee(decl(cxxMethodDecl(hasAnyName(
-                                            "append", "assign", "compare")))),
+      cxxMemberCallExpr(on(StringExpr),
+                        callee(decl(cxxMethodDecl(
+                            hasAnyName("append", "assign", "compare")))),
                         argumentCountIs(1), hasArgument(0, StringCStrCallExpr)),
       this);
 

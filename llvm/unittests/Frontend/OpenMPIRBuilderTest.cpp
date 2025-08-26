@@ -23,6 +23,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstdlib>
 #include <optional>
 
 using namespace llvm;
@@ -644,7 +645,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {
   std::string oldDLStr = M->getDataLayoutStr();
   M->setDataLayout(
       "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:"
-      "256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:"
+      "256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-"
+      "v192:"
       "256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8");
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.Config.IsTargetDevice = true;
@@ -2241,23 +2243,34 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
 
-  // Check if there are two loops (one with enabled vectorization)
+  // Check if there is one loop containing branches with and without
+  // vectorization
   const std::vector<Loop *> &TopLvl = LI.getTopLevelLoops();
-  EXPECT_EQ(TopLvl.size(), 2u);
+  EXPECT_EQ(TopLvl.size(), 1u);
 
   Loop *L = TopLvl[0];
   EXPECT_TRUE(findStringMetadataForLoop(L, "llvm.loop.parallel_accesses"));
-  EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
-  EXPECT_EQ(getIntLoopAttribute(L, "llvm.loop.vectorize.width"), 3);
-
-  // The second loop should have disabled vectorization
-  L = TopLvl[1];
-  EXPECT_FALSE(findStringMetadataForLoop(L, "llvm.loop.parallel_accesses"));
+  // These attributes cannot not be set because the loop is shared between simd
+  // and non-simd versions
   EXPECT_FALSE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
-  // Check for llvm.access.group metadata attached to the printf
-  // function in the loop body.
+  EXPECT_EQ(getIntLoopAttribute(L, "llvm.loop.vectorize.width"), 0);
+
+  // Check for if condition
   BasicBlock *LoopBody = CLI->getBody();
-  EXPECT_TRUE(any_of(*LoopBody, [](Instruction &I) {
+  BranchInst *IfCond = cast<BranchInst>(LoopBody->getTerminator());
+  EXPECT_EQ(IfCond->getCondition(), IfCmp);
+  BasicBlock *TrueBranch = IfCond->getSuccessor(0);
+  BasicBlock *FalseBranch = IfCond->getSuccessor(1)->getUniqueSuccessor();
+
+  // Check for llvm.access.group metadata attached to the printf
+  // function in the true body.
+  EXPECT_TRUE(any_of(*TrueBranch, [](Instruction &I) {
+    return I.getMetadata("llvm.access.group") != nullptr;
+  }));
+
+  // Check for llvm.access.group metadata attached to the printf
+  // function in the false body.
+  EXPECT_FALSE(any_of(*FalseBranch, [](Instruction &I) {
     return I.getMetadata("llvm.access.group") != nullptr;
   }));
 }
@@ -2347,10 +2360,10 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopHeuristic) {
 
 TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  std::string oldDLStr = M->getDataLayoutStr();
   M->setDataLayout(
       "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:"
-      "256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:"
+      "256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-"
+      "v192:"
       "256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8");
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.Config.IsTargetDevice = true;
@@ -2724,8 +2737,8 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
   EXPECT_EQ(OrigUpperBound->getValue(), 21);
   EXPECT_EQ(OrigStride->getValue(), 1);
 
-  CallInst *FiniCall = dyn_cast<CallInst>(
-      &*(LatchBlock->getTerminator()->getPrevNonDebugInstruction(true)));
+  CallInst *FiniCall =
+      dyn_cast<CallInst>(&*(LatchBlock->getTerminator()->getPrevNode()));
   EXPECT_EQ(FiniCall, nullptr);
 
   // The original loop iterator should only be used in the condition, in the
@@ -2828,8 +2841,8 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoopOrdered) {
   EXPECT_EQ(SchedVal->getValue(),
             static_cast<uint64_t>(OMPScheduleType::OrderedStaticChunked));
 
-  CallInst *FiniCall = dyn_cast<CallInst>(
-      &*(LatchBlock->getTerminator()->getPrevNonDebugInstruction(true)));
+  CallInst *FiniCall =
+      dyn_cast<CallInst>(&*(LatchBlock->getTerminator()->getPrevNode()));
   ASSERT_NE(FiniCall, nullptr);
   EXPECT_EQ(FiniCall->getCalledFunction()->getName(),
             "__kmpc_dispatch_fini_4u");
@@ -3875,6 +3888,9 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteFlt) {
   IRBuilder<> Builder(BB);
 
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  BasicBlock *EntryBB = BB;
+  OpenMPIRBuilder::InsertPointTy AllocaIP(EntryBB,
+                                          EntryBB->getFirstInsertionPt());
 
   LLVMContext &Ctx = M->getContext();
   Type *Float32 = Type::getFloatTy(Ctx);
@@ -3884,7 +3900,8 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteFlt) {
   AtomicOrdering AO = AtomicOrdering::Monotonic;
   Constant *ValToWrite = ConstantFP::get(Float32, 1.0);
 
-  Builder.restoreIP(OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO));
+  Builder.restoreIP(
+      OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO, AllocaIP));
 
   IntegerType *IntCastTy =
       IntegerType::get(M->getContext(), Float32->getScalarSizeInBits());
@@ -3918,8 +3935,11 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteInt) {
   ConstantInt *ValToWrite = ConstantInt::get(Type::getInt32Ty(Ctx), 1U);
 
   BasicBlock *EntryBB = BB;
+  OpenMPIRBuilder::InsertPointTy AllocaIP(EntryBB,
+                                          EntryBB->getFirstInsertionPt());
 
-  Builder.restoreIP(OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO));
+  Builder.restoreIP(
+      OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO, AllocaIP));
 
   StoreInst *StoreofAtomic = nullptr;
 
@@ -4636,7 +4656,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -4693,7 +4713,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsUpper) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -4753,7 +4773,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsBoth) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -4819,7 +4839,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -5341,6 +5361,144 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   EXPECT_TRUE(findGEPZeroOne(ReductionFn->getArg(1), FirstRHS, SecondRHS));
 }
 
+static void createScan(llvm::Value *scanVar, llvm::Type *scanType,
+                       OpenMPIRBuilder &OMPBuilder, IRBuilder<> &Builder,
+                       OpenMPIRBuilder::LocationDescription Loc,
+                       OpenMPIRBuilder::InsertPointTy &allocaIP,
+                       ScanInfo *&ScanRedInfo) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  ASSERT_EXPECTED_INIT(InsertPointTy, retIp,
+                       OMPBuilder.createScan(Loc, allocaIP, {scanVar},
+                                             {scanType}, true, ScanRedInfo));
+  Builder.restoreIP(retIp);
+}
+/*
+ Following is the pseudocode of the code generated by the test case
+ <declare pointer to buffer> ptr
+  size num_iters = 100
+  // temp buffer allocation
+  omp masked {
+    buff = malloc(num_iters*scanvarstype)
+    *ptr = buff
+  }
+ barrier;
+  // input phase loop
+  for (i: 0..<num_iters>) {
+    <input phase>;
+    buffer = *ptr;
+    buffer[i] = red;
+  }
+  // scan reduction
+  omp masked
+  {
+    for (int k = 0; k != ceil(log2(num_iters)); ++k) {
+      i=pow(2,k)
+      for (size cnt = last_iter; cnt >= i; --cnt) {
+        buffer = *ptr;
+        buffer[cnt] op= buffer[cnt-i];
+      }
+    }
+  }
+ barrier;
+ // scan phase loop
+  for (0..<num_iters>) {
+    buffer = *ptr;
+    red = buffer[i] ;
+    <scan phase>;
+  }
+  // temp buffer deletion
+  omp masked {
+    free(*ptr)
+  }
+  barrier;
+*/
+TEST_F(OpenMPIRBuilderTest, ScanReduction) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Value *TripCount = F->getArg(0);
+  Type *LCTy = TripCount->getType();
+  Value *StartVal = ConstantInt::get(LCTy, 1);
+  Value *StopVal = ConstantInt::get(LCTy, 100);
+  Value *Step = ConstantInt::get(LCTy, 1);
+  auto AllocaIP = Builder.saveIP();
+
+  llvm::Value *ScanVar = Builder.CreateAlloca(Builder.getFloatTy());
+  llvm::Value *OrigVar = Builder.CreateAlloca(Builder.getFloatTy());
+  unsigned NumBodiesGenerated = 0;
+  ScanInfo *ScanRedInfo;
+  ASSERT_EXPECTED_INIT(ScanInfo *, ScanInformation,
+                       OMPBuilder.scanInfoInitialize());
+  ScanRedInfo = ScanInformation;
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
+    NumBodiesGenerated += 1;
+    Builder.restoreIP(CodeGenIP);
+    createScan(ScanVar, Builder.getFloatTy(), OMPBuilder, Builder, Loc,
+               AllocaIP, ScanRedInfo);
+    return Error::success();
+  };
+  llvm::SmallVector<CanonicalLoopInfo *> loops;
+  ASSERT_EXPECTED_INIT(llvm::SmallVector<CanonicalLoopInfo *>, loopvec,
+                       OMPBuilder.createCanonicalScanLoops(
+                           Loc, LoopBodyGenCB, StartVal, StopVal, Step, false,
+                           false, Builder.saveIP(), "scan", ScanRedInfo));
+  loops = loopvec;
+  CanonicalLoopInfo *InputLoop = loops.front();
+  CanonicalLoopInfo *ScanLoop = loops.back();
+  Builder.restoreIP(ScanLoop->getAfterIP());
+  InputLoop->assertOK();
+  ScanLoop->assertOK();
+
+  EXPECT_EQ(ScanLoop->getAfter(), Builder.GetInsertBlock());
+  EXPECT_EQ(NumBodiesGenerated, 2U);
+  SmallVector<OpenMPIRBuilder::ReductionInfo> ReductionInfos = {
+      {Builder.getFloatTy(), OrigVar, ScanVar,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
+       /*ReductionGenClang=*/nullptr, sumAtomicReduction}};
+  OpenMPIRBuilder::LocationDescription RedLoc({InputLoop->getAfterIP(), DL});
+  llvm::BasicBlock *Cont = splitBB(Builder, false, "omp.scan.loop.cont");
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, retIp,
+      OMPBuilder.emitScanReduction(RedLoc, ReductionInfos, ScanRedInfo));
+  Builder.restoreIP(retIp);
+  Builder.CreateBr(Cont);
+  Builder.SetInsertPoint(Cont);
+  unsigned NumMallocs = 0;
+  unsigned NumFrees = 0;
+  unsigned NumMasked = 0;
+  unsigned NumEndMasked = 0;
+  unsigned NumLog = 0;
+  unsigned NumCeil = 0;
+  for (Instruction &I : instructions(F)) {
+    if (!isa<CallInst>(I))
+      continue;
+    CallInst *Call = dyn_cast<CallInst>(&I);
+    StringRef Name = Call->getCalledFunction()->getName();
+    if (Name.equals_insensitive("malloc")) {
+      NumMallocs += 1;
+    } else if (Name.equals_insensitive("free")) {
+      NumFrees += 1;
+    } else if (Name.equals_insensitive("__kmpc_masked")) {
+      NumMasked += 1;
+    } else if (Name.equals_insensitive("__kmpc_end_masked")) {
+      NumEndMasked += 1;
+    } else if (Name.equals_insensitive("llvm.log2.f64")) {
+      NumLog += 1;
+    } else if (Name.equals_insensitive("llvm.ceil.f64")) {
+      NumCeil += 1;
+    }
+  }
+  EXPECT_EQ(NumBodiesGenerated, 2U);
+  EXPECT_EQ(NumMasked, 3U);
+  EXPECT_EQ(NumEndMasked, 3U);
+  EXPECT_EQ(NumMallocs, 1U);
+  EXPECT_EQ(NumFrees, 1U);
+  EXPECT_EQ(NumLog, 1U);
+  EXPECT_EQ(NumCeil, 1U);
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -5547,7 +5705,6 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
-  llvm::SmallVector<BasicBlock *, 4> CaseBBs;
 
   auto FiniCB = [&](InsertPointTy IP) { return Error::success(); };
   auto SectionCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
@@ -6599,7 +6756,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
                               Builder.saveIP(), Info, EntryInfo, DefaultAttrs,
                               RuntimeAttrs, /*IfCond=*/nullptr, Inputs,
                               GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB,
-                              CustomMapperCB));
+                              CustomMapperCB, {}));
   Builder.restoreIP(AfterIP);
 
   OMPBuilder.finalize();
@@ -6701,12 +6858,12 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
 
-  ASSERT_EXPECTED_INIT(
-      OpenMPIRBuilder::InsertPointTy, AfterIP,
-      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
-                              Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
-                              /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
-                              BodyGenCB, SimpleArgAccessorCB, CustomMapperCB));
+  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
+                       OMPBuilder.createTarget(
+                           Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP, Info,
+                           EntryInfo, DefaultAttrs, RuntimeAttrs,
+                           /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
+                           BodyGenCB, SimpleArgAccessorCB, CustomMapperCB, {}));
   Builder.restoreIP(AfterIP);
 
   Builder.CreateRetVoid();
@@ -7331,8 +7488,8 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskIfCondition) {
   EXPECT_EQ(TaskBeginIfCall->getParent(),
             IfConditionBranchInst->getSuccessor(1));
 
-  EXPECT_EQ(TaskBeginIfCall->getNextNonDebugInstruction(), OulinedFnCall);
-  EXPECT_EQ(OulinedFnCall->getNextNonDebugInstruction(), TaskCompleteCall);
+  EXPECT_EQ(TaskBeginIfCall->getNextNode(), OulinedFnCall);
+  EXPECT_EQ(OulinedFnCall->getNextNode(), TaskCompleteCall);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
@@ -7416,12 +7573,12 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
                                            OMPRTL___kmpc_global_thread_num));
 
   // Checking the general structure of the IR generated is same as expected.
-  Instruction *GeneratedStoreInst = TaskgroupCall->getNextNonDebugInstruction();
+  Instruction *GeneratedStoreInst = TaskgroupCall->getNextNode();
   EXPECT_EQ(GeneratedStoreInst, InternalStoreInst);
   Instruction *GeneratedLoad32 =
-      GeneratedStoreInst->getNextNonDebugInstruction();
+      GeneratedStoreInst->getNextNode();
   EXPECT_EQ(GeneratedLoad32, InternalLoad32);
-  Instruction *GeneratedLoad128 = GeneratedLoad32->getNextNonDebugInstruction();
+  Instruction *GeneratedLoad128 = GeneratedLoad32->getNextNode();
   EXPECT_EQ(GeneratedLoad128, InternalLoad128);
 
   // Checking the ordering because of the if statements and that

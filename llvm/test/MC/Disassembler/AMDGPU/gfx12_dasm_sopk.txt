@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX12 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX12 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefixes=GFX12,GFX1200 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+WavefrontSize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefixes=GFX1200 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefixes=GFX12,GFX1250 %s
 
 # GFX12: s_addk_co_i32 exec_hi, 0x1234           ; encoding: [0x34,0x12,0xff,0xb7]
 0x34,0x12,0xff,0xb7
@@ -25,19 +26,24 @@
 # GFX12: s_addk_co_i32 vcc_lo, 0x1234            ; encoding: [0x34,0x12,0xea,0xb7]
 0x34,0x12,0xea,0xb7
 
-# GFX12: s_call_b64 exec, 4660                   ; encoding: [0x34,0x12,0x7e,0xba]
+# GFX1200: s_call_b64 exec, 4660                   ; encoding: [0x34,0x12,0x7e,0xba]
+# GFX1250: s_call_i64 exec, 4660                   ; encoding: [0x34,0x12,0x7e,0xba]
 0x34,0x12,0x7e,0xba
 
-# GFX12: s_call_b64 s[0:1], 4660                 ; encoding: [0x34,0x12,0x00,0xba]
+# GFX1200: s_call_b64 s[0:1], 4660                 ; encoding: [0x34,0x12,0x00,0xba]
+# GFX1250: s_call_i64 s[0:1], 4660                 ; encoding: [0x34,0x12,0x00,0xba]
 0x34,0x12,0x00,0xba
 
-# GFX12: s_call_b64 s[104:105], 4660             ; encoding: [0x34,0x12,0x68,0xba]
+# GFX1200: s_call_b64 s[104:105], 4660             ; encoding: [0x34,0x12,0x68,0xba]
+# GFX1250: s_call_i64 s[104:105], 4660             ; encoding: [0x34,0x12,0x68,0xba]
 0x34,0x12,0x68,0xba
 
-# GFX12: s_call_b64 vcc, 4660                    ; encoding: [0x34,0x12,0x6a,0xba]
+# GFX1200: s_call_b64 vcc, 4660                    ; encoding: [0x34,0x12,0x6a,0xba]
+# GFX1250: s_call_i64 vcc, 4660                    ; encoding: [0x34,0x12,0x6a,0xba]
 0x34,0x12,0x6a,0xba
 
-# GFX12: s_call_b64 null, 4660                   ; encoding: [0x34,0x12,0x7c,0xba]
+# GFX1200: s_call_b64 null, 4660                   ; encoding: [0x34,0x12,0x7c,0xba]
+# GFX1250: s_call_i64 null, 4660                   ; encoding: [0x34,0x12,0x7c,0xba]
 0x34,0x12,0x7c,0xba
 
 # GFX12: s_cmovk_i32 exec_hi, 0x1234             ; encoding: [0x34,0x12,0x7f,0xb1]

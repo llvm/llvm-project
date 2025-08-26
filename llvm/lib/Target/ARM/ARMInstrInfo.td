@@ -164,10 +164,9 @@ def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
 def ARMWrapperJT     : SDNode<"ARMISD::WrapperJT",   SDTIntUnaryOp>;
 
 def ARMcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_ARMCallSeqStart,
-                              [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOutGlue]>;
 def ARMcallseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_ARMCallSeqEnd,
-                              [SDNPHasChain, SDNPSideEffect,
-                               SDNPOptInGlue, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def ARMcopystructbyval : SDNode<"ARMISD::COPY_STRUCT_BYVAL" ,
                                 SDT_ARMStructByVal,
                                 [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
@@ -421,7 +420,7 @@ def imm16_31 : ImmLeaf<i32, [{
 
 // sext_16_node predicate - True if the SDNode is sign-extended 16 or more bits.
 def sext_16_node : PatLeaf<(i32 GPR:$a), [{
-  return CurDAG->ComputeNumSignBits(SDValue(N,0)) >= 17;
+  return CurDAG->ComputeNumSignBits(Op) >= 17;
 }]>;
 
 def sext_bottom_16 : PatFrag<(ops node:$a),
@@ -451,14 +450,14 @@ def lo16AllZero : PatLeaf<(i32 imm), [{
 
 // top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
 def top16Zero: PatLeaf<(i32 GPR:$src), [{
-  return !SDValue(N,0)->getValueType(0).isVector() &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
+  return !Op.getValueType().isVector() &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 16));
   }]>;
 
 // topbitsallzero - Return true if all bits except the lowest bit are known zero
 def topbitsallzero32 : PatLeaf<(i32 GPRwithZR:$src), [{
-  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
-         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 31));
+  return Op.getValueType() == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 31));
   }]>;
 
 class BinOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$RHS), res>;
@@ -484,11 +483,6 @@ def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
 // An 'fsub' node which checks for single non-hazardous use.
 def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
-}]>;
-
-// An 'fadd' node which can be contracted into a fma
-def fadd_contract : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
-  return N->getFlags().hasAllowContract();
 }]>;
 
 def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
@@ -2387,29 +2381,13 @@ def UDF : AInoP<(outs), (ins imm0_65535:$imm16), MiscFrm, NoItinerary,
 /*
  * A5.4 Permanently UNDEFINED instructions.
  *
- * For most targets use UDF #65006, for which the OS will generate SIGTRAP.
- * Other UDF encodings generate SIGILL.
+ * Targets use UDF #65006, for which the OS will generate SIGTRAP.
  *
- * NaCl's OS instead chooses an ARM UDF encoding that's also a UDF in Thumb.
- * Encoding A1:
- *  1110 0111 1111 iiii iiii iiii 1111 iiii
- * Encoding T1:
- *  1101 1110 iiii iiii
- * It uses the following encoding:
- *  1110 0111 1111 1110 1101 1110 1111 0000
- *  - In ARM: UDF #60896;
- *  - In Thumb: UDF #254 followed by a branch-to-self.
  */
-let isTrap = 1 in
-def TRAPNaCl : AXI<(outs), (ins), MiscFrm, NoItinerary,
-               "trap", [(trap)]>,
-           Requires<[IsARM,UseNaClTrap]> {
-  let Inst = 0xe7fedef0;
-}
 let isTrap = 1 in
 def TRAP : AXI<(outs), (ins), MiscFrm, NoItinerary,
                "trap", [(trap)]>,
-           Requires<[IsARM,DontUseNaClTrap]> {
+           Requires<[IsARM]> {
   let Inst = 0xe7ffdefe;
 }
 
@@ -5384,7 +5362,7 @@ class acquiring_load<PatFrags base>
 
 def atomic_load_azext_acquire_8  : acquiring_load<atomic_load_azext_8>;
 def atomic_load_azext_acquire_16 : acquiring_load<atomic_load_azext_16>;
-def atomic_load_acquire_32 : acquiring_load<atomic_load_32>;
+def atomic_load_nonext_acquire_32 : acquiring_load<atomic_load_nonext_32>;
 
 class releasing_store<PatFrag base>
   : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr), [{
@@ -5399,7 +5377,7 @@ def atomic_store_release_32 : releasing_store<atomic_store_32>;
 let AddedComplexity = 8 in {
   def : ARMPat<(atomic_load_azext_acquire_8 addr_offset_none:$addr),  (LDAB addr_offset_none:$addr)>;
   def : ARMPat<(atomic_load_azext_acquire_16 addr_offset_none:$addr), (LDAH addr_offset_none:$addr)>;
-  def : ARMPat<(atomic_load_acquire_32 addr_offset_none:$addr), (LDA  addr_offset_none:$addr)>;
+  def : ARMPat<(atomic_load_nonext_acquire_32 addr_offset_none:$addr), (LDA  addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_8 addr_offset_none:$addr, GPR:$val),  (STLB GPR:$val, addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_16 addr_offset_none:$addr, GPR:$val), (STLH GPR:$val, addr_offset_none:$addr)>;
   def : ARMPat<(atomic_store_release_32 addr_offset_none:$addr, GPR:$val), (STL  GPR:$val, addr_offset_none:$addr)>;
@@ -6220,9 +6198,9 @@ def : ARMPat<(atomic_load_azext_8 addrmode_imm12:$src),
              (LDRBi12 addrmode_imm12:$src)>;
 def : ARMPat<(atomic_load_azext_16 addrmode3:$src),
              (LDRH addrmode3:$src)>;
-def : ARMPat<(atomic_load_32 ldst_so_reg:$src),
+def : ARMPat<(atomic_load_nonext_32 ldst_so_reg:$src),
              (LDRrs ldst_so_reg:$src)>;
-def : ARMPat<(atomic_load_32 addrmode_imm12:$src),
+def : ARMPat<(atomic_load_nonext_32 addrmode_imm12:$src),
              (LDRi12 addrmode_imm12:$src)>;
 def : ARMPat<(atomic_store_8 GPR:$val, ldst_so_reg:$ptr),
              (STRBrs GPR:$val, ldst_so_reg:$ptr)>;

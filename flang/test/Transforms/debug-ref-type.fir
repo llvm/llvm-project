@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func private @_FortranAioBeginExternalListOutput(i8) -> !fir.ref<i8> loc(#loc1)
 }
 #loc1 = loc("test.f90":5:1)

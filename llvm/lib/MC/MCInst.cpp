@@ -8,6 +8,8 @@
 
 #include "llvm/MC/MCInst.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -18,14 +20,14 @@
 
 using namespace llvm;
 
-void MCOperand::print(raw_ostream &OS, const MCRegisterInfo *RegInfo) const {
+void MCOperand::print(raw_ostream &OS, const MCContext *Ctx) const {
   OS << "<MCOperand ";
   if (!isValid())
     OS << "INVALID";
   else if (isReg()) {
     OS << "Reg:";
-    if (RegInfo)
-      OS << RegInfo->getName(getReg());
+    if (Ctx && Ctx->getRegisterInfo())
+      OS << Ctx->getRegisterInfo()->getName(getReg());
     else
       OS << getReg();
   } else if (isImm())
@@ -35,11 +37,15 @@ void MCOperand::print(raw_ostream &OS, const MCRegisterInfo *RegInfo) const {
   else if (isDFPImm())
     OS << "DFPImm:" << bit_cast<double>(getDFPImm());
   else if (isExpr()) {
-    OS << "Expr:(" << *getExpr() << ")";
+    OS << "Expr:";
+    if (Ctx)
+      Ctx->getAsmInfo()->printExpr(OS, *getExpr());
+    else
+      getExpr()->print(OS, nullptr);
   } else if (isInst()) {
     OS << "Inst:(";
     if (const auto *Inst = getInst())
-      Inst->print(OS, RegInfo);
+      Inst->print(OS, Ctx);
     else
       OS << "NULL";
     OS << ")";
@@ -62,7 +68,7 @@ bool MCOperand::isBareSymbolRef() const {
   const MCExpr *Expr = getExpr();
   MCExpr::ExprKind Kind = getExpr()->getKind();
   return Kind == MCExpr::SymbolRef &&
-    cast<MCSymbolRefExpr>(Expr)->getKind() == MCSymbolRefExpr::VK_None;
+         cast<MCSymbolRefExpr>(Expr)->getSpecifier() == 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -72,24 +78,23 @@ LLVM_DUMP_METHOD void MCOperand::dump() const {
 }
 #endif
 
-void MCInst::print(raw_ostream &OS, const MCRegisterInfo *RegInfo) const {
+void MCInst::print(raw_ostream &OS, const MCContext *Ctx) const {
   OS << "<MCInst " << getOpcode();
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     OS << " ";
-    getOperand(i).print(OS, RegInfo);
+    getOperand(i).print(OS, Ctx);
   }
   OS << ">";
 }
 
 void MCInst::dump_pretty(raw_ostream &OS, const MCInstPrinter *Printer,
-                         StringRef Separator,
-                         const MCRegisterInfo *RegInfo) const {
+                         StringRef Separator, const MCContext *Ctx) const {
   StringRef InstName = Printer ? Printer->getOpcodeName(getOpcode()) : "";
-  dump_pretty(OS, InstName, Separator, RegInfo);
+  dump_pretty(OS, InstName, Separator, Ctx);
 }
 
 void MCInst::dump_pretty(raw_ostream &OS, StringRef Name, StringRef Separator,
-                         const MCRegisterInfo *RegInfo) const {
+                         const MCContext *Ctx) const {
   OS << "<MCInst #" << getOpcode();
 
   // Show the instruction opcode name if we have it.
@@ -98,7 +103,7 @@ void MCInst::dump_pretty(raw_ostream &OS, StringRef Name, StringRef Separator,
 
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     OS << Separator;
-    getOperand(i).print(OS, RegInfo);
+    getOperand(i).print(OS, Ctx);
   }
   OS << ">";
 }

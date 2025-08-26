@@ -155,10 +155,10 @@ define <16 x i32> @PR42819(ptr %a0) {
 define void @PR42833() {
 ; SSE2-LABEL: PR42833:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movl b(%rip), %eax
-; SSE2-NEXT:    movdqa c+128(%rip), %xmm0
 ; SSE2-NEXT:    movdqa c+144(%rip), %xmm2
-; SSE2-NEXT:    addl c+128(%rip), %eax
+; SSE2-NEXT:    movdqa c+128(%rip), %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    addl b(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    movd %eax, %xmm3
 ; SSE2-NEXT:    paddd %xmm0, %xmm3
@@ -191,10 +191,10 @@ define void @PR42833() {
 ;
 ; SSE42-LABEL: PR42833:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movl b(%rip), %eax
-; SSE42-NEXT:    movdqa c+128(%rip), %xmm0
 ; SSE42-NEXT:    movdqa c+144(%rip), %xmm1
-; SSE42-NEXT:    addl c+128(%rip), %eax
+; SSE42-NEXT:    movdqa c+128(%rip), %xmm0
+; SSE42-NEXT:    movd %xmm0, %eax
+; SSE42-NEXT:    addl b(%rip), %eax
 ; SSE42-NEXT:    movd %eax, %xmm2
 ; SSE42-NEXT:    paddd %xmm0, %xmm2
 ; SSE42-NEXT:    movdqa d+144(%rip), %xmm3
@@ -261,9 +261,9 @@ define void @PR42833() {
 ;
 ; AVX2-LABEL: PR42833:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl b(%rip), %eax
 ; AVX2-NEXT:    vmovdqu c+128(%rip), %ymm0
-; AVX2-NEXT:    addl c+128(%rip), %eax
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    addl b(%rip), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm3
@@ -284,10 +284,10 @@ define void @PR42833() {
 ;
 ; AVX512-LABEL: PR42833:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movl b(%rip), %eax
 ; AVX512-NEXT:    vmovdqu c+128(%rip), %ymm0
 ; AVX512-NEXT:    vmovdqu64 c+128(%rip), %zmm1
-; AVX512-NEXT:    addl c+128(%rip), %eax
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addl b(%rip), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm2
 ; AVX512-NEXT:    vpaddd %ymm0, %ymm0, %ymm0

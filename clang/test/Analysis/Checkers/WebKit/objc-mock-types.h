@@ -22,6 +22,7 @@ typedef struct CF_BRIDGED_TYPE(id) CGImage *CGImageRef;
 #define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
 #define CF_CONSUMED __attribute__((cf_consumed))
 #define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
+#define NS_REQUIRES_PROPERTY_DEFINITIONS __attribute__((objc_requires_property_definitions))
 
 extern const CFAllocatorRef kCFAllocatorDefault;
 typedef struct _NSZone NSZone;
@@ -44,6 +45,7 @@ CFDictionaryRef CFDictionaryCreateCopy(CFAllocatorRef allocator, CFDictionaryRef
 CFDictionaryRef CFDictionaryCreateMutableCopy(CFAllocatorRef allocator, CFIndex capacity, CFDictionaryRef theDict);
 CFIndex CFDictionaryGetCount(CFDictionaryRef theDict);
 Boolean CFDictionaryContainsKey(CFDictionaryRef theDict, const void *key);
+Boolean CFEqual(CFTypeRef, CFTypeRef);
 Boolean CFDictionaryContainsValue(CFDictionaryRef theDict, const void *value);
 const void *CFDictionaryGetValue(CFDictionaryRef theDict, const void *key);
 void CFDictionaryAddValue(CFMutableDictionaryRef theDict, const void *key, const void *value);
@@ -61,7 +63,7 @@ typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVBufferRef;
 typedef CVBufferRef CVImageBufferRef;
 typedef CVImageBufferRef CVPixelBufferRef;
 typedef signed int CVReturn;
-CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef * pixelBufferOut);
+CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferRef * pixelBufferOut);
 
 CFRunLoopRef CFRunLoopGetCurrent(void);
 CFRunLoopRef CFRunLoopGetMain(void);
@@ -69,6 +71,12 @@ extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 #define CFSTR(cStr) ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
 extern Class NSClassFromString(NSString *aClassName);
+
+#if __has_feature(objc_arc)
+id CFBridgingRelease(CFTypeRef X) {
+    return (__bridge_transfer id)X;
+}
+#endif
 
 __attribute__((objc_root_class))
 @interface NSObject
@@ -130,11 +138,13 @@ __attribute__((objc_root_class))
 
 @interface NSNumber : NSValue
 - (char)charValue;
+- (int)intValue;
 - (id)initWithInt:(int)value;
 + (NSNumber *)numberWithInt:(int)value;
 @end
 
 @interface SomeObj : NSObject
+- (instancetype)_init;
 - (SomeObj *)mutableCopy;
 - (SomeObj *)copyWithValue:(int)value;
 - (void)doWork;

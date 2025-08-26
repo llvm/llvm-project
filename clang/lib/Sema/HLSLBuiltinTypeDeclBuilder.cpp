@@ -120,7 +120,7 @@ private:
   //   LastStmt - refers to the last statement in the method body; referencing
   //              LastStmt will remove the statement from the method body since
   //              it will be linked from the new expression being constructed.
-  enum class PlaceHolder { _0, _1, _2, _3, Handle = 128, LastStmt };
+  enum class PlaceHolder { _0, _1, _2, _3, _4, Handle = 128, LastStmt };
 
   Expr *convertPlaceholder(PlaceHolder PH);
   Expr *convertPlaceholder(Expr *E) { return E; }
@@ -313,9 +313,6 @@ TemplateParameterListBuilder::finalizeTemplateArgs(ConceptDecl *CD) {
   Builder.Record->getDeclContext()->addDecl(Builder.Template);
   Params.clear();
 
-  QualType T = Builder.Template->getInjectedClassNameSpecialization();
-  T = AST.getInjectedClassNameType(Builder.Record, T);
-
   return Builder;
 }
 
@@ -351,7 +348,7 @@ BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
   ASTContext &AST = DB.SemaRef.getASTContext();
   if (IsCtor) {
     Name = AST.DeclarationNames.getCXXConstructorName(
-        DB.Record->getTypeForDecl()->getCanonicalTypeUnqualified());
+        AST.getCanonicalTagType(DB.Record));
   } else {
     const IdentifierInfo &II =
         AST.Idents.get(NameStr, tok::TokenKind::identifier);
@@ -400,6 +397,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
 
   // create params & set them to the function prototype
   SmallVector<ParmVarDecl *> ParmDecls;
+  unsigned CurScopeDepth = DeclBuilder.SemaRef.getCurScope()->getDepth();
   auto FnProtoLoc =
       Method->getTypeSourceInfo()->getTypeLoc().getAs<FunctionProtoTypeLoc>();
   for (int I = 0, E = Params.size(); I != E; I++) {
@@ -414,6 +412,7 @@ void BuiltinTypeMethodBuilder::createDecl() {
           HLSLParamModifierAttr::Create(AST, SourceRange(), MP.Modifier);
       Parm->addAttr(Mod);
     }
+    Parm->setScopeInfo(CurScopeDepth, I);
     ParmDecls.push_back(Parm);
     FnProtoLoc.setParam(I, Parm);
   }
@@ -447,10 +446,14 @@ BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
       AST, NestedNameSpecifierLoc(), SourceLocation(), FD, false,
       FD->getNameInfo(), AST.BuiltinFnTy, VK_PRValue);
 
+  auto *ImpCast = ImplicitCastExpr::Create(
+      AST, AST.getPointerType(FD->getType()), CK_BuiltinFnToFnPtr, DRE, nullptr,
+      VK_PRValue, FPOptionsOverride());
+
   if (ReturnType.isNull())
     ReturnType = FD->getReturnType();
 
-  Expr *Call = CallExpr::Create(AST, DRE, Args, ReturnType, VK_PRValue,
+  Expr *Call = CallExpr::Create(AST, ImpCast, Args, ReturnType, VK_PRValue,
                                 SourceLocation(), FPOptionsOverride());
   StmtsList.push_back(Call);
   return *this;
@@ -547,9 +550,9 @@ BuiltinTypeDeclBuilder::BuiltinTypeDeclBuilder(Sema &SemaRef,
     return;
   }
 
-  Record = CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
-                                 SourceLocation(), SourceLocation(), &II,
-                                 PrevDecl, true);
+  Record =
+      CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
+                            SourceLocation(), SourceLocation(), &II, PrevDecl);
   Record->setImplicit(true);
   Record->setLexicalDeclContext(HLSLNamespace);
   Record->setHasExternalLexicalStorage();
@@ -562,18 +565,6 @@ BuiltinTypeDeclBuilder::BuiltinTypeDeclBuilder(Sema &SemaRef,
 BuiltinTypeDeclBuilder::~BuiltinTypeDeclBuilder() {
   if (HLSLNamespace && !Template && Record->getDeclContext() == HLSLNamespace)
     HLSLNamespace->addDecl(Record);
-}
-
-CXXRecordDecl *BuiltinTypeDeclBuilder::finalizeForwardDeclaration() {
-  // Force the QualType to be generated for the record declaration. In most
-  // cases this will happen naturally when something uses the type the
-  // QualType gets lazily created. Unfortunately, with our injected types if a
-  // type isn't used in a translation unit the QualType may not get
-  // automatically generated before a PCH is generated. To resolve this we
-  // just force that the QualType is generated after we create a forward
-  // declaration.
-  (void)Record->getASTContext().getRecordType(Record);
-  return Record;
 }
 
 BuiltinTypeDeclBuilder &
@@ -632,11 +623,56 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
   if (Record->isCompleteDefinition())
     return *this;
 
-  // FIXME: initialize handle to poison value; this can be added after
-  // resource constructor from binding is implemented, otherwise the handle
-  // value will get overwritten.
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  QualType HandleType = getResourceHandleField()->getType();
   return BuiltinTypeMethodBuilder(*this, "", SemaRef.getASTContext().VoidTy,
                                   false, true)
+      .callBuiltin("__builtin_hlsl_resource_uninitializedhandle", HandleType,
+                   PH::Handle)
+      .assign(PH::Handle, PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHandleConstructorFromBinding() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+
+  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
+      .addParam("registerNo", AST.UnsignedIntTy)
+      .addParam("spaceNo", AST.UnsignedIntTy)
+      .addParam("range", AST.IntTy)
+      .addParam("index", AST.UnsignedIntTy)
+      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
+      .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
+                   PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3, PH::_4)
+      .assign(PH::Handle, PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+
+  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
+      .addParam("spaceNo", AST.UnsignedIntTy)
+      .addParam("range", AST.IntTy)
+      .addParam("index", AST.UnsignedIntTy)
+      .addParam("orderId", AST.UnsignedIntTy)
+      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
+      .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
+                   HandleType, PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3,
+                   PH::_4)
+      .assign(PH::Handle, PH::LastStmt)
       .finalize();
 }
 
@@ -646,7 +682,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
-  addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+  if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
+    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+
   return *this;
 }
 
@@ -663,7 +701,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   return *this;
 }
 
-FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() {
+FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() const {
   auto I = Fields.find("__handle");
   assert(I != Fields.end() &&
          I->second->getType()->isHLSLAttributedResourceType() &&
@@ -685,6 +723,12 @@ QualType BuiltinTypeDeclBuilder::getHandleElementType() {
     return getFirstTemplateTypeParam();
   // TODO: Should we default to VoidTy? Using `i8` is arguably ambiguous.
   return SemaRef.getASTContext().Char8Ty;
+}
+
+HLSLAttributedResourceType::Attributes
+BuiltinTypeDeclBuilder::getResourceAttrs() const {
+  QualType HandleType = getResourceHandleField()->getType();
+  return cast<HLSLAttributedResourceType>(HandleType)->getAttrs();
 }
 
 // BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::startDefinition() {

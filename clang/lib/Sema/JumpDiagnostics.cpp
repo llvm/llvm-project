@@ -93,7 +93,7 @@ private:
                                  unsigned TargetScope);
   void CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
                  unsigned JumpDiag, unsigned JumpDiagWarning,
-                 unsigned JumpDiagCXX98Compat);
+                 unsigned JumpDiagCompat);
   void CheckGotoStmt(GotoStmt *GS);
   const Attr *GetMustTailAttr(AttributedStmt *AS);
 
@@ -179,9 +179,8 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
       }
     }
 
-    if (const Expr *Init = VD->getInit(); S.Context.getLangOpts().CPlusPlus &&
-                                          VD->hasLocalStorage() && Init &&
-                                          !Init->containsErrors()) {
+    if (const Expr *Init = VD->getInit();
+        VD->hasLocalStorage() && Init && !Init->containsErrors()) {
       // C++11 [stmt.dcl]p3:
       //   A program that jumps from a point where a variable with automatic
       //   storage duration is not in scope to a point where it is in scope
@@ -603,7 +602,10 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     Scopes.push_back(GotoScope(
         ParentScope, diag::note_acc_branch_into_compute_construct,
         diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
-    BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
+    // This can be 'null' if the 'body' is a break that we diagnosed, so no
+    // reason to put the scope into place.
+    if (CC->getStructuredBlock())
+      BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
     return;
   }
 
@@ -613,7 +615,10 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     Scopes.push_back(GotoScope(
         ParentScope, diag::note_acc_branch_into_compute_construct,
         diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
-    BuildScopeInformation(CC->getLoop(), NewParentScope);
+    // This can be 'null' if the 'body' is a break that we diagnosed, so no
+    // reason to put the scope into place.
+    if (CC->getLoop())
+      BuildScopeInformation(CC->getLoop(), NewParentScope);
     return;
   }
 
@@ -680,7 +685,9 @@ void JumpScopeChecker::VerifyJumps() {
         CheckJump(GS, GS->getLabel()->getStmt(), GS->getGotoLoc(),
                   diag::err_goto_into_protected_scope,
                   diag::ext_goto_into_protected_scope,
-                  diag::warn_cxx98_compat_goto_into_protected_scope);
+                  S.getLangOpts().CPlusPlus
+                      ? diag::warn_cxx98_compat_goto_into_protected_scope
+                      : diag::warn_cpp_compat_goto_into_protected_scope);
       }
       CheckGotoStmt(GS);
       continue;
@@ -708,7 +715,9 @@ void JumpScopeChecker::VerifyJumps() {
       CheckJump(IGS, Target->getStmt(), IGS->getGotoLoc(),
                 diag::err_goto_into_protected_scope,
                 diag::ext_goto_into_protected_scope,
-                diag::warn_cxx98_compat_goto_into_protected_scope);
+                S.getLangOpts().CPlusPlus
+                    ? diag::warn_cxx98_compat_goto_into_protected_scope
+                    : diag::warn_cpp_compat_goto_into_protected_scope);
       continue;
     }
 
@@ -725,7 +734,9 @@ void JumpScopeChecker::VerifyJumps() {
       else
         Loc = SC->getBeginLoc();
       CheckJump(SS, SC, Loc, diag::err_switch_into_protected_scope, 0,
-                diag::warn_cxx98_compat_switch_into_protected_scope);
+                S.getLangOpts().CPlusPlus
+                    ? diag::warn_cxx98_compat_switch_into_protected_scope
+                    : diag::warn_cpp_compat_switch_into_protected_scope);
     }
   }
 }
@@ -867,6 +878,13 @@ static bool IsCXX98CompatWarning(Sema &S, unsigned InDiagNote) {
          InDiagNote == diag::note_protected_by_variable_non_pod;
 }
 
+/// Returns true if a particular note should be a C++ compatibility warning in
+/// C mode with -Wc++-compat.
+static bool IsCppCompatWarning(Sema &S, unsigned InDiagNote) {
+  return !S.getLangOpts().CPlusPlus &&
+         InDiagNote == diag::note_protected_by_variable_init;
+}
+
 /// Produce primary diagnostic for an indirect jump statement.
 static void DiagnoseIndirectOrAsmJumpStmt(Sema &S, Stmt *Jump,
                                           LabelDecl *Target, bool &Diagnosed) {
@@ -906,34 +924,43 @@ void JumpScopeChecker::DiagnoseIndirectOrAsmJump(Stmt *Jump, unsigned JumpScope,
       S.Diag(Scopes[I].Loc, Scopes[I].OutDiag);
     }
 
-  SmallVector<unsigned, 10> ToScopesCXX98Compat;
+  SmallVector<unsigned, 10> ToScopesCXX98Compat, ToScopesCppCompat;
 
   // Now walk into the scopes containing the label whose address was taken.
   for (unsigned I = TargetScope; I != Common; I = Scopes[I].ParentScope)
     if (IsCXX98CompatWarning(S, Scopes[I].InDiag))
       ToScopesCXX98Compat.push_back(I);
+    else if (IsCppCompatWarning(S, Scopes[I].InDiag))
+      ToScopesCppCompat.push_back(I);
     else if (Scopes[I].InDiag) {
       DiagnoseIndirectOrAsmJumpStmt(S, Jump, Target, Diagnosed);
       S.Diag(Scopes[I].Loc, Scopes[I].InDiag);
     }
 
-  // Diagnose this jump if it would be ill-formed in C++98.
-  if (!Diagnosed && !ToScopesCXX98Compat.empty()) {
+  // Diagnose this jump if it would be ill-formed in C++[98].
+  if (!Diagnosed) {
     bool IsAsmGoto = isa<GCCAsmStmt>(Jump);
-    S.Diag(Jump->getBeginLoc(),
-           diag::warn_cxx98_compat_indirect_goto_in_protected_scope)
-        << IsAsmGoto;
-    S.Diag(Target->getStmt()->getIdentLoc(), diag::note_indirect_goto_target)
-        << IsAsmGoto;
-    NoteJumpIntoScopes(ToScopesCXX98Compat);
+    auto Diag = [&](unsigned DiagId, const SmallVectorImpl<unsigned> &Notes) {
+      S.Diag(Jump->getBeginLoc(), DiagId) << IsAsmGoto;
+      S.Diag(Target->getStmt()->getIdentLoc(), diag::note_indirect_goto_target)
+          << IsAsmGoto;
+      NoteJumpIntoScopes(Notes);
+    };
+    if (!ToScopesCXX98Compat.empty())
+      Diag(diag::warn_cxx98_compat_indirect_goto_in_protected_scope,
+           ToScopesCXX98Compat);
+    else if (!ToScopesCppCompat.empty())
+      Diag(diag::warn_cpp_compat_indirect_goto_in_protected_scope,
+           ToScopesCppCompat);
   }
 }
 
 /// CheckJump - Validate that the specified jump statement is valid: that it is
 /// jumping within or out of its current scope, not into a deeper one.
 void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
-                               unsigned JumpDiagError, unsigned JumpDiagWarning,
-                                 unsigned JumpDiagCXX98Compat) {
+                                 unsigned JumpDiagError,
+                                 unsigned JumpDiagWarning,
+                                 unsigned JumpDiagCompat) {
   if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(From)))
     return;
   if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(To)))
@@ -973,15 +1000,17 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
   if (CommonScope == ToScope) return;
 
   // Pull out (and reverse) any scopes we might need to diagnose skipping.
-  SmallVector<unsigned, 10> ToScopesCXX98Compat;
+  SmallVector<unsigned, 10> ToScopesCompat;
   SmallVector<unsigned, 10> ToScopesError;
   SmallVector<unsigned, 10> ToScopesWarning;
   for (unsigned I = ToScope; I != CommonScope; I = Scopes[I].ParentScope) {
-    if (S.getLangOpts().MSVCCompat && JumpDiagWarning != 0 &&
+    if (S.getLangOpts().MSVCCompat && S.getLangOpts().CPlusPlus &&
+        JumpDiagWarning != 0 &&
         IsMicrosoftJumpWarning(JumpDiagError, Scopes[I].InDiag))
       ToScopesWarning.push_back(I);
-    else if (IsCXX98CompatWarning(S, Scopes[I].InDiag))
-      ToScopesCXX98Compat.push_back(I);
+    else if (IsCXX98CompatWarning(S, Scopes[I].InDiag) ||
+             IsCppCompatWarning(S, Scopes[I].InDiag))
+      ToScopesCompat.push_back(I);
     else if (Scopes[I].InDiag)
       ToScopesError.push_back(I);
   }
@@ -1001,10 +1030,10 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
     NoteJumpIntoScopes(ToScopesError);
   }
 
-  // Handle -Wc++98-compat warnings if the jump is well-formed.
-  if (ToScopesError.empty() && !ToScopesCXX98Compat.empty()) {
-    S.Diag(DiagLoc, JumpDiagCXX98Compat);
-    NoteJumpIntoScopes(ToScopesCXX98Compat);
+  // Handle -Wc++98-compat or -Wc++-compat warnings if the jump is well-formed.
+  if (ToScopesError.empty() && !ToScopesCompat.empty()) {
+    S.Diag(DiagLoc, JumpDiagCompat);
+    NoteJumpIntoScopes(ToScopesCompat);
   }
 }
 

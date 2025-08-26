@@ -8,7 +8,9 @@
 
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -18,26 +20,15 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <cstdint>
+#include <optional>
 
 #define DEBUG_TYPE "dxil-resource"
 
 using namespace llvm;
 using namespace dxil;
-
-static StringRef getResourceClassName(ResourceClass RC) {
-  switch (RC) {
-  case ResourceClass::SRV:
-    return "SRV";
-  case ResourceClass::UAV:
-    return "UAV";
-  case ResourceClass::CBuffer:
-    return "CBuffer";
-  case ResourceClass::Sampler:
-    return "Sampler";
-  }
-  llvm_unreachable("Unhandled ResourceClass");
-}
 
 static StringRef getResourceKindName(ResourceKind RK) {
   switch (RK) {
@@ -60,7 +51,7 @@ static StringRef getResourceKindName(ResourceKind RK) {
   case ResourceKind::TextureCubeArray:
     return "TextureCubeArray";
   case ResourceKind::TypedBuffer:
-    return "TypedBuffer";
+    return "Buffer";
   case ResourceKind::RawBuffer:
     return "RawBuffer";
   case ResourceKind::StructuredBuffer:
@@ -122,6 +113,44 @@ static StringRef getElementTypeName(ElementType ET) {
     return "p32i8";
   case ElementType::PackedU8x32:
     return "p32u8";
+  case ElementType::Invalid:
+    return "<invalid>";
+  }
+  llvm_unreachable("Unhandled ElementType");
+}
+
+static StringRef getElementTypeNameForTemplate(ElementType ET) {
+  switch (ET) {
+  case ElementType::I1:
+    return "bool";
+  case ElementType::I16:
+    return "int16_t";
+  case ElementType::U16:
+    return "uint16_t";
+  case ElementType::I32:
+    return "int32_t";
+  case ElementType::U32:
+    return "uint32_t";
+  case ElementType::I64:
+    return "int64_t";
+  case ElementType::U64:
+    return "uint32_t";
+  case ElementType::F16:
+  case ElementType::SNormF16:
+  case ElementType::UNormF16:
+    return "half";
+  case ElementType::F32:
+  case ElementType::SNormF32:
+  case ElementType::UNormF32:
+    return "float";
+  case ElementType::F64:
+  case ElementType::SNormF64:
+  case ElementType::UNormF64:
+    return "double";
+  case ElementType::PackedS8x32:
+    return "int8_t4_packed";
+  case ElementType::PackedU8x32:
+    return "uint8_t4_packed";
   case ElementType::Invalid:
     return "<invalid>";
   }
@@ -215,12 +244,44 @@ ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
 }
 
 static void formatTypeName(SmallString<64> &Dest, StringRef Name,
-                           bool isWriteable, bool isROV) {
-  Dest = isWriteable ? (isROV ? "RasterizerOrdered" : "RW") : "";
-  Dest += Name;
+                           bool IsWriteable, bool IsROV,
+                           Type *ContainedType = nullptr,
+                           bool IsSigned = true) {
+  raw_svector_ostream DestStream(Dest);
+  if (IsWriteable)
+    DestStream << (IsROV ? "RasterizerOrdered" : "RW");
+  DestStream << Name;
+
+  if (!ContainedType)
+    return;
+
+  StringRef ElementName;
+  ElementType ET = toDXILElementType(ContainedType, IsSigned);
+  if (ET != ElementType::Invalid) {
+    ElementName = getElementTypeNameForTemplate(ET);
+  } else {
+    assert(isa<StructType>(ContainedType) &&
+           "invalid element type for raw buffer");
+    StructType *ST = cast<StructType>(ContainedType);
+    if (!ST->hasName())
+      return;
+    ElementName = ST->getStructName();
+  }
+
+  DestStream << "<" << ElementName;
+  if (const FixedVectorType *VTy = dyn_cast<FixedVectorType>(ContainedType))
+    DestStream << VTy->getNumElements();
+  DestStream << ">";
 }
 
-StructType *ResourceTypeInfo::createElementStruct() {
+static StructType *getOrCreateElementStruct(Type *ElemType, StringRef Name) {
+  StructType *Ty = StructType::getTypeByName(ElemType->getContext(), Name);
+  if (Ty && Ty->getNumElements() == 1 && Ty->getElementType(0) == ElemType)
+    return Ty;
+  return StructType::create(ElemType, Name);
+}
+
+StructType *ResourceTypeInfo::createElementStruct(StringRef CBufferName) {
   SmallString<64> TypeName;
 
   switch (Kind) {
@@ -233,51 +294,61 @@ StructType *ResourceTypeInfo::createElementStruct() {
   case ResourceKind::TextureCubeArray: {
     auto *RTy = cast<TextureExtType>(HandleTy);
     formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
-                   RTy->isROV());
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   RTy->isROV(), RTy->getResourceType(), RTy->isSigned());
+    return getOrCreateElementStruct(RTy->getResourceType(), TypeName);
   }
   case ResourceKind::Texture2DMS:
   case ResourceKind::Texture2DMSArray: {
     auto *RTy = cast<MSTextureExtType>(HandleTy);
     formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
-                   /*IsROV=*/false);
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   /*IsROV=*/false, RTy->getResourceType(), RTy->isSigned());
+    return getOrCreateElementStruct(RTy->getResourceType(), TypeName);
   }
   case ResourceKind::TypedBuffer: {
     auto *RTy = cast<TypedBufferExtType>(HandleTy);
     formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
-                   RTy->isROV());
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   RTy->isROV(), RTy->getResourceType(), RTy->isSigned());
+    return getOrCreateElementStruct(RTy->getResourceType(), TypeName);
   }
   case ResourceKind::RawBuffer: {
     auto *RTy = cast<RawBufferExtType>(HandleTy);
     formatTypeName(TypeName, "ByteAddressBuffer", RTy->isWriteable(),
                    RTy->isROV());
-    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
-                              TypeName);
+    return getOrCreateElementStruct(Type::getInt32Ty(HandleTy->getContext()),
+                                    TypeName);
   }
   case ResourceKind::StructuredBuffer: {
     auto *RTy = cast<RawBufferExtType>(HandleTy);
+    Type *Ty = RTy->getResourceType();
     formatTypeName(TypeName, "StructuredBuffer", RTy->isWriteable(),
-                   RTy->isROV());
-    return StructType::create(RTy->getResourceType(), TypeName);
+                   RTy->isROV(), RTy->getResourceType(), true);
+    return getOrCreateElementStruct(Ty, TypeName);
   }
   case ResourceKind::FeedbackTexture2D:
   case ResourceKind::FeedbackTexture2DArray: {
     auto *RTy = cast<FeedbackTextureExtType>(HandleTy);
     TypeName = formatv("{0}<{1}>", getResourceKindName(Kind),
                        llvm::to_underlying(RTy->getFeedbackType()));
-    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
-                              TypeName);
+    return getOrCreateElementStruct(Type::getInt32Ty(HandleTy->getContext()),
+                                    TypeName);
   }
-  case ResourceKind::CBuffer:
-    return StructType::create(HandleTy->getContext(), "cbuffer");
+  case ResourceKind::CBuffer: {
+    auto *RTy = cast<CBufferExtType>(HandleTy);
+    LayoutExtType *LayoutType = cast<LayoutExtType>(RTy->getResourceType());
+    StructType *Ty = cast<StructType>(LayoutType->getWrappedType());
+    SmallString<64> Name = getResourceKindName(Kind);
+    if (!CBufferName.empty()) {
+      Name.append(".");
+      Name.append(CBufferName);
+    }
+    return StructType::create(Ty->elements(), Name);
+  }
   case ResourceKind::Sampler: {
     auto *RTy = cast<SamplerExtType>(HandleTy);
     TypeName = formatv("SamplerState<{0}>",
                        llvm::to_underlying(RTy->getSamplerType()));
-    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
-                              TypeName);
+    return getOrCreateElementStruct(Type::getInt32Ty(HandleTy->getContext()),
+                                    TypeName);
   }
   case ResourceKind::TBuffer:
   case ResourceKind::RTAccelerationStructure:
@@ -526,10 +597,14 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
   }
 }
 
-GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty,
-                                           StringRef Name) {
+GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty) {
   assert(!Symbol && "Symbol has already been created");
-  Symbol = new GlobalVariable(M, Ty, /*isConstant=*/true,
+  Type *ResTy = Ty;
+  int64_t Size = Binding.Size;
+  if (Size != 1)
+    // unbounded arrays are represented as zero-sized arrays in LLVM IR
+    ResTy = ArrayType::get(Ty, Size == ~0u ? 0 : Size);
+  Symbol = new GlobalVariable(M, ResTy, /*isConstant=*/true,
                               GlobalValue::ExternalLinkage,
                               /*Initializer=*/nullptr, Name);
   return Symbol;
@@ -556,7 +631,7 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
   MDVals.push_back(getIntMD(Binding.RecordID));
   assert(Symbol && "Cannot yet create useful resource metadata without symbol");
   MDVals.push_back(ValueAsMetadata::get(Symbol));
-  MDVals.push_back(MDString::get(Ctx, Symbol->getName()));
+  MDVals.push_back(MDString::get(Ctx, Name));
   MDVals.push_back(getIntMD(Binding.Space));
   MDVals.push_back(getIntMD(Binding.LowerBound));
   MDVals.push_back(getIntMD(Binding.Size));
@@ -654,6 +729,9 @@ ResourceInfo::getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const {
 
 void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
                          const DataLayout &DL) const {
+  if (!Name.empty())
+    OS << "  Name: " << Name << "\n";
+
   if (Symbol) {
     OS << "  Symbol: ";
     Symbol->printAsOperand(OS);
@@ -701,6 +779,30 @@ static bool isUpdateCounterIntrinsic(Function &F) {
   return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
 }
 
+StringRef dxil::getResourceNameFromBindingCall(CallInst *CI) {
+  Value *Op = nullptr;
+  switch (CI->getCalledFunction()->getIntrinsicID()) {
+  default:
+    llvm_unreachable("unexpected handle creation intrinsic");
+  case Intrinsic::dx_resource_handlefrombinding:
+  case Intrinsic::dx_resource_handlefromimplicitbinding:
+    Op = CI->getArgOperand(5);
+    break;
+  }
+
+  auto *GV = dyn_cast<llvm::GlobalVariable>(Op);
+  if (!GV)
+    return "";
+
+  auto *CA = dyn_cast<ConstantDataArray>(GV->getInitializer());
+  assert(CA && CA->isString() && "expected constant string");
+  StringRef Name = CA->getAsString();
+  // strip trailing 0
+  if (Name.ends_with('\0'))
+    Name = Name.drop_back(1);
+  return Name;
+}
+
 void DXILResourceMap::populateResourceInfos(Module &M,
                                             DXILResourceTypeMap &DRTM) {
   SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
@@ -726,8 +828,11 @@ void DXILResourceMap::populateResourceInfos(Module &M,
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           uint32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+          StringRef Name = getResourceNameFromBindingCall(CI);
+
           ResourceInfo RI =
-              ResourceInfo{/*RecordID=*/0, Space, LowerBound, Size, HandleTy};
+              ResourceInfo{/*RecordID=*/0, Space,    LowerBound,
+                           Size,           HandleTy, Name};
 
           CIToInfos.emplace_back(CI, RI, RTI);
         }
@@ -811,8 +916,10 @@ void DXILResourceMap::populateCounterDirections(Module &M) {
       for (ResourceInfo *RBInfo : RBInfos) {
         if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown)
           RBInfo->CounterDirection = Direction;
-        else if (RBInfo->CounterDirection != Direction)
+        else if (RBInfo->CounterDirection != Direction) {
           RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
+          HasInvalidDirection = true;
+        }
       }
     }
   }
@@ -879,12 +986,70 @@ SmallVector<dxil::ResourceInfo *> DXILResourceMap::findByUse(const Value *Key) {
 
 //===----------------------------------------------------------------------===//
 
+void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
+  hlsl::BindingInfoBuilder Builder;
+
+  // collect all of the llvm.dx.resource.handlefrombinding calls;
+  // make a note if there is llvm.dx.resource.handlefromimplicitbinding
+  for (Function &F : M.functions()) {
+    if (!F.isDeclaration())
+      continue;
+
+    switch (F.getIntrinsicID()) {
+    default:
+      continue;
+    case Intrinsic::dx_resource_handlefrombinding: {
+      auto *HandleTy = cast<TargetExtType>(F.getReturnType());
+      ResourceTypeInfo &RTI = DRTM[HandleTy];
+
+      for (User *U : F.users())
+        if (CallInst *CI = dyn_cast<CallInst>(U)) {
+          uint32_t Space =
+              cast<ConstantInt>(CI->getArgOperand(0))->getZExtValue();
+          uint32_t LowerBound =
+              cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+          int32_t Size =
+              cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+          Value *Name = CI->getArgOperand(5);
+
+          // negative size means unbounded resource array;
+          // upper bound register overflow should be detected in Sema
+          assert((Size < 0 || (unsigned)LowerBound + Size - 1 <= UINT32_MAX) &&
+                 "upper bound register overflow");
+          uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
+          Builder.trackBinding(RTI.getResourceClass(), Space, LowerBound,
+                               UpperBound, Name);
+        }
+      break;
+    }
+    case Intrinsic::dx_resource_handlefromimplicitbinding: {
+      HasImplicitBinding = true;
+      break;
+    }
+    }
+  }
+
+  Bindings = Builder.calculateBindingInfo(
+      [this](auto, auto) { this->HasOverlappingBinding = true; });
+}
+
+//===----------------------------------------------------------------------===//
+
 AnalysisKey DXILResourceTypeAnalysis::Key;
 AnalysisKey DXILResourceAnalysis::Key;
+AnalysisKey DXILResourceBindingAnalysis::Key;
 
 DXILResourceMap DXILResourceAnalysis::run(Module &M,
                                           ModuleAnalysisManager &AM) {
   DXILResourceMap Data;
+  DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
+  Data.populate(M, DRTM);
+  return Data;
+}
+
+DXILResourceBindingInfo
+DXILResourceBindingAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+  DXILResourceBindingInfo Data;
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
   Data.populate(M, DRTM);
   return Data;
@@ -950,5 +1115,35 @@ INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resources",
 char DXILResourceWrapperPass::ID = 0;
 
 ModulePass *llvm::createDXILResourceWrapperPassPass() {
+  return new DXILResourceWrapperPass();
+}
+
+DXILResourceBindingWrapperPass::DXILResourceBindingWrapperPass()
+    : ModulePass(ID) {}
+
+DXILResourceBindingWrapperPass::~DXILResourceBindingWrapperPass() = default;
+
+void DXILResourceBindingWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
+  AU.setPreservesAll();
+}
+
+bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
+  BindingInfo.reset(new DXILResourceBindingInfo());
+
+  DXILResourceTypeMap &DRTM =
+      getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+  BindingInfo->populate(M, DRTM);
+
+  return false;
+}
+
+void DXILResourceBindingWrapperPass::releaseMemory() { BindingInfo.reset(); }
+
+INITIALIZE_PASS(DXILResourceBindingWrapperPass, "dxil-resource-binding",
+                "DXIL Resource Binding Analysis", false, true)
+char DXILResourceBindingWrapperPass::ID = 0;
+
+ModulePass *llvm::createDXILResourceBindingWrapperPassPass() {
   return new DXILResourceWrapperPass();
 }

@@ -1,3 +1,5 @@
+# XFAIL: target-windows
+
 # Test that the plugin.cplusplus.display.function-name-format setting
 # doesn't print into the frame-format setting unless all its format variables
 # were successful.
@@ -20,7 +22,7 @@ int main(int argc, const char *argv[]) {
 #--- commands.input
 settings set plugin.cplusplus.display.function-name-format "${function.basename}${script.target:invalid_func}"
 settings set -f frame-format "custom-frame '${function.name-with-args}'\n"
-break set -l 2
+break set -l 2 -f main.cpp
 
 run
 bt

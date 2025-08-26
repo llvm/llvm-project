@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/StringList.h"
 
 using namespace lldb;
@@ -19,6 +20,17 @@ OptionValueEnumeration::OptionValueEnumeration(
   SetEnumerations(enumerators);
 }
 
+void OptionValueEnumeration::DumpEnum(Stream &strm, enum_type value) {
+  const size_t count = m_enumerations.GetSize();
+  for (size_t i = 0; i < count; ++i)
+    if (m_enumerations.GetValueAtIndexUnchecked(i).value == value) {
+      strm.PutCString(m_enumerations.GetCStringAtIndex(i));
+      return;
+    }
+
+  strm.Printf("%" PRIu64, (uint64_t)value);
+}
+
 void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
                                        Stream &strm, uint32_t dump_mask) {
   if (dump_mask & eDumpOptionType)
@@ -26,19 +38,17 @@ void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
   if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" = ");
-    const size_t count = m_enumerations.GetSize();
-    for (size_t i = 0; i < count; ++i) {
-      if (m_enumerations.GetValueAtIndexUnchecked(i).value == m_current_value) {
-        strm.PutCString(m_enumerations.GetCStringAtIndex(i).GetStringRef());
-        return;
-      }
+    DumpEnum(strm, m_current_value);
+    if (dump_mask & eDumpOptionDefaultValue &&
+        m_current_value != m_default_value) {
+      DefaultValueFormat label(strm);
+      DumpEnum(strm, m_default_value);
     }
-    strm.Printf("%" PRIu64, (uint64_t)m_current_value);
   }
 }
 
 llvm::json::Value
-OptionValueEnumeration::ToJSON(const ExecutionContext *exe_ctx) {
+OptionValueEnumeration::ToJSON(const ExecutionContext *exe_ctx) const {
   for (const auto &enums : m_enumerations) {
     if (enums.value.value == m_current_value)
       return enums.cstring.GetStringRef();

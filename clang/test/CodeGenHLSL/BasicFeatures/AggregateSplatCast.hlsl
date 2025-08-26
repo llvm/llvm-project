@@ -55,7 +55,7 @@ struct S {
 // struct splats
 // CHECK-LABEL: define void {{.*}}call3
 // CHECK: [[A:%.*]] = alloca <1 x i32>, align 4
-// CHECK: [[s:%.*]] = alloca %struct.S, align 4
+// CHECK: [[s:%.*]] = alloca %struct.S, align 1
 // CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[A]], align 4
 // CHECK-NEXT: [[L:%.*]] = load <1 x i32>, ptr [[A]], align 4
 // CHECK-NEXT: [[VL:%.*]] = extractelement <1 x i32> [[L]], i32 0
@@ -72,7 +72,7 @@ export void call3() {
 // struct splat from vector of length 1
 // CHECK-LABEL: define void {{.*}}call5
 // CHECK: [[A:%.*]] = alloca <1 x i32>, align 4
-// CHECK-NEXT: [[s:%.*]] = alloca %struct.S, align 4
+// CHECK-NEXT: [[s:%.*]] = alloca %struct.S, align 1
 // CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[A]], align 4
 // CHECK-NEXT: [[L:%.*]] = load <1 x i32>, ptr [[A]], align 4
 // CHECK-NEXT: [[VL:%.*]] = extractelement <1 x i32> [[L]], i32 0

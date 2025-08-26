@@ -10,9 +10,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionDXContainer.h"
@@ -22,7 +24,6 @@
 #include "llvm/MC/MCSectionSPIRV.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -379,6 +380,19 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   unsigned EHSectionType = T.getArch() == Triple::x86_64
                                ? ELF::SHT_X86_64_UNWIND
                                : ELF::SHT_PROGBITS;
+  switch (T.getArch()) {
+  case Triple::x86_64:
+    SFrameABIArch = sframe::ABI::AMD64EndianLittle;
+    break;
+  case Triple::aarch64:
+    SFrameABIArch = sframe::ABI::AArch64EndianLittle;
+    break;
+  case Triple::aarch64_be:
+    SFrameABIArch = sframe::ABI::AArch64EndianBig;
+    break;
+  default:
+    break;
+  }
 
   // Solaris requires different flags for .eh_frame to seemingly every other
   // platform.
@@ -536,6 +550,11 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   EHFrameSection =
       Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
 
+  SFrameSection =
+      Ctx->getELFSection(".sframe", ELF::SHT_GNU_SFRAME, ELF::SHF_ALLOC);
+
+  CallGraphSection = Ctx->getELFSection(".callgraph", ELF::SHT_PROGBITS, 0);
+
   StackSizesSection = Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, 0);
 
   PseudoProbeSection = Ctx->getELFSection(".pseudo_probe", DebugSecType, 0);
@@ -546,18 +565,51 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
-  TextSection = Ctx->getGOFFSection(".text", SectionKind::getText(), nullptr);
-  BSSSection = Ctx->getGOFFSection(".bss", SectionKind::getBSS(), nullptr);
-  PPA1Section = Ctx->getGOFFSection(".ppa1", SectionKind::getMetadata(),
-                                    TextSection, GOFF::SK_PPA1);
-  PPA2Section = Ctx->getGOFFSection(".ppa2", SectionKind::getMetadata(),
-                                    TextSection, GOFF::SK_PPA2);
+  MCSectionGOFF *RootSDSection = Ctx->getGOFFSection(
+      SectionKind::getMetadata(), "#C",
+      GOFF::SDAttr{GOFF::ESD_TA_Rent, GOFF::ESD_BSC_Section});
 
-  PPA2ListSection =
-      Ctx->getGOFFSection(".ppa2list", SectionKind::getData(), nullptr);
+  MCSectionGOFF *ADAEDSection = Ctx->getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_WSA,
+      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
+                   GOFF::ESD_ALIGN_Quadword, 0},
+      RootSDSection);
+  ADASection = Ctx->getGOFFSection(SectionKind::getData(), "#S",
+                                   GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
+                                                GOFF::ESD_LT_XPLink,
+                                                GOFF::ESD_BSC_Section, 0},
+                                   ADAEDSection);
 
-  ADASection = Ctx->getGOFFSection(".ada", SectionKind::getData(), nullptr);
-  IDRLSection = Ctx->getGOFFSection("B_IDRL", SectionKind::getData(), nullptr);
+  TextSection = Ctx->getGOFFSection(
+      SectionKind::getText(), GOFF::CLASS_CODE,
+      GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Concatenate,
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword, 0},
+      RootSDSection);
+
+  MCSectionGOFF *PPA2ListEDSection = Ctx->getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_PPA2,
+      GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword, 0},
+      RootSDSection);
+  PPA2ListSection = Ctx->getGOFFSection(SectionKind::getData(), ".&ppa2",
+                                        GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
+                                                     GOFF::ESD_LT_OS,
+                                                     GOFF::ESD_BSC_Section, 0},
+                                        PPA2ListEDSection);
+
+  IDRLSection = Ctx->getGOFFSection(
+      SectionKind::getData(), "B_IDRL",
+      GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
+                   GOFF::ESD_TS_Structured, GOFF::ESD_BA_Concatenate,
+                   GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword, 0},
+      RootSDSection);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
@@ -599,6 +651,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
   if (T.getArch() == Triple::aarch64) {
     ImportCallSection =
         Ctx->getCOFFSection(".impcall", COFF::IMAGE_SCN_LNK_INFO);
+  } else if (T.getArch() == Triple::x86_64) {
+    // Import Call Optimization on x64 leverages the same metadata as the
+    // retpoline mitigation, hence the unusual section name.
+    ImportCallSection =
+        Ctx->getCOFFSection(".retplne", COFF::IMAGE_SCN_LNK_INFO);
   }
 
   // Debug info.
@@ -1023,6 +1080,7 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   CompactUnwindDwarfEHFrameOnly = 0;
 
   EHFrameSection = nullptr;             // Created on demand.
+  SFrameSection = nullptr;              // Created on demand.
   CompactUnwindSection = nullptr;       // Used only by selected targets.
   DwarfAccelNamesSection = nullptr;     // Used only by selected targets.
   DwarfAccelObjCSection = nullptr;      // Used only by selected targets.
@@ -1082,6 +1140,25 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
 }
 
 MCSection *
+MCObjectFileInfo::getCallGraphSection(const MCSection &TextSec) const {
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
+    return CallGraphSection;
+
+  const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
+  unsigned Flags = ELF::SHF_LINK_ORDER;
+  StringRef GroupName;
+  if (const MCSymbol *Group = ElfSec.getGroup()) {
+    GroupName = Group->getName();
+    Flags |= ELF::SHF_GROUP;
+  }
+
+  return Ctx->getELFSection(
+      ".callgraph", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
+}
+
+MCSection *
 MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
   if ((Ctx->getObjectFileType() != MCContext::IsELF) ||
       Ctx->getTargetTriple().isPS4())
@@ -1095,9 +1172,10 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".stack_sizes", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1115,9 +1193,10 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
 
   // Use the text section's begin symbol and unique ID to create a separate
   // .llvm_bb_addr_map section associated with every unique text section.
-  return Ctx->getELFSection(".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1133,10 +1212,10 @@ MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName,
-                            /*IsComdat=*/true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0, GroupName,
+      /*IsComdat=*/true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1152,9 +1231,10 @@ MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(PseudoProbeSection->getName(), ELF::SHT_PROGBITS,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      PseudoProbeSection->getName(), ELF::SHT_PROGBITS, Flags, 0, GroupName,
+      true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1202,7 +1282,7 @@ MCSection *MCObjectFileInfo::getPCSection(StringRef Name,
     GroupName = Group->getName();
     Flags |= ELF::SHF_GROUP;
   }
-  return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
-                            ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec->getBeginSymbol()));
+  return Ctx->getELFSection(
+      Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec->getBeginSymbol()));
 }

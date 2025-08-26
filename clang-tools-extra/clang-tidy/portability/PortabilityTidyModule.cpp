@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "AvoidPragmaOnceCheck.h"
 #include "RestrictSystemIncludesCheck.h"
 #include "SIMDIntrinsicsCheck.h"
 #include "StdAllocatorConstCheck.h"
@@ -20,6 +21,8 @@ namespace portability {
 class PortabilityModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidPragmaOnceCheck>(
+        "portability-avoid-pragma-once");
     CheckFactories.registerCheck<RestrictSystemIncludesCheck>(
         "portability-restrict-system-includes");
     CheckFactories.registerCheck<SIMDIntrinsicsCheck>(
@@ -39,6 +42,7 @@ static ClangTidyModuleRegistry::Add<PortabilityModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the PortabilityModule.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int PortabilityModuleAnchorSource = 0;
 
 } // namespace clang::tidy

@@ -1,20 +1,27 @@
 import os
 import time
-import subprocess
+from typing import Optional, Callable, Any, List, Union
+import uuid
 
 import dap_server
+from dap_server import Source
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
+import base64
 
 
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    timeoutval = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
+    DEFAULT_TIMEOUT = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def create_debug_adapter(self, lldbDAPEnv=None, connection=None):
+    def create_debug_adapter(
+        self,
+        lldbDAPEnv: Optional[dict[str, str]] = None,
+        connection: Optional[str] = None,
+    ):
         """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
@@ -28,27 +35,65 @@ class DAPTestCaseBase(TestBase):
             env=lldbDAPEnv,
         )
 
-    def build_and_create_debug_adapter(self, lldbDAPEnv=None):
-        self.build()
+    def build_and_create_debug_adapter(
+        self,
+        lldbDAPEnv: Optional[dict[str, str]] = None,
+        dictionary: Optional[dict] = None,
+    ):
+        self.build(dictionary=dictionary)
         self.create_debug_adapter(lldbDAPEnv)
 
-    def set_source_breakpoints(self, source_path, lines, data=None):
+    def build_and_create_debug_adapter_for_attach(self):
+        """Variant of build_and_create_debug_adapter that builds a uniquely
+        named binary."""
+        unique_name = str(uuid.uuid4())
+        self.build_and_create_debug_adapter(dictionary={"EXE": unique_name})
+        return self.getBuildArtifact(unique_name)
+
+    def set_source_breakpoints(
+        self, source_path, lines, data=None, wait_for_resolve=True
+    ):
         """Sets source breakpoints and returns an array of strings containing
         the breakpoint IDs ("1", "2") for each breakpoint that was set.
         Parameter data is array of data objects for breakpoints.
         Each object in data is 1:1 mapping with the entry in lines.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        response = self.dap_server.request_setBreakpoints(source_path, lines, data)
+        return self.set_source_breakpoints_from_source(
+            Source(path=source_path), lines, data, wait_for_resolve
+        )
+
+    def set_source_breakpoints_assembly(
+        self, source_reference, lines, data=None, wait_for_resolve=True
+    ):
+        return self.set_source_breakpoints_from_source(
+            Source.build(source_reference=source_reference),
+            lines,
+            data,
+            wait_for_resolve,
+        )
+
+    def set_source_breakpoints_from_source(
+        self, source: Source, lines, data=None, wait_for_resolve=True
+    ):
+        response = self.dap_server.request_setBreakpoints(
+            source,
+            lines,
+            data,
+        )
         if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
         breakpoint_ids = []
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
+        if wait_for_resolve:
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def set_function_breakpoints(self, functions, condition=None, hitCondition=None):
+    def set_function_breakpoints(
+        self, functions, condition=None, hitCondition=None, wait_for_resolve=True
+    ):
         """Sets breakpoints by function name given an array of function names
         and returns an array of strings containing the breakpoint IDs
         ("1", "2") for each breakpoint that was set.
@@ -62,22 +107,57 @@ class DAPTestCaseBase(TestBase):
         breakpoint_ids = []
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
+        if wait_for_resolve:
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def waitUntil(self, condition_callback):
-        for _ in range(20):
-            if condition_callback():
+    def wait_for_breakpoints_to_resolve(
+        self, breakpoint_ids: list[str], timeout: Optional[float] = DEFAULT_TIMEOUT
+    ):
+        unresolved_breakpoints = self.dap_server.wait_for_breakpoints_to_be_verified(
+            breakpoint_ids, timeout
+        )
+        self.assertEqual(
+            len(unresolved_breakpoints),
+            0,
+            f"Expected to resolve all breakpoints. Unresolved breakpoint ids: {unresolved_breakpoints}",
+        )
+
+    def wait_until(
+        self,
+        predicate: Callable[[], bool],
+        delay: float = 0.5,
+        timeout: float = DEFAULT_TIMEOUT,
+    ) -> bool:
+        """Repeatedly run the predicate until either the predicate returns True
+        or a timeout has occurred."""
+        deadline = time.monotonic() + timeout
+        while deadline > time.monotonic():
+            if predicate():
                 return True
-            time.sleep(0.5)
+            time.sleep(delay)
         return False
 
-    def verify_breakpoint_hit(self, breakpoint_ids):
+    def assertCapabilityIsSet(self, key: str, msg: Optional[str] = None) -> None:
+        """Assert that given capability is set in the client."""
+        self.assertIn(key, self.dap_server.capabilities, msg)
+        self.assertEqual(self.dap_server.capabilities[key], True, msg)
+
+    def assertCapabilityIsNotSet(self, key: str, msg: Optional[str] = None) -> None:
+        """Assert that given capability is not set in the client."""
+        if key in self.dap_server.capabilities:
+            self.assertEqual(self.dap_server.capabilities[key], False, msg)
+
+    def verify_breakpoint_hit(
+        self, breakpoint_ids: List[Union[int, str]], timeout: float = DEFAULT_TIMEOUT
+    ):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of breakpoint ID strings
         (["1", "2"]). The return value from self.set_source_breakpoints()
         or self.set_function_breakpoints() can be passed to this function"""
-        stopped_events = self.dap_server.wait_for_stopped()
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        normalized_bp_ids = [str(b) for b in breakpoint_ids]
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
@@ -88,31 +168,46 @@ class DAPTestCaseBase(TestBase):
                     and body["reason"] != "instruction breakpoint"
                 ):
                     continue
-                if "description" not in body:
+                if "hitBreakpointIds" not in body:
                     continue
-                # Descriptions for breakpoints will be in the form
-                # "breakpoint 1.1", so look for any description that matches
-                # ("breakpoint 1.") in the description field as verification
-                # that one of the breakpoint locations was hit. DAP doesn't
-                # allow breakpoints to have multiple locations, but LLDB does.
-                # So when looking at the description we just want to make sure
-                # the right breakpoint matches and not worry about the actual
-                # location.
-                description = body["description"]
-                for breakpoint_id in breakpoint_ids:
-                    match_desc = "breakpoint %s." % (breakpoint_id)
-                    if match_desc in description:
+                hit_breakpoint_ids = body["hitBreakpointIds"]
+                for bp in hit_breakpoint_ids:
+                    if str(bp) in normalized_bp_ids:
                         return
-        self.assertTrue(False, "breakpoint not hit")
+        self.assertTrue(
+            False,
+            f"breakpoint not hit, wanted breakpoint_ids {breakpoint_ids} in stopped_events {stopped_events}",
+        )
 
-    def verify_stop_exception_info(self, expected_description, timeout=timeoutval):
+    def verify_all_breakpoints_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+        """Wait for the process we are debugging to stop, and verify we hit
+        all of the breakpoint locations in the "breakpoint_ids" array.
+        "breakpoint_ids" should be a list of int breakpoint IDs ([1, 2])."""
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        for stopped_event in stopped_events:
+            if "body" in stopped_event:
+                body = stopped_event["body"]
+                if "reason" not in body:
+                    continue
+                if (
+                    body["reason"] != "breakpoint"
+                    and body["reason"] != "instruction breakpoint"
+                ):
+                    continue
+                if "hitBreakpointIds" not in body:
+                    continue
+                hit_bps = body["hitBreakpointIds"]
+                if all(breakpoint_id in hit_bps for breakpoint_id in breakpoint_ids):
+                    return
+        self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
+
+    def verify_stop_exception_info(self, expected_description, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify the stop
         reason is 'exception' and that the description matches
         'expected_description'
         """
-        stopped_events = self.dap_server.wait_for_stopped(timeout=timeout)
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
         for stopped_event in stopped_events:
-            print("stopped_event", stopped_event)
             if "body" in stopped_event:
                 body = stopped_event["body"]
                 if "reason" not in body:
@@ -126,7 +221,7 @@ class DAPTestCaseBase(TestBase):
                     return True
         return False
 
-    def verify_commands(self, flavor, output, commands):
+    def verify_commands(self, flavor: str, output: str, commands: list[str]):
         self.assertTrue(output and len(output) > 0, "expect console output")
         lines = output.splitlines()
         prefix = "(lldb) "
@@ -139,10 +234,11 @@ class DAPTestCaseBase(TestBase):
                     found = True
                     break
             self.assertTrue(
-                found, "verify '%s' found in console output for '%s'" % (cmd, flavor)
+                found,
+                f"Command '{flavor}' - '{cmd}' not found in output: {output}",
             )
 
-    def get_dict_value(self, d, key_path):
+    def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
         dictionary within "d". Assert if any key isn't in the
         corresponding dictionary. This is handy for grabbing values from VS
@@ -211,28 +307,34 @@ class DAPTestCaseBase(TestBase):
                         return (source["path"], stackFrame["line"])
         return ("", 0)
 
-    def get_stdout(self, timeout=0.0):
-        return self.dap_server.get_output("stdout", timeout=timeout)
+    def get_stdout(self):
+        return self.dap_server.get_output("stdout")
 
-    def get_console(self, timeout=0.0):
-        return self.dap_server.get_output("console", timeout=timeout)
+    def get_console(self):
+        return self.dap_server.get_output("console")
 
-    def get_important(self, timeout=0.0):
-        return self.dap_server.get_output("important", timeout=timeout)
+    def get_important(self):
+        return self.dap_server.get_output("important")
 
-    def collect_stdout(self, timeout_secs, pattern=None):
+    def collect_stdout(
+        self, timeout: float = DEFAULT_TIMEOUT, pattern: Optional[str] = None
+    ) -> str:
         return self.dap_server.collect_output(
-            "stdout", timeout_secs=timeout_secs, pattern=pattern
+            "stdout", timeout=timeout, pattern=pattern
         )
 
-    def collect_console(self, timeout_secs, pattern=None):
+    def collect_console(
+        self, timeout: float = DEFAULT_TIMEOUT, pattern: Optional[str] = None
+    ) -> str:
         return self.dap_server.collect_output(
-            "console", timeout_secs=timeout_secs, pattern=pattern
+            "console", timeout=timeout, pattern=pattern
         )
 
-    def collect_important(self, timeout_secs, pattern=None):
+    def collect_important(
+        self, timeout: float = DEFAULT_TIMEOUT, pattern: Optional[str] = None
+    ) -> str:
         return self.dap_server.collect_output(
-            "important", timeout_secs=timeout_secs, pattern=pattern
+            "important", timeout=timeout, pattern=pattern
         )
 
     def get_local_as_int(self, name, threadId=None):
@@ -256,46 +358,69 @@ class DAPTestCaseBase(TestBase):
         return self.dap_server.request_setVariable(2, name, str(value), id=id)
 
     def stepIn(
-        self, threadId=None, targetId=None, waitForStop=True, granularity="statement"
+        self,
+        threadId=None,
+        targetId=None,
+        waitForStop=True,
+        granularity="statement",
+        timeout=DEFAULT_TIMEOUT,
     ):
         response = self.dap_server.request_stepIn(
             threadId=threadId, targetId=targetId, granularity=granularity
         )
         self.assertTrue(response["success"])
         if waitForStop:
-            return self.dap_server.wait_for_stopped()
+            return self.dap_server.wait_for_stopped(timeout)
         return None
 
-    def stepOver(self, threadId=None, waitForStop=True, granularity="statement"):
-        self.dap_server.request_next(threadId=threadId, granularity=granularity)
+    def stepOver(
+        self,
+        threadId=None,
+        waitForStop=True,
+        granularity="statement",
+        timeout=DEFAULT_TIMEOUT,
+    ):
+        response = self.dap_server.request_next(
+            threadId=threadId, granularity=granularity
+        )
+        self.assertTrue(
+            response["success"], f"next request failed: response {response}"
+        )
         if waitForStop:
-            return self.dap_server.wait_for_stopped()
+            return self.dap_server.wait_for_stopped(timeout)
         return None
 
-    def stepOut(self, threadId=None, waitForStop=True):
+    def stepOut(self, threadId=None, waitForStop=True, timeout=DEFAULT_TIMEOUT):
         self.dap_server.request_stepOut(threadId=threadId)
         if waitForStop:
-            return self.dap_server.wait_for_stopped()
+            return self.dap_server.wait_for_stopped(timeout)
         return None
 
-    def continue_to_next_stop(self):
-        self.dap_server.request_continue()
-        return self.dap_server.wait_for_stopped()
+    def do_continue(self):  # `continue` is a keyword.
+        resp = self.dap_server.request_continue()
+        self.assertTrue(resp["success"], f"continue request failed: {resp}")
 
-    def continue_to_breakpoints(self, breakpoint_ids):
-        self.dap_server.request_continue()
-        self.verify_breakpoint_hit(breakpoint_ids)
+    def continue_to_next_stop(self, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
+        return self.dap_server.wait_for_stopped(timeout)
 
-    def continue_to_exception_breakpoint(self, filter_label):
-        self.dap_server.request_continue()
+    def continue_to_breakpoint(self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT):
+        self.continue_to_breakpoints((breakpoint_id), timeout)
+
+    def continue_to_breakpoints(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
+        self.verify_breakpoint_hit(breakpoint_ids, timeout)
+
+    def continue_to_exception_breakpoint(self, filter_label, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
         self.assertTrue(
-            self.verify_stop_exception_info(filter_label),
+            self.verify_stop_exception_info(filter_label, timeout),
             'verify we got "%s"' % (filter_label),
         )
 
-    def continue_to_exit(self, exitCode=0):
-        self.dap_server.request_continue()
-        stopped_events = self.dap_server.wait_for_stopped()
+    def continue_to_exit(self, exitCode=0, timeout=DEFAULT_TIMEOUT):
+        self.do_continue()
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
         self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
         )
@@ -316,31 +441,22 @@ class DAPTestCaseBase(TestBase):
         memoryReference = stackFrames[0]["instructionPointerReference"]
         self.assertIsNotNone(memoryReference)
 
-        if memoryReference not in self.dap_server.disassembled_instructions:
-            self.dap_server.request_disassemble(memoryReference=memoryReference)
+        instructions = self.dap_server.request_disassemble(
+            memoryReference=memoryReference
+        )
+        disassembled_instructions = {}
+        for inst in instructions:
+            disassembled_instructions[inst["address"]] = inst
 
-        return self.dap_server.disassembled_instructions[memoryReference]
+        return disassembled_instructions, disassembled_instructions[memoryReference]
 
     def attach(
         self,
-        program=None,
-        pid=None,
-        waitFor=None,
-        trace=None,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        attachCommands=None,
-        coreFile=None,
+        *,
         disconnectAutomatically=True,
-        terminateCommands=None,
-        postRunCommands=None,
-        sourceMap=None,
         sourceInitFile=False,
         expectFailure=False,
-        gdbRemotePort=None,
-        gdbRemoteHostname=None,
+        **kwargs,
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
@@ -357,23 +473,7 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_attach(
-            program=program,
-            pid=pid,
-            waitFor=waitFor,
-            trace=trace,
-            initCommands=initCommands,
-            preRunCommands=preRunCommands,
-            stopCommands=stopCommands,
-            exitCommands=exitCommands,
-            attachCommands=attachCommands,
-            terminateCommands=terminateCommands,
-            coreFile=coreFile,
-            postRunCommands=postRunCommands,
-            sourceMap=sourceMap,
-            gdbRemotePort=gdbRemotePort,
-            gdbRemoteHostname=gdbRemoteHostname,
-        )
+        response = self.dap_server.request_attach(**kwargs)
         if expectFailure:
             return response
         if not (response and response["success"]):
@@ -384,34 +484,11 @@ class DAPTestCaseBase(TestBase):
     def launch(
         self,
         program=None,
-        args=None,
-        cwd=None,
-        env=None,
-        stopOnEntry=False,
-        disableASLR=False,
-        disableSTDIO=False,
-        shellExpandArguments=False,
-        trace=False,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        terminateCommands=None,
-        sourcePath=None,
-        debuggerRoot=None,
+        *,
         sourceInitFile=False,
-        launchCommands=None,
-        sourceMap=None,
         disconnectAutomatically=True,
-        runInTerminal=False,
         expectFailure=False,
-        postRunCommands=None,
-        enableAutoVariableSummaries=False,
-        displayExtendedBacktrace=False,
-        enableSyntheticChildDebugging=False,
-        commandEscapePrefix=None,
-        customFrameFormat=None,
-        customThreadFormat=None,
+        **kwargs,
     ):
         """Sending launch request to dap"""
 
@@ -427,76 +504,21 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_launch(
-            program,
-            args=args,
-            cwd=cwd,
-            env=env,
-            stopOnEntry=stopOnEntry,
-            disableASLR=disableASLR,
-            disableSTDIO=disableSTDIO,
-            shellExpandArguments=shellExpandArguments,
-            trace=trace,
-            initCommands=initCommands,
-            preRunCommands=preRunCommands,
-            stopCommands=stopCommands,
-            exitCommands=exitCommands,
-            terminateCommands=terminateCommands,
-            sourcePath=sourcePath,
-            debuggerRoot=debuggerRoot,
-            launchCommands=launchCommands,
-            sourceMap=sourceMap,
-            runInTerminal=runInTerminal,
-            postRunCommands=postRunCommands,
-            enableAutoVariableSummaries=enableAutoVariableSummaries,
-            displayExtendedBacktrace=displayExtendedBacktrace,
-            enableSyntheticChildDebugging=enableSyntheticChildDebugging,
-            commandEscapePrefix=commandEscapePrefix,
-            customFrameFormat=customFrameFormat,
-            customThreadFormat=customThreadFormat,
-        )
-
+        response = self.dap_server.request_launch(program, **kwargs)
         if expectFailure:
             return response
-
         if not (response and response["success"]):
             self.assertTrue(
                 response["success"],
                 "launch failed (%s)" % (response["body"]["error"]["format"]),
             )
-        return response
 
     def build_and_launch(
         self,
         program,
-        args=None,
-        cwd=None,
-        env=None,
-        stopOnEntry=False,
-        disableASLR=False,
-        disableSTDIO=False,
-        shellExpandArguments=False,
-        trace=False,
-        initCommands=None,
-        preRunCommands=None,
-        stopCommands=None,
-        exitCommands=None,
-        terminateCommands=None,
-        sourcePath=None,
-        debuggerRoot=None,
-        sourceInitFile=False,
-        runInTerminal=False,
-        disconnectAutomatically=True,
-        postRunCommands=None,
-        lldbDAPEnv=None,
-        enableAutoVariableSummaries=False,
-        displayExtendedBacktrace=False,
-        enableSyntheticChildDebugging=False,
-        commandEscapePrefix=None,
-        customFrameFormat=None,
-        customThreadFormat=None,
-        launchCommands=None,
-        expectFailure=False,
+        *,
+        lldbDAPEnv: Optional[dict[str, str]] = None,
+        **kwargs,
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and launch the process.
@@ -504,36 +526,7 @@ class DAPTestCaseBase(TestBase):
         self.build_and_create_debug_adapter(lldbDAPEnv)
         self.assertTrue(os.path.exists(program), "executable must exist")
 
-        return self.launch(
-            program,
-            args,
-            cwd,
-            env,
-            stopOnEntry,
-            disableASLR,
-            disableSTDIO,
-            shellExpandArguments,
-            trace,
-            initCommands,
-            preRunCommands,
-            stopCommands,
-            exitCommands,
-            terminateCommands,
-            sourcePath,
-            debuggerRoot,
-            sourceInitFile,
-            runInTerminal=runInTerminal,
-            disconnectAutomatically=disconnectAutomatically,
-            postRunCommands=postRunCommands,
-            enableAutoVariableSummaries=enableAutoVariableSummaries,
-            enableSyntheticChildDebugging=enableSyntheticChildDebugging,
-            displayExtendedBacktrace=displayExtendedBacktrace,
-            commandEscapePrefix=commandEscapePrefix,
-            customFrameFormat=customFrameFormat,
-            customThreadFormat=customThreadFormat,
-            launchCommands=launchCommands,
-            expectFailure=expectFailure,
-        )
+        return self.launch(program, **kwargs)
 
     def getBuiltinDebugServerTool(self):
         # Tries to find simulation/lldb-server/gdbserver tool path.
@@ -549,3 +542,20 @@ class DAPTestCaseBase(TestBase):
                 self.dap_server.request_disconnect(terminateDebuggee=True)
                 self.assertIsNotNone(server_tool, "debugserver not found.")
         return server_tool
+
+    def writeMemory(self, memoryReference, data=None, offset=0, allowPartial=False):
+        # This function accepts data in decimal and hexadecimal format,
+        # converts it to a Base64 string, and send it to the DAP,
+        # which expects Base64 encoded data.
+        encodedData = (
+            ""
+            if data is None
+            else base64.b64encode(
+                # (bit_length + 7 (rounding up to nearest byte) ) //8 = converts to bytes.
+                data.to_bytes((data.bit_length() + 7) // 8, "little")
+            ).decode()
+        )
+        response = self.dap_server.request_writeMemory(
+            memoryReference, encodedData, offset=offset, allowPartial=allowPartial
+        )
+        return response

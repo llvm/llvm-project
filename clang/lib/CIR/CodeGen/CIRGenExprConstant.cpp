@@ -14,6 +14,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "CIRGenRecordLayout.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -90,8 +91,101 @@ public:
   }
 
   mlir::Attribute VisitCastExpr(CastExpr *e, QualType destType) {
-    cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
-    return {};
+    if (isa<ExplicitCastExpr>(e))
+      cgm.errorNYI(e->getBeginLoc(),
+                   "ConstExprEmitter::VisitCastExpr explicit cast");
+
+    Expr *subExpr = e->getSubExpr();
+
+    switch (e->getCastKind()) {
+    case CK_ToUnion:
+    case CK_AddressSpaceConversion:
+    case CK_ReinterpretMemberPointer:
+    case CK_DerivedToBaseMemberPointer:
+    case CK_BaseToDerivedMemberPointer:
+      cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
+      return {};
+
+    case CK_LValueToRValue:
+    case CK_AtomicToNonAtomic:
+    case CK_NonAtomicToAtomic:
+    case CK_NoOp:
+    case CK_ConstructorConversion:
+      return Visit(subExpr, destType);
+
+    case CK_IntToOCLSampler:
+      llvm_unreachable("global sampler variables are not generated");
+
+    case CK_Dependent:
+      llvm_unreachable("saw dependent cast!");
+
+    case CK_BuiltinFnToFnPtr:
+      llvm_unreachable("builtin functions are handled elsewhere");
+
+    // These will never be supported.
+    case CK_ObjCObjectLValueCast:
+    case CK_ARCProduceObject:
+    case CK_ARCConsumeObject:
+    case CK_ARCReclaimReturnedObject:
+    case CK_ARCExtendBlockObject:
+    case CK_CopyAndAutoreleaseBlockObject:
+      return {};
+
+    // These don't need to be handled here because Evaluate knows how to
+    // evaluate them in the cases where they can be folded.
+    case CK_BitCast:
+    case CK_ToVoid:
+    case CK_Dynamic:
+    case CK_LValueBitCast:
+    case CK_LValueToRValueBitCast:
+    case CK_NullToMemberPointer:
+    case CK_UserDefinedConversion:
+    case CK_CPointerToObjCPointerCast:
+    case CK_BlockPointerToObjCPointerCast:
+    case CK_AnyPointerToBlockPointerCast:
+    case CK_ArrayToPointerDecay:
+    case CK_FunctionToPointerDecay:
+    case CK_BaseToDerived:
+    case CK_DerivedToBase:
+    case CK_UncheckedDerivedToBase:
+    case CK_MemberPointerToBoolean:
+    case CK_VectorSplat:
+    case CK_FloatingRealToComplex:
+    case CK_FloatingComplexToReal:
+    case CK_FloatingComplexToBoolean:
+    case CK_FloatingComplexCast:
+    case CK_FloatingComplexToIntegralComplex:
+    case CK_IntegralRealToComplex:
+    case CK_IntegralComplexToReal:
+    case CK_IntegralComplexToBoolean:
+    case CK_IntegralComplexCast:
+    case CK_IntegralComplexToFloatingComplex:
+    case CK_PointerToIntegral:
+    case CK_PointerToBoolean:
+    case CK_NullToPointer:
+    case CK_IntegralCast:
+    case CK_BooleanToSignedIntegral:
+    case CK_IntegralToPointer:
+    case CK_IntegralToBoolean:
+    case CK_IntegralToFloating:
+    case CK_FloatingToIntegral:
+    case CK_FloatingToBoolean:
+    case CK_FloatingCast:
+    case CK_FloatingToFixedPoint:
+    case CK_FixedPointToFloating:
+    case CK_FixedPointCast:
+    case CK_FixedPointToBoolean:
+    case CK_FixedPointToIntegral:
+    case CK_IntegralToFixedPoint:
+    case CK_ZeroToOCLOpaqueType:
+    case CK_MatrixCast:
+    case CK_HLSLArrayRValue:
+    case CK_HLSLVectorTruncation:
+    case CK_HLSLElementwiseCast:
+    case CK_HLSLAggregateSplatCast:
+      return {};
+    }
+    llvm_unreachable("Invalid CastKind");
   }
 
   mlir::Attribute VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die, QualType t) {
@@ -118,7 +212,28 @@ public:
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ile, QualType t) {
-    cgm.errorNYI(ile->getBeginLoc(), "ConstExprEmitter::VisitInitListExpr");
+    if (ile->isTransparent())
+      return Visit(ile->getInit(0), t);
+
+    if (ile->getType()->isArrayType()) {
+      // If we return null here, the non-constant initializer will take care of
+      // it, but we would prefer to handle it here.
+      assert(!cir::MissingFeatures::constEmitterArrayILE());
+      return {};
+    }
+
+    if (ile->getType()->isRecordType()) {
+      cgm.errorNYI(ile->getBeginLoc(), "ConstExprEmitter: record ILE");
+      return {};
+    }
+
+    if (ile->getType()->isVectorType()) {
+      // If we return null here, the non-constant initializer will take care of
+      // it, but we would prefer to handle it here.
+      assert(!cir::MissingFeatures::constEmitterVectorILE());
+      return {};
+    }
+
     return {};
   }
 
@@ -139,8 +254,8 @@ public:
   }
 
   mlir::Attribute VisitStringLiteral(StringLiteral *e, QualType t) {
-    cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitStringLiteral");
-    return {};
+    // This is a string literal initializing an array in an initializer.
+    return cgm.getConstantArrayFromStringLiteral(e);
   }
 
   mlir::Attribute VisitObjCEncodeExpr(ObjCEncodeExpr *e, QualType t) {
@@ -170,7 +285,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
                   mlir::Type commonElementType, unsigned arrayBound,
                   SmallVectorImpl<mlir::TypedAttr> &elements,
                   mlir::TypedAttr filler) {
-  const CIRGenBuilderTy &builder = cgm.getBuilder();
+  CIRGenBuilderTy &builder = cgm.getBuilder();
 
   unsigned nonzeroLength = arrayBound;
   if (elements.size() < nonzeroLength && builder.isNullValue(filler))
@@ -191,6 +306,33 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
   if (trailingZeroes >= 8) {
     assert(elements.size() >= nonzeroLength &&
            "missing initializer for non-zero element");
+
+    if (commonElementType && nonzeroLength >= 8) {
+      // If all the elements had the same type up to the trailing zeroes and
+      // there are eight or more nonzero elements, emit a struct of two arrays
+      // (the nonzero data and the zeroinitializer).
+      SmallVector<mlir::Attribute, 4> eles;
+      eles.reserve(nonzeroLength);
+      for (const auto &element : elements)
+        eles.push_back(element);
+      auto initial = cir::ConstArrayAttr::get(
+          cir::ArrayType::get(commonElementType, nonzeroLength),
+          mlir::ArrayAttr::get(builder.getContext(), eles));
+      elements.resize(2);
+      elements[0] = initial;
+    } else {
+      // Otherwise, emit a struct with individual elements for each nonzero
+      // initializer, followed by a zeroinitializer array filler.
+      elements.resize(nonzeroLength + 1);
+    }
+
+    mlir::Type fillerType =
+        commonElementType
+            ? commonElementType
+            : mlir::cast<cir::ArrayType>(desiredType).getElementType();
+    fillerType = cir::ArrayType::get(fillerType, trailingZeroes);
+    elements.back() = cir::ZeroAttr::get(fillerType);
+    commonElementType = nullptr;
   } else if (elements.size() != arrayBound) {
     elements.resize(arrayBound, filler);
 
@@ -210,7 +352,286 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
         mlir::ArrayAttr::get(builder.getContext(), eles));
   }
 
-  cgm.errorNYI("array with different type elements");
+  SmallVector<mlir::Attribute, 4> eles;
+  eles.reserve(elements.size());
+  for (auto const &element : elements)
+    eles.push_back(element);
+
+  auto arrAttr = mlir::ArrayAttr::get(builder.getContext(), eles);
+  return builder.getAnonConstRecord(arrAttr, /*isPacked=*/true);
+}
+
+//===----------------------------------------------------------------------===//
+//                          ConstantLValueEmitter
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A struct which can be used to peephole certain kinds of finalization
+/// that normally happen during l-value emission.
+struct ConstantLValue {
+  llvm::PointerUnion<mlir::Value, mlir::Attribute> value;
+  bool hasOffsetApplied;
+
+  /*implicit*/ ConstantLValue(std::nullptr_t)
+      : value(nullptr), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(cir::GlobalViewAttr address)
+      : value(address), hasOffsetApplied(false) {}
+
+  ConstantLValue() : value(nullptr), hasOffsetApplied(false) {}
+};
+
+/// A helper class for emitting constant l-values.
+class ConstantLValueEmitter
+    : public ConstStmtVisitor<ConstantLValueEmitter, ConstantLValue> {
+  CIRGenModule &cgm;
+  ConstantEmitter &emitter;
+  const APValue &value;
+  QualType destType;
+
+  // Befriend StmtVisitorBase so that we don't have to expose Visit*.
+  friend StmtVisitorBase;
+
+public:
+  ConstantLValueEmitter(ConstantEmitter &emitter, const APValue &value,
+                        QualType destType)
+      : cgm(emitter.cgm), emitter(emitter), value(value), destType(destType) {}
+
+  mlir::Attribute tryEmit();
+
+private:
+  mlir::Attribute tryEmitAbsolute(mlir::Type destTy);
+  ConstantLValue tryEmitBase(const APValue::LValueBase &base);
+
+  ConstantLValue VisitStmt(const Stmt *s) { return nullptr; }
+  ConstantLValue VisitConstantExpr(const ConstantExpr *e);
+  ConstantLValue VisitCompoundLiteralExpr(const CompoundLiteralExpr *e);
+  ConstantLValue VisitStringLiteral(const StringLiteral *e);
+  ConstantLValue VisitObjCBoxedExpr(const ObjCBoxedExpr *e);
+  ConstantLValue VisitObjCEncodeExpr(const ObjCEncodeExpr *e);
+  ConstantLValue VisitObjCStringLiteral(const ObjCStringLiteral *e);
+  ConstantLValue VisitPredefinedExpr(const PredefinedExpr *e);
+  ConstantLValue VisitAddrLabelExpr(const AddrLabelExpr *e);
+  ConstantLValue VisitCallExpr(const CallExpr *e);
+  ConstantLValue VisitBlockExpr(const BlockExpr *e);
+  ConstantLValue VisitCXXTypeidExpr(const CXXTypeidExpr *e);
+  ConstantLValue
+  VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
+
+  /// Return GEP-like value offset
+  mlir::ArrayAttr getOffset(mlir::Type ty) {
+    int64_t offset = value.getLValueOffset().getQuantity();
+    cir::CIRDataLayout layout(cgm.getModule());
+    SmallVector<int64_t, 3> idxVec;
+    cgm.getBuilder().computeGlobalViewIndicesFromFlatOffset(offset, ty, layout,
+                                                            idxVec);
+
+    llvm::SmallVector<mlir::Attribute, 3> indices;
+    for (int64_t i : idxVec) {
+      mlir::IntegerAttr intAttr = cgm.getBuilder().getI32IntegerAttr(i);
+      indices.push_back(intAttr);
+    }
+
+    if (indices.empty())
+      return {};
+    return cgm.getBuilder().getArrayAttr(indices);
+  }
+
+  /// Apply the value offset to the given constant.
+  ConstantLValue applyOffset(ConstantLValue &c) {
+    // Handle attribute constant LValues.
+    if (auto attr = mlir::dyn_cast<mlir::Attribute>(c.value)) {
+      if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(attr)) {
+        auto baseTy = mlir::cast<cir::PointerType>(gv.getType()).getPointee();
+        mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+        assert(!gv.getIndices() && "Global view is already indexed");
+        return cir::GlobalViewAttr::get(destTy, gv.getSymbol(),
+                                        getOffset(baseTy));
+      }
+      llvm_unreachable("Unsupported attribute type to offset");
+    }
+
+    cgm.errorNYI("ConstantLValue: non-attribute offset");
+    return {};
+  }
+};
+
+} // namespace
+
+mlir::Attribute ConstantLValueEmitter::tryEmit() {
+  const APValue::LValueBase &base = value.getLValueBase();
+
+  // The destination type should be a pointer or reference
+  // type, but it might also be a cast thereof.
+  //
+  // FIXME: the chain of casts required should be reflected in the APValue.
+  // We need this in order to correctly handle things like a ptrtoint of a
+  // non-zero null pointer and addrspace casts that aren't trivially
+  // represented in LLVM IR.
+  mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+  assert(mlir::isa<cir::PointerType>(destTy));
+
+  // If there's no base at all, this is a null or absolute pointer,
+  // possibly cast back to an integer type.
+  if (!base)
+    return tryEmitAbsolute(destTy);
+
+  // Otherwise, try to emit the base.
+  ConstantLValue result = tryEmitBase(base);
+
+  // If that failed, we're done.
+  llvm::PointerUnion<mlir::Value, mlir::Attribute> &value = result.value;
+  if (!value)
+    return {};
+
+  // Apply the offset if necessary and not already done.
+  if (!result.hasOffsetApplied)
+    value = applyOffset(result).value;
+
+  // Convert to the appropriate type; this could be an lvalue for
+  // an integer. FIXME: performAddrSpaceCast
+  if (mlir::isa<cir::PointerType>(destTy)) {
+    if (auto attr = mlir::dyn_cast<mlir::Attribute>(value))
+      return attr;
+    cgm.errorNYI("ConstantLValueEmitter: non-attribute pointer");
+    return {};
+  }
+
+  cgm.errorNYI("ConstantLValueEmitter: other?");
+  return {};
+}
+
+/// Try to emit an absolute l-value, such as a null pointer or an integer
+/// bitcast to pointer type.
+mlir::Attribute ConstantLValueEmitter::tryEmitAbsolute(mlir::Type destTy) {
+  // If we're producing a pointer, this is easy.
+  auto destPtrTy = mlir::cast<cir::PointerType>(destTy);
+  return cgm.getBuilder().getConstPtrAttr(
+      destPtrTy, value.getLValueOffset().getQuantity());
+}
+
+ConstantLValue
+ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
+  // Handle values.
+  if (const ValueDecl *d = base.dyn_cast<const ValueDecl *>()) {
+    // The constant always points to the canonical declaration. We want to look
+    // at properties of the most recent declaration at the point of emission.
+    d = cast<ValueDecl>(d->getMostRecentDecl());
+
+    if (d->hasAttr<WeakRefAttr>()) {
+      cgm.errorNYI(d->getSourceRange(),
+                   "ConstantLValueEmitter: emit pointer base for weakref");
+      return {};
+    }
+
+    if (auto *fd = dyn_cast<FunctionDecl>(d)) {
+      cir::FuncOp fop = cgm.getAddrOfFunction(fd);
+      CIRGenBuilderTy &builder = cgm.getBuilder();
+      mlir::MLIRContext *mlirContext = builder.getContext();
+      return cir::GlobalViewAttr::get(
+          builder.getPointerTo(fop.getFunctionType()),
+          mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
+    }
+
+    if (auto *vd = dyn_cast<VarDecl>(d)) {
+      // We can never refer to a variable with local storage.
+      if (!vd->hasLocalStorage()) {
+        if (vd->isFileVarDecl() || vd->hasExternalStorage())
+          return cgm.getAddrOfGlobalVarAttr(vd);
+
+        if (vd->isLocalVarDecl()) {
+          cgm.errorNYI(vd->getSourceRange(),
+                       "ConstantLValueEmitter: local var decl");
+          return {};
+        }
+      }
+    }
+
+    // Classic codegen handles MSGuidDecl,UnnamedGlobalConstantDecl, and
+    // TemplateParamObjectDecl, but it can also fall through from VarDecl,
+    // in which case it silently returns nullptr. For now, let's emit an
+    // error to see what cases we need to handle.
+    cgm.errorNYI(d->getSourceRange(),
+                 "ConstantLValueEmitter: unhandled value decl");
+    return {};
+  }
+
+  // Handle typeid(T).
+  if (base.dyn_cast<TypeInfoLValue>()) {
+    cgm.errorNYI("ConstantLValueEmitter: typeid");
+    return {};
+  }
+
+  // Otherwise, it must be an expression.
+  return Visit(base.get<const Expr *>());
+}
+
+ConstantLValue ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: constant expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: compound literal");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitStringLiteral(const StringLiteral *e) {
+  return cgm.getAddrOfConstantStringFromLiteral(e);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCEncodeExpr(const ObjCEncodeExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: objc encode expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCStringLiteral(const ObjCStringLiteral *e) {
+  cgm.errorNYI(e->getSourceRange(),
+               "ConstantLValueEmitter: objc string literal");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: objc boxed expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: predefined expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: addr label expr");
+  return {};
+}
+
+ConstantLValue ConstantLValueEmitter::VisitCallExpr(const CallExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: call expr");
+  return {};
+}
+
+ConstantLValue ConstantLValueEmitter::VisitBlockExpr(const BlockExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: block expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: cxx typeid expr");
+  return {};
+}
+
+ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *e) {
+  cgm.errorNYI(e->getSourceRange(),
+               "ConstantLValueEmitter: materialize temporary expr");
   return {};
 }
 
@@ -218,10 +639,31 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
 //                             ConstantEmitter
 //===----------------------------------------------------------------------===//
 
+mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &d) {
+  initializeNonAbstract();
+  return markIfFailed(tryEmitPrivateForVarInit(d));
+}
+
+void ConstantEmitter::finalize(cir::GlobalOp gv) {
+  assert(initializedNonAbstract &&
+         "finalizing emitter that was used for abstract emission?");
+  assert(!finalized && "finalizing emitter multiple times");
+  assert(!gv.isDeclaration());
+#ifndef NDEBUG
+  // Note that we might also be Failed.
+  finalized = true;
+#endif // NDEBUG
+}
+
 mlir::Attribute
 ConstantEmitter::tryEmitAbstractForInitializer(const VarDecl &d) {
   AbstractStateRAII state(*this, true);
   return tryEmitPrivateForVarInit(d);
+}
+
+ConstantEmitter::~ConstantEmitter() {
+  assert((!initializedNonAbstract || finalized || failed) &&
+         "not finalized after being initialized for non-abstract emission");
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
@@ -230,12 +672,34 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
   // initialization of memory to all NULLs.
   if (!d.hasLocalStorage()) {
     QualType ty = cgm.getASTContext().getBaseElementType(d.getType());
-    if (ty->isRecordType())
-      if (d.getInit() && isa<CXXConstructExpr>(d.getInit())) {
-        cgm.errorNYI(d.getInit()->getBeginLoc(),
-                     "tryEmitPrivateForVarInit CXXConstructExpr");
-        return {};
+    if (ty->isRecordType()) {
+      if (const auto *e = dyn_cast_or_null<CXXConstructExpr>(d.getInit())) {
+        const CXXConstructorDecl *cd = e->getConstructor();
+        // FIXME: we should probably model this more closely to C++ than
+        // just emitting a global with zero init (mimic what we do for trivial
+        // assignments and whatnots). Since this is for globals shouldn't
+        // be a problem for the near future.
+        if (cd->isTrivial() && cd->isDefaultConstructor()) {
+          const auto *cxxrd =
+              cast<CXXRecordDecl>(ty->getAs<RecordType>()->getOriginalDecl())
+                  ->getDefinitionOrSelf();
+          if (cxxrd->getNumBases() != 0) {
+            // There may not be anything additional to do here, but this will
+            // force us to pause and test this path when it is supported.
+            cgm.errorNYI("tryEmitPrivateForVarInit: cxx record with bases");
+            return {};
+          }
+          if (!cgm.getTypes().isZeroInitializable(cxxrd)) {
+            // To handle this case, we really need to go through
+            // emitNullConstant, but we need an attribute, not a value
+            cgm.errorNYI(
+                "tryEmitPrivateForVarInit: non-zero-initializable cxx record");
+            return {};
+          }
+          return cir::ZeroAttr::get(cgm.convertType(d.getType()));
+        }
       }
+    }
   }
   inConstantContext = d.hasConstantInitialization();
 
@@ -277,6 +741,16 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
   return (c ? emitForMemory(c, destType) : nullptr);
 }
 
+mlir::Attribute ConstantEmitter::emitAbstract(const Expr *e,
+                                              QualType destType) {
+  AbstractStateRAII state{*this, true};
+  mlir::Attribute c = mlir::cast<mlir::Attribute>(tryEmitPrivate(e, destType));
+  if (!c)
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitAbstract failed, emit null constaant");
+  return c;
+}
+
 mlir::Attribute ConstantEmitter::emitAbstract(SourceLocation loc,
                                               const APValue &value,
                                               QualType destType) {
@@ -298,6 +772,32 @@ mlir::Attribute ConstantEmitter::emitForMemory(mlir::Attribute c,
   return c;
 }
 
+mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *e,
+                                                QualType destType) {
+  assert(!destType->isVoidType() && "can't emit a void constant");
+
+  if (mlir::Attribute c =
+          ConstExprEmitter(*this).Visit(const_cast<Expr *>(e), destType))
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+
+  Expr::EvalResult result;
+
+  bool success = false;
+
+  if (destType->isReferenceType())
+    success = e->EvaluateAsLValue(result, cgm.getASTContext());
+  else
+    success =
+        e->EvaluateAsRValue(result, cgm.getASTContext(), inConstantContext);
+
+  if (success && !result.hasSideEffects()) {
+    mlir::Attribute c = tryEmitPrivate(result.Val, destType);
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+  }
+
+  return nullptr;
+}
+
 mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
                                                 QualType destType) {
   auto &builder = cgm.getBuilder();
@@ -311,7 +811,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     if (mlir::isa<cir::BoolType>(ty))
       return builder.getCIRBoolAttr(value.getInt().getZExtValue());
     assert(mlir::isa<cir::IntType>(ty) && "expected integral type");
-    return cgm.getBuilder().getAttr<cir::IntAttr>(ty, value.getInt());
+    return cir::IntAttr::get(ty, value.getInt());
   }
   case APValue::Float: {
     const llvm::APFloat &init = value.getFloat();
@@ -323,9 +823,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     }
 
     mlir::Type ty = cgm.convertType(destType);
-    assert(mlir::isa<cir::CIRFPTypeInterface>(ty) &&
+    assert(mlir::isa<cir::FPTypeInterface>(ty) &&
            "expected floating-point type");
-    return cgm.getBuilder().getAttr<cir::FPAttr>(ty, init);
+    return cir::FPAttr::get(ty, init);
   }
   case APValue::Array: {
     const ArrayType *arrayTy = cgm.getASTContext().getAsArrayType(destType);
@@ -373,40 +873,65 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
                              elements, typedFiller);
   }
   case APValue::Vector: {
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate vector");
-    return {};
+    const QualType elementType =
+        destType->castAs<VectorType>()->getElementType();
+    const unsigned numElements = value.getVectorLength();
+
+    SmallVector<mlir::Attribute, 16> elements;
+    elements.reserve(numElements);
+
+    for (unsigned i = 0; i < numElements; ++i) {
+      const mlir::Attribute element =
+          tryEmitPrivateForMemory(value.getVectorElt(i), elementType);
+      if (!element)
+        return {};
+      elements.push_back(element);
+    }
+
+    const auto desiredVecTy =
+        mlir::cast<cir::VectorType>(cgm.convertType(destType));
+
+    return cir::ConstVectorAttr::get(
+        desiredVecTy,
+        mlir::ArrayAttr::get(cgm.getBuilder().getContext(), elements));
   }
   case APValue::MemberPointer: {
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer");
     return {};
   }
-  case APValue::LValue: {
-
-    if (value.getLValueBase()) {
-      cgm.errorNYI("non-null pointer initialization");
-    } else {
-
-      mlir::Type desiredType = cgm.convertType(destType);
-      if (const cir::PointerType ptrType =
-              mlir::dyn_cast<cir::PointerType>(desiredType)) {
-        return builder.getConstPtrAttr(ptrType,
-                                       value.getLValueOffset().getQuantity());
-      } else {
-        llvm_unreachable("non-pointer variable initialized with a pointer");
-      }
-    }
-    return {};
-  }
+  case APValue::LValue:
+    return ConstantLValueEmitter(*this, value, destType).tryEmit();
   case APValue::Struct:
   case APValue::Union:
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate struct or union");
     return {};
-  case APValue::FixedPoint:
   case APValue::ComplexInt:
-  case APValue::ComplexFloat:
+  case APValue::ComplexFloat: {
+    mlir::Type desiredType = cgm.convertType(destType);
+    cir::ComplexType complexType =
+        mlir::dyn_cast<cir::ComplexType>(desiredType);
+
+    mlir::Type complexElemTy = complexType.getElementType();
+    if (isa<cir::IntType>(complexElemTy)) {
+      llvm::APSInt real = value.getComplexIntReal();
+      llvm::APSInt imag = value.getComplexIntImag();
+      return builder.getAttr<cir::ConstComplexAttr>(
+          complexType, cir::IntAttr::get(complexElemTy, real),
+          cir::IntAttr::get(complexElemTy, imag));
+    }
+
+    assert(isa<cir::FPTypeInterface>(complexElemTy) &&
+           "expected floating-point type");
+    llvm::APFloat real = value.getComplexFloatReal();
+    llvm::APFloat imag = value.getComplexFloatImag();
+    return builder.getAttr<cir::ConstComplexAttr>(
+        complexType, cir::FPAttr::get(complexElemTy, real),
+        cir::FPAttr::get(complexElemTy, imag));
+  }
+  case APValue::FixedPoint:
   case APValue::AddrLabelDiff:
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate fixed point, complex int, "
-                 "complex float, addr label diff");
+    cgm.errorNYI(
+        "ConstExprEmitter::tryEmitPrivate fixed point, addr label diff");
     return {};
   }
   llvm_unreachable("Unknown APValue kind");
@@ -424,7 +949,7 @@ mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
     errorNYI("CIRGenModule::emitNullConstant ConstantArrayType");
   }
 
-  if (t->getAs<RecordType>())
+  if (t->isRecordType())
     errorNYI("CIRGenModule::emitNullConstant RecordType");
 
   assert(t->isMemberDataPointerType() &&

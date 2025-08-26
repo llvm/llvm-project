@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "CommonArgs.h"
 #include "Gnu.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
 #include "llvm/Option/ArgList.h"
@@ -545,8 +543,13 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
 SanitizerMask WebAssembly::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   if (getTriple().isOSEmscripten()) {
-    Res |= SanitizerKind::Vptr | SanitizerKind::Leak | SanitizerKind::Address;
+    Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }
+
+  if (getTriple().isOSEmscripten() || getTriple().isOSWASI()) {
+    Res |= SanitizerKind::Address;
+  }
+
   // -fsanitize=function places two words before the function label, which are
   // -unsupported.
   Res &= ~SanitizerKind::Function;

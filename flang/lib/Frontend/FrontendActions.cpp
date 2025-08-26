@@ -56,10 +56,12 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -67,13 +69,10 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
-
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
 
 using namespace Fortran::frontend;
 
@@ -165,12 +164,17 @@ static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
   // Add linker options specified by --dependent-lib
   auto builder = mlir::OpBuilder(mlirModule.getRegion());
   for (const std::string &lib : libs) {
-    builder.create<mlir::LLVM::LinkerOptionsOp>(
-        mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
+    mlir::LLVM::LinkerOptionsOp::create(
+        builder, mlirModule.getLoc(),
+        builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
   }
 }
 
 bool CodeGenAction::beginSourceFileAction() {
+  // Delete previous LLVM module depending on old context before making a new
+  // one.
+  if (llvmModule)
+    llvmModule.reset(nullptr);
   llvmCtx = std::make_unique<llvm::LLVMContext>();
   CompilerInstance &ci = this->getInstance();
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
@@ -197,6 +201,9 @@ bool CodeGenAction::beginSourceFileAction() {
     return true;
   }
 
+  // Reset MLIR module if it was set before overriding the old context.
+  if (mlirModule)
+    mlirModule = mlir::OwningOpRef<mlir::ModuleOp>(nullptr);
   // Load the MLIR dialects required by Flang
   mlirCtx = std::make_unique<mlir::MLIRContext>();
   fir::support::loadDialects(*mlirCtx);
@@ -291,6 +298,7 @@ bool CodeGenAction::beginSourceFileAction() {
   bool isOpenMPEnabled =
       ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP);
+  bool isOpenMPSimd = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   fir::OpenMPFIRPassPipelineOpts opts;
 
@@ -322,12 +330,13 @@ bool CodeGenAction::beginSourceFileAction() {
     if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
             mlirModule->getOperation()))
       opts.isTargetDevice = offloadMod.getIsTargetDevice();
-
-    // WARNING: This pipeline must be run immediately after the lowering to
-    // ensure that the FIR is correct with respect to OpenMP operations/
-    // attributes.
-    fir::createOpenMPFIRPassPipeline(pm, opts);
   }
+
+  // WARNING: This pipeline must be run immediately after the lowering to
+  // ensure that the FIR is correct with respect to OpenMP operations/
+  // attributes.
+  if (isOpenMPEnabled || isOpenMPSimd)
+    fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
@@ -610,12 +619,14 @@ void CodeGenAction::lowerHLFIRToFIR() {
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
+  fir::EnableOpenMP enableOpenMP = fir::EnableOpenMP::None;
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP))
+    enableOpenMP = fir::EnableOpenMP::Full;
+  if (ci.getInvocation().getLangOpts().OpenMPSimd)
+    enableOpenMP = fir::EnableOpenMP::Simd;
   // Create the pass pipeline
-  fir::createHLFIRToFIRPassPipeline(
-      pm,
-      ci.getInvocation().getFrontendOpts().features.IsEnabled(
-          Fortran::common::LanguageFeature::OpenMP),
-      level);
+  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, level);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
@@ -734,12 +745,20 @@ void CodeGenAction::generateLLVMIR() {
     config.VScaleMax = vsr->second;
   }
 
+  config.Reciprocals = opts.Reciprocals;
+  config.PreferVectorWidth = opts.PreferVectorWidth;
+
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
 
+  if (ci.getInvocation().getLangOpts().OpenMPSimd)
+    config.EnableOpenMPSimd = true;
+
   if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
     config.NSWOnLoopVarInc = false;
+
+  config.ComplexRange = opts.getComplexRange();
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
@@ -909,12 +928,36 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::PassInstrumentationCallbacks pic;
   llvm::PipelineTuningOptions pto;
   std::optional<llvm::PGOOptions> pgoOpt;
+
+  if (opts.hasProfileIRInstr()) {
+    // -fprofile-generate.
+    pgoOpt = llvm::PGOOptions(opts.InstrProfileOutput.empty()
+                                  ? llvm::driver::getDefaultProfileGenName()
+                                  : opts.InstrProfileOutput,
+                              "", "", opts.MemoryProfileUsePath, nullptr,
+                              llvm::PGOOptions::IRInstr,
+                              llvm::PGOOptions::NoCSAction,
+                              llvm::PGOOptions::ColdFuncOpt::Default, false,
+                              /*PseudoProbeForProfiling=*/false, false);
+  } else if (opts.hasProfileIRUse()) {
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+        llvm::vfs::getRealFileSystem();
+    // -fprofile-use.
+    auto CSAction = opts.hasProfileCSIRUse() ? llvm::PGOOptions::CSIRUse
+                                             : llvm::PGOOptions::NoCSAction;
+    pgoOpt = llvm::PGOOptions(
+        opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
+        opts.MemoryProfileUsePath, VFS, llvm::PGOOptions::IRUse, CSAction,
+        llvm::PGOOptions::ColdFuncOpt::Default, false);
+  }
+
   llvm::StandardInstrumentations si(llvmModule->getContext(),
                                     opts.DebugPassManager);
   si.registerCallbacks(pic, &mam);
   if (ci.isTimingEnabled())
     si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
   pto.LoopUnrolling = opts.UnrollLoops;
+  pto.LoopInterchange = opts.InterchangeLoops;
   pto.LoopInterleaving = opts.UnrollLoops;
   pto.LoopVectorization = opts.VectorizeLoop;
   pto.SLPVectorization = opts.VectorizeSLP;

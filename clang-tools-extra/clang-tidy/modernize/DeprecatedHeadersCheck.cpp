@@ -14,7 +14,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 
-#include <algorithm>
 #include <vector>
 
 using IncludeMarker =

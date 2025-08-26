@@ -14,6 +14,15 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+class RVSDNode<string opcode, SDTypeProfile type_profile,
+               list<SDNodeProperty> properties = []>
+    : SDNode<"RISCVISD::" # opcode, type_profile, properties> {
+  bit HasPassthruOp = false;
+  bit HasMaskOp = false;
+  let TSFlags{0} = HasPassthruOp;
+  let TSFlags{1} = HasMaskOp;
+}
+
 // Target-independent type requirements, but with target-specific formats.
 def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
                                        SDTCisVT<1, i32>]>;
@@ -29,14 +38,6 @@ def SDT_RISCVSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
 def SDT_RISCVBrCC : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
                                          SDTCisVT<2, OtherVT>,
                                          SDTCisVT<3, OtherVT>]>;
-def SDT_RISCVReadCSR  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDT_RISCVWriteCSR : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDT_RISCVSwapCSR  : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
-                                             SDTCisInt<2>]>;
-def SDT_RISCVReadCounterWide : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
-                                                    SDTCisVT<1, i32>,
-                                                    SDTCisInt<2>,
-                                                    SDTCisInt<3>]>;
 def SDT_RISCVIntUnaryOpW : SDTypeProfile<1, 1, [
   SDTCisSameAs<0, 1>, SDTCisVT<0, i64>
 ]>;
@@ -53,59 +54,140 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-// Target-dependent nodes.
-def riscv_call      : SDNode<"RISCVISD::CALL", SDT_RISCVCall,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                              SDNPVariadic]>;
-def riscv_sw_guarded_call : SDNode<"RISCVISD::SW_GUARDED_CALL", SDT_RISCVCall,
-                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                    SDNPVariadic]>;
-def riscv_ret_glue  : SDNode<"RISCVISD::RET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_mileaveret_glue : SDNode<"RISCVISD::QC_C_MILEAVERET_GLUE", SDTNone,
-                                   [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
-def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
-                             [SDNPHasChain]>;
-def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                              SDNPVariadic]>;
-def riscv_sw_guarded_tail : SDNode<"RISCVISD::SW_GUARDED_TAIL", SDT_RISCVCall,
-                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                    SDNPVariadic]>;
-def riscv_sw_guarded_brind : SDNode<"RISCVISD::SW_GUARDED_BRIND",
-                                    SDTBrind, [SDNPHasChain]>;
-def riscv_sllw      : SDNode<"RISCVISD::SLLW", SDT_RISCVIntBinOpW>;
-def riscv_sraw      : SDNode<"RISCVISD::SRAW", SDT_RISCVIntBinOpW>;
-def riscv_srlw      : SDNode<"RISCVISD::SRLW", SDT_RISCVIntBinOpW>;
-def riscv_read_csr  : SDNode<"RISCVISD::READ_CSR", SDT_RISCVReadCSR,
-                             [SDNPHasChain]>;
-def riscv_write_csr : SDNode<"RISCVISD::WRITE_CSR", SDT_RISCVWriteCSR,
-                             [SDNPHasChain]>;
-def riscv_swap_csr  : SDNode<"RISCVISD::SWAP_CSR", SDT_RISCVSwapCSR,
-                             [SDNPHasChain]>;
+def riscv_call      : RVSDNode<"CALL", SDT_RISCVCall,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                SDNPVariadic]>;
+def riscv_tail      : RVSDNode<"TAIL", SDT_RISCVCall,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                SDNPVariadic]>;
 
-def riscv_read_counter_wide : SDNode<"RISCVISD::READ_COUNTER_WIDE",
-                                     SDT_RISCVReadCounterWide,
-                                     [SDNPHasChain, SDNPSideEffect]>;
+// Software guarded calls for large code model
+def riscv_sw_guarded_call : RVSDNode<"SW_GUARDED_CALL", SDT_RISCVCall,
+                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                      SDNPVariadic]>;
+def riscv_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_RISCVCall,
+                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                      SDNPVariadic]>;
 
-def riscv_add_lo : SDNode<"RISCVISD::ADD_LO", SDTIntBinOp>;
-def riscv_hi : SDNode<"RISCVISD::HI", SDTIntUnaryOp>;
-def riscv_lla : SDNode<"RISCVISD::LLA", SDTIntUnaryOp>;
-def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
-                             SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
-                                                  SDTCisSameAs<0, 2>,
-                                                  SDTCisSameAs<0, 3>,
-                                                  SDTCisInt<0>]>>;
+def riscv_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def riscv_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
+                               [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mret_glue : RVSDNode<"MRET_GLUE", SDTNone,
+                               [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mnret_glue : RVSDNode<"MNRET_GLUE", SDTNone,
+                                [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mileaveret_glue : RVSDNode<"QC_C_MILEAVERET_GLUE", SDTNone,
+                                     [SDNPHasChain, SDNPOptInGlue]>;
 
-def riscv_probed_alloca : SDNode<"RISCVISD::PROBED_ALLOCA",
-                                 SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                      SDTCisVT<0, i32>]>,
-                                 [SDNPHasChain, SDNPMayStore]>;
+// Select with condition operator - This selects between a true value and
+// a false value (ops #3 and #4) based on the boolean result of comparing
+// the lhs and rhs (ops #0 and #1) of a conditional expression with the
+// condition code in op #2, a XLenVT constant from the ISD::CondCode enum.
+// The lhs and rhs are XLenVT integers. The true and false values can be
+// integer or floating point.
+def riscv_selectcc  : RVSDNode<"SELECT_CC", SDT_RISCVSelectCC>;
+def riscv_brcc      : RVSDNode<"BR_CC", SDT_RISCVBrCC,
+                               [SDNPHasChain]>;
+
+// Software guarded BRIND node. Operand is the target address.
+def riscv_sw_guarded_brind : RVSDNode<"SW_GUARDED_BRIND",
+                                      SDTBrind, [SDNPHasChain]>;
+
+// RV64I shifts, directly matching the semantics of the named RISC-V
+// instructions.
+def riscv_sllw      : RVSDNode<"SLLW", SDT_RISCVIntBinOpW>;
+def riscv_sraw      : RVSDNode<"SRAW", SDT_RISCVIntBinOpW>;
+def riscv_srlw      : RVSDNode<"SRLW", SDT_RISCVIntBinOpW>;
+
+// Reads value of CSR. The first operand is the address of the required CSR.
+// The result is the read value.
+def riscv_read_csr  : RVSDNode<"READ_CSR",
+                               SDTypeProfile<1, 1, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
+                               [SDNPHasChain]>;
+// Write value to CSR. The first operand is the address of the required CSR,
+// the second is the value to write.
+def riscv_write_csr : RVSDNode<"WRITE_CSR",
+                               SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
+                               [SDNPHasChain]>;
+
+// Read and write value of CSR. The first operand is the address of the
+// required CSR, the second is the value to write, and the result is the
+// read value (before modification).
+def riscv_swap_csr  : RVSDNode<"SWAP_CSR",
+                               SDTypeProfile<1, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>,
+                                                    SDTCisInt<2>]>,
+                               [SDNPHasChain]>;
+
+// Clear bits of CSR. The first operand is the address of the required CSR,
+// the second is the bitmask of cleared bits.
+def riscv_clear_csr  : RVSDNode<"CLEAR_CSR",
+                               SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
+                               [SDNPHasChain]>;
+
+// Set bits of CSR. The first operand is the address of the required CSR,
+// the second is the bitmask of bits to set.
+def riscv_set_csr  : RVSDNode<"SET_CSR",
+                               SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
+                               [SDNPHasChain]>;
+
+// A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
+// It takes a chain operand and another two target constant operands (the
+// CSR numbers of the low and high parts of the counter).
+def riscv_read_counter_wide : RVSDNode<"READ_COUNTER_WIDE",
+                                       SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
+                                                            SDTCisVT<1, i32>,
+                                                            SDTCisInt<2>,
+                                                            SDTCisInt<3>]>,
+                                       [SDNPHasChain, SDNPSideEffect]>;
+
+// Add the Lo 12 bits from an address. Selected to ADDI.
+def riscv_add_lo : RVSDNode<"ADD_LO", SDTIntBinOp>;
+
+// Get the Hi 20 bits from an address. Selected to LUI.
+def riscv_hi : RVSDNode<"HI", SDTIntUnaryOp>;
+
+// Represents an AUIPC+ADDI pair. Selected to PseudoLLA.
+def riscv_lla : RVSDNode<"LLA", SDTIntUnaryOp>;
+
+// Selected as PseudoAddTPRel. Used to emit a TP-relative relocation.
+def riscv_add_tprel : RVSDNode<"ADD_TPREL",
+                               SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
+                                                    SDTCisSameAs<0, 2>,
+                                                    SDTCisSameAs<0, 3>,
+                                                    SDTCisInt<0>]>>;
+
+// To avoid stack clash, allocation is performed by block and each block is
+// probed.
+def riscv_probed_alloca : RVSDNode<"PROBED_ALLOCA",
+                                   SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+                                   [SDNPHasChain, SDNPMayStore]>;
+
+
+defvar GPRPairVT = untyped;
+
+/// Turn a pair of `i<xlen>`s into an even-odd register pair (`untyped`).
+/// - Output: `untyped` even-odd register pair
+/// - Input 0: `i<xlen>` low-order bits, for even register.
+/// - Input 1: `i<xlen>` high-order bits, for odd register.
+def riscv_build_gpr_pair : RVSDNode<"BuildGPRPair",
+                                    SDTypeProfile<1, 2, [SDTCisVT<0, GPRPairVT>,
+                                                         SDTCisVT<1, XLenVT>,
+                                                         SDTCisVT<2, XLenVT>]>>;
+
+/// Turn an even-odd register pair (`untyped`) into a pair of `i<xlen>`s.
+/// - Output 0: `i<xlen>` low-order bits, from even register.
+/// - Output 1: `i<xlen>` high-order bits, from odd register.
+/// - Input: `untyped` even-odd register pair
+def riscv_split_gpr_pair : RVSDNode<"SplitGPRPair",
+                                    SDTypeProfile<2, 1, [SDTCisVT<0, XLenVT>,
+                                                         SDTCisVT<1, XLenVT>,
+                                                         SDTCisVT<2, GPRPairVT>]>>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -255,7 +337,7 @@ def uimm6 : RISCVUImmLeafOp<6>;
 def uimm7_opcode : RISCVUImmOp<7> {
   let ParserMatchClass = InsnDirectiveOpcode;
 }
-def uimm7 : RISCVUImmOp<7>;
+def uimm7 : RISCVUImmLeafOp<7>;
 def uimm8 : RISCVUImmOp<8>;
 def uimm16 : RISCVUImmOp<16>;
 def uimm32 : RISCVUImmOp<32>;
@@ -275,20 +357,32 @@ def simm12 : RISCVSImmLeafOp<12> {
 def simm12_no6 : ImmLeaf<XLenVT, [{
   return isInt<12>(Imm) && !isInt<6>(Imm) && isInt<12>(-Imm);}]>;
 
-// A 13-bit signed immediate where the least significant bit is zero.
-def bare_simm13_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
-  let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
+class BareSImm13Lsb0MaybeSym : Operand<OtherVT> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isShiftedInt<12, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+}
+
+// A 13-bit signed immediate where the least significant bit is zero. The ImmLeaf
+// is needed so that the CompressInstEmitter can correctly add checks for the
+// compress patterns that involve instructions that use this operand. Similar to
+// bare_simm9_lsb0 in RISCVInstrInfoC.td.
+def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
+                       ImmLeaf<XLenVT, [{return isShiftedInt<12, 1>(Imm);}]> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
   let OperandType = "OPERAND_PCREL";
 }
+
+// We need this (sort of) duplicate definition since adding ImmLeaf to
+// bare_simm13_lsb0 above makes it not sit well with codegen patterns where it
+// is used to match with a basic block (eg. BccPat<>).
+def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
   let MCOperandPredicate = [{
@@ -313,11 +407,12 @@ def Simm21Lsb0JALAsmOperand : BareSImmNLsb0AsmOperand<21> {
 }
 
 // A 21-bit signed immediate where the least significant bit is zero.
-def simm21_lsb0_jal : Operand<OtherVT> {
+def simm21_lsb0_jal : Operand<OtherVT>,
+                      ImmLeaf<XLenVT, [{return isShiftedInt<20, 1>(Imm);}]>  {
   let ParserMatchClass = Simm21Lsb0JALAsmOperand;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<21, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -422,6 +517,12 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 
 // Addressing modes.
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
+
+class AddrRegRegScale<int N>
+    : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<"#N#">">;
+class AddrRegZextRegScale<int N>
+    : ComplexPattern<i64, 3, "SelectAddrRegZextRegScale<"#N#", 32>",
+                     [], [], 10>;
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
@@ -836,7 +937,6 @@ def MRET : Priv<"mret", 0b0011000>, Sched<[]> {
   let rs1 = 0;
   let rs2 = 0b00010;
 }
-} // isBarrier = 1, isReturn = 1, isTerminator = 1
 
 let Predicates = [HasStdExtSmrnmi] in {
 def MNRET : Priv<"mnret", 0b0111000>, Sched<[]> {
@@ -845,6 +945,8 @@ def MNRET : Priv<"mnret", 0b0111000>, Sched<[]> {
   let rs2 = 0b00010;
 }
 }// Predicates = [HasStdExtSmrnmi]
+} // isBarrier = 1, isReturn = 1, isTerminator = 1
+
 
 def WFI : Priv<"wfi", 0b0001000>, Sched<[]> {
   let rd = 0;
@@ -1337,7 +1439,7 @@ def ext_oneuse    : unop_oneuse<ext>;
 def fpext_oneuse  : unop_oneuse<any_fpextend>;
 
 def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
-  return CurDAG->ComputeNumSignBits(SDValue(N, 0)) > 32;
+  return CurDAG->ComputeNumSignBits(Op) > 32;
 }]>;
 
 class immop_oneuse<ImmLeaf leaf> : PatLeaf<(leaf), [{
@@ -1365,18 +1467,18 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
-def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  if (N->getFlags().hasDisjoint())
-    return true;
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+def riscv_or_disjoint : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  return orDisjoint(N);
 }]>;
-def : PatGprSimm12<or_is_add, ADDI>;
+def : PatGprSimm12<riscv_or_disjoint, ADDI>;
 
 def add_like : PatFrags<(ops node:$lhs, node:$rhs),
-                        [(or_is_add node:$lhs, node:$rhs),
+                        [(riscv_or_disjoint node:$lhs, node:$rhs),
                          (add  node:$lhs, node:$rhs)]>;
+
+def riscv_xor_like : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(riscv_or_disjoint node:$lhs, node:$rhs),
+                               (xor  node:$lhs, node:$rhs)]>;
 
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
@@ -1452,21 +1554,22 @@ def GIAddrRegImm :
 
 /// Stack probing
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+    Defs = [X2], Uses = [X2] in {
 // Probed stack allocation of a constant size, used in function prologues when
 // stack-clash protection is enabled.
-def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$scratch),
+def PROBED_STACKALLOC : Pseudo<(outs),
+                               (ins GPR:$target),
                                []>,
                                Sched<[]>;
-def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$scratch),
-                               []>,
-                               Sched<[]>;
+def PROBED_STACKALLOC_RVV : Pseudo<(outs),
+                                   (ins GPR:$target),
+                                   []>,
+                                   Sched<[]>;
 let usesCustomInserter = 1 in
-def PROBED_STACKALLOC_DYN : Pseudo<(outs GPR:$rd),
-                               (ins GPR:$scratch),
-                               [(set GPR:$rd, (riscv_probed_alloca GPR:$scratch))]>,
+def PROBED_STACKALLOC_DYN : Pseudo<(outs),
+                               (ins GPR:$target),
+                               [(riscv_probed_alloca GPR:$target)]>,
                                Sched<[]>;
 }
 
@@ -1533,6 +1636,10 @@ def riscv_seteq : ComplexPattern<XLenVT, 1, "selectSETEQ", [setcc]>;
 def : Pat<(riscv_seteq (XLenVT GPR:$rs1)), (SLTIU GPR:$rs1, 1)>;
 def : Pat<(riscv_setne (XLenVT GPR:$rs1)), (SLTU (XLenVT X0), GPR:$rs1)>;
 def : Pat<(XLenVT (setne (XLenVT GPR:$rs1), -1)), (SLTIU GPR:$rs1, -1)>;
+def : Pat<(XLenVT (seteq (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
+          (SLTIU (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))), 1)>;
+def : Pat<(XLenVT (setne (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
+          (SLTU (XLenVT X0), (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))))>;
 
 def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -1579,15 +1686,33 @@ let Predicates = [HasStdExtC, OptForMinSize] in {
   def : SelectCompressOpt<SETNE>;
 }
 
+multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
+  let usesCustomInserter = 1 in
+  def Select_# valty #_Using_ # NAME
+      : Pseudo<(outs valty:$dst),
+               (ins valty:$lhs, imm:$imm, cond_code:$cc,
+                valty:$truev, valty:$falsev), []>;
+}
+
+let Predicates = [IsRV32] in {
+def : Pat<(i32 (setlt (i32 GPR:$rs1), 0)), (SRLI GPR:$rs1, 31)>; // compressible
+}
+let Predicates = [IsRV64] in {
+def : Pat<(i64 (seteq (i64 (and GPR:$rs1, 0x0000000080000000)), 0)),
+          (XORI (i64 (SRLIW GPR:$rs1, 31)), 1)>;
+def : Pat<(i64 (setlt (i64 GPR:$rs1), 0)), (SRLI GPR:$rs1, 63)>; // compressible
+def : Pat<(i64 (setlt (sext_inreg GPR:$rs1, i32), 0)), (SRLIW GPR:$rs1, 31)>;
+}
+
 /// Branches and jumps
 
 // Match `riscv_brcc` and lower to the appropriate RISC-V branch instruction.
 multiclass BccPat<CondCode Cond, RVInstB Inst> {
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), GPR:$rs2, Cond, bb:$imm12),
-            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0_bb:$imm12)>;
   // Explicitly select 0 to X0. The register coalescer doesn't always do it.
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), 0, Cond, bb:$imm12),
-            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0_bb:$imm12)>;
 }
 
 class BrccCompressOpt<CondCode Cond, RVInstB Inst>
@@ -1602,7 +1727,7 @@ defm : BccPat<SETGE, BGE>;
 defm : BccPat<SETULT, BLTU>;
 defm : BccPat<SETUGE, BGEU>;
 
-let Predicates = [HasStdExtCOrZca, OptForMinSize] in {
+let Predicates = [HasStdExtZca, OptForMinSize] in {
   def : BrccCompressOpt<SETEQ, BEQ>;
   def : BrccCompressOpt<SETNE, BNE>;
 }
@@ -1689,6 +1814,8 @@ def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
 def : Pat<(riscv_sret_glue), (SRET)>;
 def : Pat<(riscv_mret_glue), (MRET)>;
+let Predicates = [HasStdExtSmrnmi] in
+def : Pat<(riscv_mnret_glue), (MNRET)>;
 
 let isCall = 1, Defs = [X1] in {
 let Predicates = [NoStdExtZicfilp] in
@@ -1940,6 +2067,42 @@ class SwapSysRegImm<SysReg SR, list<Register> Regs>
   let Defs = Regs;
 }
 
+class ClearSysReg<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins GPR:$val),
+           [(riscv_clear_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
+    PseudoInstExpansion<(CSRRC X0, SR.Encoding, GPR:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class ClearSysRegImm<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins uimm5:$val),
+           [(riscv_clear_csr (XLenVT SR.Encoding), uimm5:$val)]>,
+    PseudoInstExpansion<(CSRRCI X0, SR.Encoding, uimm5:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class SetSysReg<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins GPR:$val),
+           [(riscv_set_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
+    PseudoInstExpansion<(CSRRS X0, SR.Encoding, GPR:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class SetSysRegImm<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins uimm5:$val),
+           [(riscv_set_csr (XLenVT SR.Encoding), uimm5:$val)]>,
+    PseudoInstExpansion<(CSRRSI X0, SR.Encoding, uimm5:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
 def ReadFRM : ReadSysReg<SysRegFRM, [FRM]>;
 let hasPostISelHook = 1 in {
 def WriteFRM : WriteSysReg<SysRegFRM, [FRM]>;
@@ -1953,6 +2116,17 @@ let hasSideEffects = true in {
 def ReadFFLAGS : ReadSysReg<SysRegFFLAGS, [FFLAGS]>;
 def WriteFFLAGS : WriteSysReg<SysRegFFLAGS, [FFLAGS]>;
 }
+
+let hasPostISelHook = 1 in {
+def ReadFCSR : ReadSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def WriteFCSR : WriteSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def WriteFCSRImm : WriteSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+def ClearFCSR : ClearSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def ClearFCSRImm : ClearSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+def SetFCSR : SetSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def SetFCSRImm : SetSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+}
+
 /// Other pseudo-instructions
 
 // Pessimistically assume the stack pointer will be clobbered
@@ -1965,19 +2139,19 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 /// RV64 patterns
 
-let Predicates = [IsRV64, NotHasStdExtZba] in {
+let Predicates = [IsRV64, NoStdExtZba] in {
 def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (i64 (SLLI GPR:$rs1, 32)), 32)>;
 
 // If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
 // shifts instead of 3. This can occur when unsigned is used to index an array.
 def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLI (i64 (SLLI GPR:$rs1, 32)), (ImmSubFrom32 uimm5:$shamt))>;
-}
+} // Predicates = [IsRV64, NoStdExtZba]
 
 class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
               (XLenVT (operator node:$lhs, node:$rhs)), [{
-  return hasAllHUsers(Node);
+  return hasAllHUsers(N);
 }]> {
   let GISelPredicateCode = [{ return hasAllHUsers(MI); }];
 }
@@ -1987,14 +2161,14 @@ class binop_allhusers<SDPatternOperator operator>
 class binop_allwusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs), (i64 (operator node:$lhs, node:$rhs)),
               [{
-  return hasAllWUsers(Node);
+  return hasAllWUsers(N);
 }]> {
   let GISelPredicateCode = [{ return hasAllWUsers(MI); }];
 }
 
 def sexti32_allwusers : PatFrag<(ops node:$src),
                                 (sext_inreg node:$src, i32), [{
-  return hasAllWUsers(Node);
+  return hasAllWUsers(N);
 }]>;
 
 def ImmSExt32 : SDNodeXForm<imm, [{
@@ -2059,7 +2233,7 @@ def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 // Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
 // $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
 // more power to RISCVOptWInstrs.
-def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+def : Pat<(riscv_or_disjoint 33signbits_node:$rs1, simm12:$imm),
           (ADDIW $rs1, simm12:$imm)>;
 
 /// Loads
@@ -2120,12 +2294,25 @@ def : Pat<(XLenVT (add GPR:$rs1, immop_oneuse<AddiPair>:$rs2)),
           (ADDI (XLenVT (ADDI GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
                 (AddiPairImmSmall imm:$rs2))>;
 
+def negImm : ComplexPattern<i64, 1, "selectNegImm", [], [], 0>;
+
 let Predicates = [IsRV64] in {
 // Select W instructions if only the lower 32-bits of the result are used.
 def : Pat<(binop_allwusers<add> GPR:$rs1, immop_oneuse<AddiPair>:$rs2),
           (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
                  (AddiPairImmSmall imm:$rs2))>;
+
+// Select SUB if the negated constant is cheaper to materialize.
+def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 }
+
+//===----------------------------------------------------------------------===//
+// Zihintpause
+//===----------------------------------------------------------------------===//
+
+// Zihintpause
+let Predicates = [HasStdExtZihintpause] in
+def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
 
 //===----------------------------------------------------------------------===//
 // Standard extensions
@@ -2139,9 +2326,17 @@ include "RISCVInstrInfoA.td"
 include "RISCVInstrInfoZa.td"
 include "RISCVInstrInfoZalasr.td"
 
+// Integer
+include "RISCVInstrInfoZimop.td"
+include "RISCVInstrInfoZicbo.td"
+include "RISCVInstrInfoZicond.td"
+include "RISCVInstrInfoZicfiss.td"
+include "RISCVInstrInfoZilsd.td"
+
 // Scalar FP
 include "RISCVInstrInfoF.td"
 include "RISCVInstrInfoD.td"
+include "RISCVInstrInfoQ.td"
 include "RISCVInstrInfoZfh.td"
 include "RISCVInstrInfoZfbfmin.td"
 include "RISCVInstrInfoZfa.td"
@@ -2155,12 +2350,8 @@ include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvqdotq.td"
 
-// Integer
-include "RISCVInstrInfoZimop.td"
-include "RISCVInstrInfoZicbo.td"
-include "RISCVInstrInfoZicond.td"
-include "RISCVInstrInfoZicfiss.td"
-include "RISCVInstrInfoZilsd.td"
+// Packed SIMD
+include "RISCVInstrInfoP.td"
 
 // Compressed
 include "RISCVInstrInfoC.td"
@@ -2178,12 +2369,15 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
+include "RISCVInstrInfoXSfmm.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
 include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
+include "RISCVInstrInfoXAndes.td"
+include "RISCVInstrInfoXSpacemiT.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

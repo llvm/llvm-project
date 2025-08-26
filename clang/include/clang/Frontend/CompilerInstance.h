@@ -88,6 +88,9 @@ class CompilerInstance : public ModuleLoader {
   /// The target being compiled for.
   IntrusiveRefCntPtr<TargetInfo> Target;
 
+  /// Options for the auxiliary target.
+  std::unique_ptr<TargetOptions> AuxTargetOpts;
+
   /// Auxiliary Target info.
   IntrusiveRefCntPtr<TargetInfo> AuxTarget;
 
@@ -201,6 +204,8 @@ class CompilerInstance : public ModuleLoader {
   void operator=(const CompilerInstance &) = delete;
 public:
   explicit CompilerInstance(
+      std::shared_ptr<CompilerInvocation> Invocation =
+          std::make_shared<CompilerInvocation>(),
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
       ModuleCache *ModCache = nullptr);
@@ -248,17 +253,9 @@ public:
   /// @name Compiler Invocation and Options
   /// @{
 
-  bool hasInvocation() const { return Invocation != nullptr; }
-
-  CompilerInvocation &getInvocation() {
-    assert(Invocation && "Compiler instance has no invocation!");
-    return *Invocation;
-  }
+  CompilerInvocation &getInvocation() { return *Invocation; }
 
   std::shared_ptr<CompilerInvocation> getInvocationPtr() { return Invocation; }
-
-  /// setInvocation - Replace the current invocation.
-  void setInvocation(std::shared_ptr<CompilerInvocation> Value);
 
   /// Indicates whether we should (re)build the global module index.
   bool shouldBuildGlobalModuleIndex() const;
@@ -324,9 +321,6 @@ public:
 
   LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
   const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
-  std::shared_ptr<LangOptions> getLangOptsPtr() const {
-    return Invocation->getLangOptsPtr();
-  }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();
@@ -367,7 +361,7 @@ public:
   }
 
   /// setDiagnostics - Replace the current diagnostics engine.
-  void setDiagnostics(DiagnosticsEngine *Value);
+  void setDiagnostics(llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Value);
 
   DiagnosticConsumer &getDiagnosticClient() const {
     assert(Diagnostics && Diagnostics->getClient() &&
@@ -426,6 +420,8 @@ public:
   /// @{
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getVirtualFileSystemPtr() const;
 
   /// @}
   /// @name File Manager
@@ -450,7 +446,7 @@ public:
   }
 
   /// Replace the current file manager and virtual file system.
-  void setFileManager(FileManager *Value);
+  void setFileManager(IntrusiveRefCntPtr<FileManager> Value);
 
   /// @}
   /// @name Source Manager
@@ -475,7 +471,7 @@ public:
   }
 
   /// setSourceManager - Replace the current source manager.
-  void setSourceManager(SourceManager *Value);
+  void setSourceManager(llvm::IntrusiveRefCntPtr<SourceManager> Value);
 
   /// @}
   /// @name Preprocessor
@@ -520,7 +516,7 @@ public:
   }
 
   /// setASTContext - Replace the current AST context.
-  void setASTContext(ASTContext *Value);
+  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> Value);
 
   /// Replace the current Sema; the compiler instance takes ownership
   /// of S.
@@ -680,7 +676,7 @@ public:
   ///
   /// \return The new object on success, or null on failure.
   static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
+  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions &Opts,
                     DiagnosticConsumer *Client = nullptr,
                     bool ShouldOwnClient = true,
                     const CodeGenOptions *CodeGenOpts = nullptr);
@@ -726,6 +722,7 @@ public:
       DisableValidationForModuleKind DisableValidation,
       bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
       ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
+      const CodeGenOptions &CodeGenOpts,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
@@ -836,16 +833,23 @@ public:
   class ThreadSafeCloneConfig {
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
     DiagnosticConsumer &DiagConsumer;
+    std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector;
 
   public:
-    ThreadSafeCloneConfig(IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                          DiagnosticConsumer &DiagConsumer)
-        : VFS(std::move(VFS)), DiagConsumer(DiagConsumer) {
+    ThreadSafeCloneConfig(
+        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+        DiagnosticConsumer &DiagConsumer,
+        std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector = nullptr)
+        : VFS(std::move(VFS)), DiagConsumer(DiagConsumer),
+          ModuleDepCollector(std::move(ModuleDepCollector)) {
       assert(this->VFS && "Clone config requires non-null VFS");
     }
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVFS() const { return VFS; }
     DiagnosticConsumer &getDiagConsumer() const { return DiagConsumer; }
+    std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const {
+      return ModuleDepCollector;
+    }
   };
 
 private:

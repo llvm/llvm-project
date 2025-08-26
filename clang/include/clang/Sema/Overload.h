@@ -360,6 +360,13 @@ class Sema;
     LLVM_PREFERRED_TYPE(bool)
     unsigned ObjCLifetimeConversionBinding : 1;
 
+    /// Whether the source expression was originally a single element
+    /// braced-init-list. Such a conversion is not a perfect match,
+    /// as we prefer a std::initializer_list constructor over an exact match
+    /// constructor.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FromBracedInitList : 1;
+
     /// FromType - The type that this conversion is converting
     /// from. This is an opaque pointer that can be translated into a
     /// QualType.
@@ -412,13 +419,26 @@ class Sema;
     bool isPerfect(const ASTContext &C) const {
       if (!isIdentityConversion())
         return false;
+
+      // We might prefer a std::initializer_list constructor,
+      // so this sequence cannot be perfect
+      if (FromBracedInitList)
+        return false;
+
       // If we are not performing a reference binding, we can skip comparing
       // the types, which has a noticeable performance impact.
       if (!ReferenceBinding) {
 #ifndef NDEBUG
         auto Decay = [&](QualType T) {
-          return (T->isArrayType() || T->isFunctionType()) ? C.getDecayedType(T)
-                                                           : T;
+          if (T->isArrayType() || T->isFunctionType())
+            T = C.getDecayedType(T);
+
+          // A function pointer type can be resolved to a member function type,
+          // which is still an identity conversion.
+          if (auto *N = T->getAs<MemberPointerType>();
+              N && N->isMemberFunctionPointer())
+            T = C.getDecayedType(N->getPointeeType());
+          return T;
         };
         // The types might differ if there is an array-to-pointer conversion
         // an function-to-pointer conversion, or lvalue-to-rvalue conversion.
@@ -967,7 +987,8 @@ class Sema;
     /// Have we matched any packs on the parameter side, versus any non-packs on
     /// the argument side, in a context where the opposite matching is also
     /// allowed?
-    bool StrictPackMatch : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned StrictPackMatch : 1;
 
     /// True if the candidate was found using ADL.
     LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
@@ -983,7 +1004,8 @@ class Sema;
 
     /// FailureKind - The reason why this candidate is not viable.
     /// Actually an OverloadFailureKind.
-    unsigned char FailureKind;
+    LLVM_PREFERRED_TYPE(OverloadFailureKind)
+    unsigned FailureKind : 8;
 
     /// The number of call arguments that were explicitly provided,
     /// to be used while performing partial ordering of function templates.
@@ -1469,8 +1491,6 @@ class Sema;
     OverloadingResult
     BestViableFunctionImpl(Sema &S, SourceLocation Loc,
                            OverloadCandidateSet::iterator &Best);
-    void PerfectViableFunction(Sema &S, SourceLocation Loc,
-                               OverloadCandidateSet::iterator &Best);
   };
 
   bool isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,

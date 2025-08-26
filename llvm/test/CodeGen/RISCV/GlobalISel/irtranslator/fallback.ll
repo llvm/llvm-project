@@ -9,7 +9,7 @@ declare <vscale x 1 x i8> @llvm.riscv.vadd.nxv1i8.nxv1i8(
   <vscale x 1 x i8>,
   i64)
 
-; FALLBACK_WITH_REPORT_ERR:  <unknown>:0:0: unable to translate instruction: call:
+; FALLBACK_WITH_REPORT_ERR:  <unknown>:0:0: unable to translate instruction: call
 ; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_arg
 define <vscale x 1 x i8> @scalable_arg(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, i64 %2) nounwind {
 entry:
@@ -22,7 +22,7 @@ entry:
   ret <vscale x 1 x i8> %a
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: call:
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: call
 ; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_inst
 define <vscale x 1 x i8> @scalable_inst(i64 %0) nounwind {
 entry:

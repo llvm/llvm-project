@@ -42,12 +42,12 @@ void uses(unsigned Parm) {
   while (1);
 
   // expected-error@+2{{OpenACC 'num_gangs' clause with more than 1 argument may not appear on a 'parallel' construct with a 'reduction' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'reduction' clause is here}}
 #pragma acc parallel reduction(+:Parm) num_gangs(Parm, IVar)
   while (1);
 
   // expected-error@+2{{OpenACC 'reduction' clause may not appear on a 'parallel' construct with a 'num_gangs' clause with more than 1 argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_gangs' clause is here}}
 #pragma acc parallel num_gangs(Parm, IVar) reduction(+:Var)
   while (1);
 
@@ -63,12 +63,12 @@ void uses(unsigned Parm) {
   // Vars in a reduction must be a scalar or a composite of scalars.
 #pragma acc parallel reduction(&: CoS, I, F)
   while (1);
-  // expected-error@+2{{OpenACC 'reduction' composite variable must not have non-scalar field}}
-  // expected-note@#COS_FIELD{{invalid field is here}}
+  // expected-error@+3{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(&: ChC)
   while (1);
 
-  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; type is 'int[5]'}}
 #pragma acc parallel reduction(&: Array)
   while (1);
 
@@ -76,7 +76,10 @@ void uses(unsigned Parm) {
   while (1);
 
   struct CompositeHasComposite ChCArray[5];
-  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; sub-array base type is 'struct CompositeHasComposite'}}
+  // expected-error@+4{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+3{{used as element type of sub-array type 'struct CompositeHasComposite'}}
+  // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(&: CoS, Array[I], ChCArray[0:I])
   while (1);
 

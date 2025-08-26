@@ -55,7 +55,7 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
       - name: Get subprojects that have doc changes
@@ -205,7 +205,7 @@ jobs:
           steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
         run: |
           cmake -B flang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" -DLLVM_ENABLE_SPHINX=ON ./llvm
-          TZ=UTC ninja -C flang-build docs-flang-html
+          TZ=UTC ninja -C flang-build docs-flang-html docs-flang-man
           mkdir built-docs/flang
           cp -r flang-build/docs/* built-docs/flang/
       - name: Upload docs

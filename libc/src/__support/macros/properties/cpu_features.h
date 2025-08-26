@@ -61,15 +61,15 @@
 
 #if defined(__riscv_flen)
 // https://github.com/riscv-non-isa/riscv-c-api-doc/blob/main/src/c-api.adoc
-#if (__riscv_flen & 0x10)
+#if defined(__riscv_zfhmin)
 #define LIBC_TARGET_CPU_HAS_RISCV_FPU_HALF
 #define LIBC_TARGET_CPU_HAS_FPU_HALF
 #endif // LIBC_TARGET_CPU_HAS_RISCV_FPU_HALF
-#if (__riscv_flen & 0x20)
+#if (__riscv_flen >= 32)
 #define LIBC_TARGET_CPU_HAS_RISCV_FPU_FLOAT
 #define LIBC_TARGET_CPU_HAS_FPU_FLOAT
 #endif // LIBC_TARGET_CPU_HAS_RISCV_FPU_FLOAT
-#if (__riscv_flen & 0x40)
+#if (__riscv_flen >= 64)
 #define LIBC_TARGET_CPU_HAS_RISCV_FPU_DOUBLE
 #define LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 #endif // LIBC_TARGET_CPU_HAS_RISCV_FPU_DOUBLE
@@ -81,7 +81,7 @@
 #endif
 
 #if defined(__ARM_FEATURE_FMA) || (defined(__AVX2__) && defined(__FMA__)) ||   \
-    defined(__NVPTX__) || defined(__AMDGPU__) || defined(__LIBC_RISCV_USE_FMA)
+    defined(__NVPTX__) || defined(__AMDGPU__) || defined(__riscv_flen)
 #define LIBC_TARGET_CPU_HAS_FMA
 // Provide a more fine-grained control of FMA instruction for ARM targets.
 #if defined(LIBC_TARGET_CPU_HAS_FPU_HALF)

@@ -41,6 +41,12 @@
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
 
+#if defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
+#include <OS.h>
+#include <signal.h>
+#define _LIBUNWIND_CHECK_HAIKU_SIGRETURN 1
+#endif
+
 #include "AddressSpace.hpp"
 #include "CompactUnwinder.hpp"
 #include "config.h"
@@ -82,6 +88,22 @@ struct UNWIND_INFO {
   uint8_t FrameOffset : 4;
   uint16_t UnwindCodes[2];
 };
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+union UNWIND_INFO_ARM {
+  DWORD HeaderData;
+  struct {
+    DWORD FunctionLength : 18;
+    DWORD Version : 2;
+    DWORD ExceptionDataPresent : 1;
+    DWORD EpilogInHeader : 1;
+    DWORD FunctionFragment : 1;
+    DWORD EpilogCount : 5;
+    DWORD CodeWords : 4;
+  };
+};
+#pragma clang diagnostic pop
 
 extern "C" _Unwind_Reason_Code __libunwind_seh_personality(
     int, _Unwind_Action, uint64_t, _Unwind_Exception *,
@@ -151,7 +173,8 @@ bool DwarfFDECache<A>::_registeredForDyldUnloads = false;
 #endif
 
 template <typename A>
-typename A::pint_t DwarfFDECache<A>::findFDE(pint_t mh, pint_t pc) {
+typename DwarfFDECache<A>::pint_t DwarfFDECache<A>::findFDE(pint_t mh,
+                                                            pint_t pc) {
   pint_t result = 0;
   _LIBUNWIND_LOG_IF_FALSE(_lock.lock_shared());
   for (entry *p = _buffer; p < _bufferUsed; ++p) {
@@ -1015,7 +1038,7 @@ private:
   template <typename Registers> int stepThroughSigReturn(Registers &) {
     return UNW_STEP_END;
   }
-#elif defined(_LIBUNWIND_TARGET_HAIKU)
+#elif defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool setInfoForSigReturn();
   int stepThroughSigReturn();
 #endif
@@ -2018,6 +2041,61 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       _info.handler = 0;
     }
   }
+#elif defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_ARM)
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+#define FUNC_LENGTH_UNIT 4
+#define XDATA_TYPE IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY_XDATA
+#else
+#define FUNC_LENGTH_UNIT 2
+#define XDATA_TYPE UNWIND_INFO_ARM
+#endif
+  if (unwindEntry->Flag != 0) { // Packed unwind info
+    _info.end_ip =
+        _info.start_ip + unwindEntry->FunctionLength * FUNC_LENGTH_UNIT;
+    // Only fill in the handler and LSDA if they're stale.
+    if (pc != getLastPC()) {
+      // Packed unwind info doesn't have an exception handler.
+      _info.lsda = 0;
+      _info.handler = 0;
+    }
+  } else {
+    XDATA_TYPE *xdata =
+        reinterpret_cast<XDATA_TYPE *>(base + unwindEntry->UnwindData);
+    _info.end_ip = _info.start_ip + xdata->FunctionLength * FUNC_LENGTH_UNIT;
+    // Only fill in the handler and LSDA if they're stale.
+    if (pc != getLastPC()) {
+      if (xdata->ExceptionDataPresent) {
+        uint32_t offset = 1; // The main xdata
+        uint32_t codeWords = xdata->CodeWords;
+        uint32_t epilogScopes = xdata->EpilogCount;
+        if (xdata->EpilogCount == 0 && xdata->CodeWords == 0) {
+          // The extension word has got the same layout for both ARM and ARM64
+          uint32_t extensionWord = reinterpret_cast<uint32_t *>(xdata)[1];
+          codeWords = (extensionWord >> 16) & 0xff;
+          epilogScopes = extensionWord & 0xffff;
+          offset++;
+        }
+        if (!xdata->EpilogInHeader)
+          offset += epilogScopes;
+        offset += codeWords;
+        uint32_t *exceptionHandlerInfo =
+            reinterpret_cast<uint32_t *>(xdata) + offset;
+        _dispContext.HandlerData = &exceptionHandlerInfo[1];
+        _dispContext.LanguageHandler = reinterpret_cast<EXCEPTION_ROUTINE *>(
+            base + exceptionHandlerInfo[0]);
+        _info.lsda = reinterpret_cast<unw_word_t>(_dispContext.HandlerData);
+        if (exceptionHandlerInfo[0])
+          _info.handler =
+              reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
+        else
+          _info.handler = 0;
+      } else {
+        _info.lsda = 0;
+        _info.handler = 0;
+      }
+    }
+  }
 #endif
   setLastPC(pc);
   return true;
@@ -2559,7 +2637,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   _isSigReturn = false;
 #endif
 
@@ -2684,7 +2762,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #endif // #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (setInfoForSigReturn())
     return;
 #endif
@@ -2758,63 +2836,6 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
   _registers.setSP(_addressSpace.get64(sigctx + kOffsetSp));
   _registers.setIP(_addressSpace.get64(sigctx + kOffsetPc));
   _isSignalFrame = true;
-  return UNW_STEP_SUCCESS;
-}
-
-#elif defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
-#include <commpage_defs.h>
-#include <signal.h>
-
-extern "C" {
-extern void *__gCommPageAddress;
-}
-
-template <typename A, typename R>
-bool UnwindCursor<A, R>::setInfoForSigReturn() {
-#if defined(_LIBUNWIND_TARGET_X86_64)
-  addr_t signal_handler =
-      (((addr_t *)__gCommPageAddress)[COMMPAGE_ENTRY_X86_SIGNAL_HANDLER] +
-       (addr_t)__gCommPageAddress);
-  addr_t signal_handler_ret = signal_handler + 45;
-#endif
-  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
-  if (pc == signal_handler_ret) {
-    _info = {};
-    _info.start_ip = signal_handler;
-    _info.end_ip = signal_handler_ret;
-    _isSigReturn = true;
-    return true;
-  }
-  return false;
-}
-
-template <typename A, typename R>
-int UnwindCursor<A, R>::stepThroughSigReturn() {
-  _isSignalFrame = true;
-  pint_t sp = _registers.getSP();
-#if defined(_LIBUNWIND_TARGET_X86_64)
-  vregs *regs = (vregs *)(sp + 0x70);
-
-  _registers.setRegister(UNW_REG_IP, regs->rip);
-  _registers.setRegister(UNW_REG_SP, regs->rsp);
-  _registers.setRegister(UNW_X86_64_RAX, regs->rax);
-  _registers.setRegister(UNW_X86_64_RDX, regs->rdx);
-  _registers.setRegister(UNW_X86_64_RCX, regs->rcx);
-  _registers.setRegister(UNW_X86_64_RBX, regs->rbx);
-  _registers.setRegister(UNW_X86_64_RSI, regs->rsi);
-  _registers.setRegister(UNW_X86_64_RDI, regs->rdi);
-  _registers.setRegister(UNW_X86_64_RBP, regs->rbp);
-  _registers.setRegister(UNW_X86_64_R8, regs->r8);
-  _registers.setRegister(UNW_X86_64_R9, regs->r9);
-  _registers.setRegister(UNW_X86_64_R10, regs->r10);
-  _registers.setRegister(UNW_X86_64_R11, regs->r11);
-  _registers.setRegister(UNW_X86_64_R12, regs->r12);
-  _registers.setRegister(UNW_X86_64_R13, regs->r13);
-  _registers.setRegister(UNW_X86_64_R14, regs->r14);
-  _registers.setRegister(UNW_X86_64_R15, regs->r15);
-  // TODO: XMM
-#endif
-
   return UNW_STEP_SUCCESS;
 }
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
@@ -3032,6 +3053,96 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_S390X)
 
+#if defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn() {
+  Dl_info dlinfo;
+  const auto isSignalHandler = [&](pint_t addr) {
+    if (!dladdr(reinterpret_cast<void *>(addr), &dlinfo))
+      return false;
+    if (strcmp(dlinfo.dli_fname, "commpage"))
+      return false;
+    if (dlinfo.dli_sname == NULL ||
+        strcmp(dlinfo.dli_sname, "commpage_signal_handler"))
+      return false;
+    return true;
+  };
+
+  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  if (!isSignalHandler(pc))
+    return false;
+
+  pint_t start = reinterpret_cast<pint_t>(dlinfo.dli_saddr);
+
+  static size_t signalHandlerSize = 0;
+  if (signalHandlerSize == 0) {
+    size_t boundLow = 0;
+    size_t boundHigh = static_cast<size_t>(-1);
+
+    area_info areaInfo;
+    if (get_area_info(area_for(dlinfo.dli_saddr), &areaInfo) == B_OK)
+      boundHigh = areaInfo.size;
+
+    while (boundLow < boundHigh) {
+      size_t boundMid = boundLow + ((boundHigh - boundLow) / 2);
+      pint_t test = start + boundMid;
+      if (test >= start && isSignalHandler(test))
+        boundLow = boundMid + 1;
+      else
+        boundHigh = boundMid;
+    }
+
+    signalHandlerSize = boundHigh;
+  }
+
+  _info = {};
+  _info.start_ip = start;
+  _info.end_ip = start + signalHandlerSize;
+  _isSigReturn = true;
+
+  return true;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn() {
+  _isSignalFrame = true;
+
+#if defined(_LIBUNWIND_TARGET_X86_64)
+  // Layout of the stack before function call:
+  // - signal_frame_data
+  //   + siginfo_t    (public struct, fairly stable)
+  //   + ucontext_t   (public struct, fairly stable)
+  //     - mcontext_t -> Offset 0x70, this is what we want.
+  // - frame->ip (8 bytes)
+  // - frame->bp (8 bytes). Not written by the kernel,
+  //   but the signal handler has a "push %rbp" instruction.
+  pint_t bp = this->getReg(UNW_X86_64_RBP);
+  vregs *regs = (vregs *)(bp + 0x70);
+
+  _registers.setRegister(UNW_REG_IP, regs->rip);
+  _registers.setRegister(UNW_REG_SP, regs->rsp);
+  _registers.setRegister(UNW_X86_64_RAX, regs->rax);
+  _registers.setRegister(UNW_X86_64_RDX, regs->rdx);
+  _registers.setRegister(UNW_X86_64_RCX, regs->rcx);
+  _registers.setRegister(UNW_X86_64_RBX, regs->rbx);
+  _registers.setRegister(UNW_X86_64_RSI, regs->rsi);
+  _registers.setRegister(UNW_X86_64_RDI, regs->rdi);
+  _registers.setRegister(UNW_X86_64_RBP, regs->rbp);
+  _registers.setRegister(UNW_X86_64_R8, regs->r8);
+  _registers.setRegister(UNW_X86_64_R9, regs->r9);
+  _registers.setRegister(UNW_X86_64_R10, regs->r10);
+  _registers.setRegister(UNW_X86_64_R11, regs->r11);
+  _registers.setRegister(UNW_X86_64_R12, regs->r12);
+  _registers.setRegister(UNW_X86_64_R13, regs->r13);
+  _registers.setRegister(UNW_X86_64_R14, regs->r14);
+  _registers.setRegister(UNW_X86_64_R15, regs->r15);
+  // TODO: XMM
+#endif // defined(_LIBUNWIND_TARGET_X86_64)
+
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
+
 template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   (void)stage2;
   // Bottom of stack is defined is when unwind info cannot be found.
@@ -3041,7 +3152,7 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   // Use unwinding info to modify register set as if function returned.
   int result;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (_isSigReturn) {
     result = this->stepThroughSigReturn();
   } else

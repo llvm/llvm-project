@@ -17,7 +17,7 @@ int main() { return bar(10); }
 #--- commands.input
 settings set plugin.cplusplus.display.function-name-format "this affects C++ only"
 settings set -f frame-format "custom-frame '${function.name-with-args}'\n"
-break set -l 3
+break set -l 3 -f main.m
 run
 
 bt

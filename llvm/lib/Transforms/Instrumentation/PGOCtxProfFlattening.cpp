@@ -36,8 +36,6 @@
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <deque>
-#include <functional>
 
 using namespace llvm;
 
@@ -60,7 +58,7 @@ void assignProfileData(Function &F, ArrayRef<uint64_t> RawCounters) {
         uint64_t TrueCount, FalseCount = 0;
         if (!PA.getSelectInstrProfile(*SI, TrueCount, FalseCount))
           continue;
-        setProfMetadata(F.getParent(), SI, {TrueCount, FalseCount},
+        setProfMetadata(SI, {TrueCount, FalseCount},
                         std::max(TrueCount, FalseCount));
       }
     if (succ_size(&BB) < 2)
@@ -69,7 +67,7 @@ void assignProfileData(Function &F, ArrayRef<uint64_t> RawCounters) {
     if (!PA.getOutgoingBranchWeights(BB, ProfileHolder, MaxCount))
       continue;
     assert(MaxCount > 0);
-    setProfMetadata(F.getParent(), BB.getTerminator(), ProfileHolder, MaxCount);
+    setProfMetadata(BB.getTerminator(), ProfileHolder, MaxCount);
   }
 }
 

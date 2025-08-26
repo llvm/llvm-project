@@ -103,6 +103,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_FSUB:           return "AtomicLoadFSub";
   case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
   case ISD::ATOMIC_LOAD_FMAX:           return "AtomicLoadFMax";
+  case ISD::ATOMIC_LOAD_FMINIMUM:       return "AtomicLoadFMinimum";
+  case ISD::ATOMIC_LOAD_FMAXIMUM:       return "AtomicLoadFMaximum";
   case ISD::ATOMIC_LOAD_UINC_WRAP:
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
@@ -268,6 +270,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   // Binary operators
   case ISD::ADD:                        return "add";
+  case ISD::PTRADD:                     return "ptradd";
   case ISD::SUB:                        return "sub";
   case ISD::MUL:                        return "mul";
   case ISD::MULHU:                      return "mulhu";
@@ -575,10 +578,15 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     return "find_last_active";
 
+  case ISD::GET_ACTIVE_LANE_MASK:
+    return "get_active_lane_mask";
+
   case ISD::PARTIAL_REDUCE_UMLA:
     return "partial_reduce_umla";
   case ISD::PARTIAL_REDUCE_SMLA:
     return "partial_reduce_smla";
+  case ISD::PARTIAL_REDUCE_SUMLA:
+    return "partial_reduce_sumla";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
@@ -601,7 +609,14 @@ const char *SDNode::getIndexedModeName(ISD::MemIndexedMode AM) {
 static Printable PrintNodeId(const SDNode &Node) {
   return Printable([&Node](raw_ostream &OS) {
 #ifndef NDEBUG
+    static const raw_ostream::Colors Color[] = {
+        raw_ostream::BLACK,  raw_ostream::RED,  raw_ostream::GREEN,
+        raw_ostream::YELLOW, raw_ostream::BLUE, raw_ostream::MAGENTA,
+        raw_ostream::CYAN,
+    };
+    OS.changeColor(Color[Node.PersistentId % std::size(Color)]);
     OS << 't' << Node.PersistentId;
+    OS.resetColor();
 #else
     OS << (const void*)&Node;
 #endif
@@ -931,9 +946,6 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
        << " -> "
        << ASC->getDestAddressSpace()
        << ']';
-  } else if (const LifetimeSDNode *LN = dyn_cast<LifetimeSDNode>(this)) {
-    if (LN->hasOffset())
-      OS << "<" << LN->getOffset() << " to " << LN->getOffset() + LN->getSize() << ">";
   } else if (const auto *AA = dyn_cast<AssertAlignSDNode>(this)) {
     OS << '<' << AA->getAlign().value() << '>';
   }
@@ -1152,6 +1164,9 @@ static void printrWithDepthHelper(raw_ostream &OS, const SDNode *N,
   for (const SDValue &Op : N->op_values()) {
     // Don't follow chain operands.
     if (Op.getValueType() == MVT::Other)
+      continue;
+    // Don't print children that were fully rendered inline.
+    if (shouldPrintInline(*Op.getNode(), G))
       continue;
     OS << '\n';
     printrWithDepthHelper(OS, Op.getNode(), G, depth - 1, indent + 2);

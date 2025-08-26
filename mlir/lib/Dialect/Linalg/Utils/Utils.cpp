@@ -15,7 +15,6 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -31,8 +30,6 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/Pass/Pass.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -59,7 +56,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
   TileCheck(ArrayRef<OpFoldResult> tileSizes) : tileSizes(tileSizes) {}
 
   void visitDimExpr(AffineDimExpr expr) {
-    isTiled |= !isZeroIndex(tileSizes[expr.getPosition()]);
+    isTiled |= !isZeroInteger(tileSizes[expr.getPosition()]);
   }
   void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) {
     visit(expr.getLHS());
@@ -95,7 +92,7 @@ static bool isTiled(AffineMap map, ArrayRef<OpFoldResult> tileSizes) {
 std::optional<RegionMatcher::BinaryOpKind>
 RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
   auto &region = op.getRegion();
-  if (!llvm::hasSingleElement(region))
+  if (!region.hasOneBlock())
     return std::nullopt;
 
   Block &block = region.front();
@@ -207,7 +204,7 @@ bool allIndexingsAreProjectedPermutation(LinalgOp op) {
 }
 
 bool hasOnlyScalarElementwiseOp(Region &r) {
-  if (!llvm::hasSingleElement(r))
+  if (!r.hasOneBlock())
     return false;
   for (Operation &op : r.front()) {
     if (!(isa<arith::ConstantOp, func::ConstantOp, tensor::ExtractOp,
@@ -244,11 +241,13 @@ bool isReductionIterator(utils::IteratorType iteratorType) {
 }
 
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
-                            Value source, Value pad, bool nofold) {
+                            Value source, Value pad, bool nofold,
+                            ValueRange typeDynDims) {
   // Exit if `source` is not defined by an ExtractSliceOp.
   auto sliceOp = source.getDefiningOp<tensor::ExtractSliceOp>();
   if (!sliceOp)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Search the `source` use-def chain for padded LinalgOps.
   Value current = sliceOp.getSource();
@@ -264,24 +263,28 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
   // Exit if the search fails to match a tensor::PadOp at the end of the matched
   // LinalgOp sequence.
   if (!padOp)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the padded result type does not match.
   if (sliceOp.getSource().getType() != type)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the LinalgOps are not high padded.
   if (llvm::any_of(padOp.getMixedLowPad(), [](OpFoldResult ofr) {
         return getConstantIntValue(ofr) != static_cast<int64_t>(0);
       }))
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if `padOpSliceOp`, which defines the slice used by
   // `padOp`, is rank-reducing.
   auto padOpSliceOp = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
   if (!padOpSliceOp ||
       sliceOp.getMixedSizes().size() != padOpSliceOp.getMixedSizes().size())
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the sizes of the dynamic sizes of `sliceOp` do not match the size
   // of the slice padded by `padOp`.
@@ -290,14 +293,16 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
           [](std::tuple<OpFoldResult, OpFoldResult> it) {
             return !isEqualConstantIntOrValue(std::get<0>(it), std::get<1>(it));
           }))
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the padding values do not match.
   Attribute padOpPadAttr, padAttr;
   Value padOpPad = padOp.getConstantPaddingValue();
   if (!padOpPad || !matchPattern(padOpPad, m_Constant(&padOpPadAttr)) ||
       !matchPattern(pad, m_Constant(&padAttr)) || padOpPadAttr != padAttr)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Return the padded result if the padding values and sizes match.
   return sliceOp.getSource();
@@ -315,14 +320,14 @@ GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to) {
       AffineMap::getMultiDimIdentityMap(memrefTypeTo.getRank(), b.getContext());
   SmallVector<utils::IteratorType> iteratorTypes(memrefTypeTo.getRank(),
                                                  utils::IteratorType::parallel);
-  return b.create<linalg::GenericOp>(
-      loc,
+  return linalg::GenericOp::create(
+      b, loc,
       /*inputs=*/from,
       /*outputs=*/to,
       /*indexingMaps=*/llvm::ArrayRef({id, id}),
       /*iteratorTypes=*/iteratorTypes,
       [](OpBuilder &b, Location loc, ValueRange args) {
-        b.create<linalg::YieldOp>(loc, args.front());
+        linalg::YieldOp::create(b, loc, args.front());
       });
 }
 
@@ -478,8 +483,8 @@ static void generateParallelLoopNest(
   case DistributionMethod::None: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
-    b.create<scf::ParallelOp>(
-        loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
+    scf::ParallelOp::create(
+        b, loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
         steps.take_front(numProcessed),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange localIvs) {
           ivStorage.append(localIvs.begin(), localIvs.end());
@@ -494,8 +499,8 @@ static void generateParallelLoopNest(
   case DistributionMethod::Cyclic: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
-    b.create<scf::ParallelOp>(
-        loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
+    scf::ParallelOp::create(
+        b, loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
         steps.take_front(numProcessed),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange localIvs) {
           ivStorage.append(localIvs.begin(), localIvs.end());
@@ -514,13 +519,13 @@ static void generateParallelLoopNest(
     for (unsigned i = 1; i < numProcessed; ++i)
       cond = ab._and(cond, ab.slt(lbs[i], ubs[i]));
     ivStorage.append(lbs.begin(), std::next(lbs.begin(), numProcessed));
-    b.create<scf::IfOp>(loc, cond, [&](OpBuilder &b, Location loc) {
+    scf::IfOp::create(b, loc, cond, [&](OpBuilder &b, Location loc) {
       generateParallelLoopNest(b, loc, lbs.drop_front(numProcessed),
                                ubs.drop_front(numProcessed),
                                steps.drop_front(numProcessed),
                                iteratorTypes.drop_front(numProcessed),
                                remainderProcInfo, bodyBuilderFn, ivStorage);
-      b.create<scf::YieldOp>(loc, ValueRange{});
+      scf::YieldOp::create(b, loc, ValueRange{});
     });
     return;
   }
@@ -590,13 +595,13 @@ static Operation *materializeTiledShape(OpBuilder &builder, Location loc,
   auto shapedType = dyn_cast<ShapedType>(valueToTile.getType());
   auto *sliceOp = TypeSwitch<ShapedType, Operation *>(shapedType)
                       .Case([&](MemRefType) {
-                        return builder.create<memref::SubViewOp>(
-                            loc, valueToTile, sliceParams.offsets,
+                        return memref::SubViewOp::create(
+                            builder, loc, valueToTile, sliceParams.offsets,
                             sliceParams.sizes, sliceParams.strides);
                       })
                       .Case([&](RankedTensorType) {
-                        return builder.create<tensor::ExtractSliceOp>(
-                            loc, valueToTile, sliceParams.offsets,
+                        return tensor::ExtractSliceOp::create(
+                            builder, loc, valueToTile, sliceParams.offsets,
                             sliceParams.sizes, sliceParams.strides);
                       })
                       .Default([](ShapedType) -> Operation * {
@@ -688,8 +693,8 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
     //    tensors with "0" dimensions would never be constructed.
     int64_t shapeSize = shape[r];
     std::optional<int64_t> sizeCst = getConstantIntValue(size);
-    auto hasTileSizeOne = sizeCst && *sizeCst == 1;
-    auto dividesEvenly = sizeCst && !ShapedType::isDynamic(shapeSize) &&
+    auto hasTileSizeOne = sizeCst == 1;
+    auto dividesEvenly = sizeCst && ShapedType::isStatic(shapeSize) &&
                          ((shapeSize % *sizeCst) == 0);
     if (!hasTileSizeOne && !dividesEvenly) {
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: shapeSize=" << shapeSize
@@ -741,7 +746,7 @@ SmallVector<OpFoldResult> computeTileOffsets(OpBuilder &b, Location loc,
   SmallVector<OpFoldResult> offsets;
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for loop#" << idx << "\n");
-    bool isTiled = !isZeroIndex(tileSizes[idx]);
+    bool isTiled = !isZeroInteger(tileSizes[idx]);
     offsets.push_back(isTiled ? ivs[idxIvs++] : b.getIndexAttr(0));
     LLVM_DEBUG(llvm::dbgs()
                << "computeTileOffsets: " << offsets.back() << "\n");
@@ -754,7 +759,7 @@ SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
                                            ArrayRef<OpFoldResult> sizeBounds) {
   SmallVector<OpFoldResult> sizes;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx) {
-    bool isTiled = !isZeroIndex(tileSizes[idx]);
+    bool isTiled = !isZeroInteger(tileSizes[idx]);
     // Before composing, we need to make range a closed interval.
     OpFoldResult size = isTiled ? tileSizes[idx] : sizeBounds[idx];
     AffineExpr d0 = getAffineDimExpr(0, b.getContext());
@@ -788,8 +793,8 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
     // `tiledOperands`.
     Value outputTensor = operands[opOperand.getOperandNumber()];
     if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
-      Value inserted = builder.create<tensor::InsertSliceOp>(
-          loc, sliceOp.getSource().getType(), results[resultIdx],
+      Value inserted = tensor::InsertSliceOp::create(
+          builder, loc, sliceOp.getSource().getType(), results[resultIdx],
           sliceOp.getSource(), sliceOp.getOffsets(), sliceOp.getSizes(),
           sliceOp.getStrides(), sliceOp.getStaticOffsets(),
           sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
@@ -810,7 +815,7 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
                           bool omitPartialTileCheck) {
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
                            llvm::make_range(tileSizes.begin(), tileSizes.end()),
-                           [](OpFoldResult v) { return !isZeroIndex(v); })) &&
+                           [](OpFoldResult v) { return !isZeroInteger(v); })) &&
          "expected as many ivs as non-zero sizes");
 
   // Construct (potentially temporary) mins and maxes on which to apply maps

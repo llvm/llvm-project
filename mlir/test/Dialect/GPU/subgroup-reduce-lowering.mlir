@@ -349,7 +349,7 @@ gpu.module @kernels {
     // CHECK-GFX10: %[[A4:.+]] = arith.addi %[[A3]], %[[P0]] : i16
     // CHECK-GFX10: %[[R0:.+]] = rocdl.readlane %[[A4]], %{{.+}} : (i16, i32) -> i16
     // CHECK-GFX10: %[[R1:.+]] = rocdl.readlane %[[A4]], %{{.+}} : (i16, i32) -> i16
-    // CHECK-GFX10: %[[A5:.+]] = arith.addi %[[R1]], %[[R0]] : i16
+    // CHECK-GFX10: %[[A5:.+]] = arith.addi %[[R0]], %[[R1]] : i16
     // CHECK-GFX10: "test.consume"(%[[A5]]) : (i16) -> ()
     %sum0 = gpu.subgroup_reduce add %arg0 : (i16) -> i16
     "test.consume"(%sum0) : (i16) -> ()

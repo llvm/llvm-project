@@ -85,16 +85,23 @@ public:
 
 // Wrapper around ExternalAAWrapperPass so that the default
 // constructor gets the callback.
+// Note that NVPTXAA will run before BasicAA for compile time considerations.
 class NVPTXExternalAAWrapper : public ExternalAAWrapperPass {
 public:
   static char ID;
 
   NVPTXExternalAAWrapper()
-      : ExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
-          if (auto *WrapperPass =
-                  P.getAnalysisIfAvailable<NVPTXAAWrapperPass>())
-            AAR.addAAResult(WrapperPass->getResult());
-        }) {}
+      : ExternalAAWrapperPass(
+            [](Pass &P, Function &, AAResults &AAR) {
+              if (auto *WrapperPass =
+                      P.getAnalysisIfAvailable<NVPTXAAWrapperPass>())
+                AAR.addAAResult(WrapperPass->getResult());
+            },
+            /*RunEarly=*/true) {}
+
+  StringRef getPassName() const override {
+    return "NVPTX Address space based Alias Analysis Wrapper";
+  }
 };
 
 ImmutablePass *createNVPTXAAWrapperPass();

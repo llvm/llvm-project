@@ -330,6 +330,16 @@ std::optional<uint64_t> getOverallReqNTID(const Function &F) {
   return getVectorProduct(ReqNTID);
 }
 
+std::optional<uint64_t> getOverallClusterRank(const Function &F) {
+  // maxclusterrank and cluster_dim are mutually exclusive.
+  if (const auto ClusterRank = getMaxClusterRank(F))
+    return ClusterRank;
+
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  const auto ClusterDim = getClusterDim(F);
+  return getVectorProduct(ClusterDim);
+}
+
 std::optional<unsigned> getMaxClusterRank(const Function &F) {
   return getFnAttrParsedInt(F, "nvvm.maxclusterrank");
 }
@@ -340,6 +350,10 @@ std::optional<unsigned> getMinCTASm(const Function &F) {
 
 std::optional<unsigned> getMaxNReg(const Function &F) {
   return getFnAttrParsedInt(F, "nvvm.maxnreg");
+}
+
+bool hasBlocksAreClusters(const Function &F) {
+  return F.hasFnAttribute("nvvm.blocksareclusters");
 }
 
 MaybeAlign getAlign(const CallInst &I, unsigned Index) {

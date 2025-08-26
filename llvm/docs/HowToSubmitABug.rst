@@ -112,15 +112,20 @@ If this does crash, then you should be able to debug this with the following
 Run this, then file a bug with the instructions and reduced .bc
 files that bugpoint emits.
 
-If bugpoint doesn't reproduce the crash, ``llvm-reduce`` is an alternative
-way to reduce LLVM IR. Create a script that repros the crash and run:
+If bugpoint doesn't reproduce the crash,
+:doc:`llvm-reduce <CommandGuide/llvm-reduce>` is an alternative way to reduce
+LLVM IR. Create a script that repros the crash and run:
 
 .. code-block:: bash
 
    llvm-reduce --test=path/to/script foo.bc
 
-which should produce reduced IR that reproduces the crash. Be warned the
-``llvm-reduce`` is still fairly immature and may crash.
+which should produce reduced IR that reproduces the crash.
+
+.. TIP::
+   ``llvm-reduce`` is still fairly immature and may crash. On the other hand,
+   unlike ``bugpoint``, ``llvm-reduce -j $NUM_THREADS`` is multi-threaded and
+   can therefore potentially be much faster.
 
 If none of the above work, you can get the IR before a crash by running the
 ``opt`` command with the ``--print-before-all --print-module-scope`` flags to

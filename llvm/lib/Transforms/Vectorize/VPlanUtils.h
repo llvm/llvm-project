@@ -25,34 +25,63 @@ bool onlyFirstLaneUsed(const VPValue *Def);
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(const VPValue *Def);
 
+/// Returns true if only scalar values of \p Def are used by all users.
+bool onlyScalarValuesUsed(const VPValue *Def);
+
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
 /// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
 /// pre-header already contains a recipe expanding \p Expr, return it. If not,
 /// create a new one.
-VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
-                                       ScalarEvolution &SE);
+VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
 const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 
-/// Returns true if \p VPV is uniform after vectorization.
-inline bool isUniformAfterVectorization(const VPValue *VPV) {
-  // A value defined outside the vector region must be uniform after
-  // vectorization inside a vector region.
-  if (VPV->isDefinedOutsideLoopRegions())
+/// Returns true if \p VPV is a single scalar, either because it produces the
+/// same value for all lanes or only has its first lane used.
+inline bool isSingleScalar(const VPValue *VPV) {
+  auto PreservesUniformity = [](unsigned Opcode) -> bool {
+    if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
+      return true;
+    switch (Opcode) {
+    case Instruction::GetElementPtr:
+    case Instruction::ICmp:
+    case Instruction::FCmp:
+    case VPInstruction::Broadcast:
+    case VPInstruction::PtrAdd:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  // A live-in must be uniform across the scope of VPlan.
+  if (VPV->isLiveIn())
     return true;
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
-    return Rep->isUniform();
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(),
-                  isUniformAfterVectorization);
+
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
+    const VPRegionBlock *RegionOfR = Rep->getParent()->getParent();
+    // Don't consider recipes in replicate regions as uniform yet; their first
+    // lane cannot be accessed when executing the replicate region for other
+    // lanes.
+    if (RegionOfR && RegionOfR->isReplicator())
+      return false;
+    return Rep->isSingleScalar() || (PreservesUniformity(Rep->getOpcode()) &&
+                                     all_of(Rep->operands(), isSingleScalar));
+  }
+  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe,
+          VPWidenSelectRecipe>(VPV))
+    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
+  if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
+    return PreservesUniformity(WidenR->getOpcode()) &&
+           all_of(WidenR->operands(), isSingleScalar);
+  }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           ((Instruction::isBinaryOp(VPI->getOpcode()) ||
-             VPI->getOpcode() == VPInstruction::PtrAdd) &&
-            all_of(VPI->operands(), isUniformAfterVectorization));
+           (PreservesUniformity(VPI->getOpcode()) &&
+            all_of(VPI->operands(), isSingleScalar));
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
@@ -67,6 +96,9 @@ bool isHeaderMask(const VPValue *V, VPlan &Plan);
 /// VPDerivedIV or VPCanonicalIVPHI).
 bool isUniformAcrossVFsAndUFs(VPValue *V);
 
+/// Returns the header block of the first, top-level loop, or null if none
+/// exist.
+VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -203,16 +235,18 @@ public:
   /// single edge between \p From and \p To.
   static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
                            VPBlockBase *BlockPtr) {
-    auto &Successors = From->getSuccessors();
-    auto &Predecessors = To->getPredecessors();
-    assert(count(Successors, To) == 1 && count(Predecessors, From) == 1 &&
-           "must have single between From and To");
-    unsigned SuccIdx = std::distance(Successors.begin(), find(Successors, To));
-    unsigned PredIx =
-        std::distance(Predecessors.begin(), find(Predecessors, From));
+    unsigned SuccIdx = From->getIndexForSuccessor(To);
+    unsigned PredIx = To->getIndexForPredecessor(From);
     VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
     VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
   }
+
+  /// Returns true if \p VPB is a loop header, based on regions or \p VPDT in
+  /// their absence.
+  static bool isHeader(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
+
+  /// Returns true if \p VPB is a loop latch, using isHeader().
+  static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
 };
 
 } // namespace llvm

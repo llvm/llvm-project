@@ -156,6 +156,7 @@ private:
 /// files) for C++20 Named Modules.
 class GenerateModuleInterfaceAction : public GenerateModuleAction {
 protected:
+  bool PrepareToExecuteAction(CompilerInstance &CI) override;
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -326,6 +327,18 @@ class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
 public:
   GetDependenciesByModuleNameAction(StringRef ModuleName)
       : ModuleName(ModuleName) {}
+};
+
+//===----------------------------------------------------------------------===//
+// HLSL Specific Actions
+//===----------------------------------------------------------------------===//
+
+class HLSLFrontendAction : public WrapperFrontendAction {
+protected:
+  void ExecuteAction() override;
+
+public:
+  HLSLFrontendAction(std::unique_ptr<FrontendAction> WrappedAction);
 };
 
 }  // end namespace clang

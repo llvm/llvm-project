@@ -179,8 +179,8 @@ DAGDeltaAlgorithmImpl::DAGDeltaAlgorithmImpl(
     const std::vector<edge_ty> &Dependencies)
     : DDA(DDA) {
   for (change_ty Change : Changes) {
-    Predecessors.insert(std::make_pair(Change, std::vector<change_ty>()));
-    Successors.insert(std::make_pair(Change, std::vector<change_ty>()));
+    Predecessors.try_emplace(Change);
+    Successors.try_emplace(Change);
   }
   for (const edge_ty &Dep : Dependencies) {
     Predecessors[Dep.second].push_back(Dep.first);
@@ -210,7 +210,7 @@ DAGDeltaAlgorithmImpl::DAGDeltaAlgorithmImpl(
 
   // Invert to form the predecessor closure map.
   for (change_ty Change : Changes)
-    PredClosure.insert(std::make_pair(Change, std::set<change_ty>()));
+    PredClosure.try_emplace(Change);
   for (change_ty Change : Changes)
     for (succ_closure_iterator_ty it2 = succ_closure_begin(Change),
                                   ie2 = succ_closure_end(Change);

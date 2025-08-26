@@ -17,7 +17,7 @@
 
 // On Unix-like systems (Linux* OS and OS X*) getpid() is declared in standard
 // headers.
-#if !defined(KMP_OS_AIX) && !defined(KMP_OS_HAIKU)
+#if !KMP_OS_AIX && !KMP_OS_HAIKU
 #include <sys/syscall.h>
 #endif
 #include <sys/types.h>
@@ -33,7 +33,7 @@
 #define __kmp_gettid() _lwp_self()
 #elif KMP_OS_OPENBSD
 #define __kmp_gettid() getthrid()
-#elif KMP_OS_AIX
+#elif KMP_OS_AIX || KMP_OS_SOLARIS
 #include <pthread.h>
 #define __kmp_gettid() pthread_self()
 #elif KMP_OS_HAIKU

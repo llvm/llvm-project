@@ -596,31 +596,24 @@
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512fp16 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512FP16 %s
 
 // AVX512FP16: #define __AVX512BW__ 1
-// AVX512FP16: #define __AVX512DQ__ 1
 // AVX512FP16: #define __AVX512FP16__ 1
-// AVX512FP16: #define __AVX512VL__ 1
-// AVX512FP16: #define __EVEX256__ 1
 // AVX512FP16: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512fp16 -mno-avx512vl -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512FP16NOAVX512VL %s
 
-// AVX512FP16NOAVX512VL-NOT: #define __AVX512FP16__ 1
-// AVX512FP16NOAVX512VL-NOT: #define __AVX512VL__ 1
-// AVX512FP16NOAVX512VL-NOT: #define __EVEX256__ 1
+// AVX512FP16NOAVX512VL: #define __AVX512FP16__ 1
 // AVX512FP16NOAVX512VL: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512fp16 -mno-avx512bw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512FP16NOAVX512BW %s
 
 // AVX512FP16NOAVX512BW-NOT: #define __AVX512BW__ 1
 // AVX512FP16NOAVX512BW-NOT: #define __AVX512FP16__ 1
-// AVX512FP16NOAVX512BW: #define __EVEX256__ 1
 // AVX512FP16NOAVX512BW: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512fp16 -mno-avx512dq -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512FP16NOAVX512DQ %s
 
 // AVX512FP16NOAVX512DQ-NOT: #define __AVX512DQ__ 1
-// AVX512FP16NOAVX512DQ-NOT: #define __AVX512FP16__ 1
-// AVX512FP16NOAVX512DQ: #define __EVEX256__ 1
+// AVX512FP16NOAVX512DQ: #define __AVX512FP16__ 1
 // AVX512FP16NOAVX512DQ: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512f -mno-avx512f -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOEVEX512 %s
@@ -802,7 +795,7 @@
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=nf -x c -E -dM -o - %s | FileCheck --check-prefix=NF %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=cf -x c -E -dM -o - %s | FileCheck --check-prefix=CF %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=zu -x c -E -dM -o - %s | FileCheck --check-prefix=ZU %s
-// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD,CCMP,NF,CF,ZU,APXF %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD,CCMP,NF,ZU,APXF %s
 // APXF: #define __APX_F__ 1
 // CCMP: #define __CCMP__ 1
 // CF: #define __CF__ 1

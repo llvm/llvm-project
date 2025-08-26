@@ -365,16 +365,6 @@ def PPCeh_sjlj_longjmp : SDNode<"PPCISD::EH_SJLJ_LONGJMP",
                                 SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
                                 [SDNPHasChain, SDNPSideEffect]>;
 
-def SDT_PPCsc     : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
-def PPCsc         : SDNode<"PPCISD::SC", SDT_PPCsc,
-                           [SDNPHasChain, SDNPSideEffect]>;
-
-def PPCclrbhrb    : SDNode<"PPCISD::CLRBHRB", SDTNone,
-                           [SDNPHasChain, SDNPSideEffect]>;
-def PPCmfbhrbe    : SDNode<"PPCISD::MFBHRBE", SDTIntBinOp, [SDNPHasChain]>;
-def PPCrfebb      : SDNode<"PPCISD::RFEBB", SDT_PPCsc,
-                           [SDNPHasChain, SDNPSideEffect]>;
-
 def PPCvcmp       : SDNode<"PPCISD::VCMP" , SDT_PPCvcmp, []>;
 def PPCvcmp_rec   : SDNode<"PPCISD::VCMP_rec", SDT_PPCvcmp, [SDNPOutGlue]>;
 
@@ -1673,7 +1663,7 @@ let isBranch = 1, isTerminator = 1, Size = 0 in {
 // System call.
 let PPC970_Unit = 7 in {
   def SC     : SCForm<17, 1, 0, (outs), (ins i32imm:$LEV),
-                      "sc $LEV", IIC_BrB, [(PPCsc (i32 imm:$LEV))]>;
+                      "sc $LEV", IIC_BrB, []>;
 }
 
 // We mark SCV as having no scheduling model since it is only meant to be used
@@ -1685,21 +1675,14 @@ let Predicates = [IsISA3_0], hasNoSchedulingInfo = 1 in {
 }
 
 // Branch history rolling buffer.
-def CLRBHRB : XForm_0<31, 430, (outs), (ins), "clrbhrb", IIC_BrB,
-                      [(PPCclrbhrb)]>,
+def CLRBHRB : XForm_0<31, 430, (outs), (ins), "clrbhrb", IIC_BrB, []>,
                       PPC970_DGroup_Single;
-// The $dmy argument used for MFBHRBE is not needed; however, including
-// it avoids automatic generation of PPCFastISel::fastEmit_i(), which
-// interferes with necessary special handling (see PPCFastISel.cpp).
-def MFBHRBE : XFXForm_3p<31, 302, (outs gprc:$RT),
-                         (ins u10imm:$imm, u10imm:$dmy),
-                         "mfbhrbe $RT, $imm", IIC_BrB,
-                         [(set i32:$RT,
-                               (PPCmfbhrbe imm:$imm, imm:$dmy))]>,
+
+def MFBHRBE : XFXForm_3p<31, 302, (outs gprc:$RT), (ins u10imm:$imm),
+                         "mfbhrbe $RT, $imm", IIC_BrB, []>,
                          PPC970_DGroup_First;
 
-def RFEBB : XLForm_S<19, 146, (outs), (ins u1imm:$S), "rfebb $S",
-                     IIC_BrB, [(PPCrfebb (i32 imm:$S))]>,
+def RFEBB : XLForm_S<19, 146, (outs), (ins u1imm:$S), "rfebb $S", IIC_BrB, []>,
                      PPC970_DGroup_Single;
 
 def : InstAlias<"rfebb", (RFEBB 1)>;
@@ -3252,7 +3235,8 @@ def PPC32GOT: PPCEmitTimePseudo<(outs gprc:$rD), (ins), "#PPC32GOT",
 
 // Get the _GLOBAL_OFFSET_TABLE_ in PIC mode.
 // This uses two output registers, the first as the real output, the second as a
-// temporary register, used internally in code generation.
+// temporary register, used internally in code generation. A "bl" also clobbers LR.
+let Defs = [LR] in
 def PPC32PICGOT: PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins), "#PPC32PICGOT",
                 []>, NoEncode<"$rT">;
 
@@ -5086,10 +5070,10 @@ defm : TrapExtendedMnemonic<"u", 31>;
 // Atomic loads
 def : Pat<(i32 (atomic_load_azext_8  DForm:$src)), (LBZ  memri:$src)>;
 def : Pat<(i32 (atomic_load_azext_16 DForm:$src)), (LHZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_32 DForm:$src)), (LWZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 DForm:$src)), (LWZ  memri:$src)>;
 def : Pat<(i32 (atomic_load_azext_8  XForm:$src)), (LBZX memrr:$src)>;
 def : Pat<(i32 (atomic_load_azext_16 XForm:$src)), (LHZX memrr:$src)>;
-def : Pat<(i32 (atomic_load_32 XForm:$src)), (LWZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 XForm:$src)), (LWZX memrr:$src)>;
 
 // Atomic stores
 def : Pat<(atomic_store_8  i32:$val, DForm:$ptr), (STB  gprc:$val, memri:$ptr)>;
@@ -5142,7 +5126,6 @@ def : Pat<(int_ppc_store2r gprc:$a, ForceXForm:$ptr),
           (STHBRX gprc:$a, ForceXForm:$ptr)>;
 def : Pat<(int_ppc_store4r gprc:$a, ForceXForm:$ptr),
           (STWBRX gprc:$a, ForceXForm:$ptr)>;
-
 
 // Fast 32-bit reverse bits algorithm:
 // Step 1: 1-bit swap (swap odd 1-bit and even 1-bit):
@@ -5324,10 +5307,14 @@ def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr), "#CFENCE", []>;
 def : Pat<(i64 (bitreverse i64:$A)),
   (OR8 (RLDICR DWBytes7654.DWord, 32, 31), DWBytes3210.DWord)>;
 
+def : Pat<(int_ppc_lwarx ForceXForm:$ptr),
+          (LWARX ForceXForm:$ptr)>;
 def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
           (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 4),
           (RLWINM (STWCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
+def : Pat<(int_ppc_lbarx ForceXForm:$ptr),
+          (LBARX ForceXForm:$ptr)>;
 def : Pat<(int_ppc_stbcx ForceXForm:$dst, gprc:$A),
           (RLWINM (STBCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 1),
@@ -5360,6 +5347,9 @@ def : Pat<(int_ppc_mtmsr gprc:$RS),
           (MTMSR $RS, 0)>;
 
 let Predicates = [IsISA2_07] in {
+  def : Pat<(int_ppc_lharx ForceXForm:$ptr),
+          (LHARX ForceXForm:$ptr)>;
+
   def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),
             (RLWINM (STHCX gprc:$A, ForceXForm:$dst), 31, 31, 31)>;
   def : Pat<(PPCStoreCond ForceXForm:$dst, gprc:$A, 2),

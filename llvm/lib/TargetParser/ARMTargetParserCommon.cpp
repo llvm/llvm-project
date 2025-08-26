@@ -82,9 +82,9 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   // Ex. "armebv7", move past the "eb".
   if (offset != StringRef::npos && A.substr(offset, 2) == "eb")
     offset += 2;
-  // Or, if it ends with eb ("armv7eb"), chop it off.
-  else if (A.ends_with("eb"))
-    A = A.substr(0, A.size() - 2);
+  else
+    // Or, if it ends with eb ("armv7eb"), chop it off.
+    A.consume_back("eb");
   // Trim the head
   if (offset != StringRef::npos)
     A = A.substr(offset);

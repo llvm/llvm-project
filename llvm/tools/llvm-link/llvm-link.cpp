@@ -129,8 +129,6 @@ static cl::opt<bool> IgnoreNonBitcode(
     cl::desc("Do not report an error for non-bitcode files in archives"),
     cl::Hidden);
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 static ExitOnError ExitOnErr;
 
 // Read the specified bitcode file in and return it. This routine searches the
@@ -525,16 +523,10 @@ int main(int argc, char **argv) {
 
   if (Verbose)
     errs() << "Writing bitcode...\n";
-  auto SetFormat = [&](bool NewFormat) {
-    Composite->setIsNewDbgInfoFormat(NewFormat);
-    if (NewFormat)
-      Composite->removeDebugIntrinsicDeclarations();
-  };
+  Composite->removeDebugIntrinsicDeclarations();
   if (OutputAssembly) {
-    SetFormat(UseNewDbgInfoFormat);
     Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
   } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
-    SetFormat(UseNewDbgInfoFormat);
     WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
   }
 

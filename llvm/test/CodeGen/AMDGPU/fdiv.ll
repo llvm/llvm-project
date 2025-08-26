@@ -1164,8 +1164,8 @@ define amdgpu_kernel void @s_fdiv_v2f32(ptr addrspace(1) %out, <2 x float> %a, <
 ; GFX11-NEXT:    v_fma_f32 v5, -v2, v4, v0
 ; GFX11-NEXT:    v_fmac_f32_e32 v4, v5, v3
 ; GFX11-NEXT:    v_fma_f32 v0, -v2, v4, v0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_denorm_mode 12
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    v_div_fmas_f32 v0, v0, v3, v4
 ; GFX11-NEXT:    v_div_fixup_f32 v0, v0, s2, s0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]

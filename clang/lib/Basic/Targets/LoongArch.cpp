@@ -14,7 +14,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
 
 using namespace clang;
@@ -82,38 +81,46 @@ LoongArchTargetInfo::getGCCRegAliases() const {
       {{"s6", "$s6", "r29"}, "$r29"},
       {{"s7", "$s7", "r30"}, "$r30"},
       {{"s8", "$s8", "r31"}, "$r31"},
-      {{"$fa0"}, "$f0"},
-      {{"$fa1"}, "$f1"},
-      {{"$fa2"}, "$f2"},
-      {{"$fa3"}, "$f3"},
-      {{"$fa4"}, "$f4"},
-      {{"$fa5"}, "$f5"},
-      {{"$fa6"}, "$f6"},
-      {{"$fa7"}, "$f7"},
-      {{"$ft0"}, "$f8"},
-      {{"$ft1"}, "$f9"},
-      {{"$ft2"}, "$f10"},
-      {{"$ft3"}, "$f11"},
-      {{"$ft4"}, "$f12"},
-      {{"$ft5"}, "$f13"},
-      {{"$ft6"}, "$f14"},
-      {{"$ft7"}, "$f15"},
-      {{"$ft8"}, "$f16"},
-      {{"$ft9"}, "$f17"},
-      {{"$ft10"}, "$f18"},
-      {{"$ft11"}, "$f19"},
-      {{"$ft12"}, "$f20"},
-      {{"$ft13"}, "$f21"},
-      {{"$ft14"}, "$f22"},
-      {{"$ft15"}, "$f23"},
-      {{"$fs0"}, "$f24"},
-      {{"$fs1"}, "$f25"},
-      {{"$fs2"}, "$f26"},
-      {{"$fs3"}, "$f27"},
-      {{"$fs4"}, "$f28"},
-      {{"$fs5"}, "$f29"},
-      {{"$fs6"}, "$f30"},
-      {{"$fs7"}, "$f31"},
+      {{"fa0", "$fa0", "f0"}, "$f0"},
+      {{"fa1", "$fa1", "f1"}, "$f1"},
+      {{"fa2", "$fa2", "f2"}, "$f2"},
+      {{"fa3", "$fa3", "f3"}, "$f3"},
+      {{"fa4", "$fa4", "f4"}, "$f4"},
+      {{"fa5", "$fa5", "f5"}, "$f5"},
+      {{"fa6", "$fa6", "f6"}, "$f6"},
+      {{"fa7", "$fa7", "f7"}, "$f7"},
+      {{"ft0", "$ft0", "f8"}, "$f8"},
+      {{"ft1", "$ft1", "f9"}, "$f9"},
+      {{"ft2", "$ft2", "f10"}, "$f10"},
+      {{"ft3", "$ft3", "f11"}, "$f11"},
+      {{"ft4", "$ft4", "f12"}, "$f12"},
+      {{"ft5", "$ft5", "f13"}, "$f13"},
+      {{"ft6", "$ft6", "f14"}, "$f14"},
+      {{"ft7", "$ft7", "f15"}, "$f15"},
+      {{"ft8", "$ft8", "f16"}, "$f16"},
+      {{"ft9", "$ft9", "f17"}, "$f17"},
+      {{"ft10", "$ft10", "f18"}, "$f18"},
+      {{"ft11", "$ft11", "f19"}, "$f19"},
+      {{"ft12", "$ft12", "f20"}, "$f20"},
+      {{"ft13", "$ft13", "f21"}, "$f21"},
+      {{"ft14", "$ft14", "f22"}, "$f22"},
+      {{"ft15", "$ft15", "f23"}, "$f23"},
+      {{"fs0", "$fs0", "f24"}, "$f24"},
+      {{"fs1", "$fs1", "f25"}, "$f25"},
+      {{"fs2", "$fs2", "f26"}, "$f26"},
+      {{"fs3", "$fs3", "f27"}, "$f27"},
+      {{"fs4", "$fs4", "f28"}, "$f28"},
+      {{"fs5", "$fs5", "f29"}, "$f29"},
+      {{"fs6", "$fs6", "f30"}, "$f30"},
+      {{"fs7", "$fs7", "f31"}, "$f31"},
+      {{"fcc0"}, "$fcc0"},
+      {{"fcc1"}, "$fcc1"},
+      {{"fcc2"}, "$fcc2"},
+      {{"fcc3"}, "$fcc3"},
+      {{"fcc4"}, "$fcc4"},
+      {{"fcc5"}, "$fcc5"},
+      {{"fcc6"}, "$fcc6"},
+      {{"fcc7"}, "$fcc7"},
   };
   return llvm::ArrayRef(GCCRegAliases);
 }
@@ -138,6 +145,11 @@ bool LoongArchTargetInfo::validateAsmConstraint(
   case 'l':
     // A signed 16-bit constant.
     Info.setRequiresImmediate(-32768, 32767);
+    return true;
+  case 'q':
+    // A general-purpose register except for $r0 and $r1 (for the csrxchg
+    // instruction)
+    Info.setAllowsRegister();
     return true;
   case 'I':
     // A signed 12-bit constant (for arithmetic instructions).
@@ -388,6 +400,75 @@ bool LoongArchTargetInfo::handleTargetFeatures(
   return true;
 }
 
+enum class AttrFeatureKind { Arch, Tune, NoFeature, Feature };
+
+static std::pair<AttrFeatureKind, llvm::StringRef>
+getAttrFeatureTypeAndValue(llvm::StringRef AttrFeature) {
+  if (auto Split = AttrFeature.split("="); !Split.second.empty()) {
+    if (Split.first.trim() == "arch")
+      return {AttrFeatureKind::Arch, Split.second.trim()};
+    if (Split.first.trim() == "tune")
+      return {AttrFeatureKind::Tune, Split.second.trim()};
+  }
+  if (AttrFeature.starts_with("no-"))
+    return {AttrFeatureKind::NoFeature, AttrFeature.drop_front(3)};
+  return {AttrFeatureKind::Feature, AttrFeature};
+}
+
+ParsedTargetAttr
+LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+
+  for (auto &Feature : AttrFeatures) {
+    auto [Kind, Value] = getAttrFeatureTypeAndValue(Feature.trim());
+
+    switch (Kind) {
+    case AttrFeatureKind::Arch: {
+      if (llvm::LoongArch::isValidArchName(Value) || Value == "la64v1.0" ||
+          Value == "la64v1.1") {
+        std::vector<llvm::StringRef> ArchFeatures;
+        if (llvm::LoongArch::getArchFeatures(Value, ArchFeatures)) {
+          Ret.Features.insert(Ret.Features.end(), ArchFeatures.begin(),
+                              ArchFeatures.end());
+        }
+
+        if (!Ret.CPU.empty())
+          Ret.Duplicate = "arch=";
+        else if (Value == "la64v1.0" || Value == "la64v1.1")
+          Ret.CPU = "loongarch64";
+        else
+          Ret.CPU = Value;
+      } else {
+        Ret.Features.push_back("!arch=" + Value.str());
+      }
+      break;
+    }
+
+    case AttrFeatureKind::Tune:
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Value;
+      break;
+
+    case AttrFeatureKind::NoFeature:
+      Ret.Features.push_back("-" + Value.str());
+      break;
+
+    case AttrFeatureKind::Feature:
+      Ret.Features.push_back("+" + Value.str());
+      if (Value == "lasx")
+        Ret.Features.push_back("+lsx");
+      break;
+    }
+  }
+  return Ret;
+}
+
 bool LoongArchTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::LoongArch::isValidCPUName(Name);
 }
@@ -395,4 +476,8 @@ bool LoongArchTargetInfo::isValidCPUName(StringRef Name) const {
 void LoongArchTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
   llvm::LoongArch::fillValidCPUList(Values);
+}
+
+bool LoongArchTargetInfo::isValidFeatureName(StringRef Name) const {
+  return llvm::LoongArch::isValidFeatureName(Name);
 }

@@ -7,20 +7,20 @@
 // The same problem afflicts a bunch of other class templates. Those
 // affected are array, pair, priority_queue, stack, and queue.
 
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DPR28423
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=pair
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=priority_queue
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=stack
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=queue
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array -DPR28423
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=pair
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=priority_queue
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=stack
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=queue
 //
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DNAMESPACE=__debug
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DNAMESPACE=__profile
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array -DNAMESPACE=__debug
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array -DNAMESPACE=__profile
 
 // MSVC's standard library uses a very similar pattern that relies on delayed
 // parsing of exception specifications.
 //
-// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DMSVC
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -D__GLIBCXX__=20100000L -DCLASS=array -DMSVC
 
 #ifdef BE_THE_HEADER
 

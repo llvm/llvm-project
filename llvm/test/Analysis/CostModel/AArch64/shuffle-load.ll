@@ -25,17 +25,17 @@ define void @shuffle() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv8i16 = load <8 x i16>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv8i16 = shufflevector <8 x i16> %lv8i16, <8 x i16> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %lv16i16 = load <16 x i16>, ptr undef, align 32
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:0 Lat:2 SizeLat:2 for: %sv16i16 = shufflevector <16 x i16> %lv16i16, <16 x i16> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv16i16 = shufflevector <16 x i16> %lv16i16, <16 x i16> undef, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv2i32 = load <2 x i32>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv2i32 = shufflevector <2 x i32> %lv2i32, <2 x i32> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv4i32 = load <4 x i32>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv4i32 = shufflevector <4 x i32> %lv4i32, <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %lv8i32 = load <8 x i32>, ptr undef, align 32
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:0 Lat:2 SizeLat:2 for: %sv8i32 = shufflevector <8 x i32> %lv8i32, <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv8i32 = shufflevector <8 x i32> %lv8i32, <8 x i32> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv2i64 = load <2 x i64>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv2i64 = shufflevector <2 x i64> %lv2i64, <2 x i64> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %lv4i64 = load <4 x i64>, ptr undef, align 32
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:0 Lat:2 SizeLat:2 for: %sv4i64 = shufflevector <4 x i64> %lv4i64, <4 x i64> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv4i64 = shufflevector <4 x i64> %lv4i64, <4 x i64> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv2f16 = load <2 x half>, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv2f16 = shufflevector <2 x half> %lv2f16, <2 x half> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv4f16 = load <4 x half>, ptr undef, align 8
@@ -43,17 +43,17 @@ define void @shuffle() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv8f16 = load <8 x half>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv8f16 = shufflevector <8 x half> %lv8f16, <8 x half> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %lv16f16 = load <16 x half>, ptr undef, align 32
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:0 Lat:2 SizeLat:2 for: %sv16f16 = shufflevector <16 x half> %lv16f16, <16 x half> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv16f16 = shufflevector <16 x half> %lv16f16, <16 x half> undef, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv2f32 = load <2 x float>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv2f32 = shufflevector <2 x float> %lv2f32, <2 x float> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv4f32 = load <4 x float>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv4f32 = shufflevector <4 x float> %lv4f32, <4 x float> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %lv8f32 = load <8 x float>, ptr undef, align 32
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:0 Lat:2 SizeLat:2 for: %sv8f32 = shufflevector <8 x float> %lv8f32, <8 x float> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv8f32 = shufflevector <8 x float> %lv8f32, <8 x float> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %lv2f64 = load <2 x double>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv2f64 = shufflevector <2 x double> %lv2f64, <2 x double> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %lv4f64 = load <4 x double>, ptr undef, align 32
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:0 Lat:2 SizeLat:2 for: %sv4f64 = shufflevector <4 x double> %lv4f64, <4 x double> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:0 Lat:1 SizeLat:1 for: %sv4f64 = shufflevector <4 x double> %lv4f64, <4 x double> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %lv2i8 = load <2 x i8>, ptr undef

@@ -87,7 +87,7 @@ AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/
 make -j libz.a
 
 # Build and install libcxxabi and libcxx.
-if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
+if [[ ! -f ${LIBCXX_BUILD}/build.ninja ]]; then
   rm -rf "${LIBCXX_BUILD}" "${LIBCXX_INSTALL}"
   mkdir -p ${LIBCXX_BUILD} ${LIBCXX_INSTALL}
   cd ${LIBCXX_BUILD}
@@ -120,7 +120,7 @@ ninja cxx cxxabi && ninja install-cxx install-cxxabi
 
 FLAGS="${FLAGS} -fno-rtti -fno-exceptions"
 LLVM_CFLAGS="${FLAGS} -Wno-global-constructors"
-LLVM_CXXFLAGS="${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_INSTALL}/include -isystem ${LIBCXX_INSTALL}/include/c++/v1"
+LLVM_CXXFLAGS="-isystem ${LIBCXX_INSTALL}/include -isystem ${LIBCXX_INSTALL}/include/c++/v1 ${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD}"
 
 # Build LLVM.
 if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
@@ -145,7 +145,7 @@ if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
   $LLVM_SRC
 fi
 cd ${LLVM_BUILD}
-ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI LLVMTargetParser LLVMCore
+ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMDebugInfoGSYM LLVMSupport LLVMDebugInfoPDB LLVMDebuginfod LLVMMC LLVMDemangle LLVMTextAPI LLVMTargetParser LLVMCore
 
 cd ${BUILD_DIR}
 rm -rf ${SYMBOLIZER_BUILD}
@@ -174,6 +174,8 @@ $LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
       $LLVM_BUILD/lib/libLLVMObject.a \
       $LLVM_BUILD/lib/libLLVMBinaryFormat.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoDWARFLowLevel.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoGSYM.a \
       $LLVM_BUILD/lib/libLLVMSupport.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoMSF.a \

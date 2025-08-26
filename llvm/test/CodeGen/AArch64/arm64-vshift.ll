@@ -95,6 +95,7 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli4h
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli2s
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli1d
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli1d_imm0
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli16b
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli8h
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli4s
@@ -4086,6 +4087,16 @@ define <1 x i64> @sli1d(ptr %A, ptr %B) nounwind {
   %tmp2 = load <1 x i64>, ptr %B
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.vsli.v1i64(<1 x i64> %tmp1, <1 x i64> %tmp2, i32 1)
   ret <1 x i64> %tmp3
+}
+
+; Ensure we can select scalar SLI with a zero shift (see issue #139879).
+define <1 x i64> @sli1d_imm0(<1 x i64> %a, <1 x i64> %b) {
+; CHECK-LABEL: sli1d_imm0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sli d0, d1, #0
+; CHECK-NEXT:    ret
+  %r = call <1 x i64> @llvm.aarch64.neon.vsli(<1 x i64> %a, <1 x i64> %b, i32 0)
+  ret <1 x i64> %r
 }
 
 define <16 x i8> @sli16b(ptr %A, ptr %B) nounwind {

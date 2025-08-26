@@ -16,6 +16,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 #include <vector>
 
@@ -42,7 +43,7 @@ enum Value {
 /// The offset to the local area is the offset from the stack pointer on
 /// function entry to the first location where function data (local variables,
 /// spill locations) can be stored.
-class TargetFrameLowering {
+class LLVM_ABI TargetFrameLowering {
 public:
   enum StackDirection {
     StackGrowsUp,        // Adding to the stack increases the stack address

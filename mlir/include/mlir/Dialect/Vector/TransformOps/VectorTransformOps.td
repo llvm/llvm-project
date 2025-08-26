@@ -32,7 +32,8 @@ def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
 
   let arguments = (ins
       DefaultValuedAttr<BoolAttr, "false">:$reassociate_fp_reductions,
-      DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices);
+      DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices,
+      DefaultValuedAttr<BoolAttr, "false">:$use_vector_alignment);
   let assemblyFormat = "attr-dict";
 }
 
@@ -248,6 +249,17 @@ def ApplyLowerGatherPatternsOp : Op<Transform_Dialect,
   let description = [{
     Indicates that vector.gather operations should be lowered to
     finer-grained vector primitives.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyUnrollFromElementsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.unroll_from_elements",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector from_elements operations should be unrolled
+    along the outermost dimension.
   }];
 
   let assemblyFormat = "attr-dict";

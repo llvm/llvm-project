@@ -122,21 +122,20 @@ static int GetOperation(HistoryOperation op) {
   //  - The H_FIRST returns the most recent entry in the history.
   //
   // The naming of the enum entries match the semantic meaning.
-  switch(op) {
-    case HistoryOperation::Oldest:
-      return H_LAST;
-    case HistoryOperation::Older:
-      return H_NEXT;
-    case HistoryOperation::Current:
-      return H_CURR;
-    case HistoryOperation::Newer:
-      return H_PREV;
-    case HistoryOperation::Newest:
-      return H_FIRST;
+  switch (op) {
+  case HistoryOperation::Oldest:
+    return H_LAST;
+  case HistoryOperation::Older:
+    return H_NEXT;
+  case HistoryOperation::Current:
+    return H_CURR;
+  case HistoryOperation::Newer:
+    return H_PREV;
+  case HistoryOperation::Newest:
+    return H_FIRST;
   }
   llvm_unreachable("Fully covered switch!");
 }
-
 
 EditLineStringType CombineLines(const std::vector<EditLineStringType> &lines) {
   EditLineStringStreamType combined_stream;
@@ -313,8 +312,8 @@ protected:
   /// Path to the history file.
   std::string m_path;
 };
-}
-}
+} // namespace line_editor
+} // namespace lldb_private
 
 // Editline private methods
 
@@ -1151,7 +1150,8 @@ unsigned char Editline::TabCommand(int ch) {
       to_add.push_back(' ');
       el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
-      // Clear all the autosuggestion parts if the only single space can be completed.
+      // Clear all the autosuggestion parts if the only single space can be
+      // completed.
       if (to_add == " ")
         return CC_REDISPLAY;
       return CC_REFRESH;
@@ -1707,6 +1707,13 @@ void Editline::PrintAsync(lldb::LockableStreamFileSP stream_sp, const char *s,
     DisplayInput();
     MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
   }
+}
+
+void Editline::Refresh() {
+  if (!m_editline || !m_output_stream_sp)
+    return;
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
+  el_set(m_editline, EL_REFRESH);
 }
 
 bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {

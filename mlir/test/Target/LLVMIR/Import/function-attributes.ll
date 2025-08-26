@@ -381,6 +381,18 @@ declare void @func_attr_fp_contract_fast() "fp-contract"="fast"
 
 // -----
 
+; CHECK-LABEL: @func_attr_instrument_function_entry
+; CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+declare void @func_attr_instrument_function_entry() "instrument-function-entry"="__cyg_profile_func_enter"
+
+// -----
+
+; CHECK-LABEL: @func_attr_instrument_function_exit
+; CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
+declare void @func_attr_instrument_function_exit() "instrument-function-exit"="__cyg_profile_func_exit"
+
+// -----
+
 ; CHECK-LABEL: @noinline_attribute
 ; CHECK-SAME: attributes {no_inline}
 declare void @noinline_attribute() noinline

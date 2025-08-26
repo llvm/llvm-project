@@ -6,9 +6,9 @@
 define void @foo() nounwind uwtable safestack sspreq {
 entry:
 ; The first @llvm.thread.pointer is for the unsafe stack pointer, skip it.
-; TLS: call ptr @llvm.thread.pointer()
+; TLS: call ptr @llvm.thread.pointer.p0()
 
-; TLS: %[[TP2:.*]] = call ptr @llvm.thread.pointer()
+; TLS: %[[TP2:.*]] = call ptr @llvm.thread.pointer.p0()
 ; ANDROID: %[[B:.*]] = getelementptr i8, ptr %[[TP2]], i32 40
 ; FUCHSIA: %[[B:.*]] = getelementptr i8, ptr %[[TP2]], i32 -16
 ; TLS: %[[StackGuard:.*]] = load ptr, ptr %[[B]]

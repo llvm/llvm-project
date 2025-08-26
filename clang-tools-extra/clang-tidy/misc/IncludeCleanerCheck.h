@@ -47,6 +47,10 @@ private:
   std::vector<StringRef> IgnoreHeaders;
   // Whether emit only one finding per usage of a symbol.
   const bool DeduplicateFindings;
+  // Whether to report unused includes.
+  const bool UnusedIncludes;
+  // Whether to report missing includes.
+  const bool MissingIncludes;
   llvm::SmallVector<llvm::Regex> IgnoreHeadersRegex;
   bool shouldIgnore(const include_cleaner::Header &H);
 };

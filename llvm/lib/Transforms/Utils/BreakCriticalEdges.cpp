@@ -111,15 +111,14 @@ BasicBlock *
 llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
                              const CriticalEdgeSplittingOptions &Options,
                              const Twine &BBName) {
-  assert(!isa<IndirectBrInst>(TI) &&
-         "Cannot split critical edge from IndirectBrInst");
-
   BasicBlock *TIBB = TI->getParent();
   BasicBlock *DestBB = TI->getSuccessor(SuccNum);
 
-  // Splitting the critical edge to a pad block is non-trivial. Don't do
-  // it in this generic function.
-  if (DestBB->isEHPad()) return nullptr;
+  // Splitting the critical edge to a pad block is non-trivial.
+  // And we cannot split block with IndirectBr as a terminator.
+  // Don't do it in this generic function.
+  if (DestBB->isEHPad() || isa<IndirectBrInst>(TI))
+    return nullptr;
 
   if (Options.IgnoreUnreachableDests &&
       isa<UnreachableInst>(DestBB->getFirstNonPHIOrDbgOrLifetime()))
@@ -406,6 +405,9 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     // preds.
     ValueToValueMapTy VMap;
     BasicBlock *DirectSucc = CloneBasicBlock(Target, VMap, ".clone", &F);
+    if (!VMap.AtomMap.empty())
+      for (Instruction &I : *DirectSucc)
+        RemapSourceAtom(&I, VMap);
 
     BlockFrequency BlockFreqForDirectSucc;
     for (BasicBlock *Pred : OtherPreds) {
@@ -454,6 +456,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", InsertPt);
       NewIndPHI->addIncoming(IndPHI->getIncomingValueForBlock(IBRPred),
                              IBRPred);
+      NewIndPHI->setDebugLoc(IndPHI->getDebugLoc());
 
       // Create a PHI in the body block, to merge the direct and indirect
       // predecessors.
@@ -461,6 +464,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       MergePHI->insertBefore(MergeInsert);
       MergePHI->addIncoming(NewIndPHI, Target);
       MergePHI->addIncoming(DirPHI, DirectSucc);
+      MergePHI->applyMergedLocation(DirPHI->getDebugLoc(),
+                                    IndPHI->getDebugLoc());
 
       IndPHI->replaceAllUsesWith(MergePHI);
       IndPHI->eraseFromParent();

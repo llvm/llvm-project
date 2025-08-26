@@ -135,7 +135,7 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeatureAVX512BF16 | FeatureAVX512FP16 | FeatureAVXVNNI | FeatureCLDEMOTE |
     FeatureENQCMD | FeatureMOVDIR64B | FeatureMOVDIRI | FeaturePTWRITE |
     FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureUINTR |
-    FeatureWAITPKG;
+    FeatureWAITPKG | FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset FeaturesGraniteRapids =
     FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
 constexpr FeatureBitset FeaturesDiamondRapids =
@@ -143,8 +143,8 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
-    FeaturePPX | FeatureNDD | FeatureNF | FeatureCF | FeatureMOVRS |
-    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
+    FeaturePPX | FeatureNDD | FeatureNF | FeatureMOVRS | FeatureAMX_MOVRS |
+    FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
     FeatureAMX_TRANSPOSE | FeatureUSERMSR;
 
 // Intel Atom processors.
@@ -165,17 +165,21 @@ constexpr FeatureBitset FeaturesAlderlake =
     FeaturesTremont | FeatureADX | FeatureBMI | FeatureBMI2 | FeatureF16C |
     FeatureFMA | FeatureINVPCID | FeatureLZCNT | FeaturePCONFIG | FeaturePKU |
     FeatureSERIALIZE | FeatureSHSTK | FeatureVAES | FeatureVPCLMULQDQ |
-    FeatureCLDEMOTE | FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG |
-    FeatureAVXVNNI | FeatureHRESET | FeatureWIDEKL;
-constexpr FeatureBitset FeaturesSierraforest =
+    FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG | FeatureAVXVNNI |
+    FeatureHRESET | FeatureWIDEKL;
+constexpr FeatureBitset FeaturesArrowlake =
     FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA | FeatureUINTR |
     FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
-constexpr FeatureBitset FeaturesArrowlakeS = FeaturesSierraforest |
-    FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
+constexpr FeatureBitset FeaturesSierraforest =
+    FeaturesArrowlake | FeatureCLDEMOTE;
+constexpr FeatureBitset FeaturesArrowlakeS =
+    FeaturesArrowlake | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
+    FeatureSM4;
 constexpr FeatureBitset FeaturesPantherlake =
-    FeaturesArrowlakeS | FeaturePREFETCHI;
+    (FeaturesArrowlakeS ^ FeatureWIDEKL) | FeaturePREFETCHI;
 constexpr FeatureBitset FeaturesClearwaterforest =
-    FeaturesArrowlakeS | FeatureUSERMSR | FeaturePREFETCHI;
+    (FeaturesSierraforest ^ FeatureWIDEKL) | FeatureAVXVNNIINT16 |
+    FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;
 
 // Geode Processor.
 constexpr FeatureBitset FeaturesGeode =
@@ -367,7 +371,7 @@ constexpr ProcInfo Processors[] = {
   // Meteorlake microarchitecture based processors.
   { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Arrowlake microarchitecture based processors.
-  { {"arrowlake"}, CK_Arrowlake, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
+  { {"arrowlake"}, CK_Arrowlake, FEATURE_AVX2, FeaturesArrowlake, 'p', false },
   { {"arrowlake-s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, '\0', false },
   { {"arrowlake_s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, 'p', true },
   // Lunarlake microarchitecture based processors.
@@ -624,8 +628,7 @@ constexpr FeatureBitset ImpliedFeaturesAVXVNNIINT8 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXIFMA = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXNECONVERT = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesSHA512 = FeatureAVX2;
-constexpr FeatureBitset ImpliedFeaturesAVX512FP16 =
-    FeatureAVX512BW | FeatureAVX512DQ | FeatureAVX512VL;
+constexpr FeatureBitset ImpliedFeaturesAVX512FP16 = FeatureAVX512BW;
 // Key Locker Features
 constexpr FeatureBitset ImpliedFeaturesKL = FeatureSSE2;
 constexpr FeatureBitset ImpliedFeaturesWIDEKL = FeatureKL;
@@ -637,7 +640,8 @@ constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512CD | FeatureAVX512VBMI | FeatureAVX512IFMA |
     FeatureAVX512VNNI | FeatureAVX512BF16 | FeatureAVX512VPOPCNTDQ |
-    FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureAVX512FP16;
+    FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureAVX512FP16 |
+    FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
     FeatureAVX10_1 | FeatureEVEX512;
 constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;

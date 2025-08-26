@@ -31,6 +31,7 @@ static_library("Support") {
   include_dirs = [
     "Unix",
     "Windows",
+    "//third-party/siphash/include",
   ]
   sources = [
     "AArch64AttributeParser.cpp",
@@ -71,6 +72,7 @@ static_library("Support") {
     "CrashRecoveryContext.cpp",
     "DAGDeltaAlgorithm.cpp",
     "DJB.cpp",
+    "DXILABI.cpp",
     "DataExtractor.cpp",
     "Debug.cpp",
     "DebugCounter.cpp",
@@ -109,7 +111,6 @@ static_library("Support") {
     "LockFileManager.cpp",
     "MD5.cpp",
     "MSP430AttributeParser.cpp",
-    "Mustache.cpp",
     "MSP430Attributes.cpp",
     "ManagedStatic.cpp",
     "MathExtras.cpp",
@@ -117,6 +118,7 @@ static_library("Support") {
     "MemoryBuffer.cpp",
     "MemoryBufferRef.cpp",
     "ModRef.cpp",
+    "Mustache.cpp",
     "NativeFormatting.cpp",
     "OptimizedStructLayout.cpp",
     "OptionStrCmp.cpp",
@@ -125,6 +127,7 @@ static_library("Support") {
     "Parallel.cpp",
     "PluginLoader.cpp",
     "PrettyStackTrace.cpp",
+    "ProgramStack.cpp",
     "RISCVAttributeParser.cpp",
     "RISCVAttributes.cpp",
     "RISCVISAUtils.cpp",
@@ -153,6 +156,7 @@ static_library("Support") {
     "SuffixTreeNode.cpp",
     "SystemUtils.cpp",
     "TarWriter.cpp",
+    "TextEncoding.cpp",
     "ThreadPool.cpp",
     "TimeProfiler.cpp",
     "Timer.cpp",

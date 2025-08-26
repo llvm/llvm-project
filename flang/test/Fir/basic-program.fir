@@ -37,18 +37,22 @@ func.func @_QQmain() {
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT: 'fir.global' Pipeline
 // PASSES-NEXT:    SimplifyHLFIRIntrinsics
+// PASSES-NEXT:    PropagateFortranVariableAttributes
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:    SimplifyHLFIRIntrinsics
+// PASSES-NEXT:    PropagateFortranVariableAttributes
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'omp.declare_reduction' Pipeline
 // PASSES-NEXT:    SimplifyHLFIRIntrinsics
+// PASSES-NEXT:    PropagateFortranVariableAttributes
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'omp.private' Pipeline
 // PASSES-NEXT:    SimplifyHLFIRIntrinsics
+// PASSES-NEXT:    PropagateFortranVariableAttributes
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT:   LowerHLFIROrderedAssignments
@@ -99,6 +103,8 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: PolymorphicOpConversion
 // PASSES-NEXT: AssumedRankOpConversion
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   OptimizeArrayRepacking
 // PASSES-NEXT: LowerRepackArraysPass
 // PASSES-NEXT: SimplifyFIROperations
 // PASSES-NEXT: AddAliasTags
@@ -149,6 +155,7 @@ func.func @_QQmain() {
 // PASSES-NEXT: CompilerGeneratedNamesConversion
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:  FunctionAttr
+// PASSES-NEXT:  LowerNontemporalPass
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
 // PASSES-NEXT: LLVMIRLoweringPass

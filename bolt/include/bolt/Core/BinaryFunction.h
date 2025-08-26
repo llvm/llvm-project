@@ -142,8 +142,8 @@ public:
   /// Types of profile the function can use. Could be a combination.
   enum {
     PF_NONE = 0,     /// No profile.
-    PF_LBR = 1,      /// Profile is based on last branch records.
-    PF_SAMPLE = 2,   /// Non-LBR sample-based profile.
+    PF_BRANCH = 1,   /// Profile is based on branches or branch stacks.
+    PF_BASIC = 2,    /// Non-branch IP sample-based profile.
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
@@ -360,6 +360,11 @@ private:
   /// True if the function is used for patching code at a fixed address.
   bool IsPatch{false};
 
+  /// True if the original entry point of the function may get called, but the
+  /// original body cannot be executed and needs to be patched with code that
+  /// redirects execution to the new function body.
+  bool NeedsPatch{false};
+
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
@@ -383,11 +388,15 @@ private:
   /// The profile data for the number of times the function was executed.
   uint64_t ExecutionCount{COUNT_NO_PROFILE};
 
+  /// Profile data for the number of times this function was entered from
+  /// external code (DSO, JIT, etc).
+  uint64_t ExternEntryCount{0};
+
   /// Profile match ratio.
   float ProfileMatchRatio{0.0f};
 
   /// Raw branch count for this function in the profile.
-  uint64_t RawBranchCount{0};
+  uint64_t RawSampleCount{0};
 
   /// Dynamically executed function bytes, used for density computation.
   uint64_t SampleCountInBytes{0};
@@ -799,6 +808,19 @@ public:
     return iterator_range<const_cfi_iterator>(cie_begin(), cie_end());
   }
 
+  /// Iterate over instructions (only if CFG is unavailable or not built yet).
+  iterator_range<InstrMapType::iterator> instrs() {
+    assert(!hasCFG() && "Iterate over basic blocks instead");
+    return make_range(Instructions.begin(), Instructions.end());
+  }
+  iterator_range<InstrMapType::const_iterator> instrs() const {
+    assert(!hasCFG() && "Iterate over basic blocks instead");
+    return make_range(Instructions.begin(), Instructions.end());
+  }
+
+  /// Returns whether there are any labels at Offset.
+  bool hasLabelAt(unsigned Offset) const { return Labels.count(Offset) != 0; }
+
   /// Iterate over all jump tables associated with this function.
   iterator_range<std::map<uint64_t, JumpTable *>::const_iterator>
   jumpTables() const {
@@ -862,7 +884,7 @@ public:
   /// Returns if BinaryDominatorTree has been constructed for this function.
   bool hasDomTree() const { return BDT != nullptr; }
 
-  BinaryDominatorTree &getDomTree() { return *BDT.get(); }
+  BinaryDominatorTree &getDomTree() { return *BDT; }
 
   /// Constructs DomTree for this function.
   void constructDomTree();
@@ -870,7 +892,7 @@ public:
   /// Returns if loop detection has been run for this function.
   bool hasLoopInfo() const { return BLI != nullptr; }
 
-  const BinaryLoopInfo &getLoopInfo() { return *BLI.get(); }
+  const BinaryLoopInfo &getLoopInfo() { return *BLI; }
 
   bool isLoopFree() {
     if (!hasLoopInfo())
@@ -1174,11 +1196,6 @@ public:
     return getSecondaryEntryPointSymbol(BB.getLabel());
   }
 
-  /// Remove a label from the secondary entry point map.
-  void removeSymbolFromSecondaryEntryPointMap(const MCSymbol *Label) {
-    SecondaryEntryPoints.erase(Label);
-  }
-
   /// Return true if the basic block is an entry point into the function
   /// (either primary or secondary).
   bool isEntryPoint(const BinaryBasicBlock &BB) const {
@@ -1371,6 +1388,9 @@ public:
 
   /// Return true if this function is used for patching existing code.
   bool isPatch() const { return IsPatch; }
+
+  /// Return true if the function requires a patch.
+  bool needsPatch() const { return NeedsPatch; }
 
   /// Return true if the function should not have associated symbol table entry.
   bool isAnonymous() const { return IsAnonymous; }
@@ -1638,7 +1658,11 @@ public:
       Offset = I->first;
     }
     assert(I->first == Offset && "CFI pointing to unknown instruction");
-    if (I == Instructions.begin()) {
+    // When dealing with RememberState, we place this CFI in FrameInstructions.
+    // We want to ensure RememberState and RestoreState CFIs are in the same
+    // list in order to properly populate the StateStack.
+    if (I == Instructions.begin() &&
+        Inst.getOperation() != MCCFIInstruction::OpRememberState) {
       CIEFrameInstructions.emplace_back(std::forward<MCCFIInstruction>(Inst));
       return;
     }
@@ -1757,6 +1781,9 @@ public:
     IsPatch = V;
   }
 
+  /// Mark the function for patching.
+  void setNeedsPatch(bool V) { NeedsPatch = V; }
+
   /// Indicate if the function should have a name in the symbol table.
   void setAnonymous(bool V) {
     assert(isInjected() && "Only injected functions could be anonymous");
@@ -1853,6 +1880,10 @@ public:
     return *this;
   }
 
+  /// Set the profile data for the number of times the function was entered from
+  /// external code (DSO/JIT).
+  void setExternEntryCount(uint64_t Count) { ExternEntryCount = Count; }
+
   /// Adjust execution count for the function by a given \p Count. The value
   /// \p Count will be subtracted from the current function count.
   ///
@@ -1880,13 +1911,17 @@ public:
   /// Return COUNT_NO_PROFILE if there's no profile info.
   uint64_t getExecutionCount() const { return ExecutionCount; }
 
+  /// Return the profile information about the number of times the function was
+  /// entered from external code (DSO/JIT).
+  uint64_t getExternEntryCount() const { return ExternEntryCount; }
+
   /// Return the raw profile information about the number of branch
   /// executions corresponding to this function.
-  uint64_t getRawBranchCount() const { return RawBranchCount; }
+  uint64_t getRawSampleCount() const { return RawSampleCount; }
 
   /// Set the profile data about the number of branch executions corresponding
   /// to this function.
-  void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
+  void setRawSampleCount(uint64_t Count) { RawSampleCount = Count; }
 
   /// Return the number of dynamically executed bytes, from raw perf data.
   uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }
@@ -2324,6 +2359,7 @@ public:
       releaseCFG();
       CurrentState = State::Emitted;
     }
+    clearList(Relocations);
   }
 
   /// Process LSDA information for the function.

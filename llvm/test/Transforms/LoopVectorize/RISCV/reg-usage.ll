@@ -1,28 +1,33 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+v,+d -debug-only=loop-vectorize --disable-output \
-; RUN:   -riscv-v-vector-bits-min=128 -force-vector-width=1 \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
+; RUN:   -force-vector-width=1 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALAR
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+v,+d -debug-only=loop-vectorize --disable-output \
-; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=1 \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
+; RUN:   -riscv-v-register-bit-width-lmul=1 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL1
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+v,+d -debug-only=loop-vectorize --disable-output \
-; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=2 \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
+; RUN:   -riscv-v-register-bit-width-lmul=2 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL2
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+v,+d -debug-only=loop-vectorize --disable-output \
-; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=4 \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
+; RUN:   -riscv-v-register-bit-width-lmul=4 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL4
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+v,+d -debug-only=loop-vectorize --disable-output \
-; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=8 \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
+; RUN:   -riscv-v-register-bit-width-lmul=8 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL8
+
+; TODO: -prefer-predicate-over-epilogue=scalar-epilogue was added to allow
+; unrolling. Calculate register pressure for all VPlans, not just unrolled ones,
+; and remove.
 
 define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i32 signext %size, ptr noalias nocapture writeonly %result) {
 ; CHECK-LABEL: add
-; CHECK-SCALAR:      LV(REG): Found max usage: 2 item
+; CHECK-SCALAR:      LV(REG): VF = 1
+; CHECK-SCALAR-NEXT: LV(REG): Found max usage: 2 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::FPRRC, 2 registers
 ; CHECK-SCALAR-NEXT: LV(REG): Found invariant usage: 1 item
@@ -72,7 +77,8 @@ for.body:
 
 define void @goo(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-LABEL: goo
-; CHECK-SCALAR:      LV(REG): Found max usage: 1 item
+; CHECK-SCALAR:      LV(REG): VF = 1
+; CHECK-SCALAR-NEXT: LV(REG): Found max usage: 1 item
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
 ; CHECK-LMUL1:       LV(REG): Found max usage: 2 item
 ; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers

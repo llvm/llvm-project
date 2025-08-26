@@ -67,9 +67,12 @@ define void @test_half_copysign(half %a0, half %a1, ptr %p0) nounwind {
 ;
 ; FP16-LABEL: test_half_copysign:
 ; FP16:       # %bb.0:
+; FP16-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; FP16-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; FP16-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; FP16-NEXT:    vpternlogd {{.*#+}} xmm2 = xmm1 ^ (xmm2 & (xmm0 ^ xmm1))
-; FP16-NEXT:    vmovsh %xmm2, (%rdi)
+; FP16-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (zmm2 & (zmm0 ^ zmm1))
+; FP16-NEXT:    vmovsh %xmm0, (%rdi)
+; FP16-NEXT:    vzeroupper
 ; FP16-NEXT:    retq
 ;
 ; X64-LABEL: test_half_copysign:

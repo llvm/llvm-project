@@ -36,18 +36,22 @@ end program
 ! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! O2-NEXT: 'fir.global' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
+! O2-NEXT:   PropagateFortranVariableAttributes
 ! O2-NEXT:   OptimizedBufferization
 ! O2-NEXT:   InlineHLFIRAssign
 ! O2-NEXT: 'func.func' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
+! O2-NEXT:   PropagateFortranVariableAttributes
 ! O2-NEXT:   OptimizedBufferization
 ! O2-NEXT:   InlineHLFIRAssign
 ! O2-NEXT: 'omp.declare_reduction' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
+! O2-NEXT:   PropagateFortranVariableAttributes
 ! O2-NEXT:   OptimizedBufferization
 ! O2-NEXT:   InlineHLFIRAssign
 ! O2-NEXT: 'omp.private' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
+! O2-NEXT:   PropagateFortranVariableAttributes
 ! O2-NEXT:   OptimizedBufferization
 ! O2-NEXT:   InlineHLFIRAssign
 ! ALL: LowerHLFIROrderedAssignments
@@ -101,6 +105,8 @@ end program
 
 ! ALL-NEXT: PolymorphicOpConversion
 ! ALL-NEXT: AssumedRankOpConversion
+! O2-NEXT:  'func.func' Pipeline
+! O2-NEXT:    OptimizeArrayRepacking
 ! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations
 ! O2-NEXT:  AddAliasTags

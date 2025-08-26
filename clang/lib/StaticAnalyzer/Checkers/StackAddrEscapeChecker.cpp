@@ -22,30 +22,28 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 using namespace ento;
 
 namespace {
 class StackAddrEscapeChecker
-    : public Checker<check::PreCall, check::PreStmt<ReturnStmt>,
-                     check::EndFunction> {
+    : public CheckerFamily<check::PreCall, check::PreStmt<ReturnStmt>,
+                           check::EndFunction> {
   mutable IdentifierInfo *dispatch_semaphore_tII = nullptr;
-  mutable std::unique_ptr<BugType> BT_stackleak;
-  mutable std::unique_ptr<BugType> BT_returnstack;
-  mutable std::unique_ptr<BugType> BT_capturedstackasync;
-  mutable std::unique_ptr<BugType> BT_capturedstackret;
 
 public:
-  enum CheckKind {
-    CK_StackAddrEscapeChecker,
-    CK_StackAddrAsyncEscapeChecker,
-    CK_NumCheckKinds
-  };
+  StringRef getDebugTag() const override { return "StackAddrEscapeChecker"; }
 
-  bool ChecksEnabled[CK_NumCheckKinds] = {false};
-  CheckerNameRef CheckNames[CK_NumCheckKinds];
+  CheckerFrontend StackAddrEscape;
+  CheckerFrontend StackAddrAsyncEscape;
+
+  const BugType StackLeak{&StackAddrEscape,
+                          "Stack address leaks outside of stack frame"};
+  const BugType ReturnStack{&StackAddrEscape,
+                            "Return of address to stack-allocated memory"};
+  const BugType CapturedStackAsync{
+      &StackAddrAsyncEscape, "Address of stack-allocated memory is captured"};
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
@@ -171,10 +169,6 @@ void StackAddrEscapeChecker::EmitReturnLeakError(CheckerContext &C,
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
     return;
-  if (!BT_returnstack)
-    BT_returnstack = std::make_unique<BugType>(
-        CheckNames[CK_StackAddrEscapeChecker],
-        "Return of address to stack-allocated memory");
 
   // Generate a report for this bug.
   SmallString<128> buf;
@@ -185,7 +179,7 @@ void StackAddrEscapeChecker::EmitReturnLeakError(CheckerContext &C,
   EmitReturnedAsPartOfError(os, C.getSVal(RetE), R);
 
   auto report =
-      std::make_unique<PathSensitiveBugReport>(*BT_returnstack, os.str(), N);
+      std::make_unique<PathSensitiveBugReport>(ReturnStack, os.str(), N);
   report->addRange(RetE->getSourceRange());
   if (range.isValid())
     report->addRange(range);
@@ -216,16 +210,12 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
     ExplodedNode *N = C.generateNonFatalErrorNode();
     if (!N)
       continue;
-    if (!BT_capturedstackasync)
-      BT_capturedstackasync = std::make_unique<BugType>(
-          CheckNames[CK_StackAddrAsyncEscapeChecker],
-          "Address of stack-allocated memory is captured");
     SmallString<128> Buf;
     llvm::raw_svector_ostream Out(Buf);
     SourceRange Range = genName(Out, Region, C.getASTContext());
     Out << " is captured by an asynchronously-executed block";
-    auto Report = std::make_unique<PathSensitiveBugReport>(
-        *BT_capturedstackasync, Out.str(), N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(CapturedStackAsync,
+                                                           Out.str(), N);
     if (Range.isValid())
       Report->addRange(Range);
     C.emitReport(std::move(Report));
@@ -234,7 +224,7 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
 
 void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
                                           CheckerContext &C) const {
-  if (!ChecksEnabled[CK_StackAddrAsyncEscapeChecker])
+  if (!StackAddrAsyncEscape.isEnabled())
     return;
   if (!Call.isGlobalCFunction("dispatch_after") &&
       !Call.isGlobalCFunction("dispatch_async"))
@@ -358,7 +348,7 @@ FindEscapingStackRegions(CheckerContext &C, const Expr *RetE, SVal RetVal) {
 
 void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
                                           CheckerContext &C) const {
-  if (!ChecksEnabled[CK_StackAddrEscapeChecker])
+  if (!StackAddrEscape.isEnabled())
     return;
 
   const Expr *RetE = RS->getRetValue();
@@ -457,7 +447,7 @@ static bool isInvalidatedSymbolRegion(const MemRegion *Region) {
 
 void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
                                               CheckerContext &Ctx) const {
-  if (!ChecksEnabled[CK_StackAddrEscapeChecker])
+  if (!StackAddrEscape.isEnabled())
     return;
 
   ExplodedNode *Node = Ctx.getPredecessor();
@@ -582,11 +572,6 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   if (!N)
     return;
 
-  if (!BT_stackleak)
-    BT_stackleak =
-        std::make_unique<BugType>(CheckNames[CK_StackAddrEscapeChecker],
-                                  "Stack address leaks outside of stack frame");
-
   for (const auto &P : Cb.V) {
     const MemRegion *Referrer = P.first->getBaseRegion();
     const MemRegion *Referred = P.second;
@@ -605,7 +590,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
       Out << " is still referred to by a temporary object on the stack"
           << CommonSuffix;
       auto Report =
-          std::make_unique<PathSensitiveBugReport>(*BT_stackleak, Out.str(), N);
+          std::make_unique<PathSensitiveBugReport>(StackLeak, Out.str(), N);
       if (Range.isValid())
         Report->addRange(Range);
       Ctx.emitReport(std::move(Report));
@@ -619,7 +604,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
     Out << " is still referred to by the " << *ReferrerVariable << CommonSuffix;
     auto Report =
-        std::make_unique<PathSensitiveBugReport>(*BT_stackleak, Out.str(), N);
+        std::make_unique<PathSensitiveBugReport>(StackLeak, Out.str(), N);
     if (Range.isValid())
       Report->addRange(Range);
 
@@ -627,23 +612,14 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   }
 }
 
-void ento::registerStackAddrEscapeBase(CheckerManager &mgr) {
-  mgr.registerChecker<StackAddrEscapeChecker>();
-}
-
-bool ento::shouldRegisterStackAddrEscapeBase(const CheckerManager &mgr) {
-  return true;
-}
-
-#define REGISTER_CHECKER(name)                                                 \
-  void ento::register##name(CheckerManager &Mgr) {                             \
-    StackAddrEscapeChecker *Chk = Mgr.getChecker<StackAddrEscapeChecker>();    \
-    Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true;              \
-    Chk->CheckNames[StackAddrEscapeChecker::CK_##name] =                       \
-        Mgr.getCurrentCheckerName();                                           \
+#define REGISTER_CHECKER(NAME)                                                 \
+  void ento::register##NAME##Checker(CheckerManager &Mgr) {                    \
+    Mgr.getChecker<StackAddrEscapeChecker>()->NAME.enable(Mgr);                \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
+  bool ento::shouldRegister##NAME##Checker(const CheckerManager &) {           \
+    return true;                                                               \
+  }
 
-REGISTER_CHECKER(StackAddrEscapeChecker)
-REGISTER_CHECKER(StackAddrAsyncEscapeChecker)
+REGISTER_CHECKER(StackAddrEscape)
+REGISTER_CHECKER(StackAddrAsyncEscape)

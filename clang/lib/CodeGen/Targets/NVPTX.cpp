@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
@@ -77,7 +78,7 @@ public:
     return true;
   }
 
-  unsigned getOpenCLKernelCallingConv() const override {
+  unsigned getDeviceKernelCallingConv() const override {
     return llvm::CallingConv::PTX_Kernel;
   }
 
@@ -129,10 +130,9 @@ bool NVPTXABIInfo::isUnsupportedType(QualType T) const {
     return true;
   if (const auto *AT = T->getAsArrayTypeUnsafe())
     return isUnsupportedType(AT->getElementType());
-  const auto *RT = T->getAs<RecordType>();
-  if (!RT)
+  const auto *RD = T->getAsRecordDecl();
+  if (!RD)
     return false;
-  const RecordDecl *RD = RT->getDecl();
 
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
@@ -173,7 +173,7 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-    RetTy = EnumTy->getDecl()->getIntegerType();
+    RetTy = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
@@ -182,7 +182,7 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
 ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   // Return aggregates type as indirect by value
   if (isAggregateTypeForABI(Ty)) {
@@ -259,40 +259,31 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
 
   llvm::Function *F = cast<llvm::Function>(GV);
 
-  // Perform special handling in OpenCL mode
-  if (M.getLangOpts().OpenCL) {
-    // Use OpenCL function attributes to check for kernel functions
+  // Perform special handling in OpenCL/CUDA mode
+  if (M.getLangOpts().OpenCL || M.getLangOpts().CUDA) {
+    // Use function attributes to check for kernel functions
     // By default, all functions are device functions
-    if (FD->hasAttr<OpenCLKernelAttr>()) {
-      // OpenCL __kernel functions get kernel metadata
+    if (FD->hasAttr<DeviceKernelAttr>() || FD->hasAttr<CUDAGlobalAttr>()) {
+      // OpenCL/CUDA kernel functions get kernel metadata
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
-      F->setCallingConv(llvm::CallingConv::PTX_Kernel);
       // And kernel functions are not subject to inlining
       F->addFnAttr(llvm::Attribute::NoInline);
+      if (FD->hasAttr<CUDAGlobalAttr>()) {
+        SmallVector<int, 10> GCI;
+        for (auto IV : llvm::enumerate(FD->parameters()))
+          if (IV.value()->hasAttr<CUDAGridConstantAttr>())
+            // For some reason arg indices are 1-based in NVVM
+            GCI.push_back(IV.index() + 1);
+        // Create !{<func-ref>, metadata !"kernel", i32 1} node
+        F->setCallingConv(llvm::CallingConv::PTX_Kernel);
+        addGridConstantNVVMMetadata(F, GCI);
+      }
+      if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>())
+        M.handleCUDALaunchBoundsAttr(F, Attr);
     }
   }
-
-  // Perform special handling in CUDA mode.
-  if (M.getLangOpts().CUDA) {
-    // CUDA __global__ functions get a kernel metadata entry.  Since
-    // __global__ functions cannot be called from the device, we do not
-    // need to set the noinline attribute.
-    if (FD->hasAttr<CUDAGlobalAttr>()) {
-      SmallVector<int, 10> GCI;
-      for (auto IV : llvm::enumerate(FD->parameters()))
-        if (IV.value()->hasAttr<CUDAGridConstantAttr>())
-          // For some reason arg indices are 1-based in NVVM
-          GCI.push_back(IV.index() + 1);
-      // Create !{<func-ref>, metadata !"kernel", i32 1} node
-      F->setCallingConv(llvm::CallingConv::PTX_Kernel);
-      addGridConstantNVVMMetadata(F, GCI);
-    }
-    if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>())
-      M.handleCUDALaunchBoundsAttr(F, Attr);
-  }
-
   // Attach kernel metadata directly if compiling for NVPTX.
-  if (FD->hasAttr<NVPTXKernelAttr>()) {
+  if (FD->hasAttr<DeviceKernelAttr>()) {
     F->setCallingConv(llvm::CallingConv::PTX_Kernel);
   }
 }

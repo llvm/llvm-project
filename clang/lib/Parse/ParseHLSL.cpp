@@ -48,7 +48,8 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
   return IsValid;
 }
 
-Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
+Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd,
+                              ParsedAttributes &Attrs) {
   assert((Tok.is(tok::kw_cbuffer) || Tok.is(tok::kw_tbuffer)) &&
          "Not a cbuffer or tbuffer!");
   bool IsCBuffer = Tok.is(tok::kw_cbuffer);
@@ -62,7 +63,6 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   IdentifierInfo *Identifier = Tok.getIdentifierInfo();
   SourceLocation IdentifierLoc = ConsumeToken();
 
-  ParsedAttributes Attrs(AttrFactory);
   MaybeParseHLSLAnnotations(Attrs, nullptr);
 
   ParseScope BufferScope(this, Scope::DeclScope);
@@ -163,11 +163,16 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     SourceLocation SlotLoc = Tok.getLocation();
     ArgExprs.push_back(ParseIdentifierLoc());
 
-    // Add numeric_constant for fix-it.
-    if (SlotStr.size() == 1 && Tok.is(tok::numeric_constant))
+    if (SlotStr.size() == 1) {
+      if (!Tok.is(tok::numeric_constant)) {
+        Diag(Tok.getLocation(), diag::err_expected) << tok::numeric_constant;
+        SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+        return;
+      }
+      // Add numeric_constant for fix-it.
       fixSeparateAttrArgAndNumber(SlotStr, SlotLoc, Tok, ArgExprs, *this,
                                   Actions.Context, PP);
-
+    }
     if (Tok.is(tok::comma)) {
       ConsumeToken(); // consume comma
       if (!Tok.is(tok::identifier)) {
@@ -284,12 +289,13 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
   case ParsedAttr::AT_HLSLSV_GroupID:
   case ParsedAttr::AT_HLSLSV_GroupIndex:
   case ParsedAttr::AT_HLSLSV_DispatchThreadID:
+  case ParsedAttr::AT_HLSLSV_Position:
     break;
   default:
     llvm_unreachable("invalid HLSL Annotation");
     break;
   }
 
-  Attrs.addNew(II, Loc, nullptr, SourceLocation(), ArgExprs.data(),
-               ArgExprs.size(), ParsedAttr::Form::HLSLAnnotation());
+  Attrs.addNew(II, Loc, AttributeScopeInfo(), ArgExprs.data(), ArgExprs.size(),
+               ParsedAttr::Form::HLSLAnnotation());
 }

@@ -27,7 +27,6 @@ template <class KeyContainer>
 void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_multiset<Key, std::less<Key>, KeyContainer>;
-  using KI  = typename KeyContainer::iterator;
   using I   = M::iterator;
   using CI  = M::const_iterator;
   using RI  = M::reverse_iterator;
@@ -114,34 +113,32 @@ void test_one() {
   assert(cri2 >= cri2);
   assert(!(cri1 >= cri2));
 
-  if constexpr (std::three_way_comparable<KI>) {
-    static_assert(std::three_way_comparable<I>); // ...of course the wrapped iterators still support <=>.
-    static_assert(std::three_way_comparable<CI>);
-    static_assert(std::three_way_comparable<RI>);
-    static_assert(std::three_way_comparable<CRI>);
-    static_assert(std::same_as<decltype(I() <=> I()), std::strong_ordering>);
-    static_assert(std::same_as<decltype(I() <=> CI()), std::strong_ordering>);
-    static_assert(std::same_as<decltype(CI() <=> CI()), std::strong_ordering>);
-    static_assert(std::same_as<decltype(RI() <=> RI()), std::strong_ordering>);
-    static_assert(std::same_as<decltype(RI() <=> CRI()), std::strong_ordering>);
-    static_assert(std::same_as<decltype(CRI() <=> CRI()), std::strong_ordering>);
+  static_assert(std::three_way_comparable<I>); // ...of course the wrapped iterators still support <=>.
+  static_assert(std::three_way_comparable<CI>);
+  static_assert(std::three_way_comparable<RI>);
+  static_assert(std::three_way_comparable<CRI>);
+  static_assert(std::same_as<decltype(I() <=> I()), std::strong_ordering>);
+  static_assert(std::same_as<decltype(I() <=> CI()), std::strong_ordering>);
+  static_assert(std::same_as<decltype(CI() <=> CI()), std::strong_ordering>);
+  static_assert(std::same_as<decltype(RI() <=> RI()), std::strong_ordering>);
+  static_assert(std::same_as<decltype(RI() <=> CRI()), std::strong_ordering>);
+  static_assert(std::same_as<decltype(CRI() <=> CRI()), std::strong_ordering>);
 
-    assert(i1 <=> i1 == std::strong_ordering::equivalent);
-    assert(i1 <=> i2 == std::strong_ordering::less);
-    assert(i2 <=> i1 == std::strong_ordering::greater);
+  assert(i1 <=> i1 == std::strong_ordering::equivalent);
+  assert(i1 <=> i2 == std::strong_ordering::less);
+  assert(i2 <=> i1 == std::strong_ordering::greater);
 
-    assert(ci1 <=> ci1 == std::strong_ordering::equivalent);
-    assert(ci1 <=> ci2 == std::strong_ordering::less);
-    assert(ci2 <=> ci1 == std::strong_ordering::greater);
+  assert(ci1 <=> ci1 == std::strong_ordering::equivalent);
+  assert(ci1 <=> ci2 == std::strong_ordering::less);
+  assert(ci2 <=> ci1 == std::strong_ordering::greater);
 
-    assert(ri1 <=> ri1 == std::strong_ordering::equivalent);
-    assert(ri1 <=> ri2 == std::strong_ordering::less);
-    assert(ri2 <=> ri1 == std::strong_ordering::greater);
+  assert(ri1 <=> ri1 == std::strong_ordering::equivalent);
+  assert(ri1 <=> ri2 == std::strong_ordering::less);
+  assert(ri2 <=> ri1 == std::strong_ordering::greater);
 
-    assert(cri1 <=> cri1 == std::strong_ordering::equivalent);
-    assert(cri1 <=> cri2 == std::strong_ordering::less);
-    assert(cri2 <=> cri1 == std::strong_ordering::greater);
-  }
+  assert(cri1 <=> cri1 == std::strong_ordering::equivalent);
+  assert(cri1 <=> cri2 == std::strong_ordering::less);
+  assert(cri2 <=> cri1 == std::strong_ordering::greater);
 }
 
 void test() {

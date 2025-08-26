@@ -65,9 +65,8 @@ module std_core [system] {
 
   module type_traits {
     module add_cv_quals                               { header "__type_traits/add_cv_quals.h" }
-    module add_lvalue_reference                       { header "__type_traits/add_lvalue_reference.h" }
     module add_pointer                                { header "__type_traits/add_pointer.h" }
-    module add_rvalue_reference                       { header "__type_traits/add_rvalue_reference.h" }
+    module add_reference                              { header "__type_traits/add_reference.h" }
     module aligned_storage                            { header "__type_traits/aligned_storage.h" }
     module aligned_union                              { header "__type_traits/aligned_union.h" }
     module alignment_of                               { header "__type_traits/alignment_of.h" }
@@ -94,6 +93,7 @@ module std_core [system] {
     module extent                                     { header "__type_traits/extent.h" }
     module has_unique_object_representation           { header "__type_traits/has_unique_object_representation.h" }
     module has_virtual_destructor                     { header "__type_traits/has_virtual_destructor.h" }
+    module integer_traits                             { header "__type_traits/integer_traits.h" }
     module integral_constant                          { header "__type_traits/integral_constant.h" }
     module invoke                                     { header "__type_traits/invoke.h" }
     module is_abstract {
@@ -232,10 +232,6 @@ module std_core [system] {
       header "__type_traits/is_nothrow_constructible.h"
       export std_core.type_traits.integral_constant
     }
-    module is_nothrow_convertible {
-      header "__type_traits/is_nothrow_convertible.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_nothrow_destructible {
       header "__type_traits/is_nothrow_destructible.h"
       export std_core.type_traits.integral_constant
@@ -276,16 +272,16 @@ module std_core [system] {
       header "__type_traits/is_referenceable.h"
       export std_core.type_traits.integral_constant
     }
+    module is_replaceable {
+      header "__type_traits/is_replaceable.h"
+      export std_core.type_traits.integral_constant
+    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
     }
     module is_scalar {
       header "__type_traits/is_scalar.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_signed_integer {
-      header "__type_traits/is_signed_integer.h"
       export std_core.type_traits.integral_constant
     }
     module is_signed {
@@ -338,10 +334,6 @@ module std_core [system] {
     }
     module is_union {
       header "__type_traits/is_union.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_unsigned_integer {
-      header "__type_traits/is_unsigned_integer.h"
       export std_core.type_traits.integral_constant
     }
     module is_unsigned {
@@ -437,6 +429,7 @@ module std [system] {
     module find_segment_if                        { header "__algorithm/find_segment_if.h" }
     module find                                   { header "__algorithm/find.h" }
     module for_each_n                             { header "__algorithm/for_each_n.h" }
+    module for_each_n_segment                     { header "__algorithm/for_each_n_segment.h" }
     module for_each_segment                       { header "__algorithm/for_each_segment.h" }
     module for_each                               { header "__algorithm/for_each.h" }
     module generate_n                             { header "__algorithm/generate_n.h" }
@@ -875,6 +868,7 @@ module std [system] {
 
     header "array"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module atomic {
@@ -940,7 +934,10 @@ module std [system] {
     module chars_format               { header "__charconv/chars_format.h" }
     module from_chars_floating_point  { header "__charconv/from_chars_floating_point.h" }
     module from_chars_integral        { header "__charconv/from_chars_integral.h" }
-    module from_chars_result          { header "__charconv/from_chars_result.h" }
+    module from_chars_result          {
+      header "__charconv/from_chars_result.h"
+      export std.system_error.errc
+    }
     module tables                     { header "__charconv/tables.h" }
     module to_chars                   { header "__charconv/to_chars.h" }
     module to_chars_base_10           { header "__charconv/to_chars_base_10.h" }
@@ -1229,6 +1226,7 @@ module std [system] {
 
     header "deque"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module exception {
@@ -1304,6 +1302,10 @@ module std [system] {
 
     header "flat_map"
     export *
+    export std.algorithm.ranges_sort
+    export std.iterator.reverse_iterator
+    export std.ranges.zip_view
+    export std.tuple
   }
 
   module flat_set {
@@ -1320,6 +1322,10 @@ module std [system] {
     export std.flat_map.sorted_unique
     export std.flat_map.sorted_equivalent
     export *
+    export std.algorithm.ranges_sort
+    export std.iterator.reverse_iterator
+    export std.ranges.zip_view
+    export std.tuple
   }
 
   module format {
@@ -1332,6 +1338,7 @@ module std [system] {
     module enable_insertable                  { header "__format/enable_insertable.h" }
     module escaped_output_table               { header "__format/escaped_output_table.h" }
     module extended_grapheme_cluster_table    { header "__format/extended_grapheme_cluster_table.h" }
+    module fmt_pair_like                      { header "__format/fmt_pair_like.h" }
     module format_arg                         { header "__format/format_arg.h" }
     module format_arg_store                   { header "__format/format_arg_store.h" }
     module format_args                        { header "__format/format_args.h" }
@@ -1363,6 +1370,7 @@ module std [system] {
     module indic_conjunct_break_table         { header "__format/indic_conjunct_break_table.h" }
     module parser_std_format_spec             { header "__format/parser_std_format_spec.h" }
     module range_default_formatter            { header "__format/range_default_formatter.h" }
+    module range_format                       { header "__format/range_format.h" }
     module range_formatter                    { header "__format/range_formatter.h" }
     module unicode                            { header "__format/unicode.h" }
     module width_estimation_table             { header "__format/width_estimation_table.h" }
@@ -1375,6 +1383,7 @@ module std [system] {
   module forward_list {
     header "forward_list"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module fstream {
@@ -1525,6 +1534,7 @@ module std [system] {
     }
     module permutable                 { header "__iterator/permutable.h" }
     module prev                       { header "__iterator/prev.h" }
+    module product_iterator           { header "__iterator/product_iterator.h" }
     module projected                  { header "__iterator/projected.h" }
     module ranges_iterator_traits     { header "__iterator/ranges_iterator_traits.h" }
     module readable_traits            { header "__iterator/readable_traits.h" }
@@ -1549,11 +1559,21 @@ module std [system] {
   module list {
     header "list"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module locale {
     header "locale"
-    module pad_and_output { header "__locale_dir/pad_and_output.h" }
+    module check_grouping  { header "__locale_dir/check_grouping.h" }
+    module get_c_locale    { header "__locale_dir/get_c_locale.h" }
+    module messages        { header "__locale_dir/messages.h" }
+    module money           { header "__locale_dir/money.h" }
+    module num             { header "__locale_dir/num.h" }
+    module pad_and_output  { header "__locale_dir/pad_and_output.h" }
+    module scan_keyword    { header "__locale_dir/scan_keyword.h" }
+    module time            { header "__locale_dir/time.h" }
+    module wbuffer_convert { header "__locale_dir/wbuffer_convert.h" }
+    module wstring_convert { header "__locale_dir/wstring_convert.h" }
 
     module support {
       header "__locale_dir/locale_base_api.h"
@@ -1572,7 +1592,6 @@ module std [system] {
     }
 
     module locale_base_api {
-      textual header "__locale_dir/locale_base_api/android.h"
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
       textual header "__locale_dir/locale_base_api/musl.h"
@@ -1588,9 +1607,9 @@ module std [system] {
   }
 
   module map {
-    module fwd { header "__fwd/map.h" }
     header "map"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module mdspan {
@@ -1871,6 +1890,7 @@ module std [system] {
     module iota_view                      { header "__ranges/iota_view.h" }
     module istream_view                   { header "__ranges/istream_view.h" }
     module join_view                      { header "__ranges/join_view.h" }
+    module join_with_view                 { header "__ranges/join_with_view.h" }
     module lazy_split_view {
       header "__ranges/lazy_split_view.h"
       export std.functional.bind_back
@@ -1923,6 +1943,9 @@ module std [system] {
       header "__ranges/zip_view.h"
       export std.utility.pair
     }
+    module zip_transform_view {
+      header "__ranges/zip_transform_view.h"
+    }
 
     header "ranges"
     export *
@@ -1936,6 +1959,7 @@ module std [system] {
   module regex {
     header "regex"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module scoped_allocator {
@@ -1949,9 +1973,9 @@ module std [system] {
   }
 
   module set {
-    module fwd { header "__fwd/set.h" }
     header "set"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module shared_mutex {
@@ -1969,6 +1993,7 @@ module std [system] {
 
     header "span"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module sstream {
@@ -2021,6 +2046,7 @@ module std [system] {
 
     header "string"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module string_view {
@@ -2028,6 +2054,7 @@ module std [system] {
 
     header "string_view"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module strstream {
@@ -2085,7 +2112,6 @@ module std [system] {
     module make_tuple_types         { header "__tuple/make_tuple_types.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
-    module tuple_indices            { header "__tuple/tuple_indices.h" }
     module tuple_like_ext           { header "__tuple/tuple_like_ext.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
@@ -2109,11 +2135,13 @@ module std [system] {
   module unordered_map {
     header "unordered_map"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module unordered_set {
     header "unordered_set"
     export *
+    export std.iterator.reverse_iterator
   }
 
   module utility {
@@ -2138,7 +2166,10 @@ module std [system] {
     module is_valid_range             { header "__utility/is_valid_range.h" }
     module move                       { header "__utility/move.h" }
     module no_destroy                 { header "__utility/no_destroy.h" }
-    module pair                       { header "__utility/pair.h" }
+    module pair                       {
+      header "__utility/pair.h"
+      export std.utility.piecewise_construct
+    }
     module piecewise_construct        { header "__utility/piecewise_construct.h" }
     module priority_tag               { header "__utility/priority_tag.h" }
     module private_constructor_tag    { header "__utility/private_constructor_tag.h" }
@@ -2202,6 +2233,7 @@ module std [system] {
     }
 
     header "vector"
+    export std.iterator.reverse_iterator
     export *
   }
 
@@ -2325,8 +2357,14 @@ module std [system] {
     header "__std_mbstate_t.h"
     export *
   }
+  module log_hardening_failure {
+    header "__log_hardening_failure"
+  }
   module verbose_abort {
     header "__verbose_abort"
+  }
+  module verbose_trap {
+    header "__verbose_trap"
   }
   module internal_assert {
     header "__assert"

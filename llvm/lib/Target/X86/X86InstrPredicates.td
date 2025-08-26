@@ -214,8 +214,6 @@ def NotWin64WithoutFP : Predicate<"!Subtarget->isTargetWin64() ||"
 }
 def IsPS         : Predicate<"Subtarget->isTargetPS()">;
 def NotPS        : Predicate<"!Subtarget->isTargetPS()">;
-def IsNaCl       : Predicate<"Subtarget->isTargetNaCl()">;
-def NotNaCl      : Predicate<"!Subtarget->isTargetNaCl()">;
 def SmallCode    : Predicate<"TM.getCodeModel() == CodeModel::Small">;
 def KernelCode   : Predicate<"TM.getCodeModel() == CodeModel::Kernel">;
 def NearData     : Predicate<"TM.getCodeModel() == CodeModel::Small ||"
@@ -233,6 +231,8 @@ let RecomputePerFunction = 1 in {
                             "shouldOptForSize(MF)">;
   def NoSSE41_Or_OptForSize : Predicate<"shouldOptForSize(MF) || "
                                         "!Subtarget->hasSSE41()">;
+  def ImportCallOptimizationEnabled : Predicate<"MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
+  def ImportCallOptimizationDisabled : Predicate<"!MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;

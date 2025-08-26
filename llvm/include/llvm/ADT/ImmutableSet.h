@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -213,9 +214,12 @@ private:
   ImutAVLTree *next = nullptr;
 
   unsigned height : 28;
-  bool IsMutable : 1;
-  bool IsDigestCached : 1;
-  bool IsCanonicalized : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsMutable : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsDigestCached : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsCanonicalized : 1;
 
   value_type value;
   uint32_t digest = 0;

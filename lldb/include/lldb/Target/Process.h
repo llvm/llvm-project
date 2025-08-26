@@ -100,6 +100,7 @@ public:
   void SetStopOnSharedLibraryEvents(bool stop);
   bool GetDisableLangRuntimeUnwindPlans() const;
   void SetDisableLangRuntimeUnwindPlans(bool disable);
+  void DisableLanguageRuntimeUnwindPlansCallback();
   bool GetDetachKeepsStopped() const;
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;
@@ -111,6 +112,7 @@ public:
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
   FollowForkMode GetFollowForkMode() const;
+  bool TrackMemoryCacheChanges() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
@@ -310,6 +312,18 @@ public:
     if (stop_id == m_last_natural_stop_id)
       return m_last_natural_stop_event;
     return lldb::EventSP();
+  }
+
+  void Dump(Stream &stream) const {
+    stream.Format("ProcessModID:\n"
+                  "  m_stop_id: {0}\n  m_last_natural_stop_id: {1}\n"
+                  "  m_resume_id: {2}\n  m_memory_id: {3}\n"
+                  "  m_last_user_expression_resume: {4}\n"
+                  "  m_running_user_expression: {5}\n"
+                  "  m_running_utility_function: {6}\n",
+                  m_stop_id, m_last_natural_stop_id, m_resume_id, m_memory_id,
+                  m_last_user_expression_resume, m_running_user_expression,
+                  m_running_utility_function);
   }
 
 private:
@@ -592,7 +606,7 @@ public:
 
   /// The underlying plugin might store the low-level communication history for
   /// this session.  Dump it into the provided stream.
-  virtual void DumpPluginHistory(Stream &s) { return; }
+  virtual void DumpPluginHistory(Stream &s) {}
 
   /// Launch a new process.
   ///
@@ -1114,10 +1128,9 @@ public:
   virtual Status DoResume(lldb::RunDirection direction) {
     if (direction == lldb::RunDirection::eRunForward)
       return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support resuming processes", GetPluginName());
+          "{0} does not support resuming processes", GetPluginName());
     return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
+        "{0} does not support reverse execution of processes", GetPluginName());
   }
 
   /// Called after resuming a process.
@@ -2535,6 +2548,8 @@ void PruneThreadPlans();
 
   bool CurrentThreadIsPrivateStateThread();
 
+  bool CurrentThreadPosesAsPrivateStateThread();
+
   virtual Status SendEventData(const char *data) {
     return Status::FromErrorString(
         "Sending an event is not supported for this process.");
@@ -2605,7 +2620,7 @@ void PruneThreadPlans();
 
   void ResetExtendedCrashInfoDict() {
     // StructuredData::Dictionary is add only, so we have to make a new one:
-    m_crash_info_dict_sp.reset(new StructuredData::Dictionary());
+    m_crash_info_dict_sp = std::make_shared<StructuredData::Dictionary>();
   }
 
   size_t AddImageToken(lldb::addr_t image_ptr);

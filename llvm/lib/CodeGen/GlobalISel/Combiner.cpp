@@ -255,8 +255,7 @@ bool Combiner::tryDCE(MachineInstr &MI, MachineRegisterInfo &MRI) {
 bool Combiner::combineMachineInstrs() {
   // If the ISel pipeline failed, do not bother running this pass.
   // FIXME: Should this be here or in individual combiner passes.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   // We can't call this in the constructor because the derived class is

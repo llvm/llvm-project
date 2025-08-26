@@ -270,7 +270,7 @@ ObjCLanguageRuntime::GetClassDescriptor(ValueObject &valobj) {
   // pointers returned by the expression parser, don't consider this a valid
   // ObjC object)
   if (valobj.GetCompilerType().IsValid()) {
-    addr_t isa_pointer = valobj.GetPointerValue();
+    addr_t isa_pointer = valobj.GetPointerValue().address;
     if (isa_pointer != LLDB_INVALID_ADDRESS) {
       ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
 
