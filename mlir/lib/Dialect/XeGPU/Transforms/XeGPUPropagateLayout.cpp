@@ -187,8 +187,8 @@ LayoutInfo LayoutInfo::transpose(ArrayRef<int64_t> permutation) const {
   // Check if the permutation is valid.
   llvm::SmallSet<int64_t, 4> seen(permutation.begin(), permutation.end());
   bool hasDuplicates = seen.size() != permutation.size();
-  bool withinRange = llvm::all_of(permutation, [&](size_t idx) {
-    return idx >= 0 && idx < permutation.size();
+  bool withinRange = llvm::all_of(permutation, [&](int64_t idx) {
+    return idx >= 0 && idx < static_cast<int64_t>(permutation.size());
   });
 
   if (!withinRange || hasDuplicates) {
@@ -577,7 +577,7 @@ void LayoutInfoPropagation::visitShapeCastOp(
     int sourceDistributedDim =
         sourceShape[0] % xegpu::targetinfo::subgroupSize == 0
             ? 0
-            : (sourceShape[1] % xegpu::targetinfo::subgroupSize ? 1 : -1);
+            : (sourceShape[1] % xegpu::targetinfo::subgroupSize == 0 ? 1 : -1);
     if (sourceDistributedDim == -1) {
       shapeCast.emitWarning(
           "Source vector can not be evenly distributed across lanes.");
@@ -597,16 +597,17 @@ void LayoutInfoPropagation::visitShapeCastOp(
   // [subgroupSize][1]. Otherwise, data is shared accross lanes (broadcasted).
   // We use slice attribute for the broadcast case.
   int64_t distributedDim = resultLaneLayout[0] == 1 ? 1 : 0;
-  xegpu::LayoutAttr plainLayout = xegpu::LayoutAttr::get(
-      shapeCast->getContext(), resultLaneLayout, resultLayout.getLaneData());
   if (resultShape[distributedDim] % xegpu::targetinfo::subgroupSize != 0) {
+    xegpu::LayoutAttr parentLayout = xegpu::LayoutAttr::get(
+        shapeCast->getContext(), resultLaneLayout, resultLayout.getLaneData());
     xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
-        shapeCast->getContext(), plainLayout,
+        shapeCast->getContext(), parentLayout,
         DenseI64ArrayAttr::get(shapeCast->getContext(), {distributedDim}));
     propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
     return;
   }
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(plainLayout)));
+  propagateIfChanged(operands[0], operands[0]->meet(getDefaultSIMTLayoutInfo(
+                                      shapeCast.getSourceVectorType())));
 }
 
 /// Propagate the layout of the result tensor to the source tensor descriptor
@@ -711,9 +712,9 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   bool isNarrowing = inElemTyBitWidth > outElemTyBitWidth;
   int bitCastRatio = isNarrowing ? inElemTyBitWidth / outElemTyBitWidth
                                  : outElemTyBitWidth / inElemTyBitWidth;
-  ArrayRef<int> sourceLaneLayout =
+  SmallVector<int> sourceLaneLayout =
       resultLayout.getLaneLayout(); // Lane layout does not change for bitcast.
-  ArrayRef<int> outData = resultLayout.getLaneData();
+  SmallVector<int> outData = resultLayout.getLaneData();
 
   // TODO: Currently we assume that bitcasts does not require cross lane
   // communication. So each lane must own the required number of elements to
