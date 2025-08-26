@@ -126,17 +126,15 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
 }
 
 static ValueObjectSP GetDataPointer(ValueObject &root) {
-  if (auto cap_sp = root.GetChildMemberWithName("__cap_"))
-    return cap_sp;
-
-  ValueObjectSP cap_sp = root.GetChildMemberWithName("__end_cap_");
+  auto [cap_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
+      root, /*anon_struct_idx=*/2, "__cap_", "__end_cap_");
   if (!cap_sp)
     return nullptr;
 
-  if (!isOldCompressedPairLayout(*cap_sp))
-    return nullptr;
+  if (is_compressed_pair)
+    return GetFirstValueOfLibCXXCompressedPair(*cap_sp);
 
-  return GetFirstValueOfLibCXXCompressedPair(*cap_sp);
+  return cap_sp;
 }
 
 lldb::ChildCacheState
