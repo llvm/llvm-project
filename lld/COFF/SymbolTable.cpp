@@ -1374,6 +1374,7 @@ void SymbolTable::resolveAlternateNames() {
       auto toUndef = dyn_cast<Undefined>(toSym);
       if (toUndef && (!toUndef->weakAlias || toUndef->isAntiDep))
         continue;
+      toSym->isUsedInRegularObj = true;
       if (toSym->isLazy())
         forceLazy(toSym);
       u->setWeakAlias(toSym);

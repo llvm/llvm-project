@@ -2615,3 +2615,19 @@ namespace DoubleCapture {
     };
   }
 }
+
+namespace GH154567 {
+  struct T {
+    int i;
+  };
+
+  struct S {
+    struct { // expected-warning {{GNU extension}}
+      T val;
+    };
+    constexpr S() : val() {}
+  };
+
+  constexpr S s{};
+  static_assert(s.val.i == 0, "");
+}

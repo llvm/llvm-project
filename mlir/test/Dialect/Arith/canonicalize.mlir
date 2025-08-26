@@ -3363,3 +3363,18 @@ func.func @bf16_fma(%arg0: vector<32x32x32xbf16>, %arg1: vector<32x32x32xbf16>, 
     }
   }
 #-}
+
+// CHECK-LABEL: func @unreachable()
+// CHECK-NEXT: return
+// CHECK-NOT: arith
+func.func @unreachable() {
+  return
+^unreachable:
+  %c1_i64 = arith.constant 1 : i64
+  // This self referencing operation is legal in an unreachable block.
+  // Many patterns are unsafe with respect to this kind of situation,
+  // check that we don't infinite loop here.
+  %add = arith.addi %add, %c1_i64 : i64
+  cf.br ^unreachable
+}
+

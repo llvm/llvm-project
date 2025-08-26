@@ -873,8 +873,9 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
 
     for (const BaseInfo &Base : Bases) {
       bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
-      Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
-            VTableClass, Offset + Base.Offset);
+      if (!Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
+                 VTableClass, Offset + Base.Offset))
+        return false;
     }
   }
 
@@ -1620,7 +1621,7 @@ llvm::Constant *ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *CE) {
   if (CE->isGLValue())
     RetType = CGM.getContext().getLValueReferenceType(RetType);
 
-  return emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
+  return tryEmitAbstract(CE->getAPValueResult(), RetType);
 }
 
 llvm::Constant *

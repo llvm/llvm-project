@@ -31,6 +31,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/ThreadPool.h"
@@ -883,6 +884,8 @@ int OperationName::UnregisteredOpModel::getOpPropertyByteSize() {
 void OperationName::UnregisteredOpModel::initProperties(
     OperationName opName, OpaqueProperties storage, OpaqueProperties init) {
   new (storage.as<Attribute *>()) Attribute();
+  if (init)
+    *storage.as<Attribute *>() = *init.as<Attribute *>();
 }
 void OperationName::UnregisteredOpModel::deleteProperties(
     OpaqueProperties prop) {
