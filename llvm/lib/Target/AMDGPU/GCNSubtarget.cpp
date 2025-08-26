@@ -137,13 +137,10 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.isAMDGCN() && AddressableLocalMemorySize == 0)
+  if (AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
-  LocalMemorySize = AddressableLocalMemorySize;
-  if (AMDGPU::isGFX10Plus(*this) &&
-      !getFeatureBits().test(AMDGPU::FeatureCuMode))
-    LocalMemorySize *= 2;
+  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(this);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;

@@ -989,12 +989,22 @@ class SubstTemplateTypeParmTypeLoc :
                                      SubstTemplateTypeParmType> {
 };
 
-  /// Wrapper for substituted template type parameters.
-class SubstTemplateTypeParmPackTypeLoc :
-    public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
-                                     SubstTemplateTypeParmPackTypeLoc,
-                                     SubstTemplateTypeParmPackType> {
-};
+/// Abstract type representing delayed type pack expansions.
+class SubstPackTypeLoc
+    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, SubstPackTypeLoc,
+                                       SubstPackType> {};
+
+/// Wrapper for substituted template type parameters.
+class SubstTemplateTypeParmPackTypeLoc
+    : public InheritingConcreteTypeLoc<SubstPackTypeLoc,
+                                       SubstTemplateTypeParmPackTypeLoc,
+                                       SubstTemplateTypeParmPackType> {};
+
+/// Wrapper for substituted template type parameters.
+class SubstBuiltinTemplatePackTypeLoc
+    : public InheritingConcreteTypeLoc<SubstPackTypeLoc,
+                                       SubstBuiltinTemplatePackTypeLoc,
+                                       SubstBuiltinTemplatePackType> {};
 
 struct AttributedLocInfo {
   const Attr *TypeAttr;
@@ -2517,6 +2527,15 @@ public:
                    ->getQualifier() &&
            "Inconsistent nested-name-specifier pointer");
     getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
+  }
+
+  SourceRange getLocalSourceRange() const {
+    SourceLocation BeginLoc = getElaboratedKeywordLoc();
+    if (BeginLoc.isInvalid())
+      BeginLoc = getQualifierLoc().getBeginLoc();
+    if (BeginLoc.isInvalid())
+      BeginLoc = getNameLoc();
+    return {BeginLoc, getNameLoc()};
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);

@@ -1,11 +1,9 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap module request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
 import re
 
@@ -55,7 +53,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
 
         if expect_debug_info_size:
             self.assertTrue(
-                self.waitUntil(check_symbols_loaded_with_size),
+                self.wait_until(check_symbols_loaded_with_size),
                 "expect has debug info size",
             )
 
@@ -68,7 +66,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         # Collect all the module names we saw as events.
         module_new_names = []
         module_changed_names = []
-        module_event = self.dap_server.wait_for_event("module", 1)
+        module_event = self.dap_server.wait_for_event(["module"], 1)
         while module_event is not None:
             reason = module_event["body"]["reason"]
             if reason == "new":
@@ -76,7 +74,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
             elif reason == "changed":
                 module_changed_names.append(module_event["body"]["module"]["name"])
 
-            module_event = self.dap_server.wait_for_event("module", 1)
+            module_event = self.dap_server.wait_for_event(["module"], 1)
 
         # Make sure we got an event for every active module.
         self.assertNotEqual(len(module_new_names), 0)

@@ -33,7 +33,9 @@ public:
     )";
     FullCode += Code.str();
 
-    AST = std::make_unique<clang::TestAST>(FullCode);
+    Inputs = TestInputs(FullCode);
+    Inputs.Language = TestLanguage::Lang_CXX20;
+    AST = std::make_unique<clang::TestAST>(Inputs);
     ASTCtx = &AST->context();
 
     // Find the target function using AST matchers.
@@ -51,7 +53,7 @@ public:
     BuildOptions.AddTemporaryDtors = true;
 
     // Run the main analysis.
-    Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx);
+    Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr);
     Analysis->run();
 
     AnnotationToPointMap = Analysis->getTestPoints();
@@ -70,6 +72,7 @@ public:
   }
 
 private:
+  TestInputs Inputs;
   std::unique_ptr<TestAST> AST;
   ASTContext *ASTCtx = nullptr;
   std::unique_ptr<AnalysisDeclContext> AnalysisCtx;
@@ -118,11 +121,13 @@ public:
     return Analysis.getLoansAtPoint(OID, PP);
   }
 
-  std::optional<LoanSet> getExpiredLoansAtPoint(llvm::StringRef Annotation) {
+  std::optional<llvm::DenseSet<LoanID>>
+  getExpiredLoansAtPoint(llvm::StringRef Annotation) {
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    return Analysis.getExpiredLoansAtPoint(PP);
+    auto Expired = Analysis.getExpiredLoansAtPoint(PP);
+    return llvm::DenseSet<LoanID>{Expired.begin(), Expired.end()};
   }
 
 private:

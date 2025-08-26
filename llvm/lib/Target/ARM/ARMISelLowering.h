@@ -685,8 +685,8 @@ class VectorType;
 
     bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
-                              ArrayRef<unsigned> Indices,
-                              unsigned Factor) const override;
+                              ArrayRef<unsigned> Indices, unsigned Factor,
+                              const APInt &GapMask) const override;
     bool lowerInterleavedStore(Instruction *Store, Value *Mask,
                                ShuffleVectorInst *SVI,
                                unsigned Factor) const override;
@@ -704,7 +704,6 @@ class VectorType;
     bool useLoadStackGuardNode(const Module &M) const override;
 
     void insertSSPDeclarations(Module &M) const override;
-    Value *getSDagStackGuard(const Module &M) const override;
     Function *getSSPStackGuardCheck(const Module &M) const override;
 
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,

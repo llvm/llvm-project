@@ -497,6 +497,10 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VANDN_VX:
   // Vector Reverse Bits in Elements
   case RISCV::VBREV_V:
+  // Vector Reverse Bits in Bytes
+  case RISCV::VBREV8_V:
+  // Vector Reverse Bytes
+  case RISCV::VREV8_V:
   // Vector Count Leading Zeros
   case RISCV::VCLZ_V:
   // Vector Count Trailing Zeros
@@ -510,6 +514,13 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VROR_VI:
   case RISCV::VROR_VV:
   case RISCV::VROR_VX:
+  // Vector Carry-less Multiplication Instructions (Zvbc)
+  // Vector Carry-less Multiply
+  case RISCV::VCLMUL_VV:
+  case RISCV::VCLMUL_VX:
+  // Vector Carry-less Multiply Return High Half
+  case RISCV::VCLMULH_VV:
+  case RISCV::VCLMULH_VX:
     return MILog2SEW;
 
   // Vector Widening Shift Left Logical (Zvbb)
@@ -836,13 +847,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VLUXEI32_V:
   case RISCV::VLOXEI32_V:
   case RISCV::VLUXEI64_V:
-  case RISCV::VLOXEI64_V: {
-    for (const MachineMemOperand *MMO : MI.memoperands())
-      if (MMO->isVolatile())
-        return false;
-    return true;
-  }
-
+  case RISCV::VLOXEI64_V:
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
@@ -1046,6 +1051,10 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VANDN_VX:
   // Vector Reverse Bits in Elements
   case RISCV::VBREV_V:
+  // Vector Reverse Bits in Bytes
+  case RISCV::VBREV8_V:
+  // Vector Reverse Bytes
+  case RISCV::VREV8_V:
   // Vector Count Leading Zeros
   case RISCV::VCLZ_V:
   // Vector Count Trailing Zeros
@@ -1063,6 +1072,13 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VWSLL_VI:
   case RISCV::VWSLL_VX:
   case RISCV::VWSLL_VV:
+  // Vector Carry-less Multiplication Instructions (Zvbc)
+  // Vector Carry-less Multiply
+  case RISCV::VCLMUL_VV:
+  case RISCV::VCLMUL_VX:
+  // Vector Carry-less Multiply Return High Half
+  case RISCV::VCLMULH_VV:
+  case RISCV::VCLMULH_VX:
   // Vector Mask Instructions
   // Vector Mask-Register Logical Instructions
   // vmsbf.m set-before-first mask bit
@@ -1250,34 +1266,6 @@ static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
   }
 }
 
-/// Return true if MI may read elements past VL.
-static bool mayReadPastVL(const MachineInstr &MI) {
-  const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
-  if (!RVV)
-    return true;
-
-  switch (RVV->BaseInstr) {
-  // vslidedown instructions may read elements past VL. They are handled
-  // according to current tail policy.
-  case RISCV::VSLIDEDOWN_VI:
-  case RISCV::VSLIDEDOWN_VX:
-  case RISCV::VSLIDE1DOWN_VX:
-  case RISCV::VFSLIDE1DOWN_VF:
-
-  // vrgather instructions may read the source vector at any index < VLMAX,
-  // regardless of VL.
-  case RISCV::VRGATHER_VI:
-  case RISCV::VRGATHER_VV:
-  case RISCV::VRGATHER_VX:
-  case RISCV::VRGATHEREI16_VV:
-    return true;
-
-  default:
-    return false;
-  }
-}
-
 bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
@@ -1296,6 +1284,13 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   if (MI.mayRaiseFPException()) {
     LLVM_DEBUG(dbgs() << "Not a candidate because may raise FP exception\n");
     return false;
+  }
+
+  for (const MachineMemOperand *MMO : MI.memoperands()) {
+    if (MMO->isVolatile()) {
+      LLVM_DEBUG(dbgs() << "Not a candidate because contains volatile MMO\n");
+      return false;
+    }
   }
 
   // Some instructions that produce vectors have semantics that make it more
@@ -1338,7 +1333,8 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
     return std::nullopt;
   }
 
-  if (mayReadPastVL(UserMI)) {
+  if (RISCVII::readsPastVL(
+          TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
     LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
     return std::nullopt;
   }

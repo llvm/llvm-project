@@ -2366,7 +2366,7 @@ static QualType GeneralizeFunctionType(ASTContext &Ctx, QualType Ty) {
   llvm_unreachable("Encountered unknown FunctionType");
 }
 
-llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T) {
+llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T, StringRef Salt) {
   if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
     T = GeneralizeFunctionType(getContext(), T);
   if (auto *FnType = T->getAs<FunctionProtoType>())
@@ -2378,6 +2378,9 @@ llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T) {
   llvm::raw_string_ostream Out(OutName);
   getCXXABI().getMangleContext().mangleCanonicalTypeName(
       T, Out, getCodeGenOpts().SanitizeCfiICallNormalizeIntegers);
+
+  if (!Salt.empty())
+    Out << "." << Salt;
 
   if (getCodeGenOpts().SanitizeCfiICallNormalizeIntegers)
     Out << ".normalized";
@@ -3047,9 +3050,15 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 void CodeGenModule::setKCFIType(const FunctionDecl *FD, llvm::Function *F) {
   llvm::LLVMContext &Ctx = F->getContext();
   llvm::MDBuilder MDB(Ctx);
+  llvm::StringRef Salt;
+
+  if (const auto *FP = FD->getType()->getAs<FunctionProtoType>())
+    if (const auto &Info = FP->getExtraAttributeInfo())
+      Salt = Info.CFISalt;
+
   F->setMetadata(llvm::LLVMContext::MD_kcfi_type,
-                 llvm::MDNode::get(
-                     Ctx, MDB.createConstant(CreateKCFITypeId(FD->getType()))));
+                 llvm::MDNode::get(Ctx, MDB.createConstant(CreateKCFITypeId(
+                                            FD->getType(), Salt))));
 }
 
 static bool allowKCFIIdentifier(StringRef Name) {
@@ -5787,11 +5796,16 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       (D->getType()->isCUDADeviceBuiltinSurfaceType() ||
        D->getType()->isCUDADeviceBuiltinTextureType());
   if (getLangOpts().CUDA &&
-      (IsCUDASharedVar || IsCUDAShadowVar || IsCUDADeviceShadowVar))
+      (IsCUDASharedVar || IsCUDAShadowVar || IsCUDADeviceShadowVar)) {
     Init = llvm::UndefValue::get(getTypes().ConvertTypeForMem(ASTTy));
-  else if (D->hasAttr<LoaderUninitializedAttr>())
+  } else if (getLangOpts().HLSL &&
+             (D->getType()->isHLSLResourceRecord() ||
+              D->getType()->isHLSLResourceRecordArray())) {
+    Init = llvm::PoisonValue::get(getTypes().ConvertType(ASTTy));
+    NeedsGlobalCtor = D->getType()->isHLSLResourceRecord();
+  } else if (D->hasAttr<LoaderUninitializedAttr>()) {
     Init = llvm::UndefValue::get(getTypes().ConvertTypeForMem(ASTTy));
-  else if (!InitExpr) {
+  } else if (!InitExpr) {
     // This is a tentative definition; tentative definitions are
     // implicitly initialized with { 0 }.
     //
@@ -5812,11 +5826,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       if (D->getType()->isReferenceType())
         T = D->getType();
 
-      if (getLangOpts().HLSL &&
-          D->getType().getTypePtr()->isHLSLResourceRecord()) {
-        Init = llvm::PoisonValue::get(getTypes().ConvertType(ASTTy));
-        NeedsGlobalCtor = true;
-      } else if (getLangOpts().CPlusPlus) {
+      if (getLangOpts().CPlusPlus) {
         Init = EmitNullConstant(T);
         if (!IsDefinitionAvailableExternally)
           NeedsGlobalCtor = true;
@@ -6065,8 +6075,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
     if (Context.isAlignmentRequired(VarType))
       return true;
 
-    if (const auto *RT = VarType->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    if (const auto *RD = VarType->getAsRecordDecl()) {
       for (const FieldDecl *FD : RD->fields()) {
         if (FD->isBitField())
           continue;
@@ -7524,6 +7533,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
             getContext().getCanonicalTagType(cast<EnumDecl>(D)));
     break;
 
+  case Decl::HLSLRootSignature:
+    // Will be handled by attached function
+    break;
   case Decl::HLSLBuffer:
     getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));
     break;

@@ -361,7 +361,10 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             # response or the event, since the DAP does not specify an order in which they are sent. May need revisiting
             # if there turns out to be some odd ordering issues, e.g. if we can receive messages in the order
             # ["response: continued", "event: stopped", "event: continued"].
-            if message["command"] == "continue" and message["success"] == True:
+            if (
+                message["command"] in ["continue", "stepIn", "next", "stepOut"]
+                and message["success"] == True
+            ):
                 debugger_state.is_running = True
                 # Reset all state that is invalidated upon program continue.
                 debugger_state.stopped_reason = None
@@ -677,20 +680,33 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def _post_step_hook(self):
         """Hook to be executed after completing a step request."""
 
-    def step_in(self):
+    def _step(self, step_request_string):
         self._flush_breakpoints()
         step_req_id = self.send_message(
-            self.make_request("stepIn", {"threadId": self._debugger_state.thread})
+            self.make_request(
+                step_request_string, {"threadId": self._debugger_state.thread}
+            )
         )
         response = self._await_response(step_req_id)
         if not response["success"]:
-            raise DebuggerException("failed to step")
+            raise DebuggerException(
+                f"failed to perform debugger action: '{step_request_string}'"
+            )
         # If we've "stepped" to a breakpoint, then continue to hit the breakpoint properly.
         # NB: This is an issue that only seems relevant to LLDB, but is also harmless outside of LLDB; if it turns out
         #     to cause issues for other debuggers, we can move it to a post-step hook.
         while self._debugger_state.is_running:
             time.sleep(0.001)
         self._post_step_hook()
+
+    def step_in(self):
+        self._step("stepIn")
+
+    def step_next(self):
+        self._step("next")
+
+    def step_out(self):
+        self._step("stepOut")
 
     def go(self) -> ReturnCode:
         self._flush_breakpoints()

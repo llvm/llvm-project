@@ -70,8 +70,8 @@ struct VPlanTransforms {
               PredicatedScalarEvolution &PSE);
 
   /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void
-  handleEarlyExits(VPlan &Plan, bool HasUncountableExit, VFRange &Range);
+  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
+                                                 bool HasUncountableExit);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
@@ -82,10 +82,6 @@ struct VPlanTransforms {
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
-
-  /// Creates extracts for values in \p Plan defined in a loop region and used
-  /// outside a loop region.
-  LLVM_ABI_FOR_TEST static void createExtractsForLiveOuts(VPlan &Plan);
 
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
@@ -100,7 +96,7 @@ struct VPlanTransforms {
       VPlanPtr &Plan,
       function_ref<const InductionDescriptor *(PHINode *)>
           GetIntOrFpInductionDescriptor,
-      ScalarEvolution &SE, const TargetLibraryInfo &TLI);
+      const TargetLibraryInfo &TLI);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
@@ -211,8 +207,7 @@ struct VPlanTransforms {
   static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                                          VPBasicBlock *EarlyExitVPBB,
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                         VPBasicBlock *LatchVPBB,
-                                         VFRange &Range);
+                                         VPBasicBlock *LatchVPBB);
 
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
@@ -229,9 +224,8 @@ struct VPlanTransforms {
   ///    EVLIVInc, TripCount).
   static void canonicalizeEVLLoops(VPlan &Plan);
 
-  /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
-  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
-  static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
+  /// Lower abstract recipes to concrete ones, that can be codegen'd.
+  static void convertToConcreteRecipes(VPlan &Plan);
 
   /// This function converts initial recipes to the abstract recipes and clamps
   /// \p Range based on cost model for following optimizations and cost
@@ -240,9 +234,8 @@ struct VPlanTransforms {
   static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                        VFRange &Range);
 
-  /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
-  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
-  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
+  /// Perform instcombine-like simplifications on recipes in \p Plan.
+  static void simplifyRecipes(VPlan &Plan);
 
   /// Remove BranchOnCond recipes with true or false conditions together with
   /// removing dead edges to their successors.
@@ -253,7 +246,8 @@ struct VPlanTransforms {
   /// one step backwards.
   static void
   optimizeInductionExitUsers(VPlan &Plan,
-                             DenseMap<VPValue *, VPValue *> &EndValues);
+                             DenseMap<VPValue *, VPValue *> &EndValues,
+                             ScalarEvolution &SE);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
@@ -276,9 +270,20 @@ struct VPlanTransforms {
   static void materializeBackedgeTakenCount(VPlan &Plan,
                                             VPBasicBlock *VectorPH);
 
+  /// Add explicit Build[Struct]Vector recipes that combine multiple scalar
+  /// values into single vectors.
+  static void materializeBuildVectors(VPlan &Plan);
+
   /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
   static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
                                     ElementCount VF);
+
+  /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
+  /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR
+  /// value. A mapping from SCEV expressions to their expanded IR value is
+  /// returned.
+  static DenseMap<const SCEV *, Value *> expandSCEVs(VPlan &Plan,
+                                                     ScalarEvolution &SE);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF

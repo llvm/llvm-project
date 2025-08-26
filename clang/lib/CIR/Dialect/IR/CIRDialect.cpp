@@ -22,6 +22,8 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/LogicalResult.h"
 
 #include <numeric>
@@ -339,7 +341,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
-                cir::ConstComplexAttr, cir::GlobalViewAttr, cir::PoisonAttr>(
+                cir::ConstComplexAttr, cir::ConstRecordAttr,
+                cir::GlobalViewAttr, cir::PoisonAttr, cir::VTableAttr>(
           attrType))
     return success();
 
@@ -1356,11 +1359,14 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 
 void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                           llvm::StringRef sym_name, mlir::Type sym_type,
-                          cir::GlobalLinkageKind linkage) {
+                          bool isConstant, cir::GlobalLinkageKind linkage) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
+  if (isConstant)
+    odsState.addAttribute(getConstantAttrName(odsState.name),
+                          odsBuilder.getUnitAttr());
 
   cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
@@ -1453,15 +1459,18 @@ cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   StringRef name = getName();
 
   // Verify that the result type underlying pointer type matches the type of
-  // the referenced cir.global or cir.func op.
-  auto op = symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
+  // the referenced cir.global.
+  auto op =
+      symbolTable.lookupNearestSymbolFrom<cir::GlobalOp>(*this, getNameAttr());
   if (!op)
     return emitOpError("'")
            << name << "' does not reference a valid cir.global";
   std::optional<mlir::Attribute> init = op.getInitialValue();
   if (!init)
     return success();
-  assert(!cir::MissingFeatures::vtableInitializer());
+  if (!isa<cir::VTableAttr>(*init))
+    return emitOpError("Expected #cir.vtable in initializer for global '")
+           << name << "'";
   return success();
 }
 
@@ -1647,9 +1656,28 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 }
 
-// TODO(CIR): The properties of functions that require verification haven't
-// been implemented yet.
-mlir::LogicalResult cir::FuncOp::verify() { return success(); }
+mlir::LogicalResult cir::FuncOp::verify() {
+
+  llvm::SmallSet<llvm::StringRef, 16> labels;
+  llvm::SmallSet<llvm::StringRef, 16> gotos;
+
+  getOperation()->walk([&](mlir::Operation *op) {
+    if (auto lab = dyn_cast<cir::LabelOp>(op)) {
+      labels.insert(lab.getLabel());
+    } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
+      gotos.insert(goTo.getLabel());
+    }
+  });
+
+  if (!labels.empty() || !gotos.empty()) {
+    llvm::SmallSet<llvm::StringRef, 16> mismatched =
+        llvm::set_difference(gotos, labels);
+
+    if (!mismatched.empty())
+      return emitOpError() << "goto/label mismatch";
+  }
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // BinOp
@@ -1780,6 +1808,19 @@ LogicalResult cir::ShiftOp::verify() {
       return emitOpError() << "vector operands and result type do not have the "
                               "same elements sizes";
   }
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LabelOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::LabelOp::verify() {
+  mlir::Operation *op = getOperation();
+  mlir::Block *blk = op->getBlock();
+  if (&blk->front() != op)
+    return emitError() << "must be the first operation in a block";
 
   return mlir::success();
 }
@@ -2404,6 +2445,209 @@ OpFoldResult RotateOp::fold(FoldAdaptor adaptor) {
     resultValue = inputValue.rotr(amountValue);
 
   return IntAttr::get(input.getContext(), input.getType(), resultValue);
+}
+
+//===----------------------------------------------------------------------===//
+// InlineAsmOp
+//===----------------------------------------------------------------------===//
+
+void cir::InlineAsmOp::print(OpAsmPrinter &p) {
+  p << '(' << getAsmFlavor() << ", ";
+  p.increaseIndent();
+  p.printNewline();
+
+  llvm::SmallVector<std::string, 3> names{"out", "in", "in_out"};
+  auto *nameIt = names.begin();
+  auto *attrIt = getOperandAttrs().begin();
+
+  for (mlir::OperandRange ops : getAsmOperands()) {
+    p << *nameIt << " = ";
+
+    p << '[';
+    llvm::interleaveComma(llvm::make_range(ops.begin(), ops.end()), p,
+                          [&](Value value) {
+                            p.printOperand(value);
+                            p << " : " << value.getType();
+                            if (*attrIt)
+                              p << " (maybe_memory)";
+                            attrIt++;
+                          });
+    p << "],";
+    p.printNewline();
+    ++nameIt;
+  }
+
+  p << "{";
+  p.printString(getAsmString());
+  p << " ";
+  p.printString(getConstraints());
+  p << "}";
+  p.decreaseIndent();
+  p << ')';
+  if (getSideEffects())
+    p << " side_effects";
+
+  std::array elidedAttrs{
+      llvm::StringRef("asm_flavor"),        llvm::StringRef("asm_string"),
+      llvm::StringRef("constraints"),       llvm::StringRef("operand_attrs"),
+      llvm::StringRef("operands_segments"), llvm::StringRef("side_effects")};
+  p.printOptionalAttrDict(getOperation()->getAttrs(), elidedAttrs);
+
+  if (auto v = getRes())
+    p << " -> " << v.getType();
+}
+
+void cir::InlineAsmOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                             ArrayRef<ValueRange> asmOperands,
+                             StringRef asmString, StringRef constraints,
+                             bool sideEffects, cir::AsmFlavor asmFlavor,
+                             ArrayRef<Attribute> operandAttrs) {
+  // Set up the operands_segments for VariadicOfVariadic
+  SmallVector<int32_t> segments;
+  for (auto operandRange : asmOperands) {
+    segments.push_back(operandRange.size());
+    odsState.addOperands(operandRange);
+  }
+
+  odsState.addAttribute(
+      "operands_segments",
+      DenseI32ArrayAttr::get(odsBuilder.getContext(), segments));
+  odsState.addAttribute("asm_string", odsBuilder.getStringAttr(asmString));
+  odsState.addAttribute("constraints", odsBuilder.getStringAttr(constraints));
+  odsState.addAttribute("asm_flavor",
+                        AsmFlavorAttr::get(odsBuilder.getContext(), asmFlavor));
+
+  if (sideEffects)
+    odsState.addAttribute("side_effects", odsBuilder.getUnitAttr());
+
+  odsState.addAttribute("operand_attrs", odsBuilder.getArrayAttr(operandAttrs));
+}
+
+ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
+                                    OperationState &result) {
+  llvm::SmallVector<mlir::Attribute> operandAttrs;
+  llvm::SmallVector<int32_t> operandsGroupSizes;
+  std::string asmString, constraints;
+  Type resType;
+  MLIRContext *ctxt = parser.getBuilder().getContext();
+
+  auto error = [&](const Twine &msg) -> LogicalResult {
+    return parser.emitError(parser.getCurrentLocation(), msg);
+  };
+
+  auto expected = [&](const std::string &c) {
+    return error("expected '" + c + "'");
+  };
+
+  if (parser.parseLParen().failed())
+    return expected("(");
+
+  auto flavor = FieldParser<AsmFlavor, AsmFlavor>::parse(parser);
+  if (failed(flavor))
+    return error("Unknown AsmFlavor");
+
+  if (parser.parseComma().failed())
+    return expected(",");
+
+  auto parseValue = [&](Value &v) {
+    OpAsmParser::UnresolvedOperand op;
+
+    if (parser.parseOperand(op) || parser.parseColon())
+      return error("can't parse operand");
+
+    Type typ;
+    if (parser.parseType(typ).failed())
+      return error("can't parse operand type");
+    llvm::SmallVector<mlir::Value> tmp;
+    if (parser.resolveOperand(op, typ, tmp))
+      return error("can't resolve operand");
+    v = tmp[0];
+    return mlir::success();
+  };
+
+  auto parseOperands = [&](llvm::StringRef name) {
+    if (parser.parseKeyword(name).failed())
+      return error("expected " + name + " operands here");
+    if (parser.parseEqual().failed())
+      return expected("=");
+    if (parser.parseLSquare().failed())
+      return expected("[");
+
+    int size = 0;
+    if (parser.parseOptionalRSquare().succeeded()) {
+      operandsGroupSizes.push_back(size);
+      if (parser.parseComma())
+        return expected(",");
+      return mlir::success();
+    }
+
+    auto parseOperand = [&]() {
+      Value val;
+      if (parseValue(val).succeeded()) {
+        result.operands.push_back(val);
+        size++;
+
+        if (parser.parseOptionalLParen().failed()) {
+          operandAttrs.push_back(mlir::Attribute());
+          return mlir::success();
+        }
+
+        if (parser.parseKeyword("maybe_memory").succeeded()) {
+          operandAttrs.push_back(mlir::UnitAttr::get(ctxt));
+          if (parser.parseRParen())
+            return expected(")");
+          return mlir::success();
+        } else {
+          return expected("maybe_memory");
+        }
+      }
+      return mlir::failure();
+    };
+
+    if (parser.parseCommaSeparatedList(parseOperand).failed())
+      return mlir::failure();
+
+    if (parser.parseRSquare().failed() || parser.parseComma().failed())
+      return expected("]");
+    operandsGroupSizes.push_back(size);
+    return mlir::success();
+  };
+
+  if (parseOperands("out").failed() || parseOperands("in").failed() ||
+      parseOperands("in_out").failed())
+    return error("failed to parse operands");
+
+  if (parser.parseLBrace())
+    return expected("{");
+  if (parser.parseString(&asmString))
+    return error("asm string parsing failed");
+  if (parser.parseString(&constraints))
+    return error("constraints string parsing failed");
+  if (parser.parseRBrace())
+    return expected("}");
+  if (parser.parseRParen())
+    return expected(")");
+
+  if (parser.parseOptionalKeyword("side_effects").succeeded())
+    result.attributes.set("side_effects", UnitAttr::get(ctxt));
+
+  if (parser.parseOptionalArrow().succeeded() &&
+      parser.parseType(resType).failed())
+    return mlir::failure();
+
+  if (parser.parseOptionalAttrDict(result.attributes).failed())
+    return mlir::failure();
+
+  result.attributes.set("asm_flavor", AsmFlavorAttr::get(ctxt, *flavor));
+  result.attributes.set("asm_string", StringAttr::get(ctxt, asmString));
+  result.attributes.set("constraints", StringAttr::get(ctxt, constraints));
+  result.attributes.set("operand_attrs", ArrayAttr::get(ctxt, operandAttrs));
+  result.getOrAddProperties<InlineAsmOp::Properties>().operands_segments =
+      parser.getBuilder().getDenseI32ArrayAttr(operandsGroupSizes);
+  if (resType)
+    result.addTypes(TypeRange{resType});
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

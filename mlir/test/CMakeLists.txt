@@ -123,7 +123,7 @@ set(MLIR_TEST_DEPENDS
   tblgen-to-irdl
   )
 if(NOT MLIR_STANDALONE_BUILD)
-  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file)
+  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
 endif()
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
@@ -141,6 +141,7 @@ if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
     llc
     mlir_async_runtime
     mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
     mlir_c_runner_utils
     mlir_runner_utils
     mlir_float16_utils
@@ -156,7 +157,10 @@ if(MLIR_ENABLE_CUDA_RUNNER)
 endif()
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)
-  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
+  )
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)

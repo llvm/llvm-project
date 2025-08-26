@@ -2,10 +2,10 @@
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
 
 // RUN: clang-doc --format=mustache --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
-// RUN: FileCheck %s -input-file=%t/docs/_ZTV5Shape.html -check-prefix=HTML-SHAPE
-// RUN: FileCheck %s -input-file=%t/docs/_ZTV10Calculator.html -check-prefix=HTML-CALC
-// RUN: FileCheck %s -input-file=%t/docs/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
-// RUN: FileCheck %s -input-file=%t/docs/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
+// RUN: FileCheck %s -input-file=%t/docs/html/_ZTV5Shape.html -check-prefix=HTML-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/html/_ZTV10Calculator.html -check-prefix=HTML-CALC
+// RUN: FileCheck %s -input-file=%t/docs/html/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
+// RUN: FileCheck %s -input-file=%t/docs/html/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
 
 HTML-SHAPE: <html lang="en-US">
 HTML-SHAPE: <head>
