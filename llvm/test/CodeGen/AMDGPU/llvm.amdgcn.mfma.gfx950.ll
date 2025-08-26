@@ -139,16 +139,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_f16_no_agpr__vgprcd(ptr addrsp
 ; SDAG-LABEL: test_mfma_f32_16x16x32_f16_no_agpr__vgprcd:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; SDAG-NEXT:    v_mov_b32_e32 v12, 0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; SDAG-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; SDAG-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; SDAG-NEXT:    v_mov_b32_e32 v0, s8
+; SDAG-NEXT:    v_mov_b32_e32 v1, s9
+; SDAG-NEXT:    v_mov_b32_e32 v2, s10
+; SDAG-NEXT:    v_mov_b32_e32 v3, s11
+; SDAG-NEXT:    v_mov_b32_e32 v4, s12
+; SDAG-NEXT:    v_mov_b32_e32 v5, s13
+; SDAG-NEXT:    v_mov_b32_e32 v6, s14
+; SDAG-NEXT:    v_mov_b32_e32 v7, s15
+; SDAG-NEXT:    v_mov_b32_e32 v8, s0
+; SDAG-NEXT:    v_mov_b32_e32 v9, s1
+; SDAG-NEXT:    v_mov_b32_e32 v10, s2
+; SDAG-NEXT:    v_mov_b32_e32 v11, s3
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11]
 ; SDAG-NEXT:    s_nop 7
@@ -177,16 +183,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_f16_no_agpr__vgprcd(ptr addrsp
 ; HEURRC-LABEL: test_mfma_f32_16x16x32_f16_no_agpr__vgprcd:
 ; HEURRC:       ; %bb.0:
 ; HEURRC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; HEURRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; HEURRC-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; HEURRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; HEURRC-NEXT:    v_mov_b32_e32 v12, 0
 ; HEURRC-NEXT:    s_waitcnt lgkmcnt(0)
-; HEURRC-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; HEURRC-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; HEURRC-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; HEURRC-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; HEURRC-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; HEURRC-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; HEURRC-NEXT:    v_mov_b32_e32 v0, s8
+; HEURRC-NEXT:    v_mov_b32_e32 v1, s9
+; HEURRC-NEXT:    v_mov_b32_e32 v2, s10
+; HEURRC-NEXT:    v_mov_b32_e32 v3, s11
+; HEURRC-NEXT:    v_mov_b32_e32 v4, s12
+; HEURRC-NEXT:    v_mov_b32_e32 v5, s13
+; HEURRC-NEXT:    v_mov_b32_e32 v6, s14
+; HEURRC-NEXT:    v_mov_b32_e32 v7, s15
+; HEURRC-NEXT:    v_mov_b32_e32 v8, s0
+; HEURRC-NEXT:    v_mov_b32_e32 v9, s1
+; HEURRC-NEXT:    v_mov_b32_e32 v10, s2
+; HEURRC-NEXT:    v_mov_b32_e32 v11, s3
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11]
 ; HEURRC-NEXT:    s_nop 7
@@ -196,16 +208,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_f16_no_agpr__vgprcd(ptr addrsp
 ; VGPRRC-LABEL: test_mfma_f32_16x16x32_f16_no_agpr__vgprcd:
 ; VGPRRC:       ; %bb.0:
 ; VGPRRC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; VGPRRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; VGPRRC-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; VGPRRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; VGPRRC-NEXT:    v_mov_b32_e32 v12, 0
 ; VGPRRC-NEXT:    s_waitcnt lgkmcnt(0)
-; VGPRRC-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; VGPRRC-NEXT:    v_mov_b32_e32 v0, s8
+; VGPRRC-NEXT:    v_mov_b32_e32 v1, s9
+; VGPRRC-NEXT:    v_mov_b32_e32 v2, s10
+; VGPRRC-NEXT:    v_mov_b32_e32 v3, s11
+; VGPRRC-NEXT:    v_mov_b32_e32 v4, s12
+; VGPRRC-NEXT:    v_mov_b32_e32 v5, s13
+; VGPRRC-NEXT:    v_mov_b32_e32 v6, s14
+; VGPRRC-NEXT:    v_mov_b32_e32 v7, s15
+; VGPRRC-NEXT:    v_mov_b32_e32 v8, s0
+; VGPRRC-NEXT:    v_mov_b32_e32 v9, s1
+; VGPRRC-NEXT:    v_mov_b32_e32 v10, s2
+; VGPRRC-NEXT:    v_mov_b32_e32 v11, s3
 ; VGPRRC-NEXT:    s_nop 1
 ; VGPRRC-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11]
 ; VGPRRC-NEXT:    s_nop 7
@@ -258,16 +276,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_f16_no_agpr__vgprcd__flags(ptr
 ; SDAG-LABEL: test_mfma_f32_16x16x32_f16_no_agpr__vgprcd__flags:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; SDAG-NEXT:    v_mov_b32_e32 v12, 0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; SDAG-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; SDAG-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; SDAG-NEXT:    v_mov_b32_e32 v0, s8
+; SDAG-NEXT:    v_mov_b32_e32 v1, s9
+; SDAG-NEXT:    v_mov_b32_e32 v2, s10
+; SDAG-NEXT:    v_mov_b32_e32 v3, s11
+; SDAG-NEXT:    v_mov_b32_e32 v4, s12
+; SDAG-NEXT:    v_mov_b32_e32 v5, s13
+; SDAG-NEXT:    v_mov_b32_e32 v6, s14
+; SDAG-NEXT:    v_mov_b32_e32 v7, s15
+; SDAG-NEXT:    v_mov_b32_e32 v8, s0
+; SDAG-NEXT:    v_mov_b32_e32 v9, s1
+; SDAG-NEXT:    v_mov_b32_e32 v10, s2
+; SDAG-NEXT:    v_mov_b32_e32 v11, s3
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
 ; SDAG-NEXT:    s_nop 7
@@ -296,16 +320,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_f16_no_agpr__vgprcd__flags(ptr
 ; HEURRC-LABEL: test_mfma_f32_16x16x32_f16_no_agpr__vgprcd__flags:
 ; HEURRC:       ; %bb.0:
 ; HEURRC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; HEURRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; HEURRC-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; HEURRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; HEURRC-NEXT:    v_mov_b32_e32 v12, 0
 ; HEURRC-NEXT:    s_waitcnt lgkmcnt(0)
-; HEURRC-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; HEURRC-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; HEURRC-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; HEURRC-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; HEURRC-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; HEURRC-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; HEURRC-NEXT:    v_mov_b32_e32 v0, s8
+; HEURRC-NEXT:    v_mov_b32_e32 v1, s9
+; HEURRC-NEXT:    v_mov_b32_e32 v2, s10
+; HEURRC-NEXT:    v_mov_b32_e32 v3, s11
+; HEURRC-NEXT:    v_mov_b32_e32 v4, s12
+; HEURRC-NEXT:    v_mov_b32_e32 v5, s13
+; HEURRC-NEXT:    v_mov_b32_e32 v6, s14
+; HEURRC-NEXT:    v_mov_b32_e32 v7, s15
+; HEURRC-NEXT:    v_mov_b32_e32 v8, s0
+; HEURRC-NEXT:    v_mov_b32_e32 v9, s1
+; HEURRC-NEXT:    v_mov_b32_e32 v10, s2
+; HEURRC-NEXT:    v_mov_b32_e32 v11, s3
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
 ; HEURRC-NEXT:    s_nop 7
@@ -315,16 +345,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_f16_no_agpr__vgprcd__flags(ptr
 ; VGPRRC-LABEL: test_mfma_f32_16x16x32_f16_no_agpr__vgprcd__flags:
 ; VGPRRC:       ; %bb.0:
 ; VGPRRC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; VGPRRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; VGPRRC-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; VGPRRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; VGPRRC-NEXT:    v_mov_b32_e32 v12, 0
 ; VGPRRC-NEXT:    s_waitcnt lgkmcnt(0)
-; VGPRRC-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; VGPRRC-NEXT:    v_mov_b32_e32 v0, s8
+; VGPRRC-NEXT:    v_mov_b32_e32 v1, s9
+; VGPRRC-NEXT:    v_mov_b32_e32 v2, s10
+; VGPRRC-NEXT:    v_mov_b32_e32 v3, s11
+; VGPRRC-NEXT:    v_mov_b32_e32 v4, s12
+; VGPRRC-NEXT:    v_mov_b32_e32 v5, s13
+; VGPRRC-NEXT:    v_mov_b32_e32 v6, s14
+; VGPRRC-NEXT:    v_mov_b32_e32 v7, s15
+; VGPRRC-NEXT:    v_mov_b32_e32 v8, s0
+; VGPRRC-NEXT:    v_mov_b32_e32 v9, s1
+; VGPRRC-NEXT:    v_mov_b32_e32 v10, s2
+; VGPRRC-NEXT:    v_mov_b32_e32 v11, s3
 ; VGPRRC-NEXT:    s_nop 1
 ; VGPRRC-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
 ; VGPRRC-NEXT:    s_nop 7
@@ -5459,16 +5495,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd(ptr addrs
 ; GCN-LABEL: test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; GCN-NEXT:    v_mov_b32_e32 v12, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; GCN-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; GCN-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; GCN-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; GCN-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; GCN-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s8
+; GCN-NEXT:    v_mov_b32_e32 v1, s9
+; GCN-NEXT:    v_mov_b32_e32 v2, s10
+; GCN-NEXT:    v_mov_b32_e32 v3, s11
+; GCN-NEXT:    v_mov_b32_e32 v4, s12
+; GCN-NEXT:    v_mov_b32_e32 v5, s13
+; GCN-NEXT:    v_mov_b32_e32 v6, s14
+; GCN-NEXT:    v_mov_b32_e32 v7, s15
+; GCN-NEXT:    v_mov_b32_e32 v8, s0
+; GCN-NEXT:    v_mov_b32_e32 v9, s1
+; GCN-NEXT:    v_mov_b32_e32 v10, s2
+; GCN-NEXT:    v_mov_b32_e32 v11, s3
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_mfma_f32_16x16x32_bf16 v[0:3], v[0:3], v[4:7], v[8:11]
 ; GCN-NEXT:    s_nop 7
@@ -5478,16 +5520,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd(ptr addrs
 ; HEURRC-LABEL: test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd:
 ; HEURRC:       ; %bb.0:
 ; HEURRC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; HEURRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; HEURRC-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; HEURRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; HEURRC-NEXT:    v_mov_b32_e32 v12, 0
 ; HEURRC-NEXT:    s_waitcnt lgkmcnt(0)
-; HEURRC-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; HEURRC-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; HEURRC-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; HEURRC-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; HEURRC-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; HEURRC-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; HEURRC-NEXT:    v_mov_b32_e32 v0, s8
+; HEURRC-NEXT:    v_mov_b32_e32 v1, s9
+; HEURRC-NEXT:    v_mov_b32_e32 v2, s10
+; HEURRC-NEXT:    v_mov_b32_e32 v3, s11
+; HEURRC-NEXT:    v_mov_b32_e32 v4, s12
+; HEURRC-NEXT:    v_mov_b32_e32 v5, s13
+; HEURRC-NEXT:    v_mov_b32_e32 v6, s14
+; HEURRC-NEXT:    v_mov_b32_e32 v7, s15
+; HEURRC-NEXT:    v_mov_b32_e32 v8, s0
+; HEURRC-NEXT:    v_mov_b32_e32 v9, s1
+; HEURRC-NEXT:    v_mov_b32_e32 v10, s2
+; HEURRC-NEXT:    v_mov_b32_e32 v11, s3
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_f32_16x16x32_bf16 v[0:3], v[0:3], v[4:7], v[8:11]
 ; HEURRC-NEXT:    s_nop 7
@@ -5497,16 +5545,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd(ptr addrs
 ; VGPRRC-LABEL: test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd:
 ; VGPRRC:       ; %bb.0:
 ; VGPRRC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; VGPRRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; VGPRRC-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; VGPRRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; VGPRRC-NEXT:    v_mov_b32_e32 v12, 0
 ; VGPRRC-NEXT:    s_waitcnt lgkmcnt(0)
-; VGPRRC-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; VGPRRC-NEXT:    v_mov_b32_e32 v0, s8
+; VGPRRC-NEXT:    v_mov_b32_e32 v1, s9
+; VGPRRC-NEXT:    v_mov_b32_e32 v2, s10
+; VGPRRC-NEXT:    v_mov_b32_e32 v3, s11
+; VGPRRC-NEXT:    v_mov_b32_e32 v4, s12
+; VGPRRC-NEXT:    v_mov_b32_e32 v5, s13
+; VGPRRC-NEXT:    v_mov_b32_e32 v6, s14
+; VGPRRC-NEXT:    v_mov_b32_e32 v7, s15
+; VGPRRC-NEXT:    v_mov_b32_e32 v8, s0
+; VGPRRC-NEXT:    v_mov_b32_e32 v9, s1
+; VGPRRC-NEXT:    v_mov_b32_e32 v10, s2
+; VGPRRC-NEXT:    v_mov_b32_e32 v11, s3
 ; VGPRRC-NEXT:    s_nop 1
 ; VGPRRC-NEXT:    v_mfma_f32_16x16x32_bf16 v[0:3], v[0:3], v[4:7], v[8:11]
 ; VGPRRC-NEXT:    s_nop 7
@@ -5559,16 +5613,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd__flags(pt
 ; GCN-LABEL: test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd__flags:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; GCN-NEXT:    v_mov_b32_e32 v12, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; GCN-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; GCN-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; GCN-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; GCN-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; GCN-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s8
+; GCN-NEXT:    v_mov_b32_e32 v1, s9
+; GCN-NEXT:    v_mov_b32_e32 v2, s10
+; GCN-NEXT:    v_mov_b32_e32 v3, s11
+; GCN-NEXT:    v_mov_b32_e32 v4, s12
+; GCN-NEXT:    v_mov_b32_e32 v5, s13
+; GCN-NEXT:    v_mov_b32_e32 v6, s14
+; GCN-NEXT:    v_mov_b32_e32 v7, s15
+; GCN-NEXT:    v_mov_b32_e32 v8, s0
+; GCN-NEXT:    v_mov_b32_e32 v9, s1
+; GCN-NEXT:    v_mov_b32_e32 v10, s2
+; GCN-NEXT:    v_mov_b32_e32 v11, s3
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_mfma_f32_16x16x32_bf16 v[0:3], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
 ; GCN-NEXT:    s_nop 7
@@ -5578,16 +5638,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd__flags(pt
 ; HEURRC-LABEL: test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd__flags:
 ; HEURRC:       ; %bb.0:
 ; HEURRC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; HEURRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; HEURRC-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; HEURRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; HEURRC-NEXT:    v_mov_b32_e32 v12, 0
 ; HEURRC-NEXT:    s_waitcnt lgkmcnt(0)
-; HEURRC-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; HEURRC-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; HEURRC-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; HEURRC-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; HEURRC-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; HEURRC-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; HEURRC-NEXT:    v_mov_b32_e32 v0, s8
+; HEURRC-NEXT:    v_mov_b32_e32 v1, s9
+; HEURRC-NEXT:    v_mov_b32_e32 v2, s10
+; HEURRC-NEXT:    v_mov_b32_e32 v3, s11
+; HEURRC-NEXT:    v_mov_b32_e32 v4, s12
+; HEURRC-NEXT:    v_mov_b32_e32 v5, s13
+; HEURRC-NEXT:    v_mov_b32_e32 v6, s14
+; HEURRC-NEXT:    v_mov_b32_e32 v7, s15
+; HEURRC-NEXT:    v_mov_b32_e32 v8, s0
+; HEURRC-NEXT:    v_mov_b32_e32 v9, s1
+; HEURRC-NEXT:    v_mov_b32_e32 v10, s2
+; HEURRC-NEXT:    v_mov_b32_e32 v11, s3
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_f32_16x16x32_bf16 v[0:3], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
 ; HEURRC-NEXT:    s_nop 7
@@ -5597,16 +5663,22 @@ define amdgpu_kernel void @test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd__flags(pt
 ; VGPRRC-LABEL: test_mfma_f32_16x16x32_bf16_no_agpr__vgprcd__flags:
 ; VGPRRC:       ; %bb.0:
 ; VGPRRC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x34
-; VGPRRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; VGPRRC-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; VGPRRC-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; VGPRRC-NEXT:    v_mov_b32_e32 v12, 0
 ; VGPRRC-NEXT:    s_waitcnt lgkmcnt(0)
-; VGPRRC-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[10:11], s[2:3]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
-; VGPRRC-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; VGPRRC-NEXT:    v_mov_b32_e32 v0, s8
+; VGPRRC-NEXT:    v_mov_b32_e32 v1, s9
+; VGPRRC-NEXT:    v_mov_b32_e32 v2, s10
+; VGPRRC-NEXT:    v_mov_b32_e32 v3, s11
+; VGPRRC-NEXT:    v_mov_b32_e32 v4, s12
+; VGPRRC-NEXT:    v_mov_b32_e32 v5, s13
+; VGPRRC-NEXT:    v_mov_b32_e32 v6, s14
+; VGPRRC-NEXT:    v_mov_b32_e32 v7, s15
+; VGPRRC-NEXT:    v_mov_b32_e32 v8, s0
+; VGPRRC-NEXT:    v_mov_b32_e32 v9, s1
+; VGPRRC-NEXT:    v_mov_b32_e32 v10, s2
+; VGPRRC-NEXT:    v_mov_b32_e32 v11, s3
 ; VGPRRC-NEXT:    s_nop 1
 ; VGPRRC-NEXT:    v_mfma_f32_16x16x32_bf16 v[0:3], v[0:3], v[4:7], v[8:11] cbsz:3 abid:2 blgp:1
 ; VGPRRC-NEXT:    s_nop 7
