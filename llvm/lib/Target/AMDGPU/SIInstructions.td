@@ -4402,6 +4402,21 @@ def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
 
+class D16LoadGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$addr);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_LOAD_D16_LO : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_LO_U8 : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_LO_I8 : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_HI : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_HI_U8 : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_HI_I8 : D16LoadGenericInstruction;
+
+
 class BufferStoreGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
