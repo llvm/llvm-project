@@ -1488,7 +1488,7 @@ struct OmpBlockConstructParser {
         auto end{maybe(OmpEndDirectiveParser{dir_}).Parse(state)};
         // Dereference outer optional (maybe() always succeeds) and look at the
         // inner optional.
-        bool endPresent = end->has_value();
+        bool endPresent{end->has_value()};
 
         // ORDERED is special. We do need to return failure here so that the
         // standalone ORDERED construct can be distinguished from the block
