@@ -1818,7 +1818,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
 
   if (auto *SM = dyn_cast<SCEVMulExpr>(Op)) {
     // zext((A * B * ...)<nuw>) --> (zext(A) * zext(B) * ...)<nuw>
-    if (SM->hasNoUnsignedWrap() /*|| getUnsignedRange(SM->getOperand(0)).unsignedMulMayOverflow(getUnsignedRange()) ==ConstantRange::OverflowResult::NeverOverflows*/) {
+    if (SM->hasNoUnsignedWrap()) {
       // If the multiply does not unsign overflow then we can, by definition,
       // commute the zero extension with the multiply operation.
       SmallVector<const SCEV *, 4> Ops;
@@ -3200,7 +3200,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
         }
       }
 
-      // Try to push the constant operand into a ZExt: C + zext (A + B) ->
+      // Try to push the constant operand into a ZExt: C * zext (A + B) ->
       // zext (C*A + C*B) if trunc (C) * (A + B)  does not unsigned-wrap.
       const SCEVAddExpr *InnerAdd;
       if (match(Ops[1], m_scev_ZExt(m_scev_Add(InnerAdd)))) {
@@ -3210,8 +3210,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
             hasFlags(StrengthenNoWrapFlags(this, scMulExpr, {NarrowC, InnerAdd},
                                            SCEV::FlagAnyWrap),
                      SCEV::FlagNUW)) {
-          auto *Res =
-              getMulExpr(NarrowC, InnerAdd, SCEV::FlagAnyWrap, Depth + 1);
+          auto *Res = getMulExpr(NarrowC, InnerAdd, SCEV::FlagNUW, Depth + 1);
           return getZeroExtendExpr(Res, Ops[1]->getType(), Depth + 1);
         };
       }
