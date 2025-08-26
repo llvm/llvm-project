@@ -784,6 +784,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
   }
 };
 
+// This pattern distributes the vector.step ops to work at subgroup level
 struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
   using OpConversionPattern<vector::StepOp>::OpConversionPattern;
   LogicalResult
@@ -845,8 +846,17 @@ struct WgToSgVectorShapeCastOp
       return failure();
 
     ArrayRef<int64_t> wgShape = resultType.getShape();
-    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
-    if (!layout || !layout.getSgLayout())
+    auto layoutName = xegpu::getLayoutName(op->getResult(0));
+    auto attr = op->getAttr(layoutName);
+
+    xegpu::DistributeLayoutAttr layout = nullptr;
+    if (auto trySlice = dyn_cast_if_present<xegpu::SliceAttr>(attr)) {
+      layout = trySlice;
+    } else if (auto tryLayout = dyn_cast_if_present<xegpu::LayoutAttr>(attr)) {
+      layout = tryLayout;
+    }
+
+    if (!layout)
       return failure();
 
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
@@ -857,13 +867,16 @@ struct WgToSgVectorShapeCastOp
     for (auto src : adaptor.getSource()) {
       auto newShapeCast =
           rewriter.create<vector::ShapeCastOp>(op.getLoc(), newResultType, src);
-      xegpu::setLayoutAttr(newShapeCast->getResult(0),
-                           layout.dropSgLayoutAndData());
-      newShapeCastOps.push_back(newShapeCast.getResult());
-    }
+      if (auto layoutAttr = dyn_cast<xegpu::LayoutAttr>(layout)) {
+        if (auto newLayout = layoutAttr.dropSgLayoutAndData()) {
+          xegpu::setLayoutAttr(newShapeCast->getResult(0), newLayout);
+        }
+        newShapeCastOps.push_back(newShapeCast.getResult());
+      }
 
-    rewriter.replaceOpWithMultiple(op, {newShapeCastOps});
-    return success();
+      rewriter.replaceOpWithMultiple(op, {newShapeCastOps});
+      return success();
+    }
   }
 };
 
@@ -1065,28 +1078,24 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
         return true;
       });
 
-  target.addDynamicallyLegalOp<vector::StepOp>([&](vector::StepOp op) -> bool {
-    // Check for either a SliceAttr or LayoutAttr on the result.
-    auto layoutName = xegpu::getLayoutName(op->getResult(0));
-    auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
-    if (sliceAttr)
-      return isLegal(sliceAttr);
+  target.addDynamicallyLegalOp<vector::ShapeCastOp, vector::StepOp>(
+      [=](Operation *op) -> bool {
+        // Check for either a SliceAttr or LayoutAttr on the result.
+        auto layoutName = xegpu::getLayoutName(op->getResult(0));
+        auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
+        if (sliceAttr)
+          return isLegal(sliceAttr);
 
-    auto layoutAttr = op->getAttrOfType<xegpu::LayoutAttr>(layoutName);
-    if (layoutAttr)
-      return isLegal(layoutAttr);
+        auto layoutAttr = op->getAttrOfType<xegpu::LayoutAttr>(layoutName);
+        if (layoutAttr)
+          return isLegal(layoutAttr);
 
-    // If neither attribute is present, consider the op legal.
-    return true;
-  });
+        // If neither attribute is present, consider the op legal.
+        return true;
+      });
 
   target.addDynamicallyLegalOp<vector::BroadcastOp>(
       [=](vector::BroadcastOp op) -> bool {
-        return isLegal(xegpu::getLayoutAttr(op.getResult()));
-      });
-
-  target.addDynamicallyLegalOp<vector::ShapeCastOp>(
-      [=](vector::ShapeCastOp op) -> bool {
         return isLegal(xegpu::getLayoutAttr(op.getResult()));
       });
 
