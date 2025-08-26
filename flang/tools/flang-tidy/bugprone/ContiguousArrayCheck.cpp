@@ -30,7 +30,9 @@ void ContiguousArrayCheck::CheckForContinguousArray(
         if (const auto *details{
                 dummyArg->detailsIf<semantics::ObjectEntityDetails>()};
             details && details->IsAssumedShape() &&
-            !dummyArg->attrs().test(semantics::Attr::CONTIGUOUS)) {
+            !dummyArg->attrs().test(semantics::Attr::CONTIGUOUS) &&
+            !dummyArg->attrs().HasAny(
+                {semantics::Attr::POINTER, semantics::Attr::ALLOCATABLE})) {
           const auto dummySymbol{dummyArg->GetUltimate()};
           Say(dummySymbol.name(),
               "assumed-shape array '%s' should be contiguous"_warn_en_US,
