@@ -1005,10 +1005,8 @@ AArch64ExpandPseudo::expandConditionalPseudo(MachineBasicBlock &MBB,
                                              MachineBasicBlock::iterator MBBI,
                                              DebugLoc DL,
                                              MachineInstrBuilder &Branch) {
-  MachineInstr &MI = *MBBI;
   assert((std::next(MBBI) != MBB.end() ||
-          MI.getParent()->successors().begin() !=
-              MI.getParent()->successors().end()) &&
+          MBB.successors().begin() != MBB.successors().end()) &&
          "Unexpected unreachable in block");
 
   // Split MBB and create two new blocks:
@@ -1017,9 +1015,10 @@ AArch64ExpandPseudo::expandConditionalPseudo(MachineBasicBlock &MBB,
   //  - EndBB contains all instructions after the conditional pseudo.
   MachineInstr &PrevMI = *std::prev(MBBI);
   MachineBasicBlock *CondBB = MBB.splitAt(PrevMI, /*UpdateLiveIns*/ true);
-  MachineBasicBlock *EndBB = std::next(MI.getIterator()) == CondBB->end()
-                                 ? *CondBB->successors().begin()
-                                 : CondBB->splitAt(MI, /*UpdateLiveIns*/ true);
+  MachineBasicBlock *EndBB =
+      std::next(MBBI) == CondBB->end()
+          ? *CondBB->successors().begin()
+          : CondBB->splitAt(*MBBI, /*UpdateLiveIns*/ true);
 
   // Add the SMBB label to the branch instruction & create a branch to EndBB.
   Branch.addMBB(CondBB);
@@ -1064,8 +1063,6 @@ AArch64ExpandPseudo::expandCommitZASave(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
-  [[maybe_unused]] auto *TRI =
-      MBB.getParent()->getSubtarget().getRegisterInfo();
 
   // Compare TPIDR2_EL0 against 0. Commit ZA if TPIDR2_EL0 is non-zero.
   MachineInstrBuilder Branch =
@@ -1084,6 +1081,8 @@ AArch64ExpandPseudo::expandCommitZASave(MachineBasicBlock &MBB,
       .addReg(AArch64::XZR);
   bool ZeroZA = MI.getOperand(1).getImm() != 0;
   if (ZeroZA) {
+    [[maybe_unused]] auto *TRI =
+        MBB.getParent()->getSubtarget().getRegisterInfo();
     assert(MI.definesRegister(AArch64::ZAB0, TRI) && "should define ZA!");
     BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::ZERO_M))
         .addImm(ZERO_ALL_ZA_MASK)
