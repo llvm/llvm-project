@@ -1516,42 +1516,36 @@ FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
 bool mlir::isPerfectlyNestedForLoops(
     MutableArrayRef<LoopLikeOpInterface> loops) {
   assert(!loops.empty() && "unexpected empty loop nest");
-  if (loops.size() == 1) {
+  if (loops.size() == 1)
     return isa_and_nonnull<scf::ForOp>(loops.front().getOperation());
-  }
   for (auto [outerLoop, innerLoop] :
        llvm::zip_equal(loops.drop_back(), loops.drop_front())) {
     auto outerFor = dyn_cast_or_null<scf::ForOp>(outerLoop.getOperation());
     auto innerFor = dyn_cast_or_null<scf::ForOp>(innerLoop.getOperation());
-    if (!outerFor || !innerFor) {
+    if (!outerFor || !innerFor)
       return false;
-    }
     auto outerBBArgs = outerFor.getRegionIterArgs();
     auto innerIterArgs = innerFor.getInitArgs();
-    if (outerBBArgs.size() != innerIterArgs.size()) {
+    if (outerBBArgs.size() != innerIterArgs.size())
       return false;
-    }
 
     for (auto [outerBBArg, innerIterArg] :
          llvm::zip_equal(outerBBArgs, innerIterArgs)) {
       if (!llvm::hasSingleElement(outerBBArg.getUses()) ||
-          innerIterArg != outerBBArg) {
+          innerIterArg != outerBBArg)
         return false;
-      }
     }
 
     ValueRange outerYields =
         cast<scf::YieldOp>(outerFor.getBody()->getTerminator())->getOperands();
     ValueRange innerResults = innerFor.getResults();
-    if (outerYields.size() != innerResults.size()) {
+    if (outerYields.size() != innerResults.size())
       return false;
-    }
     for (auto [outerYield, innerResult] :
          llvm::zip_equal(outerYields, innerResults)) {
       if (!llvm::hasSingleElement(innerResult.getUses()) ||
-          outerYield != innerResult) {
+          outerYield != innerResult)
         return false;
-      }
     }
   }
   return true;

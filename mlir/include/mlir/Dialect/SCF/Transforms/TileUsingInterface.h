@@ -364,14 +364,6 @@ FailureOr<scf::SCFTilingResult>
 tileReductionUsingScf(RewriterBase &b, PartialReductionOpInterface op,
                       ArrayRef<OpFoldResult> tileSizes);
 
-/// Check if the provided loops are perfectly nested for-loops. Perfect nesting
-/// means:
-/// 1. All loops are scf.for operations
-/// 2. Each outer loop's region iter args match the inner loop's init args
-/// 3. Each outer loop's yields match the inner loop's results
-/// 4. Each region iter arg and result has exactly one use
-bool isPerfectlyNestedForLoops(MutableArrayRef<LoopLikeOpInterface> loops);
-
 } // namespace scf
 } // namespace mlir
 
