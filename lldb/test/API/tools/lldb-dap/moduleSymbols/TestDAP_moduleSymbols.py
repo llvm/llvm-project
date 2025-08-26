@@ -3,9 +3,12 @@ Test lldb-dap moduleSymbols request
 """
 
 import lldbdap_testcase
+from lldbsuite.test.decorators import *
 
 
 class TestDAP_moduleSymbols(lldbdap_testcase.DAPTestCaseBase):
+    # On windows LLDB doesn't recognize symbols in a.out.
+    @skipIfWindows
     def test_moduleSymbols(self):
         """
         Test that the moduleSymbols request returns correct symbols from the module.

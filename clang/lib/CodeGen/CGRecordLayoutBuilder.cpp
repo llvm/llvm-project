@@ -1027,8 +1027,11 @@ void CGRecordLowering::fillOutputFields() {
       if (Member.FD)
         Fields[Member.FD->getCanonicalDecl()] = FieldTypes.size() - 1;
       // A field without storage must be a bitfield.
-      if (!Member.Data)
+      if (!Member.Data) {
+        assert(Member.FD &&
+               "Member.Data is a nullptr so Member.FD should not be");
         setBitFieldInfo(Member.FD, Member.Offset, FieldTypes.back());
+      }
     } else if (Member.Kind == MemberInfo::Base)
       NonVirtualBases[Member.RD] = FieldTypes.size() - 1;
     else if (Member.Kind == MemberInfo::VBase)
