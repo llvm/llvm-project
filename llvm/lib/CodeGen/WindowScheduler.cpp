@@ -36,6 +36,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/WindowScheduler.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"

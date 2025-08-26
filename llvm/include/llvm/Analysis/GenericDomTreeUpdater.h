@@ -15,7 +15,7 @@
 #define LLVM_ANALYSIS_GENERICDOMTREEUPDATER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {

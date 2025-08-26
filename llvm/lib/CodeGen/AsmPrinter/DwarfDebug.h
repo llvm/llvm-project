@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 
+#include <set>
 #include "AddressPool.h"
 #include "DebugLocEntry.h"
 #include "DebugLocStream.h"

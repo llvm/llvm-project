@@ -51,7 +51,6 @@
 #define LLVM_TRANSFORMS_UTILS_PREDICATEINFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"

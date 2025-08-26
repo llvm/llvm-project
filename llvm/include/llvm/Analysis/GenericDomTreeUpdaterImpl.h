@@ -17,6 +17,7 @@
 #define LLVM_ANALYSIS_GENERICDOMTREEUPDATERIMPL_H
 
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/GenericDomTreeUpdater.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"

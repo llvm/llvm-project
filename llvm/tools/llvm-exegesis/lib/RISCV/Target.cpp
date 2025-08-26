@@ -18,6 +18,7 @@
 #include "RISCVExegesisPasses.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVRegisterInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 

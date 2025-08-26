@@ -17,6 +17,7 @@
 #include "DwarfExpression.h"
 #include "DwarfUnit.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
