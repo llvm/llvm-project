@@ -14043,21 +14043,28 @@ static QualType getCommonElementType(const ASTContext &Ctx, const T *X,
   return Ctx.getCommonSugaredType(X->getElementType(), Y->getElementType());
 }
 
-template <class T>
-static QualType getCommonArrayElementType(const ASTContext &Ctx, const T *X,
-                                          Qualifiers &QX, const T *Y,
-                                          Qualifiers &QY) {
-  QualType EX = X->getElementType(), EY = Y->getElementType();
-  QualType R = Ctx.getCommonSugaredType(EX, EY,
+static QualType getCommonTypeWithQualifierLifting(const ASTContext &Ctx,
+                                                  QualType X, QualType Y,
+                                                  Qualifiers &QX,
+                                                  Qualifiers &QY) {
+  QualType R = Ctx.getCommonSugaredType(X, Y,
                                         /*Unqualified=*/true);
   // Qualifiers common to both element types.
   Qualifiers RQ = R.getQualifiers();
   // For each side, move to the top level any qualifiers which are not common to
   // both element types. The caller must assume top level qualifiers might
   // be different, even if they are the same type, and can be treated as sugar.
-  QX += EX.getQualifiers() - RQ;
-  QY += EY.getQualifiers() - RQ;
+  QX += X.getQualifiers() - RQ;
+  QY += Y.getQualifiers() - RQ;
   return R;
+}
+
+template <class T>
+static QualType getCommonArrayElementType(const ASTContext &Ctx, const T *X,
+                                          Qualifiers &QX, const T *Y,
+                                          Qualifiers &QY) {
+  return getCommonTypeWithQualifierLifting(Ctx, X->getElementType(),
+                                           Y->getElementType(), QX, QY);
 }
 
 template <class T>
@@ -14462,8 +14469,8 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     assert(NX->getBehaviorKind() == NY->getBehaviorKind());
     return Ctx.getOverflowBehaviorType(
         NX->getBehaviorKind(),
-        getCommonNonSugarTypeNode(Ctx, NX->getUnderlyingType().getTypePtr(), QX,
-                                  NY->getUnderlyingType().getTypePtr(), QY));
+        getCommonTypeWithQualifierLifting(Ctx, NX->getUnderlyingType(),
+                                          NY->getUnderlyingType(), QX, QY));
   }
   case Type::DependentTemplateSpecialization: {
     const auto *TX = cast<DependentTemplateSpecializationType>(X),
@@ -14814,7 +14821,8 @@ QualType ASTContext::getCommonSugaredType(QualType X, QualType Y,
   // The desired behaviour is the same as for the 'Unqualified' case here:
   // treat the redundant qualifiers as sugar, remove the ones which are not
   // common to both sides.
-  bool KeepCommonQualifiers = Unqualified || isa<ArrayType>(SX.Ty);
+  bool KeepCommonQualifiers =
+      Unqualified || isa<ArrayType, OverflowBehaviorType>(SX.Ty);
 
   if (SX.Ty != SY.Ty) {
     // The canonical nodes differ. Build a common canonical node out of the two,
