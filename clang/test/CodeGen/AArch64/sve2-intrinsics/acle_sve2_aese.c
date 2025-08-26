@@ -23,7 +23,7 @@
 #if defined(__ARM_FEATURE_SME)
 #define MODE_ATTR __arm_streaming
 #else
-#define MODE_ATTR
+#define STREAMING
 #endif
 
 // CHECK-LABEL: @test_svaese_u8(
@@ -36,7 +36,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.aese(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svuint8_t test_svaese_u8(svuint8_t op1, svuint8_t op2) MODE_ATTR
+svuint8_t test_svaese_u8(svuint8_t op1, svuint8_t op2) STREAMING
 {
   return SVE_ACLE_FUNC(svaese,_u8,,)(op1, op2);
 }
