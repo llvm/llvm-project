@@ -599,9 +599,6 @@ protected:
   /// Trip count of the original loop.
   Value *TripCount = nullptr;
 
-  /// Trip count of the widened loop (TripCount - TripCount % (VF*UF))
-  Value *VectorTripCount = nullptr;
-
   /// The profitablity analysis.
   LoopVectorizationCostModel *Cost;
 
