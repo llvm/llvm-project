@@ -307,7 +307,6 @@ def ptxas_supported_isa_versions(ptxas):
         [ptxas, "--list-version"],
         capture_output=True,
         text=True,
-        check=True,
     )
     versions = []
     for line in result.stdout.splitlines():
