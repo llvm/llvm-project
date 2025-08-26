@@ -208,23 +208,36 @@ LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 llvm::Expected<StringRef>
 ArgList::getSubcommand(const ArrayRef<OptTable::Command> Commands) const {
   // Identify if a valid subcommand is passed.
+  StringRef SubCommand = {};
   for (const Arg *A : *this) {
     if (A->getOption().getKind() == Option::InputClass) {
       assert(!StringRef(A->getValue()).empty());
       for (auto CMD : Commands) {
         if (StringRef(CMD.Name) == "TopLevelCommand")
           continue;
-        if (StringRef(CMD.Name) == A->getValue())
-          return A->getValue(); // Found a valid subcommand.
+        if (StringRef(CMD.Name) == A->getValue()) {
+          // Found a valid subcommand.
+          if (SubCommand.empty()) {
+            SubCommand = A->getValue();
+          } else {
+            SmallString<20> SubCommandsList;
+            SubCommandsList += SubCommand;
+            SubCommandsList += ",";
+            SubCommandsList += A->getValue();
+            // More than one subcommand passed in commandline.
+            return llvm::createStringError(std::errc::invalid_argument,
+                                           SubCommandsList.c_str());
+          }
+        }
       }
-      // Invalid/Unexpected subcommand passed. Let the users handle this case as
-      // they see fit.
-      return llvm::createStringError(std::errc::invalid_argument,
-                                     A->getValue());
+      if (SubCommand.empty()) {
+        // TODO:: Return a different error for unknown subcommand
+        return llvm::createStringError(std::errc::invalid_argument,
+                                       A->getValue());
+      }
     }
   }
-  // No registered subcommand found.
-  return StringRef();
+  return SubCommand;
 }
 
 void InputArgList::releaseMemory() {

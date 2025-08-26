@@ -57,9 +57,9 @@ int main(int argc, char **argv) {
 
   auto SubcommandResult = Args.getSubcommand(T.getCommands());
   if (!SubcommandResult) {
-    llvm::errs() << "error: unknown subcommand '"
+    llvm::errs() << "error: more than one subcommand passed ["
                  << toString(SubcommandResult.takeError())
-                 << "'. See --help.\n";
+                 << "]. See --help.\n";
     return 1;
   }
   // Valid subcommand found.
