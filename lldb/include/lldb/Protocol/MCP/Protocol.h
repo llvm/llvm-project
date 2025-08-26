@@ -31,9 +31,6 @@ static llvm::StringLiteral kProtocolVersion = "2024-11-05";
 using Id = std::variant<int64_t, std::string>;
 
 /// A request that expects a response.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#jsonrpcrequest
 struct Request {
   /// The request id.
   Id id = 0;
@@ -60,8 +57,6 @@ enum ErrorCode : signed {
   eErrorCodeInternalError = -32603,
 };
 
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#jsonrpcerror
 struct Error {
   /// The error type that occurred.
   int64_t code = 0;
@@ -78,9 +73,6 @@ bool fromJSON(const llvm::json::Value &, Error &, llvm::json::Path);
 bool operator==(const Error &, const Error &);
 
 /// A response to a request, either an error or a result.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#jsonrpcrequest
 struct Response {
   /// The request id.
   Id id = 0;
@@ -93,8 +85,6 @@ bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 bool operator==(const Response &, const Response &);
 
 /// A notification which does not expect a response.
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#jsonrpcnotification
 struct Notification {
   /// The method to be invoked.
   std::string method;
@@ -115,8 +105,6 @@ bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
 
 /// A known resource that the server is capable of reading.
-///
-/// See https://modelcontextprotocol.io/specification/2025-06-18/schema#resource
 struct Resource {
   /// The URI of this resource.
   std::string uri;
@@ -135,9 +123,6 @@ llvm::json::Value toJSON(const Resource &);
 bool fromJSON(const llvm::json::Value &, Resource &, llvm::json::Path);
 
 /// The server’s response to a resources/list request from the client.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#listresourcesresult
 struct ListResourcesResult {
   std::vector<Resource> resources;
 };
@@ -163,9 +148,6 @@ bool fromJSON(const llvm::json::Value &, TextResourceContents &,
               llvm::json::Path);
 
 /// Sent from the client to the server, to read a specific resource URI.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#readresourcerequest
 struct ReadResourceParams {
   /// The URI of the resource to read. The URI can use any protocol; it is up to
   /// the server how to interpret it.
@@ -184,9 +166,6 @@ bool fromJSON(const llvm::json::Value &, ReadResourceResult &,
               llvm::json::Path);
 
 /// Text provided to or from an LLM.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#textcontent
 struct TextContent {
   /// The text content of the message.
   std::string text;
@@ -195,8 +174,6 @@ llvm::json::Value toJSON(const TextContent &);
 bool fromJSON(const llvm::json::Value &, TextContent &, llvm::json::Path);
 
 /// Definition for a tool the client can call.
-///
-/// See https://modelcontextprotocol.io/specification/2025-06-18/schema#tool
 struct ToolDefinition {
   /// Unique identifier for the tool.
   std::string name;
@@ -214,9 +191,6 @@ using ToolArguments = std::variant<std::monostate, llvm::json::Value>;
 
 /// Describes the name and version of an MCP implementation, with an optional
 /// title for UI representation.
-///
-/// see
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#implementation
 struct Implementation {
   /// Intended for programmatic or logical use, but used as a display name in
   /// past specs or fallback (if title isn’t present).
@@ -239,9 +213,6 @@ bool fromJSON(const llvm::json::Value &, Implementation &, llvm::json::Path);
 /// Capabilities a client may support. Known capabilities are defined here, in
 /// this schema, but this is not a closed set: any client can define its own,
 /// additional capabilities.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#clientcapabilities
 struct ClientCapabilities {};
 llvm::json::Value toJSON(const ClientCapabilities &);
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
@@ -250,9 +221,6 @@ bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
 /// Capabilities that a server may support. Known capabilities are defined here,
 /// in this schema, but this is not a closed set: any server can define its own,
 /// additional capabilities.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#servercapabilities
 struct ServerCapabilities {
   bool supportsToolsList = false;
   bool supportsResourcesList = false;
@@ -270,9 +238,6 @@ bool fromJSON(const llvm::json::Value &, ServerCapabilities &,
 
 /// This request is sent from the client to the server when it first connects,
 /// asking it to begin initialization.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#initializerequest
 struct InitializeParams {
   /// The latest version of the Model Context Protocol that the client supports.
   /// The client MAY decide to support older versions as well.
@@ -287,9 +252,6 @@ bool fromJSON(const llvm::json::Value &, InitializeParams &, llvm::json::Path);
 
 /// After receiving an initialize request from the client, the server sends this
 /// response.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#initializeresult
 struct InitializeResult {
   /// The version of the Model Context Protocol that the server wants to use.
   /// This may not match the version that the client requested. If the client
@@ -315,9 +277,6 @@ llvm::json::Value toJSON(const Void &);
 bool fromJSON(const llvm::json::Value &, Void &, llvm::json::Path);
 
 /// The server's response to a `tools/list` request from the client.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#listtoolsresult
 struct ListToolsResult {
   std::vector<ToolDefinition> tools;
 };
@@ -337,9 +296,6 @@ llvm::json::Value toJSON(const CallToolParams &);
 bool fromJSON(const llvm::json::Value &, CallToolParams &, llvm::json::Path);
 
 /// The server’s response to a tool call.
-///
-/// See
-/// https://modelcontextprotocol.io/specification/2025-06-18/schema#calltoolresult
 struct CallToolResult {
   /// A list of content objects that represent the unstructured result of the
   /// tool call.
