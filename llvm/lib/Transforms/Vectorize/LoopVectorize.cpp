@@ -4286,6 +4286,25 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           if (!VPI)
             continue;
           switch (VPI->getOpcode()) {
+          // Selects are only modelled in the legacy cost model for safe
+          // divisors.
+          case Instruction::Select: {
+            VPValue *VPV = VPI->getVPSingleValue();
+            if (VPV->getNumUsers() == 1) {
+              if (auto *WR = dyn_cast<VPWidenRecipe>(*VPV->user_begin())) {
+                switch (WR->getOpcode()) {
+                case Instruction::UDiv:
+                case Instruction::SDiv:
+                case Instruction::URem:
+                case Instruction::SRem:
+                  continue;
+                default:
+                  break;
+                }
+              }
+            }
+            [[fallthrough]];
+          }
           case VPInstruction::ActiveLaneMask:
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
@@ -6765,9 +6784,10 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
 InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
                                              ElementCount VF) const {
-  if (ForceTargetInstructionCost.getNumOccurrences())
-    return InstructionCost(ForceTargetInstructionCost.getNumOccurrences());
-  return CM.getInstructionCost(UI, VF);
+  InstructionCost Cost = CM.getInstructionCost(UI, VF);
+  if (Cost.isValid() && ForceTargetInstructionCost.getNumOccurrences())
+    return InstructionCost(ForceTargetInstructionCost);
+  return Cost;
 }
 
 bool VPCostContext::isLegacyUniformAfterVectorization(Instruction *I,
@@ -7002,12 +7022,12 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
-        if (auto *WidenCmp = dyn_cast<VPWidenRecipe>(&R)) {
-          if ((WidenCmp->getOpcode() == Instruction::ICmp ||
-               WidenCmp->getOpcode() == Instruction::FCmp) &&
-              WidenCmp->getPredicate() != cast<CmpInst>(UI)->getPredicate())
-            return true;
-        }
+        using namespace VPlanPatternMatch;
+        CmpPredicate Pred;
+        if (match(&R, m_Cmp(Pred, m_VPValue(), m_VPValue())) &&
+            cast<VPRecipeWithIRFlags>(R).getPredicate() !=
+                cast<CmpInst>(UI)->getPredicate())
+          return true;
         SeenInstrs.insert(UI);
       }
     }
@@ -7306,6 +7326,16 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::simplifyRecipes(BestVPlan);
 
+  // 0. Generate SCEV-dependent code in the entry, including TripCount, before
+  // making any changes to the CFG.
+  DenseMap<const SCEV *, Value *> ExpandedSCEVs =
+      VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
+  if (!ILV.getTripCount())
+    ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
+  else
+    assert(VectorizingEpilogue && "should only re-use the existing trip "
+                                  "count during epilogue vectorization");
+
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
@@ -7314,30 +7344,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 #endif
-
-  // 0. Generate SCEV-dependent code in the entry, including TripCount, before
-  // making any changes to the CFG.
-  DenseMap<const SCEV *, Value *> ExpandedSCEVs;
-  auto *Entry = cast<VPIRBasicBlock>(BestVPlan.getEntry());
-  State.Builder.SetInsertPoint(Entry->getIRBasicBlock()->getTerminator());
-  for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
-    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpSCEV)
-      continue;
-    ExpSCEV->execute(State);
-    ExpandedSCEVs[ExpSCEV->getSCEV()] = State.get(ExpSCEV, VPLane(0));
-    VPValue *Exp = BestVPlan.getOrAddLiveIn(ExpandedSCEVs[ExpSCEV->getSCEV()]);
-    ExpSCEV->replaceAllUsesWith(Exp);
-    if (BestVPlan.getTripCount() == ExpSCEV)
-      BestVPlan.resetTripCount(Exp);
-    ExpSCEV->eraseFromParent();
-  }
-
-  if (!ILV.getTripCount())
-    ILV.setTripCount(State.get(BestVPlan.getTripCount(), VPLane(0)));
-  else
-    assert(VectorizingEpilogue && "should only re-use the existing trip "
-                                  "count during epilogue vectorization");
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
@@ -7776,7 +7782,7 @@ createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
          "step must be loop invariant");
 
   VPValue *Step =
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep(), SE);
+      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
   if (auto *TruncI = dyn_cast<TruncInst>(PhiOrTrunc)) {
     return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
                                              IndDesc, TruncI,
@@ -7798,8 +7804,7 @@ VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
 
   // Check if this is pointer induction. If so, build the recipe for it.
   if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
-    VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep(),
-                                                           *PSE.getSE());
+    VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
     return new VPWidenPointerInductionRecipe(
         Phi, Operands[0], Step, &Plan.getVFxUF(), *II,
         LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -8614,8 +8619,7 @@ static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
     // the VPIRInstruction modeling the phi.
     for (VPUser *U : FOR->users()) {
       using namespace llvm::VPlanPatternMatch;
-      if (!match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                        m_Specific(FOR))))
+      if (!match(U, m_ExtractLastElement(m_Specific(FOR))))
         continue;
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
       // penultimate value of the recurrence. Instead we rely on the existing
@@ -8650,13 +8654,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit(),
-                                    Range);
+  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
 
   VPlanTransforms::createLoopRegions(*Plan);
-  VPlanTransforms::createExtractsForLiveOuts(*Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8925,7 +8927,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
                                        WithoutRuntimeCheck);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues);
+  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, *PSE.getSE());
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -8943,7 +8945,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
   VPlanTransforms::handleEarlyExits(*Plan,
-                                    /*HasUncountableExit*/ false, Range);
+                                    /*HasUncountableExit*/ false);
   VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
                                   /*TailFolded*/ false);
 
@@ -8957,7 +8959,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
           [this](PHINode *P) {
             return Legal->getIntOrFpInductionDescriptor(P);
           },
-          *PSE.getSE(), *TLI))
+          *TLI))
     return nullptr;
 
   // Collect mapping of IR header phis to header phi recipes, to be used in
@@ -9258,8 +9260,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                       m_VPValue())))
+      if (match(U, m_ExtractLastElement(m_VPValue())))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 

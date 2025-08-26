@@ -225,9 +225,9 @@ protected:
 
   // Auxiliary function to calculate the number of iterations for a comparison
   // instruction or a binary operator.
-  PeelCounter mergeTwoCounter(const Instruction &CmpOrBinaryOp,
-                              const PeelCounterValue &LHS,
-                              const PeelCounterValue &RHS) const;
+  PeelCounter mergeTwoCounters(const Instruction &CmpOrBinaryOp,
+                               const PeelCounterValue &LHS,
+                               const PeelCounterValue &RHS) const;
 
   // Returns true if the \p Phi is an induction in the target loop. This is a
   // lightweight check and possible to detect an IV in some cases.
@@ -269,14 +269,12 @@ bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
       break;
 
     // Avoid infinite loop.
-    if (Visited.contains(Cur))
+    if (!Visited.insert(Cur).second)
       return false;
 
     auto *I = dyn_cast<Instruction>(Cur);
     if (!I || !L.contains(I))
       return false;
-
-    Visited.insert(Cur);
 
     if (auto *Cast = dyn_cast<CastInst>(I)) {
       Cur = Cast->getOperand(0);
@@ -300,14 +298,14 @@ bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
 
 /// When either \p LHS or \p RHS is an IV, the result of \p CmpOrBinaryOp is
 /// considered an IV only if it is an addition or a subtraction. Otherwise the
-/// result can be a value that is neither an loop-invariant nor an IV.
+/// result can be a value that is neither a loop-invariant nor an IV.
 ///
 /// If both \p LHS and \p RHS are loop-invariants, then the result of
 /// \CmpOrBinaryOp is also a loop-invariant.
 PhiAnalyzer::PeelCounter
-PhiAnalyzer::mergeTwoCounter(const Instruction &CmpOrBinaryOp,
-                             const PeelCounterValue &LHS,
-                             const PeelCounterValue &RHS) const {
+PhiAnalyzer::mergeTwoCounters(const Instruction &CmpOrBinaryOp,
+                              const PeelCounterValue &LHS,
+                              const PeelCounterValue &RHS) const {
   auto &[LVal, LTy] = LHS;
   auto &[RVal, RTy] = RHS;
   unsigned NewVal = std::max(LVal, RVal);
@@ -380,7 +378,7 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
       if (RHS == Unknown)
         return Unknown;
       return (IterationsToInvarianceOrInduction[I] =
-                  mergeTwoCounter(*I, *LHS, *RHS));
+                  mergeTwoCounters(*I, *LHS, *RHS));
     }
     if (I->isCast())
       // Cast instructions get the value of the operand.

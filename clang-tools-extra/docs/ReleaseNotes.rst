@@ -104,6 +104,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- The :program:`check_clang_tidy.py` tool now recognizes the ``-std`` argument
+  when run over C files. If ``-std`` is not specified, it defaults to
+  ``c99-or-later``.
+
 - :program:`clang-tidy` no longer attemps to analyze code from system headers
   by default, greatly improving performance. This behavior is disabled if the
   `SystemHeaders` option is enabled.
@@ -130,6 +134,13 @@ New checks
 
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
+
+- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
+  check.
+
+  Finds calls to ``operator[]`` in STL containers and suggests replacing them
+  with safe alternatives.
 
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
@@ -159,7 +170,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
-  declarations in system headers.
+  declarations and macros in system headers.
 
 - Improved :doc:`bugprone-signed-char-misuse
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
@@ -180,8 +191,18 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   avoid false positives on inherited members in class templates.
 
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check
+  adding an option to allow pointer arithmetic via prefix/postfix increment or
+  decrement operators.
+
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
+- Improved :doc:`modernize-use-constraints
+  <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
+  uses of non-standard ``enable_if`` with a signature different from
+  ``std::enable_if`` (such as ``boost::enable_if``).
 
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
@@ -215,7 +236,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
-  declarations in system headers.
+  declarations and macros in system headers. The documentation is also improved
+  to differentiate the general options from the specific ones.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option

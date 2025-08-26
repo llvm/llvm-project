@@ -782,6 +782,12 @@ public:
 
   /// Replace all the uses of the block argument `from` with `to`. This
   /// function supports both 1:1 and 1:N replacements.
+  ///
+  /// Note: If `allowPatternRollback` is set to "true", this function replaces
+  /// all current and future uses of the block argument. This same block
+  /// block argument must not be replaced multiple times. Uses are not replaced
+  /// immediately but in a delayed fashion. Patterns may still see the original
+  /// uses when inspecting IR.
   void replaceUsesOfBlockArgument(BlockArgument from, ValueRange to);
 
   /// Return the converted value of 'key' with a type defined by the type
