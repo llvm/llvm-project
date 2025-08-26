@@ -2857,10 +2857,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     // Don't push a cleanup in a thunk for a method that will also emit a
     // cleanup.
     if (Ty->isRecordType() && !CurFuncIsThunk &&
-        Ty->castAs<RecordType>()
-            ->getOriginalDecl()
-            ->getDefinitionOrSelf()
-            ->isParamDestroyedInCallee()) {
+        Ty->castAsRecordDecl()->isParamDestroyedInCallee()) {
       if (QualType::DestructionKind DtorKind =
               D.needsDestruction(getContext())) {
         assert((DtorKind == QualType::DK_cxx_destructor ||
