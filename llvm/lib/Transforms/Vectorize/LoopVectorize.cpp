@@ -7122,6 +7122,23 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
             cast<VPRecipeWithIRFlags>(R).getPredicate() !=
                 cast<CmpInst>(UI)->getPredicate())
           return true;
+
+        if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
+          if (MemR->isReverse()) {
+            // If the stored value of a reverse store is invariant, LICM will
+            // hoist the reverse operation to the preheader. In this case, the
+            // result of the VPlan-based cost model will diverge from that of
+            // the legacy model.
+            if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(MemR))
+              if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
+                return true;
+
+            if (auto *StoreR = dyn_cast<VPWidenStoreEVLRecipe>(MemR))
+              if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
+                return true;
+          }
+        }
+
         SeenInstrs.insert(UI);
       }
     }
