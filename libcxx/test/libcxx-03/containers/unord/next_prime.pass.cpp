@@ -16,9 +16,7 @@
 
 // If n == 0, return 0, else return the lowest prime greater than or equal to n
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__hash_table>
+#include <__cxx03/__hash_table>
 #include <cassert>
 #include <cstddef>
 
