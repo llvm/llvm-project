@@ -62,7 +62,7 @@ func.func @omp_target_allocmem_scalar_char_kind() -> () {
 // CHECK-LABEL: define void @omp_target_allocmem_scalar_dynchar(
 // CHECK-SAME: i32 [[TMP0:%.*]]) {
 // CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[TMP3:%.*]] = mul i64 1, [[TMP2]]
+// CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = mul i64 1, [[TMP3]]
 // CHECK-NEXT:    [[TMP5:%.*]] = call ptr @omp_target_alloc(i64 [[TMP4]], i32 0)
 // CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
@@ -80,7 +80,7 @@ func.func @omp_target_allocmem_scalar_dynchar(%l : i32) -> () {
 // CHECK-LABEL: define void @omp_target_allocmem_scalar_dynchar_kind(
 // CHECK-SAME: i32 [[TMP0:%.*]]) {
 // CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[TMP3:%.*]] = mul i64 2, [[TMP2]]
+// CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
 // CHECK-NEXT:    [[TMP4:%.*]] = mul i64 1, [[TMP3]]
 // CHECK-NEXT:    [[TMP5:%.*]] = call ptr @omp_target_alloc(i64 [[TMP4]], i32 0)
 // CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
@@ -141,7 +141,7 @@ func.func @omp_target_allocmem_array_of_dynchar(%l: i32) -> () {
 
 // CHECK-LABEL: define void @omp_target_allocmem_dynarray_of_nonchar(
 // CHECK-SAME: i64 [[TMP0:%.*]]) {
-// CHECK-NEXT:    [[TMP2:%.*]] = mul i64 12, [[TMP0]]
+// CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 12
 // CHECK-NEXT:    [[TMP3:%.*]] = mul i64 1, [[TMP2]]
 // CHECK-NEXT:    [[TMP4:%.*]] = call ptr @omp_target_alloc(i64 [[TMP3]], i32 0)
 // CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
@@ -157,7 +157,7 @@ func.func @omp_target_allocmem_dynarray_of_nonchar(%e: index) -> () {
 
 // CHECK-LABEL: define void @omp_target_allocmem_dynarray_of_nonchar2(
 // CHECK-SAME: i64 [[TMP0:%.*]]) {
-// CHECK-NEXT:    [[TMP2:%.*]] = mul i64 4, [[TMP0]]
+// CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 4
 // CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], [[TMP0]]
 // CHECK-NEXT:    [[TMP4:%.*]] = mul i64 1, [[TMP3]]
 // CHECK-NEXT:    [[TMP5:%.*]] = call ptr @omp_target_alloc(i64 [[TMP4]], i32 0)
@@ -174,7 +174,7 @@ func.func @omp_target_allocmem_dynarray_of_nonchar2(%e: index) -> () {
 
 // CHECK-LABEL: define void @omp_target_allocmem_dynarray_of_char(
 // CHECK-SAME: i64 [[TMP0:%.*]]) {
-// CHECK-NEXT:    [[TMP2:%.*]] = mul i64 60, [[TMP0]]
+// CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 60
 // CHECK-NEXT:    [[TMP3:%.*]] = mul i64 1, [[TMP2]]
 // CHECK-NEXT:    [[TMP4:%.*]] = call ptr @omp_target_alloc(i64 [[TMP3]], i32 0)
 // CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
@@ -191,7 +191,7 @@ func.func @omp_target_allocmem_dynarray_of_char(%e : index) -> () {
 
 // CHECK-LABEL: define void @omp_target_allocmem_dynarray_of_char2(
 // CHECK-SAME: i64 [[TMP0:%.*]]) {
-// CHECK-NEXT:    [[TMP2:%.*]] = mul i64 20, [[TMP0]]
+// CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 20
 // CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], [[TMP0]]
 // CHECK-NEXT:    [[TMP4:%.*]] = mul i64 1, [[TMP3]]
 // CHECK-NEXT:    [[TMP5:%.*]] = call ptr @omp_target_alloc(i64 [[TMP4]], i32 0)
@@ -227,7 +227,7 @@ func.func @omp_target_allocmem_dynarray_of_dynchar(%l: i32, %e : index) -> () {
 // CHECK-LABEL: define void @omp_target_allocmem_dynarray_of_dynchar2(
 // CHECK-SAME: i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
 // CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[TMP4:%.*]] = mul i64 2, [[TMP3]]
+// CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 2
 // CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], [[TMP1]]
 // CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], [[TMP1]]
 // CHECK-NEXT:    [[TMP7:%.*]] = mul i64 1, [[TMP6]]
