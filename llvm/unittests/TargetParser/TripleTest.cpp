@@ -1381,6 +1381,11 @@ TEST(TripleTest, ParsedIDs) {
 
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
+
+  T = Triple("riscv32-unknown-cheriotrtos");
+  EXPECT_EQ(Triple::riscv32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::CheriotRTOS, T.getOS());
 }
 
 static std::string Join(StringRef A, StringRef B, StringRef C) {
