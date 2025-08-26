@@ -347,12 +347,10 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
       is_objc_pointer = false;
 
     if (!m_use_synthetic && is_objc_pointer) {
-      std::string err_msg =
-          llvm::formatv(
-              "\"({0}) {1}\" is an Objective-C pointer, and cannot be "
-              "subscripted",
-              base->GetTypeName().AsCString("<invalid type>"),
-              var_expr_path_strm.GetData());
+      std::string err_msg = llvm::formatv(
+          "\"({0}) {1}\" is an Objective-C pointer, and cannot be subscripted",
+          base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                   node->GetLocation());
     }
