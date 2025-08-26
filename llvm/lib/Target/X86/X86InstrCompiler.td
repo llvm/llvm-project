@@ -689,27 +689,47 @@ def : Pat<(v8f64 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
 
 // CTSELECT
 
+// Enhanced CTSELECT pseudos for i386 with temporary register allocation
+// These use post-RA expansion instead of custom inserter for better
+// constant-time guarantees
 let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
+  // i386-specific CTSELECT with allocated temporary registers
+  multiclass CTSELECT_I386<RegisterClass RC, RegisterClass ByteRC> {
+    let hasNoSchedulingInfo = 1 in {
+      def rr : PseudoI<(outs RC:$dst, ByteRC:$tmp_byte, RC:$tmp_mask),
+                       (ins RC:$src1, RC:$src2, i8imm:$cond), []> {
+        let Constraints =
+            "@earlyclobber $dst,@earlyclobber $tmp_byte,@earlyclobber "
+            "$tmp_mask";
+      }
+    }
+  }
+
+  // Legacy CTSELECT for other targets (unchanged)
   multiclass CTSELECT_NOCMOV<RegisterClass RC, ValueType VT> {
     let hasNoSchedulingInfo = 1 in {
-      def rr  : PseudoI<(outs RC:$dst),
-                        (ins RC:$src1, RC:$src2, i8imm:$cond),
-                        [(set RC:$dst, ( VT (X86ctselect RC:$src1, RC:$src2, timm:$cond, EFLAGS)))]>;
-
-      // TODO: Do we need register-memory variant??
-      //def rm : PseudoI<(outs t.RegClass:$dst),
-      //                 (ins t.RegClass:$src1, t.MemOperand:$src2, i8imm:$cond),
-      //                 [(set t.RegClass:$dst, (X86ctselect t.RegClass:$src1, (t.LoadNode addr:$src2), timm:$cond, EFLAGS))]>;
+      def rr : PseudoI<(outs RC:$dst), (ins RC:$src1, RC:$src2, i8imm:$cond),
+                       [(set RC:$dst, (VT(X86ctselect RC:$src1, RC:$src2,
+                                          timm:$cond, EFLAGS)))]>;
     }
   }
 }
 
+// Post-RA expansion pseudos for i386 (no custom inserter)
+let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
+  let Predicates = [NoCMOV] in {
+    defm CTSELECT_I386_GR16 : CTSELECT_I386<GR16, GR8>;
+    defm CTSELECT_I386_GR32 : CTSELECT_I386<GR32, GR8>;
+  }
+}
+
+// Legacy custom inserter pseudos for 64-bit no-CMOV targets (rare)
 let usesCustomInserter = 1,
     isCodeGenOnly = 1,
     hasSideEffects = 1,
     ForceDisassemble = 1,
     Constraints = "$dst = $src1" in {
-  let Predicates = [NoCMOV] in {
+  let Predicates = [NoCMOV, In64BitMode] in {
     defm CTSELECT_GR16 : CTSELECT_NOCMOV<GR16, i16>;
     defm CTSELECT_GR32 : CTSELECT_NOCMOV<GR32, i32>;
   }
@@ -724,6 +744,18 @@ let usesCustomInserter = 1,
 
   let Predicates = [HasMMX] in
     defm CTSELECT_VR64   : CTSELECT_NOCMOV<VR64, x86mmx>;
+}
+
+// Pattern matching for i386 CTSELECT (routes to post-RA expansion pseudos)
+let Predicates = [NoCMOV, Not64BitMode] in {
+  // i16 and i32 patterns - will be matched by the multiclass definitions above
+  def : Pat<(i16(X86ctselect GR16:$src1, GR16:$src2, timm:$cond, EFLAGS)),
+            (CTSELECT_I386_GR16rr GR16:$src1, GR16:$src2, timm:$cond)>;
+
+  def : Pat<(i32(X86ctselect GR32:$src1, GR32:$src2, timm:$cond, EFLAGS)),
+            (CTSELECT_I386_GR32rr GR32:$src1, GR32:$src2, timm:$cond)>;
+
+  // i64 patterns handled automatically by type legalization
 }
 
 //===----------------------------------------------------------------------===//

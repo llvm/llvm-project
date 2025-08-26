@@ -914,6 +914,96 @@ bool X86InstrInfo::expandCtSelectWithCMOV(MachineInstr &MI) const {
   return true;
 }
 
+/// Expand i386-specific CTSELECT pseudo instructions (post-RA, constant-time)
+bool X86InstrInfo::expandCtSelectI386(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // CTSELECT_I386_GRxxrr has operands: (outs dst, tmp_byte, tmp_mask),
+  // (ins src1, src2, cond)
+  Register DstReg = MI.getOperand(0).getReg();
+  Register TmpByteReg = MI.getOperand(1).getReg();
+  Register TmpMaskReg = MI.getOperand(2).getReg();
+  Register Src1Reg = MI.getOperand(3).getReg();
+  Register Src2Reg = MI.getOperand(4).getReg();
+  X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(5).getImm());
+  X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
+
+  // Determine instruction opcodes based on register width
+  unsigned SetCCOp, MovZXOp, NegOp, MovOp, AndOp, NotOp, OrOp;
+  if (MI.getOpcode() == X86::CTSELECT_I386_GR16rr) {
+    SetCCOp = X86::SETCCr;
+    MovZXOp = X86::MOVZX16rr8;
+    NegOp = X86::NEG16r;
+    MovOp = X86::MOV16rr;
+    AndOp = X86::AND16rr;
+    NotOp = X86::NOT16r;
+    OrOp = X86::OR16rr;
+  } else { // X86::CTSELECT_I386_GR32rr
+    SetCCOp = X86::SETCCr;
+    MovZXOp = X86::MOVZX32rr8;
+    NegOp = X86::NEG32r;
+    MovOp = X86::MOV32rr;
+    AndOp = X86::AND32rr;
+    NotOp = X86::NOT32r;
+    OrOp = X86::OR32rr;
+  }
+
+  // 8-instruction sequence for constant-time selection:
+  // result = (true_val & mask) | (false_val & ~mask)
+
+  // Step 1: Create condition byte using SETCC (opposite condition)
+  auto FirstInstr = BuildMI(*MBB, MI, DL, get(SetCCOp), TmpByteReg)
+                        .addImm(OppCC)
+                        .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 2: Zero-extend condition to register width (0 or 1)
+  BuildMI(*MBB, MI, DL, get(MovZXOp), TmpMaskReg)
+      .addReg(TmpByteReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 3: Convert condition to bitmask (NEG: 1 -> 0xFFFF..., 0 -> 0x0000...)
+  BuildMI(*MBB, MI, DL, get(NegOp), TmpMaskReg)
+      .addReg(TmpMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 4,5: Apply mask to true value - copy src1 to dest, then AND with mask
+  BuildMI(*MBB, MI, DL, get(MovOp), DstReg)
+      .addReg(Src1Reg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  BuildMI(*MBB, MI, DL, get(AndOp), DstReg)
+      .addReg(DstReg)
+      .addReg(TmpMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 6: Create inverted mask inline (~mask)
+  BuildMI(*MBB, MI, DL, get(NotOp), TmpMaskReg)
+      .addReg(TmpMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 7: Apply inverted mask to false value - reuse mask register directly
+  BuildMI(*MBB, MI, DL, get(AndOp), TmpMaskReg)
+      .addReg(Src2Reg)
+      .addReg(TmpMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 8: Final result: (src1 & mask) | (src2 & ~mask)
+  auto LastInstr = BuildMI(*MBB, MI, DL, get(OrOp), DstReg)
+                       .addReg(DstReg)
+                       .addReg(TmpMaskReg)
+                       .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Bundle all generated instructions for atomic execution
+  auto BundleStart = FirstInstr.getInstr()->getIterator();
+  auto BundleEnd = LastInstr.getInstr()->getIterator();
+  finalizeBundle(*MBB, BundleStart, std::next(BundleEnd));
+
+  // Remove the original pseudo instruction
+  MI.eraseFromParent();
+  return true;
+}
+
 static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   switch (Opcode) {
   default:
@@ -6809,12 +6899,15 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::ADD64ri32_DB:
     MIB->setDesc(get(X86::OR64ri32));
     break;
+
   case X86::CTSELECT64rr:
   case X86::CTSELECT32rr:
   case X86::CTSELECT16rr:
   case X86::CTSELECT64rm:
   case X86::CTSELECT32rm:
   case X86::CTSELECT16rm:
+    // These CTSELECT pseudos are only selected when CMOV is available
+    // Pattern matching ensures we use CTSELECT_I386 when CMOV is not available
     return expandCtSelectWithCMOV(MI);
 
   case X86::CTSELECT_V2F64:
@@ -6836,6 +6929,11 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::CTSELECT_V4F64:
   case X86::CTSELECT_V8F32:
     return expandCtSelectVector(MI);
+
+  // i386-specific CTSELECT expansion (post-RA, constant-time)
+  case X86::CTSELECT_I386_GR16rr:
+  case X86::CTSELECT_I386_GR32rr:
+    return expandCtSelectI386(MI);
   }
   return false;
 }

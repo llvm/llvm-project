@@ -24953,6 +24953,10 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT VT = TrueOp.getSimpleValueType();
 
+  // Special handling for i386 targets (no CMOV) - route to post-RA expansion
+  // pseudos Let standard type legalization handle i64 automatically (splits
+  // into EDX:EAX)
+
   // Handle soft float16 by converting to integer operations
   if (isSoftF16(VT, Subtarget)) {
     MVT NVT = VT.changeTypeToInteger();
