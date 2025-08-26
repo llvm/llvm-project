@@ -1389,6 +1389,7 @@ Transforms/LoopVectorize/RISCV/divrem.ll
 Transforms/LoopVectorize/RISCV/inloop-reduction.ll
 Transforms/LoopVectorize/RISCV/interleaved-masked-access.ll
 Transforms/LoopVectorize/RISCV/mask-index-type.ll
+Transforms/LoopVectorize/RISCV/pr154103.ll
 Transforms/LoopVectorize/RISCV/pr87378-vpinstruction-or-drop-poison-generating-flags.ll
 Transforms/LoopVectorize/RISCV/pr88802.ll
 Transforms/LoopVectorize/RISCV/preserve-dbg-loc.ll
