@@ -68,6 +68,15 @@ private:
   const SCEV *Denominator, *Quotient, *Remainder, *Zero, *One;
 };
 
+class SCEVDivisionPrinterPass : public PassInfoMixin<SCEVDivisionPrinterPass> {
+  raw_ostream &OS;
+  void runImpl(Function &F, ScalarEvolution &SE);
+
+public:
+  explicit SCEVDivisionPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_SCALAREVOLUTIONDIVISION_H
