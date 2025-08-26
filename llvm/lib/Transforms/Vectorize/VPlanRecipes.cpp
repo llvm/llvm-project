@@ -508,6 +508,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
     return true;
   switch (Opcode) {
   case Instruction::Freeze:
+  case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::PHI:
   case Instruction::Select:
@@ -601,7 +602,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     llvm_unreachable("should be handled by VPPhi::execute");
   }
   case Instruction::Select: {
-    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    bool OnlyFirstLaneUsed =
+        State.VF.isScalar() || vputils::onlyFirstLaneUsed(this);
     Value *Cond = State.get(getOperand(0), OnlyFirstLaneUsed);
     Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
@@ -1132,7 +1134,8 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
          getOpcode() == VPInstruction::ComputeFindIVResult ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
-         getOpcode() == VPInstruction::AnyOf;
+         getOpcode() == VPInstruction::AnyOf ||
+         getOpcode() == VPInstruction::ExtractLane;
 }
 
 bool VPInstruction::isSingleScalar() const {
