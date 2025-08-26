@@ -20,6 +20,7 @@
 #include <flang/Lower/OpenMP/Clauses.h>
 #include <flang/Lower/PFTBuilder.h>
 #include <flang/Lower/StatementContext.h>
+#include <flang/Lower/Support/PrivateReductionUtils.h>
 #include <flang/Lower/SymbolMap.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
@@ -301,27 +302,17 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         assert(!subscriptIndices.empty() &&
                "missing expected indices for map clause");
         if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(curValue.getType())) {
-          fir::ExtendedValue exv =
-              hlfir::translateToExtendedValue(clauseLocation, firOpBuilder,
-                                              hlfir::Entity{curValue},
-                                              /*contiguousHint=*/
-                                              true)
-                  .first;
-
-          mlir::Type idxTy = firOpBuilder.getIndexType();
-          llvm::SmallVector<mlir::Value> shiftOperands;
-          for (unsigned dim = 0; dim < exv.rank(); ++dim) {
-            mlir::Value d =
-                firOpBuilder.createIntegerConstant(clauseLocation, idxTy, dim);
-            auto dimInfo = fir::BoxDimsOp::create(
-                firOpBuilder, clauseLocation, idxTy, idxTy, idxTy, curValue, d);
-            shiftOperands.push_back(dimInfo.getLowerBound());
-            shiftOperands.push_back(dimInfo.getExtent());
-          }
-          auto shapeShiftType =
-              fir::ShapeShiftType::get(firOpBuilder.getContext(), exv.rank());
-          mlir::Value shapeShift = fir::ShapeShiftOp::create(
-              firOpBuilder, clauseLocation, shapeShiftType, shiftOperands);
+          // To accommodate indexing into box types of all dimensions including
+          // negative dimensions we have to take into consideration the lower
+          // bounds and extents of the data (stored in the box) and convey it
+          // to the ArrayCoorOp so that it can appropriately access the element
+          // utilising the subscript we provide and the runtime sizes stored in
+          // the Box. To do so we need to generate a ShapeShiftOp which combines
+          // both the lb (ShiftOp) and extent (ShapeOp) of the Box, giving the
+          // ArrayCoorOp the spatial information it needs to calculate the
+          // underlying address.
+          mlir::Value shapeShift = Fortran::lower::getShapeShift(
+              firOpBuilder, clauseLocation, curValue);
           auto addrOp =
               fir::BoxAddrOp::create(firOpBuilder, clauseLocation, curValue);
           curValue = fir::ArrayCoorOp::create(
@@ -330,6 +321,17 @@ mlir::Value createParentSymAndGenIntermediateMaps(
               /*slice=*/mlir::Value{}, subscriptIndices,
               /*typeparms=*/mlir::ValueRange{});
         } else {
+          // We're required to negate by one in the non-Box case as I believe
+          // we do not have the shape generated from the dimensions to help
+          // adjust the indexing.
+          // TODO/FIXME: This may need adjusted to support bounds of unusual
+          // dimensions, if that's the case then it is likely best to fold this
+          // branch into the above.
+          mlir::Value one = firOpBuilder.createIntegerConstant(
+              clauseLocation, firOpBuilder.getIndexType(), 1);
+          for (auto &v : subscriptIndices)
+            v = mlir::arith::SubIOp::create(firOpBuilder, clauseLocation, v,
+                                            one);
           curValue = fir::CoordinateOp::create(
               firOpBuilder, clauseLocation,
               firOpBuilder.getRefType(arrType.getEleTy()), curValue,
