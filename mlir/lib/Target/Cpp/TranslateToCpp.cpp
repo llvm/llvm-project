@@ -782,9 +782,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
   os << applyOp.getApplicableOperator();
-  os << emitter.getOrCreateName(applyOp.getOperand());
-
-  return success();
+  return emitter.emitOperand(applyOp.getOperand());
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
