@@ -636,8 +636,8 @@ int main(int argc, char **argv) {
       auto Latency = Regions.getExplicitLatency(Loc);
       Expected<std::unique_ptr<mca::Instruction>> Inst =
           Latency ? IB.createInstruction(MCI, Instruments,
-                                         [=](llvm::mca::InstrDesc& ID) {
-                                           for (auto& W : ID.Writes)
+                                         [=](llvm::mca::InstrDesc &ID) {
+                                           for (auto &W : ID.Writes)
                                              W.Latency = *Latency;
                                            ID.MaxLatency = *Latency;
                                          })
