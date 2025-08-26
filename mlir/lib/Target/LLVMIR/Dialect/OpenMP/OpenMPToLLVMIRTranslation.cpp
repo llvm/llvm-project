@@ -2464,6 +2464,7 @@ convertOmpTaskwaitOp(omp::TaskwaitOp twOp, llvm::IRBuilderBase &builder,
 static LogicalResult
 convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
+  printf("CONVERTING WSLOOP\n");
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto wsloopOp = cast<omp::WsloopOp>(opInst);
   if (failed(checkImplementationStatus(opInst)))
@@ -2485,19 +2486,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::Value *chunkVar =
         moduleTranslation.lookupValue(wsloopOp.getScheduleChunk());
     chunk = builder.CreateSExtOrTrunc(chunkVar, ivType);
-  }
-
-  omp::DistributeOp distributeOp = nullptr;
-  llvm::Value *distScheduleChunk = nullptr;
-  bool hasDistSchedule = false;
-  if (llvm::isa_and_present<omp::DistributeOp>(opInst.getParentOp())) {
-    distributeOp = cast<omp::DistributeOp>(opInst.getParentOp());
-    hasDistSchedule = distributeOp.getDistScheduleStatic();
-    if (distributeOp.getDistScheduleChunkSize()) {
-      llvm::Value *chunkVar = moduleTranslation.lookupValue(
-          distributeOp.getDistScheduleChunkSize());
-      distScheduleChunk = builder.CreateSExtOrTrunc(chunkVar, ivType);
-    }
   }
 
   PrivateVarsInfo privateVarsInfo(wsloopOp);
@@ -2600,13 +2588,15 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
+      printf("loopInfo Address: %p\n", loopInfo);
+      printf("Applying omp.wloop Workshare Loop\n");
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
       ompBuilder->applyWorkshareLoop(
           ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
           convertToScheduleKind(schedule), chunk, isSimd,
           scheduleMod == omp::ScheduleModifier::monotonic,
           scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-          workshareLoopType, hasDistSchedule, distScheduleChunk);
+          workshareLoopType);
 
   if (failed(handleError(wsloopIP, opInst)))
     return failure();
@@ -3052,6 +3042,7 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Update the stack frame created for this loop to point to the resulting loop
   // after applying transformations.
+  printf("Applying loopInfo\n");
   moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
       [&](OpenMPLoopInfoStackFrame &frame) {
         frame.loopInfo = ompBuilder->collapseLoops(ompLoc.DL, loopInfos, {});
@@ -4767,6 +4758,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 static LogicalResult
 convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
+  printf("CONVERTING DISTRIBUTE\n");
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto distributeOp = cast<omp::DistributeOp>(opInst);
   if (failed(checkImplementationStatus(opInst)))
@@ -4835,7 +4827,7 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
     llvm::Expected<llvm::BasicBlock *> regionBlock =
         convertOmpOpRegions(distributeOp.getRegion(), "omp.distribute.region",
-                            builder, moduleTranslation);
+                            builder, moduleTranslation); // -> this is causing Schedule to be emitted first.
     if (!regionBlock)
       return regionBlock.takeError();
     builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
@@ -4843,13 +4835,12 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     // Skip applying a workshare loop below when translating 'distribute
     // parallel do' (it's been already handled by this point while translating
     // the nested omp.wsloop).
-    if (!isa_and_present<omp::WsloopOp>(distributeOp.getNestedWrapper())) {
+    if (!isa_and_present<omp::WsloopOp>(distributeOp.getNestedWrapper()) || distributeOp.getDistScheduleStatic()) {
       // TODO: Add support for clauses which are valid for DISTRIBUTE
       // constructs. Static schedule is the default.
       bool hasDistSchedule = distributeOp.getDistScheduleStatic();
       auto schedule = hasDistSchedule ? omp::ClauseScheduleKind::Distribute
                                       : omp::ClauseScheduleKind::Static;
-      // dist_schedule clauses are ordered - otherise this should be false
       bool isOrdered = hasDistSchedule;
       std::optional<omp::ScheduleModifier> scheduleMod;
       bool isSimd = false;
@@ -4859,14 +4850,17 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
       llvm::Value *chunk = moduleTranslation.lookupValue(
           distributeOp.getDistScheduleChunkSize());
       llvm::CanonicalLoopInfo *loopInfo =
-          findCurrentLoopInfo(moduleTranslation);
+          findCurrentLoopInfo(moduleTranslation); // Do we need a new loop info here?
+      printf("loopInfo Address: %p\n", loopInfo);
+      printf("InsertPoint Name : %s\n", builder.GetInsertBlock()->getName().str().c_str());
+      printf("Applying omp.ditribute Workshare Loop\n");
       llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
           ompBuilder->applyWorkshareLoop(
               ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
               convertToScheduleKind(schedule), chunk, isSimd,
               scheduleMod == omp::ScheduleModifier::monotonic,
               scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-              workshareLoopType, hasDistSchedule, chunk);
+              workshareLoopType, hasDistSchedule);
 
       if (!wsloopIP)
         return wsloopIP.takeError();
@@ -5907,7 +5901,7 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
       !dyn_cast_if_present<omp::LoopWrapperInterface>(op->getParentOp());
 
   if (isOutermostLoopWrapper)
-    moduleTranslation.stackPush<OpenMPLoopInfoStackFrame>();
+    moduleTranslation.stackPush<OpenMPLoopInfoStackFrame>(); // -> Need another one of these when Distribute AND WSLoop is present?
 
   auto result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)

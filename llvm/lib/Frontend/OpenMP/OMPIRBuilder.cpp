@@ -172,7 +172,7 @@ static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
 /// arguments.
 static OMPScheduleType
 getOpenMPBaseScheduleType(llvm::omp::ScheduleKind ClauseKind, bool HasChunks,
-                          bool HasSimdModifier, bool HasDistScheduleChunks) {
+                          bool HasSimdModifier) {
   // Currently, the default schedule it static.
   switch (ClauseKind) {
   case OMP_SCHEDULE_Default:
@@ -190,7 +190,7 @@ getOpenMPBaseScheduleType(llvm::omp::ScheduleKind ClauseKind, bool HasChunks,
     return HasSimdModifier ? OMPScheduleType::BaseRuntimeSimd
                            : OMPScheduleType::BaseRuntime;
   case OMP_SCHEDULE_Distribute:
-    return HasDistScheduleChunks ? OMPScheduleType::BaseDistributeChunked
+    return HasChunks ? OMPScheduleType::BaseDistributeChunked
                                  : OMPScheduleType::BaseDistribute;
   }
   llvm_unreachable("unhandled schedule clause argument");
@@ -260,10 +260,9 @@ getOpenMPMonotonicityScheduleType(OMPScheduleType ScheduleType,
 static OMPScheduleType
 computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
                           bool HasSimdModifier, bool HasMonotonicModifier,
-                          bool HasNonmonotonicModifier, bool HasOrderedClause,
-                          bool HasDistScheduleChunks) {
+                          bool HasNonmonotonicModifier, bool HasOrderedClause) {
   OMPScheduleType BaseSchedule = getOpenMPBaseScheduleType(
-      ClauseKind, HasChunks, HasSimdModifier, HasDistScheduleChunks);
+      ClauseKind, HasChunks, HasSimdModifier);
   OMPScheduleType OrderedSchedule =
       getOpenMPOrderingScheduleType(BaseSchedule, HasOrderedClause);
   OMPScheduleType Result = getOpenMPMonotonicityScheduleType(
@@ -4643,8 +4642,7 @@ static FunctionCallee getKmpcForStaticInitForType(Type *Ty, Module &M,
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    WorksharingLoopType LoopType, bool NeedsBarrier, bool HasDistSchedule,
-    OMPScheduleType DistScheduleSchedType) {
+    WorksharingLoopType LoopType, bool NeedsBarrier, bool HasDistSchedule) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
   assert(!isConflictIP(AllocaIP, CLI->getPreheaderIP()) &&
          "Require dedicated allocate IP");
@@ -4714,12 +4712,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
     Builder.CreateCall(StaticInit, Args);
   };
   BuildInitCall(SchedulingType, Builder);
-  if (HasDistSchedule &&
-      LoopType != WorksharingLoopType::DistributeStaticLoop) {
-    Constant *DistScheduleSchedType = ConstantInt::get(
-        I32Type, static_cast<int>(omp::OMPScheduleType::OrderedDistribute));
-    BuildInitCall(DistScheduleSchedType, Builder);
-  }
   Value *LowerBound = Builder.CreateLoad(IVTy, PLowerBound);
   Value *InclusiveUpperBound = Builder.CreateLoad(IVTy, PUpperBound);
   Value *TripCountMinusOne = Builder.CreateSub(InclusiveUpperBound, LowerBound);
@@ -4792,10 +4784,9 @@ static void applyParallelAccessesMetadata(CanonicalLoopInfo *CLI,
 OpenMPIRBuilder::InsertPointOrErrorTy
 OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    bool NeedsBarrier, Value *ChunkSize, OMPScheduleType SchedType,
-    Value *DistScheduleChunkSize, OMPScheduleType DistScheduleSchedType) {
+    bool NeedsBarrier, Value *ChunkSize, OMPScheduleType SchedType) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
-  assert(ChunkSize || DistScheduleChunkSize && "Chunk size is required");
+  assert(ChunkSize && "Chunk size is required");
 
   LLVMContext &Ctx = CLI->getFunction()->getContext();
   Value *IV = CLI->getIndVar();
@@ -4817,7 +4808,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
   LoopInfo &&LI = LIA.run(*F, FAM);
   Loop *L = LI.getLoopFor(CLI->getHeader());
   SmallVector<Metadata *> LoopMDList;
-  if (ChunkSize || DistScheduleChunkSize)
+  if (ChunkSize)
     applyParallelAccessesMetadata(CLI, Ctx, L, LI, LoopMDList);
   addLoopMetadata(CLI, LoopMDList);
 
@@ -4839,22 +4830,17 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
   CLI->setLastIter(PLastIter);
 
   // Set up the source location value for the OpenMP runtime.
-  Builder.restoreIP(CLI->getPreheaderIP());
+  Builder.restoreIP(CLI->getPreheaderIP()); // -> sets insert point to omploop! Why?
   Builder.SetCurrentDebugLocation(DL);
 
   // TODO: Detect overflow in ubsan or max-out with current tripcount.
   Value *CastedChunkSize = Builder.CreateZExtOrTrunc(
       ChunkSize ? ChunkSize : Zero, InternalIVTy, "chunksize");
-  Value *CastestDistScheduleChunkSize = Builder.CreateZExtOrTrunc(
-      DistScheduleChunkSize ? DistScheduleChunkSize : Zero, InternalIVTy,
-      "distschedulechunksize");
   Value *CastedTripCount =
       Builder.CreateZExt(OrigTripCount, InternalIVTy, "tripcount");
 
   Constant *SchedulingType =
       ConstantInt::get(I32Type, static_cast<int>(SchedType));
-  Constant *DistSchedulingType =
-      ConstantInt::get(I32Type, static_cast<int>(DistScheduleSchedType));
   Builder.CreateStore(Zero, PLowerBound);
   Value *OrigUpperBound = Builder.CreateSub(CastedTripCount, One);
   Builder.CreateStore(OrigUpperBound, PUpperBound);
@@ -4877,14 +4863,6 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
                          /*chunk=*/ChunkSize});
       };
   BuildInitCall(SchedulingType, CastedChunkSize, Builder);
-  if (DistScheduleSchedType != OMPScheduleType::None &&
-      SchedType != OMPScheduleType::OrderedDistributeChunked &&
-      SchedType != OMPScheduleType::OrderedDistribute) {
-    // We want to emit a second init function call for the dist_schedule clause
-    // to the Distribute construct. This should only be done however if a
-    // Workshare Loop is nested within a Distribute Construct
-    BuildInitCall(DistSchedulingType, CastestDistScheduleChunkSize, Builder);
-  }
 
   // Load values written by the "init" function.
   Value *FirstChunkStart =
@@ -5208,35 +5186,27 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool NeedsBarrier, omp::ScheduleKind SchedKind, Value *ChunkSize,
     bool HasSimdModifier, bool HasMonotonicModifier,
     bool HasNonmonotonicModifier, bool HasOrderedClause,
-    WorksharingLoopType LoopType, bool HasDistSchedule,
-    Value *DistScheduleChunkSize) {
+    WorksharingLoopType LoopType, bool HasDistSchedule) {
   if (Config.isTargetDevice())
     return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
-      HasNonmonotonicModifier, HasOrderedClause, DistScheduleChunkSize);
+      HasNonmonotonicModifier, HasOrderedClause);
 
   bool IsOrdered = (EffectiveScheduleType & OMPScheduleType::ModifierOrdered) ==
                    OMPScheduleType::ModifierOrdered;
-  OMPScheduleType DistScheduleSchedType = OMPScheduleType::None;
-  if (HasDistSchedule) {
-    DistScheduleSchedType = DistScheduleChunkSize
-                                ? OMPScheduleType::OrderedDistributeChunked
-                                : OMPScheduleType::OrderedDistribute;
-  }
   switch (EffectiveScheduleType & ~OMPScheduleType::ModifierMask) {
   case OMPScheduleType::BaseStatic:
   case OMPScheduleType::BaseDistribute:
-    assert(!ChunkSize || !DistScheduleChunkSize &&
+    assert(!ChunkSize &&
                              "No chunk size with static-chunked schedule");
     if (IsOrdered && !HasDistSchedule)
       return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
                                        NeedsBarrier, ChunkSize);
     // FIXME: Monotonicity ignored?
-    if (DistScheduleChunkSize)
+    if (ChunkSize)
       return applyStaticChunkedWorkshareLoop(
-          DL, CLI, AllocaIP, NeedsBarrier, ChunkSize, EffectiveScheduleType,
-          DistScheduleChunkSize, DistScheduleSchedType);
+          DL, CLI, AllocaIP, NeedsBarrier, ChunkSize, EffectiveScheduleType);
     return applyStaticWorkshareLoop(DL, CLI, AllocaIP, LoopType, NeedsBarrier,
                                     HasDistSchedule);
 
@@ -5247,8 +5217,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
                                        NeedsBarrier, ChunkSize);
     // FIXME: Monotonicity ignored?
     return applyStaticChunkedWorkshareLoop(
-        DL, CLI, AllocaIP, NeedsBarrier, ChunkSize, EffectiveScheduleType,
-        DistScheduleChunkSize, DistScheduleSchedType);
+        DL, CLI, AllocaIP, NeedsBarrier, ChunkSize, EffectiveScheduleType);
 
   case OMPScheduleType::BaseRuntime:
   case OMPScheduleType::BaseAuto:

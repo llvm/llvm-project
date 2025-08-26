@@ -1098,15 +1098,12 @@ private:
   /// \param LoopType Type of workshare loop.
   /// \param HasDistSchedule Defines if the clause being lowered is
   /// dist_schedule as this is handled slightly differently
-  /// \param DistScheduleSchedType Defines the Schedule Type for the Distribute
-  /// loop. Defaults to None if no Distribute loop is present.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointOrErrorTy applyStaticWorkshareLoop(
       DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
       omp::WorksharingLoopType LoopType, bool NeedsBarrier,
-      bool HasDistSchedule = false,
-      omp::OMPScheduleType DistScheduleSchedType = omp::OMPScheduleType::None);
+      bool HasDistSchedule = false);
 
   /// Modifies the canonical loop a statically-scheduled workshare loop with a
   /// user-specified chunk size.
@@ -1121,20 +1118,13 @@ private:
   /// \param ChunkSize    The user-specified chunk size.
   /// \param SchedType    Optional type of scheduling to be passed to the init
   /// function.
-  /// \param DistScheduleChunkSize    The size of dist_shcedule chunk considered
-  /// as a unit when
-  ///                 scheduling. If \p nullptr, defaults to 1.
-  /// \param DistScheduleSchedType Defines the Schedule Type for the Distribute
-  /// loop. Defaults to None if no Distribute loop is present.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointOrErrorTy applyStaticChunkedWorkshareLoop(
       DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
       bool NeedsBarrier, Value *ChunkSize,
       omp::OMPScheduleType SchedType =
-          omp::OMPScheduleType::UnorderedStaticChunked,
-      Value *DistScheduleChunkSize = nullptr,
-      omp::OMPScheduleType DistScheduleSchedType = omp::OMPScheduleType::None);
+          omp::OMPScheduleType::UnorderedStaticChunked);
 
   /// Modifies the canonical loop to be a dynamically-scheduled workshare loop.
   ///
@@ -1216,8 +1206,6 @@ public:
   /// \param HasDistSchedule Defines if the clause being lowered is
   /// dist_schedule as this is handled slightly differently
   ///
-  /// \param ChunkSize The chunk size for dist_schedule loop
-  ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
       DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
@@ -1228,7 +1216,7 @@ public:
       bool HasOrderedClause = false,
       omp::WorksharingLoopType LoopType =
           omp::WorksharingLoopType::ForStaticLoop,
-      bool HasDistSchedule = false, Value *DistScheduleChunkSize = nullptr);
+      bool HasDistSchedule = false);
 
   /// Tile a loop nest.
   ///
