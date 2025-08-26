@@ -14,7 +14,6 @@ define i32 @test_ctselect_smin_zero(i32 %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a1, a0, 31
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %cmp = icmp slt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 0)
@@ -36,7 +35,6 @@ define i32 @test_ctselect_smax_zero(i32 %x) {
 ; RV32-NEXT:    sgtz a1, a0
 ; RV32-NEXT:    neg a1, a1
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %cmp = icmp sgt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 0)
@@ -60,10 +58,10 @@ define i32 @test_ctselect_smin_generic(i32 %x, i32 %y) {
 ; RV32-LABEL: test_ctselect_smin_generic:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slt a2, a0, a1
+; RV32-NEXT:    addi a3, a2, -1
 ; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    and a1, a3, a1
 ; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    not a2, a2
-; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
   %cmp = icmp slt i32 %x, %y
@@ -88,10 +86,10 @@ define i32 @test_ctselect_smax_generic(i32 %x, i32 %y) {
 ; RV32-LABEL: test_ctselect_smax_generic:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slt a2, a1, a0
+; RV32-NEXT:    addi a3, a2, -1
 ; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    and a1, a3, a1
 ; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    not a2, a2
-; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
   %cmp = icmp sgt i32 %x, %y
@@ -116,10 +114,10 @@ define i32 @test_ctselect_umin_generic(i32 %x, i32 %y) {
 ; RV32-LABEL: test_ctselect_umin_generic:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    sltu a2, a0, a1
+; RV32-NEXT:    addi a3, a2, -1
 ; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    and a1, a3, a1
 ; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    not a2, a2
-; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
   %cmp = icmp ult i32 %x, %y
@@ -144,10 +142,10 @@ define i32 @test_ctselect_umax_generic(i32 %x, i32 %y) {
 ; RV32-LABEL: test_ctselect_umax_generic:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    sltu a2, a1, a0
+; RV32-NEXT:    addi a3, a2, -1
 ; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    and a1, a3, a1
 ; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    not a2, a2
-; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
   %cmp = icmp ugt i32 %x, %y
@@ -219,7 +217,6 @@ define i32 @test_ctselect_sign_extend(i32 %x) {
 ; RV32-LABEL: test_ctselect_sign_extend:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %cmp = icmp slt i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 -1, i32 0)
@@ -236,10 +233,7 @@ define i32 @test_ctselect_zero_extend(i32 %x) {
 ;
 ; RV32-LABEL: test_ctselect_zero_extend:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    seqz a0, a0
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    or a0, a0, zero
+; RV32-NEXT:    snez a0, a0
 ; RV32-NEXT:    ret
   %cmp = icmp ne i32 %x, 0
   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 1, i32 0)
@@ -254,7 +248,6 @@ define i32 @test_ctselect_constant_folding_true(i32 %a, i32 %b) {
 ;
 ; RV32-LABEL: test_ctselect_constant_folding_true:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
   ret i32 %result
@@ -268,7 +261,7 @@ define i32 @test_ctselect_constant_folding_false(i32 %a, i32 %b) {
 ;
 ; RV32-LABEL: test_ctselect_constant_folding_false:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    or a0, zero, a1
+; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
   ret i32 %result
@@ -283,12 +276,7 @@ define i32 @test_ctselect_identical_operands(i1 %cond, i32 %x) {
 ;
 ; RV32-LABEL: test_ctselect_identical_operands:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 31
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    and a2, a0, a1
-; RV32-NEXT:    not a0, a0
-; RV32-NEXT:    and a0, a0, a1
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %x, i32 %x)
   ret i32 %result
@@ -313,11 +301,11 @@ define i32 @test_ctselect_inverted_condition(i32 %x, i32 %y, i32 %a, i32 %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    xor a0, a0, a1
 ; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    neg a1, a0
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    and a2, a0, a2
-; RV32-NEXT:    not a0, a0
-; RV32-NEXT:    and a0, a0, a3
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
   %cmp = icmp eq i32 %x, %y
   %not_cmp = xor i1 %cmp, true
@@ -351,23 +339,23 @@ define i32 @test_ctselect_chain(i1 %c1, i1 %c2, i1 %c3, i32 %a, i32 %b, i32 %c, 
 ;
 ; RV32-LABEL: test_ctselect_chain:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 31
-; RV32-NEXT:    slli a1, a1, 31
-; RV32-NEXT:    slli a2, a2, 31
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    srai a1, a1, 31
-; RV32-NEXT:    srai a2, a2, 31
-; RV32-NEXT:    and a3, a0, a3
-; RV32-NEXT:    not a0, a0
-; RV32-NEXT:    and a0, a0, a4
-; RV32-NEXT:    not a4, a1
-; RV32-NEXT:    and a4, a4, a5
-; RV32-NEXT:    not a5, a2
-; RV32-NEXT:    or a0, a3, a0
-; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    andi a1, a1, 1
+; RV32-NEXT:    andi a2, a2, 1
+; RV32-NEXT:    addi a7, a0, -1
+; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    and a4, a7, a4
+; RV32-NEXT:    neg a7, a1
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a0, a0, a3
+; RV32-NEXT:    neg a3, a2
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    and a1, a1, a5
 ; RV32-NEXT:    or a0, a0, a4
-; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    and a1, a5, a6
+; RV32-NEXT:    and a0, a7, a0
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    and a0, a3, a0
+; RV32-NEXT:    and a1, a2, a6
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
   %sel1 = call i32 @llvm.ct.select.i32(i1 %c1, i32 %a, i32 %b)
@@ -382,7 +370,6 @@ define i64 @test_ctselect_i64_smin_zero(i64 %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srai a1, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
-; RV64-NEXT:    or a0, a0, zero
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_i64_smin_zero:

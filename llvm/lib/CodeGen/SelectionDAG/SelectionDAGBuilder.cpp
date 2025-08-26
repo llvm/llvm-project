@@ -6454,8 +6454,6 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
 SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Cond, SDValue T, SDValue F,
     EVT VT) {
-  SDNodeFlags ProtectedFlag;
-  ProtectedFlag.setNoMerge(true);
 
   SDValue WorkingT = T;
   SDValue WorkingF = F;
@@ -6505,16 +6503,25 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
     AllOnes = DAG.getAllOnesConstant(DL, WorkingVT);
   }
 
-  SDValue Invert = DAG.getNode(ISD::XOR, DL, WorkingVT, Mask, AllOnes, ProtectedFlag);
+  SDValue Invert = DAG.getNode(ISD::XOR, DL, WorkingVT, Mask, AllOnes);
 
   // (or (and WorkingT, Mask), (and F, ~Mask))
-  SDValue TM = DAG.getNode(ISD::AND, DL, WorkingVT, Mask, WorkingT, ProtectedFlag);
-  SDValue FM = DAG.getNode(ISD::AND, DL, WorkingVT, Invert, WorkingF, ProtectedFlag);
+  SDValue TM = DAG.getNode(ISD::AND, DL, WorkingVT, Mask, WorkingT);
 
-  // Only apply chaining for non-scalable types or when we can get a register class
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   bool CanUseChaining = false;
-  
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  if (CanUseChaining) {
+    // Apply chaining through registers for additional protection
+    
+    const TargetRegisterClass *RC = TLI.getRegClassFor(WorkingVT.getSimpleVT());
+    Register TMReg = MRI.createVirtualRegister(RC);
+    Chain = DAG.getCopyToReg(Chain, DL, TMReg, TM);
+    TM = DAG.getCopyFromReg(Chain, DL, TMReg, WorkingVT);
+  }
+
+  SDValue FM = DAG.getNode(ISD::AND, DL, WorkingVT, Invert, WorkingF);
+
   if (!WorkingVT.isScalableVector()) {
     // For fixed-size vectors and scalars, we can safely use register classes
     CanUseChaining = TLI.isTypeLegal(WorkingVT.getSimpleVT());
@@ -6524,20 +6531,8 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
     CanUseChaining = false;  // Conservative: disable for scalable vectors
   }
 
-  if (CanUseChaining) {
-    // Apply chaining through registers for additional protection
-    const TargetRegisterClass *RC = TLI.getRegClassFor(WorkingVT.getSimpleVT());
-    
-    Register TMReg = MRI.createVirtualRegister(RC);
-    Chain = DAG.getCopyToReg(Chain, DL, TMReg, TM);
-    TM = DAG.getCopyFromReg(Chain, DL, TMReg, WorkingVT);
 
-    Register FMReg = MRI.createVirtualRegister(RC);
-    Chain = DAG.getCopyToReg(Chain, DL, FMReg, FM);
-    FM = DAG.getCopyFromReg(Chain, DL, FMReg, WorkingVT);
-  }
-
-  SDValue Result = DAG.getNode(ISD::OR, DL, WorkingVT, TM, FM, ProtectedFlag);
+  SDValue Result = DAG.getNode(ISD::OR, DL, WorkingVT, TM, FM);
 
   // Convert back if needed
   if (WorkingVT != VT) {
