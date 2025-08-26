@@ -59,7 +59,7 @@ define void @load_store(ptr %p) {
 ; LMUL2-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP6]] to i64
 ; LMUL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP10]], [[INDEX]]
 ; LMUL2-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
-; LMUL2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; LMUL2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; LMUL2-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL2:       middle.block:
 ; LMUL2-NEXT:    br label [[FOR_END:%.*]]
@@ -93,7 +93,7 @@ define void @load_store(ptr %p) {
 ; LMUL4-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP6]] to i64
 ; LMUL4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP10]], [[INDEX]]
 ; LMUL4-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
-; LMUL4-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; LMUL4-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; LMUL4-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL4:       middle.block:
 ; LMUL4-NEXT:    br label [[FOR_END:%.*]]
@@ -127,7 +127,7 @@ define void @load_store(ptr %p) {
 ; LMUL8-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP6]] to i64
 ; LMUL8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP10]], [[INDEX]]
 ; LMUL8-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
-; LMUL8-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; LMUL8-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; LMUL8-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL8:       middle.block:
 ; LMUL8-NEXT:    br label [[FOR_END:%.*]]
