@@ -1406,6 +1406,8 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
       (AI.getAllocatedType()->isSized() &&
        // alloca() may be called with 0 size, ignore it.
        ((!AI.isStaticAlloca()) || !getAllocaSizeInBytes(AI).isZero()) &&
+       // alloca() may be called with a scalable parameter, we can't handle it.
+       !AI.getAllocationSize(AI.getDataLayout())->isScalable() &&
        // We are only interested in allocas not promotable to registers.
        // Promotable allocas are common under -O0.
        (!ClSkipPromotableAllocas || !isAllocaPromotable(&AI)) &&
