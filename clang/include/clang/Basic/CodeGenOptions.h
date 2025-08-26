@@ -199,8 +199,8 @@ public:
   };
 
   enum SanitizeDebugTrapReasonKind {
-    None, ///< Trap Messages are omitted. This offers the smallest debug info
-          ///< size but at the cost of making traps hard to debug.
+    None,  ///< Trap Messages are omitted. This offers the smallest debug info
+           ///< size but at the cost of making traps hard to debug.
     Basic, ///< Trap Message is fixed per SanitizerKind. Produces smaller debug
            ///< info than `Detailed` but is not as helpful for debugging.
     Detailed, ///< Trap Message includes more context (e.g. the expression being
