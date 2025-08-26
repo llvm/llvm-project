@@ -139,7 +139,7 @@
 namespace __sanitizer {
 
 #if defined(__UINTPTR_TYPE__)
-#  if defined(__arm__) && defined(__linux__)
+#  if (defined(__arm__) || _ABIO32 == 1) && defined(__linux__)
 // Linux Arm headers redefine __UINTPTR_TYPE__ and disagree with clang/gcc.
 typedef unsigned int uptr;
 typedef int sptr;
