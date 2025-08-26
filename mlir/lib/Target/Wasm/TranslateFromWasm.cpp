@@ -874,7 +874,7 @@ void ValueStack::dump() const {
   auto getNextFrameIndex = indexGetter();
   auto nextFrameIdx = getNextFrameIndex();
   size_t stackSize = size();
-  for (size_t idx = 0; idx < stackSize;) {
+  for (size_t idx = 0; idx < stackSize; ++idx) {
     size_t actualIdx = stackSize - 1 - idx;
     while (nextFrameIdx && (nextFrameIdx->second > actualIdx)) {
       llvm::dbgs() << "  --------------- Frame (" << nextFrameIdx->first
