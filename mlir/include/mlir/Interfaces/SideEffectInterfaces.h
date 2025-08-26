@@ -15,6 +15,7 @@
 #define MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Dominance.h"
 
 namespace mlir {
 namespace SideEffects {
@@ -378,12 +379,6 @@ struct Read : public Effect::Base<Read> {};
 /// dereference or read.
 struct Write : public Effect::Base<Write> {};
 
-// The following effect indicates that the operation initializes some
-// memory resource to a known value i.e., an idempotent MemWrite.
-// An 'init' effect implies only mutating a resource in a way that's
-// identical across calls if inputs are the same, and not any visible
-// dereference or read.
-struct Init : public Effect::Base<Init> {};
 } // namespace MemoryEffects
 
 //===----------------------------------------------------------------------===//
@@ -428,13 +423,15 @@ bool isOpTriviallyDead(Operation *op);
 /// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
 
-/// Returns true if the given operation is movable under memory effects.
+/// Returns true if the given operation is allowed to be moved under the
+/// memory effects interface.
 ///
-/// An operation is movable if any of the following are true:
-/// (1) isMemoryEffectFree(op) --> true
-/// (2) isMemoryInitMovable(op) --> true
+/// An operation is movable if either case is true:
+/// (a) free of memory effects as defined in isMemoryEffectFree()
+/// (b) if the operation does have memory effects, it must be conflict-free
+/// as defined in isMemoryEffectConflictFree()
 ///
-/// If the operation meets either criteria, then it is movable
+/// If the operation meets either criteria, then it is movable under memory effects
 bool isMemoryEffectMovable(Operation *op);
 
 /// Returns true if the given operation is free of memory effects.
@@ -449,32 +446,32 @@ bool isMemoryEffectMovable(Operation *op);
 /// conditions are satisfied.
 bool isMemoryEffectFree(Operation *op);
 
-/// Returns true if the given operation has a collision-free 'Init' memory
-/// effect.
+/// Returns true if the given operation has conflict-free write effects
 ///
-/// An operation is movable if:
-/// (1) it has memory effects AND all of its memory effects are of type 'Init'
-/// (2) there are no other ops with memory effects on any ofthose same resources
-/// within the operation's region(s)
+/// An operation is conflict free:
+/// (1) all of its memory effects are of type Write
+/// (2) there are no other ops with Alloc/Free/Write effects on the same
+/// resources within the ops parent region
+/// (3) all ops in the parent region with Read effects on the same resources
+/// are dominated by the operation
 ///
-/// If the operation meets both criteria, then it is movable
-bool isMemoryInitMovable(Operation *op);
+/// If the operation meets all 3 criteria, then it is conflict free
+bool isMemoryEffectConflictFree(Operation *op);
 
-/// Returns true if op and all operations within its nested regions
-/// have >1 Memory Effects on ANY of the input resources.
+/// Returns true if op and/or any operations within its nested regions
+/// have a memory effect conflict with mainOp as defined below:
 ///
-/// The first call to this function is by an op with >=1 MemInit effect on
-/// >=1 unique resources. To check that none of these resources are in conflict
-/// with other Memory Effects, we scan the entire parent region and maintain
-/// a count of Memory Effects that apply to the resources of the original op.
-/// If any resource has more than 1 Memory Effect in that region, the resource
-/// is in conflict and the op can't be moved by LICM.
+/// op has a memory effect conflict with mainOp if op and/or any of 
+/// the operations in its nested regions meet any of these criteria:
+/// (a) they have any Alloc/Free/Write effects on the resources used by mainOp 
+/// (b) they dominate mainOp and have any read effect on the resources used by mainOp
 ///
 /// Function mutates resources map
 ///
-/// If no resources are in conflict, the op is movable.
-bool hasMemoryEffectInitConflict(
-    Operation *op, DenseMap<TypeID, int> &resourceCounts);
+/// If none of the critera above are met, mainOp and op are conflict free
+bool hasMemoryEffectConflict(
+    Operation *mainOp, Operation *op, 
+    mlir::DominanceInfo &dom, DenseMap<TypeID, int> &resourceCounts);
 
 /// Returns the side effects of an operation. If the operation has
 /// RecursiveMemoryEffects, include all side effects of child operations.

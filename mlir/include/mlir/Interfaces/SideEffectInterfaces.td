@@ -87,17 +87,6 @@ def MemWrite : MemWrite<DefaultResource, 0, PartialEffect>;
 class MemWriteAt<int stage, EffectRange range = PartialEffect>
   : MemWrite<DefaultResource, stage, range>;
 
-// The following effect indicates that the operation initializes some
-// memory resource to a known value i.e., an idempotent MemWrite. 
-// An 'init' effect implies only mutating a resource in a way that's
-// identical across calls if inputs are the same, and not any visible 
-// dereference or read.
-class MemInit<Resource resource, int stage = 0,
-               EffectRange range = PartialEffect>
-  : MemoryEffect<"::mlir::MemoryEffects::Init", resource, stage, range>;
-def MemInit : MemInit<DefaultResource, 0, PartialEffect>;
-class MemInitAt<int stage, EffectRange range = PartialEffect>
-  : MemInit<DefaultResource, stage, range>;
 
 //===----------------------------------------------------------------------===//
 // Effect Traits

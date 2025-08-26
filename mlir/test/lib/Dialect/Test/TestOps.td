@@ -2978,6 +2978,60 @@ def TestEffectsResult : TEST_Op<"test_effects_result"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Test Ops with multiple effects for Loop Invariant Code Motion
+//===----------------------------------------------------------------------===//
+
+def TestResourceA : Resource<"TestResourceA">;
+def TestResourceB : Resource<"TestResourceB">;
+def TestResourceC : Resource<"TestResourceC">;
+def TestResourceD : Resource<"TestResourceD">;
+def TestResourceE : Resource<"TestResourceE">;
+def TestResourceF : Resource<"TestResourceF">;
+
+def TestEffectsWriteA : TEST_Op<"test_effects_write_A",
+  [MemoryEffects<[MemWrite<TestResourceA>]>,
+  AlwaysSpeculatable]>;
+
+def TestEffectsReadA : TEST_Op<"test_effects_read_A",
+  [MemoryEffects<[MemRead<TestResourceA>]>]>;
+
+def TestEffectsWriteB : TEST_Op<"test_effects_write_B",
+  [MemoryEffects<[MemWrite<TestResourceB>]>,
+  AlwaysSpeculatable]>;
+
+def TestEffectsReadB : TEST_Op<"test_effects_read_B",
+  [MemoryEffects<[MemRead<TestResourceB>]>]>;
+
+def TestEffectsWriteF : TEST_Op<"test_effects_write_F",
+  [MemoryEffects<[MemWrite<TestResourceF>]>, 
+  AlwaysSpeculatable]>;
+
+def TestEffectsReadF : TEST_Op<"test_effects_read_F",
+  [MemoryEffects<[MemRead<TestResourceF>]>]>;
+
+def TestEffectsWriteAC : TEST_Op<"test_effects_write_AC",
+  [MemoryEffects<[MemWrite<TestResourceA>, MemWrite<TestResourceC>]>,
+  AlwaysSpeculatable]>;
+
+def TestEffectsReadAC : TEST_Op<"test_effects_read_AC",
+  [MemoryEffects<[MemRead<TestResourceA>, MemRead<TestResourceC>]>]>;
+
+def TestEffectsWriteCD : TEST_Op<"test_effects_write_CD",
+  [MemoryEffects<[MemWrite<TestResourceC>, MemWrite<TestResourceD>]>,
+  AlwaysSpeculatable]>;
+
+def TestEffectsReadCD : TEST_Op<"test_effects_read_CD",
+  [MemoryEffects<[MemRead<TestResourceC>, MemRead<TestResourceD>]>]>;
+
+def TestEffectsWriteEF : TEST_Op<"test_effects_write_EF",
+  [MemoryEffects<[MemWrite<TestResourceE>, MemWrite<TestResourceF>]>,
+  AlwaysSpeculatable]>;
+
+def TestEffectsReadEF : TEST_Op<"test_effects_read_EF",
+  [MemoryEffects<[MemRead<TestResourceE>, MemRead<TestResourceF>]>]>;
+
+
+//===----------------------------------------------------------------------===//
 // Test Ops with verifiers
 //===----------------------------------------------------------------------===//
 
