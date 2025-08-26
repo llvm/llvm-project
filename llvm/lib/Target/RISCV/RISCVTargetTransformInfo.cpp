@@ -1570,12 +1570,10 @@ InstructionCost
 RISCVTTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
                                         const SCEV *Ptr,
                                         TTI::TargetCostKind CostKind) const {
-  // Address computations with vector type are usually for indexed load/store
-  // which is likely more expensive.
+  // Address computations for vector indexed load/store likely require an offset
+  // and/or scaling.
   if (ST->hasVInstructions() && PtrTy->isVectorTy())
-    return getArithmeticInstrCost(Instruction::Add, PtrTy, CostKind,
-                                  {TTI::OK_AnyValue, TTI::OP_None},
-                                  {TTI::OK_AnyValue, TTI::OP_None}, {});
+    return getArithmeticInstrCost(Instruction::Add, PtrTy, CostKind);
 
   return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
 }
