@@ -22,7 +22,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTSCFTOOPENMPPASS
@@ -538,15 +538,18 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
 /// Applies the conversion patterns in the given function.
 static LogicalResult applyPatterns(ModuleOp module, unsigned numThreads) {
-  ConversionTarget target(*module.getContext());
-  target.addIllegalOp<scf::ReduceOp, scf::ReduceReturnOp, scf::ParallelOp>();
-  target.addLegalDialect<omp::OpenMPDialect, LLVM::LLVMDialect,
-                         memref::MemRefDialect>();
-
   RewritePatternSet patterns(module.getContext());
   patterns.add<ParallelOpLowering>(module.getContext(), numThreads);
   FrozenRewritePatternSet frozen(std::move(patterns));
-  return applyPartialConversion(module, target, frozen);
+  walkAndApplyPatterns(module, frozen);
+  auto status = module.walk([](Operation *op) {
+    if (isa<scf::ReduceOp, scf::ReduceReturnOp, scf::ParallelOp>(op)) {
+      op->emitError("unconverted operation found");
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return failure(status.wasInterrupted());
 }
 
 /// A pass converting SCF operations to OpenMP operations.
