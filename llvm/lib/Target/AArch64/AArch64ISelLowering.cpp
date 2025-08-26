@@ -4912,21 +4912,9 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
     return SDValue();
 
   if (SrcVT == MVT::f16 && SatVT == MVT::i16 && DstVT == MVT::i32) {
-    auto Opcode = (Op.getOpcode() == ISD::FP_TO_SINT_SAT)
-                      ? AArch64::FCVTZSv1f16
-                      : AArch64::FCVTZUv1f16;
-    auto Cvt = SDValue(DAG.getMachineNode(Opcode, DL, MVT::f16, SrcVal), 0);
-    auto Sign = DAG.getTargetConstant(-1, DL, MVT::i64);
-    auto Hsub = DAG.getTargetConstant(AArch64::hsub, DL, MVT::i32);
-    auto SubregToReg =
-        SDValue(DAG.getMachineNode(TargetOpcode::SUBREG_TO_REG, DL, MVT::v8f16,
-                                   Sign, Cvt, Hsub),
-                0);
-    auto Ssub = DAG.getTargetConstant(AArch64::ssub, DL, MVT::i32);
-    auto Extract = SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
-                                              MVT::f32, SubregToReg, Ssub),
-                           0);
-    return DAG.getBitcast(MVT::i32, Extract);
+    if (Op.getOpcode() == ISD::FP_TO_SINT_SAT)
+      return DAG.getNode(AArch64ISD::FCVTZS_HALF, DL, DstVT, SrcVal);
+    return DAG.getNode(AArch64ISD::FCVTZU_HALF, DL, DstVT, SrcVal);
   }
 
   SDValue NativeCvt =

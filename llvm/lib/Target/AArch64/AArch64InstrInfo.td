@@ -989,6 +989,9 @@ def AArch64fcvtxnv: PatFrags<(ops node:$Rn),
                                  [(int_aarch64_neon_fcvtxn node:$Rn),
                                   (AArch64fcvtxn_n node:$Rn)]>;
 
+def AArch64fcvtzs_half : SDNode<"AArch64ISD::FCVTZS_HALF", SDTFPToIntOp>;
+def AArch64fcvtzu_half : SDNode<"AArch64ISD::FCVTZU_HALF", SDTFPToIntOp>;
+
 //def Aarch64softf32tobf16v8: SDNode<"AArch64ISD::", SDTFPRoundOp>;
 
 // Vector immediate ops
