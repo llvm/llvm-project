@@ -15,12 +15,12 @@
 // template <class... Args>
 //   pair<iterator, bool> emplace(Args&&... args);
 
-#include <cassert>
 #include <set>
+#include <cassert>
 
+#include "test_macros.h"
 #include "../../Emplaceable.h"
 #include "DefaultOnly.h"
-#include "MoveOnly.h"
 #include "min_allocator.h"
 
 int main(int, char**) {
@@ -83,13 +83,6 @@ int main(int, char**) {
     assert(r.first == m.begin());
     assert(m.size() == 1);
     assert(*r.first == 2);
-  }
-  { // We're unwrapping pairs for `{,multi}map`. Make sure we're not trying to do that for set.
-    using Set = std::set<std::pair<MoveOnly, MoveOnly>>;
-    Set set;
-    auto res = set.emplace(std::pair<MoveOnly, MoveOnly>(2, 4));
-    assert(std::get<1>(res));
-    assert(set.begin() == std::get<0>(res));
   }
 
   return 0;

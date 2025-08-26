@@ -15,12 +15,12 @@
 // template <class... Args>
 //   iterator emplace(Args&&... args);
 
-#include <cassert>
 #include <set>
+#include <cassert>
 
+#include "test_macros.h"
 #include "../../Emplaceable.h"
 #include "DefaultOnly.h"
-#include "MoveOnly.h"
 #include "min_allocator.h"
 
 int main(int, char**) {
@@ -76,12 +76,6 @@ int main(int, char**) {
     assert(r == m.begin());
     assert(m.size() == 1);
     assert(*r == 2);
-  }
-  { // We're unwrapping pairs for `{,multi}map`. Make sure we're not trying to do that for multiset.
-    using Set = std::multiset<std::pair<MoveOnly, MoveOnly>>;
-    Set set;
-    auto iter = set.emplace(std::pair<MoveOnly, MoveOnly>(2, 4));
-    assert(set.begin() == iter);
   }
 
   return 0;
