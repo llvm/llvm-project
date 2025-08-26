@@ -68,7 +68,6 @@ mlir::LLVM::lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
                              SymbolTableCollection *symbolTables) {
   assert(moduleOp->hasTrait<OpTrait::SymbolTable>() &&
          "expected SymbolTable operation");
-  llvm::errs() << "Looking up " << name << "\n";
   auto func = lookupFuncOp(name, moduleOp, symbolTables);
   auto funcT = LLVMFunctionType::get(resultType, paramTypes, isVarArg);
   // Assert the signature of the found function is same as expected
@@ -86,7 +85,7 @@ mlir::LLVM::lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
     }
     return func;
   }
-  llvm::errs() << "Did not find " << name << ".. creating it \n";
+
   OpBuilder::InsertionGuard g(b);
   assert(!moduleOp->getRegion(0).empty() && "expected non-empty region");
   b.setInsertionPointToStart(&moduleOp->getRegion(0).front());

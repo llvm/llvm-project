@@ -95,25 +95,21 @@ public:
         newPrivVars.push_back(privVar);
         continue;
       }
-      // Treat the privVar as varPtr. TODO: For boxchars this likely wont be a
-      // pointer. Allocate heap memory that corresponds to the type of memory
+
+      // Allocate heap memory that corresponds to the type of memory
       // pointed to by varPtr
+      // TODO: For boxchars this likely wont be a pointer.
       mlir::Value varPtr = privVar;
       mlir::Value heapMem = allocateHeapMem(targetOp, privVar, mod, rewriter);
-      if (!heapMem) {
-        newPrivVars.push_back(privVar);
+      if (!heapMem)
         return failure();
-      }
+
       newPrivVars.push_back(heapMem);
 
-      // Find the earliest insertion point for the copy.
-
-      // Now, fix up the omp::MapInfoOp instances that use varPtr to refer
-      // to heapMem instead.
-      using ReplacementEntry = std::pair<Operation *, Operation *>;
-      llvm::SmallVector<ReplacementEntry> replRecord;
-
-
+      // Find the earliest insertion point for the copy. This will be before
+      // the first in the list of omp::MapInfoOp instances that use varPtr.
+      // After the copy these omp::MapInfoOp instances will refer to heapMem
+      // instead.
       Operation *varPtrDefiningOp = varPtr.getDefiningOp();
       std::set<Operation *> users;
       users.insert(varPtrDefiningOp->user_begin(),
@@ -122,11 +118,9 @@ public:
       auto usesVarPtr = [&users](Operation *op) -> bool {
         return users.count(op);
       };
-
       SmallVector<Operation *> chainOfOps;
       chainOfOps.push_back(mapInfoOperation);
       if (!mapInfoOp.getMembers().empty()) {
-
         for (auto member : mapInfoOp.getMembers()) {
           if (usesVarPtr(member.getDefiningOp()))
             chainOfOps.push_back(member.getDefiningOp());
@@ -144,13 +138,15 @@ public:
       });
 
       rewriter.setInsertionPoint(chainOfOps.front());
+      // Copy the value of the local variable into the heap-allocated location.
       mlir::Location loc = chainOfOps.front()->getLoc();
       mlir::Type varType = getElemType(varPtr);
-      // Copy the value of the local variable into the heap-allocated location.
       auto loadVal = rewriter.create<LLVM::LoadOp>(loc, varType, varPtr);
       LLVM_ATTRIBUTE_UNUSED auto storeInst =
           rewriter.create<LLVM::StoreOp>(loc, loadVal.getResult(), heapMem);
 
+      using ReplacementEntry = std::pair<Operation *, Operation *>;
+      llvm::SmallVector<ReplacementEntry> replRecord;
       auto cloneAndMarkForDeletion = [&](Operation *origOp) -> Operation * {
         Operation *clonedOp = rewriter.clone(*origOp);
         rewriter.replaceAllOpUsesWith(origOp, clonedOp);

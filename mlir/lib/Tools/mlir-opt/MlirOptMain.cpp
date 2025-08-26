@@ -624,7 +624,7 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
   // We use the thread-pool this context is creating, and avoid
   // creating any thread when disabled.
   MLIRContext threadPoolCtx;
-  llvm::errs() << "threadPoolCtx.isMultithreadingEnabled() = " << threadPoolCtx.isMultithreadingEnabled() << "\n";
+
   if (threadPoolCtx.isMultithreadingEnabled())
     threadPool = &threadPoolCtx.getThreadPool();
 
