@@ -472,7 +472,7 @@ private:
       case FormatStyle::SRS_Never:
         return false;
       }
-    }();
+    }() && !Style.BraceWrapping.SplitEmptyRecord;
 
     // Don't merge an empty template class or struct if SplitEmptyRecords
     // is defined.
