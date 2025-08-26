@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tahiti -o - < %s | FileCheck %s --check-prefixes=GFX,GFX6
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji -o - < %s | FileCheck %s --check-prefixes=GFX,GFX8
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX10
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX1250
 
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)
@@ -13,11 +14,30 @@ declare <3 x i16> @llvm.abs.v3i16(<3 x i16>, i1)
 declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
 
 define amdgpu_cs i16 @abs_sgpr_i16(i16 inreg %arg) {
-; GFX-LABEL: abs_sgpr_i16:
-; GFX:       ; %bb.0:
-; GFX-NEXT:    s_sext_i32_i16 s0, s0
-; GFX-NEXT:    s_abs_i32 s0, s0
-; GFX-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: abs_sgpr_i16:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_sext_i32_i16 s0, s0
+; GFX6-NEXT:    s_abs_i32 s0, s0
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: abs_sgpr_i16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_sext_i32_i16 s0, s0
+; GFX8-NEXT:    s_abs_i32 s0, s0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: abs_sgpr_i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_sext_i32_i16 s0, s0
+; GFX10-NEXT:    s_abs_i32 s0, s0
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_sgpr_i16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_sext_i32_i16 s0, s0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_abs_i32 s0, s0
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call i16 @llvm.abs.i16(i16 %arg, i1 false)
   ret i16 %res
 }
@@ -32,14 +52,42 @@ define amdgpu_cs i32 @abs_sgpr_i32(i32 inreg %arg) {
 }
 
 define amdgpu_cs i64 @abs_sgpr_i64(i64 inreg %arg) {
-; GFX-LABEL: abs_sgpr_i64:
-; GFX:       ; %bb.0:
-; GFX-NEXT:    s_ashr_i32 s2, s1, 31
-; GFX-NEXT:    s_add_u32 s0, s0, s2
-; GFX-NEXT:    s_mov_b32 s3, s2
-; GFX-NEXT:    s_addc_u32 s1, s1, s2
-; GFX-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; GFX-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: abs_sgpr_i64:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_ashr_i32 s2, s1, 31
+; GFX6-NEXT:    s_add_u32 s0, s0, s2
+; GFX6-NEXT:    s_mov_b32 s3, s2
+; GFX6-NEXT:    s_addc_u32 s1, s1, s2
+; GFX6-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: abs_sgpr_i64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_ashr_i32 s2, s1, 31
+; GFX8-NEXT:    s_add_u32 s0, s0, s2
+; GFX8-NEXT:    s_mov_b32 s3, s2
+; GFX8-NEXT:    s_addc_u32 s1, s1, s2
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: abs_sgpr_i64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_ashr_i32 s2, s1, 31
+; GFX10-NEXT:    s_add_u32 s0, s0, s2
+; GFX10-NEXT:    s_mov_b32 s3, s2
+; GFX10-NEXT:    s_addc_u32 s1, s1, s2
+; GFX10-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_sgpr_i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_ashr_i32 s2, s1, 31
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_mov_b32 s3, s2
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call i64 @llvm.abs.i64(i64 %arg, i1 false)
   ret i64 %res
 }
@@ -78,6 +126,14 @@ define amdgpu_cs i16 @abs_vgpr_i16(i16 %arg) {
 ; GFX10-NEXT:    v_max_i16 v0, v0, v1
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_vgpr_i16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_sub_nc_u16 v1, 0, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_max_i16 v0, v0, v1
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call i16 @llvm.abs.i16(i16 %arg, i1 false)
   ret i16 %res
 }
@@ -103,6 +159,14 @@ define amdgpu_cs i32 @abs_vgpr_i32(i32 %arg) {
 ; GFX10-NEXT:    v_max_i32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_vgpr_i32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_sub_nc_u32_e32 v1, 0, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_max_i32_e32 v0, v0, v1
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call i32 @llvm.abs.i32(i32 %arg, i1 false)
   ret i32 %res
 }
@@ -140,6 +204,20 @@ define amdgpu_cs i64 @abs_vgpr_i64(i64 %arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_vgpr_i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], v[0:1], v[2:3]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX1250-NEXT:    v_xor_b32_e32 v1, v1, v2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call i64 @llvm.abs.i64(i64 %arg, i1 false)
   ret i64 %res
 }
@@ -192,6 +270,24 @@ define amdgpu_cs <4 x i32> @abs_vgpr_v4i32(<4 x i32> %arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_vgpr_v4i32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_dual_sub_nc_u32 v4, 0, v0 :: v_dual_sub_nc_u32 v5, 0, v1
+; GFX1250-NEXT:    v_dual_sub_nc_u32 v6, 0, v2 :: v_dual_sub_nc_u32 v7, 0, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_max_i32_e32 v0, v0, v4
+; GFX1250-NEXT:    v_max_i32_e32 v1, v1, v5
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1250-NEXT:    v_max_i32_e32 v2, v2, v6
+; GFX1250-NEXT:    v_max_i32_e32 v3, v3, v7
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1250-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %arg, i1 false)
   ret <4 x i32> %res
 }
@@ -243,6 +339,21 @@ define amdgpu_cs <2 x i8> @abs_vgpr_v2i8(<2 x i8> %arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_vgpr_v2i8:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; GFX1250-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_sub_nc_u16 v2, 0, v0
+; GFX1250-NEXT:    v_sub_nc_u16 v3, 0, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_max_i16 v0, v0, v2
+; GFX1250-NEXT:    v_max_i16 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call <2 x i8> @llvm.abs.v2i8(<2 x i8> %arg, i1 false)
   ret <2 x i8> %res
 }
@@ -307,6 +418,27 @@ define amdgpu_cs <3 x i8> @abs_vgpr_v3i8(<3 x i8>  %arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_vgpr_v3i8:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; GFX1250-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX1250-NEXT:    v_bfe_i32 v2, v2, 0, 8
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_sub_nc_u16 v3, 0, v0
+; GFX1250-NEXT:    v_sub_nc_u16 v4, 0, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_sub_nc_u16 v5, 0, v2
+; GFX1250-NEXT:    v_max_i16 v0, v0, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_max_i16 v1, v1, v4
+; GFX1250-NEXT:    v_max_i16 v2, v2, v5
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1250-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call <3 x i8> @llvm.abs.v3i8(<3 x i8> %arg, i1 false)
   ret <3 x i8> %res
 }
@@ -341,6 +473,16 @@ define amdgpu_cs <2 x i16> @abs_sgpr_v2i16(<2 x i16> inreg %arg) {
 ; GFX10-NEXT:    s_abs_i32 s0, s0
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_sgpr_v2i16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_sext_i32_i16 s1, s0
+; GFX1250-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX1250-NEXT:    s_abs_i32 s1, s1
+; GFX1250-NEXT:    s_abs_i32 s0, s0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %arg, i1 false)
   ret <2 x i16> %res
 }
@@ -375,6 +517,14 @@ define amdgpu_cs <2 x i16> @abs_vgpr_v2i16(<2 x i16> %arg) {
 ; GFX10-NEXT:    v_pk_max_i16 v0, v0, v1
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_vgpr_v2i16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_pk_sub_i16 v1, 0, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_max_i16 v0, v0, v1
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %arg, i1 false)
   ret <2 x i16> %res
 }
@@ -416,6 +566,17 @@ define amdgpu_cs <3 x i16> @abs_sgpr_v3i16(<3 x i16> inreg %arg) {
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
 ; GFX10-NEXT:    s_abs_i32 s1, s1
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_sgpr_v3i16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_sext_i32_i16 s2, s0
+; GFX1250-NEXT:    s_ashr_i32 s0, s0, 16
+; GFX1250-NEXT:    s_abs_i32 s2, s2
+; GFX1250-NEXT:    s_abs_i32 s0, s0
+; GFX1250-NEXT:    s_sext_i32_i16 s1, s1
+; GFX1250-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
+; GFX1250-NEXT:    s_abs_i32 s1, s1
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call <3 x i16> @llvm.abs.v3i16(<3 x i16> %arg, i1 false)
   ret <3 x i16> %res
 }
@@ -460,6 +621,18 @@ define amdgpu_cs <3 x i16> @abs_vgpr_v3i16(<3 x i16> %arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: abs_vgpr_v3i16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_pk_sub_i16 v2, 0, v0
+; GFX1250-NEXT:    v_sub_nc_u16 v3, 0, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_pk_max_i16 v0, v0, v2
+; GFX1250-NEXT:    v_max_i16 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    ; return to shader part epilog
   %res = call <3 x i16> @llvm.abs.v3i16(<3 x i16> %arg, i1 false)
   ret <3 x i16> %res
 }
