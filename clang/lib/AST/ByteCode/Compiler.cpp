@@ -62,7 +62,7 @@ public:
   OptionScope(Compiler<Emitter> *Ctx, bool NewDiscardResult,
               bool NewInitializing, bool NewToLValue)
       : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
-        OldInitializing(Ctx->Initializing), OldToLValue(NewToLValue) {
+        OldInitializing(Ctx->Initializing), OldToLValue(Ctx->ToLValue) {
     Ctx->DiscardResult = NewDiscardResult;
     Ctx->Initializing = NewInitializing;
     Ctx->ToLValue = NewToLValue;
@@ -2248,7 +2248,9 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     assert(VAT);
     if (VAT->getElementType()->isArrayType()) {
       std::optional<APSInt> Res =
-          VAT->getSizeExpr()->getIntegerConstantExpr(ASTCtx);
+          VAT->getSizeExpr()
+              ? VAT->getSizeExpr()->getIntegerConstantExpr(ASTCtx)
+              : std::nullopt;
       if (Res) {
         if (DiscardResult)
           return true;
@@ -5228,6 +5230,12 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     const Function *Func = getFunction(FuncDecl);
     if (!Func)
       return false;
+
+    // In error cases, the function may be called with fewer arguments than
+    // parameters.
+    if (E->getNumArgs() < Func->getNumWrittenParams())
+      return false;
+
     assert(HasRVO == Func->hasRVO());
 
     bool HasQualifier = false;
