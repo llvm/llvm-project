@@ -54,27 +54,6 @@ def _output_bug_report_message(context):
     )
 
 
-def get_tools_directory():
-    """Returns directory path where DExTer tool imports can be
-    found.
-    """
-    tools_directory = os.path.join(get_root_directory(), "tools")
-    assert os.path.isdir(tools_directory), tools_directory
-    return tools_directory
-
-
-def get_tool_names():
-    """Returns a list of expected DExTer Tools"""
-    return [
-        "help",
-        "list-debuggers",
-        "no-tool-",
-        "run-debugger-internal-",
-        "test",
-        "view",
-    ]
-
-
 def _set_auto_highlights(context):
     """Flag some strings for auto-highlighting."""
     context.o.auto_reds.extend(
@@ -118,6 +97,7 @@ def _is_valid_tool_name(tool_name):
     """check tool name matches a tool directory within the dexter tools
     directory.
     """
+    from . import get_tool_names
     valid_tools = get_tool_names()
     if tool_name not in valid_tools:
         raise Error(
@@ -125,17 +105,6 @@ def _is_valid_tool_name(tool_name):
                 tool_name, ", ".join([t for t in valid_tools if not t.endswith("-")])
             )
         )
-
-
-def _import_tool_module(tool_name):
-    """Imports the python module at the tool directory specificed by
-    tool_name.
-    """
-    # format tool argument to reflect tool directory form.
-    tool_name = tool_name.replace("-", "_")
-
-    tools_directory = get_tools_directory()
-    return load_module(tool_name, tools_directory)
 
 
 def tool_main(context, tool, args):
@@ -190,6 +159,7 @@ class Context(object):
 
 
 def main() -> ReturnCode:
+    from . import get_tools
     context = Context()
     with PrettyOutput() as context.o:
         context.logger = Logger(context.o)
@@ -200,8 +170,8 @@ def main() -> ReturnCode:
             options, args = _get_options_and_args(context)
             # raises 'Error' if command line tool is invalid.
             tool_name = _get_tool_name(options)
-            module = _import_tool_module(tool_name)
-            return tool_main(context, module.Tool(context), args)
+            T = get_tools()[tool_name]
+            return tool_main(context, T(context), args)
         except Error as e:
             context.logger.error(str(e))
             try:
