@@ -12,7 +12,7 @@
 // RUN:   -cas-path %t/cas2 -format experimental-include-tree-full \
 // RUN:   >> %t/result.json
 
-// RUN: cat %t/result.json | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK: "modules": [
 // CHECK:   {

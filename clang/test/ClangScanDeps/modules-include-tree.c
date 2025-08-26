@@ -33,7 +33,7 @@
 // RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/tu.casid >> %t/result.txt
 // RUN: cat %t/deps.json >> %t/result.txt
 
-// RUN: FileCheck %s -input-file %t/result.txt -DPREFIX=%/t
+// RUN: cat %t/result.txt | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK-LABEL: MODULE Top
 // CHECK: <module-includes> llvmcas://{{[[:xdigit:]]+}}

@@ -34,7 +34,7 @@
 // RUN: rm -rf %t/outputs
 // RUN: %clang @%t/tu.rsp
 
-// RUN: FileCheck %s -input-file %t/deps.json -DPREFIX=%/t
+// RUN: cat %t/deps.json | sed 's/\\\\/\//g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      {
 // CHECK-NEXT:  "modules": [

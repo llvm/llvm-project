@@ -43,12 +43,11 @@ StringRef FileSystemCache::getRootPathFor(StringRef Path) const {
 }
 
 StringRef
-FileSystemCache::canonicalizeWorkingDirectory(const Twine &Path,
-                                              sys::path::Style PathStyle,
+FileSystemCache::canonicalizeWorkingDirectory(sys::path::Style PathStyle,
                                               StringRef WorkingDirectory,
                                               SmallVectorImpl<char> &Storage) {
   const char PathSeparatorChar = get_separator(PathStyle)[0];
-  Path.toVector(Storage);
+  StringRef Path = StringRef(Storage.begin(), Storage.size());
   if (Storage.empty())
     return WorkingDirectory;
 
@@ -112,7 +111,11 @@ static DirectoryEntry &makeLazyEntry(
     DirectoryEntry &Parent, FileSystemCache::Directory &D, StringRef TreePath,
     DirectoryEntry::EntryKind Kind, std::optional<ObjectRef> Ref,
     sys::path::Style PathStyle) {
+#ifndef _WIN32
   assert(sys::path::parent_path(TreePath, PathStyle) == Parent.getTreePath());
+#else
+  assert(sys::path::parent_path(TreePath, PathStyle).equals_insensitive(Parent.getTreePath()));
+#endif
   assert(!D.lookup(sys::path::filename(TreePath, PathStyle)));
   assert(!D.isComplete());
 

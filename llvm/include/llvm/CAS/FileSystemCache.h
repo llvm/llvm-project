@@ -27,6 +27,37 @@
 namespace llvm {
 namespace cas {
 
+// Used to create StringRef from Twine and slash canonicalization on
+// Windows.
+struct PathStorage {
+  SmallString<261> Storage;
+  StringRef Path;
+  PathStorage() {}
+  PathStorage(const Twine &InputPath,
+              sys::path::Style Style = sys::path::Style::native) {
+    if (is_style_windows(Style)) {
+      // Canonicalize to backslahes
+      InputPath.toVector(Storage);
+      llvm::sys::path::make_preferred(Storage, Style);
+      Path = Storage.str();
+    } else {
+      InputPath.toVector(Storage);
+      Path = Storage.str();
+    }
+  }
+  PathStorage(StringRef InputPath,
+              sys::path::Style Style = sys::path::Style::native) {
+    if (is_style_windows(Style)) {
+      // Canonicalize to backslahes
+      Storage = InputPath;
+      llvm::sys::path::make_preferred(Storage, Style);
+      Path = Storage.str();
+    } else {
+      Path = InputPath;
+    }
+  }
+};
+
 /// Caching for lazily discovering a CAS-based filesystem.
 ///
 /// FIXME: Extract most of this into llvm::vfs::FileSystemCache, so that it can
@@ -187,8 +218,7 @@ public:
 
   std::error_code setCurrentWorkingDirectory(const Twine &Path);
 
-  static StringRef canonicalizeWorkingDirectory(const Twine &Path,
-                                                sys::path::Style PathStyle,
+  static StringRef canonicalizeWorkingDirectory(sys::path::Style PathStyle,
                                                 StringRef WorkingDirectory,
                                                 SmallVectorImpl<char> &Storage);
 
