@@ -88,23 +88,32 @@ static inline RT_API_ATTRS bool MustDeallocateLHS(
 // originally deallocated or because it required reallocation
 static RT_API_ATTRS int AllocateAssignmentLHS(
     Descriptor &to, const Descriptor &from, Terminator &terminator, int flags) {
-  to.raw().type = from.raw().type;
-  if (!(flags & ExplicitLengthCharacterLHS)) {
-    to.raw().elem_len = from.ElementBytes();
-  }
-  const typeInfo::DerivedType *derived{nullptr};
   DescriptorAddendum *toAddendum{to.Addendum()};
+  const typeInfo::DerivedType *derived{nullptr};
+  if (toAddendum) {
+    derived = toAddendum->derivedType();
+  }
   if (const DescriptorAddendum * fromAddendum{from.Addendum()}) {
-    derived = fromAddendum->derivedType();
-    if (toAddendum) {
-      toAddendum->set_derivedType(derived);
-      std::size_t lenParms{derived ? derived->LenParameters() : 0};
+    if (!derived || (flags & PolymorphicLHS)) {
+      derived = fromAddendum->derivedType();
+    }
+    if (toAddendum && derived) {
+      std::size_t lenParms{derived->LenParameters()};
       for (std::size_t j{0}; j < lenParms; ++j) {
         toAddendum->SetLenParameterValue(j, fromAddendum->LenParameterValue(j));
       }
     }
-  } else if (toAddendum) {
-    toAddendum->set_derivedType(nullptr);
+  } else {
+    derived = nullptr;
+  }
+  if (toAddendum) {
+    toAddendum->set_derivedType(derived);
+  }
+  to.raw().type = from.raw().type;
+  if (derived) {
+    to.raw().elem_len = derived->sizeInBytes();
+  } else if (!(flags & ExplicitLengthCharacterLHS)) {
+    to.raw().elem_len = from.ElementBytes();
   }
   // subtle: leave bounds in place when "from" is scalar (10.2.1.3(3))
   int rank{from.rank()};

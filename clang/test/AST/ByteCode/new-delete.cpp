@@ -82,8 +82,7 @@ static_assert(noInit() == 0, "");
 /// Try to delete a pointer that hasn't been heap allocated.
 constexpr int notHeapAllocated() { // both-error {{never produces a constant expression}}
   int A = 0; // both-note 2{{declared here}}
-  delete &A; // ref-note 2{{delete of pointer '&A' that does not point to a heap-allocated object}} \
-             // expected-note 2{{delete of pointer '&A' that does not point to a heap-allocated object}}
+  delete &A; // both-note 2{{delete of pointer '&A' that does not point to a heap-allocated object}}
 
   return 1;
 }
@@ -374,8 +373,7 @@ namespace delete_random_things {
   static_assert((delete &(new A)->n, true)); // both-error {{}} \
                                              // both-note {{delete of pointer to subobject }}
   static_assert((delete (new int + 1), true)); // both-error {{}} \
-                                               // ref-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}} \
-                                               // expected-note {{delete of pointer '&{*new int#1} + 1' that does not point to complete object}}
+                                               // both-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}}
   static_assert((delete[] (new int[3] + 1), true)); // both-error {{}} \
                                                     // both-note {{delete of pointer to subobject}}
   static_assert((delete &(int&)(int&&)0, true)); // both-error {{}} \

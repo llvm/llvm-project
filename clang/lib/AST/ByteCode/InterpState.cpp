@@ -45,6 +45,12 @@ InterpState::~InterpState() {
 
   while (DeadBlocks) {
     DeadBlock *Next = DeadBlocks->Next;
+
+    // There might be a pointer in a global structure pointing to the dead
+    // block.
+    for (Pointer *P = DeadBlocks->B.Pointers; P; P = P->asBlockPointer().Next)
+      DeadBlocks->B.removePointer(P);
+
     std::free(DeadBlocks);
     DeadBlocks = Next;
   }
@@ -53,12 +59,6 @@ InterpState::~InterpState() {
 void InterpState::cleanup() {
   // As a last resort, make sure all pointers still pointing to a dead block
   // don't point to it anymore.
-  for (DeadBlock *DB = DeadBlocks; DB; DB = DB->Next) {
-    for (Pointer *P = DB->B.Pointers; P; P = P->asBlockPointer().Next) {
-      P->PointeeStorage.BS.Pointee = nullptr;
-    }
-  }
-
   Alloc.cleanup();
 }
 

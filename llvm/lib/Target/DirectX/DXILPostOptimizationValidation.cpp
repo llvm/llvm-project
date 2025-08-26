@@ -95,7 +95,7 @@ static void reportOverlappingError(Module &M, ResourceInfo R1,
 }
 
 static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
-  bool ErrorFound = false;
+  [[maybe_unused]] bool ErrorFound = false;
   for (const auto &ResList :
        {DRM.srvs(), DRM.uavs(), DRM.cbuffers(), DRM.samplers()}) {
     if (ResList.empty())
@@ -164,12 +164,11 @@ static void validateRootSignature(Module &M,
 
   for (const mcdxbc::RootParameterInfo &ParamInfo : RSD.ParametersContainer) {
     dxbc::ShaderVisibility ParamVisibility =
-        static_cast<dxbc::ShaderVisibility>(ParamInfo.Header.ShaderVisibility);
+        dxbc::ShaderVisibility(ParamInfo.Visibility);
     if (ParamVisibility != dxbc::ShaderVisibility::All &&
         ParamVisibility != Visibility)
       continue;
-    dxbc::RootParameterType ParamType =
-        static_cast<dxbc::RootParameterType>(ParamInfo.Header.ParameterType);
+    dxbc::RootParameterType ParamType = dxbc::RootParameterType(ParamInfo.Type);
     switch (ParamType) {
     case dxbc::RootParameterType::Constants32Bit: {
       dxbc::RTS0::v1::RootConstants Const =
@@ -185,10 +184,9 @@ static void validateRootSignature(Module &M,
     case dxbc::RootParameterType::CBV: {
       dxbc::RTS0::v2::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
-      Builder.trackBinding(toResourceClass(static_cast<dxbc::RootParameterType>(
-                               ParamInfo.Header.ParameterType)),
-                           Desc.RegisterSpace, Desc.ShaderRegister,
-                           Desc.ShaderRegister, &ParamInfo);
+      Builder.trackBinding(toResourceClass(ParamInfo.Type), Desc.RegisterSpace,
+                           Desc.ShaderRegister, Desc.ShaderRegister,
+                           &ParamInfo);
 
       break;
     }

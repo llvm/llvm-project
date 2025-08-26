@@ -1667,9 +1667,8 @@ _mm256_cvtepu32_epi64(__m128i __V) {
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [4 x i64] containing the products.
-static __inline__  __m256i __DEFAULT_FN_ATTRS256
-_mm256_mul_epi32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mul_epi32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_pmuldq256((__v8si)__a, (__v8si)__b);
 }
 
@@ -1796,9 +1795,8 @@ _mm256_mullo_epi32 (__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [4 x i64] containing the products.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_mul_epu32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mul_epu32(__m256i __a, __m256i __b) {
   return __builtin_ia32_pmuludq256((__v8si)__a, (__v8si)__b);
 }
 
@@ -3723,7 +3721,7 @@ _mm_maskstore_epi64(long long *__X, __m128i __M, __m128i __Y)
 ///    A 256-bit vector of [8 x i32] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_sllv_epi32(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psllv8si((__v8si)__X, (__v8si)__Y);
@@ -3745,7 +3743,7 @@ _mm256_sllv_epi32(__m256i __X, __m256i __Y)
 ///    A 128-bit vector of [4 x i32] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 128-bit vector of [4 x i32] containing the result.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_sllv_epi32(__m128i __X, __m128i __Y)
 {
   return (__m128i)__builtin_ia32_psllv4si((__v4si)__X, (__v4si)__Y);
@@ -3767,7 +3765,7 @@ _mm_sllv_epi32(__m128i __X, __m128i __Y)
 ///    A 256-bit vector of [4 x i64] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_sllv_epi64(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psllv4di((__v4di)__X, (__v4di)__Y);
@@ -3789,7 +3787,7 @@ _mm256_sllv_epi64(__m256i __X, __m256i __Y)
 ///    A 128-bit vector of [2 x i64] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 128-bit vector of [2 x i64] containing the result.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_sllv_epi64(__m128i __X, __m128i __Y)
 {
   return (__m128i)__builtin_ia32_psllv2di((__v2di)__X, (__v2di)__Y);
@@ -3812,7 +3810,7 @@ _mm_sllv_epi64(__m128i __X, __m128i __Y)
 ///    A 256-bit vector of [8 x i32] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_srav_epi32(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psrav8si((__v8si)__X, (__v8si)__Y);
@@ -3835,7 +3833,7 @@ _mm256_srav_epi32(__m256i __X, __m256i __Y)
 ///    A 128-bit vector of [4 x i32] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 128-bit vector of [4 x i32] containing the result.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_srav_epi32(__m128i __X, __m128i __Y)
 {
   return (__m128i)__builtin_ia32_psrav4si((__v4si)__X, (__v4si)__Y);
@@ -3857,7 +3855,7 @@ _mm_srav_epi32(__m128i __X, __m128i __Y)
 ///    A 256-bit vector of [8 x i32] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_srlv_epi32(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psrlv8si((__v8si)__X, (__v8si)__Y);
@@ -3879,7 +3877,7 @@ _mm256_srlv_epi32(__m256i __X, __m256i __Y)
 ///    A 128-bit vector of [4 x i32] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 128-bit vector of [4 x i32] containing the result.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_srlv_epi32(__m128i __X, __m128i __Y)
 {
   return (__m128i)__builtin_ia32_psrlv4si((__v4si)__X, (__v4si)__Y);
@@ -3901,7 +3899,7 @@ _mm_srlv_epi32(__m128i __X, __m128i __Y)
 ///    A 256-bit vector of [4 x i64] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_srlv_epi64(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psrlv4di((__v4di)__X, (__v4di)__Y);
@@ -3923,7 +3921,7 @@ _mm256_srlv_epi64(__m256i __X, __m256i __Y)
 ///    A 128-bit vector of [2 x i64] containing the unsigned shift counts (in
 ///    bits).
 /// \returns A 128-bit vector of [2 x i64] containing the result.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_srlv_epi64(__m128i __X, __m128i __Y)
 {
   return (__m128i)__builtin_ia32_psrlv2di((__v2di)__X, (__v2di)__Y);

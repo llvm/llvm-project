@@ -9,9 +9,9 @@
 #include <clc/internal/math/clc_sw_fma.h>
 #include <clc/opencl/math/fma.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION fma
-#define __IMPL_FUNCTION(x) __clc_sw_fma
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION fma
+#define __CLC_IMPL_FUNCTION(x) __clc_sw_fma
 #define __CLC_BODY <clc/shared/ternary_def.inc>
 
 #include <clc/math/gentype.inc>

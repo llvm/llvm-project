@@ -13,6 +13,7 @@ include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -1245,7 +1246,8 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
 // TargetFeaturesAttr
 //===----------------------------------------------------------------------===//
 
-def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features",
+                                        [DLTIQueryInterface]>
 {
   let summary = "LLVM target features attribute";
 
@@ -1298,10 +1300,41 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
     static constexpr StringLiteral getAttributeName() {
       return StringLiteral("target_features");
     }
+
+    /// Returns the attribute associated with the key.
+    FailureOr<Attribute> query(DataLayoutEntryKey key);
   }];
 
   let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
   let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
+                                [LLVM_TargetAttrInterface]> {
+  let summary = "LLVM target info: triple, chip, features";
+  let description = [{
+    An attribute to hold LLVM target information, specifying LLVM's target
+    `triple` string, the target `chip` string (i.e. the `cpu` string), and
+    target `features` string as an attribute. The latter is optional.
+
+    Responds to DLTI-queries on the keys:
+      * A query for `"triple"` returns the `StringAttr` for the `triple`.
+      * A query for `"chip"` returns the `StringAttr` for the `chip`/`cpu`.
+      * A query for `"features"` returns the `StringAttr`, if provided.
+  }];
+  let parameters = (ins "StringAttr":$triple,
+                        "StringAttr":$chip,
+                        OptionalParameter<"TargetFeaturesAttr", "">:$features);
+
+  let assemblyFormat = [{`<` struct($triple, $chip, $features) `>`}];
+
+  let extraClassDeclaration = [{
+    FailureOr<Attribute> query(DataLayoutEntryKey key);
+  }];
 }
 
 //===----------------------------------------------------------------------===//

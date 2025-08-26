@@ -92,18 +92,18 @@ public:
   void addRecipeForPart(VPRecipeBase *OrigR, VPRecipeBase *CopyR,
                         unsigned Part) {
     for (const auto &[Idx, VPV] : enumerate(OrigR->definedValues())) {
-      auto Ins = VPV2Parts.insert({VPV, {}});
-      assert(Ins.first->second.size() == Part - 1 && "earlier parts not set");
-      Ins.first->second.push_back(CopyR->getVPValue(Idx));
+      const auto &[V, _] = VPV2Parts.try_emplace(VPV);
+      assert(V->second.size() == Part - 1 && "earlier parts not set");
+      V->second.push_back(CopyR->getVPValue(Idx));
     }
   }
 
   /// Given a uniform recipe \p R, add it for all parts.
   void addUniformForAllParts(VPSingleDefRecipe *R) {
-    auto Ins = VPV2Parts.insert({R, {}});
-    assert(Ins.second && "uniform value already added");
+    const auto &[V, Inserted] = VPV2Parts.try_emplace(R);
+    assert(Inserted && "uniform value already added");
     for (unsigned Part = 0; Part != UF; ++Part)
-      Ins.first->second.push_back(R);
+      V->second.push_back(R);
   }
 
   bool contains(VPValue *VPV) const { return VPV2Parts.contains(VPV); }
@@ -373,8 +373,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
-                      m_VPValue(Op0))) ||
+    if (match(&R, m_ExtractLastElement(m_VPValue(Op0))) ||
         match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
                       m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
@@ -464,15 +463,20 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   VPlanTransforms::removeDeadRecipes(Plan);
 }
 
-/// Create a single-scalar clone of \p RepR for lane \p Lane.
-static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
-                                       Type *IdxTy, VPReplicateRecipe *RepR,
-                                       VPLane Lane) {
+/// Create a single-scalar clone of \p RepR for lane \p Lane. Use \p
+/// Def2LaneDefs to look up scalar definitions for operands of \RepR.
+static VPReplicateRecipe *
+cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
+             VPReplicateRecipe *RepR, VPLane Lane,
+             const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
   // Collect the operands at Lane, creating extracts as needed.
   SmallVector<VPValue *> NewOps;
   for (VPValue *Op : RepR->operands()) {
-    if (vputils::isSingleScalar(Op)) {
-      NewOps.push_back(Op);
+    // If Op is a definition that has been unrolled, directly use the clone for
+    // the corresponding lane.
+    auto LaneDefs = Def2LaneDefs.find(Op);
+    if (LaneDefs != Def2LaneDefs.end()) {
+      NewOps.push_back(LaneDefs->second[Lane.getKnownLane()]);
       continue;
     }
     if (Lane.getKind() == VPLane::Kind::ScalableLast) {
@@ -480,6 +484,11 @@ static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
           Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
       continue;
     }
+    if (vputils::isSingleScalar(Op)) {
+      NewOps.push_back(Op);
+      continue;
+    }
+
     // Look through buildvector to avoid unnecessary extracts.
     if (match(Op, m_BuildVector())) {
       NewOps.push_back(
@@ -512,6 +521,13 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()));
   auto VPBBsToUnroll =
       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion);
+  // A mapping of current VPValue definitions to collections of new VPValues
+  // defined per lane. Serves to hook-up potential users of current VPValue
+  // definition that are replicated-per-VF later.
+  DenseMap<VPValue *, SmallVector<VPValue *>> Def2LaneDefs;
+  // The removal of current recipes being replaced by new ones needs to be
+  // delayed after Def2LaneDefs is no longer in use.
+  SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
@@ -523,12 +539,12 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
         if (isa<StoreInst>(RepR->getUnderlyingInstr()) &&
             vputils::isSingleScalar(RepR->getOperand(1))) {
           // Stores to invariant addresses need to store the last lane only.
-          cloneForLane(Plan, Builder, IdxTy, RepR,
-                       VPLane::getLastLaneForVF(VF));
+          cloneForLane(Plan, Builder, IdxTy, RepR, VPLane::getLastLaneForVF(VF),
+                       Def2LaneDefs);
         } else {
           // Create single-scalar version of RepR for all lanes.
           for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
-            cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I));
+            cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I), Def2LaneDefs);
         }
         RepR->eraseFromParent();
         continue;
@@ -536,23 +552,33 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Create single-scalar version of RepR for all lanes.
       SmallVector<VPValue *> LaneDefs;
       for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
-        LaneDefs.push_back(cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I)));
+        LaneDefs.push_back(
+            cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I), Def2LaneDefs));
 
+      Def2LaneDefs[RepR] = LaneDefs;
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       RepR->replaceUsesWithIf(LaneDefs[0], [RepR](VPUser &U, unsigned) {
         return U.onlyFirstLaneUsed(RepR);
       });
 
-      // If needed, create a Build(Struct)Vector recipe to insert the scalar
-      // lane values into a vector.
-      Type *ResTy = RepR->getUnderlyingInstr()->getType();
-      VPValue *VecRes = Builder.createNaryOp(
-          ResTy->isStructTy() ? VPInstruction::BuildStructVector
-                              : VPInstruction::BuildVector,
-          LaneDefs);
-      RepR->replaceAllUsesWith(VecRes);
-      RepR->eraseFromParent();
+      // Update each build vector user that currently has RepR as its only
+      // operand, to have all LaneDefs as its operands.
+      for (VPUser *U : to_vector(RepR->users())) {
+        auto *VPI = dyn_cast<VPInstruction>(U);
+        if (!VPI || (VPI->getOpcode() != VPInstruction::BuildVector &&
+                     VPI->getOpcode() != VPInstruction::BuildStructVector))
+          continue;
+        assert(VPI->getNumOperands() == 1 &&
+               "Build(Struct)Vector must have a single operand before "
+               "replicating by VF");
+        VPI->setOperand(0, LaneDefs[0]);
+        for (VPValue *LaneDef : drop_begin(LaneDefs))
+          VPI->addOperand(LaneDef);
+      }
+      ToRemove.push_back(RepR);
     }
   }
+  for (auto *R : reverse(ToRemove))
+    R->eraseFromParent();
 }
