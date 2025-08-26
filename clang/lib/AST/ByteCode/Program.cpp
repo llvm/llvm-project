@@ -332,10 +332,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         continue;
 
       // In error cases, the base might not be a RecordType.
-      const auto *RT = Spec.getType()->getAs<RecordType>();
-      if (!RT)
+      const auto *BD = Spec.getType()->getAsCXXRecordDecl();
+      if (!BD)
         return nullptr;
-      const RecordDecl *BD = RT->getOriginalDecl()->getDefinitionOrSelf();
       const Record *BR = getOrCreateRecord(BD);
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
@@ -408,9 +407,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       const Expr *Init) {
 
   // Classes and structures.
-  if (const auto *RT = Ty->getAs<RecordType>()) {
-    if (const auto *Record =
-            getOrCreateRecord(RT->getOriginalDecl()->getDefinitionOrSelf()))
+  if (const auto *RD = Ty->getAsRecordDecl()) {
+    if (const auto *Record = getOrCreateRecord(RD))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable, IsVolatile);
     return allocateDescriptor(D, MDSize);

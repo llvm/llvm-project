@@ -955,11 +955,11 @@ void AggExprEmitter::EmitBoundsSafetyPointerConversion(CastExpr *E) {
 /// True if the given aggregate type requires special GC API calls.
 bool AggExprEmitter::TypeRequiresGCollection(QualType T) {
   // Only record types have members that might require garbage collection.
-  const RecordType *RecordTy = T->getAs<RecordType>();
-  if (!RecordTy) return false;
+  const auto *Record = T->getAsRecordDecl();
+  if (!Record)
+    return false;
 
   // Don't mess with non-trivial C++ types.
-  RecordDecl *Record = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
   if (isa<CXXRecordDecl>(Record) &&
       (cast<CXXRecordDecl>(Record)->hasNonTrivialCopyConstructor() ||
        !cast<CXXRecordDecl>(Record)->hasTrivialDestructor()))
@@ -3161,9 +3161,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   Address SrcPtr = Src.getAddress();
 
   if (getLangOpts().CPlusPlus) {
-    if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      auto *Record =
-          cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+    if (const auto *Record = Ty->getAsCXXRecordDecl()) {
       assert((Record->hasTrivialCopyConstructor() ||
               Record->hasTrivialCopyAssignment() ||
               Record->hasTrivialMoveConstructor() ||
@@ -3246,8 +3244,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   // Don't do any of the memmove_collectable tests if GC isn't set.
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     // fall through
-  } else if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
-    RecordDecl *Record = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
+  } else if (const auto *Record = Ty->getAsRecordDecl()) {
     if (Record->hasObjectMember()) {
       CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr,
                                                     SizeVal);
@@ -3255,10 +3252,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   } else if (Ty->isArrayType()) {
     QualType BaseType = getContext().getBaseElementType(Ty);
-    if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
-      if (RecordTy->getOriginalDecl()
-              ->getDefinitionOrSelf()
-              ->hasObjectMember()) {
+    if (const auto *Record = BaseType->getAsRecordDecl()) {
+      if (Record->hasObjectMember()) {
         CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr,
                                                       SizeVal);
         return;
