@@ -13,7 +13,7 @@
 # CHECK: Traceback (most recent call last):
 # CHECK:   File {{.*}}, line {{.*}}, in {{.*}}
 # CHECK:     update_output = test_updater(result, test)
-# CHECK:   File "{{.*}}/should_not_run.py", line {{.*}}, in should_not_run
+# CHECK:   File "{{.*}}{{/|\\}}should_not_run.py", line {{.*}}, in should_not_run
 # CHECK:     raise Exception("this test updater should only run on failure")
 # CHECK: Exception: this test updater should only run on failure
 # CHECK: ********************
