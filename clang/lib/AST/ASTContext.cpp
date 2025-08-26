@@ -5474,18 +5474,15 @@ TagType *ASTContext::getTagTypeInternal(ElaboratedTypeKeyword Keyword,
   return T;
 }
 
-static bool getNonInjectedClassName(const TagDecl *&TD) {
+static const TagDecl *getNonInjectedClassName(const TagDecl *TD) {
   if (const auto *RD = dyn_cast<CXXRecordDecl>(TD);
-      RD && RD->isInjectedClassName()) {
-    TD = cast<TagDecl>(RD->getDeclContext());
-    return true;
-  }
-  return false;
+      RD && RD->isInjectedClassName())
+    return cast<TagDecl>(RD->getDeclContext());
+  return TD;
 }
 
 CanQualType ASTContext::getCanonicalTagType(const TagDecl *TD) const {
-  ::getNonInjectedClassName(TD);
-  TD = TD->getCanonicalDecl();
+  TD = ::getNonInjectedClassName(TD)->getCanonicalDecl();
   if (TD->TypeForDecl)
     return TD->TypeForDecl->getCanonicalTypeUnqualified();
 
@@ -5501,40 +5498,42 @@ CanQualType ASTContext::getCanonicalTagType(const TagDecl *TD) const {
 QualType ASTContext::getTagType(ElaboratedTypeKeyword Keyword,
                                 NestedNameSpecifier Qualifier,
                                 const TagDecl *TD, bool OwnsTag) const {
+
+  const TagDecl *NonInjectedTD = ::getNonInjectedClassName(TD);
+  bool IsInjected = TD != NonInjectedTD;
+
   ElaboratedTypeKeyword PreferredKeyword =
-      getLangOpts().CPlusPlus
-          ? ElaboratedTypeKeyword::None
-          : KeywordHelpers::getKeywordForTagTypeKind(TD->getTagKind());
+      getLangOpts().CPlusPlus ? ElaboratedTypeKeyword::None
+                              : KeywordHelpers::getKeywordForTagTypeKind(
+                                    NonInjectedTD->getTagKind());
 
   if (Keyword == PreferredKeyword && !Qualifier && !OwnsTag) {
     if (const Type *T = TD->TypeForDecl; T && !T->isCanonicalUnqualified())
       return QualType(T, 0);
 
-    bool IsInjected = ::getNonInjectedClassName(TD);
-    const Type *CanonicalType = getCanonicalTagType(TD).getTypePtr();
+    const Type *CanonicalType = getCanonicalTagType(NonInjectedTD).getTypePtr();
     const Type *T =
         getTagTypeInternal(Keyword,
-                           /*Qualifier=*/std::nullopt, TD,
+                           /*Qualifier=*/std::nullopt, NonInjectedTD,
                            /*OwnsTag=*/false, IsInjected, CanonicalType,
                            /*WithFoldingSetNode=*/false);
     TD->TypeForDecl = T;
     return QualType(T, 0);
   }
 
-  bool IsInjected = ::getNonInjectedClassName(TD);
-
   llvm::FoldingSetNodeID ID;
-  TagTypeFoldingSetPlaceholder::Profile(ID, Keyword, Qualifier, TD, OwnsTag,
-                                        IsInjected);
+  TagTypeFoldingSetPlaceholder::Profile(ID, Keyword, Qualifier, NonInjectedTD,
+                                        OwnsTag, IsInjected);
 
   void *InsertPos = nullptr;
   if (TagTypeFoldingSetPlaceholder *T =
           TagTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(T->getTagType(), 0);
 
-  const Type *CanonicalType = getCanonicalTagType(TD).getTypePtr();
-  TagType *T = getTagTypeInternal(Keyword, Qualifier, TD, OwnsTag, IsInjected,
-                                  CanonicalType, /*WithFoldingSetNode=*/true);
+  const Type *CanonicalType = getCanonicalTagType(NonInjectedTD).getTypePtr();
+  TagType *T =
+      getTagTypeInternal(Keyword, Qualifier, NonInjectedTD, OwnsTag, IsInjected,
+                         CanonicalType, /*WithFoldingSetNode=*/true);
   TagTypes.InsertNode(TagTypeFoldingSetPlaceholder::fromTagType(T), InsertPos);
   return QualType(T, 0);
 }
