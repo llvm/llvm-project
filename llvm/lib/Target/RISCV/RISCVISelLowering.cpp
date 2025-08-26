@@ -9288,10 +9288,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           return DeltaCost;
         const int AddendCost = RISCVMatInt::getIntMatCost(
             Addend, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
-        // Panalize the ADD slightly so that we prefer to end with an ADDI
-        // if costs are otherwise equal.  This helps to expose the immediate
-        // for possible folding into a dependent memory instruction.
-        return AddendCost + DeltaCost + 1;
+        return AddendCost + DeltaCost;
       };
       bool IsCZERO_NEZ = getCost(FalseVal - TrueVal, TrueVal) <=
                          getCost(TrueVal - FalseVal, FalseVal);
