@@ -220,6 +220,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.MaxIterationsCountToAnalyze = UnrollMaxIterationsCountToAnalyze;
   UP.SCEVExpansionBudget = SCEVCheapExpansionBudget;
   UP.RuntimeUnrollMultiExit = false;
+  UP.RelaxPragmaUnrollThresholds = false;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, SE, UP, &ORE);
@@ -938,6 +939,10 @@ bool llvm::computeUnrollCount(
 
   const bool ExplicitUnroll = PragmaCount > 0 || PragmaFullUnroll ||
                               PragmaEnableUnroll || UserUnrollCount;
+  // If enabled, relax unrolling thresholds when pragma unroll is used.
+  const bool RelaxUnrollThrehsholds = UP.RelaxPragmaUnrollThresholds &&
+                                      (PragmaEnableUnroll && !UserUnrollCount &&
+                                       !PragmaFullUnroll && PragmaCount == 0);
 
   PragmaInfo PInfo(UserUnrollCount, PragmaFullUnroll, PragmaCount,
                    PragmaEnableUnroll);
@@ -966,7 +971,7 @@ bool llvm::computeUnrollCount(
     UP.Runtime |= (PragmaCount > 0);
     return ExplicitUnroll;
   } else {
-    if (ExplicitUnroll && TripCount != 0) {
+    if (RelaxUnrollThrehsholds || (ExplicitUnroll && TripCount != 0)) {
       // If the loop has an unrolling pragma, we want to be more aggressive with
       // unrolling limits. Set thresholds to at least the PragmaUnrollThreshold
       // value which is larger than the default limits.
@@ -1076,7 +1081,8 @@ bool llvm::computeUnrollCount(
   }
 
   // Don't unroll a small upper bound loop unless user or TTI asked to do so.
-  if (MaxTripCount && !UP.Force && MaxTripCount < UP.MaxUpperBound) {
+  if (!RelaxUnrollThrehsholds && MaxTripCount && !UP.Force &&
+      MaxTripCount < UP.MaxUpperBound) {
     UP.Count = 0;
     return false;
   }

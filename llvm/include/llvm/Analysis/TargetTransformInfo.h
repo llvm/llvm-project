@@ -638,6 +638,8 @@ public:
     /// Fall back to the generic logic to determine whether multi-exit unrolling
     /// is profitable if set to false.
     bool RuntimeUnrollMultiExit;
+    // Relax conditions for unrolling when user requests unrolling via pragma.
+    bool RelaxPragmaUnrollThresholds;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
