@@ -1179,9 +1179,11 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":Coverage",
         ":DebugInfoCodeView",
         ":MC",
         ":Object",
+        ":ProfileData",
         ":Support",
         ":TargetParser",
     ],
