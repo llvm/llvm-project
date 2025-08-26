@@ -2814,6 +2814,7 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
       Opcode = Instruction::And;
     else if (match(BOp, m_LogicalOr(m_Value(BOp0), m_Value(BOp1))))
       Opcode = Instruction::Or;
+
     if (Opcode &&
         !(match(BOp0, m_ExtractElt(m_Value(Vec), m_Value())) &&
           match(BOp1, m_ExtractElt(m_Specific(Vec), m_Value()))) &&

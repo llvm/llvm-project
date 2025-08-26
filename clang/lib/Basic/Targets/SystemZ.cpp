@@ -105,7 +105,7 @@ bool SystemZTargetInfo::validateAsmConstraint(
       Name += 2;
       Info.setAllowsRegister();
       // SystemZ has 2-bits CC, and hence Interval [0, 4).
-      Info.setFlagOutputCCUpperBound(4);
+      Info.setOutputOperandBounds(0, 4);
       return true;
     }
     return false;

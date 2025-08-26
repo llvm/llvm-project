@@ -8776,8 +8776,6 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
 
 SmallVector<SDValue, 4> static simplifyAssumingCCVal(SDValue &Val, SDValue &CC,
                                                      SelectionDAG &DAG) {
-  if (CC == SDValue())
-    return {};
   SDLoc DL(Val);
   auto Opcode = Val.getOpcode();
   switch (Opcode) {
@@ -8881,16 +8879,13 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
     const auto &&Op1SDVals = simplifyAssumingCCVal(Op1, Op0CC, DAG);
     if (Op0SDVals.empty() || Op1SDVals.empty())
       return false;
-    SmallVector<int, 4> CCVals;
-    std::transform(Op0SDVals.begin(), Op0SDVals.end(), Op1SDVals.begin(),
-                   std::back_inserter(CCVals), emulateTMCCMask);
-    if (std::any_of(CCVals.begin(), CCVals.end(),
-                    [](const auto Val) { return Val < 0; }))
-      return false;
     int NewCCMask = 0;
-    for (auto CC : CCVals) {
+    for (auto CC : {0, 1, 2, 3}) {
+      auto CCVal = emulateTMCCMask(Op0SDVals[CC], Op1SDVals[CC]);
+      if (CCVal < 0)
+        return false;
       NewCCMask <<= 1;
-      NewCCMask |= (CCMask & (1 << (3 - CC))) != 0;
+      NewCCMask |= (CCMask & (1 << (3 - CCVal))) != 0;
     }
     NewCCMask &= Op0CCValid;
     CCReg = Op0CC;
@@ -8926,16 +8921,13 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
         return Op0APVal == Op1APVal ? 0 : Op0APVal.slt(Op1APVal) ? 1 : 2;
       return Op0APVal == Op1APVal ? 0 : Op0APVal.ult(Op1APVal) ? 1 : 2;
     };
-    SmallVector<int, 4> CCVals;
-    std::transform(Op0SDVals.begin(), Op0SDVals.end(), Op1SDVals.begin(),
-                   std::back_inserter(CCVals), compareCCSigned);
-    if (std::any_of(CCVals.begin(), CCVals.end(),
-                    [](const auto Val) { return Val < 0; }))
-      return false;
     int NewCCMask = 0;
-    for (auto CC : CCVals) {
+    for (auto CC : {0, 1, 2, 3}) {
+      auto CCVal = compareCCSigned(Op0SDVals[CC], Op1SDVals[CC]);
+      if (CCVal < 0)
+        return false;
       NewCCMask <<= 1;
-      NewCCMask |= ((CCMask & (1 << (3 - CC))) != 0);
+      NewCCMask |= (CCMask & (1 << (3 - CCVal))) != 0;
     }
     NewCCMask &= Op0CCValid;
     CCMask = NewCCMask;
@@ -9018,7 +9010,7 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
   int CCMaskVal = CCMask->getZExtValue();
   SDValue CCReg = N->getOperand(4);
 
-  bool UpdatedCCReg = combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG);
+  bool IsCombinedCCReg = combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG);
 
   // Attempting to optimize TrueVal/FalseVal in outermost select_ccmask either
   // with CCReg found by combineCCMask or original CCReg.
@@ -9031,15 +9023,14 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
   // optimized by combineCCMask, we can not take early exit here, just bypass it
   // and directly create a new SELECT_CCMASK.
   if (!TrueSDVals.empty() && !FalseSDVals.empty()) {
-    SmallVector<SDValue, 4> MergedSDVals;
-    CCMaskVal &= CCValidVal;
+    SmallSet<SDValue, 4> MergedSDValsSet;
+    // Ignoring CC values outside CCValiid.
     for (auto CC : {0, 1, 2, 3}) {
-      MergedSDVals.emplace_back(((CCMaskVal & (1 << (3 - CC))) != 0)
-                                    ? TrueSDVals[CC]
-                                    : FalseSDVals[CC]);
+      if ((CCValidVal & ((1 << (3 - CC)))) != 0)
+        MergedSDValsSet.insert(((CCMaskVal & (1 << (3 - CC))) != 0)
+                                   ? TrueSDVals[CC]
+                                   : FalseSDVals[CC]);
     }
-    SmallSet<SDValue, 4> MergedSDValsSet(MergedSDVals.begin(),
-                                         MergedSDVals.end());
     if (MergedSDValsSet.size() == 1)
       return *MergedSDValsSet.begin();
     if (MergedSDValsSet.size() == 2) {
@@ -9050,19 +9041,19 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
       int NewCCMask = 0;
       for (auto CC : {0, 1, 2, 3}) {
         NewCCMask <<= 1;
-        NewCCMask |= MergedSDVals[CC] == NewTrueVal;
+        NewCCMask |= ((CCMaskVal & (1 << (3 - CC))) != 0)
+                         ? (TrueSDVals[CC] == NewTrueVal)
+                         : (FalseSDVals[CC] == NewTrueVal);
       }
       CCMaskVal = NewCCMask;
+      CCMaskVal &= CCValidVal;
       TrueVal = NewTrueVal;
       FalseVal = NewFalseVal;
-      return DAG.getNode(
-          SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0), TrueVal,
-          FalseVal, DAG.getTargetConstant(CCValidVal, SDLoc(N), MVT::i32),
-          DAG.getTargetConstant(CCMaskVal, SDLoc(N), MVT::i32), CCReg);
+      IsCombinedCCReg = true;
     }
   }
 
-  if (UpdatedCCReg)
+  if (IsCombinedCCReg)
     return DAG.getNode(
         SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0), TrueVal,
         FalseVal, DAG.getTargetConstant(CCValidVal, SDLoc(N), MVT::i32),
@@ -9396,6 +9387,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INTRINSIC_VOID:
     return combineINTRINSIC(N, DCI);
   }
+
   return SDValue();
 }
 

@@ -1138,7 +1138,6 @@ public:
 
     std::string ConstraintStr;  // constraint: "=rm"
     std::string Name;           // Operand name: [foo] with no []'s.
-
   public:
     ConstraintInfo(StringRef ConstraintStr, StringRef Name)
         : Flags(0), TiedOperand(-1), ConstraintStr(ConstraintStr.str()),
@@ -1213,11 +1212,9 @@ public:
       // Don't copy Name or constraint string.
     }
 
-    // CC range can be set by targets supporting flag output operand.
-    void setFlagOutputCCUpperBound(unsigned CCBound) {
-      // Using ImmRange.Max to store CC upper bound. Interval [0, CCBound).
-      ImmRange.Max = CCBound;
-      ImmRange.isConstrained = true;
+    // Output operand bounds can be set by target.
+    void setOutputOperandBounds(unsigned Min, unsigned Max) {
+      setRequiresImmediate(Min, Max);
     }
     unsigned getFlagOutputCCUpperBound() const { return ImmRange.Max; }
   };
