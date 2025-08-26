@@ -4055,6 +4055,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
     return false;
   }
+  case RISCV::PseudoCV_ELW:
+    emitLoadStoreSymbol(Inst, RISCV::CV_ELW, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
   }
 
   emitToStreamer(Out, Inst);
