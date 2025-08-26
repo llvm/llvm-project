@@ -1228,9 +1228,8 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   if (!LAI->canVectorizeMemory()) {
     if (hasUncountableExitWithSideEffects()) {
       reportVectorizationFailure(
-          "Cannot vectorize unsafe dependencies in early exit loop with "
-          "side effects.",
-          "Unable to vectorize memory in an early exit loop with side effects",
+          "Cannot vectorize unsafe dependencies in uncountable exit loop with "
+          "side effects",
           "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE,
           TheLoop);
       return false;
@@ -1860,49 +1859,63 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   // transform code lands.
   auto *Br = cast<BranchInst>(ExitingBlock->getTerminator());
 
+  using namespace llvm::PatternMatch;
+  Value *L = nullptr;
+  Value *R = nullptr;
+  if (!match(Br->getCondition(),
+             m_OneUse(m_ICmp(m_OneUse(m_Value(L)), (m_Value(R)))))) {
+    reportVectorizationFailure(
+        "Early exit loop with store but no supported condition load",
+        "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
+    return false;
+  }
+
   // FIXME: Don't rely on operand ordering for the comparison.
-  ICmpInst *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
-  if (Cmp && Cmp->hasOneUse() && TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
-    LoadInst *Load = dyn_cast<LoadInst>(Cmp->getOperand(0));
-    if (Load && Load->hasOneUse()) {
-      // Make sure that the load address is not loop invariant; we want an
-      // address calculation that we can rotate to the next vector iteration.
-      const SCEV *PtrScev = PSE.getSE()->getSCEV(Load->getPointerOperand());
-      if (PSE.getSE()->isLoopInvariant(PtrScev, TheLoop)) {
-        reportVectorizationFailure(
-            "Uncountable exit condition depends on load from invariant address",
-            "EarlyExitLoadInvariantAddress", ORE, TheLoop);
-        return false;
-      }
+  if (!TheLoop->isLoopInvariant(R)) {
+    reportVectorizationFailure(
+        "Early exit loop with store but no supported condition load",
+        "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
+    return false;
+  }
 
-      // The following call also checks that the load address is either
-      // invariant (which we've just ruled out) or is an affine SCEVAddRecExpr
-      // with a constant step. In either case, we're not relying on another
-      // load within the loop.
-      // FIXME: Support gathers after first-faulting load support lands.
-      SmallVector<const SCEVPredicate *, 4> Predicates;
-      if (!isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT,
-                                             AC, &Predicates)) {
-        reportVectorizationFailure(
-            "Loop may fault",
-            "Cannot vectorize potentially faulting early exit loop",
-            "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
-        return false;
-      }
-
-      ICFLoopSafetyInfo SafetyInfo;
-      SafetyInfo.computeLoopSafetyInfo(TheLoop);
-      // We need to know that load will be executed before we can hoist a
-      // copy out to run just before the first iteration.
-      if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
-        reportVectorizationFailure(
-            "Early exit condition load not guaranteed to execute",
-            "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
-        return false;
-      }
-
-      CriticalUncountableExitConditionLoad = Load;
+  if (auto *Load = dyn_cast<LoadInst>(L)) {
+    // Make sure that the load address is not loop invariant; we want an
+    // address calculation that we can rotate to the next vector iteration.
+    const SCEV *PtrScev = PSE.getSE()->getSCEV(Load->getPointerOperand());
+    if (PSE.getSE()->isLoopInvariant(PtrScev, TheLoop)) {
+      reportVectorizationFailure(
+          "Uncountable exit condition depends on load from invariant address",
+          "EarlyExitLoadInvariantAddress", ORE, TheLoop);
+      return false;
     }
+
+    // The following call also checks that the load address is either
+    // invariant (which we've just ruled out) or is an affine SCEVAddRecExpr
+    // with a constant step. In either case, we're not relying on another
+    // load within the loop.
+    // FIXME: Support gathers after first-faulting load support lands.
+    SmallVector<const SCEVPredicate *, 4> Predicates;
+    if (!isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT, AC,
+                                           &Predicates)) {
+      reportVectorizationFailure(
+          "Loop may fault",
+          "Cannot vectorize potentially faulting early exit loop",
+          "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+      return false;
+    }
+
+    ICFLoopSafetyInfo SafetyInfo;
+    SafetyInfo.computeLoopSafetyInfo(TheLoop);
+    // We need to know that load will be executed before we can hoist a
+    // copy out to run just before the first iteration.
+    if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
+      reportVectorizationFailure(
+          "Early exit condition load not guaranteed to execute",
+          "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
+      return false;
+    }
+
+    CriticalUncountableExitConditionLoad = Load;
   }
 
   if (!CriticalUncountableExitConditionLoad) {
