@@ -33037,8 +33037,6 @@ define i1 @v_fcmp_true_bf16(bfloat %a, bfloat %b) {
   ret i1 %op
 }
 
-<<<<<<< HEAD
-=======
 declare bfloat @llvm.copysign.bf16(bfloat, bfloat)
 
 define bfloat @v_copysign_bf16_bf16(bfloat %mag, bfloat %sign) {
@@ -34131,7 +34129,6 @@ define amdgpu_ps <2 x i32> @s_copysign_f64_bf16(double inreg %mag, bfloat inreg 
   ret <2 x i32> %ins.1
 }
 
->>>>>>> a9becbe509280bd147cef54315b3efc15d5aa594
 define i16 @v_fptosi_bf16_to_i16(bfloat %x) {
 ; GCN-LABEL: v_fptosi_bf16_to_i16:
 ; GCN:       ; %bb.0:
