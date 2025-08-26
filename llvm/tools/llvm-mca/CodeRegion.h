@@ -178,7 +178,7 @@ public:
   void addInstruction(const llvm::MCInst &Instruction);
   llvm::SourceMgr &getSourceMgr() const { return SM; }
 
-  void Annotate(llvm::SMLoc Loc, const InstAnnotation& A) {
+  void Annotate(llvm::SMLoc Loc, const InstAnnotation &A) {
     Annotations[Loc.getPointer()] = A;
   }
   std::optional<unsigned> getExplicitLatency(llvm::SMLoc Loc) const {
