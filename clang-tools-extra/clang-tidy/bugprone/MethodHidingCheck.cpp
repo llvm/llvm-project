@@ -132,7 +132,7 @@ void MethodHidingCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto const MethodName = ShadowingMethod->getNameInfo().getAsString();
   auto const DerivedClassName = DerivedClass->getNameAsString();
-  std::string BaseClassName = BaseMethod->getParent()->getNameAsString();
+  const std::string BaseClassName = BaseMethod->getParent()->getNameAsString();
 
   std::string Message;
   llvm::raw_string_ostream StringStream(Message);
