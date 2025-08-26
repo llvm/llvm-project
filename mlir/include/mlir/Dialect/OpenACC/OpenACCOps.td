@@ -1313,9 +1313,8 @@ def OpenACC_ReductionRecipeOp
          values of the reduction type into one. It has at least two arguments
          and it is expected to `acc.yield` the combined value. Extra arguments
          can be added to deal with dynamic arrays.
-      3. The destroy region specifies how to destruct the value when it reaches
-         its end of life. It takes the reduction value as argument. It is
-         optional.
+      3. The optional destroy region specifies how to destruct the value when it
+         reaches its end of life. It takes the reduction value as argument.
 
     Example:
 
