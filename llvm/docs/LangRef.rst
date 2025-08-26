@@ -2747,18 +2747,17 @@ For example:
     all arguments are not undef and not poison. Otherwise, it is undefined
     behavior.
 
-``"modular-format"="<type>,<string_idx>,<first_idx_to_check>,<modular_impl_fn>,<impl_name>,<aspects...>"``
+``"modular-format"="<type>,<string_idx>,<first_arg_idx>,<modular_impl_fn>,<impl_name>,<aspects...>"``
     This attribute indicates that the implementation is modular on a particular
-    format string argument . When the argument for a given call is constant, the
-    compiler may redirect the call to a modular implementation function
-    instead.
+    format string argument. If the compiler can determine that not all aspects
+    of the implementation are needed, it can report which aspects were needed
+    and redirect the call to a modular implementation function instead.
 
-    The compiler also emits relocations to report various aspects of the format
-    string and arguments that were present. The compiler reports an aspect by
-    issuing a relocation for the symbol `<impl_name>_<aspect>``. This arranges
-    for code and data needed to support the aspect of the implementation to be
-    brought into the link to satisfy weak references in the modular
-    implemenation function.
+    The compiler reports that an implementation aspect is needed by issuing a
+    relocation for the symbol `<impl_name>_<aspect>``. This arranges for code
+    and data needed to support the aspect of the implementation to be brought
+    into the link to satisfy weak references in the modular implemenation
+    function.
 
     The first three arguments have the same semantics as the arguments to the C
     ``format`` attribute.

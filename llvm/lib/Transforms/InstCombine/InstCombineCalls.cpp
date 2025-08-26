@@ -4099,12 +4099,10 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
   SmallVector<StringRef> Args(
       llvm::split(CI->getFnAttr("modular-format").getValueAsString(), ','));
   // TODO: Make use of the first two arguments
-  // TODO: Error handling
   unsigned FirstArgIdx;
-  if (!llvm::to_integer(Args[2], FirstArgIdx))
-    return nullptr;
-  if (FirstArgIdx == 0)
-    return nullptr;
+  [[maybe_unused]] bool Error;
+  Error = Args[2].getAsInteger(10, FirstArgIdx);
+  assert(!Error && "invalid first arg index");
   --FirstArgIdx;
   StringRef FnName = Args[3];
   StringRef ImplName = Args[4];
