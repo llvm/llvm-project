@@ -149,9 +149,11 @@ extractThreeVariablesAndInstructions(
   if (Variables.size() != 3) {
     return {nullptr, nullptr, nullptr};
   }
-  // Check that all instruction variables are in the same BB
+  // Check that all instructions (both variables and computation instructions)
+  // are in the same BB
   SmallVector<Value *, 3> SortedVars(Variables.begin(), Variables.end());
   BasicBlock *FirstBB = nullptr;
+
   for (Value *V : SortedVars) {
     if (auto *I = dyn_cast<Instruction>(V)) {
       if (!FirstBB) {
@@ -159,6 +161,14 @@ extractThreeVariablesAndInstructions(
       } else if (I->getParent() != FirstBB) {
         return {nullptr, nullptr, nullptr};
       }
+    }
+  }
+
+  for (Instruction *I : Instructions) {
+    if (!FirstBB) {
+      FirstBB = I->getParent();
+    } else if (I->getParent() != FirstBB) {
+      return {nullptr, nullptr, nullptr};
     }
   }
 

@@ -353,7 +353,7 @@ define i32 @multi_use_add_as_variable(i32 %x, i32 %y, i32 %offset) {
 ; CHECK-NEXT:    [[RESULT:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
-  %add = add i32 %x, %offset    ; Multi-use non-bitwise op  
+  %add = add i32 %x, %offset    ; Multi-use non-bitwise op
   call void @use(i32 %add)      ; Extra use
   %not1 = xor i32 %add, -1
   %and1 = and i32 %not1, %y
