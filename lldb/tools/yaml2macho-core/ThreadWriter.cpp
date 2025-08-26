@@ -47,6 +47,18 @@ void add_reg_value(CoreSpec &spec, std::vector<uint8_t> &buf,
   }
 }
 
+void add_reg_value_32(CoreSpec &spec, std::vector<uint8_t> &buf,
+                      const std::vector<RegisterNameAndValue> &registers,
+                      const char *regname) {
+  add_reg_value(spec, buf, registers, regname, 4);
+}
+
+void add_reg_value_64(CoreSpec &spec, std::vector<uint8_t> &buf,
+                      const std::vector<RegisterNameAndValue> &registers,
+                      const char *regname) {
+  add_reg_value(spec, buf, registers, regname, 8);
+}
+
 void add_lc_threads_armv7(CoreSpec &spec,
                           std::vector<std::vector<uint8_t>> &load_commands) {
   for (const Thread &th : spec.threads) {
@@ -72,14 +84,14 @@ void add_lc_threads_armv7(CoreSpec &spec,
                                "r6",  "r7", "r8", "r9", "r10",  "r11",
                                "r12", "sp", "lr", "pc", "cpsr", nullptr};
         for (int i = 0; names[i]; i++)
-          add_reg_value(spec, lc, rs.registers, names[i], 4);
+          add_reg_value_32(spec, lc, rs.registers, names[i]);
       }
       if (rs.flavor == RegisterFlavor::EXC) {
         add_uint32(lc, ARM_EXCEPTION_STATE);       // thread_command.flavor
         add_uint32(lc, ARM_EXCEPTION_STATE_COUNT); // thread_command.count
         const char *names[] = {"far", "esr", "exception", nullptr};
         for (int i = 0; names[i]; i++)
-          add_reg_value(spec, lc, rs.registers, names[i], 4);
+          add_reg_value_32(spec, lc, rs.registers, names[i]);
       }
     }
     load_commands.push_back(lc);
@@ -119,10 +131,10 @@ void add_lc_threads_arm64(CoreSpec &spec,
                                "x21", "x22", "x23", "x24", "x25", "x26",  "x27",
                                "x28", "fp",  "lr",  "sp",  "pc",  nullptr};
         for (int i = 0; names[i]; i++)
-          add_reg_value(spec, lc, rs.registers, names[i], 8);
+          add_reg_value_64(spec, lc, rs.registers, names[i]);
 
         // cpsr is a 4-byte reg
-        add_reg_value(spec, lc, rs.registers, "cpsr", 4);
+        add_reg_value_32(spec, lc, rs.registers, "cpsr");
         // the 4 bytes of zeroes
         add_uint32(lc, 0);
       }
@@ -130,9 +142,9 @@ void add_lc_threads_arm64(CoreSpec &spec,
         add_uint32(lc, ARM_EXCEPTION_STATE64); // thread_command.flavor
         add_uint32(lc,
                    ARM_EXCEPTION_STATE64_COUNT); // thread_command.count
-        add_reg_value(spec, lc, rs.registers, "far", 8);
-        add_reg_value(spec, lc, rs.registers, "esr", 4);
-        add_reg_value(spec, lc, rs.registers, "exception", 4);
+        add_reg_value_64(spec, lc, rs.registers, "far");
+        add_reg_value_32(spec, lc, rs.registers, "esr");
+        add_reg_value_32(spec, lc, rs.registers, "exception");
       }
     }
     load_commands.push_back(lc);
@@ -167,7 +179,7 @@ void add_lc_threads_riscv(CoreSpec &spec,
                                "s5",   "s6", "s7", "s8", "s9", "s10",  "s11",
                                "t3",   "t4", "t5", "t6", "pc", nullptr};
         for (int i = 0; names[i]; i++)
-          add_reg_value(spec, lc, rs.registers, names[i], 4);
+          add_reg_value_32(spec, lc, rs.registers, names[i]);
       }
     }
     load_commands.push_back(lc);
