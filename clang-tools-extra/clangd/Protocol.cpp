@@ -297,6 +297,9 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
 
 SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
   switch (Kind) {
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case index::SymbolKind::IncludeDirective:
   case index::SymbolKind::Unknown:
   case index::SymbolKind::CommentTag:
     return SymbolKind::Variable;
