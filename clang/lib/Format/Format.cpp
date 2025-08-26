@@ -203,16 +203,18 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
-  static void enumeration(IO &IO, FormatStyle::BracketAlignmentStyle &Value) {
-    IO.enumCase(Value, "Align", FormatStyle::BAS_Align);
-    IO.enumCase(Value, "DontAlign", FormatStyle::BAS_DontAlign);
-
-    // For backward compatibility.
-    IO.enumCase(Value, "true", FormatStyle::BAS_Align);
-    IO.enumCase(Value, "false", FormatStyle::BAS_DontAlign);
-    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BAS_ABDeprecated);
-    IO.enumCase(Value, "BlockIndent", FormatStyle::BAS_BIDeprecated);
+// For backward compatibility.
+template <> struct MappingTraits<FormatStyle::BracketAlignmentStyle> {
+  static void enumInput(IO &IO, FormatStyle::BracketAlignmentStyle &Value) {
+    IO.enumCase(Value, "Align", FormatStyle::BracketAlignmentStyle(true));
+    IO.enumCase(Value, "DontAlign", FormatStyle::BracketAlignmentStyle(false));
+    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BracketAlignmentStyle(true));
+    IO.enumCase(Value, "BlockIndent", FormatStyle::BracketAlignmentStyle(true));
+    IO.enumCase(Value, "true", FormatStyle::BracketAlignmentStyle(true));
+    IO.enumCase(Value, "false", FormatStyle::BracketAlignmentStyle(true));
+  }
+  static void mapping(IO &IO, FormatStyle::BracketAlignmentStyle &BAS) {
+    IO.mapOptional("AlignAfterOpenBracket", BAS.value);
   }
 };
 
@@ -981,7 +983,6 @@ template <> struct MappingTraits<FormatStyle> {
     }
 
     IO.mapOptional("AccessModifierOffset", Style.AccessModifierOffset);
-    IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
     IO.mapOptional("AlignArrayOfStructures", Style.AlignArrayOfStructures);
     IO.mapOptional("AlignConsecutiveAssignments",
                    Style.AlignConsecutiveAssignments);
@@ -1258,7 +1259,8 @@ template <> struct MappingTraits<FormatStyle> {
     // If AlwaysBreak or BlockIndent were specified but individual
     // options for BreakAfterOpenBracket* (CloseAfterOpenBracket*),
     // initialize the latter to preserve backwards compatibility.
-    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_ABDeprecated) {
+    bool set = false;
+    if (set) {
       if (!Style.BreakAfterOpenBracketBracedList &&
           !Style.BreakAfterOpenBracketFunction &&
           !Style.BreakAfterOpenBracketIf && !Style.BreakAfterOpenBracketLoop &&
@@ -1267,8 +1269,9 @@ template <> struct MappingTraits<FormatStyle> {
         Style.BreakAfterOpenBracketFunction = true;
         Style.BreakAfterOpenBracketIf = true;
       }
-      Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
-    } else if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BIDeprecated) {
+      set = false;
+    }
+    if (set) {
       if (!Style.BreakAfterOpenBracketBracedList &&
           !Style.BreakAfterOpenBracketFunction &&
           !Style.BreakAfterOpenBracketIf && !Style.BreakAfterOpenBracketLoop &&
@@ -1285,7 +1288,6 @@ template <> struct MappingTraits<FormatStyle> {
         Style.BreakBeforeCloseBracketFunction = true;
         Style.BreakBeforeCloseBracketIf = true;
       }
-      Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
     }
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
@@ -1577,7 +1579,7 @@ static void expandPresetsSpacesInParens(FormatStyle &Expanded) {
 FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
   LLVMStyle.AccessModifierOffset = -2;
-  LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  LLVMStyle.AlignAfterOpenBracket = true;
   LLVMStyle.AlignArrayOfStructures = FormatStyle::AIAS_None;
   LLVMStyle.AlignConsecutiveAssignments = {};
   LLVMStyle.AlignConsecutiveAssignments.PadOperators = true;
@@ -1898,7 +1900,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.PenaltyReturnTypeOnItsOwnLine = 200;
 
   if (Language == FormatStyle::LK_Java) {
-    GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+    GoogleStyle.AlignAfterOpenBracket = false;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
     GoogleStyle.AlignTrailingComments = {};
     GoogleStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
@@ -2051,7 +2053,7 @@ FormatStyle getMozillaStyle() {
 FormatStyle getWebKitStyle() {
   FormatStyle Style = getLLVMStyle();
   Style.AccessModifierOffset = -4;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
   Style.AlignTrailingComments = {};
   Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
