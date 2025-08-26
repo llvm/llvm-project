@@ -2808,11 +2808,6 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   if (FromTy->isPointerTy() && ToTy->isPointerTy()) {
     // Non-bitcast address space conversions are only supported on
     // DIOp-DIExpressions.
-    auto IdentityNew = [&](DbgVariableIntrinsic &DII) -> DbgValReplacement {
-      if (DII.getExpression()->holdsNewElements())
-        return updateNewDIExpressionArgType(DII, &From, ToTy);
-      return std::nullopt;
-    };
     auto IdentityNewDVR = [&](DbgVariableRecord &DVR) -> DbgValReplacement {
       if (DVR.getExpression()->holdsNewElements())
         return updateNewDIExpressionArgType(DVR, &From, ToTy);

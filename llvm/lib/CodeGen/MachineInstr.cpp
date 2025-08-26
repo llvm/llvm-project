@@ -2432,20 +2432,12 @@ static const DIExpression *computeExprForSpill(
          "Expected inlined-at fields to agree");
 
   const DIExpression *Expr = MI.getDebugExpression();
-  if (MI.isIndirectDebugValue()) {
-    assert(MI.getDebugOffset().getImm() == 0 &&
-           "DBG_VALUE with nonzero offset");
-    Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
-  } else if (MI.isDebugValueList()) {
-    // We will replace the spilled register with a frame index, so
-    // immediately deref all references to the spilled register.
-    std::array<uint64_t, 1> Ops{{dwarf::DW_OP_deref}};
-    for (const MachineOperand *Op : SpilledOperands) {
-      unsigned OpIdx = MI.getDebugOperandIndex(Op);
-      Expr = DIExpression::appendOpsToArg(Expr, Ops, OpIdx);
-    }
-  }
-  return Expr;
+  SmallBitVector SpilledOpIndexes(MI.getNumDebugOperands());
+  for (const MachineOperand *Op : SpilledOperands)
+    SpilledOpIndexes.set(MI.getDebugOperandIndex(Op));
+  unsigned SpillAddrSpace = MI.getMF()->getDataLayout().getAllocaAddrSpace();
+
+  return DIExpression::spillArgs(Expr, SpilledOpIndexes, SpillAddrSpace);
 }
 static const DIExpression *computeExprForSpill(const MachineInstr &MI,
                                                Register SpillReg) {

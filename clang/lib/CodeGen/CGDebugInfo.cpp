@@ -5436,7 +5436,11 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclareForHeterogeneousDwarf(
   } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
     // If VD is an anonymous union then Storage represents value for
     // all union fields.
+<<<<<<< HEAD
     const RecordDecl *RD = RT->getOriginalDecl();
+=======
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+>>>>>>> a9becbe509280bd147cef54315b3efc15d5aa594
     if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
       llvm::DIExprBuilder UnionExprBuilder{ExprBuilder};
       llvm::DIExpression *UnionDIExpression = UnionExprBuilder.intoExpression();
@@ -5999,9 +6003,15 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
     // Ignore unnamed fields, but recurse into anonymous records.
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
+<<<<<<< HEAD
         GVE =
             CollectAnonRecordDecls(RT->getOriginalDecl()->getDefinitionOrSelf(),
                                    Unit, LineNo, LinkageName, MS, Var, DContext);
+=======
+        GVE = CollectAnonRecordDecls(
+            RT->getOriginalDecl()->getDefinitionOrSelf(), Unit, LineNo,
+            LinkageName, MS, Var, DContext);
+>>>>>>> a9becbe509280bd147cef54315b3efc15d5aa594
       continue;
     }
     // Use VarDecl's Tag, Scope and Line number.
@@ -6030,7 +6040,12 @@ CGDebugInfo::CollectAnonRecordDeclsForHeterogeneousDwarf(
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
         GVE = CollectAnonRecordDeclsForHeterogeneousDwarf(
+<<<<<<< HEAD
             RT->getOriginalDecl(), Unit, LineNo, LinkageName, MS, Var, DContext);
+=======
+            RT->getOriginalDecl()->getDefinitionOrSelf(), Unit, LineNo,
+            LinkageName, MS, Var, DContext);
+>>>>>>> a9becbe509280bd147cef54315b3efc15d5aa594
       continue;
     }
     // Use VarDecl's Tag, Scope and Line number.
@@ -6394,7 +6409,12 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
   // to find the name of any field in the union.
   llvm::dwarf::MemorySpace MS = getDWARFMemorySpace(D);
   if (T->isUnionType() && DeclName.empty()) {
+<<<<<<< HEAD
     const RecordDecl *RD = T->castAs<RecordType>()->getOriginalDecl();
+=======
+    const RecordDecl *RD =
+        T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+>>>>>>> a9becbe509280bd147cef54315b3efc15d5aa594
     assert(RD->isAnonymousStructOrUnion() &&
            "unnamed non-anonymous struct or union?");
     // FIXME(KZHURAVL): No tests for this path.
@@ -6515,7 +6535,10 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
 
   if (const auto *ECD = dyn_cast<EnumConstantDecl>(VD)) {
     const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+<<<<<<< HEAD
     assert(isa<EnumType>(ED->getASTContext().getCanonicalTagType(ED)) && "Enum without EnumType?");
+=======
+>>>>>>> a9becbe509280bd147cef54315b3efc15d5aa594
 
     if (CGM.getCodeGenOpts().EmitCodeView) {
       // If CodeView, emit enums as global variables, unless they are defined
@@ -6528,10 +6551,16 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
       // If not CodeView, emit DW_TAG_enumeration_type if necessary. For
       // example: for "enum { ZERO };", a DW_TAG_enumeration_type is created the
       // first time `ZERO` is referenced in a function.
+<<<<<<< HEAD
       llvm::DIType *EDTy =
           getOrCreateType(QualType(ED->getASTContext().getCanonicalTagType(ED)), Unit);
       assert (EDTy->getTag() == llvm::dwarf::DW_TAG_enumeration_type);
       (void)EDTy;
+=======
+      CanQualType T = CGM.getContext().getCanonicalTagType(ED);
+      [[maybe_unused]] llvm::DIType *EDTy = getOrCreateType(T, Unit);
+      assert(EDTy->getTag() == llvm::dwarf::DW_TAG_enumeration_type);
+>>>>>>> a9becbe509280bd147cef54315b3efc15d5aa594
       return;
     }
   }
