@@ -167,18 +167,18 @@ define void @fold_strlen_A(ptr %plen) {
 
 define void @fold_strlen_A_pI(ptr %plen, i64 %I) {
 ; CHECK-LABEL: @fold_strlen_A_pI(
-; CHECK-NEXT:    [[PA0A:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[PA0A:%.*]] = getelementptr [[STRUCT_A:%.*]], ptr @a, i64 0, i32 0, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[LENA0A:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA0A]])
 ; CHECK-NEXT:    store i64 [[LENA0A]], ptr [[PLEN:%.*]], align 4
-; CHECK-NEXT:    [[PA0B:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 [[I]]
+; CHECK-NEXT:    [[PA0B:%.*]] = getelementptr [[STRUCT_A]], ptr @a, i64 0, i32 1, i64 [[I]]
 ; CHECK-NEXT:    [[LENA0B:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA0B]])
 ; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i8, ptr [[PLEN]], i64 8
 ; CHECK-NEXT:    store i64 [[LENA0B]], ptr [[PLEN1]], align 4
-; CHECK-NEXT:    [[PA1A:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 0, i64 [[I]]
+; CHECK-NEXT:    [[PA1A:%.*]] = getelementptr [[STRUCT_A]], ptr @a, i64 1, i32 0, i64 [[I]]
 ; CHECK-NEXT:    [[LENA1A:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA1A]])
 ; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i8, ptr [[PLEN]], i64 16
 ; CHECK-NEXT:    store i64 [[LENA1A]], ptr [[PLEN2]], align 4
-; CHECK-NEXT:    [[PA1B:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 [[I]]
+; CHECK-NEXT:    [[PA1B:%.*]] = getelementptr [[STRUCT_A]], ptr @a, i64 1, i32 1, i64 [[I]]
 ; CHECK-NEXT:    [[LENA1B:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA1B]])
 ; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i8, ptr [[PLEN]], i64 24
 ; CHECK-NEXT:    store i64 [[LENA1B]], ptr [[PLEN3]], align 4
