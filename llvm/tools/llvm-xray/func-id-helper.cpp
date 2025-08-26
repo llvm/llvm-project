@@ -23,6 +23,12 @@ std::string FuncIdConversionHelper::SymbolOrNumber(int32_t FuncId) const {
   if (CacheIt != CachedNames.end())
     return CacheIt->second;
 
+  auto* lookupRes = LookupFn(FuncId);
+  if (lookupRes) {
+    CachedNames[FuncId] = lookupRes->Name;
+    return lookupRes->Name;
+  }
+
   std::ostringstream F;
   auto It = FunctionAddresses.find(FuncId);
   if (It == FunctionAddresses.end()) {
@@ -52,25 +58,38 @@ std::string FuncIdConversionHelper::SymbolOrNumber(int32_t FuncId) const {
 }
 
 std::string FuncIdConversionHelper::FileLineAndColumn(int32_t FuncId) const {
-  auto It = FunctionAddresses.find(FuncId);
-  if (It == FunctionAddresses.end())
-    return "(unknown)";
 
-  std::ostringstream F;
-  object::SectionedAddress ModuleAddress;
-  ModuleAddress.Address = It->second;
-  // TODO: set proper section index here.
-  // object::SectionedAddress::UndefSection works for only absolute addresses.
-  ModuleAddress.SectionIndex = object::SectionedAddress::UndefSection;
-  auto ResOrErr = Symbolizer.symbolizeCode(BinaryInstrMap, ModuleAddress);
-  if (!ResOrErr) {
-    consumeError(ResOrErr.takeError());
-    return "(unknown)";
+  std::string Filename;
+  int Line;
+  int Column;
+
+  auto *LookupRes = LookupFn(FuncId);
+  if (LookupRes) {
+    Filename = LookupRes->File;
+    Line = LookupRes->Line;
+    Column = 0;
+  } else {
+    auto It = FunctionAddresses.find(FuncId);
+    if (It == FunctionAddresses.end())
+      return "(unknown)";
+    object::SectionedAddress ModuleAddress;
+    ModuleAddress.Address = It->second;
+    // TODO: set proper section index here.
+    // object::SectionedAddress::UndefSection works for only absolute addresses.
+    ModuleAddress.SectionIndex = object::SectionedAddress::UndefSection;
+    auto ResOrErr = Symbolizer.symbolizeCode(BinaryInstrMap, ModuleAddress);
+    if (!ResOrErr) {
+      consumeError(ResOrErr.takeError());
+      return "(unknown)";
+    }
+    auto &DI = *ResOrErr;
+    Filename = DI.FileName;
+    Line = DI.Line;
+    Column = DI.Column;
   }
-
-  auto &DI = *ResOrErr;
-  F << sys::path::filename(DI.FileName).str() << ":" << DI.Line << ":"
-    << DI.Column;
+  std::ostringstream F;
+  F << sys::path::filename(Filename).str() << ":" << Line << ":"
+    << Column;
 
   return F.str();
 }
