@@ -2088,7 +2088,7 @@ the configuration (without a prefix: ``Auto``).
 .. _AllowShortRecordOnASingleLine:
 
 **AllowShortRecordOnASingleLine** (``ShortRecordStyle``) :versionbadge:`clang-format 22` :ref:`¶ <AllowShortRecordOnASingleLine>`
-  Dependent on the value, ``struct bar { int i; }`` can be put on a single
+  Dependent on the value, ``struct bar { int i; };`` can be put on a single
   line.
 
   Possible values:

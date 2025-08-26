@@ -961,7 +961,8 @@ static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
   bool IsEmptyBlock = NextToken.is(tok::r_brace);
   bool WrapRecordAllowed =
       !(IsEmptyBlock &&
-        Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never);
+        Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never) ||
+      Style.BraceWrapping.SplitEmptyRecord;
 
   switch (Kind) {
   case tok::kw_namespace:

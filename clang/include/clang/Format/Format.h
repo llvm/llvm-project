@@ -1009,7 +1009,7 @@ struct FormatStyle {
     SRS_Always
   };
 
-  /// Dependent on the value, ``struct bar { int i; }`` can be put on a single
+  /// Dependent on the value, ``struct bar { int i; };`` can be put on a single
   /// line.
   /// \version 22
   ShortRecordStyle AllowShortRecordOnASingleLine;
