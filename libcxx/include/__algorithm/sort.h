@@ -860,7 +860,7 @@ __sort<__less<long double>&, long double*>(long double*, long double*, __less<lo
 template <class _AlgPolicy, class _RandomAccessIterator, class _Comp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __sort_dispatch(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
-  if (__first == __last)
+  if (__first == __last) // don't even try computing the depth
     return;
 
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;

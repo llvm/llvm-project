@@ -13,7 +13,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class Comp, class RandomAccessIterator>
 void __sort(RandomAccessIterator first, RandomAccessIterator last, Comp comp) {
-  if (first == last)
+  if (first == last) // don't even try computing the depth
     return;
 
   auto depth_limit = 2 * std::__bit_log2(static_cast<size_t>(last - first));
