@@ -1927,7 +1927,8 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
     return;
   }
   if (SimplifiedS == NextLoop) {
-    if (auto *Dir = dyn_cast<OMPLoopTransformationDirective>(SimplifiedS))
+    if (auto *Dir =
+            dyn_cast<OMPCanonicalLoopNestTransformationDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))
       SimplifiedS = CanonLoop->getLoopStmt();
