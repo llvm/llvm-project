@@ -2822,9 +2822,9 @@ static bool interp__builtin_elementwise_fsh(InterpState &S, CodePtr OpPC,
                                             unsigned BuiltinID) {
   assert(Call->getNumArgs() == 3);
 
-  const QualType Arg0Type = Call->getArg(0)->getType();
-  const QualType Arg1Type = Call->getArg(1)->getType();
-  const QualType Arg2Type = Call->getArg(2)->getType();
+  QualType Arg0Type = Call->getArg(0)->getType();
+  QualType Arg1Type = Call->getArg(1)->getType();
+  QualType Arg2Type = Call->getArg(2)->getType();
 
   // Non-vector integer types.
   if (!Arg0Type->isVectorType()) {
@@ -2875,13 +2875,12 @@ static bool interp__builtin_elementwise_fsh(InterpState &S, CodePtr OpPC,
       Shift = VecShift.elem<T>(I).toAPSInt();
     });
     APSInt Result;
-    if (BuiltinID == Builtin::BI__builtin_elementwise_fshl) {
+    if (BuiltinID == Builtin::BI__builtin_elementwise_fshl)
       Result = APSInt(llvm::APIntOps::fshl(Hi, Lo, Shift), Hi.isUnsigned());
-    } else if (BuiltinID == Builtin::BI__builtin_elementwise_fshr) {
+    else if (BuiltinID == Builtin::BI__builtin_elementwise_fshr)
       Result = APSInt(llvm::APIntOps::fshr(Hi, Lo, Shift), Hi.isUnsigned());
-    } else {
+    else
       llvm_unreachable("Wrong builtin ID");
-    }
     INT_TYPE_SWITCH_NO_BOOL(ElemT,
                             { Dst.elem<T>(I) = static_cast<T>(Result); });
   }

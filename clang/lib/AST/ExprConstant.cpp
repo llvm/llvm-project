@@ -11950,9 +11950,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         !EvaluateAsRValue(Info, E->getArg(2), SourceShift))
       return false;
 
-    const QualType DestEltTy =
-        E->getType()->castAs<VectorType>()->getElementType();
-
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
     if (!DestEltTy->isIntegerType())
       return false;
 
