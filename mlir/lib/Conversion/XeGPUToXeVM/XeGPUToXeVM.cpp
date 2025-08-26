@@ -290,6 +290,11 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     auto tdescTy = op.getTensorDescType();
     if (tdescTy.getRank() != 2)
       return rewriter.notifyMatchFailure(op, "Expected 2D tensor descriptor.");
+    auto elemType = tdescTy.getElementType();
+    auto elemBitSize = elemType.getIntOrFloatBitWidth();
+    if (elemBitSize % 8 != 0)
+      return rewriter.notifyMatchFailure(
+          op, "Expected element type bit width to be multiple of 8.");
 
     VectorType payloadI64Ty = VectorType::get(4, rewriter.getI64Type());
     Value payLoadAsI64 =
@@ -333,8 +338,6 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     Value basePtrLLVM =
         LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
     // Compute element byte size and surface width in bytes.
-    auto elemType = tdescTy.getElementType();
-    auto elemBitSize = elemType.getIntOrFloatBitWidth();
     Value elemByteSize = arith::ConstantIntOp::create(
         rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
     Value surfaceW =
