@@ -142,8 +142,9 @@ class AMX_Op<string mnemonic, list<Trait> traits = []> :
 // Tile reset.
 //
 
-def TileZeroOp : AMX_Op<"tile_zero", [Pure,
-    AMXIntrinsicOpInterface
+def TileZeroOp : AMX_Op<"tile_zero", [
+    AMXIntrinsicOpInterface,
+    MemoryEffects<[MemWrite]>
   ]> {
   let summary = "tile zero operation";
   let description = [{
