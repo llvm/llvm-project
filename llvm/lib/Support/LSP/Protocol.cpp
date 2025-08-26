@@ -24,17 +24,17 @@ using namespace llvm::lsp;
 
 // Helper that doesn't treat `null` and absent fields as failures.
 template <typename T>
-static bool mapOptOrNull(const llvm::json::Value &params,
-                         llvm::StringLiteral prop, T &out,
-                         llvm::json::Path path) {
-  const llvm::json::Object *o = params.getAsObject();
-  assert(o);
+static bool mapOptOrNull(const llvm::json::Value &Params,
+                         llvm::StringLiteral Prop, T &Out,
+                         llvm::json::Path Path) {
+  const llvm::json::Object *O = Params.getAsObject();
+  assert(O);
 
   // Field is missing or null.
-  auto *v = o->get(prop);
-  if (!v || v->getAsNull())
+  auto *V = O->get(Prop);
+  if (!V || V->getAsNull())
     return true;
-  return fromJSON(*v, out, path.field(prop));
+  return fromJSON(*V, Out, Path.field(Prop));
 }
 
 //===----------------------------------------------------------------------===//
@@ -47,22 +47,22 @@ char LSPError::ID;
 // URIForFile
 //===----------------------------------------------------------------------===//
 
-static bool isWindowsPath(StringRef path) {
-  return path.size() > 1 && llvm::isAlpha(path[0]) && path[1] == ':';
+static bool isWindowsPath(StringRef Path) {
+  return Path.size() > 1 && llvm::isAlpha(Path[0]) && Path[1] == ':';
 }
 
-static bool isNetworkPath(StringRef path) {
-  return path.size() > 2 && path[0] == path[1] &&
-         llvm::sys::path::is_separator(path[0]);
+static bool isNetworkPath(StringRef Path) {
+  return Path.size() > 2 && Path[0] == Path[1] &&
+         llvm::sys::path::is_separator(Path[0]);
 }
 
-static bool shouldEscapeInURI(unsigned char c) {
+static bool shouldEscapeInURI(unsigned char C) {
   // Unreserved characters.
-  if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-      (c >= '0' && c <= '9'))
+  if ((C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') ||
+      (C >= '0' && C <= '9'))
     return false;
 
-  switch (c) {
+  switch (C) {
   case '-':
   case '_':
   case '.':
@@ -80,215 +80,215 @@ static bool shouldEscapeInURI(unsigned char c) {
 /// - Unreserved characters are not escaped.
 /// - Reserved characters always escaped with exceptions like '/'.
 /// - All other characters are escaped.
-static void percentEncode(StringRef content, std::string &out) {
-  for (unsigned char c : content) {
-    if (shouldEscapeInURI(c)) {
-      out.push_back('%');
-      out.push_back(llvm::hexdigit(c / 16));
-      out.push_back(llvm::hexdigit(c % 16));
+static void percentEncode(StringRef Content, std::string &Out) {
+  for (unsigned char C : Content) {
+    if (shouldEscapeInURI(C)) {
+      Out.push_back('%');
+      Out.push_back(llvm::hexdigit(C / 16));
+      Out.push_back(llvm::hexdigit(C % 16));
     } else {
-      out.push_back(c);
+      Out.push_back(C);
     }
   }
 }
 
 /// Decodes a string according to percent-encoding.
-static std::string percentDecode(StringRef content) {
-  std::string result;
-  for (auto i = content.begin(), e = content.end(); i != e; ++i) {
-    if (*i != '%') {
-      result += *i;
+static std::string percentDecode(StringRef Content) {
+  std::string Result;
+  for (auto I = Content.begin(), E = Content.end(); I != E; ++I) {
+    if (*I != '%') {
+      Result += *I;
       continue;
     }
-    if (*i == '%' && i + 2 < content.end() && llvm::isHexDigit(*(i + 1)) &&
-        llvm::isHexDigit(*(i + 2))) {
-      result.push_back(llvm::hexFromNibbles(*(i + 1), *(i + 2)));
-      i += 2;
+    if (*I == '%' && I + 2 < Content.end() && llvm::isHexDigit(*(I + 1)) &&
+        llvm::isHexDigit(*(I + 2))) {
+      Result.push_back(llvm::hexFromNibbles(*(I + 1), *(I + 2)));
+      I += 2;
     } else {
-      result.push_back(*i);
+      Result.push_back(*I);
     }
   }
-  return result;
+  return Result;
 }
 
 /// Return the set containing the supported URI schemes.
 static StringSet<> &getSupportedSchemes() {
-  static StringSet<> schemes({"file", "test"});
-  return schemes;
+  static StringSet<> Schemes({"file", "test"});
+  return Schemes;
 }
 
 /// Returns true if the given scheme is structurally valid, i.e. it does not
 /// contain any invalid scheme characters. This does not check that the scheme
 /// is actually supported.
-static bool isStructurallyValidScheme(StringRef scheme) {
-  if (scheme.empty())
+static bool isStructurallyValidScheme(StringRef Scheme) {
+  if (Scheme.empty())
     return false;
-  if (!llvm::isAlpha(scheme[0]))
+  if (!llvm::isAlpha(Scheme[0]))
     return false;
-  return llvm::all_of(llvm::drop_begin(scheme), [](char c) {
-    return llvm::isAlnum(c) || c == '+' || c == '.' || c == '-';
+  return llvm::all_of(llvm::drop_begin(Scheme), [](char C) {
+    return llvm::isAlnum(C) || C == '+' || C == '.' || C == '-';
   });
 }
 
-static llvm::Expected<std::string> uriFromAbsolutePath(StringRef absolutePath,
-                                                       StringRef scheme) {
-  std::string body;
-  StringRef authority;
-  StringRef root = llvm::sys::path::root_name(absolutePath);
-  if (isNetworkPath(root)) {
+static llvm::Expected<std::string> uriFromAbsolutePath(StringRef AbsolutePath,
+                                                       StringRef Scheme) {
+  std::string Body;
+  StringRef Authority;
+  StringRef Root = llvm::sys::path::root_name(AbsolutePath);
+  if (isNetworkPath(Root)) {
     // Windows UNC paths e.g. \\server\share => file://server/share
-    authority = root.drop_front(2);
-    absolutePath.consume_front(root);
-  } else if (isWindowsPath(root)) {
+    Authority = Root.drop_front(2);
+    AbsolutePath.consume_front(Root);
+  } else if (isWindowsPath(Root)) {
     // Windows paths e.g. X:\path => file:///X:/path
-    body = "/";
+    Body = "/";
   }
-  body += llvm::sys::path::convert_to_slash(absolutePath);
+  Body += llvm::sys::path::convert_to_slash(AbsolutePath);
 
-  std::string uri = scheme.str() + ":";
-  if (authority.empty() && body.empty())
-    return uri;
+  std::string Uri = Scheme.str() + ":";
+  if (Authority.empty() && Body.empty())
+    return Uri;
 
   // If authority if empty, we only print body if it starts with "/"; otherwise,
   // the URI is invalid.
-  if (!authority.empty() || StringRef(body).starts_with("/")) {
-    uri.append("//");
-    percentEncode(authority, uri);
+  if (!Authority.empty() || StringRef(Body).starts_with("/")) {
+    Uri.append("//");
+    percentEncode(Authority, Uri);
   }
-  percentEncode(body, uri);
-  return uri;
+  percentEncode(Body, Uri);
+  return Uri;
 }
 
-static llvm::Expected<std::string> getAbsolutePath(StringRef authority,
-                                                   StringRef body) {
-  if (!body.starts_with("/"))
+static llvm::Expected<std::string> getAbsolutePath(StringRef Authority,
+                                                   StringRef Body) {
+  if (!Body.starts_with("/"))
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         "File scheme: expect body to be an absolute path starting "
         "with '/': " +
-            body);
-  SmallString<128> path;
-  if (!authority.empty()) {
+            Body);
+  SmallString<128> Path;
+  if (!Authority.empty()) {
     // Windows UNC paths e.g. file://server/share => \\server\share
-    ("//" + authority).toVector(path);
-  } else if (isWindowsPath(body.substr(1))) {
+    ("//" + Authority).toVector(Path);
+  } else if (isWindowsPath(Body.substr(1))) {
     // Windows paths e.g. file:///X:/path => X:\path
-    body.consume_front("/");
+    Body.consume_front("/");
   }
-  path.append(body);
-  llvm::sys::path::native(path);
-  return std::string(path);
+  Path.append(Body);
+  llvm::sys::path::native(Path);
+  return std::string(Path);
 }
 
-static llvm::Expected<std::string> parseFilePathFromURI(StringRef origUri) {
-  StringRef uri = origUri;
+static llvm::Expected<std::string> parseFilePathFromURI(StringRef OrigUri) {
+  StringRef Uri = OrigUri;
 
   // Decode the scheme of the URI.
-  size_t pos = uri.find(':');
-  if (pos == StringRef::npos)
+  size_t Pos = Uri.find(':');
+  if (Pos == StringRef::npos)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Scheme must be provided in URI: " +
-                                       origUri);
-  StringRef schemeStr = uri.substr(0, pos);
-  std::string uriScheme = percentDecode(schemeStr);
-  if (!isStructurallyValidScheme(uriScheme))
+                                       OrigUri);
+  StringRef SchemeStr = Uri.substr(0, Pos);
+  std::string UriScheme = percentDecode(SchemeStr);
+  if (!isStructurallyValidScheme(UriScheme))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Invalid scheme: " + schemeStr +
-                                       " (decoded: " + uriScheme + ")");
-  uri = uri.substr(pos + 1);
+                                   "Invalid scheme: " + SchemeStr +
+                                       " (decoded: " + UriScheme + ")");
+  Uri = Uri.substr(Pos + 1);
 
   // Decode the authority of the URI.
-  std::string uriAuthority;
-  if (uri.consume_front("//")) {
-    pos = uri.find('/');
-    uriAuthority = percentDecode(uri.substr(0, pos));
-    uri = uri.substr(pos);
+  std::string UriAuthority;
+  if (Uri.consume_front("//")) {
+    Pos = Uri.find('/');
+    UriAuthority = percentDecode(Uri.substr(0, Pos));
+    Uri = Uri.substr(Pos);
   }
 
   // Decode the body of the URI.
-  std::string uriBody = percentDecode(uri);
+  std::string UriBody = percentDecode(Uri);
 
   // Compute the absolute path for this uri.
-  if (!getSupportedSchemes().contains(uriScheme)) {
+  if (!getSupportedSchemes().contains(UriScheme)) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "unsupported URI scheme `" + uriScheme +
+                                   "unsupported URI scheme `" + UriScheme +
                                        "' for workspace files");
   }
-  return getAbsolutePath(uriAuthority, uriBody);
+  return getAbsolutePath(UriAuthority, UriBody);
 }
 
-llvm::Expected<URIForFile> URIForFile::fromURI(StringRef uri) {
-  llvm::Expected<std::string> filePath = parseFilePathFromURI(uri);
-  if (!filePath)
-    return filePath.takeError();
-  return URIForFile(std::move(*filePath), uri.str());
+llvm::Expected<URIForFile> URIForFile::fromURI(StringRef Uri) {
+  llvm::Expected<std::string> FilePath = parseFilePathFromURI(Uri);
+  if (!FilePath)
+    return FilePath.takeError();
+  return URIForFile(std::move(*FilePath), Uri.str());
 }
 
-llvm::Expected<URIForFile> URIForFile::fromFile(StringRef absoluteFilepath,
-                                                StringRef scheme) {
-  llvm::Expected<std::string> uri =
-      uriFromAbsolutePath(absoluteFilepath, scheme);
-  if (!uri)
-    return uri.takeError();
-  return fromURI(*uri);
+llvm::Expected<URIForFile> URIForFile::fromFile(StringRef AbsoluteFilepath,
+                                                StringRef Scheme) {
+  llvm::Expected<std::string> Uri =
+      uriFromAbsolutePath(AbsoluteFilepath, Scheme);
+  if (!Uri)
+    return Uri.takeError();
+  return fromURI(*Uri);
 }
 
 StringRef URIForFile::scheme() const { return uri().split(':').first; }
 
-void URIForFile::registerSupportedScheme(StringRef scheme) {
-  getSupportedSchemes().insert(scheme);
+void URIForFile::registerSupportedScheme(StringRef Scheme) {
+  getSupportedSchemes().insert(Scheme);
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, URIForFile &result,
-                         llvm::json::Path path) {
-  if (std::optional<StringRef> str = value.getAsString()) {
-    llvm::Expected<URIForFile> expectedURI = URIForFile::fromURI(*str);
-    if (!expectedURI) {
-      path.report("unresolvable URI");
-      consumeError(expectedURI.takeError());
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, URIForFile &Result,
+                         llvm::json::Path Path) {
+  if (std::optional<StringRef> Str = Value.getAsString()) {
+    llvm::Expected<URIForFile> ExpectedUri = URIForFile::fromURI(*Str);
+    if (!ExpectedUri) {
+      Path.report("unresolvable URI");
+      consumeError(ExpectedUri.takeError());
       return false;
     }
-    result = std::move(*expectedURI);
+    Result = std::move(*ExpectedUri);
     return true;
   }
   return false;
 }
 
-llvm::json::Value llvm::lsp::toJSON(const URIForFile &value) {
-  return value.uri();
+llvm::json::Value llvm::lsp::toJSON(const URIForFile &Value) {
+  return Value.uri();
 }
 
-raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const URIForFile &value) {
-  return os << value.uri();
+raw_ostream &llvm::lsp::operator<<(raw_ostream &Os, const URIForFile &Value) {
+  return Os << Value.uri();
 }
 
 //===----------------------------------------------------------------------===//
 // ClientCapabilities
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         ClientCapabilities &result, llvm::json::Path path) {
-  const llvm::json::Object *o = value.getAsObject();
-  if (!o) {
-    path.report("expected object");
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         ClientCapabilities &Result, llvm::json::Path Path) {
+  const llvm::json::Object *O = Value.getAsObject();
+  if (!O) {
+    Path.report("expected object");
     return false;
   }
-  if (const llvm::json::Object *textDocument = o->getObject("textDocument")) {
-    if (const llvm::json::Object *documentSymbol =
-            textDocument->getObject("documentSymbol")) {
-      if (std::optional<bool> hierarchicalSupport =
-              documentSymbol->getBoolean("hierarchicalDocumentSymbolSupport"))
-        result.hierarchicalDocumentSymbol = *hierarchicalSupport;
+  if (const llvm::json::Object *TextDocument = O->getObject("textDocument")) {
+    if (const llvm::json::Object *DocumentSymbol =
+            TextDocument->getObject("documentSymbol")) {
+      if (std::optional<bool> HierarchicalSupport =
+              DocumentSymbol->getBoolean("hierarchicalDocumentSymbolSupport"))
+        Result.hierarchicalDocumentSymbol = *HierarchicalSupport;
     }
-    if (auto *codeAction = textDocument->getObject("codeAction")) {
-      if (codeAction->getObject("codeActionLiteralSupport"))
-        result.codeActionStructure = true;
+    if (auto *CodeAction = TextDocument->getObject("codeAction")) {
+      if (CodeAction->getObject("codeActionLiteralSupport"))
+        Result.codeActionStructure = true;
     }
   }
-  if (auto *window = o->getObject("window")) {
-    if (std::optional<bool> workDoneProgressSupport =
-            window->getBoolean("workDoneProgress"))
-      result.workDoneProgress = *workDoneProgressSupport;
+  if (auto *Window = O->getObject("window")) {
+    if (std::optional<bool> WorkDoneProgressSupport =
+            Window->getBoolean("workDoneProgress"))
+      Result.workDoneProgress = *WorkDoneProgressSupport;
   }
   return true;
 }
@@ -297,14 +297,14 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &value,
 // ClientInfo
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, ClientInfo &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  if (!o || !o.map("name", result.name))
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, ClientInfo &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  if (!O || !O.map("name", Result.name))
     return false;
 
   // Don't fail if we can't parse version.
-  o.map("version", result.version);
+  O.map("version", Result.version);
   return true;
 }
 
@@ -312,34 +312,34 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &value, ClientInfo &result,
 // InitializeParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, TraceLevel &result,
-                         llvm::json::Path path) {
-  if (std::optional<StringRef> str = value.getAsString()) {
-    if (*str == "off") {
-      result = TraceLevel::Off;
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, TraceLevel &Result,
+                         llvm::json::Path Path) {
+  if (std::optional<StringRef> Str = Value.getAsString()) {
+    if (*Str == "off") {
+      Result = TraceLevel::Off;
       return true;
     }
-    if (*str == "messages") {
-      result = TraceLevel::Messages;
+    if (*Str == "messages") {
+      Result = TraceLevel::Messages;
       return true;
     }
-    if (*str == "verbose") {
-      result = TraceLevel::Verbose;
+    if (*Str == "verbose") {
+      Result = TraceLevel::Verbose;
       return true;
     }
   }
   return false;
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         InitializeParams &result, llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  if (!o)
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         InitializeParams &Result, llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  if (!O)
     return false;
   // We deliberately don't fail if we can't parse individual fields.
-  o.map("capabilities", result.capabilities);
-  o.map("trace", result.trace);
-  mapOptOrNull(value, "clientInfo", result.clientInfo, path);
+  O.map("capabilities", Result.capabilities);
+  O.map("trace", Result.trace);
+  mapOptOrNull(Value, "clientInfo", Result.clientInfo, Path);
 
   return true;
 }
@@ -348,27 +348,27 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &value,
 // TextDocumentItem
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         TextDocumentItem &result, llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("uri", result.uri) &&
-         o.map("languageId", result.languageId) && o.map("text", result.text) &&
-         o.map("version", result.version);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         TextDocumentItem &Result, llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("uri", Result.uri) &&
+         O.map("languageId", Result.languageId) && O.map("text", Result.text) &&
+         O.map("version", Result.version);
 }
 
 //===----------------------------------------------------------------------===//
 // TextDocumentIdentifier
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const TextDocumentIdentifier &value) {
-  return llvm::json::Object{{"uri", value.uri}};
+llvm::json::Value llvm::lsp::toJSON(const TextDocumentIdentifier &Value) {
+  return llvm::json::Object{{"uri", Value.uri}};
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         TextDocumentIdentifier &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("uri", result.uri);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         TextDocumentIdentifier &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("uri", Result.uri);
 }
 
 //===----------------------------------------------------------------------===//
@@ -376,134 +376,134 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &value,
 //===----------------------------------------------------------------------===//
 
 llvm::json::Value
-llvm::lsp::toJSON(const VersionedTextDocumentIdentifier &value) {
+llvm::lsp::toJSON(const VersionedTextDocumentIdentifier &Value) {
   return llvm::json::Object{
-      {"uri", value.uri},
-      {"version", value.version},
+      {"uri", Value.uri},
+      {"version", Value.version},
   };
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         VersionedTextDocumentIdentifier &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("uri", result.uri) && o.map("version", result.version);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         VersionedTextDocumentIdentifier &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("uri", Result.uri) && O.map("version", Result.version);
 }
 
 //===----------------------------------------------------------------------===//
 // Position
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, Position &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("line", result.line) &&
-         o.map("character", result.character);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, Position &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("line", Result.line) &&
+         O.map("character", Result.character);
 }
 
-llvm::json::Value llvm::lsp::toJSON(const Position &value) {
+llvm::json::Value llvm::lsp::toJSON(const Position &Value) {
   return llvm::json::Object{
-      {"line", value.line},
-      {"character", value.character},
+      {"line", Value.line},
+      {"character", Value.character},
   };
 }
 
-raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const Position &value) {
-  return os << value.line << ':' << value.character;
+raw_ostream &llvm::lsp::operator<<(raw_ostream &Os, const Position &Value) {
+  return Os << Value.line << ':' << Value.character;
 }
 
 //===----------------------------------------------------------------------===//
 // Range
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, Range &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("start", result.start) && o.map("end", result.end);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, Range &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("start", Result.start) && O.map("end", Result.end);
 }
 
-llvm::json::Value llvm::lsp::toJSON(const Range &value) {
+llvm::json::Value llvm::lsp::toJSON(const Range &Value) {
   return llvm::json::Object{
-      {"start", value.start},
-      {"end", value.end},
+      {"start", Value.start},
+      {"end", Value.end},
   };
 }
 
-raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const Range &value) {
-  return os << value.start << '-' << value.end;
+raw_ostream &llvm::lsp::operator<<(raw_ostream &Os, const Range &Value) {
+  return Os << Value.start << '-' << Value.end;
 }
 
 //===----------------------------------------------------------------------===//
 // Location
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, Location &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("uri", result.uri) && o.map("range", result.range);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, Location &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("uri", Result.uri) && O.map("range", Result.range);
 }
 
-llvm::json::Value llvm::lsp::toJSON(const Location &value) {
+llvm::json::Value llvm::lsp::toJSON(const Location &Value) {
   return llvm::json::Object{
-      {"uri", value.uri},
-      {"range", value.range},
+      {"uri", Value.uri},
+      {"range", Value.range},
   };
 }
 
-raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const Location &value) {
-  return os << value.range << '@' << value.uri;
+raw_ostream &llvm::lsp::operator<<(raw_ostream &Os, const Location &Value) {
+  return Os << Value.range << '@' << Value.uri;
 }
 
 //===----------------------------------------------------------------------===//
 // TextDocumentPositionParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         TextDocumentPositionParams &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("textDocument", result.textDocument) &&
-         o.map("position", result.position);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         TextDocumentPositionParams &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("textDocument", Result.textDocument) &&
+         O.map("position", Result.position);
 }
 
 //===----------------------------------------------------------------------===//
 // ReferenceParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         ReferenceContext &result, llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.mapOptional("includeDeclaration", result.includeDeclaration);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         ReferenceContext &Result, llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.mapOptional("includeDeclaration", Result.includeDeclaration);
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         ReferenceParams &result, llvm::json::Path path) {
-  TextDocumentPositionParams &base = result;
-  llvm::json::ObjectMapper o(value, path);
-  return fromJSON(value, base, path) && o &&
-         o.mapOptional("context", result.context);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         ReferenceParams &Result, llvm::json::Path Path) {
+  TextDocumentPositionParams &Base = Result;
+  llvm::json::ObjectMapper O(Value, Path);
+  return fromJSON(Value, Base, Path) && O &&
+         O.mapOptional("context", Result.context);
 }
 
 //===----------------------------------------------------------------------===//
 // DidOpenTextDocumentParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         DidOpenTextDocumentParams &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("textDocument", result.textDocument);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         DidOpenTextDocumentParams &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("textDocument", Result.textDocument);
 }
 
 //===----------------------------------------------------------------------===//
 // DidCloseTextDocumentParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         DidCloseTextDocumentParams &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("textDocument", result.textDocument);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         DidCloseTextDocumentParams &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("textDocument", Result.textDocument);
 }
 
 //===----------------------------------------------------------------------===//
@@ -511,57 +511,57 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &value,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-TextDocumentContentChangeEvent::applyTo(std::string &contents) const {
+TextDocumentContentChangeEvent::applyTo(std::string &Contents) const {
   // If there is no range, the full document changed.
   if (!range) {
-    contents = text;
+    Contents = text;
     return success();
   }
 
   // Try to map the replacement range to the content.
-  llvm::SourceMgr tmpScrMgr;
-  tmpScrMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(contents),
+  llvm::SourceMgr TmpScrMgr;
+  TmpScrMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(Contents),
                                SMLoc());
-  SMRange rangeLoc = range->getAsSMRange(tmpScrMgr);
-  if (!rangeLoc.isValid())
+  SMRange RangeLoc = range->getAsSMRange(TmpScrMgr);
+  if (!RangeLoc.isValid())
     return failure();
 
-  contents.replace(rangeLoc.Start.getPointer() - contents.data(),
-                   rangeLoc.End.getPointer() - rangeLoc.Start.getPointer(),
+  Contents.replace(RangeLoc.Start.getPointer() - Contents.data(),
+                   RangeLoc.End.getPointer() - RangeLoc.Start.getPointer(),
                    text);
   return success();
 }
 
 LogicalResult TextDocumentContentChangeEvent::applyTo(
-    ArrayRef<TextDocumentContentChangeEvent> changes, std::string &contents) {
-  for (const auto &change : changes)
-    if (failed(change.applyTo(contents)))
+    ArrayRef<TextDocumentContentChangeEvent> Changes, std::string &Contents) {
+  for (const auto &Change : Changes)
+    if (failed(Change.applyTo(Contents)))
       return failure();
   return success();
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         TextDocumentContentChangeEvent &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("range", result.range) &&
-         o.map("rangeLength", result.rangeLength) && o.map("text", result.text);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         TextDocumentContentChangeEvent &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("range", Result.range) &&
+         O.map("rangeLength", Result.rangeLength) && O.map("text", Result.text);
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         DidChangeTextDocumentParams &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("textDocument", result.textDocument) &&
-         o.map("contentChanges", result.contentChanges);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         DidChangeTextDocumentParams &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("textDocument", Result.textDocument) &&
+         O.map("contentChanges", Result.contentChanges);
 }
 
 //===----------------------------------------------------------------------===//
 // MarkupContent
 //===----------------------------------------------------------------------===//
 
-static llvm::StringRef toTextKind(MarkupKind kind) {
-  switch (kind) {
+static llvm::StringRef toTextKind(MarkupKind Kind) {
+  switch (Kind) {
   case MarkupKind::PlainText:
     return "plaintext";
   case MarkupKind::Markdown:
@@ -570,17 +570,17 @@ static llvm::StringRef toTextKind(MarkupKind kind) {
   llvm_unreachable("Invalid MarkupKind");
 }
 
-raw_ostream &llvm::lsp::operator<<(raw_ostream &os, MarkupKind kind) {
-  return os << toTextKind(kind);
+raw_ostream &llvm::lsp::operator<<(raw_ostream &Os, MarkupKind Kind) {
+  return Os << toTextKind(Kind);
 }
 
-llvm::json::Value llvm::lsp::toJSON(const MarkupContent &mc) {
-  if (mc.value.empty())
+llvm::json::Value llvm::lsp::toJSON(const MarkupContent &Mc) {
+  if (Mc.value.empty())
     return nullptr;
 
   return llvm::json::Object{
-      {"kind", toTextKind(mc.kind)},
-      {"value", mc.value},
+      {"kind", toTextKind(Mc.kind)},
+      {"value", Mc.value},
   };
 }
 
@@ -588,56 +588,56 @@ llvm::json::Value llvm::lsp::toJSON(const MarkupContent &mc) {
 // Hover
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const Hover &hover) {
-  llvm::json::Object result{{"contents", toJSON(hover.contents)}};
-  if (hover.range)
-    result["range"] = toJSON(*hover.range);
-  return std::move(result);
+llvm::json::Value llvm::lsp::toJSON(const Hover &Hover) {
+  llvm::json::Object Result{{"contents", toJSON(Hover.contents)}};
+  if (Hover.range)
+    Result["range"] = toJSON(*Hover.range);
+  return std::move(Result);
 }
 
 //===----------------------------------------------------------------------===//
 // DocumentSymbol
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const DocumentSymbol &symbol) {
-  llvm::json::Object result{{"name", symbol.name},
-                            {"kind", static_cast<int>(symbol.kind)},
-                            {"range", symbol.range},
-                            {"selectionRange", symbol.selectionRange}};
+llvm::json::Value llvm::lsp::toJSON(const DocumentSymbol &Symbol) {
+  llvm::json::Object Result{{"name", Symbol.name},
+                            {"kind", static_cast<int>(Symbol.kind)},
+                            {"range", Symbol.range},
+                            {"selectionRange", Symbol.selectionRange}};
 
-  if (!symbol.detail.empty())
-    result["detail"] = symbol.detail;
-  if (!symbol.children.empty())
-    result["children"] = symbol.children;
-  return std::move(result);
+  if (!Symbol.detail.empty())
+    Result["detail"] = Symbol.detail;
+  if (!Symbol.children.empty())
+    Result["children"] = Symbol.children;
+  return std::move(Result);
 }
 
 //===----------------------------------------------------------------------===//
 // DocumentSymbolParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         DocumentSymbolParams &result, llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("textDocument", result.textDocument);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         DocumentSymbolParams &Result, llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("textDocument", Result.textDocument);
 }
 
 //===----------------------------------------------------------------------===//
 // DiagnosticRelatedInformation
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         DiagnosticRelatedInformation &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("location", result.location) &&
-         o.map("message", result.message);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         DiagnosticRelatedInformation &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("location", Result.location) &&
+         O.map("message", Result.message);
 }
 
-llvm::json::Value llvm::lsp::toJSON(const DiagnosticRelatedInformation &info) {
+llvm::json::Value llvm::lsp::toJSON(const DiagnosticRelatedInformation &Info) {
   return llvm::json::Object{
-      {"location", info.location},
-      {"message", info.message},
+      {"location", Info.location},
+      {"message", Info.message},
   };
 }
 
@@ -645,64 +645,64 @@ llvm::json::Value llvm::lsp::toJSON(const DiagnosticRelatedInformation &info) {
 // Diagnostic
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(DiagnosticTag tag) {
-  return static_cast<int>(tag);
+llvm::json::Value llvm::lsp::toJSON(DiagnosticTag Tag) {
+  return static_cast<int>(Tag);
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, DiagnosticTag &result,
-                         llvm::json::Path path) {
-  if (std::optional<int64_t> i = value.getAsInteger()) {
-    result = (DiagnosticTag)*i;
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, DiagnosticTag &Result,
+                         llvm::json::Path Path) {
+  if (std::optional<int64_t> I = Value.getAsInteger()) {
+    Result = (DiagnosticTag)*I;
     return true;
   }
 
   return false;
 }
 
-llvm::json::Value llvm::lsp::toJSON(const Diagnostic &diag) {
-  llvm::json::Object result{
-      {"range", diag.range},
-      {"severity", (int)diag.severity},
-      {"message", diag.message},
+llvm::json::Value llvm::lsp::toJSON(const Diagnostic &Diag) {
+  llvm::json::Object Result{
+      {"range", Diag.range},
+      {"severity", (int)Diag.severity},
+      {"message", Diag.message},
   };
-  if (diag.category)
-    result["category"] = *diag.category;
-  if (!diag.source.empty())
-    result["source"] = diag.source;
-  if (diag.relatedInformation)
-    result["relatedInformation"] = *diag.relatedInformation;
-  if (!diag.tags.empty())
-    result["tags"] = diag.tags;
-  return std::move(result);
+  if (Diag.category)
+    Result["category"] = *Diag.category;
+  if (!Diag.source.empty())
+    Result["source"] = Diag.source;
+  if (Diag.relatedInformation)
+    Result["relatedInformation"] = *Diag.relatedInformation;
+  if (!Diag.tags.empty())
+    Result["tags"] = Diag.tags;
+  return std::move(Result);
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, Diagnostic &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  if (!o)
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, Diagnostic &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  if (!O)
     return false;
-  int severity = 0;
-  if (!mapOptOrNull(value, "severity", severity, path))
+  int Severity = 0;
+  if (!mapOptOrNull(Value, "severity", Severity, Path))
     return false;
-  result.severity = (DiagnosticSeverity)severity;
+  Result.severity = (DiagnosticSeverity)Severity;
 
-  return o.map("range", result.range) && o.map("message", result.message) &&
-         mapOptOrNull(value, "category", result.category, path) &&
-         mapOptOrNull(value, "source", result.source, path) &&
-         mapOptOrNull(value, "relatedInformation", result.relatedInformation,
-                      path) &&
-         mapOptOrNull(value, "tags", result.tags, path);
+  return O.map("range", Result.range) && O.map("message", Result.message) &&
+         mapOptOrNull(Value, "category", Result.category, Path) &&
+         mapOptOrNull(Value, "source", Result.source, Path) &&
+         mapOptOrNull(Value, "relatedInformation", Result.relatedInformation,
+                      Path) &&
+         mapOptOrNull(Value, "tags", Result.tags, Path);
 }
 
 //===----------------------------------------------------------------------===//
 // PublishDiagnosticsParams
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const PublishDiagnosticsParams &params) {
+llvm::json::Value llvm::lsp::toJSON(const PublishDiagnosticsParams &Params) {
   return llvm::json::Object{
-      {"uri", params.uri},
-      {"diagnostics", params.diagnostics},
-      {"version", params.version},
+      {"uri", Params.uri},
+      {"diagnostics", Params.diagnostics},
+      {"version", Params.version},
   };
 }
 
@@ -710,52 +710,52 @@ llvm::json::Value llvm::lsp::toJSON(const PublishDiagnosticsParams &params) {
 // TextEdit
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, TextEdit &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("range", result.range) && o.map("newText", result.newText);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, TextEdit &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("range", Result.range) && O.map("newText", Result.newText);
 }
 
-llvm::json::Value llvm::lsp::toJSON(const TextEdit &value) {
+llvm::json::Value llvm::lsp::toJSON(const TextEdit &Value) {
   return llvm::json::Object{
-      {"range", value.range},
-      {"newText", value.newText},
+      {"range", Value.range},
+      {"newText", Value.newText},
   };
 }
 
-raw_ostream &llvm::lsp::operator<<(raw_ostream &os, const TextEdit &value) {
-  os << value.range << " => \"";
-  llvm::printEscapedString(value.newText, os);
-  return os << '"';
+raw_ostream &llvm::lsp::operator<<(raw_ostream &Os, const TextEdit &Value) {
+  Os << Value.range << " => \"";
+  llvm::printEscapedString(Value.newText, Os);
+  return Os << '"';
 }
 
 //===----------------------------------------------------------------------===//
 // CompletionItemKind
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         CompletionItemKind &result, llvm::json::Path path) {
-  if (std::optional<int64_t> intValue = value.getAsInteger()) {
-    if (*intValue < static_cast<int>(CompletionItemKind::Text) ||
-        *intValue > static_cast<int>(CompletionItemKind::TypeParameter))
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         CompletionItemKind &Result, llvm::json::Path Path) {
+  if (std::optional<int64_t> IntValue = Value.getAsInteger()) {
+    if (*IntValue < static_cast<int>(CompletionItemKind::Text) ||
+        *IntValue > static_cast<int>(CompletionItemKind::TypeParameter))
       return false;
-    result = static_cast<CompletionItemKind>(*intValue);
+    Result = static_cast<CompletionItemKind>(*IntValue);
     return true;
   }
   return false;
 }
 
 CompletionItemKind llvm::lsp::adjustKindToCapability(
-    CompletionItemKind kind,
-    CompletionItemKindBitset &supportedCompletionItemKinds) {
-  size_t kindVal = static_cast<size_t>(kind);
-  if (kindVal >= kCompletionItemKindMin &&
-      kindVal <= supportedCompletionItemKinds.size() &&
-      supportedCompletionItemKinds[kindVal])
-    return kind;
+    CompletionItemKind Kind,
+    CompletionItemKindBitset &SupportedCompletionItemKinds) {
+  size_t KindVal = static_cast<size_t>(Kind);
+  if (KindVal >= kCompletionItemKindMin &&
+      KindVal <= SupportedCompletionItemKinds.size() &&
+      SupportedCompletionItemKinds[KindVal])
+    return Kind;
 
   // Provide some fall backs for common kinds that are close enough.
-  switch (kind) {
+  switch (Kind) {
   case CompletionItemKind::Folder:
     return CompletionItemKind::File;
   case CompletionItemKind::EnumMember:
@@ -767,14 +767,14 @@ CompletionItemKind llvm::lsp::adjustKindToCapability(
   }
 }
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         CompletionItemKindBitset &result,
-                         llvm::json::Path path) {
-  if (const llvm::json::Array *arrayValue = value.getAsArray()) {
-    for (size_t i = 0, e = arrayValue->size(); i < e; ++i) {
-      CompletionItemKind kindOut;
-      if (fromJSON((*arrayValue)[i], kindOut, path.index(i)))
-        result.set(size_t(kindOut));
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         CompletionItemKindBitset &Result,
+                         llvm::json::Path Path) {
+  if (const llvm::json::Array *ArrayValue = Value.getAsArray()) {
+    for (size_t I = 0, E = ArrayValue->size(); I < E; ++I) {
+      CompletionItemKind KindOut;
+      if (fromJSON((*ArrayValue)[I], KindOut, Path.index(I)))
+        Result.set(size_t(KindOut));
     }
     return true;
   }
@@ -785,53 +785,53 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &value,
 // CompletionItem
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const CompletionItem &value) {
-  assert(!value.label.empty() && "completion item label is required");
-  llvm::json::Object result{{"label", value.label}};
-  if (value.kind != CompletionItemKind::Missing)
-    result["kind"] = static_cast<int>(value.kind);
-  if (!value.detail.empty())
-    result["detail"] = value.detail;
-  if (value.documentation)
-    result["documentation"] = value.documentation;
-  if (!value.sortText.empty())
-    result["sortText"] = value.sortText;
-  if (!value.filterText.empty())
-    result["filterText"] = value.filterText;
-  if (!value.insertText.empty())
-    result["insertText"] = value.insertText;
-  if (value.insertTextFormat != InsertTextFormat::Missing)
-    result["insertTextFormat"] = static_cast<int>(value.insertTextFormat);
-  if (value.textEdit)
-    result["textEdit"] = *value.textEdit;
-  if (!value.additionalTextEdits.empty()) {
-    result["additionalTextEdits"] =
-        llvm::json::Array(value.additionalTextEdits);
+llvm::json::Value llvm::lsp::toJSON(const CompletionItem &Value) {
+  assert(!Value.label.empty() && "completion item label is required");
+  llvm::json::Object Result{{"label", Value.label}};
+  if (Value.kind != CompletionItemKind::Missing)
+    Result["kind"] = static_cast<int>(Value.kind);
+  if (!Value.detail.empty())
+    Result["detail"] = Value.detail;
+  if (Value.documentation)
+    Result["documentation"] = Value.documentation;
+  if (!Value.sortText.empty())
+    Result["sortText"] = Value.sortText;
+  if (!Value.filterText.empty())
+    Result["filterText"] = Value.filterText;
+  if (!Value.insertText.empty())
+    Result["insertText"] = Value.insertText;
+  if (Value.insertTextFormat != InsertTextFormat::Missing)
+    Result["insertTextFormat"] = static_cast<int>(Value.insertTextFormat);
+  if (Value.textEdit)
+    Result["textEdit"] = *Value.textEdit;
+  if (!Value.additionalTextEdits.empty()) {
+    Result["additionalTextEdits"] =
+        llvm::json::Array(Value.additionalTextEdits);
   }
-  if (value.deprecated)
-    result["deprecated"] = value.deprecated;
-  return std::move(result);
+  if (Value.deprecated)
+    Result["deprecated"] = Value.deprecated;
+  return std::move(Result);
 }
 
-raw_ostream &llvm::lsp::operator<<(raw_ostream &os,
-                                   const CompletionItem &value) {
-  return os << value.label << " - " << toJSON(value);
+raw_ostream &llvm::lsp::operator<<(raw_ostream &Os,
+                                   const CompletionItem &Value) {
+  return Os << Value.label << " - " << toJSON(Value);
 }
 
-bool llvm::lsp::operator<(const CompletionItem &lhs,
-                          const CompletionItem &rhs) {
-  return (lhs.sortText.empty() ? lhs.label : lhs.sortText) <
-         (rhs.sortText.empty() ? rhs.label : rhs.sortText);
+bool llvm::lsp::operator<(const CompletionItem &Lhs,
+                          const CompletionItem &Rhs) {
+  return (Lhs.sortText.empty() ? Lhs.label : Lhs.sortText) <
+         (Rhs.sortText.empty() ? Rhs.label : Rhs.sortText);
 }
 
 //===----------------------------------------------------------------------===//
 // CompletionList
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const CompletionList &value) {
+llvm::json::Value llvm::lsp::toJSON(const CompletionList &Value) {
   return llvm::json::Object{
-      {"isIncomplete", value.isIncomplete},
-      {"items", llvm::json::Array(value.items)},
+      {"isIncomplete", Value.isIncomplete},
+      {"items", llvm::json::Array(Value.items)},
   };
 }
 
@@ -839,14 +839,14 @@ llvm::json::Value llvm::lsp::toJSON(const CompletionList &value) {
 // CompletionContext
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         CompletionContext &result, llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  int triggerKind;
-  if (!o || !o.map("triggerKind", triggerKind) ||
-      !mapOptOrNull(value, "triggerCharacter", result.triggerCharacter, path))
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         CompletionContext &Result, llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  int TriggerKind;
+  if (!O || !O.map("triggerKind", TriggerKind) ||
+      !mapOptOrNull(Value, "triggerCharacter", Result.triggerCharacter, Path))
     return false;
-  result.triggerKind = static_cast<CompletionTriggerKind>(triggerKind);
+  Result.triggerKind = static_cast<CompletionTriggerKind>(TriggerKind);
   return true;
 }
 
@@ -854,12 +854,12 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &value,
 // CompletionParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         CompletionParams &result, llvm::json::Path path) {
-  if (!fromJSON(value, static_cast<TextDocumentPositionParams &>(result), path))
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         CompletionParams &Result, llvm::json::Path Path) {
+  if (!fromJSON(Value, static_cast<TextDocumentPositionParams &>(Result), Path))
     return false;
-  if (const llvm::json::Value *context = value.getAsObject()->get("context"))
-    return fromJSON(*context, result.context, path.field("context"));
+  if (const llvm::json::Value *Context = Value.getAsObject()->get("context"))
+    return fromJSON(*Context, Result.context, Path.field("context"));
   return true;
 }
 
@@ -867,53 +867,53 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &value,
 // ParameterInformation
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const ParameterInformation &value) {
-  assert((value.labelOffsets || !value.labelString.empty()) &&
+llvm::json::Value llvm::lsp::toJSON(const ParameterInformation &Value) {
+  assert((Value.labelOffsets || !Value.labelString.empty()) &&
          "parameter information label is required");
-  llvm::json::Object result;
-  if (value.labelOffsets)
-    result["label"] = llvm::json::Array(
-        {value.labelOffsets->first, value.labelOffsets->second});
+  llvm::json::Object Result;
+  if (Value.labelOffsets)
+    Result["label"] = llvm::json::Array(
+        {Value.labelOffsets->first, Value.labelOffsets->second});
   else
-    result["label"] = value.labelString;
-  if (!value.documentation.empty())
-    result["documentation"] = value.documentation;
-  return std::move(result);
+    Result["label"] = Value.labelString;
+  if (!Value.documentation.empty())
+    Result["documentation"] = Value.documentation;
+  return std::move(Result);
 }
 
 //===----------------------------------------------------------------------===//
 // SignatureInformation
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const SignatureInformation &value) {
-  assert(!value.label.empty() && "signature information label is required");
-  llvm::json::Object result{
-      {"label", value.label},
-      {"parameters", llvm::json::Array(value.parameters)},
+llvm::json::Value llvm::lsp::toJSON(const SignatureInformation &Value) {
+  assert(!Value.label.empty() && "signature information label is required");
+  llvm::json::Object Result{
+      {"label", Value.label},
+      {"parameters", llvm::json::Array(Value.parameters)},
   };
-  if (!value.documentation.empty())
-    result["documentation"] = value.documentation;
-  return std::move(result);
+  if (!Value.documentation.empty())
+    Result["documentation"] = Value.documentation;
+  return std::move(Result);
 }
 
-raw_ostream &llvm::lsp::operator<<(raw_ostream &os,
-                                   const SignatureInformation &value) {
-  return os << value.label << " - " << toJSON(value);
+raw_ostream &llvm::lsp::operator<<(raw_ostream &Os,
+                                   const SignatureInformation &Value) {
+  return Os << Value.label << " - " << toJSON(Value);
 }
 
 //===----------------------------------------------------------------------===//
 // SignatureHelp
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const SignatureHelp &value) {
-  assert(value.activeSignature >= 0 &&
+llvm::json::Value llvm::lsp::toJSON(const SignatureHelp &Value) {
+  assert(Value.activeSignature >= 0 &&
          "Unexpected negative value for number of active signatures.");
-  assert(value.activeParameter >= 0 &&
+  assert(Value.activeParameter >= 0 &&
          "Unexpected negative value for active parameter index");
   return llvm::json::Object{
-      {"activeSignature", value.activeSignature},
-      {"activeParameter", value.activeParameter},
-      {"signatures", llvm::json::Array(value.signatures)},
+      {"activeSignature", Value.activeSignature},
+      {"activeParameter", Value.activeParameter},
+      {"signatures", llvm::json::Array(Value.signatures)},
   };
 }
 
@@ -921,20 +921,20 @@ llvm::json::Value llvm::lsp::toJSON(const SignatureHelp &value) {
 // DocumentLinkParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         DocumentLinkParams &result, llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("textDocument", result.textDocument);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         DocumentLinkParams &Result, llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("textDocument", Result.textDocument);
 }
 
 //===----------------------------------------------------------------------===//
 // DocumentLink
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const DocumentLink &value) {
+llvm::json::Value llvm::lsp::toJSON(const DocumentLink &Value) {
   return llvm::json::Object{
-      {"range", value.range},
-      {"target", value.target},
+      {"range", Value.range},
+      {"target", Value.target},
   };
 }
 
@@ -942,40 +942,40 @@ llvm::json::Value llvm::lsp::toJSON(const DocumentLink &value) {
 // InlayHintsParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         InlayHintsParams &result, llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("textDocument", result.textDocument) &&
-         o.map("range", result.range);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         InlayHintsParams &Result, llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("textDocument", Result.textDocument) &&
+         O.map("range", Result.range);
 }
 
 //===----------------------------------------------------------------------===//
 // InlayHint
 //===----------------------------------------------------------------------===//
 
-llvm::json::Value llvm::lsp::toJSON(const InlayHint &value) {
-  return llvm::json::Object{{"position", value.position},
-                            {"kind", (int)value.kind},
-                            {"label", value.label},
-                            {"paddingLeft", value.paddingLeft},
-                            {"paddingRight", value.paddingRight}};
+llvm::json::Value llvm::lsp::toJSON(const InlayHint &Value) {
+  return llvm::json::Object{{"position", Value.position},
+                            {"kind", (int)Value.kind},
+                            {"label", Value.label},
+                            {"paddingLeft", Value.paddingLeft},
+                            {"paddingRight", Value.paddingRight}};
 }
-bool llvm::lsp::operator==(const InlayHint &lhs, const InlayHint &rhs) {
-  return std::tie(lhs.position, lhs.kind, lhs.label) ==
-         std::tie(rhs.position, rhs.kind, rhs.label);
+bool llvm::lsp::operator==(const InlayHint &Lhs, const InlayHint &Rhs) {
+  return std::tie(Lhs.position, Lhs.kind, Lhs.label) ==
+         std::tie(Rhs.position, Rhs.kind, Rhs.label);
 }
-bool llvm::lsp::operator<(const InlayHint &lhs, const InlayHint &rhs) {
-  return std::tie(lhs.position, lhs.kind, lhs.label) <
-         std::tie(rhs.position, rhs.kind, rhs.label);
+bool llvm::lsp::operator<(const InlayHint &Lhs, const InlayHint &Rhs) {
+  return std::tie(Lhs.position, Lhs.kind, Lhs.label) <
+         std::tie(Rhs.position, Rhs.kind, Rhs.label);
 }
 
-llvm::raw_ostream &llvm::lsp::operator<<(llvm::raw_ostream &os,
-                                         InlayHintKind value) {
-  switch (value) {
+llvm::raw_ostream &llvm::lsp::operator<<(llvm::raw_ostream &Os,
+                                         InlayHintKind Value) {
+  switch (Value) {
   case InlayHintKind::Parameter:
-    return os << "parameter";
+    return Os << "parameter";
   case InlayHintKind::Type:
-    return os << "type";
+    return Os << "type";
   }
   llvm_unreachable("Unknown InlayHintKind");
 }
@@ -984,12 +984,12 @@ llvm::raw_ostream &llvm::lsp::operator<<(llvm::raw_ostream &os,
 // CodeActionContext
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         CodeActionContext &result, llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  if (!o || !o.map("diagnostics", result.diagnostics))
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         CodeActionContext &Result, llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  if (!O || !O.map("diagnostics", Result.diagnostics))
     return false;
-  o.map("only", result.only);
+  O.map("only", Result.only);
   return true;
 }
 
@@ -997,28 +997,28 @@ bool llvm::lsp::fromJSON(const llvm::json::Value &value,
 // CodeActionParams
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value,
-                         CodeActionParams &result, llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("textDocument", result.textDocument) &&
-         o.map("range", result.range) && o.map("context", result.context);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value,
+                         CodeActionParams &Result, llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("textDocument", Result.textDocument) &&
+         O.map("range", Result.range) && O.map("context", Result.context);
 }
 
 //===----------------------------------------------------------------------===//
 // WorkspaceEdit
 //===----------------------------------------------------------------------===//
 
-bool llvm::lsp::fromJSON(const llvm::json::Value &value, WorkspaceEdit &result,
-                         llvm::json::Path path) {
-  llvm::json::ObjectMapper o(value, path);
-  return o && o.map("changes", result.changes);
+bool llvm::lsp::fromJSON(const llvm::json::Value &Value, WorkspaceEdit &Result,
+                         llvm::json::Path Path) {
+  llvm::json::ObjectMapper O(Value, Path);
+  return O && O.map("changes", Result.changes);
 }
 
-llvm::json::Value llvm::lsp::toJSON(const WorkspaceEdit &value) {
-  llvm::json::Object fileChanges;
-  for (auto &change : value.changes)
-    fileChanges[change.first] = llvm::json::Array(change.second);
-  return llvm::json::Object{{"changes", std::move(fileChanges)}};
+llvm::json::Value llvm::lsp::toJSON(const WorkspaceEdit &Value) {
+  llvm::json::Object FileChanges;
+  for (auto &Change : Value.changes)
+    FileChanges[Change.first] = llvm::json::Array(Change.second);
+  return llvm::json::Object{{"changes", std::move(FileChanges)}};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1029,15 +1029,15 @@ const llvm::StringLiteral CodeAction::kQuickFix = "quickfix";
 const llvm::StringLiteral CodeAction::kRefactor = "refactor";
 const llvm::StringLiteral CodeAction::kInfo = "info";
 
-llvm::json::Value llvm::lsp::toJSON(const CodeAction &value) {
-  llvm::json::Object codeAction{{"title", value.title}};
-  if (value.kind)
-    codeAction["kind"] = *value.kind;
-  if (value.diagnostics)
-    codeAction["diagnostics"] = llvm::json::Array(*value.diagnostics);
-  if (value.isPreferred)
-    codeAction["isPreferred"] = true;
-  if (value.edit)
-    codeAction["edit"] = *value.edit;
-  return std::move(codeAction);
+llvm::json::Value llvm::lsp::toJSON(const CodeAction &Value) {
+  llvm::json::Object CodeAction{{"title", Value.title}};
+  if (Value.kind)
+    CodeAction["kind"] = *Value.kind;
+  if (Value.diagnostics)
+    CodeAction["diagnostics"] = llvm::json::Array(*Value.diagnostics);
+  if (Value.isPreferred)
+    CodeAction["isPreferred"] = true;
+  if (Value.edit)
+    CodeAction["edit"] = *Value.edit;
+  return std::move(CodeAction);
 }

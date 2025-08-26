@@ -20,8 +20,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H
-#define MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H
+#ifndef LLVM_SUPPORT_LSP_PROTOCOL_H
+#define LLVM_SUPPORT_LSP_PROTOCOL_H
 
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LogicalResult.h"
