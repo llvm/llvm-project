@@ -702,7 +702,7 @@ void mlir::arith::populateArithToAMDGPUConversionPatterns(
   if (allowPackedF16Rtz)
     patterns.add<TruncfToFloat16RewritePattern>(patterns.getContext(), benefit);
 
-  if (chipset >= kGfx950) {
+  if (chipset == kGfx950) {
     patterns.add<ScalingExtFRewritePattern>(patterns.getContext(), benefit);
     patterns.add<ScalingTruncFRewritePattern>(patterns.getContext(), benefit);
   }
