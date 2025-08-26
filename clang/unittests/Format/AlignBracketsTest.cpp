@@ -28,7 +28,7 @@ TEST_F(AlignBracketsTest, AlignsAfterOpenBracket) {
       "SomeLongVariableName->someFunction(foooooooo(aaaaaaaaaaaaaaa,\n"
       "                                             aaaaaaaaaaaaaaaaaaaaa));");
   FormatStyle Style = getLLVMStyle();
-  Style.AlignAfterOpenBracket = false;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    aaaaaaaaaaa aaaaaaaa, aaaaaaaaa aaaaaaa) {}",
                Style);
@@ -617,13 +617,13 @@ TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
   StringRef Input = "functionCall(paramA, paramB, paramC);\n"
                     "void functionDecl(int A, int B, int C);";
   Style.AllowAllArgumentsOnNextLine = false;
-  Style.AlignAfterOpenBracket = false;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "    paramC);\n"
                          "void functionDecl(int A, int B,\n"
                          "    int C);"),
                Input, Style);
-  Style.AlignAfterOpenBracket = true;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "             paramC);\n"
                          "void functionDecl(int A, int B,\n"
@@ -646,11 +646,12 @@ TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
                "    int A, int B, int C\n"
                ");",
                Input, Style);
+  Style.BreakBeforeCloseBracketFunction = false;
 
   // When AllowAllArgumentsOnNextLine is set, we prefer breaking before the
   // first argument.
   Style.AllowAllArgumentsOnNextLine = true;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   verifyFormat(StringRef("functionCall(\n"
                          "    paramA, paramB, paramC);\n"
                          "void functionDecl(\n"
@@ -658,13 +659,14 @@ TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
                Input, Style);
   // It wouldn't fit on one line with aligned parameters so this setting
   // doesn't change anything for BAS_Align.
-  Style.AlignAfterOpenBracket = true;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.BreakAfterOpenBracketFunction = false;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "             paramC);\n"
                          "void functionDecl(int A, int B,\n"
                          "                  int C);"),
                Input, Style);
-  Style.AlignAfterOpenBracket = false;
+  Style.BreakAfterOpenBracketFunction = true;
   verifyFormat(StringRef("functionCall(\n"
                          "    paramA, paramB, paramC);\n"
                          "void functionDecl(\n"
@@ -770,17 +772,17 @@ TEST_F(AlignBracketsTest, ParenthesesAndOperandAlignment) {
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "          bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
-  Style.AlignAfterOpenBracket = true;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "          bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
-  Style.AlignAfterOpenBracket = false;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
   Style.AlignOperands = FormatStyle::OAS_Align;
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "          bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
-  Style.AlignAfterOpenBracket = false;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "    bbbbbbbbbbbbbbbbbbbbbb);",
