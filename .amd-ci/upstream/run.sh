@@ -53,6 +53,11 @@ ${mod_cmd3}
 execute_and_check "mkdir -p ${WORKSPACE}/BUILD"
 execute_and_check "cd  ${WORKSPACE}/BUILD"
 
+MEMORY_KILOS=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+MEMORY_GIGS=$(( MEMORY_KILOS / 1000000 ))
+MEMORY_COMPILE_LIMIT=$(( MEMORY_GIGS / 4 ))
+MEMORY_LINK_LIMIT=$(( MEMORY_GIGS / 12 ))
+
 set -x
 cmake \
     -G Ninja \
@@ -72,7 +77,8 @@ cmake \
     -DCMAKE_INSTALL_MESSAGE=LAZY \
     -DCMAKE_C_COMPILER=gcc \
     -DCMAKE_CXX_COMPILER=g++ \
-    -DLLVM_PARALLEL_LINK_JOBS=16 \
+    -DLLVM_PARALLEL_COMPILE_JOBS=${MEMORY_COMPILE_LIMIT} \
+    -DLLVM_PARALLEL_LINK_JOBS=${MEMORY_LINK_LIMIT} \
     -DBUILD_SHARED_LIBS:STRING=ON \
     -DLIBOMP_OMP_VERSION=50 \
     -DLIBOMP_OMPT_SUPPORT=ON \
