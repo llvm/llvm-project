@@ -126,10 +126,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @user_defined_lookup_table.table.rel = internal unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @user_defined_lookup_table.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @user_defined_lookup_table.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @user_defined_lookup_table.table.rel to i64)) to i32)], align 4
 ; CHECK: @table.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.rel to i64)) to i32)], align 4
 ; CHECK: @table2.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table2.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table2.rel to i64)) to i32)], align 4
-; CHECK: @table3 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table3.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table3.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table3.rel to i64)) to i32)], align 4
 ; CHECK: @table4 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
 ; CHECK: @table5 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
-; CHECK: @skip.table = internal constant [4 x ptr] [ptr @.str.8, ptr null, ptr @.str.9, ptr null], align 16
+; CHECK: @skip.table.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @skip.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @skip.table.rel to i64)) to i32)], align 4
 ; CHECK: @wrong.skip.table = internal constant [4 x ptr] [ptr null, ptr @.str.8, ptr null, ptr @.str.9], align 16
 ;.
 define ptr @external_linkage(i32 %cond) {
@@ -360,8 +360,8 @@ entry:
 define ptr @gep_no_leading_zero(i64 %index) {
 ; CHECK-LABEL: define ptr @gep_no_leading_zero(
 ; CHECK-SAME: i64 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table3, i64 [[INDEX]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[LOAD:%.*]] = call ptr @llvm.load.relative.i64(ptr @table3.rel, i64 [[RELTABLE_SHIFT]])
 ; CHECK-NEXT:    ret ptr [[LOAD]]
 ;
   %gep = getelementptr ptr, ptr @table3, i64 %index
@@ -397,8 +397,8 @@ define ptr @gep_wrong_constant_offset(i64 %index) {
 define ptr @table_with_skipped_elements(i64 %index) {
 ; CHECK-LABEL: define ptr @table_with_skipped_elements(
 ; CHECK-SAME: i64 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x ptr], ptr @skip.table, i64 [[INDEX]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[LOAD:%.*]] = call ptr @llvm.load.relative.i64(ptr @skip.table.rel, i64 [[RELTABLE_SHIFT]])
 ; CHECK-NEXT:    ret ptr [[LOAD]]
 ;
   %gep = getelementptr [2 x ptr], ptr @skip.table, i64 %index
