@@ -593,18 +593,11 @@ This is accomplished by identifying the end position of the user input
 (expression statement). This helps store and return the expression statement
 effectively, so that it can be printed (displayed to the user automatically).
 
-**Note:** This logic is only available for C++ for now, since part of the
-implementation itself requires C++ features. Future versions may support more
-languages.
-
 .. code-block:: console
 
   Token *CurTok = nullptr;
-  // If the semicolon is missing at the end of REPL input, consider if
-  // we want to do value printing. Note this is only enabled in C++ mode
-  // since part of the implementation requires C++ language features.
   // Note we shouldn't eat the token since the callback needs it.
-  if (Tok.is(tok::annot_repl_input_end) && Actions.getLangOpts().CPlusPlus)
+  if (Tok.is(tok::annot_repl_input_end))
     CurTok = &Tok;
   else
     // Otherwise, eat the semicolon.
