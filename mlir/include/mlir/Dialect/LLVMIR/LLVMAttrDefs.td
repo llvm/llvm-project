@@ -1246,7 +1246,8 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
 // TargetFeaturesAttr
 //===----------------------------------------------------------------------===//
 
-def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features",
+                                        [DLTIQueryInterface]>
 {
   let summary = "LLVM target features attribute";
 
@@ -1299,6 +1300,9 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
     static constexpr StringLiteral getAttributeName() {
       return StringLiteral("target_features");
     }
+
+    /// Returns the attribute associated with the key.
+    FailureOr<Attribute> query(DataLayoutEntryKey key);
   }];
 
   let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
@@ -1306,7 +1310,7 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
 }
 
 //===----------------------------------------------------------------------===//
-// LLVM_TargetAttr
+// TargetAttr
 //===----------------------------------------------------------------------===//
 
 def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
@@ -1324,7 +1328,7 @@ def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
   }];
   let parameters = (ins "StringAttr":$triple,
                         "StringAttr":$chip,
-                        OptionalParameter<"StringAttr", "">:$features);
+                        OptionalParameter<"TargetFeaturesAttr", "">:$features);
 
   let assemblyFormat = [{`<` struct($triple, $chip, $features) `>`}];
 

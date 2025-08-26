@@ -7913,7 +7913,7 @@ void ConstructVisitor::Post(const parser::AssociateStmt &x) {
       if (ExtractCoarrayRef(expr)) { // C1103
         Say("Selector must not be a coindexed object"_err_en_US);
       }
-      if (evaluate::IsAssumedRank(expr)) {
+      if (IsAssumedRank(expr)) {
         Say("Selector must not be assumed-rank"_err_en_US);
       }
       SetTypeFromAssociation(*symbol);
