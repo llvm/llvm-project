@@ -839,7 +839,7 @@ bool FunctionSpecializer::run() {
 }
 
 void FunctionSpecializer::removeDeadFunctions() {
-  for (Function *F : FullySpecialized) {
+  for (Function *F : DeadFunctions) {
     LLVM_DEBUG(dbgs() << "FnSpecialization: Removing dead function "
                       << F->getName() << "\n");
     if (FAM)
@@ -856,7 +856,7 @@ void FunctionSpecializer::removeDeadFunctions() {
     }
     F->eraseFromParent();
   }
-  FullySpecialized.clear();
+  DeadFunctions.clear();
 }
 
 /// Clone the function \p F and remove the ssa_copy intrinsics added by
@@ -1217,8 +1217,11 @@ void FunctionSpecializer::updateCallSites(Function *F, const Spec *Begin,
 
   // If the function has been completely specialized, the original function
   // is no longer needed. Mark it unreachable.
-  if (NCallsLeft == 0 && Solver.isArgumentTrackedFunction(F)) {
+  // NOTE: If the address of a function is taken, we cannot treat it as dead
+  // function.
+  if (NCallsLeft == 0 && Solver.isArgumentTrackedFunction(F) &&
+      !F->hasAddressTaken()) {
     Solver.markFunctionUnreachable(F);
-    FullySpecialized.insert(F);
+    DeadFunctions.insert(F);
   }
 }
