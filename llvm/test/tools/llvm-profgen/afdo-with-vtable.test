@@ -8,8 +8,9 @@ RUN: not llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-acce
 RUN:  --binary=%p/Inputs/dap.bin --format=text --pid=3446532 \
 RUN: -ignore-stack-samples -use-dwarf-correlation=false -o - 2>&1 | FileCheck %s --check-prefix=PSEUDOERR
 
-;; COM: Generate a context-sensitive LBR perf script for the tested binary and provide it to llvm-profgen.
-;; Test that llvm-profgen emits error like above when provided with a context-sensitive profile.
+RUN: not llvm-profgen --perfscript=%p/Inputs/css-pgo-perf.script --data-access-perftrace=%p/Inputs/dap-perf-trace.txt \
+RUN:  --binary=%p/Inputs/dap.bin --format=text --pid=21450 \
+RUN: -ignore-stack-samples=false -use-dwarf-correlation=true -o - 2>&1 | FileCheck %s --check-prefix=PSEUDOERR
 
 CHECK:       Function: _Z9loop_funciii: 958, 15, 5 sampled lines
 CHECK-NEXT:  Samples collected in the function's body {
