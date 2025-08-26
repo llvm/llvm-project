@@ -530,11 +530,6 @@ bool DummyDataObject::IsPassedByDescriptor(bool isBindC) const {
   return false;
 }
 
-bool DummyDataObject::IsArray() const {
-  return type.attrs().test(characteristics::TypeAndShape::Attr::AssumedRank) ||
-      type.Rank() > 0;
-}
-
 llvm::raw_ostream &DummyDataObject::Dump(llvm::raw_ostream &o) const {
   attrs.Dump(o, EnumToString);
   if (intent != common::Intent::Default) {

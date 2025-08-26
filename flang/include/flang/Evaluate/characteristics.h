@@ -254,7 +254,6 @@ struct DummyDataObject {
   bool CanBePassedViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool IsPassedByDescriptor(bool isBindC) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
-  bool IsArray() const;
 
   TypeAndShape type;
   std::vector<Expr<SubscriptInteger>> coshape;
