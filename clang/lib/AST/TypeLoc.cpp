@@ -756,8 +756,9 @@ void TemplateSpecializationTypeLoc::set(SourceLocation ElaboratedKeywordLoc,
 
 void TemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
                                                     SourceLocation Loc) {
-  QualifiedTemplateName *Name =
-      getTypePtr()->getTemplateName().getAsAdjustedQualifiedTemplateName();
+
+  auto [Qualifier, HasTemplateKeyword] =
+      getTypePtr()->getTemplateName().getQualifierAndTemplateKeyword();
 
   SourceLocation ElaboratedKeywordLoc =
       getTypePtr()->getKeyword() != ElaboratedTypeKeyword::None
@@ -765,8 +766,7 @@ void TemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
           : SourceLocation();
 
   NestedNameSpecifierLoc QualifierLoc;
-  if (NestedNameSpecifier Qualifier =
-          Name ? Name->getQualifier() : std::nullopt) {
+  if (Qualifier) {
     NestedNameSpecifierLocBuilder Builder;
     Builder.MakeTrivial(Context, Qualifier, Loc);
     QualifierLoc = Builder.getWithLocInContext(Context);
@@ -774,9 +774,7 @@ void TemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
 
   TemplateArgumentListInfo TAL(Loc, Loc);
   set(ElaboratedKeywordLoc, QualifierLoc,
-      /*TemplateKeywordLoc=*/Name && Name->hasTemplateKeyword()
-          ? Loc
-          : SourceLocation(),
+      /*TemplateKeywordLoc=*/HasTemplateKeyword ? Loc : SourceLocation(),
       /*NameLoc=*/Loc, /*LAngleLoc=*/Loc, /*RAngleLoc=*/Loc);
   initializeArgLocs(Context, getTypePtr()->template_arguments(), getArgInfos(),
                     Loc);
