@@ -346,7 +346,7 @@ bool mlir::isMemoryEffectFree(Operation *op) {
   // free.
   for (Region &region : op->getRegions())
     for (Operation &op : region.getOps())
-      if (!isMemoryEffectMovable(&op))
+      if (!isMemoryEffectFree(&op))
         return false;
 
   return true;
