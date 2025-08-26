@@ -26,6 +26,7 @@ define protected amdgpu_kernel void @_RSENC_PRInit______________________________
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_13
 ; CHECK-NEXT:  ; %bb.2: ; %lor.lhs.false17
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_3: ; %while.cond.i
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_3

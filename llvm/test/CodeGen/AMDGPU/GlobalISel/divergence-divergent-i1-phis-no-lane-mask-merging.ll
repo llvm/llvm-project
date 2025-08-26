@@ -105,6 +105,7 @@ define void @divergent_i1_phi_used_inside_loop(float %val, ptr %addr) {
 ; GFX10-NEXT:    s_mov_b32 s5, 1
 ; GFX10-NEXT:    s_mov_b32 s6, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr7
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB2_1: ; %loop
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v3, s6
@@ -154,6 +155,7 @@ define void @divergent_i1_phi_used_inside_loop_bigger_loop_body(float %val, floa
 ; GFX10-NEXT:    s_mov_b32 s6, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr7
 ; GFX10-NEXT:    s_branch .LBB3_2
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB3_1: ; %loop_body
 ; GFX10-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v8, s6
@@ -247,6 +249,7 @@ define amdgpu_cs void @single_lane_execution_attribute(i32 inreg %.userdata0, <3
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB4_4
 ; GFX10-NEXT:  ; %bb.1: ; %.preheader.preheader
 ; GFX10-NEXT:    s_mov_b32 s2, 0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB4_2: ; %.preheader
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s12

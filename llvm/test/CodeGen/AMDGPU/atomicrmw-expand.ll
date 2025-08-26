@@ -11,6 +11,7 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    flat_load_dword v3, v[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[4:5], 0
+; GFX908-NEXT:    .p2align
 ; GFX908-NEXT:  .LBB0_1: ; %atomicrmw.start
 ; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -123,6 +124,7 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    flat_load_dword v3, v[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[4:5], 0
+; GFX908-NEXT:    .p2align
 ; GFX908-NEXT:  .LBB1_1: ; %atomicrmw.start
 ; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -362,6 +364,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    flat_load_dword v3, v[0:1]
 ; GFX908-NEXT:    s_mov_b64 s[4:5], 0
+; GFX908-NEXT:    .p2align
 ; GFX908-NEXT:  .LBB3_1: ; %atomicrmw.start
 ; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -383,6 +386,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    flat_load_dword v3, v[0:1]
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
+; GFX90A-NEXT:    .p2align
 ; GFX90A-NEXT:  .LBB3_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -411,6 +415,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    flat_load_b32 v3, v[0:1]
 ; GFX1100-NEXT:    s_mov_b32 s0, 0
+; GFX1100-NEXT:    .p2align
 ; GFX1100-NEXT:  .LBB3_1: ; %atomicrmw.start
 ; GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

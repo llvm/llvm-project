@@ -677,6 +677,7 @@ define amdgpu_kernel void @v32i8_loop_carried(ptr addrspace(1) %src1, ptr addrsp
 ; GFX942-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v0
+; GFX942-NEXT:    .p2align
 ; GFX942-NEXT:  .LBB12_1: ; %bb.1
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_and_b64 s[6:7], exec, vcc

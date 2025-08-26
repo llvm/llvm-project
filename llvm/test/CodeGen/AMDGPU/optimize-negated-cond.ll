@@ -29,6 +29,7 @@ define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 ; GCN-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
 ; GCN-NEXT:    s_mov_b32 s12, s6
 ; GCN-NEXT:    s_branch .LBB0_4
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB0_3: ; %Flow1
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_andn2_b64 vcc, exec, s[16:17]
@@ -42,6 +43,7 @@ define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 ; GCN-NEXT:  ; %bb.5: ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_mov_b64 s[16:17], s[2:3]
 ; GCN-NEXT:    s_branch .LBB0_7
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB0_6: ; %bb3
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_add_i32 s12, s12, 1
@@ -105,6 +107,7 @@ define amdgpu_kernel void @negated_cond_dominated_blocks(ptr addrspace(1) %arg1)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 s3, s6
 ; GCN-NEXT:    s_branch .LBB1_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB1_1: ; %bb7
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_ashr_i32 s3, s2, 31
@@ -125,6 +128,7 @@ define amdgpu_kernel void @negated_cond_dominated_blocks(ptr addrspace(1) %arg1)
 ; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:    s_cbranch_execnz .LBB1_1
 ; GCN-NEXT:    s_branch .LBB1_5
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB1_4: ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    ; implicit-def: $sgpr2
 ; GCN-NEXT:    s_mov_b64 vcc, 0

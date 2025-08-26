@@ -433,6 +433,7 @@ define amdgpu_ps void @divergent_because_of_temporal_divergent_use(float %val, p
 ; OLD_RBS-NEXT:    s_mov_b32 s0, -1
 ; OLD_RBS-NEXT:    v_mov_b32_e32 v3, s0
 ; OLD_RBS-NEXT:    s_mov_b32 s0, 0
+; OLD_RBS-NEXT:    .p2align
 ; OLD_RBS-NEXT:  .LBB15_1: ; %loop
 ; OLD_RBS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; OLD_RBS-NEXT:    v_add_nc_u32_e32 v3, 1, v3
@@ -451,6 +452,7 @@ define amdgpu_ps void @divergent_because_of_temporal_divergent_use(float %val, p
 ; NEW_RBS:       ; %bb.0: ; %entry
 ; NEW_RBS-NEXT:    s_mov_b32 s1, -1
 ; NEW_RBS-NEXT:    s_mov_b32 s0, 0
+; NEW_RBS-NEXT:    .p2align
 ; NEW_RBS-NEXT:  .LBB15_1: ; %loop
 ; NEW_RBS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NEW_RBS-NEXT:    s_add_i32 s1, s1, 1
@@ -489,6 +491,7 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; OLD_RBS-NEXT:    ; implicit-def: $sgpr1
 ; OLD_RBS-NEXT:    v_mov_b32_e32 v6, s0
 ; OLD_RBS-NEXT:    s_branch .LBB16_3
+; OLD_RBS-NEXT:    .p2align
 ; OLD_RBS-NEXT:  .LBB16_1: ; %Flow3
 ; OLD_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
 ; OLD_RBS-NEXT:    s_waitcnt_depctr 0xffe3
@@ -551,6 +554,7 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; NEW_RBS-NEXT:    s_mov_b32 s0, 0
 ; NEW_RBS-NEXT:    ; implicit-def: $sgpr5
 ; NEW_RBS-NEXT:    s_branch .LBB16_3
+; NEW_RBS-NEXT:    .p2align
 ; NEW_RBS-NEXT:  .LBB16_1: ; %Flow3
 ; NEW_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
 ; NEW_RBS-NEXT:    s_waitcnt_depctr 0xffe3

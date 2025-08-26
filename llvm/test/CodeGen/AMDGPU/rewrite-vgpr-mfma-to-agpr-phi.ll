@@ -95,7 +95,7 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi_loop(ptr addrspace
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v64, 4.0
 ; CHECK-NEXT:    v_mov_b32_e32 v65, 2.0
-; CHECK-NEXT:  .LBB1_1: ; %loop
+; CHECK:       .LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_nop 7

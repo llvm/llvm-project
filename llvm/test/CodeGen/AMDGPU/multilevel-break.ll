@@ -63,6 +63,7 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    s_branch .LBB0_4
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB0_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_or_b64 exec, exec, s[10:11]
@@ -172,6 +173,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s2, v0
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_branch .LBB1_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB1_1: ; %Flow4
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_and_b64 s[4:5], exec, s[4:5]

@@ -12,6 +12,7 @@ define amdgpu_cs void @memcpy_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src)
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
 ; LOOP-NEXT:    v_mov_b32_e32 v5, s1
 ; LOOP-NEXT:    v_mov_b32_e32 v4, s0
+; LOOP-NEXT:    .p2align
 ; LOOP-NEXT:  .LBB0_1: ; %load-store-loop
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; LOOP-NEXT:    v_add_i32_e32 v6, vcc, v2, v4

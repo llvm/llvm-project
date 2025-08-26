@@ -13,6 +13,7 @@ define double @issue130646(i64 %arg) {
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_branch .LBB0_2
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_1: ; %for.body.5
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_lshr_b64 s[6:7], s[4:5], 1
@@ -95,6 +96,7 @@ define amdgpu_cs void @issue130119(i1 %arg) {
 ; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; CHECK-NEXT:    s_branch .LBB1_4
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB1_3: ; %Flow1
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
 ; CHECK-NEXT:    s_xor_b64 s[14:15], s[14:15], -1

@@ -7,6 +7,7 @@ define amdgpu_ps float @while_break(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:    s_mov_b32 s1, -1
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:    s_branch .LBB0_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB0_1: ; %Flow2
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
@@ -82,6 +83,7 @@ define amdgpu_ps float @while_break2(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:    s_mov_b32 s1, -1
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:    s_branch .LBB1_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB1_1: ; %Flow2
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
@@ -160,6 +162,7 @@ define amdgpu_ps < 2 x float> @while_break_two_chains_of_phi(float %v, i32 %x, i
 ; GCN-NEXT:    s_mov_b32 s2, 0
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:    s_branch .LBB2_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB2_1: ; %Flow1
 ; GCN-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4

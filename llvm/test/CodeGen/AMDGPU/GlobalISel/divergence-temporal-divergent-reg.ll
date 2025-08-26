@@ -7,6 +7,7 @@ define void @temporal_divergent_i32(float %val, ptr %addr) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_mov_b32 s5, -1
 ; GFX10-NEXT:    s_mov_b32 s4, 0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB0_1: ; %loop
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_add_i32 s5, s5, 1
@@ -42,6 +43,7 @@ define void @temporal_divergent_i32_multiple_use(float %val, ptr %addr, ptr %add
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_mov_b32 s5, -1
 ; GFX10-NEXT:    s_mov_b32 s4, 0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB1_1: ; %loop
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_add_i32 s5, s5, 1

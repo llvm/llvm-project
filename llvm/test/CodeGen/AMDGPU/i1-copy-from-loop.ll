@@ -9,6 +9,7 @@ define amdgpu_ps void @i1_copy_from_loop(ptr addrspace(8) inreg %rsrc, i32 %tid)
 ; SI-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; SI-NEXT:    ; implicit-def: $sgpr8_sgpr9
 ; SI-NEXT:    s_branch .LBB0_3
+; SI-NEXT:    .p2align
 ; SI-NEXT:  .LBB0_1: ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    ; implicit-def: $sgpr14
 ; SI-NEXT:  .LBB0_2: ; %Flow

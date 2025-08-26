@@ -23,6 +23,7 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr(ptr addrspace(1) nocap
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; GCN-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GCN-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB0_1: ; %bb3
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    global_load_dword v3, v[0:1], off glc
@@ -61,6 +62,7 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr_d16_hi(ptr addrspace(1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-NEXT:    s_movk_i32 s1, 0x100
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB1_1: ; %bb3
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    v_lshlrev_b64 v[3:4], 1, v[0:1]

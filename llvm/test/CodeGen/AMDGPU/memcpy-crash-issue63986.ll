@@ -12,6 +12,7 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    v_add_co_u32_e32 v8, vcc, s16, v4
 ; CHECK-NEXT:    v_addc_co_u32_e32 v9, vcc, v6, v5, vcc
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_1: ; %loop-memcpy-expansion
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v7, s5
@@ -41,6 +42,7 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, s4, v4
 ; CHECK-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v5, vcc
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  ; %bb.6: ; %loop-memcpy-residual
 ; CHECK-NEXT:    s_add_u32 s6, 32, s4
 ; CHECK-NEXT:    s_addc_u32 s7, 0, s5
@@ -87,6 +89,7 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_13: ; %loop-memcpy-expansion2
 ; CHECK-NEXT:    ; Parent Loop BB0_11 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -117,6 +120,7 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:    s_mov_b64 s[14:15], 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_17: ; %loop-memcpy-residual4
 ; CHECK-NEXT:    ; Parent Loop BB0_11 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -173,6 +177,7 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB1_6: ; %loop-memcpy-residual
 ; CHECK-NEXT:    s_add_i32 s6, s8, 1
 ; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[6:7], v[0:1]
@@ -188,6 +193,7 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v2
 ; CHECK-NEXT:    s_and_b64 vcc, exec, 0
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB1_9: ; %loop-memcpy-expansion2
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc
 ; CHECK-NEXT:    s_cbranch_vccz .LBB1_9

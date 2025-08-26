@@ -162,6 +162,7 @@ define float @fold_abs_in_branch_phi(float %arg1, float %arg2) {
 ; GFX10-NEXT:    s_cbranch_execz .LBB5_3
 ; GFX10-NEXT:  ; %bb.1: ; %header.preheader
 ; GFX10-NEXT:    ; implicit-def: $vgpr0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB5_2: ; %header
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 0x40400000, v0

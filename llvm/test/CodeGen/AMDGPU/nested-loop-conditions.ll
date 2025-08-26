@@ -19,6 +19,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; GCN-NEXT:    ds_read_b64 v[0:1], v0
 ; GCN-NEXT:    s_and_b64 s[0:1], exec, 0
 ; GCN-NEXT:    s_branch .LBB0_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB0_1: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GCN-NEXT:    s_mov_b64 vcc, s[0:1]
@@ -39,6 +40,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_read_b32 v0, v0
 ; GCN-NEXT:    s_and_b64 vcc, exec, 0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB0_6: ; %bb9
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_mov_b64 vcc, vcc
@@ -170,6 +172,7 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none
 ; GCN-NEXT:    s_mov_b64 s[0:1], -1
 ; GCN-NEXT:    ; implicit-def: $sgpr4
 ; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB1_4: ; %bb18
 ; GCN-NEXT:    ; Parent Loop BB1_3 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2

@@ -210,6 +210,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: long_backward_sbranch:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s0, 0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB4_1: ; %bb2
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_add_i32 s0, s0, 1

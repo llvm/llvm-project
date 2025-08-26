@@ -474,6 +474,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: long_backward_sbranch:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s0, 0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB4_1: ; %bb2
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_add_i32 s0, s0, 1
@@ -524,6 +525,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GFX12-LABEL: long_backward_sbranch:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB4_1: ; %bb2
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -747,6 +749,7 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ; GCN-LABEL: uniform_unconditional_min_long_backward_branch:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_and_b64 vcc, exec, -1
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB6_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART
@@ -795,6 +798,7 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ; GFX12-LABEL: uniform_unconditional_min_long_backward_branch:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB6_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    ;;#ASMSTART
@@ -1109,6 +1113,7 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:    s_setpc_b64 s[0:1]
 ; GCN-NEXT:  .LBB9_3: ; %loop.preheader
 ; GCN-NEXT:    s_and_b64 vcc, exec, 0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB9_4: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART
@@ -1211,6 +1216,7 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GFX12-NEXT:    s_setpc_b64 s[0:1]
 ; GFX12-NEXT:  .LBB9_3: ; %loop.preheader
 ; GFX12-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB9_4: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    ;;#ASMSTART

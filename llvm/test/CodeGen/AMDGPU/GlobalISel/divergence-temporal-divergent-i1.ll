@@ -9,6 +9,7 @@ define void @temporal_divergent_i1_phi(float %val, ptr %addr) {
 ; GFX10-NEXT:    s_mov_b32 s5, 1
 ; GFX10-NEXT:    s_mov_b32 s6, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr7
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB0_1: ; %loop
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v3, s6
@@ -56,6 +57,7 @@ define void @temporal_divergent_i1_non_phi(float %val, ptr %addr) {
 ; GFX10-NEXT:    s_mov_b32 s5, 1
 ; GFX10-NEXT:    s_mov_b32 s6, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr7
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB1_1: ; %loop
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v3, s6
@@ -106,6 +108,7 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, i32 %x.size, ptr ad
 ; GFX10-NEXT:    ; implicit-def: $sgpr10
 ; GFX10-NEXT:    ; implicit-def: $sgpr9
 ; GFX10-NEXT:    s_branch .LBB2_3
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB2_1: ; %loop.body
 ; GFX10-NEXT:    ; in Loop: Header=BB2_3 Depth=1
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s6
@@ -214,6 +217,7 @@ define void @nested_loops_temporal_divergence_inner(float %pre.cond.val, i32 %n.
 ; GFX10-NEXT:    v_add_co_u32 v6, vcc_lo, v2, v6
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v3, v7, vcc_lo
 ; GFX10-NEXT:    flat_load_dword v0, v[6:7]
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB3_2: ; %InnerHeader
 ; GFX10-NEXT:    ; Parent Loop BB3_1 Depth=1
 ; GFX10-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -305,6 +309,7 @@ define void @nested_loops_temporal_divergence_outer(float %pre.cond.val, i32 %n.
 ; GFX10-NEXT:    v_add_co_u32 v6, vcc_lo, v2, v6
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v3, v7, vcc_lo
 ; GFX10-NEXT:    flat_load_dword v0, v[6:7]
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB4_2: ; %InnerHeader
 ; GFX10-NEXT:    ; Parent Loop BB4_1 Depth=1
 ; GFX10-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -396,6 +401,7 @@ define void @nested_loops_temporal_divergence_both(float %pre.cond.val, i32 %n.i
 ; GFX10-NEXT:    v_add_co_u32 v8, vcc_lo, v2, v8
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, v3, v9, vcc_lo
 ; GFX10-NEXT:    flat_load_dword v0, v[8:9]
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB5_2: ; %InnerHeader
 ; GFX10-NEXT:    ; Parent Loop BB5_1 Depth=1
 ; GFX10-NEXT:    ; => This Inner Loop Header: Depth=2

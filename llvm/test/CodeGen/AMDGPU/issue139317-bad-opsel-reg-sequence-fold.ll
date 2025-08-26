@@ -20,6 +20,7 @@ define amdgpu_kernel void @stepper_test_kernel_DType_I6A6AcB6A6AsA6A6A_68a5362b9
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
+; GFX942-NEXT:    .p2align
 ; GFX942-NEXT:  .LBB0_2: ; %.lr.ph
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)

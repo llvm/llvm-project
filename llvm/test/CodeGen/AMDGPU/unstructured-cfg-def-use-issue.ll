@@ -313,6 +313,7 @@ define hidden void @blam() {
 ; GCN-NEXT:    v_cmp_neq_f32_e64 s[50:51], 0, v43
 ; GCN-NEXT:    v_mov_b32_e32 v44, 0x7fc00000
 ; GCN-NEXT:    s_branch .LBB1_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB1_1: ; %Flow7
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]

@@ -200,6 +200,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: long_backward_sbranch:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s0, 0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB4_1: ; %bb2
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -302,6 +303,7 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ; GCN-LABEL: uniform_unconditional_min_long_backward_branch:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB6_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART
@@ -472,6 +474,7 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:  .Lpost_addpc11:
 ; GCN-NEXT:  .LBB9_3: ; %loop.preheader
 ; GCN-NEXT:    s_mov_b32 vcc_lo, 0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB9_4: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART

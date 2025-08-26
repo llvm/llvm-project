@@ -17501,26 +17501,18 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
 Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   const Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
   const Align CacheLineAlign = Align(64);
-
-  // Pre-GFX10 target did not benefit from loop alignment
-  if (!ML || DisableLoopAlignment || !getSubtarget()->hasInstPrefetch() ||
-      getSubtarget()->hasInstFwdPrefetchBug())
+  if (!ML || DisableLoopAlignment)
     return PrefAlign;
-
-  // On GFX10 I$ is 4 x 64 bytes cache lines.
-  // By default prefetcher keeps one cache line behind and reads two ahead.
-  // We can modify it with S_INST_PREFETCH for larger loops to have two lines
-  // behind and one ahead.
-  // Therefor we can benefit from aligning loop headers if loop fits 192 bytes.
-  // If loop fits 64 bytes it always spans no more than two cache lines and
-  // does not need an alignment.
-  // Else if loop is less or equal 128 bytes we do not need to modify prefetch,
-  // Else if loop is less or equal 192 bytes we need two lines behind.
-
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   const MachineBasicBlock *Header = ML->getHeader();
   if (Header->getAlignment() != PrefAlign)
     return Header->getAlignment(); // Already processed.
+  const MachineFunction *MF = Header->getParent();
+  const Function &Fn = MF->getFunction();
+  for (auto &BB : Fn)
+    for (auto &I : BB)
+      if (isa<llvm::UnreachableInst>(&I))
+        return PrefAlign;
 
   unsigned LoopSize = 0;
   for (const MachineBasicBlock *MBB : ML->blocks()) {
@@ -17531,13 +17523,41 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
 
     for (const MachineInstr &MI : *MBB) {
       LoopSize += TII->getInstSizeInBytes(MI);
-      if (LoopSize > 192)
-        return PrefAlign;
     }
+    if (LoopSize > 192)
+      break;
+  }
+
+  if (!getSubtarget()->hasInstPrefetch() ||
+      getSubtarget()->hasInstFwdPrefetchBug()) {
+    // Align loops < 32 bytes agrressively
+    if (LoopSize <= 32)
+      return Align(32);
+    // Align larger loops less aggressively
+    if (!ML->isInnermost())
+      return PrefAlign;
+    return Align(16);
+  }
+
+  // On GFX10 I$ is 4 x 64 bytes cache lines.
+  // By default prefetcher keeps one cache line behind and reads two ahead.
+  // We can modify it with S_INST_PREFETCH for larger loops to have two lines
+  // behind and one ahead.
+  // Therefor we can benefit from aligning loop headers if loop fits 192 bytes.
+  // If loop fits 64 bytes it always spans no more than two cache lines and
+  // does not need an alignment driven by prefetch considerations.
+  // Else if loop is less or equal 128 bytes we do not need to modify prefetch,
+  // Else if loop is less or equal 192 bytes we need two lines behind.
+
+  // Align larger loops less aggressively
+  if (LoopSize > 192) {
+    if (!ML->isInnermost())
+      return PrefAlign;
+    return Align(16);
   }
 
   if (LoopSize <= 64)
-    return PrefAlign;
+    return Align(32);
 
   if (LoopSize <= 128)
     return CacheLineAlign;

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -amdgpu-s-branch-bits=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1030 %s
+; RUN: llc -amdgpu-disable-loop-alignment=true -mtriple=amdgcn -mcpu=gfx1030 -amdgpu-s-branch-bits=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1030 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -amdgpu-s-branch-bits=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1010 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-s-branch-bits=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1030 %s
+; RUN: llc -amdgpu-disable-loop-alignment=true -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-s-branch-bits=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1030 %s
 
 ; For gfx1010, overestimate the branch size in case we need to insert
 ; a nop for the buggy offset.
@@ -15,7 +15,8 @@
 ; GFX1010-NEXT: [[POST_GETPC:.Lpost_getpc[0-9]+]]:{{$}}
 ; GFX1010-NEXT: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, ([[ENDBB:.LBB[0-9]+_[0-9]+]]-[[POST_GETPC]])&4294967295
 ; GFX1010-NEXT: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ([[ENDBB:.LBB[0-9]+_[0-9]+]]-[[POST_GETPC]])>>32
-; GFX1010: [[RELAX_BB]]:
+; GFX1010: .p2align 4
+; GFX1010-NEXT: [[RELAX_BB]]:
 
 ; GCN: v_nop
 ; GCN: s_sleep

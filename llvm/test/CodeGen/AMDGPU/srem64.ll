@@ -160,6 +160,7 @@ define amdgpu_kernel void @s_test_srem(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-IR-NEXT:    s_addc_u32 s11, s5, 0
 ; GCN-IR-NEXT:    s_mov_b64 s[14:15], 0
 ; GCN-IR-NEXT:    s_mov_b32 s5, 0
+; GCN-IR-NEXT:    .p2align
 ; GCN-IR-NEXT:  .LBB0_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    s_lshl_b64 s[12:13], s[12:13], 1
@@ -388,6 +389,7 @@ define i64 @v_test_srem(i64 %x, i64 %y) {
 ; GCN-IR-NEXT:    s_mov_b64 s[10:11], 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v13, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v7, 0
+; GCN-IR-NEXT:    .p2align
 ; GCN-IR-NEXT:  .LBB1_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    v_lshl_b64 v[10:11], v[10:11], 1
@@ -1102,6 +1104,7 @@ define amdgpu_kernel void @s_test_srem33_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    s_addc_u32 s13, s3, 0
 ; GCN-IR-NEXT:    s_mov_b64 s[16:17], 0
 ; GCN-IR-NEXT:    s_mov_b32 s3, 0
+; GCN-IR-NEXT:    .p2align
 ; GCN-IR-NEXT:  .LBB8_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    s_lshl_b64 s[14:15], s[14:15], 1
@@ -1381,6 +1384,7 @@ define amdgpu_kernel void @s_test_srem_k_num_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_subb_u32 s9, 0, 0
 ; GCN-IR-NEXT:    s_mov_b64 s[12:13], 0
 ; GCN-IR-NEXT:    s_mov_b32 s7, 0
+; GCN-IR-NEXT:    .p2align
 ; GCN-IR-NEXT:  .LBB10_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    s_lshl_b64 s[10:11], s[10:11], 1
@@ -1573,6 +1577,7 @@ define i64 @v_test_srem_k_num_i64(i64 %x) {
 ; GCN-IR-NEXT:    s_mov_b64 s[10:11], 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v11, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v5, 0
+; GCN-IR-NEXT:    .p2align
 ; GCN-IR-NEXT:  .LBB11_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    v_lshl_b64 v[8:9], v[8:9], 1
@@ -1766,6 +1771,7 @@ define i64 @v_test_srem_pow2_k_num_i64(i64 %x) {
 ; GCN-IR-NEXT:    s_mov_b64 s[10:11], 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v11, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v5, 0
+; GCN-IR-NEXT:    .p2align
 ; GCN-IR-NEXT:  .LBB12_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    v_lshl_b64 v[8:9], v[8:9], 1
@@ -1870,6 +1876,7 @@ define i64 @v_test_srem_pow2_k_den_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_mov_b32_e32 v11, 0
 ; GCN-IR-NEXT:    s_movk_i32 s12, 0x7fff
 ; GCN-IR-NEXT:    v_mov_b32_e32 v5, 0
+; GCN-IR-NEXT:    .p2align
 ; GCN-IR-NEXT:  .LBB13_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    v_lshl_b64 v[8:9], v[8:9], 1

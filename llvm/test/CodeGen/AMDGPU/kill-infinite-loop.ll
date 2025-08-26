@@ -19,6 +19,7 @@ define amdgpu_ps void @return_void(float %0) #0 {
 ; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_3
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
@@ -63,6 +64,7 @@ define amdgpu_ps void @return_void_compr(float %0) #0 {
 ; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_3
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
@@ -102,6 +104,7 @@ define amdgpu_ps void @only_kill() #0 {
 ; CHECK-LABEL: only_kill:
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB2_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
@@ -135,6 +138,7 @@ define amdgpu_ps float @return_nonvoid(float %0) #0 {
 ; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
 ; CHECK-NEXT:    s_cbranch_execz .LBB3_3
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB3_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec

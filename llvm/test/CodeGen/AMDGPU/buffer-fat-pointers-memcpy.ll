@@ -43,6 +43,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; SDAG-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; SDAG-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB0_1: ; %load-store-loop
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    s_add_i32 s9, s20, s8
@@ -154,6 +155,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; GISEL-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GISEL-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GISEL-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB0_1: ; %load-store-loop
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_add_u32_e32 v46, s20, v1
@@ -255,6 +257,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-GFX942-NEXT:    s_mov_b32 s17, s10
 ; SDAG-GFX942-NEXT:    s_mov_b32 s2, s9
 ; SDAG-GFX942-NEXT:    s_or_b64 s[12:13], s[2:3], s[16:17]
+; SDAG-GFX942-NEXT:    .p2align
 ; SDAG-GFX942-NEXT:  .LBB0_1: ; %load-store-loop
 ; SDAG-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-GFX942-NEXT:    s_add_i32 s1, s0, s16
@@ -350,6 +353,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s3, s16
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    s_or_b64 s[12:13], s[2:3], s[16:17]
+; SDAG-GFX1100-NEXT:    .p2align
 ; SDAG-GFX1100-NEXT:  .LBB0_1: ; %load-store-loop
 ; SDAG-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-GFX1100-NEXT:    s_add_i32 s1, s0, s16
@@ -438,6 +442,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; GISEL-GFX942-NEXT:    s_or_b64 s[6:7], s[6:7], s[2:3]
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v0, 0x2000
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v1, s16
+; GISEL-GFX942-NEXT:    .p2align
 ; GISEL-GFX942-NEXT:  .LBB0_1: ; %load-store-loop
 ; GISEL-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX942-NEXT:    v_add_u32_e32 v62, s0, v1
@@ -510,6 +515,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; GISEL-GFX1100-NEXT:    s_or_b64 s[12:13], s[16:17], s[2:3]
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s16, s11
 ; GISEL-GFX1100-NEXT:    s_or_b64 s[14:15], s[16:17], s[14:15]
+; GISEL-GFX1100-NEXT:    .p2align
 ; GISEL-GFX1100-NEXT:  .LBB0_1: ; %load-store-loop
 ; GISEL-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v61, s0, v0
@@ -595,6 +601,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; SDAG-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; SDAG-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB1_1: ; %load-store-loop
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_add_u32_e32 v45, s20, v0
@@ -698,6 +705,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; GISEL-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GISEL-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GISEL-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB1_1: ; %load-store-loop
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_add_u32_e32 v45, s20, v0
@@ -801,6 +809,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-GFX942-NEXT:    s_mov_b32 s13, s10
 ; SDAG-GFX942-NEXT:    s_mov_b32 s2, s9
 ; SDAG-GFX942-NEXT:    s_or_b64 s[12:13], s[2:3], s[12:13]
+; SDAG-GFX942-NEXT:    .p2align
 ; SDAG-GFX942-NEXT:  .LBB1_1: ; %load-store-loop
 ; SDAG-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-GFX942-NEXT:    v_add_u32_e32 v1, s0, v0
@@ -874,6 +883,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s3, s12
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    s_or_b64 s[12:13], s[2:3], s[12:13]
+; SDAG-GFX1100-NEXT:    .p2align
 ; SDAG-GFX1100-NEXT:  .LBB1_1: ; %load-store-loop
 ; SDAG-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-GFX1100-NEXT:    v_add_nc_u32_e32 v61, s0, v0
@@ -958,6 +968,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; GISEL-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-GFX942-NEXT:    s_or_b64 s[6:7], s[6:7], s[2:3]
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v0, s16
+; GISEL-GFX942-NEXT:    .p2align
 ; GISEL-GFX942-NEXT:  .LBB1_1: ; %load-store-loop
 ; GISEL-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX942-NEXT:    v_add_u32_e32 v1, s0, v0
@@ -1033,6 +1044,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; GISEL-GFX1100-NEXT:    s_or_b64 s[12:13], s[16:17], s[2:3]
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s16, s11
 ; GISEL-GFX1100-NEXT:    s_or_b64 s[14:15], s[16:17], s[14:15]
+; GISEL-GFX1100-NEXT:    .p2align
 ; GISEL-GFX1100-NEXT:  .LBB1_1: ; %load-store-loop
 ; GISEL-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v61, s0, v0

@@ -986,6 +986,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v7, 0
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_branch .LBB5_3
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB5_1: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[12:13]

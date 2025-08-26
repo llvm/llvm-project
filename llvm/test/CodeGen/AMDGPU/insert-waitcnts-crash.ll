@@ -32,7 +32,7 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr16_sgpr17, @bar, csr_amdgpu, implicit killed $sgpr4_sgpr5, implicit killed $sgpr6_sgpr7, implicit killed $sgpr8_sgpr9, implicit killed $sgpr10_sgpr11, implicit killed $sgpr12, implicit killed $sgpr13, implicit killed $sgpr14, implicit killed $sgpr15, implicit killed $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1 (%ir-block.1):
+  ; CHECK-NEXT: bb.1 (%ir-block.1, align 32):
   ; CHECK-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
   ; CHECK-NEXT:   liveins: $vcc_lo
   ; CHECK-NEXT: {{  $}}

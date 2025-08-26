@@ -564,6 +564,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX6-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    ; implicit-def: $vgpr1
+; GFX6-NEXT:    .p2align
 ; GFX6-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX6-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX6-NEXT:    s_ff1_i32_b64 s3, s[0:1]
@@ -607,6 +608,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX8-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX8-NEXT:    s_mov_b32 s2, 0
 ; GFX8-NEXT:    ; implicit-def: $vgpr1
+; GFX8-NEXT:    .p2align
 ; GFX8-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_ff1_i32_b64 s3, s[0:1]
@@ -648,6 +650,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX9-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX9-NEXT:    s_mov_b32 s2, 0
 ; GFX9-NEXT:    ; implicit-def: $vgpr1
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_ff1_i32_b64 s3, s[0:1]
@@ -688,6 +691,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX10W64-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX10W64-NEXT:    s_mov_b32 s2, 0
 ; GFX10W64-NEXT:    ; implicit-def: $vgpr1
+; GFX10W64-NEXT:    .p2align
 ; GFX10W64-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX10W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10W64-NEXT:    s_ff1_i32_b64 s3, s[0:1]
@@ -728,6 +732,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX10W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10W32-NEXT:    s_mov_b32 s0, 0
 ; GFX10W32-NEXT:    ; implicit-def: $vgpr1
+; GFX10W32-NEXT:    .p2align
 ; GFX10W32-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX10W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10W32-NEXT:    s_ff1_i32_b32 s2, s1
@@ -768,6 +773,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX11W64-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX11W64-NEXT:    s_mov_b32 s2, 0
 ; GFX11W64-NEXT:    ; implicit-def: $vgpr0
+; GFX11W64-NEXT:    .p2align
 ; GFX11W64-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX11W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11W64-NEXT:    s_ctz_i32_b64 s3, s[0:1]
@@ -812,6 +818,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX11W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11W32-NEXT:    s_mov_b32 s0, 0
 ; GFX11W32-NEXT:    ; implicit-def: $vgpr0
+; GFX11W32-NEXT:    .p2align
 ; GFX11W32-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX11W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11W32-NEXT:    s_ctz_i32_b32 s2, s1
@@ -853,6 +860,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX12W64-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX12W64-NEXT:    s_mov_b32 s2, 0
 ; GFX12W64-NEXT:    ; implicit-def: $vgpr0
+; GFX12W64-NEXT:    .p2align
 ; GFX12W64-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX12W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12W64-NEXT:    s_ctz_i32_b64 s3, s[0:1]
@@ -898,6 +906,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX12W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX12W32-NEXT:    s_mov_b32 s0, 0
 ; GFX12W32-NEXT:    ; implicit-def: $vgpr0
+; GFX12W32-NEXT:    .p2align
 ; GFX12W32-NEXT:  .LBB2_1: ; %ComputeLoop
 ; GFX12W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12W32-NEXT:    s_ctz_i32_b32 s2, s1
@@ -1618,6 +1627,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX6-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    ; implicit-def: $vgpr1
+; GFX6-NEXT:    .p2align
 ; GFX6-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX6-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX6-NEXT:    s_ff1_i32_b64 s3, s[0:1]
@@ -1661,6 +1671,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX8-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX8-NEXT:    s_mov_b32 s2, 0
 ; GFX8-NEXT:    ; implicit-def: $vgpr1
+; GFX8-NEXT:    .p2align
 ; GFX8-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_ff1_i32_b64 s3, s[0:1]
@@ -1702,6 +1713,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX9-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX9-NEXT:    s_mov_b32 s2, 0
 ; GFX9-NEXT:    ; implicit-def: $vgpr1
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_ff1_i32_b64 s3, s[0:1]
@@ -1742,6 +1754,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX10W64-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX10W64-NEXT:    s_mov_b32 s2, 0
 ; GFX10W64-NEXT:    ; implicit-def: $vgpr1
+; GFX10W64-NEXT:    .p2align
 ; GFX10W64-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX10W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10W64-NEXT:    s_ff1_i32_b64 s3, s[0:1]
@@ -1782,6 +1795,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX10W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10W32-NEXT:    s_mov_b32 s0, 0
 ; GFX10W32-NEXT:    ; implicit-def: $vgpr1
+; GFX10W32-NEXT:    .p2align
 ; GFX10W32-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX10W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10W32-NEXT:    s_ff1_i32_b32 s2, s1
@@ -1822,6 +1836,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX11W64-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX11W64-NEXT:    s_mov_b32 s2, 0
 ; GFX11W64-NEXT:    ; implicit-def: $vgpr0
+; GFX11W64-NEXT:    .p2align
 ; GFX11W64-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX11W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11W64-NEXT:    s_ctz_i32_b64 s3, s[0:1]
@@ -1866,6 +1881,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX11W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11W32-NEXT:    s_mov_b32 s0, 0
 ; GFX11W32-NEXT:    ; implicit-def: $vgpr0
+; GFX11W32-NEXT:    .p2align
 ; GFX11W32-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX11W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11W32-NEXT:    s_ctz_i32_b32 s2, s1
@@ -1908,6 +1924,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX12W64-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX12W64-NEXT:    s_mov_b32 s2, 0
 ; GFX12W64-NEXT:    ; implicit-def: $vgpr0
+; GFX12W64-NEXT:    .p2align
 ; GFX12W64-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX12W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12W64-NEXT:    s_ctz_i32_b64 s3, s[0:1]
@@ -1953,6 +1970,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX12W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX12W32-NEXT:    s_mov_b32 s0, 0
 ; GFX12W32-NEXT:    ; implicit-def: $vgpr0
+; GFX12W32-NEXT:    .p2align
 ; GFX12W32-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX12W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12W32-NEXT:    s_ctz_i32_b32 s2, s1

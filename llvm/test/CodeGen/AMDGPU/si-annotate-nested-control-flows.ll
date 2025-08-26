@@ -33,6 +33,7 @@ define void @nested_inf_loop(i1 %0, i1 %1) {
 ; ISA-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; ISA-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; ISA-NEXT:    s_mov_b64 s[8:9], 0
+; ISA-NEXT:    .p2align
 ; ISA-NEXT:  .LBB0_3: ; %BB4
 ; ISA-NEXT:    ; Parent Loop BB0_1 Depth=1
 ; ISA-NEXT:    ; => This Inner Loop Header: Depth=2

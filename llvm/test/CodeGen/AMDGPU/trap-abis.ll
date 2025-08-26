@@ -350,6 +350,7 @@ define amdgpu_kernel void @trap_with_use_after(ptr addrspace(1) %arg0, ptr addrs
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, s0
 ; HSA-TRAP-GFX1100-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
 ; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, ttmp2
+; HSA-TRAP-GFX1100-NEXT:    .p2align
 ; HSA-TRAP-GFX1100-NEXT:  .LBB2_3: ; =>This Inner Loop Header: Depth=1
 ; HSA-TRAP-GFX1100-NEXT:    s_sethalt 5
 ; HSA-TRAP-GFX1100-NEXT:    s_branch .LBB2_3

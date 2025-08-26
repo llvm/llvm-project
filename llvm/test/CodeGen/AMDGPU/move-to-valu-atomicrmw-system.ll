@@ -31,6 +31,7 @@ define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GCN-NEXT:    buffer_load_dword v4, v[1:2], s[8:11], 0 addr64 offset:400
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0xf
 ; GCN-NEXT:    s_mov_b64 s[2:3], 0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -90,6 +91,7 @@ define amdgpu_kernel void @atomic_max_i32_noret(ptr addrspace(1) %out, ptr addrs
 ; GCN-NEXT:    buffer_load_dword v4, v[1:2], s[0:3], 0 addr64 offset:400
 ; GCN-NEXT:    s_load_dword s6, s[4:5], 0xf
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB1_2: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

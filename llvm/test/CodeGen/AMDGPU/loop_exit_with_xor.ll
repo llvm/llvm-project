@@ -13,6 +13,7 @@ define void @needs_and(i32 %arg) {
 ; GCN-NEXT:    s_mov_b32 s10, 1
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_branch .LBB0_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB0_1: ; %endif
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
@@ -67,6 +68,7 @@ define void @doesnt_need_and(i32 %arg) {
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], s4
 ; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB1_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_add_i32 s6, s6, 1
@@ -104,6 +106,7 @@ define void @break_cond_is_arg(i32 %arg, i1 %breakcond) {
 ; GCN-NEXT:    s_mov_b32 s10, 1
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_branch .LBB2_2
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB2_1: ; %endif
 ; GCN-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]

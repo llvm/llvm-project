@@ -1404,6 +1404,7 @@ define amdgpu_ps void @test_scc_liveness() #0 {
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    s_mov_b64 s[0:1], exec
 ; SI-NEXT:    s_mov_b32 s2, 0
+; SI-NEXT:    .p2align
 ; SI-NEXT:  .LBB25_1: ; %loop3
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_cmp_gt_i32 s2, 0
@@ -1429,6 +1430,7 @@ define amdgpu_ps void @test_scc_liveness() #0 {
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX10-NEXT:    s_mov_b32 s2, 0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB25_1: ; %loop3
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_cmp_gt_i32 s2, 0
@@ -1454,6 +1456,7 @@ define amdgpu_ps void @test_scc_liveness() #0 {
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX11-NEXT:    s_mov_b32 s2, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB25_1: ; %loop3
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_cmp_gt_i32 s2, 0
@@ -1479,6 +1482,7 @@ define amdgpu_ps void @test_scc_liveness() #0 {
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX12-NEXT:    s_mov_b32 s2, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB25_1: ; %loop3
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_cmp_gt_i32 s2, 0
@@ -1531,6 +1535,7 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x3fc00000
 ; SI-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
+; SI-NEXT:    .p2align
 ; SI-NEXT:  .LBB26_2: ; %bb
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_and_b64 vcc, exec, s[0:1]
@@ -1563,6 +1568,7 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX10-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GFX10-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB26_2: ; %bb
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_add_f32_e32 v0, 0x3e800000, v0
@@ -1595,6 +1601,7 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX11-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GFX11-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB26_2: ; %bb
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    v_add_f32_e32 v0, 0x3e800000, v0
@@ -1630,6 +1637,7 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX12-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX12-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB26_2: ; %bb
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_add_f32 s4, s4, 0x3e800000

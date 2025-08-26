@@ -88,6 +88,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    v_mov_b64_e32 v[26:27], v[18:19]
 ; CHECK-NEXT:    v_fmac_f64_e32 v[26:27], 0, v[16:17]
 ; CHECK-NEXT:    s_branch .LBB0_6
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_5: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[8:9]

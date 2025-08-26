@@ -16,6 +16,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i32(<4 x i32> %addr) {
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB0_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -35,6 +36,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i32(<4 x i32> %addr) {
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB0_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -64,6 +66,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i32_off(<4 x i32> %addr) {
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB1_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -83,6 +86,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i32_off(<4 x i32> %addr) {
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB1_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -111,6 +115,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i32_soff(<4 x i32> %addr) {
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB2_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -131,6 +136,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i32_soff(<4 x i32> %addr) {
 ; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
 ; GFX12-NEXT:    s_mov_b32 s5, 4
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB2_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -159,6 +165,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i32_dlc(<4 x i32> %addr) {
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB3_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -178,6 +185,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i32_dlc(<4 x i32> %addr) {
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB3_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -211,6 +219,7 @@ define amdgpu_kernel void @raw_nonatomic_buffer_load_i32(<4 x i32> %addr) {
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB4_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
@@ -231,6 +240,7 @@ define amdgpu_kernel void @raw_nonatomic_buffer_load_i32(<4 x i32> %addr) {
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB4_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
@@ -257,6 +267,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i64(<4 x i32> %addr) {
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB5_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -277,6 +288,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_i64(<4 x i32> %addr) {
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB5_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -307,6 +319,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v2i16(<4 x i32> %addr) {
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB6_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -326,6 +339,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v2i16(<4 x i32> %addr) {
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB6_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -356,6 +370,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i16(<4 x i32> %addr) {
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_mov_b32 s4, 0
+; GFX11-SDAG-TRUE16-NEXT:    .p2align
 ; GFX11-SDAG-TRUE16-NEXT:  .LBB7_1: ; %bb1
 ; GFX11-SDAG-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
@@ -377,6 +392,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i16(<4 x i32> %addr) {
 ; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s4, 0
+; GFX11-FAKE16-NEXT:    .p2align
 ; GFX11-FAKE16-NEXT:  .LBB7_1: ; %bb1
 ; GFX11-FAKE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
@@ -398,6 +414,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i16(<4 x i32> %addr) {
 ; GFX11-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-GISEL-TRUE16-NEXT:    s_mov_b32 s4, 0
+; GFX11-GISEL-TRUE16-NEXT:    .p2align
 ; GFX11-GISEL-TRUE16-NEXT:  .LBB7_1: ; %bb1
 ; GFX11-GISEL-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
@@ -417,6 +434,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i16(<4 x i32> %addr) {
 ; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, 0
+; GFX11-GISEL-NEXT:    .p2align
 ; GFX11-GISEL-NEXT:  .LBB7_1: ; %bb1
 ; GFX11-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -439,6 +457,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i16(<4 x i32> %addr) {
 ; GFX12-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s4, 0
+; GFX12-SDAG-TRUE16-NEXT:    .p2align
 ; GFX12-SDAG-TRUE16-NEXT:  .LBB7_1: ; %bb1
 ; GFX12-SDAG-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
@@ -461,6 +480,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i16(<4 x i32> %addr) {
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-FAKE16-NEXT:    s_wait_xcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s4, 0
+; GFX12-FAKE16-NEXT:    .p2align
 ; GFX12-FAKE16-NEXT:  .LBB7_1: ; %bb1
 ; GFX12-FAKE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
@@ -483,6 +503,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i16(<4 x i32> %addr) {
 ; GFX12-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_xcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s4, 0
+; GFX12-GISEL-TRUE16-NEXT:    .p2align
 ; GFX12-GISEL-TRUE16-NEXT:  .LBB7_1: ; %bb1
 ; GFX12-GISEL-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
@@ -515,6 +536,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i32(<4 x i32> %addr) {
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB8_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -534,6 +556,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i32(<4 x i32> %addr) {
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB8_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -564,6 +587,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_ptr(<4 x i32> %addr) {
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB9_1: ; %bb1
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -585,6 +609,7 @@ define amdgpu_kernel void @raw_atomic_buffer_load_ptr(<4 x i32> %addr) {
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_wait_xcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
+; GFX12-NEXT:    .p2align
 ; GFX12-NEXT:  .LBB9_1: ; %bb1
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0

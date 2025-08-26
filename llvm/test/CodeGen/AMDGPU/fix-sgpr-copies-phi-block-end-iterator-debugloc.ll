@@ -12,6 +12,7 @@ define i32 @rocrand_regression(ptr addrspace(1) %arg, i32 %arg0, i1 %cmp7) {
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB0_2 Depth 2
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_2: ; %while.cond
 ; CHECK-NEXT:    ; Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2

@@ -88,6 +88,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[16:23], s[68:71] dmask:0x1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_and_b64 vcc, exec, -1
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_2: ; %bb50
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_mov_b32 s69, s68
@@ -171,6 +172,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_sub_f32_e32 v1, v4, v3
 ; CHECK-NEXT:    v_mul_f32_e32 v0, v1, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_8: ; %bb33
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_f32_e32 v2, v1, v0

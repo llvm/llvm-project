@@ -33,6 +33,7 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK-NEXT:    s_mov_b32 s46, 1
 ; CHECK-NEXT:    s_movk_i32 s45, 0x990
 ; CHECK-NEXT:    s_mov_b32 s48, 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_1: ; %bb3
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cmp_eq_u32 s46, 0

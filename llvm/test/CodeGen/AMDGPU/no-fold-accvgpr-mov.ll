@@ -16,6 +16,7 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX942-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
 ; GFX942-NEXT:    s_branch .LBB0_2
+; GFX942-NEXT:    .p2align
 ; GFX942-NEXT:  .LBB0_1: ; %bb2
 ; GFX942-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GFX942-NEXT:    s_or_b32 s4, s3, 1
@@ -52,6 +53,7 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX908-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
 ; GFX908-NEXT:    s_branch .LBB0_2
+; GFX908-NEXT:    .p2align
 ; GFX908-NEXT:  .LBB0_1: ; %bb2
 ; GFX908-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GFX908-NEXT:    s_or_b32 s4, s3, 1

@@ -149,6 +149,7 @@ define i128 @v_srem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-NEXT:    v_mov_b32_e32 v19, 0
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v9, 0
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB0_3: ; %udiv-do-while
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v32, 31, v15
@@ -1624,6 +1625,7 @@ define i128 @v_urem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-NEXT:    v_mov_b32_e32 v21, 0
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v13, 0
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB1_3: ; %udiv-do-while
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_lshlrev_b64 v[30:31], 1, v[10:11]

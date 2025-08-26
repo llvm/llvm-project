@@ -360,6 +360,7 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1032-NEXT:    s_branch .LBB10_2
+; GFX1032-NEXT:    .p2align
 ; GFX1032-NEXT:  .LBB10_1: ; %bb13
 ; GFX1032-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
@@ -422,6 +423,7 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1064-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX1064-NEXT:    s_branch .LBB10_2
+; GFX1064-NEXT:    .p2align
 ; GFX1064-NEXT:  .LBB10_1: ; %bb13
 ; GFX1064-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
@@ -526,6 +528,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1032-NEXT:    s_mov_b32 s3, 0
 ; GFX1032-NEXT:    ; implicit-def: $sgpr4
 ; GFX1032-NEXT:    s_branch .LBB11_4
+; GFX1032-NEXT:    .p2align
 ; GFX1032-NEXT:  .LBB11_2: ; %bb8
 ; GFX1032-NEXT:    ; in Loop: Header=BB11_4 Depth=1
 ; GFX1032-NEXT:    s_add_i32 s3, s3, 1
@@ -570,6 +573,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1064-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX1064-NEXT:    s_branch .LBB11_4
+; GFX1064-NEXT:    .p2align
 ; GFX1064-NEXT:  .LBB11_2: ; %bb8
 ; GFX1064-NEXT:    ; in Loop: Header=BB11_4 Depth=1
 ; GFX1064-NEXT:    s_add_i32 s6, s6, 1
@@ -1538,6 +1542,7 @@ define amdgpu_kernel void @test_invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; GFX1032-NEXT:    v_subrev_nc_u32_e32 v0, s0, v0
 ; GFX1032-NEXT:    s_mov_b32 s0, 0
 ; GFX1032-NEXT:    s_branch .LBB27_2
+; GFX1032-NEXT:    .p2align
 ; GFX1032-NEXT:  .LBB27_1: ; %Flow
 ; GFX1032-NEXT:    ; in Loop: Header=BB27_2 Depth=1
 ; GFX1032-NEXT:    s_xor_b32 s3, s1, -1
@@ -1576,6 +1581,7 @@ define amdgpu_kernel void @test_invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; GFX1064-NEXT:    v_subrev_nc_u32_e32 v0, s0, v0
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX1064-NEXT:    s_branch .LBB27_2
+; GFX1064-NEXT:    .p2align
 ; GFX1064-NEXT:  .LBB27_1: ; %Flow
 ; GFX1064-NEXT:    ; in Loop: Header=BB27_2 Depth=1
 ; GFX1064-NEXT:    s_xor_b64 s[6:7], s[2:3], -1
@@ -1811,6 +1817,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1032-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1032-NEXT:    s_branch .LBB33_2
+; GFX1032-NEXT:    .p2align
 ; GFX1032-NEXT:  .LBB33_1: ; %body
 ; GFX1032-NEXT:    ; in Loop: Header=BB33_2 Depth=1
 ; GFX1032-NEXT:    image_sample v[4:7], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
@@ -1843,6 +1850,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1064-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1064-NEXT:    s_branch .LBB33_2
+; GFX1064-NEXT:    .p2align
 ; GFX1064-NEXT:  .LBB33_1: ; %body
 ; GFX1064-NEXT:    ; in Loop: Header=BB33_2 Depth=1
 ; GFX1064-NEXT:    image_sample v[4:7], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D

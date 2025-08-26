@@ -6,6 +6,7 @@ define amdgpu_kernel void @copy_to_reg_frameindex(ptr addrspace(1) %out, i32 %a,
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_cmp_lt_u32 0, 16
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_set_gpr_idx_on 0, gpr_idx(DST)
@@ -47,6 +48,7 @@ define void @phi_with_alloca_and_divergent_copy_to_reg(ptr addrspace(5) %diverge
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v1
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    v_lshrrev_b32_e64 v2, 6, s32
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2

@@ -27,6 +27,7 @@ define amdgpu_ps void @main(i32 %0, float %1) {
 ; ISA-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; ISA-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; ISA-NEXT:    s_branch .LBB0_3
+; ISA-NEXT:    .p2align
 ; ISA-NEXT:  .LBB0_1: ; %Flow1
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; ISA-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -132,6 +133,7 @@ define amdgpu_ps void @i1_copy_assert(i1 %v4) {
 ; ISA-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; ISA-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; ISA-NEXT:    s_branch .LBB1_3
+; ISA-NEXT:    .p2align
 ; ISA-NEXT:  .LBB1_1: ; %endif1
 ; ISA-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; ISA-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec

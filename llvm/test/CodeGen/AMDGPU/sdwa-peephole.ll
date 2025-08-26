@@ -2015,6 +2015,7 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; NOSDWA:       ; %bb.0: ; %bb
 ; NOSDWA-NEXT:    s_mov_b32 s0, 0xffff
 ; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
+; NOSDWA-NEXT:    .p2align
 ; NOSDWA-NEXT:  .LBB21_1: ; %bb1
 ; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NOSDWA-NEXT:    ;;#ASMSTART
@@ -2032,6 +2033,7 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX89:       ; %bb.0: ; %bb
 ; GFX89-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX89-NEXT:    s_and_b64 vcc, exec, -1
+; GFX89-NEXT:    .p2align
 ; GFX89-NEXT:  .LBB21_1: ; %bb1
 ; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    ;;#ASMSTART
@@ -2049,6 +2051,7 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX9-NEXT:    s_and_b64 vcc, exec, -1
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB21_1: ; %bb1
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    ;;#ASMSTART
@@ -2066,6 +2069,7 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB21_1: ; %bb1
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    ;;#ASMSTART
@@ -2104,6 +2108,7 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; NOSDWA-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; NOSDWA-NEXT:    s_mov_b64 s[4:5], 0
 ; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
+; NOSDWA-NEXT:    .p2align
 ; NOSDWA-NEXT:  .LBB22_1: ; %bb1
 ; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NOSDWA-NEXT:    s_lshl_b32 s7, s4, 3
@@ -2126,6 +2131,7 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX89-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; GFX89-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX89-NEXT:    s_and_b64 vcc, exec, -1
+; GFX89-NEXT:    .p2align
 ; GFX89-NEXT:  .LBB22_1: ; %bb1
 ; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    s_lshl_b32 s7, s4, 3
@@ -2148,6 +2154,7 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX9-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    s_and_b64 vcc, exec, -1
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB22_1: ; %bb1
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_lshl_b32 s7, s4, 3
@@ -2170,6 +2177,7 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, s4, 0x1ff
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB22_1: ; %bb1
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_lshl_b32 s7, s4, 3

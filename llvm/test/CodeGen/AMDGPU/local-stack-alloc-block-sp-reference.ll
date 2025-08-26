@@ -28,6 +28,7 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-NEXT:    s_mov_b32 s4, 0
 ; MUBUF-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
+; MUBUF-NEXT:    .p2align
 ; MUBUF-NEXT:  .LBB0_1: ; %loadstoreloop
 ; MUBUF-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 0x3000
@@ -65,6 +66,7 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    .p2align
 ; FLATSCR-NEXT:  .LBB0_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLATSCR-NEXT:    s_add_i32 s1, s0, 0x3000
@@ -121,6 +123,7 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-NEXT:    s_add_i32 s32, s32, 0x200000
 ; MUBUF-NEXT:    buffer_store_dword v3, v4, s[0:3], s33 offen
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
+; MUBUF-NEXT:    .p2align
 ; MUBUF-NEXT:  .LBB1_1: ; %loadstoreloop
 ; MUBUF-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; MUBUF-NEXT:    v_lshrrev_b32_e64 v5, 6, s33
@@ -166,6 +169,7 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    scratch_store_dword off, v2, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    .p2align
 ; FLATSCR-NEXT:  .LBB1_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLATSCR-NEXT:    s_add_i32 s1, s33, s0
@@ -216,6 +220,7 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; MUBUF-NEXT:    s_mov_b32 s4, 0
 ; MUBUF-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
+; MUBUF-NEXT:    .p2align
 ; MUBUF-NEXT:  .LBB2_1: ; %loadstoreloop
 ; MUBUF-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
@@ -297,6 +302,7 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0 offset:1024
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    .p2align
 ; FLATSCR-NEXT:  .LBB2_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLATSCR-NEXT:    s_add_i32 s1, s0, 0x2000

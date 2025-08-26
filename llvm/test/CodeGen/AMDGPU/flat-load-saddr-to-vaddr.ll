@@ -22,6 +22,7 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr(ptr addrspace(1) nocap
 ; GCN-NEXT:    v_add_nc_u32_e32 v2, 0xffffff00, v2
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
+; GCN-NEXT:    .p2align 5
 ; GCN-NEXT:  .LBB0_1: ; %bb3
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_wait_dscnt 0x0

@@ -13,6 +13,7 @@ define amdgpu_kernel void @func(ptr addrspace(1) %in, ptr addrspace(3) %out) {
 ; CHECK-NEXT:    s_mov_b32 s3, 32
 ; CHECK-NEXT:    s_mov_b32 s2, 0
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[10:11]

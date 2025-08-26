@@ -284,6 +284,7 @@ define amdgpu_kernel void @no_clobbering_loop1(ptr addrspace(1) %arg, i1 %cc) {
 ; GCN-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GCN-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB4_1: ; %while.cond
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_load_dword s5, s[2:3], 0x4
@@ -338,6 +339,7 @@ define amdgpu_kernel void @no_clobbering_loop2(ptr addrspace(1) noalias %arg, pt
 ; GCN-NEXT:    s_load_dword s6, s[4:5], 0x34
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB5_1: ; %while.cond
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_load_dword s5, s[0:1], 0x0
@@ -402,6 +404,7 @@ define amdgpu_kernel void @clobbering_loop(ptr addrspace(1) %arg, ptr addrspace(
 ; GCN-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GCN-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
+; GCN-NEXT:    .p2align
 ; GCN-NEXT:  .LBB6_1: ; %while.cond
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    global_load_dword v1, v0, s[8:9] offset:4

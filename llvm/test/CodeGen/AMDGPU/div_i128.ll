@@ -150,6 +150,7 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-NEXT:    v_mov_b32_e32 v15, 0
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v7, 0
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB0_3: ; %udiv-do-while
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_lshlrev_b64 v[30:31], 1, v[4:5]
@@ -1363,6 +1364,7 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX9-G-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX9-G-NEXT:    v_mov_b32_e32 v3, s11
+; GFX9-G-NEXT:    .p2align
 ; GFX9-G-NEXT:  .LBB0_3: ; %udiv-do-while
 ; GFX9-G-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-G-NEXT:    v_lshlrev_b64 v[2:3], 1, v[6:7]
@@ -2430,6 +2432,7 @@ define i128 @v_udiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-NEXT:    v_mov_b32_e32 v17, 0
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v13, 0
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB1_3: ; %udiv-do-while
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 31, v11
@@ -3490,6 +3493,7 @@ define i128 @v_udiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_mov_b32_e32 v11, s9
 ; GFX9-G-NEXT:    v_mov_b32_e32 v10, s8
 ; GFX9-G-NEXT:    v_mov_b32_e32 v12, s10
+; GFX9-G-NEXT:    .p2align
 ; GFX9-G-NEXT:  .LBB1_3: ; %udiv-do-while
 ; GFX9-G-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-G-NEXT:    v_lshlrev_b64 v[12:13], 1, v[14:15]

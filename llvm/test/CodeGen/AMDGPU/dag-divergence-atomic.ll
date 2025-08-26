@@ -125,6 +125,7 @@ define protected amdgpu_kernel void @nand(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB5_1: ; %atomicrmw.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
@@ -427,6 +428,7 @@ define protected amdgpu_kernel void @fadd(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB18_1: ; %atomicrmw.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
@@ -464,6 +466,7 @@ define protected amdgpu_kernel void @fsub(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s6
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB19_1: ; %atomicrmw.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0

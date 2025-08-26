@@ -2113,6 +2113,7 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv(ptr inreg %arg) {
 ; GFX1250-SDAG:       ; %bb.0: ; %bb
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX1250-SDAG-NEXT:    .p2align
 ; GFX1250-SDAG-NEXT:  .LBB116_1: ; %bb3
 ; GFX1250-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
@@ -2131,6 +2132,7 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv(ptr inreg %arg) {
 ; GFX1250-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX1250-GISEL-NEXT:    .p2align
 ; GFX1250-GISEL-NEXT:  .LBB116_1: ; %bb3
 ; GFX1250-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
@@ -2168,6 +2170,7 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv_multiload(ptr inreg %arg, ptr inre
 ; GFX1250-SDAG:       ; %bb.0: ; %bb
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX1250-SDAG-NEXT:    .p2align
 ; GFX1250-SDAG-NEXT:  .LBB117_1: ; %bb3
 ; GFX1250-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
@@ -2188,6 +2191,7 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv_multiload(ptr inreg %arg, ptr inre
 ; GFX1250-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX1250-GISEL-NEXT:    .p2align
 ; GFX1250-GISEL-NEXT:  .LBB117_1: ; %bb3
 ; GFX1250-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0

@@ -18,6 +18,7 @@ define amdgpu_kernel void @copy_to_reg_frameindex(ptr addrspace(1) %out, i32 %a,
 ; GFX7-NEXT:    s_addc_u32 s13, s13, 0
 ; GFX7-NEXT:    s_mov_b32 s0, 0
 ; GFX7-NEXT:    s_mov_b32 s1, 0
+; GFX7-NEXT:    .p2align
 ; GFX7-NEXT:  .LBB0_1: ; %loop
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s1
@@ -46,6 +47,7 @@ define amdgpu_kernel void @copy_to_reg_frameindex(ptr addrspace(1) %out, i32 %a,
 ; GFX8-NEXT:    s_addc_u32 s89, s89, 0
 ; GFX8-NEXT:    s_mov_b32 s0, 0
 ; GFX8-NEXT:    s_mov_b32 s1, 0
+; GFX8-NEXT:    .p2align
 ; GFX8-NEXT:  .LBB0_1: ; %loop
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s1

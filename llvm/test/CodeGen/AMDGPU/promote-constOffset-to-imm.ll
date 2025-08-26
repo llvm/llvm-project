@@ -384,6 +384,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX8-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX8-NEXT:    s_mov_b32 s1, 0
+; GFX8-NEXT:    .p2align
 ; GFX8-NEXT:  .LBB1_2: ; %for.body
 ; GFX8-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; GFX8-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -513,6 +514,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX900-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX900-NEXT:    s_mov_b32 s6, 0
+; GFX900-NEXT:    .p2align
 ; GFX900-NEXT:  .LBB1_2: ; %for.body
 ; GFX900-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; GFX900-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -625,6 +627,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-NEXT:    s_mov_b32 s2, 0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB1_2: ; %for.body
 ; GFX10-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; GFX10-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -740,6 +743,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    ; Child Loop BB1_2 Depth 2
 ; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[2:3], v[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:    s_mov_b32 s4, 0
+; GFX90A-NEXT:    .p2align
 ; GFX90A-NEXT:  .LBB1_2: ; %for.body
 ; GFX90A-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; GFX90A-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -844,6 +848,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
 ; GFX11-NEXT:    s_mov_b32 s2, 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB1_2: ; %for.body
 ; GFX11-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; GFX11-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -2586,6 +2591,7 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX8-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
+; GFX8-NEXT:    .p2align
 ; GFX8-NEXT:  .LBB8_1: ; %branch
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_and_b64 s[2:3], exec, vcc
@@ -2605,6 +2611,7 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX9-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB8_1: ; %branch
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_and_b64 s[2:3], exec, vcc
@@ -2625,6 +2632,7 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB8_1: ; %branch
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
@@ -2644,6 +2652,7 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX11-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0.l
+; GFX11-TRUE16-NEXT:    .p2align
 ; GFX11-TRUE16-NEXT:  .LBB8_1: ; %branch
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
@@ -2664,6 +2673,7 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX11-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v0
+; GFX11-FAKE16-NEXT:    .p2align
 ; GFX11-FAKE16-NEXT:  .LBB8_1: ; %branch
 ; GFX11-FAKE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-FAKE16-NEXT:    s_and_b32 s1, exec_lo, vcc_lo

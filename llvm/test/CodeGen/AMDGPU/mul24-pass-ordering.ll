@@ -16,6 +16,7 @@ define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write_b32 v0, v5
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB0_1: ; %bb23
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v5, v0, v2
@@ -70,6 +71,7 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) 
 ; GFX9-NEXT:    s_mov_b64 s[10:11], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    ; implicit-def: $vgpr3
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB1_2: ; %bb23
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, v0

@@ -563,6 +563,7 @@ define amdgpu_kernel void @uniform_loop(ptr addrspace(1) %out, i32 %a) {
 ; SI-LABEL: uniform_loop:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dword s0, s[4:5], 0xb
+; SI-NEXT:    .p2align
 ; SI-NEXT:  .LBB10_1: ; %loop
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -575,6 +576,7 @@ define amdgpu_kernel void @uniform_loop(ptr addrspace(1) %out, i32 %a) {
 ; VI-LABEL: uniform_loop:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; VI-NEXT:    .p2align
 ; VI-NEXT:  .LBB10_1: ; %loop
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1145,6 +1147,7 @@ define void @move_to_valu_vgpr_operand_phi(ptr addrspace(3) %out) {
 ; SI-NEXT:    s_and_b64 vcc, exec, 0
 ; SI-NEXT:    s_mov_b32 m0, -1
 ; SI-NEXT:    s_branch .LBB20_2
+; SI-NEXT:    .p2align
 ; SI-NEXT:  .LBB20_1: ; %bb3
 ; SI-NEXT:    ; in Loop: Header=BB20_2 Depth=1
 ; SI-NEXT:    v_add_i32_e64 v0, s[4:5], 8, v0
@@ -1172,6 +1175,7 @@ define void @move_to_valu_vgpr_operand_phi(ptr addrspace(3) %out) {
 ; VI-NEXT:    s_and_b64 vcc, exec, 0
 ; VI-NEXT:    s_mov_b32 m0, -1
 ; VI-NEXT:    s_branch .LBB20_2
+; VI-NEXT:    .p2align
 ; VI-NEXT:  .LBB20_1: ; %bb3
 ; VI-NEXT:    ; in Loop: Header=BB20_2 Depth=1
 ; VI-NEXT:    v_add_u32_e64 v0, s[4:5], 8, v0

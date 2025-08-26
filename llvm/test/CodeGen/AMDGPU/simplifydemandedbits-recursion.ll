@@ -63,6 +63,7 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg,
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v2
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_2
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_4: ; %bb21
 ; CHECK-NEXT:    ; Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    ; Parent Loop BB0_3 Depth=2
@@ -72,6 +73,7 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg,
 ; CHECK-NEXT:    s_mov_b64 vcc, s[2:3]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_4
 ; CHECK-NEXT:    s_branch .LBB0_2
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB0_5: ; %bb31
 ; CHECK-NEXT:    ; Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2

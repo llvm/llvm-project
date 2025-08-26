@@ -4810,6 +4810,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB132_1: ; %bb3
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_add_u32 s4, s2, s0
@@ -4827,6 +4828,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_mov_b64 s[0:1], 0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB132_1: ; %bb3
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
@@ -4845,6 +4847,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB132_1: ; %bb3
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4863,6 +4866,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-SDAG:       ; %bb.0: ; %bb
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX12-SDAG-NEXT:    .p2align
 ; GFX12-SDAG-NEXT:  .LBB132_1: ; %bb3
 ; GFX12-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4882,6 +4886,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-GISEL-NEXT:    .p2align
 ; GFX12-GISEL-NEXT:  .LBB132_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
@@ -4920,6 +4925,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB133_1: ; %bb3
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_add_u32 s4, s2, s0
@@ -4940,6 +4946,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_mov_b64 s[0:1], 0
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB133_1: ; %bb3
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
@@ -4961,6 +4968,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-NEXT:    .p2align
 ; GFX11-NEXT:  .LBB133_1: ; %bb3
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4981,6 +4989,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-SDAG:       ; %bb.0: ; %bb
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[0:1], 0
+; GFX12-SDAG-NEXT:    .p2align
 ; GFX12-SDAG-NEXT:  .LBB133_1: ; %bb3
 ; GFX12-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -5002,6 +5011,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-GISEL-NEXT:    .p2align
 ; GFX12-GISEL-NEXT:  .LBB133_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)

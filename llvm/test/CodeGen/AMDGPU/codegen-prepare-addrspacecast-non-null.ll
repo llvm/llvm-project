@@ -334,6 +334,7 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; DAGISEL-ASM-NEXT:    s_mov_b64 s[4:5], 0
 ; DAGISEL-ASM-NEXT:    s_mov_b64 s[8:9], src_private_base
 ; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
+; DAGISEL-ASM-NEXT:    .p2align
 ; DAGISEL-ASM-NEXT:  .LBB11_3: ; %finally
 ; DAGISEL-ASM-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DAGISEL-ASM-NEXT:    s_and_b64 s[10:11], exec, s[6:7]
@@ -365,6 +366,7 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; GISEL-ASM-NEXT:    s_mov_b64 s[6:7], 0
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
+; GISEL-ASM-NEXT:    .p2align
 ; GISEL-ASM-NEXT:  .LBB11_3: ; %finally
 ; GISEL-ASM-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-ASM-NEXT:    s_and_b64 s[8:9], exec, s[4:5]

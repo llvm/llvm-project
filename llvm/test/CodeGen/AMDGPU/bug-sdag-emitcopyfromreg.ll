@@ -24,6 +24,7 @@ define void @f(i32 %arg, ptr %ptr) {
 ; ISA-NEXT:    v_cvt_f32_ubyte0_e32 v4, s6
 ; ISA-NEXT:    v_cvt_f32_i32_e32 v5, s5
 ; ISA-NEXT:    s_mov_b32 s4, 0
+; ISA-NEXT:    .p2align
 ; ISA-NEXT:  .LBB0_1: ; %bb14
 ; ISA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ISA-NEXT:    v_mov_b32_e32 v7, v6

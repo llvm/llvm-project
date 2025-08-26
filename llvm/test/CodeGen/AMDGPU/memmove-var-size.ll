@@ -1054,6 +1054,7 @@ define void @memmove_p1_p3(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:  ; %bb.1: ; %loop-memcpy-expansion.preheader
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v2
 ; CHECK-NEXT:    s_mov_b32 s7, 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB7_2: ; %loop-memcpy-expansion
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ds_read_b128 v[10:13], v9
@@ -1081,6 +1082,7 @@ define void @memmove_p1_p3(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
 ; CHECK-NEXT:    v_add_nc_u32_e32 v2, v2, v3
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v4, vcc_lo
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB7_5: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ds_read_u8 v7, v2
@@ -1298,6 +1300,7 @@ define void @memmove_p1_p5(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
 ; CHECK-NEXT:    v_add_nc_u32_e32 v2, v2, v3
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v4, vcc_lo
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB9_5: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    buffer_load_ubyte v7, v2, s[0:3], 0 offen
@@ -1482,6 +1485,7 @@ define void @memmove_p3_p1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:  ; %bb.1: ; %loop-memcpy-expansion.preheader
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v0
 ; CHECK-NEXT:    s_mov_b32 s7, 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB11_2: ; %loop-memcpy-expansion
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_co_u32 v10, vcc_lo, v1, s4
@@ -1509,6 +1513,7 @@ define void @memmove_p3_p1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    v_add_co_u32 v1, vcc_lo, v1, v3
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v3
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v2, null, v2, v4, vcc_lo
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB11_5: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_co_u32 v3, vcc_lo, v1, s4
@@ -1562,6 +1567,7 @@ define void @memmove_p3_p3(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v0
 ; CHECK-NEXT:    s_mov_b32 s8, 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB12_5: ; %memmove_fwd_main_loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ds_read_b128 v[9:12], v3
@@ -1584,6 +1590,7 @@ define void @memmove_p3_p3(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    s_mov_b32 s8, 0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB12_8: ; %memmove_fwd_residual_loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ds_read_u8 v2, v1
@@ -1613,6 +1620,7 @@ define void @memmove_p3_p3(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v6, v0, v7
 ; CHECK-NEXT:    v_add_nc_u32_e32 v7, v1, v7
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB12_12: ; %memmove_bwd_residual_loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ds_read_u8 v8, v7
@@ -1638,6 +1646,7 @@ define void @memmove_p3_p3(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    v_sub_co_u32 v0, vcc_lo, 0, v5
 ; CHECK-NEXT:    v_add_nc_u32_e32 v4, v1, v4
 ; CHECK-NEXT:    v_sub_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB12_15: ; %memmove_bwd_main_loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ds_read_b128 v[5:8], v4
@@ -1676,6 +1685,7 @@ define void @memmove_p3_p4(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:  ; %bb.1: ; %loop-memcpy-expansion.preheader
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v0
 ; CHECK-NEXT:    s_mov_b32 s7, 0
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB13_2: ; %loop-memcpy-expansion
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_co_u32 v10, vcc_lo, v1, s4
@@ -1703,6 +1713,7 @@ define void @memmove_p3_p4(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    v_add_co_u32 v1, vcc_lo, v1, v3
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v3
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v2, null, v2, v4, vcc_lo
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB13_5: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_co_u32 v3, vcc_lo, v1, s4
@@ -1774,6 +1785,7 @@ define void @memmove_p3_p5(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB14_5: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen
@@ -1993,6 +2005,7 @@ define void @memmove_p5_p1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    v_add_co_u32 v1, vcc_lo, v1, v3
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v3
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v2, null, v2, v4, vcc_lo
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB16_5: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_co_u32 v3, vcc_lo, v1, s4
@@ -2062,6 +2075,7 @@ define void @memmove_p5_p3(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB17_5: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ds_read_u8 v2, v1
@@ -2131,6 +2145,7 @@ define void @memmove_p5_p4(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    v_add_co_u32 v1, vcc_lo, v1, v3
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v3
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v2, null, v2, v4, vcc_lo
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB18_5: ; %loop-memcpy-residual
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_co_u32 v3, vcc_lo, v1, s4
@@ -2215,6 +2230,7 @@ define void @memmove_p5_p5(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    s_mov_b32 s8, 0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB19_8: ; %memmove_fwd_residual_loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen
@@ -2244,6 +2260,7 @@ define void @memmove_p5_p5(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v6, v0, v7
 ; CHECK-NEXT:    v_add_nc_u32_e32 v7, v1, v7
+; CHECK-NEXT:    .p2align
 ; CHECK-NEXT:  .LBB19_12: ; %memmove_bwd_residual_loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    buffer_load_ubyte v8, v7, s[0:3], 0 offen

@@ -38,7 +38,7 @@ define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s1
 ; CHECK-NEXT:    s_branch .LBB0_4
-; CHECK-NEXT:    .p2align 6
+; CHECK-NOT:     .p2align 6
 ; CHECK-NEXT:  .LBB0_3: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s3

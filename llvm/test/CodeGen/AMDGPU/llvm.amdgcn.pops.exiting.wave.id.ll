@@ -38,6 +38,7 @@ define amdgpu_ps void @test(ptr addrspace(1) inreg %ptr) {
 define amdgpu_ps void @test_loop() {
 ; GFX9-LABEL: test_loop:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    .p2align
 ; GFX9-NEXT:  .LBB1_1: ; %loop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
@@ -48,6 +49,7 @@ define amdgpu_ps void @test_loop() {
 ;
 ; GFX10-LABEL: test_loop:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    .p2align
 ; GFX10-NEXT:  .LBB1_1: ; %loop
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id

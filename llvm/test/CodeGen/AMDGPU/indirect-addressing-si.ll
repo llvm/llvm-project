@@ -9008,6 +9008,7 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    s_branch .LBB26_2
+; GENERIC-NEXT:    .p2align
 ; GENERIC-NEXT:  .LBB26_1: ; %Flow
 ; GENERIC-NEXT:    ; in Loop: Header=BB26_2 Depth=1
 ; GENERIC-NEXT:    s_andn2_b64 vcc, exec, s[4:5]

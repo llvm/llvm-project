@@ -16,7 +16,7 @@ body:             |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   S_BRANCH %bb.2
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT: bb.1 (align 64):
+  ; GFX10-NEXT: bb.1:
   ; GFX10-NEXT:   successors: %bb.7(0x04000000), %bb.2(0x7c000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit $vcc_lo

@@ -1,15 +1,20 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -asm-verbose=0 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10-ASM %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s -filetype=obj | llvm-objdump -d --arch-name=amdgcn --mcpu=gfx1030 --symbolize-operands - | FileCheck --check-prefixes=GCN,GFX10,GFX10-DIS %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=GFX8 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefix=GFX9 %s
+
+; GFX9-LABEL: test_loop_64
+; GFX9: .p2align 5
 
 ; GFX8-NOT: s_inst_prefetch
 ; GFX8-NOT: .palign 6
 
 ; GCN-LABEL: test_loop_64
 ; GFX10:          s_movk_i32 s{{[0-9]+}}, 0x400
-; GFX10-DIS-NEXT: {{^$}}
+; GFX10-ASM-NEXT: p2align 5
+; GFX10-DIS-NEXT: s_nop 0
 ; GFX10-ASM-NEXT: [[L1:.LBB[0-9_]+]]:
-; GFX10-DIS-NEXT: <[[L1:L[0-9]+]]>:
+; GFX10-DIS:      <[[L1:L[0-9]+]]>:
 ; GFX10:          s_sleep 0
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_endpgm
@@ -27,6 +32,9 @@ bb2:                                              ; preds = %bb2, %bb
   tail call void @llvm.amdgcn.s.sleep(i32 0)
   br i1 %tmp3, label %bb1, label %bb2
 }
+
+; GFX9-LABEL: test_loop_128
+; GFX9: .p2align 4
 
 ; GCN-LABEL: test_loop_128
 ; GFX10:          s_movk_i32 s{{[0-9]+}}, 0x400
@@ -67,6 +75,9 @@ bb2:                                              ; preds = %bb2, %bb
   tail call void @llvm.amdgcn.s.sleep(i32 0)
   br i1 %tmp3, label %bb1, label %bb2
 }
+
+; GFX9-LABEL: test_loop_192
+; GFX9: .p2align 4
 
 ; GCN-LABEL: test_loop_192
 ; GFX10:          s_movk_i32 s{{[0-9]+}}, 0x400
@@ -128,11 +139,15 @@ bb2:                                              ; preds = %bb2, %bb
   br i1 %tmp3, label %bb1, label %bb2
 }
 
+; GFX9-LABEL: test_loop_256
+; GFX9: .p2align 4
+
 ; GCN-LABEL: test_loop_256
 ; GFX10:          s_movk_i32 s{{[0-9]+}}, 0x400
-; GFX10-DIS-NEXT: {{^$}}
+; GFX10-ASM-NEXT: p2align 4
+; GFX10-DIS-NEXT: s_nop 0
 ; GFX10-ASM-NEXT: [[L1:.LBB[0-9_]+]]:
-; GFX10-DIS-NEXT: <[[L1:L[0-9]+]]>:
+; GFX10-DIS:      <[[L1:L[0-9]+]]>:
 ; GFX10:          s_sleep 0
 ; GFX10:          s_cbranch_scc0 [[L1]]
 ; GFX10-NEXT:     s_endpgm

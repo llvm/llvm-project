@@ -147,6 +147,7 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_mov_b32_e32 v17, 0
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; SDAG-NEXT:    v_mov_b32_e32 v9, 0
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB0_3: ; %udiv-do-while3
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v8, 31, v19
@@ -344,6 +345,7 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v3, v9, v3, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v8, v2, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v9, 0
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB0_9: ; %udiv-do-while
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_lshl_b64 v[6:7], v[6:7], 1
@@ -564,6 +566,7 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s9
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s10
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s11
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB0_3: ; %udiv-do-while3
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v36, 31, v17
@@ -755,6 +758,7 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s7
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB0_9: ; %udiv-do-while
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[12:13], 1
@@ -953,6 +957,7 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_mov_b32_e32 v25, 0
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; SDAG-NEXT:    v_mov_b32_e32 v21, 0
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB1_3: ; %udiv-do-while3
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v34, 31, v17
@@ -1128,6 +1133,7 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v5, v3, v5, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v4, v2, v4, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v3, 0
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB1_9: ; %udiv-do-while
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_lshl_b64 v[6:7], v[6:7], 1
@@ -1320,6 +1326,7 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_mov_b32_e32 v20, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v19, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v18, s4
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB1_3: ; %udiv-do-while3
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v34, 31, v23
@@ -1493,6 +1500,7 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_mov_b32_e32 v22, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v21, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v20, s4
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB1_9: ; %udiv-do-while
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_lshl_b64 v[22:23], v[6:7], 1
@@ -1700,6 +1708,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v25, v9, v17, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v24, v8, v16, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v9, 0
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB2_3: ; %udiv-do-while3
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v8, 31, v21
@@ -1895,6 +1904,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v23, v15, v9, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v22, v14, v8, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v15, 0
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB2_9: ; %udiv-do-while
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_lshl_b64 v[24:25], v[24:25], 1
@@ -2162,6 +2172,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s7
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB2_3: ; %udiv-do-while3
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v39, 31, v21
@@ -2353,6 +2364,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s7
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB2_9: ; %udiv-do-while
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_lshl_b64 v[2:3], v[20:21], 1
@@ -2583,6 +2595,7 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v27, v17, v1, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v26, v16, v0, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v17, 0
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB3_3: ; %udiv-do-while3
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v16, 31, v23
@@ -2758,6 +2771,7 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v27, v19, v5, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v26, v18, v4, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v19, 0
+; SDAG-NEXT:    .p2align
 ; SDAG-NEXT:  .LBB3_9: ; %udiv-do-while
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_lshl_b64 v[28:29], v[28:29], 1
@@ -2989,6 +3003,7 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_mov_b32_e32 v18, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v17, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v16, s4
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB3_3: ; %udiv-do-while3
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v38, 31, v23
@@ -3162,6 +3177,7 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GISEL-NEXT:    v_mov_b32_e32 v18, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v17, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v16, s4
+; GISEL-NEXT:    .p2align
 ; GISEL-NEXT:  .LBB3_9: ; %udiv-do-while
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_lshl_b64 v[18:19], v[24:25], 1
