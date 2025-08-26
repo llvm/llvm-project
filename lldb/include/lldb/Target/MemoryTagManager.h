@@ -122,11 +122,15 @@ public:
   //
   // 'reader' will always be a wrapper around a CoreFile in real use
   // but allows testing without having to mock a CoreFile.
+  //
+  // This call will fail in the case that the core file segment does not contain
+  // enough data to read all the tags.
   typedef std::function<size_t(lldb::offset_t, size_t, void *)> CoreReaderFn;
-  std::vector<lldb::addr_t> virtual UnpackTagsFromCoreFileSegment(
-      CoreReaderFn reader, lldb::addr_t tag_segment_virtual_address,
-      lldb::addr_t tag_segment_data_address, lldb::addr_t addr,
-      size_t len) const = 0;
+  llvm::
+      Expected<std::vector<lldb::addr_t>> virtual UnpackTagsFromCoreFileSegment(
+          CoreReaderFn reader, lldb::addr_t tag_segment_virtual_address,
+          lldb::addr_t tag_segment_data_address, lldb::addr_t addr,
+          size_t len) const = 0;
 
   // Pack uncompressed tags into their storage format (e.g. for gdb QMemTags).
   // Checks that each tag is within the expected value range.

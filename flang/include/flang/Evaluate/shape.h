@@ -43,6 +43,8 @@ std::optional<Constant<ExtentType>> AsConstantShape(
     FoldingContext &, const Shape &);
 Constant<ExtentType> AsConstantShape(const ConstantSubscripts &);
 
+// AsConstantExtents returns a constant shape.  It may contain
+// invalid negative extents; use HasNegativeExtent() to check.
 ConstantSubscripts AsConstantExtents(const Constant<ExtentType> &);
 std::optional<ConstantSubscripts> AsConstantExtents(
     FoldingContext &, const Shape &);
@@ -53,6 +55,7 @@ inline std::optional<ConstantSubscripts> AsConstantExtents(
   }
   return std::nullopt;
 }
+
 Shape AsShape(const ConstantSubscripts &);
 std::optional<Shape> AsShape(const std::optional<ConstantSubscripts> &);
 
@@ -67,6 +70,9 @@ std::optional<Shape> Fold(FoldingContext &, std::optional<Shape> &&);
 template <typename A>
 std::optional<Shape> GetShape(
     FoldingContext &, const A &, bool invariantOnly = true);
+template <typename A>
+std::optional<Shape> GetShape(
+    FoldingContext *, const A &, bool invariantOnly = true);
 template <typename A>
 std::optional<Shape> GetShape(const A &, bool invariantOnly = true);
 
@@ -117,6 +123,14 @@ MaybeExtentExpr GetExtent(const Subscript &, const NamedEntity &, int dimension,
 MaybeExtentExpr GetExtent(FoldingContext &, const Subscript &,
     const NamedEntity &, int dimension, bool invariantOnly = true);
 
+// Similar analyses for coarrays
+MaybeExtentExpr GetLCOBOUND(
+    const Symbol &, int dimension, bool invariantOnly = true);
+MaybeExtentExpr GetUCOBOUND(
+    const Symbol &, int dimension, bool invariantOnly = true);
+Shape GetLCOBOUNDs(const Symbol &, bool invariantOnly = true);
+Shape GetUCOBOUNDs(const Symbol &, bool invariantOnly = true);
+
 // Compute an element count for a triplet or trip count for a DO.
 ExtentExpr CountTrips(
     ExtentExpr &&lower, ExtentExpr &&upper, ExtentExpr &&stride);
@@ -137,6 +151,8 @@ inline MaybeExtentExpr GetSize(const std::optional<Shape> &maybeShape) {
 
 // Utility predicate: does an expression reference any implied DO index?
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
+
+// GetShape()
 
 class GetShapeHelper
     : public AnyTraverse<GetShapeHelper, std::optional<Shape>> {
@@ -175,8 +191,12 @@ public:
   }
   template <typename D, typename R, typename LO, typename RO>
   Result operator()(const Operation<D, R, LO, RO> &operation) const {
-    if (operation.right().Rank() > 0) {
-      return (*this)(operation.right());
+    if (int rr{operation.right().Rank()}; rr > 0) {
+      if (int lr{operation.left().Rank()}; lr == 0 || lr == rr) {
+        return (*this)(operation.right());
+      } else {
+        return std::nullopt;
+      }
     } else {
       return (*this)(operation.left());
     }
@@ -246,23 +266,27 @@ private:
 
 template <typename A>
 std::optional<Shape> GetShape(
-    FoldingContext &context, const A &x, bool invariantOnly) {
-  if (auto shape{GetShapeHelper{&context, invariantOnly}(x)}) {
-    return Fold(context, std::move(shape));
+    FoldingContext *context, const A &x, bool invariantOnly) {
+  if (auto shape{GetShapeHelper{context, invariantOnly}(x)}) {
+    if (context) {
+      return Fold(*context, std::move(shape));
+    } else {
+      return shape;
+    }
   } else {
     return std::nullopt;
   }
 }
 
 template <typename A>
-std::optional<Shape> GetShape(const A &x, bool invariantOnly) {
-  return GetShapeHelper{/*context=*/nullptr, invariantOnly}(x);
+std::optional<Shape> GetShape(
+    FoldingContext &context, const A &x, bool invariantOnly) {
+  return GetShape(&context, x, invariantOnly);
 }
 
 template <typename A>
-std::optional<Shape> GetShape(
-    FoldingContext *context, const A &x, bool invariantOnly = true) {
-  return GetShapeHelper{context, invariantOnly}(x);
+std::optional<Shape> GetShape(const A &x, bool invariantOnly) {
+  return GetShape(/*context=*/nullptr, x, invariantOnly);
 }
 
 template <typename A>
@@ -275,14 +299,18 @@ std::optional<Constant<ExtentType>> GetConstantShape(
   }
 }
 
+// Combines GetShape and AsConstantExtents; only returns valid shapes.
 template <typename A>
 std::optional<ConstantSubscripts> GetConstantExtents(
     FoldingContext &context, const A &x) {
   if (auto shape{GetShape(context, x, /*invariantOnly=*/true)}) {
-    return AsConstantExtents(context, *shape);
-  } else {
-    return std::nullopt;
+    if (auto extents{AsConstantExtents(context, *shape)}) {
+      if (!HasNegativeExtent(*extents)) {
+        return extents;
+      }
+    }
   }
+  return std::nullopt;
 }
 
 // Get shape that does not depends on callee scope symbols if the expression

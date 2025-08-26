@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that this testcase compiles successfully.
 ; Because l2fetch has mayLoad/mayStore flags on it, the packetizer

@@ -4,8 +4,8 @@
 define <2 x i1> @cmp1(<2 x i8> %a) {
 ; CHECK-LABEL: define <2 x i1> @cmp1(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i8> [[A]], <i8 1, i8 1>
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i8> [[A]], splat (i8 1)
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %add = add nuw <2 x i8> %a, splat (i8 1)
   %cmp = icmp ne <2 x i8> %add, zeroinitializer
@@ -15,8 +15,8 @@ define <2 x i1> @cmp1(<2 x i8> %a) {
 define <2 x i1> @cmp2(<2 x i8> %a) {
 ; CHECK-LABEL: define <2 x i1> @cmp2(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i8> [[A]], <i8 5, i8 5>
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i8> [[A]], splat (i8 5)
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %add = add nuw <2 x i8> %a, splat (i8 5)
   %cmp = icmp ugt <2 x i8> %add, splat (i8 2)
@@ -27,7 +27,7 @@ define <2 x i1> @cmp_nonsplat(<2 x i8> %a) {
 ; CHECK-LABEL: define <2 x i1> @cmp_nonsplat(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i8> [[A]], <i8 4, i8 5>
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %add = add nuw <2 x i8> %a, <i8 4, i8 5>
   %cmp = icmp ugt <2 x i8> %add, <i8 2, i8 3>
@@ -51,7 +51,7 @@ define <2 x i1> @cmp_signedness(<2 x i8> %a) {
 ; CHECK-LABEL: define <2 x i1> @cmp_signedness(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i16> [[ZEXT]], <i16 5, i16 5>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult <2 x i16> [[ZEXT]], splat (i16 5)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %zext = zext <2 x i8> %a to <2 x i16>
@@ -63,7 +63,7 @@ define <2 x i16> @infer_nowrap(<2 x i8> %a) {
 ; CHECK-LABEL: define range(i16 1, 257) <2 x i16> @infer_nowrap(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], <i16 1, i16 1>
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], splat (i16 1)
 ; CHECK-NEXT:    ret <2 x i16> [[RES]]
 ;
   %zext = zext <2 x i8> %a to <2 x i16>
@@ -87,7 +87,7 @@ define <vscale x 2 x i16> @infer_nowrap_scalable(<vscale x 2 x i8> %a) {
 ; CHECK-LABEL: define range(i16 1, 257) <vscale x 2 x i16> @infer_nowrap_scalable(
 ; CHECK-SAME: <vscale x 2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i8> [[A]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <vscale x 2 x i16> [[ZEXT]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <vscale x 2 x i16> [[ZEXT]], splat (i16 1)
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[RES]]
 ;
   %zext = zext <vscale x 2 x i8> %a to <vscale x 2 x i16>
@@ -134,7 +134,7 @@ define <2 x i16> @saturating(<2 x i8> %a) {
 ; CHECK-LABEL: define range(i16 1, 257) <2 x i16> @saturating(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], <i16 1, i16 1>
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], splat (i16 1)
 ; CHECK-NEXT:    ret <2 x i16> [[RES]]
 ;
   %zext = zext <2 x i8> %a to <2 x i16>
@@ -146,7 +146,7 @@ define {<2 x i16>, <2 x i1>} @with_overflow(<2 x i8> %a) {
 ; CHECK-LABEL: define { <2 x i16>, <2 x i1> } @with_overflow(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[RES1:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], <i16 1, i16 1>
+; CHECK-NEXT:    [[RES1:%.*]] = add nuw nsw <2 x i16> [[ZEXT]], splat (i16 1)
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { <2 x i16>, <2 x i1> } { <2 x i16> poison, <2 x i1> zeroinitializer }, <2 x i16> [[RES1]], 0
 ; CHECK-NEXT:    ret { <2 x i16>, <2 x i1> } [[RES]]
 ;
@@ -160,7 +160,7 @@ define <2 x i16> @srem1(<2 x i8> %a) {
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES1_LHS_TRUNC:%.*]] = trunc <2 x i16> [[ZEXT]] to <2 x i8>
-; CHECK-NEXT:    [[RES12:%.*]] = urem <2 x i8> [[RES1_LHS_TRUNC]], <i8 42, i8 42>
+; CHECK-NEXT:    [[RES12:%.*]] = urem <2 x i8> [[RES1_LHS_TRUNC]], splat (i8 42)
 ; CHECK-NEXT:    [[RES:%.*]] = zext <2 x i8> [[RES12]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[RES]]
 ;
@@ -174,7 +174,7 @@ define <2 x i16> @srem2(<2 x i8> %a) {
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = sext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    [[RES_LHS_TRUNC:%.*]] = trunc <2 x i16> [[ZEXT]] to <2 x i8>
-; CHECK-NEXT:    [[RES1:%.*]] = srem <2 x i8> [[RES_LHS_TRUNC]], <i8 42, i8 42>
+; CHECK-NEXT:    [[RES1:%.*]] = srem <2 x i8> [[RES_LHS_TRUNC]], splat (i8 42)
 ; CHECK-NEXT:    [[RES:%.*]] = sext <2 x i8> [[RES1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[RES]]
 ;
@@ -187,7 +187,7 @@ define <2 x i16> @ashr(<2 x i8> %a) {
 ; CHECK-LABEL: define range(i16 0, 128) <2 x i16> @ashr(
 ; CHECK-SAME: <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[RES:%.*]] = lshr <2 x i16> [[ZEXT]], <i16 1, i16 1>
+; CHECK-NEXT:    [[RES:%.*]] = lshr <2 x i16> [[ZEXT]], splat (i16 1)
 ; CHECK-NEXT:    ret <2 x i16> [[RES]]
 ;
   %zext = zext <2 x i8> %a to <2 x i16>
@@ -247,10 +247,10 @@ define <4 x i64> @issue_97674_getConstantOnEdge(i1 %cond) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[FOLDS:%.*]] = add nuw nsw <4 x i64> zeroinitializer, <i64 1, i64 1, i64 1, i64 1>
+; CHECK-NEXT:    [[FOLDS:%.*]] = add nuw nsw <4 x i64> zeroinitializer, splat (i64 1)
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[R:%.*]] = phi <4 x i64> [ <i64 1, i64 1, i64 1, i64 1>, %[[IF_THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi <4 x i64> [ splat (i64 1), %[[IF_THEN]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret <4 x i64> [[R]]
 ;
 entry:
@@ -333,7 +333,7 @@ define <2 x i1> @insertelement_fold1() {
 ; CHECK-LABEL: define <2 x i1> @insertelement_fold1() {
 ; CHECK-NEXT:    [[IE1:%.*]] = insertelement <2 x i32> poison, i32 10, i64 0
 ; CHECK-NEXT:    [[IE2:%.*]] = insertelement <2 x i32> [[IE1]], i32 20, i64 1
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %ie1 = insertelement <2 x i32> poison, i32 10, i64 0
   %ie2 = insertelement <2 x i32> %ie1, i32 20, i64 1
@@ -346,9 +346,20 @@ define <2 x i1> @insertelement_fold1() {
 define <2 x i1> @insertelement_fold2() {
 ; CHECK-LABEL: define <2 x i1> @insertelement_fold2() {
 ; CHECK-NEXT:    [[IE1:%.*]] = insertelement <2 x i32> <i32 poison, i32 20>, i32 10, i64 0
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %ie1 = insertelement <2 x i32> <i32 poison, i32 20>, i32 10, i64 0
   %icmp1 = icmp slt <2 x i32> %ie1, <i32 1024, i32 1024>
   ret <2 x i1> %icmp1
+}
+
+@g = external global i32
+
+define <2 x i16> @insertelement_constexpr() {
+; CHECK-LABEL: define <2 x i16> @insertelement_constexpr() {
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i16> poison, i16 ptrtoint (ptr @g to i16), i32 0
+; CHECK-NEXT:    ret <2 x i16> [[INS]]
+;
+  %ins = insertelement <2 x i16> poison, i16 ptrtoint (ptr @g to i16), i32 0
+  ret <2 x i16> %ins
 }

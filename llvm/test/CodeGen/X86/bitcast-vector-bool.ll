@@ -16,7 +16,7 @@ define i1 @bitcast_v2i64_to_v2i1(<2 x i64> %a0) nounwind {
 ; SSE-NEXT:    movmskpd %xmm0, %ecx
 ; SSE-NEXT:    movl %ecx, %eax
 ; SSE-NEXT:    shrb %al
-; SSE-NEXT:    addb %cl, %al
+; SSE-NEXT:    xorb %cl, %al
 ; SSE-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_v2i64_to_v2i1:
@@ -24,7 +24,7 @@ define i1 @bitcast_v2i64_to_v2i1(<2 x i64> %a0) nounwind {
 ; AVX12-NEXT:    vmovmskpd %xmm0, %ecx
 ; AVX12-NEXT:    movl %ecx, %eax
 ; AVX12-NEXT:    shrb %al
-; AVX12-NEXT:    addb %cl, %al
+; AVX12-NEXT:    xorb %cl, %al
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_v2i64_to_v2i1:
@@ -34,7 +34,7 @@ define i1 @bitcast_v2i64_to_v2i1(<2 x i64> %a0) nounwind {
 ; AVX512-NEXT:    kshiftrw $1, %k0, %k1
 ; AVX512-NEXT:    kmovd %k1, %ecx
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    addb %cl, %al
+; AVX512-NEXT:    xorb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
   %1 = icmp slt <2 x i64> %a0, zeroinitializer

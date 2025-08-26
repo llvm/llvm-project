@@ -289,8 +289,11 @@ MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetRank(MlirType type);
 /// Checks whether the given shaped type has a static shape.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeHasStaticShape(MlirType type);
 
-/// Checks wither the dim-th dimension of the given shaped type is dynamic.
+/// Checks whether the dim-th dimension of the given shaped type is dynamic.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicDim(MlirType type, intptr_t dim);
+
+/// Checks whether the dim-th dimension of the given shaped type is static.
+MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticDim(MlirType type, intptr_t dim);
 
 /// Returns the dim-th dimension of the given ranked shaped type.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDimSize(MlirType type,
@@ -300,17 +303,25 @@ MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDimSize(MlirType type,
 /// in shaped types.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicSize(int64_t size);
 
+/// Checks whether the given shaped type dimension value is statically-sized.
+MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticSize(int64_t size);
+
 /// Returns the value indicating a dynamic size in a shaped type. Prefer
-/// mlirShapedTypeIsDynamicSize to direct comparisons with this value.
+/// mlirShapedTypeIsDynamicSize and mlirShapedTypeIsStaticSize to direct
+/// comparisons with this value.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicSize(void);
 
 /// Checks whether the given value is used as a placeholder for dynamic strides
 /// and offsets in shaped types.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicStrideOrOffset(int64_t val);
 
+/// Checks whether the given dimension value of a stride or an offset is
+/// statically-sized.
+MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticStrideOrOffset(int64_t val);
+
 /// Returns the value indicating a dynamic stride or offset in a shaped type.
-/// Prefer mlirShapedTypeGetDynamicStrideOrOffset to direct comparisons with
-/// this value.
+/// Prefer mlirShapedTypeIsDynamicStrideOrOffset and
+/// mlirShapedTypeIsStaticStrideOrOffset to direct comparisons with this value.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicStrideOrOffset(void);
 
 //===----------------------------------------------------------------------===//

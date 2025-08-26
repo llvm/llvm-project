@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefixes=CHECK,NOALIGN4
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-force-min-byval-param-align | FileCheck %s --check-prefixes=CHECK,ALIGN4
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-force-min-byval-param-align | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefixes=CHECK,NOALIGN4
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -nvptx-force-min-byval-param-align | FileCheck %s --check-prefixes=CHECK,ALIGN4
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -nvptx-force-min-byval-param-align | %ptxas-verify %}
 
 ;;; Need 4-byte alignment on ptr passed byval
 define ptx_device void @t1(ptr byval(float) %x) {
@@ -71,14 +71,12 @@ define ptx_device void @t6() {
 }
 
 ; CHECK-LABEL: .func check_ptr_align1(
-; CHECK: 	ld.param.u64 	%rd1, [check_ptr_align1_param_0];
-; CHECK-NOT: 	ld.param.u8
-; CHECK: 	mov.b32 	%r1, 0;
-; CHECK: 	st.u8 	[%rd1+3], %r1;
-; CHECK: 	st.u8 	[%rd1+2], %r1;
-; CHECK: 	st.u8 	[%rd1+1], %r1;
-; CHECK: 	mov.b32 	%r2, 1;
-; CHECK: 	st.u8 	[%rd1], %r2;
+; CHECK: 	ld.param.b64 	%rd1, [check_ptr_align1_param_0];
+; CHECK-NOT: 	ld.param.b8
+; CHECK: 	st.b8 	[%rd1+3], 0;
+; CHECK: 	st.b8 	[%rd1+2], 0;
+; CHECK: 	st.b8 	[%rd1+1], 0;
+; CHECK: 	st.b8 	[%rd1], 1;
 ; CHECK: 	ret;
 define void @check_ptr_align1(ptr align 1 %_arg_ptr) {
 entry:
@@ -87,12 +85,10 @@ entry:
 }
 
 ; CHECK-LABEL: .func check_ptr_align2(
-; CHECK: 	ld.param.u64 	%rd1, [check_ptr_align2_param_0];
-; CHECK-NOT: 	ld.param.u16
-; CHECK: 	mov.b32 	%r1, 0;
-; CHECK: 	st.u16 	[%rd1+2], %r1;
-; CHECK: 	mov.b32 	%r2, 2;
-; CHECK: 	st.u16 	[%rd1], %r2;
+; CHECK: 	ld.param.b64 	%rd1, [check_ptr_align2_param_0];
+; CHECK-NOT: 	ld.param.b16
+; CHECK: 	st.b16 	[%rd1+2], 0;
+; CHECK: 	st.b16 	[%rd1], 2;
 ; CHECK: 	ret;
 define void @check_ptr_align2(ptr align 2 %_arg_ptr) {
 entry:
@@ -101,10 +97,9 @@ entry:
 }
 
 ; CHECK-LABEL: .func check_ptr_align4(
-; CHECK: 	ld.param.u64 	%rd1, [check_ptr_align4_param_0];
-; CHECK-NOT: 	ld.param.u32
-; CHECK: 	mov.b32 	%r1, 4;
-; CHECK: 	st.u32 	[%rd1], %r1;
+; CHECK: 	ld.param.b64 	%rd1, [check_ptr_align4_param_0];
+; CHECK-NOT: 	ld.param.b32
+; CHECK: 	st.b32 	[%rd1], 4;
 ; CHECK: 	ret;
 define void @check_ptr_align4(ptr align 4 %_arg_ptr) {
 entry:
@@ -113,9 +108,8 @@ entry:
 }
 
 ; CHECK-LABEL: .func check_ptr_align8(
-; CHECK: 	ld.param.u64 	%rd1, [check_ptr_align8_param_0];
-; CHECK: 	mov.b32 	%r1, 8;
-; CHECK: 	st.u32 	[%rd1], %r1;
+; CHECK: 	ld.param.b64 	%rd1, [check_ptr_align8_param_0];
+; CHECK: 	st.b32 	[%rd1], 8;
 ; CHECK: 	ret;
 define void @check_ptr_align8(ptr align 8 %_arg_ptr) {
 entry:

@@ -37,10 +37,9 @@ define void @tester(float %0, float %1, float %2, float %3, float %4, float %5, 
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm6, %xmm5
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm8 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vmovss {{.*#+}} xmm5 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmulss %xmm0, %xmm5, %xmm1
+; CHECK-NEXT:    vmovss {{.*#+}} xmm15 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmulss %xmm0, %xmm15, %xmm1
 ; CHECK-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    vmovaps %xmm5, %xmm15
 ; CHECK-NEXT:    vmulss %xmm1, %xmm11, %xmm5
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm12 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss %xmm2, %xmm5, %xmm2

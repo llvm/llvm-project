@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hwloops -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hwloops -o - %s | FileCheck %s
 
 # This used to crash with `Assertion `isReg() && "This is not a register operand!"`
 # CHECK: J2_loop0r

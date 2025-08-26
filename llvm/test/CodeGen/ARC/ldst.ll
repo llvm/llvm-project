@@ -1,4 +1,4 @@
-; RUN: llc -march=arc < %s | FileCheck %s
+; RUN: llc -mtriple=arc < %s | FileCheck %s
 
 ; CHECK-LABEL: load32
 ; CHECK: ld %r0, [%r0,16000]

@@ -198,14 +198,8 @@ def vsplati32 : PatFrag<(ops node:$e0),
                         (v4i32 (build_vector node:$e0, node:$e0,
                                              node:$e0, node:$e0))>;
 
-def vsplati64_imm_eq_1 : PatLeaf<(bitconvert (v4i32 (build_vector))), [{
-  APInt Imm;
-  SDNode *BV = N->getOperand(0).getNode();
-  EVT EltTy = N->getValueType(0).getVectorElementType();
-
-  return selectVSplat(BV, Imm, EltTy.getSizeInBits()) &&
-         Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 1;
-}]>;
+// Any build_vector that is a constant splat with a value that equals 1
+def vsplat_imm_eq_1 : ComplexPattern<vAny, 0, "selectVSplatImmEq1">;
 
 def vsplati64 : PatFrag<(ops node:$e0),
                         (v2i64 (build_vector node:$e0, node:$e0))>;
@@ -217,7 +211,7 @@ def vsplati64_splat_d : PatFrag<(ops node:$e0),
                                                                 node:$e0,
                                                                 node:$e0,
                                                                 node:$e0)),
-                                           vsplati64_imm_eq_1))))>;
+                                           (vsplat_imm_eq_1)))))>;
 
 def vsplatf32 : PatFrag<(ops node:$e0),
                         (v4f32 (build_vector node:$e0, node:$e0,
@@ -235,12 +229,6 @@ def vsplati64_elt : PatFrag<(ops node:$v, node:$i),
                             (MipsVSHF (vsplati64_splat_d node:$i),
                                       node:$v, node:$v)>;
 
-class SplatPatLeaf<Operand opclass, dag frag, code pred = [{}],
-                   SDNodeXForm xform = NOOP_SDNodeXForm>
-  : PatLeaf<frag, pred, xform> {
-  Operand OpClass = opclass;
-}
-
 class SplatComplexPattern<Operand opclass, ValueType ty, int numops, string fn,
                           list<SDNode> roots = [],
                           list<SDNodeProperty> props = []> :
@@ -249,150 +237,92 @@ class SplatComplexPattern<Operand opclass, ValueType ty, int numops, string fn,
 }
 
 def vsplati8_uimm3 : SplatComplexPattern<vsplat_uimm3, v16i8, 1,
-                                         "selectVSplatUimm3",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatUimm<3>">;
 
 def vsplati8_uimm4 : SplatComplexPattern<vsplat_uimm4, v16i8, 1,
-                                         "selectVSplatUimm4",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatUimm<4>">;
 
 def vsplati8_uimm5 : SplatComplexPattern<vsplat_uimm5, v16i8, 1,
-                                         "selectVSplatUimm5",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatUimm<5>">;
 
 def vsplati8_uimm8 : SplatComplexPattern<vsplat_uimm8, v16i8, 1,
-                                         "selectVSplatUimm8",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatUimm<8>">;
 
 def vsplati8_simm5 : SplatComplexPattern<vsplat_simm5, v16i8, 1,
-                                         "selectVSplatSimm5",
-                                         [build_vector, bitconvert]>;
+                                         "selectVSplatSimm<5>">;
 
 def vsplati16_uimm3 : SplatComplexPattern<vsplat_uimm3, v8i16, 1,
-                                          "selectVSplatUimm3",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<3>">;
 
 def vsplati16_uimm4 : SplatComplexPattern<vsplat_uimm4, v8i16, 1,
-                                          "selectVSplatUimm4",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<4>">;
 
 def vsplati16_uimm5 : SplatComplexPattern<vsplat_uimm5, v8i16, 1,
-                                          "selectVSplatUimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<5>">;
 
 def vsplati16_simm5 : SplatComplexPattern<vsplat_simm5, v8i16, 1,
-                                          "selectVSplatSimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatSimm<5>">;
 
 def vsplati32_uimm2 : SplatComplexPattern<vsplat_uimm2, v4i32, 1,
-                                          "selectVSplatUimm2",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<2>">;
 
 def vsplati32_uimm5 : SplatComplexPattern<vsplat_uimm5, v4i32, 1,
-                                          "selectVSplatUimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<5>">;
 
 def vsplati32_simm5 : SplatComplexPattern<vsplat_simm5, v4i32, 1,
-                                          "selectVSplatSimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatSimm<5>">;
 
 def vsplati64_uimm1 : SplatComplexPattern<vsplat_uimm1, v2i64, 1,
-                                          "selectVSplatUimm1",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<1>">;
 
 def vsplati64_uimm5 : SplatComplexPattern<vsplat_uimm5, v2i64, 1,
-                                          "selectVSplatUimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<5>">;
 
 def vsplati64_uimm6 : SplatComplexPattern<vsplat_uimm6, v2i64, 1,
-                                          "selectVSplatUimm6",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatUimm<6>">;
 
 def vsplati64_simm5 : SplatComplexPattern<vsplat_simm5, v2i64, 1,
-                                          "selectVSplatSimm5",
-                                          [build_vector, bitconvert]>;
+                                          "selectVSplatSimm<5>">;
 
 // Any build_vector that is a constant splat with a value that is an exact
 // power of 2
-def vsplat_uimm_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmPow2",
-                                      [build_vector, bitconvert]>;
+def vsplat_uimm_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmPow2">;
 
 // Any build_vector that is a constant splat with a value that is the bitwise
 // inverse of an exact power of 2
-def vsplat_uimm_inv_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmInvPow2",
-                                          [build_vector, bitconvert]>;
+def vsplat_uimm_inv_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmInvPow2">;
 
 // Any build_vector that is a constant splat with only a consecutive sequence
 // of left-most bits set.
 def vsplat_maskl_bits_uimm3
-    : SplatComplexPattern<vsplat_uimm3, vAny, 1, "selectVSplatMaskL",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm3, vAny, 1, "selectVSplatMaskL">;
 def vsplat_maskl_bits_uimm4
-    : SplatComplexPattern<vsplat_uimm4, vAny, 1, "selectVSplatMaskL",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm4, vAny, 1, "selectVSplatMaskL">;
 def vsplat_maskl_bits_uimm5
-    : SplatComplexPattern<vsplat_uimm5, vAny, 1, "selectVSplatMaskL",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm5, vAny, 1, "selectVSplatMaskL">;
 def vsplat_maskl_bits_uimm6
-    : SplatComplexPattern<vsplat_uimm6, vAny, 1, "selectVSplatMaskL",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm6, vAny, 1, "selectVSplatMaskL">;
 
 // Any build_vector that is a constant splat with only a consecutive sequence
 // of right-most bits set.
 def vsplat_maskr_bits_uimm3
-    : SplatComplexPattern<vsplat_uimm3, vAny, 1, "selectVSplatMaskR",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm3, vAny, 1, "selectVSplatMaskR">;
 def vsplat_maskr_bits_uimm4
-    : SplatComplexPattern<vsplat_uimm4, vAny, 1, "selectVSplatMaskR",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm4, vAny, 1, "selectVSplatMaskR">;
 def vsplat_maskr_bits_uimm5
-    : SplatComplexPattern<vsplat_uimm5, vAny, 1, "selectVSplatMaskR",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm5, vAny, 1, "selectVSplatMaskR">;
 def vsplat_maskr_bits_uimm6
-    : SplatComplexPattern<vsplat_uimm6, vAny, 1, "selectVSplatMaskR",
-                          [build_vector, bitconvert]>;
+    : SplatComplexPattern<vsplat_uimm6, vAny, 1, "selectVSplatMaskR">;
 
-// Any build_vector that is a constant splat with a value that equals 1
-// FIXME: These should be a ComplexPattern but we can't use them because the
-//        ISel generator requires the uses to have a name, but providing a name
-//        causes other errors ("used in pattern but not operand list")
-def vsplat_imm_eq_1 : PatLeaf<(build_vector), [{
-  APInt Imm;
-  EVT EltTy = N->getValueType(0).getVectorElementType();
 
-  return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
-         Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 1;
-}]>;
+def vbclr : PatFrag<(ops node:$ws, node:$wt),
+                    (and node:$ws, (vnot (shl (vsplat_imm_eq_1), node:$wt)))>;
 
-def vbclr_b : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl vsplat_imm_eq_1, node:$wt)))>;
-def vbclr_h : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl vsplat_imm_eq_1, node:$wt)))>;
-def vbclr_w : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl vsplat_imm_eq_1, node:$wt)))>;
-def vbclr_d : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (vnot (shl (v2i64 vsplati64_imm_eq_1),
-                                               node:$wt)))>;
+def vbneg : PatFrag<(ops node:$ws, node:$wt),
+                    (xor node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 
-def vbneg_b : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbneg_h : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbneg_w : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbneg_d : PatFrag<(ops node:$ws, node:$wt),
-                      (xor node:$ws, (shl (v2i64 vsplati64_imm_eq_1),
-                                          node:$wt))>;
-
-def vbset_b : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbset_h : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbset_w : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
-def vbset_d : PatFrag<(ops node:$ws, node:$wt),
-                      (or node:$ws, (shl (v2i64 vsplati64_imm_eq_1),
-                                         node:$wt))>;
+def vbset : PatFrag<(ops node:$ws, node:$wt),
+                    (or node:$ws, (shl (vsplat_imm_eq_1), node:$wt))>;
 
 def muladd : PatFrag<(ops node:$wd, node:$ws, node:$wt),
                      (add node:$wd, (mul node:$ws, node:$wt))>;
@@ -1609,10 +1539,10 @@ class AVER_U_W_DESC : MSA_3R_DESC_BASE<"aver_u.w", int_mips_aver_u_w,
 class AVER_U_D_DESC : MSA_3R_DESC_BASE<"aver_u.d", int_mips_aver_u_d,
                                        MSA128DOpnd>, IsCommutable;
 
-class BCLR_B_DESC : MSA_3R_DESC_BASE<"bclr.b", vbclr_b, MSA128BOpnd>;
-class BCLR_H_DESC : MSA_3R_DESC_BASE<"bclr.h", vbclr_h, MSA128HOpnd>;
-class BCLR_W_DESC : MSA_3R_DESC_BASE<"bclr.w", vbclr_w, MSA128WOpnd>;
-class BCLR_D_DESC : MSA_3R_DESC_BASE<"bclr.d", vbclr_d, MSA128DOpnd>;
+class BCLR_B_DESC : MSA_3R_DESC_BASE<"bclr.b", vbclr, MSA128BOpnd>;
+class BCLR_H_DESC : MSA_3R_DESC_BASE<"bclr.h", vbclr, MSA128HOpnd>;
+class BCLR_W_DESC : MSA_3R_DESC_BASE<"bclr.w", vbclr, MSA128WOpnd>;
+class BCLR_D_DESC : MSA_3R_DESC_BASE<"bclr.d", vbclr, MSA128DOpnd>;
 
 class BCLRI_B_DESC : MSA_BIT_B_DESC_BASE<"bclri.b", and, vsplat_uimm_inv_pow2,
                                          MSA128BOpnd>;
@@ -1707,10 +1637,10 @@ class BMZI_B_DESC {
   string Constraints = "$wd = $wd_in";
 }
 
-class BNEG_B_DESC : MSA_3R_DESC_BASE<"bneg.b", vbneg_b, MSA128BOpnd>;
-class BNEG_H_DESC : MSA_3R_DESC_BASE<"bneg.h", vbneg_h, MSA128HOpnd>;
-class BNEG_W_DESC : MSA_3R_DESC_BASE<"bneg.w", vbneg_w, MSA128WOpnd>;
-class BNEG_D_DESC : MSA_3R_DESC_BASE<"bneg.d", vbneg_d, MSA128DOpnd>;
+class BNEG_B_DESC : MSA_3R_DESC_BASE<"bneg.b", vbneg, MSA128BOpnd>;
+class BNEG_H_DESC : MSA_3R_DESC_BASE<"bneg.h", vbneg, MSA128HOpnd>;
+class BNEG_W_DESC : MSA_3R_DESC_BASE<"bneg.w", vbneg, MSA128WOpnd>;
+class BNEG_D_DESC : MSA_3R_DESC_BASE<"bneg.d", vbneg, MSA128DOpnd>;
 
 class BNEGI_B_DESC : MSA_BIT_B_DESC_BASE<"bnegi.b", xor, vsplat_uimm_pow2,
                                          MSA128BOpnd>;
@@ -1760,10 +1690,10 @@ class BSELI_B_DESC {
   string Constraints = "$wd = $wd_in";
 }
 
-class BSET_B_DESC : MSA_3R_DESC_BASE<"bset.b", vbset_b, MSA128BOpnd>;
-class BSET_H_DESC : MSA_3R_DESC_BASE<"bset.h", vbset_h, MSA128HOpnd>;
-class BSET_W_DESC : MSA_3R_DESC_BASE<"bset.w", vbset_w, MSA128WOpnd>;
-class BSET_D_DESC : MSA_3R_DESC_BASE<"bset.d", vbset_d, MSA128DOpnd>;
+class BSET_B_DESC : MSA_3R_DESC_BASE<"bset.b", vbset, MSA128BOpnd>;
+class BSET_H_DESC : MSA_3R_DESC_BASE<"bset.h", vbset, MSA128HOpnd>;
+class BSET_W_DESC : MSA_3R_DESC_BASE<"bset.w", vbset, MSA128WOpnd>;
+class BSET_D_DESC : MSA_3R_DESC_BASE<"bset.d", vbset, MSA128DOpnd>;
 
 class BSETI_B_DESC : MSA_BIT_B_DESC_BASE<"bseti.b", or, vsplat_uimm_pow2,
                                          MSA128BOpnd>;
@@ -3842,7 +3772,7 @@ class MSAShiftPat<SDNode Node, ValueType VT, MSAInst Insn, dag Vec> :
          (VT (Insn VT:$ws, VT:$wt))>;
 
 class MSABitPat<SDNode Node, ValueType VT, MSAInst Insn, PatFrag Frag> :
-  MSAPat<(VT (Node VT:$ws, (shl vsplat_imm_eq_1, (Frag VT:$wt)))),
+  MSAPat<(VT (Node VT:$ws, (shl (vsplat_imm_eq_1), (Frag VT:$wt)))),
          (VT (Insn VT:$ws, VT:$wt))>;
 
 multiclass MSAShiftPats<SDNode Node, string Insn> {
@@ -3861,7 +3791,7 @@ multiclass MSABitPats<SDNode Node, string Insn> {
   def : MSABitPat<Node, v16i8, !cast<MSAInst>(Insn#_B), vsplati8imm7>;
   def : MSABitPat<Node, v8i16, !cast<MSAInst>(Insn#_H), vsplati16imm15>;
   def : MSABitPat<Node, v4i32, !cast<MSAInst>(Insn#_W), vsplati32imm31>;
-  def : MSAPat<(Node v2i64:$ws, (shl (v2i64 vsplati64_imm_eq_1),
+  def : MSAPat<(Node v2i64:$ws, (shl (vsplat_imm_eq_1),
                                      (vsplati64imm63 v2i64:$wt))),
                (v2i64 (!cast<MSAInst>(Insn#_D) v2i64:$ws, v2i64:$wt))>;
 }
@@ -3872,16 +3802,16 @@ defm : MSAShiftPats<sra, "SRA">;
 defm : MSABitPats<xor, "BNEG">;
 defm : MSABitPats<or, "BSET">;
 
-def : MSAPat<(and v16i8:$ws, (vnot (shl vsplat_imm_eq_1,
+def : MSAPat<(and v16i8:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati8imm7 v16i8:$wt)))),
              (v16i8 (BCLR_B v16i8:$ws, v16i8:$wt))>;
-def : MSAPat<(and v8i16:$ws, (vnot (shl vsplat_imm_eq_1,
+def : MSAPat<(and v8i16:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati16imm15 v8i16:$wt)))),
              (v8i16 (BCLR_H v8i16:$ws, v8i16:$wt))>;
-def : MSAPat<(and v4i32:$ws, (vnot (shl vsplat_imm_eq_1,
+def : MSAPat<(and v4i32:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati32imm31 v4i32:$wt)))),
              (v4i32 (BCLR_W v4i32:$ws, v4i32:$wt))>;
-def : MSAPat<(and v2i64:$ws, (vnot (shl (v2i64 vsplati64_imm_eq_1),
+def : MSAPat<(and v2i64:$ws, (vnot (shl (vsplat_imm_eq_1),
                                         (vsplati64imm63 v2i64:$wt)))),
              (v2i64 (BCLR_D v2i64:$ws, v2i64:$wt))>;
 

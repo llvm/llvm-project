@@ -246,4 +246,10 @@ int m() {
     return 0;
 }
 }
+
+namespace GH46755 {
+void f() {
+    struct { int v; } &&r = {512 * 1024 * 1024 * 1024}; // expected-warning {{overflow in expression; result is 0 with type 'int'}}
+}
+}
 #endif

@@ -17,25 +17,19 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <vector>
 
 using namespace llvm;
@@ -102,9 +96,10 @@ lto::Config BitcodeCompiler::createConfig() {
     c.Options.MCOptions.AsmVerbose = true;
   }
 
-  if (ctx.config.saveTemps)
+  if (!ctx.config.saveTempsArgs.empty())
     checkError(c.addSaveTemps(std::string(ctx.config.outputFile) + ".",
-                              /*UseInputModulePath*/ true));
+                              /*UseInputModulePath*/ true,
+                              ctx.config.saveTempsArgs));
   return c;
 }
 
@@ -115,7 +110,16 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
   // Initialize ltoObj.
   lto::ThinBackend backend;
-  if (ctx.config.thinLTOIndexOnly) {
+  if (!ctx.config.dtltoDistributor.empty()) {
+    backend = lto::createOutOfProcessThinBackend(
+        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
+        /*OnWrite=*/nullptr,
+        /*ShouldEmitIndexFiles=*/false,
+        /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
+        ctx.config.dtltoDistributor, ctx.config.dtltoDistributorArgs,
+        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerArgs,
+        !ctx.config.saveTempsArgs.empty());
+  } else if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
         llvm::hardware_concurrency(ctx.config.thinLTOJobs),
@@ -255,10 +259,10 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       sys::path::remove_dots(path, true);
       ltoObjName = saver().save(path.str());
     }
-    if (ctx.config.saveTemps || emitASM)
+    if (llvm::is_contained(ctx.config.saveTempsArgs, "prelink") || emitASM)
       saveBuffer(buf[i].second, ltoObjName);
     if (!emitASM)
-      ret.push_back(make<ObjFile>(ctx, MemoryBufferRef(objBuf, ltoObjName)));
+      ret.push_back(ObjFile::create(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
 
   return ret;

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK: r{{[0-9]+}} = ##673059850
 

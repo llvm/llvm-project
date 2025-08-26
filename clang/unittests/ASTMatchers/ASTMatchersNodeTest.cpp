@@ -189,6 +189,21 @@ TEST(ASTMatchersTestCUDA, HasAttrCUDA) {
                                   hasAttr(clang::attr::CUDAGlobal)));
 }
 
+TEST_P(ASTMatchersTest, ExportDecl) {
+  if (!GetParam().isCXX20OrLater()) {
+    return;
+  }
+  const std::string moduleHeader = "module;export module ast_matcher_test;";
+  EXPECT_TRUE(matches(moduleHeader + "export void foo();",
+                      exportDecl(has(functionDecl()))));
+  EXPECT_TRUE(matches(moduleHeader + "export { void foo(); int v; }",
+                      exportDecl(has(functionDecl()))));
+  EXPECT_TRUE(matches(moduleHeader + "export { void foo(); int v; }",
+                      exportDecl(has(varDecl()))));
+  EXPECT_TRUE(matches(moduleHeader + "export namespace aa { void foo(); }",
+                      exportDecl(has(namespaceDecl()))));
+}
+
 TEST_P(ASTMatchersTest, ValueDecl) {
   if (!GetParam().isCXX()) {
     // FIXME: Fix this test in non-C++ language modes.
@@ -541,6 +556,21 @@ TEST_P(ASTMatchersTest, DeclRefExpr) {
                          Reference));
 }
 
+TEST_P(ASTMatchersTest, DependentScopeDeclRefExpr) {
+  if (!GetParam().isCXX() || GetParam().hasDelayedTemplateParsing()) {
+    // FIXME: Fix this test to work with delayed template parsing.
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
+                      dependentScopeDeclRefExpr()));
+
+  EXPECT_TRUE(
+      matches("template <typename T> struct S { static T Foo; };"
+              "template <typename T> void declToImport() { (void)S<T>::Foo; }",
+              dependentScopeDeclRefExpr()));
+}
+
 TEST_P(ASTMatchersTest, CXXMemberCallExpr) {
   if (!GetParam().isCXX()) {
     return;
@@ -614,10 +644,8 @@ TEST_P(ASTMatchersTest, MemberExpr_MatchesVariable) {
   EXPECT_TRUE(matches("template <class T>"
                       "class X : T { void f() { this->T::v; } };",
                       cxxDependentScopeMemberExpr()));
-  // FIXME: Add a matcher for DependentScopeDeclRefExpr.
-  EXPECT_TRUE(
-      notMatches("template <class T> class X : T { void f() { T::v; } };",
-                 cxxDependentScopeMemberExpr()));
+  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
+                      dependentScopeDeclRefExpr()));
   EXPECT_TRUE(matches("template <class T> void x() { T t; t.v; }",
                       cxxDependentScopeMemberExpr()));
 }
@@ -989,6 +1017,67 @@ TEST_P(ASTMatchersTest, FloatLiteral) {
       notMatches("double i = 5.0;", floatLiteral(equals(llvm::APFloat(6.0)))));
 }
 
+TEST_P(ASTMatchersTest, FixedPointLiterals) {
+  StatementMatcher HasFixedPointLiteral = fixedPointLiteral();
+  EXPECT_TRUE(matchesWithFixedpoint("_Fract i = 0.25r;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25hr;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25uhr;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25ur;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25lr;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25ulr;", HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Accum i = 1.25k;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25hk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25uhk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25uk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25lk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25ulk;", HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Accum decexp1 = 1.575e1k;",
+                                    HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum hex = 0x1.25fp2k;", HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Sat long _Fract i = 0.25r;",
+                                    HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Sat short _Accum i = 256.0k;",
+                                    HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint(
+      "_Accum i = 256.0k;",
+      fixedPointLiteral(equals(llvm::APInt(32, 0x800000, true)))));
+  EXPECT_TRUE(matchesWithFixedpoint(
+      "_Fract i = 0.25ulr;",
+      fixedPointLiteral(equals(llvm::APInt(32, 0x40000000, false)))));
+  EXPECT_TRUE(matchesWithFixedpoint(
+      "_Fract i = 0.5hr;",
+      fixedPointLiteral(equals(llvm::APInt(8, 0x40, true)))));
+
+  EXPECT_TRUE(
+      notMatchesWithFixedpoint("short _Accum i = 2u;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      notMatchesWithFixedpoint("short _Accum i = 2;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      notMatchesWithFixedpoint("_Accum i = 1.25;", HasFixedPointLiteral));
+  EXPECT_TRUE(notMatchesWithFixedpoint("_Accum i = (double)(1.25 *  4.5i);",
+                                       HasFixedPointLiteral));
+  EXPECT_TRUE(notMatchesWithFixedpoint(
+      "_Accum i = 256.0k;",
+      fixedPointLiteral(equals(llvm::APInt(32, 0x800001, true)))));
+  EXPECT_TRUE(notMatchesWithFixedpoint(
+      "_Fract i = 0.25ulr;",
+      fixedPointLiteral(equals(llvm::APInt(32, 0x40000001, false)))));
+  EXPECT_TRUE(notMatchesWithFixedpoint(
+      "_Fract i = 0.5hr;",
+      fixedPointLiteral(equals(llvm::APInt(8, 0x41, true)))));
+}
+
 TEST_P(ASTMatchersTest, CXXNullPtrLiteralExpr) {
   if (!GetParam().isCXX11OrLater()) {
     return;
@@ -1092,6 +1181,39 @@ TEST_P(ASTMatchersTest, PredefinedExpr) {
 
 TEST_P(ASTMatchersTest, AsmStatement) {
   EXPECT_TRUE(matches("void foo() { __asm(\"mov al, 2\"); }", asmStmt()));
+}
+
+TEST_P(ASTMatchersTest, HasConditionVariableStatement) {
+  if (!GetParam().isCXX()) {
+    // FIXME: Add a test for `hasConditionVariableStatement()` that does not
+    // depend on C++.
+    return;
+  }
+
+  StatementMatcher IfCondition =
+      ifStmt(hasConditionVariableStatement(declStmt()));
+
+  EXPECT_TRUE(matches("void x() { if (int* a = 0) {} }", IfCondition));
+  EXPECT_TRUE(notMatches("void x() { if (true) {} }", IfCondition));
+  EXPECT_TRUE(notMatches("void x() { int x; if ((x = 42)) {} }", IfCondition));
+
+  StatementMatcher SwitchCondition =
+      switchStmt(hasConditionVariableStatement(declStmt()));
+
+  EXPECT_TRUE(matches("void x() { switch (int a = 0) {} }", SwitchCondition));
+  if (GetParam().isCXX17OrLater()) {
+    EXPECT_TRUE(
+        notMatches("void x() { switch (int a = 0; a) {} }", SwitchCondition));
+  }
+
+  StatementMatcher ForCondition =
+      forStmt(hasConditionVariableStatement(declStmt()));
+
+  EXPECT_TRUE(matches("void x() { for (; int a = 0; ) {} }", ForCondition));
+  EXPECT_TRUE(notMatches("void x() { for (int a = 0; ; ) {} }", ForCondition));
+
+  EXPECT_TRUE(matches("void x() { while (int a = 0) {} }",
+                      whileStmt(hasConditionVariableStatement(declStmt()))));
 }
 
 TEST_P(ASTMatchersTest, HasCondition) {
@@ -1849,8 +1971,7 @@ TEST_P(ASTMatchersTest, PointerType_MatchesPointersToConstTypes) {
 
 TEST_P(ASTMatchersTest, TypedefType) {
   EXPECT_TRUE(matches("typedef int X; X a;",
-                      varDecl(hasName("a"), hasType(elaboratedType(
-                                                namesType(typedefType()))))));
+                      varDecl(hasName("a"), hasType(typedefType()))));
 }
 
 TEST_P(ASTMatchersTest, MacroQualifiedType) {
@@ -1884,6 +2005,35 @@ TEST_P(ASTMatchersTest, DeducedTemplateSpecializationType) {
               deducedTemplateSpecializationType()));
 }
 
+TEST_P(ASTMatchersTest, DependentNameType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      R"(
+        template <typename T> struct declToImport {
+          typedef typename T::type dependent_name;
+        };
+      )",
+      dependentNameType()));
+}
+
+TEST_P(ASTMatchersTest, DependentTemplateSpecializationType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      R"(
+        template<typename T> struct A;
+        template<typename T> struct declToImport {
+          typename A<T>::template B<T> a;
+        };
+      )",
+      dependentTemplateSpecializationType()));
+}
+
 TEST_P(ASTMatchersTest, RecordType) {
   EXPECT_TRUE(matches("struct S {}; struct S s;",
                       recordType(hasDeclaration(recordDecl(hasName("S"))))));
@@ -1898,22 +2048,6 @@ TEST_P(ASTMatchersTest, RecordType_CXX) {
   EXPECT_TRUE(matches("class C {}; C c;", recordType()));
   EXPECT_TRUE(matches("struct S {}; S s;",
                       recordType(hasDeclaration(recordDecl(hasName("S"))))));
-}
-
-TEST_P(ASTMatchersTest, ElaboratedType) {
-  if (!GetParam().isCXX()) {
-    // FIXME: Add a test for `elaboratedType()` that does not depend on C++.
-    return;
-  }
-  EXPECT_TRUE(matches("namespace N {"
-                      "  namespace M {"
-                      "    class D {};"
-                      "  }"
-                      "}"
-                      "N::M::D d;",
-                      elaboratedType()));
-  EXPECT_TRUE(matches("class C {} c;", elaboratedType()));
-  EXPECT_TRUE(matches("class C {}; C c;", elaboratedType()));
 }
 
 TEST_P(ASTMatchersTest, SubstTemplateTypeParmType) {
@@ -2015,16 +2149,16 @@ TEST_P(ASTMatchersTest,
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(matches(
-      "struct A { struct B { struct C {}; }; }; A::B::C c;",
-      nestedNameSpecifier(hasPrefix(specifiesType(asString("struct A"))))));
+  EXPECT_TRUE(
+      matches("struct A { struct B { struct C {}; }; }; A::B::C c;",
+              nestedNameSpecifier(hasPrefix(specifiesType(asString("A"))))));
   EXPECT_TRUE(matches("struct A { struct B { struct C {}; }; }; A::B::C c;",
-                      nestedNameSpecifierLoc(hasPrefix(specifiesTypeLoc(
-                          loc(qualType(asString("struct A"))))))));
+                      nestedNameSpecifierLoc(hasPrefix(
+                          specifiesTypeLoc(loc(qualType(asString("A"))))))));
   EXPECT_TRUE(matches(
       "namespace N { struct A { struct B { struct C {}; }; }; } N::A::B::C c;",
-      nestedNameSpecifierLoc(hasPrefix(
-          specifiesTypeLoc(loc(qualType(asString("struct N::A"))))))));
+      nestedNameSpecifierLoc(
+          hasPrefix(specifiesTypeLoc(loc(qualType(asString("N::A"))))))));
 }
 
 template <typename T>
@@ -2220,8 +2354,7 @@ TEST_P(ASTMatchersTest,
   }
   EXPECT_TRUE(matches(
       "template <typename T> class C {}; C<char> var;",
-      varDecl(hasName("var"), hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
-                                  templateSpecializationTypeLoc()))))));
+      varDecl(hasName("var"), hasTypeLoc(templateSpecializationTypeLoc()))));
 }
 
 TEST_P(
@@ -2233,58 +2366,6 @@ TEST_P(
   EXPECT_TRUE(notMatches(
       "class C {}; C var;",
       varDecl(hasName("var"), hasTypeLoc(templateSpecializationTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToElaboratedObjectDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("class C {}; class C c;",
-                      varDecl(hasName("c"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToNamespaceElaboratedObjectDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("namespace N { class D {}; } N::D d;",
-                      varDecl(hasName("d"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToElaboratedStructDeclaration) {
-  EXPECT_TRUE(matches("struct s {}; struct s ss;",
-                      varDecl(hasName("ss"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToBareElaboratedObjectDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("class C {}; C c;",
-                      varDecl(hasName("c"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(
-    ASTMatchersTest,
-    ElaboratedTypeLocTest_DoesNotBindToNamespaceNonElaboratedObjectDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("namespace N { class D {}; } using N::D; D d;",
-                      varDecl(hasName("d"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToBareElaboratedStructDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("struct s {}; s ss;",
-                      varDecl(hasName("ss"), hasTypeLoc(elaboratedTypeLoc()))));
 }
 
 TEST_P(ASTMatchersTest, LambdaCaptureTest) {

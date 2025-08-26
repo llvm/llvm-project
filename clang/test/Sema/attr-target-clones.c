@@ -122,3 +122,6 @@ void good_overload5(int) __attribute__((target_clones("mmx", "sse4.2", "default"
 void good_isa_level(int) __attribute__((target_clones("default", "arch=x86-64", "arch=x86-64-v2", "arch=x86-64-v3", "arch=x86-64-v4")));
 // expected-warning@+1 {{unsupported CPU 'x86-64-v5' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void bad_isa_level(int) __attribute__((target_clones("default", "arch=x86-64-v5")));
+
+// expected-warning@+1 {{unsupported 'sha' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
+void bad_feature(void) __attribute__((target_clones("default", "sse4.2", "sha")));

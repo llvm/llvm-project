@@ -29,7 +29,7 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/threads/thread.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 #include "test/IntegrationTest/test.h"
 
@@ -332,7 +332,7 @@ static void run_failure_tests() {
 }
 
 TEST_MAIN() {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   run_success_tests();
   run_failure_tests();
   return 0;

@@ -2,19 +2,19 @@
 
 ! RUN: split-file %s %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/one_dim_array.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - \
 ! RUN:   %t/one_dim_array.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/two_dim_array.f90 2>&1 | FileCheck %s --check-prefix=TWO_DIM
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - \
 ! RUN:   %t/two_dim_array.f90 2>&1 | FileCheck %s --check-prefix=TWO_DIM
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/one_dim_array_default_lb.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM_DEFAULT_LB
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - \
 ! RUN:   %t/one_dim_array_default_lb.f90 2>&1 | FileCheck %s --check-prefix=ONE_DIM_DEFAULT_LB
 
 !--- one_dim_array.f90
@@ -29,20 +29,28 @@ subroutine delayed_privatization_private_1d(var1, l1, u1)
 end subroutine
 
 ! ONE_DIM-LABEL: omp.private {type = firstprivate}
-! ONE_DIM-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.box<!fir.array<\?xi32>>]] alloc {
+! ONE_DIM-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.array<\?xi32>>]] init {
 
-! ONE_DIM-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
+! ONE_DIM-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.array<\?xi32>>>]], %[[PRIV_BOX_ALLOC:.*]]: [[TYPE]]):
 
-! ONE_DIM:   %[[C0:.*]] = arith.constant 0 : index
-! ONE_DIM-NEXT:   %[[DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG]], %[[C0]] : ([[TYPE]], index) -> (index, index, index)
-! ONE_DIM:   %[[PRIV_ALLOCA:.*]] = fir.alloca !fir.array<{{\?}}xi32>
-! ONE_DIM-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[DIMS]]#0, %[[DIMS]]#1 : (index, index) -> !fir.shapeshift<1>
-! ONE_DIM-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOCA]](%[[SHAPE_SHIFT]]) {uniq_name = "_QFdelayed_privatization_private_1dEvar1"}
-! ONE_DIM-NEXT:  omp.yield(%[[PRIV_DECL]]#0 : [[TYPE]])
+! ONE_DIM-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]]
+! ONE_DIM-NEXT:   %[[C0:.*]] = arith.constant 0 : index
+! ONE_DIM-NEXT:   %[[DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]]
+! ONE_DIM-NEXT:   %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1
+! ONE_DIM-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[DIMS]]#1
+! ONE_DIM-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
+! ONE_DIM-NEXT:   %[[TRUE:.*]] = arith.constant true
+! ONE_DIM-NEXT:   %[[C0_0:.*]] = arith.constant 0
+! ONE_DIM-NEXT:   %[[DIMS2:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_0]]
+! ONE_DIM-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[DIMS2]]#0, %[[DIMS2]]#1
+! ONE_DIM-NEXT:   %[[REBOX:.*]] = fir.rebox %[[DECL]]#0(%[[SHAPE_SHIFT]])
+! ONE_DIM-NEXT:   fir.store %[[REBOX]] to %[[PRIV_BOX_ALLOC]]
+! ONE_DIM-NEXT:   omp.yield(%[[PRIV_BOX_ALLOC]] : [[TYPE]])
 
 ! ONE_DIM-NEXT: } copy {
 ! ONE_DIM-NEXT: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
-! ONE_DIM-NEXT:  hlfir.assign %[[PRIV_ORIG_ARG]] to %[[PRIV_PRIV_ARG]]
+! ONE_DIM-NEXT:  %[[PRIV_ORIG_ARG_VAL:.*]] = fir.load %[[PRIV_ORIG_ARG:.*]] : [[TYPE]]
+! ONE_DIM-NEXT:  hlfir.assign %[[PRIV_ORIG_ARG_VAL]] to %[[PRIV_PRIV_ARG]]
 ! ONE_DIM-NEXT:   omp.yield(%[[PRIV_PRIV_ARG]] : [[TYPE]])
 ! ONE_DIM-NEXT: }
 
@@ -58,24 +66,31 @@ subroutine delayed_privatization_private_2d(var1, l1, u1, l2, u2)
 end subroutine
 
 ! TWO_DIM-LABEL: omp.private {type = firstprivate}
-! TWO_DIM-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.box<!fir.array<\?x\?xi32>>]] alloc {
+! TWO_DIM-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.array<\?x\?xi32>>]] init {
 
-! TWO_DIM-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-! TWO_DIM:        %[[C0:.*]] = arith.constant 0 : index
-! TWO_DIM-NEXT:   %[[DIMS0:.*]]:3 = fir.box_dims %[[PRIV_ARG]], %[[C0]] : ([[TYPE]], index) -> (index, index, index)
-
+! TWO_DIM-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.array<\?x\?xi32>>>]], %[[PRIV_BOX_ALLOC:.*]]: [[TYPE]]):
+! TWO_DIM-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]]
+! TWO_DIM-NEXT:   %[[C0:.*]] = arith.constant 0 : index
+! TWO_DIM-NEXT:   %[[DIMS_0:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]]
 ! TWO_DIM-NEXT:   %[[C1:.*]] = arith.constant 1 : index
-! TWO_DIM-NEXT:   %[[DIMS1:.*]]:3 = fir.box_dims %[[PRIV_ARG]], %[[C1]] : ([[TYPE]], index) -> (index, index, index)
-
-! TWO_DIM-NEXT:   %[[PRIV_ALLOCA:.*]] = fir.alloca !fir.array<{{\?}}x{{\?}}xi32>, %[[DIMS0]]#1, %[[DIMS1]]#1 {bindc_name = "var1", pinned, uniq_name = "_QFdelayed_privatization_private_2dEvar1"}
-! TWO_DIM-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[DIMS0]]#0, %[[DIMS0]]#1, %[[DIMS1]]#0, %[[DIMS1]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
-
-! TWO_DIM-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOCA]](%[[SHAPE_SHIFT]]) {uniq_name = "_QFdelayed_privatization_private_2dEvar1"}
-! TWO_DIM-NEXT:  omp.yield(%[[PRIV_DECL]]#0 : [[TYPE]])
+! TWO_DIM-NEXT:   %[[DIMS_1:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C1]]
+! TWO_DIM-NEXT:   %[[SHAPE:.*]] = fir.shape %[[DIMS_0]]#1, %[[DIMS_1]]#1
+! TWO_DIM-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<?x?xi32>, %[[DIMS_0]]#1, %[[DIMS_1]]#1
+! TWO_DIM-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
+! TWO_DIM-NEXT:   %[[TRUE:.*]] = arith.constant true
+! TWO_DIM-NEXT:   %[[C0_0:.*]] = arith.constant 0
+! TWO_DIM-NEXT:   %[[DIMS2_0:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_0]]
+! TWO_DIM-NEXT:   %[[C1_0:.*]] = arith.constant 1
+! TWO_DIM-NEXT:   %[[DIMS2_1:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C1_0]]
+! TWO_DIM-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[DIMS2_0]]#0, %[[DIMS2_0]]#1, %[[DIMS2_1]]#0, %[[DIMS2_1]]#1
+! TWO_DIM-NEXT:   %[[REBOX:.*]] = fir.rebox %[[DECL]]#0(%[[SHAPE_SHIFT]])
+! TWO_DIM-NEXT:   fir.store %[[REBOX]] to %[[PRIV_BOX_ALLOC]]
+! TWO_DIM-NEXT:   omp.yield(%[[PRIV_BOX_ALLOC]] : [[TYPE]])
 
 ! TWO_DIM-NEXT: } copy {
 ! TWO_DIM-NEXT: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
-! TWO_DIM-NEXT:  hlfir.assign %[[PRIV_ORIG_ARG]] to %[[PRIV_PRIV_ARG]]
+! TWO_DIM-NEXT:  %[[PRIV_ORIG_ARG_VAL:.*]] = fir.load %[[PRIV_ORIG_ARG:.*]] : [[TYPE]]
+! TWO_DIM-NEXT:  hlfir.assign %[[PRIV_ORIG_ARG_VAL]] to %[[PRIV_PRIV_ARG]]
 ! TWO_DIM-NEXT:   omp.yield(%[[PRIV_PRIV_ARG]] : [[TYPE]])
 ! TWO_DIM-NEXT: }
 
@@ -90,11 +105,17 @@ program main
 end program
 
 ! ONE_DIM_DEFAULT_LB-LABEL: omp.private {type = private}
-! ONE_DIM_DEFAULT_LB-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.ref<!fir.array<10xi32>>]] alloc {
+! ONE_DIM_DEFAULT_LB-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.array<10xi32>>]] init {
 
-! ONE_DIM_DEFAULT_LB-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-
-! ONE_DIM_DEFAULT_LB:   %[[C10:.*]] = arith.constant 10 : index
-! ONE_DIM_DEFAULT_LB:   %[[PRIV_ALLOCA:.*]] = fir.alloca !fir.array<10xi32>
-! ONE_DIM_DEFAULT_LB:   %[[SHAPE:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
-! ONE_DIM_DEFAULT_LB:   hlfir.declare %[[PRIV_ALLOCA]](%[[SHAPE]])
+! ONE_DIM_DEFAULT_LB-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.array<10xi32>>>]], %[[PRIV_BOX_ALLOC:.*]]: [[TYPE]]):
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[C10:.*]] = arith.constant 10 : index
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[SHAPE:.*]] = fir.shape %[[C10]]
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<10xi32>
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[TRUE:.*]] = arith.constant true
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[ONE:.*]] = arith.constant 1 : index
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[TEN:.*]] = arith.constant 10 : index
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[ONE]], %[[TEN]]
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[EMBOX:.*]] = fir.embox %[[DECL]]#0(%[[SHAPE_SHIFT]])
+! ONE_DIM_DEFAULT_LB-NEXT:   fir.store %[[EMBOX]] to %[[PRIV_BOX_ALLOC]]
+! ONE_DIM_DEFAULT_LB-NEXT:   omp.yield(%[[PRIV_BOX_ALLOC]] : [[TYPE]])

@@ -10,7 +10,6 @@
 #define _LIBCPP___CSTDDEF_NULLPTR_T_H
 
 #include <__config>
-#include <stddef.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,7 +17,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::nullptr_t;
+using nullptr_t = decltype(nullptr);
 
 _LIBCPP_END_NAMESPACE_STD
 

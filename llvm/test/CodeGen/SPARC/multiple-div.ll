@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=sparc | FileCheck %s
-; RUN: llc -O0 < %s -march=sparc | FileCheck %s
+; RUN: llc < %s -mtriple=sparc | FileCheck %s
+; RUN: llc -O0 < %s -mtriple=sparc | FileCheck %s
 
 ;; llc -O0 used to try to spill Y to the stack, which isn't possible,
 ;; and then crashed. Additionally, in -O1, it would omit the second

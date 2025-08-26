@@ -156,7 +156,7 @@ std::string LVOperation::getOperandsDWARFInfo() {
     Stream << "push_object_address";
     break;
   case dwarf::DW_OP_form_tls_address:
-    Stream << "form_tls_address " << hexString(Operands[0]);
+    Stream << "form_tls_address";
     break;
   case dwarf::DW_OP_call_frame_cfa:
     Stream << "call_frame_cfa";
@@ -308,7 +308,7 @@ std::string LVOperation::getOperandsDWARFInfo() {
     PrintRegisterInfo(dwarf::DW_OP_reg0);
     break;
   case dwarf::DW_OP_GNU_push_tls_address:
-    Stream << "gnu_push_tls_address " << hexString(Operands[0]);
+    Stream << "gnu_push_tls_address";
     break;
   case dwarf::DW_OP_GNU_addr_index:
     Stream << "gnu_addr_index " << unsigned(Operands[0]);

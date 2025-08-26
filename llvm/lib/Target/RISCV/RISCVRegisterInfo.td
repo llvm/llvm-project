@@ -45,6 +45,13 @@ class RISCVReg64<RISCVReg32 subreg>
   let SubRegIndices = [sub_32];
 }
 
+def sub_64 : SubRegIndex<64>;
+class RISCVReg128<RISCVReg64 subreg>
+    : RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                          subreg.AltNames> {
+  let SubRegIndices = [sub_64];
+}
+
 let FallbackRegAltNameIndex = NoRegAltName in
 def ABIRegAltName : RegAltNameIndex;
 
@@ -74,7 +81,10 @@ def sub_gpr_odd  : SubRegIndex<32, 32> {
 }
 } // Namespace = "RISCV"
 
-// Integer registers
+//===----------------------------------------------------------------------===//
+// General Purpose Registers (aka Integer Registers)
+//===----------------------------------------------------------------------===//
+
 // CostPerUse is set higher for registers that may not be compressible as they
 // are not part of GPRC, the most restrictive register class used by the
 // compressed instruction set. This will influence the greedy register
@@ -205,6 +215,8 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 def XLenVT : ValueTypeByHwMode<[RV32, RV64],
                                [i32,  i64]>;
+defvar XLenPairVT = untyped;
+
 // Allow f64 in GPR for ZDINX on RV64.
 def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
@@ -220,15 +232,13 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
   int VLMul = 1;
   int NF = 1;
 
-  let Size = !if(IsVRegClass, !mul(VLMul, NF, 64), 0);
-
   let TSFlags{0} = IsVRegClass;
-  let TSFlags{3-1} = !logtwo(VLMul);
-  let TSFlags{6-4} = !sub(NF, 1);
+  let TSFlags{2-1} = !logtwo(VLMul);
+  let TSFlags{5-3} = !sub(NF, 1);
 }
 
 class GPRRegisterClass<dag regList>
-    : RISCVRegisterClass<[XLenVT, XLenFVT, i32], 32, regList> {
+    : RISCVRegisterClass<[XLenVT, XLenFVT, i32, i16], 32, regList> {
   let RegInfos = XLenRI;
 }
 
@@ -242,12 +252,31 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 0, 4))>;
 
 def GPRX0 : GPRRegisterClass<(add X0)>;
-def GPRX1 : GPRRegisterClass<(add X1)>;
-def GPRX5 : GPRRegisterClass<(add X5)>;
 
-def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)>;
+def GPRX1 : GPRRegisterClass<(add X1)> {
+  let DiagnosticType = "InvalidRegClassGPRX1";
+  let DiagnosticString = "register must be ra (x1)";
+}
 
-def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)>;
+def GPRX5 : GPRRegisterClass<(add X5)> {
+  let DiagnosticType = "InvalidRegClassGPRX5";
+  let DiagnosticString = "register must be t0 (x5)";
+}
+
+def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
+  let DiagnosticType = "InvalidRegClassGPRNoX0";
+  let DiagnosticString = "register must be a GPR excluding zero (x0)";
+}
+
+def GPRNoX2 : GPRRegisterClass<(sub GPR, X2)> {
+  let DiagnosticType = "InvalidRegClassGPRNoX2";
+  let DiagnosticString = "register must be a GPR excluding sp (x2)";
+}
+
+def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)> {
+  let DiagnosticType = "InvalidRegClassGPRNoX0X2";
+  let DiagnosticString = "register must be a GPR excluding zero (x0) and sp (x2)";
+}
 
 def GPRX7 : GPRRegisterClass<(add X7)>;
 
@@ -271,15 +300,87 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
                                   (sequence "X%u", 28, 31))>;
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
-def SP : GPRRegisterClass<(add X2)>;
+def SP : GPRRegisterClass<(add X2)> {
+  let DiagnosticType = "InvalidRegClassSP";
+  let DiagnosticString = "register must be sp (x2)";
+}
 
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
                                  (sequence "X%u", 18, 23))>;
 
-def GPRX1X5 :  GPRRegisterClass<(add X1, X5)>;
+def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
+  let DiagnosticType = "InvalidRegClassGPRX1X5";
+  let DiagnosticString = "register must be ra or t0 (x1 or x5)";
+}
 
-// Floating point registers
+def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {
+  let DiagnosticType = "InvalidRegClassGPRX31";
+  let DiagnosticString = "register must be a GPR excluding t6 (x31)";
+}
+
+//===----------------------------------------------------------------------===//
+// Even-Odd GPR Pairs
+//===----------------------------------------------------------------------===//
+
+def XLenPairRI : RegInfoByHwMode<
+      [RV32,                RV64],
+      [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
+
+// Dummy zero register for use in the register pair containing X0 (as X1 is
+// not read to or written when the X0 register pair is used).
+def DUMMY_REG_PAIR_WITH_X0 : RISCVReg<0, "0">;
+
+// Must add DUMMY_REG_PAIR_WITH_X0 to a separate register class to prevent the
+// register's existence from changing codegen (due to the regPressureSetLimit
+// for the GPR register class being altered).
+def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)>;
+
+let RegAltNameIndices = [ABIRegAltName] in {
+  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName,
+                                    [X0, DUMMY_REG_PAIR_WITH_X0],
+                                    X0.AltNames> {
+    let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
+    let CoveredBySubRegs = 1;
+  }
+  foreach I = 1-15 in {
+    defvar Index = !shl(I, 1);
+    defvar IndexP1 = !add(Index, 1);
+    defvar Reg = !cast<Register>("X"#Index);
+    defvar RegP1 = !cast<Register>("X"#IndexP1);
+    def "X" # Index #"_X" # IndexP1 : RISCVRegWithSubRegs<Index,
+                                                          Reg.AsmName,
+                                                          [Reg, RegP1],
+                                                          Reg.AltNames> {
+      let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
+      let CoveredBySubRegs = 1;
+    }
+  }
+}
+
+let RegInfos = XLenPairRI, CopyCost = 2,
+    DecoderMethod = "DecodeGPRPairRegisterClass" in {
+def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
+    X10_X11, X12_X13, X14_X15, X16_X17,
+    X6_X7,
+    X28_X29, X30_X31,
+    X8_X9,
+    X18_X19, X20_X21, X22_X23, X24_X25, X26_X27,
+    X0_Pair, X2_X3, X4_X5
+)>;
+
+def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
+} // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
+
+let RegInfos = XLenPairRI, CopyCost = 2 in
+def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
+  X10_X11, X12_X13, X14_X15, X8_X9
+)>;
+
+//===----------------------------------------------------------------------===//
+// Floating Point registers
+//===----------------------------------------------------------------------===//
+
 let RegAltNameIndices = [ABIRegAltName] in {
   def F0_H  : RISCVReg16<0, "f0", ["ft0"]>, DwarfRegNum<[32]>;
   def F1_H  : RISCVReg16<1, "f1", ["ft1"]>, DwarfRegNum<[33]>;
@@ -321,6 +422,11 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
   foreach Index = 0-31 in {
     def F#Index#_D : RISCVReg64<!cast<RISCVReg32>("F"#Index#"_F")>,
+      DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
+  }
+
+  foreach Index = 0-31 in {
+    def F#Index#_Q : RISCVReg128<!cast<RISCVReg64>("F"#Index#"_D")>,
       DwarfRegAlias<!cast<Register>("F"#Index#"_H")>;
   }
 }
@@ -373,8 +479,44 @@ def FPR64C : RISCVRegisterClass<[f64], 64, (add
   (sequence "F%u_D", 8, 9)
 )>;
 
+def FPR128 : RISCVRegisterClass<[f128], 128, (add
+    (sequence "F%u_Q", 15, 10),
+    (sequence "F%u_Q", 0, 7),
+    (sequence "F%u_Q", 16, 17),
+    (sequence "F%u_Q", 28, 31),
+    (sequence "F%u_Q", 8, 9),
+    (sequence "F%u_Q", 18, 27)
+)>;
+
+//===----------------------------------------------------------------------===//
+// GPR Classes for "H/F/D in X"
+//===----------------------------------------------------------------------===//
+
+// 16-bit GPR sub-register class used by Zhinx instructions.
+def GPRF16 : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 17),
+                                                (sequence "X%u_H", 5, 7),
+                                                (sequence "X%u_H", 28, 31),
+                                                (sequence "X%u_H", 8, 9),
+                                                (sequence "X%u_H", 18, 27),
+                                                (sequence "X%u_H", 0, 4))>;
+def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
+                                                 (sequence "X%u_H", 8, 9))>;
+def GPRF16NoX0 : RISCVRegisterClass<[f16], 16, (sub GPRF16, X0_H)>;
+
+def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
+                                                (sequence "X%u_W", 5, 7),
+                                                (sequence "X%u_W", 28, 31),
+                                                (sequence "X%u_W", 8, 9),
+                                                (sequence "X%u_W", 18, 27),
+                                                (sequence "X%u_W", 0, 4))>;
+def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
+                                                 (sequence "X%u_W", 8, 9))>;
+def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
+
+//===----------------------------------------------------------------------===//
 // Vector type mapping to LLVM types.
-//
+//===----------------------------------------------------------------------===//
+
 // The V vector extension requires that VLEN >= 128 and <= 65536.
 // Additionally, the only supported ELEN values are 32 and 64,
 // thus `vscale` can be defined as VLEN/64,
@@ -534,7 +676,10 @@ class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
         !foreach(i, IndexSet<start, nf, lmul, isV0>.R, "v" # i));
 }
 
+//===----------------------------------------------------------------------===//
 // Vector registers
+//===----------------------------------------------------------------------===//
+
 foreach Index = !range(0, 32, 1) in {
   def V#Index : RISCVReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]>;
 }
@@ -596,12 +741,18 @@ foreach m = [1, 2, 4] in {
   }
 }
 
-class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
+class VReg<list<ValueType> regTypes, dag regList, int Vlmul, int nf = 1>
     : RISCVRegisterClass<regTypes,
                          64, // The maximum supported ELEN is 64.
                          regList> {
   let IsVRegClass = 1;
   let VLMul = Vlmul;
+  let NF = nf;
+
+  let Size = !mul(VLMul, NF, 64);
+  let CopyCost = !mul(VLMul, NF);
+  // Prefer to allocate high LMUL registers first.
+  let AllocationPriority = !if(!gt(Vlmul, 1), Vlmul, 0);
 }
 
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
@@ -652,80 +803,6 @@ def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
 def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
-// 16-bit GPR sub-register class used by Zhinx instructions.
-def GPRF16 : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 17),
-                                                (sequence "X%u_H", 5, 7),
-                                                (sequence "X%u_H", 28, 31),
-                                                (sequence "X%u_H", 8, 9),
-                                                (sequence "X%u_H", 18, 27),
-                                                (sequence "X%u_H", 0, 4))>;
-def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
-                                                 (sequence "X%u_H", 8, 9))>;
-def GPRF16NoX0 : RISCVRegisterClass<[f16], 16, (sub GPRF16, X0_H)>;
-
-def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
-                                                (sequence "X%u_W", 5, 7),
-                                                (sequence "X%u_W", 28, 31),
-                                                (sequence "X%u_W", 8, 9),
-                                                (sequence "X%u_W", 18, 27),
-                                                (sequence "X%u_W", 0, 4))>;
-def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
-                                                 (sequence "X%u_W", 8, 9))>;
-def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
-
-def XLenPairRI : RegInfoByHwMode<
-      [RV32,                RV64],
-      [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
-
-// Dummy zero register for use in the register pair containing X0 (as X1 is
-// not read to or written when the X0 register pair is used).
-def DUMMY_REG_PAIR_WITH_X0 : RISCVReg<0, "0">;
-
-// Must add DUMMY_REG_PAIR_WITH_X0 to a separate register class to prevent the
-// register's existence from changing codegen (due to the regPressureSetLimit
-// for the GPR register class being altered).
-def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)>;
-
-let RegAltNameIndices = [ABIRegAltName] in {
-  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName,
-                                    [X0, DUMMY_REG_PAIR_WITH_X0],
-                                    X0.AltNames> {
-    let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
-    let CoveredBySubRegs = 1;
-  }
-  foreach I = 1-15 in {
-    defvar Index = !shl(I, 1);
-    defvar IndexP1 = !add(Index, 1);
-    defvar Reg = !cast<Register>("X"#Index);
-    defvar RegP1 = !cast<Register>("X"#IndexP1);
-    def "X" # Index #"_X" # IndexP1 : RISCVRegWithSubRegs<Index,
-                                                          Reg.AsmName,
-                                                          [Reg, RegP1],
-                                                          Reg.AltNames> {
-      let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
-      let CoveredBySubRegs = 1;
-    }
-  }
-}
-
-let RegInfos = XLenPairRI,
-    DecoderMethod = "DecodeGPRPairRegisterClass" in {
-def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
-    X10_X11, X12_X13, X14_X15, X16_X17,
-    X6_X7,
-    X28_X29, X30_X31,
-    X8_X9,
-    X18_X19, X20_X21, X22_X23, X24_X25, X26_X27,
-    X0_Pair, X2_X3, X4_X5
-)>;
-
-def GPRPairC : RISCVRegisterClass<[XLenPairFVT], 64, (add
-  X10_X11, X12_X13, X14_X15, X8_X9
-)>;
-
-def GPRPairNoX0 : RISCVRegisterClass<[XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
-} // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
-
 // The register class is added for inline assembly for vector mask types.
 def VM : VReg<VMaskVTs, (add VR), 1>;
 
@@ -756,23 +833,25 @@ class VTupRegList<int LMUL, int NF> {
 
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
-    let NF = nf in {
-      def "VRN" # nf # "M" # m # "NoV0"
-        : VReg<VTupRegList<m, nf>.L,
-               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
-               m>;
-      def "VRN" # nf # "M" # m
-        : VReg<VTupRegList<m, nf>.L,
-               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
-                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
-               m>;
-    }
+    def "VRN" # nf # "M" # m # "NoV0"
+      : VReg<VTupRegList<m, nf>.L,
+             (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
+             m, nf>;
+    def "VRN" # nf # "M" # m
+      : VReg<VTupRegList<m, nf>.L,
+             (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
+                  !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
+             m, nf>;
   }
 }
 
+//===----------------------------------------------------------------------===//
 // Special registers
+//===----------------------------------------------------------------------===//
+
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
+def FCSR   : RISCVReg<0, "fcsr">;
 
 // Shadow Stack register
 def SSP    : RISCVReg<0, "ssp">;
@@ -782,4 +861,17 @@ def SF_VCIX_STATE : RISCVReg<0, "sf.vcix_state">;
 def : RISCVRegisterClass<[XLenVT], 32, (add SF_VCIX_STATE)> {
   let RegInfos = XLenRI;
   let isAllocatable = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// XSfmmbase tiles
+//===----------------------------------------------------------------------===//
+foreach Index = 0-15 in
+  def T#Index : RISCVReg<Index, "mt"#Index, []>,
+                DwarfRegNum<[!add(Index, 3072)]>;
+
+let RegInfos = XLenRI in {
+  def TR   : RISCVRegisterClass<[untyped], 32, (add (sequence "T%u", 0, 15))>;
+  def TRM2 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 2))>;
+  def TRM4 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 4))>;
 }

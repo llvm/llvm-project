@@ -1,8 +1,10 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf \
 // RUN:   -transform-interpreter \
 // RUN:   -test-transform-dialect-erase-schedule \
-// RUN:   -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN:   -convert-vector-to-llvm -convert-func-to-llvm \
+// RUN:   -convert-arith-to-llvm -convert-cf-to-llvm \
+// RUN:   -convert-ub-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 

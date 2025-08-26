@@ -28,7 +28,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -153,7 +153,7 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
     AsmPrinterVariant = MMI->getTarget().unqualifiedInlineAsmVariant();
 
   // FIXME: Should this happen for `asm inteldialect` as well?
-  if (!InputIsIntelDialect && MAI->getEmitGNUAsmStartIndentationMarker())
+  if (!InputIsIntelDialect && !MAI->isHLASM())
     OS << '\t';
 
   while (*LastEmitted) {
@@ -312,10 +312,10 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
           }
         }
         if (Error) {
-          std::string msg;
-          raw_string_ostream Msg(msg);
-          Msg << "invalid operand in inline asm: '" << AsmStr << "'";
-          MMI->getModule()->getContext().emitError(LocCookie, msg);
+          const Function &Fn = MI->getMF()->getFunction();
+          Fn.getContext().diagnose(DiagnosticInfoInlineAsm(
+              LocCookie,
+              "invalid operand in inline asm: '" + Twine(AsmStr) + "'"));
         }
       }
       break;
@@ -347,20 +347,11 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   // enabled, so we use emitRawComment.
   OutStreamer->emitRawComment(MAI->getInlineAsmStart());
 
-  // Get the !srcloc metadata node if we have it, and decode the loc cookie from
-  // it.
-  uint64_t LocCookie = 0;
-  const MDNode *LocMD = nullptr;
-  for (const MachineOperand &MO : llvm::reverse(MI->operands())) {
-    if (MO.isMetadata() && (LocMD = MO.getMetadata()) &&
-        LocMD->getNumOperands() != 0) {
-      if (const ConstantInt *CI =
-              mdconst::dyn_extract<ConstantInt>(LocMD->getOperand(0))) {
-        LocCookie = CI->getZExtValue();
-        break;
-      }
-    }
-  }
+  const MDNode *LocMD = MI->getLocCookieMD();
+  uint64_t LocCookie =
+      LocMD
+          ? mdconst::extract<ConstantInt>(LocMD->getOperand(0))->getZExtValue()
+          : 0;
 
   // Emit the inline asm to a temporary string so we can emit it through
   // EmitInlineAsm.
@@ -397,20 +388,23 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
       Msg += LS;
       Msg += TRI->getRegAsmName(RR);
     }
+
+    const Function &Fn = MF->getFunction();
     const char *Note =
         "Reserved registers on the clobber list may not be "
         "preserved across the asm statement, and clobbering them may "
         "lead to undefined behaviour.";
-    MMI->getModule()->getContext().diagnose(DiagnosticInfoInlineAsm(
-        LocCookie, Msg, DiagnosticSeverity::DS_Warning));
-    MMI->getModule()->getContext().diagnose(
+    LLVMContext &Ctx = Fn.getContext();
+    Ctx.diagnose(DiagnosticInfoInlineAsm(LocCookie, Msg,
+                                         DiagnosticSeverity::DS_Warning));
+    Ctx.diagnose(
         DiagnosticInfoInlineAsm(LocCookie, Note, DiagnosticSeverity::DS_Note));
 
     for (const Register RR : RestrRegs) {
       if (std::optional<std::string> reason =
               TRI->explainReservedReg(*MF, RR)) {
-        MMI->getModule()->getContext().diagnose(DiagnosticInfoInlineAsm(
-            LocCookie, *reason, DiagnosticSeverity::DS_Note));
+        Ctx.diagnose(DiagnosticInfoInlineAsm(LocCookie, *reason,
+                                             DiagnosticSeverity::DS_Note));
       }
     }
   }

@@ -58,7 +58,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -80,28 +80,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	b0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	b0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -113,8 +116,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	b0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	b0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	b0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -123,9 +126,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	b0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	b0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [1] Code Region - FPR16-bit
 
@@ -134,7 +137,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -156,28 +159,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	h0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	h0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -189,8 +195,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	h0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	h0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	h0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -199,9 +205,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	h0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	h0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [2] Code Region - FPR32-bit
 
@@ -210,7 +216,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -232,28 +238,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	s0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	s0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -265,8 +274,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	s0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	s0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	s0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -275,9 +284,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	s0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	s0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [3] Code Region - FPR64-bit
 
@@ -286,7 +295,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -308,28 +317,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	d0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	d0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -341,8 +353,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	d0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	d0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	d0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -351,9 +363,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	d0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	d0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [4] Code Region - FPR128-bit
 
@@ -362,7 +374,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -384,28 +396,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	q0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	q0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -417,8 +432,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	q0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	q0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	q0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -427,9 +442,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	q0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	q0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [5] Code Region - SIMD64-bit-b
 
@@ -438,7 +453,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -460,28 +475,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.8b }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.8b }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -493,8 +511,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.8b }, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -503,9 +521,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [6] Code Region - SIMD64-bit-h
 
@@ -514,7 +532,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -536,28 +554,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.4h }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.4h }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -569,8 +590,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.4h }, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -579,9 +600,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [7] Code Region - SIMD64-bit-s
 
@@ -590,7 +611,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -612,28 +633,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.2s }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.2s }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -645,8 +669,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.2s }, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -655,9 +679,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [8] Code Region - SIMD64-bit-d
 
@@ -666,7 +690,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -688,28 +712,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.1d }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.1d }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -721,8 +748,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.1d }, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -731,9 +758,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [9] Code Region - insr
 
@@ -742,7 +769,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      803
 # CHECK-NEXT: Total uOps:        300
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    0.37
 # CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 1.0
@@ -764,28 +791,31 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2]   - V2UnitL2
-# CHECK-NEXT: [3.0] - V2UnitL01
-# CHECK-NEXT: [3.1] - V2UnitL01
-# CHECK-NEXT: [4]   - V2UnitM0
-# CHECK-NEXT: [5]   - V2UnitM1
-# CHECK-NEXT: [6]   - V2UnitS0
-# CHECK-NEXT: [7]   - V2UnitS1
-# CHECK-NEXT: [8]   - V2UnitS2
-# CHECK-NEXT: [9]   - V2UnitS3
-# CHECK-NEXT: [10]  - V2UnitV0
-# CHECK-NEXT: [11]  - V2UnitV1
-# CHECK-NEXT: [12]  - V2UnitV2
-# CHECK-NEXT: [13]  - V2UnitV3
+# CHECK-NEXT: [2.0] - V2UnitFlg
+# CHECK-NEXT: [2.1] - V2UnitFlg
+# CHECK-NEXT: [2.2] - V2UnitFlg
+# CHECK-NEXT: [3]   - V2UnitL2
+# CHECK-NEXT: [4.0] - V2UnitL01
+# CHECK-NEXT: [4.1] - V2UnitL01
+# CHECK-NEXT: [5]   - V2UnitM0
+# CHECK-NEXT: [6]   - V2UnitM1
+# CHECK-NEXT: [7]   - V2UnitS0
+# CHECK-NEXT: [8]   - V2UnitS1
+# CHECK-NEXT: [9]   - V2UnitS2
+# CHECK-NEXT: [10]  - V2UnitS3
+# CHECK-NEXT: [11]  - V2UnitV0
+# CHECK-NEXT: [12]  - V2UnitV1
+# CHECK-NEXT: [13]  - V2UnitV2
+# CHECK-NEXT: [14]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     0.33   1.00   0.33   0.34
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     0.33   1.00   0.33   0.34
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     insr	z0.s, w0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33    -     0.33   0.34   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     insr	z0.s, w0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.33    -     0.33   0.34   add	z0.s, z0.s, z0.s
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          01234
@@ -795,10 +825,10 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0,1]     D======eeER    .    .    .    .   .   add	z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,0]     D========eeeeeeER   .    .    .   .   insr	z0.s, w0
 # CHECK-NEXT: [1,1]     D==============eeER .    .    .   .   add	z0.s, z0.s, z0.s
-# CHECK-NEXT: [2,0]     D================eeeeeeER.    .   .   insr	z0.s, w0
-# CHECK-NEXT: [2,1]     D======================eeER   .   .   add	z0.s, z0.s, z0.s
-# CHECK-NEXT: [3,0]     D========================eeeeeeER .   insr	z0.s, w0
-# CHECK-NEXT: [3,1]     D==============================eeER   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [2,0]     .D===============eeeeeeER.    .   .   insr	z0.s, w0
+# CHECK-NEXT: [2,1]     .D=====================eeER   .   .   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [3,0]     .D=======================eeeeeeER .   insr	z0.s, w0
+# CHECK-NEXT: [3,1]     .D=============================eeER   add	z0.s, z0.s, z0.s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -807,6 +837,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     13.0   0.3    0.0       insr	z0.s, w0
-# CHECK-NEXT: 1.     4     19.0   0.0    0.0       add	z0.s, z0.s, z0.s
-# CHECK-NEXT:        4     16.0   0.1    0.0       <total>
+# CHECK-NEXT: 0.     4     12.5   0.3    0.0       insr	z0.s, w0
+# CHECK-NEXT: 1.     4     18.5   0.0    0.0       add	z0.s, z0.s, z0.s
+# CHECK-NEXT:        4     15.5   0.1    0.0       <total>

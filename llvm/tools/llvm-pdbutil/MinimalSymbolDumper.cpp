@@ -955,3 +955,11 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
       JumpTable.EntriesCount);
   return Error::success();
 }
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            HotPatchFuncSym &JumpTable) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("function = {0}, name = {1}", typeIndex(JumpTable.Function),
+               JumpTable.Name);
+  return Error::success();
+}

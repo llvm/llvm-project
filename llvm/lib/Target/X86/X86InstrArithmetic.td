@@ -25,11 +25,25 @@ let SchedRW = [WriteLEA] in {
                      [(set GR32:$dst, lea32addr:$src)]>,
                      OpSize32, Requires<[Not64BitMode]>;
 
-  def LEA64_32r : I<0x8D, MRMSrcMem,
-                    (outs GR32:$dst), (ins lea64_32mem:$src),
+  let Predicates = [HasNDD], isCodeGenOnly = 1 in {
+    def LEA64_8r : I<0x8D, MRMSrcMem, (outs GR8:$dst), (ins lea64_8mem:$src),
+                     "lea{b}\t{$src|$dst}, {$dst|$src}",
+                     [(set GR8:$dst, lea64_iaddr:$src)]>,
+                   OpSize16,
+                   Requires<[In64BitMode]>;
+
+    def LEA64_16r : I<0x8D, MRMSrcMem, (outs GR16:$dst), (ins lea64_16mem:$src),
+                      "lea{w}\t{$src|$dst}, {$dst|$src}",
+                      [(set GR16:$dst, lea64_iaddr:$src)]>,
+                    OpSize16,
+                    Requires<[In64BitMode]>;
+  }
+
+  def LEA64_32r : I<0x8D, MRMSrcMem, (outs GR32:$dst), (ins lea64_32mem:$src),
                     "lea{l}\t{$src|$dst}, {$dst|$src}",
-                    [(set GR32:$dst, lea64_32addr:$src)]>,
-                    OpSize32, Requires<[In64BitMode]>;
+                    [(set GR32:$dst, lea64_iaddr:$src)]>,
+                  OpSize32,
+                  Requires<[In64BitMode]>;
 
   let isReMaterializable = 1 in
     def LEA64r   : RI<0x8D, MRMSrcMem, (outs GR64:$dst), (ins lea64mem:$src),
@@ -73,7 +87,7 @@ multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOpera
   // syntax can be accepted.
   let Defs = [AL, EFLAGS, AX], Uses = [AL] in
     def 8r : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8,
-                       [(set AL, (node AL, GR8:$src1)), (implicit EFLAGS)]>;
+                       [(set AL, EFLAGS, (node AL, GR8:$src1))]>;
   let Defs = [AX, DX, EFLAGS], Uses = [AX] in
     def 16r : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, OpSize16;
   let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
@@ -82,7 +96,7 @@ multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOpera
     def 64r : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>;
   let Defs = [AL, EFLAGS, AX], Uses = [AL] in
     def 8m : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8,
-                       [(set AL, (node AL, (loadi8 addr:$src1))), (implicit EFLAGS)]>;
+                       [(set AL, EFLAGS, (node AL, (loadi8 addr:$src1)))]>;
   let Defs = [AX, DX, EFLAGS], Uses = [AX] in
     def 16m : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, OpSize16;
   let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
@@ -386,12 +400,10 @@ class DecOpR_RF<X86TypeInfo t, bit ndd = 0> : UnaryOpR_RF<0xFF, MRM1r, "dec", t,
 class IncOpR_R<X86TypeInfo t, bit ndd = 0> : UnaryOpR_R<0xFF, MRM0r, "inc", t, null_frag, ndd>;
 class DecOpR_R<X86TypeInfo t, bit ndd = 0> : UnaryOpR_R<0xFF, MRM1r, "dec", t, null_frag, ndd>;
 class IncOpM_MF<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM0m, "inc", t, null_frag> {
-  let Pattern = [(store (add (t.LoadNode addr:$src1), 1), addr:$src1),
-                 (implicit EFLAGS)];
+  let Pattern = [(store (add (t.LoadNode addr:$src1), 1), addr:$src1)];
 }
 class DecOpM_MF<X86TypeInfo t> : UnaryOpM_MF<0xFF, MRM1m, "dec", t, null_frag> {
-  let Pattern = [(store (add (t.LoadNode addr:$src1), -1), addr:$src1),
-                 (implicit EFLAGS)];
+  let Pattern = [(store (add (t.LoadNode addr:$src1), -1), addr:$src1)];
 }
 class IncOpM_RF<X86TypeInfo t> : UnaryOpM_RF<0xFF, MRM0m, "inc", t, null_frag> {
   let Pattern = [(set t.RegClass:$dst, EFLAGS, (add (t.LoadNode addr:$src1), 1))];

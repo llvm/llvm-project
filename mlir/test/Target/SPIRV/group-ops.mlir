@@ -21,14 +21,14 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   }
   // CHECK-LABEL: @subgroup_block_read_intel
   spirv.func @subgroup_block_read_intel(%ptr : !spirv.ptr<i32, StorageBuffer>) -> i32 "None" {
-    // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : i32
-    %0 = spirv.INTEL.SubgroupBlockRead "StorageBuffer" %ptr : i32
+    // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : !spirv.ptr<i32, StorageBuffer> -> i32
+    %0 = spirv.INTEL.SubgroupBlockRead %ptr : !spirv.ptr<i32, StorageBuffer> -> i32
     spirv.ReturnValue %0: i32
   }
   // CHECK-LABEL: @subgroup_block_read_intel_vector
   spirv.func @subgroup_block_read_intel_vector(%ptr : !spirv.ptr<i32, StorageBuffer>) -> vector<3xi32> "None" {
-    // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : vector<3xi32>
-    %0 = spirv.INTEL.SubgroupBlockRead "StorageBuffer" %ptr : vector<3xi32>
+    // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : !spirv.ptr<i32, StorageBuffer> -> vector<3xi32>
+    %0 = spirv.INTEL.SubgroupBlockRead %ptr : !spirv.ptr<i32, StorageBuffer> -> vector<3xi32>
     spirv.ReturnValue %0: vector<3xi32>
   }
   // CHECK-LABEL: @subgroup_block_write_intel
@@ -103,5 +103,15 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %0 = spirv.KHR.GroupFMul <Workgroup> <Reduce> %value : f32
     spirv.ReturnValue %0: f32
   }
+}
 
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, GroupNonUniformBallot, Linkage], []> {
+  // CHECK-LABEL: @group_non_uniform_ballot_bit_count
+  spirv.func @group_non_uniform_ballot_bit_count(%value: vector<4xi32>) -> i32 "None" {
+    // CHECK: spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> {{%.*}} : vector<4xi32> -> i32
+    %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> %value : vector<4xi32> -> i32
+    spirv.ReturnValue %0 : i32
+  }
 }

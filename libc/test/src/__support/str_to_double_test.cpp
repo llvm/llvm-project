@@ -1,3 +1,11 @@
+//===-- Unittests for str_to_float<double> --------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
@@ -91,12 +99,11 @@ TEST(LlvmLibcStrToDblTest, SimpleDecimalConversionExtraTypes) {
   uint64_t double_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 
-  LIBC_NAMESPACE::libc_errno = 0;
   auto double_result =
       internal::simple_decimal_conversion<double>("123456789012345678900");
 
   double_output_mantissa = double_result.num.mantissa;
-  output_exp2 = double_result.num.exponent;
+  output_exp2 = static_cast<uint32_t>(double_result.num.exponent);
 
   EXPECT_EQ(double_output_mantissa, uint64_t(0x1AC53A7E04BCDA));
   EXPECT_EQ(output_exp2, uint32_t(1089));

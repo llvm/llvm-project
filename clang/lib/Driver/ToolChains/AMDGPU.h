@@ -10,7 +10,6 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPU_H
 
 #include "Gnu.h"
-#include "ROCm.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
@@ -41,6 +40,8 @@ void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
                              std::vector<StringRef> &Features);
 
+void addFullLTOPartitionOption(const Driver &D, const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs);
 } // end namespace amdgpu
 } // end namespace tools
 
@@ -142,12 +143,27 @@ public:
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   // Returns a list of device library names shared by different languages
-  llvm::SmallVector<std::string, 12>
+  llvm::SmallVector<BitCodeLibraryInfo, 12>
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                           const std::string &GPUArch,
-                          bool isOpenMP = false) const;
+                          Action::OffloadKind DeviceOffloadingKind) const;
+
   SanitizerMask getSupportedSanitizers() const override {
     return SanitizerKind::Address;
+  }
+
+  void diagnoseUnsupportedSanitizers(const llvm::opt::ArgList &Args) const {
+    if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                      true))
+      return;
+    auto &Diags = getDriver().getDiags();
+    for (auto *A : Args.filtered(options::OPT_fsanitize_EQ)) {
+      SanitizerMask K =
+          parseSanitizerValue(A->getValue(), /*Allow Groups*/ false);
+      if (K != SanitizerKind::Address)
+        Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
+            << A->getAsString(Args) << getTriple().str();
+    }
   }
 };
 

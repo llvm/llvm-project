@@ -12,7 +12,6 @@
 
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 
-#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -87,7 +86,7 @@ constexpr StringRef RegisterPerfImplSymbolName =
 static PerfJITCodeLoadRecord
 getCodeLoadRecord(const Symbol &Sym, std::atomic<uint64_t> &CodeIndex) {
   PerfJITCodeLoadRecord Record;
-  auto Name = Sym.getName();
+  auto Name = *Sym.getName();
   auto Addr = Sym.getAddress();
   auto Size = Sym.getSize();
   Record.Prefix.Id = PerfJITRecordType::JIT_CODE_LOAD;
@@ -114,7 +113,7 @@ getCodeLoadRecord(const Symbol &Sym, std::atomic<uint64_t> &CodeIndex) {
 
 static std::optional<PerfJITDebugInfoRecord>
 getDebugInfoRecord(const Symbol &Sym, DWARFContext &DC) {
-  auto &Section = Sym.getBlock().getSection();
+  auto &Section = Sym.getSection();
   auto Addr = Sym.getAddress();
   auto Size = Sym.getSize();
   auto SAddr = object::SectionedAddress{Addr.getValue(), Section.getOrdinal()};

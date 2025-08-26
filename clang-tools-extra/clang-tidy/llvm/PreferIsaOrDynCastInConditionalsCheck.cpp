@@ -14,12 +14,11 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace ast_matchers {
-AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
-} // namespace ast_matchers
+namespace clang::tidy::llvm_check {
 
-namespace tidy::llvm_check {
+namespace {
+AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
+} // namespace
 
 void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
     MatchFinder *Finder) {
@@ -125,5 +124,4 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
   }
 }
 
-} // namespace tidy::llvm_check
-} // namespace clang
+} // namespace clang::tidy::llvm_check

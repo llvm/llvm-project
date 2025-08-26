@@ -29,6 +29,7 @@ namespace spirv {
 namespace detail {
 struct ArrayTypeStorage;
 struct CooperativeMatrixTypeStorage;
+struct TensorArmTypeStorage;
 struct ImageTypeStorage;
 struct MatrixTypeStorage;
 struct PointerTypeStorage;
@@ -96,7 +97,8 @@ public:
   std::optional<int64_t> getSizeInBytes();
 };
 
-// SPIR-V composite type: VectorType, SPIR-V ArrayType, or SPIR-V StructType.
+// SPIR-V composite type: VectorType, SPIR-V ArrayType, SPIR-V
+// StructType, or SPIR-V TensorArmType.
 class CompositeType : public SPIRVType {
 public:
   using SPIRVType::SPIRVType;
@@ -299,36 +301,63 @@ public:
 
   static constexpr StringLiteral name = "spirv.struct";
 
-  // Type for specifying the decoration(s) on struct members
+  // Type for specifying the decoration(s) on struct members.
+  // If `decorationValue` is UnitAttr then decoration has no
+  // value.
   struct MemberDecorationInfo {
-    uint32_t memberIndex : 31;
-    uint32_t hasValue : 1;
+    uint32_t memberIndex;
     Decoration decoration;
-    uint32_t decorationValue;
+    Attribute decorationValue;
 
-    MemberDecorationInfo(uint32_t index, uint32_t hasValue,
-                         Decoration decoration, uint32_t decorationValue)
-        : memberIndex(index), hasValue(hasValue), decoration(decoration),
+    MemberDecorationInfo(uint32_t index, Decoration decoration,
+                         Attribute decorationValue)
+        : memberIndex(index), decoration(decoration),
           decorationValue(decorationValue) {}
 
-    bool operator==(const MemberDecorationInfo &other) const {
-      return (this->memberIndex == other.memberIndex) &&
-             (this->decoration == other.decoration) &&
-             (this->decorationValue == other.decorationValue);
+    friend bool operator==(const MemberDecorationInfo &lhs,
+                           const MemberDecorationInfo &rhs) {
+      return lhs.memberIndex == rhs.memberIndex &&
+             lhs.decoration == rhs.decoration &&
+             lhs.decorationValue == rhs.decorationValue;
     }
 
-    bool operator<(const MemberDecorationInfo &other) const {
-      return this->memberIndex < other.memberIndex ||
-             (this->memberIndex == other.memberIndex &&
-              static_cast<uint32_t>(this->decoration) <
-                  static_cast<uint32_t>(other.decoration));
+    friend bool operator<(const MemberDecorationInfo &lhs,
+                          const MemberDecorationInfo &rhs) {
+      return std::tuple(lhs.memberIndex, llvm::to_underlying(lhs.decoration)) <
+             std::tuple(rhs.memberIndex, llvm::to_underlying(rhs.decoration));
     }
+
+    bool hasValue() const { return !isa<UnitAttr>(decorationValue); }
+  };
+
+  // Type for specifying the decoration(s) on the struct itself.
+  struct StructDecorationInfo {
+    Decoration decoration;
+    Attribute decorationValue;
+
+    StructDecorationInfo(Decoration decoration, Attribute decorationValue)
+        : decoration(decoration), decorationValue(decorationValue) {}
+
+    friend bool operator==(const StructDecorationInfo &lhs,
+                           const StructDecorationInfo &rhs) {
+      return lhs.decoration == rhs.decoration &&
+             lhs.decorationValue == rhs.decorationValue;
+    }
+
+    friend bool operator<(const StructDecorationInfo &lhs,
+                          const StructDecorationInfo &rhs) {
+      return llvm::to_underlying(lhs.decoration) <
+             llvm::to_underlying(rhs.decoration);
+    }
+
+    bool hasValue() const { return !isa<UnitAttr>(decorationValue); }
   };
 
   /// Construct a literal StructType with at least one member.
   static StructType get(ArrayRef<Type> memberTypes,
                         ArrayRef<OffsetInfo> offsetInfo = {},
-                        ArrayRef<MemberDecorationInfo> memberDecorations = {});
+                        ArrayRef<MemberDecorationInfo> memberDecorations = {},
+                        ArrayRef<StructDecorationInfo> structDecorations = {});
 
   /// Construct an identified StructType. This creates a StructType whose body
   /// (member types, offset info, and decorations) is not set yet. A call to
@@ -362,6 +391,9 @@ public:
 
   bool hasOffset() const;
 
+  /// Returns true if the struct has a specified decoration.
+  bool hasDecoration(spirv::Decoration decoration) const;
+
   uint64_t getMemberOffset(unsigned) const;
 
   // Returns in `memberDecorations` the Decorations (apart from Offset)
@@ -375,12 +407,18 @@ public:
       unsigned i,
       SmallVectorImpl<StructType::MemberDecorationInfo> &decorationsInfo) const;
 
+  // Returns in `structDecorations` the Decorations associated with the
+  // StructType.
+  void getStructDecorations(SmallVectorImpl<StructType::StructDecorationInfo>
+                                &structDecorations) const;
+
   /// Sets the contents of an incomplete identified StructType. This method must
   /// be called only for identified StructTypes and it must be called only once
   /// per instance. Otherwise, failure() is returned.
   LogicalResult
   trySetBody(ArrayRef<Type> memberTypes, ArrayRef<OffsetInfo> offsetInfo = {},
-             ArrayRef<MemberDecorationInfo> memberDecorations = {});
+             ArrayRef<MemberDecorationInfo> memberDecorations = {},
+             ArrayRef<StructDecorationInfo> structDecorations = {});
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      std::optional<StorageClass> storage = std::nullopt);
@@ -391,10 +429,14 @@ public:
 llvm::hash_code
 hash_value(const StructType::MemberDecorationInfo &memberDecorationInfo);
 
+llvm::hash_code
+hash_value(const StructType::StructDecorationInfo &structDecorationInfo);
+
 // SPIR-V KHR cooperative matrix type
 class CooperativeMatrixType
     : public Type::TypeBase<CooperativeMatrixType, CompositeType,
-                            detail::CooperativeMatrixTypeStorage> {
+                            detail::CooperativeMatrixTypeStorage,
+                            ShapedType::Trait> {
 public:
   using Base::Base;
 
@@ -418,6 +460,22 @@ public:
                      std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
+
+  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
+
+  ArrayRef<int64_t> getShape() const;
+
+  bool hasRank() const { return true; }
+
+  CooperativeMatrixType cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                                  Type elementType) const {
+    if (!shape)
+      return get(elementType, getRows(), getColumns(), getScope(), getUse());
+
+    assert(shape.value().size() == 2);
+    return get(elementType, shape.value()[0], shape.value()[1], getScope(),
+               getUse());
+  }
 };
 
 // SPIR-V matrix type
@@ -453,6 +511,46 @@ public:
 
   /// Returns the elements' type (i.e, single element type).
   Type getElementType() const;
+
+  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                     std::optional<StorageClass> storage = std::nullopt);
+  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
+                       std::optional<StorageClass> storage = std::nullopt);
+};
+
+/// SPIR-V TensorARM Type
+class TensorArmType
+    : public Type::TypeBase<TensorArmType, CompositeType,
+                            detail::TensorArmTypeStorage, ShapedType::Trait> {
+public:
+  using Base::Base;
+
+  using ShapedTypeTraits = ShapedType::Trait<TensorArmType>;
+  using ShapedTypeTraits::getDimSize;
+  using ShapedTypeTraits::getDynamicDimIndex;
+  using ShapedTypeTraits::getElementTypeBitWidth;
+  using ShapedTypeTraits::getNumDynamicDims;
+  using ShapedTypeTraits::getNumElements;
+  using ShapedTypeTraits::getRank;
+  using ShapedTypeTraits::hasStaticShape;
+  using ShapedTypeTraits::isDynamicDim;
+
+  static constexpr StringLiteral name = "spirv.arm.tensor";
+
+  // TensorArm supports minimum rank of 1, hence an empty shape here means
+  // unranked.
+  static TensorArmType get(ArrayRef<int64_t> shape, Type elementType);
+  TensorArmType cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                          Type elementType) const;
+
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   ArrayRef<int64_t> shape, Type elementType);
+
+  Type getElementType() const;
+  ArrayRef<int64_t> getShape() const;
+  bool hasRank() const { return !getShape().empty(); }
+  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      std::optional<StorageClass> storage = std::nullopt);

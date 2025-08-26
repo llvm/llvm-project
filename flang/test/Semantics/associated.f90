@@ -90,7 +90,7 @@ subroutine assoc()
     type(t2) :: t2x
     type(t2), target :: t2xtarget
     integer, target :: targetIntArr(2)
-    integer, target :: targetIntCoarray[*]
+    integer, target, save :: targetIntCoarray[*]
     integer, pointer :: intPointerArr(:)
     procedure(objPtrFunc), pointer :: objPtrFuncPointer
 
@@ -119,18 +119,19 @@ subroutine assoc()
     lvar = associated(intPointerVar1, (targetIntVar1))
     !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
     lVar = associated(null(intVar))
-    lVar = associated(null(intAllocVar)) !OK
+    !ERROR: A NULL() allocatable is not allowed for 'pointer=' intrinsic argument
+    lVar = associated(null(intAllocVar))
     lVar = associated(null()) !OK
     lVar = associated(null(intPointerVar1)) !OK
-    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement [-Wportability]
     !BECAUSE: 'NULL()' is a null pointer
     lVar = associated(null(), null()) !OK
     lVar = associated(intPointerVar1, null(intPointerVar2)) !OK
     lVar = associated(intPointerVar1, null()) !OK
-    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement [-Wportability]
     !BECAUSE: 'NULL()' is a null pointer
     lVar = associated(null(), null(intPointerVar1)) !OK
-    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer [-Wportability]
     lVar = associated(null(intPointerVar1), null()) !OK
     !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
     lVar = associated(intVar)
@@ -179,18 +180,18 @@ subroutine assoc()
 
     ! Functions (other than NULL) returning pointers
     lVar = associated(objPtrFunc(targetIntVar1)) ! ok
-    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer [-Wportability]
     lVar = associated(objPtrFunc(targetIntVar1), targetIntVar1) ! ok
-    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer [-Wportability]
     lVar = associated(objPtrFunc(targetIntVar1), objPtrFunc(targetIntVar1)) ! ok
     lVar = associated(procPtrFunc()) ! ok
     lVar = associated(procPtrFunc(), intFunc) ! ok
     lVar = associated(procPtrFunc(), procPtrFunc()) ! ok
     !ERROR: POINTER= argument 'objptrfunc(targetintvar1)' is an object pointer but the TARGET= argument 'intfunc' is not a variable
-    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer [-Wportability]
     lVar = associated(objPtrFunc(targetIntVar1), intFunc)
     !ERROR: POINTER= argument 'objptrfunc(targetintvar1)' is an object pointer but the TARGET= argument 'procptrfunc()' is not a variable
-    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer
+    !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer [-Wportability]
     lVar = associated(objPtrFunc(targetIntVar1), procPtrFunc())
     !ERROR: POINTER= argument 'procptrfunc()' is a procedure pointer but the TARGET= argument 'objptrfunc(targetintvar1)' is not a procedure or procedure pointer
     lVar = associated(procPtrFunc(), objPtrFunc(targetIntVar1))

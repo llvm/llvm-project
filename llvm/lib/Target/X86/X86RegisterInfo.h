@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 #define LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -30,6 +31,10 @@ private:
   /// IsWin64 - Is the target on of win64 flavours
   ///
   bool IsWin64;
+
+  /// IsUEFI64 - Is UEFI 64 bit target.
+  ///
+  bool IsUEFI64;
 
   /// SlotSize - Stack slot size in bytes.
   ///
@@ -69,11 +74,6 @@ public:
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;
-
-  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                            unsigned DefSubReg,
-                            const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
 
   /// getPointerRegClass - Returns a TargetRegisterClass used for pointer
   /// values.
@@ -160,8 +160,8 @@ public:
 
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
-  unsigned getPtrSizedFrameRegister(const MachineFunction &MF) const;
-  unsigned getPtrSizedStackRegister(const MachineFunction &MF) const;
+  Register getPtrSizedFrameRegister(const MachineFunction &MF) const;
+  Register getPtrSizedStackRegister(const MachineFunction &MF) const;
   Register getStackRegister() const { return StackPtr; }
   Register getBaseRegister() const { return BasePtr; }
   /// Returns physical register used as frame pointer.
@@ -176,6 +176,15 @@ public:
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  const TargetRegisterClass *
+  constrainRegClassToNonRex2(const TargetRegisterClass *RC) const;
+
+  bool isNonRex2RegClass(const TargetRegisterClass *RC) const;
+
+  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
+    return true;
+  }
 };
 
 } // End llvm namespace

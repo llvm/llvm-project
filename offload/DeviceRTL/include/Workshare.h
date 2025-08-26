@@ -12,8 +12,6 @@
 #ifndef OMPTARGET_WORKSHARE_H
 #define OMPTARGET_WORKSHARE_H
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace ompx {
 
 namespace workshare {
@@ -24,7 +22,5 @@ void init(bool IsSPMD);
 } // namespace workshare
 
 } // namespace ompx
-
-#pragma omp end declare target
 
 #endif

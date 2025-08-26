@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that we generate the correct value for a Phi in the epilog
 ; that is for a value defined two stages earlier. An extra copy in the

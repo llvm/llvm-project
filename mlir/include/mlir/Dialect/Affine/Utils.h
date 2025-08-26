@@ -31,6 +31,8 @@ class FuncOp;
 
 namespace memref {
 class AllocOp;
+class AllocaOp;
+class ReinterpretCastOp;
 } // namespace memref
 
 namespace affine {
@@ -196,10 +198,9 @@ AffineExpr substWithMin(AffineExpr e, AffineExpr dim, AffineExpr min,
 /// of its input list. `indexRemap`'s dimensional inputs are expected to
 /// correspond to memref's indices, and its symbolic inputs if any should be
 /// provided in `symbolOperands`.
-///
-/// `domOpFilter`, if non-null, restricts the replacement to only those
-/// operations that are dominated by the former; similarly, `postDomOpFilter`
-/// restricts replacement to only those operations that are postdominated by it.
+//
+/// If `userFilterFn` is specified, restrict replacement to only those users
+/// that pass the specified filter (i.e., the filter returns true).
 ///
 /// 'allowNonDereferencingOps', if set, allows replacement of non-dereferencing
 /// uses of a memref without any requirement for access index rewrites as long
@@ -222,13 +223,14 @@ AffineExpr substWithMin(AffineExpr e, AffineExpr dim, AffineExpr min,
 //  d1, d2) -> (d0 - d1, d2), and %ii will be the extra operand. Without any
 //  extra operands, note that 'indexRemap' would just be applied to existing
 //  indices (%i, %j).
+//
 //  TODO: allow extraIndices to be added at any position.
 LogicalResult replaceAllMemRefUsesWith(
     Value oldMemRef, Value newMemRef, ArrayRef<Value> extraIndices = {},
     AffineMap indexRemap = AffineMap(), ArrayRef<Value> extraOperands = {},
-    ArrayRef<Value> symbolOperands = {}, Operation *domOpFilter = nullptr,
-    Operation *postDomOpFilter = nullptr, bool allowNonDereferencingOps = false,
-    bool replaceInDeallocOp = false);
+    ArrayRef<Value> symbolOperands = {},
+    llvm::function_ref<bool(Operation *)> userFilterFn = nullptr,
+    bool allowNonDereferencingOps = false, bool replaceInDeallocOp = false);
 
 /// Performs the same replacement as the other version above but only for the
 /// dereferencing uses of `oldMemRef` in `op`, except in cases where
@@ -242,10 +244,16 @@ LogicalResult replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
                                        ArrayRef<Value> symbolOperands = {},
                                        bool allowNonDereferencingOps = false);
 
-/// Rewrites the memref defined by this alloc op to have an identity layout map
-/// and updates all its indexing uses. Returns failure if any of its uses
-/// escape (while leaving the IR in a valid state).
-LogicalResult normalizeMemRef(memref::AllocOp *op);
+/// Rewrites the memref defined by alloc or reinterpret_cast op to have an
+/// identity layout map and updates all its indexing uses. Returns failure if
+/// any of its uses escape (while leaving the IR in a valid state).
+template <typename AllocLikeOp>
+LogicalResult normalizeMemRef(AllocLikeOp op);
+extern template LogicalResult
+normalizeMemRef<memref::AllocaOp>(memref::AllocaOp op);
+extern template LogicalResult
+normalizeMemRef<memref::AllocOp>(memref::AllocOp op);
+LogicalResult normalizeMemRef(memref::ReinterpretCastOp op);
 
 /// Normalizes `memrefType` so that the affine layout map of the memref is
 /// transformed to an identity map with a new shape being computed for the
@@ -307,15 +315,30 @@ struct DivModValue {
 DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
 
 /// Generate the IR to delinearize `linearIndex` given the `basis` and return
-/// the multi-index.
+/// the multi-index. `hasOuterBound` indicates whether `basis` has an entry
+/// given the size of the first multi-index result - if it is true, the function
+/// will return `basis.size()` values, otherwise, it will return `basis.size() +
+/// 1`.
 FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
                                                Value linearIndex,
-                                               ArrayRef<Value> basis);
+                                               ArrayRef<Value> basis,
+                                               bool hasOuterBound = true);
+
+FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
+                                               Value linearIndex,
+                                               ArrayRef<OpFoldResult> basis,
+                                               bool hasOuterBound = true);
+
 // Generate IR that extracts the linear index from a multi-index according to
-// a basis/shape.
+// a basis/shape. The basis may contain either `multiIndex.size()` or
+// `multiIndex.size() - 1` elements.
 OpFoldResult linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
                             ArrayRef<OpFoldResult> basis,
                             ImplicitLocOpBuilder &builder);
+
+OpFoldResult linearizeIndex(OpBuilder &builder, Location loc,
+                            ArrayRef<OpFoldResult> multiIndex,
+                            ArrayRef<OpFoldResult> basis);
 
 /// Ensure that all operations that could be executed after `start`
 /// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path

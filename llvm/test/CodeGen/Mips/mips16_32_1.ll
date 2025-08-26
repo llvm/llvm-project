@@ -1,5 +1,5 @@
-; RUN: llc  -march=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s -mips-mixed-16-32  | FileCheck %s 
-; RUN: llc  -march=mipsel -mcpu=mips32 -relocation-model=pic -O3 < %s -mips-mixed-16-32  | FileCheck %s 
+; RUN: llc  -mtriple=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s -mips-mixed-16-32  | FileCheck %s 
+; RUN: llc  -mtriple=mipsel -mcpu=mips32 -relocation-model=pic -O3 < %s -mips-mixed-16-32  | FileCheck %s 
 
 define void @foo() #0 {
 entry:

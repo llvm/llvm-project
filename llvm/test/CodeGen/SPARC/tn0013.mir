@@ -1,4 +1,4 @@
-# RUN: llc %s -mattr=+fix-tn0013 -march=sparc -run-pass=errata-workaround -o - \
+# RUN: llc %s -mattr=+fix-tn0013 -mtriple=sparc -run-pass=errata-workaround -o - \
 # RUN:   | FileCheck %s
 
 ---

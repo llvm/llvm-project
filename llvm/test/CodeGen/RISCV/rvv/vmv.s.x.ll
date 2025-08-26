@@ -349,11 +349,11 @@ define <vscale x 1 x i64> @intrinsic_vmv.s.x_x_nxv1i64_bug(<vscale x 1 x i64> %0
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    lw a1, 0(a0)
 ; RV32-NEXT:    lw a0, 4(a0)
-; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vid.v v9
 ; RV32-NEXT:    vmseq.vi v0, v9, 0
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; RV32-NEXT:    addi sp, sp, 16

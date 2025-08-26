@@ -81,7 +81,7 @@ define i32 @test5(i32 %x, i32 %y) {
 define <2 x i4> @test5_commuted(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @test5_commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i4> [[TMP1]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i4> [[TMP1]], splat (i4 -1)
 ; CHECK-NEXT:    ret <2 x i4> [[Z]]
 ;
   %xor = xor <2 x i4> %x, %y
@@ -437,7 +437,7 @@ define i9 @or_and_xor_not_constant_commute1(i9 %a, i9 %b) {
 
 define <2 x i9> @or_and_xor_not_constant_commute2_splat(<2 x i9> %a, <2 x i9> %b) {
 ; CHECK-LABEL: @or_and_xor_not_constant_commute2_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i9> [[A:%.*]], <i9 42, i9 42>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i9> [[A:%.*]], splat (i9 42)
 ; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i9> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i9> [[XOR]]
 ;
@@ -450,7 +450,7 @@ define <2 x i9> @or_and_xor_not_constant_commute2_splat(<2 x i9> %a, <2 x i9> %b
 
 define <2 x i9> @or_and_xor_not_constant_commute3_splat(<2 x i9> %a, <2 x i9> %b) {
 ; CHECK-LABEL: @or_and_xor_not_constant_commute3_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i9> [[A:%.*]], <i9 42, i9 42>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i9> [[A:%.*]], splat (i9 42)
 ; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i9> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i9> [[XOR]]
 ;
@@ -862,7 +862,7 @@ define i8 @or_not_xor_common_op_commute3(i8 %x, i8 %y, i8 %p) {
 define <2 x i4> @or_not_xor_common_op_commute4(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
 ; CHECK-LABEL: @or_not_xor_common_op_commute4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i4> [[TMP1]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i4> [[TMP1]], splat (i4 -1)
 ; CHECK-NEXT:    [[O2:%.*]] = or <2 x i4> [[Z:%.*]], [[NAND]]
 ; CHECK-NEXT:    ret <2 x i4> [[O2]]
 ;
@@ -975,7 +975,7 @@ define <2 x i4> @or_nand_xor_common_op_commute1(<2 x i4> %x, <2 x i4> %y, <2 x i
 ; CHECK-LABEL: @or_nand_xor_common_op_commute1(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[Z:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[AND]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], splat (i4 -1)
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %and = and <2 x i4> %z, %x

@@ -55,7 +55,7 @@
 //  cond_branch <Loop>
 //
 // In this pass, we look for PHIs such as X2 whose incoming values come only
-// from the Loop Preheader and over the backedge and additionaly, both these
+// from the Loop Preheader and over the backedge and additionally, both these
 // values are the results of the same operation in terms of opcode. We call such
 // a PHI node a dependence chain or DepChain. In this case, the dependence of X2
 // over X1 is carried over only one iteration and so the DepChain is only one

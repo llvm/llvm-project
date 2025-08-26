@@ -3,6 +3,7 @@
 ! Check OpenACC reduction validity.
 
 program openacc_reduction_validity
+  implicit none
 
   integer :: i
   real :: r
@@ -168,5 +169,21 @@ program openacc_reduction_validity
   !$acc parallel reduction(ieor:l)
   !$acc end parallel
 
+  !ERROR: No explicit type declared for 'xyz'
+  !$acc parallel reduction(+:xyz)
+  !$acc end parallel  
+
 
 end program
+
+subroutine sum()
+  ! ERROR: 'sum' is already declared in this scoping unit
+  integer :: i,sum 
+  sum = 0
+  !$acc parallel 
+  !$acc loop independent gang reduction(+:sum)
+  do i=1,10
+     sum = sum + i
+  enddo
+  !$acc end parallel
+end subroutine

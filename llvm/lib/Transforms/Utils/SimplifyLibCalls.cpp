@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the library calls simplifier. It does not implement
-// any pass, but can't be used by other passes to do simplifications.
+// any pass, but can be used by other passes to do simplifications.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -19,6 +20,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DataLayout.h"
@@ -31,6 +33,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
@@ -317,10 +320,10 @@ static void annotateNonNullAndDereferenceable(CallInst *CI, ArrayRef<unsigned> A
     annotateDereferenceableBytes(CI, ArgNos, LenC->getZExtValue());
   } else if (isKnownNonZero(Size, DL)) {
     annotateNonNullNoUndefBasedOnAccess(CI, ArgNos);
-    const APInt *X, *Y;
+    uint64_t X, Y;
     uint64_t DerefMin = 1;
-    if (match(Size, m_Select(m_Value(), m_APInt(X), m_APInt(Y)))) {
-      DerefMin = std::min(X->getZExtValue(), Y->getZExtValue());
+    if (match(Size, m_Select(m_Value(), m_ConstantInt(X), m_ConstantInt(Y)))) {
+      DerefMin = std::min(X, Y);
       annotateDereferenceableBytes(CI, ArgNos, DerefMin);
     }
   }
@@ -397,9 +400,8 @@ Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
 
   // We have enough information to now generate the memcpy call to do the
   // concatenation for us.  Make a memcpy to copy the nul byte with align = 1.
-  B.CreateMemCpy(
-      CpyDst, Align(1), Src, Align(1),
-      ConstantInt::get(DL.getIntPtrType(Src->getContext()), Len + 1));
+  B.CreateMemCpy(CpyDst, Align(1), Src, Align(1),
+                 TLI->getAsSizeT(Len + 1, *B.GetInsertBlock()->getModule()));
   return Dst;
 }
 
@@ -590,26 +592,21 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
   if (Len1 && Len2) {
     return copyFlags(
         *CI, emitMemCmp(Str1P, Str2P,
-                        ConstantInt::get(DL.getIntPtrType(CI->getContext()),
-                                         std::min(Len1, Len2)),
+                        TLI->getAsSizeT(std::min(Len1, Len2), *CI->getModule()),
                         B, DL, TLI));
   }
 
   // strcmp to memcmp
   if (!HasStr1 && HasStr2) {
     if (canTransformToMemCmp(CI, Str1P, Len2, DL))
-      return copyFlags(
-          *CI,
-          emitMemCmp(Str1P, Str2P,
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len2),
-                     B, DL, TLI));
+      return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
+                                       TLI->getAsSizeT(Len2, *CI->getModule()),
+                                       B, DL, TLI));
   } else if (HasStr1 && !HasStr2) {
     if (canTransformToMemCmp(CI, Str2P, Len1, DL))
-      return copyFlags(
-          *CI,
-          emitMemCmp(Str1P, Str2P,
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len1),
-                     B, DL, TLI));
+      return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
+                                       TLI->getAsSizeT(Len1, *CI->getModule()),
+                                       B, DL, TLI));
   }
 
   annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
@@ -676,19 +673,15 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
   if (!HasStr1 && HasStr2) {
     Len2 = std::min(Len2, Length);
     if (canTransformToMemCmp(CI, Str1P, Len2, DL))
-      return copyFlags(
-          *CI,
-          emitMemCmp(Str1P, Str2P,
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len2),
-                     B, DL, TLI));
+      return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
+                                       TLI->getAsSizeT(Len2, *CI->getModule()),
+                                       B, DL, TLI));
   } else if (HasStr1 && !HasStr2) {
     Len1 = std::min(Len1, Length);
     if (canTransformToMemCmp(CI, Str2P, Len1, DL))
-      return copyFlags(
-          *CI,
-          emitMemCmp(Str1P, Str2P,
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len1),
-                     B, DL, TLI));
+      return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
+                                       TLI->getAsSizeT(Len1, *CI->getModule()),
+                                       B, DL, TLI));
   }
 
   return nullptr;
@@ -722,15 +715,13 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilderBase &B) {
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
-  CallInst *NewCI =
-      B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len));
+  CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
+                                   TLI->getAsSizeT(Len, *CI->getModule()));
   mergeAttributesAndFlags(NewCI, *CI);
   return Dst;
 }
 
 Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
-  Function *Callee = CI->getCalledFunction();
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1);
 
   // stpcpy(d,s) -> strcpy(d,s) if the result is not used.
@@ -749,10 +740,9 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
   else
     return nullptr;
 
-  Type *PT = Callee->getFunctionType()->getParamType(0);
-  Value *LenV = ConstantInt::get(DL.getIntPtrType(PT), Len);
+  Value *LenV = TLI->getAsSizeT(Len, *CI->getModule());
   Value *DstEnd = B.CreateInBoundsGEP(
-      B.getInt8Ty(), Dst, ConstantInt::get(DL.getIntPtrType(PT), Len - 1));
+      B.getInt8Ty(), Dst, TLI->getAsSizeT(Len - 1, *CI->getModule()));
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
@@ -819,13 +809,11 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
     return ConstantInt::get(CI->getType(), 0);
   }
 
-  Function *Callee = CI->getCalledFunction();
-  Type *PT = Callee->getFunctionType()->getParamType(0);
   // Transform strlcpy(D, S, N) to memcpy(D, S, N') where N' is the lower
   // bound on strlen(S) + 1 and N, optionally followed by a nul store to
   // D[N' - 1] if necessary.
   CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                        ConstantInt::get(DL.getIntPtrType(PT), NBytes));
+                                   TLI->getAsSizeT(NBytes, *CI->getModule()));
   mergeAttributesAndFlags(NewCI, *CI);
 
   if (!NulTerm) {
@@ -844,7 +832,6 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
 // otherwise.
 Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
                                              IRBuilderBase &B) {
-  Function *Callee = CI->getCalledFunction();
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
@@ -921,11 +908,10 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
                                /*M=*/nullptr, /*AddNull=*/false);
   }
 
-  Type *PT = Callee->getFunctionType()->getParamType(0);
   // st{p,r}ncpy(D, S, N) -> memcpy(align 1 D, align 1 S, N) when both
   // S and N are constant.
   CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                                   ConstantInt::get(DL.getIntPtrType(PT), N));
+                                   TLI->getAsSizeT(N, *CI->getModule()));
   mergeAttributesAndFlags(NewCI, *CI);
   if (!RetEnd)
     return Dst;
@@ -992,8 +978,14 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
   // it's not very useful because calling strlen for a pointer of other types is
   // very uncommon.
   if (GEPOperator *GEP = dyn_cast<GEPOperator>(Src)) {
-    // TODO: Handle subobjects.
-    if (!isGEPBasedOnPointerToString(GEP, CharSize))
+    unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
+    SmallMapVector<Value *, APInt, 4> VarOffsets;
+    APInt ConstOffset(BW, 0);
+    assert(CharSize % 8 == 0 && "Expected a multiple of 8 sized CharSize");
+    // Check the gep is a single variable offset.
+    if (!GEP->collectOffset(DL, BW, VarOffsets, ConstOffset) ||
+        VarOffsets.size() != 1 || ConstOffset != 0 ||
+        VarOffsets.begin()->second != CharSize / 8)
       return nullptr;
 
     ConstantDataArraySlice Slice;
@@ -1015,10 +1007,8 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
           return nullptr;
       }
 
-      Value *Offset = GEP->getOperand(2);
-      KnownBits Known = computeKnownBits(Offset, DL, 0, nullptr, CI, nullptr);
-      uint64_t ArrSize =
-             cast<ArrayType>(GEP->getSourceElementType())->getNumElements();
+      Value *Offset = VarOffsets.begin()->first;
+      KnownBits Known = computeKnownBits(Offset, DL, nullptr, CI, nullptr);
 
       // If Offset is not provably in the range [0, NullTermIdx], we can still
       // optimize if we can prove that the program has undefined behavior when
@@ -1026,7 +1016,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
       // is a pointer to an object whose memory extent is NullTermIdx+1.
       if ((Known.isNonNegative() && Known.getMaxValue().ule(NullTermIdx)) ||
           (isa<GlobalVariable>(GEP->getOperand(0)) &&
-           NullTermIdx == ArrSize - 1)) {
+           NullTermIdx == Slice.Length - 1)) {
         Offset = B.CreateSExtOrTrunc(Offset, CI->getType());
         return B.CreateSub(ConstantInt::get(CI->getType(), NullTermIdx),
                            Offset);
@@ -1111,7 +1101,8 @@ Value *LibCallSimplifier::optimizeStrTo(CallInst *CI, IRBuilderBase &B) {
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::NoCapture);
+    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
+                                                      CaptureInfo::none()));
   }
 
   return nullptr;
@@ -1413,8 +1404,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
   }
 
-  bool OptForSize = CI->getFunction()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+  bool OptForSize = llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
                                                 PGSOQueryType::IRPass);
 
   // If the char is variable but the input str and length are not we can turn
@@ -1951,7 +1941,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   bool IsIntrinsic = CalleeFn->isIntrinsic();
   if (!IsIntrinsic) {
     StringRef CallerName = CI->getFunction()->getName();
-    if (!CallerName.empty() && CallerName.back() == 'f' &&
+    if (CallerName.ends_with('f') &&
         CallerName.size() == (CalleeName.size() + 1) &&
         CallerName.starts_with(CalleeName))
       return nullptr;
@@ -2023,28 +2013,21 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
         AbsOp = Real;
     }
 
-    if (AbsOp) {
-      IRBuilderBase::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(CI->getFastMathFlags());
-
+    if (AbsOp)
       return copyFlags(
-          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, nullptr, "cabs"));
-    }
+          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, CI, "cabs"));
 
     if (!CI->isFast())
       return nullptr;
   }
 
   // Propagate fast-math flags from the existing call to new instructions.
-  IRBuilderBase::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(CI->getFastMathFlags());
-
-  Value *RealReal = B.CreateFMul(Real, Real);
-  Value *ImagImag = B.CreateFMul(Imag, Imag);
-
-  return copyFlags(*CI, B.CreateUnaryIntrinsic(Intrinsic::sqrt,
-                                               B.CreateFAdd(RealReal, ImagImag),
-                                               nullptr, "cabs"));
+  Value *RealReal = B.CreateFMulFMF(Real, Real, CI);
+  Value *ImagImag = B.CreateFMulFMF(Imag, Imag, CI);
+  return copyFlags(
+      *CI, B.CreateUnaryIntrinsic(Intrinsic::sqrt,
+                                  B.CreateFAddFMF(RealReal, ImagImag, CI), CI,
+                                  "cabs"));
 }
 
 // Return a properly extended integer (DstWidth bits wide) if the operation is
@@ -2284,7 +2267,7 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   // errno), but sqrt(-Inf) is required by various standards to set errno.
   if (!Pow->doesNotAccessMemory() && !Pow->hasNoInfs() &&
       !isKnownNeverInfinity(
-          Base, 0, SimplifyQuery(DL, TLI, DT, AC, Pow, true, true, DC)))
+          Base, SimplifyQuery(DL, TLI, DT, AC, Pow, true, true, DC)))
     return nullptr;
 
   Sqrt = getSqrtCall(Base, AttributeList(), Pow->doesNotAccessMemory(), Mod, B,
@@ -2498,15 +2481,13 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
   // "Ideally, fmax would be sensitive to the sign of zero, for example
   // fmax(-0.0, +0.0) would return +0; however, implementation in software
   // might be impractical."
-  IRBuilderBase::FastMathFlagGuard Guard(B);
   FastMathFlags FMF = CI->getFastMathFlags();
   FMF.setNoSignedZeros();
-  B.setFastMathFlags(FMF);
 
   Intrinsic::ID IID = Callee->getName().starts_with("fmin") ? Intrinsic::minnum
                                                             : Intrinsic::maxnum;
   return copyFlags(*CI, B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
-                                                CI->getArgOperand(1)));
+                                                CI->getArgOperand(1), FMF));
 }
 
 Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
@@ -2598,11 +2579,12 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
       SimplifyQuery SQ(DL, TLI, DT, AC, Log, true, true, DC);
       KnownFPClass Known = computeKnownFPClass(
           Log->getOperand(0),
-          KnownFPClass::OrderedLessThanZeroMask | fcSubnormal,
-          /*Depth=*/0, SQ);
+          KnownFPClass::OrderedLessThanZeroMask | fcSubnormal, SQ);
       Function *F = Log->getParent()->getParent();
-      IsKnownNoErrno = Known.cannotBeOrderedLessThanZero() &&
-                       Known.isKnownNeverLogicalZero(*F, Ty);
+      const fltSemantics &FltSem = Ty->getScalarType()->getFltSemantics();
+      IsKnownNoErrno =
+          Known.cannotBeOrderedLessThanZero() &&
+          Known.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
     if (IsKnownNoErrno) {
       auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
@@ -2801,20 +2783,18 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
   // Fast math flags for any created instructions should match the sqrt
   // and multiply.
-  IRBuilderBase::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(I->getFastMathFlags());
 
   // If we found a repeated factor, hoist it out of the square root and
   // replace it with the fabs of that factor.
   Value *FabsCall =
-      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, nullptr, "fabs");
+      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, I, "fabs");
   if (OtherOp) {
     // If we found a non-repeated factor, we still need to get its square
     // root. We then multiply that by the value that was simplified out
     // of the square root calculation.
     Value *SqrtCall =
-        B.CreateUnaryIntrinsic(Intrinsic::sqrt, OtherOp, nullptr, "sqrt");
-    return copyFlags(*CI, B.CreateFMul(FabsCall, SqrtCall));
+        B.CreateUnaryIntrinsic(Intrinsic::sqrt, OtherOp, I, "sqrt");
+    return copyFlags(*CI, B.CreateFMulFMF(FabsCall, SqrtCall, I));
   }
   return copyFlags(*CI, FabsCall);
 }
@@ -2827,14 +2807,14 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
   bool IsNoNan = CI->hasNoNaNs();
   if (!IsNoNan) {
     SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
-    KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf,
-                                              /*Depth=*/0, SQ);
+    KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf, SQ);
     if (Known0.isKnownNeverInfinity()) {
       KnownFPClass Known1 =
-          computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal,
-                              /*Depth=*/0, SQ);
+          computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal, SQ);
       Function *F = CI->getParent()->getParent();
-      IsNoNan = Known1.isKnownNeverLogicalZero(*F, CI->getType());
+      const fltSemantics &FltSem =
+          CI->getType()->getScalarType()->getFltSemantics();
+      IsNoNan = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
   }
 
@@ -2969,26 +2949,23 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *Src = CI->getArgOperand(0);
 
   if (match(Src, m_OneUse(m_FNeg(m_Value(X))))) {
-    IRBuilderBase::FastMathFlagGuard Guard(B);
-    B.setFastMathFlags(CI->getFastMathFlags());
-
-    auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
+    Call->copyFastMathFlags(CI);
+    auto *CallInst = copyFlags(*CI, Call);
     if (IsEven) {
       // Even function: f(-x) = f(x)
       return CallInst;
     }
     // Odd function: f(-x) = -f(x)
-    return B.CreateFNeg(CallInst);
+    return B.CreateFNegFMF(CallInst, CI);
   }
 
   // Even function: f(abs(x)) = f(x), f(copysign(x, y)) = f(x)
   if (IsEven && (match(Src, m_FAbs(m_Value(X))) ||
                  match(Src, m_CopySign(m_Value(X), m_Value())))) {
-    IRBuilderBase::FastMathFlagGuard Guard(B);
-    B.setFastMathFlags(CI->getFastMathFlags());
-
-    auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
-    return CallInst;
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
+    Call->copyFastMathFlags(CI);
+    return copyFlags(*CI, Call);
   }
 
   return nullptr;
@@ -3027,6 +3004,9 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBa
     return nullptr;
 
   Value *Arg = CI->getArgOperand(0);
+  if (isa<ConstantData>(Arg))
+    return nullptr;
+
   SmallVector<CallInst *, 1> SinCalls;
   SmallVector<CallInst *, 1> CosCalls;
   SmallVector<CallInst *, 1> SinCosCalls;
@@ -3223,8 +3203,6 @@ Value *LibCallSimplifier::optimizeToAscii(CallInst *CI, IRBuilderBase &B) {
 
 // Fold calls to atoi, atol, and atoll.
 Value *LibCallSimplifier::optimizeAtoi(CallInst *CI, IRBuilderBase &B) {
-  CI->addParamAttr(0, Attribute::NoCapture);
-
   StringRef Str;
   if (!getConstantStringInfo(CI->getArgOperand(0), Str))
     return nullptr;
@@ -3239,7 +3217,8 @@ Value *LibCallSimplifier::optimizeStrToInt(CallInst *CI, IRBuilderBase &B,
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::NoCapture);
+    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
+                                                      CaptureInfo::none()));
     EndPtr = nullptr;
   } else if (!isKnownNonZero(EndPtr, DL))
     return nullptr;
@@ -3433,10 +3412,9 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return nullptr; // we found a format specifier, bail out.
 
     // sprintf(str, fmt) -> llvm.memcpy(align 1 str, align 1 fmt, strlen(fmt)+1)
-    B.CreateMemCpy(
-        Dest, Align(1), CI->getArgOperand(1), Align(1),
-        ConstantInt::get(DL.getIntPtrType(CI->getContext()),
-                         FormatStr.size() + 1)); // Copy the null byte.
+    B.CreateMemCpy(Dest, Align(1), CI->getArgOperand(1), Align(1),
+                   // Copy the null byte.
+                   TLI->getAsSizeT(FormatStr.size() + 1, *CI->getModule()));
     return ConstantInt::get(CI->getType(), FormatStr.size());
   }
 
@@ -3471,9 +3449,8 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
 
     uint64_t SrcLen = GetStringLength(CI->getArgOperand(2));
     if (SrcLen) {
-      B.CreateMemCpy(
-          Dest, Align(1), CI->getArgOperand(2), Align(1),
-          ConstantInt::get(DL.getIntPtrType(CI->getContext()), SrcLen));
+      B.CreateMemCpy(Dest, Align(1), CI->getArgOperand(2), Align(1),
+                     TLI->getAsSizeT(SrcLen, *CI->getModule()));
       // Returns total number of characters written without null-character.
       return ConstantInt::get(CI->getType(), SrcLen - 1);
     } else if (Value *V = emitStpCpy(Dest, CI->getArgOperand(2), B, TLI)) {
@@ -3482,10 +3459,8 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
 
-    bool OptForSize = CI->getFunction()->hasOptSize() ||
-                      llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
-                                                  PGSOQueryType::IRPass);
-    if (OptForSize)
+    if (llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+                                    PGSOQueryType::IRPass))
       return nullptr;
 
     Value *Len = emitStrLen(CI->getArgOperand(2), B, DL, TLI);
@@ -3573,11 +3548,8 @@ Value *LibCallSimplifier::emitSnPrintfMemCpy(CallInst *CI, Value *StrArg,
   Value *DstArg = CI->getArgOperand(0);
   if (NCopy && StrArg)
     // Transform the call to lvm.memcpy(dst, fmt, N).
-    copyFlags(
-         *CI,
-          B.CreateMemCpy(
-                         DstArg, Align(1), StrArg, Align(1),
-              ConstantInt::get(DL.getIntPtrType(CI->getContext()), NCopy)));
+    copyFlags(*CI, B.CreateMemCpy(DstArg, Align(1), StrArg, Align(1),
+                                  TLI->getAsSizeT(NCopy, *CI->getModule())));
 
   if (N > Str.size())
     // Return early when the whole format string, including the final nul,
@@ -3693,11 +3665,9 @@ Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI,
     if (FormatStr.contains('%'))
       return nullptr; // We found a format specifier.
 
-    unsigned SizeTBits = TLI->getSizeTSize(*CI->getModule());
-    Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
     return copyFlags(
         *CI, emitFWrite(CI->getArgOperand(1),
-                        ConstantInt::get(SizeTTy, FormatStr.size()),
+                        TLI->getAsSizeT(FormatStr.size(), *CI->getModule()),
                         CI->getArgOperand(0), B, DL, TLI));
   }
 
@@ -3795,10 +3765,8 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
 
   // Don't rewrite fputs to fwrite when optimising for size because fwrite
   // requires more arguments and thus extra MOVs are required.
-  bool OptForSize = CI->getFunction()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
-  if (OptForSize)
+  if (llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+                                  PGSOQueryType::IRPass))
     return nullptr;
 
   // We can't optimize if return value is used.
@@ -4170,6 +4138,11 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
       return optimizeMemCpy(CI, Builder);
     case Intrinsic::memmove:
       return optimizeMemMove(CI, Builder);
+    case Intrinsic::sin:
+    case Intrinsic::cos:
+      if (UnsafeFPShrink)
+        return optimizeUnaryDoubleFP(CI, Builder, TLI, /*isPrecise=*/true);
+      return nullptr;
     default:
       return nullptr;
     }

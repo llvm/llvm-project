@@ -72,11 +72,6 @@ else()
 endif()
 set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
 
-# The NVPTX backend cannot currently handle objects created in debug mode.
-if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(LIBC_GPU_TESTS_DISABLED TRUE)
-endif()
-
 # Identify the GPU loader utility used to run tests.
 set(LIBC_GPU_LOADER_EXECUTABLE "" CACHE STRING "Executable for the GPU loader.")
 if(LIBC_GPU_LOADER_EXECUTABLE)
@@ -109,7 +104,7 @@ if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
   # The AMDGPU environment uses different code objects to encode the ABI for
   # kernel calls and intrinsic functions. We want to specify this manually to
   # conform to whatever the test suite was built to handle.
-  set(LIBC_GPU_CODE_OBJECT_VERSION 5)
+  set(LIBC_GPU_CODE_OBJECT_VERSION 6)
 endif()
 
 if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)

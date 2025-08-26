@@ -1,8 +1,8 @@
-; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips4 \
+; RUN: llc  < %s -verify-machineinstrs -mtriple=mips64el -mcpu=mips4 \
 ; RUN:   -target-abi=n64 | FileCheck %s -check-prefixes=ALL,64
-; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips64 \
+; RUN: llc  < %s -verify-machineinstrs -mtriple=mips64el -mcpu=mips64 \
 ; RUN:   -target-abi=n64 | FileCheck %s -check-prefixes=ALL,64
-; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips64r2 \
+; RUN: llc  < %s -verify-machineinstrs -mtriple=mips64el -mcpu=mips64r2 \
 ; RUN:   -target-abi=n64 | FileCheck %s -check-prefixes=ALL,64R2
 
 declare double @copysign(double, double) nounwind readnone

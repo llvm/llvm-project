@@ -18,7 +18,7 @@ namespace llvm {
     /// might jump out of the basic block.
     MachineBasicBlock::iterator
     findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
-                           unsigned SrcReg);
+                           Register SrcReg);
 }
 
 #endif

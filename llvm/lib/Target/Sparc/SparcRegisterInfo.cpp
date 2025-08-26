@@ -226,26 +226,3 @@ SparcRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 Register SparcRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return SP::I6;
 }
-
-// Sparc has no architectural need for stack realignment support,
-// except that LLVM unfortunately currently implements overaligned
-// stack objects by depending upon stack realignment support.
-// If that ever changes, this can probably be deleted.
-bool SparcRegisterInfo::canRealignStack(const MachineFunction &MF) const {
-  if (!TargetRegisterInfo::canRealignStack(MF))
-    return false;
-
-  // Sparc always has a fixed frame pointer register, so don't need to
-  // worry about needing to reserve it. [even if we don't have a frame
-  // pointer for our frame, it still cannot be used for other things,
-  // or register window traps will be SADNESS.]
-
-  // If there's a reserved call frame, we can use SP to access locals.
-  if (getFrameLowering(MF)->hasReservedCallFrame(MF))
-    return true;
-
-  // Otherwise, we'd need a base pointer, but those aren't implemented
-  // for SPARC at the moment.
-
-  return false;
-}

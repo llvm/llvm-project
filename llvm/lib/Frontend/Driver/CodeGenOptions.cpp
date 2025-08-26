@@ -8,11 +8,18 @@
 
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/TargetParser/Triple.h"
+
+namespace llvm {
+extern llvm::cl::opt<bool> DebugInfoCorrelate;
+extern llvm::cl::opt<llvm::InstrProfCorrelator::ProfCorrelatorKind>
+    ProfileCorrelate;
+} // namespace llvm
 
 namespace llvm::driver {
 
-TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
+TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
                                   driver::VectorLibrary Veclib) {
   TargetLibraryInfoImpl *TLII = new TargetLibraryInfoImpl(TargetTriple);
 
@@ -23,7 +30,7 @@ TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
                                              TargetTriple);
     break;
   case VectorLibrary::LIBMVEC:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::LIBMVEC_X86,
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::LIBMVEC,
                                              TargetTriple);
     break;
   case VectorLibrary::MASSV:
@@ -56,4 +63,10 @@ TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
   return TLII;
 }
 
+std::string getDefaultProfileGenName() {
+  return llvm::DebugInfoCorrelate ||
+                 llvm::ProfileCorrelate != InstrProfCorrelator::NONE
+             ? "default_%m.proflite"
+             : "default_%m.profraw";
+}
 } // namespace llvm::driver

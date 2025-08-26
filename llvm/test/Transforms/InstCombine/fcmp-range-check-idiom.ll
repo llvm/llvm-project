@@ -186,7 +186,7 @@ define <2 x i1> @test_and_olt_poison(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x i1> @test_and_olt_poison(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp olt <2 x float> [[TMP1]], <float 0x3C00000000000000, float 0x3C00000000000000>
+; CHECK-NEXT:    [[COND:%.*]] = fcmp olt <2 x float> [[TMP1]], splat (float 0x3C00000000000000)
 ; CHECK-NEXT:    ret <2 x i1> [[COND]]
 ;
   %cmp1 = fcmp olt <2 x float> %x, <float 0x3C00000000000000, float poison>

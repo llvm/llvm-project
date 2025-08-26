@@ -1,5 +1,5 @@
 ; Test to ensure dropping of type tests can handle a phi feeding the assume.
-; RUN: opt -S -passes=lowertypetests -lowertypetests-drop-type-tests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests -lowertypetests-drop-type-tests=assume -mtriple=x86_64-unknown-linux-gnu %s | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"

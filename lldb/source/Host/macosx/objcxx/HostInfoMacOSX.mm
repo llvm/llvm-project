@@ -393,6 +393,33 @@ lldb_private::FileSpec HostInfoMacOSX::GetXcodeDeveloperDirectory() {
   return g_developer_directory;
 }
 
+std::string HostInfoMacOSX::FindComponentInPath(llvm::StringRef path,
+                                                llvm::StringRef component) {
+  auto begin = llvm::sys::path::begin(path);
+  auto end = llvm::sys::path::end(path);
+  for (auto it = begin; it != end; ++it) {
+    if (it->contains(component)) {
+      llvm::SmallString<128> buffer;
+      llvm::sys::path::append(buffer, begin, ++it,
+                              llvm::sys::path::Style::posix);
+      return buffer.str().str();
+    }
+  }
+  return {};
+}
+
+FileSpec HostInfoMacOSX::GetCurrentXcodeToolchainDirectory() {
+  if (FileSpec fspec = HostInfo::GetShlibDir())
+    return FileSpec(FindComponentInPath(fspec.GetPath(), ".xctoolchain"));
+  return {};
+}
+
+FileSpec HostInfoMacOSX::GetCurrentCommandLineToolsDirectory() {
+  if (FileSpec fspec = HostInfo::GetShlibDir())
+    return FileSpec(FindComponentInPath(fspec.GetPath(), "CommandLineTools"));
+  return {};
+}
+
 static llvm::Expected<std::string>
 xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
       llvm::StringRef developer_dir = "") {

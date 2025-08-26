@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 define void @call_more_than_64_bits() {
 ; CHECK-LABEL: call_more_than_64_bits
 entry-block:

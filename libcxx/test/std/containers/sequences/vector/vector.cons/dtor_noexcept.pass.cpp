@@ -20,43 +20,40 @@
 #include "test_allocator.h"
 
 template <class T>
-struct some_alloc
-{
-    typedef T value_type;
-    some_alloc(const some_alloc&);
-    ~some_alloc() noexcept(false);
-    void allocate(std::size_t);
+struct some_alloc {
+  typedef T value_type;
+  some_alloc(const some_alloc&);
+  ~some_alloc() noexcept(false);
+  void allocate(std::size_t);
 };
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    {
-        typedef std::vector<MoveOnly> C;
-        static_assert(std::is_nothrow_destructible<C>::value, "");
-    }
-    {
-        typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
-        static_assert(std::is_nothrow_destructible<C>::value, "");
-    }
-    {
-        typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
-        static_assert(std::is_nothrow_destructible<C>::value, "");
-    }
+TEST_CONSTEXPR_CXX20 bool tests() {
+  {
+    typedef std::vector<MoveOnly> C;
+    static_assert(std::is_nothrow_destructible<C>::value, "");
+  }
+  {
+    typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
+    static_assert(std::is_nothrow_destructible<C>::value, "");
+  }
+  {
+    typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
+    static_assert(std::is_nothrow_destructible<C>::value, "");
+  }
 #if defined(_LIBCPP_VERSION)
-    {
-        typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
-        static_assert(!std::is_nothrow_destructible<C>::value, "");
-    }
+  {
+    typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
+    static_assert(!std::is_nothrow_destructible<C>::value, "");
+  }
 #endif // _LIBCPP_VERSION
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    tests();
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER > 17
-    static_assert(tests());
+  static_assert(tests());
 #endif
-    return 0;
+  return 0;
 }

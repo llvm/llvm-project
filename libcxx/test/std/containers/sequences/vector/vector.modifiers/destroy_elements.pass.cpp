@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <vector>
 
 #include "test_macros.h"
@@ -63,9 +64,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   test();
 #if TEST_STD_VER >= 20
   static_assert(test());
 #endif
+
+  return 0;
 }

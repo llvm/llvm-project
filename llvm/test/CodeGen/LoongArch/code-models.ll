@@ -14,7 +14,7 @@ define i32 @call_globaladdress(i32 %a) nounwind {
 ; SMALL:       # %bb.0:
 ; SMALL-NEXT:    addi.d $sp, $sp, -16
 ; SMALL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; SMALL-NEXT:    bl %plt(callee)
+; SMALL-NEXT:    bl callee
 ; SMALL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; SMALL-NEXT:    addi.d $sp, $sp, 16
 ; SMALL-NEXT:    ret
@@ -55,7 +55,7 @@ define void @call_external_sym(ptr %dst) {
 ; SMALL-NEXT:    .cfi_offset 1, -8
 ; SMALL-NEXT:    ori $a2, $zero, 1000
 ; SMALL-NEXT:    move $a1, $zero
-; SMALL-NEXT:    bl %plt(memset)
+; SMALL-NEXT:    bl memset
 ; SMALL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; SMALL-NEXT:    addi.d $sp, $sp, 16
 ; SMALL-NEXT:    ret
@@ -82,11 +82,11 @@ define void @call_external_sym(ptr %dst) {
 ; LARGE-NEXT:    .cfi_offset 1, -8
 ; LARGE-NEXT:    ori $a2, $zero, 1000
 ; LARGE-NEXT:    move $a1, $zero
-; LARGE-NEXT:    pcalau12i $a3, %pc_hi20(memset)
-; LARGE-NEXT:    addi.d $ra, $zero, %pc_lo12(memset)
-; LARGE-NEXT:    lu32i.d $ra, %pc64_lo20(memset)
-; LARGE-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(memset)
-; LARGE-NEXT:    add.d $ra, $ra, $a3
+; LARGE-NEXT:    pcalau12i $a3, %got_pc_hi20(memset)
+; LARGE-NEXT:    addi.d $ra, $zero, %got_pc_lo12(memset)
+; LARGE-NEXT:    lu32i.d $ra, %got64_pc_lo20(memset)
+; LARGE-NEXT:    lu52i.d $ra, $ra, %got64_pc_hi12(memset)
+; LARGE-NEXT:    ldx.d $ra, $ra, $a3
 ; LARGE-NEXT:    jirl $ra, $ra, 0
 ; LARGE-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LARGE-NEXT:    addi.d $sp, $sp, 16
@@ -101,12 +101,12 @@ declare i32 @callee_tail(i32 %i)
 define i32 @caller_tail(i32 %i) nounwind {
 ; SMALL-LABEL: caller_tail:
 ; SMALL:       # %bb.0: # %entry
-; SMALL-NEXT:    b %plt(callee_tail)
+; SMALL-NEXT:    b callee_tail
 ;
 ; MEDIUM-LABEL: caller_tail:
 ; MEDIUM:       # %bb.0: # %entry
-; MEDIUM-NEXT:    pcaddu18i $a1, %call36(callee_tail)
-; MEDIUM-NEXT:    jr $a1
+; MEDIUM-NEXT:    pcaddu18i $t8, %call36(callee_tail)
+; MEDIUM-NEXT:    jr $t8
 ;
 ; LARGE-LABEL: caller_tail:
 ; LARGE:       # %bb.0: # %entry

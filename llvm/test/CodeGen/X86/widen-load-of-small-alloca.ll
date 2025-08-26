@@ -1946,9 +1946,10 @@ define void @load_16byte_chunk_of_32byte_alloca(ptr %src, i64 %byteOff, ptr %dst
 ;
 ; X64-HAVE-BMI2-HAVE-SHLD-LABEL: load_16byte_chunk_of_32byte_alloca:
 ; X64-HAVE-BMI2-HAVE-SHLD:       # %bb.0:
+; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movq %rsi, %rcx
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movups (%rdi), %xmm0
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movups 16(%rdi), %xmm1
-; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    leal (,%rsi,8), %ecx
+; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    xorps %xmm2, %xmm2
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)

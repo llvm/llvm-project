@@ -41,37 +41,6 @@ std::wstring convert_thousands_sep(std::wstring const& in, wchar_t sep) {
   return out;
 }
 
-// GLIBC 2.27 and newer use U+202F NARROW NO-BREAK SPACE as a thousands separator.
-// This function converts the spaces in string inputs to U+202F if need
-// be. FreeBSD's locale data also uses U+202F, since 2018.
-// Windows uses U+00A0 NO-BREAK SPACE.
-std::wstring convert_thousands_sep_fr_FR(std::wstring const& in) {
-#if defined(_CS_GNU_LIBC_VERSION)
-  if (glibc_version_less_than("2.27"))
-    return in;
-  else
-    return convert_thousands_sep(in, L'\u202F');
-#elif defined(__FreeBSD__)
-  return convert_thousands_sep(in, L'\u202F');
-#elif defined(_WIN32)
-  return convert_thousands_sep(in, L'\u00A0');
-#else
-  return in;
-#endif
-}
-
-// GLIBC 2.27 uses U+202F NARROW NO-BREAK SPACE as a thousands separator.
-// FreeBSD, AIX and Windows use U+00A0 NO-BREAK SPACE.
-std::wstring convert_thousands_sep_ru_RU(std::wstring const& in) {
-#if defined(TEST_HAS_GLIBC)
-  return convert_thousands_sep(in, L'\u202F');
-#  elif defined(__FreeBSD__) || defined(_WIN32) || defined(_AIX)
-  return convert_thousands_sep(in, L'\u00A0');
-#  else
-  return in;
-#  endif
-}
-
 std::wstring negate_en_US(std::wstring s) {
 #if defined(_WIN32)
   return L"(" + s + L")";
@@ -79,6 +48,12 @@ std::wstring negate_en_US(std::wstring s) {
   return L"-" + s;
 #endif
 }
+
+wchar_t thousands_sep_or_default(std::wstring s) { return !s.empty() ? s[0] : L','; }
+
+wchar_t mon_thousands_sep_or_default(std::wstring s) { return thousands_sep_or_default(s); }
+
+wchar_t decimal_point_or_default(std::wstring s) { return !s.empty() ? s[0] : L'.'; }
 
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 

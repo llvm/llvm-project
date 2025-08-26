@@ -1,17 +1,13 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import Config, LinkageKind
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
-from clang.cindex import LinkageKind
-from clang.cindex import Cursor
-from clang.cindex import TranslationUnit
-
-from .util import get_cursor
-from .util import get_tu
-
 import unittest
+
+from .util import get_cursor, get_tu
 
 
 class TestLinkage(unittest.TestCase):

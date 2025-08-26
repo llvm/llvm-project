@@ -18,6 +18,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Serialization/PCHContainerOperations.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -514,6 +515,26 @@ TEST_F(PragmaIncludeTest, IWYUExportForStandardHeaders) {
               testing::UnorderedElementsAre(FileNamed("export.h")));
 }
 
+TEST_F(PragmaIncludeTest, IWYUExportForStandardHeadersRespectsLang) {
+  Inputs.Code = R"cpp(
+    #include "export.h"
+  )cpp";
+  Inputs.Language = TestLanguage::Lang_C99;
+  Inputs.ExtraFiles["export.h"] = R"cpp(
+    #include <stdlib.h> // IWYU pragma: export
+  )cpp";
+  Inputs.ExtraFiles["stdlib.h"] = "";
+  Inputs.ExtraArgs = {"-isystem."};
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  EXPECT_THAT(PI.getExporters(*tooling::stdlib::Header::named(
+                                  "<stdlib.h>", tooling::stdlib::Lang::C),
+                              FM),
+              testing::UnorderedElementsAre(FileNamed("export.h")));
+  EXPECT_THAT(PI.getExporters(llvm::cantFail(FM.getFileRef("stdlib.h")), FM),
+              testing::UnorderedElementsAre(FileNamed("export.h")));
+}
+
 TEST_F(PragmaIncludeTest, IWYUExportBlock) {
   Inputs.Code = R"cpp(// Line 1
    #include "normal.h"
@@ -609,15 +630,6 @@ TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
   )cpp";
   Inputs.ExtraFiles["foo.h"] = "";
 
-  auto Clang = std::make_unique<CompilerInstance>(
-      std::make_shared<PCHContainerOperations>());
-  Clang->createDiagnostics();
-
-  Clang->setInvocation(std::make_unique<CompilerInvocation>());
-  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(
-      Clang->getInvocation(), {Filename.data()}, Clang->getDiagnostics(),
-      "clang"));
-
   // Create unnamed memory buffers for all the files.
   auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->addFile(Filename, /*ModificationTime=*/0,
@@ -626,6 +638,16 @@ TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
     VFS->addFile(Extra.getKey(), /*ModificationTime=*/0,
                  llvm::MemoryBuffer::getMemBufferCopy(Extra.getValue(),
                                                       /*BufferName=*/""));
+
+  DiagnosticOptions DiagOpts;
+  auto Diags = CompilerInstance::createDiagnostics(*VFS, DiagOpts);
+  auto Invocation = std::make_unique<CompilerInvocation>();
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(*Invocation, {Filename.data()},
+                                                 *Diags, "clang"));
+
+  auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation));
+  Clang->createDiagnostics(*VFS);
+
   auto *FM = Clang->createFileManager(VFS);
   ASSERT_TRUE(Clang->ExecuteAction(*Inputs.MakeAction()));
   EXPECT_THAT(

@@ -22,8 +22,8 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "If set, arch-specific Arm integration tests are run with an emulator.")
   set(ARM_EMULATOR_OPTIONS "" CACHE STRING
       "If arch-specific Arm integration tests run emulated, pass these as parameters to the emulator.")
-  set(ARM_EMULATOR_MLIR_CPU_RUNNER_EXECUTABLE "" CACHE STRING
-      "If arch-specific Arm integration tests run emulated, use this Arm native mlir-cpu-runner.")
+  set(ARM_EMULATOR_MLIR_RUNNER_EXECUTABLE "" CACHE STRING
+      "If arch-specific Arm integration tests run emulated, use this Arm native mlir-runner.")
   set(ARM_EMULATOR_LLI_EXECUTABLE "" CACHE STRING
       "If arch-specific Arm integration tests run emulated, use this Arm native lli.")
   set(ARM_EMULATOR_UTILS_LIB_DIR "" CACHE STRING
@@ -68,6 +68,7 @@ endif()
 llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
   LLVM_HAS_NVPTX_TARGET
+  LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   MLIR_ENABLE_BINDINGS_PYTHON
   MLIR_ENABLE_CUDA_RUNNER
   MLIR_ENABLE_ROCM_CONVERSIONS
@@ -99,13 +100,13 @@ configure_lit_site_cfg(
   )
 
 set(MLIR_TEST_DEPENDS
-  FileCheck count not split-file
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-quant-test
   mlir-capi-rewrite-test
+  mlir-capi-smt-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
   mlir-capi-transform-interpreter-test
@@ -121,6 +122,9 @@ set(MLIR_TEST_DEPENDS
   tblgen-lsp-server
   tblgen-to-irdl
   )
+if(NOT MLIR_STANDALONE_BUILD)
+  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
+endif()
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
   mlir-capi-pdl-test
@@ -133,10 +137,11 @@ set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
 # useless binaries.
 if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-cpu-runner
+    mlir-runner
     llc
     mlir_async_runtime
     mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
     mlir_c_runner_utils
     mlir_runner_utils
     mlir_float16_utils
@@ -152,7 +157,10 @@ if(MLIR_ENABLE_CUDA_RUNNER)
 endif()
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)
-  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
+  )
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)
@@ -161,6 +169,10 @@ endif()
 
 if(MLIR_ENABLE_SYCL_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_sycl_runtime)
+endif()
+
+if(MLIR_ENABLE_LEVELZERO_RUNNER)
+  list(APPEND MLIR_TEST_DEPENDS mlir_levelzero_runtime)
 endif()
 
 if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
@@ -197,16 +209,14 @@ if(LLVM_BUILD_EXAMPLES)
 endif()
 
 if(MLIR_ENABLE_SPIRV_CPU_RUNNER)
-  add_subdirectory(mlir-spirv-cpu-runner)
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-spirv-cpu-runner
-    mlir_test_spirv_cpu_runner_c_wrappers
+    mlir_spirv_cpu_runtime
   )
 endif()
 
 if(MLIR_ENABLE_VULKAN_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-vulkan-runner
+    mlir_vulkan_runtime
   )
 endif()
 
@@ -214,6 +224,11 @@ if(MLIR_ENABLE_BINDINGS_PYTHON)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRPythonModules
   )
+endif()
+
+if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS spirv-as)
+  list(APPEND MLIR_TEST_DEPENDS spirv-val)
 endif()
 
 # This target can be used to just build the dependencies

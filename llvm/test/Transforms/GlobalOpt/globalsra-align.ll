@@ -15,9 +15,9 @@ target datalayout = "p:16:32:64" ; 16-bit pointers with 32-bit ABI alignment and
 
 ;.
 ; CHECK: @[[A_4:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 8
-; CHECK: @[[A_5:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 16
+; CHECK: @[[A_5:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 8
 ; CHECK: @[[A_6:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 16
-; CHECK: @[[A_7:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 16
+; CHECK: @[[A_7:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 8
 ;.
 define ptr @reduce_align_0() {
 ; CHECK-LABEL: @reduce_align_0(
@@ -31,7 +31,7 @@ define ptr @reduce_align_0() {
 
 define ptr @reduce_align_1() {
 ; CHECK-LABEL: @reduce_align_1(
-; CHECK-NEXT:    [[X:%.*]] = load ptr, ptr @a.5, align 16
+; CHECK-NEXT:    [[X:%.*]] = load ptr, ptr @a.5, align 8
 ; CHECK-NEXT:    ret ptr [[X]]
 ;
   %x = load ptr, ptr getelementptr inbounds ([3 x [7 x ptr]], ptr @a, i64 0, i64 2, i64 1), align 4
@@ -51,7 +51,7 @@ define ptr @reduce_align_2() {
 
 define ptr @reduce_align_3() {
 ; CHECK-LABEL: @reduce_align_3(
-; CHECK-NEXT:    [[X:%.*]] = load ptr, ptr @a.7, align 16
+; CHECK-NEXT:    [[X:%.*]] = load ptr, ptr @a.7, align 8
 ; CHECK-NEXT:    ret ptr [[X]]
 ;
   %x = load ptr, ptr getelementptr inbounds ([3 x [7 x ptr]], ptr @a, i64 0, i64 2, i64 3), align 4

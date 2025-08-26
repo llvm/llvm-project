@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-definitions-in-headers %t -- --fix-notes
+// RUN: %check_clang_tidy --match-partial-fixes %s misc-definitions-in-headers %t -- --fix-notes
 
 int f() {
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f' defined in a header file; function definitions in header files can lead to ODR violations [misc-definitions-in-headers]
@@ -203,4 +203,4 @@ constexpr bool f13<void, int> = false;
 
 int main() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'main' defined in a header file;
-// CHECK-FIXES: {{^}}int main() {
+// CHECK-FIXES: int main() {}

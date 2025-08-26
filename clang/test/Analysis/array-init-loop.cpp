@@ -19,7 +19,7 @@ void array_uninit() {
 
   auto [a, b, c, d, e] = arr;
 
-  int x = e; // expected-warning{{Assigned value is garbage or undefined}}
+  int x = e; // expected-warning{{Assigned value is uninitialized}}
 }
 
 void lambda_init() {
@@ -168,7 +168,7 @@ struct S3_duplicate {
 void array_uninit_non_pod() {
   S3 arr[1];
 
-  auto [a] = arr; // expected-warning@159{{ in implicit constructor is garbage or undefined }}
+  auto [a] = arr; // expected-warning@159{{ in implicit constructor is uninitialized}}
 }
 
 void lambda_init_non_pod() {
@@ -191,7 +191,7 @@ void lambda_init_non_pod() {
 void lambda_uninit_non_pod() {
   S3_duplicate arr[4];
 
-  int l = [arr] { return arr[3].i; }(); // expected-warning@164{{ in implicit constructor is garbage or undefined }}
+  int l = [arr] { return arr[3].i; }(); // expected-warning@164{{ in implicit constructor is uninitialized }}
 }
 
 // If this struct is being copy/move constructed by the implicit ctors, ArrayInitLoopExpr
@@ -330,3 +330,41 @@ void no_crash() {
 }
 
 } // namespace crash
+
+namespace array_subscript_initializer {
+struct S {
+  int x;
+};
+
+void no_crash() {
+  S arr[][2] = {{1, 2}};
+
+  const auto [a, b] = arr[0]; // no-crash
+
+  clang_analyzer_eval(a.x == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(b.x == 2); // expected-warning{{TRUE}}
+}
+} // namespace array_subscript_initializer
+
+namespace iterator_initializer {
+struct S {
+  int x;
+};
+
+void no_crash() {
+  S arr[][2] = {{1, 2}, {3, 4}};
+
+  int i = 0;
+  for (const auto [a, b] : arr) { // no-crash
+    if (i == 0) {
+      clang_analyzer_eval(a.x == 1); // expected-warning{{TRUE}}
+      clang_analyzer_eval(b.x == 2); // expected-warning{{TRUE}}
+    } else {
+      clang_analyzer_eval(a.x == 3); // expected-warning{{TRUE}}
+      clang_analyzer_eval(b.x == 4); // expected-warning{{TRUE}}
+    }
+
+    ++i;
+  }
+}
+} // namespace iterator_initializer

@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=x86_64-- -run-pass=register-coalescer -late-remat-update-threshold=1 -stats %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -passes=register-coalescer -late-remat-update-threshold=1 -stats %s -o /dev/null 2>&1 | FileCheck %s
 # Check the test will rematerialize for three copies, but will call shrinkToUses
 # only once to update live range because of late rematerialization update.
 # CHECK: 3 regalloc - Number of instructions re-materialized

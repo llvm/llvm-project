@@ -1,5 +1,5 @@
 # REQUIRES: hexagon
-# RUN: llvm-mc -filetype=obj -triple=hexagon %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=hexagon --mcpu=hexagonv73 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf --file-headers %t | FileCheck --check-prefix=CHECK %s
 # RUN: ld.lld -m hexagonelf %t.o -o %t
@@ -26,7 +26,7 @@
 # CHECK-NEXT:    Entry point address:               0x200B4
 # CHECK-NEXT:    Start of program headers:          52 (bytes into file)
 # CHECK-NEXT:    Start of section headers:
-# CHECK-NEXT:    Flags:                             0x60
+# CHECK-NEXT:    Flags:                             0x73
 # CHECK-NEXT:    Size of this header:               52 (bytes)
 # CHECK-NEXT:    Size of program headers:           32 (bytes)
 

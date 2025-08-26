@@ -23,9 +23,9 @@ define dso_local noundef i32 @leaf(i32 noundef %0) {
 ; LEAF-FP-AAPCS:       @ %bb.0:
 ; LEAF-FP-AAPCS-NEXT:    .save {lr}
 ; LEAF-FP-AAPCS-NEXT:    push {lr}
-; LEAF-FP-AAPCS-NEXT:    mov lr, r11
+; LEAF-FP-AAPCS-NEXT:    mov r3, r11
 ; LEAF-FP-AAPCS-NEXT:    .save {r11}
-; LEAF-FP-AAPCS-NEXT:    push {lr}
+; LEAF-FP-AAPCS-NEXT:    push {r3}
 ; LEAF-FP-AAPCS-NEXT:    .setfp r11, sp
 ; LEAF-FP-AAPCS-NEXT:    mov r11, sp
 ; LEAF-FP-AAPCS-NEXT:    .pad #4
@@ -80,9 +80,9 @@ define dso_local noundef i32 @non_leaf(i32 noundef %0) {
 ; FP-AAPCS:       @ %bb.0:
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
 ; FP-AAPCS-NEXT:    .pad #8
@@ -161,9 +161,9 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; FP-AAPCS:       @ %bb.0:
 ; FP-AAPCS-NEXT:    .save {lr}
 ; FP-AAPCS-NEXT:    push {lr}
-; FP-AAPCS-NEXT:    mov lr, r11
+; FP-AAPCS-NEXT:    mov r3, r11
 ; FP-AAPCS-NEXT:    .save {r11}
-; FP-AAPCS-NEXT:    push {lr}
+; FP-AAPCS-NEXT:    push {r3}
 ; FP-AAPCS-NEXT:    .setfp r11, sp
 ; FP-AAPCS-NEXT:    mov r11, sp
 ; FP-AAPCS-NEXT:    .save {r4, r6}
@@ -227,9 +227,9 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; NOFP-AAPCS:       @ %bb.0:
 ; NOFP-AAPCS-NEXT:    .save {lr}
 ; NOFP-AAPCS-NEXT:    push {lr}
-; NOFP-AAPCS-NEXT:    mov lr, r11
+; NOFP-AAPCS-NEXT:    mov r3, r11
 ; NOFP-AAPCS-NEXT:    .save {r11}
-; NOFP-AAPCS-NEXT:    push {lr}
+; NOFP-AAPCS-NEXT:    push {r3}
 ; NOFP-AAPCS-NEXT:    .setfp r11, sp
 ; NOFP-AAPCS-NEXT:    mov r11, sp
 ; NOFP-AAPCS-NEXT:    .save {r4, r6}

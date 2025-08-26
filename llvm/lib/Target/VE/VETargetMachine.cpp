@@ -19,17 +19,19 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "ve"
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   // Register the target.
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeVEAsmPrinterPass(PR);
   initializeVEDAGToDAGISelLegacyPass(PR);
 }
 
@@ -89,9 +91,9 @@ VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
                                  std::optional<Reloc::Model> RM,
                                  std::optional<CodeModel::Model> CM,
                                  CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();
@@ -101,7 +103,7 @@ VETargetMachine::~VETargetMachine() = default;
 
 TargetTransformInfo
 VETargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(VETTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<VETTIImpl>(this, F));
 }
 
 MachineFunctionInfo *VETargetMachine::createMachineFunctionInfo(

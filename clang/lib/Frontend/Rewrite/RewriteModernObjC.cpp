@@ -852,7 +852,7 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
     IvarT = GetGroupRecordTypeForObjCIvarBitfield(D);
 
   if (!IvarT->getAs<TypedefType>() && IvarT->isRecordType()) {
-    RecordDecl *RD = IvarT->castAs<RecordType>()->getDecl();
+    RecordDecl *RD = IvarT->castAs<RecordType>()->getOriginalDecl();
     RD = RD->getDefinition();
     if (RD && !RD->getDeclName().getAsIdentifierInfo()) {
       // decltype(((Foo_IMPL*)0)->bar) *
@@ -865,7 +865,8 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
       RecordDecl *RD = RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                                           SourceLocation(), SourceLocation(),
                                           &Context->Idents.get(RecName));
-      QualType PtrStructIMPL = Context->getPointerType(Context->getTagDeclType(RD));
+      QualType PtrStructIMPL =
+          Context->getPointerType(Context->getCanonicalTagType(RD));
       unsigned UnsignedIntSize =
       static_cast<unsigned>(Context->getTypeSize(Context->UnsignedIntTy));
       Expr *Zero = IntegerLiteral::Create(*Context,
@@ -2999,7 +3000,7 @@ QualType RewriteModernObjC::getSuperStructType() {
 
     SuperStructDecl->completeDefinition();
   }
-  return Context->getTagDeclType(SuperStructDecl);
+  return Context->getCanonicalTagType(SuperStructDecl);
 }
 
 QualType RewriteModernObjC::getConstantStringStructType() {
@@ -3032,7 +3033,7 @@ QualType RewriteModernObjC::getConstantStringStructType() {
 
     ConstantStringDecl->completeDefinition();
   }
-  return Context->getTagDeclType(ConstantStringDecl);
+  return Context->getCanonicalTagType(ConstantStringDecl);
 }
 
 /// getFunctionSourceLocation - returns start location of a function
@@ -3637,7 +3638,8 @@ bool RewriteModernObjC::RewriteObjCFieldDeclType(QualType &Type,
     return RewriteObjCFieldDeclType(ElemTy, Result);
   }
   else if (Type->isRecordType()) {
-    RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
+    RecordDecl *RD =
+        Type->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isCompleteDefinition()) {
       if (RD->isStruct())
         Result += "\n\tstruct ";
@@ -3660,7 +3662,8 @@ bool RewriteModernObjC::RewriteObjCFieldDeclType(QualType &Type,
     }
   }
   else if (Type->isEnumeralType()) {
-    EnumDecl *ED = Type->castAs<EnumType>()->getDecl();
+    EnumDecl *ED =
+        Type->castAs<EnumType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (ED->isCompleteDefinition()) {
       Result += "\n\tenum ";
       Result += ED->getName();
@@ -3699,7 +3702,8 @@ void RewriteModernObjC::RewriteObjCFieldDecl(FieldDecl *fieldDecl,
     Type.getAsStringInternal(Name, Context->getPrintingPolicy());
   Result += Name;
   if (fieldDecl->isBitField()) {
-    Result += " : "; Result += utostr(fieldDecl->getBitWidthValue(*Context));
+    Result += " : ";
+    Result += utostr(fieldDecl->getBitWidthValue());
   }
   else if (EleboratedType && Type->isArrayType()) {
     const ArrayType *AT = Context->getAsArrayType(Type);
@@ -3729,15 +3733,7 @@ void RewriteModernObjC::RewriteLocallyDefinedNamedAggregates(FieldDecl *fieldDec
 
   auto *IDecl = dyn_cast<ObjCContainerDecl>(fieldDecl->getDeclContext());
 
-  TagDecl *TD = nullptr;
-  if (Type->isRecordType()) {
-    TD = Type->castAs<RecordType>()->getDecl();
-  }
-  else if (Type->isEnumeralType()) {
-    TD = Type->castAs<EnumType>()->getDecl();
-  }
-
-  if (TD) {
+  if (auto *TD = Type->getAsTagDecl()) {
     if (GlobalDefinedTags.count(TD))
       return;
 
@@ -3792,15 +3788,15 @@ QualType RewriteModernObjC::SynthesizeBitfieldGroupStructType(
                                   false, ICIS_NoInit));
   }
   RD->completeDefinition();
-  return Context->getTagDeclType(RD);
+  return Context->getCanonicalTagType(RD);
 }
 
 QualType RewriteModernObjC::GetGroupRecordTypeForObjCIvarBitfield(ObjCIvarDecl *IV) {
   const ObjCInterfaceDecl *CDecl = IV->getContainingInterface();
   unsigned GroupNo = ObjCIvarBitfieldGroupNo(IV);
   std::pair<const ObjCInterfaceDecl*, unsigned> tuple = std::make_pair(CDecl, GroupNo);
-  if (GroupRecordType.count(tuple))
-    return GroupRecordType[tuple];
+  if (auto It = GroupRecordType.find(tuple); It != GroupRecordType.end())
+    return It->second;
 
   SmallVector<ObjCIvarDecl *, 8> IVars;
   for (const ObjCIvarDecl *IVD = CDecl->all_declared_ivar_begin();
@@ -4571,7 +4567,7 @@ Stmt *RewriteModernObjC::SynthesizeBlockCall(CallExpr *Exp, const Expr *BlockExp
   RecordDecl *RD = RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                                       SourceLocation(), SourceLocation(),
                                       &Context->Idents.get("__block_impl"));
-  QualType PtrBlock = Context->getPointerType(Context->getTagDeclType(RD));
+  QualType PtrBlock = Context->getPointerType(Context->getCanonicalTagType(RD));
 
   // Generate a funky cast.
   SmallVector<QualType, 8> ArgTypes;
@@ -5315,7 +5311,8 @@ Stmt *RewriteModernObjC::SynthBlockInitExpr(BlockExpr *Exp,
           RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                              SourceLocation(), SourceLocation(), II);
       assert(RD && "SynthBlockInitExpr(): Can't find RecordDecl");
-      QualType castT = Context->getPointerType(Context->getTagDeclType(RD));
+      QualType castT =
+          Context->getPointerType(Context->getCanonicalTagType(RD));
 
       FD = SynthBlockInitFunctionDecl(ND->getName());
       Exp = new (Context) DeclRefExpr(*Context, FD, false, FD->getType(),
@@ -5718,7 +5715,10 @@ void RewriteModernObjC::HandleDeclInMainFile(Decl *D) {
           }
         }
       } else if (VD->getType()->isRecordType()) {
-        RecordDecl *RD = VD->getType()->castAs<RecordType>()->getDecl();
+        RecordDecl *RD = VD->getType()
+                             ->castAs<RecordType>()
+                             ->getOriginalDecl()
+                             ->getDefinitionOrSelf();
         if (RD->isCompleteDefinition())
           RewriteRecordBody(RD);
       }
@@ -7459,7 +7459,7 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
         IvarT = GetGroupRecordTypeForObjCIvarBitfield(D);
 
       if (!IvarT->getAs<TypedefType>() && IvarT->isRecordType()) {
-        RecordDecl *RD = IvarT->castAs<RecordType>()->getDecl();
+        RecordDecl *RD = IvarT->castAs<RecordType>()->getOriginalDecl();
         RD = RD->getDefinition();
         if (RD && !RD->getDeclName().getAsIdentifierInfo()) {
           // decltype(((Foo_IMPL*)0)->bar) *
@@ -7472,7 +7472,8 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
           RecordDecl *RD = RecordDecl::Create(
               *Context, TagTypeKind::Struct, TUDecl, SourceLocation(),
               SourceLocation(), &Context->Idents.get(RecName));
-          QualType PtrStructIMPL = Context->getPointerType(Context->getTagDeclType(RD));
+          QualType PtrStructIMPL =
+              Context->getPointerType(Context->getCanonicalTagType(RD));
           unsigned UnsignedIntSize =
             static_cast<unsigned>(Context->getTypeSize(Context->UnsignedIntTy));
           Expr *Zero = IntegerLiteral::Create(*Context,

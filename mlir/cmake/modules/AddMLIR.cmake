@@ -1,3 +1,4 @@
+include(TableGen)
 include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
@@ -42,20 +43,26 @@ function(_pdll_tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
-  # Use depfile instead of globbing arbitrary *.td(s) for Ninja.
-  if(CMAKE_GENERATOR MATCHES "Ninja")
-    # Make output path relative to build.ninja, assuming located on
-    # ${CMAKE_BINARY_DIR}.
+  # Use depfile instead of globbing arbitrary *.td(s) for Ninja. We force
+  # CMake versions older than v3.30 on Windows to use the fallback behavior
+  # due to a depfile parsing bug on Windows paths in versions prior to 3.30.
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/25943
+  # CMake versions older than v3.23 on other platforms use the fallback
+  # behavior as v3.22 and earlier fail to parse some depfiles that get
+  # generated, and this behavior was fixed in CMake commit
+  # e04a352cca523eba2ac0d60063a3799f5bb1c69e.
+  cmake_policy(GET CMP0116 cmp0116_state)
+  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW
+     AND NOT (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS 3.30)
+     AND NOT (CMAKE_VERSION VERSION_LESS 3.23))
     # CMake emits build targets as relative paths but Ninja doesn't identify
-    # absolute path (in *.d) as relative path (in build.ninja)
-    # Note that tblgen is executed on ${CMAKE_BINARY_DIR} as working directory.
-    file(RELATIVE_PATH ofn_rel
-      ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${ofn})
+    # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
+    # CMake handles this discrepancy for us. Otherwise, we use the fallback
+    # logic.
     set(additional_cmdline
-      -o ${ofn_rel}
-      -d ${ofn_rel}.d
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      DEPFILE ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.d
+      -o ${ofn}
+      -d ${ofn}.d
+      DEPFILE ${ofn}.d
       )
     set(local_tds)
     set(global_tds)
@@ -305,7 +312,9 @@ endfunction()
 # EXCLUDE_FROM_LIBMLIR
 #   Don't include this library in libMLIR.so.  This option should be used
 #   for test libraries, executable-specific libraries, or rarely used libraries
-#   with large dependencies.
+#   with large dependencies.  When using it, please link libraries included
+#   in libMLIR via mlir_target_link_libraries(), to ensure that the library
+#   does not pull in static dependencies when MLIR_LINK_MLIR_DYLIB=ON is used.
 # OBJECT
 #   The library's object library is referenced using "obj.${name}". For this to
 #   work reliably, this flag ensures that the OBJECT library exists.
@@ -379,6 +388,9 @@ function(add_mlir_library name)
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
+    if(ARG_INSTALL_WITH_TOOLCHAIN)
+      set_target_properties(${name} PROPERTIES MLIR_INSTALL_WITH_TOOLCHAIN TRUE)
+    endif()
     if(NOT ARG_DISABLE_INSTALL)
       add_mlir_library_install(${name})
     endif()
@@ -584,7 +596,7 @@ function(add_mlir_aggregate name)
   # TODO: Should be transitive.
   set_target_properties(${name} PROPERTIES
     MLIR_AGGREGATE_EXCLUDE_LIBS "${_embed_libs}")
-  if(MSVC)
+  if(WIN32)
     set_property(TARGET ${name} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()
 
@@ -608,26 +620,27 @@ endfunction(add_mlir_aggregate)
 # This is usually done as part of add_mlir_library but is broken out for cases
 # where non-standard library builds can be installed.
 function(add_mlir_library_install name)
-  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
-  install(TARGETS ${name}
-    COMPONENT ${name}
-    ${export_to_mlirtargets}
-    LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    # Note that CMake will create a directory like:
-    #   objects-${CMAKE_BUILD_TYPE}/obj.LibName
-    # and put object files there.
-    OBJECTS DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-  )
+  get_target_property(_install_with_toolchain ${name} MLIR_INSTALL_WITH_TOOLCHAIN)
+  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR _install_with_toolchain)
+    get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
+    install(TARGETS ${name}
+      COMPONENT ${name}
+      ${export_to_mlirtargets}
+      LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+      ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+      # Note that CMake will create a directory like:
+      #   objects-${CMAKE_BUILD_TYPE}/obj.LibName
+      # and put object files there.
+      OBJECTS DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    )
 
-  if (NOT LLVM_ENABLE_IDE)
-    add_llvm_install_targets(install-${name}
-                            DEPENDS ${name}
-                            COMPONENT ${name})
-  endif()
-  set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
+    if (NOT LLVM_ENABLE_IDE)
+      add_llvm_install_targets(install-${name}
+                              DEPENDS ${name}
+                              COMPONENT ${name})
+    endif()
+    set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
   endif()
   set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
 endfunction()
@@ -717,3 +730,23 @@ function(mlir_check_all_link_libraries name)
     endforeach()
   endif()
 endfunction(mlir_check_all_link_libraries)
+
+# Link target against a list of MLIR libraries. If MLIR_LINK_MLIR_DYLIB is
+# enabled, this will link against the MLIR dylib instead of the static
+# libraries.
+#
+# This function should be used instead of target_link_libraries() when linking
+# MLIR libraries that are part of the MLIR dylib. For libraries that are not
+# part of the dylib (like test libraries), target_link_libraries() should be
+# used.
+function(mlir_target_link_libraries target type)
+  if (TARGET obj.${target})
+    target_link_libraries(obj.${target} ${ARGN})
+  endif()
+
+  if (MLIR_LINK_MLIR_DYLIB)
+    target_link_libraries(${target} ${type} MLIR)
+  else()
+    target_link_libraries(${target} ${type} ${ARGN})
+  endif()
+endfunction()

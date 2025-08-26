@@ -15,6 +15,9 @@ using LlvmLibcTanTest = LIBC_NAMESPACE::testing::FPTest<double>;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcTanTest, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tan(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::tan(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::tan(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::tan(neg_inf));
@@ -24,3 +27,30 @@ TEST_F(LlvmLibcTanTest, SpecialNumbers) {
   EXPECT_FP_EQ(min_normal, LIBC_NAMESPACE::tan(min_normal));
   EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::tan(min_denormal));
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcTanTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::tan(min_denormal));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::tan(max_denormal));
+}
+
+TEST_F(LlvmLibcTanTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::tan(min_denormal));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::tan(max_denormal));
+}
+
+TEST_F(LlvmLibcTanTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::tan(min_denormal));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::tan(max_denormal));
+}
+
+#endif

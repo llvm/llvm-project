@@ -8,7 +8,6 @@
 
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/Process.h"
 
@@ -44,7 +43,7 @@ public:
   }
 
   void abandon(OnAbandonedFunction OnFinalize) override {
-    Parent.Mapper->release({AllocAddr}, std::move(OnFinalize));
+    Parent.Mapper->deinitialize({AllocAddr}, std::move(OnFinalize));
   }
 
 private:

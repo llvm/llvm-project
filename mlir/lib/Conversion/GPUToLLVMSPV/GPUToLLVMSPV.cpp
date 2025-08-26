@@ -20,9 +20,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
-#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -56,8 +54,8 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
       SymbolTable::lookupSymbolIn(symbolTable, name));
   if (!func) {
     OpBuilder b(symbolTable->getRegion(0));
-    func = b.create<LLVM::LLVMFuncOp>(
-        symbolTable->getLoc(), name,
+    func = LLVM::LLVMFuncOp::create(
+        b, symbolTable->getLoc(), name,
         LLVM::LLVMFunctionType::get(resultType, paramTypes));
     func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
     func.setNoUnwind(true);
@@ -81,7 +79,7 @@ static LLVM::CallOp createSPIRVBuiltinCall(Location loc,
                                            ConversionPatternRewriter &rewriter,
                                            LLVM::LLVMFuncOp func,
                                            ValueRange args) {
-  auto call = rewriter.create<LLVM::CallOp>(loc, func, args);
+  auto call = LLVM::CallOp::create(rewriter, loc, func, args);
   call.setCConv(func.getCConv());
   call.setConvergentAttr(func.getConvergentAttr());
   call.setNoUnwindAttr(func.getNoUnwindAttr());
@@ -123,7 +121,7 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
     constexpr int64_t localMemFenceFlag = 1;
     Location loc = op->getLoc();
     Value flag =
-        rewriter.create<LLVM::ConstantOp>(loc, flagTy, localMemFenceFlag);
+        LLVM::ConstantOp::create(rewriter, loc, flagTy, localMemFenceFlag);
     rewriter.replaceOp(op, createSPIRVBuiltinCall(loc, rewriter, func, flag));
     return success();
   }
@@ -164,8 +162,8 @@ struct LaunchConfigConversion : ConvertToLLVMPattern {
 
     Location loc = op->getLoc();
     gpu::Dimension dim = getDimension(op);
-    Value dimVal = rewriter.create<LLVM::ConstantOp>(loc, dimTy,
-                                                     static_cast<int64_t>(dim));
+    Value dimVal = LLVM::ConstantOp::create(rewriter, loc, dimTy,
+                                            static_cast<int64_t>(dim));
     rewriter.replaceOp(op, createSPIRVBuiltinCall(loc, rewriter, func, dimVal));
     return success();
   }
@@ -264,20 +262,22 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
         .Default([](auto) { return std::nullopt; });
   }
 
-  static std::optional<std::string> getFuncName(gpu::ShuffleOp op) {
-    StringRef baseName = getBaseName(op.getMode());
-    std::optional<StringRef> typeMangling = getTypeMangling(op.getType(0));
+  static std::optional<std::string> getFuncName(gpu::ShuffleMode mode,
+                                                Type type) {
+    StringRef baseName = getBaseName(mode);
+    std::optional<StringRef> typeMangling = getTypeMangling(type);
     if (!typeMangling)
       return std::nullopt;
-    return llvm::formatv("_Z{0}{1}{2}", baseName.size(), baseName,
+    return llvm::formatv("_Z{}{}{}", baseName.size(), baseName,
                          typeMangling.value());
   }
 
   /// Get the subgroup size from the target or return a default.
-  static int getSubgroupSize(Operation *op) {
-    return spirv::lookupTargetEnvOrDefault(op)
-        .getResourceLimits()
-        .getSubgroupSize();
+  static std::optional<int> getSubgroupSize(Operation *op) {
+    auto parentFunc = op->getParentOfType<LLVM::LLVMFuncOp>();
+    if (!parentFunc)
+      return std::nullopt;
+    return parentFunc.getIntelReqdSubGroupSize();
   }
 
   static bool hasValidWidth(gpu::ShuffleOp op) {
@@ -287,6 +287,37 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
            val == getSubgroupSize(op);
   }
 
+  static Value bitcastOrExtBeforeShuffle(Value oldVal, Location loc,
+                                         ConversionPatternRewriter &rewriter) {
+    return TypeSwitch<Type, Value>(oldVal.getType())
+        .Case([&](BFloat16Type) {
+          return LLVM::BitcastOp::create(rewriter, loc, rewriter.getI16Type(),
+                                         oldVal);
+        })
+        .Case([&](IntegerType intTy) -> Value {
+          if (intTy.getWidth() == 1)
+            return LLVM::ZExtOp::create(rewriter, loc, rewriter.getI8Type(),
+                                        oldVal);
+          return oldVal;
+        })
+        .Default(oldVal);
+  }
+
+  static Value bitcastOrTruncAfterShuffle(Value oldVal, Type newTy,
+                                          Location loc,
+                                          ConversionPatternRewriter &rewriter) {
+    return TypeSwitch<Type, Value>(newTy)
+        .Case([&](BFloat16Type) {
+          return LLVM::BitcastOp::create(rewriter, loc, newTy, oldVal);
+        })
+        .Case([&](IntegerType intTy) -> Value {
+          if (intTy.getWidth() == 1)
+            return LLVM::TruncOp::create(rewriter, loc, newTy, oldVal);
+          return oldVal;
+        })
+        .Default(oldVal);
+  }
+
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
@@ -294,26 +325,32 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
       return rewriter.notifyMatchFailure(
           op, "shuffle width and subgroup size mismatch");
 
-    std::optional<std::string> funcName = getFuncName(op);
+    Location loc = op->getLoc();
+    Value inValue =
+        bitcastOrExtBeforeShuffle(adaptor.getValue(), loc, rewriter);
+    std::optional<std::string> funcName =
+        getFuncName(op.getMode(), inValue.getType());
     if (!funcName)
       return rewriter.notifyMatchFailure(op, "unsupported value type");
 
     Operation *moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
     assert(moduleOp && "Expecting module");
-    Type valueType = adaptor.getValue().getType();
+    Type valueType = inValue.getType();
     Type offsetType = adaptor.getOffset().getType();
     Type resultType = valueType;
     LLVM::LLVMFuncOp func = lookupOrCreateSPIRVFn(
         moduleOp, funcName.value(), {valueType, offsetType}, resultType,
         /*isMemNone=*/false, /*isConvergent=*/true);
 
-    Location loc = op->getLoc();
-    std::array<Value, 2> args{adaptor.getValue(), adaptor.getOffset()};
+    std::array<Value, 2> args{inValue, adaptor.getOffset()};
     Value result =
         createSPIRVBuiltinCall(loc, rewriter, func, args).getResult();
+    Value resultOrConversion =
+        bitcastOrTruncAfterShuffle(result, op.getType(0), loc, rewriter);
+
     Value trueVal =
-        rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI1Type(), true);
-    rewriter.replaceOp(op, {result, trueVal});
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getI1Type(), true);
+    rewriter.replaceOp(op, {resultOrConversion, trueVal});
     return success();
   }
 };
@@ -389,7 +426,7 @@ struct GPUSubgroupOpConversion final : ConvertOpToLLVMPattern<SubgroupOp> {
       if (indexTy.getIntOrFloatBitWidth() < resultTy.getIntOrFloatBitWidth()) {
         return failure();
       }
-      result = rewriter.create<LLVM::ZExtOp>(loc, indexTy, result);
+      result = LLVM::ZExtOp::create(rewriter, loc, indexTy, result);
     }
 
     rewriter.replaceOp(op, result);
@@ -410,9 +447,7 @@ struct GPUToLLVMSPVConversionPass final
     RewritePatternSet patterns(context);
 
     LowerToLLVMOptions options(context);
-    if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
-      options.overrideIndexBitwidth(indexBitwidth);
-
+    options.overrideIndexBitwidth(this->use64bitIndex ? 64 : 32);
     LLVMTypeConverter converter(context, options);
     LLVMConversionTarget target(*context);
 

@@ -453,7 +453,8 @@ CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFunction(
       return std::move(IndexLoadError);
 
     // Check if there is an entry in the index for the function.
-    if (!NameFileMap.count(FunctionName)) {
+    auto It = NameFileMap.find(FunctionName);
+    if (It == NameFileMap.end()) {
       ++NumNotInOtherTU;
       return llvm::make_error<IndexError>(index_error_code::missing_definition);
     }
@@ -461,7 +462,7 @@ CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFunction(
     // Search in the index for the filename where the definition of FunctionName
     // resides.
     if (llvm::Expected<ASTUnit *> FoundForFile =
-            getASTUnitForFile(NameFileMap[FunctionName], DisplayCTUProgress)) {
+            getASTUnitForFile(It->second, DisplayCTUProgress)) {
 
       // Update the cache.
       NameASTUnitMap[FunctionName] = *FoundForFile;
@@ -559,16 +560,15 @@ CrossTranslationUnitContext::ASTLoader::load(StringRef Identifier) {
 
 CrossTranslationUnitContext::LoadResultTy
 CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
   TextDiagnosticPrinter *DiagClient =
-      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
+      new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
+  auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+      DiagnosticIDs::create(), *DiagOpts, DiagClient);
   return ASTUnit::LoadFromASTFile(
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
-      CI.getHeaderSearchOptsPtr());
+      ASTUnit::LoadEverything, DiagOpts, Diags, CI.getFileSystemOpts(),
+      CI.getHeaderSearchOpts());
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the
@@ -602,17 +602,17 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
                  CommandLineArgs.begin(),
                  [](auto &&CmdPart) { return CmdPart.c_str(); });
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts{&CI.getDiagnosticOpts()};
+  auto DiagOpts = std::make_shared<DiagnosticOptions>(CI.getDiagnosticOpts());
   auto *DiagClient = new ForwardingDiagnosticConsumer{CI.getDiagnosticClient()};
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID{
       CI.getDiagnostics().getDiagnosticIDs()};
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine{DiagID, &*DiagOpts, DiagClient});
+  auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagID, *DiagOpts,
+                                                            DiagClient);
 
-  return ASTUnit::LoadFromCommandLine(CommandLineArgs.begin(),
-                                      (CommandLineArgs.end()),
-                                      CI.getPCHContainerOperations(), Diags,
-                                      CI.getHeaderSearchOpts().ResourceDir);
+  return ASTUnit::LoadFromCommandLine(
+      CommandLineArgs.begin(), (CommandLineArgs.end()),
+      CI.getPCHContainerOperations(), DiagOpts, Diags,
+      CI.getHeaderSearchOpts().ResourceDir);
 }
 
 llvm::Expected<InvocationListTy>

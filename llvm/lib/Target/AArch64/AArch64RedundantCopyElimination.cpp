@@ -78,10 +78,7 @@ class AArch64RedundantCopyElimination : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64RedundantCopyElimination() : MachineFunctionPass(ID) {
-    initializeAArch64RedundantCopyEliminationPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AArch64RedundantCopyElimination() : MachineFunctionPass(ID) {}
 
   struct RegImm {
     MCPhysReg Reg;
@@ -95,8 +92,7 @@ public:
   bool optimizeBlock(MachineBasicBlock *MBB);
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
   StringRef getPassName() const override {
     return "AArch64 Redundant Copy Elimination";

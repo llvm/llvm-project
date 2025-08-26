@@ -9,10 +9,10 @@
 #ifndef FORTRAN_SEMANTICS_DATA_TO_INITS_H_
 #define FORTRAN_SEMANTICS_DATA_TO_INITS_H_
 
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/interval.h"
 #include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/initial-image.h"
+#include "flang/Support/default-kinds.h"
 #include <list>
 #include <map>
 

@@ -15,9 +15,9 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
@@ -42,6 +42,7 @@ cl::opt<unsigned> llvm::SCEVCheapExpansionBudget(
              "controls the budget that is considered cheap (default = 4)"));
 
 using namespace PatternMatch;
+using namespace SCEVPatternMatch;
 
 PoisonFlags::PoisonFlags(const Instruction *I) {
   NUW = false;
@@ -111,20 +112,23 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
 
   Value *Ret = nullptr;
 
-  // Check to see if there is already a cast!
-  for (User *U : V->users()) {
-    if (U->getType() != Ty)
-      continue;
-    CastInst *CI = dyn_cast<CastInst>(U);
-    if (!CI || CI->getOpcode() != Op)
-      continue;
+  if (!isa<Constant>(V)) {
+    // Check to see if there is already a cast!
+    for (User *U : V->users()) {
+      if (U->getType() != Ty)
+        continue;
+      CastInst *CI = dyn_cast<CastInst>(U);
+      if (!CI || CI->getOpcode() != Op)
+        continue;
 
-    // Found a suitable cast that is at IP or comes before IP. Use it. Note that
-    // the cast must also properly dominate the Builder's insertion point.
-    if (IP->getParent() == CI->getParent() && &*BIP != CI &&
-        (&*IP == CI || CI->comesBefore(&*IP))) {
-      Ret = CI;
-      break;
+      // Found a suitable cast that is at IP or comes before IP. Use it. Note
+      // that the cast must also properly dominate the Builder's insertion
+      // point.
+      if (IP->getParent() == CI->getParent() && &*BIP != CI &&
+          (&*IP == CI || CI->comesBefore(&*IP))) {
+        Ret = CI;
+        break;
+      }
     }
   }
 
@@ -179,8 +183,7 @@ SCEVExpander::GetOptimalInsertionPointForCastOf(Value *V) const {
     BasicBlock::iterator IP = A->getParent()->getEntryBlock().begin();
     while ((isa<BitCastInst>(IP) &&
             isa<Argument>(cast<BitCastInst>(IP)->getOperand(0)) &&
-            cast<BitCastInst>(IP)->getOperand(0) != A) ||
-           isa<DbgInfoIntrinsic>(IP))
+            cast<BitCastInst>(IP)->getOperand(0) != A))
       ++IP;
     return IP;
   }
@@ -275,11 +278,6 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   if (IP != BlockBegin) {
     --IP;
     for (; ScanLimit; --IP, --ScanLimit) {
-      // Don't count dbg.value against the ScanLimit, to avoid perturbing the
-      // generated code.
-      if (isa<DbgInfoIntrinsic>(IP))
-        ScanLimit++;
-
       auto canGenerateIncompatiblePoison = [&Flags](Instruction *I) {
         // Ensure that no-wrap flags match.
         if (isa<OverflowingBinaryOperator>(I)) {
@@ -379,10 +377,6 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V,
   if (IP != BlockBegin) {
     --IP;
     for (; ScanLimit; --IP, --ScanLimit) {
-      // Don't count dbg.value against the ScanLimit, to avoid perturbing the
-      // generated code.
-      if (isa<DbgInfoIntrinsic>(IP))
-        ScanLimit++;
       if (auto *GEP = dyn_cast<GetElementPtrInst>(IP)) {
         if (GEP->getPointerOperand() == V &&
             GEP->getSourceElementType() == Builder.getInt8Ty() &&
@@ -431,7 +425,7 @@ static const Loop *PickMostRelevantLoop(const Loop *A, const Loop *B,
 /// expression, according to PickMostRelevantLoop.
 const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   // Test whether we've already computed the most relevant loop for this SCEV.
-  auto Pair = RelevantLoops.insert(std::make_pair(S, nullptr));
+  auto Pair = RelevantLoops.try_emplace(S);
   if (!Pair.second)
     return Pair.first->second;
 
@@ -845,7 +839,7 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
   }
   for (Instruction *I : llvm::reverse(IVIncs)) {
     fixupInsertPoints(I);
-    I->moveBefore(InsertPos);
+    I->moveBefore(InsertPos->getIterator());
     if (RecomputePoisonFlags)
       FixupPoisonFlags(I);
   }
@@ -1230,6 +1224,54 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   return Result;
 }
 
+Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
+  Type *STy = S->getType();
+  const Loop *L = S->getLoop();
+  BasicBlock *EB = L->getExitBlock();
+  if (!EB || !EB->getSinglePredecessor() ||
+      !SE.DT.dominates(EB, Builder.GetInsertBlock()))
+    return nullptr;
+
+  for (auto &PN : EB->phis()) {
+    if (!SE.isSCEVable(PN.getType()))
+      continue;
+    auto *ExitSCEV = SE.getSCEV(&PN);
+    if (!isa<SCEVAddRecExpr>(ExitSCEV))
+      continue;
+    Type *PhiTy = PN.getType();
+    if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
+      ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
+      if (isa<SCEVCouldNotCompute>(ExitSCEV))
+        continue;
+    } else if (S->getType() != PN.getType()) {
+      continue;
+    }
+
+    // Check if we can re-use the existing PN, by adjusting it with an expanded
+    // offset, if the offset is simpler.
+    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
+    const SCEV *Op = Diff;
+    match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
+    match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
+    match(Op, m_scev_PtrToInt(m_SCEV(Op)));
+    if (!isa<SCEVConstant, SCEVUnknown>(Op))
+      continue;
+
+    assert(Diff->getType()->isIntegerTy() &&
+           "difference must be of integer type");
+    Value *DiffV = expand(Diff);
+    Value *BaseV = fixupLCSSAFormFor(&PN);
+    if (PhiTy->isPointerTy()) {
+      if (STy->isPointerTy())
+        return Builder.CreatePtrAdd(BaseV, DiffV);
+      BaseV = Builder.CreatePtrToInt(BaseV, DiffV->getType());
+    }
+    return Builder.CreateAdd(BaseV, DiffV);
+  }
+
+  return nullptr;
+}
+
 Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   // In canonical mode we compute the addrec as an expression of a canonical IV
   // using evaluateAtIteration and expand the resulting SCEV expression. This
@@ -1269,6 +1311,11 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     return V;
   }
 
+  // If S is expanded outside the defining loop, check if there is a
+  // matching LCSSA phi node for it.
+  if (Value *V = tryToReuseLCSSAPhi(S))
+    return V;
+
   // {X,+,F} --> X + {0,+,F}
   if (!S->getStart()->isZero()) {
     if (isa<PointerType>(S->getType())) {
@@ -1301,7 +1348,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     CanonicalIV->insertBefore(Header->begin());
     rememberInstruction(CanonicalIV);
 
-    SmallSet<BasicBlock *, 4> PredSeen;
+    SmallPtrSet<BasicBlock *, 4> PredSeen;
     Constant *One = ConstantInt::get(Ty, 1);
     for (pred_iterator HPI = HPB; HPI != HPE; ++HPI) {
       BasicBlock *HP = *HPI;
@@ -1437,7 +1484,7 @@ Value *SCEVExpander::visitSequentialUMinExpr(const SCEVSequentialUMinExpr *S) {
 }
 
 Value *SCEVExpander::visitVScale(const SCEVVScale *S) {
-  return Builder.CreateVScale(ConstantInt::get(S->getType(), 1));
+  return Builder.CreateVScale(S->getType());
 }
 
 Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty,
@@ -1451,7 +1498,7 @@ Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty) {
   // Expand the code for this SCEV.
   Value *V = expand(SH);
 
-  if (Ty) {
+  if (Ty && Ty != V->getType()) {
     assert(SE.getTypeSizeInBits(Ty) == SE.getTypeSizeInBits(SH->getType()) &&
            "non-trivial casts should be done with the SCEVs directly!");
     V = InsertNoopCastOfTo(V, Ty);
@@ -1467,8 +1514,8 @@ Value *SCEVExpander::FindValueInExprValueMap(
   if (!CanonicalMode && SE.containsAddRecurrence(S))
     return nullptr;
 
-  // If S is a constant, it may be worse to reuse an existing Value.
-  if (isa<SCEVConstant>(S))
+  // If S is a constant or unknown, it may be worse to reuse an existing Value.
+  if (isa<SCEVConstant>(S) || isa<SCEVUnknown>(S))
     return nullptr;
 
   for (Value *V : SE.getSCEVValues(S)) {
@@ -1542,8 +1589,7 @@ Value *SCEVExpander::expand(const SCEV *S) {
           InsertPt = L->getHeader()->getFirstInsertionPt();
 
         while (InsertPt != Builder.GetInsertPoint() &&
-               (isInsertedInstruction(&*InsertPt) ||
-                isa<DbgInfoIntrinsic>(&*InsertPt))) {
+               (isInsertedInstruction(&*InsertPt))) {
           InsertPt = std::next(InsertPt);
         }
         break;
@@ -1630,13 +1676,13 @@ void SCEVExpander::replaceCongruentIVInc(
   // If this phi has the same width but is more canonical, replace the
   // original with it. As part of the "more canonical" determination,
   // respect a prior decision to use an IV chain.
-  if (OrigPhi->getType() == Phi->getType() &&
-      !(ChainedPhis.count(Phi) ||
-        isExpandedAddRecExprPHI(OrigPhi, OrigInc, L)) &&
-      (ChainedPhis.count(Phi) ||
-       isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
-    std::swap(OrigPhi, Phi);
-    std::swap(OrigInc, IsomorphicInc);
+  if (OrigPhi->getType() == Phi->getType()) {
+    bool Chained = ChainedPhis.contains(Phi);
+    if (!(Chained || isExpandedAddRecExprPHI(OrigPhi, OrigInc, L)) &&
+        (Chained || isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
+      std::swap(OrigPhi, Phi);
+      std::swap(OrigInc, IsomorphicInc);
+    }
   }
 
   // Replacing the congruent phi is sufficient because acyclic
@@ -1690,7 +1736,7 @@ void SCEVExpander::replaceCongruentIVInc(
     if (PHINode *PN = dyn_cast<PHINode>(OrigInc))
       IP = PN->getParent()->getFirstInsertionPt();
     else
-      IP = OrigInc->getNextNonDebugInstruction()->getIterator();
+      IP = OrigInc->getNextNode()->getIterator();
 
     IRBuilder<> Builder(IP->getParent(), IP);
     Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
@@ -1712,9 +1758,8 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
                                   SmallVectorImpl<WeakTrackingVH> &DeadInsts,
                                   const TargetTransformInfo *TTI) {
   // Find integer phis in order of increasing width.
-  SmallVector<PHINode*, 8> Phis;
-  for (PHINode &PN : L->getHeader()->phis())
-    Phis.push_back(&PN);
+  SmallVector<PHINode *, 8> Phis(
+      llvm::make_pointer_range(L->getHeader()->phis()));
 
   if (TTI)
     // Use stable_sort to preserve order of equivalent PHIs, so the order
@@ -1816,7 +1861,7 @@ bool SCEVExpander::hasRelatedExistingExpansion(const SCEV *S,
 
   // Look for suitable value in simple conditions at the loop exits.
   for (BasicBlock *BB : ExitingBlocks) {
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Instruction *LHS, *RHS;
 
     if (!match(BB->getTerminator(),
@@ -2389,8 +2434,8 @@ void SCEVExpanderCleaner::cleanup() {
 
   auto InsertedInstructions = Expander.getAllInsertedInstructions();
 #ifndef NDEBUG
-  SmallPtrSet<Instruction *, 8> InsertedSet(InsertedInstructions.begin(),
-                                            InsertedInstructions.end());
+  SmallPtrSet<Instruction *, 8> InsertedSet(llvm::from_range,
+                                            InsertedInstructions);
   (void)InsertedSet;
 #endif
   // Remove sets with value handles.

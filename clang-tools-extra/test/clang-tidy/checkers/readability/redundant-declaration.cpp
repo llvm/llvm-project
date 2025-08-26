@@ -38,7 +38,7 @@ static int f();
 static int f(); // f
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'f' declaration
 // CHECK-FIXES: {{^}}// f{{$}}
-static int f() {}
+static int f() { return 0; }
 
 // Original check crashed for the code below.
 namespace std {

@@ -34,7 +34,7 @@ enum {
   HistOpcWidth = 40,
 };
 
-cl::OptionCategory DAGISelCat("Options for -gen-dag-isel");
+static cl::OptionCategory DAGISelCat("Options for -gen-dag-isel");
 
 // To reduce generated source code size.
 static cl::opt<bool> OmitComments("omit-comments",
@@ -151,7 +151,7 @@ public:
         Uses += PredicateUsage[TP];
 
       // We only add the first predicate here since they are with the same code.
-      PredicateList.push_back({TPs[0], Uses});
+      PredicateList.emplace_back(TPs[0], Uses);
     }
 
     stable_sort(PredicateList, [](const auto &A, const auto &B) {
@@ -381,8 +381,10 @@ static void EndEmitFunction(raw_ostream &OS) {
 
 void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 
-  assert(isUInt<16>(VecPatterns.size()) &&
-         "Using only 16 bits to encode offset into Pattern Table");
+  if (!isUInt<32>(VecPatterns.size()))
+    report_fatal_error("More patterns defined that can fit into 32-bit Pattern "
+                       "Table index encoding");
+
   assert(VecPatterns.size() == VecIncludeStrings.size() &&
          "The sizes of Pattern and include vectors should be the same");
 
@@ -437,8 +439,9 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         if (!OmitComments) {
           OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
           OS.indent(Indent) << "/*Scope*/ ";
-        } else
+        } else {
           OS.indent(Indent);
+        }
       }
 
       unsigned ChildSize = SM->getChild(i)->getSize();
@@ -556,8 +559,9 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       if (PredNo < 8) {
         OperandBytes = -1;
         OS << "OPC_CheckPredicate" << PredNo << ", ";
-      } else
+      } else {
         OS << "OPC_CheckPredicate, ";
+      }
     }
 
     if (PredNo >= 8 || Pred.usesOperands())
@@ -798,6 +802,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       break;
     }
     unsigned Bytes = OpBytes + EmitSignedVBRValue(Val, OS);
+    if (!OmitComments)
+      OS << " // " << Val << " #" << cast<EmitIntegerMatcher>(N)->getResultNo();
     OS << '\n';
     return Bytes;
   }
@@ -818,7 +824,10 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OpBytes = EmitVBRValue(VT, OS) + 1;
       break;
     }
-    OS << Val << ",\n";
+    OS << Val << ',';
+    if (!OmitComments)
+      OS << " // #" << cast<EmitStringIntegerMatcher>(N)->getResultNo();
+    OS << '\n';
     return OpBytes + 1;
   }
 
@@ -851,24 +860,31 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       break;
     }
     if (Reg) {
-      OS << getQualifiedName(Reg->TheDef) << ",\n";
+      OS << getQualifiedName(Reg->TheDef);
     } else {
       OS << "0 ";
       if (!OmitComments)
         OS << "/*zero_reg*/";
-      OS << ",\n";
     }
+
+    OS << ',';
+    if (!OmitComments)
+      OS << " // #" << Matcher->getResultNo();
+    OS << '\n';
     return OpBytes + 1;
   }
 
   case Matcher::EmitConvertToTarget: {
-    unsigned Slot = cast<EmitConvertToTargetMatcher>(N)->getSlot();
-    if (Slot < 8) {
-      OS << "OPC_EmitConvertToTarget" << Slot << ",\n";
-      return 1;
-    }
-    OS << "OPC_EmitConvertToTarget, " << Slot << ",\n";
-    return 2;
+    const auto *CTTM = cast<EmitConvertToTargetMatcher>(N);
+    unsigned Slot = CTTM->getSlot();
+    OS << "OPC_EmitConvertToTarget";
+    if (Slot >= 8)
+      OS << ", ";
+    OS << Slot << ',';
+    if (!OmitComments)
+      OS << " // #" << CTTM->getResultNo();
+    OS << '\n';
+    return 1 + (Slot >= 8);
   }
 
   case Matcher::EmitMergeInputChains: {
@@ -902,9 +918,10 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         OS << "OPC_EmitCopyToReg" << Slot << ", "
            << getQualifiedName(Reg->TheDef) << ",\n";
         --Bytes;
-      } else
+      } else {
         OS << "OPC_EmitCopyToReg, " << Slot << ", "
            << getQualifiedName(Reg->TheDef) << ",\n";
+      }
     }
 
     return Bytes;
@@ -914,7 +931,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     OS << "OPC_EmitNodeXForm, " << getNodeXFormID(XF->getNodeXForm()) << ", "
        << XF->getSlot() << ',';
     if (!OmitComments)
-      OS << " // " << XF->getNodeXForm()->getName();
+      OS << " // " << XF->getNodeXForm()->getName() << " #"
+         << XF->getResultNo();
     OS << '\n';
     return 3;
   }
@@ -934,7 +952,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         std::string include_src = getIncludePath(PatRecord);
         unsigned Offset =
             getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
-        OS << "TARGET_VAL(" << Offset << "),\n";
+        OS << "COVERAGE_IDX_VAL(" << Offset << "),\n";
         OS.indent(FullIndexWidth + Indent);
       }
     }
@@ -1027,8 +1045,9 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         OS.indent(FullIndexWidth + Indent)
             << "// Dst: " << SNT->getPattern().getDstPattern() << '\n';
       }
-    } else
+    } else {
       OS << '\n';
+    }
 
     return 4 + !CompressVTs + !CompressNodeInfo + NumTypeBytes +
            NumOperandBytes + NumCoveredBytes;
@@ -1047,7 +1066,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       std::string include_src = getIncludePath(PatRecord);
       unsigned Offset =
           getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
-      OS << "TARGET_VAL(" << Offset << "),\n";
+      OS << "COVERAGE_IDX_VAL(" << Offset << "),\n";
       OS.indent(FullIndexWidth + Indent);
     }
     OS << "OPC_CompleteMatch, " << CM->getNumResults() << ", ";
@@ -1134,12 +1153,12 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
 
   // Emit Node predicates.
   EmitNodePredicatesFunction(
-      NodePredicates, "CheckNodePredicate(SDNode *Node, unsigned PredNo) const",
+      NodePredicates, "CheckNodePredicate(SDValue Op, unsigned PredNo) const",
       OS);
   EmitNodePredicatesFunction(
       NodePredicatesWithOperands,
-      "CheckNodePredicateWithOperands(SDNode *Node, unsigned PredNo, "
-      "const SmallVectorImpl<SDValue> &Operands) const",
+      "CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo, "
+      "ArrayRef<SDValue> Operands) const",
       OS);
 
   // Emit CompletePattern matchers.
@@ -1174,12 +1193,12 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
       OS << "(";
       // If the complex pattern wants the root of the match, pass it in as the
       // first argument.
-      if (P.hasProperty(SDNPWantRoot))
+      if (P.wantsRoot())
         OS << "Root, ";
 
       // If the complex pattern wants the parent of the operand being matched,
       // pass it in as the next argument.
-      if (P.hasProperty(SDNPWantParent))
+      if (P.wantsParent())
         OS << "Parent, ";
 
       OS << "N";
@@ -1222,8 +1241,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
         OS << "// " << NodeXForms[i]->getName();
       OS << '\n';
 
-      std::string ClassName =
-          std::string(CGP.getSDNodeInfo(SDNode).getSDClassName());
+      std::string ClassName = CGP.getSDNodeInfo(SDNode).getSDClassName().str();
       if (ClassName == "SDNode")
         OS << "    SDNode *N = V.getNode();\n";
       else
@@ -1380,8 +1398,11 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
   // final stream.
   OS << "{\n";
   OS << "  // Some target values are emitted as 2 bytes, TARGET_VAL handles\n";
-  OS << "  // this.\n";
+  OS << "  // this. Coverage indexes are emitted as 4 bytes,\n";
+  OS << "  // COVERAGE_IDX_VAL handles this.\n";
   OS << "  #define TARGET_VAL(X) X & 255, unsigned(X) >> 8\n";
+  OS << "  #define COVERAGE_IDX_VAL(X) X & 255, (unsigned(X) >> 8) & 255, ";
+  OS << "(unsigned(X) >> 16) & 255, (unsigned(X) >> 24) & 255\n";
   OS << "  static const unsigned char MatcherTable[] = {\n";
   TotalSize = MatcherEmitter.EmitMatcherList(TheMatcher, 1, 0, OS);
   OS << "    0\n  }; // Total Array size is " << (TotalSize + 1)
@@ -1389,6 +1410,7 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
 
   MatcherEmitter.EmitHistogram(TheMatcher, OS);
 
+  OS << "  #undef COVERAGE_IDX_VAL\n";
   OS << "  #undef TARGET_VAL\n";
   OS << "  SelectCodeCommon(N, MatcherTable, sizeof(MatcherTable));\n";
   OS << "}\n";

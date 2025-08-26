@@ -106,6 +106,12 @@ if(MSVC)
 endif()
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
+# Win/ASan relies on the runtime functions being hotpatchable. See
+# https://github.com/llvm/llvm-project/pull/149444
+if(MSVC)
+  list(APPEND ASAN_CFLAGS /hotpatch)
+endif()
+
 append_list_if(MSVC /Zl ASAN_CFLAGS)
 
 set(ASAN_COMMON_DEFINITIONS "")
@@ -141,7 +147,7 @@ append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
 # LLVM turns /OPT:ICF back on when LLVM_ENABLE_PDBs is set
 # we _REALLY_ need to turn it back off for ASAN, because the way
 # asan emulates weak functions from DLLs requires NOICF
-append_list_if(MSVC "/DEBUG;/OPT:NOICF" ASAN_DYNAMIC_LINK_FLAGS)
+append_list_if(MSVC "LINKER:/DEBUG;LINKER:/OPT:NOICF" ASAN_DYNAMIC_LINK_FLAGS)
 
 set(ASAN_DYNAMIC_LIBS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
@@ -260,7 +266,6 @@ else()
       STATIC
       ARCHS ${ASAN_SUPPORTED_ARCH}
       OBJECT_LIBS RTAsan_cxx
-                  RTUbsan_cxx
       CFLAGS ${ASAN_CFLAGS}
       DEFS ${ASAN_COMMON_DEFINITIONS}
       PARENT_TARGET asan)
@@ -282,6 +287,8 @@ else()
       PARENT_TARGET asan)
   endif()
 
+  # On AIX, we only need the static libraries.
+  if (NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   foreach(arch ${ASAN_SUPPORTED_ARCH})
     if (COMPILER_RT_HAS_VERSION_SCRIPT)
       if(WIN32)
@@ -383,9 +390,20 @@ else()
       endif()
     endif()
   endforeach()
+  endif()
 endif()
 
 add_compiler_rt_resource_file(asan_ignorelist asan_ignorelist.txt asan)
+
+# On AIX, static sanitizer libraries are not added to the DSO, so we need to put 
+# asan.link_with_main_exec.txt and asan_cxx.link_with_main_exec.txt to the build
+# and install dir for use in resolving undefined sanitizer symbols at runtime.
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  foreach(arch ${ASAN_SUPPORTED_ARCH})
+    add_compiler_rt_cfg(asan_symbols_${arch} asan.link_with_main_exec.txt asan ${arch})
+    add_compiler_rt_cfg(asan_cxx_symbols_${arch} asan_cxx.link_with_main_exec.txt asan ${arch})
+  endforeach()
+endif()
 
 add_subdirectory(scripts)
 

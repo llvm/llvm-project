@@ -88,8 +88,8 @@ body:             |
     ; CHECK-LABEL: name: test_combine_trunc_sub_i128
     ; CHECK: %lhs:_(s128) = COPY $q0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %lhs(s128)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK-NEXT: %small:_(s32) = G_SUB [[TRUNC]], [[C]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -5
+    ; CHECK-NEXT: %small:_(s32) = G_ADD [[TRUNC]], [[C]]
     ; CHECK-NEXT: $w0 = COPY %small(s32)
     %lhs:_(s128) = COPY $q0
     %rhs:_(s128) = G_CONSTANT i128 5
@@ -103,8 +103,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_trunc_sub_i128_multi_use
     ; CHECK: %lhs:_(s128) = COPY $q0
-    ; CHECK-NEXT: %rhs:_(s128) = G_CONSTANT i128 5
-    ; CHECK-NEXT: %res:_(s128) = G_SUB %lhs, %rhs
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 -5
+    ; CHECK-NEXT: %res:_(s128) = G_ADD %lhs, [[C]]
     ; CHECK-NEXT: %small:_(s32) = G_TRUNC %res(s128)
     ; CHECK-NEXT: $q0 = COPY %res(s128)
     ; CHECK-NEXT: $w0 = COPY %small(s32)

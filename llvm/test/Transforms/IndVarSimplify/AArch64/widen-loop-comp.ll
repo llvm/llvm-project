@@ -93,11 +93,11 @@ for.end:
 }
 
 
-define void @test2(ptr %a, ptr %b, i8 %limit) {
+define void @test2(ptr %a, ptr %b, i8 %limit, i1 %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[LIMIT:%.*]] to i32
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader.us.preheader:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[CONV]], i32 1)
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
@@ -139,7 +139,7 @@ define void @test2(ptr %a, ptr %b, i8 %limit) {
 ;
 entry:
   %conv = zext i8 %limit to i32
-  br i1 undef, label %for.cond1.preheader, label %for.cond1.preheader.us
+  br i1 %arg, label %for.cond1.preheader, label %for.cond1.preheader.us
 
 for.cond1.preheader.us:
   %storemerge5.us = phi i32 [ 0, %entry ], [ %inc14.us, %for.inc13.us ]

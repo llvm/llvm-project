@@ -15,6 +15,7 @@
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
 #include <mutex>
@@ -34,7 +35,7 @@ static const char *dynoStatsOptName(const bolt::DynoStats::Category C) {
 
   OptNames[C] = bolt::DynoStats::Description(C);
 
-  std::replace(OptNames[C].begin(), OptNames[C].end(), ' ', '-');
+  llvm::replace(OptNames[C], ' ', '-');
 
   return OptNames[C].c_str();
 }
@@ -222,6 +223,18 @@ static cl::opt<unsigned> TopCalledLimit(
     cl::desc("maximum number of functions to print in top called "
              "functions section"),
     cl::init(100), cl::Hidden, cl::cat(BoltCategory));
+
+// Profile density options, synced with llvm-profgen/ProfileGenerator.cpp
+static cl::opt<int> ProfileDensityCutOffHot(
+    "profile-density-cutoff-hot", cl::init(990000),
+    cl::desc("Total samples cutoff for functions used to calculate "
+             "profile density."));
+
+static cl::opt<double> ProfileDensityThreshold(
+    "profile-density-threshold", cl::init(60),
+    cl::desc("If the profile density is below the given threshold, it "
+             "will be suggested to increase the sampling rate."),
+    cl::Optional);
 
 } // namespace opts
 
@@ -575,10 +588,18 @@ Error CheckLargeFunctions::runOnFunctions(BinaryContext &BC) {
     uint64_t HotSize, ColdSize;
     std::tie(HotSize, ColdSize) =
         BC.calculateEmittedSize(BF, /*FixBranches=*/false);
-    if (HotSize > BF.getMaxSize()) {
+    uint64_t MainFragmentSize = HotSize;
+    if (BF.hasIslandsInfo()) {
+      MainFragmentSize +=
+          offsetToAlignment(BF.getAddress() + MainFragmentSize,
+                            Align(BF.getConstantIslandAlignment()));
+      MainFragmentSize += BF.estimateConstantIslandSize();
+    }
+    if (MainFragmentSize > BF.getMaxSize()) {
       if (opts::PrintLargeFunctions)
-        BC.outs() << "BOLT-INFO: " << BF << " size exceeds allocated space by "
-                  << (HotSize - BF.getMaxSize()) << " bytes\n";
+        BC.outs() << "BOLT-INFO: " << BF << " size of " << MainFragmentSize
+                  << " bytes exceeds allocated space by "
+                  << (MainFragmentSize - BF.getMaxSize()) << " bytes\n";
       BF.setSimple(false);
     }
   };
@@ -641,7 +662,7 @@ Error CleanMCState::runOnFunctions(BinaryContext &BC) {
     if (S->isDefined()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
                         << "\" is already defined\n");
-      const_cast<MCSymbol *>(S)->setUndefined();
+      const_cast<MCSymbol *>(S)->setFragment(nullptr);
     }
     if (S->isRegistered()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
@@ -1248,8 +1269,10 @@ Error SimplifyRODataLoads::runOnFunctions(BinaryContext &BC) {
 
 Error AssignSections::runOnFunctions(BinaryContext &BC) {
   for (BinaryFunction *Function : BC.getInjectedBinaryFunctions()) {
-    Function->setCodeSectionName(BC.getInjectedCodeSectionName());
-    Function->setColdCodeSectionName(BC.getInjectedColdCodeSectionName());
+    if (!Function->isPatch()) {
+      Function->setCodeSectionName(BC.getInjectedCodeSectionName());
+      Function->setColdCodeSectionName(BC.getInjectedColdCodeSectionName());
+    }
   }
 
   // In non-relocation mode functions have pre-assigned section names.
@@ -1383,6 +1406,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   uint64_t StaleSampleCount = 0;
   uint64_t InferredSampleCount = 0;
   std::vector<const BinaryFunction *> ProfiledFunctions;
+  std::vector<std::pair<double, uint64_t>> FuncDensityList;
   const char *StaleFuncsHeader = "BOLT-INFO: Functions with stale profile:\n";
   for (auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction &Function = BFI.second;
@@ -1421,7 +1445,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     if (!Function.hasProfile())
       continue;
 
-    uint64_t SampleCount = Function.getRawBranchCount();
+    uint64_t SampleCount = Function.getRawSampleCount();
     TotalSampleCount += SampleCount;
 
     if (Function.hasValidProfile()) {
@@ -1440,6 +1464,22 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
       ++NumStaleProfileFunctions;
       StaleSampleCount += SampleCount;
       ++NumAllStaleFunctions;
+    }
+
+    if (opts::ShowDensity) {
+      uint64_t Size = Function.getSize();
+      // In case of BOLT split functions registered in BAT, executed traces are
+      // automatically attributed to the main fragment. Add up function sizes
+      // for all fragments.
+      if (IsHotParentOfBOLTSplitFunction)
+        for (const BinaryFunction *Fragment : Function.getFragments())
+          Size += Fragment->getSize();
+      double Density = (double)1.0 * Function.getSampleCountInBytes() / Size;
+      FuncDensityList.emplace_back(Density, SampleCount);
+      LLVM_DEBUG(BC.outs() << Function << ": executed bytes "
+                           << Function.getSampleCountInBytes() << ", size (b) "
+                           << Size << ", density " << Density
+                           << ", sample count " << SampleCount << '\n');
     }
   }
   BC.NumProfiledFuncs = ProfiledFunctions.size();
@@ -1519,10 +1559,48 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
         "BOLT-INFO: inference found an exact match for %.2f%% of basic blocks"
         " (%zu out of %zu stale) responsible for %.2f%% samples"
         " (%zu out of %zu stale)\n",
-        100.0 * BC.Stats.NumMatchedBlocks / BC.Stats.NumStaleBlocks,
-        BC.Stats.NumMatchedBlocks, BC.Stats.NumStaleBlocks,
-        100.0 * BC.Stats.MatchedSampleCount / BC.Stats.StaleSampleCount,
-        BC.Stats.MatchedSampleCount, BC.Stats.StaleSampleCount);
+        100.0 * BC.Stats.NumExactMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumExactMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.ExactMatchedSampleCount / BC.Stats.StaleSampleCount,
+        BC.Stats.ExactMatchedSampleCount, BC.Stats.StaleSampleCount);
+    BC.outs() << format(
+        "BOLT-INFO: inference found an exact pseudo probe match for %.2f%% of "
+        "basic blocks (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumPseudoProbeExactMatchedBlocks /
+            BC.Stats.NumStaleBlocks,
+        BC.Stats.NumPseudoProbeExactMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.PseudoProbeExactMatchedSampleCount /
+            BC.Stats.StaleSampleCount,
+        BC.Stats.PseudoProbeExactMatchedSampleCount, BC.Stats.StaleSampleCount);
+    BC.outs() << format(
+        "BOLT-INFO: inference found a loose pseudo probe match for %.2f%% of "
+        "basic blocks (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumPseudoProbeLooseMatchedBlocks /
+            BC.Stats.NumStaleBlocks,
+        BC.Stats.NumPseudoProbeLooseMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.PseudoProbeLooseMatchedSampleCount /
+            BC.Stats.StaleSampleCount,
+        BC.Stats.PseudoProbeLooseMatchedSampleCount, BC.Stats.StaleSampleCount);
+    BC.outs() << format(
+        "BOLT-INFO: inference found a call match for %.2f%% of basic "
+        "blocks"
+        " (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumCallMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumCallMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.CallMatchedSampleCount / BC.Stats.StaleSampleCount,
+        BC.Stats.CallMatchedSampleCount, BC.Stats.StaleSampleCount);
+    BC.outs() << format(
+        "BOLT-INFO: inference found a loose match for %.2f%% of basic "
+        "blocks"
+        " (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumLooseMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumLooseMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.LooseMatchedSampleCount / BC.Stats.StaleSampleCount,
+        BC.Stats.LooseMatchedSampleCount, BC.Stats.StaleSampleCount);
   }
 
   if (const uint64_t NumUnusedObjects = BC.getNumUnusedProfiledObjects()) {
@@ -1683,6 +1761,49 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     if (!opts::PrintUnknown)
       BC.outs() << ". Use -print-unknown to see the list.";
     BC.outs() << '\n';
+  }
+
+  if (opts::ShowDensity) {
+    double Density = 0.0;
+    llvm::sort(FuncDensityList);
+
+    uint64_t AccumulatedSamples = 0;
+    assert(opts::ProfileDensityCutOffHot <= 1000000 &&
+           "The cutoff value is greater than 1000000(100%)");
+    // Subtract samples in zero-density functions (no fall-throughs) from
+    // TotalSampleCount (not used anywhere below).
+    for (const auto [CurDensity, CurSamples] : FuncDensityList) {
+      if (CurDensity != 0.0)
+        break;
+      TotalSampleCount -= CurSamples;
+    }
+    const uint64_t CutoffSampleCount =
+        1.f * TotalSampleCount * opts::ProfileDensityCutOffHot / 1000000;
+    // Process functions in decreasing density order
+    for (const auto [CurDensity, CurSamples] : llvm::reverse(FuncDensityList)) {
+      if (AccumulatedSamples >= CutoffSampleCount)
+        break;
+      AccumulatedSamples += CurSamples;
+      Density = CurDensity;
+    }
+    if (Density == 0.0) {
+      BC.errs() << "BOLT-WARNING: the output profile is empty or the "
+                   "--profile-density-cutoff-hot option is "
+                   "set too low. Please check your command.\n";
+    } else if (Density < opts::ProfileDensityThreshold) {
+      BC.errs()
+          << "BOLT-WARNING: BOLT is estimated to optimize better with "
+          << format("%.1f", opts::ProfileDensityThreshold / Density)
+          << "x more samples. Please consider increasing sampling rate or "
+             "profiling for longer duration to get more samples.\n";
+    }
+
+    BC.outs() << "BOLT-INFO: Functions with density >= "
+              << format("%.1f", Density) << " account for "
+              << format("%.2f",
+                        static_cast<double>(opts::ProfileDensityCutOffHot) /
+                            10000)
+              << "% total sample counts.\n";
   }
   return Error::success();
 }

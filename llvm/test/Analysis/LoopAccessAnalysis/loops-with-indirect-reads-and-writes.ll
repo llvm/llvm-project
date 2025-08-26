@@ -92,15 +92,15 @@ define void @test_indirect_read_loop_also_modifies_pointer_array(ptr noundef %ar
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i64, ptr %arr, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
 ; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
 ; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:
@@ -160,15 +160,15 @@ define void @test_indirect_write_loop_also_modifies_pointer_array(ptr noundef %a
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
 ; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
 ; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:

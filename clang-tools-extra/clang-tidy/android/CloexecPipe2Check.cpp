@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CloexecPipe2Check.h"
-#include "../utils/ASTUtils.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -16,10 +14,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::android {
 
 void CloexecPipe2Check::registerMatchers(MatchFinder *Finder) {
-  registerMatchersImpl(Finder,
-                       functionDecl(returns(isInteger()), hasName("pipe2"),
-                                    hasParameter(0, hasType(pointsTo(isInteger()))),
-                                    hasParameter(1, hasType(isInteger()))));
+  registerMatchersImpl(
+      Finder, functionDecl(returns(isInteger()), hasName("pipe2"),
+                           hasParameter(0, hasType(pointsTo(isInteger()))),
+                           hasParameter(1, hasType(isInteger()))));
 }
 
 void CloexecPipe2Check::check(const MatchFinder::MatchResult &Result) {

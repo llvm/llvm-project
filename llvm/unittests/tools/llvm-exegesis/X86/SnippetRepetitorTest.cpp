@@ -55,7 +55,7 @@ protected:
   static constexpr const unsigned kMinInstructions = 3;
   static constexpr const unsigned kLoopBodySize = 5;
 
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<LLVMContext> Context;
   std::unique_ptr<Module> Mod;
   std::unique_ptr<MachineModuleInfo> MMI;

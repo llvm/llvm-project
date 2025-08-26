@@ -369,8 +369,7 @@ void *ManyThreadsWorker(void *a) {
   return 0;
 }
 
-#if !defined(__aarch64__) && !defined(__powerpc64__)
-// FIXME: Infinite loop in AArch64 (PR24389).
+#if !defined(__powerpc64__)
 // FIXME: Also occasional hang on powerpc.  Maybe same problem as on AArch64?
 TEST(AddressSanitizer, ManyThreadsTest) {
   const size_t kNumThreads =
@@ -396,7 +395,8 @@ TEST(AddressSanitizer, ReallocTest) {
   }
   free(ptr);
   // Realloc pointer returned by malloc(0).
-  int *ptr2 = Ident((int*)malloc(0));
+  volatile void *ptr0 = malloc(0);
+  int *ptr2 = Ident((int *)ptr0);
   ptr2 = Ident((int*)realloc(ptr2, sizeof(*ptr2)));
   *ptr2 = 42;
   EXPECT_EQ(42, *ptr2);
@@ -631,7 +631,7 @@ NOINLINE void SigLongJmpFunc1(sigjmp_buf buf) {
 
 #if !defined(__ANDROID__) && !defined(__arm__) && !defined(__aarch64__) && \
     !defined(__mips__) && !defined(__mips64) && !defined(__s390__) &&      \
-    !defined(__riscv) && !defined(__loongarch__)
+    !defined(__riscv) && !defined(__loongarch__) && !defined(__sparc__)
 NOINLINE void BuiltinLongJmpFunc1(jmp_buf buf) {
   // create three red zones for these two stack objects.
   int a;
@@ -1164,15 +1164,11 @@ TEST(AddressSanitizer, DISABLED_StressStackReuseAndExceptionsTest) {
 }
 #endif
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__HAIKU__)
 TEST(AddressSanitizer, MlockTest) {
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 17
   EXPECT_EQ(0, mlockall(MCL_CURRENT));
-#endif
-  EXPECT_EQ(0, mlock((void*)0x12345, 0x5678));
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 17
+  EXPECT_EQ(0, mlock((void *)0x12345, 0x5678));
   EXPECT_EQ(0, munlockall());
-#endif
   EXPECT_EQ(0, munlock((void*)0x987, 0x654));
 }
 #endif

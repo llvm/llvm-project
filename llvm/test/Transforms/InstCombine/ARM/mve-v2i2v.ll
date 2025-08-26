@@ -282,7 +282,7 @@ entry:
 define <2 x i1> @vpnot_2(<2 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[VOUT]]
 ;
 entry:
@@ -295,7 +295,7 @@ entry:
 define <4 x i1> @vpnot_4(<4 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <4 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <4 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <4 x i1> [[VOUT]]
 ;
 entry:
@@ -308,7 +308,7 @@ entry:
 define <8 x i1> @vpnot_8(<8 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <8 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <8 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <8 x i1> [[VOUT]]
 ;
 entry:
@@ -321,7 +321,7 @@ entry:
 define <16 x i1> @vpnot_16(<16 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <16 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <16 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <16 x i1> [[VOUT]]
 ;
 entry:
@@ -337,7 +337,7 @@ entry:
 define <2 x i1> @vpnot_narrow_2(<2 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_narrow_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[VOUT]]
 ;
 entry:
@@ -352,7 +352,7 @@ entry:
 define <4 x i1> @vpnot_narrow_4(<4 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_narrow_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <4 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <4 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <4 x i1> [[VOUT]]
 ;
 entry:
@@ -367,7 +367,7 @@ entry:
 define <8 x i1> @vpnot_narrow_8(<8 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_narrow_8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <8 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <8 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <8 x i1> [[VOUT]]
 ;
 entry:
@@ -382,7 +382,7 @@ entry:
 define <16 x i1> @vpnot_narrow_16(<16 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_narrow_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <16 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <16 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <16 x i1> [[VOUT]]
 ;
 entry:

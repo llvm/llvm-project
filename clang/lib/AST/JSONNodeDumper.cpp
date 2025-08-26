@@ -4,7 +4,6 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
-#include <optional>
 
 using namespace clang;
 
@@ -396,8 +395,8 @@ llvm::json::Array JSONNodeDumper::createCastPath(const CastExpr *C) {
 
   for (auto I = C->path_begin(), E = C->path_end(); I != E; ++I) {
     const CXXBaseSpecifier *Base = *I;
-    const auto *RD =
-        cast<CXXRecordDecl>(Base->getType()->castAs<RecordType>()->getDecl());
+    const auto *RD = cast<CXXRecordDecl>(
+        Base->getType()->castAs<RecordType>()->getOriginalDecl());
 
     llvm::json::Object Val{{"name", RD->getName()}};
     if (Base->isVirtual())
@@ -607,9 +606,8 @@ void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
 }
 
 void JSONNodeDumper::VisitUsingType(const UsingType *TT) {
-  JOS.attribute("decl", createBareDeclRef(TT->getFoundDecl()));
-  if (!TT->typeMatchesDecl())
-    JOS.attribute("type", createQualType(TT->desugar()));
+  JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
+  JOS.attribute("type", createQualType(TT->desugar()));
 }
 
 void JSONNodeDumper::VisitFunctionType(const FunctionType *T) {
@@ -760,7 +758,15 @@ void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
 }
 
 void JSONNodeDumper::VisitTagType(const TagType *TT) {
-  JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
+  if (NestedNameSpecifier Qualifier = TT->getQualifier()) {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    Qualifier.print(OS, PrintPolicy, /*ResolveTemplateArguments=*/true);
+    JOS.attribute("qualifier", Str);
+  }
+  JOS.attribute("decl", createBareDeclRef(TT->getOriginalDecl()));
+  if (TT->isTagOwned())
+    JOS.attribute("isTagOwned", true);
 }
 
 void JSONNodeDumper::VisitTemplateTypeParmType(
@@ -810,7 +816,7 @@ void JSONNodeDumper::VisitTemplateSpecializationType(
 
 void JSONNodeDumper::VisitInjectedClassNameType(
     const InjectedClassNameType *ICNT) {
-  JOS.attribute("decl", createBareDeclRef(ICNT->getDecl()));
+  JOS.attribute("decl", createBareDeclRef(ICNT->getOriginalDecl()));
 }
 
 void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
@@ -818,19 +824,8 @@ void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
 }
 
 void JSONNodeDumper::VisitPackExpansionType(const PackExpansionType *PET) {
-  if (std::optional<unsigned> N = PET->getNumExpansions())
+  if (UnsignedOrNone N = PET->getNumExpansions())
     JOS.attribute("numExpansions", *N);
-}
-
-void JSONNodeDumper::VisitElaboratedType(const ElaboratedType *ET) {
-  if (const NestedNameSpecifier *NNS = ET->getQualifier()) {
-    std::string Str;
-    llvm::raw_string_ostream OS(Str);
-    NNS->print(OS, PrintPolicy, /*ResolveTemplateArgs*/ true);
-    JOS.attribute("qualifier", Str);
-  }
-  if (const TagDecl *TD = ET->getOwnedTagDecl())
-    JOS.attribute("ownedTagDecl", createBareDeclRef(TD));
 }
 
 void JSONNodeDumper::VisitMacroQualifiedType(const MacroQualifiedType *MQT) {
@@ -903,9 +898,9 @@ void JSONNodeDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *NAD) {
 
 void JSONNodeDumper::VisitUsingDecl(const UsingDecl *UD) {
   std::string Name;
-  if (const NestedNameSpecifier *NNS = UD->getQualifier()) {
+  if (NestedNameSpecifier Qualifier = UD->getQualifier()) {
     llvm::raw_string_ostream SOS(Name);
-    NNS->print(SOS, UD->getASTContext().getPrintingPolicy());
+    Qualifier.print(SOS, UD->getASTContext().getPrintingPolicy());
   }
   Name += UD->getNameAsString();
   JOS.attribute("name", Name);
@@ -1002,6 +997,11 @@ void JSONNodeDumper::VisitRecordDecl(const RecordDecl *RD) {
 }
 void JSONNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *RD) {
   VisitRecordDecl(RD);
+
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+    if (CTSD->hasStrictPackMatch())
+      JOS.attribute("strict-pack-match", true);
+  }
 
   // All other information requires a complete definition.
   if (!RD->isCompleteDefinition())
@@ -1357,6 +1357,9 @@ void JSONNodeDumper::VisitSYCLUniqueStableNameExpr(
 void JSONNodeDumper::VisitOpenACCAsteriskSizeExpr(
     const OpenACCAsteriskSizeExpr *E) {}
 
+void JSONNodeDumper::VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D) {}
+void JSONNodeDumper::VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D) {}
+
 void JSONNodeDumper::VisitPredefinedExpr(const PredefinedExpr *PE) {
   JOS.attribute("name", PredefinedExpr::getIdentKindName(PE->getIdentKind()));
 }
@@ -1537,9 +1540,9 @@ void JSONNodeDumper::VisitExprWithCleanups(const ExprWithCleanups *EWC) {
   if (EWC->getNumObjects()) {
     JOS.attributeArray("cleanups", [this, EWC] {
       for (const ExprWithCleanups::CleanupObject &CO : EWC->getObjects())
-        if (auto *BD = CO.dyn_cast<BlockDecl *>()) {
+        if (auto *BD = dyn_cast<BlockDecl *>(CO)) {
           JOS.value(createBareDeclRef(BD));
-        } else if (auto *CLE = CO.dyn_cast<CompoundLiteralExpr *>()) {
+        } else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(CO)) {
           llvm::json::Object Obj;
           Obj["id"] = createPointerRepresentation(CLE);
           Obj["kind"] = CLE->getStmtClassName();
@@ -1700,6 +1703,10 @@ void JSONNodeDumper::VisitNullPtrTemplateArgument(const TemplateArgument &TA) {
 void JSONNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
   JOS.attribute("value", TA.getAsIntegral().getSExtValue());
 }
+void JSONNodeDumper::VisitStructuralValueTemplateArgument(
+    const TemplateArgument &TA) {
+  Visit(TA.getAsStructuralValue(), TA.getStructuralValueType());
+}
 void JSONNodeDumper::VisitTemplateTemplateArgument(const TemplateArgument &TA) {
   // FIXME: cannot just call dump() on the argument, as that doesn't specify
   // the output format.
@@ -1712,6 +1719,8 @@ void JSONNodeDumper::VisitTemplateExpansionTemplateArgument(
 void JSONNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   JOS.attribute("isExpr", true);
+  if (TA.isCanonicalExpr())
+    JOS.attribute("isCanonical", true);
 }
 void JSONNodeDumper::VisitPackTemplateArgument(const TemplateArgument &TA) {
   JOS.attribute("isPack", true);
@@ -1850,7 +1859,7 @@ void JSONNodeDumper::visitVerbatimLineComment(
 
 llvm::json::Object JSONNodeDumper::createFPOptions(FPOptionsOverride FPO) {
   llvm::json::Object Ret;
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (FPO.has##NAME##Override())                                               \
     Ret.try_emplace(#NAME, static_cast<unsigned>(FPO.get##NAME##Override()));
 #include "clang/Basic/FPOptions.def"

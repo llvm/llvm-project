@@ -20,7 +20,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <algorithm>
 #include <cstdint>
 #include <numeric>
 

@@ -19,6 +19,7 @@
 #include "Common/CodeGenDAGPatterns.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -144,14 +145,10 @@ public:
   /// A bitfield of RecordFlagsBits flags.
   unsigned Flags;
 
-  /// The actual run-time value, if known
-  int64_t RawValue;
-
   MatchTableRecord(std::optional<unsigned> LabelID_, StringRef EmitStr,
-                   unsigned NumElements, unsigned Flags,
-                   int64_t RawValue = std::numeric_limits<int64_t>::min())
+                   unsigned NumElements, unsigned Flags)
       : LabelID(LabelID_.value_or(~0u)), EmitStr(EmitStr),
-        NumElements(NumElements), Flags(Flags), RawValue(RawValue) {
+        NumElements(NumElements), Flags(Flags) {
     assert((!LabelID_ || LabelID != ~0u) &&
            "This value is reserved for non-labels");
   }
@@ -164,12 +161,6 @@ public:
     Flags &= ~MTRF_CommaFollows;
     NumElements = 0;
   }
-
-  /// For Jump Table generation purposes
-  bool operator<(const MatchTableRecord &Other) const {
-    return RawValue < Other.RawValue;
-  }
-  int64_t getRawValue() const { return RawValue; }
 
   void emit(raw_ostream &OS, bool LineBreakNextAfterThis,
             const MatchTable &Table) const;
@@ -201,12 +192,8 @@ public:
   static MatchTableRecord Comment(StringRef Comment);
   static MatchTableRecord Opcode(StringRef Opcode, int IndentAdjust = 0);
   static MatchTableRecord NamedValue(unsigned NumBytes, StringRef NamedValue);
-  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef NamedValue,
-                                     int64_t RawValue);
   static MatchTableRecord NamedValue(unsigned NumBytes, StringRef Namespace,
                                      StringRef NamedValue);
-  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef Namespace,
-                                     StringRef NamedValue, int64_t RawValue);
   static MatchTableRecord IntValue(unsigned NumBytes, int64_t IntValue);
   static MatchTableRecord ULEB128Value(uint64_t IntValue);
   static MatchTableRecord Label(unsigned LabelID);
@@ -232,7 +219,7 @@ public:
   unsigned allocateLabelID() { return CurrentLabelID++; }
 
   void defineLabel(unsigned LabelID) {
-    LabelMap.insert(std::pair(LabelID, CurrentSize));
+    LabelMap.try_emplace(LabelID, CurrentSize);
   }
 
   unsigned getLabelIndex(unsigned LabelID) const {
@@ -399,6 +386,20 @@ private:
   bool candidateConditionMatches(const PredicateMatcher &Predicate) const;
 };
 
+/// MatchTableRecord and associated value, for jump table generation.
+struct RecordAndValue {
+  MatchTableRecord Record;
+  int64_t RawValue;
+
+  RecordAndValue(MatchTableRecord Record,
+                 int64_t RawValue = std::numeric_limits<int64_t>::min())
+      : Record(std::move(Record)), RawValue(RawValue) {}
+
+  bool operator<(const RecordAndValue &Other) const {
+    return RawValue < Other.RawValue;
+  }
+};
+
 class SwitchMatcher : public Matcher {
   /// All the nested matchers, representing distinct switch-cases. The first
   /// conditions (as Matcher::getFirstCondition() reports) of all the nested
@@ -413,7 +414,7 @@ class SwitchMatcher : public Matcher {
 
   /// Temporary set used to check that the case values don't repeat within the
   /// same switch.
-  std::set<MatchTableRecord> Values;
+  std::set<RecordAndValue> Values;
 
   /// An owning collection for any auxiliary matchers created while optimizing
   /// nested matchers contained.
@@ -492,19 +493,21 @@ protected:
   /// the renderers.
   StringMap<OperandMatcher *> DefinedOperands;
 
+  using PhysRegOperandsTy = SmallMapVector<const Record *, OperandMatcher *, 1>;
+
   /// A map of anonymous physical register operands defined by the matchers that
   /// may be referenced by the renderers.
-  DenseMap<const Record *, OperandMatcher *> PhysRegOperands;
+  PhysRegOperandsTy PhysRegOperands;
 
   /// ID for the next instruction variable defined with
   /// implicitlyDefineInsnVar()
-  unsigned NextInsnVarID;
+  unsigned NextInsnVarID = 0;
 
   /// ID for the next output instruction allocated with allocateOutputInsnID()
-  unsigned NextOutputInsnID;
+  unsigned NextOutputInsnID = 0;
 
   /// ID for the next temporary register ID allocated with allocateTempRegID()
-  unsigned NextTempRegID;
+  unsigned NextTempRegID = 0;
 
   /// ID for the next recorded type. Starts at -1 and counts down.
   TempTypeIdx NextTempTypeIdx = -1;
@@ -542,9 +545,7 @@ protected:
                              StringRef FlagName, GISelFlags FlagBit);
 
 public:
-  RuleMatcher(ArrayRef<SMLoc> SrcLoc)
-      : NextInsnVarID(0), NextOutputInsnID(0), NextTempRegID(0), SrcLoc(SrcLoc),
-        RuleID(NextRuleID++) {}
+  RuleMatcher(ArrayRef<SMLoc> SrcLoc) : SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
@@ -695,6 +696,10 @@ public:
   unsigned allocateOutputInsnID() { return NextOutputInsnID++; }
   unsigned allocateTempRegID() { return NextTempRegID++; }
 
+  iterator_range<PhysRegOperandsTy::const_iterator> physoperands() const {
+    return make_range(PhysRegOperands.begin(), PhysRegOperands.end());
+  }
+
   iterator_range<MatchersTy::iterator> insnmatchers() {
     return make_range(Matchers.begin(), Matchers.end());
   }
@@ -817,6 +822,7 @@ public:
     IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
+    OPM_LeafPredicate,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -867,7 +873,7 @@ public:
     return hasValue() && PredicateMatcher::isIdentical(B);
   }
 
-  virtual MatchTableRecord getValue() const {
+  virtual RecordAndValue getValue() const {
     assert(hasValue() && "Can not get a value of a value-less predicate!");
     llvm_unreachable("Not implemented yet");
   }
@@ -961,7 +967,7 @@ public:
            Ty == cast<LLTOperandMatcher>(&B)->Ty;
   }
 
-  MatchTableRecord getValue() const override;
+  RecordAndValue getValue() const override;
   bool hasValue() const override;
 
   LLTCodeGen getTy() const { return Ty; }
@@ -1248,6 +1254,26 @@ public:
                             RuleMatcher &Rule) const override;
 };
 
+/// Generates code to check that this operand is a register whose value meets
+/// the predicate.
+class OperandLeafPredicateMatcher : public OperandPredicateMatcher {
+protected:
+  TreePredicateFn Predicate;
+
+public:
+  OperandLeafPredicateMatcher(unsigned InsnVarID, unsigned OpIdx,
+                              const TreePredicateFn &Predicate)
+      : OperandPredicateMatcher(OPM_LeafPredicate, InsnVarID, OpIdx),
+        Predicate(Predicate) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == OPM_LeafPredicate;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override;
+};
+
 /// Generates code to check that a set of predicates match for a particular
 /// operand.
 class OperandMatcher : public PredicateListMatcher<OperandPredicateMatcher> {
@@ -1278,7 +1304,7 @@ public:
   StringRef getSymbolicName() const { return SymbolicName; }
   void setSymbolicName(StringRef Name) {
     assert(SymbolicName.empty() && "Operand already has a symbolic name");
-    SymbolicName = std::string(Name);
+    SymbolicName = Name.str();
   }
 
   /// Construct a new operand predicate and add it to the matcher.
@@ -1371,7 +1397,7 @@ protected:
 
   static DenseMap<const CodeGenInstruction *, unsigned> OpcodeValues;
 
-  MatchTableRecord getInstValue(const CodeGenInstruction *I) const;
+  RecordAndValue getInstValue(const CodeGenInstruction *I) const;
 
 public:
   static void initOpcodeValuesMap(const CodeGenTarget &Target);
@@ -1393,12 +1419,12 @@ public:
   }
 
   bool hasValue() const override {
-    return Insts.size() == 1 && OpcodeValues.count(Insts[0]);
+    return Insts.size() == 1 && OpcodeValues.contains(Insts[0]);
   }
 
   // TODO: This is used for the SwitchMatcher optimization. We should be able to
   // return a list of the opcodes to match.
-  MatchTableRecord getValue() const override;
+  RecordAndValue getValue() const override;
 
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override;
@@ -1756,11 +1782,6 @@ protected:
   unsigned InsnVarID;
   bool AllowNumOpsCheck;
 
-  /// PhysRegInputs - List list has an entry for each explicitly specified
-  /// physreg input to the pattern.  The first elt is the Register node, the
-  /// second is the recorded slot number the input pattern match saved it in.
-  SmallVector<std::pair<const Record *, unsigned>, 2> PhysRegInputs;
-
   bool canAddNumOperandsCheck() const {
     // Add if it's allowed, and:
     //    - We don't have a variadic operand
@@ -1801,10 +1822,6 @@ public:
   OperandMatcher &getOperand(unsigned OpIdx);
   OperandMatcher &addPhysRegInput(const Record *Reg, unsigned OpIdx,
                                   unsigned TempOpIdx);
-
-  ArrayRef<std::pair<const Record *, unsigned>> getPhysRegInputs() const {
-    return PhysRegInputs;
-  }
 
   StringRef getSymbolicName() const { return SymbolicName; }
 
@@ -2020,12 +2037,12 @@ protected:
   unsigned NewInsnID;
   /// The name of the operand.
   const std::string SymbolicName;
-  bool Signed;
+  bool Signed = true;
 
 public:
   CopyConstantAsImmRenderer(unsigned NewInsnID, StringRef SymbolicName)
       : OperandRenderer(OR_CopyConstantAsImm), NewInsnID(NewInsnID),
-        SymbolicName(SymbolicName), Signed(true) {}
+        SymbolicName(SymbolicName) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CopyConstantAsImm;
@@ -2091,13 +2108,15 @@ protected:
   unsigned InsnID;
   const Record *RegisterDef;
   bool IsDef;
+  bool IsDead;
   const CodeGenTarget &Target;
 
 public:
   AddRegisterRenderer(unsigned InsnID, const CodeGenTarget &Target,
-                      const Record *RegisterDef, bool IsDef = false)
+                      const Record *RegisterDef, bool IsDef = false,
+                      bool IsDead = false)
       : OperandRenderer(OR_Register), InsnID(InsnID), RegisterDef(RegisterDef),
-        IsDef(IsDef), Target(Target) {}
+        IsDef(IsDef), IsDead(IsDead), Target(Target) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Register;
@@ -2321,8 +2340,7 @@ private:
   std::string S;
 
 public:
-  DebugCommentAction(StringRef S)
-      : MatchAction(AK_DebugComment), S(std::string(S)) {}
+  DebugCommentAction(StringRef S) : MatchAction(AK_DebugComment), S(S.str()) {}
 
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_DebugComment;
@@ -2339,7 +2357,7 @@ class BuildMIAction : public MatchAction {
 private:
   unsigned InsnID;
   const CodeGenInstruction *I;
-  InstructionMatcher *Matched;
+  InstructionMatcher *Matched = nullptr;
   std::vector<std::unique_ptr<OperandRenderer>> OperandRenderers;
   SmallPtrSet<const Record *, 4> DeadImplicitDefs;
 
@@ -2352,7 +2370,7 @@ private:
 
 public:
   BuildMIAction(unsigned InsnID, const CodeGenInstruction *I)
-      : MatchAction(AK_BuildMI), InsnID(InsnID), I(I), Matched(nullptr) {}
+      : MatchAction(AK_BuildMI), InsnID(InsnID), I(I) {}
 
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_BuildMI;

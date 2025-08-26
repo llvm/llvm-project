@@ -795,9 +795,7 @@ private:
     set_unused_bits(false);
   }
 
-  void init_words(bool t) {
-    std::fill(Bits.begin(), Bits.end(), 0 - (BitWord)t);
-  }
+  void init_words(bool t) { llvm::fill(Bits, 0 - (BitWord)t); }
 
   template<bool AddBits, bool InvertMask>
   void applyMask(const uint32_t *Mask, unsigned MaskWords) {

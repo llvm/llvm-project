@@ -1,0 +1,154 @@
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
+# REQUIRES: asserts
+
+# Test that loop carried memory dependencies are computed correctly
+# when barrier instructions exist in the loop.
+# The original code is as follows.
+# 
+# ```
+# volatile int x = 0;
+# void f(int * restrict a, int * restrict b, int * restrict c, int n) {
+#   for (int i = 0; i < n; i++) {
+#     a[i] *= c[i];
+#     b[i] *= c[i];
+#     x += i;
+#     a[i + 1] *= i;
+#     x += i;
+#     b[i + 1] *= i;
+#   }
+# }
+# ```
+#
+# FIXME: Currently the following dependencies are missed.
+# Loop carried edges from SU(16)
+#   Order
+#     SU(6)
+#     SU(8)
+#     SU(10)
+#     SU(11)
+# Loop carried edges from SU(17)
+#   Order
+#     SU(10)
+#     SU(11)
+# Loop carried edges from SU(19)
+#   Order
+#     SU(10)
+#     SU(11)
+
+# CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT: ===== Loop Carried Edges End =====
+
+--- |
+  @x = dso_local global i32 0, align 4
+
+  define dso_local void @f(ptr noalias nocapture noundef %a, ptr noalias nocapture noundef %b, ptr noalias nocapture noundef readonly %c, i32 noundef %n) {
+  entry:
+    %cmp26 = icmp sgt i32 %n, 0
+    br i1 %cmp26, label %for.body.preheader, label %for.cond.cleanup
+
+  for.body.preheader:
+    %.pre = load i32, ptr %a, align 4, !tbaa !5
+    %.pre28 = load i32, ptr %b, align 4, !tbaa !5
+    %cgep = getelementptr i8, ptr %b, i32 4
+    %cgep37 = getelementptr i8, ptr %a, i32 4
+    br label %for.body
+
+  for.cond.cleanup:
+    ret void
+
+  for.body:
+    %lsr.iv35 = phi ptr [ %c, %for.body.preheader ], [ %cgep42, %for.body ]
+    %lsr.iv31 = phi ptr [ %cgep37, %for.body.preheader ], [ %cgep41, %for.body ]
+    %lsr.iv = phi ptr [ %cgep, %for.body.preheader ], [ %cgep40, %for.body ]
+    %0 = phi i32 [ %mul11, %for.body ], [ %.pre28, %for.body.preheader ]
+    %1 = phi i32 [ %mul7, %for.body ], [ %.pre, %for.body.preheader ]
+    %i.027 = phi i32 [ %add5, %for.body ], [ 0, %for.body.preheader ]
+    %2 = load i32, ptr %lsr.iv35, align 4, !tbaa !5
+    %mul = mul nsw i32 %1, %2
+    %cgep38 = getelementptr i8, ptr %lsr.iv31, i32 -4
+    store i32 %mul, ptr %cgep38, align 4, !tbaa !5
+    %mul4 = mul nsw i32 %0, %2
+    %cgep39 = getelementptr i8, ptr %lsr.iv, i32 -4
+    store i32 %mul4, ptr %cgep39, align 4, !tbaa !5
+    %3 = load volatile i32, ptr @x, align 4, !tbaa !5
+    %4 = add i32 %i.027, %3
+    store volatile i32 %4, ptr @x, align 4, !tbaa !5
+    %add5 = add nuw nsw i32 %i.027, 1
+    %5 = load i32, ptr %lsr.iv31, align 4, !tbaa !5
+    %mul7 = mul nsw i32 %5, %i.027
+    store i32 %mul7, ptr %lsr.iv31, align 4, !tbaa !5
+    %6 = load volatile i32, ptr @x, align 4, !tbaa !5
+    %7 = add i32 %i.027, %6
+    store volatile i32 %7, ptr @x, align 4, !tbaa !5
+    %8 = load i32, ptr %lsr.iv, align 4, !tbaa !5
+    %mul11 = mul nsw i32 %8, %i.027
+    store i32 %mul11, ptr %lsr.iv, align 4, !tbaa !5
+    %exitcond.not = icmp eq i32 %n, %add5
+    %cgep40 = getelementptr i8, ptr %lsr.iv, i32 4
+    %cgep41 = getelementptr i8, ptr %lsr.iv31, i32 4
+    %cgep42 = getelementptr i8, ptr %lsr.iv35, i32 4
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+
+  !5 = !{!6, !6, i64 0}
+  !6 = !{!"int", !7, i64 0}
+  !7 = !{!"omnipotent char", !8, i64 0}
+  !8 = !{!"Simple C/C++ TBAA"}
+
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $r0, $r1, $r2, $r3
+  
+    %19:intregs = COPY $r3
+    %18:intregs = COPY $r2
+    %17:intregs = COPY $r1
+    %16:intregs = COPY $r0
+    %20:predregs = C2_cmpgti %19, 0
+    J2_jumpf %20, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+  
+  bb.1.for.body.preheader:
+    %0:intregs, %3:intregs = L2_loadri_pi %16, 4 :: (load (s32) from %ir.a, !tbaa !5)
+    %1:intregs, %2:intregs = L2_loadri_pi %17, 4 :: (load (s32) from %ir.b, !tbaa !5)
+    %22:intregs = A2_tfrsi 0
+    %26:intregs = C4_addipc target-flags(hexagon-pcrel) @x
+    %30:intregs = COPY %19
+    J2_loop0r %bb.3, %30, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.3, implicit-def dead $pc
+  
+  bb.2.for.cond.cleanup:
+    PS_jmpret $r31, implicit-def dead $pc
+  
+  bb.3.for.body:
+    successors: %bb.2, %bb.3
+  
+    %4:intregs = PHI %18, %bb.1, %15, %bb.3
+    %5:intregs = PHI %3, %bb.1, %14, %bb.3
+    %6:intregs = PHI %2, %bb.1, %13, %bb.3
+    %7:intregs = PHI %1, %bb.1, %12, %bb.3
+    %8:intregs = PHI %0, %bb.1, %11, %bb.3
+    %9:intregs = PHI %22, %bb.1, %10, %bb.3
+    %23:intregs, %15:intregs = L2_loadri_pi %4, 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !5)
+    %24:intregs = nsw M2_mpyi %8, %23
+    S2_storeri_io %5, -4, killed %24 :: (store (s32) into %ir.cgep38, !tbaa !5)
+    %25:intregs = nsw M2_mpyi %7, %23
+    S2_storeri_io %6, -4, killed %25 :: (store (s32) into %ir.cgep39, !tbaa !5)
+    L4_add_memopw_io %26, 0, %9 :: (volatile store (s32) into @x, !tbaa !5), (volatile dereferenceable load (s32) from @x, !tbaa !5)
+    %10:intregs = nuw nsw A2_addi %9, 1
+    %27:intregs = L2_loadri_io %5, 0 :: (load (s32) from %ir.lsr.iv31, !tbaa !5)
+    %11:intregs = nsw M2_mpyi killed %27, %9
+    S2_storeri_io %5, 0, %11 :: (store (s32) into %ir.lsr.iv31, !tbaa !5)
+    L4_add_memopw_io %26, 0, %9 :: (volatile store (s32) into @x, !tbaa !5), (volatile dereferenceable load (s32) from @x, !tbaa !5)
+    %28:intregs = L2_loadri_io %6, 0 :: (load (s32) from %ir.lsr.iv, !tbaa !5)
+    %12:intregs = nsw M2_mpyi killed %28, %9
+    S2_storeri_io %6, 0, %12 :: (store (s32) into %ir.lsr.iv, !tbaa !5)
+    %13:intregs = A2_addi %6, 4
+    %14:intregs = A2_addi %5, 4
+    ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def $pc
+...

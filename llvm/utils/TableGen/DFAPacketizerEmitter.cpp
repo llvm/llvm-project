@@ -92,7 +92,7 @@ public:
 } // end anonymous namespace
 
 DFAPacketizerEmitter::DFAPacketizerEmitter(const RecordKeeper &R)
-    : TargetName(std::string(CodeGenTarget(R).getName())), Records(R) {}
+    : TargetName(CodeGenTarget(R).getName().str()), Records(R) {}
 
 int DFAPacketizerEmitter::collectAllFuncUnits(
     ArrayRef<const CodeGenProcModel *> ProcModels) {
@@ -105,7 +105,7 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
   for (const CodeGenProcModel *Model : ProcModels)
     ProcItinList.insert(Model->ItinsDef);
 
-  int totalFUs = 0;
+  int TotalFUs = 0;
   // Parse functional units for all the itineraries.
   for (const Record *Proc : ProcItinList) {
     std::vector<const Record *> FUs = Proc->getValueAsListOfDefs("FU");
@@ -119,14 +119,14 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
       assert((j < DFA_MAX_RESOURCES) &&
              "Exceeded maximum number of representable resources");
       uint64_t FuncResources = 1ULL << j;
-      FUNameToBitsMap[std::string(FUs[j]->getName())] = FuncResources;
+      FUNameToBitsMap[FUs[j]->getName().str()] = FuncResources;
       LLVM_DEBUG(dbgs() << " " << FUs[j]->getName() << ":0x"
                         << Twine::utohexstr(FuncResources));
     }
-    totalFUs += numFUs;
+    TotalFUs += numFUs;
     LLVM_DEBUG(dbgs() << "\n");
   }
-  return totalFUs;
+  return TotalFUs;
 }
 
 int DFAPacketizerEmitter::collectAllComboFuncs(
@@ -136,42 +136,42 @@ int DFAPacketizerEmitter::collectAllComboFuncs(
   LLVM_DEBUG(dbgs() << "collectAllComboFuncs");
   LLVM_DEBUG(dbgs() << " (" << ComboFuncList.size() << " sets)\n");
 
-  int numCombos = 0;
-  for (unsigned i = 0, N = ComboFuncList.size(); i < N; ++i) {
-    const Record *Func = ComboFuncList[i];
+  int NumCombos = 0;
+  for (unsigned I = 0, N = ComboFuncList.size(); I < N; ++I) {
+    const Record *Func = ComboFuncList[I];
     std::vector<const Record *> FUs = Func->getValueAsListOfDefs("CFD");
 
-    LLVM_DEBUG(dbgs() << "    CFD:" << i << " (" << FUs.size() << " combo FUs) "
+    LLVM_DEBUG(dbgs() << "    CFD:" << I << " (" << FUs.size() << " combo FUs) "
                       << Func->getName() << "\n");
 
     // Convert macros to bits for each stage.
-    for (unsigned j = 0, N = FUs.size(); j < N; ++j) {
-      assert((j < DFA_MAX_RESOURCES) &&
+    for (unsigned J = 0, N = FUs.size(); J < N; ++J) {
+      assert((J < DFA_MAX_RESOURCES) &&
              "Exceeded maximum number of DFA resources");
-      const Record *FuncData = FUs[j];
+      const Record *FuncData = FUs[J];
       const Record *ComboFunc = FuncData->getValueAsDef("TheComboFunc");
       const std::vector<const Record *> FuncList =
           FuncData->getValueAsListOfDefs("FuncList");
-      const std::string &ComboFuncName = std::string(ComboFunc->getName());
+      const std::string &ComboFuncName = ComboFunc->getName().str();
       uint64_t ComboBit = FUNameToBitsMap[ComboFuncName];
       uint64_t ComboResources = ComboBit;
       LLVM_DEBUG(dbgs() << "      combo: " << ComboFuncName << ":0x"
                         << Twine::utohexstr(ComboResources) << "\n");
       for (const Record *K : FuncList) {
-        std::string FuncName = std::string(K->getName());
+        std::string FuncName = K->getName().str();
         uint64_t FuncResources = FUNameToBitsMap[FuncName];
         LLVM_DEBUG(dbgs() << "        " << FuncName << ":0x"
                           << Twine::utohexstr(FuncResources) << "\n");
         ComboResources |= FuncResources;
       }
       ComboBitToBitsMap[ComboBit] = ComboResources;
-      numCombos++;
+      NumCombos++;
       LLVM_DEBUG(dbgs() << "          => combo bits: " << ComboFuncName << ":0x"
                         << Twine::utohexstr(ComboBit) << " = 0x"
                         << Twine::utohexstr(ComboResources) << "\n");
     }
   }
-  return numCombos;
+  return NumCombos;
 }
 
 ResourceVector
@@ -181,7 +181,7 @@ DFAPacketizerEmitter::getResourcesForItinerary(const Record *Itinerary) {
   for (const Record *StageDef : Itinerary->getValueAsListOfDefs("Stages")) {
     uint64_t StageResources = 0;
     for (const Record *Unit : StageDef->getValueAsListOfDefs("Units")) {
-      StageResources |= FUNameToBitsMap[std::string(Unit->getName())];
+      StageResources |= FUNameToBitsMap[Unit->getName().str()];
     }
     if (StageResources != 0)
       Resources.push_back(StageResources);
@@ -220,7 +220,7 @@ void DFAPacketizerEmitter::run(raw_ostream &OS) {
   for (const CodeGenProcModel &ProcModel : CGS.procModels()) {
     if (ProcModel.hasItineraries()) {
       auto NS = ProcModel.ItinsDef->getValueAsString("PacketizerNamespace");
-      ItinsByNamespace[std::string(NS)].push_back(&ProcModel);
+      ItinsByNamespace[NS.str()].push_back(&ProcModel);
     }
   }
 
@@ -271,7 +271,7 @@ void DFAPacketizerEmitter::emitForItineraries(
 
   // Given a resource state, return all resource states by applying
   // InsnClass.
-  auto applyInsnClass = [&](const ResourceVector &InsnClass,
+  auto ApplyInsnClass = [&](const ResourceVector &InsnClass,
                             NfaStateTy State) -> std::deque<NfaStateTy> {
     std::deque<NfaStateTy> V(1, State);
     // Apply every stage in the class individually.
@@ -304,7 +304,7 @@ void DFAPacketizerEmitter::emitForItineraries(
 
   // Given a resource state, return a quick (conservative) guess as to whether
   // InsnClass can be applied. This is a filter for the more heavyweight
-  // applyInsnClass.
+  // ApplyInsnClass.
   auto canApplyInsnClass = [](const ResourceVector &InsnClass,
                               NfaStateTy State) -> bool {
     for (NfaStateTy Resources : InsnClass) {
@@ -325,7 +325,7 @@ void DFAPacketizerEmitter::emitForItineraries(
       if (!canApplyInsnClass(Resources, State))
         continue;
       unsigned ResourcesID = UniqueResources.idFor(Resources);
-      for (uint64_t NewState : applyInsnClass(Resources, State)) {
+      for (uint64_t NewState : ApplyInsnClass(Resources, State)) {
         if (SeenStates.emplace(NewState).second)
           Worklist.emplace_back(NewState);
         Emitter.addTransition(State, NewState, ResourcesID);
