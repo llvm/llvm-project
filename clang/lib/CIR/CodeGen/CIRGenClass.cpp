@@ -141,7 +141,7 @@ struct DynamicThisUseChecker
   // Black-list all explicit and implicit references to 'this'.
   //
   // Do we need to worry about external references to 'this' derived
-  // from arbitrary code?  If so, then anything which runs arbitrary
+  // from arbitrary code? If so, then anything which runs arbitrary
   // external code might potentially access the vtable.
   void VisitCXXThisExpr(const CXXThisExpr *e) { usesThis = true; }
 };
@@ -298,7 +298,6 @@ static Address applyNonVirtualAndVirtualOffset(
   assert(!nonVirtualOffset.isZero() || virtualOffset != nullptr);
 
   // Compute the offset from the static and dynamic components.
-  mlir::Value baseOffset;
   if (!nonVirtualOffset.isZero()) {
     if (virtualOffset) {
       cgf.cgm.errorNYI(
@@ -312,8 +311,6 @@ static Address applyNonVirtualAndVirtualOffset(
           loc, addr, baseValueTy, nonVirtualOffset.getQuantity(),
           assumeNotNull);
     }
-  } else {
-    baseOffset = virtualOffset;
   }
 
   cgf.cgm.errorNYI(loc, "applyNonVirtualAndVirtualOffset: virtual offset");
