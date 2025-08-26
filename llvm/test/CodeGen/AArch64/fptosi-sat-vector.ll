@@ -1837,21 +1837,11 @@ define <4 x i13> @test_signed_v4f32_v4i13(<4 x float> %f) {
 }
 
 define <4 x i16> @test_signed_v4f32_v4i16(<4 x float> %f) {
-; CHECK-SD-LABEL: test_signed_v4f32_v4i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-SD-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_signed_v4f32_v4i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-GI-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    mvni v1.4s, #127, msl #8
-; CHECK-GI-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_signed_v4f32_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
     %x = call <4 x i16> @llvm.fptosi.sat.v4f32.v4i16(<4 x float> %f)
     ret <4 x i16> %x
 }
@@ -2949,28 +2939,17 @@ define <4 x i13> @test_signed_v4f16_v4i13(<4 x half> %f) {
 }
 
 define <4 x i16> @test_signed_v4f16_v4i16(<4 x half> %f) {
-; CHECK-SD-CVT-LABEL: test_signed_v4f16_v4i16:
-; CHECK-SD-CVT:       // %bb.0:
-; CHECK-SD-CVT-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-SD-CVT-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-SD-CVT-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-SD-CVT-NEXT:    ret
+; CHECK-CVT-LABEL: test_signed_v4f16_v4i16:
+; CHECK-CVT:       // %bb.0:
+; CHECK-CVT-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_signed_v4f16_v4i16:
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
-;
-; CHECK-GI-CVT-LABEL: test_signed_v4f16_v4i16:
-; CHECK-GI-CVT:       // %bb.0:
-; CHECK-GI-CVT-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-CVT-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-GI-CVT-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-GI-CVT-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-GI-CVT-NEXT:    mvni v1.4s, #127, msl #8
-; CHECK-GI-CVT-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-GI-CVT-NEXT:    xtn v0.4h, v0.4s
-; CHECK-GI-CVT-NEXT:    ret
     %x = call <4 x i16> @llvm.fptosi.sat.v4f16.v4i16(<4 x half> %f)
     ret <4 x i16> %x
 }
@@ -3489,11 +3468,11 @@ define <8 x i8> @test_signed_v8f16_v8i8(<8 x half> %f) {
 ; CHECK-SD-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-SD-CVT-NEXT:    ret
 ;
-; CHECK-SD-FP16-LABEL: test_signed_v8f16_v8i8:
-; CHECK-SD-FP16:       // %bb.0:
-; CHECK-SD-FP16-NEXT:    fcvtzs v0.8h, v0.8h
-; CHECK-SD-FP16-NEXT:    sqxtn v0.8b, v0.8h
-; CHECK-SD-FP16-NEXT:    ret
+; CHECK-FP16-LABEL: test_signed_v8f16_v8i8:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    sqxtn v0.8b, v0.8h
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-GI-CVT-LABEL: test_signed_v8f16_v8i8:
 ; CHECK-GI-CVT:       // %bb.0:
@@ -3510,16 +3489,6 @@ define <8 x i8> @test_signed_v8f16_v8i8(<8 x half> %f) {
 ; CHECK-GI-CVT-NEXT:    uzp1 v0.8h, v2.8h, v0.8h
 ; CHECK-GI-CVT-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-GI-CVT-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: test_signed_v8f16_v8i8:
-; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    movi v1.8h, #127
-; CHECK-GI-FP16-NEXT:    fcvtzs v0.8h, v0.8h
-; CHECK-GI-FP16-NEXT:    mvni v2.8h, #127
-; CHECK-GI-FP16-NEXT:    smin v0.8h, v0.8h, v1.8h
-; CHECK-GI-FP16-NEXT:    smax v0.8h, v0.8h, v2.8h
-; CHECK-GI-FP16-NEXT:    xtn v0.8b, v0.8h
-; CHECK-GI-FP16-NEXT:    ret
     %x = call <8 x i8> @llvm.fptosi.sat.v8f16.v8i8(<8 x half> %f)
     ret <8 x i8> %x
 }
@@ -3585,17 +3554,12 @@ define <8 x i16> @test_signed_v8f16_v8i16(<8 x half> %f) {
 ;
 ; CHECK-GI-CVT-LABEL: test_signed_v8f16_v8i16:
 ; CHECK-GI-CVT:       // %bb.0:
-; CHECK-GI-CVT-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-GI-CVT-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-GI-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-CVT-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-GI-CVT-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-GI-CVT-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-GI-CVT-NEXT:    smin v2.4s, v2.4s, v1.4s
-; CHECK-GI-CVT-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-GI-CVT-NEXT:    mvni v1.4s, #127, msl #8
-; CHECK-GI-CVT-NEXT:    smax v2.4s, v2.4s, v1.4s
-; CHECK-GI-CVT-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-GI-CVT-NEXT:    uzp1 v0.8h, v2.8h, v0.8h
+; CHECK-GI-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-GI-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-GI-CVT-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-GI-CVT-NEXT:    sqxtn2 v0.8h, v2.4s
 ; CHECK-GI-CVT-NEXT:    ret
     %x = call <8 x i16> @llvm.fptosi.sat.v8f16.v8i16(<8 x half> %f)
     ret <8 x i16> %x
@@ -4430,26 +4394,13 @@ define <16 x i8> @test_signed_v16f32_v16i8(<16 x float> %f) {
 }
 
 define <8 x i16> @test_signed_v8f32_v8i16(<8 x float> %f) {
-; CHECK-SD-LABEL: test_signed_v8f32_v8i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-SD-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-SD-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    sqxtn2 v0.8h, v1.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_signed_v8f32_v8i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-GI-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-GI-NEXT:    smin v0.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    smin v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    mvni v2.4s, #127, msl #8
-; CHECK-GI-NEXT:    smax v0.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    smax v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_signed_v8f32_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NEXT:    sqxtn2 v0.8h, v1.4s
+; CHECK-NEXT:    ret
     %x = call <8 x i16> @llvm.fptosi.sat.v8f32.v8i16(<8 x float> %f)
     ret <8 x i16> %x
 }
@@ -4469,22 +4420,14 @@ define <16 x i16> @test_signed_v16f32_v16i16(<16 x float> %f) {
 ;
 ; CHECK-GI-LABEL: test_signed_v16f32_v16i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-GI-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-GI-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-GI-NEXT:    fcvtzs v4.4s, v1.4s
 ; CHECK-GI-NEXT:    fcvtzs v3.4s, v3.4s
-; CHECK-GI-NEXT:    mvni v5.4s, #127, msl #8
-; CHECK-GI-NEXT:    smin v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    smin v1.4s, v1.4s, v4.4s
-; CHECK-GI-NEXT:    smin v2.4s, v2.4s, v4.4s
-; CHECK-GI-NEXT:    smin v3.4s, v3.4s, v4.4s
-; CHECK-GI-NEXT:    smax v0.4s, v0.4s, v5.4s
-; CHECK-GI-NEXT:    smax v1.4s, v1.4s, v5.4s
-; CHECK-GI-NEXT:    smax v2.4s, v2.4s, v5.4s
-; CHECK-GI-NEXT:    smax v3.4s, v3.4s, v5.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
+; CHECK-GI-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    sqxtn v1.4h, v2.4s
+; CHECK-GI-NEXT:    sqxtn2 v0.8h, v4.4s
+; CHECK-GI-NEXT:    sqxtn2 v1.8h, v3.4s
 ; CHECK-GI-NEXT:    ret
     %x = call <16 x i16> @llvm.fptosi.sat.v16f32.v16i16(<16 x float> %f)
     ret <16 x i16> %x
@@ -4518,13 +4461,13 @@ define <16 x i8> @test_signed_v16f16_v16i8(<16 x half> %f) {
 ; CHECK-SD-CVT-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-SD-CVT-NEXT:    ret
 ;
-; CHECK-SD-FP16-LABEL: test_signed_v16f16_v16i8:
-; CHECK-SD-FP16:       // %bb.0:
-; CHECK-SD-FP16-NEXT:    fcvtzs v0.8h, v0.8h
-; CHECK-SD-FP16-NEXT:    fcvtzs v1.8h, v1.8h
-; CHECK-SD-FP16-NEXT:    sqxtn v0.8b, v0.8h
-; CHECK-SD-FP16-NEXT:    sqxtn2 v0.16b, v1.8h
-; CHECK-SD-FP16-NEXT:    ret
+; CHECK-FP16-LABEL: test_signed_v16f16_v16i8:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtzs v1.8h, v1.8h
+; CHECK-FP16-NEXT:    sqxtn v0.8b, v0.8h
+; CHECK-FP16-NEXT:    sqxtn2 v0.16b, v1.8h
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-GI-CVT-LABEL: test_signed_v16f16_v16i8:
 ; CHECK-GI-CVT:       // %bb.0:
@@ -4550,19 +4493,6 @@ define <16 x i8> @test_signed_v16f16_v16i8(<16 x half> %f) {
 ; CHECK-GI-CVT-NEXT:    uzp1 v1.8h, v3.8h, v1.8h
 ; CHECK-GI-CVT-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-GI-CVT-NEXT:    ret
-;
-; CHECK-GI-FP16-LABEL: test_signed_v16f16_v16i8:
-; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    movi v2.8h, #127
-; CHECK-GI-FP16-NEXT:    fcvtzs v0.8h, v0.8h
-; CHECK-GI-FP16-NEXT:    fcvtzs v1.8h, v1.8h
-; CHECK-GI-FP16-NEXT:    mvni v3.8h, #127
-; CHECK-GI-FP16-NEXT:    smin v0.8h, v0.8h, v2.8h
-; CHECK-GI-FP16-NEXT:    smin v1.8h, v1.8h, v2.8h
-; CHECK-GI-FP16-NEXT:    smax v0.8h, v0.8h, v3.8h
-; CHECK-GI-FP16-NEXT:    smax v1.8h, v1.8h, v3.8h
-; CHECK-GI-FP16-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-GI-FP16-NEXT:    ret
     %x = call <16 x i8> @llvm.fptosi.sat.v16f16.v16i8(<16 x half> %f)
     ret <16 x i8> %x
 }
@@ -4592,26 +4522,18 @@ define <16 x i16> @test_signed_v16f16_v16i16(<16 x half> %f) {
 ;
 ; CHECK-GI-CVT-LABEL: test_signed_v16f16_v16i16:
 ; CHECK-GI-CVT:       // %bb.0:
-; CHECK-GI-CVT-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-GI-CVT-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-GI-CVT-NEXT:    fcvtl v3.4s, v1.4h
 ; CHECK-GI-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-CVT-NEXT:    fcvtl v4.4s, v1.4h
 ; CHECK-GI-CVT-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-GI-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-GI-CVT-NEXT:    mvni v5.4s, #127, msl #8
+; CHECK-GI-CVT-NEXT:    fcvtzs v2.4s, v2.4s
 ; CHECK-GI-CVT-NEXT:    fcvtzs v3.4s, v3.4s
-; CHECK-GI-CVT-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-GI-CVT-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-GI-CVT-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-GI-CVT-NEXT:    smin v3.4s, v3.4s, v2.4s
-; CHECK-GI-CVT-NEXT:    smin v0.4s, v0.4s, v2.4s
-; CHECK-GI-CVT-NEXT:    smin v4.4s, v4.4s, v2.4s
-; CHECK-GI-CVT-NEXT:    smin v1.4s, v1.4s, v2.4s
-; CHECK-GI-CVT-NEXT:    smax v2.4s, v3.4s, v5.4s
-; CHECK-GI-CVT-NEXT:    smax v0.4s, v0.4s, v5.4s
-; CHECK-GI-CVT-NEXT:    smax v3.4s, v4.4s, v5.4s
-; CHECK-GI-CVT-NEXT:    smax v1.4s, v1.4s, v5.4s
-; CHECK-GI-CVT-NEXT:    uzp1 v0.8h, v2.8h, v0.8h
-; CHECK-GI-CVT-NEXT:    uzp1 v1.8h, v3.8h, v1.8h
+; CHECK-GI-CVT-NEXT:    fcvtzs v4.4s, v0.4s
+; CHECK-GI-CVT-NEXT:    fcvtzs v5.4s, v1.4s
+; CHECK-GI-CVT-NEXT:    sqxtn v0.4h, v2.4s
+; CHECK-GI-CVT-NEXT:    sqxtn v1.4h, v3.4s
+; CHECK-GI-CVT-NEXT:    sqxtn2 v0.8h, v4.4s
+; CHECK-GI-CVT-NEXT:    sqxtn2 v1.8h, v5.4s
 ; CHECK-GI-CVT-NEXT:    ret
     %x = call <16 x i16> @llvm.fptosi.sat.v16f16.v16i16(<16 x half> %f)
     ret <16 x i16> %x

@@ -340,8 +340,15 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   // None of the existing plugins specify a limit on a single allocation,
   // so return the global memory size instead
   case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
-    PropName = OL_DEVICE_INFO_GLOBAL_MEM_SIZE;
-    break;
+    [[fallthrough]];
+  // AMD doesn't provide the global memory size (trivially) with the device info
+  // struct, so use the plugin interface
+  case OL_DEVICE_INFO_GLOBAL_MEM_SIZE: {
+    uint64_t Mem;
+    if (auto Err = Device->Device->getDeviceMemorySize(Mem))
+      return Err;
+    return Info.write<uint64_t>(Mem);
+  } break;
 
   default:
     break;
@@ -367,14 +374,6 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       return makeError(ErrorCode::BACKEND_FAILURE,
                        "plugin returned incorrect type");
     return Info.writeString(std::get<std::string>(Entry->Value).c_str());
-  }
-
-  case OL_DEVICE_INFO_GLOBAL_MEM_SIZE: {
-    // Uint64 values
-    if (!std::holds_alternative<uint64_t>(Entry->Value))
-      return makeError(ErrorCode::BACKEND_FAILURE,
-                       "plugin returned incorrect type");
-    return Info.write(std::get<uint64_t>(Entry->Value));
   }
 
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
@@ -646,8 +645,8 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
 }
 
 Error olSyncEvent_impl(ol_event_handle_t Event) {
+  // No event info means that this event was complete on creation
   if (!Event->EventInfo)
-    // Event always complete
     return Plugin::success();
 
   if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
@@ -668,10 +667,22 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
                                ol_event_info_t PropName, size_t PropSize,
                                void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
+  auto Queue = Event->Queue;
 
   switch (PropName) {
   case OL_EVENT_INFO_QUEUE:
-    return Info.write<ol_queue_handle_t>(Event->Queue);
+    return Info.write<ol_queue_handle_t>(Queue);
+  case OL_EVENT_INFO_IS_COMPLETE: {
+    // No event info means that this event was complete on creation
+    if (!Event->EventInfo)
+      return Info.write<bool>(true);
+
+    auto Res = Queue->Device->Device->isEventComplete(Event->EventInfo,
+                                                      Queue->AsyncInfo);
+    if (auto Err = Res.takeError())
+      return Err;
+    return Info.write<bool>(*Res);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetEventInfo enum '%i' is invalid", PropName);
@@ -747,6 +758,12 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   }
 
   return Error::success();
+}
+
+Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+                     const void *PatternPtr, size_t FillSize) {
+  return Queue->Device->Device->dataFill(Ptr, PatternPtr, PatternSize, FillSize,
+                                         Queue->AsyncInfo);
 }
 
 Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
