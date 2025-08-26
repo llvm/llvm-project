@@ -43,13 +43,13 @@ _mm_macc_pd(__m128d __A, __m128d __B, __m128d __C) {
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_macc_ss(__m128 __A, __m128 __B, __m128 __C)
 {
-  return _mm_set_ss(__builtin_elementwise_fma(__A[0], __B[0], __C[0]));
+  return _mm_set_ss(__builtin_fmaf(__A[0], __B[0], __C[0]));
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_macc_sd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return _mm_set_sd(__builtin_elementwise_fma(__A[0], __B[0], __C[0]));
+  return _mm_set_sd(__builtin_fma(__A[0], __B[0], __C[0]));
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
@@ -67,13 +67,13 @@ _mm_msub_pd(__m128d __A, __m128d __B, __m128d __C) {
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_msub_ss(__m128 __A, __m128 __B, __m128 __C)
 {
-  return _mm_set_ss(__builtin_elementwise_fma(__A[0], __B[0], -__C[0]));
+  return _mm_set_ss(__builtin_fmaf(__A[0], __B[0], -__C[0]));
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_msub_sd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return _mm_set_sd(__builtin_elementwise_fma(__A[0], __B[0], -__C[0]));
+  return _mm_set_sd(__builtin_fma(__A[0], __B[0], -__C[0]));
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
@@ -91,13 +91,13 @@ _mm_nmacc_pd(__m128d __A, __m128d __B, __m128d __C) {
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_nmacc_ss(__m128 __A, __m128 __B, __m128 __C)
 {
-  return _mm_set_ss(__builtin_elementwise_fma(-__A[0], __B[0], __C[0]));
+  return _mm_set_ss(__builtin_fmaf(-__A[0], __B[0], __C[0]));
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_nmacc_sd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return _mm_set_sd(__builtin_elementwise_fma(-__A[0], __B[0], __C[0]));
+  return _mm_set_sd(__builtin_fma(-__A[0], __B[0], __C[0]));
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
@@ -115,13 +115,13 @@ _mm_nmsub_pd(__m128d __A, __m128d __B, __m128d __C) {
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_nmsub_ss(__m128 __A, __m128 __B, __m128 __C)
 {
-  return _mm_set_ss(__builtin_elementwise_fma(-__A[0], __B[0], -__C[0]));
+  return _mm_set_ss(__builtin_fmaf(-__A[0], __B[0], -__C[0]));
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_nmsub_sd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return _mm_set_sd(__builtin_elementwise_fma(-__A[0], __B[0], -__C[0]));
+  return _mm_set_sd(__builtin_fma(-__A[0], __B[0], -__C[0]));
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
