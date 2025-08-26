@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
 #include <optional>
@@ -114,6 +115,50 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
     }
   }
   return Cost;
+}
+
+Value *
+RISCVTTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                                Type *ExpectedType) const {
+  Intrinsic::ID IID = Inst->getIntrinsicID();
+  switch (IID) {
+  default:
+    return nullptr;
+  // TODO: Add more memory intrinsic operations.
+  case Intrinsic::riscv_vle: {
+    if (Inst->getType() == ExpectedType)
+      return Inst;
+  }
+    return nullptr;
+  }
+}
+
+bool RISCVTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
+                                      MemIntrinsicInfo &Info) const {
+  Intrinsic::ID IID = Inst->getIntrinsicID();
+  switch (IID) {
+  default:
+    return false;
+  case Intrinsic::riscv_vle: {
+    // Intrinsic interface:
+    // riscv_vle(merge, ptr, vl)
+    Info.ReadMem = true;
+    Info.WriteMem = false;
+    Info.PtrVal = Inst->getArgOperand(1);
+    Info.MatchingId = VECTOR_VLE_VSE;
+    break;
+  }
+  case Intrinsic::riscv_vse: {
+    // Intrinsic interface:
+    // riscv_vse(val, ptr, vl)
+    Info.ReadMem = false;
+    Info.WriteMem = true;
+    Info.PtrVal = Inst->getArgOperand(1);
+    Info.MatchingId = VECTOR_VLE_VSE;
+    break;
+  }
+  }
+  return true;
 }
 
 static InstructionCost getIntImmCostImpl(const DataLayout &DL,
