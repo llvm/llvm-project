@@ -416,14 +416,11 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
     case SD_Static:
     case SD_Thread: {
       CXXDestructorDecl *ReferenceTemporaryDtor = nullptr;
-      if (const RecordType *RT =
-              E->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
+      if (const auto *ClassDecl =
+              E->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+          ClassDecl && !ClassDecl->hasTrivialDestructor())
         // Get the destructor for the reference temporary.
-        if (auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
-            ClassDecl && !ClassDecl->hasTrivialDestructor())
-          ReferenceTemporaryDtor =
-              ClassDecl->getDefinitionOrSelf()->getDestructor();
-      }
+        ReferenceTemporaryDtor = ClassDecl->getDestructor();
 
       if (!ReferenceTemporaryDtor)
         return;
@@ -1327,6 +1324,57 @@ void CodeGenModule::EmitExplicitCastExprType(const ExplicitCastExpr *E,
 //                         LValue Expression Emission
 //===----------------------------------------------------------------------===//
 
+static CharUnits getArrayElementAlign(CharUnits arrayAlign, llvm::Value *idx,
+                                      CharUnits eltSize) {
+  // If we have a constant index, we can use the exact offset of the
+  // element we're accessing.
+  if (auto *constantIdx = dyn_cast<llvm::ConstantInt>(idx)) {
+    CharUnits offset = constantIdx->getZExtValue() * eltSize;
+    return arrayAlign.alignmentAtOffset(offset);
+  }
+
+  // Otherwise, use the worst-case alignment for any element.
+  return arrayAlign.alignmentOfArrayElement(eltSize);
+}
+
+/// Emit pointer + index arithmetic.
+static Address emitPointerArithmetic(CodeGenFunction &CGF,
+                                     const BinaryOperator *BO,
+                                     LValueBaseInfo *BaseInfo,
+                                     TBAAAccessInfo *TBAAInfo,
+                                     KnownNonNull_t IsKnownNonNull) {
+  assert(BO->isAdditiveOp() && "Expect an addition or subtraction.");
+  Expr *pointerOperand = BO->getLHS();
+  Expr *indexOperand = BO->getRHS();
+  bool isSubtraction = BO->getOpcode() == BO_Sub;
+
+  Address BaseAddr = Address::invalid();
+  llvm::Value *index = nullptr;
+  // In a subtraction, the LHS is always the pointer.
+  // Note: do not change the evaluation order.
+  if (!isSubtraction && !pointerOperand->getType()->isAnyPointerType()) {
+    std::swap(pointerOperand, indexOperand);
+    index = CGF.EmitScalarExpr(indexOperand);
+    BaseAddr = CGF.EmitPointerWithAlignment(pointerOperand, BaseInfo, TBAAInfo,
+                                            NotKnownNonNull);
+  } else {
+    BaseAddr = CGF.EmitPointerWithAlignment(pointerOperand, BaseInfo, TBAAInfo,
+                                            NotKnownNonNull);
+    index = CGF.EmitScalarExpr(indexOperand);
+  }
+
+  llvm::Value *pointer = BaseAddr.getBasePointer();
+  llvm::Value *Res = CGF.EmitPointerArithmetic(
+      BO, pointerOperand, pointer, indexOperand, index, isSubtraction);
+  QualType PointeeTy = BO->getType()->getPointeeType();
+  CharUnits Align =
+      getArrayElementAlign(BaseAddr.getAlignment(), index,
+                           CGF.getContext().getTypeSizeInChars(PointeeTy));
+  return Address(Res, CGF.ConvertTypeForMem(PointeeTy), Align,
+                 CGF.CGM.getPointerAuthInfoForPointeeType(PointeeTy),
+                 /*Offset=*/nullptr, IsKnownNonNull);
+}
+
 static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
                                         TBAAAccessInfo *TBAAInfo,
                                         KnownNonNull_t IsKnownNonNull,
@@ -1389,6 +1437,7 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
         if (CE->getCastKind() == CK_AddressSpaceConversion)
           Addr = CGF.Builder.CreateAddrSpaceCast(
               Addr, CGF.ConvertType(E->getType()), ElemTy);
+
         return CGF.authPointerToPointerCast(Addr, CE->getSubExpr()->getType(),
                                             CE->getType());
       }
@@ -1447,6 +1496,12 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
       return LV.getAddress();
     }
     }
+  }
+
+  // Pointer arithmetic: pointer +/- index.
+  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+    if (BO->isAdditiveOp())
+      return emitPointerArithmetic(CGF, BO, BaseInfo, TBAAInfo, IsKnownNonNull);
   }
 
   // TODO: conditional operators, comma.
@@ -2007,7 +2062,7 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   bool IsBool = (Ty->hasBooleanRepresentation() && !Ty->isVectorType()) ||
                 NSAPI(CGM.getContext()).isObjCBOOLType(Ty);
   bool NeedsBoolCheck = HasBoolCheck && IsBool;
-  bool NeedsEnumCheck = HasEnumCheck && Ty->getAs<EnumType>();
+  bool NeedsEnumCheck = HasEnumCheck && Ty->isEnumeralType();
   if (!NeedsBoolCheck && !NeedsEnumCheck)
     return false;
 
@@ -4265,21 +4320,6 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                       align, name);
   } else {
     return CGF.Builder.CreateGEP(addr, indices, elementType, align, name);
-  }
-}
-
-static CharUnits getArrayElementAlign(CharUnits arrayAlign,
-                                      llvm::Value *idx,
-                                      CharUnits eltSize) {
-  // If we have a constant index, we can use the exact offset of the
-  // element we're accessing.
-  if (auto constantIdx = dyn_cast<llvm::ConstantInt>(idx)) {
-    CharUnits offset = constantIdx->getZExtValue() * eltSize;
-    return arrayAlign.alignmentAtOffset(offset);
-
-  // Otherwise, use the worst-case alignment for any element.
-  } else {
-    return arrayAlign.alignmentOfArrayElement(eltSize);
   }
 }
 

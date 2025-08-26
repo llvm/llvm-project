@@ -267,6 +267,8 @@ NVPTXSerializer::NVPTXSerializer(Operation &module, NVVMTargetAttr target,
 std::optional<NVPTXSerializer::TmpFile>
 NVPTXSerializer::createTemp(StringRef name, StringRef suffix) {
   llvm::SmallString<128> filename;
+  if (name.size() > 80)
+    name = name.substr(0, 80);
   std::error_code ec =
       llvm::sys::fs::createTemporaryFile(name, suffix, filename);
   if (ec) {

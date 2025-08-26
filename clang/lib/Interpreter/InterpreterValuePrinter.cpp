@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IncrementalParser.h"
+#include "IncrementalAction.h"
 #include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -366,7 +366,7 @@ Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) const {
       getCompilerInstance()->getSema().LookupDestructor(CXXRD);
 
   llvm::StringRef Name =
-      getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
+      Act->getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
   auto AddrOrErr = getSymbolAddress(Name);
   if (!AddrOrErr)
     return AddrOrErr.takeError();

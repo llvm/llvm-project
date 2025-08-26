@@ -215,7 +215,6 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
     return;
   }
   out << SpvExtensionArg;
-  return;
 }
 
 SmallString<1024> getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
@@ -348,6 +347,13 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     if (A->getOption().getID() == options::OPT_dxc_rootsig_ver) {
       DAL->AddJoinedArg(nullptr,
                         Opts.getOption(options::OPT_fdx_rootsignature_version),
+                        A->getValue());
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_rootsig_define) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fdx_rootsignature_define),
                         A->getValue());
       A->claim();
       continue;

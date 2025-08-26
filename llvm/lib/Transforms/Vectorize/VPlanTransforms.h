@@ -70,8 +70,8 @@ struct VPlanTransforms {
               PredicatedScalarEvolution &PSE);
 
   /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void
-  handleEarlyExits(VPlan &Plan, bool HasUncountableExit, VFRange &Range);
+  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
+                                                 bool HasUncountableExit);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
@@ -207,8 +207,7 @@ struct VPlanTransforms {
   static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                                          VPBasicBlock *EarlyExitVPBB,
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                         VPBasicBlock *LatchVPBB,
-                                         VFRange &Range);
+                                         VPBasicBlock *LatchVPBB);
 
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
@@ -220,9 +219,10 @@ struct VPlanTransforms {
   /// variable vector lengths instead of fixed lengths. This transformation:
   ///  * Makes EVL-Phi concrete.
   //   * Removes CanonicalIV and increment.
-  ///  * Replaces fixed-length stepping (branch-on-cond CanonicalIVInc,
-  ///    VectorTripCount) with variable-length stepping (branch-on-cond
-  ///    EVLIVInc, TripCount).
+  ///  * Replaces the exit condition from
+  ///      (branch-on-count CanonicalIVInc, VectorTripCount)
+  ///    to
+  ///      (branch-on-cond eq AVLNext, 0)
   static void canonicalizeEVLLoops(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
@@ -247,7 +247,8 @@ struct VPlanTransforms {
   /// one step backwards.
   static void
   optimizeInductionExitUsers(VPlan &Plan,
-                             DenseMap<VPValue *, VPValue *> &EndValues);
+                             DenseMap<VPValue *, VPValue *> &EndValues,
+                             ScalarEvolution &SE);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
