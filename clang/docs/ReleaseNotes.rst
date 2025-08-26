@@ -188,6 +188,8 @@ Lanai Support
 ^^^^^^^^^^^^^^
 - The option ``-mcmodel={small,medium,large}`` is supported again.
 
+- New Option ``-Wpointer-bool-conversion-strict`` has been added to warn about all implicit pointer-to-bool conversions (#GH9500). This option is ignored by default.
+
 Deprecated Compiler Flags
 -------------------------
 
