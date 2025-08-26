@@ -15,8 +15,8 @@ declare {i64, i1} @llvm.usub.with.overflow.i64(i64, i64)
 declare {<2 x i64>, <2 x i1>} @llvm.uadd.with.overflow.v2i64(<2 x i64>, <2 x i64>)
 declare {<2 x i64>, <2 x i1>} @llvm.usub.with.overflow.v2i64(<2 x i64>, <2 x i64>)
 
-define hidden %struct.uint96 @add64_32(i64 %val64A, i64 %val64B, i32 %val32) {
-; CHECK-LABEL: add64_32:
+define %struct.uint96 @v_add64_32(i64 %val64A, i64 %val64B, i32 %val32) {
+; CHECK-LABEL: v_add64_32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v5, vcc, v0, v2
@@ -35,8 +35,8 @@ define hidden %struct.uint96 @add64_32(i64 %val64A, i64 %val64B, i32 %val32) {
   ret %struct.uint96 %.fca.1.insert
 }
 
-define <2 x i64> @uadd_v2i64(<2 x i64> %val0, <2 x i64> %val1, ptr %ptrval) {
-; CHECK-LABEL: uadd_v2i64:
+define <2 x i64> @v_uadd_v2i64(<2 x i64> %val0, <2 x i64> %val1, ptr %ptrval) {
+; CHECK-LABEL: v_uadd_v2i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, v2, v6
@@ -60,8 +60,8 @@ define <2 x i64> @uadd_v2i64(<2 x i64> %val0, <2 x i64> %val1, ptr %ptrval) {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @usub_v2i64(<2 x i64> %val0, <2 x i64> %val1, ptr %ptrval) {
-; CHECK-LABEL: usub_v2i64:
+define <2 x i64> @v_usub_v2i64(<2 x i64> %val0, <2 x i64> %val1, ptr %ptrval) {
+; CHECK-LABEL: v_usub_v2i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_sub_co_u32_e32 v6, vcc, v2, v6
@@ -85,8 +85,8 @@ define <2 x i64> @usub_v2i64(<2 x i64> %val0, <2 x i64> %val1, ptr %ptrval) {
   ret <2 x i64> %res
 }
 
-define i64 @uadd_i64(i64 %val0, i64 %val1, ptr %ptrval) {
-; CHECK-LABEL: uadd_i64:
+define i64 @v_uadd_i64(i64 %val0, i64 %val1, ptr %ptrval) {
+; CHECK-LABEL: v_uadd_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v2
@@ -105,8 +105,8 @@ define i64 @uadd_i64(i64 %val0, i64 %val1, ptr %ptrval) {
   ret i64 %res
 }
 
-define i64 @uadd_p1(i64 %val0, i64 %val1, ptr %ptrval) {
-; CHECK-LABEL: uadd_p1:
+define i64 @v_uadd_p1(i64 %val0, i64 %val1, ptr %ptrval) {
+; CHECK-LABEL: v_uadd_p1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v0
@@ -125,8 +125,8 @@ define i64 @uadd_p1(i64 %val0, i64 %val1, ptr %ptrval) {
   ret i64 %res
 }
 
-define i64 @uadd_n1(i64 %val0, i64 %val1, ptr %ptrval) {
-; CHECK-LABEL: uadd_n1:
+define i64 @v_uadd_n1(i64 %val0, i64 %val1, ptr %ptrval) {
+; CHECK-LABEL: v_uadd_n1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, -1, v0
@@ -145,8 +145,8 @@ define i64 @uadd_n1(i64 %val0, i64 %val1, ptr %ptrval) {
   ret i64 %res
 }
 
-define i64 @usub_p1(i64 %val0, i64 %val1, ptr %ptrval) {
-; CHECK-LABEL: usub_p1:
+define i64 @v_usub_p1(i64 %val0, i64 %val1, ptr %ptrval) {
+; CHECK-LABEL: v_usub_p1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, -1, v0
@@ -165,14 +165,228 @@ define i64 @usub_p1(i64 %val0, i64 %val1, ptr %ptrval) {
   ret i64 %res
 }
 
-define i64 @usub_n1(i64 %val0, i64 %val1, ptr %ptrval) {
-; CHECK-LABEL: usub_n1:
+define i64 @v_usub_n1(i64 %val0, i64 %val1, ptr %ptrval) {
+; CHECK-LABEL: v_usub_n1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, 1, v0
 ; CHECK-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, v[2:3], v[0:1]
 ; CHECK-NEXT:    flat_store_dwordx2 v[4:5], v[2:3]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %pair = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %val0, i64 -1)
+  %val = extractvalue {i64, i1} %pair, 0
+  %obit = extractvalue {i64, i1} %pair, 1
+  %res = sext i1 %obit to i64
+  store i64 %val, ptr %ptrval
+  ret i64 %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; test SGPR
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+define %struct.uint96 @s_add64_32(i64 inreg %val64A, i64 inreg %val64B, i32 inreg %val32) {
+; CHECK-LABEL: s_add64_32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_add_u32 s4, s16, s18
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    s_addc_u32 s5, s17, s19
+; CHECK-NEXT:    v_mov_b32_e32 v1, s17
+; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[0:1]
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-NEXT:    s_cmp_lg_u64 vcc, 0
+; CHECK-NEXT:    s_addc_u32 s6, s20, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s5
+; CHECK-NEXT:    v_mov_b32_e32 v2, s6
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %sum64 = add i64 %val64A, %val64B
+  %obit = icmp ult i64 %sum64, %val64A
+  %obit32 = zext i1 %obit to i32
+  %sum32 = add i32 %val32, %obit32
+  %.fca.0.insert = insertvalue %struct.uint96 poison, i64 %sum64, 0
+  %.fca.1.insert = insertvalue %struct.uint96 %.fca.0.insert, i32 %sum32, 1
+  ret %struct.uint96 %.fca.1.insert
+}
+
+define <2 x i64> @s_uadd_v2i64(<2 x i64> inreg %val0, <2 x i64> inreg %val1, ptr %ptrval) {
+; CHECK-LABEL: s_uadd_v2i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_add_u32 s4, s18, s22
+; CHECK-NEXT:    s_addc_u32 s5, s19, s23
+; CHECK-NEXT:    s_add_u32 s6, s16, s20
+; CHECK-NEXT:    v_mov_b32_e32 v2, s16
+; CHECK-NEXT:    s_addc_u32 s7, s17, s21
+; CHECK-NEXT:    v_mov_b32_e32 v3, s17
+; CHECK-NEXT:    v_mov_b32_e32 v8, s18
+; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[6:7], v[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v9, s19
+; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
+; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[8:9]
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    v_mov_b32_e32 v6, s4
+; CHECK-NEXT:    v_mov_b32_e32 v7, s5
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, -1, vcc
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; CHECK-NEXT:    v_mov_b32_e32 v0, v2
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
+; CHECK-NEXT:    v_mov_b32_e32 v2, v3
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %pair = call {<2 x i64>, <2 x i1>} @llvm.uadd.with.overflow.v2i64(<2 x i64> %val0, <2 x i64> %val1)
+  %val = extractvalue {<2 x i64>, <2 x i1>} %pair, 0
+  %obit = extractvalue {<2 x i64>, <2 x i1>} %pair, 1
+  %res = sext <2 x i1> %obit to <2 x i64>
+  store <2 x i64> %val, ptr %ptrval
+  ret <2 x i64> %res
+}
+
+define <2 x i64> @s_usub_v2i64(<2 x i64> inreg %val0, <2 x i64> inreg %val1, ptr %ptrval) {
+; CHECK-LABEL: s_usub_v2i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_sub_u32 s4, s18, s22
+; CHECK-NEXT:    s_subb_u32 s5, s19, s23
+; CHECK-NEXT:    s_sub_u32 s6, s16, s20
+; CHECK-NEXT:    v_mov_b32_e32 v2, s16
+; CHECK-NEXT:    s_subb_u32 s7, s17, s21
+; CHECK-NEXT:    v_mov_b32_e32 v3, s17
+; CHECK-NEXT:    v_mov_b32_e32 v8, s18
+; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, s[6:7], v[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v9, s19
+; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
+; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[8:9]
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    v_mov_b32_e32 v6, s4
+; CHECK-NEXT:    v_mov_b32_e32 v7, s5
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, -1, vcc
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; CHECK-NEXT:    v_mov_b32_e32 v0, v2
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
+; CHECK-NEXT:    v_mov_b32_e32 v2, v3
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %pair = call {<2 x i64>, <2 x i1>} @llvm.usub.with.overflow.v2i64(<2 x i64> %val0, <2 x i64> %val1)
+  %val = extractvalue {<2 x i64>, <2 x i1>} %pair, 0
+  %obit = extractvalue {<2 x i64>, <2 x i1>} %pair, 1
+  %res = sext <2 x i1> %obit to <2 x i64>
+  store <2 x i64> %val, ptr %ptrval
+  ret <2 x i64> %res
+}
+
+define i64 @s_uadd_i64(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
+; CHECK-LABEL: s_uadd_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_add_u32 s4, s16, s18
+; CHECK-NEXT:    v_mov_b32_e32 v2, s16
+; CHECK-NEXT:    s_addc_u32 s5, s17, s19
+; CHECK-NEXT:    v_mov_b32_e32 v3, s17
+; CHECK-NEXT:    v_mov_b32_e32 v4, s4
+; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v5, s5
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %pair = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %val0, i64 %val1)
+  %val = extractvalue {i64, i1} %pair, 0
+  %obit = extractvalue {i64, i1} %pair, 1
+  %res = sext i1 %obit to i64
+  store i64 %val, ptr %ptrval
+  ret i64 %res
+}
+
+define i64 @s_uadd_p1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
+; CHECK-LABEL: s_uadd_p1:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_add_u32 s4, s16, 1
+; CHECK-NEXT:    s_addc_u32 s5, s17, 0
+; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %pair = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %val0, i64 1)
+  %val = extractvalue {i64, i1} %pair, 0
+  %obit = extractvalue {i64, i1} %pair, 1
+  %res = sext i1 %obit to i64
+  store i64 %val, ptr %ptrval
+  ret i64 %res
+}
+
+define i64 @s_uadd_n1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
+; CHECK-LABEL: s_uadd_n1:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_add_u32 s4, s16, -1
+; CHECK-NEXT:    s_addc_u32 s5, s17, -1
+; CHECK-NEXT:    s_cmp_lg_u64 s[16:17], 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %pair = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %val0, i64 -1)
+  %val = extractvalue {i64, i1} %pair, 0
+  %obit = extractvalue {i64, i1} %pair, 1
+  %res = sext i1 %obit to i64
+  store i64 %val, ptr %ptrval
+  ret i64 %res
+}
+
+define i64 @s_usub_p1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
+; CHECK-LABEL: s_usub_p1:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_add_u32 s4, s16, -1
+; CHECK-NEXT:    v_mov_b32_e32 v2, s16
+; CHECK-NEXT:    s_addc_u32 s5, s17, -1
+; CHECK-NEXT:    v_mov_b32_e32 v3, s17
+; CHECK-NEXT:    v_mov_b32_e32 v4, s4
+; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v5, s5
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %pair = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %val0, i64 1)
+  %val = extractvalue {i64, i1} %pair, 0
+  %obit = extractvalue {i64, i1} %pair, 1
+  %res = sext i1 %obit to i64
+  store i64 %val, ptr %ptrval
+  ret i64 %res
+}
+
+define i64 @s_usub_n1(i64 inreg %val0, i64 inreg %val1, ptr %ptrval) {
+; CHECK-LABEL: s_usub_n1:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_add_u32 s4, s16, 1
+; CHECK-NEXT:    v_mov_b32_e32 v2, s16
+; CHECK-NEXT:    s_addc_u32 s5, s17, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s17
+; CHECK-NEXT:    v_mov_b32_e32 v4, s4
+; CHECK-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v5, s5
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[4:5]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
