@@ -8,7 +8,7 @@
 # The arguments to the call must become implicit arguments, because the branch
 # only expects to get 1 explicit operand which is the branch target.
 
-# CHECK:    BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $w30_hi, implicit-def $sp, implicit-def $wsp, implicit-def $wsp_hi, implicit $sp, implicit $x0, implicit $w1 {
+# CHECK:    BUNDLE implicit-def $lr, implicit-def $sp, implicit $sp, implicit $x0, implicit $w1 {
 # CHECK:      BL @_setjmp, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp
 # CHECK:      HINT 36
 # CHECK:    }

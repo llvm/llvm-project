@@ -256,7 +256,7 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
       else
         iter++;
     }
-    
+
     if (!names_found.empty()) {
       for (BreakpointSP bkpt_sp : target->GetBreakpointList().Breakpoints()) {
         for (const std::string &name : names_found) {

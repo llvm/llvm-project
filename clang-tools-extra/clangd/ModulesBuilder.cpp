@@ -14,12 +14,20 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/CommandLine.h"
+
 #include <queue>
 
 namespace clang {
 namespace clangd {
 
 namespace {
+
+llvm::cl::opt<bool> DebugModulesBuilder(
+    "debug-modules-builder",
+    llvm::cl::desc("Don't remove clangd's built module files for debugging. "
+                   "Remember to remove them later after debugging."),
+    llvm::cl::init(false));
 
 // Create a path to store module files. Generally it should be:
 //
@@ -122,7 +130,7 @@ struct ModuleFile {
   }
 
   ~ModuleFile() {
-    if (!ModuleFilePath.empty())
+    if (!ModuleFilePath.empty() && !DebugModulesBuilder)
       llvm::sys::fs::remove(ModuleFilePath);
   }
 
@@ -158,6 +166,16 @@ public:
       Options.PrebuiltModuleFiles.insert_or_assign(
           RequiredModule->getModuleName().str(),
           RequiredModule->getModuleFilePath().str());
+  }
+
+  std::string getAsString() const {
+    std::string Result;
+    llvm::raw_string_ostream OS(Result);
+    for (const auto &ModuleFile : RequiredModules) {
+      OS << "-fmodule-file=" << ModuleFile->getModuleName() << "="
+         << ModuleFile->getModuleFilePath() << " ";
+    }
+    return Result;
   }
 
   bool canReuse(const CompilerInvocation &CI,
@@ -209,8 +227,9 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
+  CodeGenOptions CodeGenOpts;
   ASTReader Reader(PP, *ModCache, /*ASTContext=*/nullptr,
-                   PCHOperations.getRawReader(), {});
+                   PCHOperations.getRawReader(), CodeGenOpts, {});
 
   // We don't need any listener here. By default it will use a validator
   // listener.
@@ -296,8 +315,27 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
   GenerateReducedModuleInterfaceAction Action;
   Clang->ExecuteAction(Action);
 
-  if (Clang->getDiagnostics().hasErrorOccurred())
-    return llvm::createStringError("Compilation failed");
+  if (Clang->getDiagnostics().hasErrorOccurred()) {
+    std::string Cmds;
+    for (const auto &Arg : Inputs.CompileCommand.CommandLine) {
+      if (!Cmds.empty())
+        Cmds += " ";
+      Cmds += Arg;
+    }
+
+    clangd::vlog("Failed to compile {0} with command: {1}", ModuleUnitFileName,
+                 Cmds);
+
+    std::string BuiltModuleFilesStr = BuiltModuleFiles.getAsString();
+    if (!BuiltModuleFilesStr.empty())
+      clangd::vlog("The actual used module files built by clangd is {0}",
+                   BuiltModuleFilesStr);
+
+    return llvm::createStringError(
+        llvm::formatv("Failed to compile {0}. Use '--log=verbose' to view "
+                      "detailed failure reasons.",
+                      ModuleUnitFileName));
+  }
 
   return ModuleFile{ModuleName, Inputs.CompileCommand.Output};
 }

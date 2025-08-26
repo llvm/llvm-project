@@ -157,10 +157,10 @@ define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    mul a7, a7, t1
 ; RV64IM-NEXT:    slli t1, a5, 7
 ; RV64IM-NEXT:    slli a5, a5, 2
-; RV64IM-NEXT:    subw a5, a5, t1
-; RV64IM-NEXT:    subw a2, a2, a6
-; RV64IM-NEXT:    subw a4, a4, t0
-; RV64IM-NEXT:    subw a1, a1, a7
+; RV64IM-NEXT:    sub a5, a5, t1
+; RV64IM-NEXT:    sub a2, a2, a6
+; RV64IM-NEXT:    sub a4, a4, t0
+; RV64IM-NEXT:    sub a1, a1, a7
 ; RV64IM-NEXT:    add a3, a3, a5
 ; RV64IM-NEXT:    sh a2, 0(a0)
 ; RV64IM-NEXT:    sh a3, 2(a0)
@@ -300,10 +300,10 @@ define <4 x i16> @fold_urem_vec_2(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    mul t0, t0, a6
 ; RV64IM-NEXT:    mul t1, t1, a6
 ; RV64IM-NEXT:    mul a2, a2, a6
-; RV64IM-NEXT:    subw a3, a3, a7
-; RV64IM-NEXT:    subw a4, a4, t0
-; RV64IM-NEXT:    subw a5, a5, t1
-; RV64IM-NEXT:    subw a1, a1, a2
+; RV64IM-NEXT:    sub a3, a3, a7
+; RV64IM-NEXT:    sub a4, a4, t0
+; RV64IM-NEXT:    sub a5, a5, t1
+; RV64IM-NEXT:    sub a1, a1, a2
 ; RV64IM-NEXT:    sh a3, 0(a0)
 ; RV64IM-NEXT:    sh a4, 2(a0)
 ; RV64IM-NEXT:    sh a5, 4(a0)
@@ -508,10 +508,10 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    add a1, a1, t1
 ; RV64IM-NEXT:    add a3, a3, t0
 ; RV64IM-NEXT:    add a4, a4, a7
-; RV64IM-NEXT:    subw a2, a2, a6
-; RV64IM-NEXT:    subw a1, a1, t4
-; RV64IM-NEXT:    subw a3, a3, t3
-; RV64IM-NEXT:    subw a4, a4, t2
+; RV64IM-NEXT:    sub a2, a2, a6
+; RV64IM-NEXT:    sub a1, a1, t4
+; RV64IM-NEXT:    sub a3, a3, t3
+; RV64IM-NEXT:    sub a4, a4, t2
 ; RV64IM-NEXT:    sh a2, 0(a0)
 ; RV64IM-NEXT:    sh a1, 2(a0)
 ; RV64IM-NEXT:    sh a3, 4(a0)
@@ -622,7 +622,7 @@ define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    andi a4, a4, 7
 ; RV64IM-NEXT:    mulhu a5, a1, a5
 ; RV64IM-NEXT:    mul a5, a5, a6
-; RV64IM-NEXT:    subw a1, a1, a5
+; RV64IM-NEXT:    sub a1, a1, a5
 ; RV64IM-NEXT:    sh a2, 0(a0)
 ; RV64IM-NEXT:    sh a3, 2(a0)
 ; RV64IM-NEXT:    sh a4, 4(a0)
@@ -757,9 +757,9 @@ define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    addi a7, a7, 1327
 ; RV64IM-NEXT:    mulhu a5, a1, a5
 ; RV64IM-NEXT:    mul a5, a5, a7
-; RV64IM-NEXT:    subw a2, a2, a4
-; RV64IM-NEXT:    subw a3, a3, a6
-; RV64IM-NEXT:    subw a1, a1, a5
+; RV64IM-NEXT:    sub a2, a2, a4
+; RV64IM-NEXT:    sub a3, a3, a6
+; RV64IM-NEXT:    sub a1, a1, a5
 ; RV64IM-NEXT:    sh zero, 0(a0)
 ; RV64IM-NEXT:    sh a2, 2(a0)
 ; RV64IM-NEXT:    sh a3, 4(a0)

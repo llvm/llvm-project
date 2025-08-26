@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86MCAsmInfo.h"
-#include "MCTargetDesc/X86MCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -85,6 +84,8 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   // wasn't always case preserving or something.
   CommentString = "##";
 
+  AllowDollarAtStartOfIdentifier = false;
+
   SupportsDebugInformation = true;
   UseDataRegionDirectives = MarkedJTDataRegions;
 
@@ -124,6 +125,7 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
   CalleeSaveStackSlotSize = is64Bit ? 8 : 4;
 
   AssemblerDialect = X86AsmSyntax;
+  AllowDollarAtStartOfIdentifier = false;
 
   // Debug Information
   SupportsDebugInformation = true;
@@ -162,6 +164,7 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   ExceptionsType = ExceptionHandling::WinEH;
 
   AssemblerDialect = X86AsmSyntax;
+  AllowDollarAtStartOfIdentifier = false;
 
   AllowAtInName = true;
 
@@ -199,6 +202,7 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
+  AllowDollarAtStartOfIdentifier = false;
 
   initializeAtSpecifiers(atSpecifiers);
 }

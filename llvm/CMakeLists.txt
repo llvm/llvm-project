@@ -110,7 +110,7 @@ endif()
 # one for llvm+clang+... using the same sources.
 # These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
 set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;openmp;polly")
-if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
   # LLVM_ENABLE_RUNTIMES.
   list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
@@ -149,7 +149,7 @@ endforeach()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -179,29 +179,37 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif ()
 endif()
 
+if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
+  if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling clang as a dependency of lldb")
+    list(APPEND LLVM_ENABLE_PROJECTS "clang")
+  endif()
+endif ()
+
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated.  Please use "
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
+    "become a fatal error in a future release. Please use "
     "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
     "https://libc.llvm.org/ for building the runtimes.")
 endif()
 
 if ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=compiler-rt is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=compiler-rt or see the instructions at "
     "https://compiler-rt.llvm.org/ for building the runtimes.")
 endif()
 
 if ("offload" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=offload is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=offload or see the instructions at "
     "https://openmp.llvm.org/ for building the runtimes.")
 endif()
 
 if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=openmp is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=openmp or see the instructions at "
     "https://openmp.llvm.org/ for building the runtimes.")
 endif()
@@ -214,7 +222,7 @@ endif ()
 
 if ("libclc" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=libclc is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+    "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=libclc or see the instructions at "
     "https://libclc.llvm.org/ for building the runtimes.")
 endif()
@@ -580,9 +588,6 @@ set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
   "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, COVERAGE, or COVERAGE_AND_ORIGIN.")
 set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE COVERAGE_AND_ORIGIN)
 
-option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
-  "Add additional fields to DILocations to support Key Instructions" OFF)
-
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
   # Cygwin doesn't identify itself as Windows, and thus gets path::Style::posix
@@ -677,7 +682,7 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
   option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
 endif()
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." ON)
 else()
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." OFF)
@@ -781,7 +786,7 @@ option(LLVM_USE_SPLIT_DWARF
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
-if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
+if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT (WIN32 OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
   # TODO: support other platforms and toolchains.
   option(LLVM_BUILD_32_BITS "Build 32 bits executables and libraries." OFF)
 endif()
@@ -1071,6 +1076,10 @@ if (LLVM_BUILD_LLVM_DYLIB OR LLVM_BUILD_SHARED_LIBS OR LLVM_ENABLE_PLUGINS)
   set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS ON)
 endif()
 
+# Because LLVM-C is built into the LLVM library, for now export its symbols
+# whenever LLVM symbols are exported.
+set(LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS ${LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS})
+
 set(LLVM_ENABLE_NEW_PASS_MANAGER TRUE CACHE BOOL
   "Enable the new pass manager by default.")
 if(NOT LLVM_ENABLE_NEW_PASS_MANAGER)
@@ -1179,6 +1188,8 @@ if (LLVM_HAVE_TFLITE)
   find_package(tensorflow-lite REQUIRED)
 endif()
 
+set(LLVM_ENABLE_PROFCHECK OFF CACHE BOOL "Enable profile checking in test tools")
+
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
 # Specifically, assuming python3 is installed:
@@ -1245,7 +1256,7 @@ endif()
 
 # Build with _XOPEN_SOURCE on AIX, as stray macros in _ALL_SOURCE mode tend to
 # break things. In this case we need to enable the large-file API as well.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
           add_compile_definitions(_XOPEN_SOURCE=700)
           add_compile_definitions(_LARGE_FILE_API)
           add_compile_options(-pthread)
@@ -1273,7 +1284,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
 endif()
 
 # Build with _FILE_OFFSET_BITS=64 on Solaris to match g++ >= 9.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
           add_compile_definitions(_FILE_OFFSET_BITS=64)
 endif()
 
@@ -1291,10 +1302,10 @@ if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 # (this is a variable that CrossCompile sets on recursive invocations)
 endif()
 
-if( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
+if( "${CMAKE_SYSTEM_NAME}" MATCHES SunOS )
    # special hack for Solaris to handle crazy system sys/regset.h
    include_directories("${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/Solaris")
-endif( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
+endif( "${CMAKE_SYSTEM_NAME}" MATCHES SunOS )
 
 # Make sure we don't get -rdynamic in every binary. For those that need it,
 # use EXPORT_SYMBOLS argument.
@@ -1365,6 +1376,17 @@ if( LLVM_INCLUDE_TOOLS )
   add_subdirectory(tools)
 endif()
 
+# We need to setup KillTheDoctor before setting up the runtimes build because
+# the runtimes build needs to add a KillTheDoctor dep for compiler-rt on
+# Windows.
+if (LLVM_INCLUDE_TESTS)
+  if (WIN32)
+    # This utility is used to prevent crashing tests from calling Dr. Watson on
+    # Windows.
+    add_subdirectory(utils/KillTheDoctor)
+  endif()
+endif()
+
 if( LLVM_INCLUDE_RUNTIMES )
   add_subdirectory(runtimes)
 endif()
@@ -1388,12 +1410,6 @@ if( LLVM_INCLUDE_TESTS )
   add_subdirectory(utils/lit)
   add_subdirectory(test)
   add_subdirectory(unittests)
-
-  if (WIN32)
-    # This utility is used to prevent crashing tests from calling Dr. Watson on
-    # Windows.
-    add_subdirectory(utils/KillTheDoctor)
-  endif()
 
   umbrella_lit_testsuite_end(check-all)
   get_property(LLVM_ALL_LIT_DEPENDS GLOBAL PROPERTY LLVM_ALL_LIT_DEPENDS)

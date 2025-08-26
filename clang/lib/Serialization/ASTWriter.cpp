@@ -345,6 +345,7 @@ public:
 
   void VisitArrayTypeLoc(ArrayTypeLoc TyLoc);
   void VisitFunctionTypeLoc(FunctionTypeLoc TyLoc);
+  void VisitTagTypeLoc(TagTypeLoc TL);
 };
 
 } // namespace
@@ -490,14 +491,20 @@ void TypeLocWriter::VisitFunctionNoProtoTypeLoc(FunctionNoProtoTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
 void TypeLocWriter::VisitUsingTypeLoc(UsingTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
 void TypeLocWriter::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
@@ -564,16 +571,26 @@ void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
 void TypeLocWriter::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getTemplateNameLoc());
 }
 
-void TypeLocWriter::VisitRecordTypeLoc(RecordTypeLoc TL) {
+void TypeLocWriter::VisitTagTypeLoc(TagTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
-void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
-  addSourceLocation(TL.getNameLoc());
+void TypeLocWriter::VisitRecordTypeLoc(RecordTypeLoc TL) {
+  VisitTagTypeLoc(TL);
 }
+
+void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
+  VisitTagTypeLoc(TL);
+}
+
+void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) { VisitTagTypeLoc(TL); }
 
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
@@ -610,15 +627,21 @@ void TypeLocWriter::VisitSubstTemplateTypeParmPackTypeLoc(
   addSourceLocation(TL.getNameLoc());
 }
 
+void TypeLocWriter::VisitSubstBuiltinTemplatePackTypeLoc(
+    SubstBuiltinTemplatePackTypeLoc TL) {
+  addSourceLocation(TL.getNameLoc());
+}
+
 void TypeLocWriter::VisitTemplateSpecializationTypeLoc(
                                            TemplateSpecializationTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getTemplateKeywordLoc());
   addSourceLocation(TL.getTemplateNameLoc());
   addSourceLocation(TL.getLAngleLoc());
   addSourceLocation(TL.getRAngleLoc());
   for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
-    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(i).getArgument().getKind(),
-                                      TL.getArgLoc(i).getLocInfo());
+    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(i));
 }
 
 void TypeLocWriter::VisitParenTypeLoc(ParenTypeLoc TL) {
@@ -628,15 +651,6 @@ void TypeLocWriter::VisitParenTypeLoc(ParenTypeLoc TL) {
 
 void TypeLocWriter::VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
   addSourceLocation(TL.getExpansionLoc());
-}
-
-void TypeLocWriter::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-  addSourceLocation(TL.getElaboratedKeywordLoc());
-  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
-}
-
-void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  addSourceLocation(TL.getNameLoc());
 }
 
 void TypeLocWriter::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
@@ -654,8 +668,7 @@ void TypeLocWriter::VisitDependentTemplateSpecializationTypeLoc(
   addSourceLocation(TL.getLAngleLoc());
   addSourceLocation(TL.getRAngleLoc());
   for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
-    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I).getArgument().getKind(),
-                                      TL.getArgLoc(I).getLocInfo());
+    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I));
 }
 
 void TypeLocWriter::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
@@ -692,13 +705,17 @@ void TypeLocWriter::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
 void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
   addSourceLocation(TL.getKWLoc());
 }
-
 void TypeLocWriter::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitDependentBitIntTypeLoc(
     clang::DependentBitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+}
+
+void TypeLocWriter::VisitPredefinedSugarTypeLoc(
+    clang::PredefinedSugarTypeLoc TL) {
+  // Nothing to do.
 }
 
 void ASTWriter::WriteTypeAbbrevs() {
@@ -898,6 +915,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   BLOCK(OPTIONS_BLOCK);
   RECORD(LANGUAGE_OPTIONS);
+  RECORD(CODEGEN_OPTIONS);
   RECORD(TARGET_OPTIONS);
   RECORD(FILE_SYSTEM_OPTIONS);
   RECORD(HEADER_SEARCH_OPTIONS);
@@ -1033,7 +1051,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_OBJC_INTERFACE);
   RECORD(TYPE_OBJC_OBJECT_POINTER);
   RECORD(TYPE_DECLTYPE);
-  RECORD(TYPE_ELABORATED);
   RECORD(TYPE_SUBST_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_UNRESOLVED_USING);
   RECORD(TYPE_INJECTED_CLASS_NAME);
@@ -1048,6 +1065,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_PACK_EXPANSION);
   RECORD(TYPE_ATTRIBUTED);
   RECORD(TYPE_SUBST_TEMPLATE_TYPE_PARM_PACK);
+  RECORD(TYPE_SUBST_BUILTIN_TEMPLATE_PACK);
   RECORD(TYPE_AUTO);
   RECORD(TYPE_UNARY_TRANSFORM);
   RECORD(TYPE_ATOMIC);
@@ -1612,9 +1630,9 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // Language options.
   Record.clear();
   const LangOptions &LangOpts = PP.getLangOpts();
-#define LANGOPT(Name, Bits, Default, Description) \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
   Record.push_back(LangOpts.Name);
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
   Record.push_back(static_cast<unsigned>(LangOpts.get##Name()));
 #include "clang/Basic/LangOptions.def"
 #define SANITIZER(NAME, ID)                                                    \
@@ -1645,6 +1663,23 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   AddString(LangOpts.OMPHostIRFile, Record);
 
   Stream.EmitRecord(LANGUAGE_OPTIONS, Record);
+
+  // Codegen options.
+  // FIXME: Replace with C++20 `using enum CodeGenOptions::CompatibilityKind`.
+  using CK = CodeGenOptions::CompatibilityKind;
+  Record.clear();
+  const CodeGenOptions &CGOpts = getCodeGenOpts();
+#define CODEGENOPT(Name, Bits, Default, Compatibility)                         \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    Record.push_back(static_cast<unsigned>(CGOpts.Name));
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    Record.push_back(static_cast<unsigned>(CGOpts.get##Name()));
+#define DEBUGOPT(Name, Bits, Default, Compatibility)
+#define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)
+#include "clang/Basic/CodeGenOptions.def"
+  Stream.EmitRecord(CODEGEN_OPTIONS, Record);
 
   // Target options.
   Record.clear();
@@ -5384,11 +5419,12 @@ void ASTWriter::SetSelectorOffset(Selector Sel, uint32_t Offset) {
 
 ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
                      SmallVectorImpl<char> &Buffer, ModuleCache &ModCache,
+                     const CodeGenOptions &CodeGenOpts,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                      bool IncludeTimestamps, bool BuildingImplicitModule,
                      bool GeneratingReducedBMI)
     : Stream(Stream), Buffer(Buffer), ModCache(ModCache),
-      IncludeTimestamps(IncludeTimestamps),
+      CodeGenOpts(CodeGenOpts), IncludeTimestamps(IncludeTimestamps),
       BuildingImplicitModule(BuildingImplicitModule),
       GeneratingReducedBMI(GeneratingReducedBMI) {
   for (const auto &Ext : Extensions) {
@@ -5437,11 +5473,6 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
   this->BaseDirectory.clear();
 
   WritingAST = false;
-
-  if (WritingModule && PPRef.getHeaderSearchInfo()
-                           .getHeaderSearchOpts()
-                           .ModulesValidateOncePerBuildSession)
-    ModCache.updateModuleTimestamp(OutputFile);
 
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
@@ -5595,6 +5626,8 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
                      PREDEF_DECL_BUILTIN_MS_VA_LIST_ID);
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
+  RegisterPredefDecl(Context.MSTypeInfoTagDecl,
+                     PREDEF_DECL_BUILTIN_MS_TYPE_INFO_TAG_ID);
   RegisterPredefDecl(Context.ExternCContext, PREDEF_DECL_EXTERN_C_CONTEXT_ID);
   RegisterPredefDecl(Context.CFConstantStringTypeDecl,
                      PREDEF_DECL_CF_CONSTANT_STRING_ID);
@@ -6749,22 +6782,22 @@ void ASTRecordWriter::AddCXXTemporary(const CXXTemporary *Temp) {
 }
 
 void ASTRecordWriter::AddTemplateArgumentLocInfo(
-    TemplateArgument::ArgKind Kind, const TemplateArgumentLocInfo &Arg) {
-  switch (Kind) {
+    const TemplateArgumentLoc &Arg) {
+  const TemplateArgumentLocInfo &Info = Arg.getLocInfo();
+  switch (auto K = Arg.getArgument().getKind()) {
   case TemplateArgument::Expression:
-    AddStmt(Arg.getAsExpr());
+    AddStmt(Info.getAsExpr());
     break;
   case TemplateArgument::Type:
-    AddTypeSourceInfo(Arg.getAsTypeSourceInfo());
+    AddTypeSourceInfo(Info.getAsTypeSourceInfo());
     break;
   case TemplateArgument::Template:
-    AddNestedNameSpecifierLoc(Arg.getTemplateQualifierLoc());
-    AddSourceLocation(Arg.getTemplateNameLoc());
-    break;
   case TemplateArgument::TemplateExpansion:
+    AddSourceLocation(Arg.getTemplateKWLoc());
     AddNestedNameSpecifierLoc(Arg.getTemplateQualifierLoc());
     AddSourceLocation(Arg.getTemplateNameLoc());
-    AddSourceLocation(Arg.getTemplateEllipsisLoc());
+    if (K == TemplateArgument::TemplateExpansion)
+      AddSourceLocation(Arg.getTemplateEllipsisLoc());
     break;
   case TemplateArgument::Null:
   case TemplateArgument::Integral:
@@ -6787,7 +6820,7 @@ void ASTRecordWriter::AddTemplateArgumentLoc(const TemplateArgumentLoc &Arg) {
     if (InfoHasSameExpr)
       return; // Avoid storing the same expr twice.
   }
-  AddTemplateArgumentLocInfo(Arg.getArgument().getKind(), Arg.getLocInfo());
+  AddTemplateArgumentLocInfo(Arg);
 }
 
 void ASTRecordWriter::AddTypeSourceInfo(TypeSourceInfo *TInfo) {
@@ -6968,9 +7001,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
   SourceManager &SM = PP->getSourceManager();
   SourceLocation FileLoc = SM.getFileLoc(Loc);
   assert(SM.isLocalSourceLocation(FileLoc));
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = SM.getDecomposedLoc(FileLoc);
+  auto [FID, Offset] = SM.getDecomposedLoc(FileLoc);
   if (FID.isInvalid())
     return;
   assert(SM.getSLocEntry(FID).isFile());
@@ -7047,54 +7078,50 @@ void ASTRecordWriter::AddQualifierInfo(const QualifierInfo &Info) {
     AddTemplateParameterList(Info.TemplParamLists[i]);
 }
 
-void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+void ASTRecordWriter::AddNestedNameSpecifierLoc(
+    NestedNameSpecifierLoc QualifierLoc) {
   // Nested name specifiers usually aren't too long. I think that 8 would
   // typically accommodate the vast majority.
   SmallVector<NestedNameSpecifierLoc , 8> NestedNames;
 
   // Push each of the nested-name-specifiers's onto a stack for
   // serialization in reverse order.
-  while (NNS) {
-    NestedNames.push_back(NNS);
-    NNS = NNS.getPrefix();
+  while (QualifierLoc) {
+    NestedNames.push_back(QualifierLoc);
+    QualifierLoc = QualifierLoc.getAsNamespaceAndPrefix().Prefix;
   }
 
   Record->push_back(NestedNames.size());
   while(!NestedNames.empty()) {
-    NNS = NestedNames.pop_back_val();
-    NestedNameSpecifier::SpecifierKind Kind
-      = NNS.getNestedNameSpecifier()->getKind();
-    Record->push_back(Kind);
+    QualifierLoc = NestedNames.pop_back_val();
+    NestedNameSpecifier Qualifier = QualifierLoc.getNestedNameSpecifier();
+    NestedNameSpecifier::Kind Kind = Qualifier.getKind();
+    Record->push_back(llvm::to_underlying(Kind));
     switch (Kind) {
-    case NestedNameSpecifier::Identifier:
-      AddIdentifierRef(NNS.getNestedNameSpecifier()->getAsIdentifier());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::Namespace:
+      AddDeclRef(Qualifier.getAsNamespaceAndPrefix().Namespace);
+      AddSourceRange(QualifierLoc.getLocalSourceRange());
       break;
 
-    case NestedNameSpecifier::Namespace:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsNamespace());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::Type: {
+      TypeLoc TL = QualifierLoc.castAsTypeLoc();
+      AddTypeRef(TL.getType());
+      AddTypeLoc(TL);
+      AddSourceLocation(QualifierLoc.getLocalSourceRange().getEnd());
+      break;
+    }
+
+    case NestedNameSpecifier::Kind::Global:
+      AddSourceLocation(QualifierLoc.getLocalSourceRange().getEnd());
       break;
 
-    case NestedNameSpecifier::NamespaceAlias:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsNamespaceAlias());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      AddDeclRef(Qualifier.getAsMicrosoftSuper());
+      AddSourceRange(QualifierLoc.getLocalSourceRange());
       break;
 
-    case NestedNameSpecifier::TypeSpec:
-      AddTypeRef(NNS.getTypeLoc().getType());
-      AddTypeLoc(NNS.getTypeLoc());
-      AddSourceLocation(NNS.getLocalSourceRange().getEnd());
-      break;
-
-    case NestedNameSpecifier::Global:
-      AddSourceLocation(NNS.getLocalSourceRange().getEnd());
-      break;
-
-    case NestedNameSpecifier::Super:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsRecordDecl());
-      AddSourceRange(NNS.getLocalSourceRange());
-      break;
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
     }
   }
 }
@@ -8722,6 +8749,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *PC = cast<OpenACCPrivateClause>(C);
     writeSourceLocation(PC->getLParenLoc());
     writeOpenACCVarList(PC);
+
+    for (VarDecl *VD : PC->getInitRecipes())
+      AddDeclRef(VD);
     return;
   }
   case OpenACCClauseKind::Host: {
@@ -8740,6 +8770,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *FPC = cast<OpenACCFirstPrivateClause>(C);
     writeSourceLocation(FPC->getLParenLoc());
     writeOpenACCVarList(FPC);
+
+    for (const OpenACCFirstPrivateRecipe &R : FPC->getInitRecipes()) {
+      AddDeclRef(R.RecipeDecl);
+      AddDeclRef(R.InitFromTemporary);
+    }
     return;
   }
   case OpenACCClauseKind::Attach: {
@@ -8857,6 +8892,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(RC->getLParenLoc());
     writeEnum(RC->getReductionOp());
     writeOpenACCVarList(RC);
+
+    for (const OpenACCReductionRecipe &R : RC->getRecipes()) {
+      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+      AddDeclRef(R.RecipeDecl);
+    }
     return;
   }
   case OpenACCClauseKind::Seq:

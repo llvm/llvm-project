@@ -117,6 +117,9 @@
 /* Define if exporting LLVM public interface for shared library */
 /* LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS defined in Bazel */
 
+/* Define if exporting LLVM-C public interface for shared library */
+/* LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS */
+
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
 /* #undef LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN} */
 

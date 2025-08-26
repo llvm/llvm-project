@@ -12,15 +12,11 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;

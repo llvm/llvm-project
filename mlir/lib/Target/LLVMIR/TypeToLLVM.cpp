@@ -9,7 +9,6 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/MLIRContext.h"
 
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"

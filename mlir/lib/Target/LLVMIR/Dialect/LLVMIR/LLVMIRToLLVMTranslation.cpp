@@ -16,15 +16,11 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/ModRef.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;

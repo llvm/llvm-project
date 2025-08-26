@@ -14,7 +14,7 @@ add_lldb_library(lldbValueObject
   ValueObjectList.cpp
   ValueObjectMemory.cpp
   ValueObjectRegister.cpp
-  ValueObjectSyntheticFilter.cpp
+  ValueObjectSynthetic.cpp
   ValueObjectUpdater.cpp
   ValueObjectVariable.cpp
   ValueObjectVTable.cpp

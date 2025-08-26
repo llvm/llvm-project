@@ -157,6 +157,7 @@ enum {
   FUNCTION_INST_CMP_ABBREV,
   FUNCTION_INST_CMP_FLAGS_ABBREV,
   FUNCTION_DEBUG_RECORD_VALUE_ABBREV,
+  FUNCTION_DEBUG_LOC_ABBREV,
 };
 
 /// Abstract class to manage the bitcode writing, subclassed for each bitcode
@@ -609,7 +610,7 @@ public:
       std::vector<StringRef> ModulePaths;
       for (auto &[ModPath, _] : Index.modulePaths())
         ModulePaths.push_back(ModPath);
-      llvm::sort(ModulePaths.begin(), ModulePaths.end());
+      llvm::sort(ModulePaths);
       for (auto &ModPath : ModulePaths)
         Callback(*Index.modulePaths().find(ModPath));
     }
@@ -646,6 +647,7 @@ static unsigned getEncodedCastOpcode(unsigned Opcode) {
   case Instruction::SIToFP  : return bitc::CAST_SITOFP;
   case Instruction::FPTrunc : return bitc::CAST_FPTRUNC;
   case Instruction::FPExt   : return bitc::CAST_FPEXT;
+  case Instruction::PtrToAddr: return bitc::CAST_PTRTOADDR;
   case Instruction::PtrToInt: return bitc::CAST_PTRTOINT;
   case Instruction::IntToPtr: return bitc::CAST_INTTOPTR;
   case Instruction::BitCast : return bitc::CAST_BITCAST;
@@ -1806,12 +1808,14 @@ unsigned ModuleBitcodeWriter::createDILocationAbbrev() {
   // location (it's never more expensive than building an array size 1).
   auto Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::METADATA_LOCATION));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isDistinct
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // line
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // column
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // scope
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // inlinedAt
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isImplicitCode
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // atomGroup
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // atomRank
   return Stream.EmitAbbrev(std::move(Abbv));
 }
 
@@ -1827,7 +1831,8 @@ void ModuleBitcodeWriter::writeDILocation(const DILocation *N,
   Record.push_back(VE.getMetadataID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getInlinedAt()));
   Record.push_back(N->isImplicitCode());
-
+  Record.push_back(N->getAtomGroup());
+  Record.push_back(N->getAtomRank());
   Stream.EmitRecord(bitc::METADATA_LOCATION, Record, Abbrev);
   Record.clear();
 }
@@ -2155,6 +2160,7 @@ void ModuleBitcodeWriter::writeDISubprogram(const DISubprogram *N,
   Record.push_back(VE.getMetadataOrNullID(N->getThrownTypes().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawTargetFuncName()));
+  Record.push_back(N->getKeyInstructionsEnabled());
 
   Stream.EmitRecord(bitc::METADATA_SUBPROGRAM, Record, Abbrev);
   Record.clear();
@@ -3747,7 +3753,10 @@ void ModuleBitcodeWriter::writeFunction(
           Vals.push_back(VE.getMetadataOrNullID(DL->getScope()));
           Vals.push_back(VE.getMetadataOrNullID(DL->getInlinedAt()));
           Vals.push_back(DL->isImplicitCode());
-          Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals);
+          Vals.push_back(DL->getAtomGroup());
+          Vals.push_back(DL->getAtomRank());
+          Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals,
+                            FUNCTION_DEBUG_LOC_ABBREV);
           Vals.clear();
           LastDL = DL;
         }
@@ -4130,6 +4139,21 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_DEBUG_RECORD_VALUE_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering! 1");
+  }
+  {
+    auto Abbv = std::make_shared<BitCodeAbbrev>();
+    Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_DEBUG_LOC));
+    // NOTE: No IsDistinct field for FUNC_CODE_DEBUG_LOC.
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Atom group.
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 3)); // Atom rank.
+    if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
+        FUNCTION_DEBUG_LOC_ABBREV)
+      llvm_unreachable("Unexpected abbrev ordering!");
   }
   Stream.ExitBlock();
 }

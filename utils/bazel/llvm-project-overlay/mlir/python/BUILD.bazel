@@ -701,6 +701,32 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Tune dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "TuneTransformOpsPyGen",
+    tbl_outs = {"mlir/dialects/_transform_tune_extension_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=transform_tune_extension",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/TransformTuneExtensionOps.td",
+    deps = [
+        "//mlir:TransformTuneExtensionTdFiles",
+    ],
+)
+
+filegroup(
+    name = "TunePyFiles",
+    srcs = [
+        "mlir/dialects/transform/tune.py",
+        ":TuneTransformOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # PythonTest dialect.
 ##---------------------------------------------------------------------------##
 

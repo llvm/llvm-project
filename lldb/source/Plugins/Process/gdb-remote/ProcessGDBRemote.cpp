@@ -323,6 +323,11 @@ ProcessGDBRemote::~ProcessGDBRemote() {
   KillDebugserverProcess();
 }
 
+std::shared_ptr<ThreadGDBRemote>
+ProcessGDBRemote::CreateThread(lldb::tid_t tid) {
+  return std::make_shared<ThreadGDBRemote>(*this, tid);
+}
+
 bool ProcessGDBRemote::ParsePythonTargetDefinition(
     const FileSpec &target_definition_fspec) {
   ScriptInterpreter *interpreter =
@@ -476,10 +481,29 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                     .Success())
               reg_info.format =
                   llvm::StringSwitch<Format>(value)
+                      .Case("boolean", eFormatBoolean)
                       .Case("binary", eFormatBinary)
+                      .Case("bytes", eFormatBytes)
+                      .Case("bytes-with-ascii", eFormatBytesWithASCII)
+                      .Case("char", eFormatChar)
+                      .Case("char-printable", eFormatCharPrintable)
+                      .Case("complex", eFormatComplex)
+                      .Case("cstring", eFormatCString)
                       .Case("decimal", eFormatDecimal)
+                      .Case("enum", eFormatEnum)
                       .Case("hex", eFormatHex)
+                      .Case("hex-uppercase", eFormatHexUppercase)
                       .Case("float", eFormatFloat)
+                      .Case("octal", eFormatOctal)
+                      .Case("ostype", eFormatOSType)
+                      .Case("unicode16", eFormatUnicode16)
+                      .Case("unicode32", eFormatUnicode32)
+                      .Case("unsigned", eFormatUnsigned)
+                      .Case("pointer", eFormatPointer)
+                      .Case("vector-char", eFormatVectorOfChar)
+                      .Case("vector-sint64", eFormatVectorOfSInt64)
+                      .Case("vector-float16", eFormatVectorOfFloat16)
+                      .Case("vector-float64", eFormatVectorOfFloat64)
                       .Case("vector-sint8", eFormatVectorOfSInt8)
                       .Case("vector-uint8", eFormatVectorOfUInt8)
                       .Case("vector-sint16", eFormatVectorOfSInt16)
@@ -489,6 +513,14 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                       .Case("vector-float32", eFormatVectorOfFloat32)
                       .Case("vector-uint64", eFormatVectorOfUInt64)
                       .Case("vector-uint128", eFormatVectorOfUInt128)
+                      .Case("complex-integer", eFormatComplexInteger)
+                      .Case("char-array", eFormatCharArray)
+                      .Case("address-info", eFormatAddressInfo)
+                      .Case("hex-float", eFormatHexFloat)
+                      .Case("instruction", eFormatInstruction)
+                      .Case("void", eFormatVoid)
+                      .Case("unicode8", eFormatUnicode8)
+                      .Case("float128", eFormatFloat128)
                       .Default(eFormatInvalid);
           } else if (name == "set") {
             reg_info.set_name.SetString(value);
@@ -1594,7 +1626,7 @@ bool ProcessGDBRemote::DoUpdateThreadList(ThreadList &old_thread_list,
       ThreadSP thread_sp(
           old_thread_list_copy.RemoveThreadByProtocolID(tid, false));
       if (!thread_sp) {
-        thread_sp = std::make_shared<ThreadGDBRemote>(*this, tid);
+        thread_sp = CreateThread(tid);
         LLDB_LOGV(log, "Making new thread: {0} for thread ID: {1:x}.",
                   thread_sp.get(), thread_sp->GetID());
       } else {
@@ -1726,7 +1758,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
     if (!thread_sp) {
       // Create the thread if we need to
-      thread_sp = std::make_shared<ThreadGDBRemote>(*this, tid);
+      thread_sp = CreateThread(tid);
       m_thread_list_real.AddThread(thread_sp);
     }
   }
@@ -4783,7 +4815,8 @@ bool ParseRegisters(
             } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
               reg_info.format = eFormatAddressInfo;
               reg_info.encoding = eEncodingUint;
-            } else if (gdb_type == "float") {
+            } else if (gdb_type == "float" || gdb_type == "ieee_single" ||
+                       gdb_type == "ieee_double") {
               reg_info.format = eFormatFloat;
               reg_info.encoding = eEncodingIEEE754;
             } else if (gdb_type == "aarch64v" ||
@@ -5260,17 +5293,17 @@ llvm::Error ProcessGDBRemote::LoadModules() {
     loaded_modules.Remove(removed_modules);
     m_process->GetTarget().ModulesDidUnload(removed_modules, false);
 
-    new_modules.ForEach([&target](const lldb::ModuleSP module_sp) -> bool {
+    new_modules.ForEach([&target](const lldb::ModuleSP module_sp) {
       lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
       if (!obj)
-        return true;
+        return IterationAction::Continue;
 
       if (obj->GetType() != ObjectFile::Type::eTypeExecutable)
-        return true;
+        return IterationAction::Continue;
 
       lldb::ModuleSP module_copy_sp = module_sp;
       target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
-      return false;
+      return IterationAction::Stop;
     });
 
     loaded_modules.AppendIfNeeded(new_modules);
@@ -5740,7 +5773,7 @@ public:
   CommandObjectProcessGDBRemotePacketMonitor(CommandInterpreter &interpreter)
       : CommandObjectRaw(interpreter, "process plugin packet monitor",
                          "Send a qRcmd packet through the GDB remote protocol "
-                         "and print the response."
+                         "and print the response. "
                          "The argument passed to this command will be hex "
                          "encoded into a valid 'qRcmd' packet, sent and the "
                          "response will be printed.") {}

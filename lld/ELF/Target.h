@@ -96,6 +96,9 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  virtual bool synthesizeAlign(uint64_t &dot, InputSection *sec) {
+    return false;
+  }
   // Do finalize relaxation after collecting relaxation infos.
   virtual void finalizeRelax(int passes) const {}
 
@@ -214,6 +217,7 @@ void processArmCmseSymbols(Ctx &);
 template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
 uint8_t getMipsFpAbiFlag(Ctx &, InputFile *file, uint8_t oldFlag,
                          uint8_t newFlag);
+uint64_t getMipsPageAddr(uint64_t addr);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
 bool isMipsR6(Ctx &);
@@ -245,6 +249,7 @@ template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections(Ctx &);
+void mergeHexagonAttributesSections(Ctx &);
 void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
 void sortArmMappingSymbols(Ctx &);
@@ -337,21 +342,23 @@ inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 #define invokeELFT(f, ...)                                                     \
-  switch (ctx.arg.ekind) {                                                     \
-  case lld::elf::ELF32LEKind:                                                  \
-    f<llvm::object::ELF32LE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  case lld::elf::ELF32BEKind:                                                  \
-    f<llvm::object::ELF32BE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  case lld::elf::ELF64LEKind:                                                  \
-    f<llvm::object::ELF64LE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  case lld::elf::ELF64BEKind:                                                  \
-    f<llvm::object::ELF64BE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  default:                                                                     \
-    llvm_unreachable("unknown ctx.arg.ekind");                                 \
-  }
+  do {                                                                         \
+    switch (ctx.arg.ekind) {                                                   \
+    case lld::elf::ELF32LEKind:                                                \
+      f<llvm::object::ELF32LE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    case lld::elf::ELF32BEKind:                                                \
+      f<llvm::object::ELF32BE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    case lld::elf::ELF64LEKind:                                                \
+      f<llvm::object::ELF64LE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    case lld::elf::ELF64BEKind:                                                \
+      f<llvm::object::ELF64BE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    default:                                                                   \
+      llvm_unreachable("unknown ctx.arg.ekind");                               \
+    }                                                                          \
+  } while (0)
 
 #endif

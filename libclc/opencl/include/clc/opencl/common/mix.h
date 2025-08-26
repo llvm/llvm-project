@@ -6,5 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_COMMON_MIX_H__
+#define __CLC_OPENCL_COMMON_MIX_H__
+
 #define __CLC_BODY <clc/opencl/common/mix.inc>
 #include <clc/math/gentype.inc>
+
+#endif // __CLC_OPENCL_COMMON_MIX_H__

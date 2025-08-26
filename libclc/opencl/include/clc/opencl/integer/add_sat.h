@@ -6,9 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_INTEGER_ADD_SAT_H__
+#define __CLC_OPENCL_INTEGER_ADD_SAT_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define __CLC_FUNCTION add_sat
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/integer/gentype.inc>
 
 #undef __CLC_FUNCTION
+
+#endif // __CLC_OPENCL_INTEGER_ADD_SAT_H__

@@ -18,7 +18,6 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -222,6 +221,10 @@ public:
 
   bool isTerminateBranch(const MCInst &Inst) const override {
     return Inst.getOpcode() == X86::ENDBR32 || Inst.getOpcode() == X86::ENDBR64;
+  }
+
+  bool isX86HLT(const MCInst &Inst) const override {
+    return Inst.getOpcode() == X86::HLT;
   }
 
   int getPopSize(const MCInst &Inst) const override {
@@ -2442,6 +2445,7 @@ public:
 
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();
+    auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
     uint32_t RelType;
     if (Fixup.isPCRel()) {
@@ -2453,6 +2457,9 @@ public:
       case 32: RelType = ELF::R_X86_64_PC32; break;
       case 64: RelType = ELF::R_X86_64_PC64; break;
       }
+      // Adjust PC-relative fixup offsets, which are calculated from the start
+      // of the next instruction.
+      RelAddend -= FKI.TargetSize / 8;
     } else {
       switch (FKI.TargetSize) {
       default:
@@ -2463,8 +2470,6 @@ public:
       case 64: RelType = ELF::R_X86_64_64; break;
       }
     }
-
-    auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
     return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
   }

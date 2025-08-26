@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_IMAGE_IMAGE_DEFINES_H__
+#define __CLC_OPENCL_IMAGE_IMAGE_DEFINES_H__
+
 /* get_image_channel_data_type flags */
 #define CLK_SNORM_INT8 0x10D0
 #define CLK_SNORM_INT16 0x10D1
@@ -55,3 +58,5 @@
 #define CLK_FILTER_NEAREST 0x0000
 #define CLK_FILTER_LINEAR 0x0010
 #define __CLC_FILTER_MASK 0x0010
+
+#endif // __CLC_OPENCL_IMAGE_IMAGE_DEFINES_H__

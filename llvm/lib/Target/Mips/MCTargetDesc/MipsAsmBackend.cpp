@@ -20,7 +20,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -284,9 +283,8 @@ static bool shouldForceRelocation(const MCFixup &Fixup) {
 /// data fragment, at the offset specified by the fixup and following the
 /// fixup kind as appropriate.
 void MipsAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                const MCValue &Target,
-                                MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsResolved) {
+                                const MCValue &Target, uint8_t *Data,
+                                uint64_t Value, bool IsResolved) {
   if (shouldForceRelocation(Fixup))
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
@@ -298,7 +296,6 @@ void MipsAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return; // Doesn't change encoding.
 
   // Where do we start in the object
-  unsigned Offset = Fixup.getOffset();
   // Number of bytes we need to fixup
   unsigned NumBytes = (getFixupKindInfo(Kind).TargetSize + 7) / 8;
   // Used to point to big endian bytes
@@ -329,7 +326,7 @@ void MipsAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     unsigned Idx = Endian == llvm::endianness::little
                        ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
                        : (FullSize - 1 - i);
-    CurVal |= (uint64_t)((uint8_t)Data[Offset + Idx]) << (i*8);
+    CurVal |= (uint64_t)((uint8_t)Data[Idx]) << (i * 8);
   }
 
   uint64_t Mask = ((uint64_t)(-1) >>
@@ -341,7 +338,7 @@ void MipsAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     unsigned Idx = Endian == llvm::endianness::little
                        ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
                        : (FullSize - 1 - i);
-    Data[Offset + Idx] = (uint8_t)((CurVal >> (i*8)) & 0xff);
+    Data[Idx] = (uint8_t)((CurVal >> (i * 8)) & 0xff);
   }
 }
 
@@ -358,41 +355,38 @@ std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
   return StringSwitch<std::optional<MCFixupKind>>(Name)
       .Case("R_MIPS_NONE", FK_NONE)
       .Case("R_MIPS_32", FK_Data_4)
-      .Case("R_MIPS_CALL_HI16", (MCFixupKind)Mips::fixup_Mips_CALL_HI16)
-      .Case("R_MIPS_CALL_LO16", (MCFixupKind)Mips::fixup_Mips_CALL_LO16)
-      .Case("R_MIPS_CALL16", (MCFixupKind)Mips::fixup_Mips_CALL16)
-      .Case("R_MIPS_GOT16", (MCFixupKind)Mips::fixup_Mips_GOT)
-      .Case("R_MIPS_GOT_PAGE", (MCFixupKind)Mips::fixup_Mips_GOT_PAGE)
-      .Case("R_MIPS_GOT_OFST", (MCFixupKind)Mips::fixup_Mips_GOT_OFST)
-      .Case("R_MIPS_GOT_DISP", (MCFixupKind)Mips::fixup_Mips_GOT_DISP)
-      .Case("R_MIPS_GOT_HI16", (MCFixupKind)Mips::fixup_Mips_GOT_HI16)
-      .Case("R_MIPS_GOT_LO16", (MCFixupKind)Mips::fixup_Mips_GOT_LO16)
-      .Case("R_MIPS_TLS_GOTTPREL", (MCFixupKind)Mips::fixup_Mips_GOTTPREL)
-      .Case("R_MIPS_TLS_DTPREL_HI16", (MCFixupKind)Mips::fixup_Mips_DTPREL_HI)
-      .Case("R_MIPS_TLS_DTPREL_LO16", (MCFixupKind)Mips::fixup_Mips_DTPREL_LO)
-      .Case("R_MIPS_TLS_GD", (MCFixupKind)Mips::fixup_Mips_TLSGD)
-      .Case("R_MIPS_TLS_LDM", (MCFixupKind)Mips::fixup_Mips_TLSLDM)
-      .Case("R_MIPS_TLS_TPREL_HI16", (MCFixupKind)Mips::fixup_Mips_TPREL_HI)
-      .Case("R_MIPS_TLS_TPREL_LO16", (MCFixupKind)Mips::fixup_Mips_TPREL_LO)
-      .Case("R_MICROMIPS_CALL16", (MCFixupKind)Mips::fixup_MICROMIPS_CALL16)
-      .Case("R_MICROMIPS_GOT_DISP", (MCFixupKind)Mips::fixup_MICROMIPS_GOT_DISP)
-      .Case("R_MICROMIPS_GOT_PAGE", (MCFixupKind)Mips::fixup_MICROMIPS_GOT_PAGE)
-      .Case("R_MICROMIPS_GOT_OFST", (MCFixupKind)Mips::fixup_MICROMIPS_GOT_OFST)
-      .Case("R_MICROMIPS_GOT16", (MCFixupKind)Mips::fixup_MICROMIPS_GOT16)
-      .Case("R_MICROMIPS_TLS_GOTTPREL",
-            (MCFixupKind)Mips::fixup_MICROMIPS_GOTTPREL)
+      .Case("R_MIPS_CALL_HI16", Mips::fixup_Mips_CALL_HI16)
+      .Case("R_MIPS_CALL_LO16", Mips::fixup_Mips_CALL_LO16)
+      .Case("R_MIPS_CALL16", Mips::fixup_Mips_CALL16)
+      .Case("R_MIPS_GOT16", Mips::fixup_Mips_GOT)
+      .Case("R_MIPS_GOT_PAGE", Mips::fixup_Mips_GOT_PAGE)
+      .Case("R_MIPS_GOT_OFST", Mips::fixup_Mips_GOT_OFST)
+      .Case("R_MIPS_GOT_DISP", Mips::fixup_Mips_GOT_DISP)
+      .Case("R_MIPS_GOT_HI16", Mips::fixup_Mips_GOT_HI16)
+      .Case("R_MIPS_GOT_LO16", Mips::fixup_Mips_GOT_LO16)
+      .Case("R_MIPS_TLS_GOTTPREL", Mips::fixup_Mips_GOTTPREL)
+      .Case("R_MIPS_TLS_DTPREL_HI16", Mips::fixup_Mips_DTPREL_HI)
+      .Case("R_MIPS_TLS_DTPREL_LO16", Mips::fixup_Mips_DTPREL_LO)
+      .Case("R_MIPS_TLS_GD", Mips::fixup_Mips_TLSGD)
+      .Case("R_MIPS_TLS_LDM", Mips::fixup_Mips_TLSLDM)
+      .Case("R_MIPS_TLS_TPREL_HI16", Mips::fixup_Mips_TPREL_HI)
+      .Case("R_MIPS_TLS_TPREL_LO16", Mips::fixup_Mips_TPREL_LO)
+      .Case("R_MICROMIPS_CALL16", Mips::fixup_MICROMIPS_CALL16)
+      .Case("R_MICROMIPS_GOT_DISP", Mips::fixup_MICROMIPS_GOT_DISP)
+      .Case("R_MICROMIPS_GOT_PAGE", Mips::fixup_MICROMIPS_GOT_PAGE)
+      .Case("R_MICROMIPS_GOT_OFST", Mips::fixup_MICROMIPS_GOT_OFST)
+      .Case("R_MICROMIPS_GOT16", Mips::fixup_MICROMIPS_GOT16)
+      .Case("R_MICROMIPS_TLS_GOTTPREL", Mips::fixup_MICROMIPS_GOTTPREL)
       .Case("R_MICROMIPS_TLS_DTPREL_HI16",
-            (MCFixupKind)Mips::fixup_MICROMIPS_TLS_DTPREL_HI16)
+            Mips::fixup_MICROMIPS_TLS_DTPREL_HI16)
       .Case("R_MICROMIPS_TLS_DTPREL_LO16",
-            (MCFixupKind)Mips::fixup_MICROMIPS_TLS_DTPREL_LO16)
-      .Case("R_MICROMIPS_TLS_GD", (MCFixupKind)Mips::fixup_MICROMIPS_TLS_GD)
-      .Case("R_MICROMIPS_TLS_LDM", (MCFixupKind)Mips::fixup_MICROMIPS_TLS_LDM)
-      .Case("R_MICROMIPS_TLS_TPREL_HI16",
-            (MCFixupKind)Mips::fixup_MICROMIPS_TLS_TPREL_HI16)
-      .Case("R_MICROMIPS_TLS_TPREL_LO16",
-            (MCFixupKind)Mips::fixup_MICROMIPS_TLS_TPREL_LO16)
-      .Case("R_MIPS_JALR", (MCFixupKind)Mips::fixup_Mips_JALR)
-      .Case("R_MICROMIPS_JALR", (MCFixupKind)Mips::fixup_MICROMIPS_JALR)
+            Mips::fixup_MICROMIPS_TLS_DTPREL_LO16)
+      .Case("R_MICROMIPS_TLS_GD", Mips::fixup_MICROMIPS_TLS_GD)
+      .Case("R_MICROMIPS_TLS_LDM", Mips::fixup_MICROMIPS_TLS_LDM)
+      .Case("R_MICROMIPS_TLS_TPREL_HI16", Mips::fixup_MICROMIPS_TLS_TPREL_HI16)
+      .Case("R_MICROMIPS_TLS_TPREL_LO16", Mips::fixup_MICROMIPS_TLS_TPREL_LO16)
+      .Case("R_MIPS_JALR", Mips::fixup_Mips_JALR)
+      .Case("R_MICROMIPS_JALR", Mips::fixup_MICROMIPS_JALR)
       .Default(MCAsmBackend::getFixupKind(Name));
 }
 
@@ -570,7 +564,7 @@ MCFixupKindInfo MipsAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
                 "Not all MIPS big endian fixup kinds added!");
 
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 

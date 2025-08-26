@@ -49,7 +49,7 @@ contains
 end module m1
 
 program test_vector
-!CHECK-LABEL: MainProgram scope: test_vector
+!CHECK-LABEL: MainProgram scope: TEST_VECTOR
   use vector_mod
 !CHECK: add_vectors (Function): Use from add_vectors in vector_mod
   implicit none

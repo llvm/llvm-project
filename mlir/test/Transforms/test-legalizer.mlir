@@ -1,9 +1,15 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns -verify-diagnostics -profile-actions-to=- %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=1" -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=1" -verify-diagnostics -profile-actions-to=- %s | FileCheck %s --check-prefix=CHECK-PROFILER
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=0" -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=0 build-materializations=0 attach-debug-materialization-kind=1" -verify-diagnostics %s | FileCheck %s --check-prefix=CHECK-KIND
 
-//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "B"
-//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "B"
-//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "B"
-//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "E"
+// CHECK-PROFILER: "name": "pass-execution", "cat": "PERF", "ph": "B"
+// CHECK-PROFILER: "name": "apply-conversion", "cat": "PERF", "ph": "B"
+// CHECK-PROFILER: "name": "apply-pattern", "cat": "PERF", "ph": "B"
+// CHECK-PROFILER: "name": "apply-pattern", "cat": "PERF", "ph": "E"
+// CHECK-PROFILER: "name": "apply-conversion", "cat": "PERF", "ph": "E"
+// CHECK-PROFILER: "name": "pass-execution", "cat": "PERF", "ph": "E"
+
 // Note: Listener notifications appear after the pattern application because
 // the conversion driver sends all notifications at the end of the conversion
 // in bulk.
@@ -11,8 +17,6 @@
 // CHECK-NEXT: notifyOperationReplaced: test.illegal_op_a
 // CHECK-NEXT: notifyOperationModified: func.return
 // CHECK-NEXT: notifyOperationErased: test.illegal_op_a
-//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "E"
-//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "E"
 // CHECK-LABEL: verifyDirectPattern
 func.func @verifyDirectPattern() -> i32 {
   // CHECK-NEXT:  "test.legal_op_a"() <{status = "Success"}
@@ -29,7 +33,9 @@ func.func @verifyDirectPattern() -> i32 {
 // CHECK-NEXT: notifyOperationErased: test.illegal_op_c
 // CHECK-NEXT: notifyOperationInserted: test.legal_op_a, was unlinked
 // CHECK-NEXT: notifyOperationReplaced: test.illegal_op_e
-// CHECK-NEXT: notifyOperationErased: test.illegal_op_e
+// Note: func.return is modified a second time when running in no-rollback
+//       mode.
+//      CHECK: notifyOperationErased: test.illegal_op_e
 
 // CHECK-LABEL: verifyLargerBenefit
 func.func @verifyLargerBenefit() -> i32 {
@@ -70,7 +76,7 @@ func.func @remap_call_1_to_1(%arg0: i64) {
 // CHECK:      notifyBlockInserted into func.func: was unlinked
 
 // Contents of the old block are moved to the new block.
-// CHECK-NEXT: notifyOperationInserted: test.return, was linked, exact position unknown
+// CHECK-NEXT: notifyOperationInserted: test.return
 
 // The old block is erased.
 // CHECK-NEXT: notifyBlockErased
@@ -185,9 +191,12 @@ func.func @remap_drop_region() {
 // -----
 
 // CHECK-LABEL: func @dropped_input_in_use
+// CHECK-KIND-LABEL: func @dropped_input_in_use
 func.func @dropped_input_in_use(%arg: i16, %arg2: i64) {
-  // CHECK-NEXT: "test.cast"{{.*}} : () -> i16
-  // CHECK-NEXT: "work"{{.*}} : (i16)
+  // CHECK-NEXT: %[[cast:.*]] = "test.cast"() : () -> i16
+  // CHECK-NEXT: "work"(%[[cast]]) : (i16)
+  // CHECK-KIND-NEXT: %[[cast:.*]] = builtin.unrealized_conversion_cast to i16 {__kind__ = "source"}
+  // CHECK-KIND-NEXT: "work"(%[[cast]]) : (i16)
   // expected-remark@+1 {{op 'work' is not legalizable}}
   "work"(%arg) : (i16) -> ()
 }
@@ -258,73 +267,6 @@ builtin.module {
 
 // -----
 
-// expected-remark@+1 {{applyPartialConversion failed}}
-builtin.module {
-
-  func.func @fail_to_convert_illegal_op_in_region() {
-    // expected-error@+1 {{failed to legalize operation 'test.region_builder'}}
-    "test.region_builder"() : () -> ()
-    return
-  }
-
-}
-
-// -----
-
-// Check that the entry block arguments of a region are untouched in the case
-// of failure.
-
-// expected-remark@+1 {{applyPartialConversion failed}}
-builtin.module {
-
-  func.func @fail_to_convert_region() {
-    // CHECK: "test.region"
-    // CHECK-NEXT: ^bb{{.*}}(%{{.*}}: i64):
-    "test.region"() ({
-      ^bb1(%i0: i64):
-        // expected-error@+1 {{failed to legalize operation 'test.region_builder'}}
-        "test.region_builder"() : () -> ()
-        "test.valid"() : () -> ()
-    }) : () -> ()
-    return
-  }
-
-}
-
-// -----
-
-// CHECK-LABEL: @create_illegal_block
-func.func @create_illegal_block() {
-  // Check that we can undo block creation, i.e. that the block was removed.
-  // CHECK: test.create_illegal_block
-  // CHECK-NOT: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
-  // expected-remark@+1 {{op 'test.create_illegal_block' is not legalizable}}
-  "test.create_illegal_block"() : () -> ()
-
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
-  return
-}
-
-// -----
-
-// CHECK-LABEL: @undo_block_arg_replace
-// expected-remark@+1{{applyPartialConversion failed}}
-module {
-func.func @undo_block_arg_replace() {
-  // expected-error@+1{{failed to legalize operation 'test.block_arg_replace' that was explicitly marked illegal}}
-  "test.block_arg_replace"() ({
-  ^bb0(%arg0: i32, %arg1: i16):
-    // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
-    // CHECK-NEXT: "test.return"(%[[ARG0]]) : (i32)
-
-    "test.return"(%arg0) : (i32) -> ()
-  }) {trigger_rollback} : () -> ()
-  return
-}
-}
-
-// -----
-
 // CHECK-LABEL: @replace_block_arg_1_to_n
 func.func @replace_block_arg_1_to_n() {
   // CHECK: "test.block_arg_replace"
@@ -340,42 +282,6 @@ func.func @replace_block_arg_1_to_n() {
 
 // -----
 
-// The op in this function is rewritten to itself (and thus remains illegal) by
-// a pattern that removes its second block after adding an operation into it.
-// Check that we can undo block removal successfully.
-// CHECK-LABEL: @undo_block_erase
-func.func @undo_block_erase() {
-  // CHECK: test.undo_block_erase
-  "test.undo_block_erase"() ({
-    // expected-remark@-1 {{not legalizable}}
-    // CHECK: "unregistered.return"()[^[[BB:.*]]]
-    "unregistered.return"()[^bb1] : () -> ()
-    // expected-remark@-1 {{not legalizable}}
-  // CHECK: ^[[BB]]
-  ^bb1:
-    // CHECK: unregistered.return
-    "unregistered.return"() : () -> ()
-    // expected-remark@-1 {{not legalizable}}
-  }) : () -> ()
-}
-
-// -----
-
-// The op in this function is attempted to be rewritten to another illegal op
-// with an attached region containing an invalid terminator. The terminator is
-// created before the parent op. The deletion should not crash when deleting
-// created ops in the inverse order, i.e. deleting the parent op and then the
-// child op.
-// CHECK-LABEL: @undo_child_created_before_parent
-func.func @undo_child_created_before_parent() {
-  // expected-remark@+1 {{is not legalizable}}
-  "test.illegal_op_with_region_anchor"() : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
-  return
-}
-
-// -----
-
 // Check that a conversion pattern on `test.blackhole` can mark the producer
 // for deletion.
 // CHECK-LABEL: @blackhole
@@ -384,19 +290,6 @@ func.func @blackhole() {
   "test.blackhole"(%input) : (i32) -> ()
   // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
-}
-
-// -----
-
-// expected-remark@+1 {{applyPartialConversion failed}}
-builtin.module {
-
-  func.func @create_unregistered_op_in_pattern() -> i32 {
-    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_g'}}
-    %0 = "test.illegal_op_g"() : () -> (i32)
-    "test.return"(%0) : (i32) -> ()
-  }
-
 }
 
 // -----
@@ -419,32 +312,6 @@ func.func @caller() {
   "test.some_user"(%0#0, %0#1) : (f32, i24) -> ()
   "test.return"() : () -> ()
 }
-}
-
-// -----
-
-// CHECK-LABEL: func @test_move_op_before_rollback()
-func.func @test_move_op_before_rollback() {
-  // CHECK: "test.one_region_op"()
-  // CHECK: "test.hoist_me"()
-  "test.one_region_op"() ({
-    // expected-remark @below{{'test.hoist_me' is not legalizable}}
-    %0 = "test.hoist_me"() : () -> (i32)
-    "test.valid"(%0) : (i32) -> ()
-  }) : () -> ()
-  "test.return"() : () -> ()
-}
-
-// -----
-
-// CHECK-LABEL: func @test_properties_rollback()
-func.func @test_properties_rollback() {
-  // CHECK: test.with_properties a = 32,
-  // expected-remark @below{{op 'test.with_properties' is not legalizable}}
-  test.with_properties
-      a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4]
-      {modify_inplace}
-  "test.return"() : () -> ()
 }
 
 // -----
@@ -551,9 +418,54 @@ func.func @test_remap_block_arg() {
 
 // CHECK-LABEL: func @test_multiple_1_to_n_replacement()
 //       CHECK:   %[[legal_op:.*]]:4 = "test.legal_op"() : () -> (f16, f16, f16, f16)
-//       CHECK:   %[[cast:.*]] = "test.cast"(%[[legal_op]]#0, %[[legal_op]]#1, %[[legal_op]]#2, %[[legal_op]]#3) : (f16, f16, f16, f16) -> f16
-//       CHECK:   "test.valid"(%[[cast]]) : (f16) -> ()
+// Note: There is a bug in the rollback-based conversion driver: it emits a
+// "test.cast" : (f16, f16, f16, f16) -> f16, when it should be emitting
+// three consecutive casts of (f16, f16) -> f16.
+//       CHECK:   "test.valid"(%{{.*}}) : (f16) -> ()
 func.func @test_multiple_1_to_n_replacement() {
   %0 = "test.multiple_1_to_n_replacement"() : () -> (f16)
   "test.invalid"(%0) : (f16) -> ()
+}
+
+// -----
+
+// CHECK-LABEL: func @test_lookup_without_converter
+//       CHECK:   %[[producer:.*]] = "test.valid_producer"() : () -> i16
+//       CHECK:   %[[cast:.*]] = "test.cast"(%[[producer]]) : (i16) -> f64
+//       CHECK:   "test.valid_consumer"(%[[cast]]) : (f64) -> ()
+//       CHECK:   "test.valid_consumer"(%[[producer]]) : (i16) -> ()
+// CHECK-KIND-LABEL: func @test_lookup_without_converter
+//       CHECK-KIND:   %[[producer:.*]] = "test.valid_producer"() : () -> i16
+//       CHECK-KIND:   %[[cast:.*]] = builtin.unrealized_conversion_cast %[[producer]] : i16 to f64 {__kind__ = "target"}
+//       CHECK-KIND:   "test.valid_consumer"(%[[cast]]) : (f64) -> ()
+//       CHECK-KIND:   "test.valid_consumer"(%[[producer]]) : (i16) -> ()
+func.func @test_lookup_without_converter() {
+  %0 = "test.replace_with_valid_producer"() {type = i16} : () -> (i64)
+  "test.replace_with_valid_consumer"(%0) {with_converter} : (i64) -> ()
+  // Make sure that the second "replace_with_valid_consumer" lowering does not
+  // lookup the materialization that was created for the above op.
+  "test.replace_with_valid_consumer"(%0) : (i64) -> ()
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
+  return
+}
+
+// -----
+// expected-remark@-1 {{applyPartialConversion failed}}
+
+func.func @test_skip_1to1_pattern(%arg0: f32) {
+  // expected-error@+1 {{failed to legalize operation 'test.type_consumer'}}
+  "test.type_consumer"(%arg0) : (f32) -> ()
+  return
+}
+
+// -----
+
+// Demonstrate that the pattern generally works, but only for 1:1 type
+// conversions.
+
+// CHECK-LABEL: @test_working_1to1_pattern(
+func.func @test_working_1to1_pattern(%arg0: f16) {
+  // CHECK-NEXT: "test.return"() : () -> ()
+  "test.type_consumer"(%arg0) : (f16) -> ()
+  "test.return"() : () -> ()
 }

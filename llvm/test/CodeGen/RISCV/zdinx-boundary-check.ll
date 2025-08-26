@@ -242,7 +242,7 @@ define void @foo7(ptr nocapture %p) nounwind {
 ; RV64ZDINX:       # %bb.0: # %entry
 ; RV64ZDINX-NEXT:    lui a1, %hi(d)
 ; RV64ZDINX-NEXT:    addi a2, a1, %lo(d)
-; RV64ZDINX-NEXT:    lwu a2, 8(a2)
+; RV64ZDINX-NEXT:    lw a2, 8(a2)
 ; RV64ZDINX-NEXT:    lwu a1, %lo(d+4)(a1)
 ; RV64ZDINX-NEXT:    slli a2, a2, 32
 ; RV64ZDINX-NEXT:    or a1, a2, a1
@@ -337,7 +337,7 @@ define void @foo9(ptr nocapture %p) nounwind {
 ; RV64ZDINX:       # %bb.0: # %entry
 ; RV64ZDINX-NEXT:    lui a1, %hi(e)
 ; RV64ZDINX-NEXT:    addi a2, a1, %lo(e)
-; RV64ZDINX-NEXT:    lwu a2, 4(a2)
+; RV64ZDINX-NEXT:    lw a2, 4(a2)
 ; RV64ZDINX-NEXT:    lwu a1, %lo(e)(a1)
 ; RV64ZDINX-NEXT:    slli a2, a2, 32
 ; RV64ZDINX-NEXT:    or a1, a2, a1
@@ -480,7 +480,7 @@ define double @foo13(ptr nocapture %p) nounwind {
 ; RV64ZDINX-LABEL: foo13:
 ; RV64ZDINX:       # %bb.0: # %entry
 ; RV64ZDINX-NEXT:    lui a0, %hi(f)
-; RV64ZDINX-NEXT:    lwu a1, %lo(f+8)(a0)
+; RV64ZDINX-NEXT:    lw a1, %lo(f+8)(a0)
 ; RV64ZDINX-NEXT:    lwu a0, %lo(f+4)(a0)
 ; RV64ZDINX-NEXT:    slli a1, a1, 32
 ; RV64ZDINX-NEXT:    or a0, a1, a0

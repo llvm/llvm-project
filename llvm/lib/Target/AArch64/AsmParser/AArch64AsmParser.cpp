@@ -3742,7 +3742,8 @@ static const struct Extension {
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve-aes", {AArch64::FeatureSVEAES}},
     {"sve2-aes", {AArch64::FeatureAliasSVE2AES, AArch64::FeatureSVEAES}},
-    {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
+    {"sve-sm4", {AArch64::FeatureSVESM4}},
+    {"sve2-sm4", {AArch64::FeatureAliasSVE2SM4, AArch64::FeatureSVESM4}},
     {"sve-sha3", {AArch64::FeatureSVESHA3}},
     {"sve2-sha3", {AArch64::FeatureAliasSVE2SHA3, AArch64::FeatureSVESHA3}},
     {"sve-bitperm", {AArch64::FeatureSVEBitPerm}},
@@ -7405,7 +7406,7 @@ bool AArch64AsmParser::parseDirectiveLOH(StringRef IDVal, SMLoc Loc) {
   if (parseEOL())
     return true;
 
-  getStreamer().emitLOHDirective((MCLOHType)Kind, Args);
+  getStreamer().emitLOHDirective(Kind, Args);
   return false;
 }
 
@@ -7908,9 +7909,11 @@ bool AArch64AsmParser::parseDirectiveSEHSavePReg(SMLoc L) {
 }
 
 bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
-  // Expecting 3 AsmToken::Identifier after '.aeabi_subsection', a name and 2
-  // parameters, e.g.: .aeabi_subsection (1)aeabi_feature_and_bits, (2)optional,
-  // (3)uleb128 separated by 2 commas.
+  // Handle parsing of .aeabi_subsection directives
+  // - On first declaration of a subsection, expect exactly three identifiers
+  //   after `.aeabi_subsection`: the subsection name and two parameters.
+  // - When switching to an existing subsection, it is valid to provide only
+  //   the subsection name, or the name together with the two parameters.
   MCAsmParser &Parser = getParser();
 
   // Consume the name (subsection name)
@@ -7924,15 +7927,37 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     return true;
   }
   Parser.Lex();
-  // consume a comma
+
+  std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
+      getTargetStreamer().getAttributesSubsectionByName(SubsectionName);
+  // Check whether only the subsection name was provided.
+  // If so, the user is trying to switch to a subsection that should have been
+  // declared before.
+  if (Parser.getTok().is(llvm::AsmToken::EndOfStatement)) {
+    if (SubsectionExists) {
+      getTargetStreamer().emitAttributesSubsection(
+          SubsectionName,
+          static_cast<AArch64BuildAttributes::SubsectionOptional>(
+              SubsectionExists->IsOptional),
+          static_cast<AArch64BuildAttributes::SubsectionType>(
+              SubsectionExists->ParameterType));
+      return false;
+    }
+    // If subsection does not exists, report error.
+    else {
+      Error(Parser.getTok().getLoc(),
+            "Could not switch to subsection '" + SubsectionName +
+                "' using subsection name, subsection has not been defined");
+      return true;
+    }
+  }
+
+  // Otherwise, expecting 2 more parameters: consume a comma
   // parseComma() return *false* on success, and call Lex(), no need to call
   // Lex() again.
   if (Parser.parseComma()) {
     return true;
   }
-
-  std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
-      getTargetStreamer().getAttributesSubsectionByName(SubsectionName);
 
   // Consume the first parameter (optionality parameter)
   AArch64BuildAttributes::SubsectionOptional IsOptional;

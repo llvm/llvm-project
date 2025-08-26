@@ -208,7 +208,6 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
     }
-    setLibcallCallingConv(RTLIB::MUL_I64, CallingConv::MSP430_BUILTIN);
   }
 
   setMinFunctionAlignment(Align(2));
@@ -378,6 +377,7 @@ static void AnalyzeArguments(CCState &State,
   for (unsigned i = 0, e = ArgsParts.size(); i != e; i++) {
     MVT ArgVT = Args[ValNo].VT;
     ISD::ArgFlagsTy ArgFlags = Args[ValNo].Flags;
+    Type *OrigTy = Args[ValNo].OrigTy;
     MVT LocVT = ArgVT;
     CCValAssign::LocInfo LocInfo = CCValAssign::Full;
 
@@ -412,7 +412,8 @@ static void AnalyzeArguments(CCState &State,
       RegsLeft -= 1;
 
       UsedStack = true;
-      CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, State);
+      CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, OrigTy,
+                            State);
     } else if (Parts <= RegsLeft) {
       for (unsigned j = 0; j < Parts; j++) {
         MCRegister Reg = State.AllocateReg(RegList);
@@ -422,7 +423,8 @@ static void AnalyzeArguments(CCState &State,
     } else {
       UsedStack = true;
       for (unsigned j = 0; j < Parts; j++)
-        CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, State);
+        CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, OrigTy,
+                              State);
     }
   }
 }
@@ -1141,9 +1143,6 @@ SDValue MSP430TargetLowering::LowerRETURNADDR(SDValue Op,
                                               SelectionDAG &DAG) const {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);

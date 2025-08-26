@@ -156,23 +156,50 @@ static TokenSequence TokenPasting(TokenSequence &&text) {
   }
   TokenSequence result;
   std::size_t tokens{text.SizeInTokens()};
-  bool pasting{false};
+  std::optional<CharBlock> before; // last non-blank token before ##
   for (std::size_t j{0}; j < tokens; ++j) {
-    if (IsTokenPasting(text.TokenAt(j))) {
-      if (!pasting) {
+    CharBlock after{text.TokenAt(j)};
+    if (!before) {
+      if (IsTokenPasting(after)) {
         while (!result.empty() &&
             result.TokenAt(result.SizeInTokens() - 1).IsBlank()) {
           result.pop_back();
         }
         if (!result.empty()) {
-          result.ReopenLastToken();
-          pasting = true;
+          before = result.TokenAt(result.SizeInTokens() - 1);
+        }
+      } else {
+        result.AppendRange(text, j, 1);
+      }
+    } else if (after.IsBlank() || IsTokenPasting(after)) {
+      // drop it
+    } else { // pasting before ## after
+      bool doPaste{false};
+      char last{before->back()};
+      char first{after.front()};
+      // Apply basic sanity checking to pasting so avoid constructing a bogus
+      // token that might cause macro replacement to fail, like "macro(".
+      if (IsLegalInIdentifier(last) && IsLegalInIdentifier(first)) {
+        doPaste = true;
+      } else if (IsDecimalDigit(first) &&
+          (last == '.' || last == '+' || last == '-')) {
+        doPaste = true; // 1. ## 0, - ## 1
+      } else if (before->size() == 1 && after.size() == 1) {
+        if (first == last &&
+            (last == '<' || last == '>' || last == '*' || last == '/' ||
+                last == '=' || last == '&' || last == '|' || last == ':')) {
+          // Fortran **, //, ==, ::
+          // C <<, >>, &&, || for use in #if expressions
+          doPaste = true;
+        } else if (first == '=' && (last == '!' || last == '/')) {
+          doPaste = true; // != and /=
         }
       }
-    } else if (pasting && text.TokenAt(j).IsBlank()) {
-    } else {
+      if (doPaste) {
+        result.ReopenLastToken();
+      }
       result.AppendRange(text, j, 1);
-      pasting = false;
+      before.reset();
     }
   }
   return result;

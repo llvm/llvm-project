@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
@@ -53,6 +52,35 @@ static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
     cl::desc("webassembly: disables the fix "
              " irreducible control flow optimization pass"),
     cl::init(false));
+
+// Exception handling & setjmp-longjmp handling related options.
+
+// Emscripten's asm.js-style exception handling
+cl::opt<bool> WebAssembly::WasmEnableEmEH(
+    "enable-emscripten-cxx-exceptions",
+    cl::desc("WebAssembly Emscripten-style exception handling"),
+    cl::init(false));
+// Emscripten's asm.js-style setjmp/longjmp handling
+cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
+    "enable-emscripten-sjlj",
+    cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
+    cl::init(false));
+// Exception handling using wasm EH instructions
+cl::opt<bool>
+    WebAssembly::WasmEnableEH("wasm-enable-eh",
+                              cl::desc("WebAssembly exception handling"));
+// setjmp/longjmp handling using wasm EH instrutions
+cl::opt<bool> WebAssembly::WasmEnableSjLj(
+    "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
+// If true, use the legacy Wasm EH proposal:
+// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/legacy/Exceptions.md
+// And if false, use the standardized Wasm EH proposal:
+// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md
+// Currently set to true by default because not all major web browsers turn on
+// the new standard proposal by default, but will later change to false.
+cl::opt<bool> WebAssembly::WasmUseLegacyEH(
+    "wasm-use-legacy-eh", cl::desc("WebAssembly exception handling (legacy)"),
+    cl::init(true));
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeWebAssemblyTarget() {

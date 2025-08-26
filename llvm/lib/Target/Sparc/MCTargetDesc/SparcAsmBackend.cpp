@@ -12,7 +12,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -128,8 +127,7 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {
@@ -254,21 +252,19 @@ MCFixupKindInfo SparcAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 }
 
 void SparcAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                 const MCValue &Target,
-                                 MutableArrayRef<char> Data, uint64_t Value,
-                                 bool IsResolved) {
+                                 const MCValue &Target, uint8_t *Data,
+                                 uint64_t Value, bool IsResolved) {
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   if (!IsResolved)
     return;
   Value = adjustFixupValue(Fixup.getKind(), Value);
 
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-  unsigned Offset = Fixup.getOffset();
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
-    Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
+    Data[Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
 

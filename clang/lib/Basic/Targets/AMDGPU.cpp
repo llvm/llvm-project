@@ -251,7 +251,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     BFloat16Format = &llvm::APFloat::BFloat();
   }
 
-  HasLegalHalfType = true;
+  HasFastHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
 
@@ -266,13 +266,17 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
-  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"})
-    ReadOnlyFeatures.insert(F);
+
+  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"}) {
+    if (GPUKind != llvm::AMDGPU::GK_NONE)
+      ReadOnlyFeatures.insert(F);
+  }
   HalfArgsAndReturns = true;
 }
 
-void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
-  TargetInfo::adjust(Diags, Opts);
+void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                              const TargetInfo *Aux) {
+  TargetInfo::adjust(Diags, Opts, Aux);
   // ToDo: There are still a few places using default address space as private
   // address space in OpenCL, which needs to be cleaned up, then the references
   // to OpenCL can be removed from the following line.

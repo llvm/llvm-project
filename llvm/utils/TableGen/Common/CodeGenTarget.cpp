@@ -88,7 +88,7 @@ StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
 /// namespace. The namespace is cached because it is requested multiple times.
 StringRef CodeGenTarget::getInstNamespace() const {
   if (InstNamespace.empty()) {
-    for (const CodeGenInstruction *Inst : getInstructionsByEnumValue()) {
+    for (const CodeGenInstruction *Inst : getInstructions()) {
       // We are not interested in the "TargetOpcode" namespace.
       if (Inst->Namespace != "TargetOpcode") {
         InstNamespace = Inst->Namespace;
@@ -270,8 +270,8 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
         const Record &D2 = *Rec2->TheDef;
         // Sort all pseudo instructions before non-pseudo ones, and sort by name
         // within.
-        return std::tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
-               std::tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
+        return std::tuple(!Rec1->isPseudo, D1.getName()) <
+               std::tuple(!Rec2->isPseudo, D2.getName());
       });
 
   // Assign an enum value to each instruction according to the sorted order.

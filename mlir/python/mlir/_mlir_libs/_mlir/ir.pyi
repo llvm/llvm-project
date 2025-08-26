@@ -194,12 +194,20 @@ class _OperationBase:
         """
         Detaches the operation from its parent block.
         """
+
+    @property
+    def attached(self) -> bool:
+        """
+        Reports if the operation is attached to its parent block.
+        """
+
     def erase(self) -> None: ...
 
     @overload
     def get_asm(
         binary: Literal[True],
         large_elements_limit: int | None = None,
+        large_resource_limit: int | None = None,
         enable_debug_info: bool = False,
         pretty_debug_info: bool = False,
         print_generic_op_form: bool = False,
@@ -212,6 +220,7 @@ class _OperationBase:
         self,
         binary: bool = False,
         large_elements_limit: int | None = None,
+        large_resource_limit: int | None = None,
         enable_debug_info: bool = False,
         pretty_debug_info: bool = False,
         print_generic_op_form: bool = False,
@@ -253,6 +262,7 @@ class _OperationBase:
     def print(
         self,
         large_elements_limit: int | None = None,
+        large_resource_limit: int | None = None,
         enable_debug_info: bool = False,
         pretty_debug_info: bool = False,
         print_generic_op_form: bool = False,
@@ -270,6 +280,10 @@ class _OperationBase:
           binary: Whether to write bytes (True) or str (False). Defaults to False.
           large_elements_limit: Whether to elide elements attributes above this
             number of elements. Defaults to None (no limit).
+          large_resource_limit: Whether to elide resource strings above this
+            number of characters. Defaults to None (no limit). If large_elements_limit
+            is set and this is None, the behavior will be to use large_elements_limit
+            as large_resource_limit.
           enable_debug_info: Whether to print debug/location information. Defaults
             to False.
           pretty_debug_info: Whether to format debug information for easier reading
@@ -2497,6 +2511,11 @@ class ShapedType(Type):
         Returns whether the given dimension size indicates a dynamic dimension.
         """
     @staticmethod
+    def is_static_size(dim_size: int) -> bool:
+        """
+        Returns whether the given dimension size indicates a static dimension.
+        """
+    @staticmethod
     def isinstance(other: Type) -> bool: ...
     def __init__(self, cast_from_type: Type) -> None: ...
     def get_dim_size(self, dim: int) -> int:
@@ -2507,9 +2526,17 @@ class ShapedType(Type):
         """
         Returns whether the dim-th dimension of the given shaped type is dynamic.
         """
+    def is_static_dim(self, dim: int) -> bool:
+        """
+        Returns whether the dim-th dimension of the given shaped type is static.
+        """
     def is_dynamic_stride_or_offset(self, dim_size: int) -> bool:
         """
         Returns whether the given value is used as a placeholder for dynamic strides and offsets in shaped types.
+        """
+    def is_static_stride_or_offset(self, dim_size: int) -> bool:
+        """
+        Returns whether the given shaped type stride or offset value is statically-sized.
         """
     @property
     def element_type(self) -> Type:

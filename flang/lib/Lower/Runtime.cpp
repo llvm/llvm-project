@@ -43,7 +43,7 @@ static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
            mlir::acc::OpenACCDialect::getDialectNamespace())
     Fortran::lower::genOpenACCTerminator(builder, parentOp, loc);
   else
-    builder.create<fir::UnreachableOp>(loc);
+    fir::UnreachableOp::create(builder, loc);
   mlir::Block *newBlock = curBlock->splitBlock(builder.getInsertionPoint());
   builder.setInsertionPointToStart(newBlock);
 }
@@ -118,7 +118,7 @@ void Fortran::lower::genStopStatement(
         loc, calleeType.getInput(operands.size()), 0));
   }
 
-  builder.create<fir::CallOp>(loc, callee, operands);
+  fir::CallOp::create(builder, loc, callee, operands);
   auto blockIsUnterminated = [&builder]() {
     mlir::Block *currentBlock = builder.getBlock();
     return currentBlock->empty() ||
@@ -134,7 +134,7 @@ void Fortran::lower::genFailImageStatement(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(FailImageStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, std::nullopt);
+  fir::CallOp::create(builder, loc, callee, mlir::ValueRange{});
   genUnreachable(builder, loc);
 }
 
@@ -199,7 +199,7 @@ void Fortran::lower::genPauseStatement(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, std::nullopt);
+  fir::CallOp::create(builder, loc, callee, mlir::ValueRange{});
 }
 
 void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
@@ -210,17 +210,18 @@ void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociate)>(loc, builder);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
-void Fortran::lower::genPointerAssociateRemapping(fir::FirOpBuilder &builder,
-                                                  mlir::Location loc,
-                                                  mlir::Value pointer,
-                                                  mlir::Value target,
-                                                  mlir::Value bounds) {
+void Fortran::lower::genPointerAssociateRemapping(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value pointer,
+    mlir::Value target, mlir::Value bounds, bool isMonomorphic) {
   mlir::func::FuncOp func =
-      fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociateRemapping)>(loc,
-                                                                       builder);
+      isMonomorphic
+          ? fir::runtime::getRuntimeFunc<mkRTKey(
+                PointerAssociateRemappingMonomorphic)>(loc, builder)
+          : fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociateRemapping)>(
+                loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
@@ -228,7 +229,7 @@ void Fortran::lower::genPointerAssociateRemapping(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target, bounds, sourceFile,
       sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void Fortran::lower::genPointerAssociateLowerBounds(fir::FirOpBuilder &builder,
@@ -241,5 +242,5 @@ void Fortran::lower::genPointerAssociateLowerBounds(fir::FirOpBuilder &builder,
           loc, builder);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target, lbounds);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }

@@ -396,6 +396,10 @@ RTLIB::Libcall RTLIB::getPOWI(EVT RetVT) {
                       POWI_PPCF128);
 }
 
+RTLIB::Libcall RTLIB::getPOW(EVT RetVT) {
+  return getFPLibCall(RetVT, POW_F32, POW_F64, POW_F80, POW_F128, POW_PPCF128);
+}
+
 RTLIB::Libcall RTLIB::getLDEXP(EVT RetVT) {
   return getFPLibCall(RetVT, LDEXP_F32, LDEXP_F64, LDEXP_F80, LDEXP_F128,
                       LDEXP_PPCF128);
@@ -404,6 +408,14 @@ RTLIB::Libcall RTLIB::getLDEXP(EVT RetVT) {
 RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
   return getFPLibCall(RetVT, FREXP_F32, FREXP_F64, FREXP_F80, FREXP_F128,
                       FREXP_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getSIN(EVT RetVT) {
+  return getFPLibCall(RetVT, SIN_F32, SIN_F64, SIN_F80, SIN_F128, SIN_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getCOS(EVT RetVT) {
+  return getFPLibCall(RetVT, COS_F32, COS_F64, COS_F80, COS_F128, COS_PPCF128);
 }
 
 RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
@@ -597,37 +609,79 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   }
 }
 
-void RTLIB::initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs) {
-  std::fill(CmpLibcallCCs, CmpLibcallCCs + RTLIB::UNKNOWN_LIBCALL,
-            ISD::SETCC_INVALID);
-  CmpLibcallCCs[RTLIB::OEQ_F32] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::OEQ_F64] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::OEQ_F128] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::OEQ_PPCF128] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::UNE_F32] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UNE_F64] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UNE_F128] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UNE_PPCF128] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::OGE_F32] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OGE_F64] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OGE_F128] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OGE_PPCF128] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OLT_F32] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLT_F64] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLT_F128] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLT_PPCF128] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLE_F32] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OLE_F64] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OLE_F128] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OLE_PPCF128] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OGT_F32] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::OGT_F64] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::OGT_F128] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::OGT_PPCF128] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::UO_F32] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UO_F64] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UO_F128] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UO_PPCF128] = ISD::SETNE;
+ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
+    RTLIB::LibcallImpl Impl) const {
+  switch (Impl) {
+  case RTLIB::__aeabi_dcmpeq__une:
+  case RTLIB::__aeabi_fcmpeq__une:
+    // Usage in the eq case, so we have to invert the comparison.
+    return ISD::SETEQ;
+  case RTLIB::__aeabi_dcmpeq__oeq:
+  case RTLIB::__aeabi_fcmpeq__oeq:
+    // Normal comparison to boolean value.
+    return ISD::SETNE;
+  case RTLIB::__aeabi_dcmplt:
+  case RTLIB::__aeabi_dcmple:
+  case RTLIB::__aeabi_dcmpge:
+  case RTLIB::__aeabi_dcmpgt:
+  case RTLIB::__aeabi_dcmpun:
+  case RTLIB::__aeabi_fcmplt:
+  case RTLIB::__aeabi_fcmple:
+  case RTLIB::__aeabi_fcmpge:
+  case RTLIB::__aeabi_fcmpgt:
+    /// The AEABI versions return a typical boolean value, so we can compare
+    /// against the integer result as simply != 0.
+    return ISD::SETNE;
+  default:
+    break;
+  }
+
+  // Assume libgcc/compiler-rt behavior. Most of the cases are really aliases of
+  // each other, and return a 3-way comparison style result of -1, 0, or 1
+  // depending on lt/eq/gt.
+  //
+  // FIXME: It would be cleaner to directly express this as a 3-way comparison
+  // soft FP libcall instead of individual compares.
+  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
+  switch (LC) {
+  case RTLIB::OEQ_F32:
+  case RTLIB::OEQ_F64:
+  case RTLIB::OEQ_F128:
+  case RTLIB::OEQ_PPCF128:
+    return ISD::SETEQ;
+  case RTLIB::UNE_F32:
+  case RTLIB::UNE_F64:
+  case RTLIB::UNE_F128:
+  case RTLIB::UNE_PPCF128:
+    return ISD::SETNE;
+  case RTLIB::OGE_F32:
+  case RTLIB::OGE_F64:
+  case RTLIB::OGE_F128:
+  case RTLIB::OGE_PPCF128:
+    return ISD::SETGE;
+  case RTLIB::OLT_F32:
+  case RTLIB::OLT_F64:
+  case RTLIB::OLT_F128:
+  case RTLIB::OLT_PPCF128:
+    return ISD::SETLT;
+  case RTLIB::OLE_F32:
+  case RTLIB::OLE_F64:
+  case RTLIB::OLE_F128:
+  case RTLIB::OLE_PPCF128:
+    return ISD::SETLE;
+  case RTLIB::OGT_F32:
+  case RTLIB::OGT_F64:
+  case RTLIB::OGT_F128:
+  case RTLIB::OGT_PPCF128:
+    return ISD::SETGT;
+  case RTLIB::UO_F32:
+  case RTLIB::UO_F64:
+  case RTLIB::UO_F128:
+  case RTLIB::UO_PPCF128:
+    return ISD::SETNE;
+  default:
+    llvm_unreachable("not a compare libcall");
+  }
 }
 
 /// NOTE: The TargetMachine owns TLOF.
@@ -643,7 +697,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
   MaxGluedStoresPerMemcpy = 0;
   MaxStoresPerMemsetOptSize = MaxStoresPerMemcpyOptSize =
       MaxStoresPerMemmoveOptSize = MaxLoadsPerMemcmpOptSize = 4;
-  HasMultipleConditionRegisters = false;
   HasExtractBitsInsn = false;
   JumpIsExpensive = JumpIsExpensiveOverride;
   PredictableSelectIsExpensive = false;
@@ -666,8 +719,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
 
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
-
-  RTLIB::initCmpLibcallCCs(CmpLibcallCCs);
 }
 
 // Define the virtual destructor out-of-line to act as a key method to anchor
@@ -754,7 +805,17 @@ void TargetLoweringBase::initActions() {
                         ISD::SDIVFIX,        ISD::SDIVFIXSAT,
                         ISD::UDIVFIX,        ISD::UDIVFIXSAT,
                         ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT,
-                        ISD::IS_FPCLASS},
+                        ISD::IS_FPCLASS,     ISD::FCBRT,
+                        ISD::FLOG,           ISD::FLOG2,
+                        ISD::FLOG10,         ISD::FEXP,
+                        ISD::FEXP2,          ISD::FEXP10,
+                        ISD::FFLOOR,         ISD::FNEARBYINT,
+                        ISD::FCEIL,          ISD::FRINT,
+                        ISD::FTRUNC,         ISD::FROUNDEVEN,
+                        ISD::FTAN,           ISD::FACOS,
+                        ISD::FASIN,          ISD::FATAN,
+                        ISD::FCOSH,          ISD::FSINH,
+                        ISD::FTANH,          ISD::FATAN2},
                        VT, Expand);
 
     // Overflow operations default to expand
@@ -800,13 +861,12 @@ void TargetLoweringBase::initActions() {
 
     // These operations default to expand for vector types.
     if (VT.isVector())
-      setOperationAction(
-          {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
-           ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::LROUND,
-           ISD::LLROUND, ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN,
-           ISD::FCOSH, ISD::FSINH, ISD::FTANH, ISD::FATAN2},
-          VT, Expand);
+      setOperationAction({ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG,
+                          ISD::ANY_EXTEND_VECTOR_INREG,
+                          ISD::SIGN_EXTEND_VECTOR_INREG,
+                          ISD::ZERO_EXTEND_VECTOR_INREG, ISD::SPLAT_VECTOR,
+                          ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},
+                         VT, Expand);
 
       // Constrained floating-point operations default to expand.
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
@@ -844,6 +904,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::GET_FPENV, VT, Expand);
     setOperationAction(ISD::SET_FPENV, VT, Expand);
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
+
+    setOperationAction(ISD::MSTORE, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -862,14 +924,9 @@ void TargetLoweringBase::initActions() {
                      {MVT::bf16, MVT::f16, MVT::f32, MVT::f64, MVT::f80, MVT::f128},
                      Expand);
 
-  // These library functions default to expand.
-  setOperationAction({ISD::FCBRT,      ISD::FLOG,  ISD::FLOG2,  ISD::FLOG10,
-                      ISD::FEXP,       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR,
-                      ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT,  ISD::FTRUNC,
-                      ISD::FROUNDEVEN, ISD::FTAN,  ISD::FACOS,  ISD::FASIN,
-                      ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH,
-                      ISD::FATAN2},
-                     {MVT::f32, MVT::f64, MVT::f128}, Expand);
+  // Insert custom handling default for llvm.canonicalize.*.
+  setOperationAction(ISD::FCANONICALIZE,
+                     {MVT::f16, MVT::f32, MVT::f64, MVT::f128}, Expand);
 
   // FIXME: Query RuntimeLibCalls to make the decision.
   setOperationAction({ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},
@@ -951,7 +1008,7 @@ unsigned TargetLoweringBase::getBitWidthForCttzElements(
     CR = CR.subtract(APInt(64, 1));
 
   unsigned EltWidth = RetTy->getScalarSizeInBits();
-  EltWidth = std::min(EltWidth, (unsigned)CR.getActiveBits());
+  EltWidth = std::min(EltWidth, CR.getActiveBits());
   EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
 
   return EltWidth;
@@ -1681,13 +1738,13 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
                          AttributeList attr,
                          SmallVectorImpl<ISD::OutputArg> &Outs,
                          const TargetLowering &TLI, const DataLayout &DL) {
-  SmallVector<EVT, 4> ValueVTs;
-  ComputeValueVTs(TLI, DL, ReturnType, ValueVTs);
-  unsigned NumValues = ValueVTs.size();
+  SmallVector<Type *, 4> Types;
+  ComputeValueTypes(DL, ReturnType, Types);
+  unsigned NumValues = Types.size();
   if (NumValues == 0) return;
 
-  for (unsigned j = 0, f = NumValues; j != f; ++j) {
-    EVT VT = ValueVTs[j];
+  for (Type *Ty : Types) {
+    EVT VT = TLI.getValueType(DL, Ty);
     ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
 
     if (attr.hasRetAttr(Attribute::SExt))
@@ -1715,7 +1772,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
       Flags.setZExt();
 
     for (unsigned i = 0; i < NumParts; ++i)
-      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
+      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, Ty, 0, 0));
   }
 }
 
@@ -1836,6 +1893,7 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case SIToFP:         return ISD::SINT_TO_FP;
   case FPTrunc:        return ISD::FP_ROUND;
   case FPExt:          return ISD::FP_EXTEND;
+  case PtrToAddr:      return ISD::BITCAST;
   case PtrToInt:       return ISD::BITCAST;
   case IntToPtr:       return ISD::BITCAST;
   case BitCast:        return ISD::BITCAST;
@@ -1866,6 +1924,8 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FEXP;
   case Intrinsic::exp2:
     return ISD::FEXP2;
+  case Intrinsic::log:
+    return ISD::FLOG;
   default:
     return ISD::DELETED_NODE;
   }
@@ -1909,15 +1969,26 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
 
 Value *
 TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
+  // FIXME: Can this triple check be replaced with SAFESTACK_POINTER_ADDRESS
+  // being available?
   if (!TM.getTargetTriple().isAndroid())
     return getDefaultSafeStackPointerLocation(IRB, true);
 
-  // Android provides a libc function to retrieve the address of the current
-  // thread's unsafe stack pointer.
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
+
+  const char *SafestackPointerAddressName =
+      getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
+  if (!SafestackPointerAddressName) {
+    M->getContext().emitError(
+        "no libcall available for safestack pointer address");
+    return PoisonValue::get(PtrTy);
+  }
+
+  // Android provides a libc function to retrieve the address of the current
+  // thread's unsafe stack pointer.
   FunctionCallee Fn =
-      M->getOrInsertFunction("__safestack_pointer_address", PtrTy);
+      M->getOrInsertFunction(SafestackPointerAddressName, PtrTy);
   return IRB.CreateCall(Fn);
 }
 
@@ -1975,7 +2046,9 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
 Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
   if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
     Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
-    PointerType *PtrTy = PointerType::getUnqual(M.getContext());
+    const DataLayout &DL = M.getDataLayout();
+    PointerType *PtrTy =
+        PointerType::get(M.getContext(), DL.getDefaultGlobalsAddressSpace());
     GlobalVariable *G = M.getOrInsertGlobal("__guard_local", PtrTy);
     G->setVisibility(GlobalValue::HiddenVisibility);
     return G;
@@ -1986,29 +2059,37 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
-  if (!M.getNamedValue("__stack_chk_guard")) {
-    auto *GV = new GlobalVariable(M, PointerType::getUnqual(M.getContext()),
-                                  false, GlobalVariable::ExternalLinkage,
-                                  nullptr, "__stack_chk_guard");
+  RTLIB::LibcallImpl StackGuardImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (StackGuardImpl == RTLIB::Unsupported)
+    return;
 
-    // FreeBSD has "__stack_chk_guard" defined externally on libc.so
-    if (M.getDirectAccessExternalData() &&
-        !TM.getTargetTriple().isWindowsGNUEnvironment() &&
-        !(TM.getTargetTriple().isPPC64() &&
-          TM.getTargetTriple().isOSFreeBSD()) &&
-        (!TM.getTargetTriple().isOSDarwin() ||
-         TM.getRelocationModel() == Reloc::Static))
-      GV->setDSOLocal(true);
-  }
+  StringRef StackGuardVarName = getLibcallImplName(StackGuardImpl);
+  M.getOrInsertGlobal(
+      StackGuardVarName, PointerType::getUnqual(M.getContext()), [=, &M]() {
+        auto *GV = new GlobalVariable(M, PointerType::getUnqual(M.getContext()),
+                                      false, GlobalVariable::ExternalLinkage,
+                                      nullptr, StackGuardVarName);
+
+        // FreeBSD has "__stack_chk_guard" defined externally on libc.so
+        if (M.getDirectAccessExternalData() &&
+            !TM.getTargetTriple().isOSCygMing() &&
+            !(TM.getTargetTriple().isPPC64() &&
+              TM.getTargetTriple().isOSFreeBSD()) &&
+            (!TM.getTargetTriple().isOSDarwin() ||
+             TM.getRelocationModel() == Reloc::Static))
+          GV->setDSOLocal(true);
+
+        return GV;
+      });
 }
 
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
-  if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
-    return M.getNamedValue("__guard_local");
-  }
-  return M.getNamedValue("__stack_chk_guard");
+  RTLIB::LibcallImpl GuardVarImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (GuardVarImpl == RTLIB::Unsupported)
+    return nullptr;
+  return M.getNamedValue(getLibcallImplName(GuardVarImpl));
 }
 
 Function *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {

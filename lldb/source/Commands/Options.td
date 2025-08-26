@@ -13,6 +13,9 @@ let Command = "target modules dump separate debug info" in {
     Desc<"Output the details in JSON format.">;
   def tm_errors_only : Option<"errors-only", "e">, Group<1>,
     Desc<"Filter to show only debug info files with errors.">;
+  def tm_force_load_all_debug_info : Option<"force-load-all-debug-info", "f">,
+                                     Group<1>,
+                                     Desc<"Load all debug info files.">;
 }
 
 let Command = "help" in {
@@ -51,6 +54,11 @@ let Command = "settings read" in {
 let Command = "settings clear" in {
   def setclear_all : Option<"all", "a">,
     Desc<"Clear all settings.">;
+}
+
+let Command = "settings show" in {
+  def setshow_defaults : Option<"defaults", "d">,
+    Desc<"Include default values if defined.">;
 }
 
 let Command = "breakpoint list" in {
@@ -92,6 +100,12 @@ let Command = "breakpoint modify" in {
   def breakpoint_modify_condition : Option<"condition", "c">, Group<1>,
     Arg<"Expression">, Desc<"The breakpoint stops only if this condition "
     "expression evaluates to true.">;
+  def breakpoint_modify_condition_language
+      : Option<"condition-language", "Y">,
+        Group<1>,
+        Arg<"Language">,
+        Desc<"Specifies the Language to use when executing the breakpoint's "
+             "condition expression.">;
   def breakpoint_modify_auto_continue : Option<"auto-continue", "G">, Group<1>,
     Arg<"Boolean">,
     Desc<"The breakpoint will auto-continue after running its commands.">;
@@ -196,7 +210,7 @@ let Command = "breakpoint set" in {
     "identifiers). If not set the target.language setting is used.">;
   def breakpoint_set_skip_prologue : Option<"skip-prologue", "K">,
     Arg<"Boolean">, Groups<[1,3,4,5,6,7,8,12]>,
-    Desc<"sKip the prologue if the breakpoint is at the beginning of a "
+    Desc<"Skip the prologue if the breakpoint is at the beginning of a "
     "function. If not set the target.skip-prologue setting is used.">;
   def breakpoint_set_breakpoint_name : Option<"breakpoint-name", "N">,
     Arg<"BreakpointName">,
@@ -727,18 +741,35 @@ let Command = "process launch" in {
 }
 
 let Command = "process attach" in {
-  def process_attach_continue : Option<"continue", "c">,
-    Desc<"Immediately continue the process once attached.">;
-  def process_attach_plugin : Option<"plugin", "P">, Arg<"Plugin">,
-    Desc<"Name of the process plugin you want to use.">;
-  def process_attach_pid : Option<"pid", "p">, Group<1>, Arg<"Pid">,
-    Desc<"The process ID of an existing process to attach to.">;
-  def process_attach_name : Option<"name", "n">, Group<2>, Arg<"ProcessName">,
-    Desc<"The name of the process to attach to.">;
-  def process_attach_include_existing : Option<"include-existing", "i">,
-    Group<2>, Desc<"Include existing processes when doing attach -w.">;
-  def process_attach_waitfor : Option<"waitfor", "w">, Group<2>,
-    Desc<"Wait for the process with <process-name> to launch.">;
+  def process_attach_continue
+      : Option<"continue", "c">,
+        Desc<"Immediately ${ansi.underline}c${ansi.normal}ontinue the process "
+             "once attached.">;
+  def process_attach_plugin
+      : Option<"plugin", "P">,
+        Arg<"Plugin">,
+        Desc<"Name of the process ${ansi.underline}p${ansi.normal}lugin you "
+             "want to use.">;
+  def process_attach_pid : Option<"pid", "p">,
+                           Group<1>,
+                           Arg<"Pid">,
+                           Desc<"The ${ansi.underline}p${ansi.normal}rocess ID "
+                                "of an existing process to attach to.">;
+  def process_attach_name : Option<"name", "n">,
+                            Group<2>,
+                            Arg<"ProcessName">,
+                            Desc<"The ${ansi.underline}n${ansi.normal}ame of "
+                                 "the process to attach to.">;
+  def process_attach_include_existing
+      : Option<"include-existing", "i">,
+        Group<2>,
+        Desc<"${ansi.underline}I${ansi.normal}nclude existing processes when "
+             "doing attach -w.">;
+  def process_attach_waitfor
+      : Option<"waitfor", "w">,
+        Group<2>,
+        Desc<"${ansi.underline}W${ansi.normal}ait for the process with "
+             "<process-name> to launch.">;
 }
 
 let Command = "process continue" in {

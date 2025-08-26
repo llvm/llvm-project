@@ -166,7 +166,7 @@ unsigned AVRMCCodeEmitter::encodeMemri(const MCInst &MI, unsigned OpNo,
     OffsetBits = OffsetOp.getImm();
   } else if (OffsetOp.isExpr()) {
     OffsetBits = 0;
-    addFixup(Fixups, 0, OffsetOp.getExpr(), MCFixupKind(AVR::fixup_6));
+    addFixup(Fixups, 0, OffsetOp.getExpr(), AVR::fixup_6);
   } else {
     llvm_unreachable("Invalid value for offset");
   }
@@ -215,7 +215,7 @@ unsigned AVRMCCodeEmitter::encodeCallTarget(const MCInst &MI, unsigned OpNo,
   auto MO = MI.getOperand(OpNo);
 
   if (MO.isExpr()) {
-    MCFixupKind FixupKind = static_cast<MCFixupKind>(AVR::fixup_call);
+    MCFixupKind FixupKind = AVR::fixup_call;
     addFixup(Fixups, 0, MO.getExpr(), FixupKind);
     return 0;
   }

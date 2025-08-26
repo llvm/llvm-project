@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_
 
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 namespace mlir {
 
 class VectorType;
@@ -76,6 +77,17 @@ LayoutAttr getLayoutAttr(const Value value);
 /// it will check the operand itself and its defining op.
 LayoutAttr getLayoutAttr(const OpOperand &opr);
 
+/// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+void removeLayoutAttr(const T &operandOrResult);
+
+/// Removes the LayoutAttr for each OpOperand and OpResult of the given
+/// operation if they exist. If the operation contains regions, it is also
+/// applied recursively to the contained operations
+void removeLayoutAttrs(Operation *op);
+
 /// Sets the LayoutAttr for a given OpOperand or OpResult by attaching
 /// it to the owner's dictionary attributes
 template <typename T,
@@ -111,6 +123,25 @@ Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 /// type conversion is available.
 void doSCFStructuralTypeConversionWithTensorType(Operation *op,
                                                  TypeConverter converter);
+
+/// Retrieves the chip string from the XeVM target attribute of the parent
+/// GPU module operation. Returns the chip identifier if found, or nullopt
+/// if no GPU module parent or XeVM target attribute exists.
+std::optional<std::string> getChipStr(Operation *op);
+
+/// Generates element-wise addition ops of two arrays with automatic alignment.
+/// When the input arrays have different sizes, the shorter array is
+/// right-aligned with the longer array, and the unmatched leading elements from
+/// the longer array are preserved unchanged. This is commonly used for offset
+/// computation where higher-dimensional offsets need to be added to
+/// lower-dimensional adjustments.
+///
+/// Example:
+///   lhs = [l1, l2, l3], rhs = [r1, r2]
+///   Result: [11, l2+r1, l3+r2]
+SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
+                                              ArrayRef<OpFoldResult> lhs,
+                                              ArrayRef<OpFoldResult> rhs);
 
 } // namespace xegpu
 

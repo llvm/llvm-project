@@ -39,11 +39,14 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cmath>
 #include <cstddef>
 #include <iterator>
 #include <utility>
@@ -66,6 +69,10 @@ static RegisterType getRegisterType(ResourceClass RC) {
     return RegisterType::Sampler;
   }
   llvm_unreachable("unexpected ResourceClass value");
+}
+
+static RegisterType getRegisterType(const HLSLAttributedResourceType *ResTy) {
+  return getRegisterType(ResTy->getAttrs().ResourceClass);
 }
 
 // Converts the first letter of string Slot to RegisterType.
@@ -229,9 +236,8 @@ static unsigned calculateLegacyCbufferFieldAlign(const ASTContext &Context,
 static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
                                            QualType T) {
   constexpr unsigned CBufferAlign = 16;
-  if (const RecordType *RT = T->getAs<RecordType>()) {
+  if (const auto *RD = T->getAsRecordDecl()) {
     unsigned Size = 0;
-    const RecordDecl *RD = RT->getDecl();
     for (const FieldDecl *Field : RD->fields()) {
       QualType Ty = Field->getType();
       unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
@@ -334,16 +340,19 @@ static bool isZeroSizedArray(const ConstantArrayType *CAT) {
   return CAT != nullptr;
 }
 
-// Returns true if the record type is an HLSL resource class or an array of
-// resource classes
-static bool isResourceRecordTypeOrArrayOf(const Type *Ty) {
-  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
-    Ty = CAT->getArrayElementTypeNoTypeQual();
-  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
+static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
+  const Type *Ty = VD->getType().getTypePtr();
+  return Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray();
 }
 
-static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
-  return isResourceRecordTypeOrArrayOf(VD->getType().getTypePtr());
+static const HLSLAttributedResourceType *
+getResourceArrayHandleType(VarDecl *VD) {
+  assert(VD->getType()->isHLSLResourceRecordArray() &&
+         "expected array of resource records");
+  const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
+    Ty = CAT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
 }
 
 // Returns true if the type is a leaf element type that is not valid to be
@@ -352,10 +361,10 @@ static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
 // type or if it is a record type that needs to be inspected further.
 static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
   Ty = Ty->getUnqualifiedDesugaredType();
-  if (isResourceRecordTypeOrArrayOf(Ty))
+  if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
     return true;
-  if (Ty->isRecordType())
-    return Ty->getAsCXXRecordDecl()->isEmpty();
+  if (const auto *RD = Ty->getAsCXXRecordDecl())
+    return RD->isEmpty();
   if (Ty->isConstantArrayType() &&
       isZeroSizedArray(cast<ConstantArrayType>(Ty)))
     return true;
@@ -370,7 +379,7 @@ static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
 // needs to be created for HLSL Buffer use that will exclude these unwanted
 // declarations (see createHostLayoutStruct function).
 static bool requiresImplicitBufferLayoutStructure(const CXXRecordDecl *RD) {
-  if (RD->getTypeForDecl()->isHLSLIntangibleType() || RD->isEmpty())
+  if (RD->isHLSLIntangible() || RD->isEmpty())
     return true;
   // check fields
   for (const FieldDecl *Field : RD->fields()) {
@@ -449,13 +458,12 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
   if (isInvalidConstantBufferLeafElementType(Ty))
     return nullptr;
 
-  if (Ty->isRecordType()) {
-    CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+  if (auto *RD = Ty->getAsCXXRecordDecl()) {
     if (requiresImplicitBufferLayoutStructure(RD)) {
       RD = createHostLayoutStruct(S, RD);
       if (!RD)
         return nullptr;
-      Ty = RD->getTypeForDecl();
+      Ty = S.Context.getCanonicalTagType(RD)->getTypePtr();
     }
   }
 
@@ -505,8 +513,8 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
     if (requiresImplicitBufferLayoutStructure(BaseDecl)) {
       BaseDecl = createHostLayoutStruct(S, BaseDecl);
       if (BaseDecl) {
-        TypeSourceInfo *TSI = AST.getTrivialTypeSourceInfo(
-            QualType(BaseDecl->getTypeForDecl(), 0));
+        TypeSourceInfo *TSI =
+            AST.getTrivialTypeSourceInfo(AST.getCanonicalTagType(BaseDecl));
         Base = CXXBaseSpecifier(SourceRange(), false, StructDecl->isClass(),
                                 AS_none, TSI, SourceLocation());
       }
@@ -572,16 +580,13 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   BufDecl->addLayoutStruct(LS);
 }
 
-static void addImplicitBindingAttrToBuffer(Sema &S, HLSLBufferDecl *BufDecl,
-                                           uint32_t ImplicitBindingOrderID) {
-  RegisterType RT =
-      BufDecl->isCBuffer() ? RegisterType::CBuffer : RegisterType::SRV;
+static void addImplicitBindingAttrToDecl(Sema &S, Decl *D, RegisterType RT,
+                                         uint32_t ImplicitBindingOrderID) {
   auto *Attr =
       HLSLResourceBindingAttr::CreateImplicit(S.getASTContext(), "", "0", {});
-  std::optional<unsigned> RegSlot;
-  Attr->setBinding(RT, RegSlot, 0);
+  Attr->setBinding(RT, std::nullopt, 0);
   Attr->setImplicitBindingOrderID(ImplicitBindingOrderID);
-  BufDecl->addAttr(Attr);
+  D->addAttr(Attr);
 }
 
 // Handle end of cbuffer/tbuffer declaration
@@ -594,8 +599,9 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
+  HLSLVkBindingAttr *VkBinding = Dcl->getAttr<HLSLVkBindingAttr>();
   HLSLResourceBindingAttr *RBA = Dcl->getAttr<HLSLResourceBindingAttr>();
-  if (!RBA || !RBA->hasRegisterSlot()) {
+  if (!VkBinding && (!RBA || !RBA->hasRegisterSlot())) {
     SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
     // Use HLSLResourceBindingAttr to transfer implicit binding order_ID
     // to codegen. If it does not exist, create an implicit attribute.
@@ -603,7 +609,10 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
     if (RBA)
       RBA->setImplicitBindingOrderID(OrderID);
     else
-      addImplicitBindingAttrToBuffer(SemaRef, BufDecl, OrderID);
+      addImplicitBindingAttrToDecl(SemaRef, BufDecl,
+                                   BufDecl->isCBuffer() ? RegisterType::CBuffer
+                                                        : RegisterType::SRV,
+                                   OrderID);
   }
 
   SemaRef.PopDeclContext();
@@ -717,6 +726,23 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 
   if (FD->getName() != TargetInfo.getTargetOpts().HLSLEntry)
     return;
+
+  // If we have specified a root signature to override the entry function then
+  // attach it now
+  if (RootSigOverrideIdent) {
+    LookupResult R(SemaRef, RootSigOverrideIdent, SourceLocation(),
+                   Sema::LookupOrdinaryName);
+    if (SemaRef.LookupQualifiedName(R, FD->getDeclContext()))
+      if (auto *SignatureDecl =
+              dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
+        FD->dropAttr<RootSignatureAttr>();
+        // We could look up the SourceRange of the macro here as well
+        AttributeCommonInfo AL(RootSigOverrideIdent, AttributeScopeInfo(),
+                               SourceRange(), ParsedAttr::Form::Microsoft());
+        FD->addAttr(::new (getASTContext()) RootSignatureAttr(
+            getASTContext(), AL, RootSigOverrideIdent, SignatureDecl));
+      }
+  }
 
   llvm::Triple::EnvironmentType Env = TargetInfo.getTriple().getEnvironment();
   if (HLSLShaderAttr::isValidShaderType(Env) && Env != llvm::Triple::Library) {
@@ -1064,190 +1090,268 @@ SemaHLSL::ActOnStartRootSignatureDecl(StringRef Signature) {
 
 void SemaHLSL::ActOnFinishRootSignatureDecl(
     SourceLocation Loc, IdentifierInfo *DeclIdent,
-    SmallVector<llvm::hlsl::rootsig::RootElement> &Elements) {
+    ArrayRef<hlsl::RootSignatureElement> RootElements) {
+
+  if (handleRootSignatureElements(RootElements))
+    return;
+
+  SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
+  for (auto &RootSigElement : RootElements)
+    Elements.push_back(RootSigElement.getElement());
 
   auto *SignatureDecl = HLSLRootSignatureDecl::Create(
       SemaRef.getASTContext(), /*DeclContext=*/SemaRef.CurContext, Loc,
       DeclIdent, SemaRef.getLangOpts().HLSLRootSigVer, Elements);
 
-  if (handleRootSignatureDecl(SignatureDecl, Loc))
-    return;
-
   SignatureDecl->setImplicit();
   SemaRef.PushOnScopeChains(SignatureDecl, SemaRef.getCurScope());
 }
 
-bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
-                                       SourceLocation Loc) {
-  // The following conducts analysis on resource ranges to detect and report
-  // any overlaps in resource ranges.
-  //
-  // A resource range overlaps with another resource range if they have:
-  // - equivalent ResourceClass (SRV, UAV, CBuffer, Sampler)
-  // - equivalent resource space
-  // - overlapping visbility
-  //
-  // The following algorithm is implemented in the following steps:
-  //
-  // 1. Collect RangeInfo from relevant RootElements:
-  //   - RangeInfo will retain the interval, ResourceClass, Space and Visibility
-  // 2. Sort the RangeInfo's such that they are grouped together by
-  //  ResourceClass and Space (GroupT defined below)
-  // 3. Iterate through the collected RangeInfos by their groups
-  //   - For each group we will have a ResourceRange for each visibility
-  //   - As we iterate through we will:
-  //      A: Insert the current RangeInfo into the corresponding Visibility
-  //   ResourceRange
-  //      B: Check for overlap with any overlapping Visibility ResourceRange
-  using RangeInfo = llvm::hlsl::rootsig::RangeInfo;
-  using ResourceRange = llvm::hlsl::rootsig::ResourceRange;
-  using GroupT = std::pair<ResourceClass, /*Space*/ uint32_t>;
+namespace {
 
-  // 1. Collect RangeInfos
-  llvm::SmallVector<RangeInfo> Infos;
-  for (const llvm::hlsl::rootsig::RootElement &Elem : D->getRootElements()) {
+struct PerVisibilityBindingChecker {
+  SemaHLSL *S;
+  // We need one builder per `llvm::dxbc::ShaderVisibility` value.
+  std::array<llvm::hlsl::BindingInfoBuilder, 8> Builders;
+
+  struct ElemInfo {
+    const hlsl::RootSignatureElement *Elem;
+    llvm::dxbc::ShaderVisibility Vis;
+    bool Diagnosed;
+  };
+  llvm::SmallVector<ElemInfo> ElemInfoMap;
+
+  PerVisibilityBindingChecker(SemaHLSL *S) : S(S) {}
+
+  void trackBinding(llvm::dxbc::ShaderVisibility Visibility,
+                    llvm::dxil::ResourceClass RC, uint32_t Space,
+                    uint32_t LowerBound, uint32_t UpperBound,
+                    const hlsl::RootSignatureElement *Elem) {
+    uint32_t BuilderIndex = llvm::to_underlying(Visibility);
+    assert(BuilderIndex < Builders.size() &&
+           "Not enough builders for visibility type");
+    Builders[BuilderIndex].trackBinding(RC, Space, LowerBound, UpperBound,
+                                        static_cast<const void *>(Elem));
+
+    static_assert(llvm::to_underlying(llvm::dxbc::ShaderVisibility::All) == 0,
+                  "'All' visibility must come first");
+    if (Visibility == llvm::dxbc::ShaderVisibility::All)
+      for (size_t I = 1, E = Builders.size(); I < E; ++I)
+        Builders[I].trackBinding(RC, Space, LowerBound, UpperBound,
+                                 static_cast<const void *>(Elem));
+
+    ElemInfoMap.push_back({Elem, Visibility, false});
+  }
+
+  ElemInfo &getInfo(const hlsl::RootSignatureElement *Elem) {
+    auto It = llvm::lower_bound(
+        ElemInfoMap, Elem,
+        [](const auto &LHS, const auto &RHS) { return LHS.Elem < RHS; });
+    assert(It->Elem == Elem && "Element not in map");
+    return *It;
+  }
+
+  bool checkOverlap() {
+    llvm::sort(ElemInfoMap, [](const auto &LHS, const auto &RHS) {
+      return LHS.Elem < RHS.Elem;
+    });
+
+    bool HadOverlap = false;
+
+    using llvm::hlsl::BindingInfoBuilder;
+    auto ReportOverlap = [this, &HadOverlap](
+                             const BindingInfoBuilder &Builder,
+                             const BindingInfoBuilder::Binding &Reported) {
+      HadOverlap = true;
+
+      const auto *Elem =
+          static_cast<const hlsl::RootSignatureElement *>(Reported.Cookie);
+      const BindingInfoBuilder::Binding &Previous =
+          Builder.findOverlapping(Reported);
+      const auto *PrevElem =
+          static_cast<const hlsl::RootSignatureElement *>(Previous.Cookie);
+
+      ElemInfo &Info = getInfo(Elem);
+      // We will have already diagnosed this binding if there's overlap in the
+      // "All" visibility as well as any particular visibility.
+      if (Info.Diagnosed)
+        return;
+      Info.Diagnosed = true;
+
+      ElemInfo &PrevInfo = getInfo(PrevElem);
+      llvm::dxbc::ShaderVisibility CommonVis =
+          Info.Vis == llvm::dxbc::ShaderVisibility::All ? PrevInfo.Vis
+                                                        : Info.Vis;
+
+      this->S->Diag(Elem->getLocation(), diag::err_hlsl_resource_range_overlap)
+          << llvm::to_underlying(Reported.RC) << Reported.LowerBound
+          << Reported.isUnbounded() << Reported.UpperBound
+          << llvm::to_underlying(Previous.RC) << Previous.LowerBound
+          << Previous.isUnbounded() << Previous.UpperBound << Reported.Space
+          << CommonVis;
+
+      this->S->Diag(PrevElem->getLocation(),
+                    diag::note_hlsl_resource_range_here);
+    };
+
+    for (BindingInfoBuilder &Builder : Builders)
+      Builder.calculateBindingInfo(ReportOverlap);
+
+    return HadOverlap;
+  }
+};
+
+} // end anonymous namespace
+
+bool SemaHLSL::handleRootSignatureElements(
+    ArrayRef<hlsl::RootSignatureElement> Elements) {
+  // Define some common error handling functions
+  bool HadError = false;
+  auto ReportError = [this, &HadError](SourceLocation Loc, uint32_t LowerBound,
+                                       uint32_t UpperBound) {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_value)
+        << LowerBound << UpperBound;
+  };
+
+  auto ReportFloatError = [this, &HadError](SourceLocation Loc,
+                                            float LowerBound,
+                                            float UpperBound) {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_value)
+        << llvm::formatv("{0:f}", LowerBound).sstr<6>()
+        << llvm::formatv("{0:f}", UpperBound).sstr<6>();
+  };
+
+  auto VerifyRegister = [ReportError](SourceLocation Loc, uint32_t Register) {
+    if (!llvm::hlsl::rootsig::verifyRegisterValue(Register))
+      ReportError(Loc, 0, 0xfffffffe);
+  };
+
+  auto VerifySpace = [ReportError](SourceLocation Loc, uint32_t Space) {
+    if (!llvm::hlsl::rootsig::verifyRegisterSpace(Space))
+      ReportError(Loc, 0, 0xffffffef);
+  };
+
+  const uint32_t Version =
+      llvm::to_underlying(SemaRef.getLangOpts().HLSLRootSigVer);
+  const uint32_t VersionEnum = Version - 1;
+  auto ReportFlagError = [this, &HadError, VersionEnum](SourceLocation Loc) {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_flag)
+        << /*version minor*/ VersionEnum;
+  };
+
+  // Iterate through the elements and do basic validations
+  for (const hlsl::RootSignatureElement &RootSigElem : Elements) {
+    SourceLocation Loc = RootSigElem.getLocation();
+    const llvm::hlsl::rootsig::RootElement &Elem = RootSigElem.getElement();
     if (const auto *Descriptor =
             std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
-      RangeInfo Info;
-      Info.LowerBound = Descriptor->Reg.Number;
-      Info.UpperBound = Info.LowerBound; // use inclusive ranges []
+      VerifyRegister(Loc, Descriptor->Reg.Number);
+      VerifySpace(Loc, Descriptor->Space);
 
-      Info.Class =
-          llvm::dxil::ResourceClass(llvm::to_underlying(Descriptor->Type));
-      Info.Space = Descriptor->Space;
-      Info.Visibility = Descriptor->Visibility;
-      Infos.push_back(Info);
+      if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(
+              Version, llvm::to_underlying(Descriptor->Flags)))
+        ReportFlagError(Loc);
     } else if (const auto *Constants =
                    std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
-      RangeInfo Info;
-      Info.LowerBound = Constants->Reg.Number;
-      Info.UpperBound = Info.LowerBound; // use inclusive ranges []
-
-      Info.Class = llvm::dxil::ResourceClass::CBuffer;
-      Info.Space = Constants->Space;
-      Info.Visibility = Constants->Visibility;
-      Infos.push_back(Info);
+      VerifyRegister(Loc, Constants->Reg.Number);
+      VerifySpace(Loc, Constants->Space);
     } else if (const auto *Sampler =
                    std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
-      RangeInfo Info;
-      Info.LowerBound = Sampler->Reg.Number;
-      Info.UpperBound = Info.LowerBound; // use inclusive ranges []
+      VerifyRegister(Loc, Sampler->Reg.Number);
+      VerifySpace(Loc, Sampler->Space);
 
-      Info.Class = llvm::dxil::ResourceClass::Sampler;
-      Info.Space = Sampler->Space;
-      Info.Visibility = Sampler->Visibility;
-      Infos.push_back(Info);
+      assert(!std::isnan(Sampler->MaxLOD) && !std::isnan(Sampler->MinLOD) &&
+             "By construction, parseFloatParam can't produce a NaN from a "
+             "float_literal token");
+
+      if (!llvm::hlsl::rootsig::verifyMaxAnisotropy(Sampler->MaxAnisotropy))
+        ReportError(Loc, 0, 16);
+      if (!llvm::hlsl::rootsig::verifyMipLODBias(Sampler->MipLODBias))
+        ReportFloatError(Loc, -16.f, 15.99f);
     } else if (const auto *Clause =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
                        &Elem)) {
-      RangeInfo Info;
-      Info.LowerBound = Clause->Reg.Number;
-      assert(0 < Clause->NumDescriptors && "Verified as part of TODO(#129940)");
-      Info.UpperBound = Clause->NumDescriptors == RangeInfo::Unbounded
-                            ? RangeInfo::Unbounded
-                            : Info.LowerBound + Clause->NumDescriptors -
-                                  1; // use inclusive ranges []
+      VerifyRegister(Loc, Clause->Reg.Number);
+      VerifySpace(Loc, Clause->Space);
 
-      Info.Class = Clause->Type;
-      Info.Space = Clause->Space;
-      // Note: Clause does not hold the visibility this will need to
-      Infos.push_back(Info);
+      if (!llvm::hlsl::rootsig::verifyNumDescriptors(Clause->NumDescriptors)) {
+        // NumDescriptor could techincally be ~0u but that is reserved for
+        // unbounded, so the diagnostic will not report that as a valid int
+        // value
+        ReportError(Loc, 1, 0xfffffffe);
+      }
+
+      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
+              Version, llvm::to_underlying(Clause->Type),
+              llvm::to_underlying(Clause->Flags)))
+        ReportFlagError(Loc);
+    }
+  }
+
+  PerVisibilityBindingChecker BindingChecker(this);
+  SmallVector<std::pair<const llvm::hlsl::rootsig::DescriptorTableClause *,
+                        const hlsl::RootSignatureElement *>>
+      UnboundClauses;
+
+  for (const hlsl::RootSignatureElement &RootSigElem : Elements) {
+    const llvm::hlsl::rootsig::RootElement &Elem = RootSigElem.getElement();
+    if (const auto *Descriptor =
+            std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
+      uint32_t LowerBound(Descriptor->Reg.Number);
+      uint32_t UpperBound(LowerBound); // inclusive range
+
+      BindingChecker.trackBinding(
+          Descriptor->Visibility,
+          static_cast<llvm::dxil::ResourceClass>(Descriptor->Type),
+          Descriptor->Space, LowerBound, UpperBound, &RootSigElem);
+    } else if (const auto *Constants =
+                   std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
+      uint32_t LowerBound(Constants->Reg.Number);
+      uint32_t UpperBound(LowerBound); // inclusive range
+
+      BindingChecker.trackBinding(
+          Constants->Visibility, llvm::dxil::ResourceClass::CBuffer,
+          Constants->Space, LowerBound, UpperBound, &RootSigElem);
+    } else if (const auto *Sampler =
+                   std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
+      uint32_t LowerBound(Sampler->Reg.Number);
+      uint32_t UpperBound(LowerBound); // inclusive range
+
+      BindingChecker.trackBinding(
+          Sampler->Visibility, llvm::dxil::ResourceClass::Sampler,
+          Sampler->Space, LowerBound, UpperBound, &RootSigElem);
+    } else if (const auto *Clause =
+                   std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
+                       &Elem)) {
+      // We'll process these once we see the table element.
+      UnboundClauses.emplace_back(Clause, &RootSigElem);
     } else if (const auto *Table =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
-      // Table holds the Visibility of all owned Clauses in Table, so iterate
-      // owned Clauses and update their corresponding RangeInfo
-      assert(Table->NumClauses <= Infos.size() && "RootElement");
-      // The last Table->NumClauses elements of Infos are the owned Clauses
-      // generated RangeInfo
-      auto TableInfos =
-          MutableArrayRef<RangeInfo>(Infos).take_back(Table->NumClauses);
-      for (RangeInfo &Info : TableInfos)
-        Info.Visibility = Table->Visibility;
+      assert(UnboundClauses.size() == Table->NumClauses &&
+             "Number of unbound elements must match the number of clauses");
+      for (const auto &[Clause, ClauseElem] : UnboundClauses) {
+        uint32_t LowerBound(Clause->Reg.Number);
+        // Relevant error will have already been reported above and needs to be
+        // fixed before we can conduct range analysis, so shortcut error return
+        if (Clause->NumDescriptors == 0)
+          return true;
+        uint32_t UpperBound = Clause->NumDescriptors == ~0u
+                                  ? ~0u
+                                  : LowerBound + Clause->NumDescriptors - 1;
+
+        BindingChecker.trackBinding(
+            Table->Visibility,
+            static_cast<llvm::dxil::ResourceClass>(Clause->Type), Clause->Space,
+            LowerBound, UpperBound, ClauseElem);
+      }
+      UnboundClauses.clear();
     }
   }
 
-  // 2. Sort the RangeInfo's by their GroupT to form groupings
-  std::sort(Infos.begin(), Infos.end(), [](RangeInfo A, RangeInfo B) {
-    return std::tie(A.Class, A.Space) < std::tie(B.Class, B.Space);
-  });
-
-  // 3. First we will init our state to track:
-  if (Infos.size() == 0)
-    return false; // No ranges to overlap
-  GroupT CurGroup = {Infos[0].Class, Infos[0].Space};
-  bool HadOverlap = false;
-
-  // Create a ResourceRange for each Visibility
-  ResourceRange::MapT::Allocator Allocator;
-  std::array<ResourceRange, 8> Ranges = {
-      ResourceRange(Allocator), // All
-      ResourceRange(Allocator), // Vertex
-      ResourceRange(Allocator), // Hull
-      ResourceRange(Allocator), // Domain
-      ResourceRange(Allocator), // Geometry
-      ResourceRange(Allocator), // Pixel
-      ResourceRange(Allocator), // Amplification
-      ResourceRange(Allocator), // Mesh
-  };
-
-  // Reset the ResourceRanges for when we iterate through a new group
-  auto ClearRanges = [&Ranges]() {
-    for (ResourceRange &Range : Ranges)
-      Range.clear();
-  };
-
-  // Helper to report diagnostics
-  auto ReportOverlap = [this, Loc, &HadOverlap](const RangeInfo *Info,
-                                                const RangeInfo *OInfo) {
-    HadOverlap = true;
-    auto CommonVis = Info->Visibility == llvm::dxbc::ShaderVisibility::All
-                         ? OInfo->Visibility
-                         : Info->Visibility;
-    this->Diag(Loc, diag::err_hlsl_resource_range_overlap)
-        << llvm::to_underlying(Info->Class) << Info->LowerBound
-        << /*unbounded=*/(Info->UpperBound == RangeInfo::Unbounded)
-        << Info->UpperBound << llvm::to_underlying(OInfo->Class)
-        << OInfo->LowerBound
-        << /*unbounded=*/(OInfo->UpperBound == RangeInfo::Unbounded)
-        << OInfo->UpperBound << Info->Space << CommonVis;
-  };
-
-  // 3: Iterate through collected RangeInfos
-  for (const RangeInfo &Info : Infos) {
-    GroupT InfoGroup = {Info.Class, Info.Space};
-    // Reset our ResourceRanges when we enter a new group
-    if (CurGroup != InfoGroup) {
-      ClearRanges();
-      CurGroup = InfoGroup;
-    }
-
-    // 3A: Insert range info into corresponding Visibility ResourceRange
-    ResourceRange &VisRange = Ranges[llvm::to_underlying(Info.Visibility)];
-    if (std::optional<const RangeInfo *> Overlapping = VisRange.insert(Info))
-      ReportOverlap(&Info, Overlapping.value());
-
-    // 3B: Check for overlap in all overlapping Visibility ResourceRanges
-    //
-    // If the range that we are inserting has ShaderVisiblity::All it needs to
-    // check for an overlap in all other visibility types as well.
-    // Otherwise, the range that is inserted needs to check that it does not
-    // overlap with ShaderVisibility::All.
-    //
-    // OverlapRanges will be an ArrayRef to all non-all visibility
-    // ResourceRanges in the former case and it will be an ArrayRef to just the
-    // all visiblity ResourceRange in the latter case.
-    ArrayRef<ResourceRange> OverlapRanges =
-        Info.Visibility == llvm::dxbc::ShaderVisibility::All
-            ? ArrayRef<ResourceRange>{Ranges}.drop_front()
-            : ArrayRef<ResourceRange>{Ranges}.take_front();
-
-    for (const ResourceRange &Range : OverlapRanges)
-      if (std::optional<const RangeInfo *> Overlapping =
-              Range.getOverlapping(Info))
-        ReportOverlap(&Info, Overlapping.value());
-  }
-
-  return HadOverlap;
+  return BindingChecker.checkOverlap();
 }
 
 void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
@@ -1413,6 +1517,23 @@ void SemaHLSL::handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL) {
   HLSLVkConstantIdAttr *NewAttr = mergeVkConstantIdAttr(D, AL, Id);
   if (NewAttr)
     D->addAttr(NewAttr);
+}
+
+void SemaHLSL::handleVkBindingAttr(Decl *D, const ParsedAttr &AL) {
+  // The vk::binding attribute only applies to SPIR-V.
+  if (!getASTContext().getTargetInfo().getTriple().isSPIRV())
+    return;
+
+  uint32_t Binding = 0;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Binding))
+    return;
+  uint32_t Set = 0;
+  if (AL.getNumArgs() > 1 &&
+      !SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), Set))
+    return;
+
+  D->addAttr(::new (getASTContext())
+                 HLSLVkBindingAttr(getASTContext(), AL, Binding, Set));
 }
 
 bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
@@ -1640,6 +1761,15 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     return false;
 
   Attr *A = nullptr;
+
+  AttributeCommonInfo ACI(
+      AL.getLoc(), AttributeScopeInfo(AL.getScopeName(), AL.getScopeLoc()),
+      AttributeCommonInfo::NoSemaHandlerAttribute,
+      {
+          AttributeCommonInfo::AS_CXX11, 0, false /*IsAlignas*/,
+          false /*IsRegularKeywordAttribute*/
+      });
+
   switch (AL.getKind()) {
   case ParsedAttr::AT_HLSLResourceClass: {
     if (!AL.isArgIdent(0)) {
@@ -1659,16 +1789,16 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
           << "ResourceClass" << Identifier;
       return false;
     }
-    A = HLSLResourceClassAttr::Create(getASTContext(), RC, AL.getLoc());
+    A = HLSLResourceClassAttr::Create(getASTContext(), RC, ACI);
     break;
   }
 
   case ParsedAttr::AT_HLSLROV:
-    A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
+    A = HLSLROVAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLRawBuffer:
-    A = HLSLRawBufferAttr::Create(getASTContext(), AL.getLoc());
+    A = HLSLRawBufferAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -1683,7 +1813,7 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     if (SemaRef.RequireCompleteType(TSI->getTypeLoc().getBeginLoc(), QT,
                                     diag::err_incomplete_type))
       return false;
-    A = HLSLContainedTypeAttr::Create(getASTContext(), TSI, AL.getLoc());
+    A = HLSLContainedTypeAttr::Create(getASTContext(), TSI, ACI);
     break;
   }
 
@@ -1735,7 +1865,7 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                        const RecordType *RT) {
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   for (FieldDecl *FD : RD->fields()) {
     const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
 
@@ -1805,7 +1935,7 @@ static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
   if (const HLSLAttributedResourceType *AttrResType =
           HLSLAttributedResourceType::findHandleTypeOnResource(
               VD->getType().getTypePtr())) {
-    if (RegType == getRegisterType(AttrResType->getAttrs().ResourceClass))
+    if (RegType == getRegisterType(AttrResType))
       return true;
 
     S.Diag(D->getLocation(), diag::err_hlsl_binding_type_mismatch)
@@ -2338,8 +2468,8 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     HLSLBufferDecl *DefaultCBuffer = HLSLBufferDecl::CreateDefaultCBuffer(
         SemaRef.getASTContext(), SemaRef.getCurLexicalContext(),
         DefaultCBufferDecls);
-    addImplicitBindingAttrToBuffer(SemaRef, DefaultCBuffer,
-                                   getNextImplicitBindingOrderID());
+    addImplicitBindingAttrToDecl(SemaRef, DefaultCBuffer, RegisterType::CBuffer,
+                                 getNextImplicitBindingOrderID());
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
     createHostLayoutStructForBuffer(SemaRef, DefaultCBuffer);
 
@@ -3079,10 +3209,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       List.insert(List.end(), VT->getNumElements(), VT->getElementType());
       continue;
     }
-    if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
-      assert(RD && "HLSL record types should all be CXXRecordDecls!");
-
+    if (const auto *RD = T->getAsCXXRecordDecl()) {
       if (RD->isStandardLayout())
         RD = RD->getStandardLayoutBaseWithFields();
 
@@ -3288,7 +3415,7 @@ bool SemaHLSL::ContainsBitField(QualType BaseTy) {
       continue;
     }
     if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isUnion())
         continue;
 
@@ -3489,7 +3616,7 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
     return;
 
   // Resource handles.
-  if (isResourceRecordTypeOrArrayOf(Type->getUnqualifiedDesugaredType()))
+  if (Type->isHLSLResourceRecord() || Type->isHLSLResourceRecordArray())
     return;
 
   // Only static globals belong to the Private address space.
@@ -3529,10 +3656,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     if (VD->getType()->isHLSLIntangibleType())
       collectResourceBindingsOnVarDecl(VD);
 
-    const Type *VarType = VD->getType().getTypePtr();
-    while (VarType->isArrayType())
-      VarType = VarType->getArrayElementTypeNoTypeQual();
-    if (VarType->isHLSLResourceRecord() ||
+    if (isResourceRecordTypeOrArrayOf(VD) ||
         VD->hasAttr<HLSLVkConstantIdAttr>()) {
       // Make the variable for resources static. The global externally visible
       // storage is accessed through the handle, which is a member. The variable
@@ -3542,6 +3666,24 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
 
     // process explicit bindings
     processExplicitBindingsOnDecl(VD);
+
+    if (VD->getType()->isHLSLResourceRecordArray()) {
+      // If the resource array does not have an explicit binding attribute,
+      // create an implicit one. It will be used to transfer implicit binding
+      // order_ID to codegen.
+      if (!VD->hasAttr<HLSLVkBindingAttr>()) {
+        HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
+        if (!RBA || !RBA->hasRegisterSlot()) {
+          uint32_t OrderID = getNextImplicitBindingOrderID();
+          if (RBA)
+            RBA->setImplicitBindingOrderID(OrderID);
+          else
+            addImplicitBindingAttrToDecl(
+                SemaRef, VD, getRegisterType(getResourceArrayHandleType(VD)),
+                OrderID);
+        }
+      }
+    }
   }
 
   deduceAddressSpace(VD);
@@ -3567,11 +3709,16 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
   return true;
 }
 
-bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
+void SemaHLSL::createResourceRecordCtorArgs(
+    const Type *ResourceTy, StringRef VarName, HLSLResourceBindingAttr *RBA,
+    HLSLVkBindingAttr *VkBinding, uint32_t ArrayIndex,
+    llvm::SmallVectorImpl<Expr *> &Args) {
   std::optional<uint32_t> RegisterSlot;
   uint32_t SpaceNo = 0;
-  HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
-  if (RBA) {
+  if (VkBinding) {
+    RegisterSlot = VkBinding->getBinding();
+    SpaceNo = VkBinding->getSet();
+  } else if (RBA) {
     if (RBA->hasRegisterSlot())
       RegisterSlot = RBA->getSlotNumber();
     SpaceNo = RBA->getSpaceNumber();
@@ -3582,12 +3729,12 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
   IntegerLiteral *RangeSize = IntegerLiteral::Create(
       AST, llvm::APInt(IntTySize, 1), AST.IntTy, SourceLocation());
-  IntegerLiteral *Index = IntegerLiteral::Create(
-      AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy, SourceLocation());
+  IntegerLiteral *Index =
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, ArrayIndex),
+                             AST.UnsignedIntTy, SourceLocation());
   IntegerLiteral *Space =
       IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
                              AST.UnsignedIntTy, SourceLocation());
-  StringRef VarName = VD->getName();
   StringLiteral *Name = StringLiteral::Create(
       AST, VarName, StringLiteralKind::Ordinary, false,
       AST.getStringLiteralArrayType(AST.CharTy.withConst(), VarName.size()),
@@ -3598,16 +3745,55 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
     IntegerLiteral *RegSlot = IntegerLiteral::Create(
         AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
         SourceLocation());
-    Expr *Args[] = {RegSlot, Space, RangeSize, Index, Name};
-    return initVarDeclWithCtor(SemaRef, VD, Args);
+    Args.append({RegSlot, Space, RangeSize, Index, Name});
+  } else {
+    // resource with implicit binding
+    uint32_t OrderID = (RBA && RBA->hasImplicitBindingOrderID())
+                           ? RBA->getImplicitBindingOrderID()
+                           : getNextImplicitBindingOrderID();
+    IntegerLiteral *OrderId =
+        IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, OrderID),
+                               AST.UnsignedIntTy, SourceLocation());
+    Args.append({Space, RangeSize, Index, OrderId, Name});
   }
+}
 
-  // resource with implicit binding
-  IntegerLiteral *OrderId = IntegerLiteral::Create(
-      AST, llvm::APInt(UIntTySize, getNextImplicitBindingOrderID()),
-      AST.UnsignedIntTy, SourceLocation());
-  Expr *Args[] = {Space, RangeSize, Index, OrderId, Name};
+bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
+  SmallVector<Expr *> Args;
+  createResourceRecordCtorArgs(VD->getType().getTypePtr(), VD->getName(),
+                               VD->getAttr<HLSLResourceBindingAttr>(),
+                               VD->getAttr<HLSLVkBindingAttr>(), 0, Args);
   return initVarDeclWithCtor(SemaRef, VD, Args);
+}
+
+bool SemaHLSL::initGlobalResourceArrayDecl(VarDecl *VD) {
+  assert(VD->getType()->isHLSLResourceRecordArray() &&
+         "expected array of resource records");
+
+  // Individual resources in a resource array are not initialized here. They
+  // are initialized later on during codegen when the individual resources are
+  // accessed. Codegen will emit a call to the resource constructor with the
+  // specified array index. We need to make sure though that the constructor
+  // for the specific resource type is instantiated, so codegen can emit a call
+  // to it when the array element is accessed.
+  SmallVector<Expr *> Args;
+  QualType ResElementTy = VD->getASTContext().getBaseElementType(VD->getType());
+  createResourceRecordCtorArgs(ResElementTy.getTypePtr(), VD->getName(),
+                               VD->getAttr<HLSLResourceBindingAttr>(),
+                               VD->getAttr<HLSLVkBindingAttr>(), 0, Args);
+
+  SourceLocation Loc = VD->getLocation();
+  InitializedEntity Entity =
+      InitializedEntity::InitializeTemporary(ResElementTy);
+  InitializationKind Kind = InitializationKind::CreateDirect(Loc, Loc, Loc);
+  InitializationSequence InitSeq(SemaRef, Entity, Kind, Args);
+  if (InitSeq.Failed())
+    return false;
+
+  // This takes care of instantiating and emitting of the constructor that will
+  // be called from codegen when the array is accessed.
+  ExprResult OneResInit = InitSeq.Perform(SemaRef, Entity, Kind, Args);
+  return !OneResInit.isInvalid();
 }
 
 // Returns true if the initialization has been handled.
@@ -3618,17 +3804,14 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
     return true;
 
-  // Initialize resources
-  if (!isResourceRecordTypeOrArrayOf(VD))
-    return false;
-
-  // FIXME: We currectly support only simple resources - no arrays of resources
-  // or resources in user defined structs.
-  // (llvm/llvm-project#133835, llvm/llvm-project#133837)
   // Initialize resources at the global scope
-  if (VD->hasGlobalStorage() && VD->getType()->isHLSLResourceRecord())
-    return initGlobalResourceDecl(VD);
-
+  if (VD->hasGlobalStorage()) {
+    const Type *Ty = VD->getType().getTypePtr();
+    if (Ty->isHLSLResourceRecord())
+      return initGlobalResourceDecl(VD);
+    if (Ty->isHLSLResourceRecordArray())
+      return initGlobalResourceArrayDecl(VD);
+  }
   return false;
 }
 
@@ -3674,6 +3857,9 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
 
   bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
+    if (isa<HLSLVkBindingAttr>(A))
+      HasBinding = true;
+
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
     if (!RBA || !RBA->hasRegisterSlot())
       continue;
@@ -3804,7 +3990,8 @@ class InitListTransformer {
       }
       while (!RecordTypes.empty()) {
         const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD : RT->getDecl()->fields()) {
+        for (auto *FD :
+             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
           DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
           DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
           ExprResult Res = S.BuildFieldReferenceExpr(
@@ -3852,7 +4039,8 @@ class InitListTransformer {
       }
       while (!RecordTypes.empty()) {
         const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD : RT->getDecl()->fields()) {
+        for (auto *FD :
+             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
           Inits.push_back(generateInitListsImpl(FD->getType()));
         }
       }

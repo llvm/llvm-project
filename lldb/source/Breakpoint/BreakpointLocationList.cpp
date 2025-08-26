@@ -15,6 +15,8 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -151,17 +153,24 @@ const BreakpointLocationSP BreakpointLocationList::GetByIndex(size_t i) const {
 void BreakpointLocationList::ClearAllBreakpointSites() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   collection::iterator pos, end = m_locations.end();
-  for (pos = m_locations.begin(); pos != end; ++pos)
-    (*pos)->ClearBreakpointSite();
+  Log *log = GetLog(LLDBLog::Breakpoints);
+
+  for (pos = m_locations.begin(); pos != end; ++pos) {
+    if (llvm::Error error = (*pos)->ClearBreakpointSite())
+      LLDB_LOG_ERROR(log, std::move(error), "{0}");
+  }
 }
 
 void BreakpointLocationList::ResolveAllBreakpointSites() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   collection::iterator pos, end = m_locations.end();
+  Log *log = GetLog(LLDBLog::Breakpoints);
 
   for (pos = m_locations.begin(); pos != end; ++pos) {
-    if ((*pos)->IsEnabled())
-      (*pos)->ResolveBreakpointSite();
+    if ((*pos)->IsEnabled()) {
+      if (llvm::Error error = (*pos)->ResolveBreakpointSite())
+        LLDB_LOG_ERROR(log, std::move(error), "{0}");
+    }
   }
 }
 
@@ -212,7 +221,8 @@ BreakpointLocationSP BreakpointLocationList::AddLocation(
   if (!bp_loc_sp) {
     bp_loc_sp = Create(addr, resolve_indirect_symbols);
     if (bp_loc_sp) {
-      bp_loc_sp->ResolveBreakpointSite();
+      if (llvm::Error error = bp_loc_sp->ResolveBreakpointSite())
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), std::move(error), "{0}");
 
       if (new_location)
         *new_location = true;
@@ -234,7 +244,7 @@ void BreakpointLocationList::SwapLocation(
   to_location_sp->SwapLocation(from_location_sp);
   RemoveLocation(from_location_sp);
   m_address_to_location[to_location_sp->GetAddress()] = to_location_sp;
-  to_location_sp->ResolveBreakpointSite();
+  llvm::consumeError(to_location_sp->ResolveBreakpointSite());
 }
 
 bool BreakpointLocationList::RemoveLocation(

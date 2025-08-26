@@ -135,11 +135,9 @@ int __kmp_tp_cached = 0;
 int __kmp_dispatch_num_buffers = KMP_DFLT_DISP_NUM_BUFF;
 int __kmp_dflt_max_active_levels = 1; // Nesting off by default
 bool __kmp_dflt_max_active_levels_set = false; // Don't override set value
-#if KMP_NESTED_HOT_TEAMS
 int __kmp_hot_teams_mode = 0; /* 0 - free extra threads when reduced */
 /* 1 - keep extra threads when reduced */
 int __kmp_hot_teams_max_level = 1; /* nesting level of hot teams */
-#endif
 enum library_type __kmp_library = library_none;
 enum sched_type __kmp_sched =
     kmp_sch_default; /* scheduling method for runtime scheduling */

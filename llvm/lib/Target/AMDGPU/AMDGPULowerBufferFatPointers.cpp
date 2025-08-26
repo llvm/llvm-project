@@ -225,6 +225,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/AttributeMask.h"
@@ -243,6 +244,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Alignment.h"
@@ -599,8 +601,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitStoreInst(StoreInst &SI) {
 
   IRB.SetInsertPoint(&SI);
   Value *IntV = fatPtrsToInts(V, Ty, IntTy, V->getName());
-  for (auto *Dbg : at::getAssignmentMarkers(&SI))
-    Dbg->setValue(IntV);
+  for (auto *Dbg : at::getDVRAssignmentMarkers(&SI))
+    Dbg->setRawLocation(ValueAsMetadata::get(IntV));
 
   SI.setOperand(0, IntV);
   return true;
@@ -1361,6 +1363,7 @@ public:
   PtrParts visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI);
   PtrParts visitGetElementPtrInst(GetElementPtrInst &GEP);
 
+  PtrParts visitPtrToAddrInst(PtrToAddrInst &PA);
   PtrParts visitPtrToIntInst(PtrToIntInst &PI);
   PtrParts visitIntToPtrInst(IntToPtrInst &IP);
   PtrParts visitAddrSpaceCastInst(AddrSpaceCastInst &I);
@@ -1583,15 +1586,13 @@ void SplitPtrStructs::killAndReplaceSplitInstructions(
     if (!SplitUsers.contains(I))
       continue;
 
-    SmallVector<DbgValueInst *> Dbgs;
-    findDbgValues(Dbgs, I);
-    for (auto *Dbg : Dbgs) {
-      IRB.SetInsertPoint(Dbg);
+    SmallVector<DbgVariableRecord *> Dbgs;
+    findDbgValues(I, Dbgs);
+    for (DbgVariableRecord *Dbg : Dbgs) {
       auto &DL = I->getDataLayout();
       assert(isSplitFatPtr(I->getType()) &&
              "We should've RAUW'd away loads, stores, etc. at this point");
-      auto *OffDbg = cast<DbgValueInst>(Dbg->clone());
-      copyMetadata(OffDbg, Dbg);
+      DbgVariableRecord *OffDbg = Dbg->clone();
       auto [Rsrc, Off] = getPtrParts(I);
 
       int64_t RsrcSz = DL.getTypeSizeInBits(Rsrc->getType());
@@ -1606,9 +1607,9 @@ void SplitPtrStructs::killAndReplaceSplitInstructions(
       if (OffExpr) {
         OffDbg->setExpression(*OffExpr);
         OffDbg->replaceVariableLocationOp(I, Off);
-        IRB.Insert(OffDbg);
+        OffDbg->insertBefore(Dbg);
       } else {
-        OffDbg->deleteValue();
+        OffDbg->eraseFromParent();
       }
       if (RsrcExpr) {
         Dbg->setExpression(*RsrcExpr);
@@ -1953,6 +1954,21 @@ PtrParts SplitPtrStructs::visitPtrToIntInst(PtrToIntInst &PI) {
   Res->takeName(&PI);
   SplitUsers.insert(&PI);
   PI.replaceAllUsesWith(Res);
+  return {nullptr, nullptr};
+}
+
+PtrParts SplitPtrStructs::visitPtrToAddrInst(PtrToAddrInst &PA) {
+  Value *Ptr = PA.getPointerOperand();
+  if (!isSplitFatPtr(Ptr->getType()))
+    return {nullptr, nullptr};
+  IRB.SetInsertPoint(&PA);
+
+  auto [Rsrc, Off] = getPtrParts(Ptr);
+  Value *Res = IRB.CreateIntCast(Off, PA.getType(), /*isSigned=*/false);
+  copyMetadata(Res, &PA);
+  Res->takeName(&PA);
+  SplitUsers.insert(&PA);
+  PA.replaceAllUsesWith(Res);
   return {nullptr, nullptr};
 }
 
@@ -2352,8 +2368,12 @@ static bool containsBufferFatPointers(const Function &F,
                                       BufferFatPtrToStructTypeMap *TypeMap) {
   bool HasFatPointers = false;
   for (const BasicBlock &BB : F)
-    for (const Instruction &I : BB)
+    for (const Instruction &I : BB) {
       HasFatPointers |= (I.getType() != TypeMap->remapType(I.getType()));
+      // Catch null pointer constants in loads, stores, etc.
+      for (const Value *V : I.operand_values())
+        HasFatPointers |= (V->getType() != TypeMap->remapType(V->getType()));
+    }
   return HasFatPointers;
 }
 

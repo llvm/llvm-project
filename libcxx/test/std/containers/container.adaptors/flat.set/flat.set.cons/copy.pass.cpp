@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <deque>
 #include <flat_set>
 #include <vector>
 
@@ -21,10 +22,11 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     using C = test_less<int>;
-    std::vector<int, test_allocator<int>> ks({1, 3, 5}, test_allocator<int>(6));
+    KeyContainer<int, test_allocator<int>> ks({1, 3, 5}, test_allocator<int>(6));
     using M = std::flat_set<int, C, decltype(ks)>;
     auto mo = M(ks, C(5));
     auto m  = mo;
@@ -42,7 +44,7 @@ void test() {
   }
   {
     using C  = test_less<int>;
-    using Ks = std::vector<int, other_allocator<int>>;
+    using Ks = KeyContainer<int, other_allocator<int>>;
     auto ks  = Ks({1, 3, 5}, other_allocator<int>(6));
     using M  = std::flat_set<int, C, Ks>;
     auto mo  = M(Ks(ks, other_allocator<int>(6)), C(5));
@@ -61,8 +63,21 @@ void test() {
   }
 }
 
+constexpr bool test() {
+  test<std::vector>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
+
+  return true;
+}
+
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

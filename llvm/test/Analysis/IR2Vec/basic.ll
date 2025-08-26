@@ -1,57 +1,79 @@
-; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_vocab.json %s 2>&1 | FileCheck %s -check-prefix=3D-CHECK
-; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_5D_vocab.json %s 2>&1 | FileCheck %s -check-prefix=5D-CHECK
+; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_opc_vocab.json %s 2>&1 | FileCheck %s -check-prefix=3D-CHECK-OPC
+; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_type_vocab.json %s 2>&1 | FileCheck %s -check-prefix=3D-CHECK-TYPE
+; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_arg_vocab.json %s 2>&1 | FileCheck %s -check-prefix=3D-CHECK-ARG
 ; RUN: not opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/incorrect_vocab1.json %s 2>&1 | FileCheck %s -check-prefix=INCORRECT-VOCAB1-CHECK
 ; RUN: not opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/incorrect_vocab2.json %s 2>&1 | FileCheck %s -check-prefix=INCORRECT-VOCAB2-CHECK
 ; RUN: not opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/incorrect_vocab3.json %s 2>&1 | FileCheck %s -check-prefix=INCORRECT-VOCAB3-CHECK
 ; RUN: not opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/incorrect_vocab4.json %s 2>&1 | FileCheck %s -check-prefix=INCORRECT-VOCAB4-CHECK
  
-define dso_local i32 @abc(i32 %0, i32 %1) {
+define dso_local noundef float @_Z3abcif(i32 noundef %a, float noundef %b) #0 {
 entry:
-  %3 = alloca i32, align 4
-  %4 = alloca i32, align 4
-  store i32 %0, ptr %3, align 4
-  store i32 %1, ptr %4, align 4
-  %5 = load i32, ptr %3, align 4
-  %6 = load i32, ptr %4, align 4
-  %7 = load i32, ptr %3, align 4
-  %8 = mul nsw i32 %6, %7
-  %9 = add nsw i32 %5, %8
-  ret i32 %9
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca float, align 4
+  store i32 %a, ptr %a.addr, align 4
+  store float %b, ptr %b.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4
+  %1 = load i32, ptr %a.addr, align 4
+  %mul = mul nsw i32 %0, %1
+  %conv = sitofp i32 %mul to float
+  %2 = load float, ptr %b.addr, align 4
+  %add = fadd float %conv, %2
+  ret float %add
 }
 
-; 3D-CHECK: IR2Vec embeddings for function abc:
-; 3D-CHECK-NEXT: Function vector:  [ 51.00 60.00 69.00 ]
-; 3D-CHECK-NEXT: Basic block vectors:
-; 3D-CHECK-NEXT: Basic block: entry:
-; 3D-CHECK-NEXT:  [ 51.00 60.00 69.00 ]
-; 3D-CHECK-NEXT: Instruction vectors:
-; 3D-CHECK-NEXT: Instruction:   %2 = alloca i32, align 4 [ 1.00 2.00 3.00 ]
-; 3D-CHECK-NEXT: Instruction:   %3 = alloca i32, align 4 [ 1.00 2.00 3.00 ]
-; 3D-CHECK-NEXT: Instruction:   store i32 %0, ptr %2, align 4 [ 7.00 8.00 9.00 ]
-; 3D-CHECK-NEXT: Instruction:   store i32 %1, ptr %3, align 4 [ 7.00 8.00 9.00 ]
-; 3D-CHECK-NEXT: Instruction:   %4 = load i32, ptr %2, align 4 [ 4.00 5.00 6.00 ]
-; 3D-CHECK-NEXT: Instruction:   %5 = load i32, ptr %3, align 4 [ 4.00 5.00 6.00 ]
-; 3D-CHECK-NEXT: Instruction:   %6 = load i32, ptr %2, align 4 [ 4.00 5.00 6.00 ]
-; 3D-CHECK-NEXT: Instruction:   %7 = mul nsw i32 %5, %6 [ 13.00 14.00 15.00 ]
-; 3D-CHECK-NEXT: Instruction:   %8 = add nsw i32 %4, %7 [ 10.00 11.00 12.00 ]
-; 3D-CHECK-NEXT: Instruction:   ret i32 %8 [ 0.00 0.00 0.00 ]
+; 3D-CHECK-OPC: IR2Vec embeddings for function _Z3abcif:
+; 3D-CHECK-OPC-NEXT: Function vector: [ 878.00  889.00  900.00 ]
+; 3D-CHECK-OPC-NEXT: Basic block vectors:
+; 3D-CHECK-OPC-NEXT: Basic block: entry:
+; 3D-CHECK-OPC-NEXT:  [ 878.00  889.00  900.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction vectors:
+; 3D-CHECK-OPC-NEXT: Instruction:   %a.addr = alloca i32, align 4 [ 91.00  92.00  93.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   %b.addr = alloca float, align 4 [ 91.00  92.00  93.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   store i32 %a, ptr %a.addr, align 4 [ 97.00  98.00  99.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   store float %b, ptr %b.addr, align 4 [ 97.00  98.00  99.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   %0 = load i32, ptr %a.addr, align 4 [ 94.00  95.00  96.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   %1 = load i32, ptr %a.addr, align 4 [ 94.00  95.00  96.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   %mul = mul nsw i32 %0, %1 [ 49.00  50.00  51.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   %conv = sitofp i32 %mul to float [ 130.00  131.00  132.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   %2 = load float, ptr %b.addr, align 4 [ 94.00  95.00  96.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   %add = fadd float %conv, %2 [ 40.00  41.00  42.00 ]
+; 3D-CHECK-OPC-NEXT: Instruction:   ret float %add [ 1.00  2.00  3.00 ]
 
-; 5D-CHECK: IR2Vec embeddings for function abc:
-; 5D-CHECK-NEXT: Function vector:  [ 16.50  22.00  27.50  61.50  72.95 ]
-; 5D-CHECK-NEXT: Basic block vectors:
-; 5D-CHECK-NEXT: Basic block: entry:
-; 5D-CHECK-NEXT:  [ 16.50  22.00  27.50  61.50  72.95 ]
-; 5D-CHECK-NEXT: Instruction vectors:
-; 5D-CHECK-NEXT: Instruction:   %2 = alloca i32, align 4 [ -0.10  -0.20  -0.30  1.00  2.00 ]
-; 5D-CHECK-NEXT: Instruction:   %3 = alloca i32, align 4 [ -0.10  -0.20  -0.30  1.00  2.00 ]
-; 5D-CHECK-NEXT: Instruction:   store i32 %0, ptr %2, align 4 [ -0.30  0.20  0.70  9.20  10.80 ]
-; 5D-CHECK-NEXT: Instruction:   store i32 %1, ptr %3, align 4 [ -0.30  0.20  0.70  9.20  10.80 ]
-; 5D-CHECK-NEXT: Instruction:   %4 = load i32, ptr %2, align 4 [ -0.30  -0.10  0.10  5.10  6.05 ]
-; 5D-CHECK-NEXT: Instruction:   %5 = load i32, ptr %3, align 4 [ -0.30  -0.10  0.10  5.10  6.05 ]
-; 5D-CHECK-NEXT: Instruction:   %6 = load i32, ptr %2, align 4 [ -0.30  -0.10  0.10  5.10  6.05 ]
-; 5D-CHECK-NEXT: Instruction:   %7 = mul nsw i32 %5, %6 [ 12.90  14.80  16.70  2.50  2.95 ]
-; 5D-CHECK-NEXT: Instruction:   %8 = add nsw i32 %4, %7 [ -0.10  0.70  1.50  13.70  15.25 ]
-; 5D-CHECK-NEXT: Instruction:   ret i32 %8 [ 5.40  6.80  8.20  9.60  11.00 ]
+; 3D-CHECK-TYPE: IR2Vec embeddings for function _Z3abcif:
+; 3D-CHECK-TYPE-NEXT: Function vector: [ 61.00  66.50  72.00 ]
+; 3D-CHECK-TYPE-NEXT: Basic block vectors:
+; 3D-CHECK-TYPE-NEXT: Basic block: entry:
+; 3D-CHECK-TYPE-NEXT:  [ 61.00  66.50  72.00 ]
+; 3D-CHECK-TYPE-NEXT: Instruction vectors:
+; 3D-CHECK-TYPE-NEXT: Instruction:   %a.addr = alloca i32, align 4 [ 12.50  13.00  13.50 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   %b.addr = alloca float, align 4 [ 12.50  13.00  13.50 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   store i32 %a, ptr %a.addr, align 4 [ 2.00  2.50  3.00 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   store float %b, ptr %b.addr, align 4 [ 2.00  2.50  3.00 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   %0 = load i32, ptr %a.addr, align 4 [ 9.50  10.00  10.50 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   %1 = load i32, ptr %a.addr, align 4 [ 9.50  10.00  10.50 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   %mul = mul nsw i32 %0, %1 [ 9.50  10.00  10.50 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   %conv = sitofp i32 %mul to float [ 0.50  1.00  1.50 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   %2 = load float, ptr %b.addr, align 4 [ 0.50  1.00  1.50 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   %add = fadd float %conv, %2 [ 0.50  1.00  1.50 ]
+; 3D-CHECK-TYPE-NEXT: Instruction:   ret float %add [ 2.00  2.50  3.00 ]
+
+; 3D-CHECK-ARG: IR2Vec embeddings for function _Z3abcif:
+; 3D-CHECK-ARG-NEXT: Function vector: [ 22.80  25.80  28.80 ]
+; 3D-CHECK-ARG-NEXT: Basic block vectors:
+; 3D-CHECK-ARG-NEXT: Basic block: entry:
+; 3D-CHECK-ARG-NEXT:  [ 22.80  25.80  28.80 ]
+; 3D-CHECK-ARG-NEXT: Instruction vectors:
+; 3D-CHECK-ARG-NEXT: Instruction:   %a.addr = alloca i32, align 4 [ 1.40  1.60  1.80 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   %b.addr = alloca float, align 4 [ 1.40  1.60  1.80 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   store i32 %a, ptr %a.addr, align 4 [ 2.80  3.20  3.60 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   store float %b, ptr %b.addr, align 4 [ 2.80  3.20  3.60 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   %0 = load i32, ptr %a.addr, align 4 [ 0.80  1.00  1.20 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   %1 = load i32, ptr %a.addr, align 4 [ 0.80  1.00  1.20 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   %mul = mul nsw i32 %0, %1 [ 4.00  4.40  4.80 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   %conv = sitofp i32 %mul to float [ 2.00  2.20  2.40 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   %2 = load float, ptr %b.addr, align 4 [ 0.80  1.00  1.20 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   %add = fadd float %conv, %2 [ 4.00  4.40  4.80 ]
+; 3D-CHECK-ARG-NEXT: Instruction:   ret float %add [ 2.00  2.20  2.40 ]
 
 ; INCORRECT-VOCAB1-CHECK: error: Error reading vocabulary: Missing 'Opcodes' section in vocabulary file
 

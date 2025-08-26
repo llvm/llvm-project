@@ -120,6 +120,4 @@ _CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
 
 #endif // cl_khr_fp16
 
-#define ALIGNED(x) __attribute__((aligned(x)))
-
 #endif // __CLC_MATH_MATH_H__
