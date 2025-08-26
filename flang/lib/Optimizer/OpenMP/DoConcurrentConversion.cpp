@@ -368,22 +368,28 @@ private:
 
         mlir::OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointAfter(firReducer);
+        std::string ompReducerName = sym.getLeafReference().str() + ".omp";
 
-        auto ompReducer = mlir::omp::DeclareReductionOp::create(
-            rewriter, firReducer.getLoc(),
-            sym.getLeafReference().str() + ".omp",
-            firReducer.getTypeAttr().getValue());
+        auto ompReducer = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::omp::DeclareReductionOp>(
+            loop, rewriter.getStringAttr(ompReducerName));
 
-        cloneFIRRegionToOMP(firReducer.getAllocRegion(),
-                            ompReducer.getAllocRegion());
-        cloneFIRRegionToOMP(firReducer.getInitializerRegion(),
-                            ompReducer.getInitializerRegion());
-        cloneFIRRegionToOMP(firReducer.getReductionRegion(),
-                            ompReducer.getReductionRegion());
-        cloneFIRRegionToOMP(firReducer.getAtomicReductionRegion(),
-                            ompReducer.getAtomicReductionRegion());
-        cloneFIRRegionToOMP(firReducer.getCleanupRegion(),
-                            ompReducer.getCleanupRegion());
+        if (!ompReducer) {
+          ompReducer = mlir::omp::DeclareReductionOp::create(
+              rewriter, firReducer.getLoc(), ompReducerName,
+              firReducer.getTypeAttr().getValue());
+
+          cloneFIRRegionToOMP(firReducer.getAllocRegion(),
+                              ompReducer.getAllocRegion());
+          cloneFIRRegionToOMP(firReducer.getInitializerRegion(),
+                              ompReducer.getInitializerRegion());
+          cloneFIRRegionToOMP(firReducer.getReductionRegion(),
+                              ompReducer.getReductionRegion());
+          cloneFIRRegionToOMP(firReducer.getAtomicReductionRegion(),
+                              ompReducer.getAtomicReductionRegion());
+          cloneFIRRegionToOMP(firReducer.getCleanupRegion(),
+                              ompReducer.getCleanupRegion());
+        }
 
         wsloopClauseOps.reductionVars.push_back(op);
         wsloopClauseOps.reductionByref.push_back(byRef);
@@ -444,11 +450,7 @@ public:
       : DoConcurrentConversionPassBase(options) {}
 
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
-
-    if (func.isDeclaration())
-      return;
-
+    mlir::ModuleOp module = getOperation();
     mlir::MLIRContext *context = &getContext();
 
     if (mapTo != flangomp::DoConcurrentMappingKind::DCMK_Host &&
@@ -472,8 +474,8 @@ public:
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
 
-    if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
-                                               std::move(patterns)))) {
+    if (mlir::failed(
+            mlir::applyFullConversion(module, target, std::move(patterns)))) {
       signalPassFailure();
     }
   }
