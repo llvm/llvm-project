@@ -319,3 +319,99 @@ gpu.module @test {
     gpu.return
   }
 }
+
+// -----
+// CHECK-LABEL: gpu.func @memref_extract_aligned_pointer_as_index(
+// CHECK:  %{{.*}} = memref.extract_aligned_pointer_as_index %{{.*}} : memref<256x256xf16> -> index
+gpu.module @test {
+  gpu.func @memref_extract_aligned_pointer_as_index(%arg0 : memref<256x256xf16>) {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<1.000000e+00> : vector<16xf16>
+    %ptr = memref.extract_aligned_pointer_as_index %arg0 : memref<256x256xf16> -> index
+    %ptr_i64 = arith.index_cast %ptr : index to i64
+    %tdesc = xegpu.create_nd_tdesc %ptr_i64[%c0], shape: [16], strides: [16] : i64
+      -> !xegpu.tensor_desc<16xf16, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
+    xegpu.store_nd %cst, %tdesc : vector<16xf16>, !xegpu.tensor_desc<16xf16, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
+    gpu.return
+  }
+}
+
+
+// -----
+// CHECK-LABEL: gpu.func @vector_transpose(
+// CHECK:         %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<2xf32>
+// CHECK:         %[[DEST:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<2x16xf32> -> !xegpu.tensor_desc<2x16xf32>
+// CHECK:         xegpu.store_nd %[[CST]], %[[DEST]]  : vector<2xf32>, !xegpu.tensor_desc<2x16xf32>
+gpu.module @test {
+  gpu.func @vector_transpose(%arg0: memref<2x16xf32>) {
+    %cst = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>} dense<1.000000e+00>
+      : vector<16x2xf32>
+    %c0 = arith.constant 0 : index
+    %transpose = vector.transpose %cst, [1, 0] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : vector<16x2xf32> to vector<2x16xf32>
+    %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<2x16xf32>
+      -> !xegpu.tensor_desc<2x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    xegpu.store_nd %transpose, %0 : vector<2x16xf32>,
+      !xegpu.tensor_desc<2x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    gpu.return
+  }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @vector_bitcast(
+// CHECK:      %[[CAST:.*]] = vector.bitcast %{{.*}} : vector<4x2xi8> to vector<4x1xi16>
+// CHECK-NEXT: %[[DEST:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<4x16xi16> -> !xegpu.tensor_desc<4x16xi16>
+// CHECK-NEXT: %[[T0:.*]] = vector.shape_cast %[[CAST]] : vector<4x1xi16> to vector<4xi16>
+// CHECK-NEXT: xegpu.store_nd %[[T0]], %[[DEST]]  : vector<4xi16>, !xegpu.tensor_desc<4x16xi16>
+gpu.module @test {
+  gpu.func @vector_bitcast(%arg0: memref<4x16xi16>) {
+    %cst = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}
+      : () -> (vector<4x32xi8>)
+    %bitcast = vector.bitcast %cst {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : vector<4x32xi8> to vector<4x16xi16>
+    %c0 = arith.constant 0 : index
+    %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<4x16xi16>
+      -> !xegpu.tensor_desc<4x16xi16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    xegpu.store_nd %bitcast, %0 : vector<4x16xi16>,
+      !xegpu.tensor_desc<4x16xi16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    gpu.return
+  }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @mma_transpose_b(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x8xi32>,
+// CHECK-SAME: %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
+// CHECK:         %[[ADESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
+// CHECK-NEXT:    %[[A:.*]] = xegpu.load_nd %[[ADESC]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8xf16>
+// CHECK-NEXT:    %[[BDESC:.*]] = xegpu.create_nd_tdesc %[[ARG1]][%{{.*}}] : memref<16x8xi32> -> !xegpu.tensor_desc<16x8xi32>
+// CHECK-NEXT:    %[[B:.*]] = xegpu.load_nd %[[BDESC]] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<16x8xi32> -> vector<8xi32>
+// CHECK-NEXT:    %[[BCAST0:.*]] = vector.shape_cast %[[B]] : vector<8xi32> to vector<1x8xi32>
+// CHECK-NEXT:    %[[BCAST1:.*]] = vector.bitcast %[[BCAST0]] : vector<1x8xi32> to vector<1x16xf16>
+// CHECK-NEXT:    %[[BCAST2:.*]] = vector.shape_cast %[[BCAST1]] : vector<1x16xf16> to vector<16xf16>
+// CHECK-NEXT:    %[[C:.*]] = xegpu.dpas %[[A]], %[[BCAST2]] : vector<8xf16>, vector<16xf16> -> vector<8xf32>
+gpu.module @test {
+  gpu.func @mma_transpose_b(%arg0: memref<8x16xf16>, %arg1: memref<16x8xi32>, %arg2: memref<8x16xf32>) {
+    %c0 = arith.constant 0 : index
+    %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xf16>
+      -> !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    %1 = xegpu.load_nd %0  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x16xf16>
+    %2 = xegpu.create_nd_tdesc %arg1[%c0, %c0] : memref<16x8xi32>
+      -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
+    %3 = xegpu.load_nd %2  {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
+      : !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>> -> vector<16x8xi32>
+    %4 = vector.bitcast %3 {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>}
+      : vector<16x8xi32> to vector<16x16xf16>
+    %5 = vector.transpose %4, [1, 0] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+      : vector<16x16xf16> to vector<16x16xf16>
+    %6 = xegpu.dpas %1, %5 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+    %7 = xegpu.create_nd_tdesc %arg2[%c0, %c0] : memref<8x16xf32>
+      -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    xegpu.store_nd %6, %7 : vector<8x16xf32>,
+      !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    gpu.return
+
+  }
+}
