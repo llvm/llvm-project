@@ -152,7 +152,7 @@ class CreateNdDescToXeVMPattern
     auto loc = op.getLoc();
     auto source = op.getSource();
     // Op is lowered to a code sequence that populates payload.
-    // payload is a 8xi32 vector.
+    // Payload is a 8xi32 vector.
     Type payloadElemTy = rewriter.getI32Type();
     Type i64Ty = rewriter.getI64Type();
     VectorType payloadTy = VectorType::get(8, payloadElemTy);
@@ -179,7 +179,7 @@ class CreateNdDescToXeVMPattern
     auto sourceTy = source.getType();
     auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
     // If source is a memref, we need to extract the aligned pointer as index.
-    // pointer type is passed as i32 or i64 by type converter.
+    // Pointer type is passed as i32 or i64 by type converter.
     if (sourceMemrefTy) {
       baseAddr =
           memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
@@ -190,7 +190,7 @@ class CreateNdDescToXeVMPattern
     } else {
       baseAddr = adaptor.getSource();
     }
-    // utility for creating offset values from op fold result.
+    // Utility for creating offset values from op fold result.
     auto createOffset = [&](SmallVector<OpFoldResult> &ofrVec,
                             unsigned idx) -> Value {
       Value val = getValueOrCreateConstantIntOp(rewriter, loc, ofrVec[idx]);
@@ -212,10 +212,10 @@ class CreateNdDescToXeVMPattern
     baseShapeW = createOffset(mixedSizes, rank - 1);
     baseShapeH = createOffset(mixedSizes, rank - 2);
     if (sourceMemrefTy) {
-      // cast index to i64.
+      // Cast index to i64.
       baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
     } else if (baseAddr.getType() != i64Ty) {
-      // pointer type may be i32. Cast to i64 if needed.
+      // Pointer type may be i32. Cast to i64 if needed.
       baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
     }
     // Populate payload.
@@ -255,7 +255,7 @@ class UpdateNdOffsetToXeVMPattern
     if (mixedOffsets.size() != 2)
       return rewriter.notifyMatchFailure(op, "Expected 2D offsets.");
     auto tdesc = adaptor.getTensorDesc();
-    // utility for updating payload offset values from op fold result.
+    // Utility for updating payload offset values from op fold result.
     auto updateOffset = [&](unsigned idx, int payloadPos) -> Value {
       Value offset =
           getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[idx]);
@@ -425,7 +425,7 @@ class CreateDescToXeVMPattern
           op, "Expected element type bit width to be multiple of 8.");
     }
     auto loc = op.getLoc();
-    // offsets are provided as scalar i64 by type converter.
+    // Offsets are provided as scalar i64 by type converter.
     auto offsets = adaptor.getOffsets();
     // Source type can be a 1D memref or pointer type (ui64, ui32, i64 or i32).
     // But type converter will convert them to integer types.
@@ -453,8 +453,8 @@ class UpdateOffsetToXeVMPattern
           op, "Expected element type bit width to be multiple of 8.");
     }
     auto loc = op.getLoc();
-    // scatter descriptor is provided as scalar i64 by type converter.
-    // offsets are provided as scalar i64 by type converter.
+    // Scatter descriptor is provided as scalar i64 by type converter.
+    // Offsets are provided as scalar i64 by type converter.
     Value newOffset = addOffset(rewriter, loc, adaptor.getTensorDesc(),
                                 adaptor.getOffsets(), eBw / 8);
     rewriter.replaceOp(op, newOffset);
@@ -583,7 +583,7 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       scf::YieldOp::create(rewriter, loc, ValueRange{loaded});
       rewriter.replaceOp(op, ifOp.getResult(0));
     } else {
-      // if mask is true, perform the store.
+      // If mask is true, perform the store.
       scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, maskForLane, false);
       auto body = ifOp.getBody();
       rewriter.setInsertionPointToStart(body);
@@ -758,7 +758,7 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
         VectorType::get(cvecty.getNumElements(), cvecty.getElementType());
     if (cvecty != cNty)
       c = vector::ShapeCastOp::create(rewriter, loc, cNty, c);
-    // below are uArch dependent values, should move away from hardcoding
+    // Below are uArch dependent values, should move away from hardcoding
     constexpr int32_t systolicDepth{8};
     constexpr int32_t executionSize{16};
     Value dpasRes = xevm::MMAOp::create(
@@ -818,7 +818,6 @@ matchSimpleAtomicOp(arith::AtomicRMWKind arithKind) {
   default:
     return std::nullopt;
   }
-  llvm_unreachable("Invalid AtomicRMWKind");
 }
 
 class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
