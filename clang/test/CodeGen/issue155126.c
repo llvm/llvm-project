@@ -1,7 +1,5 @@
-// RUN: %clang_cc1 -std=c23 -verify %s
-// RUN: %clang_cc1 -std=c23 -verify -fexperimental-new-constant-interpreter %s
-
-// expected-no-diagnostics
+// RUN: %clang_cc1 -std=c23 %s -emit-llvm -o -
+// RUN: %clang_cc1 -std=c23 %s -emit-llvm -o - -fexperimental-new-constant-interpreter
 
 enum e : bool { b = true };
 void foo ()
