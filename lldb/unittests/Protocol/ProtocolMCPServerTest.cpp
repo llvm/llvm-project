@@ -282,7 +282,6 @@ TEST_F(ProtocolServerMCPTest, ToolsCallFail) {
 TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
   bool handler_called = false;
   std::condition_variable cv;
-  std::mutex mutex;
 
   server_up->AddNotificationHandler(
       "notifications/initialized",
