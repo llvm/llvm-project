@@ -6,40 +6,30 @@
 define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; WASM32-LABEL: test_ctselect_v4i32:
 ; WASM32:         .functype test_ctselect_v4i32 (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shl
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4i32:
 ; WASM64:         .functype test_ctselect_v4i32 (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shl
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b)
   ret <4 x i32> %result
@@ -49,40 +39,30 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 define <8 x i16> @test_ctselect_v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b) {
 ; WASM32-LABEL: test_ctselect_v8i16:
 ; WASM32:         .functype test_ctselect_v8i16 (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i16x8.splat
 ; WASM32-NEXT:    i32.const 15
 ; WASM32-NEXT:    i16x8.shl
 ; WASM32-NEXT:    i32.const 15
 ; WASM32-NEXT:    i16x8.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v8i16:
 ; WASM64:         .functype test_ctselect_v8i16 (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i16x8.splat
 ; WASM64-NEXT:    i32.const 15
 ; WASM64-NEXT:    i16x8.shl
 ; WASM64-NEXT:    i32.const 15
 ; WASM64-NEXT:    i16x8.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <8 x i16> @llvm.ct.select.v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b)
   ret <8 x i16> %result
@@ -92,40 +72,30 @@ define <8 x i16> @test_ctselect_v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b) {
 define <16 x i8> @test_ctselect_v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b) {
 ; WASM32-LABEL: test_ctselect_v16i8:
 ; WASM32:         .functype test_ctselect_v16i8 (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i8x16.splat
 ; WASM32-NEXT:    i32.const 7
 ; WASM32-NEXT:    i8x16.shl
 ; WASM32-NEXT:    i32.const 7
 ; WASM32-NEXT:    i8x16.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v16i8:
 ; WASM64:         .functype test_ctselect_v16i8 (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i8x16.splat
 ; WASM64-NEXT:    i32.const 7
 ; WASM64-NEXT:    i8x16.shl
 ; WASM64-NEXT:    i32.const 7
 ; WASM64-NEXT:    i8x16.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <16 x i8> @llvm.ct.select.v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b)
   ret <16 x i8> %result
@@ -135,40 +105,30 @@ define <16 x i8> @test_ctselect_v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b) {
 define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
 ; WASM32-LABEL: test_ctselect_v2i64:
 ; WASM32:         .functype test_ctselect_v2i64 (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 63
 ; WASM32-NEXT:    i64x2.shl
 ; WASM32-NEXT:    i32.const 63
 ; WASM32-NEXT:    i64x2.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v2i64:
 ; WASM64:         .functype test_ctselect_v2i64 (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 63
 ; WASM64-NEXT:    i64x2.shl
 ; WASM64-NEXT:    i32.const 63
 ; WASM64-NEXT:    i64x2.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <2 x i64> @llvm.ct.select.v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %result
@@ -178,40 +138,30 @@ define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
 define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
 ; WASM32-LABEL: test_ctselect_v4f32:
 ; WASM32:         .functype test_ctselect_v4f32 (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shl
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4f32:
 ; WASM64:         .functype test_ctselect_v4f32 (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shl
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <4 x float> @llvm.ct.select.v4f32(i1 %cond, <4 x float> %a, <4 x float> %b)
   ret <4 x float> %result
@@ -221,40 +171,30 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 define <2 x double> @test_ctselect_v2f64(i1 %cond, <2 x double> %a, <2 x double> %b) {
 ; WASM32-LABEL: test_ctselect_v2f64:
 ; WASM32:         .functype test_ctselect_v2f64 (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 63
 ; WASM32-NEXT:    i64x2.shl
 ; WASM32-NEXT:    i32.const 63
 ; WASM32-NEXT:    i64x2.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v2f64:
 ; WASM64:         .functype test_ctselect_v2f64 (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 63
 ; WASM64-NEXT:    i64x2.shl
 ; WASM64-NEXT:    i32.const 63
 ; WASM64-NEXT:    i64x2.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <2 x double> @llvm.ct.select.v2f64(i1 %cond, <2 x double> %a, <2 x double> %b)
   ret <2 x double> %result
@@ -264,44 +204,34 @@ define <2 x double> @test_ctselect_v2f64(i1 %cond, <2 x double> %a, <2 x double>
 define <4 x i32> @test_ctselect_v4i32_aligned_load(i1 %cond, ptr %p1, ptr %p2) {
 ; WASM32-LABEL: test_ctselect_v4i32_aligned_load:
 ; WASM32:         .functype test_ctselect_v4i32_aligned_load (i32, i32, i32) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    v128.load 0
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    v128.load 0
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shl
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.load 0
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    v128.load 0
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4i32_aligned_load:
 ; WASM64:         .functype test_ctselect_v4i32_aligned_load (i32, i64, i64) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    v128.load 0
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    v128.load 0
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shl
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.load 0
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    v128.load 0
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %a = load <4 x i32>, ptr %p1, align 16
   %b = load <4 x i32>, ptr %p2, align 16
@@ -313,44 +243,34 @@ define <4 x i32> @test_ctselect_v4i32_aligned_load(i1 %cond, ptr %p1, ptr %p2) {
 define <4 x i32> @test_ctselect_v4i32_unaligned_load(i1 %cond, ptr %p1, ptr %p2) {
 ; WASM32-LABEL: test_ctselect_v4i32_unaligned_load:
 ; WASM32:         .functype test_ctselect_v4i32_unaligned_load (i32, i32, i32) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    v128.load 0:p2align=2
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    v128.load 0:p2align=2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shl
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.load 0:p2align=2
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    v128.load 0:p2align=2
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4i32_unaligned_load:
 ; WASM64:         .functype test_ctselect_v4i32_unaligned_load (i32, i64, i64) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    v128.load 0:p2align=2
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    v128.load 0:p2align=2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shl
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.load 0:p2align=2
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    v128.load 0:p2align=2
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %a = load <4 x i32>, ptr %p1, align 4
   %b = load <4 x i32>, ptr %p2, align 4
@@ -362,43 +282,33 @@ define <4 x i32> @test_ctselect_v4i32_unaligned_load(i1 %cond, ptr %p1, ptr %p2)
 define void @test_ctselect_v4i32_store(i1 %cond, <4 x i32> %a, <4 x i32> %b, ptr %out) {
 ; WASM32-LABEL: test_ctselect_v4i32_store:
 ; WASM32:         .functype test_ctselect_v4i32_store (i32, v128, v128, i32) -> ()
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shl
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 4
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 4
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    v128.store 0
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4i32_store:
 ; WASM64:         .functype test_ctselect_v4i32_store (i32, v128, v128, i64) -> ()
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shl
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 4
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 4
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    v128.store 0
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b)
@@ -410,64 +320,46 @@ define void @test_ctselect_v4i32_store(i1 %cond, <4 x i32> %a, <4 x i32> %b, ptr
 define <4 x i32> @test_ctselect_v4i32_chain(i1 %cond1, i1 %cond2, <4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; WASM32-LABEL: test_ctselect_v4i32_chain:
 ; WASM32:         .functype test_ctselect_v4i32_chain (i32, i32, v128, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128, v128
 ; WASM32-NEXT:  # %bb.0:
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    i32x4.splat
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shl
-; WASM32-NEXT:    i32.const 31
-; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 5
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    local.get 3
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shl
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 6
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    local.get 6
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
-; WASM32-NEXT:    v128.and
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    local.get 4
-; WASM32-NEXT:    local.get 5
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    i32x4.splat
+; WASM32-NEXT:    i32.const 31
+; WASM32-NEXT:    i32x4.shl
+; WASM32-NEXT:    i32.const 31
+; WASM32-NEXT:    i32x4.shr_s
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4i32_chain:
 ; WASM64:         .functype test_ctselect_v4i32_chain (i32, i32, v128, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128, v128
 ; WASM64-NEXT:  # %bb.0:
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    i32x4.splat
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shl
-; WASM64-NEXT:    i32.const 31
-; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 5
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    local.get 3
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shl
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 6
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    local.get 6
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
-; WASM64-NEXT:    v128.and
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    local.get 4
-; WASM64-NEXT:    local.get 5
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    i32x4.splat
+; WASM64-NEXT:    i32.const 31
+; WASM64-NEXT:    i32x4.shl
+; WASM64-NEXT:    i32.const 31
+; WASM64-NEXT:    i32x4.shr_s
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %tmp = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond1, <4 x i32> %a, <4 x i32> %b)
   %result = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond2, <4 x i32> %tmp, <4 x i32> %c)
@@ -478,48 +370,38 @@ define <4 x i32> @test_ctselect_v4i32_chain(i1 %cond1, i1 %cond2, <4 x i32> %a, 
 define <4 x float> @test_ctselect_v4f32_arithmetic(i1 %cond, <4 x float> %x, <4 x float> %y) {
 ; WASM32-LABEL: test_ctselect_v4f32_arithmetic:
 ; WASM32:         .functype test_ctselect_v4f32_arithmetic (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    f32x4.add
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    f32x4.sub
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shl
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    f32x4.add
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    f32x4.sub
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4f32_arithmetic:
 ; WASM64:         .functype test_ctselect_v4f32_arithmetic (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    f32x4.add
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    f32x4.sub
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shl
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    f32x4.add
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    f32x4.sub
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %sum = fadd <4 x float> %x, %y
   %diff = fsub <4 x float> %x, %y
@@ -540,8 +422,6 @@ define <4 x i32> @test_ctselect_v4i32_zeros(i1 %cond, <4 x i32> %a) {
 ; WASM32-NEXT:    i32x4.shr_s
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    v128.const 0, 0, 0, 0
-; WASM32-NEXT:    v128.or
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4i32_zeros:
@@ -555,8 +435,6 @@ define <4 x i32> @test_ctselect_v4i32_zeros(i1 %cond, <4 x i32> %a) {
 ; WASM64-NEXT:    i32x4.shr_s
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    v128.const 0, 0, 0, 0
-; WASM64-NEXT:    v128.or
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond,
                                                    <4 x i32> %a,
@@ -568,40 +446,30 @@ define <4 x i32> @test_ctselect_v4i32_zeros(i1 %cond, <4 x i32> %a) {
 define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b) nounwind {
 ; WASM32-LABEL: test_ctselect_v4i32_args:
 ; WASM32:         .functype test_ctselect_v4i32_args (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shl
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4i32_args:
 ; WASM64:         .functype test_ctselect_v4i32_args (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shl
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %result = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b)
   ret <4 x i32> %result
@@ -611,45 +479,35 @@ define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b)
 define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; WASM32-LABEL: test_ctselect_v4i32_multi_use:
 ; WASM32:         .functype test_ctselect_v4i32_multi_use (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i32x4.splat
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shl
 ; WASM32-NEXT:    i32.const 31
 ; WASM32-NEXT:    i32x4.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    v128.and
+; WASM32-NEXT:    v128.bitselect
+; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
-; WASM32-NEXT:    local.tee 1
-; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    i32x4.add
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v4i32_multi_use:
 ; WASM64:         .functype test_ctselect_v4i32_multi_use (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i32x4.splat
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shl
 ; WASM64-NEXT:    i32.const 31
 ; WASM64-NEXT:    i32x4.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    v128.and
+; WASM64-NEXT:    v128.bitselect
+; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
-; WASM64-NEXT:    local.tee 1
-; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    i32x4.add
 ; WASM64-NEXT:    # fallthrough-return
   %sel = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b)
@@ -661,48 +519,38 @@ define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32
 define <16 x i8> @test_ctselect_v16i8_ops(i1 %cond, <16 x i8> %x, <16 x i8> %y) {
 ; WASM32-LABEL: test_ctselect_v16i8_ops:
 ; WASM32:         .functype test_ctselect_v16i8_ops (i32, v128, v128) -> (v128)
-; WASM32-NEXT:    .local v128
 ; WASM32-NEXT:  # %bb.0:
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    v128.xor
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    v128.and
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    i8x16.splat
 ; WASM32-NEXT:    i32.const 7
 ; WASM32-NEXT:    i8x16.shl
 ; WASM32-NEXT:    i32.const 7
 ; WASM32-NEXT:    i8x16.shr_s
-; WASM32-NEXT:    local.tee 3
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    v128.xor
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    v128.and
-; WASM32-NEXT:    local.get 3
-; WASM32-NEXT:    v128.andnot
-; WASM32-NEXT:    v128.or
+; WASM32-NEXT:    v128.bitselect
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_ctselect_v16i8_ops:
 ; WASM64:         .functype test_ctselect_v16i8_ops (i32, v128, v128) -> (v128)
-; WASM64-NEXT:    .local v128
 ; WASM64-NEXT:  # %bb.0:
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    v128.xor
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    v128.and
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    i8x16.splat
 ; WASM64-NEXT:    i32.const 7
 ; WASM64-NEXT:    i8x16.shl
 ; WASM64-NEXT:    i32.const 7
 ; WASM64-NEXT:    i8x16.shr_s
-; WASM64-NEXT:    local.tee 3
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    v128.xor
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    v128.and
-; WASM64-NEXT:    local.get 3
-; WASM64-NEXT:    v128.andnot
-; WASM64-NEXT:    v128.or
+; WASM64-NEXT:    v128.bitselect
 ; WASM64-NEXT:    # fallthrough-return
   %xor = xor <16 x i8> %x, %y
   %and = and <16 x i8> %x, %y

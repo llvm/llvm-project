@@ -39,12 +39,12 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ;
 ; RV32-LABEL: test_ctselect_extremal_values:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 31
+; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    not a2, a0
-; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    addi a2, a0, -1
+; RV32-NEXT:    neg a0, a0
 ; RV32-NEXT:    and a1, a2, a1
+; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    srli a0, a0, 1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
@@ -59,7 +59,6 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a0, a1
-; RV64-NEXT:    or a0, a0, zero
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_null_ptr:
@@ -67,7 +66,6 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a0, a1
-; RV32-NEXT:    or a0, a0, zero
 ; RV32-NEXT:    ret
   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %ptr, ptr null)
   ret ptr %result
@@ -77,22 +75,22 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 define ptr @test_ctselect_function_ptr(i1 %cond, ptr %func1, ptr %func2) {
 ; RV64-LABEL: test_ctselect_function_ptr:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 63
-; RV64-NEXT:    srai a0, a0, 63
-; RV64-NEXT:    and a1, a0, a1
-; RV64-NEXT:    not a0, a0
-; RV64-NEXT:    and a0, a0, a2
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    addi a3, a0, -1
+; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    and a2, a3, a2
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_function_ptr:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 31
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    and a1, a0, a1
-; RV32-NEXT:    not a0, a0
-; RV32-NEXT:    and a0, a0, a2
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    addi a3, a0, -1
+; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    and a2, a3, a2
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    ret
   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %func1, ptr %func2)
   ret ptr %result
@@ -104,22 +102,22 @@ define ptr @test_ctselect_ptr_cmp(ptr %p1, ptr %p2, ptr %a, ptr %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    neg a1, a0
 ; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    and a2, a0, a2
-; RV64-NEXT:    not a0, a0
-; RV64-NEXT:    and a0, a0, a3
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    and a1, a1, a3
+; RV64-NEXT:    and a0, a0, a2
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_ptr_cmp:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    xor a0, a0, a1
 ; RV32-NEXT:    snez a0, a0
+; RV32-NEXT:    neg a1, a0
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    and a2, a0, a2
-; RV32-NEXT:    not a0, a0
-; RV32-NEXT:    and a0, a0, a3
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
   %cmp = icmp eq ptr %p1, %p2
   %result = call ptr @llvm.ct.select.p0(i1 %cmp, ptr %a, ptr %b)
@@ -132,22 +130,22 @@ define ptr @test_ctselect_ptr_cmp(ptr %p1, ptr %p2, ptr %a, ptr %b) {
 define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
 ; RV64-LABEL: test_ctselect_struct_ptr:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 63
-; RV64-NEXT:    srai a0, a0, 63
-; RV64-NEXT:    and a1, a0, a1
-; RV64-NEXT:    not a0, a0
-; RV64-NEXT:    and a0, a0, a2
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    addi a3, a0, -1
+; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    and a2, a3, a2
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_struct_ptr:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 31
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    and a1, a0, a1
-; RV32-NEXT:    not a0, a0
-; RV32-NEXT:    and a0, a0, a2
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    addi a3, a0, -1
+; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    and a2, a3, a2
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    ret
   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %a, ptr %b)
   ret ptr %result
@@ -187,29 +185,29 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; RV32-LABEL: test_ctselect_deeply_nested:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw t0, 0(sp)
-; RV32-NEXT:    slli a0, a0, 31
-; RV32-NEXT:    slli a1, a1, 31
-; RV32-NEXT:    slli a2, a2, 31
-; RV32-NEXT:    slli a3, a3, 31
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    srai a1, a1, 31
-; RV32-NEXT:    srai a2, a2, 31
-; RV32-NEXT:    srai a3, a3, 31
-; RV32-NEXT:    and a4, a0, a4
-; RV32-NEXT:    not a0, a0
-; RV32-NEXT:    and a0, a0, a5
-; RV32-NEXT:    not a5, a1
-; RV32-NEXT:    and a5, a5, a6
-; RV32-NEXT:    not a6, a2
-; RV32-NEXT:    and a6, a6, a7
-; RV32-NEXT:    not a7, a3
-; RV32-NEXT:    or a0, a4, a0
-; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    andi a1, a1, 1
+; RV32-NEXT:    andi a2, a2, 1
+; RV32-NEXT:    andi a3, a3, 1
+; RV32-NEXT:    addi t1, a0, -1
+; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    and a5, t1, a5
+; RV32-NEXT:    neg t1, a1
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a0, a0, a4
+; RV32-NEXT:    neg a4, a2
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    and a1, a1, a6
+; RV32-NEXT:    neg a6, a3
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    and a2, a2, a7
 ; RV32-NEXT:    or a0, a0, a5
-; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    or a0, a0, a6
-; RV32-NEXT:    and a0, a3, a0
-; RV32-NEXT:    and a1, a7, t0
+; RV32-NEXT:    and a0, t1, a0
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    and a0, a4, a0
+; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    and a0, a6, a0
+; RV32-NEXT:    and a1, a3, t0
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
   %sel1 = call i32 @llvm.ct.select.i32(i1 %c1, i32 %a, i32 %b)
@@ -345,31 +343,31 @@ define void @cmovznz4_builtin_ctselect(i64 %cin, ptr %x, ptr %y, ptr %r) {
 ; RV64-LABEL: cmovznz4_builtin_ctselect:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    snez a0, a0
-; RV64-NEXT:    ld a4, 0(a1)
-; RV64-NEXT:    ld a5, 0(a2)
+; RV64-NEXT:    ld a4, 0(a2)
+; RV64-NEXT:    ld a5, 0(a1)
+; RV64-NEXT:    neg a6, a0
 ; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    not a6, a0
-; RV64-NEXT:    and a4, a0, a4
-; RV64-NEXT:    and a5, a6, a5
-; RV64-NEXT:    or a4, a4, a5
+; RV64-NEXT:    and a4, a6, a4
+; RV64-NEXT:    and a5, a0, a5
+; RV64-NEXT:    or a4, a5, a4
 ; RV64-NEXT:    sd a4, 0(a3)
-; RV64-NEXT:    ld a4, 8(a1)
-; RV64-NEXT:    ld a5, 8(a2)
-; RV64-NEXT:    and a4, a0, a4
-; RV64-NEXT:    and a5, a6, a5
-; RV64-NEXT:    or a4, a4, a5
+; RV64-NEXT:    ld a4, 8(a2)
+; RV64-NEXT:    ld a5, 8(a1)
+; RV64-NEXT:    and a4, a6, a4
+; RV64-NEXT:    and a5, a0, a5
+; RV64-NEXT:    or a4, a5, a4
 ; RV64-NEXT:    sd a4, 8(a3)
-; RV64-NEXT:    ld a4, 16(a1)
-; RV64-NEXT:    ld a5, 16(a2)
-; RV64-NEXT:    and a4, a0, a4
-; RV64-NEXT:    and a5, a6, a5
-; RV64-NEXT:    or a4, a4, a5
+; RV64-NEXT:    ld a4, 16(a2)
+; RV64-NEXT:    ld a5, 16(a1)
+; RV64-NEXT:    and a4, a6, a4
+; RV64-NEXT:    and a5, a0, a5
+; RV64-NEXT:    or a4, a5, a4
 ; RV64-NEXT:    sd a4, 16(a3)
-; RV64-NEXT:    ld a1, 24(a1)
 ; RV64-NEXT:    ld a2, 24(a2)
+; RV64-NEXT:    ld a1, 24(a1)
+; RV64-NEXT:    and a2, a6, a2
 ; RV64-NEXT:    and a0, a0, a1
-; RV64-NEXT:    and a1, a6, a2
-; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    sd a0, 24(a3)
 ; RV64-NEXT:    ret
 ;

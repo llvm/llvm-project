@@ -44,13 +44,13 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 0
+; W32-NEXT:    i32.sub
 ; W32-NEXT:    i32.const 2147483647
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const -1
-; W32-NEXT:    i32.xor
+; W32-NEXT:    i32.add
 ; W32-NEXT:    i32.const -2147483648
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.or
@@ -63,13 +63,13 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
-; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.tee 0
+; W64-NEXT:    i32.sub
 ; W64-NEXT:    i32.const 2147483647
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.const -1
-; W64-NEXT:    i32.xor
+; W64-NEXT:    i32.add
 ; W64-NEXT:    i32.const -2147483648
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.or
@@ -90,8 +90,6 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.const 0
-; W32-NEXT:    i32.or
 ; W32-NEXT:    # fallthrough-return
 ;
 ; W64-LABEL: test_ctselect_null_ptr:
@@ -105,8 +103,6 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
 ; W64-NEXT:    i64.sub
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i64.and
-; W64-NEXT:    i64.const 0
-; W64-NEXT:    i64.or
 ; W64-NEXT:    # fallthrough-return
   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %ptr, ptr null)
   ret ptr %result
@@ -121,13 +117,13 @@ define ptr @test_ctselect_function_ptr(i1 %cond, ptr %func1, ptr %func2) {
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 0
+; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const -1
-; W32-NEXT:    i32.xor
+; W32-NEXT:    i32.add
 ; W32-NEXT:    local.get 2
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.or
@@ -142,13 +138,13 @@ define ptr @test_ctselect_function_ptr(i1 %cond, ptr %func1, ptr %func2) {
 ; W64-NEXT:    i64.extend_i32_u
 ; W64-NEXT:    i64.const 1
 ; W64-NEXT:    i64.and
-; W64-NEXT:    i64.sub
 ; W64-NEXT:    local.tee 3
+; W64-NEXT:    i64.sub
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i64.and
 ; W64-NEXT:    local.get 3
 ; W64-NEXT:    i64.const -1
-; W64-NEXT:    i64.xor
+; W64-NEXT:    i64.add
 ; W64-NEXT:    local.get 2
 ; W64-NEXT:    i64.and
 ; W64-NEXT:    i64.or
@@ -214,13 +210,13 @@ define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 0
+; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const -1
-; W32-NEXT:    i32.xor
+; W32-NEXT:    i32.add
 ; W32-NEXT:    local.get 2
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.or
@@ -235,13 +231,13 @@ define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
 ; W64-NEXT:    i64.extend_i32_u
 ; W64-NEXT:    i64.const 1
 ; W64-NEXT:    i64.and
-; W64-NEXT:    i64.sub
 ; W64-NEXT:    local.tee 3
+; W64-NEXT:    i64.sub
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i64.and
 ; W64-NEXT:    local.get 3
 ; W64-NEXT:    i64.const -1
-; W64-NEXT:    i64.xor
+; W64-NEXT:    i64.add
 ; W64-NEXT:    local.get 2
 ; W64-NEXT:    i64.and
 ; W64-NEXT:    i64.or
@@ -259,52 +255,52 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; W32-NEXT:    local.get 3
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 3
+; W32-NEXT:    i32.sub
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 2
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 2
+; W32-NEXT:    i32.sub
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 1
+; W32-NEXT:    i32.sub
 ; W32-NEXT:    i32.const 0
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const 1
 ; W32-NEXT:    i32.and
-; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.tee 0
+; W32-NEXT:    i32.sub
 ; W32-NEXT:    local.get 4
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    local.get 0
 ; W32-NEXT:    i32.const -1
-; W32-NEXT:    i32.xor
+; W32-NEXT:    i32.add
 ; W32-NEXT:    local.get 5
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.or
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    local.get 1
 ; W32-NEXT:    i32.const -1
-; W32-NEXT:    i32.xor
+; W32-NEXT:    i32.add
 ; W32-NEXT:    local.get 6
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.or
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    local.get 2
 ; W32-NEXT:    i32.const -1
-; W32-NEXT:    i32.xor
+; W32-NEXT:    i32.add
 ; W32-NEXT:    local.get 7
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.or
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    local.get 3
 ; W32-NEXT:    i32.const -1
-; W32-NEXT:    i32.xor
+; W32-NEXT:    i32.add
 ; W32-NEXT:    local.get 8
 ; W32-NEXT:    i32.and
 ; W32-NEXT:    i32.or
@@ -317,52 +313,52 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; W64-NEXT:    local.get 3
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
-; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.tee 3
+; W64-NEXT:    i32.sub
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 2
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
-; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.tee 2
+; W64-NEXT:    i32.sub
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
-; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.tee 1
+; W64-NEXT:    i32.sub
 ; W64-NEXT:    i32.const 0
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.const 1
 ; W64-NEXT:    i32.and
-; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.tee 0
+; W64-NEXT:    i32.sub
 ; W64-NEXT:    local.get 4
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    local.get 0
 ; W64-NEXT:    i32.const -1
-; W64-NEXT:    i32.xor
+; W64-NEXT:    i32.add
 ; W64-NEXT:    local.get 5
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.or
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    local.get 1
 ; W64-NEXT:    i32.const -1
-; W64-NEXT:    i32.xor
+; W64-NEXT:    i32.add
 ; W64-NEXT:    local.get 6
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.or
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    local.get 2
 ; W64-NEXT:    i32.const -1
-; W64-NEXT:    i32.xor
+; W64-NEXT:    i32.add
 ; W64-NEXT:    local.get 7
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.or
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    local.get 3
 ; W64-NEXT:    i32.const -1
-; W64-NEXT:    i32.xor
+; W64-NEXT:    i32.add
 ; W64-NEXT:    local.get 8
 ; W64-NEXT:    i32.and
 ; W64-NEXT:    i32.or
