@@ -238,7 +238,7 @@ static void validateRootSignature(Module &M,
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
     if (!Info.isBound(RC, Binding.Space,
-                      {Binding.LowerBound, Binding.LowerBound + Binding.Size}))
+                      {Binding.LowerBound, Binding.LowerBound + Binding.Size - 1}))
       reportRegNotBound(M, RC, Binding);
   }
 }

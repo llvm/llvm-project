@@ -83,8 +83,8 @@ bool BindingInfo::RegisterSpace::isBound(const BindingRange &Range) const {
 
   if (It == FreeRanges.end())
     return true;
-  return !(Range.LowerBound >= It->LowerBound &&
-           Range.UpperBound <= It->UpperBound);
+  return ((Range.LowerBound < It->LowerBound) && (Range.UpperBound < It->LowerBound)) || 
+         ((Range.LowerBound > It->UpperBound) && (Range.UpperBound > It->UpperBound));    
 }
 
 bool BindingInfo::isBound(dxil::ResourceClass RC, uint32_t Space,
