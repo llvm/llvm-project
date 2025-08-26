@@ -121,14 +121,17 @@ double setTicksToTime() {
   return TicksToTime;
 }
 
+/// HSA system clock frequency
+double TicksToTime = 1.0;
+
+/// Compute system timestamp conversion factor, modeled after ROCclr
+void setHSATicksToTimeConstant() { TicksToTime = setTicksToTime(); }
+
 #ifdef OMPT_SUPPORT
 #include "OmptDeviceTracing.h"
 #include <omp-tools.h>
 
 extern void ompt::setOmptHostToDeviceRate(double Slope, double Offset);
-
-/// HSA system clock frequency
-double TicksToTime = 1.0;
 
 /// Forward declare
 namespace llvm {
@@ -206,9 +209,6 @@ void setOmptAsyncCopyProfile(bool Enable) {
   if (Status != HSA_STATUS_SUCCESS)
     DP("Error enabling async copy profiling\n");
 }
-
-/// Compute system timestamp conversion factor, modeled after ROCclr.
-void setOmptTicksToTime() { TicksToTime = setTicksToTime(); }
 
 /// Get the current HSA-based device timestamp.
 uint64_t getSystemTimestampInNs() {
@@ -2830,7 +2830,7 @@ struct AMDGPUStreamManagerTy final
   }
 
   /// Enable/disable profiling of the HSA queues.
-  void setOmptQueueProfile(int Enable) {
+  void setHSAQueueProfiling(int Enable) {
     // If queue profiling is enabled with an env-var, it means that
     // profiling is already ON and should remain so all the time.
     if (OMPX_EnableQueueProfiling)
@@ -3233,7 +3233,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = initMemoryPools())
       return Err;
 
-    OMPT_IF_ENABLED(::setOmptTicksToTime(););
+    setHSATicksToTimeConstant();
 
 #ifdef OMPT_SUPPORT
     // At init we capture two time points for host and device. The two
@@ -4347,7 +4347,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Implementation sanity checks: either unified_shared_memory or auto
     // zero-copy, not both
     if (isUnifiedSharedMemory && isAutoZeroCopy)
-      return Plugin::error(ErrorCode::UNKNOWN, 
+      return Plugin::error(ErrorCode::UNKNOWN,
                            "Internal runtime error: cannot be both "
                            "unified_shared_memory and auto zero-copy.");
 
@@ -4460,8 +4460,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Propagate the enable/disable profiling request to the StreamManager.
-  void setOmptQueueProfile(int Enable) {
-    AMDGPUStreamManager.setOmptQueueProfile(Enable);
+  void setHSAQueueProfiling(int Enable) {
+    AMDGPUStreamManager.setHSAQueueProfiling(Enable);
   }
 
   /// Get the address of pointer to the preallocated device memory pool.
@@ -5860,6 +5860,11 @@ unsigned AMDGPUKernelTy::computeAchievedOccupancy(GenericDeviceTy &Device,
   return Occupancy;
 }
 
+/// Enable profiling of HSA queues
+void setQueueProfiling(void *Device, int Enable) {
+  reinterpret_cast<AMDGPUDeviceTy *>(Device)->setHSAQueueProfiling(Enable);
+}
+
 } // namespace plugin
 } // namespace target
 } // namespace omp
@@ -5871,14 +5876,14 @@ namespace llvm::omp::target::plugin {
 /// Enable/disable kernel profiling for the given device.
 void setOmptQueueProfile(void *Device, int Enable) {
   reinterpret_cast<llvm::omp::target::plugin::AMDGPUDeviceTy *>(Device)
-      ->setOmptQueueProfile(Enable);
+      ->setHSAQueueProfiling(Enable);
 }
 
 } // namespace llvm::omp::target::plugin
 
 /// Enable/disable kernel profiling for the given device.
 void setGlobalOmptKernelProfile(void *Device, int Enable) {
-  llvm::omp::target::plugin::setOmptQueueProfile(Device, Enable);
+  llvm::omp::target::plugin::setQueueProfiling(Device, Enable);
 }
 
 #endif
