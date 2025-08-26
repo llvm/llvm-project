@@ -363,7 +363,7 @@ static llvm::DILocalScope *
 getLocalScopeFromLoc(llvm::IRBuilderBase &builder, Location loc,
                      LLVM::ModuleTranslation &moduleTranslation) {
   if (auto scopeLoc = loc->findInstanceOf<FusedLocWith<LLVM::DIScopeAttr>>())
-    if (llvm::DILocalScope *localScope = llvm::dyn_cast<llvm::DILocalScope>(
+    if (auto *localScope = llvm::dyn_cast<llvm::DILocalScope>(
             moduleTranslation.translateDebugInfo(scopeLoc.getMetadata())))
       return localScope;
   return builder.GetInsertBlock()->getParent()->getSubprogram();
