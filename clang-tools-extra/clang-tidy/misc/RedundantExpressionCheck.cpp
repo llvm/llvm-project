@@ -45,14 +45,6 @@ static bool incrementWithoutOverflow(const APSInt &Value, APSInt &Result) {
   return Value < Result;
 }
 
-static bool areEquivalentNameSpecifier(const NestedNameSpecifier *Left,
-                                       const NestedNameSpecifier *Right) {
-  llvm::FoldingSetNodeID LeftID, RightID;
-  Left->Profile(LeftID);
-  Right->Profile(RightID);
-  return LeftID == RightID;
-}
-
 static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
   if (!Left || !Right)
     return !Left && !Right;
@@ -104,9 +96,8 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
     if (cast<DependentScopeDeclRefExpr>(Left)->getDeclName() !=
         cast<DependentScopeDeclRefExpr>(Right)->getDeclName())
       return false;
-    return areEquivalentNameSpecifier(
-        cast<DependentScopeDeclRefExpr>(Left)->getQualifier(),
-        cast<DependentScopeDeclRefExpr>(Right)->getQualifier());
+    return cast<DependentScopeDeclRefExpr>(Left)->getQualifier() ==
+           cast<DependentScopeDeclRefExpr>(Right)->getQualifier();
   case Stmt::DeclRefExprClass:
     return cast<DeclRefExpr>(Left)->getDecl() ==
            cast<DeclRefExpr>(Right)->getDecl();
@@ -910,9 +901,9 @@ static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
     if (Rsr.getBegin().isMacroID()) {
       // Both sides are macros so they are same macro or literal
       const llvm::StringRef L = Lexer::getSourceText(
-          CharSourceRange::getTokenRange(Lsr), SM, Context->getLangOpts(), 0);
+          CharSourceRange::getTokenRange(Lsr), SM, Context->getLangOpts());
       const llvm::StringRef R = Lexer::getSourceText(
-          CharSourceRange::getTokenRange(Rsr), SM, Context->getLangOpts(), 0);
+          CharSourceRange::getTokenRange(Rsr), SM, Context->getLangOpts());
       return areStringsSameIgnoreSpaces(L, R);
     }
     // Left is macro but right is not so they are not same macro or literal

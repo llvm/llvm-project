@@ -29,6 +29,7 @@ add_clang_library(clangInterpreter
   InterpreterUtils.cpp
   RemoteJITUtils.cpp
   Value.cpp
+  InterpreterValuePrinter.cpp
   ${WASM_SRC}
   PARTIAL_SOURCES_INTENDED
 

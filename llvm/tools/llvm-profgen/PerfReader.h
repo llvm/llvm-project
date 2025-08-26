@@ -18,9 +18,6 @@
 #include <fstream>
 #include <map>
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 
 class CleanupInstaller;

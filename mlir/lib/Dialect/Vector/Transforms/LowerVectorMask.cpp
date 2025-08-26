@@ -67,19 +67,20 @@ public:
     Value idx = op.getOperand(0);
 
     VectorType lowType = VectorType::Builder(dstType).dropDim(0);
-    Value trueVal = rewriter.create<vector::CreateMaskOp>(
-        loc, lowType, op.getOperands().drop_front());
-    Value falseVal = rewriter.create<arith::ConstantOp>(
-        loc, lowType, rewriter.getZeroAttr(lowType));
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, dstType, rewriter.getZeroAttr(dstType));
+    Value trueVal = vector::CreateMaskOp::create(rewriter, loc, lowType,
+                                                 op.getOperands().drop_front());
+    Value falseVal = arith::ConstantOp::create(rewriter, loc, lowType,
+                                               rewriter.getZeroAttr(lowType));
+    Value result = arith::ConstantOp::create(rewriter, loc, dstType,
+                                             rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < dim; d++) {
       Value bnd =
-          rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(d));
-      Value val = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
-                                                 bnd, idx);
-      Value sel = rewriter.create<arith::SelectOp>(loc, val, trueVal, falseVal);
-      result = rewriter.create<vector::InsertOp>(loc, sel, result, d);
+          arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(d));
+      Value val = arith::CmpIOp::create(rewriter, loc,
+                                        arith::CmpIPredicate::slt, bnd, idx);
+      Value sel =
+          arith::SelectOp::create(rewriter, loc, val, trueVal, falseVal);
+      result = vector::InsertOp::create(rewriter, loc, sel, result, d);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -146,12 +147,12 @@ public:
           op, "Cannot unroll leading scalable dim in dstType");
 
     VectorType lowType = VectorType::Builder(dstType).dropDim(0);
-    Value trueVal = rewriter.create<vector::ConstantMaskOp>(
-        loc, lowType, dimSizes.drop_front());
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, dstType, rewriter.getZeroAttr(dstType));
+    Value trueVal = vector::ConstantMaskOp::create(rewriter, loc, lowType,
+                                                   dimSizes.drop_front());
+    Value result = arith::ConstantOp::create(rewriter, loc, dstType,
+                                             rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < trueDimSize; d++)
-      result = rewriter.create<vector::InsertOp>(loc, trueVal, result, d);
+      result = vector::InsertOp::create(rewriter, loc, trueVal, result, d);
 
     rewriter.replaceOp(op, result);
     return success();
@@ -261,8 +262,8 @@ public:
                             PatternRewriter &rewriter) const override {
     Value passthru = maskingOp.hasPassthru()
                          ? maskingOp.getPassthru()
-                         : rewriter.create<arith::ConstantOp>(
-                               gatherOp.getLoc(),
+                         : arith::ConstantOp::create(
+                               rewriter, gatherOp.getLoc(),
                                rewriter.getZeroAttr(gatherOp.getVectorType()));
 
     // Replace the `vector.mask` operation.

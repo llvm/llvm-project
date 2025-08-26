@@ -270,18 +270,18 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   std::optional<MessageFixedText> msg;
   const auto &funcResult{proc->functionResult}; // C1025
   if (!funcResult) {
-    msg = "%s is associated with the non-existent result of reference to"
-          " procedure"_err_en_US;
+    msg =
+        "%s is associated with the non-existent result of reference to procedure"_err_en_US;
   } else if (CharacterizeProcedure()) {
     // Shouldn't be here in this function unless lhs is an object pointer.
-    msg = "Procedure %s is associated with the result of a reference to"
-          " function '%s' that does not return a procedure pointer"_err_en_US;
+    msg =
+        "Procedure %s is associated with the result of a reference to function '%s' that does not return a procedure pointer"_err_en_US;
   } else if (funcResult->IsProcedurePointer()) {
-    msg = "Object %s is associated with the result of a reference to"
-          " function '%s' that is a procedure pointer"_err_en_US;
+    msg =
+        "Object %s is associated with the result of a reference to function '%s' that is a procedure pointer"_err_en_US;
   } else if (!funcResult->attrs.test(FunctionResult::Attr::Pointer)) {
-    msg = "%s is associated with the result of a reference to function '%s'"
-          " that is a not a pointer"_err_en_US;
+    msg =
+        "%s is associated with the result of a reference to function '%s' that is not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
     auto restorer{common::ScopedSet(lhs_, symbol)};

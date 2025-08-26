@@ -1,14 +1,19 @@
 ; Tests that we add DILabels for the suspend points.
 ;
-; We check both the generated LLVM:
+; Check the generated LLVM:
 ; RUN: opt < %s -passes='cgscc(coro-split)' -S | FileCheck %s
 ;
-; And the debug info:
+; Check the generated DWARF debug info:
 ; REQUIRES: object-emission
 ; RUN: opt < %s -passes='cgscc(coro-split),coro-cleanup' \
 ; RUN:   | %llc_dwarf -O0 -filetype=obj -o - \
 ; RUN:   | llvm-dwarfdump - \
 ; RUN:   | FileCheck %s -check-prefix=DWARF
+;
+; Check that we don't emit any DILabel if in `LineTablesOnly` mode
+; RUN: sed -e 's/emissionKind: FullDebug/emissionKind: LineTablesOnly/' %s \
+; RUN:   | opt -passes='cgscc(coro-split)' -S \
+; RUN:   | FileCheck %s -check-prefix=LINE-TABLE
 
 source_filename = "coro.c"
 
@@ -82,6 +87,12 @@ coro_Suspend:                                     ; preds = %for.cond, %if.then,
 ; CHECK: ![[RESUME_1]] = !DILabel(scope: !{{[0-9]+}}, name: "__coro_resume_1", file: !{{[0-9]*}}, line: 14, column: 6, isArtificial: true, coroSuspendIdx: 1)
 ; CHECK: ![[DESTROY_0]] = !DILabel(scope: !{{[0-9]+}}, name: "__coro_resume_0", file: !{{[0-9]*}}, line: 12, column: 6, isArtificial: true, coroSuspendIdx: 0)
 ; CHECK: ![[DESTROY_1]] = !DILabel(scope: !{{[0-9]+}}, name: "__coro_resume_1", file: !{{[0-9]*}}, line: 14, column: 6, isArtificial: true, coroSuspendIdx: 1)
+
+; Check the we do not emit any DILabels in LineTablesOnly mode.
+; The DWARF emitter cannot handle this and would run into an assertion.
+; LINE-TABLE: !DICompileUnit{{.*}}LineTablesOnly
+; LINE-TABLE-NOT: DILabel
+
 
 ; DWARF:        {{.*}}DW_TAG_label
 ; DWARF-NEXT:    DW_AT_name ("__coro_resume_0")

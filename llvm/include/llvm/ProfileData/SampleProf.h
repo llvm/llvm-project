@@ -63,7 +63,6 @@ enum class sampleprof_error {
   zlib_unavailable,
   hash_mismatch,
   illegal_line_offset,
-  duplicate_vtable_type
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
@@ -324,8 +323,10 @@ struct LineLocationHash {
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
-/// Key represents the id of a vtable and value represents its count.
-/// TODO: Rename class FunctionId to SymbolId in a separate PR.
+/// Key represents type of a C++ polymorphic class type by its vtable and value
+/// represents its counter.
+/// TODO: The class name FunctionId should be renamed to SymbolId in a refactor
+/// change.
 using TypeCountMap = std::map<FunctionId, uint64_t>;
 
 /// Write \p Map to the output stream. Keys are linearized using \p NameTable
@@ -1016,13 +1017,15 @@ public:
     return CallsiteSamples;
   }
 
-  /// Return all the callsite type samples collected in the body of the
+  /// Returns vtable access samples for the C++ types collected in this
   /// function.
   const CallsiteTypeMap &getCallsiteTypeCounts() const {
     return VirtualCallsiteTypeCounts;
   }
 
-  /// Returns the type samples for the un-drifted location of \p Loc.
+  /// Returns the vtable access samples for the C++ types for \p Loc.
+  /// Under the hood, the caller-specified \p Loc will be un-drifted before the
+  /// type sample lookup if possible.
   TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) {
     return VirtualCallsiteTypeCounts[mapIRLocToProfileLoc(Loc)];
   }
@@ -1043,7 +1046,9 @@ public:
   }
 
   /// Scale \p Other sample counts by \p Weight and add the scaled result to the
-  /// type samples for the undrifted location of \p Loc.
+  /// type samples for \p Loc. Under the hoold, the caller-provided \p Loc will
+  /// be un-drifted before the type sample lookup if possible.
+  /// typename T is either a std::map or a DenseMap.
   template <typename T>
   sampleprof_error addCallsiteVTableTypeProfAt(const LineLocation &Loc,
                                                const T &Other,
@@ -1368,10 +1373,10 @@ private:
   /// collected in the call to baz() at line offset 8.
   CallsiteSampleMap CallsiteSamples;
 
-  /// Map virtual callsites to the vtable from which they are loaded.
+  /// Map a virtual callsite to the list of accessed vtables and vtable counts.
+  /// The callsite is referenced by its source location.
   ///
-  /// Each entry is a mapping from the location to the list of vtables and their
-  /// sampled counts. For example, given:
+  /// For example, given:
   ///
   ///     void foo() {
   ///       ...

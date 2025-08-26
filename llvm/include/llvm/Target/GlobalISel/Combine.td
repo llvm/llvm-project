@@ -194,6 +194,7 @@ def IsExact     : MIFlagEnum<"IsExact">;
 def NoSWrap     : MIFlagEnum<"NoSWrap">;
 def NoUWrap     : MIFlagEnum<"NoUWrap">;
 def NonNeg      : MIFlagEnum<"NonNeg">;
+def InBounds    : MIFlagEnum<"InBounds">;
 
 def MIFlags;
 // def not; -> Already defined as a SDNode
@@ -556,6 +557,13 @@ def right_identity_neg_zero_fp: GICombineRule<
   (defs root:$dst),
   (match (G_FADD $dst, $x, $y):$root,
     [{ return Helper.matchConstantFPOp(${y}, -0.0); }]),
+  (apply (GIReplaceReg $dst, $x))
+>;
+
+def right_identity_neg_zero_fp_nsz: GICombineRule<
+  (defs root:$dst),
+  (match (G_FADD $dst, $x, $y, (MIFlags FmNsz)):$root,
+    [{ return Helper.matchConstantFPOp(${y}, 0.0); }]),
   (apply (GIReplaceReg $dst, $x))
 >;
 
@@ -1131,15 +1139,15 @@ def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
 
 def udiv_by_const : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_UDIV):$root,
-   [{ return Helper.matchUDivorURemByConst(*${root}); }]),
-  (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
+  (match (G_UDIV $dst, $x, $y):$root,
+   [{ return Helper.matchUDivOrURemByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivOrURemByConst(*${root}); }])>;
 
 def sdiv_by_const : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_SDIV):$root,
-   [{ return Helper.matchSDivByConst(*${root}); }]),
-  (apply [{ Helper.applySDivByConst(*${root}); }])>;
+  (match (G_SDIV $dst, $x, $y):$root,
+   [{ return Helper.matchSDivOrSRemByConst(*${root}); }]),
+  (apply [{ Helper.applySDivOrSRemByConst(*${root}); }])>;
 
 def sdiv_by_pow2 : GICombineRule<
   (defs root:$root),
@@ -1153,16 +1161,22 @@ def udiv_by_pow2 : GICombineRule<
    [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
   (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_const, sdiv_by_const,
-                                      sdiv_by_pow2, udiv_by_pow2]>;
+def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2, 
+                                      udiv_by_const, sdiv_by_const,]>;
 
 def urem_by_const : GICombineRule<
   (defs root:$root),
   (match (G_UREM $dst, $x, $y):$root,
-   [{ return Helper.matchUDivorURemByConst(*${root}); }]),
-  (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
+   [{ return Helper.matchUDivOrURemByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivOrURemByConst(*${root}); }])>;
 
-def intrem_combines : GICombineGroup<[urem_by_const]>;
+def srem_by_const : GICombineRule<
+  (defs root:$root),
+  (match (G_SREM $dst, $x, $y):$root,
+   [{ return Helper.matchSDivOrSRemByConst(*${root}); }]),
+  (apply [{ Helper.applySDivOrSRemByConst(*${root}); }])>;
+
+def intrem_combines : GICombineGroup<[urem_by_const, srem_by_const]>;
 
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1235,6 +1249,35 @@ def mulh_to_lshr : GICombineRule<
   (apply [{ Helper.applyUMulHToLShr(*${root}); }])>;
 
 def mulh_combines : GICombineGroup<[mulh_to_lshr]>;
+
+def trunc_ssats : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_TRUNC $dst, $src):$root,
+         [{ return Helper.matchTruncSSatS(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyTruncSSatS(*${root}, ${matchinfo}); }])>;
+
+def trunc_ssatu : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_TRUNC $dst, $src):$root,
+    [{ return Helper.matchTruncSSatU(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyTruncSSatU(*${root}, ${matchinfo}); }])>;
+
+def trunc_usatu : GICombineRule<
+  (defs root:$root),
+  (match (G_UMIN $min, $x, $y):$Min, 
+         (G_TRUNC $dst, $min):$root,
+    [{ return Helper.matchTruncUSatU(*${root}, *${Min}); }]),
+  (apply (G_TRUNC_USAT_U $dst, $x))>;
+
+def truncusatu_to_fptouisat : GICombineRule<
+  (defs root:$root),
+  (match (G_FPTOUI $src, $x):$Src,
+         (G_TRUNC_USAT_U $dst, $src):$root,
+    [{ return Helper.matchTruncUSatUToFPTOUISat(*${root}, *${Src}); }]),
+  (apply (G_FPTOUI_SAT $dst, $x))
+>;
+
+def truncsat_combines : GICombineGroup<[trunc_ssats, trunc_ssatu, trunc_usatu, truncusatu_to_fptouisat]>;
 
 def redundant_neg_operands: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1996,7 +2039,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
                                         bitcast_bitcast_fold, fptrunc_fpext_fold,
-                                        right_identity_neg_zero_fp,
+                                        right_identity_neg_zero_fp, right_identity_neg_zero_fp_nsz,
                                         right_identity_neg_one_fp]>;
 
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
@@ -2054,13 +2097,13 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,
     form_bitfield_extract, constant_fold_binops, constant_fold_fma,
     constant_fold_cast_op, fabs_fneg_fold,
-    intdiv_combines, mulh_combines, redundant_neg_operands,
+    mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    intrem_combines, sub_add_reg, select_to_minmax,
+    intrem_combines, intdiv_combines, sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines]>;
+    combine_use_vector_truncate, merge_combines, overflow_combines, truncsat_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

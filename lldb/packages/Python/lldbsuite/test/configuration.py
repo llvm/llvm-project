@@ -45,6 +45,9 @@ dsymutil = None
 sdkroot = None
 make_path = None
 
+# Allow specifying a triple for cross compilation.
+triple = None
+
 # The overriden dwarf verison.
 # Don't use this to test the current compiler's
 # DWARF version, as this won't be set if the
@@ -140,6 +143,7 @@ enabled_plugins = []
 # the build type of lldb
 # Typical values include Debug, Release, RelWithDebInfo and MinSizeRel
 cmake_build_type = None
+
 
 def shouldSkipBecauseOfCategories(test_categories):
     if use_categories:

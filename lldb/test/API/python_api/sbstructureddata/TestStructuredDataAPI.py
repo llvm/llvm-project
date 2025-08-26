@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 import json
 
-
 class TestStructuredDataAPI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -129,6 +128,52 @@ class TestStructuredDataAPI(TestBase):
 
         self.assertSuccess(example.SetFromJSON("null"))
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeNull)
+
+        example = lldb.SBStructuredData()
+        example.SetUnsignedIntegerValue(1)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeInteger)
+        self.assertEqual(example.GetIntegerValue(), 1)
+
+        example.SetSignedIntegerValue(-42)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeSignedInteger)
+        self.assertEqual(example.GetSignedIntegerValue(), -42)
+
+        example.SetFloatValue(4.19)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeFloat)
+        self.assertEqual(example.GetFloatValue(), 4.19)
+
+        example.SetStringValue("Bonjour, 123!")
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeString)
+        self.assertEqual(example.GetStringValue(42), "Bonjour, 123!")
+
+        value = lldb.SBStructuredData()
+        example.SetValueForKey("Hello", value)
+        self.assertEqual(example.GetSize(), 0)
+
+        nested_obj = lldb.SBStructuredData()
+        nested_obj.SetStringValue("World")
+        example.SetValueForKey("Hello", nested_obj)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeDictionary)
+        nested_obj = None
+        nested_obj = example.GetValueForKey("Hello")
+        self.assertTrue(nested_obj.IsValid())
+        self.assertEqual(nested_obj.GetType(), lldb.eStructuredDataTypeString)
+        self.assertEqual(nested_obj.GetStringValue(42), "World")
+
+        example.SetBooleanValue(True)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeBoolean)
+        self.assertTrue(example.GetBooleanValue())
+
+        rnd_obj = MyRandomClass()
+        stp = lldb.SBScriptObject(rnd_obj, lldb.eScriptLanguagePython)
+        self.assertEqual(stp.ptr, rnd_obj)
+
+        example.SetGenericValue(stp)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeGeneric)
+
+        my_random_class = example.GetGenericValue()
+        self.assertTrue(my_random_class)
+        self.assertEqual(my_random_class.payload, MyRandomClass.payload)
 
         example_arr = [1, 2.3, "4", {"5": False}]
         arr_str = json.dumps(example_arr)

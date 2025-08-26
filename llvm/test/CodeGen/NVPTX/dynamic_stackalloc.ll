@@ -12,7 +12,7 @@
 define i32 @test_dynamic_stackalloc(i64 %n) {
 ; CHECK-32-LABEL: test_dynamic_stackalloc(
 ; CHECK-32:       {
-; CHECK-32-NEXT:    .reg .b32 %r<8>;
+; CHECK-32-NEXT:    .reg .b32 %r<7>;
 ; CHECK-32-EMPTY:
 ; CHECK-32-NEXT:  // %bb.0:
 ; CHECK-32-NEXT:    ld.param.b32 %r1, [test_dynamic_stackalloc_param_0];
@@ -22,8 +22,8 @@ define i32 @test_dynamic_stackalloc(i64 %n) {
 ; CHECK-32-NEXT:    cvta.local.u32 %r5, %r4;
 ; CHECK-32-NEXT:    { // callseq 0, 0
 ; CHECK-32-NEXT:    .param .b32 param0;
-; CHECK-32-NEXT:    st.param.b32 [param0], %r5;
 ; CHECK-32-NEXT:    .param .b32 retval0;
+; CHECK-32-NEXT:    st.param.b32 [param0], %r5;
 ; CHECK-32-NEXT:    call.uni (retval0), bar, (param0);
 ; CHECK-32-NEXT:    ld.param.b32 %r6, [retval0];
 ; CHECK-32-NEXT:    } // callseq 0
@@ -32,7 +32,7 @@ define i32 @test_dynamic_stackalloc(i64 %n) {
 ;
 ; CHECK-64-LABEL: test_dynamic_stackalloc(
 ; CHECK-64:       {
-; CHECK-64-NEXT:    .reg .b32 %r<3>;
+; CHECK-64-NEXT:    .reg .b32 %r<2>;
 ; CHECK-64-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-64-EMPTY:
 ; CHECK-64-NEXT:  // %bb.0:
@@ -43,8 +43,8 @@ define i32 @test_dynamic_stackalloc(i64 %n) {
 ; CHECK-64-NEXT:    cvta.local.u64 %rd5, %rd4;
 ; CHECK-64-NEXT:    { // callseq 0, 0
 ; CHECK-64-NEXT:    .param .b64 param0;
-; CHECK-64-NEXT:    st.param.b64 [param0], %rd5;
 ; CHECK-64-NEXT:    .param .b32 retval0;
+; CHECK-64-NEXT:    st.param.b64 [param0], %rd5;
 ; CHECK-64-NEXT:    call.uni (retval0), bar, (param0);
 ; CHECK-64-NEXT:    ld.param.b32 %r1, [retval0];
 ; CHECK-64-NEXT:    } // callseq 0

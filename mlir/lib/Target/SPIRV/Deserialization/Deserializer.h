@@ -95,6 +95,7 @@ struct DeferredStructTypeInfo {
   SmallVector<Type, 4> memberTypes;
   SmallVector<spirv::StructType::OffsetInfo, 0> offsetInfo;
   SmallVector<spirv::StructType::MemberDecorationInfo, 0> memberDecorationsInfo;
+  SmallVector<spirv::StructType::StructDecorationInfo, 0> structDecorationsInfo;
 };
 
 /// A struct that collects the info needed to materialize/emit a
@@ -190,6 +191,11 @@ private:
   /// Gets the constant's attribute and type associated with the given <id>.
   std::optional<std::pair<Attribute, Type>> getConstant(uint32_t id);
 
+  /// Gets the replicated composite constant's attribute and type associated
+  /// with the given <id>.
+  std::optional<std::pair<Attribute, Type>>
+  getConstantCompositeReplicate(uint32_t id);
+
   /// Gets the info needed to materialize the spec constant operation op
   /// associated with the given <id>.
   std::optional<SpecConstOperationMaterializationInfo>
@@ -218,6 +224,13 @@ private:
   /// Gets the composite specialization constant with the given result <id>.
   spirv::SpecConstantCompositeOp getSpecConstantComposite(uint32_t id) {
     return specConstCompositeMap.lookup(id);
+  }
+
+  /// Gets the replicated composite specialization constant with the given
+  /// result <id>.
+  spirv::EXTSpecConstantCompositeReplicateOp
+  getSpecConstantCompositeReplicate(uint32_t id) {
+    return specConstCompositeReplicateMap.lookup(id);
   }
 
   /// Creates a spirv::SpecConstantOp.
@@ -313,9 +326,19 @@ private:
   /// `operands`.
   LogicalResult processConstantComposite(ArrayRef<uint32_t> operands);
 
+  /// Processes a SPIR-V OpConstantCompositeReplicateEXT instruction with
+  /// the given `operands`.
+  LogicalResult
+  processConstantCompositeReplicateEXT(ArrayRef<uint32_t> operands);
+
   /// Processes a SPIR-V OpSpecConstantComposite instruction with the given
   /// `operands`.
   LogicalResult processSpecConstantComposite(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpSpecConstantCompositeReplicateEXT instruction with
+  /// the given `operands`.
+  LogicalResult
+  processSpecConstantCompositeReplicateEXT(ArrayRef<uint32_t> operands);
 
   /// Processes a SPIR-V OpSpecConstantOp instruction with the given
   /// `operands`.
@@ -549,11 +572,27 @@ private:
   /// (and type) here. Later when it's used, we materialize the constant.
   DenseMap<uint32_t, std::pair<Attribute, Type>> constantMap;
 
+  // Result <id> to replicated constant attribute and type mapping.
+  ///
+  /// In the SPIR-V binary format, OpConstantCompositeReplicateEXT is placed in
+  /// the module and shared by instructions at module level and in subsequent
+  /// functions. But in the SPIR-V dialect, this is materialized to where
+  /// it's used in the function. So when seeing a
+  /// OpConstantCompositeReplicateEXT in the binary format, we don't immediately
+  /// emit a `spirv.EXT.ConstantCompositeReplicate` op into the module, we keep
+  /// the id of its value and type here. Later when it's used, we materialize
+  /// the `spirv.EXT.ConstantCompositeReplicate`.
+  DenseMap<uint32_t, std::pair<Attribute, Type>> constantCompositeReplicateMap;
+
   // Result <id> to spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantOp> specConstMap;
 
   // Result <id> to composite spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantCompositeOp> specConstCompositeMap;
+
+  // Result <id> to replicated composite spec constant mapping.
+  DenseMap<uint32_t, spirv::EXTSpecConstantCompositeReplicateOp>
+      specConstCompositeReplicateMap;
 
   /// Result <id> to info needed to materialize an OpSpecConstantOp
   /// mapping.

@@ -132,8 +132,8 @@ bool CXXRecordDecl::forallBases(ForallBasesCallback BaseMatches) const {
       if (!Ty)
         return false;
 
-      CXXRecordDecl *Base =
-          cast_if_present<CXXRecordDecl>(Ty->getDecl()->getDefinition());
+      CXXRecordDecl *Base = cast_if_present<CXXRecordDecl>(
+          Ty->getOriginalDecl()->getDefinition());
       if (!Base ||
           (Base->isDependentContext() &&
            !Base->isCurrentInstantiation(Record))) {
@@ -256,7 +256,8 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
             BaseSpec.getType()->getAs<TemplateSpecializationType>();
         if (!TST) {
           if (auto *RT = BaseSpec.getType()->getAs<RecordType>())
-            BaseRecord = cast<CXXRecordDecl>(RT->getDecl());
+            BaseRecord = cast<CXXRecordDecl>(RT->getOriginalDecl())
+                             ->getDefinitionOrSelf();
         } else {
           TemplateName TN = TST->getTemplateName();
           if (auto *TD =
@@ -336,7 +337,8 @@ bool CXXRecordDecl::lookupInBases(BaseMatchesCallback BaseMatches,
 
       CXXRecordDecl *VBase = nullptr;
       if (const RecordType *Record = PE.Base->getType()->getAs<RecordType>())
-        VBase = cast<CXXRecordDecl>(Record->getDecl());
+        VBase = cast<CXXRecordDecl>(Record->getOriginalDecl())
+                    ->getDefinitionOrSelf();
       if (!VBase)
         break;
 
@@ -348,7 +350,8 @@ bool CXXRecordDecl::lookupInBases(BaseMatchesCallback BaseMatches,
         CXXRecordDecl *HidingClass = nullptr;
         if (const RecordType *Record =
                 HidingP.back().Base->getType()->getAs<RecordType>())
-          HidingClass = cast<CXXRecordDecl>(Record->getDecl());
+          HidingClass = cast<CXXRecordDecl>(Record->getOriginalDecl())
+                            ->getDefinitionOrSelf();
         if (!HidingClass)
           break;
 
@@ -468,7 +471,8 @@ void FinalOverriderCollector::Collect(const CXXRecordDecl *RD,
 
   for (const auto &Base : RD->bases()) {
     if (const RecordType *RT = Base.getType()->getAs<RecordType>()) {
-      const CXXRecordDecl *BaseDecl = cast<CXXRecordDecl>(RT->getDecl());
+      const CXXRecordDecl *BaseDecl =
+          cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
       if (!BaseDecl->isPolymorphic())
         continue;
 

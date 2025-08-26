@@ -538,7 +538,11 @@ void ASTDeclReader::Visit(Decl *D) {
 
   if (auto *TD = dyn_cast<TypeDecl>(D)) {
     // We have a fully initialized TypeDecl. Read its type now.
-    TD->setTypeForDecl(Reader.GetType(DeferredTypeID).getTypePtrOrNull());
+    if (isa<TagDecl, TypedefDecl, TypeAliasDecl>(TD))
+      assert(DeferredTypeID == 0 &&
+             "Deferred type not used for TagDecls and Typedefs");
+    else
+      TD->setTypeForDecl(Reader.GetType(DeferredTypeID).getTypePtrOrNull());
 
     // If this is a tag declaration with a typedef name for linkage, it's safe
     // to load that typedef now.
@@ -695,7 +699,8 @@ void ASTDeclReader::VisitTypeDecl(TypeDecl *TD) {
   VisitNamedDecl(TD);
   TD->setLocStart(readSourceLocation());
   // Delay type reading until after we have fully initialized the decl.
-  DeferredTypeID = Record.getGlobalTypeID(Record.readInt());
+  if (!isa<TagDecl, TypedefDecl, TypeAliasDecl>(TD))
+    DeferredTypeID = Record.getGlobalTypeID(Record.readInt());
 }
 
 RedeclarableResult ASTDeclReader::VisitTypedefNameDecl(TypedefNameDecl *TD) {
@@ -1147,7 +1152,8 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     const SYCLKernelInfo *SKI = C.findSYCLKernelInfo(SKEPAttr->getKernelName());
     if (SKI) {
       if (!declaresSameEntity(FD, SKI->getKernelEntryPointDecl())) {
-        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict);
+        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict)
+            << SKEPAttr;
         Reader.Diag(SKI->getKernelEntryPointDecl()->getLocation(),
                     diag::note_previous_declaration);
         SKEPAttr->setInvalidAttr();
@@ -1889,7 +1895,7 @@ void ASTDeclReader::VisitNamespaceAliasDecl(NamespaceAliasDecl *D) {
   D->NamespaceLoc = readSourceLocation();
   D->IdentLoc = readSourceLocation();
   D->QualifierLoc = Record.readNestedNameSpecifierLoc();
-  D->Namespace = readDeclAs<NamedDecl>();
+  D->Namespace = readDeclAs<NamespaceBaseDecl>();
   mergeRedeclarable(D, Redecl);
 }
 
@@ -2236,15 +2242,6 @@ RedeclarableResult ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
     // Merged when we merge the template.
     auto *Template = readDeclAs<ClassTemplateDecl>();
     D->TemplateOrInstantiation = Template;
-    if (!Template->getTemplatedDecl()) {
-      // We've not actually loaded the ClassTemplateDecl yet, because we're
-      // currently being loaded as its pattern. Rely on it to set up our
-      // TypeForDecl (see VisitClassTemplateDecl).
-      //
-      // Beware: we do not yet know our canonical declaration, and may still
-      // get merged once the surrounding class template has got off the ground.
-      DeferredTypeID = 0;
-    }
     break;
   }
   case CXXRecMemberSpecialization: {
@@ -2477,14 +2474,6 @@ void ASTDeclReader::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     // the specializations.
     ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor, /*IsPartial=*/false);
     ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor, /*IsPartial=*/true);
-  }
-
-  if (D->getTemplatedDecl()->TemplateOrInstantiation) {
-    // We were loaded before our templated declaration was. We've not set up
-    // its corresponding type yet (see VisitCXXRecordDeclImpl), so reconstruct
-    // it now.
-    Reader.getContext().getInjectedClassNameType(
-        D->getTemplatedDecl(), D->getInjectedClassNameSpecialization());
   }
 }
 
@@ -2741,6 +2730,7 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
 
 void ASTDeclReader::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
   VisitTemplateDecl(D);
+  D->ParameterKind = static_cast<TemplateNameKind>(Record.readInt());
   D->setDeclaredWithTypename(Record.readBool());
   // TemplateParmPosition.
   D->setDepth(Record.readInt());

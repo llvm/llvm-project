@@ -175,31 +175,42 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  const llvm::SmallVectorImpl<Expr *> &getValuePrintingInfo() const {
-    return ValuePrintingInfo;
-  }
-
-  Expr *SynthesizeExpr(Expr *E);
-
-private:
-  size_t getEffectivePTUSize() const;
-  void markUserCodeStart();
-  llvm::Expected<Expr *> ExtractValueFromExpr(Expr *E);
-  llvm::Expected<llvm::orc::ExecutorAddr> CompileDtorCall(CXXRecordDecl *CXXRD);
-
-  CodeGenerator *getCodeGen(IncrementalAction *Action = nullptr) const;
   std::unique_ptr<llvm::Module> GenModule(IncrementalAction *Action = nullptr);
   PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
                                       std::unique_ptr<llvm::Module> M = {},
                                       IncrementalAction *Action = nullptr);
 
+private:
+  size_t getEffectivePTUSize() const;
+  void markUserCodeStart();
+  llvm::Expected<Expr *> ExtractValueFromExpr(Expr *E);
+
   // A cache for the compiled destructors used to for de-allocation of managed
   // clang::Values.
-  llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
+  mutable llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
-  llvm::SmallVector<Expr *, 4> ValuePrintingInfo;
+  std::array<Expr *, 4> ValuePrintingInfo = {0};
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
+
+  /// @}
+  /// @name Value and pretty printing support
+  /// @{
+
+  std::string ValueDataToString(const Value &V) const;
+  std::string ValueTypeToString(const Value &V) const;
+
+  llvm::Expected<Expr *> convertExprToValue(Expr *E);
+
+  // When we deallocate clang::Value we need to run the destructor of the type.
+  // This function forces emission of the needed dtor.
+  llvm::Expected<llvm::orc::ExecutorAddr>
+  CompileDtorCall(CXXRecordDecl *CXXRD) const;
+
+  /// @}
+  /// @name Code generation
+  /// @{
+  CodeGenerator *getCodeGen(IncrementalAction *Action = nullptr) const;
 };
 } // namespace clang
 

@@ -178,8 +178,11 @@ def OMPC_Doacross : Clause<[Spelling<"doacross">]> {
 def OMPC_DynamicAllocators : Clause<[Spelling<"dynamic_allocators">]> {
   let clangClass = "OMPDynamicAllocatorsClause";
 }
+def OMPC_DynGroupprivate : Clause<[Spelling<"dyn_groupprivate">]> {
+  let flangClass = "OmpDynGroupprivateClause";
+}
 def OMPC_Enter : Clause<[Spelling<"enter">]> {
-  let flangClass = "OmpObjectList";
+  let flangClass = "OmpEnterClause";
 }
 def OMPC_Exclusive : Clause<[Spelling<"exclusive">]> {
   let clangClass = "OMPExclusiveClause";
@@ -873,6 +876,14 @@ def OMP_For : Directive<[Spelling<"for">]> {
   let category = CA_Executable;
   let languages = [L_C];
 }
+def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_DeviceType>,
+  ];
+  let association = AS_None;
+  let category = CA_Declarative;
+  let languages = [L_C, L_Fortran];
+}
 def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Permutation>,
@@ -955,11 +966,12 @@ def OMP_Parallel : Directive<[Spelling<"parallel">]> {
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Shared>,
   ];
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_Default>,
-    VersionedClause<OMPC_If>,
-    VersionedClause<OMPC_NumThreads>,
-    VersionedClause<OMPC_ProcBind>,
+  let allowedOnceClauses = [VersionedClause<OMPC_Default>,
+                            VersionedClause<OMPC_If>,
+                            VersionedClause<OMPC_NumThreads>,
+                            VersionedClause<OMPC_ProcBind>,
+                            VersionedClause<OMPC_Message, 60>,
+                            VersionedClause<OMPC_Severity, 60>,
   ];
   let association = AS_Block;
   let category = CA_Executable;
@@ -1091,6 +1103,7 @@ def OMP_Target : Directive<[Spelling<"target">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_InReduction, 50>,
@@ -1245,6 +1258,7 @@ def OMP_TaskYield : Directive<[Spelling<"taskyield">]> {
 def OMP_Teams : Directive<[Spelling<"teams">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_OMPX_Attribute>,
     VersionedClause<OMPC_Private>,
@@ -1459,7 +1473,7 @@ def OMP_DoSimd : Directive<[Spelling<"do simd">]> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
-    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_If, 50>,
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Ordered>,
@@ -1506,6 +1520,7 @@ def OMP_target_loop : Directive<[Spelling<"target loop">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_IsDevicePtr>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
@@ -1967,6 +1982,7 @@ def OMP_TargetParallel : Directive<[Spelling<"target parallel">]> {
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -1995,6 +2011,7 @@ def OMP_TargetParallelDo : Directive<[Spelling<"target parallel do">]> {
     VersionedClause<OMPC_Allocator>,
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2032,6 +2049,7 @@ def OMP_TargetParallelDoSimd
     VersionedClause<OMPC_DefaultMap>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2065,6 +2083,7 @@ def OMP_TargetParallelFor : Directive<[Spelling<"target parallel for">]> {
     VersionedClause<OMPC_DefaultMap>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2102,6 +2121,7 @@ def OMP_TargetParallelForSimd
     VersionedClause<OMPC_DefaultMap>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2137,6 +2157,7 @@ def OMP_target_parallel_loop : Directive<[Spelling<"target parallel loop">]> {
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2169,6 +2190,7 @@ def OMP_TargetSimd : Directive<[Spelling<"target simd">]> {
     VersionedClause<OMPC_Aligned>,
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2204,6 +2226,7 @@ def OMP_TargetTeams : Directive<[Spelling<"target teams">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2233,6 +2256,7 @@ def OMP_TargetTeamsDistribute
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2265,6 +2289,7 @@ def OMP_TargetTeamsDistributeParallelDo
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2302,6 +2327,7 @@ def OMP_TargetTeamsDistributeParallelDoSimd
     VersionedClause<OMPC_Aligned>,
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2346,6 +2372,7 @@ def OMP_TargetTeamsDistributeParallelFor
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_DistSchedule>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2384,6 +2411,7 @@ def OMP_TargetTeamsDistributeParallelForSimd
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_DistSchedule>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2421,6 +2449,7 @@ def OMP_TargetTeamsDistributeSimd
     VersionedClause<OMPC_Aligned>,
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2457,6 +2486,7 @@ def OMP_target_teams_loop : Directive<[Spelling<"target teams loop">]> {
     VersionedClause<OMPC_DefaultMap>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
     VersionedClause<OMPC_If>,
@@ -2521,6 +2551,7 @@ def OMP_TeamsDistribute : Directive<[Spelling<"teams distribute">]> {
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_DistSchedule>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_LastPrivate>,
     VersionedClause<OMPC_NumTeams>,
@@ -2542,6 +2573,7 @@ def OMP_TeamsDistributeParallelDo
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Copyin>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_LastPrivate>,
@@ -2570,6 +2602,7 @@ def OMP_TeamsDistributeParallelDoSimd
   let allowedClauses = [
     VersionedClause<OMPC_Aligned>,
     VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_LastPrivate>,
@@ -2605,6 +2638,7 @@ def OMP_TeamsDistributeParallelFor
     VersionedClause<OMPC_Copyin>,
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_DistSchedule>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_LastPrivate>,
@@ -2631,6 +2665,7 @@ def OMP_TeamsDistributeParallelForSimd
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_DistSchedule>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_LastPrivate>,
@@ -2658,6 +2693,7 @@ def OMP_TeamsDistributeSimd : Directive<[Spelling<"teams distribute simd">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Aligned>,
     VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_If, 50>,
     VersionedClause<OMPC_LastPrivate>,
@@ -2684,6 +2720,7 @@ def OMP_TeamsDistributeSimd : Directive<[Spelling<"teams distribute simd">]> {
 def OMP_teams_loop : Directive<[Spelling<"teams loop">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_DynGroupprivate, 61>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_LastPrivate>,
     VersionedClause<OMPC_OMPX_Attribute>,

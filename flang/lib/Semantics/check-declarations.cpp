@@ -151,8 +151,8 @@ private:
   void CheckProcedureAssemblyName(const Symbol &symbol);
   void CheckExplicitSave(const Symbol &);
   parser::Messages WhyNotInteroperableDerivedType(const Symbol &);
-  parser::Messages WhyNotInteroperableObject(
-      const Symbol &, bool allowNonInteroperableType = false);
+  parser::Messages WhyNotInteroperableObject(const Symbol &,
+      bool allowNonInteroperableType = false, bool forCommonBlock = false);
   parser::Messages WhyNotInteroperableFunctionResult(const Symbol &);
   parser::Messages WhyNotInteroperableProcedure(const Symbol &, bool isError);
   void CheckBindC(const Symbol &);
@@ -519,11 +519,35 @@ void CheckHelper::Check(const Symbol &symbol) {
 }
 
 void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
+  auto restorer{messages_.SetLocation(symbol.name())};
   CheckGlobalName(symbol);
   if (symbol.attrs().test(Attr::BIND_C)) {
     CheckBindC(symbol);
+    for (auto ref : symbol.get<CommonBlockDetails>().objects()) {
+      if (ref->has<ObjectEntityDetails>()) {
+        if (auto msgs{WhyNotInteroperableObject(*ref,
+                /*allowInteroperableType=*/false, /*forCommonBlock=*/true)};
+            !msgs.empty()) {
+          parser::Message &reason{msgs.messages().front()};
+          parser::Message *msg{nullptr};
+          if (reason.IsFatal()) {
+            msg = messages_.Say(symbol.name(),
+                "'%s' may not be a member of BIND(C) COMMON block /%s/"_err_en_US,
+                ref->name(), symbol.name());
+          } else {
+            msg = messages_.Say(symbol.name(),
+                "'%s' should not be a member of BIND(C) COMMON block /%s/"_warn_en_US,
+                ref->name(), symbol.name());
+          }
+          if (msg) {
+            msg->Attach(
+                std::move(reason.set_severity(parser::Severity::Because)));
+          }
+        }
+      }
+    }
   }
-  for (MutableSymbolRef ref : symbol.get<CommonBlockDetails>().objects()) {
+  for (auto ref : symbol.get<CommonBlockDetails>().objects()) {
     if (ref->test(Symbol::Flag::CrayPointee)) {
       messages_.Say(ref->name(),
           "Cray pointee '%s' may not be a member of a COMMON block"_err_en_US,
@@ -2057,7 +2081,7 @@ static bool ConflictsWithIntrinsicAssignment(const Procedure &proc) {
 }
 
 static bool ConflictsWithIntrinsicOperator(
-    const GenericKind &kind, const Procedure &proc) {
+    const GenericKind &kind, const Procedure &proc, SemanticsContext &context) {
   if (!kind.IsIntrinsicOperator()) {
     return false;
   }
@@ -2143,7 +2167,7 @@ bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
     }
   } else if (!checkDefinedOperatorArgs(opName, specific, proc)) {
     return false; // error was reported
-  } else if (ConflictsWithIntrinsicOperator(kind, proc)) {
+  } else if (ConflictsWithIntrinsicOperator(kind, proc, context_)) {
     msg = "%s function '%s' conflicts with intrinsic operator"_err_en_US;
   }
   if (msg) {
@@ -3154,14 +3178,16 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
 }
 
 parser::Messages CheckHelper::WhyNotInteroperableObject(
-    const Symbol &symbol, bool allowNonInteroperableType) {
+    const Symbol &symbol, bool allowNonInteroperableType, bool forCommonBlock) {
   parser::Messages msgs;
-  if (examinedByWhyNotInteroperable_.find(symbol) !=
-      examinedByWhyNotInteroperable_.end()) {
-    return msgs;
+  if (!forCommonBlock) {
+    if (examinedByWhyNotInteroperable_.find(symbol) !=
+        examinedByWhyNotInteroperable_.end()) {
+      return msgs;
+    }
+    examinedByWhyNotInteroperable_.insert(symbol);
   }
   bool isExplicitBindC{symbol.attrs().test(Attr::BIND_C)};
-  examinedByWhyNotInteroperable_.insert(symbol);
   CHECK(symbol.has<ObjectEntityDetails>());
   if (isExplicitBindC && !symbol.owner().IsModule()) {
     msgs.Say(symbol.name(),
@@ -3258,7 +3284,7 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
     msgs.Say(symbol.name(),
         "An interoperable pointer must not be CONTIGUOUS"_err_en_US);
   }
-  if (msgs.AnyFatalError()) {
+  if (!forCommonBlock && msgs.AnyFatalError()) {
     examinedByWhyNotInteroperable_.erase(symbol);
   }
   return msgs;
@@ -3338,8 +3364,8 @@ parser::Messages CheckHelper::WhyNotInteroperableProcedure(
           // on the C side by either a cdesc_t * or a void *.  F'2023 18.3.7 (5)
           bool allowNonInteroperableType{!dummy->attrs().test(Attr::VALUE) &&
               (IsDescriptor(*dummy) || IsAssumedType(*dummy))};
-          dummyMsgs =
-              WhyNotInteroperableObject(*dummy, allowNonInteroperableType);
+          dummyMsgs = WhyNotInteroperableObject(
+              *dummy, allowNonInteroperableType, /*forCommonBlock=*/false);
         } else {
           CheckBindC(*dummy);
         }

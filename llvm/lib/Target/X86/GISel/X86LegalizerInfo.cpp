@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -107,6 +108,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasSSE1 || UseX87, {s32})
       .legalFor(HasSSE2 || UseX87, {s64})
       .legalFor(UseX87, {s80});
+
+  getActionDefinitionsBuilder(G_GET_ROUNDING).customFor({s32});
 
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -611,6 +614,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeSITOFP(MI, MRI, Helper);
   case TargetOpcode::G_FPTOSI:
     return legalizeFPTOSI(MI, MRI, Helper);
+  case TargetOpcode::G_GET_ROUNDING:
+    return legalizeGETROUNDING(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -774,6 +779,82 @@ bool X86LegalizerInfo::legalizeNarrowingStore(MachineInstr &MI,
   Helper.Observer.changingInstr(Store);
   Store.setMemRefs(MF, {NewMMO});
   Helper.Observer.changedInstr(Store);
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeGETROUNDING(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           LegalizerHelper &Helper) const {
+  /*
+   The rounding mode is in bits 11:10 of FPSR, and has the following
+   settings:
+     00 Round to nearest
+     01 Round to -inf
+     10 Round to +inf
+     11 Round to 0
+
+  GET_ROUNDING, on the other hand, expects the following:
+    -1 Undefined
+     0 Round to 0
+     1 Round to nearest
+     2 Round to +inf
+     3 Round to -inf
+
+  To perform the conversion, we use a packed lookup table of the four 2-bit
+  values that we can index by FPSP[11:10]
+    0x2d --> (0b00,10,11,01) --> (0,2,3,1) >> FPSR[11:10]
+
+    (0x2d >> ((FPSR >> 9) & 6)) & 3
+  */
+
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = MIRBuilder.getMF();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+
+  // Save FP Control Word to stack slot
+  int MemSize = 2;
+  Align Alignment = Align(2);
+  MachinePointerInfo PtrInfo;
+  auto StackTemp = Helper.createStackTemporary(TypeSize::getFixed(MemSize),
+                                               Alignment, PtrInfo);
+  Register StackPtr = StackTemp.getReg(0);
+
+  auto StoreMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                          MemSize, Alignment);
+
+  // Store FP Control Word to stack slot using G_FNSTCW16
+  MIRBuilder.buildInstr(X86::G_FNSTCW16)
+      .addUse(StackPtr)
+      .addMemOperand(StoreMMO);
+
+  // Load FP Control Word from stack slot
+  auto LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
+                                         MemSize, Alignment);
+
+  auto CWD32 =
+      MIRBuilder.buildZExt(s32, MIRBuilder.buildLoad(s16, StackPtr, *LoadMMO));
+  auto Shifted8 = MIRBuilder.buildTrunc(
+      s8, MIRBuilder.buildLShr(s32, CWD32, MIRBuilder.buildConstant(s8, 9)));
+  auto Masked32 = MIRBuilder.buildZExt(
+      s32, MIRBuilder.buildAnd(s8, Shifted8, MIRBuilder.buildConstant(s8, 6)));
+
+  // LUT is a packed lookup table (0x2d) used to map the 2-bit x87 FPU rounding
+  // mode (from bits 11:10 of the control word) to the values expected by
+  // GET_ROUNDING. The mapping is performed by shifting LUT right by the
+  // extracted rounding mode and masking the result with 3 to obtain the final
+  auto LUT = MIRBuilder.buildConstant(s32, 0x2d);
+  auto LUTShifted = MIRBuilder.buildLShr(s32, LUT, Masked32);
+  auto RetVal =
+      MIRBuilder.buildAnd(s32, LUTShifted, MIRBuilder.buildConstant(s32, 3));
+  auto RetValTrunc = MIRBuilder.buildZExtOrTrunc(DstTy, RetVal);
+
+  MIRBuilder.buildCopy(Dst, RetValTrunc);
+
+  MI.eraseFromParent();
   return true;
 }
 

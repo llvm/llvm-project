@@ -27,13 +27,13 @@ define [2 x i128] @foo(i64 %a, i32 %b) {
 define [2 x i128] @foo2(ptr byval([2 x i128]) %a) {
 ; CHECK-LABEL: foo2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [foo2_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd5, %rd6}, [foo2_param_0+16];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd5, %rd6};
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [foo2_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [foo2_param_0+16];
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
   %ptr0 = getelementptr [2 x i128], ptr %a, i64 0, i32 0
   %1 = load i128, i128* %ptr0

@@ -10,20 +10,20 @@ bool clang::CIRGen::isEmptyRecordForLayout(const ASTContext &context,
   if (!rt)
     return false;
 
-  const RecordDecl *rd = rt->getDecl();
+  const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
 
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
     if (cxxrd->isDynamicClass())
       return false;
 
-    for (const auto &I : cxxrd->bases())
-      if (!isEmptyRecordForLayout(context, I.getType()))
+    for (const auto &i : cxxrd->bases())
+      if (!isEmptyRecordForLayout(context, i.getType()))
         return false;
   }
 
-  for (const auto *I : rd->fields())
-    if (!isEmptyFieldForLayout(context, I))
+  for (const auto *i : rd->fields())
+    if (!isEmptyFieldForLayout(context, i))
       return false;
 
   return true;

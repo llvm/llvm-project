@@ -10,6 +10,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
@@ -571,6 +572,88 @@ TEST_F(ProgramEnvTest, TestLockFile) {
   ASSERT_EQ(0, WaitResult.ReturnCode);
   ASSERT_EQ(WaitResult.Pid, PI2.Pid);
   sys::fs::remove(LockedFile);
+}
+
+TEST_F(ProgramEnvTest, TestLockFileExclusive) {
+  using namespace llvm::sys;
+  using namespace std::chrono_literals;
+
+  if (const char *LockedFile = getenv("LLVM_PROGRAM_TEST_LOCKED_FILE")) {
+    // Child process.
+    int FD2;
+    ASSERT_NO_ERROR(fs::openFileForReadWrite(LockedFile, FD2,
+                                             fs::CD_OpenExisting, fs::OF_None));
+
+    // File should currently be non-exclusive locked by the main process, thus
+    // trying to acquire exclusive lock will fail and trying to acquire
+    // non-exclusive will succeed.
+    EXPECT_TRUE(
+        fs::tryLockFile(FD2, std::chrono::seconds(0), fs::LockKind::Exclusive));
+
+    EXPECT_FALSE(
+        fs::tryLockFile(FD2, std::chrono::seconds(0), fs::LockKind::Shared));
+
+    close(FD2);
+    // Write a file to indicate just finished.
+    std::string FinishFile = std::string(LockedFile) + "-finished";
+    int FD3;
+    ASSERT_NO_ERROR(fs::openFileForReadWrite(FinishFile, FD3, fs::CD_CreateNew,
+                                             fs::OF_None));
+    close(FD3);
+    exit(0);
+  }
+
+  // Create file that will be locked.
+  SmallString<64> LockedFile;
+  int FD1;
+  ASSERT_NO_ERROR(
+      fs::createUniqueDirectory("TestLockFileExclusive", LockedFile));
+  sys::path::append(LockedFile, "file");
+  ASSERT_NO_ERROR(
+      fs::openFileForReadWrite(LockedFile, FD1, fs::CD_CreateNew, fs::OF_None));
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {Executable,
+                      "--gtest_filter=ProgramEnvTest.TestLockFileExclusive"};
+
+  // Add LLVM_PROGRAM_TEST_LOCKED_FILE to the environment of the child.
+  std::string EnvVar = "LLVM_PROGRAM_TEST_LOCKED_FILE=";
+  EnvVar += LockedFile.str();
+  addEnvVar(EnvVar);
+
+  // Lock the file.
+  ASSERT_NO_ERROR(
+      fs::tryLockFile(FD1, std::chrono::seconds(0), fs::LockKind::Exclusive));
+
+  std::string Error;
+  bool ExecutionFailed;
+  ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(), {}, 0, &Error,
+                                  &ExecutionFailed);
+  ASSERT_FALSE(ExecutionFailed) << Error;
+  ASSERT_TRUE(Error.empty());
+  ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+
+  std::string FinishFile = std::string(LockedFile) + "-finished";
+  // Wait till child process writes the file to indicate the job finished.
+  bool Finished = false;
+  ExponentialBackoff Backoff(5s); // timeout 5s.
+  do {
+    if (fs::exists(FinishFile)) {
+      Finished = true;
+      break;
+    }
+  } while (Backoff.waitForNextAttempt());
+
+  ASSERT_TRUE(Finished);
+  ASSERT_NO_ERROR(fs::unlockFile(FD1));
+  ProcessInfo WaitResult = llvm::sys::Wait(PI2, /*SecondsToWait=*/1, &Error);
+  ASSERT_TRUE(Error.empty());
+  ASSERT_EQ(0, WaitResult.ReturnCode);
+  ASSERT_EQ(WaitResult.Pid, PI2.Pid);
+  sys::fs::remove(LockedFile);
+  sys::fs::remove(FinishFile);
+  sys::fs::remove_directories(sys::path::parent_path(LockedFile));
 }
 
 TEST_F(ProgramEnvTest, TestExecuteWithNoStacktraceHandler) {

@@ -69,8 +69,10 @@
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "llvm/CodeGen/PostRAMachineSink.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/ProcessImplicitDefs.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
@@ -112,13 +114,16 @@
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/CFGuard.h"
+#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
+#include "llvm/Transforms/Scalar/LoopTermFold.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Scalar/MergeICmps.h"
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Transforms/Scalar/ScalarizeMaskedMemIntrin.h"
+#include "llvm/Transforms/Utils/CanonicalizeFreezeInLoops.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include <cassert>
@@ -170,8 +175,12 @@ public:
 
     // Target should override TM.Options.EnableIPRA in their target-specific
     // LLVMTM ctor. See TargetMachine::setGlobalISel for example.
-    if (Opt.EnableIPRA)
+    if (Opt.EnableIPRA) {
       TM.Options.EnableIPRA = *Opt.EnableIPRA;
+    } else {
+      // If not explicitly specified, use target default.
+      TM.Options.EnableIPRA |= TM.useIPRA();
+    }
 
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
@@ -275,7 +284,7 @@ protected:
 
       FunctionPassManager FPM;
       FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-      FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+      FPM.addPass(FreeMachineFunctionPass());
       if (this->PB.AddInCGSCCOrder) {
         MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
             createCGSCCToFunctionPassAdaptor(std::move(FPM))));
@@ -573,8 +582,10 @@ protected:
   void insertPass(InsertedPassT &&Pass) const {
     AfterCallbacks.emplace_back(
         [&](StringRef Name, MachineFunctionPassManager &MFPM) mutable {
-          if (Name == TargetPassT::name())
+          if (Name == TargetPassT::name() &&
+              runBeforeAdding(InsertedPassT::name())) {
             MFPM.addPass(std::forward<InsertedPassT>(Pass));
+          }
         });
   }
 
@@ -746,7 +757,12 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
-    addPass(createFunctionToLoopPassAdaptor(LoopStrengthReducePass(),
+    LoopPassManager LPM;
+    LPM.addPass(CanonicalizeFreezeInLoopsPass());
+    LPM.addPass(LoopStrengthReducePass());
+    if (Opt.EnableLoopTermFold)
+      LPM.addPass(LoopTermFoldPass());
+    addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
                                             /*UseMemorySSA=*/true));
   }
 
@@ -791,7 +807,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   addPass(ScalarizeMaskedMemIntrinPass());
 
   // Expand reduction intrinsics into shuffle sequences if the target wants to.
-  addPass(ExpandReductionsPass());
+  if (!Opt.DisableExpandReductions)
+    addPass(ExpandReductionsPass());
 
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
@@ -868,6 +885,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
 
   if (Opt.RequiresCodeGenSCCOrder)
     addPass.requireCGSCCOrder();
+
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(ObjCARCContractPass());
 
   addPass(CallBrPreparePass());
   // Add both the safe stack and the stack protection passes: each of them will

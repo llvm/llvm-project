@@ -589,6 +589,10 @@ protected:
   /// Whether the function profiles use FS discriminators.
   bool ProfileIsFS = false;
 
+  /// If true, the profile has vtable profiles and reader should decode them
+  /// to parse profiles correctly.
+  bool ReadVTableProf = false;
+
   /// \brief The format of sample.
   SampleProfileFormat Format = SPF_None;
 
@@ -734,10 +738,6 @@ protected:
   /// hashes of non-CS contexts are already in the profile. Otherwise it points
   /// to the start of MD5SampleContextTable.
   const uint64_t *MD5SampleContextStart = nullptr;
-
-  /// If true, the profile has vtable profiles and reader should decode them
-  /// to parse profiles correctly.
-  bool ReadVTableProf = false;
 
 private:
   std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);

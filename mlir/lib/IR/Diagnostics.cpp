@@ -821,15 +821,7 @@ SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
   for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
     (void)impl->computeExpectedDiags(out, mgr, mgr.getMemoryBuffer(i + 1));
 
-  // Register a handler to verify the diagnostics.
-  setHandler([&](Diagnostic &diag) {
-    // Process the main diagnostics.
-    process(diag);
-
-    // Process each of the notes.
-    for (auto &note : diag.getNotes())
-      process(note);
-  });
+  registerInContext(ctx);
 }
 
 SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
@@ -860,6 +852,17 @@ LogicalResult SourceMgrDiagnosticVerifierHandler::verify() {
     checkExpectedDiags(err);
   impl->expectedDiagsPerFile.clear();
   return impl->status;
+}
+
+void SourceMgrDiagnosticVerifierHandler::registerInContext(MLIRContext *ctx) {
+  ctx->getDiagEngine().registerHandler([&](Diagnostic &diag) {
+    // Process the main diagnostics.
+    process(diag);
+
+    // Process each of the notes.
+    for (auto &note : diag.getNotes())
+      process(note);
+  });
 }
 
 /// Process a single diagnostic.

@@ -106,8 +106,16 @@ static void generateEnumClass(ArrayRef<const Record *> Records, raw_ostream &OS,
                               bool ExportEnums) {
   OS << "\n";
   OS << "enum class " << Enum << " {\n";
-  for (const Record *R : Records) {
-    OS << "  " << getIdentifierName(R, Prefix) << ",\n";
+  if (!Records.empty()) {
+    std::string N;
+    for (auto [I, R] : llvm::enumerate(Records)) {
+      N = getIdentifierName(R, Prefix);
+      OS << "  " << N << ",\n";
+      // Make the sentinel names less likely to conflict with actual names...
+      if (I == 0)
+        OS << "  First_ = " << N << ",\n";
+    }
+    OS << "  Last_ = " << N << ",\n";
   }
   OS << "};\n";
   OS << "\n";
@@ -282,6 +290,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
 
+  OS << "#include \"llvm/ADT/Sequence.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
   OS << "#include \"llvm/Support/Compiler.h\"\n";
@@ -374,6 +383,15 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   // Closing namespaces
   for (auto Ns : reverse(Namespaces))
     OS << "} // namespace " << Ns << "\n";
+
+  // These specializations need to be in ::llvm.
+  for (StringRef Enum : {"Association", "Category", "Directive", "Clause"}) {
+    OS << "\n";
+    OS << "template <> struct enum_iteration_traits<"
+       << DirLang.getCppNamespace() << "::" << Enum << "> {\n";
+    OS << "  static constexpr bool is_iterable = true;\n";
+    OS << "};\n";
+  }
 
   OS << "} // namespace llvm\n";
 

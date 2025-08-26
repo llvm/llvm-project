@@ -165,4 +165,13 @@ def main():
 
 
 if __name__ == "__main__":
-    exit(main())
+    rc = main()
+
+    # If the remote process died with a signal, this will be exposed by ssh as
+    # an exit code in this range. We may be running under `not --crash` which
+    # will expect us to also die with a signal, so send the signal to ourselves
+    # so that wait4() in `not` will detect the signal. 
+    if rc > 128 and rc < 160:
+        os.kill(os.getpid(), rc - 128)
+
+    exit(rc)

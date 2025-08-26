@@ -26,6 +26,11 @@ struct tuple_element;
 template <class...>
 class tuple;
 
+template <size_t _Ip, class... _Tp>
+struct tuple_element<_Ip, tuple<_Tp...> > {
+  using type _LIBCPP_NODEBUG = __type_pack_element<_Ip, _Tp...>;
+};
+
 template <class>
 struct tuple_size;
 

@@ -173,7 +173,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
           // `enum x : int;' is not formally an incomplete type.
           // We may need a full definition anyway.
           if (auto * ET = llvm::dyn_cast<EnumType>(T))
-            if (!ET->getDecl()->getDefinition())
+            if (!ET->getOriginalDecl()->getDefinition())
               return fixIncompleteType(*T);
         }
       }
@@ -400,10 +400,12 @@ std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
   CheapUnresolvedName Result;
   Result.Name = Unresolved.getAsString();
   if (SS && SS->isNotEmpty()) { // "::" or "ns::"
-    if (auto *Nested = SS->getScopeRep()) {
-      if (Nested->getKind() == NestedNameSpecifier::Global) {
-        Result.ResolvedScope = "";
-      } else if (const auto *NS = Nested->getAsNamespace()) {
+    NestedNameSpecifier Nested = SS->getScopeRep();
+    if (Nested.getKind() == NestedNameSpecifier::Kind::Global) {
+      Result.ResolvedScope = "";
+    } else if (Nested.getKind() == NestedNameSpecifier::Kind::Namespace) {
+      const NamespaceBaseDecl *NSB = Nested.getAsNamespaceAndPrefix().Namespace;
+      if (const auto *NS = dyn_cast<NamespaceDecl>(NSB)) {
         std::string SpecifiedNS = printNamespaceScope(*NS);
         std::optional<std::string> Spelling = getSpelledSpecifier(*SS, SM);
 
@@ -420,13 +422,13 @@ std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
         } else {
           Result.UnresolvedScope = std::move(*Spelling);
         }
-      } else if (const auto *ANS = Nested->getAsNamespaceAlias()) {
-        Result.ResolvedScope = printNamespaceScope(*ANS->getNamespace());
       } else {
-        // We don't fix symbols in scopes that are not top-level e.g. class
-        // members, as we don't collect includes for them.
-        return std::nullopt;
+        Result.ResolvedScope = printNamespaceScope(*cast<NamespaceAliasDecl>(NSB)->getNamespace());
       }
+    } else {
+      // We don't fix symbols in scopes that are not top-level e.g. class
+      // members, as we don't collect includes for them.
+      return std::nullopt;
     }
   }
 

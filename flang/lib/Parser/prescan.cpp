@@ -179,7 +179,9 @@ void Prescanner::Statement() {
         EmitChar(tokens, *sp);
       }
       if (inFixedForm_) {
-        while (column_ < 6) {
+        // We need to add the whitespace after the sentinel because otherwise
+        // the line cannot be re-categorised as a compiler directive.
+        while (column_ <= 6) {
           if (*at_ == '\t') {
             tabInCurrentLine_ = true;
             ++at_;

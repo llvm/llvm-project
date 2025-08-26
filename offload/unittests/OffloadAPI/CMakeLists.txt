@@ -9,8 +9,9 @@ add_offload_unittest("device"
     device/olGetDeviceInfoSize.cpp)
 
 add_offload_unittest("event"
+    event/olCreateEvent.cpp
     event/olDestroyEvent.cpp
-    event/olWaitEvent.cpp
+    event/olSyncEvent.cpp
     event/olGetEventInfo.cpp
     event/olGetEventInfoSize.cpp)
 
@@ -19,11 +20,12 @@ add_offload_unittest("init"
 target_compile_definitions("init.unittests" PRIVATE DISABLE_WRAPPER)
 
 add_offload_unittest("kernel"
-    kernel/olGetKernel.cpp
+    kernel/olCalculateOptimalOccupancy.cpp
     kernel/olLaunchKernel.cpp)
 
 add_offload_unittest("memory"
     memory/olMemAlloc.cpp
+    memory/olMemFill.cpp
     memory/olMemFree.cpp
     memory/olMemcpy.cpp)
 
@@ -37,7 +39,14 @@ add_offload_unittest("program"
 
 add_offload_unittest("queue"
     queue/olCreateQueue.cpp
-    queue/olWaitQueue.cpp
+    queue/olSyncQueue.cpp
     queue/olDestroyQueue.cpp
     queue/olGetQueueInfo.cpp
-    queue/olGetQueueInfoSize.cpp)
+    queue/olGetQueueInfoSize.cpp
+    queue/olWaitEvents.cpp
+    queue/olLaunchHostFunction.cpp)
+
+add_offload_unittest("symbol"
+    symbol/olGetSymbol.cpp
+    symbol/olGetSymbolInfo.cpp
+    symbol/olGetSymbolInfoSize.cpp)

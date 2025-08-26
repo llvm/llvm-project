@@ -200,7 +200,8 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
           if (CSI.Symbol)
             Counts.emplace_back(CSI.Symbol, CSI.Count);
       } else {
-        const uint64_t Count = BB->getExecutionCount();
+        const uint64_t Count = BC.MIB->getAnnotationWithDefault(
+            Inst, "Count", BB->getExecutionCount());
         Counts.emplace_back(DstSym, Count);
       }
 
