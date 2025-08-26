@@ -159,6 +159,9 @@ Non-comprehensive list of changes in this release
 - Added ``__builtin_masked_load`` and ``__builtin_masked_store`` for conditional
   memory loads from vectors. Binds to the LLVM intrinsic of the same name.
 
+- The ``__builtin_popcountg``, ``__builtin_ctzg``, and ``__builtin_clzg``
+  functions now accept fixed-size boolean vectors.
+
 - Use of ``__has_feature`` to detect the ``ptrauth_qualifier`` and ``ptrauth_intrinsics``
   features has been deprecated, and is restricted to the arm64e target only. The
   correct method to check for these features is to test for the ``__PTRAUTH__``
