@@ -52,3 +52,12 @@ void f() {}
 // RUN: %clang %s -O1 -target x86_64 -gcodeview -gmlt                    -S -emit-llvm -o - | FileCheck %s --check-prefixes=SMOKETEST-OFF
 // SMOKETEST-NO-DEBUG: llvm.module.flags
 // SMOKETEST-NO-DEBUG-NOT: DICompileUnit
+
+//// Check only "plain" C/C++ turns on Key Instructions by default.
+// RUN: %clang -x c             %s -O1 -target x86_64 -gdwarf -gmlt -### 2>&1 | FileCheck %s --check-prefix=KEY-INSTRUCTIONS
+// RUN: %clang -x c++           %s -O1 -target x86_64 -gdwarf -gmlt -### 2>&1 | FileCheck %s --check-prefix=KEY-INSTRUCTIONS
+// RUN: %clang -x cuda -nocudalib -nocudainc %s -O1 -target x86_64 -gdwarf -gmlt -### 2>&1 | FileCheck %s --check-prefix=NO-KEY-INSTRUCTIONS
+// RUN: %clang -x hip  -nogpulib  -nogpuinc  %s -O1 -target x86_64 -gdwarf -gmlt -### 2>&1 | FileCheck %s --check-prefix=NO-KEY-INSTRUCTIONS
+// RUN: %clang -x cl            %s -O1 -target x86_64 -gdwarf -gmlt -### 2>&1 | FileCheck %s --check-prefix=NO-KEY-INSTRUCTIONS
+// RUN: %clang -x objective-c   %s -O1 -target x86_64 -gdwarf -gmlt -### 2>&1 | FileCheck %s --check-prefix=NO-KEY-INSTRUCTIONS
+// RUN: %clang -x objective-c++ %s -O1 -target x86_64 -gdwarf -gmlt -### 2>&1 | FileCheck %s --check-prefix=NO-KEY-INSTRUCTIONS
