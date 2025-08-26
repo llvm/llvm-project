@@ -2626,32 +2626,6 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
                                        << Op->getConstantOperandVal(1)));
     break;
   }
-  case AArch64ISD::MOVImsl: {
-    Known = KnownBits::makeConstant(
-        APInt(Known.getBitWidth(), ~(~Op->getConstantOperandVal(0)
-                                     << Op->getConstantOperandVal(1))));
-    break;
-  }
-  case AArch64ISD::MOVIedit: {
-    Known = KnownBits::makeConstant(APInt(
-        Known.getBitWidth(),
-        AArch64_AM::decodeAdvSIMDModImmType10(Op->getConstantOperandVal(0))));
-    break;
-  }
-  case AArch64ISD::MVNIshift: {
-    Known = KnownBits::makeConstant(
-        APInt(Known.getBitWidth(),
-              ~(Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
-              /*isSigned*/ false, /*implicitTrunc*/ true));
-    break;
-  }
-  case AArch64ISD::MVNImsl: {
-    Known = KnownBits::makeConstant(
-        APInt(Known.getBitWidth(),
-              (~Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
-              /*isSigned*/ false, /*implicitTrunc*/ true));
-    break;
-  }
   case AArch64ISD::LOADgot:
   case AArch64ISD::ADDlow: {
     if (!Subtarget->isTargetILP32())
@@ -30672,16 +30646,6 @@ bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
   return Op.getOpcode() == AArch64ISD::DUP ||
          Op.getOpcode() == AArch64ISD::MOVI ||
          Op.getOpcode() == AArch64ISD::MOVIshift ||
-         Op.getOpcode() == AArch64ISD::MOVImsl ||
-         Op.getOpcode() == AArch64ISD::MOVIedit ||
-         Op.getOpcode() == AArch64ISD::MVNIshift ||
-         Op.getOpcode() == AArch64ISD::MVNImsl ||
-         // Ignoring fneg(movi(0)), because if it is folded to FPConstant(-0.0),
-         // ISel will select fmov(mov i64 0x8000000000000000), resulting in a
-         // fmov from fpr to gpr, which is more expensive than fneg(movi(0))
-         (Op.getOpcode() == ISD::FNEG &&
-          Op.getOperand(0).getOpcode() == AArch64ISD::MOVIedit &&
-          Op.getOperand(0).getConstantOperandVal(0) == 0) ||
          (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           Op.getOperand(0).getOpcode() == AArch64ISD::DUP) ||
          TargetLowering::isTargetCanonicalConstantNode(Op);
