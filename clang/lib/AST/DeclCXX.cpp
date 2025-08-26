@@ -1440,7 +1440,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
     // If this type contains any address discriminated values we should
     // have already indicated that the only special member functions that
-    // can possibly be trivial are the constructor and destructor.
+    // can possibly be trivial are the default constructor and destructor.
     if (T.hasAddressDiscriminatedPointerAuth())
       data().HasTrivialSpecialMembers &=
           SMF_DefaultConstructor | SMF_Destructor;
