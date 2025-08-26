@@ -5,15 +5,14 @@
 define <2 x i64> @test1_vpmadd52l(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
 ; AVX512-LABEL: test1_vpmadd52l:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmadd52luq %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX-LABEL: test1_vpmadd52l:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    {vex} vpmadd52luq %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    retq
+
   %and = and <2 x i64> %x1, splat (i64 4503599627370495) ; (1LL << 52) - 1
   %1 = call <2 x i64> @llvm.x86.avx512.vpmadd52l.uq.128(<2 x i64> %x0, <2 x i64> %and, <2 x i64> %x2)
   ret <2 x i64> %1
@@ -22,13 +21,11 @@ define <2 x i64> @test1_vpmadd52l(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
 define <2 x i64> @test2_vpmadd52l(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
 ; AVX512-LABEL: test2_vpmadd52l:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm2, %xmm2
 ; AVX512-NEXT:    vpmadd52luq %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX-LABEL: test2_vpmadd52l:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX-NEXT:    {vex} vpmadd52luq %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %and = and <2 x i64> %x2, splat (i64 4503599627370495) ; (1LL << 52) - 1
@@ -39,15 +36,11 @@ define <2 x i64> @test2_vpmadd52l(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
 define <2 x i64> @test3_vpmadd52l(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
 ; AVX512-LABEL: test3_vpmadd52l:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm1
-; AVX512-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm2, %xmm2
 ; AVX512-NEXT:    vpmadd52luq %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX-LABEL: test3_vpmadd52l:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX-NEXT:    {vex} vpmadd52luq %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %and = and <2 x i64> %x1, splat (i64 4503599627370495) ; (1LL << 52) - 1
@@ -96,17 +89,14 @@ define <2 x i64> @test_vpmadd52l_wrong_op(<2 x i64> %x0, <2 x i64> %x1, <2 x i64
 define <2 x i64> @test_vpmadd52h(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2) {
 ; AVX512-LABEL: test_vpmadd52h:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm1
-; AVX512-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm2, %xmm2
 ; AVX512-NEXT:    vpmadd52huq %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX-LABEL: test_vpmadd52h:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX-NEXT:    {vex} vpmadd52huq %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    retq
+
   %and = and <2 x i64> %x1, splat (i64 4503599627370495) ; (1LL << 52) - 1
   %or = or <2 x i64> %x2, splat (i64 4503599627370496) ; 1LL << 52
   %1 = call <2 x i64> @llvm.x86.avx512.vpmadd52h.uq.128(<2 x i64> %x0, <2 x i64> %and, <2 x i64> %or)
