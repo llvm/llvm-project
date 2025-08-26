@@ -810,9 +810,13 @@ void OptTable::internalPrintHelp(
     StringRef TopLevelCommandName = "TopLevelCommand";
     if (Commands.size() > 1) {
       OS << "SUBCOMMANDS:\n\n";
+      // This loop prints subcommands list and sets ActiveCommand to
+      // TopLevelCommand while iterating over all commands.
       for (const auto &C : Commands) {
-        if (C.Name == TopLevelCommandName)
+        if (C.Name == TopLevelCommandName) {
+          ActiveCommand = &C;
           continue;
+        }
         OS << C.Name << " - " << C.HelpText << "\n";
       }
       OS << "\n";

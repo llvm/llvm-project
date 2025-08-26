@@ -1,6 +1,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -54,40 +55,54 @@ int main(int argc, char **argv) {
   InputArgList Args = T.ParseArgs(ArrayRef(argv + 1, argc - 1), MissingArgIndex,
                                   MissingArgCount);
 
-  StringRef Subcommand = Args.getSubcommand();
+  auto SubcommandResult = Args.getSubcommand(T.getCommands());
+  if (!SubcommandResult) {
+    llvm::errs() << "error: unknown subcommand '"
+                 << toString(SubcommandResult.takeError())
+                 << "'. See --help.\n";
+    return 1;
+  }
+  // Valid subcommand found.
+  StringRef Subcommand = *SubcommandResult;
+
+  // Handle help. When help options is found, ignore all other options and exit
+  // after printing help.
   if (Args.hasArg(OPT_help)) {
     T.printHelp(llvm::outs(), "llvm-hello-sub [subcommand] [options]",
                 "LLVM Hello Subcommand Example", false, false, Visibility(),
                 Subcommand);
     return 0;
   }
-
-  if (Args.hasArg(OPT_version)) {
-    llvm::outs() << "LLVM Hello Subcommand Example 1.0\n";
-    return 0;
+  bool HasUnknownOptions = false;
+  for (const Arg *A : Args.filtered(OPT_UNKNOWN)) {
+    HasUnknownOptions = true;
+    llvm::errs() << "Unknown option `" << A->getAsString(Args) << "'\n";
   }
-
-  if (Subcommand == "foo") {
+  if (HasUnknownOptions) {
+    llvm::errs() << "See `OptSubcommand --help`.\n";
+    return 1;
+  }
+  if (Subcommand.empty()) {
+    if (Args.hasArg(OPT_version)) {
+      llvm::outs() << "LLVM Hello Subcommand Example 1.0\n";
+    }
+  } else if (Subcommand == "foo") {
     if (Args.hasArg(OPT_uppercase))
       llvm::outs() << "FOO\n";
     else if (Args.hasArg(OPT_lowercase))
       llvm::outs() << "foo\n";
-    else
-      llvm::errs() << "error: unknown option for subcommand '" << Subcommand
-                   << "'. See -help.\n";
-    return 1;
+
+    if (Args.hasArg(OPT_version))
+      llvm::outs() << "LLVM Hello Subcommand foo Example 1.0\n";
+
   } else if (Subcommand == "bar") {
     if (Args.hasArg(OPT_lowercase))
       llvm::outs() << "bar\n";
     else if (Args.hasArg(OPT_uppercase))
       llvm::outs() << "BAR\n";
-    else
-      llvm::errs() << "error: unknown option for subcommand '" << Subcommand
-                   << "'. See -help.\n";
-  } else {
-    llvm::errs() << "error: unknown subcommand '" << Subcommand
-                 << "'. See --help.\n";
-    return 1;
+
+    if (Args.hasArg(OPT_version))
+      llvm::outs() << "LLVM Hello Subcommand bar Example 1.0\n";
   }
 
   return 0;

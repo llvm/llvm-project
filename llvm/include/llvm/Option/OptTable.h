@@ -212,6 +212,8 @@ public:
   /// Return the string table used for option names.
   const StringTable &getStrTable() const { return *StrTable; }
 
+  const ArrayRef<Command> getCommands() const { return Commands; }
+
   /// Return the prefixes table used for option names.
   ArrayRef<StringTable::Offset> getPrefixesTable() const {
     return PrefixesTable;

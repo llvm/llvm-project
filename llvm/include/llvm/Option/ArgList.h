@@ -20,6 +20,7 @@
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstddef>
 #include <initializer_list>
@@ -280,8 +281,11 @@ public:
   /// list.
   virtual unsigned getNumInputArgStrings() const = 0;
 
-  /// getSubcommand - Return the active subcommand, if one exists.
-  LLVM_ABI StringRef getSubcommand() const;
+  /// getSubcommand - Return the active subcommand, if one exists. Return empty
+  /// StringRef if no subcommand passed. Return an error if an invalid/unknown
+  /// subcommand is found as the first argument.
+  LLVM_ABI llvm::Expected<StringRef>
+  getSubcommand(const ArrayRef<OptTable::Command> Commands) const;
 
   /// @}
   /// @name Argument Lookup Utilities

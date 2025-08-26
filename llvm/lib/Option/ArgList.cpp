@@ -14,9 +14,11 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptSpecifier.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -203,14 +205,24 @@ void ArgList::print(raw_ostream &O) const {
 LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 #endif
 
-StringRef ArgList::getSubcommand() const {
+llvm::Expected<StringRef>
+ArgList::getSubcommand(const ArrayRef<OptTable::Command> Commands) const {
+  // Identify if a valid subcommand is passed.
   for (const Arg *A : *this) {
     if (A->getOption().getKind() == Option::InputClass) {
-      if (StringRef(A->getValue()).empty())
-        return StringRef();
-      return A->getValue();
+      assert(!StringRef(A->getValue()).empty());
+      for (auto CMD : Commands) {
+        if (StringRef(CMD.Name) == "TopLevelCommand")
+          continue;
+        if (StringRef(CMD.Name) == A->getValue())
+          return A->getValue(); // Found a valid subcommand.
+      }
+      // Invalid/Unexpected subcommand passed. Let the users handle this case as
+      // they see fit. return
+      // llvm::createStringError(std::errc::invalid_argument, A->getValue());
     }
   }
+  // No registered subcommand found.
   return StringRef();
 }
 
