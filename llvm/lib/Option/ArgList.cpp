@@ -218,8 +218,9 @@ ArgList::getSubcommand(const ArrayRef<OptTable::Command> Commands) const {
           return A->getValue(); // Found a valid subcommand.
       }
       // Invalid/Unexpected subcommand passed. Let the users handle this case as
-      // they see fit. return
-      // llvm::createStringError(std::errc::invalid_argument, A->getValue());
+      // they see fit.
+      return llvm::createStringError(std::errc::invalid_argument,
+                                     A->getValue());
     }
   }
   // No registered subcommand found.
