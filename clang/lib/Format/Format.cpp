@@ -205,6 +205,52 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
 
 // For backward compatibility.
 template <> struct MappingTraits<FormatStyle::BracketAlignmentStyle> {
+
+  class NormalizedBracketAlignmentStyle {
+  public:
+
+    NormalizedBracketAlignmentStyle(IO &IO,
+        FormatStyle::BracketAlignmentStyle &BAS) :
+      AlignAfterOpenBracket(BAS.value == true ? BAS_Align : BAS_DontAlign) {
+    }
+
+    FormatStyle::BracketAlignmentStyle denormalize(IO &IO) {
+      if (AlignAfterOpenBracket == BAS_DontAlign)
+        return FormatStyle::BracketAlignmentStyle(false);
+      return true;
+    }
+
+    /// Different styles for aligning after open brackets.
+    /// This is **deprecated**. For backward compatibility only.
+    enum BracketAlignmentStyleEnum : int8_t {
+      /// Align parameters on the open bracket, e.g.:
+      /// \code
+      ///   someLongFunction(argument1,
+      ///                    argument2);
+      /// \endcode
+      BAS_Align,
+      /// Don't align, instead use ``ContinuationIndentWidth``, e.g.:
+      /// \code
+      ///   someLongFunction(argument1,
+      ///       argument2);
+      /// \endcode
+      BAS_DontAlign,
+      /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+      /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+      /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+      BAS_AlwaysBreak,
+      /// This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+      /// ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+      /// ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+      /// in combination with ``BreakBeforeCloseBracketBracedList``,
+      /// ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
+      /// ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
+      BAS_BlockIndent,
+    };
+
+    BracketAlignmentStyleEnum AlignAfterOpenBracket; 
+  };
+
   static void enumInput(IO &IO, FormatStyle::BracketAlignmentStyle &Value) {
     IO.enumCase(Value, "Align", FormatStyle::BracketAlignmentStyle(true));
     IO.enumCase(Value, "DontAlign", FormatStyle::BracketAlignmentStyle(false));
@@ -214,7 +260,9 @@ template <> struct MappingTraits<FormatStyle::BracketAlignmentStyle> {
     IO.enumCase(Value, "false", FormatStyle::BracketAlignmentStyle(true));
   }
   static void mapping(IO &IO, FormatStyle::BracketAlignmentStyle &BAS) {
-    IO.mapOptional("AlignAfterOpenBracket", BAS.value);
+    MappingNormalization<NormalizedBracketAlignmentStyle,
+                         FormatStyle::BracketAlignmentStyle> keys(IO, BAS);
+    IO.mapOptional("AlignAfterOpenBracket", keys->AlignAfterOpenBracket);
   }
 };
 
