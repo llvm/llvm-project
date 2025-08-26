@@ -1,7 +1,6 @@
 include "llvm/Option/OptParser.td"
 
-def sc_foo : Subcommand<"foo", "HelpText for Subcommand foo.",
-                        "OptSubcommand foo <options>">;
+def sc_foo : Subcommand<"foo", "HelpText for Subcommand foo.">;
 
 def sc_bar : Subcommand<"bar", "HelpText for Subcommand bar.",
                         "OptSubcommand bar <options>">;

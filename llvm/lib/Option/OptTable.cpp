@@ -802,7 +802,8 @@ void OptTable::internalPrintHelp(
   const Command *ActiveCommand = getActiveCommand(Commands, Subcommand);
   if (ActiveCommand) {
     OS << ActiveCommand->HelpText << "\n\n";
-    OS << "USAGE: " << ActiveCommand->Usage << "\n\n";
+    if (!StringRef(ActiveCommand->Usage).empty())
+      OS << "USAGE: " << ActiveCommand->Usage << "\n\n";
   } else {
     OS << "USAGE: " << Usage << "\n\n";
     // Assume top level command (toolname) is active.

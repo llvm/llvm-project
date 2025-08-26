@@ -102,7 +102,8 @@ class HelpTextVariant<list<OptionVisibility> visibilities, string text> {
 class Command<string name> { string Name = name; }
 
 // Class definition for positional subcommands.
-class Subcommand<string name, string helpText, string usage> : Command<name> {
+class Subcommand<string name, string helpText, string usage = "">
+    : Command<name> {
   string HelpText = helpText;
   string Usage = usage; //TODO(prabhuk): This could be part of another subclass of subcommand to make passing usage string optional.
 }
