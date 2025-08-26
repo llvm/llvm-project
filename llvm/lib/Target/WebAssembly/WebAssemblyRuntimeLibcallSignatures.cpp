@@ -533,8 +533,8 @@ struct StaticLibcallNameMap {
     // different libcalls.
     RTLIB::RuntimeLibcallsInfo RTCI(TT);
     for (RTLIB::Libcall LC : RTLIB::libcalls()) {
-      const char *NameLibcall = RTCI.getLibcallName(LC);
-      if (NameLibcall != nullptr &&
+      StringRef NameLibcall = RTCI.getLibcallName(LC);
+      if (!NameLibcall.empty() &&
           getRuntimeLibcallSignatures().Table[LC] != unsupported) {
         assert(!Map.contains(NameLibcall) &&
                "duplicate libcall names in name map");

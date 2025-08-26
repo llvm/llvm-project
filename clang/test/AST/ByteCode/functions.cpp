@@ -708,3 +708,32 @@ namespace NoDiags {
     return true;
   }
 }
+
+namespace EnableIfWithTemporary {
+  struct A { ~A(); };
+  int &h() __attribute__((enable_if((A(), true), ""))); // both-warning {{clang extension}}
+}
+
+namespace LocalVarForParmVarDecl {
+  struct Iter {
+    void *p;
+  };
+  constexpr bool bar2(Iter A) {
+    return true;
+  }
+  constexpr bool bar(Iter A, bool b) {
+    if (b)
+      return true;
+
+    return bar(A, true);
+  }
+  constexpr int foo() {
+    return bar(Iter(), false);
+  }
+  static_assert(foo(), "");
+}
+
+namespace PtrPtrCast {
+  void foo() { ; }
+  void bar(int *a) { a = (int *)(void *)(foo); }
+}

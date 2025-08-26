@@ -1,9 +1,15 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns -verify-diagnostics -profile-actions-to=- %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=1" -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=1" -verify-diagnostics -profile-actions-to=- %s | FileCheck %s --check-prefix=CHECK-PROFILER
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=0" -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns="allow-pattern-rollback=0 build-materializations=0 attach-debug-materialization-kind=1" -verify-diagnostics %s | FileCheck %s --check-prefix=CHECK-KIND
 
-//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "B"
-//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "B"
-//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "B"
-//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "E"
+// CHECK-PROFILER: "name": "pass-execution", "cat": "PERF", "ph": "B"
+// CHECK-PROFILER: "name": "apply-conversion", "cat": "PERF", "ph": "B"
+// CHECK-PROFILER: "name": "apply-pattern", "cat": "PERF", "ph": "B"
+// CHECK-PROFILER: "name": "apply-pattern", "cat": "PERF", "ph": "E"
+// CHECK-PROFILER: "name": "apply-conversion", "cat": "PERF", "ph": "E"
+// CHECK-PROFILER: "name": "pass-execution", "cat": "PERF", "ph": "E"
+
 // Note: Listener notifications appear after the pattern application because
 // the conversion driver sends all notifications at the end of the conversion
 // in bulk.
@@ -11,8 +17,6 @@
 // CHECK-NEXT: notifyOperationReplaced: test.illegal_op_a
 // CHECK-NEXT: notifyOperationModified: func.return
 // CHECK-NEXT: notifyOperationErased: test.illegal_op_a
-//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "E"
-//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "E"
 // CHECK-LABEL: verifyDirectPattern
 func.func @verifyDirectPattern() -> i32 {
   // CHECK-NEXT:  "test.legal_op_a"() <{status = "Success"}
@@ -29,7 +33,9 @@ func.func @verifyDirectPattern() -> i32 {
 // CHECK-NEXT: notifyOperationErased: test.illegal_op_c
 // CHECK-NEXT: notifyOperationInserted: test.legal_op_a, was unlinked
 // CHECK-NEXT: notifyOperationReplaced: test.illegal_op_e
-// CHECK-NEXT: notifyOperationErased: test.illegal_op_e
+// Note: func.return is modified a second time when running in no-rollback
+//       mode.
+//      CHECK: notifyOperationErased: test.illegal_op_e
 
 // CHECK-LABEL: verifyLargerBenefit
 func.func @verifyLargerBenefit() -> i32 {
@@ -70,7 +76,7 @@ func.func @remap_call_1_to_1(%arg0: i64) {
 // CHECK:      notifyBlockInserted into func.func: was unlinked
 
 // Contents of the old block are moved to the new block.
-// CHECK-NEXT: notifyOperationInserted: test.return, was linked, exact position unknown
+// CHECK-NEXT: notifyOperationInserted: test.return
 
 // The old block is erased.
 // CHECK-NEXT: notifyBlockErased
@@ -185,9 +191,12 @@ func.func @remap_drop_region() {
 // -----
 
 // CHECK-LABEL: func @dropped_input_in_use
+// CHECK-KIND-LABEL: func @dropped_input_in_use
 func.func @dropped_input_in_use(%arg: i16, %arg2: i64) {
-  // CHECK-NEXT: "test.cast"{{.*}} : () -> i16
-  // CHECK-NEXT: "work"{{.*}} : (i16)
+  // CHECK-NEXT: %[[cast:.*]] = "test.cast"() : () -> i16
+  // CHECK-NEXT: "work"(%[[cast]]) : (i16)
+  // CHECK-KIND-NEXT: %[[cast:.*]] = builtin.unrealized_conversion_cast to i16 {__kind__ = "source"}
+  // CHECK-KIND-NEXT: "work"(%[[cast]]) : (i16)
   // expected-remark@+1 {{op 'work' is not legalizable}}
   "work"(%arg) : (i16) -> ()
 }
@@ -409,8 +418,10 @@ func.func @test_remap_block_arg() {
 
 // CHECK-LABEL: func @test_multiple_1_to_n_replacement()
 //       CHECK:   %[[legal_op:.*]]:4 = "test.legal_op"() : () -> (f16, f16, f16, f16)
-//       CHECK:   %[[cast:.*]] = "test.cast"(%[[legal_op]]#0, %[[legal_op]]#1, %[[legal_op]]#2, %[[legal_op]]#3) : (f16, f16, f16, f16) -> f16
-//       CHECK:   "test.valid"(%[[cast]]) : (f16) -> ()
+// Note: There is a bug in the rollback-based conversion driver: it emits a
+// "test.cast" : (f16, f16, f16, f16) -> f16, when it should be emitting
+// three consecutive casts of (f16, f16) -> f16.
+//       CHECK:   "test.valid"(%{{.*}}) : (f16) -> ()
 func.func @test_multiple_1_to_n_replacement() {
   %0 = "test.multiple_1_to_n_replacement"() : () -> (f16)
   "test.invalid"(%0) : (f16) -> ()
@@ -423,6 +434,11 @@ func.func @test_multiple_1_to_n_replacement() {
 //       CHECK:   %[[cast:.*]] = "test.cast"(%[[producer]]) : (i16) -> f64
 //       CHECK:   "test.valid_consumer"(%[[cast]]) : (f64) -> ()
 //       CHECK:   "test.valid_consumer"(%[[producer]]) : (i16) -> ()
+// CHECK-KIND-LABEL: func @test_lookup_without_converter
+//       CHECK-KIND:   %[[producer:.*]] = "test.valid_producer"() : () -> i16
+//       CHECK-KIND:   %[[cast:.*]] = builtin.unrealized_conversion_cast %[[producer]] : i16 to f64 {__kind__ = "target"}
+//       CHECK-KIND:   "test.valid_consumer"(%[[cast]]) : (f64) -> ()
+//       CHECK-KIND:   "test.valid_consumer"(%[[producer]]) : (i16) -> ()
 func.func @test_lookup_without_converter() {
   %0 = "test.replace_with_valid_producer"() {type = i16} : () -> (i64)
   "test.replace_with_valid_consumer"(%0) {with_converter} : (i64) -> ()
@@ -431,4 +447,25 @@ func.func @test_lookup_without_converter() {
   "test.replace_with_valid_consumer"(%0) : (i64) -> ()
   // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
+}
+
+// -----
+// expected-remark@-1 {{applyPartialConversion failed}}
+
+func.func @test_skip_1to1_pattern(%arg0: f32) {
+  // expected-error@+1 {{failed to legalize operation 'test.type_consumer'}}
+  "test.type_consumer"(%arg0) : (f32) -> ()
+  return
+}
+
+// -----
+
+// Demonstrate that the pattern generally works, but only for 1:1 type
+// conversions.
+
+// CHECK-LABEL: @test_working_1to1_pattern(
+func.func @test_working_1to1_pattern(%arg0: f16) {
+  // CHECK-NEXT: "test.return"() : () -> ()
+  "test.type_consumer"(%arg0) : (f16) -> ()
+  "test.return"() : () -> ()
 }

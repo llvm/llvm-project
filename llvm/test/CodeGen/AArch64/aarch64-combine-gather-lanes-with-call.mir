@@ -1,0 +1,45 @@
+# RUN: llc -run-pass=machine-combiner -mcpu=neoverse-n2 -mtriple=aarch64-none-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s
+
+
+--- |
+  @external_func = external global i32
+  define void @negative_pattern_offset_reg_copied_to_physical(i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4) {
+  entry:  
+    ret void
+  }
+...
+---
+name:            negative_pattern_offset_reg_copied_to_physical
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
+
+    ; CHECK-LABEL: name: negative_pattern_offset_reg_copied_to_physical
+    ; CHECK: [[BASE_REG:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[PTR_1:%[0-9]+]]:gpr64common = COPY $x1
+    ; CHECK-NEXT: [[PTR_2:%[0-9]+]]:gpr64common = COPY $x2
+    ; CHECK-NEXT: [[PTR_3:%[0-9]+]]:gpr64common = COPY $x3
+    ; CHECK-NEXT: [[LD_i32:%[0-9]+]]:fpr32 = LDRSroX [[BASE_REG]], killed [[PTR_1]], 0, 1
+    ; CHECK-NEXT: [[LD_LANE_0:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i32]], %subreg.ssub
+    ; CHECK-NEXT: [[LD_LANE_1:%[0-9]+]]:fpr128 = LD1i32 [[LD_LANE_0]], 1, [[PTR_2]]
+    ; CHECK-NEXT: $x0 = COPY [[PTR_2]]
+    ; CHECK-NEXT: BL @external_func, csr_aarch64_aapcs, implicit-def $lr, implicit $x0, implicit-def $x0
+    ; CHECK-NEXT: [[LD_LANE_2:%[0-9]+]]:fpr128 = LD1i32 [[LD_LANE_1]], 2, killed [[PTR_2]]
+    ; CHECK-NEXT: [[LD_LANE_3:%[0-9]+]]:fpr128 = LD1i32 [[LD_LANE_2]], 3, killed [[PTR_3]]
+    ; CHECK-NEXT: [[RESULT:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: $q0 = COPY [[LD_LANE_3]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:gpr64common = COPY $x0
+    %1:gpr64common = COPY $x1
+    %2:gpr64common = COPY $x2
+    %3:gpr64common = COPY $x3
+    %5:fpr32 = LDRSroX %0, killed %1, 0, 1
+    %6:fpr128 = SUBREG_TO_REG 0, killed %5, %subreg.ssub
+    %7:fpr128 = LD1i32 %6, 1, %2
+    $x0 = COPY %2
+    BL @external_func, csr_aarch64_aapcs, implicit-def $lr, implicit $x0, implicit-def $x0
+    %8:fpr128 = LD1i32 %7, 2, killed %2
+    %9:fpr128 = LD1i32 %8, 3, killed %3
+    %10:gpr64common = COPY $x0
+    $q0 = COPY %9
+    RET_ReallyLR implicit $q0

@@ -27,9 +27,6 @@ struct MissingFeatures {
   // Address space related
   static bool addressSpace() { return false; }
 
-  // CIRGenFunction implementation details
-  static bool cgfSymbolTable() { return false; }
-
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
@@ -52,7 +49,6 @@ struct MissingFeatures {
   static bool opLoadEmitScalarRangeCheck() { return false; }
   static bool opLoadBooleanRepresentation() { return false; }
   static bool opLoadStoreTbaa() { return false; }
-  static bool opLoadStoreMemOrder() { return false; }
   static bool opLoadStoreVolatile() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
@@ -87,7 +83,6 @@ struct MissingFeatures {
   static bool setFunctionAttributes() { return false; }
 
   // CallOp handling
-  static bool opCallPseudoDtor() { return false; }
   static bool opCallAggregateArgs() { return false; }
   static bool opCallPaddingArgs() { return false; }
   static bool opCallABIExtendArg() { return false; }
@@ -99,7 +94,6 @@ struct MissingFeatures {
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
   static bool opCallMustTail() { return false; }
-  static bool opCallVirtual() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
@@ -162,6 +156,15 @@ struct MissingFeatures {
   static bool addressIsKnownNonNull() { return false; }
   static bool addressPointerAuthInfo() { return false; }
 
+  // Atomic
+  static bool atomicExpr() { return false; }
+  static bool atomicInfo() { return false; }
+  static bool atomicInfoGetAtomicPointer() { return false; }
+  static bool atomicInfoGetAtomicAddress() { return false; }
+  static bool atomicUseLibCall() { return false; }
+  static bool atomicScope() { return false; }
+  static bool atomicSyncScopeID() { return false; }
+
   // Misc
   static bool abiArgInfo() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
@@ -173,7 +176,12 @@ struct MissingFeatures {
   static bool aggValueSlotVolatile() { return false; }
   static bool alignCXXRecordDecl() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
+  static bool asmGoto() { return false; }
+  static bool asmInputOperands() { return false; }
   static bool asmLabelAttr() { return false; }
+  static bool asmMemoryEffects() { return false; }
+  static bool asmOutputOperands() { return false; }
+  static bool asmUnwindClobber() { return false; }
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeBuiltin() { return false; }
@@ -192,14 +200,20 @@ struct MissingFeatures {
   static bool constantFoldSwitchStatement() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool coverageMapping() { return false; }
+  static bool createInvariantGroup() { return false; }
   static bool createProfileWeightsForLoop() { return false; }
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool cxxRecordStaticMembers() { return false; }
+  static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
+  static bool dataLayoutTypeStoreSize() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
+  static bool devirtualizeMemberFunction() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupScope() { return false; }
+  static bool ehCleanupScopeRequiresEHCleanup() { return false; }
+  static bool ehCleanupBranchFixups() { return false; }
   static bool ehstackBranches() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
@@ -207,12 +221,16 @@ struct MissingFeatures {
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
+  static bool emitTypeMetadataCodeForVCall() { return false; }
   static bool fastMathFlags() { return false; }
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
+  static bool globalViewIndices() { return false; }
+  static bool globalViewIntLowering() { return false; }
   static bool hip() { return false; }
   static bool implicitConstructorArgs() { return false; }
   static bool incrementProfileCounter() { return false; }
+  static bool innermostEHScope() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
   static bool intrinsics() { return false; }
@@ -232,8 +250,8 @@ struct MissingFeatures {
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
+  static bool openCL() { return false; }
   static bool openMP() { return false; }
-  static bool opGlobalViewAttr() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
@@ -246,6 +264,7 @@ struct MissingFeatures {
   static bool setNonGC() { return false; }
   static bool setObjCGCLValueClass() { return false; }
   static bool setTargetAttributes() { return false; }
+  static bool sourceLanguageCases() { return false; }
   static bool stackBase() { return false; }
   static bool stackSaveOp() { return false; }
   static bool targetCIRGenInfoArch() { return false; }
@@ -254,13 +273,15 @@ struct MissingFeatures {
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool typeChecks() { return false; }
-  static bool vtableInitializer() { return false; }
   static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
   static bool appleKext() { return false; }
   static bool dtorCleanups() { return false; }
   static bool vtableInitialization() { return false; }
+  static bool vtableEmitMetadata() { return false; }
+  static bool vtableRelativeLayout() { return false; }
   static bool msvcBuiltins() { return false; }
+  static bool vaArgABILowering() { return false; }
   static bool vlas() { return false; }
 
   // Missing types

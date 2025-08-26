@@ -603,7 +603,11 @@ private:
   }
 
 public:
+  const DXContainer &getDXContainer() const { return Container; }
+
   static bool classof(const Binary *v) { return v->isDXContainer(); }
+
+  const dxbc::Header &getHeader() const { return Container.getHeader(); }
 
   Expected<StringRef> getSymbolName(DataRefImpl) const override;
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;

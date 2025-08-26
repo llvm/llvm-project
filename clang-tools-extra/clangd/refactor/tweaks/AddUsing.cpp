@@ -115,13 +115,6 @@ private:
   const SourceManager &SM;
 };
 
-bool isFullyQualified(const NestedNameSpecifier *NNS) {
-  if (!NNS)
-    return false;
-  return NNS->getKind() == NestedNameSpecifier::Global ||
-         isFullyQualified(NNS->getPrefix());
-}
-
 struct InsertionPointData {
   // Location to insert the "using" statement. If invalid then the statement
   // should not be inserted at all (it already exists).
@@ -167,18 +160,20 @@ findInsertionPoint(const Tweak::Selection &Inputs,
   for (auto &U : Usings) {
     // Only "upgrade" to fully qualified is all relevant using decls are fully
     // qualified. Otherwise trust what the user typed.
-    if (!isFullyQualified(U->getQualifier()))
+    if (!U->getQualifier().isFullyQualified())
       AlwaysFullyQualify = false;
 
     if (SM.isBeforeInTranslationUnit(Inputs.Cursor, U->getUsingLoc()))
       // "Usings" is sorted, so we're done.
       break;
-    if (const auto *Namespace = dyn_cast_if_present<NamespaceDecl>(
-            U->getQualifier()->getAsNamespace())) {
+    if (NestedNameSpecifier Qualifier = U->getQualifier();
+        Qualifier.getKind() == NestedNameSpecifier::Kind::Namespace) {
+      const auto *Namespace =
+          U->getQualifier().getAsNamespaceAndPrefix().Namespace;
       if (Namespace->getCanonicalDecl() ==
               QualifierToRemove.getNestedNameSpecifier()
-                  ->getAsNamespace()
-                  ->getCanonicalDecl() &&
+                  .getAsNamespaceAndPrefix()
+                  .Namespace->getCanonicalDecl() &&
           U->getName() == Name) {
         return InsertionPointData();
       }
@@ -232,8 +227,9 @@ findInsertionPoint(const Tweak::Selection &Inputs,
 }
 
 bool isNamespaceForbidden(const Tweak::Selection &Inputs,
-                          const NestedNameSpecifier &Namespace) {
-  const auto *NS = dyn_cast<NamespaceDecl>(Namespace.getAsNamespace());
+                          NestedNameSpecifier Namespace) {
+  const auto *NS =
+      dyn_cast<NamespaceDecl>(Namespace.getAsNamespaceAndPrefix().Namespace);
   if (!NS)
     return true;
   std::string NamespaceStr = printNamespaceScope(*NS);
@@ -247,11 +243,11 @@ bool isNamespaceForbidden(const Tweak::Selection &Inputs,
   return false;
 }
 
-std::string getNNSLAsString(NestedNameSpecifierLoc &NNSL,
+std::string getNNSLAsString(NestedNameSpecifierLoc NNSL,
                             const PrintingPolicy &Policy) {
   std::string Out;
   llvm::raw_string_ostream OutStream(Out);
-  NNSL.getNestedNameSpecifier()->print(OutStream, Policy);
+  NNSL.getNestedNameSpecifier().print(OutStream, Policy);
   return OutStream.str();
 }
 
@@ -276,16 +272,15 @@ bool AddUsing::prepare(const Selection &Inputs) {
       continue;
     }
     if (auto *T = Node->ASTNode.get<TypeLoc>()) {
-      if (T->getAs<ElaboratedTypeLoc>()) {
-        break;
-      }
-      if (Node->Parent->ASTNode.get<TypeLoc>() ||
-          Node->Parent->ASTNode.get<NestedNameSpecifierLoc>()) {
-        // Node is TypeLoc, but it's parent is either TypeLoc or
-        // NestedNameSpecifier. In both cases, we want to go up, to find
-        // the outermost TypeLoc.
+      // Find the outermost TypeLoc.
+      if (Node->Parent->ASTNode.get<NestedNameSpecifierLoc>())
         continue;
-      }
+      if (isa<TagType, TemplateSpecializationType, TypedefType, UsingType,
+              UnresolvedUsingType>(T->getTypePtr()))
+        break;
+      // Find the outermost TypeLoc.
+      if (Node->Parent->ASTNode.get<TypeLoc>())
+        continue;
     }
     break;
   }
@@ -307,32 +302,70 @@ bool AddUsing::prepare(const Selection &Inputs) {
       MustInsertAfterLoc = D->getDecl()->getBeginLoc();
     }
   } else if (auto *T = Node->ASTNode.get<TypeLoc>()) {
-    if (auto E = T->getAs<ElaboratedTypeLoc>()) {
-      QualifierToRemove = E.getQualifierLoc();
-
-      SpelledNameRange = E.getSourceRange();
-      if (auto T = E.getNamedTypeLoc().getAs<TemplateSpecializationTypeLoc>()) {
-        // Remove the template arguments from the name.
-        SpelledNameRange.setEnd(T.getLAngleLoc().getLocWithOffset(-1));
-      }
-
-      if (const auto *ET = E.getTypePtr()) {
-        if (const auto *TDT =
-                dyn_cast<TypedefType>(ET->getNamedType().getTypePtr())) {
-          MustInsertAfterLoc = TDT->getDecl()->getBeginLoc();
-        } else if (auto *TD = ET->getAsTagDecl()) {
-          MustInsertAfterLoc = TD->getBeginLoc();
-        }
-      }
+    switch (T->getTypeLocClass()) {
+    case TypeLoc::TemplateSpecialization: {
+      auto TL = T->castAs<TemplateSpecializationTypeLoc>();
+      QualifierToRemove = TL.getQualifierLoc();
+      if (!QualifierToRemove)
+        break;
+      SpelledNameRange = TL.getTemplateNameLoc();
+      if (auto *TD = TL.getTypePtr()->getTemplateName().getAsTemplateDecl(
+              /*IgnoreDeduced=*/true))
+        MustInsertAfterLoc = TD->getBeginLoc();
+      break;
     }
+    case TypeLoc::Enum:
+    case TypeLoc::Record:
+    case TypeLoc::InjectedClassName: {
+      auto TL = T->castAs<TagTypeLoc>();
+      QualifierToRemove = TL.getQualifierLoc();
+      if (!QualifierToRemove)
+        break;
+      SpelledNameRange = TL.getNameLoc();
+      MustInsertAfterLoc = TL.getOriginalDecl()->getBeginLoc();
+      break;
+    }
+    case TypeLoc::Typedef: {
+      auto TL = T->castAs<TypedefTypeLoc>();
+      QualifierToRemove = TL.getQualifierLoc();
+      if (!QualifierToRemove)
+        break;
+      SpelledNameRange = TL.getNameLoc();
+      MustInsertAfterLoc = TL.getDecl()->getBeginLoc();
+      break;
+    }
+    case TypeLoc::UnresolvedUsing: {
+      auto TL = T->castAs<UnresolvedUsingTypeLoc>();
+      QualifierToRemove = TL.getQualifierLoc();
+      if (!QualifierToRemove)
+        break;
+      SpelledNameRange = TL.getNameLoc();
+      MustInsertAfterLoc = TL.getDecl()->getBeginLoc();
+      break;
+    }
+    case TypeLoc::Using: {
+      auto TL = T->castAs<UsingTypeLoc>();
+      QualifierToRemove = TL.getQualifierLoc();
+      if (!QualifierToRemove)
+        break;
+      SpelledNameRange = TL.getNameLoc();
+      MustInsertAfterLoc = TL.getDecl()->getBeginLoc();
+      break;
+    }
+    default:
+      break;
+    }
+    if (QualifierToRemove)
+      SpelledNameRange.setBegin(QualifierToRemove.getBeginLoc());
   }
   if (!QualifierToRemove ||
       // FIXME: This only supports removing qualifiers that are made up of just
       // namespace names. If qualifier contains a type, we could take the
       // longest namespace prefix and remove that.
-      !QualifierToRemove.getNestedNameSpecifier()->getAsNamespace() ||
+      QualifierToRemove.getNestedNameSpecifier().getKind() !=
+          NestedNameSpecifier::Kind::Namespace ||
       // Respect user config.
-      isNamespaceForbidden(Inputs, *QualifierToRemove.getNestedNameSpecifier()))
+      isNamespaceForbidden(Inputs, QualifierToRemove.getNestedNameSpecifier()))
     return false;
   // Macros are difficult. We only want to offer code action when what's spelled
   // under the cursor is a namespace qualifier. If it's a macro that expands to
@@ -384,7 +417,7 @@ Expected<Tweak::Effect> AddUsing::apply(const Selection &Inputs) {
     llvm::raw_string_ostream UsingTextStream(UsingText);
     UsingTextStream << "using ";
     if (InsertionPoint->AlwaysFullyQualify &&
-        !isFullyQualified(QualifierToRemove.getNestedNameSpecifier()))
+        !QualifierToRemove.getNestedNameSpecifier().isFullyQualified())
       UsingTextStream << "::";
     UsingTextStream << QualifierToSpell << SpelledName << ";"
                     << InsertionPoint->Suffix;

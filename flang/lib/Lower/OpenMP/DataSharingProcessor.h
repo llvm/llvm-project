@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include <variant>
 
 namespace mlir {
 namespace omp {
@@ -58,20 +59,35 @@ private:
     }
 
     void Post(const parser::Name &name) {
-      auto *current = !constructs.empty() ? constructs.back() : nullptr;
+      auto current = !constructs.empty() ? constructs.back() : ConstructPtr();
       symDefMap.try_emplace(name.symbol, current);
     }
 
-    llvm::SmallVector<const parser::OpenMPConstruct *> constructs;
-    llvm::DenseMap<semantics::Symbol *, const parser::OpenMPConstruct *>
-        symDefMap;
+    bool Pre(const parser::DeclarationConstruct &decl) {
+      constructs.push_back(&decl);
+      return true;
+    }
+
+    void Post(const parser::DeclarationConstruct &decl) {
+      constructs.pop_back();
+    }
 
     /// Given a \p symbol and an \p eval, returns true if eval is the OMP
     /// construct that defines symbol.
     bool isSymbolDefineBy(const semantics::Symbol *symbol,
                           lower::pft::Evaluation &eval) const;
 
+    // Given a \p symbol, returns true if it is defined by a nested
+    // `DeclarationConstruct`.
+    bool
+    isSymbolDefineByNestedDeclaration(const semantics::Symbol *symbol) const;
+
   private:
+    using ConstructPtr = std::variant<const parser::OpenMPConstruct *,
+                                      const parser::DeclarationConstruct *>;
+    llvm::SmallVector<ConstructPtr> constructs;
+    llvm::DenseMap<semantics::Symbol *, ConstructPtr> symDefMap;
+
     unsigned version;
   };
 
@@ -91,7 +107,7 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  llvm::SmallSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
+  llvm::SmallPtrSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
   lower::SymMap &symTable;
   bool isTargetPrivatization;
   OMPConstructSymbolVisitor visitor;

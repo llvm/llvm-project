@@ -245,7 +245,7 @@ static void recordFixedType(const MemRegion *Region, const CXXMethodDecl *MD,
   assert(MD);
 
   ASTContext &Ctx = C.getASTContext();
-  QualType Ty = Ctx.getPointerType(Ctx.getRecordType(MD->getParent()));
+  CanQualType Ty = Ctx.getPointerType(Ctx.getCanonicalTagType(MD->getParent()));
 
   ProgramStateRef State = C.getState();
   State = setDynamicTypeInfo(State, Region, Ty, /*CanBeSubClassed=*/false);
