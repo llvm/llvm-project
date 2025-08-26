@@ -7022,8 +7022,54 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
       return false;
   }
 
+  // Compute the table index value.
+  Value *TableIndex;
+  if (UseSwitchConditionAsTableIndex) {
+    TableIndex = SI->getCondition();
+    if (HasDefaultResults) {
+      // Grow the table to cover all possible index values to avoid the range
+      // check. It will use the default result to fill in the table hole later,
+      // so make sure it exist.
+      ConstantRange CR =
+          computeConstantRange(TableIndex, /* ForSigned */ false);
+      // Grow the table shouldn't have any size impact by checking
+      // wouldFitInRegister.
+      // TODO: Consider growing the table also when it doesn't fit in a register
+      // if no optsize is specified.
+      const uint64_t UpperBound = CR.getUpper().getLimitedValue();
+      if (!CR.isUpperWrapped() && all_of(ResultTypes, [&](const auto &KV) {
+            return SwitchLookupTable::wouldFitInRegister(
+                DL, UpperBound, KV.second /* ResultType */);
+          })) {
+        // There may be some case index larger than the UpperBound (unreachable
+        // case), so make sure the table size does not get smaller.
+        TableSize = std::max(UpperBound, TableSize);
+        // The default branch is unreachable after we enlarge the lookup table.
+        // Adjust DefaultIsReachable to reuse code path.
+        DefaultIsReachable = false;
+      }
+    }
+  }
+
   if (!shouldBuildLookupTable(SI, TableSize, TTI, DL, ResultTypes))
     return false;
+
+  Builder.SetInsertPoint(SI);
+  // TableIndex is the switch condition - TableIndexOffset if we don't
+  // use the condition directly
+  if (!UseSwitchConditionAsTableIndex) {
+    // If the default is unreachable, all case values are s>= MinCaseVal. Then
+    // we can try to attach nsw.
+    bool MayWrap = true;
+    if (!DefaultIsReachable) {
+      APInt Res =
+          MaxCaseVal->getValue().ssub_ov(MinCaseVal->getValue(), MayWrap);
+      (void)Res;
+    }
+    TableIndex = Builder.CreateSub(SI->getCondition(), TableIndexOffset,
+                                   "switch.tableidx", /*HasNUW =*/false,
+                                   /*HasNSW =*/!MayWrap);
+  }
 
   std::vector<DominatorTree::UpdateType> Updates;
 
@@ -7040,50 +7086,9 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   BasicBlock *LookupBB = BasicBlock::Create(
       Mod.getContext(), "switch.lookup", CommonDest->getParent(), CommonDest);
 
-  // Compute the table index value.
-  Builder.SetInsertPoint(SI);
-  Value *TableIndex;
-  if (UseSwitchConditionAsTableIndex) {
-    TableIndex = SI->getCondition();
-  } else {
-    // If the default is unreachable, all case values are s>= MinCaseVal. Then
-    // we can try to attach nsw.
-    bool MayWrap = true;
-    if (!DefaultIsReachable) {
-      APInt Res = MaxCaseVal->getValue().ssub_ov(MinCaseVal->getValue(), MayWrap);
-      (void)Res;
-    }
-
-    TableIndex = Builder.CreateSub(SI->getCondition(), TableIndexOffset,
-                                   "switch.tableidx", /*HasNUW =*/false,
-                                   /*HasNSW =*/!MayWrap);
-  }
-
   BranchInst *RangeCheckBranch = nullptr;
 
-  // Grow the table to cover all possible index values to avoid the range check.
-  // It will use the default result to fill in the table hole later, so make
-  // sure it exist.
-  if (UseSwitchConditionAsTableIndex && HasDefaultResults) {
-    ConstantRange CR = computeConstantRange(TableIndex, /* ForSigned */ false);
-    // Grow the table shouldn't have any size impact by checking
-    // wouldFitInRegister.
-    // TODO: Consider growing the table also when it doesn't fit in a register
-    // if no optsize is specified.
-    const uint64_t UpperBound = CR.getUpper().getLimitedValue();
-    if (!CR.isUpperWrapped() && all_of(ResultTypes, [&](const auto &KV) {
-          return SwitchLookupTable::wouldFitInRegister(
-              DL, UpperBound, KV.second /* ResultType */);
-        })) {
-      // There may be some case index larger than the UpperBound (unreachable
-      // case), so make sure the table size does not get smaller.
-      TableSize = std::max(UpperBound, TableSize);
-      // The default branch is unreachable after we enlarge the lookup table.
-      // Adjust DefaultIsReachable to reuse code path.
-      DefaultIsReachable = false;
-    }
-  }
-
+  Builder.SetInsertPoint(SI);
   const bool GeneratingCoveredLookupTable = (MaxTableSize == TableSize);
   if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
     Builder.CreateBr(LookupBB);
