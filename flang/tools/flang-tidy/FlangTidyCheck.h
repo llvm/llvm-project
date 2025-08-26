@@ -441,6 +441,7 @@ public:
   virtual void Enter(const parser::FunctionSubprogram &) {}
   virtual void Enter(const parser::GotoStmt &) {}
   virtual void Enter(const parser::IfConstruct &) {}
+  virtual void Enter(const parser::IfStmt &) {}
   virtual void Enter(const parser::InputImpliedDo &) {}
   virtual void Enter(const parser::Name &) {}
   virtual void Enter(const parser::OmpAtomicUpdate &) {}
