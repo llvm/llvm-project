@@ -5,18 +5,18 @@
 
 declare void @free(ptr allocptr noundef captures(none)) mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc"
 declare ptr @malloc(i64) mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc"
-declare void @callee(i1)
+declare void @may_not_return(i1)
 
 define i8 @load_global(i64 %idx) {
 ; CHECK-LABEL: define i8 @load_global(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @g, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g, i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
-  %gep = getelementptr inbounds i8, ptr @g, i64 %idx
+  %gep = getelementptr nuw i8, ptr @g, i64 %idx
   %load = load i8, ptr %gep
   %cmp = icmp ult i64 %idx, 5
   %zext = zext i1 %cmp to i8
@@ -27,11 +27,11 @@ define i8 @load_global(i64 %idx) {
 define i1 @store_global(i64 %idx) {
 ; CHECK-LABEL: define i1 @store_global(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @g, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g, i64 [[IDX]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    ret i1 true
 ;
-  %gep = getelementptr inbounds i8, ptr @g, i64 %idx
+  %gep = getelementptr nuw i8, ptr @g, i64 %idx
   store i8 0, ptr %gep
   %cmp = icmp ult i64 %idx, 5
   ret i1 %cmp
@@ -40,13 +40,13 @@ define i1 @store_global(i64 %idx) {
 define i8 @load_byval(ptr byval([5 x i8]) %p, i64 %idx) {
 ; CHECK-LABEL: define i8 @load_byval(
 ; CHECK-SAME: ptr byval([5 x i8]) [[P:%.*]], i64 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
-  %gep = getelementptr inbounds i8, ptr %p, i64 %idx
+  %gep = getelementptr nuw i8, ptr %p, i64 %idx
   %load = load i8, ptr %gep
   %cmp = icmp ult i64 %idx, 5
   %zext = zext i1 %cmp to i8
@@ -59,7 +59,7 @@ define i8 @load_alloca(i64 %idx) {
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = alloca [5 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ALLOC]], ptr @g, i64 5, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[ALLOC]], i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[ALLOC]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
@@ -67,7 +67,7 @@ define i8 @load_alloca(i64 %idx) {
 ;
   %alloc = alloca [5 x i8], align 1
   call void @llvm.memcpy.p0.p0.i64(ptr %alloc, ptr @g, i64 5, i1 false)
-  %gep = getelementptr inbounds i8, ptr %alloc, i64 %idx
+  %gep = getelementptr nuw i8, ptr %alloc, i64 %idx
   %load = load i8, ptr %gep
   %cmp = icmp ult i64 %idx, 5
   %zext = zext i1 %cmp to i8
@@ -80,7 +80,7 @@ define i8 @load_malloc(i64 %idx) {
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 5)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[ALLOC]], ptr @g, i64 5, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[ALLOC]], i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[ALLOC]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
@@ -89,7 +89,7 @@ define i8 @load_malloc(i64 %idx) {
 ;
   %alloc = call ptr @malloc(i64 5)
   call void @llvm.memcpy.p0.p0.i64(ptr %alloc, ptr @g, i64 5, i1 false)
-  %gep = getelementptr inbounds i8, ptr %alloc, i64 %idx
+  %gep = getelementptr nuw i8, ptr %alloc, i64 %idx
   %load = load i8, ptr %gep
   %cmp = icmp ult i64 %idx, 5
   %zext = zext i1 %cmp to i8
@@ -101,13 +101,13 @@ define i8 @load_malloc(i64 %idx) {
 define i32 @load_byval_i32(ptr byval([10 x i8]) %p, i64 %idx) {
 ; CHECK-LABEL: define i32 @load_byval_i32(
 ; CHECK-SAME: ptr byval([10 x i8]) [[P:%.*]], i64 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
-  %gep = getelementptr inbounds i8, ptr %p, i64 %idx
+  %gep = getelementptr nuw i8, ptr %p, i64 %idx
   %load = load i32, ptr %gep
   %cmp = icmp ult i64 %idx, 7
   %zext = zext i1 %cmp to i32
@@ -118,9 +118,9 @@ define i32 @load_byval_i32(ptr byval([10 x i8]) %p, i64 %idx) {
 define i8 @load_global_may_noreturn_dom_bb(i64 %idx) {
 ; CHECK-LABEL: define i8 @load_global_may_noreturn_dom_bb(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @g, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g, i64 [[IDX]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IDX]], 5
-; CHECK-NEXT:    call void @callee(i1 [[CMP1]])
+; CHECK-NEXT:    call void @may_not_return(i1 [[CMP1]])
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    br label %[[NEXT:.*]]
 ; CHECK:       [[NEXT]]:
@@ -128,9 +128,9 @@ define i8 @load_global_may_noreturn_dom_bb(i64 %idx) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
-  %gep = getelementptr inbounds i8, ptr @g, i64 %idx
+  %gep = getelementptr nuw i8, ptr @g, i64 %idx
   %cmp1 = icmp ult i64 %idx, 5
-  call void @callee(i1 %cmp1) ; %cmp1 should not be simplified.
+  call void @may_not_return(i1 %cmp1) ; %cmp1 should not be simplified.
   %load = load i8, ptr %gep
   br label %next
 
@@ -162,16 +162,16 @@ define i8 @load_from_non_gep(ptr %p, i64 %idx) {
 define i8 @load_global_multi_indices(i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: define i8 @load_global_multi_indices(
 ; CHECK-SAME: i64 [[IDX1:%.*]], i64 [[IDX2:%.*]]) {
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr @g, i64 [[IDX1]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[GEP1]], i64 [[IDX2]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr @g, i64 [[IDX1]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw i8, ptr [[GEP1]], i64 [[IDX2]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP2]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX1]], 5
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
-  %gep1 = getelementptr inbounds i8, ptr @g, i64 %idx1
-  %gep2 = getelementptr inbounds i8, ptr %gep1, i64 %idx2
+  %gep1 = getelementptr nuw i8, ptr @g, i64 %idx1
+  %gep2 = getelementptr nuw i8, ptr %gep1, i64 %idx2
   %load = load i8, ptr %gep2
   %cmp = icmp ult i64 %idx1, 5
   %zext = zext i1 %cmp to i8
@@ -179,8 +179,8 @@ define i8 @load_global_multi_indices(i64 %idx1, i64 %idx2) {
   ret i8 %add
 }
 
-define i8 @load_global_without_inbounds(i64 %idx) {
-; CHECK-LABEL: define i8 @load_global_without_inbounds(
+define i8 @load_global_without_nuw(i64 %idx) {
+; CHECK-LABEL: define i8 @load_global_without_nuw(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr @g, i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
@@ -200,14 +200,14 @@ define i8 @load_global_without_inbounds(i64 %idx) {
 define i32 @load_byval_i32_smaller_range(ptr byval([10 x i8]) %p, i64 %idx) {
 ; CHECK-LABEL: define i32 @load_byval_i32_smaller_range(
 ; CHECK-SAME: ptr byval([10 x i8]) [[P:%.*]], i64 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 6
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
-  %gep = getelementptr inbounds i8, ptr %p, i64 %idx
+  %gep = getelementptr nuw i8, ptr %p, i64 %idx
   %load = load i32, ptr %gep
   %cmp = icmp ult i64 %idx, 6
   %zext = zext i1 %cmp to i32
@@ -218,14 +218,14 @@ define i32 @load_byval_i32_smaller_range(ptr byval([10 x i8]) %p, i64 %idx) {
 define i8 @load_global_volatile(i64 %idx) {
 ; CHECK-LABEL: define i8 @load_global_volatile(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @g, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g, i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
-  %gep = getelementptr inbounds i8, ptr @g, i64 %idx
+  %gep = getelementptr nuw i8, ptr @g, i64 %idx
   %load = load volatile i8, ptr %gep
   %cmp = icmp ult i64 %idx, 5
   %zext = zext i1 %cmp to i8
@@ -236,7 +236,7 @@ define i8 @load_global_volatile(i64 %idx) {
 define i8 @load_global_vscale(i64 %idx) {
 ; CHECK-LABEL: define i8 @load_global_vscale(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @g, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g, i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 1 x i8>, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[EXT:%.*]] = extractelement <vscale x 1 x i8> [[LOAD]], i64 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
@@ -244,7 +244,7 @@ define i8 @load_global_vscale(i64 %idx) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[EXT]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
-  %gep = getelementptr inbounds i8, ptr @g, i64 %idx
+  %gep = getelementptr nuw i8, ptr @g, i64 %idx
   %load = load <vscale x 1 x i8>, ptr %gep
   %ext = extractelement <vscale x 1 x i8> %load, i64 0
   %cmp = icmp ult i64 %idx, 5
@@ -256,14 +256,14 @@ define i8 @load_global_vscale(i64 %idx) {
 define i8 @load_from_null(i64 %idx) {
 ; CHECK-LABEL: define i8 @load_from_null(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr null, i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
-  %gep = getelementptr inbounds i8, ptr null, i64 %idx
+  %gep = getelementptr nuw i8, ptr null, i64 %idx
   %load = load i8, ptr %gep
   %cmp = icmp ult i64 %idx, 5
   %zext = zext i1 %cmp to i8

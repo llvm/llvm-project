@@ -1119,7 +1119,7 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
                                           Value *&B, const DataLayout &DL,
                                           const TargetLibraryInfo &TLI) {
   auto Offset = collectOffsets(cast<GEPOperator>(GEP), DL);
-  if (!Offset.NW.isInBounds())
+  if (!Offset.NW.hasNoUnsignedWrap())
     return false;
 
   if (Offset.VariableOffsets.size() != 1)
@@ -1134,6 +1134,9 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
     return false;
 
   // Index * Scale + ConstOffset + AccessSize <= AllocSize
+  // With nuw flag, we know that the index addition doesn't have unsigned wrap.
+  // If (AllocSize - (ConstOffset + AccessSize)) wraps around, there is no valid
+  // value for Index.
   uint64_t BitWidth = Offset.ConstantOffset.getBitWidth();
   auto &[Index, Scale] = Offset.VariableOffsets.front();
   APInt MaxIndex =
@@ -2113,7 +2116,6 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  PA.preserve<TargetLibraryAnalysis>();
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
   PA.preserve<ScalarEvolutionAnalysis>();
