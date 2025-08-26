@@ -23,13 +23,13 @@
 #include "mlir/Tools/PDLL/Parser/CodeComplete.h"
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "mlir/Tools/lsp-server-support/CompilationDatabase.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/Path.h"
 #include <optional>
 
@@ -1710,9 +1710,9 @@ lsp::PDLLServer::PDLLServer(const Options &options)
     : impl(std::make_unique<Impl>(options)) {}
 lsp::PDLLServer::~PDLLServer() = default;
 
-void lsp::PDLLServer::addDocument(const URIForFile &uri, StringRef contents,
-                                  int64_t version,
-                                  std::vector<Diagnostic> &diagnostics) {
+void lsp::PDLLServer::addDocument(
+    const URIForFile &uri, StringRef contents, int64_t version,
+    std::vector<llvm::lsp::Diagnostic> &diagnostics) {
   // Build the set of additional include directories.
   std::vector<std::string> additionalIncludeDirs = impl->options.extraDirs;
   const auto &fileInfo = impl->compilationDatabase.getFileInfo(uri.file());
@@ -1724,7 +1724,7 @@ void lsp::PDLLServer::addDocument(const URIForFile &uri, StringRef contents,
 
 void lsp::PDLLServer::updateDocument(
     const URIForFile &uri, ArrayRef<TextDocumentContentChangeEvent> changes,
-    int64_t version, std::vector<Diagnostic> &diagnostics) {
+    int64_t version, std::vector<llvm::lsp::Diagnostic> &diagnostics) {
   // Check that we actually have a document for this uri.
   auto it = impl->files.find(uri.file());
   if (it == impl->files.end())
@@ -1746,17 +1746,17 @@ std::optional<int64_t> lsp::PDLLServer::removeDocument(const URIForFile &uri) {
   return version;
 }
 
-void lsp::PDLLServer::getLocationsOf(const URIForFile &uri,
-                                     const Position &defPos,
-                                     std::vector<Location> &locations) {
+void lsp::PDLLServer::getLocationsOf(
+    const URIForFile &uri, const Position &defPos,
+    std::vector<llvm::lsp::Location> &locations) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->getLocationsOf(uri, defPos, locations);
 }
 
-void lsp::PDLLServer::findReferencesOf(const URIForFile &uri,
-                                       const Position &pos,
-                                       std::vector<Location> &references) {
+void lsp::PDLLServer::findReferencesOf(
+    const URIForFile &uri, const Position &pos,
+    std::vector<llvm::lsp::Location> &references) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->findReferencesOf(uri, pos, references);

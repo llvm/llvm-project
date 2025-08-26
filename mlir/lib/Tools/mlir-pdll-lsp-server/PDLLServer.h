@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -18,21 +19,10 @@
 
 namespace mlir {
 namespace lsp {
-struct Diagnostic;
+using namespace llvm::lsp;
 class CompilationDatabase;
 struct PDLLViewOutputResult;
 enum class PDLLViewOutputKind;
-struct CompletionList;
-struct DocumentLink;
-struct DocumentSymbol;
-struct Hover;
-struct InlayHint;
-struct Location;
-struct Position;
-struct Range;
-struct SignatureHelp;
-struct TextDocumentContentChangeEvent;
-class URIForFile;
 
 /// This class implements all of the PDLL related functionality necessary for a
 /// language server. This class allows for keeping the PDLL specific logic
