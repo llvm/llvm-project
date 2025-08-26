@@ -379,7 +379,6 @@ struct Read : public Effect::Base<Read> {};
 /// 'write' effect implies only mutating a resource, and not any visible
 /// dereference or read.
 struct Write : public Effect::Base<Write> {};
-
 } // namespace MemoryEffects
 
 //===----------------------------------------------------------------------===//

@@ -87,7 +87,6 @@ def MemWrite : MemWrite<DefaultResource, 0, PartialEffect>;
 class MemWriteAt<int stage, EffectRange range = PartialEffect>
   : MemWrite<DefaultResource, stage, range>;
 
-
 //===----------------------------------------------------------------------===//
 // Effect Traits
 //===----------------------------------------------------------------------===//

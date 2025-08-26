@@ -22,13 +22,6 @@ using namespace mlir;
 /// Include the definitions of the side effect interfaces.
 #include "mlir/Interfaces/SideEffectInterfaces.cpp.inc"
 
-// //===----------------------------------------------------------------------===//
-// // LoopLike Interfaces
-// //===----------------------------------------------------------------------===//
-
-// /// Include the definitions of the loop like interfaces.
-// #include "mlir/Interfaces/LoopLikeInterface.cpp.inc"
-
 //===----------------------------------------------------------------------===//
 // MemoryEffects
 //===----------------------------------------------------------------------===//
