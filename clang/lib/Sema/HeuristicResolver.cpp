@@ -256,6 +256,21 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
         }
       }
     }
+    // check if member expr is in the context of an explicit object method
+    if (!T.Type.isNull() &&
+        (T.Type->isUndeducedAutoType() || T.Type->isTemplateTypeParmType())) {
+      if (auto *DRE = dyn_cast_if_present<DeclRefExpr>(T.E)) {
+        auto *PrDecl = dyn_cast_if_present<ParmVarDecl>(DRE->getDecl());
+        // Then the type of 'this' should be type of the record the method is
+        // defined in
+        if (PrDecl && PrDecl->isExplicitObjectParameter()) {
+          const auto *Parent =
+              dyn_cast<TypeDecl>(PrDecl->getDeclContext()->getParent());
+          return {Ctx.getTypeDeclType(Parent)};
+        }
+      }
+    }
+
     return T;
   };
   // As an additional protection against infinite loops, bound the number of
@@ -302,33 +317,17 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
     return {};
   }
 
-  // check if member expr is in the context of an explicit object method
-  // If so, it's safe to assume the templated arg is of type of the record
-  const auto ExplicitMemberHeuristic = [&](const Expr *Base) -> QualType {
-    if (auto *DeclRef = dyn_cast_if_present<DeclRefExpr>(Base)) {
-      auto *PrDecl = dyn_cast_if_present<ParmVarDecl>(DeclRef->getDecl());
-
-      if (PrDecl && PrDecl->isExplicitObjectParameter()) {
-        // get the parent, a cxxrecord
-        return Ctx.getTypeDeclType(
-            dyn_cast<TypeDecl>(PrDecl->getDeclContext()->getParent()));
-      }
-    }
-
-    return {};
-  };
-
   // Try resolving the member inside the expression's base type.
   Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
   QualType BaseType = ME->getBaseType();
   BaseType = simplifyType(BaseType, Base, ME->isArrow());
 
-  if (!BaseType.isNull() &&
-      (BaseType->isUndeducedAutoType() || BaseType->isTemplateTypeParmType())) {
-    if (auto Type = ExplicitMemberHeuristic(Base); !Type.isNull()) {
-      BaseType = Type;
-    }
-  }
+  // fflush(stdout);
+  // fflush(stderr);
+  // std::flush(std::cout);
+  // std::flush(std::cerr);
+  // using namespace std::chrono_literals;
+  // std::this_thread::sleep_for(10ms);
 
   return resolveDependentMember(BaseType, ME->getMember(), NoFilter);
 }

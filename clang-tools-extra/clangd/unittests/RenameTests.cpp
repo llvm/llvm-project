@@ -862,6 +862,25 @@ TEST(RenameTest, WithinFileRename) {
 
         void func([[Fo^o]] *f) {}
       )cpp",
+
+      // rename with explicit object parameter
+      R"cpp(
+      struct Foo {
+        int [[memb^er]] {};
+        auto&& getter1(this auto&& self) {
+          auto local = [&] {
+            return self.[[memb^er]];
+          }();
+          return local + self.[[memb^er]];
+        }
+        auto&& getter2(this Foo&& self) {
+          return self.[[memb^er]];
+        }
+        int normal() {
+          return this->[[mem^ber]] + [[memb^er]];
+        }
+      };
+    )cpp",
   };
   llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
@@ -869,6 +888,7 @@ TEST(RenameTest, WithinFileRename) {
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-xobjective-c++");
+    TU.ExtraArgs.push_back("-std=c++23");
     auto AST = TU.build();
     auto Index = TU.index();
     for (const auto &RenamePos : Code.points()) {
@@ -2468,47 +2488,6 @@ TEST(CrossFileRenameTests, adjustmentCost) {
               T.ExpectedCost);
   }
 }
-
-TEST(RenameTest, RenameWithExplicitObjectPararameter) {
-  Annotations Test = {R"cpp(
-    struct Foo {
-      int [[memb^er]] {};
-      auto&& getter1(this auto&& self) {
-        auto local = [&] {
-          return self.[[memb^er]];
-        }();
-        return local + self.[[memb^er]];
-      }
-      auto&& getter2(this Foo&& self) {
-        return self.[[memb^er]];
-      }
-      int normal() {
-        return this->[[mem^ber]] + [[memb^er]];
-      }
-    };
-  )cpp"};
-
-  auto TU = TestTU::withCode(Test.code());
-  TU.ExtraArgs.push_back("-std=c++23");
-  auto AST = TU.build();
-
-  llvm::StringRef NewName = "m_member";
-  auto Index = TU.index();
-
-  for (const auto &RenamePos : Test.points()) {
-    auto RenameResult = rename({RenamePos, NewName, AST, testPath(TU.Filename),
-                                getVFSFromAST(AST), Index.get()});
-
-    ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
-    auto Res = RenameResult.get();
-
-    ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
-    ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
-    EXPECT_EQ(applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
-              expectedResult(Test, NewName));
-  }
-}
-
 } // namespace
 } // namespace clangd
 } // namespace clang
