@@ -27,7 +27,10 @@ char GenericRSMetadataError::ID;
 char InvalidRSMetadataFormat::ID;
 char InvalidRSMetadataValue::ID;
 char TableSamplerMixinError::ID;
-char TableRegisterOverflowError::ID;
+char ShaderRegisterOverflowError::ID;
+char OffsetOverflowError::ID;
+char DescriptorRangeOverflowError::ID;
+
 template <typename T> char RootSignatureValidationError<T>::ID;
 
 static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
@@ -547,21 +550,25 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
     dxbc::DescriptorRangeType RangeType =
         static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
 
-    if (verifyOffsetOverflow(Range.OffsetInDescriptorsFromTableStart,
-                             AppendingRegister))
-      return make_error<TableRegisterOverflowError>(
+    uint64_t StartSlot = AppendingRegister;
+    if (Range.OffsetInDescriptorsFromTableStart != ~0U)
+      StartSlot = Range.OffsetInDescriptorsFromTableStart;
+
+    if (verifyOffsetOverflow(StartSlot))
+      return make_error<OffsetOverflowError>(
           RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
     if (verifyRegisterOverflow(Range.BaseShaderRegister, Range.NumDescriptors))
-      return make_error<TableRegisterOverflowError>(
+      return make_error<ShaderRegisterOverflowError>(
           RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
-    if (verifyRegisterOverflow(AppendingRegister, Range.NumDescriptors))
-      return make_error<TableRegisterOverflowError>(
+    if (verifyRegisterOverflow(StartSlot, Range.NumDescriptors))
+      return make_error<DescriptorRangeOverflowError>(
           RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
     AppendingRegister =
-        updateAppendingRegister(AppendingRegister, Range.NumDescriptors);
+        updateAppendingRegister(StartSlot, Range.NumDescriptors,
+                                Range.OffsetInDescriptorsFromTableStart);
   }
 
   return Error::success();

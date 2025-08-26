@@ -48,21 +48,66 @@ public:
   }
 };
 
-class TableRegisterOverflowError
-    : public ErrorInfo<TableRegisterOverflowError> {
+class OffsetOverflowError : public ErrorInfo<OffsetOverflowError> {
 public:
   static char ID;
   dxbc::DescriptorRangeType Type;
   uint32_t Register;
   uint32_t Space;
 
-  TableRegisterOverflowError(dxbc::DescriptorRangeType Type, uint32_t Register,
-                             uint32_t Space)
+  OffsetOverflowError(dxbc::DescriptorRangeType Type, uint32_t Register,
+                      uint32_t Space)
       : Type(Type), Register(Register), Space(Space) {}
 
   void log(raw_ostream &OS) const override {
     OS << "Cannot append range with implicit lower bound after an unbounded "
           "range "
+       << getResourceClassName(toResourceClass(Type))
+       << "(register=" << Register << ", space=" << Space << ").";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class ShaderRegisterOverflowError
+    : public ErrorInfo<ShaderRegisterOverflowError> {
+public:
+  static char ID;
+  dxbc::DescriptorRangeType Type;
+  uint32_t Register;
+  uint32_t Space;
+
+  ShaderRegisterOverflowError(dxbc::DescriptorRangeType Type, uint32_t Register,
+                              uint32_t Space)
+      : Type(Type), Register(Register), Space(Space) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Overflow for shader register range: "
+       << getResourceClassName(toResourceClass(Type))
+       << "(register=" << Register << ", space=" << Space << ").";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class DescriptorRangeOverflowError
+    : public ErrorInfo<DescriptorRangeOverflowError> {
+public:
+  static char ID;
+  dxbc::DescriptorRangeType Type;
+  uint32_t Register;
+  uint32_t Space;
+
+  DescriptorRangeOverflowError(dxbc::DescriptorRangeType Type,
+                               uint32_t Register, uint32_t Space)
+      : Type(Type), Register(Register), Space(Space) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Overflow for descriptor range: "
        << getResourceClassName(toResourceClass(Type))
        << "(register=" << Register << ", space=" << Space << ").";
   }

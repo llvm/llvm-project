@@ -180,10 +180,7 @@ bool verifyBorderColor(uint32_t BorderColor) {
 
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
 
-bool verifyOffsetOverflow(uint32_t Offset, uint64_t Register) {
-  if (Offset != ~0U)
-    Register = Offset;
-
+bool verifyOffsetOverflow(uint64_t Register) {
   if (Register > ~0U)
     return true;
   return false;
@@ -201,11 +198,12 @@ bool verifyRegisterOverflow(uint64_t Register, uint32_t NumDescriptors) {
   return false;
 }
 
-uint64_t updateAppendingRegister(uint64_t AppendingRegisterRegister,
-                                 uint32_t NumDescriptors) {
+uint64_t updateAppendingRegister(uint64_t AppendingRegister,
+                                 uint64_t NumDescriptors, uint64_t Offset) {
   if (NumDescriptors == ~0U)
     return (uint64_t)~0U + (uint64_t)1ULL;
-  return AppendingRegisterRegister + NumDescriptors;
+  return Offset == ~0U ? AppendingRegister + NumDescriptors
+                       : Offset + NumDescriptors;
 }
 } // namespace rootsig
 } // namespace hlsl
