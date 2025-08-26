@@ -43,7 +43,7 @@ enum class SortMask : unsigned {
 class IterationGraphSorter {
 public:
   /// Factory method that construct an iteration graph sorter
-  /// for the given linalg.generic operation with a specific strategy.
+  /// for the given linalg.generic operation with a specific loop ordering strategy.
   static IterationGraphSorter fromGenericOp(linalg::GenericOp genericOp,
                                            sparse_tensor::LoopOrderingStrategy strategy);
 

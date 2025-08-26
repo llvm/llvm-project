@@ -83,9 +83,9 @@ def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
                     "Run on operations expect linalg.generic (e.g., foreach)"))}]>,
     Option<"loopOrderingStrategy", "loop-ordering-strategy", "mlir::sparse_tensor::LoopOrderingStrategy",
        "mlir::sparse_tensor::LoopOrderingStrategy::kDefault",
-       "Set the loop ordering strategy for sparse tensor dialect", [{llvm::cl::values(
+       "Set the loop ordering strategy for sparse code generation", [{llvm::cl::values(
          clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDefault, "default",
-                    "Default strategy (current behavior)"))}]>,
+                    "Default strategy (selects loops from back of available candidates)"))}]>,
   ];
 }
 

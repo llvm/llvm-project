@@ -423,7 +423,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     if (linalgOp->hasAttr(sorted))
       return failure();
 
-    // Pass strategy to IterationGraphSorter
+    // Pass strategy to IterationGraphSorter.
     auto scheduler = IterationGraphSorter::fromGenericOp(linalgOp, strategy);
     bool isAdmissible = false;
     AffineMap order;

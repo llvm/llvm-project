@@ -101,7 +101,7 @@ AffineMap IterationGraphSorter::topoSort() {
     // a reduction loop early might make the loop sequence inadmissible.
     auto &it = !parIt.empty() ? parIt : redIt;
     
-    // Select loop based on strategy
+    // Select loop based on strategy.
     unsigned src;
     switch (strategy) {
     case sparse_tensor::LoopOrderingStrategy::kDefault:

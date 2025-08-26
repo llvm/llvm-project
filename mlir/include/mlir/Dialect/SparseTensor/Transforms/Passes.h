@@ -57,9 +57,9 @@ enum class SparseEmitStrategy {
 
 namespace sparse_tensor {
 
-/// Selects between different loop ordering strategies for sparse tensor 
+/// Defines a strategy for loop ordering during sparse code generation.
 enum class LoopOrderingStrategy : unsigned {
-  kDefault, ///< Default strategy (current behavior)
+  kDefault, ///< Default strategy (selects loops from back of available candidates).
 };
 
 } // namespace sparse_tensor
