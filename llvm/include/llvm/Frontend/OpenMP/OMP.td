@@ -342,6 +342,7 @@ def OMPC_Novariants : Clause<[Spelling<"novariants">]> {
 }
 def OMPC_NoWait : Clause<[Spelling<"nowait">]> {
   let clangClass = "OMPNowaitClause";
+  let isValueOptional = true;
 }
 def OMP_NUMTASKS_Strict : EnumVal<"strict", 1, 1> {}
 def OMP_NUMTASKS_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
@@ -1130,6 +1131,7 @@ def OMP_TargetData : Directive<[Spelling<"target data", 1, 52>,
   let allowedOnceClauses = [
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_NoWait, 60>,
   ];
   let requiredClauses = [
     VersionedClause<OMPC_Map>,
