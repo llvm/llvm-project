@@ -31,6 +31,10 @@ void SubprogramTrampolineCheck::Enter(const parser::CallStmt &callStmt) {
         const auto proc = std::get<evaluate::ProcedureDesignator>(argExpr->u);
         if (const auto *symbol{proc.GetSymbol()}) {
           if (symbol->has<semantics::SubprogramDetails>()) {
+            const auto &owner = symbol->owner();
+            if (owner.IsModule())
+              continue;
+
             Say(callStmt.source,
                 "contained subprogram '%s' is passed as an argument"_warn_en_US,
                 symbol->name().ToString());
@@ -57,6 +61,9 @@ void SubprogramTrampolineCheck::Enter(const parser::Expr &e) {
         const auto proc = std::get<evaluate::ProcedureDesignator>(argExpr->u);
         if (const auto *symbol{proc.GetSymbol()}) {
           if (symbol->has<semantics::SubprogramDetails>()) {
+            const auto &owner = symbol->owner();
+            if (owner.IsModule())
+              continue;
             Say(e.source,
                 "contained subprogram '%s' is passed as an argument"_warn_en_US,
                 symbol->name().ToString());
