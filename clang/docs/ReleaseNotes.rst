@@ -1234,33 +1234,112 @@ Code Completion
 
 Static Analyzer
 ---------------
-- Fixed a crash when C++20 parenthesized initializer lists are used. This issue
-  was causing a crash in clang-tidy. (#GH136041)
 
 New features
 ^^^^^^^^^^^^
 
+- Added support for the ``[[clang::assume(cond)]]`` attribute, treating it as
+  ``__builtin_assume(cond)`` for better static analysis. (#GH129234)
+
+- Introduced per-entry-point statistics to provide more detailed analysis metrics.
+  Documentation: :doc:`analyzer/developer-docs/Statistics` (#GH131175)
+
+- Added time-trace scopes for high-level analyzer steps to improve performance
+  debugging. Documentation: :doc:`analyzer/developer-docs/PerformanceInvestigation`
+  (#GH125508, #GH125884)
+
+- Enhanced the ``check::BlockEntrance`` checker callback to provide more granular
+  control over block-level analysis.
+  `Documentation (check::BlockEntrance)
+  <https://clang.llvm.org/doxygen/CheckerDocumentation_8cpp_source.html>`_
+  (#GH140924)
+
+- Added a new checker ``core.FixedAddressDereference`` to detect dereferences
+  of fixed addresses, which can be useful for finding hard-coded memory
+  accesses. (#GH127191, #GH132404)
+
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
-- Fixed a crash in ``UnixAPIMisuseChecker`` and ``MallocChecker`` when analyzing
+- Fixed a crash when C++20 parenthesized initializer lists are used.
+  This affected a crash of the well-known lambda overloaded pattern.
+  (#GH136041, #GH135665)
+
+- Dropped an unjustified assertion, that was triggered in ``BugReporterVisitors.cpp``
+  for variable initialization detection. (#GH125044)
+
+- Fixed a crash in ``unix.API`` and ``unix.Malloc`` when analyzing
   code with non-standard ``getline`` or ``getdelim`` function signatures. (#GH144884)
+
+- Fixed crashes involving ``__builtin_bit_cast``. (#GH139188)
+
+- ``__datasizeof`` (C++) and ``_Countof`` (C) no longer cause a failed assertion
+  when given an operand of VLA type. (#GH151711)
+
+- Fixed a crash in ``alpha.core.CastSize``. (#GH134387)
+
+- Some ``cplusplus.PlacementNew`` false positives were fixed. (#GH150161)
 
 Improvements
 ^^^^^^^^^^^^
 
+- Added option to assume at least one iteration in loops to reduce false positives.
+  (#GH125494)
+
 - The checker option ``optin.cplusplus.VirtualCall:PureOnly`` was removed,
-  because it had been deprecated since 2019 and it is completely useless (it
-  was kept only for compatibility with pre-2019 versions, setting it to true is
-  equivalent to completely disabling the checker).
+  because it had been deprecated since 2019. (#GH131823)
+
+- Enhanced the ``core.StackAddressEscape`` to detect more cases of stack address
+  escapes, including return values for child stack frames. (#GH126620, #GH126986)
+
+- Improved the ``unix.BlockInCriticalSection`` to recognize ``O_NONBLOCK``
+  streams and suppress reports in those cases. (#GH127049)
+
+- Better support for lambda-converted function pointers in analysis. (#GH144906)
+
+- Improved modeling of ``getcwd`` function in ``unix.StdCLibraryFunctions`` checker.
+  (#GH141076)
+
+- Enhanced the ``optin.core.EnumCastOutOfRange`` checker to ignore ``[[clang::flag_enum]]``
+  enums. (#GH141232)
+
+- Improved handling of structured bindings captured by lambdas. (#GH132579, #GH91835)
+
+- Fixed unnamed bitfield handling in ``optin.cplusplus.UninitializedObject``. (#GH132427, #GH132001)
+
+- Enhanced iterator checker modeling for ``insert`` operations. (#GH132596)
+
+- Improved ``format`` attribute handling in ``optin.taint.GenericTaint``. (#GH132765)
+
+- Added support for ``consteval`` in ``ConditionBRVisitor::VisitTerminator``.
+  (#GH146859, #GH139130)
+
+- C standard streams are no longer invalidated by all C library function calls.
+  (#GH147766)
+
+- Enhanced store management with region-store-binding-limit to improve performance.
+  See `region-store-max-binding-fanout
+  <https://clang.llvm.org/docs/analyzer/user-docs/Options.html#region-store-max-binding-fanout>`_
+  config option. Overriding these options are discouraged, unless you know what you do.
+  (#GH127602)
+
+- Updated undefined assignment checker (``core.uninitialized.Assign``) diagnostics
+  to avoid using the term ``garbage``. (#GH126596)
+
+- Fixed false memory leak reports involving placement new. (#GH144341)
+
+- Avoided unnecessary super region invalidation in ``unix.cstring.*`` checkers.
+  (#GH146212, #GH143807)
+
+- Enhanced handling of tainted division-by-zero error paths in the
+  ``optin.taint.TaintedDiv`` checker. (#GH144491)
 
 Moved checkers
 ^^^^^^^^^^^^^^
 
-- After lots of improvements, the checker ``alpha.security.ArrayBoundV2`` is
+- After lots of improvements, the checker ``alpha.security.ArrayBoundV2`` was
   renamed to ``security.ArrayBound``. As this checker is stable now, the old
-  checker ``alpha.security.ArrayBound`` (which was searching for the same kind
-  of bugs with an different, simpler and less accurate algorithm) is removed.
+  checker ``alpha.security.ArrayBound`` was removed.
 
 .. _release-notes-sanitizers:
 
