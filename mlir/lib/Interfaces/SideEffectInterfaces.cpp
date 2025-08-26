@@ -319,7 +319,7 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
-std::optional<bool> mlir::isZeroTrip(mlir::LoopLikeOpInterface loop) {
+std::optional<bool> mlir::isZeroTrip(mlir::LoopLikeOpInterface &loop) {
   auto lbs = loop.getLoopLowerBounds();
   auto ubs = loop.getLoopUpperBounds();
   auto steps = loop.getLoopSteps();

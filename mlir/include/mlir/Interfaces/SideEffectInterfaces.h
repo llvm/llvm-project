@@ -468,7 +468,7 @@ bool wouldOpBeTriviallyDead(Operation *op);
 /// Can only infer if loop is dead if it has constant loop bounds/steps.
 /// Otherwise we assume that it's dead to be conservative.
 ///
-std::optional<bool> isZeroTrip(mlir::LoopLikeOpInterface loop);
+std::optional<bool> isZeroTrip(mlir::LoopLikeOpInterface &loop);
 
 /// Returns true if the given operation is allowed to be moved under the
 /// memory effects interface.
