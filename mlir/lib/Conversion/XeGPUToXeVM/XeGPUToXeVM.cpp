@@ -210,13 +210,13 @@ class CreateNdDescToXeVMPattern
     // Get shape values from op fold results.
     baseShapeW = createOffset(mixedSizes, rank - 1);
     baseShapeH = createOffset(mixedSizes, rank - 2);
-    if (sourceMemrefTy) {
+    if (sourceMemrefTy)
       // Cast index to i64.
       baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
-    } else if (baseAddr.getType() != i64Ty) {
+    else if (baseAddr.getType() != i64Ty)
       // Pointer type may be i32. Cast to i64 if needed.
       baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
-    }
+
     // Populate payload.
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
@@ -288,9 +288,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
 
     auto tdesc = adaptor.getTensorDesc();
     auto tdescTy = op.getTensorDescType();
-    if (tdescTy.getRank() != 2) {
+    if (tdescTy.getRank() != 2)
       return rewriter.notifyMatchFailure(op, "Expected 2D tensor descriptor.");
-    }
 
     VectorType payloadI64Ty = VectorType::get(4, rewriter.getI64Type());
     Value payLoadAsI64 =
@@ -308,10 +307,9 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     Value offsetH;
     auto mixedOffsets = op.getMixedOffsets();
     int64_t opOffsetsSize = mixedOffsets.size();
-    if (opOffsetsSize != 0 && opOffsetsSize != 2) {
+    if (opOffsetsSize != 0 && opOffsetsSize != 2)
       return rewriter.notifyMatchFailure(op,
                                          "Expected 2D offsets or no offsets.");
-    }
     if (opOffsetsSize) {
       // If mixed offsets are provided by the op convert them to i32.
       offsetW = getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
@@ -348,10 +346,9 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     int32_t vblocks = tdescTy.getArrayLength();
     if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
       VectorType srcVecTy = dyn_cast<VectorType>(adaptor.getValue().getType());
-      if (!srcVecTy) {
+      if (!srcVecTy)
         return rewriter.notifyMatchFailure(
             op, "Expected store value to be a vector type.");
-      }
       auto storeCacheControl =
           translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
       Value src = adaptor.getValue();
@@ -419,10 +416,9 @@ class CreateDescToXeVMPattern
                   ConversionPatternRewriter &rewriter) const override {
     auto eTy = op.getTensorDescType().getElementType();
     auto eBw = eTy.getIntOrFloatBitWidth();
-    if (eBw % 8 != 0) {
+    if (eBw % 8 != 0)
       return rewriter.notifyMatchFailure(
           op, "Expected element type bit width to be multiple of 8.");
-    }
     auto loc = op.getLoc();
     // Offsets are provided as scalar i64 by type converter.
     auto offsets = adaptor.getOffsets();
@@ -447,10 +443,9 @@ class UpdateOffsetToXeVMPattern
                   ConversionPatternRewriter &rewriter) const override {
     auto eTy = op.getTensorDescType().getElementType();
     auto eBw = eTy.getIntOrFloatBitWidth();
-    if (eBw % 8 != 0) {
+    if (eBw % 8 != 0)
       return rewriter.notifyMatchFailure(
           op, "Expected element type bit width to be multiple of 8.");
-    }
     auto loc = op.getLoc();
     // Scatter descriptor is provided as scalar i64 by type converter.
     // Offsets are provided as scalar i64 by type converter.
@@ -475,30 +470,27 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     Value basePtrI64;
     // Load result or Store valye Type can be vector or scalar.
     Type valOrResTy;
-    if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
+    if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>)
       valOrResTy = op.getResult().getType();
-    } else {
+    else
       valOrResTy = adaptor.getValue().getType();
-    }
     VectorType valOrResVecTy = dyn_cast<VectorType>(valOrResTy);
     bool hasScalarVal = !valOrResVecTy;
     int64_t elemBitWidth =
         hasScalarVal ? valOrResTy.getIntOrFloatBitWidth()
                      : valOrResVecTy.getElementType().getIntOrFloatBitWidth();
     // Element type must be multiple of 8 bits.
-    if (elemBitWidth % 8 != 0) {
+    if (elemBitWidth % 8 != 0)
       return rewriter.notifyMatchFailure(
           op, "Expected element type bit width to be multiple of 8.");
-    }
     int64_t elemByteSize = elemBitWidth / 8;
     // Default memory space is global.
     LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
     // If tensor descriptor is available, we use its memory space.
-    if (tdescTy) {
+    if (tdescTy)
       ptrTypeLLVM = LLVM::LLVMPointerType::get(
           ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
-    }
     // Base pointer can come from source (load) or dest (store).
     // If they are memrefs, we use their memory space.
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
@@ -524,18 +516,17 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     Value offsets = adaptor.getOffsets();
     Value mask = adaptor.getMask();
     if (offsets) {
-      if (dyn_cast<VectorType>(offsets.getType())) {
+      if (dyn_cast<VectorType>(offsets.getType()))
         // Offset needs be scalar. Single element vector is converted to scalar
         // by type converter.
         return rewriter.notifyMatchFailure(op,
                                            "Expected offsets to be a scalar.");
-      } else {
+      else
         // If offsets are provided, we add them to the base pointer.
         // Offsets are in number of elements, we need to multiply by
         // element byte size.
         basePtrI64 =
             addOffset(rewriter, loc, basePtrI64, offsets, elemByteSize);
-      }
     }
     // Convert base pointer (i64) to LLVM pointer type.
     Value basePtrLLVM =
@@ -543,13 +534,12 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
 
     Value maskForLane;
     VectorType maskVecTy = dyn_cast<VectorType>(mask.getType());
-    if (maskVecTy) {
+    if (maskVecTy)
       // Mask needs be scalar. Single element vector is converted to scalar by
       // type converter.
       return rewriter.notifyMatchFailure(op, "Expected mask to be a scalar.");
-    } else {
+    else
       maskForLane = mask;
-    }
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
       scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, {valOrResTy},
                                          maskForLane, true, true);
@@ -609,10 +599,9 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
     auto tdescTy = op.getTensorDescType();
     Value basePtrI64 = adaptor.getSource();
     // Base pointer is passed as i32 or i64 by adaptor, cast to i64 if needed.
-    if (basePtrI64.getType() != rewriter.getI64Type()) {
+    if (basePtrI64.getType() != rewriter.getI64Type())
       basePtrI64 = arith::ExtUIOp::create(rewriter, loc, rewriter.getI64Type(),
                                           basePtrI64);
-    }
     Value offsets = adaptor.getOffsets();
     if (offsets) {
       VectorType offsetsVecTy = dyn_cast<VectorType>(offsets.getType());
@@ -637,10 +626,9 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
           elemByteSize = *op.getOffsetAlignByte();
         }
         if (elemBitWidth != 0) {
-          if (elemBitWidth % 8 != 0) {
+          if (elemBitWidth % 8 != 0)
             return rewriter.notifyMatchFailure(
                 op, "Expected element type bit width to be multiple of 8.");
-          }
           elemByteSize = elemBitWidth / 8;
         }
         basePtrI64 =
@@ -651,10 +639,9 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
     LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
     // If tensor descriptor is available, we use its memory space.
-    if (tdescTy) {
+    if (tdescTy)
       ptrTypeLLVM = LLVM::LLVMPointerType::get(
           ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
-    }
     // If source is a memref, we use its memory space.
     if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
       auto addrSpace = memRefTy.getMemorySpaceAsInt();
@@ -883,9 +870,8 @@ struct ConvertXeGPUToXeVMPass
       return VectorType::get(sum, elemType);
     });
     typeConverter.addConversion([&](xegpu::TensorDescType type) -> Type {
-      if (type.isScattered()) {
+      if (type.isScattered())
         return IntegerType::get(&getContext(), 64);
-      }
       auto i32Type = IntegerType::get(&getContext(), 32);
       return VectorType::get(8, i32Type);
     });
