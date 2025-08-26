@@ -65,6 +65,7 @@ struct OneShotBufferizePass
       opt.allowUnknownOps = allowUnknownOps;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
       opt.analysisHeuristic = parseHeuristicOption(analysisHeuristic);
+      opt.enforceAliasingInvariants = enforceAliasingInvariants;
       opt.copyBeforeWrite = copyBeforeWrite;
       opt.dumpAliasSets = dumpAliasSets;
       opt.setFunctionBoundaryTypeConversion(functionBoundaryTypeConversion);
