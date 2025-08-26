@@ -114,6 +114,7 @@ extern int unw_get_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t *) LIBUNWIND_
 extern int unw_set_reg(unw_cursor_t *, unw_regnum_t, unw_word_t) LIBUNWIND_AVAIL;
 extern int unw_set_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t)  LIBUNWIND_AVAIL;
 extern int unw_resume(unw_cursor_t *) LIBUNWIND_AVAIL;
+extern const char *unw_strerror(int) LIBUNWIND_AVAIL;
 
 #ifdef __arm__
 /* Save VFP registers in FSTMX format (instead of FSTMD). */
