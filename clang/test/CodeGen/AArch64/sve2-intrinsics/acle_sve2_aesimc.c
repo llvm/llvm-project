@@ -22,7 +22,7 @@
 #endif
 
 #if defined(__ARM_FEATURE_SME)
-#define MODE_ATTR __arm_streaming
+#define STREAMING __arm_streaming
 #else
 #define STREAMING
 #endif
