@@ -248,7 +248,7 @@ uint32_t NativeRegisterContextDBReg::SetHardwareWatchpoint(
     return LLDB_INVALID_INDEX32;
   }
 
-  control_value = MakeWatchControlValue(addr, size, watch_flags);
+  control_value = MakeWatchControlValue(size, watch_flags);
 
   // Iterate over stored watchpoints and find a free wp_index
   wp_index = LLDB_INVALID_INDEX32;

@@ -26,8 +26,7 @@ private:
 
   uint32_t MakeBreakControlValue(size_t size) override;
 
-  uint32_t MakeWatchControlValue(lldb::addr_t addr, size_t size,
-                                 uint32_t watch_flags) override;
+  uint32_t MakeWatchControlValue(size_t size, uint32_t watch_flags) override;
 };
 
 } // namespace lldb_private

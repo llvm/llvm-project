@@ -70,8 +70,9 @@ uint32_t NativeRegisterContextDBReg_arm::MakeBreakControlValue(size_t size) {
   }
 }
 
-uint32_t NativeRegisterContextDBReg_arm::MakeWatchControlValue(
-    lldb::addr_t addr, size_t size, uint32_t watch_flags) {
+uint32_t
+NativeRegisterContextDBReg_arm::MakeWatchControlValue(size_t size,
+                                                      uint32_t watch_flags) {
   // We can only watch up to four bytes that follow a 4 byte aligned address
   // per watchpoint register pair, so make sure we can properly encode this.
   // We assume that the address was 4 byte aligned by AdjustWatchpoint.
