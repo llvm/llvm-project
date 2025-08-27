@@ -88,6 +88,7 @@ ccomplex stdexcept
 ccomplex streambuf
 ccomplex string
 ccomplex string_view
+ccomplex text_encoding
 ccomplex tuple
 ccomplex typeinfo
 ccomplex version
@@ -126,6 +127,7 @@ chrono stdexcept
 chrono streambuf
 chrono string
 chrono string_view
+chrono text_encoding
 chrono tuple
 chrono typeinfo
 chrono version
@@ -149,6 +151,7 @@ codecvt limits
 codecvt stdexcept
 codecvt string
 codecvt string_view
+codecvt text_encoding
 codecvt tuple
 codecvt typeinfo
 codecvt version
@@ -181,6 +184,7 @@ complex stdexcept
 complex streambuf
 complex string
 complex string_view
+complex text_encoding
 complex tuple
 complex typeinfo
 complex version
@@ -229,6 +233,7 @@ ctgmath stdexcept
 ctgmath streambuf
 ctgmath string
 ctgmath string_view
+ctgmath text_encoding
 ctgmath tuple
 ctgmath typeinfo
 ctgmath version
@@ -279,6 +284,7 @@ experimental/iterator stdexcept
 experimental/iterator streambuf
 experimental/iterator string
 experimental/iterator string_view
+experimental/iterator text_encoding
 experimental/iterator tuple
 experimental/iterator typeinfo
 experimental/iterator variant
@@ -323,6 +329,7 @@ filesystem ratio
 filesystem stdexcept
 filesystem string
 filesystem string_view
+filesystem text_encoding
 filesystem tuple
 filesystem typeinfo
 filesystem version
@@ -373,6 +380,7 @@ format optional
 format stdexcept
 format string
 format string_view
+format text_encoding
 format tuple
 format typeinfo
 format version
@@ -410,6 +418,7 @@ fstream stdexcept
 fstream streambuf
 fstream string
 fstream string_view
+fstream text_encoding
 fstream tuple
 fstream typeinfo
 fstream version
@@ -453,6 +462,7 @@ future stdexcept
 future streambuf
 future string
 future string_view
+future text_encoding
 future tuple
 future typeinfo
 future version
@@ -478,6 +488,7 @@ iomanip ratio
 iomanip stdexcept
 iomanip string
 iomanip string_view
+iomanip text_encoding
 iomanip tuple
 iomanip typeinfo
 iomanip version
@@ -501,6 +512,7 @@ ios ratio
 ios stdexcept
 ios string
 ios string_view
+ios text_encoding
 ios tuple
 ios typeinfo
 ios version
@@ -535,6 +547,7 @@ iostream stdexcept
 iostream streambuf
 iostream string
 iostream string_view
+iostream text_encoding
 iostream tuple
 iostream typeinfo
 iostream version
@@ -561,6 +574,7 @@ istream stdexcept
 istream streambuf
 istream string
 istream string_view
+istream text_encoding
 istream tuple
 istream typeinfo
 istream version
@@ -617,6 +631,7 @@ locale stdexcept
 locale streambuf
 locale string
 locale string_view
+locale text_encoding
 locale tuple
 locale typeinfo
 locale version
@@ -718,6 +733,7 @@ ostream stdexcept
 ostream streambuf
 ostream string
 ostream string_view
+ostream text_encoding
 ostream tuple
 ostream typeinfo
 ostream version
@@ -743,6 +759,7 @@ print optional
 print stdexcept
 print string
 print string_view
+print text_encoding
 print tuple
 print typeinfo
 print version
@@ -766,6 +783,7 @@ queue limits
 queue stdexcept
 queue string
 queue string_view
+queue text_encoding
 queue tuple
 queue typeinfo
 queue vector
@@ -832,6 +850,7 @@ regex limits
 regex stdexcept
 regex string
 regex string_view
+regex text_encoding
 regex tuple
 regex typeinfo
 regex vector
@@ -896,6 +915,7 @@ sstream stdexcept
 sstream streambuf
 sstream string
 sstream string_view
+sstream text_encoding
 sstream tuple
 sstream typeinfo
 sstream version
@@ -940,6 +960,7 @@ streambuf ratio
 streambuf stdexcept
 streambuf string
 streambuf string_view
+streambuf text_encoding
 streambuf tuple
 streambuf typeinfo
 streambuf version
@@ -994,6 +1015,7 @@ strstream stdexcept
 strstream streambuf
 strstream string
 strstream string_view
+strstream text_encoding
 strstream tuple
 strstream typeinfo
 strstream version
@@ -1028,6 +1050,7 @@ syncstream stdexcept
 syncstream streambuf
 syncstream string
 syncstream string_view
+syncstream text_encoding
 syncstream tuple
 syncstream typeinfo
 syncstream version
@@ -1048,6 +1071,19 @@ system_error string
 system_error string_view
 system_error tuple
 system_error version
+text_encoding cctype
+text_encoding compare
+text_encoding cstdint
+text_encoding cstdio
+text_encoding cstring
+text_encoding cwchar
+text_encoding cwctype
+text_encoding initializer_list
+text_encoding iosfwd
+text_encoding limits
+text_encoding stdexcept
+text_encoding string_view
+text_encoding version
 thread array
 thread atomic
 thread bitset
@@ -1075,6 +1111,7 @@ thread stdexcept
 thread streambuf
 thread string
 thread string_view
+thread text_encoding
 thread tuple
 thread typeinfo
 thread version
@@ -1144,6 +1181,7 @@ vector limits
 vector stdexcept
 vector string
 vector string_view
+vector text_encoding
 vector tuple
 vector typeinfo
 vector version

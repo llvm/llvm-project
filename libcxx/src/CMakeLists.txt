@@ -92,6 +92,7 @@ if (LIBCXX_ENABLE_LOCALIZATION)
     ostream.cpp
     regex.cpp
     strstream.cpp
+    text_encoding.cpp
     )
 endif()
 
