@@ -1211,7 +1211,7 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testnzc_si128(__m128i __M,
 /// \param __V2
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi64(__m128i __V1,
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpeq_epi64(__m128i __V1,
                                                              __m128i __V2) {
   return (__m128i)((__v2di)__V1 == (__v2di)__V2);
 }
@@ -2338,7 +2338,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
 /// \param __V2
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi64(__m128i __V1,
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpgt_epi64(__m128i __V1,
                                                              __m128i __V2) {
   return (__m128i)((__v2di)__V1 > (__v2di)__V2);
 }
