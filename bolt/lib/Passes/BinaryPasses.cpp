@@ -1866,14 +1866,14 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
         const bool IsMemcpy8 = (CalleeSymbol->getName() == "_memcpy8");
         const bool IsTailCall = BC.MIB->isTailCall(Inst);
 
-        // Extract size from preceding instructions (AArch64 only)
-        // Pattern: MOV X2, #nb-bytes; BL memcpy src, dest, X2
+        // Extract size from preceding instructions (AArch64 only).
+        // Pattern: MOV X2, #nb-bytes; BL memcpy src, dest, X2.
         std::optional<uint64_t> KnownSize = std::nullopt;
         if (BC.isAArch64()) {
           BitVector WrittenRegs(BC.MRI->getNumRegs());
           MCPhysReg SizeReg = BC.MIB->getIntArgRegister(2);
 
-          // Look backwards for size-setting instruction
+          // Look backwards for size-setting instruction.
           for (auto InstIt = BB.begin(); InstIt != II; ++InstIt) {
             MCInst &Inst = *InstIt;
             WrittenRegs.reset();

@@ -2622,10 +2622,10 @@ public:
     InstructionListType Code;
     uint64_t Size = *KnownSize;
 
-    // Generate the optimized memcpy sequence
+    // Generate the optimized memcpy sequence.
     generateSizeSpecificMemcpy(Code, Size);
 
-    // If _memcpy8, adjust X0 to return dest+size instead of dest
+    // If _memcpy8, adjust X0 to return dest+size instead of dest.
     if (ReturnEnd)
       Code.emplace_back(MCInstBuilder(AArch64::ADDXri)
                             .addReg(AArch64::X0)
@@ -2637,7 +2637,6 @@ public:
 
   InstructionListType generateSizeSpecificMemcpy(InstructionListType &Code,
                                                  uint64_t Size) const {
-    // Helper to add load/store pair
     auto addLoadStorePair = [&](unsigned LoadOpc, unsigned StoreOpc,
                                 unsigned Reg, unsigned Offset = 0) {
       Code.emplace_back(MCInstBuilder(LoadOpc)
@@ -2650,7 +2649,7 @@ public:
                             .addImm(Offset));
     };
 
-    // Generate optimal instruction sequences based on exact size
+    // Generate optimal instruction sequences based on exact size.
     switch (Size) {
     case 1:
       addLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3);
@@ -2674,7 +2673,7 @@ public:
 
     default:
       if (Size <= 64) {
-        // For sizes up to 64 bytes, greedily use the largest possible loads
+        // For sizes up to 64 bytes, greedily use the largest possible loads.
         uint64_t Remaining = Size;
         uint64_t Offset = 0;
 
