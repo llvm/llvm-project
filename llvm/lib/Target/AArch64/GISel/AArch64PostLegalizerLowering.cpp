@@ -1111,6 +1111,121 @@ void applyVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI,
   LegalizerHelper Helper(*MI.getMF(), Observer, B);
   Helper.lower(MI, 0, /* Unused hint type */ LLT());
 }
+struct AuthLoadMatchInfo {
+  Register Dst = 0;
+  Register Addr = 0;
+  int64_t Offset = 0;
+  unsigned Key = 0;
+  Register Disc = 0;
+
+  bool Writeback = false;
+  Register NewAddr = 0;
+};
+
+static bool matchFormAuthLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              const CombinerHelper &Helper,
+                              AuthLoadMatchInfo &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_LOAD);
+  if (!MI.getMF()->getSubtarget<AArch64Subtarget>().hasPAuth())
+    return false;
+
+  MatchInfo.Dst = MI.getOperand(0).getReg();
+
+  LLT DstTy = MRI.getType(MatchInfo.Dst);
+  if (DstTy != LLT::scalar(64) && DstTy != LLT::pointer(0, 64))
+    return false;
+
+  Register LoadPtr = MI.getOperand(1).getReg();
+  if (MRI.getType(LoadPtr) != LLT::pointer(0, 64))
+    return false;
+
+  // When matching the writeback variant, we may need to writeback either the
+  // ptr-typed (used by the G_LOAD) or int-typed (def'd by @llvm.ptrauth.auth)
+  // base (+offset, with auth) pointer.  Try at each level, but at most once.
+  auto TryWriteback = [&](Register Ptr, MachineInstr &KnownUseMI) {
+    if (MRI.hasOneNonDBGUse(Ptr))
+      return true;
+    if (MatchInfo.Writeback)
+      return false;
+    for (auto &UseMI : MRI.use_nodbg_instructions(Ptr))
+      if (&KnownUseMI != &UseMI && !Helper.dominates(MI, UseMI))
+        return false;
+    MatchInfo.Writeback = true;
+    MatchInfo.NewAddr = Ptr;
+    return true;
+  };
+
+  if (!TryWriteback(LoadPtr, MI))
+    return false;
+
+  // Try to match different variants of offset additions to find the base ptr.
+  Register BasePtr = AArch64::NoRegister;
+
+  MachineInstr *LoadPtrDef = getDefIgnoringCopies(LoadPtr, MRI);
+  if (!LoadPtrDef)
+    return false;
+
+  if (LoadPtrDef->getOpcode() == TargetOpcode::G_INTTOPTR) {
+    Register IntPtr = LoadPtrDef->getOperand(1).getReg();
+
+    // Check if the int-typed ptr is the one in need of writeback.
+    if (!TryWriteback(IntPtr, *LoadPtrDef))
+      return false;
+
+    if (!mi_match(IntPtr, MRI,
+                  m_any_of(m_GAdd(m_Reg(BasePtr), m_ICst(MatchInfo.Offset)),
+                           m_Reg(BasePtr))))
+      return false;
+
+  } else if (!mi_match(*LoadPtrDef, MRI,
+                       m_GPtrAdd(m_GIntToPtr(m_Reg(BasePtr)),
+                                 m_ICst(MatchInfo.Offset)))) {
+    return false;
+  }
+
+  MachineInstr *AUT = getOpcodeDef(TargetOpcode::G_INTRINSIC, BasePtr, MRI);
+  if (!AUT ||
+      cast<GIntrinsic>(AUT)->getIntrinsicID() != Intrinsic::ptrauth_auth)
+    return false;
+
+  Register RawPtr;
+  if (!mi_match(AUT->getOperand(2).getReg(), MRI, m_GPtrToInt(m_Reg(RawPtr))))
+    return false;
+
+  MatchInfo.Addr = RawPtr;
+  MatchInfo.Key = AUT->getOperand(3).getImm();
+  MatchInfo.Disc = AUT->getOperand(4).getReg();
+  return true;
+}
+
+static bool applyFormAuthLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineIRBuilder &B, const CombinerHelper &Helper,
+                              GISelChangeObserver &Observer,
+                              AuthLoadMatchInfo &MatchInfo) {
+  MachineIRBuilder MIB(MI);
+
+  Register AddrDisc;
+  uint16_t DiscImm;
+  std::tie(DiscImm, AddrDisc) =
+      extractPtrauthBlendDiscriminators(MatchInfo.Disc, MRI);
+
+  if (MatchInfo.Writeback) {
+    MachineInstr &AddrDef = *MRI.getUniqueVRegDef(MatchInfo.NewAddr);
+    MIB.buildInstr(AArch64::G_LDRApre, {MatchInfo.Dst, MatchInfo.NewAddr},
+                   {MatchInfo.Addr, MatchInfo.Offset, (uint64_t)MatchInfo.Key,
+                    (uint64_t)DiscImm, AddrDisc})
+        .addMemOperand(*MI.memoperands_begin());
+    AddrDef.eraseFromParent();
+  } else {
+    MIB.buildInstr(AArch64::G_LDRA, {MatchInfo.Dst},
+                   {MatchInfo.Addr, MatchInfo.Offset, (uint64_t)MatchInfo.Key,
+                    (uint64_t)DiscImm, AddrDisc})
+        .addMemOperand(*MI.memoperands_begin());
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
 
 /// Combine <N x t>, unused = unmerge(G_EXT <2*N x t> v, undef, N)
 ///           => unused, <N x t> = unmerge v

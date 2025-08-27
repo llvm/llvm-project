@@ -226,6 +226,7 @@ private:
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectPtrAuthGlobalValue(MachineInstr &I,
                                 MachineRegisterInfo &MRI) const;
+  bool selectAuthLoad(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectReduction(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectMOPS(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -2939,6 +2940,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
   case TargetOpcode::G_PTRAUTH_GLOBAL_VALUE:
     return selectPtrAuthGlobalValue(I, MRI);
+
+  case AArch64::G_LDRA:
+  case AArch64::G_LDRApre:
+    return selectAuthLoad(I, MRI);
 
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_LOAD:
@@ -6946,6 +6951,72 @@ bool AArch64InstructionSelector::selectPtrAuthGlobalValue(
       .addImm(Key)
       .addImm(Disc);
   RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
+
+  I.eraseFromParent();
+  return true;
+}
+
+bool AArch64InstructionSelector::selectAuthLoad(MachineInstr &I,
+                                                MachineRegisterInfo &MRI) {
+  bool Writeback = I.getOpcode() == AArch64::G_LDRApre;
+
+  Register ValReg = I.getOperand(0).getReg();
+  Register PtrReg = I.getOperand(1 + Writeback).getReg();
+  int64_t Offset = I.getOperand(2 + Writeback).getImm();
+  auto Key =
+      static_cast<AArch64PACKey::ID>(I.getOperand(3 + Writeback).getImm());
+  uint64_t DiscImm = I.getOperand(4 + Writeback).getImm();
+  Register AddrDisc = I.getOperand(5 + Writeback).getReg();
+
+  bool IsDKey = Key == AArch64PACKey::DA || Key == AArch64PACKey::DB;
+  bool ZeroDisc = AddrDisc == AArch64::NoRegister && !DiscImm;
+
+  // If the discriminator is zero and the offset fits, we can use LDRAA/LDRAB.
+  // Do that here to avoid needlessly constraining regalloc into using X16.
+  if (ZeroDisc && isShiftedInt<10, 3>(Offset) && IsDKey) {
+    unsigned Opc = 0;
+    switch (Key) {
+    case AArch64PACKey::DA:
+      Opc = Writeback ? AArch64::LDRAAwriteback : AArch64::LDRAAindexed;
+      break;
+    case AArch64PACKey::DB:
+      Opc = Writeback ? AArch64::LDRABwriteback : AArch64::LDRABindexed;
+      break;
+    default:
+      llvm_unreachable("Invalid key for LDRAA/LDRAB");
+    }
+    // The LDRAA/LDRAB offset immediate is scaled.
+    Offset /= 8;
+    if (Writeback) {
+      MIB.buildInstr(Opc, {I.getOperand(1).getReg(), ValReg}, {PtrReg, Offset})
+          .constrainAllUses(TII, TRI, RBI);
+      RBI.constrainGenericRegister(I.getOperand(1).getReg(),
+                                   AArch64::GPR64spRegClass, MRI);
+    } else {
+      MIB.buildInstr(Opc, {ValReg}, {PtrReg, Offset})
+          .constrainAllUses(TII, TRI, RBI);
+    }
+    I.eraseFromParent();
+    return true;
+  }
+
+  if (AddrDisc == AArch64::NoRegister)
+    AddrDisc = AArch64::XZR;
+
+  // Otherwise, use the generalized LDRA pseudo.
+  MIB.buildCopy(AArch64::X16, PtrReg);
+  if (Writeback) {
+    MIB.buildInstr(AArch64::LDRApre, {ValReg},
+                   {Offset, uint64_t(Key), DiscImm, AddrDisc})
+        .constrainAllUses(TII, TRI, RBI);
+    MIB.buildCopy(I.getOperand(1).getReg(), (Register)AArch64::X16);
+    RBI.constrainGenericRegister(I.getOperand(1).getReg(),
+                                 AArch64::GPR64RegClass, MRI);
+  } else {
+    MIB.buildInstr(AArch64::LDRA, {ValReg},
+                   {Offset, uint64_t(Key), DiscImm, AddrDisc})
+        .constrainAllUses(TII, TRI, RBI);
+  }
 
   I.eraseFromParent();
   return true;

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64MCInstLower.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
@@ -211,6 +212,9 @@ public:
   // and authenticate it with, if FPAC bit is not set, check+trap sequence after
   // authenticating)
   void LowerLOADgotAUTH(const MachineInstr &MI);
+
+  // Emit the sequence for LDRA (auth + load from authenticated base).
+  void LowerPtrauthAuthLoad(const MachineInstr &MI);
 
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
@@ -2259,6 +2263,111 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, BRInst);
 }
 
+void AArch64AsmPrinter::LowerPtrauthAuthLoad(const MachineInstr &MI) {
+  const bool IsPreWB = MI.getOpcode() == AArch64::LDRApre;
+
+  const Register DstReg = MI.getOperand(0).getReg();
+  const int64_t Offset = MI.getOperand(1).getImm();
+  const auto Key = (AArch64PACKey::ID)MI.getOperand(2).getImm();
+  const uint64_t Disc = MI.getOperand(3).getImm();
+  const Register AddrDisc = MI.getOperand(4).getReg();
+
+  Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17);
+
+  unsigned AUTOpc = getAUTOpcodeForKey(Key, DiscReg == AArch64::XZR);
+  auto MIB = MCInstBuilder(AUTOpc).addReg(AArch64::X16).addReg(AArch64::X16);
+  if (DiscReg != AArch64::XZR)
+    MIB.addReg(DiscReg);
+
+  EmitToStreamer(MIB);
+
+  // We have a few options for offset folding:
+  // - writeback, 0 offset (we already wrote the AUT result): LDRXui
+  // - no wb, uimm12s8 offset (including 0): LDRXui
+  if (!Offset || (!IsPreWB && isShiftedUInt<12, 3>(Offset))) {
+    EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                       .addReg(DstReg)
+                       .addReg(AArch64::X16)
+                       .addImm(Offset / 8));
+    return;
+  }
+
+  // - no wb, simm9 offset: LDURXi
+  if (!IsPreWB && isInt<9>(Offset)) {
+    EmitToStreamer(MCInstBuilder(AArch64::LDURXi)
+                       .addReg(DstReg)
+                       .addReg(AArch64::X16)
+                       .addImm(Offset));
+    return;
+  }
+
+  // - pre-indexed wb, simm9 offset: LDRXpre
+  if (IsPreWB && isInt<9>(Offset)) {
+    EmitToStreamer(MCInstBuilder(AArch64::LDRXpre)
+                       .addReg(AArch64::X16)
+                       .addReg(DstReg)
+                       .addReg(AArch64::X16)
+                       .addImm(Offset));
+    return;
+  }
+
+  // Finally, in the general case, we need a MOVimm either way.
+  SmallVector<AArch64_IMM::ImmInsnModel, 4> ImmInsns;
+  AArch64_IMM::expandMOVImm(Offset, 64, ImmInsns);
+
+  // X17 is dead at this point, use it as the offset register
+  for (const auto &ImmI : ImmInsns) {
+    switch (ImmI.Opcode) {
+    default:
+      llvm_unreachable("invalid ldra imm expansion opc!");
+      break;
+
+    case AArch64::ORRXri:
+      EmitToStreamer(MCInstBuilder(ImmI.Opcode)
+                         .addReg(AArch64::X17)
+                         .addReg(AArch64::XZR)
+                         .addImm(ImmI.Op2));
+      break;
+    case AArch64::MOVNXi:
+    case AArch64::MOVZXi:
+      EmitToStreamer(MCInstBuilder(ImmI.Opcode)
+                         .addReg(AArch64::X17)
+                         .addImm(ImmI.Op1)
+                         .addImm(ImmI.Op2));
+      break;
+    case AArch64::MOVKXi:
+      EmitToStreamer(MCInstBuilder(ImmI.Opcode)
+                         .addReg(AArch64::X17)
+                         .addReg(AArch64::X17)
+                         .addImm(ImmI.Op1)
+                         .addImm(ImmI.Op2));
+      break;
+    }
+  }
+
+  // - no wb, any offset: expanded MOVImm + LDRXroX
+  if (!IsPreWB) {
+    EmitToStreamer(MCInstBuilder(AArch64::LDRXroX)
+                       .addReg(DstReg)
+                       .addReg(AArch64::X16)
+                       .addReg(AArch64::X17)
+                       .addImm(0)
+                       .addImm(0));
+    return;
+  }
+
+  // - pre-indexed wb, any offset: expanded MOVImm + ADD + LDRXui
+  EmitToStreamer(MCInstBuilder(AArch64::ADDXrs)
+                     .addReg(AArch64::X16)
+                     .addReg(AArch64::X16)
+                     .addReg(AArch64::X17)
+                     .addImm(0));
+  EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                     .addReg(DstReg)
+                     .addReg(AArch64::X16)
+                     .addImm(0));
+}
+
 const MCExpr *
 AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   MCContext &Ctx = OutContext;
@@ -2939,6 +3048,11 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case AArch64::LOADgotAUTH:
     LowerLOADgotAUTH(*MI);
+    return;
+
+  case AArch64::LDRA:
+  case AArch64::LDRApre:
+    LowerPtrauthAuthLoad(*MI);
     return;
 
   case AArch64::BRA:

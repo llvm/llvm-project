@@ -2239,6 +2239,36 @@ let Predicates = [HasPAuth] in {
     let Size = 8;
   }
 
+  // LDRA pseudo: generalized LDRAA/Bindexed, allowing arbitrary discriminators,
+  // and wider offsets.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  // The loaded value is in $Rt.  The signed pointer is in X16.
+  // $Rt could be GPR64 but is GPR64noip to help out regalloc: we imp-def 2/3rds
+  // of the difference between the two, and the 3rd reg (LR) is often reserved.
+  def LDRA : Pseudo<(outs GPR64noip:$Rt),
+                    (ins i64imm:$Offset, i32imm:$Key, i64imm:$Disc,
+                         GPR64noip:$AddrDisc),
+                    []>, Sched<[]> {
+    let mayLoad = 1;
+    let Size = 48;
+    let Defs = [X16,X17];
+    let Uses = [X16];
+  }
+
+  // Pre-indexed + writeback variant of LDRA.
+  // The signed pointer is in X16, and is written back, after being
+  // authenticated and offset, into X16.
+  def LDRApre : Pseudo<(outs GPR64noip:$Rt),
+                       (ins i64imm:$Offset, i32imm:$Key, i64imm:$Disc,
+                            GPR64noip:$AddrDisc),
+                    []>, Sched<[]> {
+    let mayLoad = 1;
+    let Size = 48;
+    let Defs = [X16,X17];
+    let Uses = [X16];
+  }
+
   // Size 16: 4 fixed + 8 variable, to compute discriminator.
   // The size returned by getInstSizeInBytes() is incremented according
   // to the variant of LR check.
