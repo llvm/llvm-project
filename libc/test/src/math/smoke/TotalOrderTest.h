@@ -139,10 +139,10 @@ public:
       EXPECT_FALSE(funcWrapper(func, qnan_0x42, aNaN));
       EXPECT_TRUE(funcWrapper(func, snan_0x42, sNaN));
 
-      EXPECT_TRUE(funcWrapper(func, neg_aNaN, neg_qnan_0x42));
-      EXPECT_FALSE(funcWrapper(func, neg_sNaN, neg_snan_0x42));
-      EXPECT_FALSE(funcWrapper(func, neg_qnan_0x42, neg_aNaN));
-      EXPECT_TRUE(funcWrapper(func, neg_snan_0x42, neg_sNaN));
+      EXPECT_FALSE(funcWrapper(func, neg_aNaN, neg_qnan_0x42));
+      EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_snan_0x42));
+      EXPECT_TRUE(funcWrapper(func, neg_qnan_0x42, neg_aNaN));
+      EXPECT_FALSE(funcWrapper(func, neg_snan_0x42, neg_sNaN));
     }
   }
 };
