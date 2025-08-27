@@ -23,7 +23,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
@@ -40,6 +40,7 @@
 #include <optional>
 
 namespace clang {
+  class AllocSizeAttr;
   class APValue;
   class ASTContext;
   class BlockDecl;
@@ -3260,6 +3261,15 @@ public:
   void markDependentForPostponedNameLookup() {
     setDependence(getDependence() | ExprDependence::TypeValueInstantiation);
   }
+
+  /// Try to get the alloc_size attribute of the callee. May return null.
+  const AllocSizeAttr *getCalleeAllocSizeAttr() const;
+
+  /// Evaluates the total size in bytes allocated by calling a function
+  /// decorated with alloc_size. Returns std::nullopt if the the result cannot
+  /// be evaluated.
+  std::optional<llvm::APInt>
+  evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const;
 
   bool isCallToStdMove() const;
 

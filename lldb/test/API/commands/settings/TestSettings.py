@@ -1051,6 +1051,7 @@ class SettingsCommandTestCase(TestBase):
             substrs=["(default: empty)", '[0]: "PATH"'],
         )
         # dictionaries
+        self.runCmd("settings clear target.env-vars")
         self.expect(
             "settings show --defaults target.env-vars",
             matching=False,
@@ -1061,16 +1062,17 @@ class SettingsCommandTestCase(TestBase):
             "settings show --defaults target.env-vars",
             substrs=["(default: empty)", "THING=value"],
         )
+        pwd = os.getcwd()
         # file list
         self.expect(
             "settings show --defaults target.exec-search-paths",
             matching=False,
             substrs=["(default: empty)"],
         )
-        self.runCmd("settings set target.exec-search-paths /tmp")
+        self.runCmd(f"settings set target.exec-search-paths {pwd}")
         self.expect(
             "settings show --defaults target.exec-search-paths",
-            substrs=["(default: empty)", "[0]: /tmp"],
+            substrs=["(default: empty)", f"[0]: {pwd}"],
         )
         # path map
         self.expect(
@@ -1078,10 +1080,13 @@ class SettingsCommandTestCase(TestBase):
             matching=False,
             substrs=["(default: empty)"],
         )
-        self.runCmd("settings set target.source-map /abc /tmp")
+        self.runCmd(f"settings set target.source-map /abc {pwd}")
         self.expect(
             "settings show --defaults target.source-map",
-            substrs=["(default: empty)", '[0] "/abc" -> "/tmp"'],
+            patterns=[
+                r"\(default: empty\)",
+                rf'\[0\] "[/\\]abc" -> "{re.escape(pwd)}"',
+            ],
         )
 
     def get_setting_json(self, setting_path=None):

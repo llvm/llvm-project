@@ -22,7 +22,6 @@
 namespace llvm {
 class AsmPrinter;
 class MCContext;
-} // namespace llvm
 
 class AMDGPUMCInstLower {
   MCContext &Ctx;
@@ -66,4 +65,5 @@ static inline const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
   return nullptr;
 }
 } // namespace
+} // namespace llvm
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUMCINSTLOWER_H

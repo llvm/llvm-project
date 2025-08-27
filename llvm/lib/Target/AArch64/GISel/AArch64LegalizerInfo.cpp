@@ -1150,7 +1150,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
       .clampMaxNumElements(1, s8, 16)
-      .clampMaxNumElements(1, p0, 2);
+      .clampMaxNumElements(1, p0, 2)
+      .scalarizeIf(scalarOrEltWiderThan(1, 64), 1);
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalIf(
@@ -1165,7 +1166,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampMaxNumElements(0, s64, 2)
-      .clampMaxNumElements(0, p0, 2);
+      .clampMaxNumElements(0, p0, 2)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalFor({{v8s8, s8},
@@ -1258,6 +1260,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({p0});
 
   getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, s64}});
+
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
 

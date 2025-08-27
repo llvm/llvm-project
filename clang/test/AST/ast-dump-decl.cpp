@@ -973,5 +973,20 @@ namespace TestConstexprVariableTemplateWithInitializer {
   // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:25, col:48> col:37 call_init 'const T' constexpr callinit{{$}}
   // CHECK-NEXT:  `-ParenListExpr 0x{{.+}} <col:46, col:48> 'NULL TYPE'{{$}}
   // CHECK-NEXT:   `-IntegerLiteral 0x{{.+}} <col:47> 'int' 0{{$}}
-
 }
+
+namespace TestInjectedClassName {
+  struct A {
+    using T1 = A;
+    using T2 = A;
+  };
+  // CHECK-LABEL: Dumping TestInjectedClassName:
+  // CHECK:       CXXRecordDecl [[TestInjectedClassName_RD:0x[^ ]+]] {{.*}} struct A definition
+  // CHECK:       CXXRecordDecl {{.*}} implicit referenced struct A
+  // CHECK-NEXT:  |-TypeAliasDecl {{.*}} T1 'A'
+  // CHECK-NEXT:  | `-RecordType [[TestInjectedClassName_RT:0x[^ ]+]] 'A' injected
+  // CHECK-NEXT:  |   `-CXXRecord [[TestInjectedClassName_RD]] 'A'
+  // CHECK-NEXT:  `-TypeAliasDecl {{.*}} T2 'A'
+  // CHECK-NEXT:    `-RecordType [[TestInjectedClassName_RT]] 'A' injected
+  // CHECK-NEXT:      `-CXXRecord [[TestInjectedClassName_RD]] 'A'
+} // namespace InjectedClassName
