@@ -18,6 +18,7 @@
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/OpenMP/Utils.h"
 #include "flang/Support/OpenMP-utils.h"
+#include "flang/Utils/OpenMP.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -631,7 +632,7 @@ private:
     llvm::SmallVector<mlir::Value> boundsOps;
     genBoundsOps(builder, liveIn, rawAddr, boundsOps);
 
-    return Fortran::common::openmp::createMapInfoOp(
+    return Fortran::utils::openmp::createMapInfoOp(
         builder, liveIn.getLoc(), rawAddr,
         /*varPtrPtr=*/{}, name.str(), boundsOps,
         /*members=*/{},
@@ -720,7 +721,7 @@ private:
     // MemoryEffectFree, or else copy them to a new temporary and add them to
     // the map and block_argument lists and replace their uses with the new
     // temporary.
-    Fortran::common::openmp::cloneOrMapRegionOutsiders(builder, targetOp);
+    Fortran::utils::openmp::cloneOrMapRegionOutsiders(builder, targetOp);
     rewriter.setInsertionPoint(
         rewriter.create<mlir::omp::TerminatorOp>(targetOp.getLoc()));
 
@@ -753,11 +754,11 @@ private:
              llvm::zip_equal(targetShapeCreationInfo.startIndices,
                              targetShapeCreationInfo.extents)) {
           shapeShiftOperands.push_back(
-              Fortran::common::openmp::mapTemporaryValue(
+              Fortran::utils::openmp::mapTemporaryValue(
                   builder, targetOp, startIndex,
                   liveInName + ".start_idx.dim" + std::to_string(shapeIdx)));
           shapeShiftOperands.push_back(
-              Fortran::common::openmp::mapTemporaryValue(
+              Fortran::utils::openmp::mapTemporaryValue(
                   builder, targetOp, extent,
                   liveInName + ".extent.dim" + std::to_string(shapeIdx)));
           ++shapeIdx;
@@ -772,7 +773,7 @@ private:
       llvm::SmallVector<mlir::Value> shapeOperands;
       size_t shapeIdx = 0;
       for (auto extent : targetShapeCreationInfo.extents) {
-        shapeOperands.push_back(Fortran::common::openmp::mapTemporaryValue(
+        shapeOperands.push_back(Fortran::utils::openmp::mapTemporaryValue(
             builder, targetOp, extent,
             liveInName + ".extent.dim" + std::to_string(shapeIdx)));
         ++shapeIdx;
