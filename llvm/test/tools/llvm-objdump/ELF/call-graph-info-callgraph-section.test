@@ -1,0 +1,73 @@
+## Tests --call-graph-info prints information from call graph section.
+
+# RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
+# RUN: llvm-objdump --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK: [[FILE]]: file format elf64-x86-64
+
+# CHECK: INDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])
+# CHECK-NEXT: UNKNOWN 6 b
+# CHECK-NEXT: 20 a
+# CHECK-EMPTY:
+# CHECK-NEXT: INDIRECT CALL TYPES (TYPEID [CALL_SITE_ADDR,])
+# CHECK-NEXT: 10 9
+# CHECK-EMPTY:
+# CHECK-NEXT: INDIRECT CALL SITES (CALLER_ADDR [CALL_SITE_ADDR,])
+# CHECK-NEXT: 6 9
+# CHECK-EMPTY:
+# CHECK-NEXT: DIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])
+# CHECK-NEXT: 0 5 5
+# CHECK-EMPTY:
+# CHECK-NEXT: FUNCTIONS (FUNC_ENTRY_ADDR, SYM_NAME)
+# CHECK-NEXT: 0 foo
+# CHECK-NEXT: 6 bar
+# CHECK-NEXT: a baz
+# CHECK-NEXT: b qux
+
+.text
+
+.globl foo
+.type foo,@function
+foo:                  #< foo is at 0.
+.Lfoo_begin:
+ callq foo            #< direct call is at 5. target is foo (5).
+ retq
+
+.globl bar
+.type bar,@function
+bar:                  #< bar is at 6.
+ callq	*-40(%rbp)    #< indirect call is at 9.
+ retq
+
+.globl baz
+.type baz,@function
+baz:                  #< baz is at 10 (a).
+ retq
+
+.globl qux
+.type qux,@function
+qux:                  #< qux is at 11 (b).
+ retq
+
+.section	.callgraph,"o",@progbits,.text
+.quad	0       #< Format version number.
+.quad	0       #< foo()'s entry address.
+.quad	0       #< Function kind: not an indirect target.
+.quad	0       #< Count of indirect call sites that follow: 0.
+
+.quad	0       #< Format version number.
+.quad	6       #< bar()'s entry address.
+.quad	1       #< Function kind: indirect target with unknown type id.
+.quad	1       #< Count of indirect call sites that follow: 1.
+.quad 16      #< Indirect call type id.
+.quad 9       #< Indirect call site.
+
+.quad	0       #< Format version number.
+.quad	10      #< baz()'s entry address.
+.quad	2       #< Function kind: indirect target with known type id.
+.quad 32      #< Indirect target type id.
+.quad	0       #< Count of indirect call sites that follow: 1.
+
+# No call graph section entry for qux: will be printed as unknown target.
+
+.text
