@@ -271,12 +271,25 @@ bool ClauseProcessor::processCancelDirectiveName(
   return true;
 }
 
-bool ClauseProcessor::processCollapse(
+bool ClauseProcessor::processLoopNests(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
-  return collectLoopRelatedInfo(converter, currentLocation, eval, clauses,
-                                result, iv);
+  int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
+                                               clauses, result, iv);
+  return numCollapse > 1;
+}
+
+bool ClauseProcessor::processCollapse(
+    mlir::Location currentLocation, lower::pft::Evaluation &eval,
+    mlir::omp::LoopNestOperands &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
+
+  int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
+                                               clauses, result, iv);
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  result.collapseNumLoops = firOpBuilder.getI64IntegerAttr(numCollapse);
+  return numCollapse > 1;
 }
 
 bool ClauseProcessor::processDevice(lower::StatementContext &stmtCtx,
@@ -520,6 +533,19 @@ bool ClauseProcessor::processProcBind(
     return true;
   }
   return false;
+}
+
+bool ClauseProcessor::processTileSizes(
+    lower::pft::Evaluation &eval, mlir::omp::LoopNestOperands &result) const {
+  bool found = false;
+  llvm::SmallVector<int64_t> sizeValues;
+  auto *ompCons{eval.getIf<parser::OpenMPConstruct>()};
+  collectTileSizesFromOpenMPConstruct(ompCons, sizeValues, semaCtx);
+  if (sizeValues.size() > 0) {
+    found = true;
+    result.tileSizes = sizeValues;
+  }
+  return found;
 }
 
 bool ClauseProcessor::processSafelen(

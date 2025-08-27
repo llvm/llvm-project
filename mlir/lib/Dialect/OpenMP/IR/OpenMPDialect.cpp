@@ -2980,7 +2980,7 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   if (value > 1)
     result.addAttribute(
-        "num_collapse",
+        "collapse_num_loops",
         IntegerAttr::get(parser.getBuilder().getI64Type(), value));
 
   // Parse tiles
@@ -3024,7 +3024,7 @@ void LoopNestOp::print(OpAsmPrinter &p) {
   if (getLoopInclusive())
     p << "inclusive ";
   p << "step (" << getLoopSteps() << ") ";
-  if (int64_t numCollapse = getNumCollapse())
+  if (int64_t numCollapse = getCollapseNumLoops())
     if (numCollapse > 1)
       p << "collapse(" << numCollapse << ") ";
 
@@ -3037,9 +3037,9 @@ void LoopNestOp::print(OpAsmPrinter &p) {
 void LoopNestOp::build(OpBuilder &builder, OperationState &state,
                        const LoopNestOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  LoopNestOp::build(builder, state, clauses.loopLowerBounds,
-                    clauses.loopUpperBounds, clauses.loopSteps,
-                    clauses.loopInclusive, clauses.numCollapse,
+  LoopNestOp::build(builder, state, clauses.collapseNumLoops,
+                    clauses.loopLowerBounds, clauses.loopUpperBounds,
+                    clauses.loopSteps, clauses.loopInclusive,
                     makeDenseI64ArrayAttr(ctx, clauses.tileSizes));
 }
 
@@ -3058,7 +3058,7 @@ LogicalResult LoopNestOp::verify() {
 
   uint64_t numIVs = getIVs().size();
 
-  if (const auto &numCollapse = getNumCollapse())
+  if (const auto &numCollapse = getCollapseNumLoops())
     if (numCollapse > numIVs)
       return emitOpError()
              << "collapse value is larger than the number of loops";
