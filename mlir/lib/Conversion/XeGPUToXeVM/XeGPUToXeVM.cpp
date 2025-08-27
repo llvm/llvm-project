@@ -30,6 +30,8 @@
 
 #include "llvm/ADT/TypeSwitch.h"
 
+#include <numeric>
+
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTXEGPUTOXEVMPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -38,6 +40,10 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
+
+// TODO: Below are uArch dependent values, should move away from hardcoding
+static constexpr int32_t systolicDepth{8};
+static constexpr int32_t executionSize{16};
 
 // Offsets to individual fields of the 8xi32 layout nd tensor descriptor.
 enum class NdTdescOffset : uint32_t {
@@ -746,9 +752,6 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
         VectorType::get(cvecty.getNumElements(), cvecty.getElementType());
     if (cvecty != cNty)
       c = vector::ShapeCastOp::create(rewriter, loc, cNty, c);
-    // Below are uArch dependent values, should move away from hardcoding
-    constexpr int32_t systolicDepth{8};
-    constexpr int32_t executionSize{16};
     Value dpasRes = xevm::MMAOp::create(
         rewriter, loc, cNty, aVec, bVec, c,
         xevm::MMAShapeAttr::get(ctxt, cvecty.getNumElements(), executionSize,
@@ -867,10 +870,9 @@ struct ConvertXeGPUToXeVMPass
       if (rank < 1 || type.getNumElements() == 1)
         return elemType;
       // Otherwise, convert the vector to a flat vector type.
-      unsigned sum = 1;
-      for (unsigned i = 0; i < rank; i++) {
-        sum *= type.getShape()[i];
-      }
+      int64_t sum =
+          std::accumulate(type.getShape().begin(), type.getShape().end(),
+                          int64_t{1}, std::multiplies<int64_t>());
       return VectorType::get(sum, elemType);
     });
     typeConverter.addConversion([&](xegpu::TensorDescType type) -> Type {
