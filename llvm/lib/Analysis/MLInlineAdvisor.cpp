@@ -130,7 +130,7 @@ const TensorSpec llvm::DefaultDecisionSpec =
     TensorSpec::createSpec<int64_t>(DefaultDecisionName, {1});
 const char *const llvm::RewardName = "delta_size";
 
-static CallBase *getInlinableCS(Instruction &I) {
+CallBase *getInlinableCS(Instruction &I) {
   if (auto *CS = dyn_cast<CallBase>(&I))
     if (Function *Callee = CS->getCalledFunction()) {
       if (!Callee->isDeclaration()) {
