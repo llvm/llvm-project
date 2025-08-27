@@ -59,7 +59,8 @@ constexpr bool explicit_conversion(Input&& in, const Expect& v)
     static_assert(!std::is_constructible<O, void*>::value, "");
     static_assert(!std::is_constructible<O, Input, int>::value, "");
     optional<To> opt(std::forward<Input>(in));
-    return opt && *opt == static_cast<To>(v);
+    optional<To> opt2{std::forward<Input>(in)};
+    return opt && *opt == static_cast<To>(v) && (opt2 && *opt2 == static_cast<To>(v));
 }
 
 void test_implicit()
@@ -130,6 +131,15 @@ void test_explicit() {
             assert(T::move_constructed == 0);
             assert(T::copy_constructed == 0);
             assert(t.value().value == 42);
+        }
+        T::reset();
+        {
+            optional<T> t{43};
+            assert(T::alive == 1);
+            assert(T::value_constructed == 1);
+            assert(T::move_constructed == 0);
+            assert(T::copy_constructed == 0);
+            assert(t.value().value == 43);
         }
         assert(T::alive == 0);
     }

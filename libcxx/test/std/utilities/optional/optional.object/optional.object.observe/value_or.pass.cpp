@@ -64,6 +64,11 @@ constexpr int test()
         assert(std::move(opt).value_or(Y(3)) == 4);
         assert(!opt);
     }
+    {
+        optional<X> opt;
+        assert(std::move(opt).value_or<X>({Y(3)}) == 4);
+        assert(!opt);
+    }
     return 0;
 }
 
