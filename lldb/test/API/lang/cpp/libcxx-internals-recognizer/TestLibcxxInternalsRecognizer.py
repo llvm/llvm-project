@@ -40,6 +40,7 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
             "Callable::operator()(int) const": ["::invoke", "test_invoke"],
             # Containers
             "MyKey::operator<(MyKey const&) const": [
+                "::operator()",
                 "less",
                 "::emplace",
                 "test_containers",
