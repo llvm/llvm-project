@@ -1782,7 +1782,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                                  ORE, TheLoop);
       return false;
     }
-    if (!TTI->isLegalSpeculativeLoad(LI->getType(), LI->getAlign())) {
+    if (!TTI->isLegalFaultOnlyFirstLoad(LI->getType(), LI->getAlign())) {
       reportVectorizationFailure("Loop may fault",
                                  "Cannot vectorize early exit loop with "
                                  "illegal speculative load",

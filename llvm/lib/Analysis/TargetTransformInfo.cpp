@@ -531,9 +531,9 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
-bool TargetTransformInfo::isLegalSpeculativeLoad(Type *DataType,
-                                                 Align Alignment) const {
-  return TTIImpl->isLegalSpeculativeLoad(DataType, Alignment);
+bool TargetTransformInfo::isLegalFaultOnlyFirstLoad(Type *DataType,
+                                                    Align Alignment) const {
+  return TTIImpl->isLegalFaultOnlyFirstLoad(DataType, Alignment);
 }
 
 bool TargetTransformInfo::isLegalInterleavedAccessType(

@@ -843,8 +843,9 @@ public:
   /// Return true if the target supports strided load.
   LLVM_ABI bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
 
-  /// Return true if the target supports speculative load.
-  LLVM_ABI bool isLegalSpeculativeLoad(Type *DataType, Align Alignment) const;
+  /// Return true if the target supports fault-only-first load.
+  LLVM_ABI bool isLegalFaultOnlyFirstLoad(Type *DataType,
+                                          Align Alignment) const;
 
   /// Return true is the target supports interleaved access for the given vector
   /// type \p VTy, interleave factor \p Factor, alignment \p Alignment and

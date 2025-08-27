@@ -374,7 +374,8 @@ public:
     return false;
   }
 
-  virtual bool isLegalSpeculativeLoad(Type *DataType, Align Alignment) const {
+  virtual bool isLegalFaultOnlyFirstLoad(Type *DataType,
+                                         Align Alignment) const {
     return false;
   }
 
