@@ -2775,14 +2775,13 @@ RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
 
-RandomizePaddingSection::RandomizePaddingSection(Ctx &ctx, uint64_t size,
-                                                 OutputSection *parent)
-    : SyntheticSection(ctx, ".randomize_padding", SHT_PROGBITS, SHF_ALLOC, 1),
+PaddingSection::PaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent)
+    : SyntheticSection(ctx, ".padding", SHT_PROGBITS, SHF_ALLOC, 1),
       size(size) {
   this->parent = parent;
 }
 
-void RandomizePaddingSection::writeTo(uint8_t *buf) {
+void PaddingSection::writeTo(uint8_t *buf) {
   std::array<uint8_t, 4> filler = getParent()->getFiller(ctx);
   uint8_t *end = buf + size;
   for (; buf + 4 <= end; buf += 4)

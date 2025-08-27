@@ -784,11 +784,11 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
-class RandomizePaddingSection final : public SyntheticSection {
+class PaddingSection final : public SyntheticSection {
   uint64_t size;
 
 public:
-  RandomizePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
+  PaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
   size_t getSize() const override { return size; }
   void writeTo(uint8_t *buf) override;
 };

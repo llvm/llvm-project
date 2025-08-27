@@ -818,6 +818,8 @@ public:
       Alignment = A;
   }
 
+  Align getPreferredAlignment() const;
+  
   /// exposesReturnsTwice - Returns true if the function calls setjmp or
   /// any other similar functions with attribute "returns twice" without
   /// having the attribute itself.
