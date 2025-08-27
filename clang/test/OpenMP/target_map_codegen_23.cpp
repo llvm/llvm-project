@@ -77,8 +77,8 @@ struct SC{
 // CK24: [[MTYPE16:@.+]] = private {{.*}}constant [3 x i64] [i64 32, i64 281474976710659, i64 16384]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK24: [[SIZE17:@.+]] = private {{.*}}constant [3 x i64] [i64 {{4|8}}, i64 {{3560|2880}}, i64 {{4|8}}]
-// CK24: [[MTYPE17:@.+]] = private {{.*}}constant [3 x i64] [i64 547, i64 3, i64 16384]
+// CK24: [[SIZE17:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 {{3560|2880}}, i64 {{4|8}}]
+// CK24: [[MTYPE17:@.+]] = private {{.*}}constant [3 x i64] [i64 544, i64 3, i64 16384]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE18:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 {{4|8}}]
@@ -89,8 +89,8 @@ struct SC{
 // CK24: [[MTYPE19:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 16384]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK24: [[SIZE20:@.+]] = private unnamed_addr constant [3 x i64] [i64 {{4|8}}, i64 4, i64 {{4|8}}]
-// CK24: [[MTYPE20:@.+]] = private unnamed_addr constant [3 x i64] [i64 547, i64 3, i64 16384]
+// CK24: [[SIZE20:@.+]] = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 {{4|8}}]
+// CK24: [[MTYPE20:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 3, i64 16384]
 
 // CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_struct_fields{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK24: [[SIZE21:@.+]] = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 {{4|8}}]
@@ -285,7 +285,7 @@ int explicit_maps_struct_fields(int a){
 
 // Region 17
 
-//  &p[0],    &p->p,           sizeof(p[0].p),    IMPLICIT | PARAM | TO | FROM
+//  &p[0],    &p[0],           0,                 IMPLICIT | PARAM
 //  &p->p[0], &p->p[/*lb=*/0], sizeof(p->p[0:5]), TO | FROM
 //  &p->p,    &p->p[/*lb=*/0], sizeof(p),         ATTACH
 
@@ -300,10 +300,8 @@ int explicit_maps_struct_fields(int a){
 // CK24-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK24-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK24-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
-// CK24-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+// CK24-DAG: store ptr [[VAR0]], ptr [[P0]]
 // CK24-DAG: [[VAR0]] = load ptr, ptr %p
-// CK24-DAG: [[SEC0]] = getelementptr {{.*}}%struct.SC, ptr [[SEC00:%.+]], i{{.+}} 0, i{{.+}} 2
-// CK24-DAG: [[SEC00]] = load ptr, ptr %p
 
 // CK24-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
 // CK24-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
@@ -413,7 +411,7 @@ int explicit_maps_struct_fields(int a){
 
 // Region 20
 
-//  &p[0],    &p->p,    sizeof(p->p),    IMPLICIT | PARAM | TO | FROM
+//  &p[0],    &p[0],    0,               IMPLICIT | PARAM
 //  &p->p[0], &p->p->a, sizeof(p->p->a), TO | FROM
 //  &p->p,    &p->p->a, sizeof(p),       ATTACH
 
@@ -428,10 +426,8 @@ int explicit_maps_struct_fields(int a){
 // CK24-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK24-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK24-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
-// CK24-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+// CK24-DAG: store ptr [[VAR0]], ptr [[P0]]
 // CK24-DAG: [[VAR0]] = load ptr, ptr %p
-// CK24-DAG: [[SEC0]] = getelementptr {{.*}}%struct.SC, ptr [[SEC00:.+]], i{{.*}} 0, i{{.*}} 2
-// CK24-DAG: [[SEC00]] = load ptr, ptr [[SEC01:%[^,]+]]
 
 // CK24-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
 // CK24-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1

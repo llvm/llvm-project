@@ -6765,8 +6765,9 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
 namespace {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-// Utility to compare expression locations for deterministic ordering.
-// This function asserts that both expressions have valid source locations.
+/// Utility to compare expression locations.
+/// Returns true if expr-loc of LHS is less-than that of RHS.
+/// This function asserts that both expressions have valid expr-locations.
 static bool compareExprLocs(const Expr *LHS, const Expr *RHS) {
   // Assert that neither LHS nor RHS can be null
   assert(LHS && "LHS expression cannot be null");
@@ -6791,14 +6792,14 @@ static bool compareExprLocs(const Expr *LHS, const Expr *RHS) {
 // code for that information.
 class MappableExprsHandler {
 public:
-  // Custom comparator for attach-pointer expressions that compares them by
-  // complexity (i.e. their component-depth) first, then by their expr-locs if
-  // they are semantically different.
+  /// Custom comparator for attach-pointer expressions that compares them by
+  /// complexity (i.e. their component-depth) first, then by their expr-locs if
+  /// they are semantically different.
   struct AttachPtrExprComparator {
     const MappableExprsHandler *Handler;
-    // Cache of previous  results.
+    // Cache of previous equality comparison results.
     mutable llvm::DenseMap<std::pair<const Expr *, const Expr *>, bool>
-        CachedComparisonResults;
+        CachedEqualityComparisons;
 
     AttachPtrExprComparator(const MappableExprsHandler *H) : Handler(H) {}
 
@@ -6843,27 +6844,29 @@ public:
     }
 
   public:
+    /// Return true if \p LHS and \p RHS are semantically equal. Uses pre-cached
+    /// results, if available, otherwise does a recursive semantic comparison.
     bool areEqual(const Expr *LHS, const Expr *RHS) const {
       // Check cache first for faster lookup
-      auto CachedResultIt = CachedComparisonResults.find({LHS, RHS});
-      if (CachedResultIt != CachedComparisonResults.end())
+      auto CachedResultIt = CachedEqualityComparisons.find({LHS, RHS});
+      if (CachedResultIt != CachedEqualityComparisons.end())
         return CachedResultIt->second;
 
       bool ComparisonResult = areSemanticallyEqual(LHS, RHS);
 
       // Cache the result for future lookups (both orders since semantic
       // equality is commutative)
-      CachedComparisonResults[{LHS, RHS}] = ComparisonResult;
-      CachedComparisonResults[{RHS, LHS}] = ComparisonResult;
+      CachedEqualityComparisons[{LHS, RHS}] = ComparisonResult;
+      CachedEqualityComparisons[{RHS, LHS}] = ComparisonResult;
       return ComparisonResult;
     }
 
   private:
-    // Helper function to compare attach-pointer expressions semantically.
-    // This function handles various expression types that can be part of an
-    // attach-pointer.
-    // TODO: Not urgent, but we should ideally return true when comparing
-    // `p[10]`, `*(p + 10)`,  `*(p + 5 + 5)`, `p[10:1]` etc.
+    /// Helper function to compare attach-pointer expressions semantically.
+    /// This function handles various expression types that can be part of an
+    /// attach-pointer.
+    /// TODO: Not urgent, but we should ideally return true when comparing
+    /// `p[10]`, `*(p + 10)`,  `*(p + 5 + 5)`, `p[10:1]` etc.
     bool areSemanticallyEqual(const Expr *LHS, const Expr *RHS) const {
       if (LHS == RHS)
         return true;
@@ -9582,10 +9585,19 @@ public:
 
       const Expr *Base = ME->getBase()->IgnoreParenImpCasts();
 
+      // If we are handling a "this" capture, then we are looking for
+      // attach-ptrs of form `this->p`, either explicitly or implicitly.
       if (IsThisCapture && !ME->isImplicitCXXThis() && !isa<CXXThisExpr>(Base))
         continue;
 
       if (!IsThisCapture && (!isa<DeclRefExpr>(Base) ||
+                             cast<DeclRefExpr>(Base)->getDecl() != CapturedVD))
+        continue;
+
+      // For non-this captures, we are looking for attach-ptrs of form
+      // `s.p`.
+      // For non-this captures, we are looking for attach-ptrs like `s.p`.
+      if (!IsThisCapture && (ME->isArrow() || !isa<DeclRefExpr>(Base) ||
                              cast<DeclRefExpr>(Base)->getDecl() != CapturedVD))
         continue;
 

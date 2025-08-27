@@ -61,7 +61,7 @@ public:
      #pragma omp target data map(to:d.A[0:Asize]) map(from:d.C[0:Csize])
      {
        // Csize, Csize, sizeof(intptr_t), LITERAL | PARAM
-       // &d,    &d,    sizeof(d),        IMPLICIT | TO | FROM | PARAM
+       // &d,    &d,    sizeof(d),        IMPLICIT | PARAM | TO | FROM
        #pragma omp target teams firstprivate(Csize)
        for (int i = 0; i < Csize; ++i)
           d.C[i] = 1;
