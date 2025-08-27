@@ -28,7 +28,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -6793,15 +6792,17 @@ static bool compareExprLocs(const Expr *LHS, const Expr *RHS) {
 class MappableExprsHandler {
 public:
   // Custom comparator for attach-pointer expressions that compares them by
-  // complexity (i.e. their component-depth) first, then semantically.
+  // complexity (i.e. their component-depth) first, then by their expr-locs if
+  // they are semantically different.
   struct AttachPtrExprComparator {
     const MappableExprsHandler *Handler;
-    // Cache of previous comparison results.
+    // Cache of previous  results.
     mutable llvm::DenseMap<std::pair<const Expr *, const Expr *>, bool>
         CachedComparisonResults;
 
     AttachPtrExprComparator(const MappableExprsHandler *H) : Handler(H) {}
 
+    // Return true iff LHS is "less than" RHS.
     bool operator()(const Expr *LHS, const Expr *RHS) const {
       if (LHS == RHS)
         return false;
@@ -7202,12 +7203,13 @@ private:
   /// Map from attach pointer expressions to their component depth.
   /// nullptr key has std::nullopt depth. This can be used to order attach-ptr
   /// expressions with increasing/decreasing depth.
+  /// The component-depth of `nullptr` (i.e. no attach-ptr) is `std::nullopt`.
   /// TODO: Not urgent, but we should ideally use the number of pointer
   /// dereferences in an expr as an indicator of its complexity, instead of the
-  /// component-depth. That would be needed for us to treat `p[1]`,
-  /// `*(p + 10)`, `*(p + 5 + 5)` together.
+  /// component-depth. That would be needed for us to treat `p[1]`, `*(p + 10)`,
+  /// `*(p + 5 + 5)` together.
   mutable llvm::DenseMap<const Expr *, std::optional<size_t>>
-      AttachPtrComponentDepthMap;
+      AttachPtrComponentDepthMap = {{nullptr, std::nullopt}};
 
   llvm::Value *getExprTypeSize(const Expr *E) const {
     QualType ExprTy = E->getType().getCanonicalType();
@@ -8622,48 +8624,6 @@ private:
                                                           CurDirectiveID);
   }
 
-  /// Group component lists by their AttachPtrExpr and return them sorted by
-  /// complexity. Complexity is determined by the depth of the AttachPtrExpr in
-  /// the component list. Lower depth = lower complexity. nullptr (no attach
-  /// pointer) has lowest complexity.
-  SmallVector<const Expr *, 8> getAttachPtrExprsSortedByComplexity() const {
-    SmallVector<const Expr *, 8> SortedAttachPtrs;
-
-    // Collect all unique AttachPtrExprs from the map
-    for (const auto &Entry : AttachPtrComponentDepthMap)
-      SortedAttachPtrs.push_back(Entry.first);
-
-    // Sort by complexity (nullptr first, then by increasing complexity) using
-    // stable_sort
-    llvm::stable_sort(SortedAttachPtrs, [this](const Expr *A, const Expr *B) {
-      // Use cached component depth values
-      auto ItA = AttachPtrComponentDepthMap.find(A);
-      auto ItB = AttachPtrComponentDepthMap.find(B);
-
-      // std::nullopt (no attach pointer) has lowest complexity
-      std::optional<size_t> DepthA = (ItA != AttachPtrComponentDepthMap.end())
-                                         ? ItA->second
-                                         : std::nullopt;
-      std::optional<size_t> DepthB = (ItB != AttachPtrComponentDepthMap.end())
-                                         ? ItB->second
-                                         : std::nullopt;
-
-      // If both are nullopt, they're equal
-      if (!DepthA.has_value() && !DepthB.has_value())
-        return false;
-      // If only A is nullopt, A comes first (lower complexity)
-      if (!DepthA.has_value())
-        return true;
-      // If only B is nullopt, B comes first (lower complexity)
-      if (!DepthB.has_value())
-        return false;
-      // Both have values, compare by depth (lower depth = lower complexity)
-      return DepthA.value() < DepthB.value();
-    });
-
-    return SortedAttachPtrs;
-  }
-
   /// Generate all the base pointers, section pointers, sizes, map types, and
   /// mappers for the extracted mappable expressions (all included in \a
   /// CombinedInfo). Also, for each item that relates with a device pointer, a
@@ -8784,12 +8744,12 @@ private:
         };
 
     auto &&MapInfoGen =
-        [&DeferredInfo, &UseDeviceDataCombinedInfoGen,
-         &InfoGen](CodeGenFunction &CGF, const Expr *IE, const ValueDecl *VD,
-                   OMPClauseMappableExprCommon::MappableExprComponentListRef
-                       Components,
-                   bool IsImplicit, bool IsDevAddr,
-                   bool IEIsAttachPtrForDevAddr = false) {
+        [&UseDeviceDataCombinedInfoGen](
+            CodeGenFunction &CGF, const Expr *IE, const ValueDecl *VD,
+            OMPClauseMappableExprCommon::MappableExprComponentListRef
+                Components,
+            bool IsImplicit, bool IsDevAddr,
+            bool IEIsAttachPtrForDevAddr = false) {
           // We didn't find any match in our map information - generate a zero
           // size array section - if the pointer is a struct member we defer
           // this action until the whole struct has been processed.
@@ -9086,6 +9046,9 @@ private:
 
       // Append any pending zero-length pointers which are struct members and
       // used with use_device_ptr or use_device_addr.
+      // FIXME: This is now redundant as we are not populating DeferredInfo
+      // anymore. Remove unless we find a legitimate need of populating
+      // using DefferedInfo during the review process.
       auto CI = DeferredInfo.find(Data.first);
       if (CI != DeferredInfo.end()) {
         size_t DeferredStartIdx = CurInfo.Types.size();
@@ -9784,6 +9747,12 @@ public:
     // of increasing complexity (nullptr first, then simple expressions like p,
     // then more complex ones like p[0], etc.)
     //
+    // This ensure that we:
+    // * handle maps that can contribute towards setting the kernel argument,
+    // (e.g. map(ps), or map(ps[0])), before any that cannot (e.g. ps->pt->d).
+    // * allocate a single contiguous storage for all exprs with the same
+    // captured var and having the same attach-ptr.
+    //
     // Example: The map clauses below should be handled grouped together based
     // on their attachable-base-pointers:
     //   map-clause                | attachable-base-pointer
@@ -9881,24 +9850,12 @@ public:
           // etc.), it is not an overlapping.
           // Same, if one component is a base and another component is a
           // dereferenced pointer memberexpr with the same base.
-          // Check if both component lists share the same attach pointer
-          // This allows struct member access through pointers when they
-          // belong to the same struct, including nested cases like ps->qs->x
-          const Expr *AttachPtr1 = getAttachPtrExpr(Components);
-          const Expr *AttachPtr2 = getAttachPtrExpr(Components1);
           if (!isa<MemberExpr>(It->getAssociatedExpression()) ||
               (std::prev(It)->getAssociatedDeclaration() &&
                std::prev(It)
                    ->getAssociatedDeclaration()
                    ->getType()
-                   ->isPointerType()) || /*&&
-               // Check if both component lists share the same attach pointer
-               // This allows struct member access through pointers when they
-               // belong to the same struct, including nested cases like
-               // ps->qs->x
-               !(AttachPtr1 &&
-                 AttachPtr2 &&
-                 AttachPtr1 == AttachPtr2)) ||*/
+                   ->isPointerType()) ||
               (It->getAssociatedDeclaration() &&
                It->getAssociatedDeclaration()->getType()->isPointerType() &&
                std::next(It) != CE && std::next(It) != SE))
@@ -10523,35 +10480,26 @@ static void genMapInfoForCaptures(
           CapturedVD, DeclComponentLists,
           StorageForImplicitlyAddedComponentLists);
 
+      // OpenMP 6.0, 15.8, target construct, restrictions:
+      // * A list item in a map clause that is specified on a target construct
+      // must have a base variable or base pointer.
+      //
       // Map clauses on a target construct must either have a base pointer, or a
       // base-variable. So, if we don't have a base-pointer, that means that it
-      // must have a base-variable, like map(s), map(s.x) etc. In such cases, we
-      // do not need to handle default map generation for s.
-      bool HasEntryWithoutAttachPtr = false;
-      bool AttachPtrIsMemberOfThis = false;
-      for (const auto &MapData : DeclComponentLists) {
-        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
-            std::get<0>(MapData);
-        const Expr *AttachPtr = MEHandler.getAttachPtrExpr(Components);
-        if (!AttachPtr) {
-          HasEntryWithoutAttachPtr = true;
-          break;
-        }
-        // Check if the attach pointer is a member expression (this->member)
-        if (CI->capturesThis() && isa<MemberExpr>(AttachPtr)) {
-          const auto *ME = cast<MemberExpr>(AttachPtr);
-          if (ME->isImplicitCXXThis() ||
-              isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts())) {
-            AttachPtrIsMemberOfThis = true;
-          }
-        }
-      }
+      // must have a base-variable, i.e. we have a map like `map(s)`, `map(s.x)`
+      // etc. In such cases, we do not need to handle default map generation
+      // for `s`.
+      bool HasEntryWithoutAttachPtr =
+          llvm::any_of(DeclComponentLists, [&](const auto &MapData) {
+            OMPClauseMappableExprCommon::MappableExprComponentListRef
+                Components = std::get<0>(MapData);
+            return !MEHandler.getAttachPtrExpr(Components);
+          });
 
       // Generate default map info first if there's no direct map with CV as
       // the base-variable, or attach pointer.
       if (DeclComponentLists.empty() ||
-          (!HasEntryWithCVAsAttachPtr && !HasEntryWithoutAttachPtr &&
-           !AttachPtrIsMemberOfThis))
+          (!HasEntryWithCVAsAttachPtr && !HasEntryWithoutAttachPtr))
         MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo);
 
       // If we have any information in the map clause, we use it, otherwise we
