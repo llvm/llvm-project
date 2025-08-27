@@ -49,7 +49,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 30
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[S_MOV_B32_]].lo16
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY [[S_MOV_B32_]]
     ; CHECK-NEXT: [[V_ALIGNBIT_B32_t16_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_t16_e64 0, [[DEF]], 0, killed [[DEF1]], 0, killed [[COPY]], 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ALIGNBIT_B32_t16_e64_]]
     %0:sreg_32 = IMPLICIT_DEF
