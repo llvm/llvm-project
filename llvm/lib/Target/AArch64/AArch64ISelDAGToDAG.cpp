@@ -424,7 +424,6 @@ public:
   void SelectPostStoreLane(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectPredicatedStore(SDNode *N, unsigned NumVecs, unsigned Scale,
                              unsigned Opc_rr, unsigned Opc_ri);
-  void SelectFCVT_FPTOINT_Half(SDNode *N, unsigned Opc);
   std::tuple<unsigned, SDValue, SDValue>
   findAddrModeSVELoadStore(SDNode *N, unsigned Opc_rr, unsigned Opc_ri,
                            const SDValue &OldBase, const SDValue &OldOffset,
@@ -2535,24 +2534,6 @@ void AArch64DAGToDAGISel::SelectPostStoreLane(SDNode *N, unsigned NumVecs,
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
   ReplaceNode(N, St);
-}
-
-// Select f16 -> i16 conversions
-// Since i16 is an illegal type, we return the converted bit pattern in a f32
-// which can then be bitcast to i32 and truncated as needed.
-void AArch64DAGToDAGISel::SelectFCVT_FPTOINT_Half(SDNode *N, unsigned int Opc) {
-  SDLoc DL(N);
-  SDValue SrcVal = N->getOperand(0);
-  SDNode *Cvt = CurDAG->getMachineNode(Opc, DL, MVT::f16, SrcVal);
-  SDValue Sign = CurDAG->getTargetConstant(-1, DL, MVT::i64);
-  SDValue Hsub = CurDAG->getTargetConstant(AArch64::hsub, DL, MVT::i32);
-  SDNode *SubregToReg = CurDAG->getMachineNode(
-      TargetOpcode::SUBREG_TO_REG, DL, MVT::v8f16, Sign, SDValue(Cvt, 0), Hsub);
-  SDValue Ssub = CurDAG->getTargetConstant(AArch64::ssub, DL, MVT::i32);
-  SDNode *Extract =
-      CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, MVT::f32,
-                             SDValue(SubregToReg, 0), Ssub);
-  ReplaceNode(N, Extract);
 }
 
 static bool isBitfieldExtractOpFromAnd(SelectionDAG *CurDAG, SDNode *N,
@@ -7377,14 +7358,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     break;
-  }
-  case AArch64ISD::FCVTZS_HALF: {
-    SelectFCVT_FPTOINT_Half(Node, AArch64::FCVTZSv1f16);
-    return;
-  }
-  case AArch64ISD::FCVTZU_HALF: {
-    SelectFCVT_FPTOINT_Half(Node, AArch64::FCVTZUv1f16);
-    return;
   }
   }
 
