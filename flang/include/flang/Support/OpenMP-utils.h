@@ -78,20 +78,6 @@ struct EntryBlockArgs {
 mlir::Block *genEntryBlock(
     mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
 
-mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
-    mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
-    llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
-    llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
-    uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
-    mlir::Type retTy, bool partialMap = false,
-    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
-
-mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
-    mlir::omp::TargetOp targetOp, mlir::Value val, llvm::StringRef name);
-
-void cloneOrMapRegionOutsiders(
-    fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp);
-
 // Returns true if the variable has a dynamic size and therefore requires
 // bounds operations to describe its extents.
 inline bool needsBoundsOps(mlir::Value var) {

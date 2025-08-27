@@ -11,6 +11,10 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
+namespace fir {
+class FirOpBuilder;
+} // namespace fir
+
 namespace Fortran::utils::openmp {
 // TODO We can probably move the stuff inside `Support/OpenMP-utils.h/.cpp` here
 // as well.
@@ -28,6 +32,12 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
     mlir::Type retTy, bool partialMap = false,
     mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
+
+mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
+    mlir::omp::TargetOp targetOp, mlir::Value val, llvm::StringRef name);
+
+void cloneOrMapRegionOutsiders(
+    fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp);
 } // namespace Fortran::utils::openmp
 
 #endif // FORTRAN_UTILS_OPENMP_H_
