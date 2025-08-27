@@ -19778,6 +19778,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                  Q && Q.isAddressDiscriminated()) {
         Record->setArgPassingRestrictions(
             RecordArgPassingKind::CanNeverPassInRegs);
+        Record->setNonTrivialToPrimitiveCopy(true);
       }
     }
 

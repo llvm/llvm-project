@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=nvptx64-nvidia-cuda -mattr=+ptx70 < %s | FileCheck %s
 ; RUN: %if ptxas %{ llc -mtriple=nvptx64-nvidia-cuda -mattr=+ptx70 < %s | %ptxas-verify %}
-; XFAIL: *
 
 ; Generated with -O1 from:
 ; int f1();
