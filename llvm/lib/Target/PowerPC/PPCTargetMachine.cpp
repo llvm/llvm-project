@@ -36,6 +36,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -43,6 +44,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/LowerIFunc.h"
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -451,6 +453,16 @@ public:
 };
 
 } // end anonymous namespace
+
+void PPCTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  if (getTargetTriple().isOSAIX())
+    PB.registerOptimizerLastEPCallback([](ModulePassManager &PM,
+                                          OptimizationLevel Level,
+                                          ThinOrFullLTOPhase Phase) {
+      if (Phase == ThinOrFullLTOPhase::None)
+        PM.addPass(LowerIFuncPass());
+    });
+}
 
 TargetPassConfig *PPCTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new PPCPassConfig(*this, PM);
