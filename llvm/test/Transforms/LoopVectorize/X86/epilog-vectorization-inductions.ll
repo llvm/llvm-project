@@ -250,3 +250,78 @@ loop:
 exit:
   ret void
 }
+
+; Test case for https://github.com/llvm/llvm-project/issues/151686.
+define i8 @multiple_inductions_start_at_0() {
+; CHECK-LABEL: @multiple_inductions_start_at_0(
+; CHECK-NEXT:  iter.check:
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; CHECK:       vector.main.loop.iter.check:
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <32 x i8> [ zeroinitializer, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <32 x i8> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <32 x i8> [[STEP_ADD]], zeroinitializer
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <32 x i8> [[STEP_ADD_2]], zeroinitializer
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 128
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i8> [[STEP_ADD_3]], zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <32 x i8> [[STEP_ADD_3]], i32 31
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
+; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[BC_RESUME_VAL]] to i8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i8> [[BROADCAST_SPLAT]], zeroinitializer
+; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
+; CHECK:       vec.epilog.vector.body:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i8> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT4:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i32 [[INDEX1]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT4]] = add <4 x i8> [[VEC_IND2]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1052
+; CHECK-NEXT:    br i1 [[TMP3]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[VEC_IND2]], i32 3
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK:       vec.epilog.scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ 1052, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i32 [ -469762048, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL5]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[BC_RESUME_VAL6]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ADD]] = add i32 [[IV_2]], -16777216
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[IV_2]] to i8
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ugt i32 [[IV]], 1050
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ [[TRUNC]], [[LOOP]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ [[TMP4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.2 = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %add = add i32 %iv.2, -16777216
+  %trunc = trunc i32 %iv.2 to i8
+  %iv.next = add i32 %iv, 1
+  %ec = icmp ugt i32 %iv, 1050
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %res = phi i8 [ %trunc, %loop ]
+  ret i8 %res
+}

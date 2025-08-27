@@ -40,6 +40,7 @@
 #include <optional>
 
 namespace clang {
+  class AllocSizeAttr;
   class APValue;
   class ASTContext;
   class BlockDecl;
@@ -553,17 +554,13 @@ public:
       bool IgnoreTemplateOrMacroSubstitution = false) const;
 
   /// isIntegerConstantExpr - Return the value if this expression is a valid
-  /// integer constant expression.  If not a valid i-c-e, return std::nullopt
-  /// and fill in Loc (if specified) with the location of the invalid
-  /// expression.
+  /// integer constant expression.  If not a valid i-c-e, return std::nullopt.
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
   std::optional<llvm::APSInt>
-  getIntegerConstantExpr(const ASTContext &Ctx,
-                         SourceLocation *Loc = nullptr) const;
-  bool isIntegerConstantExpr(const ASTContext &Ctx,
-                             SourceLocation *Loc = nullptr) const;
+  getIntegerConstantExpr(const ASTContext &Ctx) const;
+  bool isIntegerConstantExpr(const ASTContext &Ctx) const;
 
   /// isCXX98IntegralConstantExpr - Return true if this expression is an
   /// integral constant expression in C++98. Can only be used in C++.
@@ -574,8 +571,8 @@ public:
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
-                           SourceLocation *Loc = nullptr) const;
+  bool isCXX11ConstantExpr(const ASTContext &Ctx,
+                           APValue *Result = nullptr) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
   /// might be usable in a constant expression in C++11, if it were marked
@@ -1373,7 +1370,7 @@ public:
 
   /// If the name was qualified, retrieves the nested-name-specifier
   /// that precedes the name. Otherwise, returns NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -3265,6 +3262,15 @@ public:
     setDependence(getDependence() | ExprDependence::TypeValueInstantiation);
   }
 
+  /// Try to get the alloc_size attribute of the callee. May return null.
+  const AllocSizeAttr *getCalleeAllocSizeAttr() const;
+
+  /// Evaluates the total size in bytes allocated by calling a function
+  /// decorated with alloc_size. Returns std::nullopt if the the result cannot
+  /// be evaluated.
+  std::optional<llvm::APInt>
+  evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const;
+
   bool isCallToStdMove() const;
 
   static bool classof(const Stmt *T) {
@@ -3402,7 +3408,7 @@ public:
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name. Otherwise, returns
   /// NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -3552,6 +3558,7 @@ public:
                       QualType T, ExprValueKind VK, Expr *init, bool fileScope)
       : Expr(CompoundLiteralExprClass, T, VK, OK_Ordinary),
         LParenLoc(lparenloc), TInfoAndScope(tinfo, fileScope), Init(init) {
+    assert(Init && "Init is a nullptr");
     setDependence(computeDependence(this));
   }
 
@@ -3581,19 +3588,11 @@ public:
   APValue &getStaticValue() const;
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
     if (LParenLoc.isInvalid())
       return Init->getBeginLoc();
     return LParenLoc;
   }
-  SourceLocation getEndLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
-    return Init->getEndLoc();
-  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Init->getEndLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CompoundLiteralExprClass;

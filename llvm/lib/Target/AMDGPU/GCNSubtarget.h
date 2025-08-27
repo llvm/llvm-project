@@ -187,6 +187,7 @@ protected:
   bool HasFlatBufferGlobalAtomicFaddF64Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
+  bool HasEmulatedSystemScopeAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   bool HasXF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
@@ -197,6 +198,7 @@ protected:
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
   bool HasVMemToLDSLoad = false;
+  bool RequiresAlignVGPR = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -236,6 +238,7 @@ protected:
   bool Has64BitLiterals = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
+  bool HasTensorCvtLutInsts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
@@ -280,6 +283,7 @@ protected:
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
+  bool HasGloballyAddressableScratch = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -387,7 +391,11 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
-  bool supportsWGP() const { return getGeneration() >= GFX10; }
+  bool supportsWGP() const {
+    if (GFX1250Insts)
+      return false;
+    return getGeneration() >= GFX10;
+  }
 
   bool hasIntClamp() const {
     return HasIntClamp;
@@ -948,6 +956,12 @@ public:
     return HasAgentScopeFineGrainedRemoteMemoryAtomics;
   }
 
+  /// \return true is HW emulates system scope atomics unsupported by the PCI-e
+  /// via CAS loop.
+  bool hasEmulatedSystemScopeAtomics() const {
+    return HasEmulatedSystemScopeAtomics;
+  }
+
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
 
   bool hasDefaultComponentBroadcast() const {
@@ -1079,7 +1093,7 @@ public:
   }
 
   bool hasLDSFPAtomicAddF32() const { return GFX8Insts; }
-  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts; }
+  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts || GFX1250Insts; }
 
   /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
   bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
@@ -1324,12 +1338,20 @@ public:
 
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
 
+  bool hasGloballyAddressableScratch() const {
+    return HasGloballyAddressableScratch;
+  }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
 
+  bool setRegModeNeedsVNOPs() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   /// Return if operations acting on VGPR tuples require even alignment.
-  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
+  bool needsAlignedVGPRs() const { return RequiresAlignVGPR; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return GFX11Insts; }
@@ -1410,6 +1432,8 @@ public:
   bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
+
+  bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
@@ -1547,12 +1571,22 @@ public:
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX1250Insts; }
 
+  // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
+  bool hasSGetShaderCyclesInst() const { return GFX1250Insts; }
+
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
-  // of sign-extending.
-  bool hasGetPCZeroExtension() const { return GFX12Insts; }
+  // of sign-extending. Note that GFX1250 has not only fixed the bug but also
+  // extended VA to 57 bits.
+  bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX1250Insts; }
+
+  // \returns true if the target needs to create a prolog for backward
+  // compatibility when preloading kernel arguments.
+  bool needsKernArgPreloadProlog() const {
+    return hasKernargPreload() && !GFX1250Insts;
+  }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1703,6 +1737,10 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
+  bool supportsWave32() const { return getGeneration() >= GFX10; }
+
+  bool supportsWave64() const { return !hasGFX1250Insts(); }
+
   bool isWave32() const {
     return getWavefrontSize() == 32;
   }
@@ -1766,11 +1804,11 @@ public:
 
   // \returns true if the subtarget has a hazard requiring an "s_nop 0"
   // instruction before "s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)".
-  bool requiresNopBeforeDeallocVGPRs() const {
-    // Currently all targets that support the dealloc VGPRs message also require
-    // the nop.
-    return true;
-  }
+  bool requiresNopBeforeDeallocVGPRs() const { return !GFX1250Insts; }
+
+  // \returns true if the subtarget needs S_WAIT_ALU 0 before S_GETREG_B32 on
+  // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
+  bool requiresWaitIdleBeforeGetReg() const { return GFX1250Insts; }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
   unsigned getDynamicVGPRBlockSize() const {
@@ -1781,6 +1819,18 @@ public:
     // AMDGPU doesn't care if early-clobber and undef operands are allocated
     // to the same register.
     return false;
+  }
+
+  // DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 shall not be claused with anything
+  // and surronded by S_WAIT_ALU(0xFFE3).
+  bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
+    return getGeneration() == GFX12;
+  }
+
+  // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
+  // read.
+  bool hasScratchBaseForwardingHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
   }
 };
 

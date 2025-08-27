@@ -614,7 +614,7 @@ public:
     if (!IsThumb)
       return Val;
 
-    unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
+    unsigned Type = static_cast<MCSymbolELF *>(Symbol)->getType();
     if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC) &&
         Symbol->isDefined())
       getAssembler().setIsThumbFunc(Symbol);
@@ -679,7 +679,8 @@ private:
   }
 
   void EmitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
 
     Symbol->setType(ELF::STT_NOTYPE);
@@ -687,7 +688,8 @@ private:
   }
 
   void emitMappingSymbol(StringRef Name, MCFragment &F, uint64_t Offset) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabelAtPos(Symbol, SMLoc(), F, Offset);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
@@ -1088,7 +1090,7 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
     return;
 
   Streamer.getAssembler().registerSymbol(*Symbol);
-  unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
+  unsigned Type = static_cast<MCSymbolELF *>(Symbol)->getType();
   if (Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)
     emitThumbFunc(Symbol);
 }

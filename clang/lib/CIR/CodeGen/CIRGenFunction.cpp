@@ -28,8 +28,6 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder) {
   ehStack.setCGF(this);
-  currentCleanupStackDepth = 0;
-  assert(ehStack.getStackDepth() == 0);
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -217,13 +215,17 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
                              mlir::Location loc, CharUnits alignment,
                              bool isParam) {
   assert(isa<NamedDecl>(var) && "Needs a named decl");
-  assert(!cir::MissingFeatures::cgfSymbolTable());
+  assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
-  auto allocaOp = cast<cir::AllocaOp>(addrVal.getDefiningOp());
+  auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
+  assert(allocaOp && "expected cir::AllocaOp");
+
   if (isParam)
     allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
+
+  symbolTable.insert(var, allocaOp);
 }
 
 void CIRGenFunction::LexicalScope::cleanup() {
@@ -354,11 +356,8 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
                                   QualType returnType) {
   // We can't just discard the return value for a record type with a complex
   // destructor or a non-trivially copyable type.
-  if (const RecordType *recordType =
-          returnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(recordType->getDecl()))
-      return classDecl->hasTrivialDestructor();
-  }
+  if (const auto *classDecl = returnType->getAsCXXRecordDecl())
+    return classDecl->hasTrivialDestructor();
   return returnType.isTriviallyCopyableType(astContext);
 }
 
@@ -381,6 +380,7 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
         !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
 
     if (shouldEmitUnreachable) {
+      assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
         builder.create<cir::TrapOp>(localScope->endLoc);
       else
@@ -405,6 +405,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const Decl *d = gd.getDecl();
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
+
+  prologueCleanupDepth = ehStack.stable_begin();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
@@ -472,22 +474,22 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
   // TODO(cir): Use prologueCleanupDepth here.
-  bool hasCleanups = ehStack.getStackDepth() != currentCleanupStackDepth;
+  bool hasCleanups = ehStack.stable_begin() != prologueCleanupDepth;
   if (hasCleanups) {
     assert(!cir::MissingFeatures::generateDebugInfo());
     // FIXME(cir): should we clearInsertionPoint? breaks many testcases
-    popCleanupBlocks(currentCleanupStackDepth);
+    popCleanupBlocks(prologueCleanupDepth);
   }
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
-  auto result = mlir::LogicalResult::success();
-  if (const CompoundStmt *block = dyn_cast<CompoundStmt>(body))
-    emitCompoundStmtWithoutScope(*block);
-  else
-    result = emitStmt(body, /*useCurrentScope=*/true);
+  // We start with function level scope for variables.
+  SymTableScopeTy varScope(symbolTable);
 
-  return result;
+  if (const CompoundStmt *block = dyn_cast<CompoundStmt>(body))
+    return emitCompoundStmtWithoutScope(*block);
+
+  return emitStmt(body, /*useCurrentScope=*/true);
 }
 
 static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
@@ -527,6 +529,8 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   FunctionArgList args;
   QualType retTy = buildFunctionArgList(gd, args);
 
+  // Create a scope in the symbol table to hold variable declarations.
+  SymTableScopeTy varScope(symbolTable);
   {
     LexicalScope lexScope(*this, fusedLoc, entryBB);
 
@@ -550,7 +554,6 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       emitImplicitAssignmentOperatorBody(args);
     } else if (body) {
       if (mlir::failed(emitFunctionBody(body))) {
-        fn.erase();
         return nullptr;
       }
     } else {
@@ -782,9 +785,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     }
     if (!ty->isAnyComplexType())
       return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
-    cgm.errorNYI(e->getSourceRange(),
-                 "CompoundAssignOperator with ComplexType");
-    return LValue();
+
+    return emitComplexCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
   }
   case Expr::CallExprClass:
   case Expr::CXXMemberCallExprClass:
@@ -800,6 +802,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::ImplicitCastExprClass:
     return emitCastLValue(cast<CastExpr>(e));
+  case Expr::MaterializeTemporaryExprClass:
+    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
   }
 }
 
@@ -810,6 +814,10 @@ static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
   return std::string(out.str());
 }
 
+std::string CIRGenFunction::getCounterRefTmpAsString() {
+  return getVersionedTmpName("ref.tmp", counterRefTmp++);
+}
+
 std::string CIRGenFunction::getCounterAggTmpAsString() {
   return getVersionedTmpName("agg.tmp", counterAggTmp++);
 }
@@ -817,12 +825,9 @@ std::string CIRGenFunction::getCounterAggTmpAsString() {
 void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
                                             QualType ty) {
   // Ignore empty classes in C++.
-  if (getLangOpts().CPlusPlus) {
-    if (const RecordType *rt = ty->getAs<RecordType>()) {
-      if (cast<CXXRecordDecl>(rt->getDecl())->isEmpty())
-        return;
-    }
-  }
+  if (getLangOpts().CPlusPlus)
+    if (const auto *rd = ty->getAsCXXRecordDecl(); rd && rd->isEmpty())
+      return;
 
   // Cast the dest ptr to the appropriate i8 pointer type.
   if (builder.isInt8Ty(destPtr.getElementType())) {
@@ -922,6 +927,23 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   return builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
 }
 
+mlir::Value CIRGenFunction::emitAlignmentAssumption(
+    mlir::Value ptrValue, QualType ty, SourceLocation loc,
+    SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
+  assert(!cir::MissingFeatures::sanitizers());
+  return cir::AssumeAlignedOp::create(builder, getLoc(assumptionLoc), ptrValue,
+                                      alignment, offsetValue);
+}
+
+mlir::Value CIRGenFunction::emitAlignmentAssumption(
+    mlir::Value ptrValue, const Expr *expr, SourceLocation assumptionLoc,
+    int64_t alignment, mlir::Value offsetValue) {
+  QualType ty = expr->getType();
+  SourceLocation loc = expr->getExprLoc();
+  return emitAlignmentAssumption(ptrValue, ty, loc, assumptionLoc, alignment,
+                                 offsetValue);
+}
+
 // TODO(cir): Most of this function can be shared between CIRGen
 // and traditional LLVM codegen
 void CIRGenFunction::emitVariablyModifiedType(QualType type) {
@@ -969,10 +991,6 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::BitInt:
       llvm_unreachable("type class is never variably-modified!");
-
-    case Type::Elaborated:
-      type = cast<clang::ElaboratedType>(ty)->getNamedType();
-      break;
 
     case Type::Adjusted:
       type = cast<clang::AdjustedType>(ty)->getAdjustedType();
@@ -1047,6 +1065,12 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
       break;
     }
   } while (type->isVariablyModifiedType());
+}
+
+Address CIRGenFunction::emitVAListRef(const Expr *e) {
+  if (getContext().getBuiltinVaListType()->isArrayType())
+    return emitPointerWithAlignment(e);
+  return emitLValue(e).getAddress();
 }
 
 } // namespace clang::CIRGen

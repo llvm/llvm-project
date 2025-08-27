@@ -14,8 +14,10 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
@@ -166,7 +168,7 @@ CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
   return CFPMatcher<T, C>(expectedValue);
 }
 
-template <typename T> struct FPTest : public Test {
+template <typename T> struct FPTest : public ErrnoCheckingTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
   static constexpr StorageType STORAGE_MAX =
@@ -191,6 +193,13 @@ template <typename T> struct FPTest : public Test {
       fputil::testing::RoundingMode::Downward,
       fputil::testing::RoundingMode::TowardZero,
   };
+
+  void TearDown() override {
+    // TODO (PR 135320): Remove this override once all FPTest instances are
+    // updated to validate or ignore errno.
+    libc_errno = 0;
+    ErrnoCheckingTest::TearDown();
+  }
 };
 
 // Add facility to test Flush-Denormal-To-Zero (FTZ) and Denormal-As-Zero (DAZ)

@@ -735,7 +735,7 @@ public:
 
     bool isUnsigned = op.getType().getElementType().isUnsignedInteger();
     ShapedType resultTy =
-        cast<ShapedType>(getTypeConverter()->convertType(op.getType()));
+        getTypeConverter()->convertType<ShapedType>(op.getType());
     if (!resultTy)
       return rewriter.notifyMatchFailure(op, "failed to convert type");
     Type resultETy = inputTy.getElementType();

@@ -666,7 +666,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"lbound",
-        {{"array", AnyData, Rank::anyOrAssumedRank}, RequiredDIM,
+        {{"array", AnyData, Rank::arrayOrAssumedRank}, RequiredDIM,
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"lbound", {{"array", AnyData, Rank::arrayOrAssumedRank}, SizeDefaultKIND},
@@ -921,6 +921,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
+    {"secnds",
+        {{"refTime", TypePattern{RealType, KindCode::exactKind, 4},
+            Rank::scalar}},
+        TypePattern{RealType, KindCode::exactKind, 4}, Rank::scalar},
     {"second", {}, DefaultReal, Rank::scalar},
     {"selected_char_kind", {{"name", DefaultChar, Rank::scalar}}, DefaultInt,
         Rank::scalar, IntrinsicClass::transformationalFunction},
@@ -1034,7 +1038,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"trim", {{"string", SameCharNoLen, Rank::scalar}}, SameCharNoLen,
         Rank::scalar, IntrinsicClass::transformationalFunction},
     {"ubound",
-        {{"array", AnyData, Rank::anyOrAssumedRank}, RequiredDIM,
+        {{"array", AnyData, Rank::arrayOrAssumedRank}, RequiredDIM,
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"ubound", {{"array", AnyData, Rank::arrayOrAssumedRank}, SizeDefaultKIND},
@@ -2256,7 +2260,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const ActualArgument *arg{actualForDummy[j]}) {
-      bool isAssumedRank{IsAssumedRank(*arg)};
+      bool isAssumedRank{semantics::IsAssumedRank(*arg)};
       if (isAssumedRank && d.rank != Rank::anyOrAssumedRank &&
           d.rank != Rank::arrayOrAssumedRank) {
         messages.Say(arg->sourceLocation(),
@@ -3002,7 +3006,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
       mold = nullptr;
     }
     if (mold) {
-      if (IsAssumedRank(*arguments[0])) {
+      if (semantics::IsAssumedRank(*arguments[0])) {
         context.messages().Say(arguments[0]->sourceLocation(),
             "MOLD= argument to NULL() must not be assumed-rank"_err_en_US);
       }

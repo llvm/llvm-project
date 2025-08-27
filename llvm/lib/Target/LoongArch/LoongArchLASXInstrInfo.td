@@ -1186,6 +1186,17 @@ multiclass PatXrXrXr<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LASX256:$xd, LASX256:$xj, LASX256:$xk)>;
 }
 
+multiclass PatXrXrW<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode(v32i8 LASX256:$vj), (v32i8 LASX256:$vk)),
+            (!cast<LAInst>(Inst#"_H_B") LASX256:$vj, LASX256:$vk)>;
+  def : Pat<(OpNode(v16i16 LASX256:$vj), (v16i16 LASX256:$vk)),
+            (!cast<LAInst>(Inst#"_W_H") LASX256:$vj, LASX256:$vk)>;
+  def : Pat<(OpNode(v8i32 LASX256:$vj), (v8i32 LASX256:$vk)),
+            (!cast<LAInst>(Inst#"_D_W") LASX256:$vj, LASX256:$vk)>;
+  def : Pat<(OpNode(v4i64 LASX256:$vj), (v4i64 LASX256:$vk)),
+            (!cast<LAInst>(Inst#"_Q_D") LASX256:$vj, LASX256:$vk)>;
+}
+
 multiclass PatShiftXrXr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v32i8 LASX256:$xj), (and vsplati8_imm_eq_7,
                                               (v32i8 LASX256:$xk))),
@@ -1513,6 +1524,9 @@ def : Pat<(bswap (v8i32 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b00011011)>;
 def : Pat<(bswap (v4i64 LASX256:$xj)),
           (XVSHUF4I_W (XVSHUF4I_B LASX256:$xj, 0b00011011), 0b10110001)>;
 
+// XVHADDW_{H_B/W_H/D_W/Q_D}
+defm : PatXrXrW<loongarch_vhaddw, "XVHADDW">;
+
 // XVFADD_{S/D}
 defm : PatXrXrF<fadd, "XVFADD">;
 
@@ -1640,6 +1654,24 @@ defm : PairInsertExtractPatV8<v8f32, f32>;
 defm : PairInsertExtractPatV4<v4i64, GRLenVT>;
 defm : PairInsertExtractPatV4<v4f64, f64>;
 
+def : Pat<(vector_insert v8i32:$xd, (GRLenVT(vector_extract v8i32:$xj, 0)),
+              uimm3:$imm),
+          (XVINSVE0_W v8i32:$xd, v8i32:$xj, uimm3:$imm)>;
+
+def : Pat<(vector_insert v4i64:$xd, (GRLenVT(vector_extract v4i64:$xj, 0)),
+              uimm2:$imm),
+          (XVINSVE0_D v4i64:$xd, v4i64:$xj, uimm2:$imm)>;
+
+def : Pat<(vector_insert v8i32:$xd,
+              (GRLenVT(vector_extract v8i32:$xj, uimm3:$imm1)), uimm3:$imm2),
+          (XVINSVE0_W v8i32:$xd, (XVPICKVE_W v8i32:$xj, uimm3:$imm1),
+              uimm3:$imm2)>;
+
+def : Pat<(vector_insert v4i64:$xd,
+              (GRLenVT(vector_extract v4i64:$xj, uimm2:$imm1)), uimm2:$imm2),
+          (XVINSVE0_D v4i64:$xd, (XVPICKVE_D v4i64:$xj, uimm2:$imm1),
+              uimm2:$imm2)>;
+
 // PseudoXVINSGR2VR_{B/H}
 def : Pat<(vector_insert v32i8:$xd, GRLenVT:$rj, uimm5:$imm),
           (PseudoXVINSGR2VR_B v32i8:$xd, GRLenVT:$rj, uimm5:$imm)>;
@@ -1651,20 +1683,19 @@ def : Pat<(vector_insert v8i32:$xd, GRLenVT:$rj, uimm3:$imm),
           (XVINSGR2VR_W v8i32:$xd, GRLenVT:$rj, uimm3:$imm)>;
 def : Pat<(vector_insert v4i64:$xd, GRLenVT:$rj, uimm2:$imm),
           (XVINSGR2VR_D v4i64:$xd, GRLenVT:$rj, uimm2:$imm)>;
-def : Pat<(vector_insert v8f32:$xd, (loongarch_movgr2fr_w_la64 GPR:$rj), uimm3:$imm),
-          (XVINSGR2VR_W $xd, $rj, uimm3:$imm)>;
-def : Pat<(vector_insert v4f64:$xd, (f64 (bitconvert i64:$rj)), uimm2:$imm),
-          (XVINSGR2VR_D $xd, $rj, uimm2:$imm)>;
-def : Pat<(vector_insert v8f32:$xd, (f32 (vector_extract v8f32:$xj, uimm3:$imm1)), uimm3:$imm2),
-          (XVINSGR2VR_W $xd, (XVPICKVE2GR_W v8f32:$xj, uimm3:$imm1), uimm3:$imm2)>;
-def : Pat<(vector_insert v4f64:$xd, (f64 (vector_extract v4f64:$xj, uimm2:$imm1)), uimm2:$imm2),
-          (XVINSGR2VR_D $xd, (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm1), uimm2:$imm2)>;
+def : Pat<(vector_insert v8f32:$xd, (loongarch_movgr2fr_w_la64 GPR:$rj),
+              uimm3:$imm),
+          (XVINSGR2VR_W v8f32:$xd, GPR:$rj, uimm3:$imm)>;
+def : Pat<(vector_insert v4f64:$xd, (f64(bitconvert i64:$rj)), uimm2:$imm),
+          (XVINSGR2VR_D v4f64:$xd, GPR:$rj, uimm2:$imm)>;
 
 // XVINSVE0_{W/D}
 def : Pat<(vector_insert v8f32:$xd, FPR32:$fj, uimm3:$imm),
-          (XVINSVE0_W $xd, (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), uimm3:$imm)>;
+          (XVINSVE0_W v8f32:$xd, (SUBREG_TO_REG(i64 0), FPR32:$fj, sub_32),
+              uimm3:$imm)>;
 def : Pat<(vector_insert v4f64:$xd, FPR64:$fj, uimm2:$imm),
-          (XVINSVE0_D $xd, (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), uimm2:$imm)>;
+          (XVINSVE0_D v4f64:$xd, (SUBREG_TO_REG(i64 0), FPR64:$fj, sub_64),
+              uimm2:$imm)>;
 
 // scalar_to_vector
 def : Pat<(v8f32 (scalar_to_vector FPR32:$fj)),
@@ -1884,10 +1915,10 @@ def : Pat<(i64 (vector_extract v8i32:$xj, uimm3:$imm)),
           (XVPICKVE2GR_W v8i32:$xj, uimm3:$imm)>;
 def : Pat<(i64 (vector_extract v4i64:$xj, uimm2:$imm)),
           (XVPICKVE2GR_D v4i64:$xj, uimm2:$imm)>;
-def : Pat<(f32 (vector_extract v8f32:$xj, uimm3:$imm)),
-          (MOVGR2FR_W (XVPICKVE2GR_W v8f32:$xj, uimm3:$imm))>;
-def : Pat<(f64 (vector_extract v4f64:$xj, uimm2:$imm)),
-          (MOVGR2FR_D (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm))>;
+def : Pat<(f32(vector_extract v8f32:$xj, uimm3:$imm)),
+          (EXTRACT_SUBREG(XVPICKVE_W v8f32:$xj, uimm3:$imm), sub_32)>;
+def : Pat<(f64(vector_extract v4f64:$xj, uimm2:$imm)),
+          (EXTRACT_SUBREG(XVPICKVE_D v4f64:$xj, uimm2:$imm), sub_64)>;
 
 // vselect
 def : Pat<(v32i8 (vselect LASX256:$xd, (v32i8 (SplatPat_uimm8 uimm8:$imm)),

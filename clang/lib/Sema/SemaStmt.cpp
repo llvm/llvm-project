@@ -316,17 +316,10 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
       }
     }
   } else if (const auto *CE = dyn_cast<CXXConstructExpr>(E)) {
-    if (const CXXConstructorDecl *Ctor = CE->getConstructor()) {
-      const NamedDecl *OffendingDecl = nullptr;
-      const auto *A = Ctor->getAttr<WarnUnusedResultAttr>();
-      if (!A) {
-        OffendingDecl = Ctor->getParent();
-        A = OffendingDecl->getAttr<WarnUnusedResultAttr>();
-      }
-      if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
-                            /*isCtor=*/true))
-        return;
-    }
+    auto [OffendingDecl, A] = CE->getUnusedResultAttr(S.Context);
+    if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
+                          /*isCtor=*/true))
+      return;
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     if (const TagDecl *TD = ILE->getType()->getAsTagDecl()) {
 
@@ -798,7 +791,7 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     const auto *MPT =
         CalleeBinOp->getRHS()->getType()->castAs<MemberPointerType>();
     CalleeType.This =
-        Context.getTypeDeclType(MPT->getMostRecentCXXRecordDecl());
+        Context.getCanonicalTagType(MPT->getMostRecentCXXRecordDecl());
     CalleeType.Func = MPT->getPointeeType()->castAs<FunctionProtoType>();
     CalleeType.MemberType = FuncType::ft_pointer_to_member;
   } else if (isa<CXXPseudoDestructorExpr>(CalleeExpr)) {
@@ -1254,7 +1247,7 @@ static bool ShouldDiagnoseSwitchCaseNotInEnum(const Sema &S,
           dyn_cast<DeclRefExpr>(CaseExpr->IgnoreParenImpCasts())) {
     if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       QualType VarType = VD->getType();
-      QualType EnumType = S.Context.getTypeDeclType(ED);
+      CanQualType EnumType = S.Context.getCanonicalTagType(ED);
       if (VD->hasGlobalStorage() && VarType.isConstQualified() &&
           S.Context.hasSameUnqualifiedType(EnumType, VarType))
         return false;
@@ -1284,11 +1277,11 @@ static void checkEnumTypesInSwitchStmt(Sema &S, const Expr *Cond,
     return;
 
   // Ignore anonymous enums.
-  if (!CondEnumType->getDecl()->getIdentifier() &&
-      !CondEnumType->getDecl()->getTypedefNameForAnonDecl())
+  if (!CondEnumType->getOriginalDecl()->getIdentifier() &&
+      !CondEnumType->getOriginalDecl()->getTypedefNameForAnonDecl())
     return;
-  if (!CaseEnumType->getDecl()->getIdentifier() &&
-      !CaseEnumType->getDecl()->getTypedefNameForAnonDecl())
+  if (!CaseEnumType->getOriginalDecl()->getIdentifier() &&
+      !CaseEnumType->getOriginalDecl()->getTypedefNameForAnonDecl())
     return;
 
   if (S.Context.hasSameUnqualifiedType(CondType, CaseType))
@@ -1597,13 +1590,13 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
     // we still do the analysis to preserve this information in the AST
     // (which can be used by flow-based analyes).
     //
-    const EnumType *ET = CondTypeBeforePromotion->getAs<EnumType>();
-
     // If switch has default case, then ignore it.
     if (!CaseListIsErroneous && !CaseListIsIncomplete && !HasConstantCond &&
-        ET && ET->getDecl()->isCompleteDefinition() &&
-        !ET->getDecl()->enumerators().empty()) {
-      const EnumDecl *ED = ET->getDecl();
+        CondTypeBeforePromotion->isEnumeralType()) {
+      const auto *ED = CondTypeBeforePromotion->castAsEnumDecl();
+      if (!ED->isCompleteDefinition() || ED->enumerators().empty())
+        goto enum_out;
+
       EnumValsTy EnumVals;
 
       // Gather all enum values, set their type and sort them,
@@ -1716,6 +1709,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       if (!hasCasesNotInSwitch)
         SS->setAllEnumCasesCovered();
     }
+  enum_out:;
   }
 
   if (BodyStmt)
@@ -1734,8 +1728,7 @@ void
 Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
                              Expr *SrcExpr) {
 
-  const auto *ET = DstType->getAs<EnumType>();
-  if (!ET)
+  if (!DstType->isEnumeralType())
     return;
 
   if (!SrcType->isIntegerType() ||
@@ -1745,7 +1738,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
   if (SrcExpr->isTypeDependent() || SrcExpr->isValueDependent())
     return;
 
-  const EnumDecl *ED = ET->getDecl();
+  const auto *ED = DstType->castAsEnumDecl();
   if (!ED->isClosed())
     return;
 
@@ -2284,7 +2277,11 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
           // we can diagnose if we don't see any variable declarations. This
           // covers a case like declaring a typedef, function, or structure
           // type rather than a variable.
-          NonVarSeen = DI;
+          //
+          // Note, _Static_assert is acceptable because it does not declare an
+          // identifier at all, so "for object having" does not apply.
+          if (!isa<StaticAssertDecl>(DI))
+            NonVarSeen = DI;
         }
       }
       // Diagnose if we saw a non-variable declaration but no variable
@@ -3706,7 +3703,7 @@ private:
   Sema &S;
 };
 bool LocalTypedefNameReferencer::VisitRecordType(RecordType *RT) {
-  auto *R = dyn_cast<CXXRecordDecl>(RT->getDecl());
+  auto *R = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
   if (!R || !R->isLocalClass() || !R->isLocalClass()->isExternallyVisible() ||
       R->isDependentType())
     return true;
@@ -3925,7 +3922,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
             << RetValExp->getSourceRange();
     if (FD->hasAttr<CmseNSEntryAttr>() && RetValExp) {
       if (const auto *RT = dyn_cast<RecordType>(FnRetType.getCanonicalType())) {
-        if (RT->getDecl()->isOrContainsUnion())
+        if (RT->getOriginalDecl()->isOrContainsUnion())
           Diag(RetValExp->getBeginLoc(), diag::warn_cmse_nonsecure_union) << 1;
       }
     }
@@ -4616,7 +4613,8 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
   // Build the context parameter
   DeclContext *DC = CapturedDecl::castToDeclContext(CD);
   IdentifierInfo *ParamName = &Context.Idents.get("__context");
-  QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD));
+  CanQualType ParamType =
+      Context.getPointerType(Context.getCanonicalTagType(RD));
   auto *Param =
       ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
                                 ImplicitParamKind::CapturedContext);
@@ -4658,9 +4656,10 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
       assert(!ContextIsFound &&
              "null type has been found already for '__context' parameter");
       IdentifierInfo *ParamName = &Context.Idents.get("__context");
-      QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD))
-                               .withConst()
-                               .withRestrict();
+      QualType ParamType =
+          Context.getPointerType(Context.getCanonicalTagType(RD))
+              .withConst()
+              .withRestrict();
       auto *Param =
           ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
                                     ImplicitParamKind::CapturedContext);
@@ -4680,7 +4679,8 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
   if (!ContextIsFound) {
     // Add __context implicitly if it is not specified.
     IdentifierInfo *ParamName = &Context.Idents.get("__context");
-    QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD));
+    CanQualType ParamType =
+        Context.getPointerType(Context.getCanonicalTagType(RD));
     auto *Param =
         ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
                                   ImplicitParamKind::CapturedContext);

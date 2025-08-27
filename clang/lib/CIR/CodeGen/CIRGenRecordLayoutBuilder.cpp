@@ -41,7 +41,7 @@ struct CIRRecordLowering final {
   // member type that ensures correct rounding.
   struct MemberInfo final {
     CharUnits offset;
-    enum class InfoKind { Field, Base } kind;
+    enum class InfoKind { VFPtr, Field, Base } kind;
     mlir::Type data;
     union {
       const FieldDecl *fieldDecl;
@@ -86,6 +86,8 @@ struct CIRRecordLowering final {
   RecordDecl::field_iterator
   accumulateBitFields(RecordDecl::field_iterator field,
                       RecordDecl::field_iterator fieldEnd);
+
+  mlir::Type getVFPtrType();
 
   bool isAAPCS() const {
     return astContext.getTargetInfo().getABI().starts_with("aapcs");
@@ -499,11 +501,7 @@ void CIRRecordLowering::accumulateFields() {
                                   fieldEnd = recordDecl->field_end();
        field != fieldEnd;) {
     if (field->isBitField()) {
-      RecordDecl::field_iterator start = field;
-      // Iterate to gather the list of bitfields.
-      for (++field; field != fieldEnd && field->isBitField(); ++field)
-        ;
-      field = accumulateBitFields(start, field);
+      field = accumulateBitFields(field, fieldEnd);
       assert((field == fieldEnd || !field->isBitField()) &&
              "Failed to accumulate all the bitfields");
     } else if (!field->isZeroSize(astContext)) {
@@ -849,8 +847,9 @@ void CIRRecordLowering::computeVolatileBitfields() {
 
       const CharUnits fEnd =
           fOffset +
-          astContext.toCharUnitsFromBits(astContext.toBits(
-              getSizeInBits(cirGenTypes.convertTypeForMem(f->getType())))) -
+          astContext.toCharUnitsFromBits(
+              getSizeInBits(cirGenTypes.convertTypeForMem(f->getType()))
+                  .getQuantity()) -
           CharUnits::One();
       // If no overlap, continue.
       if (end < fOffset || fEnd < storageOffset)
@@ -902,9 +901,14 @@ void CIRRecordLowering::accumulateBases(const CXXRecordDecl *cxxRecordDecl) {
 
 void CIRRecordLowering::accumulateVPtrs() {
   if (astRecordLayout.hasOwnVFPtr())
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "accumulateVPtrs: hasOwnVFPtr");
+    members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::InfoKind::VFPtr,
+                                 getVFPtrType()));
+
   if (astRecordLayout.hasOwnVBPtr())
     cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
                                        "accumulateVPtrs: hasOwnVBPtr");
+}
+
+mlir::Type CIRRecordLowering::getVFPtrType() {
+  return cir::VPtrType::get(builder.getContext());
 }

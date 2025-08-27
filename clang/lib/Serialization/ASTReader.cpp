@@ -5500,7 +5500,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid FILE type in AST file");
             return;
           }
-          Context.setFILEDecl(Tag->getDecl());
+          Context.setFILEDecl(Tag->getOriginalDecl());
         }
       }
     }
@@ -5521,7 +5521,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid jmp_buf type in AST file");
             return;
           }
-          Context.setjmp_bufDecl(Tag->getDecl());
+          Context.setjmp_bufDecl(Tag->getOriginalDecl());
         }
       }
     }
@@ -5539,7 +5539,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Sigjmp_bufType->getAs<TagType>();
           assert(Tag && "Invalid sigjmp_buf type in AST file");
-          Context.setsigjmp_bufDecl(Tag->getDecl());
+          Context.setsigjmp_bufDecl(Tag->getOriginalDecl());
         }
       }
     }
@@ -5574,7 +5574,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Ucontext_tType->getAs<TagType>();
           assert(Tag && "Invalid ucontext_t type in AST file");
-          Context.setucontext_tDecl(Tag->getDecl());
+          Context.setucontext_tDecl(Tag->getOriginalDecl());
         }
       }
     }
@@ -7226,6 +7226,7 @@ public:
 
   void VisitFunctionTypeLoc(FunctionTypeLoc);
   void VisitArrayTypeLoc(ArrayTypeLoc);
+  void VisitTagTypeLoc(TagTypeLoc TL);
 };
 
 } // namespace clang
@@ -7372,15 +7373,24 @@ void TypeLocReader::VisitFunctionNoProtoTypeLoc(FunctionNoProtoTypeLoc TL) {
 }
 
 void TypeLocReader::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  SourceLocation ElaboratedKeywordLoc = readSourceLocation();
+  NestedNameSpecifierLoc QualifierLoc = ReadNestedNameSpecifierLoc();
+  SourceLocation NameLoc = readSourceLocation();
+  TL.set(ElaboratedKeywordLoc, QualifierLoc, NameLoc);
 }
 
 void TypeLocReader::VisitUsingTypeLoc(UsingTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  SourceLocation ElaboratedKeywordLoc = readSourceLocation();
+  NestedNameSpecifierLoc QualifierLoc = ReadNestedNameSpecifierLoc();
+  SourceLocation NameLoc = readSourceLocation();
+  TL.set(ElaboratedKeywordLoc, QualifierLoc, NameLoc);
 }
 
 void TypeLocReader::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  SourceLocation ElaboratedKeywordLoc = readSourceLocation();
+  NestedNameSpecifierLoc QualifierLoc = ReadNestedNameSpecifierLoc();
+  SourceLocation NameLoc = readSourceLocation();
+  TL.set(ElaboratedKeywordLoc, QualifierLoc, NameLoc);
 }
 
 void TypeLocReader::VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
@@ -7434,16 +7444,26 @@ void TypeLocReader::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
 void TypeLocReader::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
+  TL.setElaboratedKeywordLoc(readSourceLocation());
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
   TL.setTemplateNameLoc(readSourceLocation());
 }
 
-void TypeLocReader::VisitRecordTypeLoc(RecordTypeLoc TL) {
+void TypeLocReader::VisitTagTypeLoc(TagTypeLoc TL) {
+  TL.setElaboratedKeywordLoc(readSourceLocation());
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
   TL.setNameLoc(readSourceLocation());
 }
 
-void TypeLocReader::VisitEnumTypeLoc(EnumTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+void TypeLocReader::VisitRecordTypeLoc(RecordTypeLoc TL) {
+  VisitTagTypeLoc(TL);
 }
+
+void TypeLocReader::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
+  VisitTagTypeLoc(TL);
+}
+
+void TypeLocReader::VisitEnumTypeLoc(EnumTypeLoc TL) { VisitTagTypeLoc(TL); }
 
 void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   TL.setAttr(ReadAttr());
@@ -7480,30 +7500,30 @@ void TypeLocReader::VisitSubstTemplateTypeParmPackTypeLoc(
   TL.setNameLoc(readSourceLocation());
 }
 
+void TypeLocReader::VisitSubstBuiltinTemplatePackTypeLoc(
+    SubstBuiltinTemplatePackTypeLoc TL) {
+  TL.setNameLoc(readSourceLocation());
+}
+
 void TypeLocReader::VisitTemplateSpecializationTypeLoc(
                                            TemplateSpecializationTypeLoc TL) {
-  TL.setTemplateKeywordLoc(readSourceLocation());
-  TL.setTemplateNameLoc(readSourceLocation());
-  TL.setLAngleLoc(readSourceLocation());
-  TL.setRAngleLoc(readSourceLocation());
-  for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
-    TL.setArgLocInfo(i,
-                     Reader.readTemplateArgumentLocInfo(
-                         TL.getTypePtr()->template_arguments()[i].getKind()));
+  SourceLocation ElaboratedKeywordLoc = readSourceLocation();
+  NestedNameSpecifierLoc QualifierLoc = ReadNestedNameSpecifierLoc();
+  SourceLocation TemplateKeywordLoc = readSourceLocation();
+  SourceLocation NameLoc = readSourceLocation();
+  SourceLocation LAngleLoc = readSourceLocation();
+  SourceLocation RAngleLoc = readSourceLocation();
+  TL.set(ElaboratedKeywordLoc, QualifierLoc, TemplateKeywordLoc, NameLoc,
+         LAngleLoc, RAngleLoc);
+  MutableArrayRef<TemplateArgumentLocInfo> Args = TL.getArgLocInfos();
+  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
+    Args[I] = Reader.readTemplateArgumentLocInfo(
+        TL.getTypePtr()->template_arguments()[I].getKind());
 }
 
 void TypeLocReader::VisitParenTypeLoc(ParenTypeLoc TL) {
   TL.setLParenLoc(readSourceLocation());
   TL.setRParenLoc(readSourceLocation());
-}
-
-void TypeLocReader::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-  TL.setElaboratedKeywordLoc(readSourceLocation());
-  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
-}
-
-void TypeLocReader::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
 }
 
 void TypeLocReader::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
@@ -7962,18 +7982,15 @@ ASTRecordReader::readTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind) {
     return readExpr();
   case TemplateArgument::Type:
     return readTypeSourceInfo();
-  case TemplateArgument::Template: {
-    NestedNameSpecifierLoc QualifierLoc =
-      readNestedNameSpecifierLoc();
-    SourceLocation TemplateNameLoc = readSourceLocation();
-    return TemplateArgumentLocInfo(getASTContext(), QualifierLoc,
-                                   TemplateNameLoc, SourceLocation());
-  }
+  case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion: {
+    SourceLocation TemplateKWLoc = readSourceLocation();
     NestedNameSpecifierLoc QualifierLoc = readNestedNameSpecifierLoc();
     SourceLocation TemplateNameLoc = readSourceLocation();
-    SourceLocation EllipsisLoc = readSourceLocation();
-    return TemplateArgumentLocInfo(getASTContext(), QualifierLoc,
+    SourceLocation EllipsisLoc = Kind == TemplateArgument::TemplateExpansion
+                                     ? readSourceLocation()
+                                     : SourceLocation();
+    return TemplateArgumentLocInfo(getASTContext(), TemplateKWLoc, QualifierLoc,
                                    TemplateNameLoc, EllipsisLoc);
   }
   case TemplateArgument::Null:
@@ -8316,6 +8333,9 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
       return Context.CFConstantStringTagDecl;
     NewLoaded = Context.getCFConstantStringTagDecl();
     break;
+
+  case PREDEF_DECL_BUILTIN_MS_TYPE_INFO_TAG_ID:
+    return Context.getMSTypeInfoTagDecl();
 
 #define BuiltinTemplate(BTName)                                                \
   case PREDEF_DECL##BTName##_ID:                                               \
@@ -9583,12 +9603,6 @@ void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
     CXXRecordDecl *Previous =
         cast<CXXRecordDecl>(Iter->second)->getMostRecentDecl();
     Lambda->setPreviousDecl(Previous);
-    // FIXME: It will be best to use the Previous type when we creating the
-    // lambda directly. But that requires us to get the lambda context decl and
-    // lambda index before creating the lambda, which needs a drastic change in
-    // the parser.
-    const_cast<QualType &>(Lambda->TypeForDecl->CanonicalType) =
-        Previous->TypeForDecl->CanonicalType;
     return;
   }
 
@@ -10104,41 +10118,37 @@ ASTRecordReader::readNestedNameSpecifierLoc() {
   for (unsigned I = 0; I != N; ++I) {
     auto Kind = readNestedNameSpecifierKind();
     switch (Kind) {
-    case NestedNameSpecifier::Identifier: {
-      IdentifierInfo *II = readIdentifier();
-      SourceRange Range = readSourceRange();
-      Builder.Extend(Context, II, Range.getBegin(), Range.getEnd());
-      break;
-    }
-
-    case NestedNameSpecifier::Namespace: {
+    case NestedNameSpecifier::Kind::Namespace: {
       auto *NS = readDeclAs<NamespaceBaseDecl>();
       SourceRange Range = readSourceRange();
       Builder.Extend(Context, NS, Range.getBegin(), Range.getEnd());
       break;
     }
 
-    case NestedNameSpecifier::TypeSpec: {
+    case NestedNameSpecifier::Kind::Type: {
       TypeSourceInfo *T = readTypeSourceInfo();
       if (!T)
         return NestedNameSpecifierLoc();
       SourceLocation ColonColonLoc = readSourceLocation();
-      Builder.Extend(Context, T->getTypeLoc(), ColonColonLoc);
+      Builder.Make(Context, T->getTypeLoc(), ColonColonLoc);
       break;
     }
 
-    case NestedNameSpecifier::Global: {
+    case NestedNameSpecifier::Kind::Global: {
       SourceLocation ColonColonLoc = readSourceLocation();
       Builder.MakeGlobal(Context, ColonColonLoc);
       break;
     }
 
-    case NestedNameSpecifier::Super: {
+    case NestedNameSpecifier::Kind::MicrosoftSuper: {
       CXXRecordDecl *RD = readDeclAs<CXXRecordDecl>();
       SourceRange Range = readSourceRange();
-      Builder.MakeSuper(Context, RD, Range.getBegin(), Range.getEnd());
+      Builder.MakeMicrosoftSuper(Context, RD, Range.getBegin(), Range.getEnd());
       break;
     }
+
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
     }
   }
 
@@ -10534,12 +10544,7 @@ void ASTReader::finishPendingActions() {
   // happen now, after the redeclaration chains have been fully wired.
   for (Decl *D : PendingDefinitions) {
     if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
-      if (const TagType *TagT = dyn_cast<TagType>(TD->getTypeForDecl())) {
-        // Make sure that the TagType points at the definition.
-        const_cast<TagType*>(TagT)->decl = TD;
-      }
-
-      if (auto RD = dyn_cast<CXXRecordDecl>(D)) {
+      if (auto *RD = dyn_cast<CXXRecordDecl>(TD)) {
         for (auto *R = getMostRecentExistingDecl(RD); R;
              R = R->getPreviousDecl()) {
           assert((R == D) ==
@@ -11003,8 +11008,9 @@ void ASTReader::diagnoseOdrViolations() {
 }
 
 void ASTReader::StartedDeserializing() {
-  if (++NumCurrentElementsDeserializing == 1 && ReadTimer.get())
-    ReadTimer->startTimer();
+  if (llvm::Timer *T = ReadTimer.get();
+      ++NumCurrentElementsDeserializing == 1 && T)
+    ReadTimeRegion.emplace(T);
 }
 
 void ASTReader::FinishedDeserializing() {
@@ -11062,8 +11068,7 @@ void ASTReader::FinishedDeserializing() {
           (void)UndeducedFD->getMostRecentDecl();
       }
 
-      if (ReadTimer)
-        ReadTimer->stopTimer();
+      ReadTimeRegion.reset();
 
       diagnoseOdrViolations();
     }
@@ -12851,8 +12856,13 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Private: {
     SourceLocation LParenLoc = readSourceLocation();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+
+    llvm::SmallVector<VarDecl *> RecipeList;
+    for (unsigned I = 0; I < VarList.size(); ++I)
+      RecipeList.push_back(readDeclAs<VarDecl>());
+
     return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
-                                        VarList, EndLoc);
+                                        VarList, RecipeList, EndLoc);
   }
   case OpenACCClauseKind::Host: {
     SourceLocation LParenLoc = readSourceLocation();
@@ -12869,8 +12879,15 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::FirstPrivate: {
     SourceLocation LParenLoc = readSourceLocation();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    llvm::SmallVector<OpenACCFirstPrivateRecipe> RecipeList;
+    for (unsigned I = 0; I < VarList.size(); ++I) {
+      VarDecl *Recipe = readDeclAs<VarDecl>();
+      VarDecl *RecipeTemp = readDeclAs<VarDecl>();
+      RecipeList.push_back({Recipe, RecipeTemp});
+    }
+
     return OpenACCFirstPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
-                                             VarList, EndLoc);
+                                             VarList, RecipeList, EndLoc);
   }
   case OpenACCClauseKind::Attach: {
     SourceLocation LParenLoc = readSourceLocation();
@@ -12984,8 +13001,16 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     SourceLocation LParenLoc = readSourceLocation();
     OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    llvm::SmallVector<OpenACCReductionRecipe> RecipeList;
+
+    for (unsigned I = 0; I < VarList.size(); ++I) {
+      VarDecl *Recipe = readDeclAs<VarDecl>();
+      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+      RecipeList.push_back({Recipe});
+    }
+
     return OpenACCReductionClause::Create(getContext(), BeginLoc, LParenLoc, Op,
-                                          VarList, EndLoc);
+                                          VarList, RecipeList, EndLoc);
   }
   case OpenACCClauseKind::Seq:
     return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);

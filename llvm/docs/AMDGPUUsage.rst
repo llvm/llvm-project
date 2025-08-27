@@ -1771,6 +1771,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       using dedicated instructions, but may not send the DEALLOC_VGPRS
                                                       message. If a shader has this attribute, then all its callees must
                                                       match its value.
+                                                      An amd_cs_chain CC function with this enabled has an extra symbol
+                                                      prefixed with "_dvgpr$" with the value of the function symbol,
+                                                      offset by one less than the number of dynamic VGPR blocks required
+                                                      by the function encoded in bits 5..3.
 
      ================================================ ==========================================================
 
@@ -1890,7 +1894,7 @@ The AMDGPU backend supports the following calling conventions:
 AMDGPU MCExpr
 -------------
 
-As part of the AMDGPU MC layer, AMDGPU provides the following target specific
+As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
 ``MCExpr``\s.
 
   .. table:: AMDGPU MCExpr types:
@@ -5401,7 +5405,21 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.FP16_OVFL``.
-     28:27   2 bits                                  Reserved, must be 0.
+     27      1 bit    RESERVED                       GFX6-GFX120*
+                                                       Reserved, must be 0.
+                      FLAT_SCRATCH_IS_NV             GFX125*
+                                                       0 - Use the NV ISA as indication
+                                                       that scratch is NV. 1 - Force
+                                                       scratch to NV = 1, even if
+                                                       ISA.NV == 0 if the address falls
+                                                       into scratch space (not global).
+                                                       This allows global.NV = 0 and
+                                                       scratch.NV = 1 for flat ops. Other
+                                                       threads use the ISA bit value.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC1.FLAT_SCRATCH_IS_NV``.
+     28      1 bit    RESERVED                       Reserved, must be 0.
      29      1 bit    WGP_MODE                       GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX12
@@ -5483,15 +5501,16 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.SCRATCH_EN``.
-     5:1     5 bits  USER_SGPR_COUNT                 The total number of SGPR
-                                                     user data
-                                                     registers requested. This
-                                                     number must be greater than
-                                                     or equal to the number of user
-                                                     data registers enabled.
+     5:1     5 bits  USER_SGPR_COUNT                 GFX6-GFX120*
+                                                       The total number of SGPR
+                                                       user data
+                                                       registers requested. This
+                                                       number must be greater than
+                                                       or equal to the number of user
+                                                       data registers enabled.
 
-                                                     Used by CP to set up
-                                                     ``COMPUTE_PGM_RSRC2.USER_SGPR``.
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.USER_SGPR``.
      6       1 bit   ENABLE_TRAP_HANDLER             GFX6-GFX11
                                                        Must be 0.
 
@@ -5500,8 +5519,25 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        which is set by the CP if
                                                        the runtime has installed a
                                                        trap handler.
-                                                     GFX12
-                                                       Reserved, must be 0.
+                     ENABLE_DYNAMIC_VGPR             GFX120*
+                                                       Enables dynamic VGPR mode, where
+                                                       each wave allocates one VGPR chunk
+                                                       at launch and can request for
+                                                       additional space to use during
+                                                       execution in SQ.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.DYNAMIC_VGPR``.
+     6:1     6 bits  USER_SGPR_COUNT                 GFX125*
+                                                       The total number of SGPR
+                                                       user data
+                                                       registers requested. This
+                                                       number must be greater than
+                                                       or equal to the number of user
+                                                       data registers enabled.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC2.USER_SGPR``.
      7       1 bit   ENABLE_SGPR_WORKGROUP_ID_X      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the X
@@ -5594,10 +5630,12 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      GFX6
                                                        roundup(lds-size / (64 * 4))
-                                                     GFX7-GFX11
+                                                     GFX7-GFX12
                                                        roundup(lds-size / (128 * 4))
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
+                                                     GFX125*
+                                                       roundup(lds-size / (256 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions
@@ -5716,7 +5754,30 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      with a granularity of 128 bytes.
      12      1 bit   RESERVED                        Reserved, must be 0.
      13      1 bit   GLG_EN                          If 1, group launch guarantee will be enabled for this dispatch
-     30:14   17 bits RESERVED                        Reserved, must be 0.
+     16:14   3 bits  RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     NAMED_BAR_CNT                   GFX125*
+                                                       Number of named barriers to alloc for each workgroup, in granularity of
+                                                       4. Range is from 0-4 allocating 0, 4, 8, 12, 16.
+     17      1 bit   RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     ENABLE_DYNAMIC_VGPR             GFX125*
+                                                       Enables dynamic VGPR mode, where each wave allocates one VGPR chunk
+                                                       at launch and can request for additional space to use during
+                                                       execution in SQ.
+
+                                                       Used by CP to set up ``COMPUTE_PGM_RSRC3.DYNAMIC_VGPR``.
+     20:18   3 bits  RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     TCP_SPLIT                       GFX125*
+                                                       Desired LDS/VC split of TCP. 0: no preference 1: LDS=0, VC=448kB
+                                                       2: LDS=64kB, VC=384kB 3: LDS=128kB, VC=320kB 4: LDS=192kB, VC=256kB
+                                                       5: LDS=256kB, VC=192kB 6: LDS=320kB, VC=128kB 7: LDS=384kB, VC=64kB
+     21      1 bit   RESERVED                        GFX120*
+                                                       Reserved, must be 0.
+                     ENABLE_DIDT_THROTTLE            GFX125*
+                                                       Enable DIDT throttling for all ACE pipes
+     30:22   9 bits  RESERVED                        Reserved, must be 0.
      31      1 bit   IMAGE_OP                        If 1, the kernel execution contains image instructions. If executed as
                                                      part of a graphics pipeline, image read instructions will stall waiting
                                                      for any necessary ``WAIT_SYNC`` fence to be performed in order to
@@ -18201,6 +18262,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               (wavefrontsize64)
      ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX12   Controls USES_DYNAMIC_STACK in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_named_barrier_count``                          0                   GFX1250+     Controls NAMED_BAR_CNT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
                                                                                   (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
                                                                                   GFX942)

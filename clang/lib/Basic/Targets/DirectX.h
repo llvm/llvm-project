@@ -59,7 +59,7 @@ public:
     VLASupported = false;
     AddrSpaceMap = &DirectXAddrSpaceMap;
     UseAddrSpaceMapMangling = true;
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
     NoAsmVariants = true;
     PlatformMinVersion = Triple.getOSVersion();

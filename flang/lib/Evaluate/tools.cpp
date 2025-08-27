@@ -890,29 +890,6 @@ std::optional<Expr<SomeType>> ConvertToType(
   }
 }
 
-bool IsAssumedRank(const Symbol &original) {
-  if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (assoc->rank()) {
-      return false; // in RANK(n) or RANK(*)
-    } else if (assoc->IsAssumedRank()) {
-      return true; // RANK DEFAULT
-    }
-  }
-  const Symbol &symbol{semantics::ResolveAssociations(original)};
-  const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
-  return object && object->IsAssumedRank();
-}
-
-bool IsAssumedRank(const ActualArgument &arg) {
-  if (const auto *expr{arg.UnwrapExpr()}) {
-    return IsAssumedRank(*expr);
-  } else {
-    const Symbol *assumedTypeDummy{arg.GetAssumedTypeDummy()};
-    CHECK(assumedTypeDummy);
-    return IsAssumedRank(*assumedTypeDummy);
-  }
-}
-
 int GetCorank(const ActualArgument &arg) {
   const auto *expr{arg.UnwrapExpr()};
   return GetCorank(*expr);
@@ -1129,7 +1106,7 @@ struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
   CollectCudaSymbolsHelper() : Base{*this} {}
   using Base::operator();
   semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
-    return {symbol};
+    return {symbol.GetUltimate()};
   }
   // Overload some of the operator() to filter out the symbols that are not
   // of interest for CUDA data transfer logic.
@@ -1201,6 +1178,11 @@ struct HasVectorSubscriptHelper
 
 bool HasVectorSubscript(const Expr<SomeType> &expr) {
   return HasVectorSubscriptHelper{}(expr);
+}
+
+bool HasVectorSubscript(const ActualArgument &actual) {
+  auto expr{actual.UnwrapExpr()};
+  return expr && HasVectorSubscript(*expr);
 }
 
 // HasConstant()
@@ -1693,17 +1675,17 @@ struct ArgumentExtractor
       // to int(kind=4) for example.
       return (*this)(x.template operand<0>());
     } else {
-      return std::make_pair(operation::OperationCode(x),
+      return std::make_pair(operation::OperationCode(x.derived()),
           OperationArgs(x, std::index_sequence_for<Os...>{}));
     }
   }
 
   template <typename T> Result operator()(const Designator<T> &x) const {
-    return {operation::Operator::Identity, {AsSomeExpr(x)}};
+    return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
   template <typename T> Result operator()(const Constant<T> &x) const {
-    return {operation::Operator::Identity, {AsSomeExpr(x)}};
+    return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
   template <typename... Rs>
@@ -1791,6 +1773,10 @@ std::string operation::ToString(operation::Operator op) {
     return ".TRUE.";
   }
   llvm_unreachable("Unhandler operator");
+}
+
+operation::Operator operation::OperationCode(const Relational<SomeType> &op) {
+  return common::visit([](auto &&s) { return OperationCode(s); }, op.u);
 }
 
 operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {
@@ -2308,9 +2294,22 @@ bool IsDummy(const Symbol &symbol) {
       ResolveAssociations(symbol).details());
 }
 
+bool IsAssumedRank(const Symbol &original) {
+  if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (assoc->rank()) {
+      return false; // in RANK(n) or RANK(*)
+    } else if (assoc->IsAssumedRank()) {
+      return true; // RANK DEFAULT
+    }
+  }
+  const Symbol &symbol{semantics::ResolveAssociations(original)};
+  const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
+  return object && object->IsAssumedRank();
+}
+
 bool IsAssumedShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
-  const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
+  const auto *object{ultimate.detailsIf<semantics::ObjectEntityDetails>()};
   return object && object->IsAssumedShape() &&
       !semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
