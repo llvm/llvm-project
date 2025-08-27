@@ -268,43 +268,6 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
   return CheckAllowed(clause);
 }
 
-void OmpStructureChecker::AnalyzeObject(
-    const parser::OmpObject &object, bool allowAssumedSizeArrays) {
-  if (std::holds_alternative<parser::Name>(object.u)) {
-    // Do not analyze common block names. The analyzer will flag an error
-    // on those.
-    return;
-  }
-  if (auto *symbol{GetObjectSymbol(object)}) {
-    // Eliminate certain kinds of symbols before running the analyzer to
-    // avoid confusing error messages. The analyzer assumes that the context
-    // of the object use is an expression, and some diagnostics are tailored
-    // to that.
-    if (symbol->has<DerivedTypeDetails>() || symbol->has<MiscDetails>()) {
-      // Type names, construct names, etc.
-      return;
-    }
-    if (auto *typeSpec{symbol->GetType()}) {
-      if (typeSpec->category() == DeclTypeSpec::Category::Character) {
-        // Don't pass character objects to the analyzer, it can emit somewhat
-        // cryptic errors (e.g. "'obj' is not an array"). Substrings are
-        // checked elsewhere in OmpStructureChecker.
-        return;
-      }
-    }
-  }
-  evaluate::ExpressionAnalyzer ea{context_};
-  auto restore{ea.AllowWholeAssumedSizeArray(allowAssumedSizeArrays)};
-  common::visit([&](auto &&s) { ea.Analyze(s); }, object.u);
-}
-
-void OmpStructureChecker::AnalyzeObjects(
-    const parser::OmpObjectList &objects, bool allowAssumedSizeArrays) {
-  for (const parser::OmpObject &object : objects.v) {
-    AnalyzeObject(object, allowAssumedSizeArrays);
-  }
-}
-
 bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
   // Definition of close nesting:
   //
@@ -2734,9 +2697,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   SetContextClause(x);
 
-  llvm::omp::Clause id{x.Id()};
   // The visitors for these clauses do their own checks.
-  switch (id) {
+  switch (x.Id()) {
   case llvm::omp::Clause::OMPC_copyprivate:
   case llvm::omp::Clause::OMPC_enter:
   case llvm::omp::Clause::OMPC_lastprivate:
@@ -2750,7 +2712,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   // Named constants are OK to be used within 'shared' and 'firstprivate'
   // clauses.  The check for this happens a few lines below.
   bool SharedOrFirstprivate = false;
-  switch (id) {
+  switch (x.Id()) {
   case llvm::omp::Clause::OMPC_shared:
   case llvm::omp::Clause::OMPC_firstprivate:
     SharedOrFirstprivate = true;
@@ -2759,20 +2721,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     break;
   }
 
-  auto allowsAssumedSizeArrays{[](llvm::omp::Clause c) {
-    // These clauses allow assumed-size-arrays as list items.
-    switch (c) {
-    case llvm::omp::Clause::OMPC_map:
-    case llvm::omp::Clause::OMPC_shared:
-    case llvm::omp::Clause::OMPC_use_device_addr:
-      return true;
-    default:
-      return false;
-    }
-  }};
-
   if (const parser::OmpObjectList *objList{GetOmpObjectList(x)}) {
-    AnalyzeObjects(*objList, allowsAssumedSizeArrays(id));
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[symbol, source] : symbols) {
