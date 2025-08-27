@@ -173,9 +173,11 @@ public:
 
   DoConcurrentConversion(
       mlir::MLIRContext *context, bool mapToDevice,
-      llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip)
+      llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip,
+      mlir::SymbolTable &moduleSymbolTable)
       : OpConversionPattern(context), mapToDevice(mapToDevice),
-        concurrentLoopsToSkip(concurrentLoopsToSkip) {}
+        concurrentLoopsToSkip(concurrentLoopsToSkip),
+        moduleSymbolTable(moduleSymbolTable) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::DoConcurrentOp doLoop, OpAdaptor adaptor,
@@ -332,8 +334,8 @@ private:
                loop.getLocalVars(),
                loop.getLocalSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
                loop.getRegionLocalArgs())) {
-        auto localizer = mlir::SymbolTable::lookupNearestSymbolFrom<
-            fir::LocalitySpecifierOp>(loop, sym);
+        auto localizer = moduleSymbolTable.lookup<fir::LocalitySpecifierOp>(
+            sym.getLeafReference());
         if (localizer.getLocalitySpecifierType() ==
             fir::LocalitySpecifierType::LocalInit)
           TODO(localizer.getLoc(),
@@ -352,6 +354,8 @@ private:
         cloneFIRRegionToOMP(localizer.getDeallocRegion(),
                             privatizer.getDeallocRegion());
 
+        moduleSymbolTable.insert(privatizer);
+
         wsloopClauseOps.privateVars.push_back(op);
         wsloopClauseOps.privateSyms.push_back(
             mlir::SymbolRefAttr::get(privatizer));
@@ -362,17 +366,16 @@ private:
                loop.getReduceVars(), loop.getReduceByrefAttr().asArrayRef(),
                loop.getReduceSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
                loop.getRegionReduceArgs())) {
-        auto firReducer =
-            mlir::SymbolTable::lookupNearestSymbolFrom<fir::DeclareReductionOp>(
-                loop, sym);
+        auto firReducer = moduleSymbolTable.lookup<fir::DeclareReductionOp>(
+            sym.getLeafReference());
 
         mlir::OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointAfter(firReducer);
         std::string ompReducerName = sym.getLeafReference().str() + ".omp";
 
-        auto ompReducer = mlir::SymbolTable::lookupNearestSymbolFrom<
-            mlir::omp::DeclareReductionOp>(
-            loop, rewriter.getStringAttr(ompReducerName));
+        auto ompReducer =
+            moduleSymbolTable.lookup<mlir::omp::DeclareReductionOp>(
+                rewriter.getStringAttr(ompReducerName));
 
         if (!ompReducer) {
           ompReducer = mlir::omp::DeclareReductionOp::create(
@@ -389,6 +392,7 @@ private:
                               ompReducer.getAtomicReductionRegion());
           cloneFIRRegionToOMP(firReducer.getCleanupRegion(),
                               ompReducer.getCleanupRegion());
+          moduleSymbolTable.insert(ompReducer);
         }
 
         wsloopClauseOps.reductionVars.push_back(op);
@@ -437,6 +441,7 @@ private:
 
   bool mapToDevice;
   llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip;
+  mlir::SymbolTable &moduleSymbolTable;
 };
 
 class DoConcurrentConversionPass
@@ -452,6 +457,7 @@ public:
   void runOnOperation() override {
     mlir::ModuleOp module = getOperation();
     mlir::MLIRContext *context = &getContext();
+    mlir::SymbolTable moduleSymbolTable(module);
 
     if (mapTo != flangomp::DoConcurrentMappingKind::DCMK_Host &&
         mapTo != flangomp::DoConcurrentMappingKind::DCMK_Device) {
@@ -465,7 +471,7 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<DoConcurrentConversion>(
         context, mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device,
-        concurrentLoopsToSkip);
+        concurrentLoopsToSkip, moduleSymbolTable);
     mlir::ConversionTarget target(*context);
     target.addDynamicallyLegalOp<fir::DoConcurrentOp>(
         [&](fir::DoConcurrentOp op) {
