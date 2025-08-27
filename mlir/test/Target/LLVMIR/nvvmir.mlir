@@ -64,92 +64,94 @@ llvm.func @nvvm_special_regs() -> i32 {
   %30 = nvvm.read.ptx.sreg.clock64 : i64
   // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.globaltimer
   %31 = nvvm.read.ptx.sreg.globaltimer : i64
-  // CHECK: %32 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-  %32 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 64> : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.globaltimer.lo()
+  %32 = nvvm.read.ptx.sreg.globaltimer.lo : i32
+  // CHECK: %33 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %33 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 64> : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.warpid
-  %33 = nvvm.read.ptx.sreg.warpid : i32
+  %34 = nvvm.read.ptx.sreg.warpid : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nwarpid
-  %34 = nvvm.read.ptx.sreg.nwarpid : i32
+  %35 = nvvm.read.ptx.sreg.nwarpid : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.smid
-  %35 = nvvm.read.ptx.sreg.smid : i32
+  %36 = nvvm.read.ptx.sreg.smid : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nsmid
-  %36 = nvvm.read.ptx.sreg.nsmid : i32
+  %37 = nvvm.read.ptx.sreg.nsmid : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.gridid
-  %37 = nvvm.read.ptx.sreg.gridid : i32
+  %38 = nvvm.read.ptx.sreg.gridid : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg0
-  %38 = nvvm.read.ptx.sreg.envreg0 : i32
+  %39 = nvvm.read.ptx.sreg.envreg0 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg1
-  %39 = nvvm.read.ptx.sreg.envreg1 : i32
+  %40 = nvvm.read.ptx.sreg.envreg1 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg2
-  %40 = nvvm.read.ptx.sreg.envreg2 : i32
+  %41 = nvvm.read.ptx.sreg.envreg2 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg3
-  %41 = nvvm.read.ptx.sreg.envreg3 : i32
+  %42 = nvvm.read.ptx.sreg.envreg3 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg4
-  %42 = nvvm.read.ptx.sreg.envreg4 : i32
+  %43 = nvvm.read.ptx.sreg.envreg4 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg5
-  %43 = nvvm.read.ptx.sreg.envreg5 : i32
+  %44 = nvvm.read.ptx.sreg.envreg5 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg6
-  %44 = nvvm.read.ptx.sreg.envreg6 : i32
+  %45 = nvvm.read.ptx.sreg.envreg6 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg7
-  %45 = nvvm.read.ptx.sreg.envreg7 : i32
+  %46 = nvvm.read.ptx.sreg.envreg7 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg8
-  %46 = nvvm.read.ptx.sreg.envreg8 : i32
+  %47 = nvvm.read.ptx.sreg.envreg8 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg9
-  %47 = nvvm.read.ptx.sreg.envreg9 : i32
+  %48 = nvvm.read.ptx.sreg.envreg9 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg10
-  %48 = nvvm.read.ptx.sreg.envreg10 : i32
+  %49 = nvvm.read.ptx.sreg.envreg10 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg11
-  %49 = nvvm.read.ptx.sreg.envreg11 : i32
+  %50 = nvvm.read.ptx.sreg.envreg11 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg12
-  %50 = nvvm.read.ptx.sreg.envreg12 : i32
+  %51 = nvvm.read.ptx.sreg.envreg12 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg13
-  %51 = nvvm.read.ptx.sreg.envreg13 : i32
+  %52 = nvvm.read.ptx.sreg.envreg13 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg14
-  %52 = nvvm.read.ptx.sreg.envreg14 : i32
+  %53 = nvvm.read.ptx.sreg.envreg14 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg15
-  %53 = nvvm.read.ptx.sreg.envreg15 : i32
+  %54 = nvvm.read.ptx.sreg.envreg15 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg16
-  %54 = nvvm.read.ptx.sreg.envreg16 : i32
+  %55 = nvvm.read.ptx.sreg.envreg16 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg17
-  %55 = nvvm.read.ptx.sreg.envreg17 : i32
+  %56 = nvvm.read.ptx.sreg.envreg17 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg18
-  %56 = nvvm.read.ptx.sreg.envreg18 : i32
+  %57 = nvvm.read.ptx.sreg.envreg18 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg19
-  %57 = nvvm.read.ptx.sreg.envreg19 : i32
+  %58 = nvvm.read.ptx.sreg.envreg19 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg20
-  %58 = nvvm.read.ptx.sreg.envreg20 : i32
+  %59 = nvvm.read.ptx.sreg.envreg20 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg21
-  %59 = nvvm.read.ptx.sreg.envreg21 : i32
+  %60 = nvvm.read.ptx.sreg.envreg21 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg22
-  %60 = nvvm.read.ptx.sreg.envreg22 : i32
+  %61 = nvvm.read.ptx.sreg.envreg22 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg23
-  %61 = nvvm.read.ptx.sreg.envreg23 : i32
+  %62 = nvvm.read.ptx.sreg.envreg23 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg24
-  %62 = nvvm.read.ptx.sreg.envreg24 : i32
+  %63 = nvvm.read.ptx.sreg.envreg24 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg25
-  %63 = nvvm.read.ptx.sreg.envreg25 : i32
+  %64 = nvvm.read.ptx.sreg.envreg25 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg26
-  %64 = nvvm.read.ptx.sreg.envreg26 : i32
+  %65 = nvvm.read.ptx.sreg.envreg26 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg27
-  %65 = nvvm.read.ptx.sreg.envreg27 : i32
+  %66 = nvvm.read.ptx.sreg.envreg27 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg28
-  %66 = nvvm.read.ptx.sreg.envreg28 : i32
+  %67 = nvvm.read.ptx.sreg.envreg28 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg29
-  %67 = nvvm.read.ptx.sreg.envreg29 : i32
+  %68 = nvvm.read.ptx.sreg.envreg29 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg30
-  %68 = nvvm.read.ptx.sreg.envreg30 : i32
+  %69 = nvvm.read.ptx.sreg.envreg30 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.envreg31
-  %69 = nvvm.read.ptx.sreg.envreg31 : i32
+  %70 = nvvm.read.ptx.sreg.envreg31 : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.eq
-  %70 = nvvm.read.ptx.sreg.lanemask.eq : i32
+  %71 = nvvm.read.ptx.sreg.lanemask.eq : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.le
-  %71 = nvvm.read.ptx.sreg.lanemask.le : i32
+  %72 = nvvm.read.ptx.sreg.lanemask.le : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.lt
-  %72 = nvvm.read.ptx.sreg.lanemask.lt : i32
+  %73 = nvvm.read.ptx.sreg.lanemask.lt : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.ge
-  %73 = nvvm.read.ptx.sreg.lanemask.ge : i32
+  %74 = nvvm.read.ptx.sreg.lanemask.ge : i32
   //CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.gt
-  %74 = nvvm.read.ptx.sreg.lanemask.gt : i32
+  %75 = nvvm.read.ptx.sreg.lanemask.gt : i32
   llvm.return %1 : i32
 }
 

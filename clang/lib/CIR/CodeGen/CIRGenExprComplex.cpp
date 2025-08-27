@@ -136,17 +136,11 @@ public:
   mlir::Value emitBinAdd(const BinOpInfo &op);
   mlir::Value emitBinSub(const BinOpInfo &op);
   mlir::Value emitBinMul(const BinOpInfo &op);
+  mlir::Value emitBinDiv(const BinOpInfo &op);
 
   QualType getPromotionType(QualType ty, bool isDivOpCode = false) {
     if (auto *complexTy = ty->getAs<ComplexType>()) {
       QualType elementTy = complexTy->getElementType();
-      if (isDivOpCode && elementTy->isFloatingType() &&
-          cgf.getLangOpts().getComplexRange() ==
-              LangOptions::ComplexRangeKind::CX_Promoted) {
-        cgf.cgm.errorNYI("HigherPrecisionTypeForComplexArithmetic");
-        return QualType();
-      }
-
       if (elementTy.UseExcessPrecision(cgf.getContext()))
         return cgf.getContext().getComplexType(cgf.getContext().FloatTy);
     }
@@ -162,13 +156,14 @@ public:
         e->getType(), e->getOpcode() == BinaryOperatorKind::BO_Div);           \
     mlir::Value result = emitBin##OP(emitBinOps(e, promotionTy));              \
     if (!promotionTy.isNull())                                                 \
-      cgf.cgm.errorNYI("Binop emitUnPromotedValue");                           \
+      result = cgf.emitUnPromotedValue(result, e->getType());                  \
     return result;                                                             \
   }
 
   HANDLEBINOP(Add)
   HANDLEBINOP(Sub)
   HANDLEBINOP(Mul)
+  HANDLEBINOP(Div)
 #undef HANDLEBINOP
 
   // Compound assignments.
@@ -866,6 +861,22 @@ mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
   return builder.createComplexCreate(op.loc, newReal, newImag);
 }
 
+mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+
+  if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
+      mlir::isa<cir::ComplexType>(op.rhs.getType())) {
+    cir::ComplexRangeKind rangeKind =
+        getComplexRangeAttr(op.fpFeatures.getComplexRange());
+    return cir::ComplexDivOp::create(builder, op.loc, op.lhs, op.rhs,
+                                     rangeKind);
+  }
+
+  cgf.cgm.errorNYI("ComplexExprEmitter::emitBinDiv between Complex & Scalar");
+  return {};
+}
+
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
   assert(e->getOpcode() == BO_Assign && "Expected assign op");
 
@@ -960,6 +971,14 @@ mlir::Value CIRGenFunction::emitPromotedValue(mlir::Value result,
          "integral complex will never be promoted");
   return builder.createCast(cir::CastKind::float_complex, result,
                             convertType(promotionType));
+}
+
+mlir::Value CIRGenFunction::emitUnPromotedValue(mlir::Value result,
+                                                QualType unPromotionType) {
+  assert(!mlir::cast<cir::ComplexType>(result.getType()).isIntegerComplex() &&
+         "integral complex will never be promoted");
+  return builder.createCast(cir::CastKind::float_complex, result,
+                            convertType(unPromotionType));
 }
 
 LValue CIRGenFunction::emitScalarCompoundAssignWithComplex(

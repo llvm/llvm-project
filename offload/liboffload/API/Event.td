@@ -44,7 +44,8 @@ def ol_event_info_t : Enum {
   let desc = "Supported event info.";
   let is_typed = 1;
   let etors = [
-    TaggedEtor<"QUEUE", "ol_queue_handle_t", "The handle of the queue associated with the device.">
+    TaggedEtor<"QUEUE", "ol_queue_handle_t", "The handle of the queue associated with the device.">,
+    TaggedEtor<"IS_COMPLETE", "bool", "True if and only if the event is complete.">,
   ];
 }
 

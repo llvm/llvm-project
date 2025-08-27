@@ -29,11 +29,15 @@
   ],
   "devDependencies": {
     "@types/node": "^18.19.41",
+    "@types/tabulator-tables": "^6.2.10",
     "@types/vscode": "1.75.0",
+    "@types/vscode-webview": "^1.57.5",
     "@vscode/debugprotocol": "^1.68.0",
     "@vscode/vsce": "^3.2.2",
+    "esbuild": "^0.25.9",
     "prettier": "^3.4.2",
     "prettier-plugin-curly": "^0.3.1",
+    "tabulator-tables": "^6.3.1",
     "typescript": "^5.7.3"
   },
   "activationEvents": [
@@ -42,8 +46,11 @@
   ],
   "main": "./out/extension",
   "scripts": {
-    "vscode:prepublish": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "bundle-symbols-table-view": "npx tsc -p src-ts/webview --noEmit && npx esbuild src-ts/webview/symbols-table-view.ts --bundle --format=iife --outdir=./out/webview",
+    "bundle-tabulator": "cp node_modules/tabulator-tables/dist/js/tabulator.min.js ./out/webview/ && cp node_modules/tabulator-tables/dist/css/tabulator_midnight.min.css ./out/webview/ && cp node_modules/tabulator-tables/dist/css/tabulator_simple.min.css ./out/webview/",
+    "bundle-webview": "npm run bundle-symbols-table-view && npm run bundle-tabulator",
+    "vscode:prepublish": "npm run bundle-webview && tsc -p ./",
+    "watch": "npm run bundle-webview && tsc -watch -p ./",
     "format": "npx prettier './src-ts/' --write",
     "package": "rm -rf ./out/lldb-dap.vsix && vsce package --out ./out/lldb-dap.vsix",
     "publish": "vsce publish",
@@ -259,6 +266,15 @@
       {
         "command": "lldb-dap.modules.copyProperty",
         "title": "Copy Value"
+      },
+      {
+        "command": "lldb-dap.modules.showSymbols",
+        "title": "Show Module Symbols"
+      },
+      {
+        "category": "lldb-dap",
+        "command": "lldb-dap.debug.showSymbols",
+        "title": "Show Symbols of a Module"
       }
     ],
     "menus": {
@@ -266,12 +282,24 @@
         {
           "command": "lldb-dap.modules.copyProperty",
           "when": "false"
+        },
+        {
+          "command": "lldb-dap.modules.showSymbols",
+          "when": "false"
+        },
+        {
+          "command": "lldb-dap.debug.showSymbols",
+          "when": "debuggersAvailable && debugType == 'lldb-dap' && lldb-dap.supportsModuleSymbolsRequest"
         }
       ],
       "view/item/context": [
         {
           "command": "lldb-dap.modules.copyProperty",
           "when": "view == lldb-dap.modules && viewItem == property"
+        },
+        {
+          "command": "lldb-dap.modules.showSymbols",
+          "when": "view == lldb-dap.modules && viewItem == module && lldb-dap.supportsModuleSymbolsRequest"
         }
       ]
     },

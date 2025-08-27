@@ -1772,7 +1772,8 @@ def note_unsatisfied_trait
            "%Replaceable{replaceable}|"
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
-           "%StandardLayout{standard-layout}"
+           "%StandardLayout{standard-layout}|"
+           "%Final{final}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1815,7 +1816,9 @@ def note_unsatisfied_trait_reason
            "%sub{select_special_member_kind}1}|"
            "%FunctionType{is a function type}|"
            "%CVVoidType{is a cv void type}|"
-           "%IncompleteArrayType{is an incomplete array type}"
+           "%IncompleteArrayType{is an incomplete array type}|"
+           "%NotClassOrUnion{is not a class or union type}|"
+           "%NotMarkedFinal{is not marked 'final'}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -3684,6 +3687,10 @@ def warn_alloca_align_alignof : Warning<
   "second argument to __builtin_alloca_with_align is supposed to be in bits">,
   InGroup<DiagGroup<"alloca-with-align-alignof">>;
 
+def warn_alloc_size : Warning<
+  "allocation of insufficient size '%0' for type %1 with size '%2'">,
+  InGroup<DiagGroup<"alloc-size">>;
+
 def err_alignment_too_small : Error<
   "requested alignment must be %0 or greater">;
 def err_alignment_too_big : Error<
@@ -4404,6 +4411,11 @@ def warn_impcast_different_enum_types : Warning<
 def warn_impcast_int_to_enum : Warning<
   "implicit conversion from %0 to enumeration type %1 is invalid in C++">,
   InGroup<ImplicitIntToEnumCast>, DefaultIgnore;
+
+def note_no_implicit_conversion_for_scoped_enum
+    : Note<"no implicit conversion for scoped enum; consider casting to "
+           "underlying type">;
+
 def warn_impcast_bool_to_null_pointer : Warning<
     "initialization of pointer of type %0 to null from a constant boolean "
     "expression">, InGroup<BoolConversion>;
@@ -12606,7 +12618,7 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
-  "not eliding copy on return">, 
+  "not eliding copy on return">,
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
