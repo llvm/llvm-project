@@ -230,6 +230,7 @@ def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
 def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
 def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
 def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
+def TargetRegionFlagsNoLoop : I32BitEnumAttrCaseBit<"no_loop", 3>;
 
 def TargetRegionFlags : OpenMP_BitEnumAttr<
     "TargetRegionFlags",
@@ -237,7 +238,8 @@ def TargetRegionFlags : OpenMP_BitEnumAttr<
       TargetRegionFlagsNone,
       TargetRegionFlagsGeneric,
       TargetRegionFlagsSpmd,
-      TargetRegionFlagsTripCount
+      TargetRegionFlagsTripCount,
+      TargetRegionFlagsNoLoop
     ]>;
 
 //===----------------------------------------------------------------------===//

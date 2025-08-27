@@ -2590,13 +2590,27 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
+
+  bool noLoopMode = false;
+  omp::TargetOp targetOp = wsloopOp->getParentOfType<mlir::omp::TargetOp>();
+  if (targetOp) {
+    Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+    omp::TargetRegionFlags kernelFlags =
+        targetOp.getKernelExecFlags(targetCapturedOp);
+    if (omp::bitEnumContainsAll(kernelFlags,
+                                omp::TargetRegionFlags::spmd |
+                                    omp::TargetRegionFlags::no_loop) &&
+        !omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::generic))
+      noLoopMode = true;
+  }
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
       ompBuilder->applyWorkshareLoop(
           ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
           convertToScheduleKind(schedule), chunk, isSimd,
           scheduleMod == omp::ScheduleModifier::monotonic,
           scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-          workshareLoopType);
+          workshareLoopType, noLoopMode);
 
   if (failed(handleError(wsloopIP, opInst)))
     return failure();
@@ -5365,6 +5379,12 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
                 ? llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD
                 : llvm::omp::OMP_TGT_EXEC_MODE_GENERIC
           : llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
+  if (omp::bitEnumContainsAll(kernelFlags,
+                              omp::TargetRegionFlags::spmd |
+                                  omp::TargetRegionFlags::no_loop) &&
+      !omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::generic))
+    attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+
   attrs.MinTeams = minTeamsVal;
   attrs.MaxTeams.front() = maxTeamsVal;
   attrs.MinThreads = 1;
