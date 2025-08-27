@@ -1,4 +1,5 @@
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/Error.h"
@@ -52,19 +53,34 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   HelloSubOptTable T;
   unsigned MissingArgIndex, MissingArgCount;
+
+  auto HandleMultipleSubcommands = [](const ArrayRef<StringRef> SubCommands) {
+    assert(SubCommands.size() > 1);
+    llvm::errs() << "error: more than one subcommand passed [\n";
+    for (auto SC : SubCommands) {
+      llvm::errs() << " `" << SC << "`\n";
+    }
+    llvm::errs() << "]\n";
+    llvm::errs() << "See --help.\n";
+    exit(1);
+  };
+
+  auto HandleOtherPositionals = [](const ArrayRef<StringRef> Positionals) {
+    assert(!Positionals.empty());
+    llvm::errs() << "error: unknown positional argument(s) [\n";
+    for (auto SC : Positionals) {
+      llvm::errs() << " `" << SC << "`\n";
+    }
+    llvm::errs() << "]\n";
+    llvm::errs() << "See --help.\n";
+    exit(1);
+  };
+
   InputArgList Args = T.ParseArgs(ArrayRef(argv + 1, argc - 1), MissingArgIndex,
                                   MissingArgCount);
 
-  auto SubcommandResult = Args.getSubcommand(T.getCommands());
-  if (!SubcommandResult) {
-    llvm::errs() << "error: more than one subcommand passed ["
-                 << toString(SubcommandResult.takeError())
-                 << "]. See --help.\n";
-    return 1;
-  }
-  // Valid subcommand found.
-  StringRef Subcommand = *SubcommandResult;
-
+  StringRef Subcommand = Args.getSubcommand(
+      T.getCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
   // Handle help. When help options is found, ignore all other options and exit
   // after printing help.
   if (Args.hasArg(OPT_help)) {

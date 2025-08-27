@@ -281,11 +281,11 @@ public:
   /// list.
   virtual unsigned getNumInputArgStrings() const = 0;
 
-  /// getSubcommand - Return the active subcommand, if one exists. Return empty
-  /// StringRef if no subcommand passed. Return an error if an invalid/unknown
-  /// subcommand is found as the first argument.
-  LLVM_ABI llvm::Expected<StringRef>
-  getSubcommand(const ArrayRef<OptTable::Command> Commands) const;
+  /// getSubcommand - Return the active subcommand, if one exists.
+  LLVM_ABI StringRef getSubcommand(
+      const ArrayRef<OptTable::Command> Commands,
+      std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
+      std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const;
 
   /// @}
   /// @name Argument Lookup Utilities

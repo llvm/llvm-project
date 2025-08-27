@@ -205,38 +205,39 @@ void ArgList::print(raw_ostream &O) const {
 LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 #endif
 
-llvm::Expected<StringRef>
-ArgList::getSubcommand(const ArrayRef<OptTable::Command> Commands) const {
-  // Identify if a valid subcommand is passed.
+StringRef ArgList::getSubcommand(
+    const ArrayRef<OptTable::Command> Commands,
+    std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
+    std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const {
+
   StringRef SubCommand = {};
+  SmallVector<StringRef, 4> SubCommands;
+  SmallVector<StringRef, 4> OtherPositionals;
   for (const Arg *A : *this) {
+    bool IsSubCommand = false;
     if (A->getOption().getKind() == Option::InputClass) {
-      assert(!StringRef(A->getValue()).empty());
-      for (auto CMD : Commands) {
+      for (const OptTable::Command CMD : Commands) {
         if (StringRef(CMD.Name) == "TopLevelCommand")
           continue;
         if (StringRef(CMD.Name) == A->getValue()) {
-          // Found a valid subcommand.
-          if (SubCommand.empty()) {
-            SubCommand = A->getValue();
-          } else {
-            SmallString<20> SubCommandsList;
-            SubCommandsList += SubCommand;
-            SubCommandsList += ",";
-            SubCommandsList += A->getValue();
-            // More than one subcommand passed in commandline.
-            return llvm::createStringError(std::errc::invalid_argument,
-                                           SubCommandsList.c_str());
-          }
+          SubCommands.push_back(A->getValue());
+          IsSubCommand = true;
         }
       }
-      if (SubCommand.empty()) {
-        // TODO:: Return a different error for unknown subcommand
-        return llvm::createStringError(std::errc::invalid_argument,
-                                       A->getValue());
+      if (!IsSubCommand) {
+        OtherPositionals.push_back(A->getValue());
+        IsSubCommand = false;
       }
     }
   }
+  if (SubCommands.size() > 1) {
+    HandleMultipleSubcommands(SubCommands);
+  }
+  if (!OtherPositionals.empty()) {
+    HandleOtherPositionals(OtherPositionals);
+  }
+  if (SubCommands.size() == 1)
+    return SubCommands.front();
   return SubCommand;
 }
 
