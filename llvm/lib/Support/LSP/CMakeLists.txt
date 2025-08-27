@@ -2,16 +2,10 @@ add_llvm_library(LLVMSupportLSP STATIC
   Protocol.cpp
   Transport.cpp
   Logging.cpp
-)
 
-target_include_directories(LLVMSupportLSP
-  PUBLIC
-    $<BUILD_INTERFACE:${LLVM_MAIN_INCLUDE_DIR}>
-    $<BUILD_INTERFACE:${LLVM_LIBRARY_DIR}/Support/LSP>
-    $<INSTALL_INTERFACE:include>   # for installation
-)
+  ADDITIONAL_HEADER_DIRS
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/LSP
 
-target_link_libraries(LLVMSupportLSP
-  PUBLIC
-    LLVMSupport
+  LINK_LIBS
+  LLVMSupport
 )

@@ -289,7 +289,6 @@ add_llvm_component_library(LLVMSupport
 
   ${ALLOCATOR_FILES}
   $<TARGET_OBJECTS:LLVMSupportBlake3>
-  $<TARGET_OBJECTS:LLVMSupportLSP>
 
 # System
   Atomic.cpp
