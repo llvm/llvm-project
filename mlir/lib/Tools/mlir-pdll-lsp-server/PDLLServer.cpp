@@ -38,17 +38,19 @@ using namespace mlir::pdll;
 
 /// Returns a language server uri for the given source location. `mainFileURI`
 /// corresponds to the uri for the main file of the source manager.
-static llvm::lsp::URIForFile getURIFromLoc(llvm::SourceMgr &mgr, SMRange loc,
-                                     const llvm::lsp::URIForFile &mainFileURI) {
+static llvm::lsp::URIForFile
+getURIFromLoc(llvm::SourceMgr &mgr, SMRange loc,
+              const llvm::lsp::URIForFile &mainFileURI) {
   int bufferId = mgr.FindBufferContainingLoc(loc.Start);
   if (bufferId == 0 || bufferId == static_cast<int>(mgr.getMainFileID()))
     return mainFileURI;
-  llvm::Expected<llvm::lsp::URIForFile> fileForLoc = llvm::lsp::URIForFile::fromFile(
-      mgr.getBufferInfo(bufferId).Buffer->getBufferIdentifier());
+  llvm::Expected<llvm::lsp::URIForFile> fileForLoc =
+      llvm::lsp::URIForFile::fromFile(
+          mgr.getBufferInfo(bufferId).Buffer->getBufferIdentifier());
   if (fileForLoc)
     return *fileForLoc;
   llvm::lsp::Logger::error("Failed to create URI for include file: {0}",
-                     llvm::toString(fileForLoc.takeError()));
+                           llvm::toString(fileForLoc.takeError()));
   return mainFileURI;
 }
 
@@ -59,9 +61,11 @@ static bool isMainFileLoc(llvm::SourceMgr &mgr, SMRange loc) {
 }
 
 /// Returns a language server location from the given source range.
-static llvm::lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMRange range,
-                                        const llvm::lsp::URIForFile &uri) {
-  return llvm::lsp::Location(getURIFromLoc(mgr, range, uri), llvm::lsp::Range(mgr, range));
+static llvm::lsp::Location
+getLocationFromLoc(llvm::SourceMgr &mgr, SMRange range,
+                   const llvm::lsp::URIForFile &uri) {
+  return llvm::lsp::Location(getURIFromLoc(mgr, range, uri),
+                             llvm::lsp::Range(mgr, range));
 }
 
 /// Convert the given MLIR diagnostic to the LSP form.
@@ -76,7 +80,8 @@ getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr, const ast::Diagnostic &diag,
   lspDiag.category = "Parse Error";
 
   // Try to grab a file location for this diagnostic.
-  llvm::lsp::Location loc = getLocationFromLoc(sourceMgr, diag.getLocation(), uri);
+  llvm::lsp::Location loc =
+      getLocationFromLoc(sourceMgr, diag.getLocation(), uri);
   lspDiag.range = loc.range;
 
   // Skip diagnostics that weren't emitted within the main file.
@@ -269,9 +274,11 @@ struct PDLDocument {
   // Definitions and References
   //===--------------------------------------------------------------------===//
 
-  void getLocationsOf(const llvm::lsp::URIForFile &uri, const llvm::lsp::Position &defPos,
+  void getLocationsOf(const llvm::lsp::URIForFile &uri,
+                      const llvm::lsp::Position &defPos,
                       std::vector<llvm::lsp::Location> &locations);
-  void findReferencesOf(const llvm::lsp::URIForFile &uri, const llvm::lsp::Position &pos,
+  void findReferencesOf(const llvm::lsp::URIForFile &uri,
+                        const llvm::lsp::Position &pos,
                         std::vector<llvm::lsp::Location> &references);
 
   //===--------------------------------------------------------------------===//
@@ -285,22 +292,24 @@ struct PDLDocument {
   // Hover
   //===--------------------------------------------------------------------===//
 
-  std::optional<llvm::lsp::Hover> findHover(const llvm::lsp::URIForFile &uri,
-                                      const llvm::lsp::Position &hoverPos);
+  std::optional<llvm::lsp::Hover>
+  findHover(const llvm::lsp::URIForFile &uri,
+            const llvm::lsp::Position &hoverPos);
   std::optional<llvm::lsp::Hover> findHover(const ast::Decl *decl,
-                                      const SMRange &hoverRange);
+                                            const SMRange &hoverRange);
   llvm::lsp::Hover buildHoverForOpName(const ods::Operation *op,
-                                 const SMRange &hoverRange);
+                                       const SMRange &hoverRange);
   llvm::lsp::Hover buildHoverForVariable(const ast::VariableDecl *varDecl,
-                                   const SMRange &hoverRange);
-  llvm::lsp::Hover buildHoverForPattern(const ast::PatternDecl *decl,
-                                  const SMRange &hoverRange);
-  llvm::lsp::Hover buildHoverForCoreConstraint(const ast::CoreConstraintDecl *decl,
                                          const SMRange &hoverRange);
+  llvm::lsp::Hover buildHoverForPattern(const ast::PatternDecl *decl,
+                                        const SMRange &hoverRange);
+  llvm::lsp::Hover
+  buildHoverForCoreConstraint(const ast::CoreConstraintDecl *decl,
+                              const SMRange &hoverRange);
   template <typename T>
-  llvm::lsp::Hover buildHoverForUserConstraintOrRewrite(StringRef typeName,
-                                                  const T *decl,
-                                                  const SMRange &hoverRange);
+  llvm::lsp::Hover
+  buildHoverForUserConstraintOrRewrite(StringRef typeName, const T *decl,
+                                       const SMRange &hoverRange);
 
   //===--------------------------------------------------------------------===//
   // Document Symbols
@@ -312,26 +321,29 @@ struct PDLDocument {
   // Code Completion
   //===--------------------------------------------------------------------===//
 
-  llvm::lsp::CompletionList getCodeCompletion(const llvm::lsp::URIForFile &uri,
-                                        const llvm::lsp::Position &completePos);
+  llvm::lsp::CompletionList
+  getCodeCompletion(const llvm::lsp::URIForFile &uri,
+                    const llvm::lsp::Position &completePos);
 
   //===--------------------------------------------------------------------===//
   // Signature Help
   //===--------------------------------------------------------------------===//
 
   llvm::lsp::SignatureHelp getSignatureHelp(const llvm::lsp::URIForFile &uri,
-                                      const llvm::lsp::Position &helpPos);
+                                            const llvm::lsp::Position &helpPos);
 
   //===--------------------------------------------------------------------===//
   // Inlay Hints
   //===--------------------------------------------------------------------===//
 
-  void getInlayHints(const llvm::lsp::URIForFile &uri, const llvm::lsp::Range &range,
+  void getInlayHints(const llvm::lsp::URIForFile &uri,
+                     const llvm::lsp::Range &range,
                      std::vector<llvm::lsp::InlayHint> &inlayHints);
   void getInlayHintsFor(const ast::VariableDecl *decl,
                         const llvm::lsp::URIForFile &uri,
                         std::vector<llvm::lsp::InlayHint> &inlayHints);
-  void getInlayHintsFor(const ast::CallExpr *expr, const llvm::lsp::URIForFile &uri,
+  void getInlayHintsFor(const ast::CallExpr *expr,
+                        const llvm::lsp::URIForFile &uri,
                         std::vector<llvm::lsp::InlayHint> &inlayHints);
   void getInlayHintsFor(const ast::OperationExpr *expr,
                         const llvm::lsp::URIForFile &uri,
@@ -378,7 +390,8 @@ PDLDocument::PDLDocument(const llvm::lsp::URIForFile &uri, StringRef contents,
     : astContext(odsContext) {
   auto memBuffer = llvm::MemoryBuffer::getMemBufferCopy(contents, uri.file());
   if (!memBuffer) {
-    llvm::lsp::Logger::error("Failed to create memory buffer for file", uri.file());
+    llvm::lsp::Logger::error("Failed to create memory buffer for file",
+                             uri.file());
     return;
   }
 
@@ -423,9 +436,9 @@ void PDLDocument::getLocationsOf(const llvm::lsp::URIForFile &uri,
   locations.push_back(getLocationFromLoc(sourceMgr, symbol->getDefLoc(), uri));
 }
 
-void PDLDocument::findReferencesOf(const llvm::lsp::URIForFile &uri,
-                                   const llvm::lsp::Position &pos,
-                                   std::vector<llvm::lsp::Location> &references) {
+void PDLDocument::findReferencesOf(
+    const llvm::lsp::URIForFile &uri, const llvm::lsp::Position &pos,
+    std::vector<llvm::lsp::Location> &references) {
   SMLoc posLoc = pos.getAsSMLoc(sourceMgr);
   const PDLIndexSymbol *symbol = index.lookup(posLoc);
   if (!symbol)
@@ -440,8 +453,9 @@ void PDLDocument::findReferencesOf(const llvm::lsp::URIForFile &uri,
 // PDLDocument: Document Links
 //===--------------------------------------------------------------------===//
 
-void PDLDocument::getDocumentLinks(const llvm::lsp::URIForFile &uri,
-                                   std::vector<llvm::lsp::DocumentLink> &links) {
+void PDLDocument::getDocumentLinks(
+    const llvm::lsp::URIForFile &uri,
+    std::vector<llvm::lsp::DocumentLink> &links) {
   for (const lsp::SourceMgrInclude &include : parsedIncludes)
     links.emplace_back(include.range, include.uri);
 }
@@ -474,8 +488,8 @@ PDLDocument::findHover(const llvm::lsp::URIForFile &uri,
   return findHover(decl, hoverRange);
 }
 
-std::optional<llvm::lsp::Hover> PDLDocument::findHover(const ast::Decl *decl,
-                                                 const SMRange &hoverRange) {
+std::optional<llvm::lsp::Hover>
+PDLDocument::findHover(const ast::Decl *decl, const SMRange &hoverRange) {
   // Add hover for variables.
   if (const auto *varDecl = dyn_cast<ast::VariableDecl>(decl))
     return buildHoverForVariable(varDecl, hoverRange);
@@ -500,7 +514,7 @@ std::optional<llvm::lsp::Hover> PDLDocument::findHover(const ast::Decl *decl,
 }
 
 llvm::lsp::Hover PDLDocument::buildHoverForOpName(const ods::Operation *op,
-                                            const SMRange &hoverRange) {
+                                                  const SMRange &hoverRange) {
   llvm::lsp::Hover hover(llvm::lsp::Range(sourceMgr, hoverRange));
   {
     llvm::raw_string_ostream hoverOS(hover.contents.value);
@@ -511,8 +525,9 @@ llvm::lsp::Hover PDLDocument::buildHoverForOpName(const ods::Operation *op,
   return hover;
 }
 
-llvm::lsp::Hover PDLDocument::buildHoverForVariable(const ast::VariableDecl *varDecl,
-                                              const SMRange &hoverRange) {
+llvm::lsp::Hover
+PDLDocument::buildHoverForVariable(const ast::VariableDecl *varDecl,
+                                   const SMRange &hoverRange) {
   llvm::lsp::Hover hover(llvm::lsp::Range(sourceMgr, hoverRange));
   {
     llvm::raw_string_ostream hoverOS(hover.contents.value);
@@ -523,7 +538,7 @@ llvm::lsp::Hover PDLDocument::buildHoverForVariable(const ast::VariableDecl *var
 }
 
 llvm::lsp::Hover PDLDocument::buildHoverForPattern(const ast::PatternDecl *decl,
-                                             const SMRange &hoverRange) {
+                                                   const SMRange &hoverRange) {
   llvm::lsp::Hover hover(llvm::lsp::Range(sourceMgr, hoverRange));
   {
     llvm::raw_string_ostream hoverOS(hover.contents.value);
@@ -631,25 +646,28 @@ void PDLDocument::findDocumentSymbols(
       SMRange nameLoc = name ? name->getLoc() : patternDecl->getLoc();
       SMRange bodyLoc(nameLoc.Start, patternDecl->getBody()->getLoc().End);
 
-      symbols.emplace_back(
-          name ? name->getName() : "<pattern>", llvm::lsp::SymbolKind::Class,
-          llvm::lsp::Range(sourceMgr, bodyLoc), llvm::lsp::Range(sourceMgr, nameLoc));
+      symbols.emplace_back(name ? name->getName() : "<pattern>",
+                           llvm::lsp::SymbolKind::Class,
+                           llvm::lsp::Range(sourceMgr, bodyLoc),
+                           llvm::lsp::Range(sourceMgr, nameLoc));
     } else if (const auto *cDecl = dyn_cast<ast::UserConstraintDecl>(decl)) {
       // TODO: Add source information for the code block body.
       SMRange nameLoc = cDecl->getName().getLoc();
       SMRange bodyLoc = nameLoc;
 
-      symbols.emplace_back(
-          cDecl->getName().getName(), llvm::lsp::SymbolKind::Function,
-          llvm::lsp::Range(sourceMgr, bodyLoc), llvm::lsp::Range(sourceMgr, nameLoc));
+      symbols.emplace_back(cDecl->getName().getName(),
+                           llvm::lsp::SymbolKind::Function,
+                           llvm::lsp::Range(sourceMgr, bodyLoc),
+                           llvm::lsp::Range(sourceMgr, nameLoc));
     } else if (const auto *cDecl = dyn_cast<ast::UserRewriteDecl>(decl)) {
       // TODO: Add source information for the code block body.
       SMRange nameLoc = cDecl->getName().getLoc();
       SMRange bodyLoc = nameLoc;
 
-      symbols.emplace_back(
-          cDecl->getName().getName(), llvm::lsp::SymbolKind::Function,
-          llvm::lsp::Range(sourceMgr, bodyLoc), llvm::lsp::Range(sourceMgr, nameLoc));
+      symbols.emplace_back(cDecl->getName().getName(),
+                           llvm::lsp::SymbolKind::Function,
+                           llvm::lsp::Range(sourceMgr, bodyLoc),
+                           llvm::lsp::Range(sourceMgr, nameLoc));
     }
   }
 }
@@ -841,8 +859,8 @@ public:
           // Format the documentation for the constraint.
           if (std::optional<std::string> doc =
                   getDocumentationFor(sourceMgr, cst)) {
-            item.documentation =
-                llvm::lsp::MarkupContent{llvm::lsp::MarkupKind::Markdown, std::move(*doc)};
+            item.documentation = llvm::lsp::MarkupContent{
+                llvm::lsp::MarkupKind::Markdown, std::move(*doc)};
           }
 
           completionList.items.emplace_back(item);
@@ -1134,8 +1152,9 @@ private:
 };
 } // namespace
 
-llvm::lsp::SignatureHelp PDLDocument::getSignatureHelp(const llvm::lsp::URIForFile &uri,
-                                                 const llvm::lsp::Position &helpPos) {
+llvm::lsp::SignatureHelp
+PDLDocument::getSignatureHelp(const llvm::lsp::URIForFile &uri,
+                              const llvm::lsp::Position &helpPos) {
   SMLoc posLoc = helpPos.getAsSMLoc(sourceMgr);
   if (!posLoc.isValid())
     return llvm::lsp::SignatureHelp();
@@ -1198,9 +1217,9 @@ void PDLDocument::getInlayHints(const llvm::lsp::URIForFile &uri,
   });
 }
 
-void PDLDocument::getInlayHintsFor(const ast::VariableDecl *decl,
-                                   const llvm::lsp::URIForFile &uri,
-                                   std::vector<llvm::lsp::InlayHint> &inlayHints) {
+void PDLDocument::getInlayHintsFor(
+    const ast::VariableDecl *decl, const llvm::lsp::URIForFile &uri,
+    std::vector<llvm::lsp::InlayHint> &inlayHints) {
   // Check to see if the variable has a constraint list, if it does we don't
   // provide initializer hints.
   if (!decl->getConstraints().empty())
@@ -1216,7 +1235,7 @@ void PDLDocument::getInlayHintsFor(const ast::VariableDecl *decl,
   }
 
   llvm::lsp::InlayHint hint(llvm::lsp::InlayHintKind::Type,
-                      llvm::lsp::Position(sourceMgr, decl->getLoc().End));
+                            llvm::lsp::Position(sourceMgr, decl->getLoc().End));
   {
     llvm::raw_string_ostream labelOS(hint.label);
     labelOS << ": " << decl->getType();
@@ -1225,9 +1244,9 @@ void PDLDocument::getInlayHintsFor(const ast::VariableDecl *decl,
   inlayHints.emplace_back(std::move(hint));
 }
 
-void PDLDocument::getInlayHintsFor(const ast::CallExpr *expr,
-                                   const llvm::lsp::URIForFile &uri,
-                                   std::vector<llvm::lsp::InlayHint> &inlayHints) {
+void PDLDocument::getInlayHintsFor(
+    const ast::CallExpr *expr, const llvm::lsp::URIForFile &uri,
+    std::vector<llvm::lsp::InlayHint> &inlayHints) {
   // Try to extract the callable of this call.
   const auto *callableRef = dyn_cast<ast::DeclRefExpr>(expr->getCallableExpr());
   const auto *callable =
@@ -1242,9 +1261,9 @@ void PDLDocument::getInlayHintsFor(const ast::CallExpr *expr,
                         std::get<1>(it)->getName().getName());
 }
 
-void PDLDocument::getInlayHintsFor(const ast::OperationExpr *expr,
-                                   const llvm::lsp::URIForFile &uri,
-                                   std::vector<llvm::lsp::InlayHint> &inlayHints) {
+void PDLDocument::getInlayHintsFor(
+    const ast::OperationExpr *expr, const llvm::lsp::URIForFile &uri,
+    std::vector<llvm::lsp::InlayHint> &inlayHints) {
   // Check for ODS information.
   ast::OperationType opType = dyn_cast<ast::OperationType>(expr->getType());
   const auto *odsOp = opType ? opType.getODSOperation() : nullptr;
@@ -1290,13 +1309,15 @@ void PDLDocument::getInlayHintsFor(const ast::OperationExpr *expr,
                           "results");
 }
 
-void PDLDocument::addParameterHintFor(std::vector<llvm::lsp::InlayHint> &inlayHints,
-                                      const ast::Expr *expr, StringRef label) {
+void PDLDocument::addParameterHintFor(
+    std::vector<llvm::lsp::InlayHint> &inlayHints, const ast::Expr *expr,
+    StringRef label) {
   if (!shouldAddHintFor(expr, label))
     return;
 
-  llvm::lsp::InlayHint hint(llvm::lsp::InlayHintKind::Parameter,
-                      llvm::lsp::Position(sourceMgr, expr->getLoc().Start));
+  llvm::lsp::InlayHint hint(
+      llvm::lsp::InlayHintKind::Parameter,
+      llvm::lsp::Position(sourceMgr, expr->getLoc().Start));
   hint.label = (label + ":").str();
   hint.paddingRight = true;
   inlayHints.emplace_back(std::move(hint));
@@ -1357,7 +1378,9 @@ struct PDLTextFileChunk {
   }
   /// Adjust the line number of the given position to anchor at the beginning of
   /// the file, instead of the beginning of this chunk.
-  void adjustLocForChunkOffset(llvm::lsp::Position &pos) { pos.line += lineOffset; }
+  void adjustLocForChunkOffset(llvm::lsp::Position &pos) {
+    pos.line += lineOffset;
+  }
 
   /// The line offset of this chunk from the beginning of the file.
   uint64_t lineOffset;
@@ -1383,27 +1406,30 @@ public:
 
   /// Update the file to the new version using the provided set of content
   /// changes. Returns failure if the update was unsuccessful.
-  LogicalResult update(const llvm::lsp::URIForFile &uri, int64_t newVersion,
-                       ArrayRef<llvm::lsp::TextDocumentContentChangeEvent> changes,
-                       std::vector<llvm::lsp::Diagnostic> &diagnostics);
+  LogicalResult
+  update(const llvm::lsp::URIForFile &uri, int64_t newVersion,
+         ArrayRef<llvm::lsp::TextDocumentContentChangeEvent> changes,
+         std::vector<llvm::lsp::Diagnostic> &diagnostics);
 
   //===--------------------------------------------------------------------===//
   // LSP Queries
   //===--------------------------------------------------------------------===//
 
-  void getLocationsOf(const llvm::lsp::URIForFile &uri, llvm::lsp::Position defPos,
+  void getLocationsOf(const llvm::lsp::URIForFile &uri,
+                      llvm::lsp::Position defPos,
                       std::vector<llvm::lsp::Location> &locations);
-  void findReferencesOf(const llvm::lsp::URIForFile &uri, llvm::lsp::Position pos,
+  void findReferencesOf(const llvm::lsp::URIForFile &uri,
+                        llvm::lsp::Position pos,
                         std::vector<llvm::lsp::Location> &references);
   void getDocumentLinks(const llvm::lsp::URIForFile &uri,
                         std::vector<llvm::lsp::DocumentLink> &links);
   std::optional<llvm::lsp::Hover> findHover(const llvm::lsp::URIForFile &uri,
-                                      llvm::lsp::Position hoverPos);
+                                            llvm::lsp::Position hoverPos);
   void findDocumentSymbols(std::vector<llvm::lsp::DocumentSymbol> &symbols);
   llvm::lsp::CompletionList getCodeCompletion(const llvm::lsp::URIForFile &uri,
-                                        llvm::lsp::Position completePos);
+                                              llvm::lsp::Position completePos);
   llvm::lsp::SignatureHelp getSignatureHelp(const llvm::lsp::URIForFile &uri,
-                                      llvm::lsp::Position helpPos);
+                                            llvm::lsp::Position helpPos);
   void getInlayHints(const llvm::lsp::URIForFile &uri, llvm::lsp::Range range,
                      std::vector<llvm::lsp::InlayHint> &inlayHints);
   lsp::PDLLViewOutputResult getPDLLViewOutput(lsp::PDLLViewOutputKind kind);
@@ -1442,8 +1468,8 @@ private:
 };
 } // namespace
 
-PDLTextFile::PDLTextFile(const llvm::lsp::URIForFile &uri, StringRef fileContents,
-                         int64_t version,
+PDLTextFile::PDLTextFile(const llvm::lsp::URIForFile &uri,
+                         StringRef fileContents, int64_t version,
                          const std::vector<std::string> &extraDirs,
                          std::vector<llvm::lsp::Diagnostic> &diagnostics)
     : contents(fileContents.str()), extraIncludeDirs(extraDirs) {
@@ -1454,7 +1480,8 @@ LogicalResult
 PDLTextFile::update(const llvm::lsp::URIForFile &uri, int64_t newVersion,
                     ArrayRef<llvm::lsp::TextDocumentContentChangeEvent> changes,
                     std::vector<llvm::lsp::Diagnostic> &diagnostics) {
-  if (failed(llvm::lsp::TextDocumentContentChangeEvent::applyTo(changes, contents))) {
+  if (failed(llvm::lsp::TextDocumentContentChangeEvent::applyTo(changes,
+                                                                contents))) {
     llvm::lsp::Logger::error("Failed to update contents of {0}", uri.file());
     return failure();
   }
@@ -1478,9 +1505,9 @@ void PDLTextFile::getLocationsOf(const llvm::lsp::URIForFile &uri,
       chunk.adjustLocForChunkOffset(loc.range);
 }
 
-void PDLTextFile::findReferencesOf(const llvm::lsp::URIForFile &uri,
-                                   llvm::lsp::Position pos,
-                                   std::vector<llvm::lsp::Location> &references) {
+void PDLTextFile::findReferencesOf(
+    const llvm::lsp::URIForFile &uri, llvm::lsp::Position pos,
+    std::vector<llvm::lsp::Location> &references) {
   PDLTextFileChunk &chunk = getChunkFor(pos);
   chunk.document.findReferencesOf(uri, pos, references);
 
@@ -1492,8 +1519,9 @@ void PDLTextFile::findReferencesOf(const llvm::lsp::URIForFile &uri,
       chunk.adjustLocForChunkOffset(loc.range);
 }
 
-void PDLTextFile::getDocumentLinks(const llvm::lsp::URIForFile &uri,
-                                   std::vector<llvm::lsp::DocumentLink> &links) {
+void PDLTextFile::getDocumentLinks(
+    const llvm::lsp::URIForFile &uri,
+    std::vector<llvm::lsp::DocumentLink> &links) {
   chunks.front()->document.getDocumentLinks(uri, links);
   for (const auto &it : llvm::drop_begin(chunks)) {
     size_t currentNumLinks = links.size();
@@ -1506,10 +1534,12 @@ void PDLTextFile::getDocumentLinks(const llvm::lsp::URIForFile &uri,
   }
 }
 
-std::optional<llvm::lsp::Hover> PDLTextFile::findHover(const llvm::lsp::URIForFile &uri,
-                                                 llvm::lsp::Position hoverPos) {
+std::optional<llvm::lsp::Hover>
+PDLTextFile::findHover(const llvm::lsp::URIForFile &uri,
+                       llvm::lsp::Position hoverPos) {
   PDLTextFileChunk &chunk = getChunkFor(hoverPos);
-  std::optional<llvm::lsp::Hover> hoverInfo = chunk.document.findHover(uri, hoverPos);
+  std::optional<llvm::lsp::Hover> hoverInfo =
+      chunk.document.findHover(uri, hoverPos);
 
   // Adjust any locations within this file for the offset of this chunk.
   if (chunk.lineOffset != 0 && hoverInfo && hoverInfo->range)
@@ -1528,11 +1558,11 @@ void PDLTextFile::findDocumentSymbols(
     PDLTextFileChunk &chunk = *chunks[i];
     llvm::lsp::Position startPos(chunk.lineOffset);
     llvm::lsp::Position endPos((i == e - 1) ? totalNumLines - 1
-                                      : chunks[i + 1]->lineOffset);
-    llvm::lsp::DocumentSymbol symbol("<file-split-" + Twine(i) + ">",
-                               llvm::lsp::SymbolKind::Namespace,
-                               /*range=*/llvm::lsp::Range(startPos, endPos),
-                               /*selectionRange=*/llvm::lsp::Range(startPos));
+                                            : chunks[i + 1]->lineOffset);
+    llvm::lsp::DocumentSymbol symbol(
+        "<file-split-" + Twine(i) + ">", llvm::lsp::SymbolKind::Namespace,
+        /*range=*/llvm::lsp::Range(startPos, endPos),
+        /*selectionRange=*/llvm::lsp::Range(startPos));
     chunk.document.findDocumentSymbols(symbol.children);
 
     // Fixup the locations of document symbols within this chunk.
@@ -1556,8 +1586,9 @@ void PDLTextFile::findDocumentSymbols(
   }
 }
 
-llvm::lsp::CompletionList PDLTextFile::getCodeCompletion(const llvm::lsp::URIForFile &uri,
-                                                   llvm::lsp::Position completePos) {
+llvm::lsp::CompletionList
+PDLTextFile::getCodeCompletion(const llvm::lsp::URIForFile &uri,
+                               llvm::lsp::Position completePos) {
   PDLTextFileChunk &chunk = getChunkFor(completePos);
   llvm::lsp::CompletionList completionList =
       chunk.document.getCodeCompletion(uri, completePos);
@@ -1572,12 +1603,14 @@ llvm::lsp::CompletionList PDLTextFile::getCodeCompletion(const llvm::lsp::URIFor
   return completionList;
 }
 
-llvm::lsp::SignatureHelp PDLTextFile::getSignatureHelp(const llvm::lsp::URIForFile &uri,
-                                                 llvm::lsp::Position helpPos) {
+llvm::lsp::SignatureHelp
+PDLTextFile::getSignatureHelp(const llvm::lsp::URIForFile &uri,
+                              llvm::lsp::Position helpPos) {
   return getChunkFor(helpPos).document.getSignatureHelp(uri, helpPos);
 }
 
-void PDLTextFile::getInlayHints(const llvm::lsp::URIForFile &uri, llvm::lsp::Range range,
+void PDLTextFile::getInlayHints(const llvm::lsp::URIForFile &uri,
+                                llvm::lsp::Range range,
                                 std::vector<llvm::lsp::InlayHint> &inlayHints) {
   auto startIt = getChunkItFor(range.start);
   auto endIt = getChunkItFor(range.end);
@@ -1605,7 +1638,8 @@ void PDLTextFile::getInlayHints(const llvm::lsp::URIForFile &uri, llvm::lsp::Ran
 
   // Otherwise, the range is split between multiple chunks. The first chunk
   // has the correct range start, but covers the total document.
-  getHintsForChunk(startIt, llvm::lsp::Range(range.start, getNumLines(startIt)));
+  getHintsForChunk(startIt,
+                   llvm::lsp::Range(range.start, getNumLines(startIt)));
 
   // Every chunk in between uses the full document.
   for (++startIt; startIt != endIt; ++startIt)
@@ -1632,7 +1666,8 @@ PDLTextFile::getPDLLViewOutput(lsp::PDLLViewOutputKind kind) {
   return result;
 }
 
-void PDLTextFile::initialize(const llvm::lsp::URIForFile &uri, int64_t newVersion,
+void PDLTextFile::initialize(const llvm::lsp::URIForFile &uri,
+                             int64_t newVersion,
                              std::vector<llvm::lsp::Diagnostic> &diagnostics) {
   version = newVersion;
   chunks.clear();
@@ -1668,7 +1703,8 @@ void PDLTextFile::initialize(const llvm::lsp::URIForFile &uri, int64_t newVersio
   totalNumLines = lineOffset;
 }
 
-PDLTextFile::ChunkIterator PDLTextFile::getChunkItFor(llvm::lsp::Position &pos) {
+PDLTextFile::ChunkIterator
+PDLTextFile::getChunkItFor(llvm::lsp::Position &pos) {
   if (chunks.size() == 1)
     return chunks.begin();
 
@@ -1769,8 +1805,8 @@ void lsp::PDLLServer::getDocumentLinks(
     return fileIt->second->getDocumentLinks(uri, documentLinks);
 }
 
-std::optional<llvm::lsp::Hover> lsp::PDLLServer::findHover(const URIForFile &uri,
-                                                     const Position &hoverPos) {
+std::optional<llvm::lsp::Hover>
+lsp::PDLLServer::findHover(const URIForFile &uri, const Position &hoverPos) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     return fileIt->second->findHover(uri, hoverPos);
@@ -1793,8 +1829,9 @@ lsp::PDLLServer::getCodeCompletion(const URIForFile &uri,
   return CompletionList();
 }
 
-llvm::lsp::SignatureHelp lsp::PDLLServer::getSignatureHelp(const URIForFile &uri,
-                                                     const Position &helpPos) {
+llvm::lsp::SignatureHelp
+lsp::PDLLServer::getSignatureHelp(const URIForFile &uri,
+                                  const Position &helpPos) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     return fileIt->second->getSignatureHelp(uri, helpPos);
