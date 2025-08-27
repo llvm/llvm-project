@@ -663,9 +663,8 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
   }
 
   // Return the number of teams required to cover the loop iterations.
-  if (isNoLoopMode()) {
+  if (isNoLoopMode())
     return LoopTripCount > 0 ? (((LoopTripCount - 1) / NumThreads) + 1) : 1;
-  }
 
   uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();

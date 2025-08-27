@@ -1174,9 +1174,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// deallocated by the allocator.
   llvm::SmallVector<DeviceImageTy *> LoadedImages;
 
-  /// Return value of OMP_TEAMS_THREAD_LIMIT environment variable
-  int32_t getOMPTeamsThreadLimit() const { return OMP_TeamsThreadLimit; }
-
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
