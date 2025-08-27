@@ -62,12 +62,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr1", structured = false}
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?xf32>>
   // CHECK: Type category: array
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
 
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr2", structured = false}
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?xf32>>
   // CHECK: Type category: array
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c2{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c2{{.*}} : index)
 
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "arr3", structured = false}
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<10xf32>>
@@ -75,4 +75,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Size: 40
   // CHECK: Offset: 0
   // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+
+  // CHECK: acc.copyin
+  // CHECK: acc.copyin
+  // CHECK: fir.shape_shift %c2, %[[EXTENT:.*]] : (index, index) -> !fir.shapeshift<1>
+  // CHECK: acc.copyin
+  // CHECK: %[[SUBI:.*]] = arith.subi %[[EXTENT]], %c1{{.*}} : index
+  // CHECK: %{{.*}} = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[SUBI]] : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c2{{.*}} : index)
+  // CHECK: acc.copyin
+  // CHECK: acc.copyin
 }

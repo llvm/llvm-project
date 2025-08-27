@@ -243,6 +243,8 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
               mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp())) {
         mlir::Value cummulativeExtent = one;
         for (auto extent : shapeOp.getExtents()) {
+          mlir::Value upperbound =
+              mlir::arith::SubIOp::create(builder, loc, extent, one);
           mlir::Value stride = one;
           if (strideIncludeLowerExtent) {
             stride = cummulativeExtent;
@@ -252,7 +254,7 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
           auto accBound = mlir::acc::DataBoundsOp::create(
               builder, loc,
               mlir::acc::DataBoundsType::get(builder.getContext()),
-              /*lowerbound=*/one, /*upperbound=*/extent,
+              /*lowerbound=*/zero, /*upperbound=*/upperbound,
               /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
               /*startIdx=*/one);
           accBounds.push_back(accBound);
@@ -269,8 +271,6 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
             mlir::Value extent = val;
             mlir::Value upperbound =
                 mlir::arith::SubIOp::create(builder, loc, extent, one);
-            upperbound = mlir::arith::AddIOp::create(builder, loc, lowerbound,
-                                                     upperbound);
             mlir::Value stride = one;
             if (strideIncludeLowerExtent) {
               stride = cummulativeExtent;
@@ -280,9 +280,9 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
             auto accBound = mlir::acc::DataBoundsOp::create(
                 builder, loc,
                 mlir::acc::DataBoundsType::get(builder.getContext()),
-                /*lowerbound=*/lowerbound, /*upperbound=*/upperbound,
+                /*lowerbound=*/zero, /*upperbound=*/upperbound,
                 /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
-                /*startIdx=*/one);
+                /*startIdx=*/lowerbound);
             accBounds.push_back(accBound);
           }
         }
