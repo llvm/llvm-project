@@ -15884,6 +15884,58 @@ static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
   return false;
 }
 
+/// Check if all arguments have the same type. If the types don't match, emit an
+/// error message and return true. Otherwise return false.
+///
+/// For scalars we directly compare their unqualified types. But even if we
+/// compare unqualified vector types, a difference in qualifiers in the element
+/// types can make the vector types be considered not equal. For example,
+/// vector of 4 'const float' values vs vector of 4 'float' values.
+/// So we compare unqualified types of their elements and number of elements.
+/// See GitHub issue #155405.
+static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef, unsigned NumArgs,
+                                           Expr *Args[]) {
+  assert(NumArgs > 0 && "Should have at least one argument.");
+
+  auto EmitError = [&](int I) {
+    SemaRef.Diag(Args[0]->getBeginLoc(),
+                 diag::err_typecheck_call_different_arg_types)
+        << Args[0]->getType() << Args[I]->getType();
+  };
+
+  QualType Ty0 = Args[0]->getType();
+
+  // Compare scalar types.
+  if (!Ty0->isVectorType()) {
+    for (unsigned I = 1; I < NumArgs; ++I)
+      if (!SemaRef.Context.hasSameUnqualifiedType(Ty0, Args[I]->getType())) {
+        EmitError(I);
+        return true;
+      }
+
+    return false;
+  }
+
+  // Compare vector types.
+  const auto *Vec0 = Ty0->castAs<VectorType>();
+  for (unsigned I = 1; I < NumArgs; ++I) {
+    QualType TyI = Args[I]->getType();
+    if (!TyI->isVectorType()) {
+      EmitError(I);
+      return true;
+    }
+    const auto *VecI = TyI->castAs<VectorType>();
+    if (!SemaRef.Context.hasSameUnqualifiedType(Vec0->getElementType(),
+                                                VecI->getElementType()) ||
+        Vec0->getNumElements() != VecI->getNumElements()) {
+      EmitError(I);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 std::optional<QualType>
 Sema::BuiltinVectorMath(CallExpr *TheCall,
                         EltwiseBuiltinArgTyRestriction ArgTyRestr) {
@@ -15905,13 +15957,11 @@ Sema::BuiltinVectorMath(CallExpr *TheCall,
 
   SourceLocation LocA = Args[0]->getBeginLoc();
   QualType TyA = Args[0]->getType();
-  QualType TyB = Args[1]->getType();
 
   if (checkMathBuiltinElementType(*this, LocA, TyA, ArgTyRestr, 1))
     return std::nullopt;
 
-  if (!Context.hasSameUnqualifiedType(TyA, TyB)) {
-    Diag(LocA, diag::err_typecheck_call_different_arg_types) << TyA << TyB;
+  if (checkBuiltinVectorMathArgTypes(*this, 2, Args)) {
     return std::nullopt;
   }
 
@@ -15948,17 +15998,12 @@ bool Sema::BuiltinElementwiseTernaryMath(
       return true;
   }
 
-  TheCall->setArg(0, Args[0]);
-  for (int I = 1; I < 3; ++I) {
-    if (Args[0]->getType().getCanonicalType() !=
-        Args[I]->getType().getCanonicalType()) {
-      return Diag(Args[0]->getBeginLoc(),
-                  diag::err_typecheck_call_different_arg_types)
-             << Args[0]->getType() << Args[I]->getType();
-    }
-
-    TheCall->setArg(I, Args[I]);
+  if (checkBuiltinVectorMathArgTypes(*this, 3, Args)) {
+    return true;
   }
+
+  for (int I = 0; I < 3; ++I)
+    TheCall->setArg(I, Args[I]);
 
   TheCall->setType(Args[0]->getType());
   return false;
