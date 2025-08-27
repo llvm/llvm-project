@@ -7583,7 +7583,6 @@ private:
     //
     // map((*a)[0:3])
     // a, a, 0, TARGET_PARAM | IMPLICIT // (+)
-    // &a, a, sizeof(void*), ATTACH     // (+)
     // (*a)[0], &(*a)[0], 3 * sizeof(int), TO | FROM
     // &(*a), &(*a)[0], sizeof(void*), ATTACH
     // (+) Only on target, if a is used in the region
@@ -7594,7 +7593,6 @@ private:
     //
     // map(**a)
     // a, a, 0, TARGET_PARAM | IMPLICIT // (+)
-    // &a, a, sizeof(void*), ATTACH     // (+)
     // &(*a)[0], &(*a)[0], sizeof(int), TO | FROM
     // &(*a), &(*a)[0], sizeof(void*), ATTACH
     // (+) Only on target, if a is used in the region
@@ -7680,7 +7678,6 @@ private:
     //
     // map(to: ps->p[:22])
     // ps, &(ps[0]), 0, TARGET_PARAM | IMPLICIT // (+)
-    // &ps, &(ps[0]), sizeof(void*), ATTACH     // (+)
     // &(ps->p[0]), &(ps->p[0]), 22*sizeof(double), TO
     // &(ps->p), &(ps->p[0]), sizeof(void*), ATTACH
     //
@@ -7690,25 +7687,21 @@ private:
     //
     // map(from: ps->ps->s.i)
     // ps, &(ps[0]), 0, TARGET_PARAM | IMPLICIT // (+)
-    // &ps, &(ps[0]), sizeof(void*), ATTACH     // (+)
     // &(ps->ps[0]), &(ps->ps->s.i), sizeof(int), FROM
     // &(ps->ps), &(ps->ps->s.i), sizeof(void*), ATTACH
     //
     // map(from: ps->ps->ps)
     // ps, &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
-    // &ps, &(ps[0]), sizeof(void*), ATTACH   // (+)
     // &(ps->ps[0]), &(ps->ps->ps), sizeof(S2*), FROM
     // &(ps->ps), &(ps->ps->ps), sizeof(void*), ATTACH
     //
     // map(ps->ps->ps->ps)
     // ps, &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
-    // &ps, &(ps[0]), sizeof(void*), ATTACH   // (+)
     // &(ps->ps->ps[0]), &(ps->ps->ps->ps), sizeof(S2*), FROM
     // &(ps->ps->ps), &(ps->ps->ps->ps), sizeof(void*), ATTACH
     //
     // map(to: ps->ps->ps->s.f[:22])
     // ps, &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
-    // &ps, &(ps[0]), sizeof(void*), ATTACH   // (+)
     // &(ps->ps->ps[0]), &(ps->ps->ps->s.f[0]), 22*sizeof(float), TO
     // &(ps->ps->ps), &(ps->ps->ps->s.f[0]), sizeof(void*), ATTACH
     //
@@ -7721,7 +7714,7 @@ private:
     // &s, &(s.p), sizeof(double*), MEMBER_OF(1) | TO | FROM | IMPLICIT
     // &(s.p[0]), &(s.p[0]), 33*sizeof(double), FROM
     // &(s.p), &(s.p[0]), sizeof(void*), ATTACH
-    // (*) allocate contiguous space needed to fit all mapped members even if
+    // (**) allocate contiguous space needed to fit all mapped members even if
     //     we allocate space for members not mapped (in this example,
     //     s.f[22..49] and s.s are not mapped, yet we must allocate space for
     //     them as well because they fall between &s.f[0] and &s.p)
@@ -7734,7 +7727,6 @@ private:
     // map(from: s.f[:22]) map(to: ps->p[:33])
     // &s, &(s.f[0]), 22*sizeof(float), TARGET_PARAM | FROM
     // &ps[0], &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
-    // &ps, &(ps[0]), sizeof(void*), ATTACH       // (+)
     // &(ps->p[0]), &(ps->p[0]), 33*sizeof(double), TO
     // &(ps->p), &(ps->p[0]), sizeof(void*), ATTACH
     //
@@ -7743,7 +7735,6 @@ private:
     // &s, &(s.f[0]), 22*sizeof(float), MEMBER_OF(1) | FROM
     // &s, &(s.s), sizeof(struct S1), MEMBER_OF(1) | FROM
     // ps, &ps[0], 0, TARGET_PARAM | IMPLICIT // (+)
-    // &ps, &(ps[0]), sizeof(void*), ATTACH   // (+)
     // &(ps->p[0]), &(ps->p[0]), 33*sizeof(double), TO
     // &(ps->p), &(ps->p[0]), sizeof(void*), ATTACH
     //
