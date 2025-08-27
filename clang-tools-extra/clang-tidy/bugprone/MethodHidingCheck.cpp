@@ -118,12 +118,12 @@ void MethodHidingCheck::check(const MatchFinder::MatchResult &Result) {
   if (!ShadowingMethod || !DerivedClass || !BaseMethod)
     llvm_unreachable("Required binding not found");
 
-  diag(ShadowingMethod->getBeginLoc(),
-       "'" + ShadowingMethod->getQualifiedNameAsString() +
-           "' hides same method in '" +
-           BaseMethod->getParent()->getNameAsString() + "'");
-  diag(BaseMethod->getBeginLoc(), "previous definition is here",
-       DiagnosticIDs::Note);
+  diag(ShadowingMethod->getBeginLoc(), "'%0' hides same method in '%1'")
+      << ShadowingMethod->getQualifiedNameAsString()
+      << BaseMethod->getParent()->getNameAsString();
+  diag(BaseMethod->getBeginLoc(), "previous definition of '%0' is here",
+       DiagnosticIDs::Note)
+      << ShadowingMethod->getNameAsString();
 }
 
 } // namespace clang::tidy::bugprone
