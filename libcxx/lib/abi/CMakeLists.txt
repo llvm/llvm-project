@@ -48,7 +48,6 @@ if (CMAKE_CXX_COMPILER_TARGET)
 else()
   set(triple "${LLVM_DEFAULT_TARGET_TRIPLE}")
 endif()
-
 cxx_abi_list_identifier(abi_list_identifier
   "${triple}"
   "${LIBCXX_CXX_ABI}"
