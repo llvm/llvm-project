@@ -227,9 +227,10 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       (Options.UnsafeFPMath || isTargetDarwin()))
     HasNEONForFP = true;
 
+  const ARM::ArchKind Arch = ARM::parseArch(TargetTriple.getArchName());
   if (isRWPI() ||
       (isTargetIOS() &&
-       ARM::parseArch(TargetTriple.getArchName()) == ARM::ArchKind::ARMV6K &&
+       (Arch == ARM::ArchKind::ARMV6K || Arch == ARM::ArchKind::ARMV6) &&
        TargetTriple.isOSVersionLT(3, 0)))
     ReserveR9 = true;
 
