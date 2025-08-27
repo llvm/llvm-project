@@ -143,6 +143,64 @@ private:
   parser::CharBlock source_;
 };
 
+// 'OmpWorkdistributeBlockChecker' is used to check the validity of the
+// assignment statements and the expressions enclosed in an OpenMP
+// WORKDISTRIBUTE construct
+class OmpWorkdistributeBlockChecker {
+public:
+  OmpWorkdistributeBlockChecker(
+      SemanticsContext &context, parser::CharBlock source)
+      : context_{context}, source_{source} {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::AssignmentStmt &assignment) {
+    const auto &var{std::get<parser::Variable>(assignment.t)};
+    const auto &expr{std::get<parser::Expr>(assignment.t)};
+    const auto *lhs{GetExpr(context_, var)};
+    const auto *rhs{GetExpr(context_, expr)};
+    if (lhs && rhs) {
+      Tristate isDefined{semantics::IsDefinedAssignment(
+          lhs->GetType(), lhs->Rank(), rhs->GetType(), rhs->Rank())};
+      if (isDefined == Tristate::Yes) {
+        context_.Say(expr.source,
+            "Defined assignment statement is not allowed in a WORKDISTRIBUTE construct"_err_en_US);
+      }
+    }
+    return true;
+  }
+
+  bool Pre(const parser::Expr &expr) {
+    if (const auto *e{GetExpr(context_, expr)}) {
+      if (!e)
+        return false;
+      for (const Symbol &symbol : evaluate::CollectSymbols(*e)) {
+        const Symbol &root{GetAssociationRoot(symbol)};
+        if (IsFunction(root)) {
+          std::vector<std::string> attrs;
+          if (!IsElementalProcedure(root)) {
+            attrs.push_back("non-ELEMENTAL");
+          }
+          if (root.attrs().test(Attr::IMPURE)) {
+            attrs.push_back("IMPURE");
+          }
+          std::string attrsStr =
+              attrs.empty() ? "" : " " + llvm::join(attrs, ", ");
+          context_.Say(expr.source,
+              "User defined%s function '%s' is not allowed in a WORKDISTRIBUTE construct"_err_en_US,
+              attrsStr, root.name());
+        }
+      }
+    }
+    return false;
+  }
+
+private:
+  SemanticsContext &context_;
+  parser::CharBlock source_;
+};
+
 // `OmpUnitedTaskDesignatorChecker` is used to check if the designator
 // can appear within the TASK construct
 class OmpUnitedTaskDesignatorChecker {
@@ -785,6 +843,30 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   const parser::Block &block{std::get<parser::Block>(x.t)};
 
   PushContextAndClauseSets(beginSpec.DirName().source, beginSpec.DirId());
+
+  // Missing mandatory end block: this is checked in semantics because that
+  // makes it easier to control the error messages.
+  // The end block is mandatory when the construct is not applied to a strictly
+  // structured block (aka it is applied to a loosely structured block). In
+  // other words, the body doesn't contain exactly one parser::BlockConstruct.
+  auto isStrictlyStructuredBlock{[](const parser::Block &block) -> bool {
+    if (block.size() != 1) {
+      return false;
+    }
+    const parser::ExecutionPartConstruct &contents{block.front()};
+    auto *executableConstruct{
+        std::get_if<parser::ExecutableConstruct>(&contents.u)};
+    if (!executableConstruct) {
+      return false;
+    }
+    return std::holds_alternative<common::Indirection<parser::BlockConstruct>>(
+        executableConstruct->u);
+  }};
+  if (!endSpec && !isStrictlyStructuredBlock(block)) {
+    context_.Say(
+        x.BeginDir().source, "Expected OpenMP end directive"_err_en_US);
+  }
+
   if (llvm::omp::allTargetSet.test(GetContext().directive)) {
     EnterDirectiveNest(TargetNest);
   }
@@ -814,6 +896,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
       context_.Say(GetContextParent().directiveSource,
           "TARGET construct with nested TEAMS region contains statements or "
           "directives outside of the TEAMS construct"_err_en_US);
+    }
+    if (GetContext().directive == llvm::omp::Directive::OMPD_workdistribute &&
+        GetContextParent().directive != llvm::omp::Directive::OMPD_teams) {
+      context_.Say(x.BeginDir().DirName().source,
+          "%s region can only be strictly nested within TEAMS region"_err_en_US,
+          ContextDirectiveAsFortran());
     }
   }
 
@@ -897,6 +985,17 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     CheckWorkshareBlockStmts(block, beginSpec.source);
     HasInvalidWorksharingNesting(
         beginSpec.source, llvm::omp::nestedWorkshareErrSet);
+    break;
+  case llvm::omp::OMPD_workdistribute:
+    if (!CurrentDirectiveIsNested()) {
+      context_.Say(beginSpec.source,
+          "A WORKDISTRIBUTE region must be nested inside TEAMS region only."_err_en_US);
+    }
+    CheckWorkdistributeBlockStmts(block, beginSpec.source);
+    break;
+  case llvm::omp::OMPD_teams_workdistribute:
+  case llvm::omp::OMPD_target_teams_workdistribute:
+    CheckWorkdistributeBlockStmts(block, beginSpec.source);
     break;
   case llvm::omp::Directive::OMPD_scope:
   case llvm::omp::Directive::OMPD_single:
@@ -1039,14 +1138,23 @@ void OmpStructureChecker::Leave(const parser::OmpBeginDirective &) {
 void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   const auto &beginSectionsDir{
       std::get<parser::OmpBeginSectionsDirective>(x.t)};
-  const auto &endSectionsDir{std::get<parser::OmpEndSectionsDirective>(x.t)};
+  const auto &endSectionsDir{
+      std::get<std::optional<parser::OmpEndSectionsDirective>>(x.t)};
   const auto &beginDir{
       std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-  const auto &endDir{std::get<parser::OmpSectionsDirective>(endSectionsDir.t)};
+  PushContextAndClauseSets(beginDir.source, beginDir.v);
+
+  if (!endSectionsDir) {
+    context_.Say(beginSectionsDir.source,
+        "Expected OpenMP END SECTIONS directive"_err_en_US);
+    // Following code assumes the option is present.
+    return;
+  }
+
+  const auto &endDir{std::get<parser::OmpSectionsDirective>(endSectionsDir->t)};
   CheckMatching<parser::OmpSectionsDirective>(beginDir, endDir);
 
-  PushContextAndClauseSets(beginDir.source, beginDir.v);
-  AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endSectionsDir.t));
+  AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endSectionsDir->t));
 
   const auto &sectionBlocks{std::get<std::list<parser::OpenMPConstruct>>(x.t)};
   for (const parser::OpenMPConstruct &construct : sectionBlocks) {
@@ -3069,7 +3177,7 @@ void OmpStructureChecker::CheckReductionObjectTypes(
     // r = 0; r = r + r2
     // But it might be valid to use these with DECLARE REDUCTION.
     // Assumed size is already caught elsewhere.
-    bool cannotBeBuiltinReduction{evaluate::IsAssumedRank(*symbol)};
+    bool cannotBeBuiltinReduction{IsAssumedRank(*symbol)};
     if (auto *type{symbol->GetType()}) {
       const auto &scope{context_.FindScope(symbol->name())};
       if (!IsReductionAllowedForType(
@@ -4542,6 +4650,27 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
           "The structured block in a WORKSHARE construct may consist of only "
           "SCALAR or ARRAY assignments, FORALL or WHERE statements, "
           "FORALL, WHERE, ATOMIC, CRITICAL or PARALLEL constructs"_err_en_US);
+    }
+  }
+}
+
+void OmpStructureChecker::CheckWorkdistributeBlockStmts(
+    const parser::Block &block, parser::CharBlock source) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  unsigned since{60};
+  if (version < since)
+    context_.Say(source,
+        "WORKDISTRIBUTE construct is not allowed in %s, %s"_err_en_US,
+        ThisVersion(version), TryVersion(since));
+
+  OmpWorkdistributeBlockChecker ompWorkdistributeBlockChecker{context_, source};
+
+  for (auto it{block.begin()}; it != block.end(); ++it) {
+    if (parser::Unwrap<parser::AssignmentStmt>(*it)) {
+      parser::Walk(*it, ompWorkdistributeBlockChecker);
+    } else {
+      context_.Say(source,
+          "The structured block in a WORKDISTRIBUTE construct may consist of only SCALAR or ARRAY assignments"_err_en_US);
     }
   }
 }

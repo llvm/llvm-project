@@ -135,6 +135,13 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
+- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
+  check.
+
+  Finds calls to ``operator[]`` in STL containers and suggests replacing them
+  with safe alternatives.
+
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 
@@ -163,7 +170,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
-  declarations in system headers.
+  declarations and macros in system headers.
 
 - Improved :doc:`bugprone-signed-char-misuse
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
@@ -229,8 +236,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
-  declarations in system headers. The documentation is also improved to
-  differentiate the general options from the specific ones.
+  declarations and macros in system headers. The documentation is also improved
+  to differentiate the general options from the specific ones.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
