@@ -116,6 +116,7 @@ define void @store_sc(ptr %0, i32 %1) nounwind {
 ; SPARC32-LEON4-NEXT:    stbar
 ; SPARC32-LEON4-NEXT:    st %o1, [%o0]
 ; SPARC32-LEON4-NEXT:    stbar
+; SPARC32-LEON4-NEXT:    ldstub [%sp+-1], %g0
 ; SPARC32-LEON4-NEXT:    retl
 ; SPARC32-LEON4-NEXT:    nop
 ;

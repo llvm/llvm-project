@@ -561,6 +561,9 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
   let isPseudo = 1;
 }
 
+// Full memory barrier for V8.
+def V8BAR : Pseudo<(outs), (ins), "!V8BAR", []>, Requires<[HasNoV9]>;
+
 // GETPCX for PIC
 let Defs = [O7] in {
   def GETPCX : Pseudo<(outs getPCX:$getpcseq), (ins), "$getpcseq", [] >;
@@ -1965,7 +1968,7 @@ let Predicates = [HasNoV9] in {
   def : Pat<(atomic_fence (i32 5), timm), (STBAR)>;
   // AcqRel and stronger -> stbar; ldstub [%sp-1], %g0
   // FIXME how to actually emit the ldstub?
-  def : Pat<(atomic_fence timm, timm), (STBAR)>;
+  def : Pat<(atomic_fence timm, timm), (V8BAR)>;
 }
 
 // We have to handle both 32 and 64-bit cases.
