@@ -9,8 +9,34 @@
 # See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 #
 # ------------------------------------------------------------------------------
-import lldbsuite.test.lldbinline as lldbinline
+from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 
-lldbinline.MakeInlineTest(__file__, globals(),
-                          decorators=[swiftTest])
+
+class TestClosureShortcuts(TestBase):
+    @swiftTest
+    def test(self):
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "break here for anonymous variable", lldb.SBFileSpec("main.swift")
+        )
+        #
+        # rdar://159316245
+        self.runCmd("settings set target.experimental.use-DIL false")
+        self.expect("expr $0", substrs=["patatino"])
+        self.expect("expr $1", substrs=["foo"])
+        self.expect("frame var $0", substrs=["patatino"])
+        self.expect("frame var $1", substrs=["foo"])
+
+        lldbutil.continue_to_source_breakpoint(
+            self, process, "break here for tinky", lldb.SBFileSpec("main.swift")
+        )
+        self.expect("expr [12, 14].map({$0 + 2})", substrs=["[0] = 14", "[1] = 16"])
+
+        lldbutil.continue_to_source_breakpoint(
+            self, process, "break here for outer scope", lldb.SBFileSpec("main.swift")
+        )
+        self.expect("expr tinky.map({$0 * 2})", substrs=["[0] = 4", "[1] = 8"])
+        self.expect("expr [2,4].map({$0 * 2})", substrs=["[0] = 4", "[1] = 8"])
+        self.expect("expr $0", substrs=["cannot find '$0' in scope"], error=True)
