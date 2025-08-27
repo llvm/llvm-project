@@ -29,23 +29,33 @@ static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
 }
 
 size_t RootSignatureDesc::getSize() const {
-  size_t Size =
-      sizeof(dxbc::RTS0::v1::RootSignatureHeader) +
-      ParametersContainer.size() * sizeof(dxbc::RTS0::v1::RootParameterHeader) +
+  uint32_t StaticSamplersOffset = computeStaticSamplersOffset();
+  size_t StaticSamplersSize =
       StaticSamplers.size() * sizeof(dxbc::RTS0::v1::StaticSampler);
 
+  return size_t(StaticSamplersOffset) + StaticSamplersSize;
+}
+
+uint32_t RootSignatureDesc::computeRootParametersOffset() const {
+  return sizeof(dxbc::RTS0::v1::RootSignatureHeader);
+}
+
+uint32_t RootSignatureDesc::computeStaticSamplersOffset() const {
+  uint32_t Offset = computeRootParametersOffset();
+
   for (const RootParameterInfo &I : ParametersContainer) {
+    Offset += sizeof(dxbc::RTS0::v1::RootParameterHeader);
     switch (I.Type) {
     case dxbc::RootParameterType::Constants32Bit:
-      Size += sizeof(dxbc::RTS0::v1::RootConstants);
+      Offset += sizeof(dxbc::RTS0::v1::RootConstants);
       break;
     case dxbc::RootParameterType::CBV:
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
       if (Version == 1)
-        Size += sizeof(dxbc::RTS0::v1::RootDescriptor);
+        Offset += sizeof(dxbc::RTS0::v1::RootDescriptor);
       else
-        Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
+        Offset += sizeof(dxbc::RTS0::v2::RootDescriptor);
 
       break;
     case dxbc::RootParameterType::DescriptorTable:
@@ -54,15 +64,16 @@ size_t RootSignatureDesc::getSize() const {
 
       // 4 bytes for the number of ranges in table and
       // 4 bytes for the ranges offset
-      Size += 2 * sizeof(uint32_t);
+      Offset += 2 * sizeof(uint32_t);
       if (Version == 1)
-        Size += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
+        Offset += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
       else
-        Size += sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size();
+        Offset += sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size();
       break;
     }
   }
-  return Size;
+
+  return Offset;
 }
 
 void RootSignatureDesc::write(raw_ostream &OS) const {

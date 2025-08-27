@@ -269,26 +269,10 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       mcdxbc::RootSignatureDesc RS;
       RS.Flags = P.RootSignature->getEncodedFlags();
       RS.Version = P.RootSignature->Version;
-
-      // Handling of RootParameters
-      const uint32_t RootHeaderSize =
-          sizeof(dxbc::RTS0::v1::RootSignatureHeader);
-      if (P.RootSignature->RootParametersOffset &&
-          P.RootSignature->RootParametersOffset.value() != RootHeaderSize) {
-        return createStringError(
-            errc::invalid_argument,
-            "Specified RootParametersOffset does not match required value: %d.",
-            RootHeaderSize);
-      }
-
-      uint32_t Offset = RootHeaderSize;
-      RS.RootParameterOffset = Offset;
+      RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
 
       for (DXContainerYAML::RootParameterLocationYaml &L :
            P.RootSignature->Parameters.Locations) {
-
-        // Offset RootParameterHeader
-        Offset += sizeof(dxbc::RTS0::v1::RootParameterHeader);
 
         assert(dxbc::isValidParameterType(L.Header.Type) &&
                "invalid DXContainer YAML");
@@ -308,8 +292,6 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
           Constants.RegisterSpace = ConstantYaml.RegisterSpace;
           Constants.ShaderRegister = ConstantYaml.ShaderRegister;
           RS.ParametersContainer.addParameter(Type, Visibility, Constants);
-
-          Offset += sizeof(dxbc::RTS0::v1::RootConstants);
           break;
         }
         case dxbc::RootParameterType::CBV:
@@ -321,11 +303,8 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
           dxbc::RTS0::v2::RootDescriptor Descriptor;
           Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
           Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
-          if (RS.Version > 1) {
+          if (RS.Version > 1)
             Descriptor.Flags = DescriptorYaml.getEncodedFlags();
-            Offset += sizeof(dxbc::RTS0::v2::RootDescriptor);
-          } else
-            Offset += sizeof(dxbc::RTS0::v1::RootDescriptor);
 
           RS.ParametersContainer.addParameter(Type, Visibility, Descriptor);
           break;
@@ -334,8 +313,6 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
           const DXContainerYAML::DescriptorTableYaml &TableYaml =
               P.RootSignature->Parameters.getOrInsertTable(L);
           mcdxbc::DescriptorTable Table;
-          Offset +=
-              2 * sizeof(uint32_t); // DescriptorTable NumRanges and Offset
           for (const auto &R : TableYaml.Ranges) {
 
             dxbc::RTS0::v2::DescriptorRange Range;
@@ -346,11 +323,8 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
             Range.OffsetInDescriptorsFromTableStart =
                 R.OffsetInDescriptorsFromTableStart;
 
-            if (RS.Version > 1) {
-              Offset += sizeof(dxbc::RTS0::v2::DescriptorRange);
+            if (RS.Version > 1)
               Range.Flags = R.getEncodedFlags();
-            } else
-              Offset += sizeof(dxbc::RTS0::v1::DescriptorRange);
 
             Table.Ranges.push_back(Range);
           }
@@ -359,19 +333,6 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         }
         }
       }
-
-      // Handling of StaticSamplers
-      RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
-
-      if (P.RootSignature->StaticSamplersOffset &&
-          P.RootSignature->StaticSamplersOffset.value() != Offset) {
-        return createStringError(
-            errc::invalid_argument,
-            "Specified StaticSamplersOffset does not match computed value: %d.",
-            Offset);
-      }
-
-      RS.StaticSamplersOffset = Offset;
 
       for (const auto &Param : P.RootSignature->samplers()) {
         dxbc::RTS0::v1::StaticSampler NewSampler;
@@ -390,6 +351,27 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         NewSampler.ShaderVisibility = Param.ShaderVisibility;
 
         RS.StaticSamplers.push_back(NewSampler);
+      }
+
+      // Handling of offsets
+      RS.RootParameterOffset = RS.computeRootParametersOffset();
+      if (P.RootSignature->RootParametersOffset &&
+          P.RootSignature->RootParametersOffset.value() !=
+              RS.RootParameterOffset) {
+        return createStringError(
+            errc::invalid_argument,
+            "Specified RootParametersOffset does not match required value: %d.",
+            RS.RootParameterOffset);
+      }
+
+      RS.StaticSamplersOffset = RS.computeStaticSamplersOffset();
+      if (P.RootSignature->StaticSamplersOffset &&
+          P.RootSignature->StaticSamplersOffset.value() !=
+              RS.StaticSamplersOffset) {
+        return createStringError(
+            errc::invalid_argument,
+            "Specified StaticSamplersOffset does not match computed value: %d.",
+            RS.StaticSamplersOffset);
       }
 
       RS.write(OS);
