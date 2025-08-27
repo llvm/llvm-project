@@ -88,8 +88,8 @@ public:
   TrackedRegisters(ArrayRef<MCPhysReg> RegsToTrack)
       : Registers(RegsToTrack),
         RegToIndexMapping(getMappingSize(RegsToTrack), NoIndex) {
-    for (unsigned I = 0; I < RegsToTrack.size(); ++I)
-      RegToIndexMapping[RegsToTrack[I]] = I;
+    for (auto [MappedIndex, Reg] : llvm::enumerate(RegsToTrack))
+      RegToIndexMapping[Reg] = MappedIndex;
   }
 
   ArrayRef<MCPhysReg> getRegisters() const { return Registers; }
@@ -203,9 +203,9 @@ struct SrcState {
 
     SafeToDerefRegs &= StateIn.SafeToDerefRegs;
     TrustedRegs &= StateIn.TrustedRegs;
-    for (unsigned I = 0; I < LastInstWritingReg.size(); ++I)
-      for (const MCInst *J : StateIn.LastInstWritingReg[I])
-        LastInstWritingReg[I].insert(J);
+    for (auto [ThisSet, OtherSet] :
+         llvm::zip_equal(LastInstWritingReg, StateIn.LastInstWritingReg))
+      ThisSet.insert_range(OtherSet);
     return *this;
   }
 
@@ -224,11 +224,9 @@ struct SrcState {
 static void printInstsShort(raw_ostream &OS,
                             ArrayRef<SetOfRelatedInsts> Insts) {
   OS << "Insts: ";
-  for (unsigned I = 0; I < Insts.size(); ++I) {
-    auto &Set = Insts[I];
+  for (auto [I, PtrSet] : llvm::enumerate(Insts)) {
     OS << "[" << I << "](";
-    for (const MCInst *MCInstP : Set)
-      OS << MCInstP << " ";
+    interleave(PtrSet, OS, " ");
     OS << ")";
   }
 }
@@ -416,8 +414,9 @@ protected:
     // ... an address can be updated in a safe manner, producing the result
     // which is as trusted as the input address.
     if (auto DstAndSrc = BC.MIB->analyzeAddressArithmeticsForPtrAuth(Point)) {
-      if (Cur.SafeToDerefRegs[DstAndSrc->second])
-        Regs.push_back(DstAndSrc->first);
+      auto [DstReg, SrcReg] = *DstAndSrc;
+      if (Cur.SafeToDerefRegs[SrcReg])
+        Regs.push_back(DstReg);
     }
 
     // Make sure explicit checker sequence keeps register safe-to-dereference
@@ -469,8 +468,9 @@ protected:
     // ... an address can be updated in a safe manner, producing the result
     // which is as trusted as the input address.
     if (auto DstAndSrc = BC.MIB->analyzeAddressArithmeticsForPtrAuth(Point)) {
-      if (Cur.TrustedRegs[DstAndSrc->second])
-        Regs.push_back(DstAndSrc->first);
+      auto [DstReg, SrcReg] = *DstAndSrc;
+      if (Cur.TrustedRegs[SrcReg])
+        Regs.push_back(DstReg);
     }
 
     return Regs;
@@ -868,9 +868,9 @@ struct DstState {
       return (*this = StateIn);
 
     CannotEscapeUnchecked &= StateIn.CannotEscapeUnchecked;
-    for (unsigned I = 0; I < FirstInstLeakingReg.size(); ++I)
-      for (const MCInst *J : StateIn.FirstInstLeakingReg[I])
-        FirstInstLeakingReg[I].insert(J);
+    for (auto [ThisSet, OtherSet] :
+         llvm::zip_equal(FirstInstLeakingReg, StateIn.FirstInstLeakingReg))
+      ThisSet.insert_range(OtherSet);
     return *this;
   }
 
@@ -1036,8 +1036,7 @@ protected:
 
     // ... an address can be updated in a safe manner, or
     if (auto DstAndSrc = BC.MIB->analyzeAddressArithmeticsForPtrAuth(Inst)) {
-      MCPhysReg DstReg, SrcReg;
-      std::tie(DstReg, SrcReg) = *DstAndSrc;
+      auto [DstReg, SrcReg] = *DstAndSrc;
       // Note that *all* registers containing the derived values must be safe,
       // both source and destination ones. No temporaries are supported at now.
       if (Cur.CannotEscapeUnchecked[SrcReg] &&
@@ -1077,7 +1076,7 @@ protected:
     // If this instruction terminates the program immediately, no
     // authentication oracles are possible past this point.
     if (BC.MIB->isTrap(Point)) {
-      LLVM_DEBUG({ traceInst(BC, "Trap instruction found", Point); });
+      LLVM_DEBUG(traceInst(BC, "Trap instruction found", Point));
       DstState Next(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
       Next.CannotEscapeUnchecked.set();
       return Next;
@@ -1255,7 +1254,7 @@ public:
       // starting to analyze Inst.
       if (BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst) ||
           BC.MIB->isReturn(Inst)) {
-        LLVM_DEBUG({ traceInst(BC, "Control flow instruction", Inst); });
+        LLVM_DEBUG(traceInst(BC, "Control flow instruction", Inst));
         S = createUnsafeState();
       }
 
@@ -1400,12 +1399,12 @@ shouldReportUnsafeTailCall(const BinaryContext &BC, const BinaryFunction &BF,
   // such libc, ignore tail calls performed by ELF entry function.
   if (BC.StartFunctionAddress &&
       *BC.StartFunctionAddress == Inst.getFunction()->getAddress()) {
-    LLVM_DEBUG({ dbgs() << "  Skipping tail call in ELF entry function.\n"; });
+    LLVM_DEBUG(dbgs() << "  Skipping tail call in ELF entry function.\n");
     return std::nullopt;
   }
 
   if (BC.MIB->isSafeJumpTableBranchForPtrAuth(Inst)) {
-    LLVM_DEBUG({ dbgs() << "  Safe jump table detected, skipping.\n"; });
+    LLVM_DEBUG(dbgs() << "  Safe jump table detected, skipping.\n");
     return std::nullopt;
   }
 
@@ -1440,7 +1439,7 @@ shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
     return std::nullopt;
 
   if (BC.MIB->isSafeJumpTableBranchForPtrAuth(Inst)) {
-    LLVM_DEBUG({ dbgs() << "  Safe jump table detected, skipping.\n"; });
+    LLVM_DEBUG(dbgs() << "  Safe jump table detected, skipping.\n");
     return std::nullopt;
   }
 
@@ -1484,7 +1483,7 @@ shouldReportAuthOracle(const BinaryContext &BC, const MCInstReference &Inst,
   });
 
   if (S.empty()) {
-    LLVM_DEBUG({ dbgs() << "    DstState is empty!\n"; });
+    LLVM_DEBUG(dbgs() << "    DstState is empty!\n");
     return make_generic_report(
         Inst, "Warning: no state computed for an authentication instruction "
               "(possibly unreachable)");
@@ -1511,7 +1510,7 @@ collectRegsToTrack(ArrayRef<PartialReport<MCPhysReg>> Reports) {
 void FunctionAnalysisContext::findUnsafeUses(
     SmallVector<PartialReport<MCPhysReg>> &Reports) {
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, {});
-  LLVM_DEBUG({ dbgs() << "Running src register safety analysis...\n"; });
+  LLVM_DEBUG(dbgs() << "Running src register safety analysis...\n");
   Analysis->run();
   LLVM_DEBUG({
     dbgs() << "After src register safety analysis:\n";
@@ -1568,8 +1567,7 @@ void FunctionAnalysisContext::findUnsafeUses(
 
     const SrcState &S = Analysis->getStateBefore(Inst);
     if (S.empty()) {
-      LLVM_DEBUG(
-          { traceInst(BC, "Instruction has no state, skipping", Inst); });
+      LLVM_DEBUG(traceInst(BC, "Instruction has no state, skipping", Inst));
       assert(UnreachableBBReported && "Should be reported at least once");
       (void)UnreachableBBReported;
       return;
@@ -1596,8 +1594,7 @@ void FunctionAnalysisContext::augmentUnsafeUseReports(
   SmallVector<MCPhysReg> RegsToTrack = collectRegsToTrack(Reports);
   // Re-compute the analysis with register tracking.
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, RegsToTrack);
-  LLVM_DEBUG(
-      { dbgs() << "\nRunning detailed src register safety analysis...\n"; });
+  LLVM_DEBUG(dbgs() << "\nRunning detailed src register safety analysis...\n");
   Analysis->run();
   LLVM_DEBUG({
     dbgs() << "After detailed src register safety analysis:\n";
@@ -1607,7 +1604,7 @@ void FunctionAnalysisContext::augmentUnsafeUseReports(
   // Augment gadget reports.
   for (auto &Report : Reports) {
     MCInstReference Location = Report.Issue->Location;
-    LLVM_DEBUG({ traceInst(BC, "Attaching clobbering info to", Location); });
+    LLVM_DEBUG(traceInst(BC, "Attaching clobbering info to", Location));
     assert(Report.RequestedDetails &&
            "Should be removed by handleSimpleReports");
     auto DetailedInfo =
@@ -1625,7 +1622,7 @@ void FunctionAnalysisContext::findUnsafeDefs(
     return;
 
   auto Analysis = DstSafetyAnalysis::create(BF, AllocatorId, {});
-  LLVM_DEBUG({ dbgs() << "Running dst register safety analysis...\n"; });
+  LLVM_DEBUG(dbgs() << "Running dst register safety analysis...\n");
   Analysis->run();
   LLVM_DEBUG({
     dbgs() << "After dst register safety analysis:\n";
@@ -1648,8 +1645,7 @@ void FunctionAnalysisContext::augmentUnsafeDefReports(
   SmallVector<MCPhysReg> RegsToTrack = collectRegsToTrack(Reports);
   // Re-compute the analysis with register tracking.
   auto Analysis = DstSafetyAnalysis::create(BF, AllocatorId, RegsToTrack);
-  LLVM_DEBUG(
-      { dbgs() << "\nRunning detailed dst register safety analysis...\n"; });
+  LLVM_DEBUG(dbgs() << "\nRunning detailed dst register safety analysis...\n");
   Analysis->run();
   LLVM_DEBUG({
     dbgs() << "After detailed dst register safety analysis:\n";
@@ -1659,7 +1655,7 @@ void FunctionAnalysisContext::augmentUnsafeDefReports(
   // Augment gadget reports.
   for (auto &Report : Reports) {
     MCInstReference Location = Report.Issue->Location;
-    LLVM_DEBUG({ traceInst(BC, "Attaching leakage info to", Location); });
+    LLVM_DEBUG(traceInst(BC, "Attaching leakage info to", Location));
     assert(Report.RequestedDetails &&
            "Should be removed by handleSimpleReports");
     auto DetailedInfo = std::make_shared<LeakageInfo>(
@@ -1794,8 +1790,7 @@ static void printRelatedInstrs(raw_ostream &OS, const MCInstReference Location,
   llvm::sort(RI, [](const MCInstReference &A, const MCInstReference &B) {
     return getAddress(A) < getAddress(B);
   });
-  for (unsigned I = 0; I < RI.size(); ++I) {
-    MCInstReference InstRef = RI[I];
+  for (auto [I, InstRef] : llvm::enumerate(RI)) {
     OS << "  " << (I + 1) << ". ";
     BC.printInstruction(OS, InstRef, getAddress(InstRef), &BF);
   };
