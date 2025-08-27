@@ -14,6 +14,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -120,7 +121,14 @@ define void @f(i32* %p1, i32* %p2, i64 %i) {
   EXPECT_TRUE(canReplacePointersInUseIfEqual(IcmpUse, P2, DL));
 }
 
-TEST(LoadsTest, IsDerefReadOnlyLoop) {
+static Instruction *getInstructionByName(Function &F, StringRef Name) {
+  for (auto &I : instructions(F))
+    if (I.getName() == Name)
+      return &I;
+  llvm_unreachable("Expected to find instruction!");
+}
+
+TEST(LoadsTest, IsLoadOnlyFaultingLoop) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"IR(
@@ -180,10 +188,14 @@ loop.end:
   auto *F2 = dyn_cast<Function>(GV2);
   ASSERT_TRUE(F1 && F2);
 
+  auto *NonDerefLI = dyn_cast<LoadInst>(getInstructionByName(*F2, "ld1"));
+  ASSERT_TRUE(NonDerefLI);
+
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
 
-  auto IsDerefReadOnlyLoop = [&TLI](Function *F) -> bool {
+  auto IsLoadOnlyFaultingLoop = [&TLI](Function *F,
+                                       LoadInst *FFLI = nullptr) -> bool {
     AssumptionCache AC(*F);
     DominatorTree DT(*F);
     LoopInfo LI(DT);
@@ -196,10 +208,13 @@ loop.end:
     Loop *L = LI.getLoopFor(Header);
 
     SmallVector<LoadInst *, 4> NonDerefLoads;
+    if (FFLI)
+      return isLoopSafeWithLoadOnlyFaults(L, &SE, &DT, &AC, &NonDerefLoads) &&
+             (NonDerefLoads.size() == 1) && (NonDerefLoads[0] == FFLI);
     return isLoopSafeWithLoadOnlyFaults(L, &SE, &DT, &AC, &NonDerefLoads) &&
            NonDerefLoads.empty();
   };
 
-  ASSERT_TRUE(IsDerefReadOnlyLoop(F1));
-  ASSERT_FALSE(IsDerefReadOnlyLoop(F2));
+  ASSERT_TRUE(IsLoadOnlyFaultingLoop(F1));
+  ASSERT_TRUE(IsLoadOnlyFaultingLoop(F2, NonDerefLI));
 }
