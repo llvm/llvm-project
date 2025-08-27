@@ -2977,22 +2977,22 @@ public:
     for (Slice &S : P) {
       auto *User = cast<Instruction>(S.getUse()->getUser());
       if (auto *LI = dyn_cast<LoadInst>(User)) {
-        // Do not handle the case if 
+        // Do not handle the case if
         //   1. There is more than one load
         //   2. The load is volatile
         //   3. The load does not read the entire alloca structure
         //   4. The load does not meet the conditions in the helper function
         if (TheLoad || !IsTypeValidForTreeStructuredMerge(LI->getType()) ||
             S.beginOffset() != NewAllocaBeginOffset ||
-            S.endOffset() != NewAllocaEndOffset ||
-            LI->isVolatile())
+            S.endOffset() != NewAllocaEndOffset || LI->isVolatile())
           return std::nullopt;
         TheLoad = LI;
       } else if (auto *SI = dyn_cast<StoreInst>(User)) {
-        // Do not handle the case if 
+        // Do not handle the case if
         //   1. The store does not meet the conditions in the helper function
         //   2. The store is volatile
-        if (!IsTypeValidForTreeStructuredMerge(SI->getValueOperand()->getType()) ||
+        if (!IsTypeValidForTreeStructuredMerge(
+                SI->getValueOperand()->getType()) ||
             SI->isVolatile())
           return std::nullopt;
         StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
