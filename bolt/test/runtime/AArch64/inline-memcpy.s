@@ -7,7 +7,7 @@
 # RUN: llvm-bolt %t.exe --inline-memcpy -o %t.bolt 2>&1 | FileCheck %s --check-prefix=CHECK-INLINE
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-ASM
 
-# Verify BOLT reports that it inlined memcpy calls (all 8 calls processed)
+# Verify BOLT reports that it inlined memcpy calls (8 successful inlines out of 11 total calls)
 # CHECK-INLINE: BOLT-INFO: inlined 8 memcpy() calls
 
 # Each function should use optimal size-specific instructions and NO memcpy calls
@@ -66,6 +66,18 @@
 # CHECK-ASM-LABEL: <test_128_byte_too_large>:
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 # CHECK-ASM-NOT: ldr{{.*}}q{{[0-9]+}}
+
+# ADD immediate with non-zero source should NOT be inlined (can't track mov+add chain)
+# CHECK-ASM-LABEL: <test_4_byte_add_immediate>:
+# CHECK-ASM: bl{{.*}}<memcpy
+
+# Register move should NOT be inlined (size unknown at compile time)
+# CHECK-ASM-LABEL: <test_register_move_negative>:
+# CHECK-ASM: bl{{.*}}<memcpy
+
+# Live-in parameter should NOT be inlined (size unknown at compile time)
+# CHECK-ASM-LABEL: <test_live_in_negative>:
+# CHECK-ASM: bl{{.*}}<memcpy
 
 	.text
 	.globl	test_1_byte_direct                
@@ -172,6 +184,50 @@ test_128_byte_too_large:
 	ret
 	.size	test_128_byte_too_large, .-test_128_byte_too_large
 
+	.globl	test_4_byte_add_immediate
+	.type	test_4_byte_add_immediate,@function
+test_4_byte_add_immediate:
+	stp	x29, x30, [sp, #-32]!
+	mov	x29, sp
+	add	x1, sp, #16
+	add	x0, sp, #8
+	mov	x3, #0
+	add	x2, x3, #4
+	bl	memcpy
+	ldp	x29, x30, [sp], #32
+	ret
+	.size	test_4_byte_add_immediate, .-test_4_byte_add_immediate
+
+	.globl	test_register_move_negative
+	.type	test_register_move_negative,@function
+test_register_move_negative:
+	stp	x29, x30, [sp, #-32]!
+	mov	x29, sp
+	add	x1, sp, #16
+	add	x0, sp, #8
+	mov	x6, #4
+	mov	x2, x6
+	bl	memcpy
+	ldp	x29, x30, [sp], #32
+	ret
+	.size	test_register_move_negative, .-test_register_move_negative
+
+	.globl	test_live_in_negative
+	.type	test_live_in_negative,@function
+test_live_in_negative:
+	# x2 comes in as parameter, no instruction sets it (should NOT inline)
+	stp	x29, x30, [sp, #-32]!
+	mov	x29, sp
+	add	x1, sp, #16
+	add	x0, sp, #8
+	# x2 is live-in, no size-setting instruction
+	bl	memcpy
+	ldp	x29, x30, [sp], #32
+	ret
+	.size	test_live_in_negative, .-test_live_in_negative
+
+
+
 	.globl	main
 	.type	main,@function
 main:
@@ -186,6 +242,9 @@ main:
 	bl	test_32_byte_direct
 	bl	test_37_byte_arbitrary
 	bl	test_128_byte_too_large
+	bl	test_4_byte_add_immediate
+	bl	test_register_move_negative
+	bl	test_live_in_negative
 	
 	mov	w0, #0
 	ldp	x29, x30, [sp], #16
