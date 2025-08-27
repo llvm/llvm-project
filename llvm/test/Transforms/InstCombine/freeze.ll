@@ -1106,13 +1106,14 @@ define void @fold_phi_multiple_start_values(i1 %c, i32 %init, i32 %init2, i32 %n
 ; CHECK-LABEL: define void @fold_phi_multiple_start_values(
 ; CHECK-SAME: i1 [[C:%.*]], i32 [[INIT:%.*]], i32 [[INIT2:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze i32 [[INIT]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LOOP:.*]]
 ; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[INIT2_FR:%.*]] = freeze i32 [[INIT2]]
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT]], %[[ENTRY]] ], [ [[INIT2]], %[[IF]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[I_FR:%.*]] = freeze i32 [[I]]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_FR]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT_FR]], %[[ENTRY]] ], [ [[INIT2_FR]], %[[IF]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
