@@ -465,23 +465,37 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
 
 /// Create a single-scalar clone of \p DefR for lane \p Lane. Use \p
 /// Def2LaneDefs to look up scalar definitions for operands of \DefR.
-static VPRecipeWithIRFlags *
+static VPValue *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
              VPRecipeWithIRFlags *DefR, VPLane Lane,
              const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
+
+  VPValue *Op;
+  if (match(DefR, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)))) {
+    auto LaneDefs = Def2LaneDefs.find(Op);
+    if (LaneDefs != Def2LaneDefs.end())
+      return LaneDefs->second[Lane.getKnownLane()];
+
+    VPValue *Idx =
+        Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, Lane.getKnownLane()));
+    return Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
+  }
+
   // Collect the operands at Lane, creating extracts as needed.
   SmallVector<VPValue *> NewOps;
   for (VPValue *Op : DefR->operands()) {
+    if (Lane.getKind() == VPLane::Kind::ScalableLast) {
+      match(Op, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)));
+      NewOps.push_back(
+          Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
+      continue;
+    }
+
     // If Op is a definition that has been unrolled, directly use the clone for
     // the corresponding lane.
     auto LaneDefs = Def2LaneDefs.find(Op);
     if (LaneDefs != Def2LaneDefs.end()) {
       NewOps.push_back(LaneDefs->second[Lane.getKnownLane()]);
-      continue;
-    }
-    if (Lane.getKind() == VPLane::Kind::ScalableLast) {
-      NewOps.push_back(
-          Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
       continue;
     }
     if (vputils::isSingleScalar(Op)) {
@@ -497,8 +511,8 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     }
     VPValue *Idx =
         Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, Lane.getKnownLane()));
-    VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
-    NewOps.push_back(Ext);
+    NewOps.push_back(
+        Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx}));
   }
 
   VPRecipeWithIRFlags *New;
@@ -544,7 +558,8 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       if ((isa<VPReplicateRecipe>(DefR) &&
            cast<VPReplicateRecipe>(DefR)->isSingleScalar()) ||
           (isa<VPInstruction>(DefR) &&
-           !cast<VPInstruction>(DefR)->doesGeneratePerAllLanes()))
+           !cast<VPInstruction>(DefR)->doesGeneratePerAllLanes() &&
+           cast<VPInstruction>(DefR)->getOpcode() != VPInstruction::Unpack))
         continue;
 
       VPBuilder Builder(DefR);
