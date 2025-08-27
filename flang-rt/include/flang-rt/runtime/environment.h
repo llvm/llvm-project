@@ -15,20 +15,6 @@
 
 struct EnvironmentDefaultList;
 
-#if 0
-// ExecutionEnvironment::Configure() allows for optional callback functions
-// to be run pre and post the core logic.
-// Most likely scenario is when a user supplied constructor function is
-// run prior to _QQmain calling RTNAME(ProgramStart)().
-
-extern "C" {
-bool RTNAME(RegisterConfigureEnv)(void (*)(int, const char *[], const char *[],
-                                      const EnvironmentDefaultList *),
-    void (*)(
-        int, const char *[], const char *[], const EnvironmentDefaultList *));
-}
-#endif
-
 namespace Fortran::runtime {
 
 class Terminator;
