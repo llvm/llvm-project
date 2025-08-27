@@ -59,7 +59,6 @@ public:
     }
     // Size == -1 means unbounded array
     LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);
-    LLVM_ABI bool isBound(const BindingRange &Range) const;
 
     bool operator==(const RegisterSpace &Other) const {
       return Space == Other.Space;
@@ -103,94 +102,90 @@ public:
   // Size == -1 means unbounded array
   LLVM_ABI std::optional<uint32_t>
   findAvailableBinding(dxil::ResourceClass RC, uint32_t Space, int32_t Size);
-
-  LLVM_ABI bool isBound(dxil::ResourceClass RC, uint32_t Space,
-                        const BindingRange &Range) const;
-
   friend class BindingInfoBuilder;
 };
-  struct Binding {
-    dxil::ResourceClass RC;
-    uint32_t Space;
-    uint32_t LowerBound;
-    uint32_t UpperBound;
-    const void *Cookie;
+struct Binding {
+  dxil::ResourceClass RC;
+  uint32_t Space;
+  uint32_t LowerBound;
+  uint32_t UpperBound;
+  const void *Cookie;
 
-    Binding(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
-            uint32_t UpperBound, const void *Cookie)
-        : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound),
-          Cookie(Cookie) {}
+  Binding(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
+          uint32_t UpperBound, const void *Cookie)
+      : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound),
+        Cookie(Cookie) {}
 
-    bool isUnbounded() const { return UpperBound == ~0U; }
+  bool isUnbounded() const { return UpperBound == ~0U; }
 
-    bool operator==(const Binding &RHS) const {
-      return std::tie(RC, Space, LowerBound, UpperBound, Cookie) ==
-             std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound,
-                      RHS.Cookie);
-    }
-    bool operator!=(const Binding &RHS) const { return !(*this == RHS); }
+  bool operator==(const Binding &RHS) const {
+    return std::tie(RC, Space, LowerBound, UpperBound, Cookie) ==
+            std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound,
+                    RHS.Cookie);
+  }
+  bool operator!=(const Binding &RHS) const { return !(*this == RHS); }
 
-    bool operator<(const Binding &RHS) const {
-      return std::tie(RC, Space, LowerBound) <
-             std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
-    }
-  };
-  class BoundRegs {
-    SmallVector<Binding> Bindings;
+  bool operator<(const Binding &RHS) const {
+    return std::tie(RC, Space, LowerBound) <
+            std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
+  }
+};
+class BoundRegs {
+  SmallVector<Binding> Bindings;
 
-  public:
-    BoundRegs(SmallVector<Binding> &&Bindings)
-        : Bindings(std::move(Bindings)) {}
+public:
+  BoundRegs(SmallVector<Binding> &&Bindings)
+      : Bindings(std::move(Bindings)) {}
 
-    bool isBound(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
-                 uint32_t UpperBound) const {
-      const Binding *It = llvm::upper_bound(
-          Bindings, Binding{RC, Space, LowerBound, 0, nullptr});
-      if (It == Bindings.begin())
-        return false;
-      --It;
-      return It->RC == RC && It->Space == Space &&
-             It->LowerBound <= LowerBound && It->UpperBound >= UpperBound;
-    }
-  };
+  bool isBound(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
+                uint32_t UpperBound) const {
+    const Binding *It = llvm::upper_bound(
+        Bindings, Binding{RC, Space, LowerBound, 0, nullptr});
+    if (It == Bindings.begin())
+      return false;
+    --It;
+    return It->RC == RC && It->Space == Space &&
+            It->LowerBound <= LowerBound && It->UpperBound >= UpperBound;
+  }
+};
 
-  /// Builder class for creating a /c BindingInfo.
-  class BindingInfoBuilder {
-  public:
-  private:
-    SmallVector<Binding> Bindings;
+/// Builder class for creating a /c BindingInfo.
+class BindingInfoBuilder {
+public:
+private:
+  SmallVector<Binding> Bindings;
 
-  public:
-    void trackBinding(dxil::ResourceClass RC, uint32_t Space,
-                      uint32_t LowerBound, uint32_t UpperBound,
-                      const void *Cookie) {
-      Bindings.emplace_back(RC, Space, LowerBound, UpperBound, Cookie);
-    }
-    /// Calculate the binding info - \c ReportOverlap will be called once for
-    /// each overlapping binding.
-    LLVM_ABI BindingInfo calculateBindingInfo(
-        llvm::function_ref<void(const BindingInfoBuilder &Builder,
-                                const Binding &Overlapping)>
-            ReportOverlap);
+public:
+  void trackBinding(dxil::ResourceClass RC, uint32_t Space,
+                    uint32_t LowerBound, uint32_t UpperBound,
+                    const void *Cookie) {
+    Bindings.emplace_back(RC, Space, LowerBound, UpperBound, Cookie);
+  }
+  /// Calculate the binding info - \c ReportOverlap will be called once for
+  /// each overlapping binding.
+  LLVM_ABI BindingInfo calculateBindingInfo(
+      llvm::function_ref<void(const BindingInfoBuilder &Builder,
+                              const Binding &Overlapping)>
+          ReportOverlap);
 
-    /// Calculate the binding info - \c HasOverlap will be set to indicate
-    /// whether there are any overlapping bindings.
-    BindingInfo calculateBindingInfo(bool &HasOverlap) {
-      HasOverlap = false;
-      return calculateBindingInfo(
-          [&HasOverlap](auto, auto) { HasOverlap = true; });
-    }
+  /// Calculate the binding info - \c HasOverlap will be set to indicate
+  /// whether there are any overlapping bindings.
+  BindingInfo calculateBindingInfo(bool &HasOverlap) {
+    HasOverlap = false;
+    return calculateBindingInfo(
+        [&HasOverlap](auto, auto) { HasOverlap = true; });
+  }
 
-    BoundRegs calculateBoundRegs(
-        llvm::function_ref<void(const BindingInfoBuilder &Builder,
-                                const Binding &Overlapping)>
-            ReportOverlap);
+  BoundRegs calculateBoundRegs(
+      llvm::function_ref<void(const BindingInfoBuilder &Builder,
+                              const Binding &Overlapping)>
+          ReportOverlap);
 
-    /// For use in the \c ReportOverlap callback of \c calculateBindingInfo -
-    /// finds a binding that the \c ReportedBinding overlaps with.
-    LLVM_ABI const Binding &
-    findOverlapping(const Binding &ReportedBinding) const;
-  };
+  /// For use in the \c ReportOverlap callback of \c calculateBindingInfo -
+  /// finds a binding that the \c ReportedBinding overlaps with.
+  LLVM_ABI const Binding &
+  findOverlapping(const Binding &ReportedBinding) const;
+};
 
 } // namespace hlsl
 } // namespace llvm
