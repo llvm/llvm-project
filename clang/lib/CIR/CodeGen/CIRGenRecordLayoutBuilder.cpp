@@ -941,15 +941,16 @@ void CIRRecordLowering::accumulateVBases() {
     CharUnits offset = astRecordLayout.getVBaseClassOffset(baseDecl);
     // If the vbase is a primary virtual base of some base, then it doesn't
     // get its own storage location but instead lives inside of that base.
-    if (isOverlappingVBaseABI() &&
-        astContext.isNearlyEmpty(baseDecl) &&
+    if (isOverlappingVBaseABI() && astContext.isNearlyEmpty(baseDecl) &&
         !hasOwnStorage(cxxRecordDecl, baseDecl)) {
-      members.push_back(MemberInfo(offset, MemberInfo::InfoKind::VBase, nullptr,
-                                   baseDecl));
+      members.push_back(
+          MemberInfo(offset, MemberInfo::InfoKind::VBase, nullptr, baseDecl));
       continue;
     }
     // If we've got a vtordisp, add it as a storage type.
-    if (astRecordLayout.getVBaseOffsetsMap().find(baseDecl)->second.hasVtorDisp())
+    if (astRecordLayout.getVBaseOffsetsMap()
+            .find(baseDecl)
+            ->second.hasVtorDisp())
       members.push_back(makeStorageInfo(offset - CharUnits::fromQuantity(4),
                                         getUIntNType(32)));
     members.push_back(MemberInfo(offset, MemberInfo::InfoKind::VBase,

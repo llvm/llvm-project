@@ -258,7 +258,7 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
   auto nonVirtualBaseInits =
       llvm::make_range(virtualBaseEnd, nonVirtualBaseEnd);
   auto memberInits = llvm::make_range(nonVirtualBaseEnd, allInits.end());
-    
+
   const mlir::Value oldThisValue = cxxThisValue;
 
   auto emitInitializer = [&](CXXCtorInitializer *baseInit) {
