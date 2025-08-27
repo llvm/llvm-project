@@ -629,26 +629,39 @@ public:
   // [optional.iterators], iterator support
   _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept {
     auto& __derived_self = static_cast<optional<_Tp>&>(*this);
+    auto __ptr = [&__derived_self]() {
+      if constexpr (is_lvalue_reference_v<_Tp>) {        
+        return __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
+      }
+      return std::addressof(__derived_self.__get());
+    }();
+
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(
-        std::__wrap_iter<__pointer>(std::addressof(__derived_self.__get())),
-        std::__wrap_iter<__pointer>(std::addressof(__derived_self.__get())),
-        std::__wrap_iter<__pointer>(std::addressof(__derived_self.__get()) + (__derived_self.has_value() ? 1 : 0)));
+        std::__wrap_iter<__pointer>(__ptr),
+        std::__wrap_iter<__pointer>(__ptr),
+        std::__wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0)));
 #      else
-    return iterator(std::addressof(__derived_self.__get()));
+    return iterator(__ptr);
 #      endif
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept {
     auto& __derived_self = static_cast<const optional<_Tp>&>(*this);
+    auto* __ptr          = [&__derived_self]() {
+      if constexpr (is_lvalue_reference_v<_Tp>) {
+        return __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
+      }
+      return std::addressof(__derived_self.__get());
+    }();
+
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(
-        std::__wrap_iter<__const_pointer>(std::addressof(__derived_self.__get())),
-        std::__wrap_iter<__const_pointer>(std::addressof(__derived_self.__get())),
-        std::__wrap_iter<__const_pointer>(
-            std::addressof(__derived_self.__get()) + (__derived_self.has_value() ? 1 : 0)));
+        std::__wrap_iter<__const_pointer>(__ptr),
+        std::__wrap_iter<__const_pointer>(__ptr),
+        std::__wrap_iter<__const_pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0)));
 #      else
-    return const_iterator(std::addressof(__derived_self.__get()));
+    return const_iterator(__ptr);
 #      endif
   }
 
