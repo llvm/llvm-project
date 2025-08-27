@@ -534,45 +534,6 @@ void foo8() {
 // OGCG: store float %[[RESULT_REAL]], ptr %[[A_REAL_PTR]], align 4
 // OGCG: store float %[[RESULT_IMAG]], ptr %[[A_IMAG_PTR]], align 4
 
-#ifndef __cplusplus
-void foo9() {
-  float _Complex a;
-  float b;
-  b += a;
-}
-#endif
-
-// C_CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// C_CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b"]
-// C_CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// C_CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.float>, !cir.float
-// C_CIR: %[[A_REAL:.*]] = cir.complex.real %[[A_ADDR]] : !cir.complex<!cir.float> -> !cir.float
-// C_CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[A_ADDR]] : !cir.complex<!cir.float> -> !cir.float
-// C_CIR: %[[NEW_REAL:.*]] = cir.binop(add, %[[TMP_B]], %[[A_REAL]]) : !cir.float
-// C_CIR: %[[RESULT:.*]] = cir.complex.create %[[NEW_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
-// C_CIR: %[[RESULT_REAL:.*]] = cir.complex.real %[[RESULT]] : !cir.complex<!cir.float> -> !cir.float
-// C_CIR: cir.store{{.*}} %[[RESULT_REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
-
-// C_LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// C_LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
-// C_LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
-// C_LLVM: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
-// C_LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
-// C_LLVM: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
-// C_LLVM: %[[NEW_REAL:.*]] = fadd float %[[TMP_B]], %[[A_REAL]]
-// C_LLVM: %[[TMP_RESULT:.*]] = insertvalue { float, float } {{.*}}, float %[[NEW_REAL]], 0
-// C_LLVM: store float %[[NEW_REAL]], ptr %[[B_ADDR]], align 4
-
-// C_OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
-// C_OGCG: %[[B_ADDR:.*]] = alloca float, align 4
-// C_OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
-// C_OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
-// C_OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
-// C_OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
-// C_OGCG: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
-// C_OGCG: %[[ADD_REAL:.*]] = fadd float %[[TMP_B]], %[[A_REAL]]
-// C_OGCG: store float %[[ADD_REAL]], ptr %[[B_ADDR]], align 4
-
 void foo10() {
   float _Complex a;
   float _Complex b;
@@ -612,7 +573,7 @@ void foo10() {
 // OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
 // OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
 // OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
-// OGCG: %[[RESULT:.*]] = call noundef <2 x float> @__divsc3(float noundef %[[A_REAL]], float noundef %[[A_IMAG]], float noundef %[[B_REAL]], float noundef %[[B_IMAG]])
+// OGCG: %[[RESULT:.*]] = call{{.*}} <2 x float> @__divsc3(float noundef %[[A_REAL]], float noundef %[[A_IMAG]], float noundef %[[B_REAL]], float noundef %[[B_IMAG]])
 // OGCG: store <2 x float> %[[RESULT]], ptr %[[RESULT_ADDR]], align 4
 // OGCG: %[[RESULT_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RESULT_ADDR]], i32 0, i32 0
 // OGCG: %[[RESULT_REAL:.*]] = load float, ptr %[[RESULT_REAL_PTR]], align 4
@@ -739,3 +700,42 @@ void foo12() {
 // OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[A_ADDR]], i32 0, i32 1
 // OGCG: store i32 %[[RESULT_REAL]], ptr %[[A_REAL_PTR]], align 4
 // OGCG: store i32 %[[RESULT_IMAG]], ptr %[[A_IMAG_PTR]], align 4
+
+#ifndef __cplusplus
+void foo9() {
+  float _Complex a;
+  float b;
+  b += a;
+}
+#endif
+
+// C_CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// C_CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b"]
+// C_CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// C_CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.float>, !cir.float
+// C_CIR: %[[A_REAL:.*]] = cir.complex.real %[[A_ADDR]] : !cir.complex<!cir.float> -> !cir.float
+// C_CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[A_ADDR]] : !cir.complex<!cir.float> -> !cir.float
+// C_CIR: %[[NEW_REAL:.*]] = cir.binop(add, %[[TMP_B]], %[[A_REAL]]) : !cir.float
+// C_CIR: %[[RESULT:.*]] = cir.complex.create %[[NEW_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// C_CIR: %[[RESULT_REAL:.*]] = cir.complex.real %[[RESULT]] : !cir.complex<!cir.float> -> !cir.float
+// C_CIR: cir.store{{.*}} %[[RESULT_REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+
+// C_LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// C_LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// C_LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// C_LLVM: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
+// C_LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
+// C_LLVM: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
+// C_LLVM: %[[NEW_REAL:.*]] = fadd float %[[TMP_B]], %[[A_REAL]]
+// C_LLVM: %[[TMP_RESULT:.*]] = insertvalue { float, float } {{.*}}, float %[[NEW_REAL]], 0
+// C_LLVM: store float %[[NEW_REAL]], ptr %[[B_ADDR]], align 4
+
+// C_OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// C_OGCG: %[[B_ADDR:.*]] = alloca float, align 4
+// C_OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// C_OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// C_OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// C_OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// C_OGCG: %[[TMP_B:.*]] = load float, ptr %[[B_ADDR]], align 4
+// C_OGCG: %[[ADD_REAL:.*]] = fadd float %[[TMP_B]], %[[A_REAL]]
+// C_OGCG: store float %[[ADD_REAL]], ptr %[[B_ADDR]], align 4

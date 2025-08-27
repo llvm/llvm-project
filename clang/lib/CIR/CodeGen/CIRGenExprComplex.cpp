@@ -869,10 +869,10 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
   assert(!cir::MissingFeatures::cgFPOptionsRAII());
 
-  // Handle division between Complex LHS and RHS with element type
-  // floating-point, and also handling if the element type is integer and either
-  // LHS or RHS is scalar because it will be implicitly casted to ComplexType
-  // from the frontend
+  // Handle division between two complex values. In the case of complex integer
+  // types mixed with scalar integers, the scalar integer type will always be
+  // promoted to a complex integer value with a zero imaginary component when
+  // the AST is formed.
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
@@ -881,7 +881,11 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
                                      rangeKind);
   }
 
+  // The C99 standard (G.5.1) defines division of a complex value by a real
+  // value in the following simplified form.
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
+    assert(mlir::cast<cir::ComplexType>(op.lhs.getType()).getElementType() ==
+           op.rhs.getType());
     mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
     mlir::Value imag = builder.createComplexImag(op.loc, op.lhs);
     mlir::Value newReal = builder.createFDiv(op.loc, real, op.rhs);
