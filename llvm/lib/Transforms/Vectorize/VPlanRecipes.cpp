@@ -3063,17 +3063,42 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Call: {
     auto *CalledFn =
         cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
-    if (CalledFn->isIntrinsic())
-      break;
 
+    SmallVector<const VPValue *> ArgOps(drop_end(operands()));
     SmallVector<Type *, 4> Tys;
-    for (VPValue *ArgOp : drop_end(operands()))
+    for (const VPValue *ArgOp : ArgOps)
       Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
+
+    if (CalledFn->isIntrinsic())
+      // Various pseudo-intrinsics with costs of 0 are scalarized instead of
+      // vectorized via VPWidenIntrinsicRecipe. Return 0 for them early.
+      switch (CalledFn->getIntrinsicID()) {
+      case Intrinsic::assume:
+      case Intrinsic::lifetime_end:
+      case Intrinsic::lifetime_start:
+      case Intrinsic::sideeffect:
+      case Intrinsic::pseudoprobe:
+      case Intrinsic::experimental_noalias_scope_decl: {
+        assert(getCostForIntrinsics(CalledFn->getIntrinsicID(), ArgOps, *this,
+                                    ElementCount::getFixed(1), Ctx) == 0 &&
+               "scalarizing intrinsic should be free");
+        return InstructionCost(0);
+      }
+      default:
+        break;
+      }
+
     Type *ResultTy = Ctx.Types.inferScalarType(this);
     InstructionCost ScalarCallCost =
         Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
-    if (isSingleScalar())
+    if (isSingleScalar()) {
+      if (CalledFn->isIntrinsic())
+        ScalarCallCost = std::min(
+            ScalarCallCost,
+            getCostForIntrinsics(CalledFn->getIntrinsicID(), ArgOps, *this,
+                                 ElementCount::getFixed(1), Ctx));
       return ScalarCallCost;
+    }
 
     if (VF.isScalable())
       return InstructionCost::getInvalid();
@@ -3094,7 +3119,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       // incur any overhead.
       SmallPtrSet<const VPValue *, 4> UniqueOperands;
       Tys.clear();
-      for (auto *Op : drop_end(operands())) {
+      for (auto *Op : ArgOps) {
         if (Op->isLiveIn() || isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op) ||
             !UniqueOperands.insert(Op).second)
           continue;
@@ -3104,8 +3129,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
           Ctx.TTI.getOperandsScalarizationOverhead(Tys, Ctx.CostKind);
     }
 
-    return ScalarCallCost * (isSingleScalar() ? 1 : VF.getFixedValue()) +
-           ScalarizationCost;
+    return ScalarCallCost * VF.getFixedValue() + ScalarizationCost;
   }
   case Instruction::Add:
   case Instruction::Sub:
