@@ -2,7 +2,6 @@
 UNSUPPORTED: target={{.*windows.*}}
 # FIXME: CreatePCArray() emits PLT stub addresses for entry blocks, which are ignored by TracePC::PrintCoverage().
 UNSUPPORTED: target=s390x{{.*}}
-RUN: mkdir -p %t.dir && cd %t.dir
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable  %S/NullDerefTest.cpp -o %t-NullDerefTest
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO1.cpp -fPIC %ld_flags_rpath_so1 -O0 -shared -o %dynamiclib1
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO2.cpp -fPIC %ld_flags_rpath_so2 -O0 -shared -o %dynamiclib2
