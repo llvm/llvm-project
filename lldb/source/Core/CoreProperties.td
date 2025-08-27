@@ -268,4 +268,8 @@ let Definition = "debugger" in {
     Global,
     DefaultFalse,
     Desc<"Controls whether diagnostics can refer directly to the command input, drawing arrows to it. If false, diagnostics will echo the input.">;
+  def UseModuleListDyld: Property<"use-module-list-dyld", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Use module list dynamic loader plugin for coredump debugging.">;
 }

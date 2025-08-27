@@ -27,6 +27,7 @@ public:
       e_has_base,
       e_has_dynamic,
       e_has_link_map,
+      e_has_size,
       e_num
     };
 
@@ -77,6 +78,15 @@ public:
       return m_has[e_has_dynamic];
     }
 
+    void set_size(const lldb::addr_t size) {
+      m_size = size;
+      m_has[e_has_size] = true;
+    }
+    bool get_size(lldb::addr_t &out) const {
+      out = m_size;
+      return m_has[e_has_size];
+    }
+
     bool has_info(e_data_point datum) const {
       assert(datum < e_num);
       return m_has[datum];
@@ -99,6 +109,7 @@ public:
     lldb::addr_t m_base = LLDB_INVALID_ADDRESS;
     bool m_base_is_offset = false;
     lldb::addr_t m_dynamic = LLDB_INVALID_ADDRESS;
+    lldb::addr_t m_size = 0;
   };
 
   LoadedModuleInfoList() = default;

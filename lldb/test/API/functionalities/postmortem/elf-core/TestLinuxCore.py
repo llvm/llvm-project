@@ -2,9 +2,9 @@
 Test basics of linux core file debugging.
 """
 
+import os
 import shutil
 import struct
-import os
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -32,6 +32,9 @@ class LinuxCoreTestCase(TestBase):
     _ppc64le_regions = 2
     _riscv64_regions = 4
     _loongarch64_regions = 4
+
+    def tearDown(self):
+        self.runCmd("settings set use-module-list-dyld false")
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64(self):
@@ -1004,6 +1007,26 @@ class LinuxCoreTestCase(TestBase):
         # application binary.
         cstr = var.GetSummary()
         self.assertEqual(cstr, '"_start"')
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_module_list_dyld(self):
+        """
+        Test module list based dyld can successfully get images
+        list from NT_FILE without main executable
+        """
+        self.runCmd("settings set use-module-list-dyld true")
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        self.assertEqual(process.GetTarget().GetNumModules(), 1)
+        exe_module = process.GetTarget().GetModuleAtIndex(0)
+        # Module load address is got from coredump NT_FILE.
+        self.assertEqual(
+            exe_module.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x400000
+        )
+        self.dbg.DeleteTarget(target)
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()
