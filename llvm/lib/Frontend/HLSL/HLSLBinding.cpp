@@ -8,8 +8,6 @@
 
 #include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
-#include <optional>
 
 using namespace llvm;
 using namespace hlsl;
@@ -32,14 +30,6 @@ BindingInfo::BindingSpaces::getOrInsertSpace(uint32_t Space) {
     return *Spaces.insert(It, Space);
   }
   return Spaces.emplace_back(Space);
-}
-
-std::optional<const BindingInfo::RegisterSpace *>
-BindingInfo::BindingSpaces::contains(uint32_t Space) const {
-  const BindingInfo::RegisterSpace *It = llvm::find(Spaces, Space);
-  if (It == Spaces.end())
-    return std::nullopt;
-  return It;
 }
 
 std::optional<uint32_t>
