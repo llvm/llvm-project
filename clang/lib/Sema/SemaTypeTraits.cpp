@@ -12,7 +12,7 @@
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"

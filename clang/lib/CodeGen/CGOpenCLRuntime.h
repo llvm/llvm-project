@@ -16,7 +16,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGOPENCLRUNTIME_H
 
 #include "clang/AST/Expr.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Type.h"

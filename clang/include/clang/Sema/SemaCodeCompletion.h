@@ -14,7 +14,7 @@
 #define LLVM_CLANG_SEMA_SEMACODECOMPLETION_H
 
 #include "clang/AST/ASTFwd.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"

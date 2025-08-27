@@ -24,7 +24,7 @@
 #define LLVM_CLANG_CODEGEN_CODEGENABITYPES_H
 
 #include "clang/AST/CanonicalType.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/BasicBlock.h"
