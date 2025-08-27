@@ -7,7 +7,7 @@ declare void @extern() #0
 
 define float @foo(float %x) #0 {
 ; GCN-LABEL: define float @foo(
-; GCN-SAME: float [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; GCN-SAME: float [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; GCN-NEXT:  [[ENTRY:.*:]]
 ; GCN-NEXT:    tail call void @extern()
 ; GCN-NEXT:    [[MUL:%.*]] = fmul float [[X]], 1.500000e+01
@@ -21,7 +21,7 @@ entry:
 
 define amdgpu_kernel void @caller(ptr addrspace(1) %p) #1 {
 ; GCN-LABEL: define amdgpu_kernel void @caller(
-; GCN-SAME: ptr addrspace(1) captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; GCN-SAME: ptr addrspace(1) captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; GCN-NEXT:  [[ENTRY:.*:]]
 ; GCN-NEXT:    [[LOAD:%.*]] = load float, ptr addrspace(1) [[P]], align 4, !amdgpu.noclobber [[META0:![0-9]+]]
 ; GCN-NEXT:    tail call void @extern()
@@ -40,17 +40,14 @@ attributes #0 = { nounwind "uniform-work-group-size"="false" "unsafe-fp-math"="t
 attributes #1 = { nounwind "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "unsafe-fp-math"="true" }
 
 ;.
-; UNSAFE: attributes #[[ATTR0:[0-9]+]] = { nounwind "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; UNSAFE: attributes #[[ATTR1]] = { nounwind "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; UNSAFE: attributes #[[ATTR2]] = { nounwind "amdgpu-waves-per-eu"="4,10" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; UNSAFE: attributes #[[ATTR0]] = { nounwind "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; UNSAFE: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
 ;.
-; NONANS: attributes #[[ATTR0:[0-9]+]] = { nounwind "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; NONANS: attributes #[[ATTR1]] = { nounwind "amdgpu-waves-per-eu"="4,10" "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; NONANS: attributes #[[ATTR2]] = { nounwind "amdgpu-waves-per-eu"="4,10" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NONANS: attributes #[[ATTR0]] = { nounwind "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NONANS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
 ;.
-; NOINFS: attributes #[[ATTR0:[0-9]+]] = { nounwind "no-infs-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; NOINFS: attributes #[[ATTR1]] = { nounwind "amdgpu-waves-per-eu"="4,10" "no-infs-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; NOINFS: attributes #[[ATTR2]] = { nounwind "amdgpu-waves-per-eu"="4,10" "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NOINFS: attributes #[[ATTR0]] = { nounwind "no-infs-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NOINFS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
 ;.
 ; UNSAFE: [[META0]] = !{}
 ;.
