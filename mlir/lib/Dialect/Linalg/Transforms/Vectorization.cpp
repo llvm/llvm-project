@@ -2609,6 +2609,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
                  isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
                  isa<linalg::MatvecOp>(op) || isa<linalg::Mmt4DOp>(op) ||
+                 isa<linalg::BatchMmt4DOp>(op) ||
                  hasReductionIterator(linalgOp));
 }
 

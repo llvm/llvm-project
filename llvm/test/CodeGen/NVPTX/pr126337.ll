@@ -17,17 +17,16 @@ define ptx_kernel void @Equal_GPU_DT_COMPLEX64_DT_BOOL_kernel(<2 x float> %0) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %.preheader15
-; CHECK-NEXT:    ld.param.b64 %rd1, [Equal_GPU_DT_COMPLEX64_DT_BOOL_kernel_param_0];
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {%r1, tmp}, %rd1; }
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [Equal_GPU_DT_COMPLEX64_DT_BOOL_kernel_param_0];
 ; CHECK-NEXT:    setp.eq.f32 %p1, %r1, 0f00000000;
 ; CHECK-NEXT:    selp.b16 %rs1, 1, 0, %p1;
 ; CHECK-NEXT:  $L__BB0_1: // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov.b64 %rd2, 0;
-; CHECK-NEXT:    st.b8 [%rd2], %rs1;
+; CHECK-NEXT:    mov.b64 %rd1, 0;
+; CHECK-NEXT:    st.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    bra.uni $L__BB0_1;
 .preheader15:
   br label %1

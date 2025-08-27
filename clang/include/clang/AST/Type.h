@@ -2210,20 +2210,24 @@ protected:
     unsigned PackIndex : 15;
   };
 
-  class SubstTemplateTypeParmPackTypeBitfields {
+  class SubstPackTypeBitfields {
+    friend class SubstPackType;
     friend class SubstTemplateTypeParmPackType;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
-
-    // The index of the template parameter this substitution represents.
-    unsigned Index : 16;
 
     /// The number of template arguments in \c Arguments, which is
     /// expected to be able to hold at least 1024 according to [implimits].
     /// However as this limit is somewhat easy to hit with template
     /// metaprogramming we'd prefer to keep it as large as possible.
     unsigned NumArgs : 16;
+
+    // The index of the template parameter this substitution represents.
+    // Only used by SubstTemplateTypeParmPackType. We keep it in the same
+    // class to avoid dealing with complexities of bitfields that go over
+    // the size of `unsigned`.
+    unsigned SubstTemplTypeParmPackIndex : 16;
   };
 
   class TemplateSpecializationTypeBitfields {
@@ -2340,7 +2344,7 @@ protected:
     VectorTypeBitfields VectorTypeBits;
     TemplateTypeParmTypeBitfields TemplateTypeParmTypeBits;
     SubstTemplateTypeParmTypeBitfields SubstTemplateTypeParmTypeBits;
-    SubstTemplateTypeParmPackTypeBitfields SubstTemplateTypeParmPackTypeBits;
+    SubstPackTypeBitfields SubstPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     DependentTemplateSpecializationTypeBitfields
       DependentTemplateSpecializationTypeBits;
@@ -2879,14 +2883,21 @@ public:
   /// because the type is a RecordType or because it is the injected-class-name
   /// type of a class template or class template partial specialization.
   CXXRecordDecl *getAsCXXRecordDecl() const;
+  CXXRecordDecl *castAsCXXRecordDecl() const;
 
   /// Retrieves the RecordDecl this type refers to.
   RecordDecl *getAsRecordDecl() const;
+  RecordDecl *castAsRecordDecl() const;
+
+  /// Retrieves the EnumDecl this type refers to.
+  EnumDecl *getAsEnumDecl() const;
+  EnumDecl *castAsEnumDecl() const;
 
   /// Retrieves the TagDecl that this type refers to, either
   /// because the type is a TagType or because it is the injected-class-name
   /// type of a class template or class template partial specialization.
   TagDecl *getAsTagDecl() const;
+  TagDecl *castAsTagDecl() const;
 
   /// If this is a pointer or reference to a RecordType, return the
   /// CXXRecordDecl that the type refers to.
@@ -2918,7 +2929,30 @@ public:
   ///
   /// There are some specializations of this member template listed
   /// immediately following this class.
+  ///
+  /// If you are interested only in the canonical properties of this type,
+  /// consider using getAsCanonical instead, as that is much faster.
   template <typename T> const T *getAs() const;
+
+  /// If this type is canonically the specified type, return its canonical type
+  /// cast to that specified type, otherwise returns null.
+  template <typename T> const T *getAsCanonical() const {
+    return dyn_cast<T>(CanonicalType);
+  }
+
+  /// Return this type's canonical type cast to the specified type.
+  /// If the type is not canonically that specified type, the behaviour is
+  /// undefined.
+  template <typename T> const T *castAsCanonical() const {
+    return cast<T>(CanonicalType);
+  }
+
+// It is not helpful to use these on types which are never canonical
+#define TYPE(Class, Base)
+#define NEVER_CANONICAL_TYPE(Class)                                            \
+  template <> inline const Class##Type *Type::getAsCanonical() const = delete; \
+  template <> inline const Class##Type *Type::castAsCanonical() const = delete;
+#include "clang/AST/TypeNodes.inc"
 
   /// Look through sugar for an instance of TemplateSpecializationType which
   /// is not a type alias, or null if there is no such type.
@@ -3131,16 +3165,16 @@ template <> const BoundsAttributedType *Type::getAs() const;
 /// sugar until it reaches an CountAttributedType or a non-sugared type.
 template <> const CountAttributedType *Type::getAs() const;
 
-// We can do canonical leaf types faster, because we don't have to
-// worry about preserving child type decoration.
+// We can do always canonical types faster, because we don't have to
+// worry about preserving decoration.
 #define TYPE(Class, Base)
-#define LEAF_TYPE(Class) \
-template <> inline const Class##Type *Type::getAs() const { \
-  return dyn_cast<Class##Type>(CanonicalType); \
-} \
-template <> inline const Class##Type *Type::castAs() const { \
-  return cast<Class##Type>(CanonicalType); \
-}
+#define ALWAYS_CANONICAL_TYPE(Class)                                           \
+  template <> inline const Class##Type *Type::getAs() const {                  \
+    return dyn_cast<Class##Type>(CanonicalType);                               \
+  }                                                                            \
+  template <> inline const Class##Type *Type::castAs() const {                 \
+    return cast<Class##Type>(CanonicalType);                                   \
+  }
 #include "clang/AST/TypeNodes.inc"
 
 /// This class is used for builtin types like 'int'.  Builtin
@@ -4688,6 +4722,9 @@ public:
     unsigned NumExceptionType : 10;
 
     LLVM_PREFERRED_TYPE(bool)
+    unsigned HasExtraAttributeInfo : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasArmTypeAttributes : 1;
 
     LLVM_PREFERRED_TYPE(bool)
@@ -4695,14 +4732,26 @@ public:
     unsigned NumFunctionEffects : 4;
 
     FunctionTypeExtraBitfields()
-        : NumExceptionType(0), HasArmTypeAttributes(false),
-          EffectsHaveConditions(false), NumFunctionEffects(0) {}
+        : NumExceptionType(0), HasExtraAttributeInfo(false),
+          HasArmTypeAttributes(false), EffectsHaveConditions(false),
+          NumFunctionEffects(0) {}
+  };
+
+  /// A holder for extra information from attributes which aren't part of an
+  /// \p AttributedType.
+  struct alignas(void *) FunctionTypeExtraAttributeInfo {
+    /// A CFI "salt" that differentiates functions with the same prototype.
+    StringRef CFISalt;
+
+    operator bool() const { return !CFISalt.empty(); }
+
+    void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddString(CFISalt); }
   };
 
   /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number
   /// of function type attributes that can be set on function types, including
   /// function pointers.
-  enum AArch64SMETypeAttributes : unsigned {
+  enum AArch64SMETypeAttributes : uint16_t {
     SME_NormalFunction = 0,
     SME_PStateSMEnabledMask = 1 << 0,
     SME_PStateSMCompatibleMask = 1 << 1,
@@ -4732,11 +4781,11 @@ public:
   };
 
   static ArmStateValue getArmZAState(unsigned AttrBits) {
-    return (ArmStateValue)((AttrBits & SME_ZAMask) >> SME_ZAShift);
+    return static_cast<ArmStateValue>((AttrBits & SME_ZAMask) >> SME_ZAShift);
   }
 
   static ArmStateValue getArmZT0State(unsigned AttrBits) {
-    return (ArmStateValue)((AttrBits & SME_ZT0Mask) >> SME_ZT0Shift);
+    return static_cast<ArmStateValue>((AttrBits & SME_ZT0Mask) >> SME_ZT0Shift);
   }
 
   /// A holder for Arm type attributes as described in the Arm C/C++
@@ -4745,6 +4794,7 @@ public:
   struct alignas(void *) FunctionTypeArmAttributes {
     /// Any AArch64 SME ACLE type attributes that need to be propagated
     /// on declarations and function pointers.
+    LLVM_PREFERRED_TYPE(AArch64SMETypeAttributes)
     unsigned AArch64SMEAttributes : 9;
 
     FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
@@ -5226,6 +5276,7 @@ class FunctionProtoType final
       private llvm::TrailingObjects<
           FunctionProtoType, QualType, SourceLocation,
           FunctionType::FunctionTypeExtraBitfields,
+          FunctionType::FunctionTypeExtraAttributeInfo,
           FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
           Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers,
           FunctionEffect, EffectConditionExpr> {
@@ -5315,19 +5366,22 @@ public:
   /// the various bits of extra information about a function prototype.
   struct ExtProtoInfo {
     FunctionType::ExtInfo ExtInfo;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned Variadic : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasTrailingReturn : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned CFIUncheckedCallee : 1;
-    unsigned AArch64SMEAttributes : 9;
     Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
     ExceptionSpecInfo ExceptionSpec;
     const ExtParameterInfo *ExtParameterInfos = nullptr;
     SourceLocation EllipsisLoc;
     FunctionEffectsRef FunctionEffects;
+    FunctionTypeExtraAttributeInfo ExtraAttributeInfo;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Variadic : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasTrailingReturn : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CFIUncheckedCallee : 1;
+    LLVM_PREFERRED_TYPE(AArch64SMETypeAttributes)
+    unsigned AArch64SMEAttributes : 9;
 
     ExtProtoInfo()
         : Variadic(false), HasTrailingReturn(false), CFIUncheckedCallee(false),
@@ -5352,11 +5406,16 @@ public:
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
              requiresFunctionProtoTypeArmAttributes() ||
+             requiresFunctionProtoTypeExtraAttributeInfo() ||
              !FunctionEffects.empty();
     }
 
     bool requiresFunctionProtoTypeArmAttributes() const {
       return AArch64SMEAttributes != SME_NormalFunction;
+    }
+
+    bool requiresFunctionProtoTypeExtraAttributeInfo() const {
+      return static_cast<bool>(ExtraAttributeInfo);
     }
 
     void setArmSMEAttribute(AArch64SMETypeAttributes Kind, bool Enable = true) {
@@ -5382,6 +5441,11 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeExtraBitfields>) const {
     return hasExtraBitfields();
+  }
+
+  unsigned
+  numTrailingObjects(OverloadToken<FunctionTypeExtraAttributeInfo>) const {
+    return hasExtraAttributeInfo();
   }
 
   unsigned numTrailingObjects(OverloadToken<ExceptionType>) const {
@@ -5476,6 +5540,12 @@ private:
 
   }
 
+  bool hasExtraAttributeInfo() const {
+    return FunctionTypeBits.HasExtraBitfields &&
+           getTrailingObjects<FunctionTypeExtraBitfields>()
+               ->HasExtraAttributeInfo;
+  }
+
   bool hasArmTypeAttributes() const {
     return FunctionTypeBits.HasExtraBitfields &&
            getTrailingObjects<FunctionTypeExtraBitfields>()
@@ -5509,6 +5579,7 @@ public:
     EPI.TypeQuals = getMethodQuals();
     EPI.RefQualifier = getRefQualifier();
     EPI.ExtParameterInfos = getExtParameterInfosOrNull();
+    EPI.ExtraAttributeInfo = getExtraAttributeInfo();
     EPI.AArch64SMEAttributes = getAArch64SMEAttributes();
     EPI.FunctionEffects = getFunctionEffects();
     return EPI;
@@ -5694,6 +5765,13 @@ public:
     if (!hasExtParameterInfos())
       return nullptr;
     return getTrailingObjects<ExtParameterInfo>();
+  }
+
+  /// Return the extra attribute information.
+  FunctionTypeExtraAttributeInfo getExtraAttributeInfo() const {
+    if (hasExtraAttributeInfo())
+      return *getTrailingObjects<FunctionTypeExtraAttributeInfo>();
+    return FunctionTypeExtraAttributeInfo();
   }
 
   /// Return a bitmask describing the SME attributes on the function type, see
@@ -6357,6 +6435,9 @@ protected:
           bool IsInjected, const Type *CanonicalType);
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   TagDecl *getOriginalDecl() const { return decl; }
 
   NestedNameSpecifier getQualifier() const;
@@ -6422,6 +6503,9 @@ class RecordType final : public TagType {
   using TagType::TagType;
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   RecordDecl *getOriginalDecl() const {
     return reinterpret_cast<RecordDecl *>(TagType::getOriginalDecl());
   }
@@ -6439,6 +6523,9 @@ class EnumType final : public TagType {
   using TagType::TagType;
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   EnumDecl *getOriginalDecl() const {
     return reinterpret_cast<EnumDecl *>(TagType::getOriginalDecl());
   }
@@ -6471,6 +6558,9 @@ class InjectedClassNameType final : public TagType {
                         bool IsInjected, const Type *CanonicalType);
 
 public:
+  // FIXME: Temporarily renamed from `getDecl` in order to facilitate
+  // rebasing, due to change in behaviour. This should be renamed back
+  // to `getDecl` once the change is settled.
   CXXRecordDecl *getOriginalDecl() const {
     return reinterpret_cast<CXXRecordDecl *>(TagType::getOriginalDecl());
   }
@@ -6936,6 +7026,56 @@ public:
   }
 };
 
+/// Represents the result of substituting a set of types as a template argument
+/// that needs to be expanded later.
+///
+/// These types are always dependent and produced depending on the situations:
+/// - SubstTemplateTypeParmPack is an expansion that had to be delayed,
+/// - SubstBuiltinTemplatePackType is an expansion from a builtin.
+class SubstPackType : public Type, public llvm::FoldingSetNode {
+  friend class ASTContext;
+
+  /// A pointer to the set of template arguments that this
+  /// parameter pack is instantiated with.
+  const TemplateArgument *Arguments;
+
+protected:
+  SubstPackType(TypeClass Derived, QualType Canon,
+                const TemplateArgument &ArgPack);
+
+public:
+  unsigned getNumArgs() const { return SubstPackTypeBits.NumArgs; }
+
+  TemplateArgument getArgumentPack() const;
+
+  void Profile(llvm::FoldingSetNodeID &ID);
+  static void Profile(llvm::FoldingSetNodeID &ID,
+                      const TemplateArgument &ArgPack);
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == SubstTemplateTypeParmPack ||
+           T->getTypeClass() == SubstBuiltinTemplatePack;
+  }
+};
+
+/// Represents the result of substituting a builtin template as a pack.
+class SubstBuiltinTemplatePackType : public SubstPackType {
+  friend class ASTContext;
+
+  SubstBuiltinTemplatePackType(QualType Canon, const TemplateArgument &ArgPack);
+
+public:
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  /// Mark that we reuse the Profile. We do not introduce new fields.
+  using SubstPackType::Profile;
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == SubstBuiltinTemplatePack;
+  }
+};
+
 /// Represents the result of substituting a set of types for a template
 /// type parameter pack.
 ///
@@ -6948,7 +7088,7 @@ public:
 /// that pack expansion (e.g., when all template parameters have corresponding
 /// arguments), this type will be replaced with the \c SubstTemplateTypeParmType
 /// at the current pack substitution index.
-class SubstTemplateTypeParmPackType : public Type, public llvm::FoldingSetNode {
+class SubstTemplateTypeParmPackType : public SubstPackType {
   friend class ASTContext;
 
   /// A pointer to the set of template arguments that this
@@ -6974,20 +7114,16 @@ public:
 
   /// Returns the index of the replaced parameter in the associated declaration.
   /// This should match the result of `getReplacedParameter()->getIndex()`.
-  unsigned getIndex() const { return SubstTemplateTypeParmPackTypeBits.Index; }
+  unsigned getIndex() const {
+    return SubstPackTypeBits.SubstTemplTypeParmPackIndex;
+  }
 
   // This substitution will be Final, which means the substitution will be fully
   // sugared: it doesn't need to be resugared later.
   bool getFinal() const;
 
-  unsigned getNumArgs() const {
-    return SubstTemplateTypeParmPackTypeBits.NumArgs;
-  }
-
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
-
-  TemplateArgument getArgumentPack() const;
 
   void Profile(llvm::FoldingSetNodeID &ID);
   static void Profile(llvm::FoldingSetNodeID &ID, const Decl *AssociatedDecl,
@@ -7223,9 +7359,7 @@ public:
             TemplateSpecializationTypeBits.NumArgs};
   }
 
-  bool isSugared() const {
-    return !isDependentType() || isCurrentInstantiation() || isTypeAlias();
-  }
+  bool isSugared() const;
 
   QualType desugar() const {
     return isTypeAlias() ? getAliasedType() : getCanonicalTypeInternal();

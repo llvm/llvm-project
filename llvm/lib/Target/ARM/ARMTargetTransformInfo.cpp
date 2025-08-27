@@ -1084,9 +1084,10 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(
                                               CostKind, Op1Info, Op2Info, I);
 }
 
-InstructionCost ARMTTIImpl::getAddressComputationCost(Type *PtrTy,
-                                                      ScalarEvolution *SE,
-                                                      const SCEV *Ptr) const {
+InstructionCost
+ARMTTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                      const SCEV *Ptr,
+                                      TTI::TargetCostKind CostKind) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -1103,7 +1104,7 @@ InstructionCost ARMTTIImpl::getAddressComputationCost(Type *PtrTy,
     // addressing mode.
     return 1;
   }
-  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr);
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
 }
 
 bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) const {
@@ -1335,6 +1336,39 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
     if (!Mask.empty()) {
       std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
+      // Check for LD2/LD4 instructions, which are represented in llvm IR as
+      // deinterleaving-shuffle(load). The shuffle cost could potentially be
+      // free, but we model it with a cost of LT.first so that LD2/LD4 have a
+      // higher cost than just the load.
+      if (Args.size() >= 1 && isa<LoadInst>(Args[0]) &&
+          (LT.second.getScalarSizeInBits() == 8 ||
+           LT.second.getScalarSizeInBits() == 16 ||
+           LT.second.getScalarSizeInBits() == 32) &&
+          LT.second.getSizeInBits() == 128 &&
+          ((TLI->getMaxSupportedInterleaveFactor() >= 2 &&
+            ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2)) ||
+           (TLI->getMaxSupportedInterleaveFactor() == 4 &&
+            ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 4))))
+        return ST->getMVEVectorCostFactor(CostKind) *
+               std::max<InstructionCost>(1, LT.first / 4);
+
+      // Check for ST2/ST4 instructions, which are represented in llvm IR as
+      // store(interleaving-shuffle). The shuffle cost could potentially be
+      // free, but we model it with a cost of LT.first so that ST2/ST4 have a
+      // higher cost than just the store.
+      if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
+          (LT.second.getScalarSizeInBits() == 8 ||
+           LT.second.getScalarSizeInBits() == 16 ||
+           LT.second.getScalarSizeInBits() == 32) &&
+          LT.second.getSizeInBits() == 128 &&
+          ((TLI->getMaxSupportedInterleaveFactor() >= 2 &&
+            ShuffleVectorInst::isInterleaveMask(
+                Mask, 2, SrcTy->getElementCount().getKnownMinValue() * 2)) ||
+           (TLI->getMaxSupportedInterleaveFactor() == 4 &&
+            ShuffleVectorInst::isInterleaveMask(
+                Mask, 4, SrcTy->getElementCount().getKnownMinValue() * 2))))
+        return ST->getMVEVectorCostFactor(CostKind) * LT.first;
+
       if (LT.second.isVector() &&
           Mask.size() <= LT.second.getVectorNumElements() &&
           (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||

@@ -20,7 +20,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -291,6 +290,11 @@ void PredicateInfoBuilder::convertUsesToDFSOrdered(
     Value *Op, SmallVectorImpl<ValueDFS> &DFSOrderedSet) {
   for (auto &U : Op->uses()) {
     if (auto *I = dyn_cast<Instruction>(U.getUser())) {
+      // Lifetime intrinsics must work directly on alloca, do not replace them
+      // with a predicated copy.
+      if (I->isLifetimeStartOrEnd())
+        continue;
+
       ValueDFS VD;
       // Put the phi node uses in the incoming block.
       BasicBlock *IBlock;

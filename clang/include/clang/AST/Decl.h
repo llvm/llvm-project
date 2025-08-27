@@ -3526,7 +3526,7 @@ protected:
 public:
   // Low-level accessor. If you just want the type defined by this node,
   // check out ASTContext::getTypeDeclType or one of
-  // ASTContext::getTypedefType, ASTContext::getRecordType, etc. if you
+  // ASTContext::getTypedefType, ASTContext::getTagType, etc. if you
   // already know the specific kind of node this is.
   const Type *getTypeForDecl() const {
     assert(!isa<TagDecl>(this));
@@ -3914,6 +3914,10 @@ public:
   bool isClass() const { return getTagKind() == TagTypeKind::Class; }
   bool isUnion() const { return getTagKind() == TagTypeKind::Union; }
   bool isEnum() const { return getTagKind() == TagTypeKind::Enum; }
+
+  bool isStructureOrClass() const {
+    return isStruct() || isClass() || isInterface();
+  }
 
   /// Is this tag type named, either directly or via being defined in
   /// a typedef of this type?

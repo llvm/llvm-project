@@ -71,6 +71,10 @@ static RegisterType getRegisterType(ResourceClass RC) {
   llvm_unreachable("unexpected ResourceClass value");
 }
 
+static RegisterType getRegisterType(const HLSLAttributedResourceType *ResTy) {
+  return getRegisterType(ResTy->getAttrs().ResourceClass);
+}
+
 // Converts the first letter of string Slot to RegisterType.
 // Returns false if the letter does not correspond to a valid register type.
 static bool convertToRegisterType(StringRef Slot, RegisterType *RT) {
@@ -232,9 +236,8 @@ static unsigned calculateLegacyCbufferFieldAlign(const ASTContext &Context,
 static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
                                            QualType T) {
   constexpr unsigned CBufferAlign = 16;
-  if (const RecordType *RT = T->getAs<RecordType>()) {
+  if (const auto *RD = T->getAsRecordDecl()) {
     unsigned Size = 0;
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     for (const FieldDecl *Field : RD->fields()) {
       QualType Ty = Field->getType();
       unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
@@ -342,6 +345,16 @@ static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
   return Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray();
 }
 
+static const HLSLAttributedResourceType *
+getResourceArrayHandleType(VarDecl *VD) {
+  assert(VD->getType()->isHLSLResourceRecordArray() &&
+         "expected array of resource records");
+  const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
+    Ty = CAT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
+}
+
 // Returns true if the type is a leaf element type that is not valid to be
 // included in HLSL Buffer, such as a resource class, empty struct, zero-sized
 // array, or a builtin intangible type. Returns false it is a valid leaf element
@@ -350,8 +363,8 @@ static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
   Ty = Ty->getUnqualifiedDesugaredType();
   if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
     return true;
-  if (Ty->isRecordType())
-    return Ty->getAsCXXRecordDecl()->isEmpty();
+  if (const auto *RD = Ty->getAsCXXRecordDecl())
+    return RD->isEmpty();
   if (Ty->isConstantArrayType() &&
       isZeroSizedArray(cast<ConstantArrayType>(Ty)))
     return true;
@@ -373,14 +386,14 @@ static bool requiresImplicitBufferLayoutStructure(const CXXRecordDecl *RD) {
     QualType Ty = Field->getType();
     if (isInvalidConstantBufferLeafElementType(Ty.getTypePtr()))
       return true;
-    if (Ty->isRecordType() &&
-        requiresImplicitBufferLayoutStructure(Ty->getAsCXXRecordDecl()))
+    if (const auto *RD = Ty->getAsCXXRecordDecl();
+        RD && requiresImplicitBufferLayoutStructure(RD))
       return true;
   }
   // check bases
   for (const CXXBaseSpecifier &Base : RD->bases())
     if (requiresImplicitBufferLayoutStructure(
-            Base.getType()->getAsCXXRecordDecl()))
+            Base.getType()->castAsCXXRecordDecl()))
       return true;
   return false;
 }
@@ -445,8 +458,7 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
   if (isInvalidConstantBufferLeafElementType(Ty))
     return nullptr;
 
-  if (Ty->isRecordType()) {
-    CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+  if (auto *RD = Ty->getAsCXXRecordDecl()) {
     if (requiresImplicitBufferLayoutStructure(RD)) {
       RD = createHostLayoutStruct(S, RD);
       if (!RD)
@@ -497,7 +509,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
     assert(NumBases == 1 && "HLSL supports only one base type");
     (void)NumBases;
     CXXBaseSpecifier Base = *StructDecl->bases_begin();
-    CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    CXXRecordDecl *BaseDecl = Base.getType()->castAsCXXRecordDecl();
     if (requiresImplicitBufferLayoutStructure(BaseDecl)) {
       BaseDecl = createHostLayoutStruct(S, BaseDecl);
       if (BaseDecl) {
@@ -568,16 +580,13 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   BufDecl->addLayoutStruct(LS);
 }
 
-static void addImplicitBindingAttrToBuffer(Sema &S, HLSLBufferDecl *BufDecl,
-                                           uint32_t ImplicitBindingOrderID) {
-  RegisterType RT =
-      BufDecl->isCBuffer() ? RegisterType::CBuffer : RegisterType::SRV;
+static void addImplicitBindingAttrToDecl(Sema &S, Decl *D, RegisterType RT,
+                                         uint32_t ImplicitBindingOrderID) {
   auto *Attr =
       HLSLResourceBindingAttr::CreateImplicit(S.getASTContext(), "", "0", {});
-  std::optional<unsigned> RegSlot;
-  Attr->setBinding(RT, RegSlot, 0);
+  Attr->setBinding(RT, std::nullopt, 0);
   Attr->setImplicitBindingOrderID(ImplicitBindingOrderID);
-  BufDecl->addAttr(Attr);
+  D->addAttr(Attr);
 }
 
 // Handle end of cbuffer/tbuffer declaration
@@ -600,7 +609,10 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
     if (RBA)
       RBA->setImplicitBindingOrderID(OrderID);
     else
-      addImplicitBindingAttrToBuffer(SemaRef, BufDecl, OrderID);
+      addImplicitBindingAttrToDecl(SemaRef, BufDecl,
+                                   BufDecl->isCBuffer() ? RegisterType::CBuffer
+                                                        : RegisterType::SRV,
+                                   OrderID);
   }
 
   SemaRef.PopDeclContext();
@@ -714,6 +726,23 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 
   if (FD->getName() != TargetInfo.getTargetOpts().HLSLEntry)
     return;
+
+  // If we have specified a root signature to override the entry function then
+  // attach it now
+  if (RootSigOverrideIdent) {
+    LookupResult R(SemaRef, RootSigOverrideIdent, SourceLocation(),
+                   Sema::LookupOrdinaryName);
+    if (SemaRef.LookupQualifiedName(R, FD->getDeclContext()))
+      if (auto *SignatureDecl =
+              dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
+        FD->dropAttr<RootSignatureAttr>();
+        // We could look up the SourceRange of the macro here as well
+        AttributeCommonInfo AL(RootSigOverrideIdent, AttributeScopeInfo(),
+                               SourceRange(), ParsedAttr::Form::Microsoft());
+        FD->addAttr(::new (getASTContext()) RootSignatureAttr(
+            getASTContext(), AL, RootSigOverrideIdent, SignatureDecl));
+      }
+  }
 
   llvm::Triple::EnvironmentType Env = TargetInfo.getTriple().getEnvironment();
   if (HLSLShaderAttr::isValidShaderType(Env) && Env != llvm::Triple::Library) {
@@ -1906,7 +1935,7 @@ static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
   if (const HLSLAttributedResourceType *AttrResType =
           HLSLAttributedResourceType::findHandleTypeOnResource(
               VD->getType().getTypePtr())) {
-    if (RegType == getRegisterType(AttrResType->getAttrs().ResourceClass))
+    if (RegType == getRegisterType(AttrResType))
       return true;
 
     S.Diag(D->getLocation(), diag::err_hlsl_binding_type_mismatch)
@@ -2439,8 +2468,8 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     HLSLBufferDecl *DefaultCBuffer = HLSLBufferDecl::CreateDefaultCBuffer(
         SemaRef.getASTContext(), SemaRef.getCurLexicalContext(),
         DefaultCBufferDecls);
-    addImplicitBindingAttrToBuffer(SemaRef, DefaultCBuffer,
-                                   getNextImplicitBindingOrderID());
+    addImplicitBindingAttrToDecl(SemaRef, DefaultCBuffer, RegisterType::CBuffer,
+                                 getNextImplicitBindingOrderID());
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
     createHostLayoutStructForBuffer(SemaRef, DefaultCBuffer);
 
@@ -3180,10 +3209,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       List.insert(List.end(), VT->getNumElements(), VT->getElementType());
       continue;
     }
-    if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
-      assert(RD && "HLSL record types should all be CXXRecordDecls!");
-
+    if (const auto *RD = T->getAsCXXRecordDecl()) {
       if (RD->isStandardLayout())
         RD = RD->getStandardLayoutBaseWithFields();
 
@@ -3640,6 +3666,24 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
 
     // process explicit bindings
     processExplicitBindingsOnDecl(VD);
+
+    if (VD->getType()->isHLSLResourceRecordArray()) {
+      // If the resource array does not have an explicit binding attribute,
+      // create an implicit one. It will be used to transfer implicit binding
+      // order_ID to codegen.
+      if (!VD->hasAttr<HLSLVkBindingAttr>()) {
+        HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
+        if (!RBA || !RBA->hasRegisterSlot()) {
+          uint32_t OrderID = getNextImplicitBindingOrderID();
+          if (RBA)
+            RBA->setImplicitBindingOrderID(OrderID);
+          else
+            addImplicitBindingAttrToDecl(
+                SemaRef, VD, getRegisterType(getResourceArrayHandleType(VD)),
+                OrderID);
+        }
+      }
+    }
   }
 
   deduceAddressSpace(VD);
@@ -3665,11 +3709,12 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
   return true;
 }
 
-bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
+void SemaHLSL::createResourceRecordCtorArgs(
+    const Type *ResourceTy, StringRef VarName, HLSLResourceBindingAttr *RBA,
+    HLSLVkBindingAttr *VkBinding, uint32_t ArrayIndex,
+    llvm::SmallVectorImpl<Expr *> &Args) {
   std::optional<uint32_t> RegisterSlot;
   uint32_t SpaceNo = 0;
-  HLSLVkBindingAttr *VkBinding = VD->getAttr<HLSLVkBindingAttr>();
-  HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
   if (VkBinding) {
     RegisterSlot = VkBinding->getBinding();
     SpaceNo = VkBinding->getSet();
@@ -3684,12 +3729,12 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
   IntegerLiteral *RangeSize = IntegerLiteral::Create(
       AST, llvm::APInt(IntTySize, 1), AST.IntTy, SourceLocation());
-  IntegerLiteral *Index = IntegerLiteral::Create(
-      AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy, SourceLocation());
+  IntegerLiteral *Index =
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, ArrayIndex),
+                             AST.UnsignedIntTy, SourceLocation());
   IntegerLiteral *Space =
       IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
                              AST.UnsignedIntTy, SourceLocation());
-  StringRef VarName = VD->getName();
   StringLiteral *Name = StringLiteral::Create(
       AST, VarName, StringLiteralKind::Ordinary, false,
       AST.getStringLiteralArrayType(AST.CharTy.withConst(), VarName.size()),
@@ -3700,16 +3745,55 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
     IntegerLiteral *RegSlot = IntegerLiteral::Create(
         AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
         SourceLocation());
-    Expr *Args[] = {RegSlot, Space, RangeSize, Index, Name};
-    return initVarDeclWithCtor(SemaRef, VD, Args);
+    Args.append({RegSlot, Space, RangeSize, Index, Name});
+  } else {
+    // resource with implicit binding
+    uint32_t OrderID = (RBA && RBA->hasImplicitBindingOrderID())
+                           ? RBA->getImplicitBindingOrderID()
+                           : getNextImplicitBindingOrderID();
+    IntegerLiteral *OrderId =
+        IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, OrderID),
+                               AST.UnsignedIntTy, SourceLocation());
+    Args.append({Space, RangeSize, Index, OrderId, Name});
   }
+}
 
-  // resource with implicit binding
-  IntegerLiteral *OrderId = IntegerLiteral::Create(
-      AST, llvm::APInt(UIntTySize, getNextImplicitBindingOrderID()),
-      AST.UnsignedIntTy, SourceLocation());
-  Expr *Args[] = {Space, RangeSize, Index, OrderId, Name};
+bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
+  SmallVector<Expr *> Args;
+  createResourceRecordCtorArgs(VD->getType().getTypePtr(), VD->getName(),
+                               VD->getAttr<HLSLResourceBindingAttr>(),
+                               VD->getAttr<HLSLVkBindingAttr>(), 0, Args);
   return initVarDeclWithCtor(SemaRef, VD, Args);
+}
+
+bool SemaHLSL::initGlobalResourceArrayDecl(VarDecl *VD) {
+  assert(VD->getType()->isHLSLResourceRecordArray() &&
+         "expected array of resource records");
+
+  // Individual resources in a resource array are not initialized here. They
+  // are initialized later on during codegen when the individual resources are
+  // accessed. Codegen will emit a call to the resource constructor with the
+  // specified array index. We need to make sure though that the constructor
+  // for the specific resource type is instantiated, so codegen can emit a call
+  // to it when the array element is accessed.
+  SmallVector<Expr *> Args;
+  QualType ResElementTy = VD->getASTContext().getBaseElementType(VD->getType());
+  createResourceRecordCtorArgs(ResElementTy.getTypePtr(), VD->getName(),
+                               VD->getAttr<HLSLResourceBindingAttr>(),
+                               VD->getAttr<HLSLVkBindingAttr>(), 0, Args);
+
+  SourceLocation Loc = VD->getLocation();
+  InitializedEntity Entity =
+      InitializedEntity::InitializeTemporary(ResElementTy);
+  InitializationKind Kind = InitializationKind::CreateDirect(Loc, Loc, Loc);
+  InitializationSequence InitSeq(SemaRef, Entity, Kind, Args);
+  if (InitSeq.Failed())
+    return false;
+
+  // This takes care of instantiating and emitting of the constructor that will
+  // be called from codegen when the array is accessed.
+  ExprResult OneResInit = InitSeq.Perform(SemaRef, Entity, Kind, Args);
+  return !OneResInit.isInvalid();
 }
 
 // Returns true if the initialization has been handled.
@@ -3720,17 +3804,14 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
     return true;
 
-  // Initialize resources
-  if (!isResourceRecordTypeOrArrayOf(VD))
-    return false;
-
-  // FIXME: We currectly support only simple resources - no arrays of resources
-  // or resources in user defined structs.
-  // (llvm/llvm-project#133835, llvm/llvm-project#133837)
   // Initialize resources at the global scope
-  if (VD->hasGlobalStorage() && VD->getType()->isHLSLResourceRecord())
-    return initGlobalResourceDecl(VD);
-
+  if (VD->hasGlobalStorage()) {
+    const Type *Ty = VD->getType().getTypePtr();
+    if (Ty->isHLSLResourceRecord())
+      return initGlobalResourceDecl(VD);
+    if (Ty->isHLSLResourceRecordArray())
+      return initGlobalResourceArrayDecl(VD);
+  }
   return false;
 }
 
@@ -3898,19 +3979,19 @@ class InitListTransformer {
       return true;
     }
 
-    if (auto *RTy = Ty->getAs<RecordType>()) {
-      llvm::SmallVector<const RecordType *> RecordTypes;
-      RecordTypes.push_back(RTy);
-      while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
-        CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+    if (auto *RD = Ty->getAsCXXRecordDecl()) {
+      llvm::SmallVector<CXXRecordDecl *> RecordDecls;
+      RecordDecls.push_back(RD);
+      while (RecordDecls.back()->getNumBases()) {
+        CXXRecordDecl *D = RecordDecls.back();
         assert(D->getNumBases() == 1 &&
                "HLSL doesn't support multiple inheritance");
-        RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+        RecordDecls.push_back(
+            D->bases_begin()->getType()->castAsCXXRecordDecl());
       }
-      while (!RecordTypes.empty()) {
-        const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD :
-             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
+      while (!RecordDecls.empty()) {
+        CXXRecordDecl *RD = RecordDecls.pop_back_val();
+        for (auto *FD : RD->fields()) {
           DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
           DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
           ExprResult Res = S.BuildFieldReferenceExpr(
@@ -3947,21 +4028,20 @@ class InitListTransformer {
       for (uint64_t I = 0; I < Size; ++I)
         Inits.push_back(generateInitListsImpl(ElTy));
     }
-    if (auto *RTy = Ty->getAs<RecordType>()) {
-      llvm::SmallVector<const RecordType *> RecordTypes;
-      RecordTypes.push_back(RTy);
-      while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
-        CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+    if (auto *RD = Ty->getAsCXXRecordDecl()) {
+      llvm::SmallVector<CXXRecordDecl *> RecordDecls;
+      RecordDecls.push_back(RD);
+      while (RecordDecls.back()->getNumBases()) {
+        CXXRecordDecl *D = RecordDecls.back();
         assert(D->getNumBases() == 1 &&
                "HLSL doesn't support multiple inheritance");
-        RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+        RecordDecls.push_back(
+            D->bases_begin()->getType()->castAsCXXRecordDecl());
       }
-      while (!RecordTypes.empty()) {
-        const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD :
-             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
+      while (!RecordDecls.empty()) {
+        CXXRecordDecl *RD = RecordDecls.pop_back_val();
+        for (auto *FD : RD->fields())
           Inits.push_back(generateInitListsImpl(FD->getType()));
-        }
       }
     }
     auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),

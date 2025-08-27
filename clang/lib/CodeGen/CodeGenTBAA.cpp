@@ -142,10 +142,9 @@ static bool TypeHasMayAlias(QualType QTy) {
 
 /// Check if the given type is a valid base type to be used in access tags.
 static bool isValidBaseType(QualType QTy) {
-  if (const RecordType *TTy = QTy->getAs<RecordType>()) {
-    const RecordDecl *RD = TTy->getOriginalDecl()->getDefinition();
+  if (const auto *RD = QTy->getAsRecordDecl()) {
     // Incomplete types are not valid base access types.
-    if (!RD)
+    if (!RD->isCompleteDefinition())
       return false;
     if (RD->hasFlexibleArrayMember())
       return false;
@@ -296,7 +295,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       // Be conservative if the type isn't a RecordType. We are specifically
       // required to do this for member pointers until we implement the
       // similar-types rule.
-      const auto *RT = Ty->getAs<RecordType>();
+      const auto *RT = Ty->getAsCanonical<RecordType>();
       if (!RT)
         return getAnyPtr(PtrDepth);
 
@@ -425,7 +424,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
                            bool MayAlias) {
   /* Things not handled yet include: C++ base classes, bitfields, */
 
-  if (const RecordType *TTy = QTy->getAs<RecordType>()) {
+  if (const auto *TTy = QTy->getAsCanonical<RecordType>()) {
     if (TTy->isUnionType()) {
       uint64_t Size = Context.getTypeSizeInChars(QTy).getQuantity();
       llvm::MDNode *TBAAType = getChar();

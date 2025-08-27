@@ -256,13 +256,15 @@ public:
         new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
                           GEPNoWrapFlags::none(), DL, Name));
   }
-  VPInstruction *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset,
-                                      DebugLoc DL = DebugLoc::getUnknown(),
-                                      const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
-                          GEPNoWrapFlags::inBounds(), DL, Name));
+
+  VPInstruction *createNoWrapPtrAdd(VPValue *Ptr, VPValue *Offset,
+                                    GEPNoWrapFlags GEPFlags,
+                                    DebugLoc DL = DebugLoc::getUnknown(),
+                                    const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::PtrAdd, {Ptr, Offset}, GEPFlags, DL, Name));
   }
+
   VPInstruction *createWidePtrAdd(VPValue *Ptr, VPValue *Offset,
                                   DebugLoc DL = DebugLoc::getUnknown(),
                                   const Twine &Name = "") {
@@ -274,6 +276,20 @@ public:
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues, DebugLoc DL,
                          const Twine &Name = "") {
     return tryInsertInstruction(new VPPhi(IncomingValues, DL, Name));
+  }
+
+  VPValue *createElementCount(Type *Ty, ElementCount EC) {
+    VPlan &Plan = *getInsertBlock()->getPlan();
+    VPValue *RuntimeEC =
+        Plan.getOrAddLiveIn(ConstantInt::get(Ty, EC.getKnownMinValue()));
+    if (EC.isScalable()) {
+      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
+      RuntimeEC = EC.getKnownMinValue() == 1
+                      ? VScale
+                      : createOverflowingOp(Instruction::Mul,
+                                            {VScale, RuntimeEC}, {true, false});
+    }
+    return RuntimeEC;
   }
 
   /// Convert the input value \p Current to the corresponding value of an
@@ -316,6 +332,10 @@ public:
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
         IV, Step, VF, InductionOpcode,
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
+  }
+
+  VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {
+    return tryInsertInstruction(new VPExpandSCEVRecipe(Expr));
   }
 
   //===--------------------------------------------------------------------===//
@@ -542,6 +562,11 @@ public:
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
+
+  /// Create a check to \p Plan to see if the vector loop should be executed
+  /// based on its trip count.
+  void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
+                                ElementCount MinProfitableTripCount) const;
 
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,

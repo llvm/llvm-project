@@ -374,8 +374,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
 
   if (!passAsAggregateType(Ty)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    if (const auto *ED = Ty->getAsEnumDecl())
+      Ty = ED->getIntegerType();
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
@@ -493,10 +493,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     auto ContainsOnlyPointers = [&](const auto &Self, QualType Ty) {
       if (isEmptyRecord(getContext(), Ty, true))
         return false;
-      const RecordType *RT = Ty->getAs<RecordType>();
-      if (!RT)
+      const auto *RD = Ty->getAsRecordDecl();
+      if (!RD)
         return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
         for (const auto &I : CXXRD->bases())
           if (!Self(Self, I.getType()))
@@ -547,9 +546,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
   if (!passAsAggregateType(RetTy)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy =
-          EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    if (const auto *ED = RetTy->getAsEnumDecl())
+      RetTy = ED->getIntegerType();
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
@@ -738,7 +736,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
     return true;
   }
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const RecordType *RT = Ty->getAsCanonical<RecordType>()) {
     // If the record cannot be passed in registers, then it's not a PST.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
         RAA != CGCXXABI::RAA_Default)

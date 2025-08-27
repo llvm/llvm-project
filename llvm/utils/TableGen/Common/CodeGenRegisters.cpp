@@ -57,9 +57,8 @@ CodeGenSubRegIndex::CodeGenSubRegIndex(const Record *R, unsigned Enum,
   if (R->getValue("Namespace"))
     Namespace = R->getValueAsString("Namespace").str();
 
-  if (const RecordVal *RV = R->getValue("SubRegRanges"))
-    if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
-      Range = SubRegRangeByHwMode(DI->getDef(), CGH);
+  if (const Record *RV = R->getValueAsOptionalDef("SubRegRanges"))
+    Range = SubRegRangeByHwMode(RV, CGH);
   if (!Range.hasDefault())
     Range.insertSubRegRangeForMode(DefaultMode, SubRegRange(R));
 }
@@ -732,9 +731,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   Namespace = R->getValueAsString("Namespace");
 
-  if (const RecordVal *RV = R->getValue("RegInfos"))
-    if (const DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
-      RSI = RegSizeInfoByHwMode(DI->getDef(), RegBank.getHwModes());
+  if (const Record *RV = R->getValueAsOptionalDef("RegInfos"))
+    RSI = RegSizeInfoByHwMode(RV, RegBank.getHwModes());
   unsigned Size = R->getValueAsInt("Size");
   assert((RSI.hasDefault() || Size != 0 || VTs[0].isSimple()) &&
          "Impossible to determine register size");

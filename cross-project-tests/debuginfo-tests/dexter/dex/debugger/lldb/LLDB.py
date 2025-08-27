@@ -204,7 +204,7 @@ class LLDB(DebuggerBase):
         assert num_stopped_threads > 0
         assert self._thread, (self._process, self._thread)
 
-    def step(self):
+    def step_in(self):
         self._thread.StepInto()
         stop_reason = self._thread.GetStopReason()
         # If we (1) completed a step and (2) are sitting at a breakpoint,

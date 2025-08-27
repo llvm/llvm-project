@@ -268,11 +268,11 @@ void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
 /// True if the given aggregate type requires special GC API calls.
 bool AggExprEmitter::TypeRequiresGCollection(QualType T) {
   // Only record types have members that might require garbage collection.
-  const RecordType *RecordTy = T->getAs<RecordType>();
-  if (!RecordTy) return false;
+  const auto *Record = T->getAsRecordDecl();
+  if (!Record)
+    return false;
 
   // Don't mess with non-trivial C++ types.
-  RecordDecl *Record = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
   if (isa<CXXRecordDecl>(Record) &&
       (cast<CXXRecordDecl>(Record)->hasNonTrivialCopyConstructor() ||
        !cast<CXXRecordDecl>(Record)->hasTrivialDestructor()))
@@ -424,10 +424,7 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
       Ctx.getAsConstantArrayType(E->getSubExpr()->getType());
   assert(ArrayType && "std::initializer_list constructed from non-array");
 
-  RecordDecl *Record = E->getType()
-                           ->castAs<RecordType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+  auto *Record = E->getType()->castAsRecordDecl();
   RecordDecl::field_iterator Field = Record->field_begin();
   assert(Field != Record->field_end() &&
          Ctx.hasSameType(Field->getType()->getPointeeType(),
@@ -1809,10 +1806,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   // the disadvantage is that the generated code is more difficult for
   // the optimizer, especially with bitfields.
   unsigned NumInitElements = InitExprs.size();
-  RecordDecl *record = ExprToVisit->getType()
-                           ->castAs<RecordType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+  RecordDecl *record = ExprToVisit->getType()->castAsRecordDecl();
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
@@ -2120,7 +2114,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
   // InitListExprs for structs have to be handled carefully.  If there are
   // reference members, we need to consider the size of the reference, not the
   // referencee.  InitListExprs for unions and arrays can't have references.
-  if (const RecordType *RT = E->getType()->getAs<RecordType>()) {
+  if (const RecordType *RT = E->getType()->getAsCanonical<RecordType>()) {
     if (!RT->isUnionType()) {
       RecordDecl *SD = RT->getOriginalDecl()->getDefinitionOrSelf();
       CharUnits NumNonZeroBytes = CharUnits::Zero();
@@ -2173,7 +2167,8 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
   // C++ objects with a user-declared constructor don't need zero'ing.
   if (CGF.getLangOpts().CPlusPlus)
     if (const RecordType *RT = CGF.getContext()
-                       .getBaseElementType(E->getType())->getAs<RecordType>()) {
+                                   .getBaseElementType(E->getType())
+                                   ->getAsCanonical<RecordType>()) {
       const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getOriginalDecl());
       if (RD->hasUserDeclaredConstructor())
         return;
@@ -2294,9 +2289,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   Address SrcPtr = Src.getAddress();
 
   if (getLangOpts().CPlusPlus) {
-    if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      auto *Record =
-          cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+    if (const auto *Record = Ty->getAsCXXRecordDecl()) {
       assert((Record->hasTrivialCopyConstructor() ||
               Record->hasTrivialCopyAssignment() ||
               Record->hasTrivialMoveConstructor() ||
@@ -2379,8 +2372,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   // Don't do any of the memmove_collectable tests if GC isn't set.
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     // fall through
-  } else if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
-    RecordDecl *Record = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
+  } else if (const auto *Record = Ty->getAsRecordDecl()) {
     if (Record->hasObjectMember()) {
       CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr,
                                                     SizeVal);
@@ -2388,10 +2380,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   } else if (Ty->isArrayType()) {
     QualType BaseType = getContext().getBaseElementType(Ty);
-    if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
-      if (RecordTy->getOriginalDecl()
-              ->getDefinitionOrSelf()
-              ->hasObjectMember()) {
+    if (const auto *Record = BaseType->getAsRecordDecl()) {
+      if (Record->hasObjectMember()) {
         CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr,
                                                       SizeVal);
         return;

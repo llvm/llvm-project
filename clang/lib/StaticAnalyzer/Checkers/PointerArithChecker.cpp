@@ -58,7 +58,7 @@ class PointerArithChecker
 
   const BugType BT_pointerArith{this, "Dangerous pointer arithmetic"};
   const BugType BT_polyArray{this, "Dangerous pointer arithmetic"};
-  mutable llvm::SmallSet<IdentifierInfo *, 8> AllocFunctions;
+  mutable llvm::SmallPtrSet<IdentifierInfo *, 8> AllocFunctions;
 
 public:
   void checkPreStmt(const UnaryOperator *UOp, CheckerContext &C) const;

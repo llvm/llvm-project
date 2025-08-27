@@ -28,7 +28,7 @@ namespace interp {
 class Program;
 class ByteCodeEmitter;
 class Pointer;
-enum PrimType : uint32_t;
+enum PrimType : uint8_t;
 
 /// Describes a scope block.
 ///
