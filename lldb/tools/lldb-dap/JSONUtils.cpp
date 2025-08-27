@@ -11,6 +11,7 @@
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
 #include "ProtocolUtils.h"
+#include "Variables.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
@@ -358,16 +359,16 @@ void FillResponse(const llvm::json::Object &request,
 //   "required": [ "name", "variablesReference", "expensive" ]
 // }
 llvm::json::Value CreateScope(const llvm::StringRef name,
-                              int64_t variablesReference,
+                              int64_t variablesReference, ScopeKind kind,
                               int64_t namedVariables, bool expensive) {
   llvm::json::Object object;
   EmplaceSafeString(object, "name", name.str());
 
   // TODO: Support "arguments" scope. At the moment lldb-dap includes the
   // arguments into the "locals" scope.
-  if (variablesReference == VARREF_LOCALS) {
+  if (kind == ScopeKind::Locals) {
     object.try_emplace("presentationHint", "locals");
-  } else if (variablesReference == VARREF_REGS) {
+  } else if (kind == ScopeKind::Registers) {
     object.try_emplace("presentationHint", "registers");
   }
 
