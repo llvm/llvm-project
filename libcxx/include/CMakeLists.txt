@@ -792,7 +792,6 @@ set(files
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
-  __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h
   __type_traits/conditional.h
@@ -933,6 +932,7 @@ set(files
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
+  __utility/try_key_extraction.h
   __utility/unreachable.h
   __variant/monostate.h
   __vector/comparison.h

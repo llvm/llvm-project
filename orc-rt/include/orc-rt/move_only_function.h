@@ -59,9 +59,9 @@ public:
   move_only_function() = default;
   move_only_function(std::nullptr_t) {}
   move_only_function(move_only_function &&) = default;
-  move_only_function(const move_only_function &&) = delete;
+  move_only_function(const move_only_function &) = delete;
   move_only_function &operator=(move_only_function &&) = default;
-  move_only_function &operator=(const move_only_function &&) = delete;
+  move_only_function &operator=(const move_only_function &) = delete;
 
   template <typename CallableT>
   move_only_function(CallableT &&Callable)

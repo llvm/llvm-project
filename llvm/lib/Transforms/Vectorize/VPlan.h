@@ -805,6 +805,9 @@ public:
 
   GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
 
+  /// Returns true if the recipe has a comparison predicate.
+  bool hasPredicate() const { return OpType == OperationType::Cmp; }
+
   /// Returns true if the recipe has fast-math flags.
   bool hasFastMathFlags() const { return OpType == OperationType::FPMathOp; }
 
@@ -1011,7 +1014,8 @@ public:
     // Returns a scalar boolean value, which is true if any lane of its
     // (boolean) vector operands is true. It produces the reduced value across
     // all unrolled iterations. Unrolling will add all copies of its original
-    // operand as additional operands.
+    // operand as additional operands. AnyOf is poison-safe as all operands
+    // will be frozen.
     AnyOf,
     // Calculates the first active lane index of the vector predicate operands.
     // It produces the lane index across all unrolled iterations. Unrolling will

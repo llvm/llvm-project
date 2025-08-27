@@ -1231,7 +1231,7 @@ define void @optimized_range_check_unsigned3(ptr %pred, i1 %c) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,3) S: [0,3) Exits: (-1 + %N)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, ptr %pred, i32 %iv
-; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N)<nsw> to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((zext i32 (-2 + (2 * %N)<nuw><nsw>)<nsw> to i64) + %pred) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4) S: [1,4) Exits: %N LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @optimized_range_check_unsigned3

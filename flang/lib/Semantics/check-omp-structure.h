@@ -167,6 +167,10 @@ private:
   void CheckVariableListItem(const SymbolSourceMap &symbols);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
+  void AnalyzeObject(
+      const parser::OmpObject &object, bool allowAssumedSizeArrays = false);
+  void AnalyzeObjects(const parser::OmpObjectList &objects,
+      bool allowAssumedSizeArrays = false);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
@@ -245,6 +249,7 @@ private:
       llvmOmpClause clause, const parser::OmpObjectList &ompObjectList);
   bool CheckTargetBlockOnlyTeams(const parser::Block &);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
+  void CheckWorkdistributeBlockStmts(const parser::Block &, parser::CharBlock);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);

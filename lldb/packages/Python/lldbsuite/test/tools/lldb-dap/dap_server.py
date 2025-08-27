@@ -1299,6 +1299,25 @@ class DebugCommunication(object):
             {"command": "modules", "type": "request", "arguments": args_dict}
         )
 
+    def request_moduleSymbols(
+        self,
+        moduleId: str = "",
+        moduleName: str = "",
+        startIndex: int = 0,
+        count: int = 0,
+    ):
+        command_dict = {
+            "command": "__lldb_moduleSymbols",
+            "type": "request",
+            "arguments": {
+                "moduleId": moduleId,
+                "moduleName": moduleName,
+                "startIndex": startIndex,
+                "count": count,
+            },
+        }
+        return self._send_recv(command_dict)
+
     def request_stackTrace(
         self, threadId=None, startFrame=None, levels=None, format=None, dump=False
     ):
