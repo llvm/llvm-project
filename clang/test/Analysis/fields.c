@@ -113,6 +113,102 @@ void testBitfields(void) {
 }
 
 
+struct BitfieldUnion {
+  union {
+    struct {
+      unsigned int addr : 22;
+      unsigned int vf : 1;
+    };
+    unsigned int raw;
+  };
+};
+
+struct BitfieldUnion processBitfieldUnion(struct BitfieldUnion r) {
+  struct BitfieldUnion result = r;
+  result.addr += 1;
+  return result;
+}
+
+void testBitfieldUnionCompoundLiteral(void) {
+  struct BitfieldUnion r1 = processBitfieldUnion((struct BitfieldUnion){.addr = 100, .vf = 1});
+  clang_analyzer_eval(r1.addr == 101); // expected-warning{{TRUE}}
+  clang_analyzer_eval(r1.vf == 1); // expected-warning{{UNKNOWN}}
+  
+  struct BitfieldUnion r2 = processBitfieldUnion((struct BitfieldUnion){.addr = 1});
+  clang_analyzer_eval(r2.addr == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(r2.vf); // expected-warning{{UNKNOWN}}
+}
+
+struct NestedBitfields {
+  struct {
+    unsigned x : 16;
+    unsigned y : 16;
+  } inner;
+};
+
+struct NestedBitfields processNestedBitfields(struct NestedBitfields n) {
+  struct NestedBitfields tmp = n;
+  tmp.inner.x += 1;
+  return tmp;
+}
+
+void testNestedBitfields(void) {
+  struct NestedBitfields n1 = processNestedBitfields((struct NestedBitfields){.inner.x = 1});
+  clang_analyzer_eval(n1.inner.x == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(n1.inner.y == 0); // expected-warning{{TRUE}}
+  
+  struct NestedBitfields n2 = processNestedBitfields((struct NestedBitfields){{200, 300}});
+  clang_analyzer_eval(n2.inner.x == 201); // expected-warning{{TRUE}}
+  clang_analyzer_eval(n2.inner.y == 300); // expected-warning{{TRUE}}
+}
+
+struct UnionContainerBitfields {
+  union {
+    unsigned val;
+    struct {
+      unsigned x : 16;
+      unsigned y : 16;
+    };
+  } u;
+};
+
+struct UnionContainerBitfields processUnionContainer(struct UnionContainerBitfields c) {
+  struct UnionContainerBitfields tmp = c;
+  tmp.u.x += 1;
+  return tmp;
+}
+
+void testUnionContainerBitfields(void) {
+  struct UnionContainerBitfields c1 = processUnionContainer((struct UnionContainerBitfields){.u.val = 100});
+  clang_analyzer_eval(c1.u.x == 101); // expected-warning{{TRUE}}
+  
+  struct UnionContainerBitfields c2 = processUnionContainer((struct UnionContainerBitfields){.u.x = 100});
+  clang_analyzer_eval(c2.u.x == 101); // expected-warning{{TRUE}}
+}
+
+struct MixedBitfields {
+  unsigned char x;
+  unsigned y : 12;
+  unsigned z : 20;
+};
+
+struct MixedBitfields processMixedBitfields(struct MixedBitfields m) {
+  struct MixedBitfields tmp = m;
+  tmp.y += 1;
+  return tmp;
+}
+
+void testMixedBitfields(void) {
+  struct MixedBitfields m1 = processMixedBitfields((struct MixedBitfields){.x = 100, .y = 100});
+  clang_analyzer_eval(m1.x == 100); // expected-warning{{TRUE}}
+  clang_analyzer_eval(m1.y == 101); // expected-warning{{TRUE}}
+  
+  struct MixedBitfields m2 = processMixedBitfields((struct MixedBitfields){.z = 100});
+  clang_analyzer_eval(m2.y == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(m2.z == 100); // expected-warning{{TRUE}}
+}
+
+
 //-----------------------------------------------------------------------------
 // Incorrect behavior
 //-----------------------------------------------------------------------------
