@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++14
+// RUN: %clang_cc1 -fsyntax-only -verify %s -cl-std=clc++2021
 
 friend class A; // expected-error {{'friend' used outside of class}}
 void f() { friend class A; } // expected-error {{'friend' used outside of class}}

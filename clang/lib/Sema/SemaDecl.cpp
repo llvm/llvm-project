@@ -51,6 +51,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -10316,6 +10317,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       }
       NewFD->setObjectOfFriendDecl();
       NewFD->setAccess(AS_public);
+      // For OpenCLCPlusPlus dialect remove address space from free friend
+      // function prototype, since it is non-member and none should be present.
+      if (!isa<CXXMethodDecl>(NewFD) && getLangOpts().OpenCLCPlusPlus) {
+        OpenCL().removeFriendFunctionAddressSpace(NewFD, TInfo);
+      }
     }
 
     // If a function is defined as defaulted or deleted, mark it as such now.

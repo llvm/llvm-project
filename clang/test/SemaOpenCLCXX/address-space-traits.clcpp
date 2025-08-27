@@ -1,0 +1,29 @@
+//RUN: %clang_cc1 %s -triple spirv64-unknown-unknown -pedantic -fsyntax-only -verify -cl-ext=+__cl_clang_function_pointers,+__opencl_c_generic_address_space
+
+#pragma OPENCL EXTENSION __cl_clang_function_pointers : enable
+
+template <class T> using remove_pointer_t = __remove_pointer(T);
+static_assert(__is_same(remove_pointer_t<int (*)()>, int()));
+
+static_assert(__is_same(remove_pointer_t<int (*)()>, int()));
+
+static_assert(__is_same(remove_pointer_t<int (&)()>, int (&)()));
+
+template <class T> using remove_reference_t = __remove_reference_t(T);
+
+static_assert(__is_same(remove_reference_t<int (&)()>, int()));
+static_assert(__is_same(remove_reference_t<int (&)()>, void()));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_same(int (), void ())'}}
+
+static_assert(!__is_same(remove_reference_t<__add_lvalue_reference(int (*)())>, int));
+
+struct S {
+  int foo() __local;
+};
+
+// FIXME: this fails since address-space is not preserved on member-function when speciefied (2nd parameter)
+//static_assert(!__is_same(remove_pointer_t<decltype(&S::foo)>, int (S::*)() const __local));
+//static_assert(__is_same(remove_pointer_t<decltype(&S::foo)>, int (S::*)() __local));
+
+//static_assert(!__is_same(remove_reference_t<decltype(&S::foo)>, int (S::*)() const __local));
+//static_assert(__is_same(remove_reference_t<decltype(&S::foo)>, int (S::*)() __local));
