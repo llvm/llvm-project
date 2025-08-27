@@ -247,6 +247,7 @@ public:
     MemRefType memRefTy = loadOrStoreOp.getMemRefType();
 
     // Resolve alignment.
+    // Explicit alignment takes priority over use-vector-alignment.
     unsigned align = loadOrStoreOp.getAlignment().value_or(0);
     if (!align &&
         failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
@@ -299,6 +300,7 @@ public:
     }
 
     // Resolve alignment.
+    // Explicit alignment takes priority over use-vector-alignment.
     unsigned align = gather.getAlignment().value_or(0);
     if (!align &&
         failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
@@ -355,6 +357,7 @@ public:
     }
 
     // Resolve alignment.
+    // Explicit alignment takes priority over use-vector-alignment.
     unsigned align = scatter.getAlignment().value_or(0);
     if (!align &&
         failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
