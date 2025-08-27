@@ -42,7 +42,7 @@ private:
   std::unique_ptr<llvm::Module> CachedInCodeGenModule;
 
 public:
-  IncrementalAction(CompilerInstance &CI, llvm::LLVMContext &LLVMCtx,
+  IncrementalAction(CompilerInstance &Instance, llvm::LLVMContext &LLVMCtx,
                     llvm::Error &Err, Interpreter &I,
                     std::unique_ptr<ASTConsumer> Consumer = nullptr);
 
