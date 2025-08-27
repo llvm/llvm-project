@@ -74,10 +74,11 @@ protected:
   /// Utility function to run MCA with (nearly) the same configuration as the
   /// `llvm-mca` tool to verify result correctness.
   /// This function only displays on SummaryView by default.
-  virtual Error runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
-                               ArrayRef<mca::View *> Views = {},
-                               const mca::PipelineOptions *PO = nullptr,
-                               SmallVector<std::pair<StringRef, StringRef>> Descs = {});
+  virtual Error
+  runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
+                 ArrayRef<mca::View *> Views = {},
+                 const mca::PipelineOptions *PO = nullptr,
+                 SmallVector<std::pair<StringRef, StringRef>> Descs = {});
 };
 
 } // end namespace mca

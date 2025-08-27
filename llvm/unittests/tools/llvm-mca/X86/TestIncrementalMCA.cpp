@@ -244,8 +244,8 @@ TEST_F(X86TestBase, TestInstructionCustomization) {
                                 .addReg(X86::RAX);
   MCIs.push_back(InstructionToAdd);
   SmallVector<std::pair<StringRef, StringRef>> InstrDescs;
-  InstrDescs.push_back(std::make_pair(StringRef("CUSTOMIZE"),
-      StringRef("Latency:100")));
+  InstrDescs.push_back(
+      std::make_pair(StringRef("CUSTOMIZE"), StringRef("Latency:100")));
 
   // Run the baseline.
   json::Object BaselineResult;

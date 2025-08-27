@@ -512,12 +512,14 @@ int main(int argc, char **argv) {
   std::unique_ptr<mca::InstrumentManager> IM;
   if (!DisableInstrumentManager) {
     std::unique_ptr<mca::InstrumentManager> TargetIM =
-      std::unique_ptr<mca::InstrumentManager>(TheTarget->createInstrumentManager(*STI, *MCII));
-    IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII, true, std::move(TargetIM));
+        std::unique_ptr<mca::InstrumentManager>(
+            TheTarget->createInstrumentManager(*STI, *MCII));
+    IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII, true,
+                                                  std::move(TargetIM));
   }
   if (!IM) {
-    // If -disable-cb flag is set then we use the base class with default behavior
-    // (which does nothing).
+    // If -disable-cb flag is set then we use the base class with default
+    // behavior (which does nothing).
     IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
   }
 
@@ -635,7 +637,7 @@ int main(int argc, char **argv) {
           InstrumentRegions.getActiveInstruments(Loc);
 
       Expected<std::unique_ptr<mca::Instruction>> Inst =
-        IB.createInstruction(MCI, Instruments);
+          IB.createInstruction(MCI, Instruments);
       if (!Inst) {
         if (auto NewE = handleErrors(
                 Inst.takeError(),

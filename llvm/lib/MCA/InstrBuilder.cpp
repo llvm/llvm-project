@@ -682,9 +682,9 @@ STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
                                 const SmallVector<Instrument *> &IVec) {
-  Expected<const InstrDesc &> DescOrErr =
-      IM.canCustomize(IVec) ? createInstrDescImpl(MCI, IVec)
-                 : getOrCreateInstrDesc(MCI, IVec);
+  Expected<const InstrDesc &> DescOrErr = IM.canCustomize(IVec)
+                                              ? createInstrDescImpl(MCI, IVec)
+                                              : getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;

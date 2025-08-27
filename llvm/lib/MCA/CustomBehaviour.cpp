@@ -45,6 +45,7 @@ CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
 
 class CustomInstrument : public Instrument {
   std::optional<unsigned> Latency;
+
 public:
   static const llvm::StringRef DESC_NAME;
   explicit CustomInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {
@@ -66,11 +67,9 @@ public:
     }
   }
 
-  bool canCustomize() const override {
-    return bool(Latency);
-  }
+  bool canCustomize() const override { return bool(Latency); }
 
-  void customize(InstrDesc& ID) const override {
+  void customize(InstrDesc &ID) const override {
     if (Latency) {
       for (auto &W : ID.Writes)
         W.Latency = *Latency;
@@ -89,7 +88,8 @@ bool InstrumentManager::supportsInstrumentType(StringRef Type) const {
   return false;
 }
 
-bool InstrumentManager::canCustomize(const llvm::SmallVector<Instrument *> &IVec) const {
+bool InstrumentManager::canCustomize(
+    const llvm::SmallVector<Instrument *> &IVec) const {
   for (const auto I : IVec) {
     if (I->canCustomize())
       return true;
@@ -97,7 +97,8 @@ bool InstrumentManager::canCustomize(const llvm::SmallVector<Instrument *> &IVec
   return false;
 }
 
-void InstrumentManager::customize(const llvm::SmallVector<Instrument *> &IVec, InstrDesc &ID) const {
+void InstrumentManager::customize(const llvm::SmallVector<Instrument *> &IVec,
+                                  InstrDesc &ID) const {
   for (const auto I : IVec) {
     if (I->canCustomize())
       I->customize(ID);

@@ -59,19 +59,21 @@ void MCATestBase::SetUp() {
   ASSERT_TRUE(IP);
 }
 
-Error MCATestBase::runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
-                                  ArrayRef<mca::View *> Views,
-                                  const mca::PipelineOptions *PO,
-                                  SmallVector<std::pair<StringRef, StringRef>> Descs) {
+Error MCATestBase::runBaselineMCA(
+    json::Object &Result, ArrayRef<MCInst> Insts,
+    ArrayRef<mca::View *> Views,
+    const mca::PipelineOptions *PO,
+    SmallVector<std::pair<StringRef, StringRef>> Descs) {
   mca::Context MCA(*MRI, *STI);
 
   // Enable instruments when descriptions are provided
-  auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII, !Descs.empty());
+  auto IM =
+      std::make_unique<mca::InstrumentManager>(*STI, *MCII, !Descs.empty());
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, /*CallLatency=*/100);
 
   SmallVector<mca::Instrument *> Instruments;
   SmallVector<mca::UniqueInstrument> InstrumentsOwner;
-  for (const auto& Desc : Descs) {
+  for (const auto &Desc : Descs) {
     auto I = IM->createInstrument(Desc.first, Desc.second);
     Instruments.push_back(I.get());
     InstrumentsOwner.push_back(std::move(I));
