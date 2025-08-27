@@ -4214,6 +4214,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
                 }
               }
             }
+            C += VPI->cost(VF, CostCtx);
             break;
           }
           case VPInstruction::ActiveLaneMask: {
