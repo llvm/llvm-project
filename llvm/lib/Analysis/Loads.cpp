@@ -26,6 +26,10 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    UseSymbolicMaxBTCForDerefInLoop("use-symbolic-maxbtc-deref-loop",
+                                    cl::init(false));
+
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
   return Base->getPointerAlignment(DL) >= Alignment;
@@ -332,7 +336,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
-  if (isa<SCEVCouldNotCompute>(BECount)) {
+  if (isa<SCEVCouldNotCompute>(BECount) && !UseSymbolicMaxBTCForDerefInLoop) {
     // TODO: Support symbolic max backedge taken counts for loops without
     // computable backedge taken counts.
     MaxBECount =
@@ -340,6 +344,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
             ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
             : SE.getConstantMaxBackedgeTakenCount(L);
   }
+
   const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
       L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr, &DT, AC);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
