@@ -439,7 +439,7 @@ bool mlir::hasMemoryEffectConflict(
     llvm::SmallVector<MemoryEffects::EffectInstance> effects;
     memInterface.getEffects(effects);
 
-    auto isDominated = dom.properlyDominates(mainOp, op);
+    bool isDominated = dom.properlyDominates(mainOp, op);
 
     // ensure op only has Write or dominated Read effects
     // check used resources
@@ -448,9 +448,8 @@ bool mlir::hasMemoryEffectConflict(
 
       if (resourceCounts.contains(resourceID)) {
         if (isa<MemoryEffects::Read>(effect.getEffect())) {
-          if (isDominated) {
+          if (isDominated)
             continue; // skip dominated reads
-          }
         }
         else if (!isa<MemoryEffects::Write>(effect.getEffect())) {
           return true; // count alloc/free in same region as conflict, be conservative
@@ -462,6 +461,11 @@ bool mlir::hasMemoryEffectConflict(
         }
       }
     }
+  } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
+    // Otherwise, if the op does not implement the memory effect interface and
+    // it does not have recursive side effects, then it cannot be known that the
+    // op is conflicting or not.
+    return true;
   }
 
   // Recurse into the regions and ensure that nested ops don't
