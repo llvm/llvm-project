@@ -1714,7 +1714,6 @@ def Vector_LoadOp : Vector_Op<"load", [
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
@@ -1830,7 +1829,6 @@ def Vector_StoreOp : Vector_Op<"store", [
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins
@@ -1919,7 +1917,6 @@ def Vector_MaskedLoadOp :
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2012,7 +2009,6 @@ def Vector_MaskedStoreOp :
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2051,10 +2047,12 @@ def Vector_GatherOp :
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
   ]>,
     Arguments<(ins Arg<TensorOrMemRef<[AnyType]>, "", [MemRead]>:$base,
-               Variadic<Index>:$indices,
-               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
+               Variadic<Index>:$offsets,
+               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = [{
@@ -2074,11 +2072,11 @@ def Vector_GatherOp :
 
     ```mlir
     func.func @gather_3D_to_2D(
-        %base: memref<?x10x?xf32>, %i0: index, %i1: index, %i2: index,
-        %index_vec: vector<2x3xi32>, %mask: vector<2x3xi1>,
+        %base: memref<?x10x?xf32>, %ofs_0: index, %ofs_1: index, %ofs_2: index,
+        %indices: vector<2x3xi32>, %mask: vector<2x3xi1>,
         %fall_thru: vector<2x3xf32>) -> vector<2x3xf32> {
-            %result = vector.gather %base[%i0, %i1, %i2]
-                                   [%index_vec], %mask, %fall_thru : [...]
+            %result = vector.gather %base[%ofs_0, %ofs_1, %ofs_2]
+                                   [%indices], %mask, %fall_thru : [...]
             return %result : vector<2x3xf32>
     }
     ```
@@ -2086,7 +2084,7 @@ def Vector_GatherOp :
     The indexing semantics are then,
 
     ```
-    result[i,j] := if mask[i,j] then base[i0, i1, i2 + index_vec[i,j]]
+    result[i,j] := if mask[i,j] then base[i0, i1, i2 + indices[i,j]]
                    else pass_thru[i,j]
     ```
     The index into `base` only varies in the innermost ((k-1)-th) dimension.
@@ -2095,6 +2093,15 @@ def Vector_GatherOp :
     given base, the behavior is undefined. If a mask bit is not set, the value
     comes from the pass-through vector regardless of the index, and the index is
     allowed to be out-of-bounds.
+
+    The gather operation can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for a gather.
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    gather operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
 
     Examples:
 
@@ -2111,28 +2118,44 @@ def Vector_GatherOp :
 
   let extraClassDeclaration = [{
     ShapedType getBaseType() { return getBase().getType(); }
-    VectorType getIndexVectorType() { return getIndexVec().getType(); }
+    VectorType getIndexVectorType() { return getIndices().getType(); }
     VectorType getMaskVectorType() { return getMask().getType(); }
     VectorType getPassThruVectorType() { return getPassThru().getType(); }
     VectorType getVectorType() { return getResult().getType(); }
   }];
 
   let assemblyFormat =
-    "$base `[` $indices `]` `[` $index_vec `]` `,` "
+    "$base `[` $offsets `]` `[` $indices `]` `,` "
     "$mask `,` $pass_thru attr-dict `:` type($base) `,` "
-    "type($index_vec)  `,` type($mask) `,` type($pass_thru) "
+    "type($indices)  `,` type($mask) `,` type($pass_thru) "
     "`into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$index_vec,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, index_vec, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ScatterOp :
   Vector_Op<"scatter">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
-               Variadic<Index>:$indices,
-               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
+               Variadic<Index>:$offsets,
+               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = [{
     scatters elements from a vector into memory as defined by an index vector
@@ -2166,6 +2189,11 @@ def Vector_ScatterOp :
     correspond to those of the `llvm.masked.scatter`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    scatter operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+
     Examples:
 
     ```mlir
@@ -2179,17 +2207,30 @@ def Vector_ScatterOp :
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() { return getBase().getType(); }
-    VectorType getIndexVectorType() { return getIndexVec().getType(); }
+    VectorType getIndexVectorType() { return getIndices().getType(); }
     VectorType getMaskVectorType() { return getMask().getType(); }
     VectorType getVectorType() { return getValueToStore().getType(); }
   }];
 
   let assemblyFormat =
-      "$base `[` $indices `]` `[` $index_vec `]` `,` "
+      "$base `[` $offsets `]` `[` $indices `]` `,` "
       "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
-      "type($index_vec)  `,` type($mask) `,` type($valueToStore)";
+      "type($indices)  `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$index_vec,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">: $alignment), [{
+      return build($_builder, $_state, base, indices, index_vec, mask, valueToStore,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ExpandLoadOp :
@@ -2197,7 +2238,9 @@ def Vector_ExpandLoadOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "reads elements from memory and spreads them into a vector as defined by a mask";
@@ -2229,6 +2272,11 @@ def Vector_ExpandLoadOp :
     correspond to those of the `llvm.masked.expandload`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+
     Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
@@ -2259,6 +2307,19 @@ def Vector_ExpandLoadOp :
     "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_CompressStoreOp :
@@ -2266,7 +2327,9 @@ def Vector_CompressStoreOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
 
@@ -2297,6 +2360,11 @@ def Vector_CompressStoreOp :
     correspond to those of the `llvm.masked.compressstore`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+
     Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
@@ -2325,6 +2393,17 @@ def Vector_CompressStoreOp :
       "type($base) `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, base, indices, valueToStore, mask,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ShapeCastOp :

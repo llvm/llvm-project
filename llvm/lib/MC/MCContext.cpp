@@ -326,7 +326,6 @@ MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
 
   // Ensure the original symbol is not emitted to the symbol table.
   Sym.IsTemporary = true;
-  Sym.setExternal(false);
   return NewSym;
 }
 

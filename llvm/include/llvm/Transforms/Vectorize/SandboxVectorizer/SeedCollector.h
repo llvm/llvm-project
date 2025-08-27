@@ -191,7 +191,8 @@ class SeedContainer {
 
   ScalarEvolution &SE;
 
-  template <typename LoadOrStoreT> KeyT getKey(LoadOrStoreT *LSI) const;
+  template <typename LoadOrStoreT>
+  KeyT getKey(LoadOrStoreT *LSI, bool AllowDiffTypes) const;
 
 public:
   SeedContainer(ScalarEvolution &SE) : SE(SE) {}
@@ -267,7 +268,8 @@ public:
     bool operator!=(const iterator &Other) const { return !(*this == Other); }
   };
   using const_iterator = BundleMapT::const_iterator;
-  template <typename LoadOrStoreT> void insert(LoadOrStoreT *LSI);
+  template <typename LoadOrStoreT>
+  void insert(LoadOrStoreT *LSI, bool AllowDiffTypes);
   // To support constant-time erase, these just mark the element used, rather
   // than actually removing them from the bundle.
   LLVM_ABI bool erase(Instruction *I);
@@ -291,9 +293,9 @@ public:
 
 // Explicit instantiations
 extern template LLVM_TEMPLATE_ABI void
-SeedContainer::insert<LoadInst>(LoadInst *);
+SeedContainer::insert<LoadInst>(LoadInst *, bool);
 extern template LLVM_TEMPLATE_ABI void
-SeedContainer::insert<StoreInst>(StoreInst *);
+SeedContainer::insert<StoreInst>(StoreInst *, bool);
 
 class SeedCollector {
   SeedContainer StoreSeeds;
@@ -308,7 +310,8 @@ class SeedCollector {
 
 public:
   LLVM_ABI SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
-                         bool CollectStores, bool CollectLoads);
+                         bool CollectStores, bool CollectLoads,
+                         bool AllowDiffTypes = false);
   LLVM_ABI ~SeedCollector();
 
   iterator_range<SeedContainer::iterator> getStoreSeeds() {
