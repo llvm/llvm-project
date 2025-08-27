@@ -36,7 +36,7 @@ class DexContinue(CommandBase):
             raise TypeError("Missing from_line argument")
 
         # Optional conditional args: to_line, hit_count.
-        self.to_line = kwargs.pop("to_line", 999999)
+        self.to_line = kwargs.pop("to_line", None)
         self.hit_count = kwargs.pop("hit_count", None)
 
         if kwargs:
