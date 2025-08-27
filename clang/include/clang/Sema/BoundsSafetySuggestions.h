@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_SEMA_BOUNDSSAFETYSUGGESTIONS_H
 #define LLVM_CLANG_SEMA_BOUNDSSAFETYSUGGESTIONS_H
 
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/ArrayRef.h"
 namespace clang {
