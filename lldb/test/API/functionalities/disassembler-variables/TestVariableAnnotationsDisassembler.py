@@ -5,7 +5,7 @@ import os
 import re
 
 
-class TestRichDisassembler(TestBase):
+class TestVariableAnnotationsDisassembler(TestBase):
     def _build_obj(self, obj_name: str) -> str:
         # Let the Makefile build all .o’s (pattern rule). Then grab the one we need.
         self.build()
