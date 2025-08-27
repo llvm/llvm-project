@@ -2158,13 +2158,12 @@ public:
     mlir::Value blankInt = builder.createIntegerConstant(loc, intTy, ' ');
 
     auto step = GenCmp::LeftToRight;
-    auto genCmp =
-        [&](mlir::Location loc, fir::FirOpBuilder &builder,
-            mlir::ValueRange index,
-            mlir::ValueRange reduxrgs) -> llvm::SmallVector<mlir::Value, 1> {
+    auto genCmp = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                      mlir::ValueRange index, mlir::ValueRange reductionArgs)
+        -> llvm::SmallVector<mlir::Value, 1> {
       assert(index.size() == 1 && "expected single loop");
-      assert(reduxrgs.size() == 1 && "expected single reduction value");
-      mlir::Value inRes = reduxrgs[0];
+      assert(reductionArgs.size() == 1 && "expected single reduction value");
+      mlir::Value inRes = reductionArgs[0];
       auto accEQzero = mlir::arith::CmpIOp::create(
           builder, loc, mlir::arith::CmpIPredicate::eq, inRes, zeroInt);
 
