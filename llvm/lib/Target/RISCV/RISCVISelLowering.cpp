@@ -21456,6 +21456,8 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
         DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // sraw produces at least 33 sign bits. If the input already has more than
     // 33 sign bits sraw, will preserve them.
+    // TODO: A more precise answer could be calculated depending on known bits
+    // in the shift amount.
     return std::max(Tmp, 33U);
   }
   case RISCVISD::SLLW:
@@ -21469,9 +21471,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::FCVT_WU_RV64:
   case RISCVISD::STRICT_FCVT_W_RV64:
   case RISCVISD::STRICT_FCVT_WU_RV64:
-    // TODO: As the result is sign-extended, this is conservatively correct. A
-    // more precise answer could be calculated for SRAW depending on known
-    // bits in the shift amount.
+    // TODO: As the result is sign-extended, this is conservatively correct.
     return 33;
   case RISCVISD::VMV_X_S: {
     // The number of sign bits of the scalar result is computed by obtaining the
