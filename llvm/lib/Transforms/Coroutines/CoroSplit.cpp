@@ -619,8 +619,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
 }
 
 /// Returns all debug records in F.
-static SmallVector<DbgVariableRecord *>
-collectDbgVariableRecords(Function &F) {
+static SmallVector<DbgVariableRecord *> collectDbgVariableRecords(Function &F) {
   SmallVector<DbgVariableRecord *> DbgVariableRecords;
   for (auto &I : instructions(F)) {
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
@@ -933,15 +932,19 @@ void coro::BaseCloner::create() {
   auto NewAttrs = AttributeList();
 
   switch (Shape.ABI) {
-  case coro::ABI::Switch:
+  case coro::ABI::Switch: {
     // Bootstrap attributes by copying function attributes from the
     // original function.  This should include optimization settings and so on.
-    NewAttrs = NewAttrs.addFnAttributes(
-        Context, AttrBuilder(Context, OrigAttrs.getFnAttrs()));
+    AttrBuilder Builder(Context, OrigAttrs.getFnAttrs());
+    // Remove all the memory attribute, as copying too strict attributes caused
+    // UB.
+    Builder.removeAttribute(Attribute::AttrKind::Memory);
+    NewAttrs = NewAttrs.addFnAttributes(Context, std::move(Builder));
 
     addFramePointerAttrs(NewAttrs, Context, 0, Shape.FrameSize,
                          Shape.FrameAlign, /*NoAlias=*/false);
     break;
+  }
   case coro::ABI::Async: {
     auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
     if (OrigF.hasParamAttribute(Shape.AsyncLowering.ContextArgNo,
