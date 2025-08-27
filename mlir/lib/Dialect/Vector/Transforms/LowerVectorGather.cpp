@@ -70,7 +70,7 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
           vector::ExtractOp::create(rewriter, loc, passThruVec, thisIdx);
       return vector::GatherOp::create(rewriter, loc, subTy, op.getBase(),
                                       op.getOffsets(), indexSubVec, maskSubVec,
-                                      passThruSubVec);
+                                      passThruSubVec, op.getAlignmentAttr());
     };
 
     return unrollVectorOp(op, rewriter, unrollGatherFn);
@@ -152,7 +152,8 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
     // updated indices.
     Value newGather = vector::GatherOp::create(
         rewriter, op.getLoc(), op.getResult().getType(), collapsed,
-        op.getOffsets(), newIdxs, op.getMask(), op.getPassThru());
+        op.getOffsets(), newIdxs, op.getMask(), op.getPassThru(),
+        op.getAlignmentAttr());
     rewriter.replaceOp(op, newGather);
 
     return success();
@@ -200,6 +201,8 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     Value lastBaseOffset = baseOffsets.back();
 
     Value result = op.getPassThru();
+    BoolAttr nontemporalAttr = nullptr;
+    IntegerAttr alignmentAttr = op.getAlignmentAttr();
 
     // Emit a conditional access for each vector element.
     for (int64_t i = 0, e = resultTy.getNumElements(); i < e; ++i) {
@@ -216,7 +219,8 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
           // `vector.load` does not support scalar result; emit a vector load
           // and extract the single result instead.
           Value load =
-              vector::LoadOp::create(b, loc, elemVecTy, base, baseOffsets);
+              vector::LoadOp::create(b, loc, elemVecTy, base, baseOffsets,
+                                     nontemporalAttr, alignmentAttr);
           int64_t zeroIdx[1] = {0};
           extracted = vector::ExtractOp::create(b, loc, load, zeroIdx);
         } else {
