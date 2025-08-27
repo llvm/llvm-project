@@ -116,9 +116,9 @@ public:
       Locations.emplace_back(Loc.FileName, Loc.Line);
   }
   // Empty constructor is used in yaml conversion.
-  DataAccessProfRecord() : AccessCount(0) {}
+  DataAccessProfRecord() = default;
   SymbolHandle SymHandle;
-  uint64_t AccessCount;
+  uint64_t AccessCount = 0;
   // The locations of data in the source code. Optional.
   SmallVector<SourceLocation> Locations;
 };

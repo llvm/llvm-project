@@ -84,6 +84,205 @@ public:
   void visitCXXParenListOrInitListExpr(Expr *e, ArrayRef<Expr *> args,
                                        FieldDecl *initializedFieldInUnion,
                                        Expr *arrayFiller);
+
+  void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *e) {
+    assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
+    Visit(e->getSubExpr());
+  }
+
+  // Stubs -- These should be moved up when they are implemented.
+  void VisitCXXFunctionalCastExpr(CXXFunctionalCastExpr *e) {
+    // We shouldn't really get here, but we do because of missing handling for
+    // emitting constant aggregate initializers. If we just ignore this, a
+    // fallback handler will do the right thing.
+    assert(!cir::MissingFeatures::constEmitterAggILE());
+    return;
+  }
+  void VisitCastExpr(CastExpr *e) {
+    switch (e->getCastKind()) {
+    case CK_LValueToRValue:
+      assert(!cir::MissingFeatures::aggValueSlotVolatile());
+      [[fallthrough]];
+    case CK_NoOp:
+    case CK_UserDefinedConversion:
+    case CK_ConstructorConversion:
+      assert(cgf.getContext().hasSameUnqualifiedType(e->getSubExpr()->getType(),
+                                                     e->getType()) &&
+             "Implicit cast types must be compatible");
+      Visit(e->getSubExpr());
+      break;
+    default:
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       std::string("AggExprEmitter: VisitCastExpr: ") +
+                           e->getCastKindName());
+      break;
+    }
+  }
+  void VisitStmt(Stmt *s) {
+    cgf.cgm.errorNYI(s->getSourceRange(),
+                     std::string("AggExprEmitter::VisitStmt: ") +
+                         s->getStmtClassName());
+  }
+  void VisitParenExpr(ParenExpr *pe) {
+    cgf.cgm.errorNYI(pe->getSourceRange(), "AggExprEmitter: VisitParenExpr");
+  }
+  void VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
+    cgf.cgm.errorNYI(ge->getSourceRange(),
+                     "AggExprEmitter: VisitGenericSelectionExpr");
+  }
+  void VisitCoawaitExpr(CoawaitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoawaitExpr");
+  }
+  void VisitCoyieldExpr(CoyieldExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoyieldExpr");
+  }
+  void VisitUnaryCoawait(UnaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitUnaryCoawait");
+  }
+  void VisitUnaryExtension(UnaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitUnaryExtension");
+  }
+  void VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitSubstNonTypeTemplateParmExpr");
+  }
+  void VisitConstantExpr(ConstantExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitConstantExpr");
+  }
+  void VisitMemberExpr(MemberExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitMemberExpr");
+  }
+  void VisitUnaryDeref(UnaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitUnaryDeref");
+  }
+  void VisitStringLiteral(StringLiteral *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitStringLiteral");
+  }
+  void VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitCompoundLiteralExpr");
+  }
+  void VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitArraySubscriptExpr");
+  }
+  void VisitPredefinedExpr(const PredefinedExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitPredefinedExpr");
+  }
+  void VisitBinaryOperator(const BinaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitBinaryOperator");
+  }
+  void VisitPointerToDataMemberBinaryOperator(const BinaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitPointerToDataMemberBinaryOperator");
+  }
+  void VisitBinAssign(const BinaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinAssign");
+  }
+  void VisitBinComma(const BinaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinComma");
+  }
+  void VisitBinCmp(const BinaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinCmp");
+  }
+  void VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitCXXRewrittenBinaryOperator");
+  }
+  void VisitObjCMessageExpr(ObjCMessageExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitObjCMessageExpr");
+  }
+  void VisitObjCIVarRefExpr(ObjCIvarRefExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitObjCIVarRefExpr");
+  }
+
+  void VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitDesignatedInitUpdateExpr");
+  }
+  void VisitAbstractConditionalOperator(const AbstractConditionalOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitAbstractConditionalOperator");
+  }
+  void VisitChooseExpr(const ChooseExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitChooseExpr");
+  }
+  void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitCXXParenListInitExpr");
+  }
+  void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *e,
+                              llvm::Value *outerBegin = nullptr) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitArrayInitLoopExpr");
+  }
+  void VisitImplicitValueInitExpr(ImplicitValueInitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitImplicitValueInitExpr");
+  }
+  void VisitNoInitExpr(NoInitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitNoInitExpr");
+  }
+  void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
+    cgf.cgm.errorNYI(dae->getSourceRange(),
+                     "AggExprEmitter: VisitCXXDefaultArgExpr");
+  }
+  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
+    cgf.cgm.errorNYI(die->getSourceRange(),
+                     "AggExprEmitter: VisitCXXDefaultInitExpr");
+  }
+  void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitCXXInheritedCtorInitExpr");
+  }
+  void VisitLambdaExpr(LambdaExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitLambdaExpr");
+  }
+  void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitCXXStdInitializerListExpr");
+  }
+
+  void VisitExprWithCleanups(ExprWithCleanups *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitExprWithCleanups");
+  }
+  void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitCXXScalarValueInitExpr");
+  }
+  void VisitCXXTypeidExpr(CXXTypeidExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXTypeidExpr");
+  }
+  void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitMaterializeTemporaryExpr");
+  }
+  void VisitOpaqueValueExpr(OpaqueValueExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitOpaqueValueExpr");
+  }
+
+  void VisitPseudoObjectExpr(PseudoObjectExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "AggExprEmitter: VisitPseudoObjectExpr");
+  }
+
+  void VisitVAArgExpr(VAArgExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitVAArgExpr");
+  }
+
+  void VisitCXXThrowExpr(const CXXThrowExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXThrowExpr");
+  }
+  void VisitAtomicExpr(AtomicExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitAtomicExpr");
+  }
 };
 
 } // namespace
