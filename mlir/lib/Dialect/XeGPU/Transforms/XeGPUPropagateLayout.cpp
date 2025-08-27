@@ -60,10 +60,14 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 /// Helper class for tracking the analysis state of an mlir value. For layout
-/// propagation, the analysis state is simply the lane_layout and lane_data of
-/// each value. Purpose of this analysis to propagate some unique layout for
-/// each value in the program starting from a set of anchor operations (like
-/// DPAS, StoreNd, etc.).
+/// propagation, the analysis state is simply the distribution layout of
+/// each value. The distribution layout information is encapsulated using
+/// xegpu::DistributeLayoutAttr class which can hold information about any type
+/// of distribution layout that XeGPU dialect supports. Purpose of this analysis
+/// to propagate some unique distribution layout for each value in the program
+/// starting from a set of anchor operations (like DPAS, StoreNd, etc.). Note
+/// that analysis will reach a fixed point when all values are reached some
+/// layout and, analysis does not try to modify any already assigned layouts.
 ///
 /// Given this, LayoutInfo  satisifies the following properties:
 ///  1) A LayoutInfo value can be in one of two states - `assigned` or `not
@@ -99,25 +103,9 @@ public:
 
   LayoutInfo transpose(ArrayRef<int64_t> permutation) const;
 
-  SmallVector<int> getLaneLayout() const {
-    if (!isAssigned())
-      return {};
-    assert(storage.getLaneLayoutAsInt().size() &&
-           "Expected lane layout to be assigned");
-    return llvm::map_to_vector(storage.getLaneLayoutAsInt(), [](int64_t val) {
-      return static_cast<int>(val);
-    });
-  }
+  SmallVector<int> getLaneLayout() const;
 
-  SmallVector<int> getLaneData() const {
-    if (!isAssigned())
-      return {};
-    assert(storage.getLaneDataAsInt().size() &&
-           "Expected lane data to be assigned");
-    return llvm::map_to_vector(storage.getLaneDataAsInt(), [](int64_t val) {
-      return static_cast<int>(val);
-    });
-  }
+  SmallVector<int> getLaneData() const;
 
   bool isSliceLayout() const {
     if (!isAssigned())
@@ -127,6 +115,24 @@ public:
 
   Attribute get() { return storage; }
 };
+
+SmallVector<int> LayoutInfo::getLaneLayout() const {
+  if (!isAssigned())
+    return {};
+  assert(storage.getLaneLayoutAsInt().size() &&
+         "Expected lane layout to be assigned");
+  return llvm::map_to_vector(storage.getLaneLayoutAsInt(),
+                             [](int64_t val) { return static_cast<int>(val); });
+}
+
+SmallVector<int> LayoutInfo::getLaneData() const {
+  if (!isAssigned())
+    return {};
+  assert(storage.getLaneDataAsInt().size() &&
+         "Expected lane data to be assigned");
+  return llvm::map_to_vector(storage.getLaneDataAsInt(),
+                             [](int64_t val) { return static_cast<int>(val); });
+}
 
 void LayoutInfo::print(raw_ostream &os) const {
   if (isAssigned()) {
