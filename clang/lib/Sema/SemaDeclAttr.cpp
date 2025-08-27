@@ -26,7 +26,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Cuda.h"

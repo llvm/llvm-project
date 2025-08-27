@@ -9,7 +9,7 @@
 #include "HLSLBufferLayoutBuilder.h"
 #include "CGHLSLRuntime.h"
 #include "CodeGenModule.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include <climits>
 
 //===----------------------------------------------------------------------===//

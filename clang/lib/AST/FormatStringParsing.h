@@ -15,7 +15,7 @@
 #define LLVM_CLANG_LIB_ANALYSIS_FORMATSTRINGPARSING_H
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/FormatString.h"
 
 namespace clang {

@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_REPRESENTATION_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_REPRESENTATION_H
 
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/StandaloneExecution.h"
 #include "llvm/ADT/APSInt.h"

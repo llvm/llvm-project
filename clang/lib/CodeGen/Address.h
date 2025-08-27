@@ -16,7 +16,7 @@
 
 #include "CGPointerAuthInfo.h"
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/MathExtras.h"
