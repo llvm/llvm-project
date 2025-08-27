@@ -4,8 +4,6 @@
 
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck %s
 
-%0 = type { i64, i64, i32, i32 }
-%1 = type { [64 x [8 x i64]] }
 %struct.uint96 = type { i64, i32 }
 %struct.uint64pair = type { i64, i64 }
 
