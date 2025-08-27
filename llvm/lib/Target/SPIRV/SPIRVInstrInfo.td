@@ -169,6 +169,8 @@ def OpTypeInt: Op<21, (outs TYPE:$type), (ins i32imm:$width, i32imm:$signedness)
                   "$type = OpTypeInt $width $signedness">;
 def OpTypeFloat: Op<22, (outs TYPE:$type), (ins i32imm:$width),
                   "$type = OpTypeFloat $width">;
+def OpTypeBFloat: Op<40, (outs TYPE:$type), (ins i32imm:$width),
+                  "$type = OpTypeFloat $width 0">;
 def OpTypeVector: Op<23, (outs TYPE:$type), (ins TYPE:$compType, i32imm:$compCount),
                   "$type = OpTypeVector $compType $compCount">;
 def OpTypeMatrix: Op<24, (outs TYPE:$type), (ins TYPE:$colType, i32imm:$colCount),

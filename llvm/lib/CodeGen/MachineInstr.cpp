@@ -632,8 +632,10 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
   if (I.getMetadata(LLVMContext::MD_unpredictable))
     MIFlags |= MachineInstr::MIFlag::Unpredictable;
 
-  if (I.getType()->isBFloatTy())
+  if (I.getType()->getScalarType()->isBFloatTy()) {
     MIFlags |= MachineInstr::MIFlag::BFloat16;
+    // assert(false && "bfloat detected at the MachineInstr");
+  }
 
   return MIFlags;
 }

@@ -1267,10 +1267,12 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Float64);
     else if (BitWidth == 16)
       Reqs.addCapability(SPIRV::Capability::Float16);
-    if(MI.getFlag(MachineInstr::MIFlag::BFloat16)) {
-      Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
-      Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
-    }
+    break;
+  }
+  case SPIRV::OpTypeBFloat: {
+    assert(false && "bfloat detected at the file");
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
+    Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
     break;
   }
   case SPIRV::OpTypeVector: {

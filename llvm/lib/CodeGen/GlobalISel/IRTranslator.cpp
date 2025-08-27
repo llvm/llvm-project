@@ -2815,6 +2815,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
 
   // If the spirv intrinsic contain bfloat, enable to Bfloat flag in MachineInst
   if (containsBF16Type(U)) {
+    // assert(false && "bfloat detected at the IR Translator");
     MIB->setFlag(MachineInstr::MIFlag::BFloat16);
   }
 
@@ -2878,7 +2879,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       MIB.addUse(TokenReg, RegState::Implicit);
     }
   }
-
+  
   return true;
 }
 
