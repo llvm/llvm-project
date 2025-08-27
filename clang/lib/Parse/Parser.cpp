@@ -2501,8 +2501,8 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     Import =
         Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, HeaderUnit);
   else if (Path)
-    Import = Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Path,
-                                       IsPartition);
+    Import = Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc,
+                                       Path->getModuleIdPath(), IsPartition);
   if (Import.isInvalid())
     return nullptr;
 

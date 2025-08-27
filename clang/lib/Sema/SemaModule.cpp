@@ -563,8 +563,8 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
 
 DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
                                    SourceLocation ExportLoc,
-                                   SourceLocation ImportLoc,
-                                   ModuleNameLoc *PathLoc, bool IsPartition) {
+                                   SourceLocation ImportLoc, ModuleIdPath Path,
+                                   bool IsPartition) {
   assert((!IsPartition || getLangOpts().CPlusPlusModules) &&
          "partition seen in non-C++20 code?");
 
@@ -573,7 +573,6 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   IdentifierLoc ModuleNameLoc;
 
   std::string ModuleName;
-  ModuleIdPath Path;
   if (IsPartition) {
     // We already checked that we are in a module purview in the parser.
     assert(!ModuleScopes.empty() && "in a module purview, but no module?");
@@ -582,17 +581,15 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // otherwise, the name of the importing named module.
     ModuleName = NamedMod->getPrimaryModuleInterfaceName().str();
     ModuleName += ":";
-    ModuleName += PathLoc->str();
+    ModuleName += ModuleNameLoc::stringFromModuleIdPath(Path);
     ModuleNameLoc =
-        IdentifierLoc(PathLoc->getBeginLoc(), PP.getIdentifierInfo(ModuleName));
+        IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);
   } else if (getLangOpts().CPlusPlusModules) {
-    ModuleName = PathLoc->str();
+    ModuleName = ModuleNameLoc::stringFromModuleIdPath(Path);
     ModuleNameLoc =
-        IdentifierLoc(PathLoc->getBeginLoc(), PP.getIdentifierInfo(ModuleName));
+        IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);
-  } else {
-    Path = PathLoc->getModuleIdPath();
   }
 
   // Diagnose self-import before attempting a load.

@@ -9870,7 +9870,7 @@ public:
   /// \param IsPartition If the name is for a partition.
   DeclResult ActOnModuleImport(SourceLocation StartLoc,
                                SourceLocation ExportLoc,
-                               SourceLocation ImportLoc, ModuleNameLoc *PathLoc,
+                               SourceLocation ImportLoc, ModuleIdPath Path,
                                bool IsPartition = false);
   DeclResult ActOnModuleImport(SourceLocation StartLoc,
                                SourceLocation ExportLoc,
