@@ -59,10 +59,6 @@ public:
     }
     // Size == -1 means unbounded array
     LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);
-
-    bool operator==(const RegisterSpace &Other) const {
-      return Space == Other.Space;
-    }
   };
 
   struct BindingSpaces {
@@ -172,10 +168,10 @@ public:
         [&HasOverlap](auto, auto) { HasOverlap = true; });
   }
 
-  BoundRegs
-  calculateBoundRegs(llvm::function_ref<void(const BindingInfoBuilder &Builder,
-                                             const Binding &Overlapping)>
-                         ReportOverlap);
+  LLVM_ABI BoundRegs calculateBoundRegs(
+      llvm::function_ref<void(const BindingInfoBuilder &Builder,
+                              const Binding &Overlapping)>
+            ReportOverlap);
 
   /// For use in the \c ReportOverlap callback of \c calculateBindingInfo -
   /// finds a binding that the \c ReportedBinding overlaps with.
