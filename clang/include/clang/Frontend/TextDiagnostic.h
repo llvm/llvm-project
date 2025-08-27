@@ -35,6 +35,8 @@ namespace clang {
 class TextDiagnostic : public DiagnosticRenderer {
   raw_ostream &OS;
   const Preprocessor *PP;
+  unsigned BaseIndent = 0;
+  SmallVector<std::pair<FullSourceLoc, PresumedLoc>, 30> IncludeStack;
 
 public:
   TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
@@ -77,14 +79,22 @@ public:
   /// \param Columns The number of columns to use in line-wrapping, 0 disables
   ///                all line-wrapping.
   /// \param ShowColors Enable colorizing of the message.
+  /// \param NestingLevel Nesting level of the diagnostic.
   static void printDiagnosticMessage(raw_ostream &OS, bool IsSupplemental,
                                      StringRef Message, unsigned CurrentColumn,
-                                     unsigned Columns, bool ShowColors);
+                                     unsigned Columns, bool ShowColors,
+                                     unsigned NestingLevel, bool FancyFormat);
 
 protected:
+  void beginDiagnostic(DiagOrStoredDiag D, DiagnosticsEngine::Level Level,
+                       unsigned NestingLevel) override;
+  void endDiagnostic(DiagOrStoredDiag D,
+                     DiagnosticsEngine::Level Level) override;
+
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                              DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
+                             unsigned NestingLevel,
                              DiagOrStoredDiag D) override;
 
   void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -117,6 +127,9 @@ private:
                    ArrayRef<StyleRange> Styles);
 
   void emitParseableFixits(ArrayRef<FixItHint> Hints, const SourceManager &SM);
+
+  void emptyLine();
+  void startLine(unsigned Indent);
 };
 
 } // end namespace clang

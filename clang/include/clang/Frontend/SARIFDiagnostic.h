@@ -36,6 +36,7 @@ protected:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                              DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
+                             unsigned NestingLevel,
                              DiagOrStoredDiag D) override;
 
   void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,

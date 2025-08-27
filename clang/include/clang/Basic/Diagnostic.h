@@ -165,6 +165,12 @@ struct DiagnosticStorage {
   /// or in DiagArguments.
   unsigned char DiagArgumentsKind[MaxArguments];
 
+  /// Nesting level of this diagnostic, if any.
+  ///
+  /// If unset, the nesting level will be computed by the diagnostics engine
+  /// when the diagnostic is emitted.
+  UnsignedOrNone NestingLevel = std::nullopt;
+
   /// The values for the various substitution positions.
   ///
   /// This is used when the argument is not an std::string. The specific value
@@ -317,6 +323,9 @@ private:
   // Color printing is enabled.
   bool ShowColors = false;
 
+  // Nesting diagnostics is enabled.
+  bool EnableNesting = false;
+
   // Which overload candidates to show.
   OverloadsShown ShowOverloads = Ovl_All;
 
@@ -336,6 +345,31 @@ private:
   // Cap on depth of constexpr evaluation backtrace stack, 0 -> no limit.
   unsigned ConstexprBacktraceLimit = 0;
 
+  // Increment to add to the nesting level of every diagnostic we emit; this is
+  // used to nest e.g. errors inside other errors.
+  unsigned GlobalNestingLevel = 0;
+
+public:
+  /// Helper to increment the global diagnostics nesting level.
+  class NestingLevelRAII {
+    DiagnosticsEngine &Diags;
+    unsigned TheIncrement;
+
+  public:
+    explicit NestingLevelRAII(DiagnosticsEngine &Diags, unsigned Increment = 1)
+        : Diags(Diags), TheIncrement(Increment) {
+      Diags.GlobalNestingLevel += Increment;
+    }
+
+    void Increment(unsigned Increment = 1) {
+      TheIncrement += Increment;
+      Diags.GlobalNestingLevel += Increment;
+    }
+
+    ~NestingLevelRAII() { Diags.GlobalNestingLevel -= TheIncrement; }
+  };
+
+private:
   IntrusiveRefCntPtr<DiagnosticIDs> Diags;
   DiagnosticOptions &DiagOpts;
   DiagnosticConsumer *Client = nullptr;
@@ -743,6 +777,10 @@ public:
   void setShowColors(bool Val) { ShowColors = Val; }
   bool getShowColors() { return ShowColors; }
 
+  /// Set whether diagnostics should be nested.
+  void setEnableNesting(bool Val) { EnableNesting = Val; }
+  bool getEnableNesting() { return EnableNesting; }
+
   /// Specify which overload candidates to show when overload resolution
   /// fails.
   ///
@@ -1042,7 +1080,7 @@ private:
   bool ProcessDiag(const DiagnosticBuilder &DiagBuilder);
 
   /// Forward a diagnostic to the DiagnosticConsumer.
-  void Report(Level DiagLevel, const Diagnostic &Info);
+  void Report(Level DiagLevel, Diagnostic Info);
 
   /// @name Diagnostic Emission
   /// @{
@@ -1188,6 +1226,13 @@ public:
       DiagStorage = getStorage();
 
     DiagStorage->FixItHints.push_back(Hint);
+  }
+
+  void SetNestingLevel(UnsignedOrNone Level) const {
+    if (!DiagStorage)
+      DiagStorage = getStorage();
+
+    DiagStorage->NestingLevel = Level;
   }
 
   /// Conversion of StreamingDiagnostic to bool always returns \c true.
@@ -1545,6 +1590,7 @@ class Diagnostic {
   const DiagnosticsEngine *DiagObj;
   SourceLocation DiagLoc;
   unsigned DiagID;
+  unsigned NestingLevel;
   std::string FlagValue;
   const DiagnosticStorage &DiagStorage;
   std::optional<StringRef> StoredDiagMessage;
@@ -1649,6 +1695,16 @@ public:
   /// Return the value associated with this diagnostic flag.
   StringRef getFlagValue() const { return FlagValue; }
 
+  /// Get the nesting level of this diagnostic.
+  unsigned getNestingLevel() const { return NestingLevel; }
+  void setNestingLevel(unsigned Level) { NestingLevel = Level; }
+
+  /// Determine whether the absolute nesting level (based on the current global
+  /// nesting level of the diagnostics engine) has already been computed.
+  bool nestingLevelAlreadyComputed() const {
+    return DiagStorage.NestingLevel != std::nullopt;
+  }
+
   /// Format this diagnostic into a string, substituting the
   /// formal arguments into the %0 slots.
   ///
@@ -1668,6 +1724,7 @@ public:
 class StoredDiagnostic {
   unsigned ID;
   DiagnosticsEngine::Level Level;
+  UnsignedOrNone NestingLevel = std::nullopt;
   FullSourceLoc Loc;
   std::string Message;
   std::vector<CharSourceRange> Ranges;
@@ -1680,8 +1737,8 @@ public:
                    StringRef Message);
   StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
                    StringRef Message, FullSourceLoc Loc,
-                   ArrayRef<CharSourceRange> Ranges,
-                   ArrayRef<FixItHint> Fixits);
+                   ArrayRef<CharSourceRange> Ranges, ArrayRef<FixItHint> Fixits,
+                   UnsignedOrNone NestingLevel = std::nullopt);
 
   /// Evaluates true when this object stores a diagnostic.
   explicit operator bool() const { return !Message.empty(); }
@@ -1708,6 +1765,7 @@ public:
   unsigned fixit_size() const { return FixIts.size(); }
 
   ArrayRef<FixItHint> getFixIts() const { return llvm::ArrayRef(FixIts); }
+  UnsignedOrNone getNestingLevel() const { return NestingLevel; }
 };
 
 // Simple debug printing of StoredDiagnostic.

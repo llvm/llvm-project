@@ -63,7 +63,7 @@ DIAGOPT(ShowNoteIncludeStack, 1, 0) /// Show include stacks for notes.
 VALUE_DIAGOPT(ShowCategories, 2, 0) /// Show categories: 0 -> none, 1 -> Number,
                                     /// 2 -> Full Name.
 
-ENUM_DIAGOPT(Format, TextDiagnosticFormat, 2, Clang) /// Format for diagnostics:
+ENUM_DIAGOPT(Format, TextDiagnosticFormat, 3, Clang) /// Format for diagnostics:
 
 DIAGOPT(ShowColors, 1, 0)       /// Show diagnostics with ANSI color sequences.
 DIAGOPT(UseANSIEscapeCodes, 1, 0)
