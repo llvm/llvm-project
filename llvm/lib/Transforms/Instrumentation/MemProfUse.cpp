@@ -767,6 +767,23 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::none();
 }
 
+// Returns true iff the global variable has custom section either by
+// __attribute__((section("name")))
+// (https://clang.llvm.org/docs/AttributeReference.html#section-declspec-allocate)
+// or #pragma clang section directives
+// (https://clang.llvm.org/docs/LanguageExtensions.html#specifying-section-names-for-global-objects-pragma-clang-section).
+static bool hasExplicitSectionName(const GlobalVariable &GVar) {
+  if (GVar.hasSection())
+    return true;
+
+  auto Attrs = GVar.getAttributes();
+  if (Attrs.hasAttribute("bss-section") || Attrs.hasAttribute("data-section") ||
+      Attrs.hasAttribute("relro-section") ||
+      Attrs.hasAttribute("rodata-section"))
+    return true;
+  return false;
+}
+
 bool MemProfUsePass::annotateGlobalVariables(
     Module &M, const memprof::DataAccessProfData *DataAccessProf) {
   if (!AnnotateStaticDataSectionPrefix || M.globals().empty())
@@ -792,6 +809,12 @@ bool MemProfUsePass::annotateGlobalVariables(
            "GVar shouldn't have section prefix yet");
     if (GVar.isDeclarationForLinker())
       continue;
+
+    if (hasExplicitSectionName(GVar)) {
+      LLVM_DEBUG(dbgs() << "Global variable " << GVar.getName()
+                        << " has explicit section name. Skip annotating.\n");
+      continue;
+    }
 
     StringRef Name = GVar.getName();
     // Skip string literals as their mangled names don't stay stable across

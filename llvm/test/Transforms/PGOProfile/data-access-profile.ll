@@ -15,7 +15,6 @@
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
 ; RUN: -debug-only=memprof -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,PREFIX
 
-
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix=false \
 ; RUN: -debug-only=memprof -S input.ll -o - 2>&1 | FileCheck %s --implicit-check-not="section_prefix"
 
@@ -24,6 +23,8 @@
 ; LOG: Global variable var2.llvm.125 is annotated as hot
 ; LOG: Global variable bar is not annotated
 ; LOG: Global variable foo is annotated as unlikely
+; LOG: Global variable var3 has explicit section name. Skip annotating.
+; LOG: Global variable var4 has explicit section name. Skip annotating.
 
 ;; String literals are not annotated.
 ; PREFIX: @.str = unnamed_addr constant [5 x i8] c"abcde"
@@ -42,7 +43,10 @@
 ;; @foo is unlikely.
 ; PREFIX-NEXT: @foo = global i8 2, !section_prefix !1
 
+; PREFIX-NEXT: @var3 = constant [2 x i32] [i32 12345, i32 6789], section "sec1"
+; PREFIX-NEXT: @var4 = constant [1 x i64] [i64 98765] #0
 
+; PREFIX: attributes #0 = { "rodata-section"="sec2" }
 
 ; PREFIX: !0 = !{!"section_prefix", !"hot"}
 ; PREFIX-NEXT: !1 = !{!"section_prefix", !"unlikely"}
@@ -87,6 +91,8 @@ target triple = "x86_64-unknown-linux-gnu"
 @var2.llvm.125 = global i64 0 
 @bar = global i16 3
 @foo = global i8 2
+@var3 = constant [2 x i32][i32 12345, i32 6789], section "sec1"
+@var4 = constant [1 x i64][i64 98765] #0
 
 define i32 @func() {
   %a = load i32, ptr @var1
@@ -96,6 +102,9 @@ define i32 @func() {
 }
 
 declare i32 @func_taking_arbitrary_param(...)
+
+attributes #0 = { "rodata-section"="sec2" }
+
 ;--- funcless-module.ll
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
@@ -106,4 +115,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @var2.llvm.125 = global i64 0
 @bar = global i16 3
 @foo = global i8 2
+@var3 = constant [2 x i32][i32 12345, i32 6789], section "sec1"
+@var4 = constant [1 x i64][i64 98765] #0
 
+attributes #0 = { "rodata-section"="sec2" }
