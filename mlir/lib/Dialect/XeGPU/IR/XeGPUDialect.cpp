@@ -104,30 +104,30 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
   // smaller than `layout[i] * data[i]`, allowing multiple compute units to
   // share the data.
   auto tryDistribute = [&](llvm::ArrayRef<int64_t> shape,
-                           std::optional<SmallVector<int64_t>> layout,
-                           std::optional<SmallVector<int64_t>> data,
+                           SmallVector<int64_t> layout,
+                           SmallVector<int64_t> data,
                            bool rr = true) -> optional<SmallVector<int64_t>> {
     llvm::SmallVector<int64_t> newShape(shape);
-    if (layout) {
-      if ((*layout).size() != shape.size())
+    if (layout.size()) {
+      if (layout.size() != shape.size())
         return std::nullopt;
-      auto ratio = computeShapeRatio(shape, *layout);
+      auto ratio = computeShapeRatio(shape, layout);
       if (!ratio.has_value())
         return std::nullopt;
       newShape = ratio.value();
     }
 
-    if (data) {
-      if ((*data).size() != shape.size())
+    if (data.size()) {
+      if (data.size() != shape.size())
         return std::nullopt;
-      auto ratio = computeShapeRatio(newShape, *data);
+      auto ratio = computeShapeRatio(newShape, data);
       if (!ratio.has_value() && rr)
-        ratio = computeShapeRatio(*data, newShape);
+        ratio = computeShapeRatio(data, newShape);
       if (!ratio.has_value())
         return std::nullopt;
 
       // if data is not null, we always return it for next phase.
-      newShape = *data;
+      newShape = data;
     }
     return newShape;
   };
@@ -141,7 +141,7 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
 
   // check InstData, it neither have layout nor need round-robin
   auto maybeInstShape =
-      tryDistribute(sgShape, std::nullopt, attr.getInstDataAsInt(), false);
+      tryDistribute(sgShape, {}, attr.getInstDataAsInt(), false);
   if (!maybeInstShape)
     return false;
   auto instShape = maybeInstShape.value();
@@ -282,7 +282,7 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   if (!hasDefaultOrder())
     return mlir::emitError(loc, "order attribute is currently not supported.");
 
-  auto dims = llvm::map_to_vector(*getSgLayoutAsInt(), [&](int64_t d) -> Value {
+  auto dims = llvm::map_to_vector(getSgLayoutAsInt(), [&](int64_t d) -> Value {
     return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
   });
 
@@ -298,14 +298,14 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   if (!isForWorkgroup())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
-  SmallVector<int64_t> sgShape;
-  if (auto maybeSgShape = getSgDataAsInt())
-    sgShape = maybeSgShape.value();
-  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
-    sgShape = derivedShape.value();
-  else
-    return failure();
+  SmallVector<int64_t> sgLayout = getSgLayoutAsInt();
+  SmallVector<int64_t> sgShape = getSgDataAsInt();
+  if (sgShape.empty()) {
+    if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+      sgShape = derivedShape.value();
+    else
+      return failure();
+  }
 
   // delinearize Ids
   auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
@@ -385,14 +385,14 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   if (!isForWorkgroup())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
-  SmallVector<int64_t> sgShape;
-  if (auto maybeSgShape = getSgDataAsInt())
-    sgShape = maybeSgShape.value();
-  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
-    sgShape = derivedShape.value();
-  else
-    return failure();
+  SmallVector<int64_t> sgLayout = getSgLayoutAsInt();
+  SmallVector<int64_t> sgShape = getSgDataAsInt();
+  if (sgShape.empty()) {
+    if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+      sgShape = derivedShape.value();
+    else
+      return failure();
+  }
 
   // delinearize Ids
   auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
