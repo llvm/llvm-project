@@ -14,10 +14,22 @@
 #include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/Protocol/MCP/Tool.h"
 #include "lldb/Protocol/MCP/Transport.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
 
 namespace lldb_protocol::mcp {
+
+/// Metadata about this instance of lldb's MCP server for lldb-mcp to use to
+/// coordinate connecting an lldb-mcp client.
+struct ServerMetadata {
+  std::string connection_uri;
+  lldb::pid_t pid;
+};
+llvm::json::Value toJSON(const ServerMetadata &SM);
+bool fromJSON(const llvm::json::Value &V, ServerMetadata &SM,
+              llvm::json::Path P);
 
 class Server : public Transport::MessageHandler {
 public:
