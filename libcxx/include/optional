@@ -640,7 +640,7 @@ public:
     return std::__make_bounded_iter(
         std::__wrap_iter<__pointer>(__ptr),
         std::__wrap_iter<__pointer>(__ptr),
-        std::__wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0)));
+        std::__wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
     return iterator(__ptr);
 #      endif
@@ -659,7 +659,7 @@ public:
     return std::__make_bounded_iter(
         std::__wrap_iter<__const_pointer>(__ptr),
         std::__wrap_iter<__const_pointer>(__ptr),
-        std::__wrap_iter<__const_pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0)));
+        std::__wrap_iter<__const_pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
     return const_iterator(__ptr);
 #      endif
