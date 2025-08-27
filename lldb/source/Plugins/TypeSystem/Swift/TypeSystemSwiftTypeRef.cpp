@@ -3437,6 +3437,11 @@ TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {
       // then we don't have debug info to resolve it from.
       CompilerType ast_type =
         ReconstructType({weak_from_this(), type}, nullptr).GetCanonicalType();
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "Cannot resolve type alias in type \"{0}\"",
+               AsMangledName(type));
+      if (!ast_type)
+        return CompilerType();
       CompilerType result =
           GetTypeFromMangledTypename(ast_type.GetMangledTypeName());
       if (result && !llvm::isa<TypeSystemSwiftTypeRefForExpressions>(this))
