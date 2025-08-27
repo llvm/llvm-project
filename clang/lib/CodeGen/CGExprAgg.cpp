@@ -424,10 +424,7 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
       Ctx.getAsConstantArrayType(E->getSubExpr()->getType());
   assert(ArrayType && "std::initializer_list constructed from non-array");
 
-  RecordDecl *Record = E->getType()
-                           ->castAs<RecordType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+  auto *Record = E->getType()->castAsRecordDecl();
   RecordDecl::field_iterator Field = Record->field_begin();
   assert(Field != Record->field_end() &&
          Ctx.hasSameType(Field->getType()->getPointeeType(),
@@ -1809,10 +1806,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   // the disadvantage is that the generated code is more difficult for
   // the optimizer, especially with bitfields.
   unsigned NumInitElements = InitExprs.size();
-  RecordDecl *record = ExprToVisit->getType()
-                           ->castAs<RecordType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+  RecordDecl *record = ExprToVisit->getType()->castAsRecordDecl();
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
@@ -2120,7 +2114,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
   // InitListExprs for structs have to be handled carefully.  If there are
   // reference members, we need to consider the size of the reference, not the
   // referencee.  InitListExprs for unions and arrays can't have references.
-  if (const RecordType *RT = E->getType()->getAs<RecordType>()) {
+  if (const RecordType *RT = E->getType()->getAsCanonical<RecordType>()) {
     if (!RT->isUnionType()) {
       RecordDecl *SD = RT->getOriginalDecl()->getDefinitionOrSelf();
       CharUnits NumNonZeroBytes = CharUnits::Zero();
@@ -2173,7 +2167,8 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
   // C++ objects with a user-declared constructor don't need zero'ing.
   if (CGF.getLangOpts().CPlusPlus)
     if (const RecordType *RT = CGF.getContext()
-                       .getBaseElementType(E->getType())->getAs<RecordType>()) {
+                                   .getBaseElementType(E->getType())
+                                   ->getAsCanonical<RecordType>()) {
       const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getOriginalDecl());
       if (RD->hasUserDeclaredConstructor())
         return;

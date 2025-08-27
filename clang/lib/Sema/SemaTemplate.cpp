@@ -2859,14 +2859,14 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     }
 
     // Retrieve the parent of an enumeration type.
-    if (const EnumType *EnumT = T->getAs<EnumType>()) {
+    if (const EnumType *EnumT = T->getAsCanonical<EnumType>()) {
       // FIXME: Forward-declared enums require a TSK_ExplicitSpecialization
       // check here.
       EnumDecl *Enum = EnumT->getOriginalDecl();
 
       // Get to the parent type.
       if (TypeDecl *Parent = dyn_cast<TypeDecl>(Enum->getParent()))
-        T = Context.getTypeDeclType(Parent);
+        T = Context.getCanonicalTypeDeclType(Parent);
       else
         T = QualType();
       continue;
@@ -3313,7 +3313,7 @@ static bool isInVkNamespace(const RecordType *RT) {
 static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
                                               QualType OperandArg,
                                               SourceLocation Loc) {
-  if (auto *RT = OperandArg->getAs<RecordType>()) {
+  if (auto *RT = OperandArg->getAsCanonical<RecordType>()) {
     bool Literal = false;
     SourceLocation LiteralLoc;
     if (isInVkNamespace(RT) && RT->getOriginalDecl()->getName() == "Literal") {
@@ -3323,7 +3323,7 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
 
       const TemplateArgumentList &LiteralArgs = SpecDecl->getTemplateArgs();
       QualType ConstantType = LiteralArgs[0].getAsType();
-      RT = ConstantType->getAs<RecordType>();
+      RT = ConstantType->getAsCanonical<RecordType>();
       Literal = true;
       LiteralLoc = SpecDecl->getSourceRange().getBegin();
     }
@@ -4132,7 +4132,7 @@ static bool isTemplateArgumentTemplateParameter(const TemplateArgument &Arg,
   case TemplateArgument::Type: {
     QualType Type = Arg.getAsType();
     const TemplateTypeParmType *TPT =
-        Arg.getAsType()->getAs<TemplateTypeParmType>();
+        Arg.getAsType()->getAsCanonical<TemplateTypeParmType>();
     return TPT && !Type.hasQualifiers() &&
            TPT->getDepth() == Depth && TPT->getIndex() == Index;
   }
@@ -7411,9 +7411,8 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
       // always a no-op, except when the parameter type is bool. In
       // that case, this may extend the argument from 1 bit to 8 bits.
       QualType IntegerType = ParamType;
-      if (const EnumType *Enum = IntegerType->getAs<EnumType>())
-        IntegerType =
-            Enum->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      if (const auto *ED = IntegerType->getAsEnumDecl())
+        IntegerType = ED->getIntegerType();
       Value = Value.extOrTrunc(IntegerType->isBitIntType()
                                    ? Context.getIntWidth(IntegerType)
                                    : Context.getTypeSize(IntegerType));
@@ -7510,9 +7509,8 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     }
 
     QualType IntegerType = ParamType;
-    if (const EnumType *Enum = IntegerType->getAs<EnumType>()) {
-      IntegerType =
-          Enum->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    if (const auto *ED = IntegerType->getAsEnumDecl()) {
+      IntegerType = ED->getIntegerType();
     }
 
     if (ParamType->isBooleanType()) {
@@ -8028,8 +8026,8 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
   // any integral type with C++11 enum classes, make sure we create the right
   // type of literal for it.
   QualType T = OrigT;
-  if (const EnumType *ET = OrigT->getAs<EnumType>())
-    T = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = OrigT->getAsEnumDecl())
+    T = ED->getIntegerType();
 
   Expr *E;
   if (T->isAnyCharacterType()) {

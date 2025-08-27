@@ -1973,8 +1973,8 @@ static UsualDeallocFnInfo resolveDeallocationOverload(
 static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
                                          TypeAwareAllocationMode PassType,
                                          QualType allocType) {
-  const RecordType *record =
-    allocType->getBaseElementTypeUnsafe()->getAs<RecordType>();
+  const auto *record =
+      allocType->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>();
   if (!record) return false;
 
   // Try to find an operator delete[] in class scope.
@@ -3052,9 +3052,7 @@ bool Sema::FindAllocationFunctions(
   LookupResult FoundDelete(*this, DeleteName, StartLoc, LookupOrdinaryName);
   if (AllocElemType->isRecordType() &&
       DeleteScope != AllocationFunctionScope::Global) {
-    auto *RD = cast<CXXRecordDecl>(
-                   AllocElemType->castAs<RecordType>()->getOriginalDecl())
-                   ->getDefinitionOrSelf();
+    auto *RD = AllocElemType->castAsCXXRecordDecl();
     LookupQualifiedName(FoundDelete, RD);
   }
   if (FoundDelete.isAmbiguous())
@@ -4835,10 +4833,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isBooleanType()) {
-      assert(FromType->castAs<EnumType>()
-                 ->getOriginalDecl()
-                 ->getDefinitionOrSelf()
-                 ->isFixed() &&
+      assert(FromType->castAsEnumDecl()->isFixed() &&
              SCS.Second == ICK_Integral_Promotion &&
              "only enums with fixed underlying type can promote to bool");
       From = ImpCastExprToType(From, StepTy, CK_IntegralToBoolean, VK_PRValue,
@@ -5524,8 +5519,8 @@ static bool TryClassUnification(Sema &Self, Expr *From, Expr *To,
   //         the same or one is a base class of the other:
   QualType FTy = From->getType();
   QualType TTy = To->getType();
-  const RecordType *FRec = FTy->getAs<RecordType>();
-  const RecordType *TRec = TTy->getAs<RecordType>();
+  const RecordType *FRec = FTy->getAsCanonical<RecordType>();
+  const RecordType *TRec = TTy->getAsCanonical<RecordType>();
   bool FDerivedFromT = FRec && TRec && FRec != TRec &&
                        Self.IsDerivedFrom(QuestionLoc, FTy, TTy);
   if (FRec && TRec && (FRec == TRec || FDerivedFromT ||
@@ -7523,12 +7518,10 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
   }
 
   // GCC seems to also exclude expressions of incomplete enum type.
-  if (const EnumType *T = E->getType()->getAs<EnumType>()) {
-    if (!T->getOriginalDecl()->getDefinitionOrSelf()->isComplete()) {
-      // FIXME: stupid workaround for a codegen bug!
-      E = ImpCastExprToType(E, Context.VoidTy, CK_ToVoid).get();
-      return E;
-    }
+  if (const auto *ED = E->getType()->getAsEnumDecl(); ED && !ED->isComplete()) {
+    // FIXME: stupid workaround for a codegen bug!
+    E = ImpCastExprToType(E, Context.VoidTy, CK_ToVoid).get();
+    return E;
   }
 
   ExprResult Res = DefaultFunctionArrayLvalueConversion(E);
