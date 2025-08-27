@@ -448,7 +448,9 @@ class OpenACCClauseCIREmitter final
   }
 
   // Create the 'init' section of the recipe, including the 'copy' section for
-  // 'firstprivate'.
+  // 'firstprivate'.  Note that this function is not 'insertion point' clean, in
+  // that it alters the insertion point to be inside of the 'destroy' section of
+  // the recipe, but doesn't restore it aftewards.
   template <typename RecipeTy>
   void createRecipeInitCopy(mlir::Location loc, mlir::Location locEnd,
                             SourceRange exprRange, mlir::Value mainOp,
@@ -514,6 +516,10 @@ class OpenACCClauseCIREmitter final
     }
   }
 
+  // This function generates the 'combiner' section for a reduction recipe. Note
+  // that this function is not 'insertion point' clean, in that it alters the
+  // insertion point to be inside of the 'combiner' section of the recipe, but
+  // doesn't restore it aftewards.
   void createReductionRecipeCombiner(mlir::Location loc, mlir::Location locEnd,
                                      mlir::Value mainOp,
                                      mlir::acc::ReductionRecipeOp recipe) {
@@ -527,6 +533,10 @@ class OpenACCClauseCIREmitter final
     mlir::acc::YieldOp::create(builder, locEnd, lhsArg);
   }
 
+  // This function generates the 'destroy' section for a recipe. Note
+  // that this function is not 'insertion point' clean, in that it alters the
+  // insertion point to be inside of the 'destroy' section of the recipe, but
+  // doesn't restore it aftewards.
   void createRecipeDestroySection(mlir::Location loc, mlir::Location locEnd,
                                   mlir::Value mainOp, CharUnits alignment,
                                   QualType baseType,
