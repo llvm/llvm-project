@@ -27,7 +27,7 @@ using namespace clang;
 using namespace ento;
 
 enum IVarState { Unused, Used };
-typedef llvm::DenseMap<const ObjCIvarDecl*,IVarState> IvarUsageMap;
+using IvarUsageMap = llvm::DenseMap<const ObjCIvarDecl *, IVarState>;
 
 static void Scan(IvarUsageMap& M, const Stmt *S) {
   if (!S)
