@@ -1590,7 +1590,14 @@ bool isInlineValue(unsigned Reg);
 
 /// Is this an AMDGPU specific source operand? These include registers,
 /// inline constants, literals and mandatory literals (KImm).
-bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo);
+constexpr bool isSISrcOperand(const MCOperandInfo &OpInfo) {
+  return OpInfo.OperandType >= AMDGPU::OPERAND_SRC_FIRST &&
+         OpInfo.OperandType <= AMDGPU::OPERAND_SRC_LAST;
+}
+
+constexpr bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  return isSISrcOperand(Desc.operands()[OpNo]);
+}
 
 /// Is this a KImm operand?
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);
