@@ -15,13 +15,30 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+
+AST_MATCHER(Type, charType) {
+  return Node.isCharType();
+}
+AST_MATCHER(Type, unionType) {
+  return Node.isUnionType();
+}
+
+}
+
 CastToStructCheck::CastToStructCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoredCasts(
           utils::options::parseStringList(Options.get("IgnoredCasts", ""))) {
   IgnoredCastsRegex.reserve(IgnoredCasts.size());
-  for (const auto &Str : IgnoredCasts)
-    IgnoredCastsRegex.emplace_back(Str);
+  for (const auto &Str : IgnoredCasts) {
+    std::string WholeWordRegex;
+    WholeWordRegex.reserve(Str.size() + 2);
+    WholeWordRegex.push_back('^');
+    WholeWordRegex.append(Str);
+    WholeWordRegex.push_back('$');
+    IgnoredCastsRegex.emplace_back(WholeWordRegex);
+  }
 }
 
 void CastToStructCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -33,7 +50,8 @@ void CastToStructCheck::registerMatchers(MatchFinder *Finder) {
   auto FromPointee =
       qualType(hasUnqualifiedDesugaredType(type().bind("FromType")),
                unless(voidType()),
-               unless(hasDeclaration(recordDecl(isUnion()))))
+               unless(charType()),
+               unless(unionType()))
           .bind("FromPointee");
   auto ToPointee =
       qualType(hasUnqualifiedDesugaredType(
@@ -53,26 +71,27 @@ void CastToStructCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<CStyleCastExpr>("CastExpr");
   const auto *const FromPtr = Result.Nodes.getNodeAs<QualType>("FromPtr");
   const auto *const ToPtr = Result.Nodes.getNodeAs<QualType>("ToPtr");
-  const auto *const FromPointee =
-      Result.Nodes.getNodeAs<QualType>("FromPointee");
-  const auto *const ToPointee = Result.Nodes.getNodeAs<QualType>("ToPointee");
   const auto *const FromType = Result.Nodes.getNodeAs<Type>("FromType");
   const auto *const ToType = Result.Nodes.getNodeAs<RecordType>("ToType");
 
   if (FromType == ToType)
     return;
 
-  const std::string FromName = FromPointee->getAsString();
-  const std::string ToName = ToPointee->getAsString();
-  bool FromMatch = false;
-  for (auto [Idx, Regex] : llvm::enumerate(IgnoredCastsRegex)) {
-    if (Idx % 2 == 0) {
-      FromMatch = Regex.match(FromName);
-    } else {
-      if (FromMatch && Regex.match(ToName))
-        return;
+  auto CheckNameIgnore = [this](const std::string &FromName, const std::string &ToName) {
+    bool FromMatch = false;
+    for (auto [Idx, Regex] : llvm::enumerate(IgnoredCastsRegex)) {
+      if (Idx % 2 == 0) {
+        FromMatch = Regex.match(FromName);
+      } else {
+        if (FromMatch && Regex.match(ToName))
+          return true;
+      }
     }
-  }
+    return false;
+  };
+
+  if (CheckNameIgnore(FromPtr->getAsString(), ToPtr->getAsString()))
+    return;
 
   diag(FoundCastExpr->getExprLoc(),
        "casting a %0 pointer to a "

@@ -11,16 +11,17 @@ scalar-type pointer (which points often to an array or memory block) to a
 ``struct`` type pointer can be unsafe for similar reasons. This check warns at
 pointer casts from any non-struct type to a struct type. No warning is produced
 at cast from type ``void *`` (this is the usual way of allocating memory with
-``malloc``-like functions). In addition, ``union`` types are excluded from the
+``malloc``-like functions) and ``char *`` types (which are used often as
+pointers into data buffers). In addition, ``union`` types are excluded from the
 check. It is possible to specify additional types to ignore. The check does not
 take into account type compatibility or data layout, only the names of the
 types.
 
 .. code-block:: c
 
-   void test1(char *p) {
+   void test1(int *p) {
      struct S1 *s;
-     s = (struct S1 *)p; // warn: 'char *' is converted to 'struct S1 *'
+     s = (struct S1 *)p; // warn: 'int *' is converted to 'struct S1 *'
    }
 
    void test2(struct S1 *p) {
@@ -36,7 +37,7 @@ types.
 Limitations
 -----------
 
-The check does run only on `C` code.
+The check does not run on `C++` code.
 
 C-style casts are discouraged in C++ and should be converted to more type-safe
 casts. The ``reinterpreted_cast`` is used for the most unsafe cases and
@@ -52,16 +53,12 @@ Options
    types to ignore. The list should contain pairs of type names in a way that
    the first type is the "from" type, the second is the "to" type in a cast
    expression. The types in a pair and the pairs itself are separated by
-   `;` characters. For example `char;struct Type1;char;struct Type2` specifies
-   that the check does not produce warning for casts from ``char *`` to
-   ``struct Type1 *`` and casts from ``char *`` to ``struct Type2 *`` (the `*`
-   character to indicate pointer should not be used in the list). The type name
-   in the cast expression is matched without resolution of type aliases like
-   ``typedef``.
+   `;` characters. The parts between `;` characters are matched as regular
+   expressions over the whole type name. For example
+   `struct S1 \*;struct T1 \*;short \*;struct T1 \*` specifies that the check
+   does not produce warning for casts from ``struct S1 *`` to ``struct T1 *``
+   and casts from ``short *`` to ``struct T1 *`` (the `*` character needs to be
+   escaped). The type name in the cast expression is matched without resolution
+   of ``typedef`` types.
    
-   The list entries are matched as substring regular expressions. For example
-   `char` would match `unsigned char` too. This problem can be avoided by using
-   anchor characters (`^char$`).
-   
-   Default value of the option is an empty list. (Casts from ``void *`` are
-   ignored always regardless of this list.)
+   Default value of the option is an empty list.

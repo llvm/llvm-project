@@ -26,9 +26,9 @@ typedef union U1 *TyPU1;
 typedef int int_t;
 typedef int * int_ptr_t;
 
-struct S1 *test_simple(char *p) {
+struct S1 *test_simple(short *p) {
   return (struct S1 *)p;
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: casting a 'char *' pointer to a 'struct S1 *' pointer and accessing a field can lead to memory access errors or data corruption [bugprone-cast-to-struct]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: casting a 'short *' pointer to a 'struct S1 *' pointer and accessing a field can lead to memory access errors or data corruption [bugprone-cast-to-struct]
   struct S1 *s;
   int i;
   s = (struct S1 *)&i;
@@ -48,18 +48,18 @@ TyPS1 test_cast_from_similar(struct S1 *p) {
   return (TyPS1)p;
 }
 
-void test_typedef(char *p1, int_t *p2, int_ptr_t p3) {
+void test_typedef(short *p1, int_t *p2, int_ptr_t p3) {
   TyS1 *a = (TyS1 *)p1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: casting a 'char *' pointer to a 'TyS1 *' (aka 'struct S1 *') pointer and accessing a field can lead to memory access errors or data corruption [bugprone-cast-to-struct]
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: casting a 'short *' pointer to a 'TyS1 *' (aka 'struct S1 *') pointer and accessing a field can lead to memory access errors or data corruption [bugprone-cast-to-struct]
   TyPS1 b = (TyPS1)p1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: casting a 'char *' pointer to a 'TyPS1' (aka 'struct S1 *') pointer and accessing a field can lead to memory access errors or data corruption [bugprone-cast-to-struct]
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: casting a 'short *' pointer to a 'TyPS1' (aka 'struct S1 *') pointer and accessing a field can lead to memory access errors or data corruption [bugprone-cast-to-struct]
   struct S1 *c = (struct S1 *)p2;
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: casting a 'int_t *' (aka 'int *') pointer to a 'struct S1 *' pointer and accessing a field can lead to memory access errors or data corruption [bugprone-cast-to-struct]
   struct S1 *d = (struct S1 *)p3;
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: casting a 'int_ptr_t' (aka 'int *') pointer to a 'struct S1 *' pointer and accessing a field can lead to memory access errors or data corruption [bugprone-cast-to-struct]
 }
 
-void test_union(char *p1, union U1 *p2, TyPU1 p3) {
+void test_union(short *p1, union U1 *p2, TyPU1 p3) {
   union U1 *a = (union U1 *)p1;
   struct S1 *b = (struct S1 *)p2;
   struct S1 *c = (struct S1 *)p3;
