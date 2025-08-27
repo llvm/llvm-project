@@ -3089,7 +3089,7 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV));
 }
 
-/// ReplaceVectorLoad - Convert vector loads into multi-output scalar loads.
+/// replaceLoadVector - Convert vector loads into multi-output scalar loads.
 static std::optional<std::pair<SDValue, SDValue>>
 replaceLoadVector(SDNode *N, SelectionDAG &DAG, const NVPTXSubtarget &STI) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
