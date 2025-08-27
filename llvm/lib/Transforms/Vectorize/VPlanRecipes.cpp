@@ -3080,7 +3080,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       case Intrinsic::pseudoprobe:
       case Intrinsic::experimental_noalias_scope_decl: {
         assert(getCostForIntrinsics(CalledFn->getIntrinsicID(), ArgOps, *this,
-                                    ElementCount::getFixed(1), Ctx) == 0 && "scalarizing intrinsic should be free");
+                                    ElementCount::getFixed(1), Ctx) == 0 &&
+               "scalarizing intrinsic should be free");
         return InstructionCost(0);
       }
       default:
