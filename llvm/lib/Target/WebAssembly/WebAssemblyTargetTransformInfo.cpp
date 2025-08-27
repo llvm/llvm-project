@@ -327,3 +327,19 @@ bool WebAssemblyTTIImpl::isProfitableToSinkOperands(
 
   return false;
 }
+
+bool WebAssemblyTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  // Always expand on Subtargets without vector instructions.
+  if (!ST->hasSIMD128())
+    return true;
+
+  // Whether or not to expand is a per-intrinsic decision.
+  switch (II->getIntrinsicID()) {
+  default:
+    return true;
+  case Intrinsic::vector_reduce_and:
+    return false;
+  case Intrinsic::vector_reduce_or:
+    return false;
+  }
+}
