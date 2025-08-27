@@ -97,3 +97,94 @@ func.func @iter_to_init_arg_loop_like(
   }
   return %result : tensor<?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @collapse_dynamic_with_unit_dims(
+// CHECK-SAME:                                               %[[arg0:.*]]: memref<1x32x?x1xsi8>) -> index {
+// CHECK:           %[[c2:.*]] = arith.constant 2 : index
+// CHECK:           %[[dim:.*]] = memref.dim %[[arg0]], %[[c2]] : memref<1x32x?x1xsi8>
+// CHECK:           return %[[dim]] : index
+// CHECK:         }
+func.func @collapse_dynamic_with_unit_dims (%arg0: memref<1x32x?x1xsi8>)
+    -> index {
+  %c2 = arith.constant 2 : index
+  %collapse_shape = memref.collapse_shape %arg0 [[0], [1], [2, 3]] : memref<1x32x?x1xsi8> into memref<1x32x?xsi8>
+  %dim_3 = memref.dim %collapse_shape, %c2 : memref<1x32x?xsi8>
+  return %dim_3: index
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_dynamic_and_const_with_dynamic_on_right(
+// CHECK-SAME:                                                            %[[arg0:.*]]: memref<1x32x8x?xsi8>) -> index {
+// CHECK:           %[[c8:.*]] = arith.constant 8 : index
+// CHECK:           %[[c3:.*]] = arith.constant 3 : index
+// CHECK:           %[[dim:.*]] = memref.dim %[[arg0]], %[[c3]] : memref<1x32x8x?xsi8>
+// CHECK:           %[[res:.*]] = arith.muli %[[dim]], %[[c8]] : index
+// CHECK:           return %[[res]] : index
+// CHECK:         }
+func.func @fold_dynamic_and_const_with_dynamic_on_right(%arg0: memref<1x32x8x?xsi8>)
+    -> index {
+  %c2 = arith.constant 2 : index
+  %collapse_shape = memref.collapse_shape %arg0 [[0], [1], [2, 3]] : memref<1x32x8x?xsi8> into memref<1x32x?xsi8>
+  %dim_3 = memref.dim %collapse_shape, %c2 : memref<1x32x?xsi8>
+  return %dim_3: index
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_dynamic_and_const_with_dynamic_on_left(
+// CHECK-SAME:                                                           %[[arg0:.*]]: memref<1x32x?x8xsi8>) -> index {
+// CHECK:           %[[c8:.*]] = arith.constant 8 : index
+// CHECK:           %[[c2:.*]] = arith.constant 2 : index
+// CHECK:           %[[dim:.*]] = memref.dim %[[arg0]], %[[c2]] : memref<1x32x?x8xsi8>
+// CHECK:           %[[res:.*]] = arith.muli %[[dim]], %[[c8]] : index
+// CHECK:           return %[[res]] : index
+// CHECK:         }
+func.func @fold_dynamic_and_const_with_dynamic_on_left(%arg0: memref<1x32x?x8xsi8>)
+    -> index {
+  %c2 = arith.constant 2 : index
+  %collapse_shape = memref.collapse_shape %arg0 [[0], [1], [2, 3]] : memref<1x32x?x8xsi8> into memref<1x32x?xsi8>
+  %dim_3 = memref.dim %collapse_shape, %c2 : memref<1x32x?xsi8>
+  return %dim_3: index
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_more_than_two_elements_group(
+// CHECK-SAME:                              %[[arg0:.*]]: memref<2x32x?x8xsi8>) -> index {
+// CHECK:           %[[c8:.*]] = arith.constant 8 : index
+// CHECK:           %[[c64:.*]] = arith.constant 64 : index
+// CHECK:           %[[c2:.*]] = arith.constant 2 : index
+// CHECK:           %[[dim:.*]] = memref.dim %[[arg0]], %[[c2]] : memref<2x32x?x8xsi8>
+// CHECK:           %[[res0:.*]] = arith.muli %[[dim]], %[[c64]] : index
+// CHECK:           %[[res1:.*]] = arith.muli %[[res0]], %[[c8]] : index
+// CHECK:           return %[[res1]] : index
+// CHECK:         }
+func.func @fold_more_than_two_elements_group(%arg0: memref<2x32x?x8xsi8>)
+    -> index {
+  %c1 = arith.constant 0 : index
+  %collapse_shape = memref.collapse_shape %arg0 [[0, 1, 2, 3]] : memref<2x32x?x8xsi8> into memref<?xsi8>
+  %dim_3 = memref.dim %collapse_shape, %c1 : memref<?xsi8>
+  return %dim_3: index
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_group_with_two_dynamic(
+// CHECK-SAME:                                           %[[arg0:.*]]: memref<1x32x?x?xsi8>) -> index {
+// CHECK:           %[[c3:.*]] = arith.constant 3 : index
+// CHECK:           %[[c2:.*]] = arith.constant 2 : index
+// CHECK:           %[[dim2:.*]] = memref.dim %[[arg0]], %[[c2]] : memref<1x32x?x?xsi8>
+// CHECK:           %[[dim3:.*]] = memref.dim %[[arg0]], %[[c3]] : memref<1x32x?x?xsi8>
+// CHECK:           %[[res:.*]] = arith.muli %[[dim2]], %[[dim3]] : index
+// CHECK:           return %[[res]] : index
+// CHECK:         }
+func.func @fold_group_with_two_dynamic(%arg0: memref<1x32x?x?xsi8>)
+    -> index {
+  %c2 = arith.constant 2 : index
+  %collapse_shape = memref.collapse_shape %arg0 [[0], [1], [2, 3]] : memref<1x32x?x?xsi8> into memref<1x32x?xsi8>
+  %dim_3 = memref.dim %collapse_shape, %c2 : memref<1x32x?xsi8>
+  return %dim_3: index
+}
