@@ -5222,19 +5222,13 @@ LegalizerHelper::fewerElementsVectorExtractInsertVectorElt(MachineInstr &MI,
     InsertVal = MI.getOperand(2).getReg();
 
   Register Idx = MI.getOperand(MI.getNumOperands() - 1).getReg();
-
-  // TODO: Handle total scalarization case.
-  if (!NarrowVecTy.isVector())
-    return UnableToLegalize;
-
   LLT VecTy = MRI.getType(SrcVec);
 
   // If the index is a constant, we can really break this down as you would
   // expect, and index into the target size pieces.
-  int64_t IdxVal;
   auto MaybeCst = getIConstantVRegValWithLookThrough(Idx, MRI);
   if (MaybeCst) {
-    IdxVal = MaybeCst->Value.getSExtValue();
+    uint64_t IdxVal = MaybeCst->Value.getZExtValue();
     // Avoid out of bounds indexing the pieces.
     if (IdxVal >= VecTy.getNumElements()) {
       MIRBuilder.buildUndef(DstReg);
@@ -5242,33 +5236,45 @@ LegalizerHelper::fewerElementsVectorExtractInsertVectorElt(MachineInstr &MI,
       return Legalized;
     }
 
-    SmallVector<Register, 8> VecParts;
-    LLT GCDTy = extractGCDType(VecParts, VecTy, NarrowVecTy, SrcVec);
-
-    // Build a sequence of NarrowTy pieces in VecParts for this operand.
-    LLT LCMTy = buildLCMMergePieces(VecTy, NarrowVecTy, GCDTy, VecParts,
-                                    TargetOpcode::G_ANYEXT);
-
-    unsigned NewNumElts = NarrowVecTy.getNumElements();
-
-    LLT IdxTy = MRI.getType(Idx);
-    int64_t PartIdx = IdxVal / NewNumElts;
-    auto NewIdx =
-        MIRBuilder.buildConstant(IdxTy, IdxVal - NewNumElts * PartIdx);
-
-    if (IsInsert) {
-      LLT PartTy = MRI.getType(VecParts[PartIdx]);
-
-      // Use the adjusted index to insert into one of the subvectors.
-      auto InsertPart = MIRBuilder.buildInsertVectorElement(
-          PartTy, VecParts[PartIdx], InsertVal, NewIdx);
-      VecParts[PartIdx] = InsertPart.getReg(0);
-
-      // Recombine the inserted subvector with the others to reform the result
-      // vector.
-      buildWidenedRemergeToDst(DstReg, LCMTy, VecParts);
+    if (!NarrowVecTy.isVector()) {
+      SmallVector<Register, 8> SplitPieces;
+      extractParts(MI.getOperand(1).getReg(), NarrowVecTy,
+                   VecTy.getNumElements(), SplitPieces, MIRBuilder, MRI);
+      if (IsInsert) {
+        SplitPieces[IdxVal] = InsertVal;
+        MIRBuilder.buildMergeLikeInstr(MI.getOperand(0).getReg(), SplitPieces);
+      } else {
+        MIRBuilder.buildCopy(MI.getOperand(0).getReg(), SplitPieces[IdxVal]);
+      }
     } else {
-      MIRBuilder.buildExtractVectorElement(DstReg, VecParts[PartIdx], NewIdx);
+      SmallVector<Register, 8> VecParts;
+      LLT GCDTy = extractGCDType(VecParts, VecTy, NarrowVecTy, SrcVec);
+
+      // Build a sequence of NarrowTy pieces in VecParts for this operand.
+      LLT LCMTy = buildLCMMergePieces(VecTy, NarrowVecTy, GCDTy, VecParts,
+                                      TargetOpcode::G_ANYEXT);
+
+      unsigned NewNumElts = NarrowVecTy.getNumElements();
+
+      LLT IdxTy = MRI.getType(Idx);
+      int64_t PartIdx = IdxVal / NewNumElts;
+      auto NewIdx =
+          MIRBuilder.buildConstant(IdxTy, IdxVal - NewNumElts * PartIdx);
+
+      if (IsInsert) {
+        LLT PartTy = MRI.getType(VecParts[PartIdx]);
+
+        // Use the adjusted index to insert into one of the subvectors.
+        auto InsertPart = MIRBuilder.buildInsertVectorElement(
+            PartTy, VecParts[PartIdx], InsertVal, NewIdx);
+        VecParts[PartIdx] = InsertPart.getReg(0);
+
+        // Recombine the inserted subvector with the others to reform the result
+        // vector.
+        buildWidenedRemergeToDst(DstReg, LCMTy, VecParts);
+      } else {
+        MIRBuilder.buildExtractVectorElement(DstReg, VecParts[PartIdx], NewIdx);
+      }
     }
 
     MI.eraseFromParent();
