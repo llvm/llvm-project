@@ -529,7 +529,7 @@ class LLDBDAP(DAP):
         confirmed_breakpoint_ids = set()
         for dex_bp_id in dex_bp_ids:
             # Function and instruction breakpoints don't use conditions.
-            # FIXME: That's not a DAP restruction, so they could in future.
+            # FIXME: That's not a DAP restriction, so they could in future.
             if dex_bp_id not in self.bp_info:
                 assert (
                     dex_bp_id in self.function_bp_info

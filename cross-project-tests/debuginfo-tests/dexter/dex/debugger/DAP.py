@@ -611,7 +611,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 dex_bp_ids = self.get_current_bps(file)
                 self._update_breakpoint_ids_after_request(dex_bp_ids, result)
 
-        # Funciton breakpoints.
+        # Function breakpoints.
         if self.pending_function_breakpoints:
             self.pending_function_breakpoints = False
             desired_bps = list(self.function_bp_info.values())
@@ -693,7 +693,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         """ "Set the debugger-specific params used in a launch request."""
 
     def launch(self, cmdline):
-        # FIXME: This should probably not a warning, not an assert.
+        # FIXME: Should this be a warning or exception, rather than assert?
         assert (
             len(self.file_to_bp)
             + len(self.function_bp_info)
