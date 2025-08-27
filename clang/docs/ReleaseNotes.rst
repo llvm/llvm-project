@@ -246,6 +246,10 @@ Improvements to Clang's diagnostics
   decorated with the ``alloc_size`` attribute don't allocate enough space for
   the target pointer type.
 
+ - Reworded the ``-Wimplicit-function-declaration`` diagnostic to make it more
+   clear that the type selected for the implicit declaration is based on the
+   signature of a standard (C, C++, POSIX) library function. (#GH146924)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
