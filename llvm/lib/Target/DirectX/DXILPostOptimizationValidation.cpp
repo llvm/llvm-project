@@ -95,7 +95,7 @@ static void reportOverlappingError(Module &M, ResourceInfo R1,
 }
 
 static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
-  bool ErrorFound = false;
+  [[maybe_unused]] bool ErrorFound = false;
   for (const auto &ResList :
        {DRM.srvs(), DRM.uavs(), DRM.cbuffers(), DRM.samplers()}) {
     if (ResList.empty())
