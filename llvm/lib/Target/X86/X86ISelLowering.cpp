@@ -44957,6 +44957,24 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     Known.Zero.setLowBits(Known2.countMinTrailingZeros());
     return false;
   }
+  case X86ISD::VPMADD52L:
+  case X86ISD::VPMADD52H: {
+    KnownBits KnownOp0, KnownOp1;
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    //  Only demand the lower 52-bits of operands 0 / 1 (and all 64-bits of
+    //  operand 2).
+    APInt Low52Bits = APInt::getLowBitsSet(BitWidth, 52);
+    if (SimplifyDemandedBits(Op0, Low52Bits, OriginalDemandedElts, KnownOp0,
+                             TLO, Depth + 1))
+      return true;
+
+    if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, KnownOp1,
+                             TLO, Depth + 1))
+      return true;
+    // TODO: Compute the known bits for VPMADD52L/VPMADD52H.
+    break;
+  }
   }
 
   return TargetLowering::SimplifyDemandedBitsForTargetNode(
@@ -60073,6 +60091,19 @@ static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Simplify VPMADD52L/VPMADD52H operations.
+static SDValue combineVPMADD52LH(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  MVT VT = N->getSimpleValueType(0);
+  unsigned NumEltBits = VT.getScalarSizeInBits();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnes(NumEltBits),
+                               DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const X86Subtarget &Subtarget) {
@@ -60710,6 +60741,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PMULUDQ:     return combinePMULDQ(N, DAG, DCI, Subtarget);
   case X86ISD::VPMADDUBSW:
   case X86ISD::VPMADDWD:    return combineVPMADD(N, DAG, DCI);
+  case X86ISD::VPMADD52L:
+  case X86ISD::VPMADD52H:    return combineVPMADD52LH(N, DAG, DCI);
   case X86ISD::KSHIFTL:
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);
