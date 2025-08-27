@@ -380,8 +380,7 @@ gpu.module @test {
 
 // -----
 // CHECK-LABEL: gpu.func @mma_transpose_b(
-// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x8xi32>,
-// CHECK-SAME: %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
+// CHECK: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x8xi32>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
 // CHECK-DAG:     %[[ADESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
 // CHECK-DAG:     %[[BDESC:.*]] = xegpu.create_nd_tdesc %[[ARG1]][%{{.*}}] : memref<16x8xi32> -> !xegpu.tensor_desc<16x8xi32>
 // CHECK-DAG:     %[[A:.*]] = xegpu.load_nd %[[ADESC]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8xf16>
