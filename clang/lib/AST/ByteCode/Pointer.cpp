@@ -278,10 +278,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Ptr = Ptr.getArray();
     } else {
       const Descriptor *Desc = Ptr.getFieldDesc();
-      bool IsVirtual = false;
 
       // Create a path entry for the field.
       if (const auto *BaseOrMember = Desc->asDecl()) {
+        bool IsVirtual = false;
         if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
           Ptr = Ptr.getBase();
           Offset += getFieldOffset(FD);
@@ -785,8 +785,11 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Complex types.
     if (const auto *CT = Ty->getAs<ComplexType>()) {
-      QualType ElemTy = CT->getElementType();
+      // Can happen via C casts.
+      if (!Ptr.getFieldDesc()->isPrimitiveArray())
+        return false;
 
+      QualType ElemTy = CT->getElementType();
       if (ElemTy->isIntegerType()) {
         OptPrimType ElemT = Ctx.classify(ElemTy);
         assert(ElemT);

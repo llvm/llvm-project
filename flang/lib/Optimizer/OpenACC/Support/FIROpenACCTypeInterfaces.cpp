@@ -591,7 +591,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
           hlfir::AssignOp::create(firBuilder, loc, initVal,
                                   declareOp.getBase());
         } else {
-          for (auto ext : seqTy.getShape()) {
+          // Generate loop nest from slowest to fastest running dimension
+          for (auto ext : llvm::reverse(seqTy.getShape())) {
             auto lb = firBuilder.createIntegerConstant(loc, idxTy, 0);
             auto ub = firBuilder.createIntegerConstant(loc, idxTy, ext - 1);
             auto step = firBuilder.createIntegerConstant(loc, idxTy, 1);

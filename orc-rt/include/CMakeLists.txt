@@ -1,8 +1,20 @@
 set(ORC_RT_HEADERS
+    orc-rt-c/ExternC.h
+    orc-rt-c/WrapperFunctionResult.h
     orc-rt-c/orc-rt.h
-    orc-rt/bitmask-enum.h
-    orc-rt/math.h
-    orc-rt/rtti.h
+    orc-rt/BitmaskEnum.h
+    orc-rt/Compiler.h
+    orc-rt/Error.h
+    orc-rt/ExecutorAddress.h
+    orc-rt/IntervalMap.h
+    orc-rt/IntervalSet.h
+    orc-rt/Math.h
+    orc-rt/RTTI.h
+    orc-rt/WrapperFunctionResult.h
+    orc-rt/SimplePackedSerialization.h
+    orc-rt/bind.h
+    orc-rt/bit.h
+    orc-rt/move_only_function.h
     orc-rt/span.h
 )
 
