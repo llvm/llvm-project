@@ -23,8 +23,10 @@ frameInfo:
   hasCalls:        true
   savePoint:
     - point:           '%bb.1'
+      registers: []
   restorePoint:
     - point:           '%bb.1'
+      registers: []
 machineFunctionInfo: {}
 body:             |
   bb.0:
