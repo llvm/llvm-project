@@ -151,10 +151,11 @@ class CreateNdDescToXeVMPattern
     auto loc = op.getLoc();
     auto source = op.getSource();
     // Op is lowered to a code sequence that populates payload.
-    // Payload is a 8xi32 vector.
+    // Payload is a 8xi32 vector. Offset to individual fields are defined in
+    // NdTdescOffset enum.
     Type payloadElemTy = rewriter.getI32Type();
-    Type i64Ty = rewriter.getI64Type();
     VectorType payloadTy = VectorType::get(8, payloadElemTy);
+    Type i64Ty = rewriter.getI64Type();
     // 4xi64 view is used for inserting the base pointer.
     VectorType payloadI64Ty = VectorType::get(4, i64Ty);
     // Initialize payload to zero.
@@ -180,12 +181,12 @@ class CreateNdDescToXeVMPattern
     // If source is a memref, we need to extract the aligned pointer as index.
     // Pointer type is passed as i32 or i64 by type converter.
     if (sourceMemrefTy) {
-      baseAddr =
-          memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
       if (!sourceMemrefTy.hasStaticShape()) {
         op.emitError() << "Expected static memref shape.";
         return failure();
       }
+      baseAddr =
+          memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
     } else {
       baseAddr = adaptor.getSource();
     }
@@ -198,8 +199,8 @@ class CreateNdDescToXeVMPattern
     };
     // Offsets can be either 2D or not provided (0 is used).
     if (mixedOffsets.size() == 2) {
-      offsetW = createOffset(mixedOffsets, rank - 1);
-      offsetH = createOffset(mixedOffsets, rank - 2);
+      offsetW = createOffset(mixedOffsets, 1);
+      offsetH = createOffset(mixedOffsets, 0);
     } else if (mixedOffsets.size() == 0) {
       offsetW = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
       offsetH = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
@@ -208,8 +209,8 @@ class CreateNdDescToXeVMPattern
                                          "Expected 2D offsets or no offsets.");
     }
     // Get shape values from op fold results.
-    baseShapeW = createOffset(mixedSizes, rank - 1);
-    baseShapeH = createOffset(mixedSizes, rank - 2);
+    baseShapeW = createOffset(mixedSizes, 1);
+    baseShapeH = createOffset(mixedSizes, 0);
     if (sourceMemrefTy)
       // Cast index to i64.
       baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
