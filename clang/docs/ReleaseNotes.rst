@@ -246,6 +246,8 @@ Improvements to Clang's diagnostics
   decorated with the ``alloc_size`` attribute don't allocate enough space for
   the target pointer type.
 
+- ``-Wimplicit-fallthrough`` was added to ``-Wextra`` for GCC compatibility.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
