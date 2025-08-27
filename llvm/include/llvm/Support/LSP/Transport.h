@@ -15,12 +15,12 @@
 #ifndef LLVM_SUPPORT_LSP_TRANSPORT_H
 #define LLVM_SUPPORT_LSP_TRANSPORT_H
 
-#include "llvm/Support/LSP/Logging.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/LSP/Protocol.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>

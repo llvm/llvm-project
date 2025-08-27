@@ -1248,8 +1248,7 @@ llvm::json::Value toJSON(const CodeAction &);
 } // namespace llvm
 
 namespace llvm {
-template <>
-struct format_provider<llvm::lsp::Position> {
+template <> struct format_provider<llvm::lsp::Position> {
   static void format(const llvm::lsp::Position &pos, raw_ostream &os,
                      StringRef style) {
     assert(style.empty() && "style modifiers for this type are not supported");

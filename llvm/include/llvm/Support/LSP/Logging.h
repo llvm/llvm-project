@@ -29,16 +29,13 @@ public:
 
   /// Initiate a log message at various severity levels. These should be called
   /// after a call to `initialize`.
-  template <typename... Ts>
-  static void debug(const char *Fmt, Ts &&...Vals) {
+  template <typename... Ts> static void debug(const char *Fmt, Ts &&...Vals) {
     log(Level::Debug, Fmt, llvm::formatv(Fmt, std::forward<Ts>(Vals)...));
   }
-  template <typename... Ts>
-  static void info(const char *Fmt, Ts &&...Vals) {
+  template <typename... Ts> static void info(const char *Fmt, Ts &&...Vals) {
     log(Level::Info, Fmt, llvm::formatv(Fmt, std::forward<Ts>(Vals)...));
   }
-  template <typename... Ts>
-  static void error(const char *Fmt, Ts &&...Vals) {
+  template <typename... Ts> static void error(const char *Fmt, Ts &&...Vals) {
     log(Level::Error, Fmt, llvm::formatv(Fmt, std::forward<Ts>(Vals)...));
   }
 
