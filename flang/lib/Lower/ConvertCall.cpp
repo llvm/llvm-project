@@ -880,9 +880,10 @@ struct CallContext {
               std::optional<mlir::Type> resultType, mlir::Location loc,
               Fortran::lower::AbstractConverter &converter,
               Fortran::lower::SymMap &symMap,
-              Fortran::lower::StatementContext &stmtCtx)
+              Fortran::lower::StatementContext &stmtCtx, bool doCopyIn = true)
       : procRef{procRef}, converter{converter}, symMap{symMap},
-        stmtCtx{stmtCtx}, resultType{resultType}, loc{loc} {}
+        stmtCtx{stmtCtx}, resultType{resultType}, loc{loc}, doCopyIn{doCopyIn} {
+  }
 
   fir::FirOpBuilder &getBuilder() { return converter.getFirOpBuilder(); }
 
@@ -924,6 +925,7 @@ struct CallContext {
   Fortran::lower::StatementContext &stmtCtx;
   std::optional<mlir::Type> resultType;
   mlir::Location loc;
+  bool doCopyIn;
 };
 
 using ExvAndCleanup =
@@ -1161,18 +1163,6 @@ mlir::Value static getZeroLowerBounds(mlir::Location loc,
   return builder.genShift(loc, lowerBounds);
 }
 
-static bool
-isSimplyContiguous(const Fortran::evaluate::ActualArgument &arg,
-                   Fortran::evaluate::FoldingContext &foldingContext) {
-  if (const auto *expr = arg.UnwrapExpr())
-    return Fortran::evaluate::IsSimplyContiguous(*expr, foldingContext);
-  const Fortran::semantics::Symbol *sym = arg.GetAssumedTypeDummy();
-  assert(sym &&
-         "expect ActualArguments to be expression or assumed-type symbols");
-  return sym->Rank() == 0 ||
-         Fortran::evaluate::IsSimplyContiguous(*sym, foldingContext);
-}
-
 static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
   mlir::Value base = entity;
   bool foundParameter = false;
@@ -1204,15 +1194,16 @@ static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
 ///   fir.box_char...).
 /// This function should only be called with an actual that is present.
 /// The optional aspects must be handled by this function user.
+///
+/// Note: while Fortran::lower::CallerInterface::PassedEntity (the type of arg)
+/// is technically a template type, in the prepare*ActualArgument() calls
+/// it resolves to Fortran::evaluate::ActualArgument *
 static PreparedDummyArgument preparePresentUserCallActualArgument(
     mlir::Location loc, fir::FirOpBuilder &builder,
     const Fortran::lower::PreparedActualArgument &preparedActual,
     mlir::Type dummyType,
     const Fortran::lower::CallerInterface::PassedEntity &arg,
     CallContext &callContext) {
-
-  Fortran::evaluate::FoldingContext &foldingContext =
-      callContext.converter.getFoldingContext();
 
   // Step 1: get the actual argument, which includes addressing the
   // element if this is an array in an elemental call.
@@ -1254,13 +1245,20 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       passingPolymorphicToNonPolymorphic &&
       (actual.isArray() || mlir::isa<fir::BaseBoxType>(dummyType));
 
-  // The simple contiguity of the actual is "lost" when passing a polymorphic
-  // to a non polymorphic entity because the dummy dynamic type matters for
-  // the contiguity.
-  const bool mustDoCopyInOut =
-      actual.isArray() && arg.mustBeMadeContiguous() &&
-      (passingPolymorphicToNonPolymorphic ||
-       !isSimplyContiguous(*arg.entity, foldingContext));
+  bool mustDoCopyIn{false};
+  bool mustDoCopyOut{false};
+
+  if (callContext.doCopyIn) {
+    Fortran::evaluate::FoldingContext &foldingContext{
+        callContext.converter.getFoldingContext()};
+
+    bool suggestCopyIn = Fortran::evaluate::MayNeedCopy(
+        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/false);
+    bool suggestCopyOut = Fortran::evaluate::MayNeedCopy(
+        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/true);
+    mustDoCopyIn = actual.isArray() && suggestCopyIn;
+    mustDoCopyOut = actual.isArray() && suggestCopyOut;
+  }
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
   // Create dummy type with actual argument rank when the dummy is an assumed
@@ -1370,8 +1368,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.pushExprAssociateCleanUp(associate);
-    } else if (mustDoCopyInOut) {
+    } else if (mustDoCopyIn || mustDoCopyOut) {
       // Copy-in non contiguous variables.
+      //
+      // TODO: copy-in and copy-out are now determined separately, in order
+      // to allow more fine grained copying. While currently both copy-in
+      // and copy-out are must be done together, these copy operations could
+      // be separated in the future. (This is related to TODO comment below.)
+      //
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
       // we may avoid doing the copy and only allocate the temporary.
@@ -1379,7 +1383,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // allocation for the temp in this case. We can communicate
       // this to the codegen via some CopyInOp flag.
       // This is a performance concern.
-      entity = genCopyIn(entity, arg.mayBeModifiedByCall());
+      entity = genCopyIn(entity, mustDoCopyOut);
     }
   } else {
     const Fortran::lower::SomeExpr *expr = arg.entity->UnwrapExpr();
@@ -2966,8 +2970,11 @@ void Fortran::lower::convertUserDefinedAssignmentToHLFIR(
     const evaluate::ProcedureRef &procRef, hlfir::Entity lhs, hlfir::Entity rhs,
     Fortran::lower::SymMap &symMap) {
   Fortran::lower::StatementContext definedAssignmentContext;
+  // For defined assignment, don't use regular copy-in/copy-out mechanism:
+  // defined assignment generates hlfir.region_assign construct, and this
+  // construct automatically handles any copy-in.
   CallContext callContext(procRef, /*resultType=*/std::nullopt, loc, converter,
-                          symMap, definedAssignmentContext);
+                          symMap, definedAssignmentContext, /*doCopyIn=*/false);
   Fortran::lower::CallerInterface caller(procRef, converter);
   mlir::FunctionType callSiteType = caller.genFunctionType();
   PreparedActualArgument preparedLhs{lhs, /*isPresent=*/std::nullopt};

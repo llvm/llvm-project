@@ -1435,6 +1435,13 @@ void CXXRecordDecl::addedMember(Decl *D) {
         data().StructuralIfLiteral = false;
     }
 
+    // If this type contains any address discriminated values we should
+    // have already indicated that the only special member functions that
+    // can possibly be trivial are the default constructor and destructor.
+    if (T.hasAddressDiscriminatedPointerAuth())
+      data().HasTrivialSpecialMembers &=
+          SMF_DefaultConstructor | SMF_Destructor;
+
     // C++14 [meta.unary.prop]p4:
     //   T is a class type [...] with [...] no non-static data members other
     //   than subobjects of zero size

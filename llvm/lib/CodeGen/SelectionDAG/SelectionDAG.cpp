@@ -5127,7 +5127,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
     // If the sign portion ends in our element the subtraction gives correct
     // result. Otherwise it gives either negative or > bitwidth result
-    return std::clamp(KnownSign - rIndex * BitWidth, 0, BitWidth);
+    return std::clamp(KnownSign - rIndex * BitWidth, 1, BitWidth);
   }
   case ISD::INSERT_VECTOR_ELT: {
     if (VT.isScalableVector())
