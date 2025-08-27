@@ -267,6 +267,7 @@ public:
 
     // Address constraints
     p,
+    a,
     ZQ,
     ZR,
     ZS,
@@ -517,6 +518,8 @@ public:
       return "Zy";
     case ConstraintCode::p:
       return "p";
+    case ConstraintCode::a:
+      return "a";
     case ConstraintCode::ZQ:
       return "ZQ";
     case ConstraintCode::ZR:
