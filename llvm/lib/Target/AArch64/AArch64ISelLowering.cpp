@@ -2627,9 +2627,9 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     break;
   }
   case AArch64ISD::MOVImsl: {
-    Known = KnownBits::makeConstant(
-        APInt(Known.getBitWidth(), ~(~Op->getConstantOperandVal(0)
-                                     << Op->getConstantOperandVal(1))));
+    auto ShiftAmt = AArch64_AM::getShiftValue(Op->getConstantOperandVal(1));
+    Known = KnownBits::makeConstant(APInt(
+        Known.getBitWidth(), ~(~Op->getConstantOperandVal(0) << ShiftAmt)));
     break;
   }
   case AArch64ISD::MOVIedit: {
@@ -2646,9 +2646,9 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     break;
   }
   case AArch64ISD::MVNImsl: {
+    auto ShiftAmt = AArch64_AM::getShiftValue(Op->getConstantOperandVal(1));
     Known = KnownBits::makeConstant(
-        APInt(Known.getBitWidth(),
-              (~Op->getConstantOperandVal(0) << Op->getConstantOperandVal(1)),
+        APInt(Known.getBitWidth(), (~Op->getConstantOperandVal(0) << ShiftAmt),
               /*isSigned*/ false, /*implicitTrunc*/ true));
     break;
   }
