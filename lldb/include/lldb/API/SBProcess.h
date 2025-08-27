@@ -63,10 +63,13 @@ public:
 
   size_t PutSTDIN(const char *src, size_t src_len);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   size_t GetSTDOUT(char *dst, size_t dst_len) const;
 
+  LLDB_RPC_POINTER_PLUS_LEN
   size_t GetSTDERR(char *dst, size_t dst_len) const;
 
+  LLDB_RPC_POINTER_PLUS_LEN
   size_t GetAsyncProfileData(char *dst, size_t dst_len) const;
 
 #ifndef SWIG
@@ -197,11 +200,14 @@ public:
   ///
   void ForceScriptedState(StateType new_state);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   size_t WriteMemory(addr_t addr, const void *buf, size_t size,
                      lldb::SBError &error);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   size_t ReadCStringFromMemory(addr_t addr, void *char_buf, size_t size,
                                lldb::SBError &error);
 

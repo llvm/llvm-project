@@ -10,6 +10,7 @@
 
 #include "clang/AST/AST.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Lex/Lexer.h"
@@ -21,6 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstring>
+#include <iostream>
 
 using namespace clang;
 
@@ -78,53 +80,6 @@ static constexpr llvm::StringRef ClassesWithoutCopyOperations[] = {
     "SBReproducer",
     "SBStream",
     "SBProgress",
-};
-
-static constexpr llvm::StringRef MethodsWithPointerPlusLen[] = {
-    "_ZN4lldb6SBData11ReadRawDataERNS_7SBErrorEyPvm",
-    "_ZN4lldb6SBData7SetDataERNS_7SBErrorEPKvmNS_9ByteOrderEh",
-    "_ZN4lldb6SBData20SetDataWithOwnershipERNS_7SBErrorEPKvmNS_9ByteOrderEh",
-    "_ZN4lldb6SBData25CreateDataFromUInt64ArrayENS_9ByteOrderEjPym",
-    "_ZN4lldb6SBData25CreateDataFromUInt32ArrayENS_9ByteOrderEjPjm",
-    "_ZN4lldb6SBData25CreateDataFromSInt64ArrayENS_9ByteOrderEjPxm",
-    "_ZN4lldb6SBData25CreateDataFromSInt32ArrayENS_9ByteOrderEjPim",
-    "_ZN4lldb6SBData25CreateDataFromDoubleArrayENS_9ByteOrderEjPdm",
-    "_ZN4lldb6SBData22SetDataFromUInt64ArrayEPym",
-    "_ZN4lldb6SBData22SetDataFromUInt32ArrayEPjm",
-    "_ZN4lldb6SBData22SetDataFromSInt64ArrayEPxm",
-    "_ZN4lldb6SBData22SetDataFromSInt32ArrayEPim",
-    "_ZN4lldb6SBData22SetDataFromDoubleArrayEPdm",
-    "_ZN4lldb10SBDebugger22GetDefaultArchitectureEPcm",
-    "_ZN4lldb10SBDebugger13DispatchInputEPvPKvm",
-    "_ZN4lldb10SBDebugger13DispatchInputEPKvm",
-    "_ZN4lldb6SBFile4ReadEPhmPm",
-    "_ZN4lldb6SBFile5WriteEPKhmPm",
-    "_ZNK4lldb10SBFileSpec7GetPathEPcm",
-    "_ZN4lldb10SBFileSpec11ResolvePathEPKcPcm",
-    "_ZN4lldb8SBModule10GetVersionEPjj",
-    "_ZN4lldb12SBModuleSpec12SetUUIDBytesEPKhm",
-    "_ZNK4lldb9SBProcess9GetSTDOUTEPcm",
-    "_ZNK4lldb9SBProcess9GetSTDERREPcm",
-    "_ZNK4lldb9SBProcess19GetAsyncProfileDataEPcm",
-    "_ZN4lldb9SBProcess10ReadMemoryEyPvmRNS_7SBErrorE",
-    "_ZN4lldb9SBProcess11WriteMemoryEyPKvmRNS_7SBErrorE",
-    "_ZN4lldb9SBProcess21ReadCStringFromMemoryEyPvmRNS_7SBErrorE",
-    "_ZNK4lldb16SBStructuredData14GetStringValueEPcm",
-    "_ZN4lldb8SBTarget23BreakpointCreateByNamesEPPKcjjRKNS_"
-    "14SBFileSpecListES6_",
-    "_ZN4lldb8SBTarget10ReadMemoryENS_9SBAddressEPvmRNS_7SBErrorE",
-    "_ZN4lldb8SBTarget15GetInstructionsENS_9SBAddressEPKvm",
-    "_ZN4lldb8SBTarget25GetInstructionsWithFlavorENS_9SBAddressEPKcPKvm",
-    "_ZN4lldb8SBTarget15GetInstructionsEyPKvm",
-    "_ZN4lldb8SBTarget25GetInstructionsWithFlavorEyPKcPKvm",
-    "_ZN4lldb8SBThread18GetStopDescriptionEPcm",
-    // The below mangled names are used for dummy methods in shell tests
-    // that test the emitters' output. If you're adding any new mangled names
-    // from the actual SB API to this list please add them above.
-    "_ZN4lldb33SBRPC_"
-    "CHECKCONSTCHARPTRPTRWITHLEN27CheckConstCharPtrPtrWithLenEPPKcm",
-    "_ZN4lldb19SBRPC_CHECKARRAYPTR13CheckArrayPtrEPPKcm",
-    "_ZN4lldb18SBRPC_CHECKVOIDPTR12CheckVoidPtrEPvm",
 };
 
 // These classes inherit from rpc::ObjectRef directly (as opposed to
@@ -194,6 +149,7 @@ std::string lldb_rpc_gen::GetMangledName(ASTContext &Context,
   return Mangled;
 }
 
+static auto CheckTypeForLLDBPrivate = [](const Type *Ty) {};
 bool lldb_rpc_gen::TypeIsFromLLDBPrivate(QualType T) {
   auto CheckTypeForLLDBPrivate = [](const Type *Ty) {
     if (!Ty)
@@ -308,6 +264,19 @@ bool lldb_rpc_gen::MethodIsDisallowed(ASTContext &Context,
   return isDisallowed;
 }
 
+// Methods that have a pointer parameter followed by a length param need to be
+// kept track of in RPC. Such methods are annotated in the main SB API using
+// this Clang attribute: [[clang::annotate("lldb-rpc-gen pointer plus len")]].
+// This method checks that a given method has this attribute.
+bool lldb_rpc_gen::MethodContainsPointerPlusLen(CXXMethodDecl *MDecl) {
+  if (!MDecl->hasAttr<clang::AnnotateAttr>())
+    return false;
+
+  auto *annotation = MDecl->getAttr<clang::AnnotateAttr>();
+  return strcmp(annotation->getAnnotation().data(),
+                "lldb-rpc-gen pointer plus len") == 0;
+}
+
 // NOTE: There's possibly a more clever way to do this, but we're keeping
 // the string replacement way here. Here is why it is written this way:
 // By the time we have already created a `Method` object, we have extracted the
@@ -408,9 +377,10 @@ lldb_rpc_gen::Method::Method(CXXMethodDecl *MDecl, const PrintingPolicy &Policy,
       const bool IsIntegerType = param.Type->isIntegerType() &&
                                  !param.Type->isBooleanType() &&
                                  !param.Type->isEnumeralType();
-      if (IsIntegerType && llvm::is_contained(MethodsWithPointerPlusLen,
-                                              llvm::StringRef(MangledName)))
+      if (IsIntegerType && lldb_rpc_gen::MethodContainsPointerPlusLen(MDecl)) {
+
         Params.back().IsFollowedByLen = true;
+      }
     }
 
     if (param.Type->isPointerType() &&
