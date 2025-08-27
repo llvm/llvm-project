@@ -3115,16 +3115,20 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Load:
   case Instruction::Store: {
     if (isSingleScalar()) {
-      Type *ValTy = getLoadStoreType(UI);
-      Type *ScalarPtrTy = getLoadStorePointerOperand(UI)->getType();
+      bool IsLoad = UI->getOpcode() == Instruction::Load;
+      Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
+      Type *ScalarPtrTy = Ctx.Types.inferScalarType(getOperand(IsLoad ? 0 : 1));
       const Align Alignment = getLoadStoreAlignment(UI);
       unsigned AS = getLoadStoreAddressSpace(UI);
+      // TODO: Is this right? Operand 0 has a different meaning for loads and
+      // stores.
       TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
       InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
-          UI->getOpcode(), ValTy, Alignment, AS, CostKind, OpInfo, UI);
-      return ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(ScalarPtrTy);
+          UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo, UI);
+      return ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
+                                   ScalarPtrTy, nullptr, nullptr, Ctx.CostKind);
     }
-    // TODO: See getMemInstScalarizationCost for how to handle vector and
+    // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
     break;
   }

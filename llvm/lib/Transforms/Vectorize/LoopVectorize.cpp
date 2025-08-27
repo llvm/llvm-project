@@ -5205,6 +5205,8 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                       CostKind);
   } else {
+    // TODO: Is this right? Operand 0 has a different meaning for loads and
+    // stores.
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(I->getOperand(0));
     Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                 CostKind, OpInfo, I);
@@ -5498,6 +5500,8 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
     const Align Alignment = getLoadStoreAlignment(I);
     unsigned AS = getLoadStoreAddressSpace(I);
 
+    // TODO: Is this right? Operand 0 has a different meaning for loads and
+    // stores.
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(I->getOperand(0));
     return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
            TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS, CostKind,
