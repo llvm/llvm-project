@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_AST_NONTRIVIALTYPEVISITOR_H
 #define LLVM_CLANG_AST_NONTRIVIALTYPEVISITOR_H
 
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 

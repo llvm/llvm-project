@@ -12,7 +12,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/identity.h"
 
 namespace clang {

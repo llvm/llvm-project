@@ -29,7 +29,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"

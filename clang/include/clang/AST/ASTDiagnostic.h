@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_AST_ASTDIAGNOSTIC_H
 #define LLVM_CLANG_AST_ASTDIAGNOSTIC_H
 
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticAST.h"
 

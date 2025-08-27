@@ -17,7 +17,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TextNodeDumper.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/Syntax/Tokens.h"

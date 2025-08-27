@@ -10,7 +10,7 @@
 #include "LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Tooling/FixIt.h"
 #include <optional>

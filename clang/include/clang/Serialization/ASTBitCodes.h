@@ -19,7 +19,7 @@
 
 #include "clang/AST/DeclID.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"

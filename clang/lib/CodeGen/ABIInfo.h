@@ -11,7 +11,7 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 

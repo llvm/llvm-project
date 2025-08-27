@@ -8475,24 +8475,6 @@ inline Qualifiers::GC QualType::getObjCGCAttr() const {
   return getQualifiers().getObjCGCAttr();
 }
 
-inline bool QualType::hasNonTrivialToPrimitiveDefaultInitializeCUnion() const {
-  if (auto *RD = getTypePtr()->getBaseElementTypeUnsafe()->getAsRecordDecl())
-    return hasNonTrivialToPrimitiveDefaultInitializeCUnion(RD);
-  return false;
-}
-
-inline bool QualType::hasNonTrivialToPrimitiveDestructCUnion() const {
-  if (auto *RD = getTypePtr()->getBaseElementTypeUnsafe()->getAsRecordDecl())
-    return hasNonTrivialToPrimitiveDestructCUnion(RD);
-  return false;
-}
-
-inline bool QualType::hasNonTrivialToPrimitiveCopyCUnion() const {
-  if (auto *RD = getTypePtr()->getBaseElementTypeUnsafe()->getAsRecordDecl())
-    return hasNonTrivialToPrimitiveCopyCUnion(RD);
-  return false;
-}
-
 inline FunctionType::ExtInfo getFunctionExtInfo(const Type &t) {
   if (const auto *PT = t.getAs<PointerType>()) {
     if (const auto *FT = PT->getPointeeType()->getAs<FunctionType>())

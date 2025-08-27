@@ -18,7 +18,7 @@
 #include "CIRGenRecordLayout.h"
 
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 

@@ -20,7 +20,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/GlobalDecl.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/IR/Value.h"
 

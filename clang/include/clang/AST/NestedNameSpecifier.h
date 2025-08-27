@@ -15,7 +15,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "llvm/ADT/DenseMapInfo.h"
 

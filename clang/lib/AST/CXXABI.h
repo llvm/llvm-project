@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_LIB_AST_CXXABI_H
 #define LLVM_CLANG_LIB_AST_CXXABI_H
 
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 

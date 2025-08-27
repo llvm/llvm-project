@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_DYNAMICTYPE_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_DYNAMICTYPE_H
 
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicCastInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
