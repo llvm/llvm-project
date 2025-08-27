@@ -12,6 +12,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include <optional>
 using namespace llvm;
@@ -150,27 +151,26 @@ MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
   return MemoryLocation::getBeforeOrAfter(UsedV, CB->getAAMetadata());
 }
 
+// If the mask for a memory op is a get active lane mask intrinsic
+// we can possibly infer the size of memory written or read
 static std::optional<FixedVectorType *>
-getFixedTypeFromScalableMemOp(Value *Mask, Type *Ty) {
-  auto ActiveLaneMask = dyn_cast<IntrinsicInst>(Mask);
-  if (!ActiveLaneMask ||
-      ActiveLaneMask->getIntrinsicID() != Intrinsic::get_active_lane_mask)
+getKnownTypeFromMaskedOp(Value *Mask, VectorType *Ty) {
+  using namespace llvm::PatternMatch;
+  ConstantInt *Op0, *Op1;
+  if (!match(Mask, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                       m_ConstantInt(Op0), m_ConstantInt(Op1))))
     return std::nullopt;
 
-  auto ScalableTy = dyn_cast<ScalableVectorType>(Ty);
-  if (!ScalableTy)
+  uint64_t LaneMaskLo = Op0->getZExtValue();
+  uint64_t LaneMaskHi = Op1->getZExtValue();
+  if ((LaneMaskHi == 0) || (LaneMaskHi <= LaneMaskLo))
     return std::nullopt;
 
-  auto LaneMaskLo = dyn_cast<ConstantInt>(ActiveLaneMask->getOperand(0));
-  auto LaneMaskHi = dyn_cast<ConstantInt>(ActiveLaneMask->getOperand(1));
-  if (!LaneMaskLo || !LaneMaskHi)
+  uint64_t NumElts = LaneMaskHi - LaneMaskLo;
+  if (NumElts > Ty->getElementCount().getKnownMinValue())
     return std::nullopt;
 
-  uint64_t NumElts = LaneMaskHi->getZExtValue() - LaneMaskLo->getZExtValue();
-  if (NumElts > ScalableTy->getMinNumElements())
-    return std::nullopt;
-
-  return FixedVectorType::get(ScalableTy->getElementType(), NumElts);
+  return FixedVectorType::get(Ty->getElementType(), NumElts);
 }
 
 MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
@@ -239,24 +239,18 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
     case Intrinsic::masked_load: {
       assert(ArgIdx == 0 && "Invalid argument index");
 
-      Type *Ty = II->getType();
-      auto KnownScalableSize =
-          getFixedTypeFromScalableMemOp(II->getOperand(2), Ty);
-      if (KnownScalableSize)
-        return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownScalableSize),
-                              AATags);
+      auto *Ty = cast<VectorType>(II->getType());
+      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(2), Ty))
+        return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
 
       return MemoryLocation(Arg, DL.getTypeStoreSize(Ty), AATags);
     }
     case Intrinsic::masked_store: {
       assert(ArgIdx == 1 && "Invalid argument index");
 
-      Type *Ty = II->getArgOperand(0)->getType();
-      auto KnownScalableSize =
-          getFixedTypeFromScalableMemOp(II->getOperand(3), Ty);
-      if (KnownScalableSize)
-        return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownScalableSize),
-                              AATags);
+      auto *Ty = cast<VectorType>(II->getArgOperand(0)->getType());
+      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(3), Ty))
+        return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
 
       return MemoryLocation(Arg, DL.getTypeStoreSize(Ty), AATags);
     }

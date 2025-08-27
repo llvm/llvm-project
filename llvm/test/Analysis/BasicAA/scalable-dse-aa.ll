@@ -127,12 +127,40 @@ define <vscale x 4 x float> @mask_gt_minimum_num_elts(ptr noalias %0, ptr %1) {
   ret <vscale x 4 x float> %retval
 }
 
+; Don't do anything if the 2nd Op of get active lane mask is 0. This currently generates poison
+define <vscale x 4 x float> @mask_hi_0(ptr noalias %0, ptr %1) {
+; CHECK-LABEL: define <vscale x 4 x float> @mask_hi_0(
+; CHECK: store i32 20, ptr %1
+;
+  %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 0)
+  store i32 20, ptr %1
+
+  %load.0 = tail call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull %0, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x float> zeroinitializer)
+  call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %load.0, ptr nonnull %1, i32 1, <vscale x 4 x i1> %mask)
+  %retval = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull %1, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x float> zeroinitializer)
+  ret <vscale x 4 x float> %retval
+}
+
+; Don't do anything if the 2nd Op is gt/eq the 1st
+define <vscale x 4 x float> @active_lane_mask_gt_eq(ptr noalias %0, ptr %1) {
+; CHECK-LABEL: define <vscale x 4 x float> @active_lane_mask_gt_eq(
+; CHECK: store i32 20, ptr %1
+;
+  %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 4, i32 2)
+  store i32 20, ptr %1
+
+  %load.0 = tail call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull %0, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x float> zeroinitializer)
+  call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %load.0, ptr nonnull %1, i32 1, <vscale x 4 x i1> %mask)
+  %retval = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull %1, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x float> zeroinitializer)
+  ret <vscale x 4 x float> %retval
+}
+
 define <vscale x 16 x i8> @scalar_stores_small_mask(ptr noalias %0, ptr %1) {
 ; CHECK-LABEL: define <vscale x 16 x i8> @scalar_stores_small_mask(
 ; CHECK-NOT: store i8 60, ptr %gep.1.6
 ; CHECK: store i8 120, ptr %gep.1.8
 ;
-  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i8.i32(i32 0, i32 7)
+  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i8.i8(i8 0, i8 7)
   %gep.1.6 = getelementptr inbounds nuw i8, ptr %1, i64 6
   store i8 60, ptr %gep.1.6
   %gep.1.8 = getelementptr inbounds nuw i8, ptr %1, i64 8
@@ -142,4 +170,27 @@ define <vscale x 16 x i8> @scalar_stores_small_mask(ptr noalias %0, ptr %1) {
   call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> %load.0, ptr %1, i32 1, <vscale x 16 x i1> %mask)
   %retval = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr %1, i32 1, <vscale x 16 x i1> %mask, <vscale x 16 x i8> zeroinitializer)
   ret <vscale x 16 x i8> %retval
+}
+
+define <vscale x 4 x float> @dead_scalar_store_offset(ptr noalias %0, ptr %1) {
+; CHECK-LABEL: define <vscale x 4 x float> @dead_scalar_store_offset(
+; CHECK-NOT: store i32 10, ptr %gep.1.0
+; CHECK-NOT: store i32 20, ptr %gep.1.4
+; CHECK-NOT: store i32 30, ptr %gep.1.8
+; CHECK: store i32 40, ptr %gep.1.12
+;
+  %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 1, i32 4)
+  %gep.1.0 = getelementptr inbounds nuw i8, ptr %1, i64 0
+  store i32 10, ptr %gep.1.0
+  %gep.1.4 = getelementptr inbounds nuw i8, ptr %1, i64 4
+  store i32 20, ptr %gep.1.4
+  %gep.1.8 = getelementptr inbounds nuw i8, ptr %1, i64 8
+  store i32 30, ptr %gep.1.8
+  %gep.1.12 = getelementptr inbounds nuw i8, ptr %1, i64 12
+  store i32 40, ptr %gep.1.12
+
+  %load.0 = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull %0, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x float> zeroinitializer)
+  call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %load.0, ptr nonnull %1, i32 1, <vscale x 4 x i1> %mask)
+  %retval = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr nonnull %1, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x float> zeroinitializer)
+  ret <vscale x 4 x float> %retval
 }
