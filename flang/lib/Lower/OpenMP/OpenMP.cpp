@@ -1601,22 +1601,12 @@ genLoopNestClauses(lower::AbstractConverter &converter,
   clauseOps.loopInclusive = converter.getFirOpBuilder().getUnitAttr();
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  for (auto &clause : clauses) {
+  for (auto &clause : clauses)
     if (clause.id == llvm::omp::Clause::OMPC_collapse) {
       const auto &collapse = std::get<clause::Collapse>(clause.u);
       int64_t collapseValue = evaluate::ToInt64(collapse.v).value();
       clauseOps.numCollapse = firOpBuilder.getI64IntegerAttr(collapseValue);
-    } else if (clause.id == llvm::omp::Clause::OMPC_sizes) {
-      // This case handles the stand-alone tiling construct
-      const auto &sizes = std::get<clause::Sizes>(clause.u);
-      llvm::SmallVector<int64_t> sizeValues;
-      for (auto &size : sizes.v) {
-        int64_t sizeValue = evaluate::ToInt64(size).value();
-        sizeValues.push_back(sizeValue);
-      }
-      clauseOps.tileSizes = sizeValues;
     }
-  }
 
   llvm::SmallVector<int64_t> sizeValues;
   auto *ompCons{eval.getIf<parser::OpenMPConstruct>()};
@@ -3895,7 +3885,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       switch (nestedDirective) {
       case llvm::omp::Directive::OMPD_tile:
         // Skip OMPD_tile since the tile sizes will be retrieved when
-        // generating the omp.looop_nest op.
+        // generating the omp.loop_nest op.
         break;
       default: {
         unsigned version = semaCtx.langOptions().OpenMPVersion;
