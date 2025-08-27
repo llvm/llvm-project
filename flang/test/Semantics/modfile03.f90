@@ -69,7 +69,7 @@ end
 module m5b
   use m5a, only: k2 => k1, l2 => l1, f2 => f1
   interface
-    subroutine s(x, y)
+    subroutine s5b(x, y)
       import f2, l2
       character(l2, k2) :: x
       character(f2(l2)) :: y
@@ -82,7 +82,7 @@ end
 ! use m5a,only:l2=>l1
 ! use m5a,only:f2=>f1
 ! interface
-!  subroutine s(x,y)
+!  subroutine s5b(x,y)
 !   import::f2
 !   import::l2
 !   character(l2,4)::x
@@ -142,7 +142,7 @@ end
 module m6e
   use m6a, only: t2 => t1
   interface
-    subroutine s(x)
+    subroutine s6e(x)
       import t2
       type(t2) :: x
     end subroutine
@@ -152,7 +152,7 @@ end
 !module m6e
 ! use m6a,only:t2=>t1
 ! interface
-!  subroutine s(x)
+!  subroutine s6e(x)
 !   import::t2
 !   type(t2)::x
 !  end

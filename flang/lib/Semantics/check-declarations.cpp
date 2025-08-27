@@ -124,10 +124,7 @@ private:
     }
     return msg;
   }
-  bool InModuleFile() const {
-    return FindModuleFileContaining(context_.FindScope(messages_.at())) !=
-        nullptr;
-  }
+  bool InModuleFile() const { return context_.IsInModuleFile(messages_.at()); }
   template <typename FeatureOrUsageWarning, typename... A>
   parser::Message *Warn(FeatureOrUsageWarning warning, A &&...x) {
     if (!context_.ShouldWarn(warning) || InModuleFile()) {
@@ -139,8 +136,7 @@ private:
   template <typename FeatureOrUsageWarning, typename... A>
   parser::Message *Warn(
       FeatureOrUsageWarning warning, parser::CharBlock source, A &&...x) {
-    if (!context_.ShouldWarn(warning) ||
-        FindModuleFileContaining(context_.FindScope(source))) {
+    if (!context_.ShouldWarn(warning) || context_.IsInModuleFile(source)) {
       return nullptr;
     } else {
       return messages_.Say(warning, source, std::forward<A>(x)...);
@@ -4076,7 +4072,7 @@ void DistinguishabilityHelper::Add(const Symbol &generic, GenericKind kind,
 }
 
 void DistinguishabilityHelper::Check(const Scope &scope) {
-  if (FindModuleFileContaining(scope)) {
+  if (IsInModuleFile(scope)) {
     // Distinguishability was checked when the module was created;
     // don't let optional warnings then become errors now.
     return;
@@ -4135,7 +4131,7 @@ void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
   if (isWarning &&
       (!context_.ShouldWarn(
            common::LanguageFeature::IndistinguishableSpecifics) ||
-          FindModuleFileContaining(scope))) {
+          IsInModuleFile(scope))) {
     return;
   }
   std::string name1{proc1.name().ToString()};

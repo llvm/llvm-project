@@ -277,13 +277,27 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
     CHECK(!derivedType_ || derivedType_ == from.derivedType_);
     derivedType_ = from.derivedType_;
   }
-  for (std::size_t i{0}; i < from.specificProcs_.size(); ++i) {
-    if (llvm::none_of(specificProcs_, [&](const Symbol &mySymbol) {
-          return &mySymbol.GetUltimate() ==
-              &from.specificProcs_[i]->GetUltimate();
-        })) {
-      specificProcs_.push_back(from.specificProcs_[i]);
-      bindingNames_.push_back(from.bindingNames_[i]);
+  for (std::size_t j{0}; j < from.specificProcs_.size(); ++j) {
+    auto fromSpecific{from.specificProcs_[j]};
+    SourceName fromBinding{from.bindingNames_[j]};
+    const Symbol &fromUltimate{fromSpecific->GetUltimate()};
+    const Scope *fromModule{FindModuleContaining(fromUltimate.owner())};
+    auto fromModuleName{fromModule ? fromModule->GetName() : std::nullopt};
+    bool addit{true};
+    for (std::size_t k{0}; addit && k < specificProcs_.size(); ++k) {
+      const Symbol &ultimate{specificProcs_[k]->GetUltimate()};
+      if (&fromUltimate == &ultimate) {
+        addit = false;
+      } else if (fromBinding == bindingNames_[k]) {
+        const Scope *module{FindModuleContaining(ultimate.owner())};
+        auto moduleName{module ? module->GetName() : std::nullopt};
+        addit =
+            !(fromModuleName && moduleName && *fromModuleName == *moduleName);
+      }
+    }
+    if (addit) {
+      specificProcs_.push_back(fromSpecific);
+      bindingNames_.push_back(fromBinding);
     }
   }
 }

@@ -43,7 +43,7 @@ const Scope &GetProgramUnitOrBlockConstructContaining(const Symbol &);
 
 const Scope *FindModuleContaining(const Scope &);
 const Scope *FindModuleOrSubmoduleContaining(const Scope &);
-const Scope *FindModuleFileContaining(const Scope &);
+bool IsInModuleFile(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
 
