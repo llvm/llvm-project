@@ -37,7 +37,15 @@ struct image {
   char name_[__stacktrace::entry_base::__max_file_len]{0};
   bool is_main_prog_{};
 
-  _LIBCPP_HIDE_FROM_ABI bool operator<(image const& __rhs) const { return loaded_at_ < __rhs.loaded_at_; }
+  _LIBCPP_HIDE_FROM_ABI bool operator<(image const& __rhs) const {
+    if (loaded_at_ < __rhs.loaded_at_) {
+      return true;
+    }
+    if (loaded_at_ > __rhs.loaded_at_) {
+      return false;
+    }
+    return strcmp(name_, __rhs.name_) < 0;
+  }
   _LIBCPP_HIDE_FROM_ABI operator bool() const { return name_[0]; }
 };
 
