@@ -209,19 +209,16 @@ std::pair<unsigned, unsigned>
 AMDGPUSubtarget::getWavesPerEU(const Function &F) const {
   // Default/requested minimum/maximum flat work group sizes.
   std::pair<unsigned, unsigned> FlatWorkGroupSizes = getFlatWorkGroupSizes(F);
-  // Minimum number of bytes allocated in the LDS.
-  unsigned LDSBytes = AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size",
-                                                      {0, UINT32_MAX}, true)
-                          .first;
-  return getWavesPerEU(FlatWorkGroupSizes, LDSBytes, F);
+  return getWavesPerEU(F, FlatWorkGroupSizes);
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
     const Function &F, std::pair<unsigned, unsigned> FlatWorkGroupSizes) const {
   // Minimum number of bytes allocated in the LDS.
-  unsigned LDSBytes = AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size",
-                                                      {0, UINT32_MAX}, true)
-                          .first;
+  unsigned LDSBytes =
+      AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size", {0, UINT32_MAX},
+                                      /*OnlyFirstRequired=*/true)
+          .first;
   return getWavesPerEU(FlatWorkGroupSizes, LDSBytes, F);
 }
 

@@ -1620,6 +1620,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  frexpbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexpbf16_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   fromfp_test
   SUITE
     libc-math-smoke-tests
@@ -1988,6 +2001,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ilogbbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogbbf16_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   issignaling_test
   SUITE
     libc-math-smoke-tests
@@ -2123,6 +2152,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  llogbbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogbbf16_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogbbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   ldexp_test
   SUITE
     libc-math-smoke-tests
@@ -2132,6 +2177,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexp
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2147,6 +2193,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2162,6 +2209,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpl
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2177,6 +2225,7 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
@@ -2192,7 +2241,25 @@ add_fp_unittest(
     LdExpTest.h
   DEPENDS
     libc.src.math.ldexpf128
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  ldexpbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ldexpbf16_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )
@@ -2268,6 +2335,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  logbbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logbbf16_test.cpp
+  HDRS
+    LogbTest.h
+  DEPENDS
+    libc.src.math.logbbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   modf_test
   SUITE
     libc-math-smoke-tests
@@ -2339,6 +2421,22 @@ add_fp_unittest(
     libc.src.math.modff128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_fp_unittest(
+  modfbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    modfbf16_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modfbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
@@ -3479,6 +3577,20 @@ add_fp_unittest(
     RemQuoTest.h
   DEPENDS
     libc.src.math.remquof16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  remquobf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    remquobf16_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquobf16
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
 )
 

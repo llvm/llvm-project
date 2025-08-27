@@ -166,6 +166,22 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         """Returns a unique opaque breakpoint id."""
         pass
 
+    def add_function_breakpoint(self, name):
+        """Returns a unique opaque breakpoint id.
+
+        The ID type depends on the debugger being used, but will probably be
+        an int.
+        """
+        raise NotImplementedError()
+
+    def add_instruction_breakpoint(self, addr):
+        """Returns a unique opaque breakpoint id.
+
+        The ID type depends on the debugger being used, but will probably be
+        an int.
+        """
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def delete_breakpoints(self, ids):
         """Delete a set of breakpoints by ids.

@@ -8193,6 +8193,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
               DL, VT, LHS, DAG.getSignedConstant(Imm + 1, DL, OpVT), CCVal);
           return DAG.getLogicalNOT(DL, SetCC, VT);
         }
+        // Lower (setugt X, 2047) as (setne (srl X, 11), 0).
+        if (CCVal == ISD::SETUGT && Imm == 2047) {
+          SDValue Shift = DAG.getNode(ISD::SRL, DL, OpVT, LHS,
+                                      DAG.getShiftAmountConstant(11, OpVT, DL));
+          return DAG.getSetCC(DL, VT, Shift, DAG.getConstant(0, DL, OpVT),
+                              ISD::SETNE);
+        }
       }
 
       // Not a constant we could handle, swap the operands and condition code to
@@ -9280,11 +9287,18 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         }
       }
 
-      const int TrueValCost = RISCVMatInt::getIntMatCost(
-          TrueVal, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
-      const int FalseValCost = RISCVMatInt::getIntMatCost(
-          FalseVal, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
-      bool IsCZERO_NEZ = TrueValCost <= FalseValCost;
+      auto getCost = [&](const APInt &Delta, const APInt &Addend) {
+        const int DeltaCost = RISCVMatInt::getIntMatCost(
+            Delta, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
+        // Does the addend fold into an ADDI
+        if (Addend.isSignedIntN(12))
+          return DeltaCost;
+        const int AddendCost = RISCVMatInt::getIntMatCost(
+            Addend, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
+        return AddendCost + DeltaCost;
+      };
+      bool IsCZERO_NEZ = getCost(FalseVal - TrueVal, TrueVal) <=
+                         getCost(TrueVal - FalseVal, FalseVal);
       SDValue LHSVal = DAG.getConstant(
           IsCZERO_NEZ ? FalseVal - TrueVal : TrueVal - FalseVal, DL, VT);
       SDValue RHSVal =
@@ -10738,11 +10752,11 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
   }
   case Intrinsic::riscv_mopr:
-    return DAG.getNode(RISCVISD::MOPR, DL, XLenVT, Op.getOperand(1),
+    return DAG.getNode(RISCVISD::MOP_R, DL, XLenVT, Op.getOperand(1),
                        Op.getOperand(2));
 
   case Intrinsic::riscv_moprr: {
-    return DAG.getNode(RISCVISD::MOPRR, DL, XLenVT, Op.getOperand(1),
+    return DAG.getNode(RISCVISD::MOP_RR, DL, XLenVT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
   }
   case Intrinsic::riscv_clmul:
@@ -14877,7 +14891,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue NewOp =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
       SDValue Res = DAG.getNode(
-          RISCVISD::MOPR, DL, MVT::i64, NewOp,
+          RISCVISD::MOP_R, DL, MVT::i64, NewOp,
           DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
@@ -14890,7 +14904,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue NewOp1 =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
       SDValue Res = DAG.getNode(
-          RISCVISD::MOPRR, DL, MVT::i64, NewOp0, NewOp1,
+          RISCVISD::MOP_RR, DL, MVT::i64, NewOp0, NewOp1,
           DAG.getTargetConstant(N->getConstantOperandVal(3), DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
@@ -21120,9 +21134,14 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
-    // Bail if we might break a sh{1,2,3}add pattern.
-    if ((Subtarget.hasStdExtZba() || Subtarget.hasVendorXAndesPerf()) && C2 &&
-        C2->getZExtValue() >= 1 && C2->getZExtValue() <= 3 && N->hasOneUse() &&
+    bool IsShXAdd =
+        (Subtarget.hasStdExtZba() || Subtarget.hasVendorXAndesPerf()) && C2 &&
+        C2->getZExtValue() >= 1 && C2->getZExtValue() <= 3;
+    bool IsQCShlAdd = Subtarget.hasVendorXqciac() && C2 &&
+                      C2->getZExtValue() >= 4 && C2->getZExtValue() <= 31;
+
+    // Bail if we might break a sh{1,2,3}add/qc.shladd pattern.
+    if ((IsShXAdd || IsQCShlAdd) && N->hasOneUse() &&
         N->user_begin()->getOpcode() == ISD::ADD &&
         !isUsedByLdSt(*N->user_begin(), nullptr) &&
         !isa<ConstantSDNode>(N->user_begin()->getOperand(1)))
@@ -21548,6 +21567,14 @@ bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
 
   // TODO: Add more target nodes.
   switch (Op.getOpcode()) {
+  case RISCVISD::SLLW:
+  case RISCVISD::SRAW:
+  case RISCVISD::SRLW:
+  case RISCVISD::RORW:
+  case RISCVISD::ROLW:
+    // Only the lower 5 bits of RHS are read, guaranteeing the rotate/shift
+    // amount is bounds.
+    return false;
   case RISCVISD::SELECT_CC:
     // Integer comparisons cannot create poison.
     assert(Op.getOperand(0).getValueType().isInteger() &&
