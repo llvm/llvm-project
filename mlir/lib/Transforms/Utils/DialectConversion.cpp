@@ -1436,7 +1436,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
 
     // If there is no legal conversion, fail to match this pattern.
     SmallVector<Type, 1> legalTypes;
-    if (failed(currentTypeConverter->convertType(origType, legalTypes))) {
+    if (failed(currentTypeConverter->convertType(operand, legalTypes))) {
       notifyMatchFailure(operandLoc, [=](Diagnostic &diag) {
         diag << "unable to convert type for " << valueDiagTag << " #"
              << it.index() << ", type was " << origType;
@@ -3430,10 +3430,41 @@ LogicalResult TypeConverter::convertType(Type t,
   return failure();
 }
 
+LogicalResult TypeConverter::convertType(Value v,
+                                         SmallVectorImpl<Type> &results) const {
+  assert(v && "expected non-null value");
+
+  // If this type converter does not have context-aware type conversions, call
+  // the type-based overload, which has caching.
+  if (!hasContextAwareTypeConversions)
+    return convertType(v.getType(), results);
+
+  // Walk the added converters in reverse order to apply the most recently
+  // registered first.
+  for (const ConversionCallbackFn &converter : llvm::reverse(conversions)) {
+    if (std::optional<LogicalResult> result = converter(v, results)) {
+      if (!succeeded(*result))
+        return failure();
+      return success();
+    }
+  }
+  return failure();
+}
+
 Type TypeConverter::convertType(Type t) const {
   // Use the multi-type result version to convert the type.
   SmallVector<Type, 1> results;
   if (failed(convertType(t, results)))
+    return nullptr;
+
+  // Check to ensure that only one type was produced.
+  return results.size() == 1 ? results.front() : nullptr;
+}
+
+Type TypeConverter::convertType(Value v) const {
+  // Use the multi-type result version to convert the type.
+  SmallVector<Type, 1> results;
+  if (failed(convertType(v, results)))
     return nullptr;
 
   // Check to ensure that only one type was produced.
@@ -3449,21 +3480,38 @@ TypeConverter::convertTypes(TypeRange types,
   return success();
 }
 
+LogicalResult
+TypeConverter::convertTypes(ValueRange values,
+                            SmallVectorImpl<Type> &results) const {
+  for (Value value : values)
+    if (failed(convertType(value, results)))
+      return failure();
+  return success();
+}
+
 bool TypeConverter::isLegal(Type type) const {
   return convertType(type) == type;
 }
+
+bool TypeConverter::isLegal(Value value) const {
+  return convertType(value) == value.getType();
+}
+
 bool TypeConverter::isLegal(Operation *op) const {
-  return isLegal(op->getOperandTypes()) && isLegal(op->getResultTypes());
+  return isLegal(op->getOperands()) && isLegal(op->getResults());
 }
 
 bool TypeConverter::isLegal(Region *region) const {
-  return llvm::all_of(*region, [this](Block &block) {
-    return isLegal(block.getArgumentTypes());
-  });
+  return llvm::all_of(
+      *region, [this](Block &block) { return isLegal(block.getArguments()); });
 }
 
 bool TypeConverter::isSignatureLegal(FunctionType ty) const {
-  return isLegal(llvm::concat<const Type>(ty.getInputs(), ty.getResults()));
+  if (!isLegal(ty.getInputs()))
+    return false;
+  if (!isLegal(ty.getResults()))
+    return false;
+  return true;
 }
 
 LogicalResult
@@ -3488,6 +3536,31 @@ TypeConverter::convertSignatureArgs(TypeRange types,
                                     unsigned origInputOffset) const {
   for (unsigned i = 0, e = types.size(); i != e; ++i)
     if (failed(convertSignatureArg(origInputOffset + i, types[i], result)))
+      return failure();
+  return success();
+}
+LogicalResult
+TypeConverter::convertSignatureArg(unsigned inputNo, Value value,
+                                   SignatureConversion &result) const {
+  // Try to convert the given input type.
+  SmallVector<Type, 1> convertedTypes;
+  if (failed(convertType(value, convertedTypes)))
+    return failure();
+
+  // If this argument is being dropped, there is nothing left to do.
+  if (convertedTypes.empty())
+    return success();
+
+  // Otherwise, add the new inputs.
+  result.addInputs(inputNo, convertedTypes);
+  return success();
+}
+LogicalResult
+TypeConverter::convertSignatureArgs(ValueRange values,
+                                    SignatureConversion &result,
+                                    unsigned origInputOffset) const {
+  for (unsigned i = 0, e = values.size(); i != e; ++i)
+    if (failed(convertSignatureArg(origInputOffset + i, values[i], result)))
       return failure();
   return success();
 }
@@ -3534,7 +3607,7 @@ SmallVector<Value> TypeConverter::materializeTargetConversion(
 std::optional<TypeConverter::SignatureConversion>
 TypeConverter::convertBlockSignature(Block *block) const {
   SignatureConversion conversion(block->getNumArguments());
-  if (failed(convertSignatureArgs(block->getArgumentTypes(), conversion)))
+  if (failed(convertSignatureArgs(block->getArguments(), conversion)))
     return std::nullopt;
   return conversion;
 }
@@ -3659,7 +3732,7 @@ mlir::convertOpResultTypes(Operation *op, ValueRange operands,
   newOp.addOperands(operands);
 
   SmallVector<Type> newResultTypes;
-  if (failed(converter.convertTypes(op->getResultTypes(), newResultTypes)))
+  if (failed(converter.convertTypes(op->getResults(), newResultTypes)))
     return rewriter.notifyMatchFailure(loc, "couldn't convert return types");
 
   newOp.addTypes(newResultTypes);
