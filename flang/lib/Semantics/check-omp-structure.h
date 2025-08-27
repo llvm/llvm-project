@@ -167,10 +167,6 @@ private:
   void CheckVariableListItem(const SymbolSourceMap &symbols);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
-  void AnalyzeObject(
-      const parser::OmpObject &object, bool allowAssumedSizeArrays = false);
-  void AnalyzeObjects(const parser::OmpObjectList &objects,
-      bool allowAssumedSizeArrays = false);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
