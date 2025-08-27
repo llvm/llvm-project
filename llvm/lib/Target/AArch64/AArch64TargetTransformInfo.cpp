@@ -4409,6 +4409,31 @@ AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   return 1;
 }
 
+/// Check whether Opcode1 has less throughput according to the scheduling
+/// model than Opcode2.
+bool AArch64TTIImpl::hasLessThroughputFromSchedulingModel(
+    unsigned Opcode1, unsigned Opcode2) const {
+  const MCSchedModel &Sched = ST->getSchedModel();
+  const TargetInstrInfo *TII = ST->getInstrInfo();
+
+  auto ResolveVariant = [&](unsigned Opcode) {
+    unsigned SCIdx = TII->get(Opcode).getSchedClass();
+    while (SCIdx && Sched.getSchedClassDesc(SCIdx)->isVariant())
+      SCIdx = ST->resolveVariantSchedClass(SCIdx, nullptr, TII,
+                                           Sched.getProcessorID());
+    assert(SCIdx);
+    const MCSchedClassDesc &SCDesc = Sched.SchedClassTable[SCIdx];
+    const MCWriteProcResEntry *B = ST->getWriteProcResBegin(&SCDesc);
+    const MCWriteProcResEntry *E = ST->getWriteProcResEnd(&SCDesc);
+    unsigned Min = Sched.IssueWidth;
+    for (const MCWriteProcResEntry *I = B; I != E; I++)
+      Min = std::min(Min, Sched.getProcResource(I->ProcResourceIdx)->NumUnits);
+    return Min;
+  };
+
+  return ResolveVariant(Opcode1) < ResolveVariant(Opcode2);
+}
+
 InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
@@ -4416,56 +4441,20 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
   // We don't lower some vector selects well that are wider than the register
   // width. TODO: Improve this with different cost kinds.
   if (isa<FixedVectorType>(ValTy) && Opcode == Instruction::Select) {
-    // We would need this many instructions to hide the scalarization happening.
-    const int AmortizationCost = 20;
-
-    // If VecPred is not set, check if we can get a predicate from the context
-    // instruction, if its type matches the requested ValTy.
-    if (VecPred == CmpInst::BAD_ICMP_PREDICATE && I && I->getType() == ValTy) {
-      CmpPredicate CurrentPred;
-      if (match(I, m_Select(m_Cmp(CurrentPred, m_Value(), m_Value()), m_Value(),
-                            m_Value())))
-        VecPred = CurrentPred;
-    }
     // Check if we have a compare/select chain that can be lowered using
-    // a (F)CMxx & BFI pair.
-    if (CmpInst::isIntPredicate(VecPred) || VecPred == CmpInst::FCMP_OLE ||
-        VecPred == CmpInst::FCMP_OLT || VecPred == CmpInst::FCMP_OGT ||
-        VecPred == CmpInst::FCMP_OGE || VecPred == CmpInst::FCMP_OEQ ||
-        VecPred == CmpInst::FCMP_UNE) {
-      static const auto ValidMinMaxTys = {
-          MVT::v8i8,  MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
-          MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32, MVT::v2f64};
-      static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
+    // a (F)CMxx & BFI pair. This assumes that the select can use a BIC/BIF/BSL
+    // so has a cost of 1, and the the comparison typesize matches the select
+    // size and no extends/truncates are required.
+    static const auto ValidMinMaxTys = {
+        MVT::v8i8,  MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
+        MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32, MVT::v2f64};
+    static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
 
-      auto LT = getTypeLegalizationCost(ValTy);
-      if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }) ||
-          (ST->hasFullFP16() &&
-           any_of(ValidFP16MinMaxTys, [&LT](MVT M) { return M == LT.second; })))
-        return LT.first;
-    }
-
-    static const TypeConversionCostTblEntry VectorSelectTbl[] = {
-        {Instruction::Select, MVT::v2i1, MVT::v2f32, 2},
-        {Instruction::Select, MVT::v2i1, MVT::v2f64, 2},
-        {Instruction::Select, MVT::v4i1, MVT::v4f32, 2},
-        {Instruction::Select, MVT::v4i1, MVT::v4f16, 2},
-        {Instruction::Select, MVT::v8i1, MVT::v8f16, 2},
-        {Instruction::Select, MVT::v16i1, MVT::v16i16, 16},
-        {Instruction::Select, MVT::v8i1, MVT::v8i32, 8},
-        {Instruction::Select, MVT::v16i1, MVT::v16i32, 16},
-        {Instruction::Select, MVT::v4i1, MVT::v4i64, 4 * AmortizationCost},
-        {Instruction::Select, MVT::v8i1, MVT::v8i64, 8 * AmortizationCost},
-        {Instruction::Select, MVT::v16i1, MVT::v16i64, 16 * AmortizationCost}};
-
-    EVT SelCondTy = TLI->getValueType(DL, CondTy);
-    EVT SelValTy = TLI->getValueType(DL, ValTy);
-    if (SelCondTy.isSimple() && SelValTy.isSimple()) {
-      if (const auto *Entry = ConvertCostTableLookup(VectorSelectTbl, Opcode,
-                                                     SelCondTy.getSimpleVT(),
-                                                     SelValTy.getSimpleVT()))
-        return Entry->Cost;
-    }
+    auto LT = getTypeLegalizationCost(ValTy);
+    if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }) ||
+        (ST->hasFullFP16() &&
+         any_of(ValidFP16MinMaxTys, [&LT](MVT M) { return M == LT.second; })))
+      return LT.first;
   }
 
   if (Opcode == Instruction::FCmp) {
@@ -4505,6 +4494,12 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     else if (isa<ScalableVectorType>(ValTy) &&
              (VecPred == FCmpInst::FCMP_ONE || VecPred == FCmpInst::FCMP_UEQ))
       Factor = 3; // fcmxx+fcmyy+or
+
+    if (isa<ScalableVectorType>(ValTy) &&
+        CostKind == TTI::TCK_RecipThroughput &&
+        hasLessThroughputFromSchedulingModel(AArch64::FCMEQ_PPzZZ_S,
+                                             AArch64::FCMEQv4f32))
+      Factor *= 2;
 
     return Factor * (CostKind == TTI::TCK_Latency ? 2 : LT.first);
   }

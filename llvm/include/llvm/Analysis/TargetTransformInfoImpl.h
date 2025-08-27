@@ -1526,7 +1526,6 @@ public:
       const auto Op1Info = TTI::getOperandInfo(Operands[0]);
       const auto Op2Info = TTI::getOperandInfo(Operands[1]);
       Type *ValTy = Operands[0]->getType();
-      // TODO: Also handle ICmp/FCmp constant expressions.
       return TargetTTI->getCmpSelInstrCost(Opcode, ValTy, U->getType(),
                                            I ? cast<CmpInst>(I)->getPredicate()
                                              : CmpInst::BAD_ICMP_PREDICATE,
