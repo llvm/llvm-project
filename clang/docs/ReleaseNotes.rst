@@ -246,6 +246,19 @@ Improvements to Clang's diagnostics
   decorated with the ``alloc_size`` attribute don't allocate enough space for
   the target pointer type.
 
+- ``-Wpointer-bool-conversion`` will now also warn in the following case
+
+  .. code-block:: c
+
+    struct B {
+      B(bool V) {}
+    };
+    void test(const B& b);
+    void test0(B* b) {
+      test(b); // this will call B::B(bool) and create a new B
+    }
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
