@@ -16,7 +16,7 @@
 
 using namespace mlir;
 using namespace mlir::lsp;
-using namespace llvm::lsp;
+using llvm::lsp::Logger;
 
 //===----------------------------------------------------------------------===//
 // YamlFileInfo

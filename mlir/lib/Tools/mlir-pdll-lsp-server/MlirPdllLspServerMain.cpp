@@ -17,6 +17,9 @@
 using namespace mlir;
 using namespace mlir::lsp;
 
+using llvm::lsp::JSONStreamStyle;
+using llvm::lsp::Logger;
+
 LogicalResult mlir::MlirPdllLspServerMain(int argc, char **argv) {
   llvm::cl::opt<JSONStreamStyle> inputStyle{
       "input-style",

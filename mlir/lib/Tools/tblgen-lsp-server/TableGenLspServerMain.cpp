@@ -17,6 +17,10 @@
 using namespace mlir;
 using namespace mlir::lsp;
 
+using llvm::lsp::JSONStreamStyle;
+using llvm::lsp::JSONTransport;
+using llvm::lsp::Logger;
+
 LogicalResult mlir::TableGenLspServerMain(int argc, char **argv) {
   llvm::cl::opt<JSONStreamStyle> inputStyle{
       "input-style",
