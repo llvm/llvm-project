@@ -1306,7 +1306,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // TODO: Use a better approach than a white-list, such as adding
   // properties to instructions using something like TSFlags.
   if (!isSupportedInstr(MI)) {
-    LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction: " << MI);
+    LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction: "
+                      << MI);
     return false;
   }
 
@@ -1487,8 +1488,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
   }
   const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
   if (!MDT->dominates(VLMI, &MI)) {
-    LLVM_DEBUG(
-        dbgs() << "  Abort due to VL not dominating.\n");
+    LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
     return false;
   }
   LLVM_DEBUG(
