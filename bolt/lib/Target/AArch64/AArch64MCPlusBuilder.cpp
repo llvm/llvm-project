@@ -2621,24 +2621,19 @@ public:
                      std::optional<uint64_t> KnownSize) const override {
     InstructionListType Code;
     if (ReturnEnd) {
-      if (KnownSize.has_value() && (*KnownSize >> 12) == 0) {
-        // Use immediate if size is known and fits in 12-bit immediate (0-4095)
+      // Use immediate if size fits in 12-bit immediate (0-4095)
+      // Otherwise, fall back to register add for large sizes
+      if ((*KnownSize >> 12) == 0)
         Code.emplace_back(MCInstBuilder(AArch64::ADDXri)
                               .addReg(AArch64::X0)
                               .addReg(AArch64::X0)
                               .addImm(*KnownSize)
                               .addImm(0));
-      } else {
-        // Fall back to register add for unknown or large sizes
+      else
         Code.emplace_back(MCInstBuilder(AArch64::ADDXrr)
                               .addReg(AArch64::X0)
                               .addReg(AArch64::X0)
                               .addReg(AArch64::X2));
-      }
-    }
-
-    if (!KnownSize.has_value()) {
-      return Code;
     }
 
     uint64_t Size = *KnownSize;

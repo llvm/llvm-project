@@ -1889,6 +1889,11 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
           }
         }
 
+        if (BC.isAArch64() && !KnownSize.has_value()) {
+          ++II;
+          continue;
+        }
+
         const InstructionListType NewCode =
             BC.MIB->createInlineMemcpy(IsMemcpy8, KnownSize);
         II = BB.replaceInstruction(II, NewCode);
