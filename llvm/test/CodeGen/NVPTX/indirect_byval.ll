@@ -13,25 +13,26 @@ define internal i32 @foo() {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
 ; CHECK-NEXT:    .local .align 1 .b8 __local_depot0[2];
+; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot0;
-; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
-; CHECK-NEXT:    cvta.local.u64 %rd2, %rd1;
-; CHECK-NEXT:    ld.global.b64 %rd3, [ptr];
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.global.b64 %rd2, [ptr];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 1 .b8 param0[1];
 ; CHECK-NEXT:    .param .b64 param1;
 ; CHECK-NEXT:    .param .b32 retval0;
-; CHECK-NEXT:    st.param.b64 [param1], %rd2;
+; CHECK-NEXT:    st.param.b64 [param1], %rd1;
 ; CHECK-NEXT:    ld.local.b8 %rs1, [%SPL+1];
 ; CHECK-NEXT:    st.param.b8 [param0], %rs1;
 ; CHECK-NEXT:    prototype_0 : .callprototype (.param .b32 _) _ (.param .align 1 .b8 _[1], .param .b64 _);
-; CHECK-NEXT:    call (retval0), %rd3, (param0, param1), prototype_0;
+; CHECK-NEXT:    call (retval0), %rd2, (param0, param1), prototype_0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -49,24 +50,25 @@ define internal i32 @bar() {
 ; CHECK:         // @bar
 ; CHECK-NEXT:  {
 ; CHECK-NEXT:    .local .align 8 .b8 __local_depot1[16];
+; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1;
-; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
-; CHECK-NEXT:    cvta.local.u64 %rd2, %rd1;
-; CHECK-NEXT:    ld.global.b64 %rd3, [ptr];
+; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
+; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.global.b64 %rd2, [ptr];
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    .param .b64 param1;
 ; CHECK-NEXT:    .param .b32 retval0;
-; CHECK-NEXT:    st.param.b64 [param1], %rd2;
-; CHECK-NEXT:    ld.local.b64 %rd4, [%SPL+8];
-; CHECK-NEXT:    st.param.b64 [param0], %rd4;
+; CHECK-NEXT:    st.param.b64 [param1], %rd1;
+; CHECK-NEXT:    ld.local.b64 %rd3, [%SPL+8];
+; CHECK-NEXT:    st.param.b64 [param0], %rd3;
 ; CHECK-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .align 8 .b8 _[8], .param .b64 _);
-; CHECK-NEXT:    call (retval0), %rd3, (param0, param1), prototype_1;
+; CHECK-NEXT:    call (retval0), %rd2, (param0, param1), prototype_1;
 ; CHECK-NEXT:    ld.param.b32 %r1, [retval0];
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;

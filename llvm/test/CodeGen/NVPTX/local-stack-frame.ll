@@ -10,6 +10,7 @@ define void @foo(i32 %a) {
 ; PTX32-LABEL: foo(
 ; PTX32:       {
 ; PTX32-NEXT:    .local .align 4 .b8 __local_depot0[4];
+; PTX32-NEXT:    .reg .b32 %SP;
 ; PTX32-NEXT:    .reg .b32 %SPL;
 ; PTX32-NEXT:    .reg .b32 %r<2>;
 ; PTX32-EMPTY:
@@ -22,6 +23,7 @@ define void @foo(i32 %a) {
 ; PTX64-LABEL: foo(
 ; PTX64:       {
 ; PTX64-NEXT:    .local .align 4 .b8 __local_depot0[4];
+; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
 ; PTX64-NEXT:    .reg .b32 %r<2>;
 ; PTX64-EMPTY:
@@ -39,18 +41,19 @@ define ptx_kernel void @foo2(i32 %a) {
 ; PTX32-LABEL: foo2(
 ; PTX32:       {
 ; PTX32-NEXT:    .local .align 4 .b8 __local_depot1[4];
+; PTX32-NEXT:    .reg .b32 %SP;
 ; PTX32-NEXT:    .reg .b32 %SPL;
-; PTX32-NEXT:    .reg .b32 %r<4>;
+; PTX32-NEXT:    .reg .b32 %r<3>;
 ; PTX32-EMPTY:
 ; PTX32-NEXT:  // %bb.0:
 ; PTX32-NEXT:    mov.b32 %SPL, __local_depot1;
+; PTX32-NEXT:    cvta.local.u32 %SP, %SPL;
 ; PTX32-NEXT:    ld.param.b32 %r1, [foo2_param_0];
-; PTX32-NEXT:    add.u32 %r2, %SPL, 0;
-; PTX32-NEXT:    cvta.local.u32 %r3, %r2;
+; PTX32-NEXT:    add.u32 %r2, %SP, 0;
 ; PTX32-NEXT:    st.local.b32 [%SPL], %r1;
 ; PTX32-NEXT:    { // callseq 0, 0
 ; PTX32-NEXT:    .param .b32 param0;
-; PTX32-NEXT:    st.param.b32 [param0], %r3;
+; PTX32-NEXT:    st.param.b32 [param0], %r2;
 ; PTX32-NEXT:    call.uni bar, (param0);
 ; PTX32-NEXT:    } // callseq 0
 ; PTX32-NEXT:    ret;
@@ -58,19 +61,20 @@ define ptx_kernel void @foo2(i32 %a) {
 ; PTX64-LABEL: foo2(
 ; PTX64:       {
 ; PTX64-NEXT:    .local .align 4 .b8 __local_depot1[4];
+; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
 ; PTX64-NEXT:    .reg .b32 %r<2>;
-; PTX64-NEXT:    .reg .b64 %rd<3>;
+; PTX64-NEXT:    .reg .b64 %rd<2>;
 ; PTX64-EMPTY:
 ; PTX64-NEXT:  // %bb.0:
 ; PTX64-NEXT:    mov.b64 %SPL, __local_depot1;
+; PTX64-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX64-NEXT:    ld.param.b32 %r1, [foo2_param_0];
-; PTX64-NEXT:    add.u64 %rd1, %SPL, 0;
-; PTX64-NEXT:    cvta.local.u64 %rd2, %rd1;
+; PTX64-NEXT:    add.u64 %rd1, %SP, 0;
 ; PTX64-NEXT:    st.local.b32 [%SPL], %r1;
 ; PTX64-NEXT:    { // callseq 0, 0
 ; PTX64-NEXT:    .param .b64 param0;
-; PTX64-NEXT:    st.param.b64 [param0], %rd2;
+; PTX64-NEXT:    st.param.b64 [param0], %rd1;
 ; PTX64-NEXT:    call.uni bar, (param0);
 ; PTX64-NEXT:    } // callseq 0
 ; PTX64-NEXT:    ret;
@@ -86,6 +90,7 @@ define void @foo3(i32 %a) {
 ; PTX32-LABEL: foo3(
 ; PTX32:       {
 ; PTX32-NEXT:    .local .align 4 .b8 __local_depot2[12];
+; PTX32-NEXT:    .reg .b32 %SP;
 ; PTX32-NEXT:    .reg .b32 %SPL;
 ; PTX32-NEXT:    .reg .b32 %r<5>;
 ; PTX32-EMPTY:
@@ -101,6 +106,7 @@ define void @foo3(i32 %a) {
 ; PTX64-LABEL: foo3(
 ; PTX64:       {
 ; PTX64-NEXT:    .local .align 4 .b8 __local_depot2[12];
+; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
 ; PTX64-NEXT:    .reg .b32 %r<2>;
 ; PTX64-NEXT:    .reg .b64 %rd<3>;
@@ -122,25 +128,25 @@ define void @foo4() {
 ; PTX32-LABEL: foo4(
 ; PTX32:       {
 ; PTX32-NEXT:    .local .align 4 .b8 __local_depot3[8];
+; PTX32-NEXT:    .reg .b32 %SP;
 ; PTX32-NEXT:    .reg .b32 %SPL;
-; PTX32-NEXT:    .reg .b32 %r<5>;
+; PTX32-NEXT:    .reg .b32 %r<3>;
 ; PTX32-EMPTY:
 ; PTX32-NEXT:  // %bb.0:
 ; PTX32-NEXT:    mov.b32 %SPL, __local_depot3;
-; PTX32-NEXT:    add.u32 %r1, %SPL, 0;
-; PTX32-NEXT:    cvta.local.u32 %r2, %r1;
-; PTX32-NEXT:    add.u32 %r3, %SPL, 4;
-; PTX32-NEXT:    cvta.local.u32 %r4, %r3;
+; PTX32-NEXT:    cvta.local.u32 %SP, %SPL;
+; PTX32-NEXT:    add.u32 %r1, %SP, 0;
+; PTX32-NEXT:    add.u32 %r2, %SP, 4;
 ; PTX32-NEXT:    st.local.b32 [%SPL], 0;
 ; PTX32-NEXT:    st.local.b32 [%SPL+4], 0;
 ; PTX32-NEXT:    { // callseq 1, 0
 ; PTX32-NEXT:    .param .b32 param0;
-; PTX32-NEXT:    st.param.b32 [param0], %r2;
+; PTX32-NEXT:    st.param.b32 [param0], %r1;
 ; PTX32-NEXT:    call.uni bar, (param0);
 ; PTX32-NEXT:    } // callseq 1
 ; PTX32-NEXT:    { // callseq 2, 0
 ; PTX32-NEXT:    .param .b32 param0;
-; PTX32-NEXT:    st.param.b32 [param0], %r4;
+; PTX32-NEXT:    st.param.b32 [param0], %r2;
 ; PTX32-NEXT:    call.uni bar, (param0);
 ; PTX32-NEXT:    } // callseq 2
 ; PTX32-NEXT:    ret;
@@ -148,25 +154,25 @@ define void @foo4() {
 ; PTX64-LABEL: foo4(
 ; PTX64:       {
 ; PTX64-NEXT:    .local .align 4 .b8 __local_depot3[8];
+; PTX64-NEXT:    .reg .b64 %SP;
 ; PTX64-NEXT:    .reg .b64 %SPL;
-; PTX64-NEXT:    .reg .b64 %rd<5>;
+; PTX64-NEXT:    .reg .b64 %rd<3>;
 ; PTX64-EMPTY:
 ; PTX64-NEXT:  // %bb.0:
 ; PTX64-NEXT:    mov.b64 %SPL, __local_depot3;
-; PTX64-NEXT:    add.u64 %rd1, %SPL, 0;
-; PTX64-NEXT:    cvta.local.u64 %rd2, %rd1;
-; PTX64-NEXT:    add.u64 %rd3, %SPL, 4;
-; PTX64-NEXT:    cvta.local.u64 %rd4, %rd3;
+; PTX64-NEXT:    cvta.local.u64 %SP, %SPL;
+; PTX64-NEXT:    add.u64 %rd1, %SP, 0;
+; PTX64-NEXT:    add.u64 %rd2, %SP, 4;
 ; PTX64-NEXT:    st.local.b32 [%SPL], 0;
 ; PTX64-NEXT:    st.local.b32 [%SPL+4], 0;
 ; PTX64-NEXT:    { // callseq 1, 0
 ; PTX64-NEXT:    .param .b64 param0;
-; PTX64-NEXT:    st.param.b64 [param0], %rd2;
+; PTX64-NEXT:    st.param.b64 [param0], %rd1;
 ; PTX64-NEXT:    call.uni bar, (param0);
 ; PTX64-NEXT:    } // callseq 1
 ; PTX64-NEXT:    { // callseq 2, 0
 ; PTX64-NEXT:    .param .b64 param0;
-; PTX64-NEXT:    st.param.b64 [param0], %rd4;
+; PTX64-NEXT:    st.param.b64 [param0], %rd2;
 ; PTX64-NEXT:    call.uni bar, (param0);
 ; PTX64-NEXT:    } // callseq 2
 ; PTX64-NEXT:    ret;

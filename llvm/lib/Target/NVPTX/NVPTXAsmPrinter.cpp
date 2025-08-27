@@ -1485,6 +1485,9 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   if (NumBytes) {
     O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
       << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n"
+      << "\t.reg .b"
+      << MF.getTarget().getPointerSizeInBits(ADDRESS_SPACE_GENERIC)
+      << " \t%SP;\n"
       << "\t.reg .b" << MF.getTarget().getPointerSizeInBits(ADDRESS_SPACE_LOCAL)
       << " \t%SPL;\n";
   }

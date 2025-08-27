@@ -46,17 +46,47 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Emits
     //   mov %SPL, %depot;
+    //   cvta.local %SP, %SPL;
     // for local address accesses in MF.
+    // if the generic and local address spaces are different,
+    // it emits:
+    //   mov %SPL, %depot;
+    //   cvt.u64.u32 %SP, %SPL;
+    //   cvta.local %SP, %SP;
+
+    if (MR.use_empty(NRI->getFrameLocalRegister(MF)))
+      // If %SPL is not used, do not bother emitting anything
+      return;
     bool IsLocal64Bit =
         MF.getTarget().getPointerSize(NVPTXAS::ADDRESS_SPACE_LOCAL) == 8;
+    bool IsGeneric64Bit =
+        MF.getTarget().getPointerSize(NVPTXAS::ADDRESS_SPACE_GENERIC) == 8;
+    bool NeedsCast = IsGeneric64Bit != IsLocal64Bit;
+    Register SourceReg = NRI->getFrameLocalRegister(MF);
+    if (NeedsCast)
+      SourceReg = NRI->getFrameRegister(MF);
+
+    unsigned CvtaLocalOpcode =
+        (IsGeneric64Bit ? NVPTX::cvta_local_64 : NVPTX::cvta_local);
+
+    MBBI = BuildMI(MBB, MBBI, dl,
+                   MF.getSubtarget().getInstrInfo()->get(CvtaLocalOpcode),
+                   NRI->getFrameRegister(MF))
+               .addReg(SourceReg);
+
+    if (NeedsCast)
+      MBBI = BuildMI(MBB, MBBI, dl,
+                     MF.getSubtarget().getInstrInfo()->get(NVPTX::CVT_u64_u32),
+                     NRI->getFrameRegister(MF))
+                 .addReg(NRI->getFrameLocalRegister(MF))
+                 .addImm(NVPTX::PTXCvtMode::NONE);
+
     unsigned MovDepotOpcode =
         (IsLocal64Bit ? NVPTX::MOV_DEPOT_ADDR_64 : NVPTX::MOV_DEPOT_ADDR);
-    if (!MR.use_empty(NRI->getFrameLocalRegister(MF))) {
-      BuildMI(MBB, MBBI, dl,
-              MF.getSubtarget().getInstrInfo()->get(MovDepotOpcode),
-              NRI->getFrameLocalRegister(MF))
-          .addImm(MF.getFunctionNumber());
-    }
+    BuildMI(MBB, MBBI, dl,
+            MF.getSubtarget().getInstrInfo()->get(MovDepotOpcode),
+            NRI->getFrameLocalRegister(MF))
+        .addImm(MF.getFunctionNumber());
   }
 }
 

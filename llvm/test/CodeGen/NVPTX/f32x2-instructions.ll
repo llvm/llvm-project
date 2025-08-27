@@ -79,12 +79,14 @@ define float @test_extract_i(<2 x float> %a, i64 %idx) #0 {
 ; CHECK-NOF32X2-LABEL: test_extract_i(
 ; CHECK-NOF32X2:       {
 ; CHECK-NOF32X2-NEXT:    .local .align 8 .b8 __local_depot3[8];
+; CHECK-NOF32X2-NEXT:    .reg .b64 %SP;
 ; CHECK-NOF32X2-NEXT:    .reg .b64 %SPL;
 ; CHECK-NOF32X2-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NOF32X2-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-NOF32X2-EMPTY:
 ; CHECK-NOF32X2-NEXT:  // %bb.0:
 ; CHECK-NOF32X2-NEXT:    mov.b64 %SPL, __local_depot3;
+; CHECK-NOF32X2-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_extract_i_param_0];
 ; CHECK-NOF32X2-NEXT:    ld.param.b64 %rd1, [test_extract_i_param_1];
 ; CHECK-NOF32X2-NEXT:    st.local.v2.b32 [%SPL], {%r1, %r2};

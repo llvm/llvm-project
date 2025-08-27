@@ -136,21 +136,22 @@ define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out
 ; PTX-LABEL: escape_ptr(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot2[8];
+; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b64 %rd<7>;
+; PTX-NEXT:    .reg .b64 %rd<6>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot2;
-; PTX-NEXT:    add.u64 %rd1, %SPL, 0;
-; PTX-NEXT:    cvta.local.u64 %rd2, %rd1;
-; PTX-NEXT:    ld.param.b32 %rd3, [escape_ptr_param_1+4];
-; PTX-NEXT:    shl.b64 %rd4, %rd3, 32;
-; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_param_1];
-; PTX-NEXT:    or.b64 %rd6, %rd4, %rd5;
-; PTX-NEXT:    st.local.b64 [%SPL], %rd6;
+; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
+; PTX-NEXT:    add.u64 %rd1, %SP, 0;
+; PTX-NEXT:    ld.param.b32 %rd2, [escape_ptr_param_1+4];
+; PTX-NEXT:    shl.b64 %rd3, %rd2, 32;
+; PTX-NEXT:    ld.param.b32 %rd4, [escape_ptr_param_1];
+; PTX-NEXT:    or.b64 %rd5, %rd3, %rd4;
+; PTX-NEXT:    st.local.b64 [%SPL], %rd5;
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0], %rd2;
+; PTX-NEXT:    st.param.b64 [param0], %rd1;
 ; PTX-NEXT:    call.uni _Z6escapePv, (param0);
 ; PTX-NEXT:    } // callseq 0
 ; PTX-NEXT:    ret;
@@ -174,22 +175,23 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ; PTX-LABEL: escape_ptr_gep(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot3[8];
+; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b64 %rd<8>;
+; PTX-NEXT:    .reg .b64 %rd<7>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot3;
-; PTX-NEXT:    add.u64 %rd1, %SPL, 0;
-; PTX-NEXT:    cvta.local.u64 %rd2, %rd1;
-; PTX-NEXT:    ld.param.b32 %rd3, [escape_ptr_gep_param_1+4];
-; PTX-NEXT:    shl.b64 %rd4, %rd3, 32;
-; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_gep_param_1];
-; PTX-NEXT:    or.b64 %rd6, %rd4, %rd5;
-; PTX-NEXT:    st.local.b64 [%SPL], %rd6;
-; PTX-NEXT:    add.s64 %rd7, %rd2, 4;
+; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
+; PTX-NEXT:    add.u64 %rd1, %SP, 0;
+; PTX-NEXT:    ld.param.b32 %rd2, [escape_ptr_gep_param_1+4];
+; PTX-NEXT:    shl.b64 %rd3, %rd2, 32;
+; PTX-NEXT:    ld.param.b32 %rd4, [escape_ptr_gep_param_1];
+; PTX-NEXT:    or.b64 %rd5, %rd3, %rd4;
+; PTX-NEXT:    st.local.b64 [%SPL], %rd5;
+; PTX-NEXT:    add.s64 %rd6, %rd1, 4;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0], %rd7;
+; PTX-NEXT:    st.param.b64 [param0], %rd6;
 ; PTX-NEXT:    call.uni _Z6escapePv, (param0);
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
@@ -213,21 +215,22 @@ define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeon
 ; PTX-LABEL: escape_ptr_store(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot4[8];
+; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b64 %rd<9>;
+; PTX-NEXT:    .reg .b64 %rd<8>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot4;
+; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.b64 %rd1, [escape_ptr_store_param_0];
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; PTX-NEXT:    add.u64 %rd3, %SPL, 0;
-; PTX-NEXT:    cvta.local.u64 %rd4, %rd3;
-; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_store_param_1+4];
-; PTX-NEXT:    shl.b64 %rd6, %rd5, 32;
-; PTX-NEXT:    ld.param.b32 %rd7, [escape_ptr_store_param_1];
-; PTX-NEXT:    or.b64 %rd8, %rd6, %rd7;
-; PTX-NEXT:    st.local.b64 [%SPL], %rd8;
-; PTX-NEXT:    st.global.b64 [%rd2], %rd4;
+; PTX-NEXT:    add.u64 %rd3, %SP, 0;
+; PTX-NEXT:    ld.param.b32 %rd4, [escape_ptr_store_param_1+4];
+; PTX-NEXT:    shl.b64 %rd5, %rd4, 32;
+; PTX-NEXT:    ld.param.b32 %rd6, [escape_ptr_store_param_1];
+; PTX-NEXT:    or.b64 %rd7, %rd5, %rd6;
+; PTX-NEXT:    st.local.b64 [%SPL], %rd7;
+; PTX-NEXT:    st.global.b64 [%rd2], %rd3;
 ; PTX-NEXT:    ret;
 entry:
   store ptr %s, ptr %out, align 8
@@ -249,22 +252,23 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ; PTX-LABEL: escape_ptr_gep_store(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot5[8];
+; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b64 %rd<10>;
+; PTX-NEXT:    .reg .b64 %rd<9>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot5;
+; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.b64 %rd1, [escape_ptr_gep_store_param_0];
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; PTX-NEXT:    add.u64 %rd3, %SPL, 0;
-; PTX-NEXT:    cvta.local.u64 %rd4, %rd3;
-; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_gep_store_param_1+4];
-; PTX-NEXT:    shl.b64 %rd6, %rd5, 32;
-; PTX-NEXT:    ld.param.b32 %rd7, [escape_ptr_gep_store_param_1];
-; PTX-NEXT:    or.b64 %rd8, %rd6, %rd7;
-; PTX-NEXT:    st.local.b64 [%SPL], %rd8;
-; PTX-NEXT:    add.s64 %rd9, %rd4, 4;
-; PTX-NEXT:    st.global.b64 [%rd2], %rd9;
+; PTX-NEXT:    add.u64 %rd3, %SP, 0;
+; PTX-NEXT:    ld.param.b32 %rd4, [escape_ptr_gep_store_param_1+4];
+; PTX-NEXT:    shl.b64 %rd5, %rd4, 32;
+; PTX-NEXT:    ld.param.b32 %rd6, [escape_ptr_gep_store_param_1];
+; PTX-NEXT:    or.b64 %rd7, %rd5, %rd6;
+; PTX-NEXT:    st.local.b64 [%SPL], %rd7;
+; PTX-NEXT:    add.s64 %rd8, %rd3, 4;
+; PTX-NEXT:    st.global.b64 [%rd2], %rd8;
 ; PTX-NEXT:    ret;
 entry:
   %b = getelementptr inbounds nuw i8, ptr %s, i64 4
@@ -287,21 +291,22 @@ define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonl
 ; PTX-LABEL: escape_ptrtoint(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot6[8];
+; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b64 %rd<9>;
+; PTX-NEXT:    .reg .b64 %rd<8>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot6;
+; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.b64 %rd1, [escape_ptrtoint_param_0];
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; PTX-NEXT:    add.u64 %rd3, %SPL, 0;
-; PTX-NEXT:    cvta.local.u64 %rd4, %rd3;
-; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptrtoint_param_1+4];
-; PTX-NEXT:    shl.b64 %rd6, %rd5, 32;
-; PTX-NEXT:    ld.param.b32 %rd7, [escape_ptrtoint_param_1];
-; PTX-NEXT:    or.b64 %rd8, %rd6, %rd7;
-; PTX-NEXT:    st.local.b64 [%SPL], %rd8;
-; PTX-NEXT:    st.global.b64 [%rd2], %rd4;
+; PTX-NEXT:    add.u64 %rd3, %SP, 0;
+; PTX-NEXT:    ld.param.b32 %rd4, [escape_ptrtoint_param_1+4];
+; PTX-NEXT:    shl.b64 %rd5, %rd4, 32;
+; PTX-NEXT:    ld.param.b32 %rd6, [escape_ptrtoint_param_1];
+; PTX-NEXT:    or.b64 %rd7, %rd5, %rd6;
+; PTX-NEXT:    st.local.b64 [%SPL], %rd7;
+; PTX-NEXT:    st.global.b64 [%rd2], %rd3;
 ; PTX-NEXT:    ret;
 entry:
   %i = ptrtoint ptr %s to i64
@@ -443,52 +448,53 @@ define dso_local ptx_kernel void @memcpy_to_param(ptr nocapture noundef readonly
 ; PTX-LABEL: memcpy_to_param(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 8 .b8 __local_depot9[8];
+; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b16 %rs<17>;
-; PTX-NEXT:    .reg .b64 %rd<8>;
+; PTX-NEXT:    .reg .b64 %rd<7>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot9;
+; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.b64 %rd1, [memcpy_to_param_param_0];
-; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
-; PTX-NEXT:    cvta.local.u64 %rd3, %rd2;
-; PTX-NEXT:    ld.param.b32 %rd4, [memcpy_to_param_param_1+4];
-; PTX-NEXT:    shl.b64 %rd5, %rd4, 32;
-; PTX-NEXT:    ld.param.b32 %rd6, [memcpy_to_param_param_1];
-; PTX-NEXT:    or.b64 %rd7, %rd5, %rd6;
-; PTX-NEXT:    st.local.b64 [%SPL], %rd7;
+; PTX-NEXT:    add.u64 %rd2, %SP, 0;
+; PTX-NEXT:    ld.param.b32 %rd3, [memcpy_to_param_param_1+4];
+; PTX-NEXT:    shl.b64 %rd4, %rd3, 32;
+; PTX-NEXT:    ld.param.b32 %rd5, [memcpy_to_param_param_1];
+; PTX-NEXT:    or.b64 %rd6, %rd4, %rd5;
+; PTX-NEXT:    st.local.b64 [%SPL], %rd6;
 ; PTX-NEXT:    ld.volatile.b8 %rs1, [%rd1];
-; PTX-NEXT:    st.volatile.b8 [%rd3], %rs1;
+; PTX-NEXT:    st.volatile.b8 [%rd2], %rs1;
 ; PTX-NEXT:    ld.volatile.b8 %rs2, [%rd1+1];
-; PTX-NEXT:    st.volatile.b8 [%rd3+1], %rs2;
+; PTX-NEXT:    st.volatile.b8 [%rd2+1], %rs2;
 ; PTX-NEXT:    ld.volatile.b8 %rs3, [%rd1+2];
-; PTX-NEXT:    st.volatile.b8 [%rd3+2], %rs3;
+; PTX-NEXT:    st.volatile.b8 [%rd2+2], %rs3;
 ; PTX-NEXT:    ld.volatile.b8 %rs4, [%rd1+3];
-; PTX-NEXT:    st.volatile.b8 [%rd3+3], %rs4;
+; PTX-NEXT:    st.volatile.b8 [%rd2+3], %rs4;
 ; PTX-NEXT:    ld.volatile.b8 %rs5, [%rd1+4];
-; PTX-NEXT:    st.volatile.b8 [%rd3+4], %rs5;
+; PTX-NEXT:    st.volatile.b8 [%rd2+4], %rs5;
 ; PTX-NEXT:    ld.volatile.b8 %rs6, [%rd1+5];
-; PTX-NEXT:    st.volatile.b8 [%rd3+5], %rs6;
+; PTX-NEXT:    st.volatile.b8 [%rd2+5], %rs6;
 ; PTX-NEXT:    ld.volatile.b8 %rs7, [%rd1+6];
-; PTX-NEXT:    st.volatile.b8 [%rd3+6], %rs7;
+; PTX-NEXT:    st.volatile.b8 [%rd2+6], %rs7;
 ; PTX-NEXT:    ld.volatile.b8 %rs8, [%rd1+7];
-; PTX-NEXT:    st.volatile.b8 [%rd3+7], %rs8;
+; PTX-NEXT:    st.volatile.b8 [%rd2+7], %rs8;
 ; PTX-NEXT:    ld.volatile.b8 %rs9, [%rd1+8];
-; PTX-NEXT:    st.volatile.b8 [%rd3+8], %rs9;
+; PTX-NEXT:    st.volatile.b8 [%rd2+8], %rs9;
 ; PTX-NEXT:    ld.volatile.b8 %rs10, [%rd1+9];
-; PTX-NEXT:    st.volatile.b8 [%rd3+9], %rs10;
+; PTX-NEXT:    st.volatile.b8 [%rd2+9], %rs10;
 ; PTX-NEXT:    ld.volatile.b8 %rs11, [%rd1+10];
-; PTX-NEXT:    st.volatile.b8 [%rd3+10], %rs11;
+; PTX-NEXT:    st.volatile.b8 [%rd2+10], %rs11;
 ; PTX-NEXT:    ld.volatile.b8 %rs12, [%rd1+11];
-; PTX-NEXT:    st.volatile.b8 [%rd3+11], %rs12;
+; PTX-NEXT:    st.volatile.b8 [%rd2+11], %rs12;
 ; PTX-NEXT:    ld.volatile.b8 %rs13, [%rd1+12];
-; PTX-NEXT:    st.volatile.b8 [%rd3+12], %rs13;
+; PTX-NEXT:    st.volatile.b8 [%rd2+12], %rs13;
 ; PTX-NEXT:    ld.volatile.b8 %rs14, [%rd1+13];
-; PTX-NEXT:    st.volatile.b8 [%rd3+13], %rs14;
+; PTX-NEXT:    st.volatile.b8 [%rd2+13], %rs14;
 ; PTX-NEXT:    ld.volatile.b8 %rs15, [%rd1+14];
-; PTX-NEXT:    st.volatile.b8 [%rd3+14], %rs15;
+; PTX-NEXT:    st.volatile.b8 [%rd2+14], %rs15;
 ; PTX-NEXT:    ld.volatile.b8 %rs16, [%rd1+15];
-; PTX-NEXT:    st.volatile.b8 [%rd3+15], %rs16;
+; PTX-NEXT:    st.volatile.b8 [%rd2+15], %rs16;
 ; PTX-NEXT:    ret;
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %s, ptr %in, i64 16, i1 true)
@@ -622,6 +628,7 @@ define ptx_kernel void @test_select_write(ptr byval(i32) align 4 %input1, ptr by
 ; PTX-LABEL: test_select_write(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 4 .b8 __local_depot12[8];
+; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b16 %rs<3>;
@@ -799,6 +806,7 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; PTX-LABEL: test_phi_write(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 4 .b8 __local_depot14[8];
+; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b16 %rs<3>;
@@ -850,6 +858,7 @@ define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
 ; PTX-LABEL: test_forward_byval_arg(
 ; PTX:       {
 ; PTX-NEXT:    .local .align 4 .b8 __local_depot15[4];
+; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<2>;
 ; PTX-EMPTY:
