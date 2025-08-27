@@ -302,7 +302,7 @@ def ptxas_version(ptxas):
     return int(match.group(1)), int(match.group(2))
 
 
-def ptxas_supported_isa_versions(ptxas):
+def ptxas_isa_versions(ptxas):
     result = subprocess.run(
         [ptxas, "--list-version"],
         capture_output=True,
@@ -316,66 +316,66 @@ def ptxas_supported_isa_versions(ptxas):
     return versions
 
 
-def ptxas_add_isa_features(major_version, minor_version):
-    supported_isa_versions = ptxas_supported_isa_versions(ptxas_executable)
+def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
+    supported_isa_versions = ptxas_isa_versions(ptxas)
     if supported_isa_versions:
-        for major_version, minor_version in supported_isa_versions:
-            config.available_features.add(f"ptxas-isa-{major_version}.{minor_version}")
-        return
+        return supported_isa_versions
     if major_version >= 13:
         raise RuntimeError(
-            f"ptxas {ptxas_executable} does not support ISA version listing"
+            f"ptxas {ptxas} does not support ISA version listing"
         )
 
     cuda_version_to_isa_version = {
-        (12, 9): ["8.8"],
-        (12, 8): ["8.7"],
-        (12, 7): ["8.6"],
-        (12, 6): ["8.5"],
-        (12, 5): ["8.5"],
-        (12, 4): ["8.4"],
-        (12, 3): ["8.3"],
-        (12, 2): ["8.2"],
-        (12, 1): ["8.1"],
-        (12, 0): ["8.0"],
-        (11, 8): ["7.8"],
-        (11, 7): ["7.7"],
-        (11, 6): ["7.6"],
-        (11, 5): ["7.5"],
-        (11, 4): ["7.4"],
-        (11, 3): ["7.3"],
-        (11, 2): ["7.2"],
-        (11, 1): ["7.1"],
-        (11, 0): ["7.0"],
-        (10, 2): ["6.5"],
-        (10, 1): ["6.4"],
-        (10, 0): ["6.3"],
-        (9, 2): ["6.2"],
-        (9, 1): ["6.1"],
-        (9, 0): ["6.0"],
-        (8, 0): ["5.0"],
-        (7, 5): ["4.3"],
-        (7, 0): ["4.2"],
-        (6, 5): ["4.1"],
-        (6, 0): ["4.0"],
-        (5, 5): ["3.2"],
-        (5, 0): ["3.1"],
-        (4, 1): ["3.0"],
-        (4, 0): ["2.3"],
-        (3, 2): ["2.2"],
-        (3, 1): ["2.1"],
-        (3, 0): ["2.0", "1.5"],
-        (2, 2): ["1.4"],
-        (2, 1): ["1.3"],
-        (2, 0): ["1.2"],
-        (1, 1): ["1.1"],
-        (1, 0): ["1.0"],
+        (12, 9): [(8, 8)],
+        (12, 8): [(8, 7)],
+        (12, 7): [(8, 6)],
+        (12, 6): [(8, 5)],
+        (12, 5): [(8, 5)],
+        (12, 4): [(8, 4)],
+        (12, 3): [(8, 3)],
+        (12, 2): [(8, 2)],
+        (12, 1): [(8, 1)],
+        (12, 0): [(8, 0)],
+        (11, 8): [(7, 8)],
+        (11, 7): [(7, 7)],
+        (11, 6): [(7, 6)],
+        (11, 5): [(7, 5)],
+        (11, 4): [(7, 4)],
+        (11, 3): [(7, 3)],
+        (11, 2): [(7, 2)],
+        (11, 1): [(7, 1)],
+        (11, 0): [(7, 0)],
+        (10, 2): [(6, 5)],
+        (10, 1): [(6, 4)],
+        (10, 0): [(6, 3)],
+        (9, 2): [(6, 2)],
+        (9, 1): [(6, 1)],
+        (9, 0): [(6, 0)],
+        (8, 0): [(5, 0)],
+        (7, 5): [(4, 3)],
+        (7, 0): [(4, 2)],
+        (6, 5): [(4, 1)],
+        (6, 0): [(4, 0)],
+        (5, 5): [(3, 2)],
+        (5, 0): [(3, 1)],
+        (4, 1): [(3, 0)],
+        (4, 0): [(2, 3)],
+        (3, 2): [(2, 2)],
+        (3, 1): [(2, 1)],
+        (3, 0): [(2, 0), (1, 5)],
+        (2, 2): [(1, 4)],
+        (2, 1): [(1, 3)],
+        (2, 0): [(1, 2)],
+        (1, 1): [(1, 1)],
+        (1, 0): [(1, 0)],
     }
 
+    supported_isa_versions = []
     for (major, minor), isa_versions in cuda_version_to_isa_version.items():
         if (major, minor) <= (major_version, minor_version):
             for isa_version in isa_versions:
-                config.available_features.add(f"ptxas-isa-{isa_version}")
+                supported_isa_versions.append(isa_version)
+    return supported_isa_versions
 
 
 def ptxas_supported_sms(ptxas_executable):
@@ -421,7 +421,8 @@ def enable_ptxas(ptxas_executable):
     major_version, minor_version = ptxas_version(ptxas_executable)
     config.available_features.add(f"ptxas-{major_version}.{minor_version}")
 
-    ptxas_add_isa_features(major_version, minor_version)
+    for major, minor in ptxas_supported_isa_versions(ptxas_executable, major_version, minor_version):
+        config.available_features.add(f"ptxas-isa-{major}.{minor}")
 
     for sm in ptxas_supported_sms(ptxas_executable):
         config.available_features.add(f"ptxas-sm_{sm}")
