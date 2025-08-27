@@ -18,9 +18,58 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 namespace llvm {
 namespace hlsl {
+
+struct BindingRange {
+  uint32_t LowerBound;
+  uint32_t UpperBound;
+  BindingRange(uint32_t LB, uint32_t UB) : LowerBound(LB), UpperBound(UB) {}
+
+  bool overlapsWith(const BindingRange &Other) const {
+    return !(
+        (Other.LowerBound < LowerBound && Other.UpperBound <= LowerBound) ||
+        (Other.LowerBound >= UpperBound && Other.UpperBound > UpperBound));
+  }
+};
+
+struct BaseRegisterSpace {
+  uint32_t Space;
+  SmallVector<BindingRange> Ranges;
+  BaseRegisterSpace(uint32_t Space) : Space(Space) {}
+
+  bool operator==(const BaseRegisterSpace &Other) const {
+    return Space == Other.Space;
+  }
+};
+
+struct FreeRegisterSpace : public BaseRegisterSpace {
+  using BaseRegisterSpace::BaseRegisterSpace;
+
+  FreeRegisterSpace(uint32_t Space) : BaseRegisterSpace(Space) {
+    Ranges.emplace_back(0, ~0u);
+  }
+  // Size == -1 means unbounded array
+  LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);
+};
+
+struct BusyRegisterSpace : public BaseRegisterSpace {
+  using BaseRegisterSpace::BaseRegisterSpace;
+
+  BusyRegisterSpace(uint32_t Space) : BaseRegisterSpace(Space) {}
+
+  LLVM_ABI bool isBound(const BindingRange &Range) const;
+};
+
+template <typename T> struct BindingSpaces {
+  dxil::ResourceClass RC;
+  llvm::SmallVector<T> Spaces;
+  BindingSpaces(dxil::ResourceClass RC) : RC(RC) {}
+  LLVM_ABI T &getOrInsertSpace(uint32_t Space);
+  LLVM_ABI std::optional<const T *> contains(uint32_t Space) const;
+};
 
 /// BindingInfo represents the ranges of bindings and free space for each
 /// `dxil::ResourceClass`. This can represent HLSL-level bindings as well as
@@ -44,44 +93,14 @@ namespace hlsl {
 /// }
 class BindingInfo {
 public:
-  struct BindingRange {
-    uint32_t LowerBound;
-    uint32_t UpperBound;
-    BindingRange(uint32_t LB, uint32_t UB) : LowerBound(LB), UpperBound(UB) {}
-  };
-
-  struct RegisterSpace {
-    uint32_t Space;
-    SmallVector<BindingRange> FreeRanges;
-    RegisterSpace(uint32_t Space) : Space(Space) {
-      FreeRanges.emplace_back(0, ~0u);
-    }
-    // Size == -1 means unbounded array
-    LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);
-    LLVM_ABI bool isBound(const BindingRange &Range) const;
-
-    bool operator==(const RegisterSpace &Other) const {
-      return Space == Other.Space;
-    }
-  };
-
-  struct BindingSpaces {
-    dxil::ResourceClass RC;
-    llvm::SmallVector<RegisterSpace> Spaces;
-    BindingSpaces(dxil::ResourceClass RC) : RC(RC) {}
-    LLVM_ABI RegisterSpace &getOrInsertSpace(uint32_t Space);
-    LLVM_ABI std::optional<const BindingInfo::RegisterSpace *>
-    contains(uint32_t Space) const;
-  };
-
 private:
-  BindingSpaces SRVSpaces{dxil::ResourceClass::SRV};
-  BindingSpaces UAVSpaces{dxil::ResourceClass::UAV};
-  BindingSpaces CBufferSpaces{dxil::ResourceClass::CBuffer};
-  BindingSpaces SamplerSpaces{dxil::ResourceClass::Sampler};
+  BindingSpaces<FreeRegisterSpace> SRVSpaces{dxil::ResourceClass::SRV};
+  BindingSpaces<FreeRegisterSpace> UAVSpaces{dxil::ResourceClass::UAV};
+  BindingSpaces<FreeRegisterSpace> CBufferSpaces{dxil::ResourceClass::CBuffer};
+  BindingSpaces<FreeRegisterSpace> SamplerSpaces{dxil::ResourceClass::Sampler};
 
 public:
-  BindingSpaces &getBindingSpaces(dxil::ResourceClass RC) {
+  BindingSpaces<FreeRegisterSpace> &getBindingSpaces(dxil::ResourceClass RC) {
     switch (RC) {
     case dxil::ResourceClass::SRV:
       return SRVSpaces;
@@ -95,13 +114,45 @@ public:
 
     llvm_unreachable("Invalid resource class");
   }
-  const BindingSpaces &getBindingSpaces(dxil::ResourceClass RC) const {
+  const BindingSpaces<FreeRegisterSpace> &
+  getBindingSpaces(dxil::ResourceClass RC) const {
     return const_cast<BindingInfo *>(this)->getBindingSpaces(RC);
   }
 
   // Size == -1 means unbounded array
   LLVM_ABI std::optional<uint32_t>
   findAvailableBinding(dxil::ResourceClass RC, uint32_t Space, int32_t Size);
+
+  friend class BindingInfoBuilder;
+};
+
+class BusyBindingInfo {
+private:
+  BindingSpaces<BusyRegisterSpace> SRVSpaces{dxil::ResourceClass::SRV};
+  BindingSpaces<BusyRegisterSpace> UAVSpaces{dxil::ResourceClass::UAV};
+  BindingSpaces<BusyRegisterSpace> CBufferSpaces{dxil::ResourceClass::CBuffer};
+  BindingSpaces<BusyRegisterSpace> SamplerSpaces{dxil::ResourceClass::Sampler};
+
+public:
+public:
+  BindingSpaces<BusyRegisterSpace> &getBindingSpaces(dxil::ResourceClass RC) {
+    switch (RC) {
+    case dxil::ResourceClass::SRV:
+      return SRVSpaces;
+    case dxil::ResourceClass::UAV:
+      return UAVSpaces;
+    case dxil::ResourceClass::CBuffer:
+      return CBufferSpaces;
+    case dxil::ResourceClass::Sampler:
+      return SamplerSpaces;
+    }
+
+    llvm_unreachable("Invalid resource class");
+  }
+  const BindingSpaces<BusyRegisterSpace> &
+  getBindingSpaces(dxil::ResourceClass RC) const {
+    return const_cast<BusyBindingInfo *>(this)->getBindingSpaces(RC);
+  }
 
   LLVM_ABI bool isBound(dxil::ResourceClass RC, uint32_t Space,
                         const BindingRange &Range) const;
@@ -161,6 +212,11 @@ public:
     return calculateBindingInfo(
         [&HasOverlap](auto, auto) { HasOverlap = true; });
   }
+
+  LLVM_ABI BusyBindingInfo calculateBusyBindingInfo(
+      llvm::function_ref<void(const BindingInfoBuilder &Builder,
+                              const Binding &Overlapping)>
+          ReportOverlap);
 
   /// For use in the \c ReportOverlap callback of \c calculateBindingInfo -
   /// finds a binding that the \c ReportedBinding overlaps with.

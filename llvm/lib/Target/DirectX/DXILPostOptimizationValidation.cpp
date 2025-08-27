@@ -227,7 +227,7 @@ static void validateRootSignature(Module &M,
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
                          S.ShaderRegister, S.ShaderRegister, &S);
 
-  hlsl::BindingInfo Info = Builder.calculateBindingInfo(
+  hlsl::BusyBindingInfo Info = Builder.calculateBusyBindingInfo(
       [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
            const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
         const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =

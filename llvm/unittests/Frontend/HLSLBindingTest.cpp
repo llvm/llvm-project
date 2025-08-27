@@ -19,14 +19,13 @@ MATCHER_P(HasSpecificValue, Value, "") {
   return arg.has_value() && *arg == Value;
 }
 
-static void
-checkExpectedSpaceAndFreeRanges(hlsl::BindingInfo::RegisterSpace &RegSpace,
-                                uint32_t ExpSpace,
-                                ArrayRef<uint32_t> ExpValues) {
+static void checkExpectedSpaceAndFreeRanges(hlsl::FreeRegisterSpace &RegSpace,
+                                            uint32_t ExpSpace,
+                                            ArrayRef<uint32_t> ExpValues) {
   EXPECT_EQ(RegSpace.Space, ExpSpace);
-  EXPECT_EQ(RegSpace.FreeRanges.size() * 2, ExpValues.size());
+  EXPECT_EQ(RegSpace.Ranges.size() * 2, ExpValues.size());
   unsigned I = 0;
-  for (auto &R : RegSpace.FreeRanges) {
+  for (auto &R : RegSpace.Ranges) {
     EXPECT_EQ(R.LowerBound, ExpValues[I]);
     EXPECT_EQ(R.UpperBound, ExpValues[I + 1]);
     I += 2;
@@ -44,7 +43,7 @@ TEST(HLSLBindingTest, TestTrivialCase) {
   EXPECT_FALSE(HasOverlap);
 
   // check that UAV has exactly one gap
-  hlsl::BindingInfo::BindingSpaces &UAVSpaces =
+  hlsl::BindingSpaces<hlsl::FreeRegisterSpace> &UAVSpaces =
       Info.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 1u);
@@ -53,7 +52,8 @@ TEST(HLSLBindingTest, TestTrivialCase) {
   // check that other kinds of register spaces are all available
   for (auto RC :
        {ResourceClass::SRV, ResourceClass::CBuffer, ResourceClass::Sampler}) {
-    hlsl::BindingInfo::BindingSpaces &Spaces = Info.getBindingSpaces(RC);
+    hlsl::BindingSpaces<hlsl::FreeRegisterSpace> &Spaces =
+        Info.getBindingSpaces(RC);
     EXPECT_EQ(Spaces.RC, RC);
     EXPECT_EQ(Spaces.Spaces.size(), 0u);
   }
@@ -91,7 +91,7 @@ TEST(HLSLBindingTest, TestManyBindings) {
 
   EXPECT_FALSE(HasOverlap);
 
-  hlsl::BindingInfo::BindingSpaces &SRVSpaces =
+  hlsl::BindingSpaces<hlsl::FreeRegisterSpace> &SRVSpaces =
       Info.getBindingSpaces(ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 1u);
@@ -99,7 +99,7 @@ TEST(HLSLBindingTest, TestManyBindings) {
   // (SRVSpaces has only one free space range {6, ~0u}).
   checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0, {6u, ~0u});
 
-  hlsl::BindingInfo::BindingSpaces &UAVSpaces =
+  hlsl::BindingSpaces<hlsl::FreeRegisterSpace> &UAVSpaces =
       Info.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 2u);
@@ -107,14 +107,14 @@ TEST(HLSLBindingTest, TestManyBindings) {
                                   {0u, 1u, 4u, 4u, 6u, ~0u});
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[1], 20, {0u, 9u, 15u, ~0u});
 
-  hlsl::BindingInfo::BindingSpaces &CBufferSpaces =
+  hlsl::BindingSpaces<hlsl::FreeRegisterSpace> &CBufferSpaces =
       Info.getBindingSpaces(ResourceClass::CBuffer);
   EXPECT_EQ(CBufferSpaces.RC, ResourceClass::CBuffer);
   EXPECT_EQ(CBufferSpaces.Spaces.size(), 1u);
   checkExpectedSpaceAndFreeRanges(CBufferSpaces.Spaces[0], 0,
                                   {0u, 2u, 4u, ~0u});
 
-  hlsl::BindingInfo::BindingSpaces &SamplerSpaces =
+  hlsl::BindingSpaces<hlsl::FreeRegisterSpace> &SamplerSpaces =
       Info.getBindingSpaces(ResourceClass::Sampler);
   EXPECT_EQ(SamplerSpaces.RC, ResourceClass::Sampler);
   EXPECT_EQ(SamplerSpaces.Spaces.size(), 1u);
@@ -142,7 +142,7 @@ TEST(HLSLBindingTest, TestUnboundedAndOverlap) {
 
   EXPECT_TRUE(HasOverlap);
 
-  hlsl::BindingInfo::BindingSpaces &SRVSpaces =
+  hlsl::BindingSpaces<hlsl::FreeRegisterSpace> &SRVSpaces =
       Info.getBindingSpaces(ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 2u);
@@ -171,7 +171,7 @@ TEST(HLSLBindingTest, TestExactOverlap) {
 
   EXPECT_TRUE(HasOverlap);
 
-  hlsl::BindingInfo::BindingSpaces &SRVSpaces =
+  hlsl::BindingSpaces<hlsl::FreeRegisterSpace> &SRVSpaces =
       Info.getBindingSpaces(ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 1u);
@@ -198,7 +198,7 @@ TEST(HLSLBindingTest, TestEndOfRange) {
 
   EXPECT_FALSE(HasOverlap);
 
-  hlsl::BindingInfo::BindingSpaces &UAVSpaces =
+  hlsl::BindingSpaces<hlsl::FreeRegisterSpace> &UAVSpaces =
       Info.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 3u);
