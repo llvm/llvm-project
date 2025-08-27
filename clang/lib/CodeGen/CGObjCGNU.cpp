@@ -1750,7 +1750,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // struct objc_method_list *methods
     // FIXME: Almost identical code is copied and pasted below for the
     // class, but refactoring it cleanly requires C++14 generic lambdas.
-    if (OID->classmeth_begin() == OID->classmeth_end())
+    if (OID->class_methods().empty())
       metaclassFields.addNullPointer(PtrTy);
     else {
       SmallVector<ObjCMethodDecl*, 16> ClassMethods;

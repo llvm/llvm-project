@@ -68,6 +68,7 @@ enum DiagnosticKind {
   DK_StackSize,
   DK_Linker,
   DK_Lowering,
+  DK_LegalizationFailure,
   DK_DebugMetadataVersion,
   DK_DebugMetadataInvalid,
   DK_Instrumentation,
@@ -381,6 +382,30 @@ private:
 
   /// Debug location where this diagnostic is triggered.
   DiagnosticLocation Loc;
+};
+
+class LLVM_ABI DiagnosticInfoLegalizationFailure
+    : public DiagnosticInfoWithLocationBase {
+private:
+  /// Message to be reported.
+  const Twine &MsgStr;
+
+public:
+  DiagnosticInfoLegalizationFailure(const Twine &MsgStr LLVM_LIFETIME_BOUND,
+                                    const Function &Fn,
+                                    const DiagnosticLocation &Loc,
+                                    DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfoWithLocationBase(DK_LegalizationFailure, Severity, Fn,
+                                       Loc),
+        MsgStr(MsgStr) {}
+
+  const Twine &getMsgStr() const { return MsgStr; }
+
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_LegalizationFailure;
+  }
 };
 
 class LLVM_ABI DiagnosticInfoGenericWithLoc

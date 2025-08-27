@@ -564,6 +564,10 @@ declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 ; CHECK: declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
 ; CHECK: declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+declare cc124 void @f.cc124(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.cc124(i1)
+declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
 declare cc1023 void @f.cc1023()
 ; CHECK: declare cc1023 void @f.cc1023()
 
@@ -754,6 +758,20 @@ declare void @f.align4() align 4
 ; CHECK: declare void @f.align4() align 4
 declare void @f.align8() align 8
 ; CHECK: declare void @f.align8() align 8
+
+; Functions -- prefalign
+define void @f.prefalign2() prefalign 2 {
+  ret void
+}
+; CHECK: define void @f.prefalign2() prefalign 2
+define void @f.prefalign4() prefalign 4 {
+  ret void
+}
+; CHECK: define void @f.prefalign4() prefalign 4
+define void @f.prefalign8() prefalign 8 {
+  ret void
+}
+; CHECK: define void @f.prefalign8() prefalign 8
 
 ; Functions -- GC
 declare void @f.gcshadow() gc "shadow-stack"

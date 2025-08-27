@@ -45,23 +45,15 @@ static inline unsigned *getHashTable(StringMapEntryBase **TheTable,
 
 uint32_t StringMapImpl::hash(StringRef Key) { return xxh3_64bits(Key); }
 
-StringMapImpl::StringMapImpl(unsigned InitSize, unsigned itemSize) {
-  ItemSize = itemSize;
-
+StringMapImpl::StringMapImpl(unsigned InitSize, unsigned itemSize)
+    : ItemSize(itemSize) {
   // If a size is specified, initialize the table with that many buckets.
   if (InitSize) {
     // The table will grow when the number of entries reach 3/4 of the number of
     // buckets. To guarantee that "InitSize" number of entries can be inserted
     // in the table without growing, we allocate just what is needed here.
     init(getMinBucketToReserveForEntries(InitSize));
-    return;
   }
-
-  // Otherwise, initialize it with zero buckets to avoid the allocation.
-  TheTable = nullptr;
-  NumBuckets = 0;
-  NumItems = 0;
-  NumTombstones = 0;
 }
 
 void StringMapImpl::init(unsigned InitSize) {

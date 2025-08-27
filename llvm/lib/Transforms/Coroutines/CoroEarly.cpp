@@ -170,6 +170,12 @@ void Lowerer::hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin) {
   auto *PI = Builder.CreateIntrinsic(
       Builder.getPtrTy(), Intrinsic::coro_promise, Arg, {}, "promise.addr");
   PI->setCannotDuplicate();
+  // Remove lifetime markers, as these are only allowed on allocas.
+  for (User *U : make_early_inc_range(PA->users())) {
+    auto *I = cast<Instruction>(U);
+    if (I->isLifetimeStartOrEnd())
+      I->eraseFromParent();
+  }
   PA->replaceUsesWithIf(PI, [CoroId](Use &U) {
     bool IsBitcast = U == U.getUser()->stripPointerCasts();
     bool IsCoroId = U.getUser() == CoroId;

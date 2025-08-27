@@ -532,7 +532,7 @@ Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
 Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigcheese)) -- Windows support in object tools \
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
-Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend
+Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend \
 Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend
 
 ### Former maintainers of removed components

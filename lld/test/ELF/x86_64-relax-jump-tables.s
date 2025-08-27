@@ -2,8 +2,6 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 // RUN: ld.lld %t.o -shared -o %t
 // RUN: llvm-objdump -d --show-all-symbols %t | FileCheck %s
-// RUN: ld.lld %t.o -shared -o %t32 --preferred-function-alignment=32
-// RUN: llvm-objdump -d --show-all-symbols %t32 | FileCheck %s
 
 // Mostly positive cases, except for f2.
 .section .text.jt1,"ax",@llvm_cfi_jump_table,8
@@ -125,10 +123,13 @@ f2.cfi:
 ret $2
 .zero 16
 
+// Overalignment should trigger emitting enough padding behind the jump table to
+// make these appear at the same address.
 // CHECK: <f3>:
 // CHECK-NEXT: <f3.cfi>:
 // CHECK-NEXT: retq $0x3
 .section .text.f3,"ax",@progbits
+.balign 64
 f3.cfi:
 ret $3
 .zero 16

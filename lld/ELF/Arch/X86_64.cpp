@@ -339,12 +339,6 @@ void X86_64::relaxCFIJumpTables() const {
       // bodies that were moved into the jump table.
       std::vector<InputSection *> replacements;
 
-      // First, push the original jump table section. This is only so that it
-      // can act as a relocation target. Later on, we will set the size of the
-      // jump table section to 0 so that the slices and moved function bodies
-      // become the actual relocation targets.
-      replacements.push_back(sec);
-
       // Add the slice [begin, end) of the original section to the replacement
       // list. [rbegin, rend) is the slice of the relocation list that covers
       // [begin, end).
@@ -354,9 +348,6 @@ void X86_64::relaxCFIJumpTables() const {
             sec->file, sec->name, sec->type, sec->flags, sec->entsize,
             sec->entsize,
             sec->contentMaybeDecompress().slice(begin, end - begin));
-        // Ensure that --preferred-function-alignment does not mess with the
-        // placement of this section.
-        slice->retainAlignment = true;
         for (const Relocation &r : ArrayRef<Relocation>(rbegin, rend)) {
           slice->relocations.push_back(
               Relocation{r.expr, r.type, r.offset - begin, r.addend, r.sym});
@@ -376,8 +367,7 @@ void X86_64::relaxCFIJumpTables() const {
             sym->value + r.addend != -4ull)
           return nullptr;
         auto *target = dyn_cast_or_null<InputSection>(sym->section);
-        if (!target || target->addralign > sec->entsize ||
-            sectionReplacements.count(target))
+        if (!target || sectionReplacements.count(target))
           return nullptr;
         return target;
       };
@@ -396,13 +386,35 @@ void X86_64::relaxCFIJumpTables() const {
       }();
       OutputSection *targetOutputSec;
       if (lastSec) {
+        // If the last section is more aligned than the jump table, we need
+        // to emit a padding section before the jump table to ensure that the
+        // last section ends up at the correct alignment.
+        if (lastSec->addralign > sec->addralign) {
+          // We need to add enough padding to make this equal to zero.
+          size_t mod = (sec->size - sec->entsize) % lastSec->addralign;
+          if (mod != 0) {
+            auto *pad = make<PaddingSection>(ctx, lastSec->addralign - mod,
+                                             lastSec->getParent());
+            pad->addralign = lastSec->addralign;
+            replacements.push_back(pad);
+          } else {
+            sec->addralign = lastSec->addralign;
+          }
+        }
+
         // We've already decided to move the output section so make sure that we
         // don't try to move it again.
-        sectionReplacements[lastSec] = replacements;
+        sectionReplacements[lastSec] = {};
         targetOutputSec = lastSec->getParent();
       } else {
         targetOutputSec = sec->getParent();
       }
+
+      // First, push the original jump table section. This is only so that it
+      // can act as a relocation target. Later on, we will set the size of the
+      // jump table section to 0 so that the slices and moved function bodies
+      // become the actual relocation targets.
+      replacements.push_back(sec);
 
       // Walk the jump table entries other than the last one looking for sections
       // that are small enough to be moved into the jump table and in the same
@@ -419,14 +431,12 @@ void X86_64::relaxCFIJumpTables() const {
         if (rcur + 1 == rnext) {
           InputSection *target = getMovableSection(*rcur);
           if (target && target->size <= sec->entsize &&
+              target->addralign <= sec->entsize &&
               target->getParent() == targetOutputSec) {
             // Okay, we found a small enough section. Move it into the jump
             // table. First add a slice for the unmodified jump table entries
             // before this one.
             addSectionSlice(begin, cur, rbegin, rcur);
-            // Ensure that --preferred-function-alignment does not mess with the
-            // placement of this section.
-            target->retainAlignment = true;
             // Add the target to our replacement list, and set the target's
             // replacement list to the empty list. This removes it from its
             // original position and adds it here, as well as causing
@@ -447,7 +457,6 @@ void X86_64::relaxCFIJumpTables() const {
       // jump table where it is and keep the last entry.
       if (lastSec) {
         addSectionSlice(begin, cur, rbegin, rcur);
-        lastSec->retainAlignment = true;
         replacements.push_back(lastSec);
         sectionReplacements[sec] = {};
         sectionReplacements[lastSec] = replacements;

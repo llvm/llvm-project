@@ -54,7 +54,7 @@ func.func @test_no_change(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi8> {
 // CHECK-LABEL: test_regions
 // CHECK: %arg0: tensor<i8>, %arg1: tensor<i8>
 func.func @test_regions(%arg0: tensor<ui8>, %arg1: tensor<ui8>, %arg2: tensor<i1>) -> tensor<ui8> {
-  // CHECK: tosa.cond_if %arg2 -> (tensor<i8>)
+  // CHECK: tosa.cond_if %arg2 (%arg3 = %arg0, %arg4 = %arg1) : tensor<i1> (tensor<i8>, tensor<i8>) -> tensor<i8> 
   %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
   ^bb0(%arg3: tensor<ui8>, %arg4: tensor<ui8>):
     // CHECK: %1 = tosa.add %arg0, %arg1 : (tensor<i8>, tensor<i8>) -> tensor<i8>

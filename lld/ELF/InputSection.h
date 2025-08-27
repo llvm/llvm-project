@@ -183,11 +183,6 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   uint8_t nopFiller : 1;
 
-  // If true, --preferred-function-alignment has no effect on this section.
-  // Set by the CFI jump table relaxation pass.
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t retainAlignment : 1;
-
   mutable bool compressed = false;
 
   // Input sections are part of an output section. Special sections

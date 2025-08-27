@@ -191,7 +191,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X64-NEXT: .long   1
 ; X64-NEXT: .long   .Ltmp6@IMGREL
 ; X64-NEXT: .long   0
-; X64-NEXT: .long   .Ltmp7@IMGREL+1
+; X64-NEXT: .long   .Ltmp7@IMGREL
 ; X64-NEXT: .long   -1
 
 attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -215,7 +215,7 @@
 
 // RUN: %clang --target=riscv32 %s -emit-llvm -S -o - | FileCheck %s
 
-// Check that "--no-relax" is forwarded to the linker for RISC-V.
+/// Check that "--no-relax" is forwarded to the linker for RISC-V.
 // RUN: env "PATH=" %clang %s -### 2>&1 -mno-relax \
 // RUN:   --target=riscv32-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv32imac -mabi=lp32\
@@ -223,7 +223,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-RV32-NORELAX %s
 // CHECK-RV32-NORELAX: "--no-relax"
 
-// Check that "--no-relax" is not forwarded to the linker for RISC-V.
+/// Check that "--no-relax" is not forwarded to the linker for RISC-V.
 // RUN:env "PATH=" %clang %s -### 2>&1 \
 // RUN:   --target=riscv32-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv32imac -mabi=lp32\
@@ -231,7 +231,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-RV32-RELAX %s
 // CHECK-RV32-RELAX-NOT: "--no-relax"
 
-// Check that "--no-relax" is forwarded to the linker for RISC-V (Gnu.cpp).
+/// Check that "--no-relax" is forwarded to the linker for RISC-V (Gnu.cpp).
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie -mno-relax \
 // RUN:   --target=riscv32-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=ilp32 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
@@ -239,13 +239,26 @@
 // RUN:   | FileCheck -check-prefix=CHECK-RV32-GNU-NORELAX %s
 // CHECK-RV32-GNU-NORELAX: "--no-relax"
 
-// Check that "--no-relax" is not forwarded to the linker for RISC-V (Gnu.cpp).
+/// Check that "--no-relax" is not forwarded to the linker for RISC-V (Gnu.cpp).
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
 // RUN:   --target=riscv32-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=ilp32 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-RV32-GNU-RELAX %s
 // CHECK-RV32-GNU-RELAX-NOT: "--no-relax"
+
+/// Check that "-static -pie" is forwarded to linker when "-static-pie" is used
+// RUN: %clang -static-pie -### %s -fuse-ld= \
+// RUN:   --target=riscv32-unknown-elf -rtlib=platform --unwindlib=platform \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
+// RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-RV32-STATIC-PIE %s
+
+// C-RV32-STATIC-PIE: "-Bstatic" "-pie" "--no-dynamic-linker" "-z" "text" "-m" "elf32lriscv" "-X"
+// C-RV32-STATIC-PIE: "{{.*}}rcrt1.o"
+// C-RV32-STATIC-PIE: "{{.*}}crtbeginS.o"
+// C-RV32-STATIC-PIE: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
+// C-RV32-STATIC-PIE: "{{.*}}crtendS.o"
 
 typedef __builtin_va_list va_list;
 typedef __SIZE_TYPE__ size_t;
