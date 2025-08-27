@@ -695,7 +695,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                  show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
                  address_text_size);
 
-      if ((options & eOptionRichAnnotations) && target_sp) {
+      if ((options & eOptionVariableAnnotations) && target_sp) {
         auto annotations = annotate_static(*inst, *target_sp, module_sp);
         if (!annotations.empty()) {
           const size_t annotation_column = 100;

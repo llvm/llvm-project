@@ -398,7 +398,7 @@ public:
     eOptionMarkPCAddress =
         (1u << 3), // Mark the disassembly line the contains the PC
     eOptionShowControlFlowKind = (1u << 4),
-    eOptionRichAnnotations = (1u << 5),
+    eOptionVariableAnnotations = (1u << 5),
   };
 
   enum HexImmediateStyle {

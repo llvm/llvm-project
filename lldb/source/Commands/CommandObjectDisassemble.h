@@ -78,7 +78,7 @@ public:
     // in SetOptionValue if anything the selects a location is set.
     lldb::addr_t symbol_containing_addr = 0;
     bool force = false;
-    bool enable_rich_annotations = false;
+    bool enable_variable_annotations = false;
   };
 
   CommandObjectDisassemble(CommandInterpreter &interpreter);
