@@ -24,39 +24,6 @@
 
 namespace llvm {
 namespace bolt {
-
-raw_ostream &operator<<(raw_ostream &OS, const MCInstInBBReference &Ref) {
-  OS << "MCInstBBRef<";
-  if (Ref.BB == nullptr)
-    OS << "BB:(null)";
-  else
-    OS << "BB:" << Ref.BB->getName() << ":" << Ref.BBIndex;
-  OS << ">";
-  return OS;
-}
-
-raw_ostream &operator<<(raw_ostream &OS, const MCInstInBFReference &Ref) {
-  OS << "MCInstBFRef<";
-  if (Ref.BF == nullptr)
-    OS << "BF:(null)";
-  else
-    OS << "BF:" << Ref.BF->getPrintName() << ":" << Ref.getOffset();
-  OS << ">";
-  return OS;
-}
-
-raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &Ref) {
-  switch (Ref.ParentKind) {
-  case MCInstReference::BasicBlockParent:
-    OS << Ref.U.BBRef;
-    return OS;
-  case MCInstReference::FunctionParent:
-    OS << Ref.U.BFRef;
-    return OS;
-  }
-  llvm_unreachable("");
-}
-
 namespace PAuthGadgetScanner {
 
 [[maybe_unused]] static void traceInst(const BinaryContext &BC, StringRef Label,
@@ -91,10 +58,10 @@ template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
   if (BF.hasCFG()) {
     for (BinaryBasicBlock &BB : BF)
       for (int64_t I = 0, E = BB.size(); I < E; ++I)
-        Fn(MCInstInBBReference(&BB, I));
+        Fn(MCInstReference(&BB, I));
   } else {
-    for (auto I : BF.instrs())
-      Fn(MCInstInBFReference(&BF, I.first));
+    for (auto I = BF.instrs().begin(), E = BF.instrs().end(); I != E; ++I)
+      Fn(MCInstReference(&BF, I));
   }
 }
 
@@ -566,7 +533,7 @@ public:
     std::vector<MCInstReference> Result;
     for (const MCInst *Inst : lastWritingInsts(S, ClobberedReg)) {
       MCInstReference Ref = MCInstReference::get(Inst, BF);
-      assert(Ref && "Expected Inst to be found");
+      assert(!Ref.empty() && "Expected Inst to be found");
       Result.push_back(Ref);
     }
     return Result;
@@ -1138,7 +1105,7 @@ public:
     std::vector<MCInstReference> Result;
     for (const MCInst *Inst : firstLeakingInsts(S, LeakedReg)) {
       MCInstReference Ref = MCInstReference::get(Inst, BF);
-      assert(Ref && "Expected Inst to be found");
+      assert(!Ref.empty() && "Expected Inst to be found");
       Result.push_back(Ref);
     }
     return Result;
@@ -1345,8 +1312,7 @@ static bool shouldAnalyzeTailCallInst(const BinaryContext &BC,
   // (such as isBranch at the time of writing this comment), some don't (such
   // as isCall). For that reason, call MCInstrDesc's methods explicitly when
   // it is important.
-  const MCInstrDesc &Desc =
-      BC.MII->get(static_cast<const MCInst &>(Inst).getOpcode());
+  const MCInstrDesc &Desc = BC.MII->get(Inst.getMCInst().getOpcode());
   // Tail call should be a branch (but not necessarily an indirect one).
   if (!Desc.isBranch())
     return false;
@@ -1541,7 +1507,7 @@ void FunctionAnalysisContext::findUnsafeUses(
       // This is printed as "[message] in function [name], basic block ...,
       // at address ..." when the issue is reported to the user.
       Reports.push_back(make_generic_report(
-          MCInstReference::get(FirstInst, BF),
+          MCInstReference(&BB, FirstInst),
           "Warning: possibly imprecise CFG, the analysis quality may be "
           "degraded in this function. According to BOLT, unreachable code is "
           "found" /* in function [name]... */));
@@ -1705,31 +1671,49 @@ void Analysis::runOnFunction(BinaryFunction &BF,
   }
 }
 
+// Compute the instruction address for printing (may be slow).
+static uint64_t getAddress(const MCInstReference &Inst) {
+  const BinaryFunction *BF = Inst.getFunction();
+
+  if (Inst.hasCFG()) {
+    const BinaryBasicBlock *BB = Inst.getBasicBlock();
+
+    auto It = static_cast<BinaryBasicBlock::const_iterator>(&Inst.getMCInst());
+    unsigned IndexInBB = std::distance(BB->begin(), It);
+
+    // FIXME: this assumes all instructions are 4 bytes in size. This is true
+    // for AArch64, but it might be good to extract this function so it can be
+    // used elsewhere and for other targets too.
+    return BF->getAddress() + BB->getOffset() + IndexInBB * 4;
+  }
+
+  for (auto I = BF->instrs().begin(), E = BF->instrs().end(); I != E; ++I) {
+    if (&I->second == &Inst.getMCInst())
+      return BF->getAddress() + I->first;
+  }
+  llvm_unreachable("Instruction not found in function");
+}
+
 static void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
                     size_t StartIndex = 0, size_t EndIndex = -1) {
   if (EndIndex == (size_t)-1)
     EndIndex = BB->size() - 1;
   const BinaryFunction *BF = BB->getFunction();
   for (unsigned I = StartIndex; I <= EndIndex; ++I) {
-    // FIXME: this assumes all instructions are 4 bytes in size. This is true
-    // for AArch64, but it might be good to extract this function so it can be
-    // used elsewhere and for other targets too.
-    uint64_t Address = BB->getOffset() + BF->getAddress() + 4 * I;
-    const MCInst &Inst = BB->getInstructionAtIndex(I);
+    MCInstReference Inst(BB, I);
     if (BC.MIB->isCFI(Inst))
       continue;
-    BC.printInstruction(outs(), Inst, Address, BF);
+    BC.printInstruction(outs(), Inst, getAddress(Inst), BF);
   }
 }
 
 static void reportFoundGadgetInSingleBBSingleRelatedInst(
     raw_ostream &OS, const BinaryContext &BC, const MCInstReference RelatedInst,
     const MCInstReference Location) {
-  BinaryBasicBlock *BB = Location.getBasicBlock();
-  assert(RelatedInst.ParentKind == MCInstReference::BasicBlockParent);
-  assert(Location.ParentKind == MCInstReference::BasicBlockParent);
-  MCInstInBBReference RelatedInstBB = RelatedInst.U.BBRef;
-  if (BB == RelatedInstBB.BB) {
+  const BinaryBasicBlock *BB = Location.getBasicBlock();
+  assert(RelatedInst.hasCFG());
+  assert(Location.hasCFG());
+  if (BB == RelatedInst.getBasicBlock()) {
     OS << "  This happens in the following basic block:\n";
     printBB(BC, BB);
   }
@@ -1737,16 +1721,16 @@ static void reportFoundGadgetInSingleBBSingleRelatedInst(
 
 void Diagnostic::printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                                 StringRef IssueKind) const {
-  BinaryFunction *BF = Location.getFunction();
-  BinaryBasicBlock *BB = Location.getBasicBlock();
+  const BinaryBasicBlock *BB = Location.getBasicBlock();
+  const BinaryFunction *BF = Location.getFunction();
 
   OS << "\nGS-PAUTH: " << IssueKind;
   OS << " in function " << BF->getPrintName();
   if (BB)
     OS << ", basic block " << BB->getName();
-  OS << ", at address " << llvm::format("%x", Location.getAddress()) << "\n";
+  OS << ", at address " << llvm::format("%x", getAddress(Location)) << "\n";
   OS << "  The instruction is ";
-  BC.printInstruction(OS, Location, Location.getAddress(), BF);
+  BC.printInstruction(OS, Location, getAddress(Location), BF);
 }
 
 void GadgetDiagnostic::generateReport(raw_ostream &OS,
@@ -1762,19 +1746,19 @@ static void printRelatedInstrs(raw_ostream &OS, const MCInstReference Location,
   // Sort by address to ensure output is deterministic.
   SmallVector<MCInstReference> RI(RelatedInstrs);
   llvm::sort(RI, [](const MCInstReference &A, const MCInstReference &B) {
-    return A.getAddress() < B.getAddress();
+    return getAddress(A) < getAddress(B);
   });
   for (unsigned I = 0; I < RI.size(); ++I) {
     MCInstReference InstRef = RI[I];
     OS << "  " << (I + 1) << ". ";
-    BC.printInstruction(OS, InstRef, InstRef.getAddress(), &BF);
+    BC.printInstruction(OS, InstRef, getAddress(InstRef), &BF);
   };
   if (RelatedInstrs.size() == 1) {
     const MCInstReference RelatedInst = RelatedInstrs[0];
     // Printing the details for the MCInstReference::FunctionParent case
     // is not implemented not to overcomplicate the code, as most functions
     // are expected to have CFG information.
-    if (RelatedInst.ParentKind == MCInstReference::BasicBlockParent)
+    if (RelatedInst.hasCFG())
       reportFoundGadgetInSingleBBSingleRelatedInst(OS, BC, RelatedInst,
                                                    Location);
   }
