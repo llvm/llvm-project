@@ -183,3 +183,29 @@ func.func @opaque_type_expression(%arg0: i32,  %arg1: !emitc.opaque<"T0">, %arg2
   %c = emitc.cmp lt, %b, %arg2 :(i32, i32) -> i1
   return %c : i1
 }
+
+// CHECK-LABEL:   func.func @expression_with_literal(
+// CHECK-SAME:      %[[ARG0:.*]]: i32) -> i1 {
+// CHECK:           %[[VAL_0:.*]] = emitc.expression : i32 {
+// CHECK:             %[[VAL_1:.*]] = literal "1" : i32
+// CHECK:             yield %[[VAL_1]] : i32
+// CHECK:           }
+// CHECK:           %[[VAL_2:.*]] = emitc.expression : i32 {
+// CHECK:             %[[VAL_3:.*]] = literal "2" : i32
+// CHECK:             yield %[[VAL_3]] : i32
+// CHECK:           }
+// CHECK:           %[[VAL_4:.*]] = emitc.expression : i1 {
+// CHECK:             %[[VAL_5:.*]] = add %[[VAL_0]], %[[VAL_2]] : (i32, i32) -> i32
+// CHECK:             %[[VAL_6:.*]] = cmp lt, %[[VAL_5]], %[[ARG0]] : (i32, i32) -> i1
+// CHECK:             yield %[[VAL_6]] : i1
+// CHECK:           }
+// CHECK:           return %[[VAL_4]] : i1
+// CHECK:         }
+
+func.func @expression_with_literal(%arg0: i32) -> i1 {
+  %literal1 = emitc.literal "1" : i32
+  %literal2 = emitc.literal "2" : i32
+  %b = emitc.add %literal1, %literal2 : (i32, i32) -> i32
+  %c = emitc.cmp lt, %b, %arg0 :(i32, i32) -> i1
+  return %c : i1
+}
