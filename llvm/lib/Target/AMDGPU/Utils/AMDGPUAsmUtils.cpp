@@ -106,7 +106,7 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_GET_DDID"},            ID_GET_DDID,                isGFX10},
   {{"MSG_HS_TESSFACTOR"},       ID_HS_TESSFACTOR_GFX11Plus, isGFX11Plus},
   {{"MSG_DEALLOC_VGPRS"},       ID_DEALLOC_VGPRS_GFX11Plus, isGFX11Plus},
-  {{""}},
+  {{"MSG_SAVEWAVE_HAS_TDM"},    ID_SAVEWAVE_HAS_TDM,        isGFX1250},
   {{"MSG_SYSMSG"},              ID_SYSMSG},
   {{"MSG_RTN_GET_DOORBELL"},    ID_RTN_GET_DOORBELL,        isGFX11Plus},
   {{"MSG_RTN_GET_DDID"},        ID_RTN_GET_DDID,            isGFX11Plus},
@@ -195,7 +195,7 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
   {{""}},
   {{"HW_REG_PERF_SNAPSHOT_DATA"}, ID_PERF_SNAPSHOT_DATA_gfx11, isGFX11},
-  {{""}},
+  {{"HW_REG_IB_STS2"}, ID_IB_STS2, isGFX1250},
   {{"HW_REG_SHADER_CYCLES"},    ID_SHADER_CYCLES,    isGFX10_3_GFX11},
   {{"HW_REG_SHADER_CYCLES_HI"}, ID_SHADER_CYCLES_HI, isGFX12Plus},
   {{"HW_REG_DVGPR_ALLOC_LO"},   ID_DVGPR_ALLOC_LO,   isGFX12Plus},
@@ -222,6 +222,10 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA1"}, ID_SQ_PERF_SNAPSHOT_DATA1, isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_PC_LO"}, ID_SQ_PERF_SNAPSHOT_PC_LO, isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_PC_HI"}, ID_SQ_PERF_SNAPSHOT_PC_HI, isGFX940},
+
+  // GFX1250
+  {{"HW_REG_XNACK_STATE_PRIV"},       ID_XNACK_STATE_PRIV,       isGFX1250},
+  {{"HW_REG_XNACK_MASK"},             ID_XNACK_MASK_gfx1250,     isGFX1250},
 
   // Aliases
   {{"HW_REG_HW_ID"},                  ID_HW_ID1,                 isGFX10},

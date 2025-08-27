@@ -122,7 +122,9 @@ public:
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
-    SameSign = 1 << 21       // Both operands have the same sign.
+    SameSign = 1 << 21,      // Both operands have the same sign.
+    InBounds = 1 << 22       // Pointer arithmetic remains inbounds.
+                             // Implies NoUSWrap.
   };
 
 private:

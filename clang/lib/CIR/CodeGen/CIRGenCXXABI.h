@@ -63,6 +63,16 @@ public:
   /// parameter.
   virtual bool needsVTTParameter(clang::GlobalDecl gd) { return false; }
 
+  /// Perform ABI-specific "this" argument adjustment required prior to
+  /// a call of a virtual function.
+  /// The "VirtualCall" argument is true iff the call itself is virtual.
+  virtual Address adjustThisArgumentForVirtualFunctionCall(CIRGenFunction &cgf,
+                                                           clang::GlobalDecl gd,
+                                                           Address thisPtr,
+                                                           bool virtualCall) {
+    return thisPtr;
+  }
+
   /// Build a parameter variable suitable for 'this'.
   void buildThisParam(CIRGenFunction &cgf, FunctionArgList &params);
 
@@ -75,6 +85,20 @@ public:
   /// Emit dtor variants required by this ABI.
   virtual void emitCXXDestructors(const clang::CXXDestructorDecl *d) = 0;
 
+  virtual void emitDestructorCall(CIRGenFunction &cgf,
+                                  const CXXDestructorDecl *dd, CXXDtorType type,
+                                  bool forVirtualBase, bool delegating,
+                                  Address thisAddr, QualType thisTy) = 0;
+
+  /// Checks if ABI requires extra virtual offset for vtable field.
+  virtual bool
+  isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
+                                      CIRGenFunction::VPtr vptr) = 0;
+
+  /// Emits the VTable definitions required for the given record type.
+  virtual void emitVTableDefinitions(CIRGenVTables &cgvt,
+                                     const CXXRecordDecl *rd) = 0;
+
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or
   /// not.
@@ -84,6 +108,33 @@ public:
   virtual cir::GlobalLinkageKind
   getCXXDestructorLinkage(GVALinkage linkage, const CXXDestructorDecl *dtor,
                           CXXDtorType dt) const;
+
+  /// Get the address of the vtable for the given record decl which should be
+  /// used for the vptr at the given offset in RD.
+  virtual cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *rd,
+                                        CharUnits vptrOffset) = 0;
+
+  /// Build a virtual function pointer in the ABI-specific way.
+  virtual CIRGenCallee getVirtualFunctionPointer(CIRGenFunction &cgf,
+                                                 clang::GlobalDecl gd,
+                                                 Address thisAddr,
+                                                 mlir::Type ty,
+                                                 SourceLocation loc) = 0;
+
+  /// Get the address point of the vtable for the given base subobject.
+  virtual mlir::Value
+  getVTableAddressPoint(BaseSubobject base,
+                        const CXXRecordDecl *vtableClass) = 0;
+
+  /// Get the address point of the vtable for the given base subobject while
+  /// building a constructor or a destructor.
+  virtual mlir::Value getVTableAddressPointInStructor(
+      CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
+      const CXXRecordDecl *nearestVBase) = 0;
+
+  /// Checks if ABI requires to initialize vptrs for given dynamic class.
+  virtual bool
+  doStructorsInitializeVPtrs(const clang::CXXRecordDecl *vtableClass) = 0;
 
   /// Returns true if the given constructor or destructor is one of the kinds
   /// that the ABI says returns 'this' (only applies when called non-virtually

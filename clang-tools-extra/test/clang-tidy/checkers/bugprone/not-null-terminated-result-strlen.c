@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy --match-partial-fixes %s bugprone-not-null-terminated-result %t -- \
-// RUN: -- -std=c11 -I %S/Inputs/not-null-terminated-result
+// RUN: -- -I %S/Inputs/not-null-terminated-result
 
 // FIXME: Something wrong with the APInt un/signed conversion on Windows:
 // in 'strncmp(str6, "string", 7);' it tries to inject '4294967302' as length.

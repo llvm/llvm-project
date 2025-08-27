@@ -406,9 +406,6 @@ def pop_state: F<"pop-state">,
 def push_state: F<"push-state">,
   HelpText<"Save the current state of --as-needed, -static and --whole-archive">;
 
-def preferred_function_alignment: JJ<"preferred-function-alignment=">,
-  HelpText<"Align functions to the given alignment if possible">;
-
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 

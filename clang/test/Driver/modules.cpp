@@ -34,7 +34,7 @@
 
 // Check combining precompile and compile steps works.
 //
-// RUN: %clang -std=c++2a -x c++-module %t/foo.cpp -S -o %t/foo2.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE --check-prefix=CHECK-COMPILE
+// RUN: %clang -std=c++2a -x c++-module -fno-modules-reduced-bmi %t/foo.cpp -S -o %t/foo2.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE --check-prefix=CHECK-COMPILE
 
 // Check that .cppm is treated as a module implicitly.
 //

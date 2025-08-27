@@ -54,9 +54,9 @@ define void @caller2_below_threshold(ptr %p1, i1 %b) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[SPLIT:%.*]]
 ; CHECK:       split:
 ; CHECK-NEXT:    [[SAVEDSTACK:%.*]] = call ptr @llvm.stacksave.p0()
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 60000, ptr [[VLA_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VLA_I]])
 ; CHECK-NEXT:    call void @extern_call(ptr nonnull [[VLA_I]]) #[[ATTR3]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 60000, ptr [[VLA_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VLA_I]])
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SAVEDSTACK]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:

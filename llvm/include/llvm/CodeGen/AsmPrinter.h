@@ -135,12 +135,12 @@ public:
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
 
-  /// Vector of symbols marking the position of callsites in the current
+  /// Vector of symbols marking the end of the callsites in the current
   /// function, keyed by their containing basic block.
   /// The callsite symbols of each block are stored in the order they appear
   /// in that block.
   DenseMap<const MachineBasicBlock *, SmallVector<MCSymbol *, 1>>
-      CurrentFnCallsiteSymbols;
+      CurrentFnCallsiteEndSymbols;
 
   /// Provides the profile information for constants.
   const StaticDataProfileInfo *SDPI = nullptr;
@@ -189,6 +189,36 @@ private:
 
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
+
+  /// Store symbols and type identifiers used to create callgraph section
+  /// entries related to a function.
+  struct FunctionInfo {
+    /// Numeric type identifier used in callgraph section for indirect calls
+    /// and targets.
+    using CGTypeId = uint64_t;
+
+    /// Enumeration of function kinds, and their mapping to function kind values
+    /// stored in callgraph section entries.
+    /// Must match the enum in llvm/tools/llvm-objdump/llvm-objdump.cpp.
+    enum class FunctionKind : uint64_t {
+      /// Function cannot be target to indirect calls.
+      NOT_INDIRECT_TARGET = 0,
+
+      /// Function may be target to indirect calls but its type id is unknown.
+      INDIRECT_TARGET_UNKNOWN_TID = 1,
+
+      /// Function may be target to indirect calls and its type id is known.
+      INDIRECT_TARGET_KNOWN_TID = 2,
+    };
+
+    /// Map type identifiers to callsite labels. Labels are generated for each
+    /// indirect callsite in the function.
+    SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
+  };
+
+  enum CallGraphSectionFormatVersion : uint64_t {
+    V_0 = 0,
+  };
 
   /// Output stream for the stack usage file (i.e., .su file).
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
@@ -302,9 +332,9 @@ public:
   /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
-  /// Creates a new symbol to be used for the beginning of a callsite at the
-  /// specified basic block.
-  MCSymbol *createCallsiteSymbol(const MachineBasicBlock &MBB);
+  /// Creates a new symbol to be used for the end of a callsite at the specified
+  /// basic block.
+  MCSymbol *createCallsiteEndSymbol(const MachineBasicBlock &MBB);
 
   /// If the specified function has had any references to address-taken blocks
   /// generated, but the block got deleted, return the symbol now so we can
@@ -354,6 +384,13 @@ public:
   /// Returns a section suffix (hot or unlikely) for the constant if profiles
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
+
+  /// Generate and emit labels for callees of the indirect callsites which will
+  /// be used to populate the .callgraph section.
+  void emitIndirectCalleeLabels(
+      FunctionInfo &FuncInfo,
+      const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+      const MachineInstr &MI);
 
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
@@ -441,6 +478,8 @@ public:
 
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
+
+  void emitCallGraphSection(const MachineFunction &MF, FunctionInfo &FuncInfo);
 
   void emitPseudoProbe(const MachineInstr &MI);
 

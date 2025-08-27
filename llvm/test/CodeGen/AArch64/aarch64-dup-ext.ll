@@ -14,10 +14,10 @@ define <8 x i16> @dupsext_v8i8_v8i16(i8 %src, <8 x i8> %b) {
 ; CHECK-GI-LABEL: dupsext_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    lsl w8, w0, #8
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
 ; CHECK-GI-NEXT:    dup v1.8h, w8
-; CHECK-GI-NEXT:    mul v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    xtn v1.8b, v1.8h
+; CHECK-GI-NEXT:    smull v0.8h, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 entry:
   %in = sext i8 %src to i16

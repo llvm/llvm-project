@@ -18,6 +18,7 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SourceModule.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -327,6 +328,18 @@ public:
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names);
+
+  /// Resolves the function corresponding to the specified LLDB function
+  /// call \c label.
+  ///
+  /// \param[in] label The FunctionCallLabel to be resolved.
+  ///
+  /// \returns An llvm::Error if the specified \c label couldn't be resolved.
+  ///          Returns the resolved function (as a SymbolContext) otherwise.
+  virtual llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(const FunctionCallLabel &label) {
+    return llvm::createStringError("Not implemented");
+  }
 
   virtual void GetTypes(lldb_private::SymbolContextScope *sc_scope,
                         lldb::TypeClass type_mask,

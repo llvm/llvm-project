@@ -86,8 +86,8 @@ define i16 @test_to_fp16(double %in) {
 
 ; CHECK-FP16-SAFE: bl __aeabi_d2h
 
-; CHECK-FP16-UNSAFE:      vcvt.f32.f64 s0, d0
-; CHECK-FP16-UNSAFE-NEXT: vcvtb.f16.f32 s0, s0
+; CHECK-FP16-UNSAFE:      vmov r0, r1, d0
+; CHECK-FP16-UNSAFE-NEXT: bl __aeabi_d2h
 
 ; CHECK-ARMV8: vcvtb.f16.f64 [[TMP:s[0-9]+]], d0
 ; CHECK-ARMV8: vmov r0, [[TMP]]

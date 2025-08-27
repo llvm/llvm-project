@@ -82,8 +82,8 @@ LogicalResult resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
   // Replace createMaskOp with an all-true constant. This should result in the
   // mask being removed in most cases (as xfer ops + vector.mask have folds to
   // remove all-true masks).
-  auto allTrue = rewriter.create<vector::ConstantMaskOp>(
-      createMaskOp.getLoc(), maskType, ConstantMaskKind::AllTrue);
+  auto allTrue = vector::ConstantMaskOp::create(
+      rewriter, createMaskOp.getLoc(), maskType, ConstantMaskKind::AllTrue);
   rewriter.replaceAllUsesWith(createMaskOp, allTrue);
   return success();
 }
