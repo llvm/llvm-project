@@ -55,7 +55,7 @@ static bool validateFullTilesOnDims(linalg::LinalgOp linalgOp,
   // Skip the batch dimension if present.
   // Offset all dimensions accordingly.
   SmallVector<int64_t, 3> offsetDims(dims);
-  for (long &offsetDim : offsetDims)
+  for (int64_t &offsetDim : offsetDims)
     offsetDim += batchDimsOffset;
 
   auto tileOp = cast<TilingInterface>(linalgOp.getOperation());
