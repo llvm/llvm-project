@@ -60,7 +60,12 @@ static cl::opt<DynoStatsSortOrder> DynoStatsSortOrderOpt(
     "print-sorted-by-order",
     cl::desc("use ascending or descending order when printing functions "
              "ordered by dyno stats"),
-    cl::init(DynoStatsSortOrder::Descending), cl::cat(BoltOptCategory));
+    cl::init(DynoStatsSortOrder::Descending),
+    cl::values(clEnumValN(DynoStatsSortOrder::Ascending, "ascending",
+                          "Ascending order"),
+               clEnumValN(DynoStatsSortOrder::Descending, "descending",
+                          "Descending order")),
+    cl::cat(BoltOptCategory));
 
 cl::list<std::string>
 HotTextMoveSections("hot-text-move-sections",
