@@ -15,8 +15,10 @@
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
 ; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,PREFIX,STAT
 
-; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix=false \
-; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --implicit-check-not="section_prefix" 
+;; Run optimizer pass without explicitly setting -memprof-annotate-static-data-prefix.
+;; The output text IR shouldn't have `section_prefix`
+; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' \
+; RUN: -debug-only=memprof -stats -S input.ll -o - | FileCheck %s --implicit-check-not="section_prefix"
 
 ; LOG: Skip annotating string literal .str
 ; LOG: Global variable var1 is annotated as hot

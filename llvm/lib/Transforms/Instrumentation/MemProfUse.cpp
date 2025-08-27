@@ -77,7 +77,7 @@ static cl::opt<unsigned> MinMatchedColdBytePercent(
     cl::desc("Min percent of cold bytes matched to hint allocation cold"));
 
 static cl::opt<bool> AnnotateStaticDataSectionPrefix(
-    "memprof-annotate-static-data-prefix", cl::init(true), cl::Hidden,
+    "memprof-annotate-static-data-prefix", cl::init(false), cl::Hidden,
     cl::desc("If true, annotate the static data section prefix"));
 
 // Matching statistics
