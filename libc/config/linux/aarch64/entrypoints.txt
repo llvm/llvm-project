@@ -860,8 +860,11 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.bf16sub
   libc.src.math.bf16subf
   libc.src.math.bf16subl
+  libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
+  libc.src.math.copysignbf16
   libc.src.math.fabsbf16
+  libc.src.math.fdimbf16
   libc.src.math.floorbf16
   libc.src.math.fmaxbf16
   libc.src.math.fmaximumbf16
@@ -878,6 +881,8 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
   libc.src.math.ilogbbf16
+  libc.src.math.iscanonicalbf16
+  libc.src.math.issignalingbf16
   libc.src.math.ldexpbf16
   libc.src.math.llogbbf16
   libc.src.math.llrintbf16
