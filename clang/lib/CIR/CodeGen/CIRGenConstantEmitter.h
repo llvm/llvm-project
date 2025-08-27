@@ -113,7 +113,8 @@ public:
   mlir::TypedAttr tryEmitPrivate(const Expr *e, QualType destType);
   mlir::Attribute tryEmitPrivate(const APValue &value, QualType destType);
   mlir::Attribute tryEmitPrivateForMemory(const Expr *e, QualType destTy);
-  mlir::Attribute tryEmitPrivateForMemory(const APValue &value, QualType destTy);
+  mlir::Attribute tryEmitPrivateForMemory(const APValue &value,
+                                          QualType destTy);
 
 private:
 #ifndef NDEBUG
