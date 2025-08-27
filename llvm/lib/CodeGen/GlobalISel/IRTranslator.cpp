@@ -2195,6 +2195,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   if (translateSimpleIntrinsic(CI, ID, MIRBuilder))
     return true;
 
+  LLVM_DEBUG(dbgs() << "IRTranslator translateKnownIntrinsic for CI: " << CI << '\n');
+  LLVM_DEBUG(dbgs() << "IRTranslator translateKnownIntrinsic for ID: " << ID << '\n');
   switch (ID) {
   default:
     break;
@@ -2581,9 +2583,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     Value *FpValue = CI.getOperand(0);
     ConstantInt *TestMaskValue = cast<ConstantInt>(CI.getOperand(1));
 
+    uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
     MIRBuilder
         .buildInstr(TargetOpcode::G_IS_FPCLASS, {getOrCreateVReg(CI)},
-                    {getOrCreateVReg(*FpValue)})
+                    {getOrCreateVReg(*FpValue)}, Flags)
         .addImm(TestMaskValue->getZExtValue());
 
     return true;
@@ -2813,12 +2816,6 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (isa<FPMathOperator>(CI))
     MIB->copyIRFlags(CI);
 
-  // If the spirv intrinsic contain bfloat, enable to Bfloat flag in MachineInst
-  if (containsBF16Type(U)) {
-    // assert(false && "bfloat detected at the IR Translator");
-    MIB->setFlag(MachineInstr::MIFlag::BFloat16);
-  }
-
   for (const auto &Arg : enumerate(CI.args())) {
     // If this is required to be an immediate, don't materialize it in a
     // register.
@@ -2879,6 +2876,13 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       MIB.addUse(TokenReg, RegState::Implicit);
     }
   }
+
+  // If the spirv intrinsic contain bfloat, enable to Bfloat flag in MachineInst
+  if (containsBF16Type(U)) {
+    dbgs() << "Flagged at IRTranslator: " << *MIB.getInstr() << "\n";
+    MIB.getInstr()->setFlag(MachineInstr::MIFlag::BFloat16);
+  }
+   MIB->copyIRFlags(CI);
   
   return true;
 }
@@ -4161,6 +4165,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
         // Translate any debug-info attached to the instruction.
         translateDbgInfo(Inst, *CurBuilder);
+        LLVM_DEBUG(dbgs() << "Inst at IRTranslator: " << Inst << "\n");
 
         if (translate(Inst))
           continue;

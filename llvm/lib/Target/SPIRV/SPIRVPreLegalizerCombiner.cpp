@@ -156,6 +156,12 @@ SPIRVPreLegalizerCombinerImpl::SPIRVPreLegalizerCombinerImpl(
 }
 
 bool SPIRVPreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
+  // Inst combiner is disabled for instructions
+  // with bfloat type.
+  // TODO: add bfloat-specific inst combiner rules
+  if (MI.getFlag(MachineInstr::BFloat16))
+    return false;
+
   return tryCombineAllImpl(MI);
 }
 

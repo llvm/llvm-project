@@ -1262,6 +1262,7 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpTypeFloat: {
+    assert(false && "bfloat detected at the spirv module analysis");
     unsigned BitWidth = MI.getOperand(1).getImm();
     if (BitWidth == 64)
       Reqs.addCapability(SPIRV::Capability::Float64);
@@ -1270,7 +1271,7 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpTypeBFloat: {
-    assert(false && "bfloat detected at the file");
+    assert(false && "bfloat detected at the spirv module analysis");
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
     Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
     break;

@@ -632,9 +632,19 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
   if (I.getMetadata(LLVMContext::MD_unpredictable))
     MIFlags |= MachineInstr::MIFlag::Unpredictable;
 
-  if (I.getType()->getScalarType()->isBFloatTy()) {
+  auto *Sel = dyn_cast<SelectInst>(&I);
+  bool BFloatOpnd = !Sel && I.getType()->getScalarType()->isBFloatTy();
+
+  if (isa<CallInst>(&I)) {
+    for (const Value *Op : I.operands()) {
+      Type *OpTy = Op->getType();
+      BFloatOpnd |= OpTy->getScalarType()->isBFloatTy();
+    }
+  }
+
+  if (BFloatOpnd) {
     MIFlags |= MachineInstr::MIFlag::BFloat16;
-    // assert(false && "bfloat detected at the MachineInstr");
+    LLVM_DEBUG(dbgs() << "bfloat detected at the MachineInstr" << "\n");
   }
 
   return MIFlags;

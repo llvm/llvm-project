@@ -192,6 +192,10 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
     if (MBB->empty())
       continue;
     for (MachineInstr &MI : *MBB) {
+      dbgs() << "Legalizer sees: " << MI << "\n";
+      if(MI.getFlag(MachineInstr::MIFlag::BFloat16)) {
+        assert(false && "bfloat detected at the Legalizer");
+      }
       // Only legalize pre-isel generic instructions: others don't have types
       // and are assumed to be legal.
       if (!isPreISelGenericOpcode(MI.getOpcode()))
