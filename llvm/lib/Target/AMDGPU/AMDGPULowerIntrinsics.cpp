@@ -73,10 +73,7 @@ bool AMDGPULowerIntrinsicsImpl::run() {
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
     case Intrinsic::amdgcn_s_barrier_wait:
-      forEachCall(F, [&](IntrinsicInst *II) {
-        if (visitBarrier(*II))
-          Changed = true;
-      });
+      forEachCall(F, [&](IntrinsicInst *II) { Changed |= visitBarrier(*II); });
       break;
     }
   }
