@@ -386,12 +386,12 @@ public:
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
 
-  /// Generate and emit labels for callees of the indirect callsites which will
+  /// Generate and emit labels for callees of all callsites which will
   /// be used to populate the .callgraph section.
-  void emitIndirectCalleeLabels(
-      FunctionInfo &FuncInfo,
-      const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
-      const MachineInstr &MI);
+  void
+  emitCalleeLabels(FunctionInfo &FuncInfo,
+                   const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+                   const MachineInstr &MI);
 
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.

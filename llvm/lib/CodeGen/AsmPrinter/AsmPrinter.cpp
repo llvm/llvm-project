@@ -1875,7 +1875,7 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
   return Name;
 }
 
-void AsmPrinter::emitIndirectCalleeLabels(
+void AsmPrinter::emitCalleeLabels(
     FunctionInfo &FuncInfo,
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
@@ -2093,9 +2093,8 @@ void AsmPrinter::emitFunctionBody() {
       if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
         OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
 
-      if (TM.Options.EmitCallGraphSection && MI.isCall()) {
-        emitIndirectCalleeLabels(FuncInfo, CallSitesInfoMap, MI);
-      }
+      if (TM.Options.EmitCallGraphSection && MI.isCall())
+        emitCalleeLabels(FuncInfo, CallSitesInfoMap, MI);
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())
