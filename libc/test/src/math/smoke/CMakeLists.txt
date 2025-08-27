@@ -433,6 +433,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  canonicalizebf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    canonicalizebf16_test.cpp
+  HDRS
+    CanonicalizeTest.h
+  DEPENDS
+    libc.src.math.canonicalizebf16
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
+)
+
+add_fp_unittest(
   iscanonical_test
   SUITE
     libc-math-smoke-tests
@@ -490,6 +506,19 @@ add_fp_unittest(
     IsCanonicalTest.h
   DEPENDS
     libc.src.math.iscanonicalf128
+)
+
+add_fp_unittest(
+  iscanonicalbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonicalbf16_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonicalbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -1560,6 +1589,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  copysignbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    copysignbf16_test.cpp
+  HDRS
+    CopySignTest.h
+  DEPENDS
+    libc.src.math.copysignbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   frexp_test
   SUITE
     libc-math-smoke-tests
@@ -2077,6 +2121,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  issignalingbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    issignalingbf16_test.cpp
+  HDRS
+    IsSignalingTest.h
+  DEPENDS
+    libc.src.math.issignalingbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   llogb_test
   SUITE
     libc-math-smoke-tests
@@ -2507,6 +2564,21 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fdimf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fdimbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdimbf16_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdimbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
 )
 
