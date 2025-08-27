@@ -208,6 +208,7 @@ RT_API_ATTRS int CFI_select_part(CFI_cdesc_t *, const CFI_cdesc_t *source,
     size_t displacement, size_t elem_len);
 RT_API_ATTRS int CFI_setpointer(
     CFI_cdesc_t *, const CFI_cdesc_t *source, const CFI_index_t lower_bounds[]);
+RT_API_ATTRS void CFI_show(void *buf, const CFI_cdesc_t *descr);
 #ifdef __cplusplus
 } // extern "C"
 #endif
