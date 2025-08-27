@@ -1,4 +1,7 @@
-add_clang_unittest(SemaTests
+# There are only a small number of tests here,
+# allow running them without building all of
+# AllClangUnitTests.
+add_distinct_clang_unittest(SemaTests
   ExternalSemaSourceTest.cpp
   CodeCompleteTest.cpp
   HeuristicResolverTest.cpp
