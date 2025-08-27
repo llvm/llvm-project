@@ -120,7 +120,7 @@ define i64 @slli(i64 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a2, a0, 25
 ; RV32I-NEXT:    slli a1, a1, 7
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    slli a0, a0, 7
 ; RV32I-NEXT:    ret
   %1 = shl i64 %a, 7
@@ -137,7 +137,7 @@ define i64 @srli(i64 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a2, a1, 24
 ; RV32I-NEXT:    srli a0, a0, 8
-; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    srli a1, a1, 8
 ; RV32I-NEXT:    ret
   %1 = lshr i64 %a, 8
@@ -154,7 +154,7 @@ define i64 @srai(i64 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a2, a1, 23
 ; RV32I-NEXT:    srli a0, a0, 9
-; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    srai a1, a1, 9
 ; RV32I-NEXT:    ret
   %1 = ashr i64 %a, 9

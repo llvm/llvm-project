@@ -42,19 +42,19 @@ define i64 @load_unaligned(ptr %p) {
 ; SLOW-NEXT:    slli a1, a1, 8
 ; SLOW-NEXT:    slli a2, a2, 16
 ; SLOW-NEXT:    slli a3, a3, 24
-; SLOW-NEXT:    or a1, a1, a4
-; SLOW-NEXT:    or a2, a3, a2
+; SLOW-NEXT:    add a1, a1, a4
+; SLOW-NEXT:    add a2, a3, a2
 ; SLOW-NEXT:    lbu a3, 5(a0)
 ; SLOW-NEXT:    lbu a4, 4(a0)
 ; SLOW-NEXT:    lbu a5, 6(a0)
 ; SLOW-NEXT:    lbu a0, 7(a0)
 ; SLOW-NEXT:    slli a3, a3, 8
-; SLOW-NEXT:    or a3, a3, a4
+; SLOW-NEXT:    add a3, a3, a4
 ; SLOW-NEXT:    slli a5, a5, 16
 ; SLOW-NEXT:    slli a0, a0, 24
-; SLOW-NEXT:    or a5, a0, a5
-; SLOW-NEXT:    or a0, a2, a1
-; SLOW-NEXT:    or a1, a5, a3
+; SLOW-NEXT:    add a5, a0, a5
+; SLOW-NEXT:    add a0, a2, a1
+; SLOW-NEXT:    add a1, a5, a3
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: load_unaligned:

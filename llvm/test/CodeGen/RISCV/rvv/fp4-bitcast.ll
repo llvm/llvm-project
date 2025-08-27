@@ -15,13 +15,13 @@ define <2 x i8> @fp4(<4 x i4> %0) nounwind {
 ; CHECK-NEXT:    vmv.x.s a2, v9
 ; CHECK-NEXT:    andi a1, a1, 15
 ; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    andi a2, a2, 15
 ; CHECK-NEXT:    slli a1, a1, 12
 ; CHECK-NEXT:    slli a2, a2, 8
-; CHECK-NEXT:    or a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    sh a0, 14(sp)
 ; CHECK-NEXT:    addi a0, sp, 14
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma

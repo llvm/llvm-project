@@ -115,7 +115,7 @@ define i64 @disjointormul6(i64 %a, i64 %b) {
 ; RV64I-NEXT:    slli a2, a0, 1
 ; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    sub a0, a0, a2
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64XTHEADBA-LABEL: disjointormul6:
@@ -1052,7 +1052,7 @@ define i64 @add4104_2(i64 %a) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 1
 ; RV64I-NEXT:    addi a1, a1, 8
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64XTHEADBA-LABEL: add4104_2:

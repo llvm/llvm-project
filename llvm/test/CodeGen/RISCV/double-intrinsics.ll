@@ -842,7 +842,7 @@ define double @copysign_f64(double %a, double %b) nounwind {
 ; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    and a2, a3, a2
 ; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: copysign_f64:
@@ -851,7 +851,7 @@ define double @copysign_f64(double %a, double %b) nounwind {
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = call double @llvm.copysign.f64(double %a, double %b)
   ret double %1

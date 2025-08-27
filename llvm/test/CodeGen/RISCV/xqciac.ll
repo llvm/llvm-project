@@ -295,7 +295,7 @@ define dso_local i64 @shladd64(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; RV32IM-NEXT:    srli a4, a2, 1
 ; RV32IM-NEXT:    slli a3, a3, 31
 ; RV32IM-NEXT:    slli a2, a2, 31
-; RV32IM-NEXT:    or a3, a3, a4
+; RV32IM-NEXT:    add a3, a3, a4
 ; RV32IM-NEXT:    add a0, a2, a0
 ; RV32IM-NEXT:    sltu a2, a0, a2
 ; RV32IM-NEXT:    add a1, a3, a1
@@ -333,7 +333,7 @@ define dso_local i32 @shladd_ordisjoint(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; RV32IM-LABEL: shladd_ordisjoint:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    slli a1, a1, 22
-; RV32IM-NEXT:    or a0, a1, a0
+; RV32IM-NEXT:    add a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
 ; RV32IMXQCIAC-LABEL: shladd_ordisjoint:
@@ -409,7 +409,7 @@ define dso_local i64 @shladdc1c264(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; RV32IM-NEXT:    slli a1, a0, 23
 ; RV32IM-NEXT:    srli a0, a2, 12
 ; RV32IM-NEXT:    slli a3, a3, 20
-; RV32IM-NEXT:    or a3, a3, a0
+; RV32IM-NEXT:    add a3, a3, a0
 ; RV32IM-NEXT:    slli a0, a2, 20
 ; RV32IM-NEXT:    add a1, a1, a3
 ; RV32IM-NEXT:    ret

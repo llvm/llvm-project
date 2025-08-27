@@ -1465,11 +1465,12 @@ def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
 
-// Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
-// can improve compressibility.
 def riscv_or_disjoint : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
   return orDisjoint(N);
 }]>;
+// Select 'or' as ADD or ADDI if known disjoint.  There is no c.ori, and c.add allows
+// more registers than c.or.
+def : PatGprGpr<riscv_or_disjoint, ADD>;
 def : PatGprSimm12<riscv_or_disjoint, ADDI>;
 
 def add_like : PatFrags<(ops node:$lhs, node:$rhs),

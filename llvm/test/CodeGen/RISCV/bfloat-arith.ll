@@ -79,7 +79,7 @@ define bfloat @fsgnj_bf16(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-NEXT:    fmv.x.h a1, fa0
 ; RV32IZFBFMIN-NEXT:    slli a1, a1, 17
 ; RV32IZFBFMIN-NEXT:    srli a1, a1, 17
-; RV32IZFBFMIN-NEXT:    or a0, a1, a0
+; RV32IZFBFMIN-NEXT:    add a0, a1, a0
 ; RV32IZFBFMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFBFMIN-NEXT:    ret
 ;
@@ -91,7 +91,7 @@ define bfloat @fsgnj_bf16(bfloat %a, bfloat %b) nounwind {
 ; RV64IZFBFMIN-NEXT:    fmv.x.h a1, fa0
 ; RV64IZFBFMIN-NEXT:    slli a1, a1, 49
 ; RV64IZFBFMIN-NEXT:    srli a1, a1, 49
-; RV64IZFBFMIN-NEXT:    or a0, a1, a0
+; RV64IZFBFMIN-NEXT:    add a0, a1, a0
 ; RV64IZFBFMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFBFMIN-NEXT:    ret
   %1 = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
@@ -133,7 +133,7 @@ define bfloat @fsgnjn_bf16(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-NEXT:    fmv.x.h a1, fa0
 ; RV32IZFBFMIN-NEXT:    slli a1, a1, 17
 ; RV32IZFBFMIN-NEXT:    srli a1, a1, 17
-; RV32IZFBFMIN-NEXT:    or a0, a1, a0
+; RV32IZFBFMIN-NEXT:    add a0, a1, a0
 ; RV32IZFBFMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFBFMIN-NEXT:    ret
 ;
@@ -150,7 +150,7 @@ define bfloat @fsgnjn_bf16(bfloat %a, bfloat %b) nounwind {
 ; RV64IZFBFMIN-NEXT:    fmv.x.h a1, fa0
 ; RV64IZFBFMIN-NEXT:    slli a1, a1, 49
 ; RV64IZFBFMIN-NEXT:    srli a1, a1, 49
-; RV64IZFBFMIN-NEXT:    or a0, a1, a0
+; RV64IZFBFMIN-NEXT:    add a0, a1, a0
 ; RV64IZFBFMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFBFMIN-NEXT:    ret
   %1 = fadd bfloat %a, %b

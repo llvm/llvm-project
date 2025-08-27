@@ -428,7 +428,7 @@ define half @fsgnj_h(half %a, half %b) nounwind {
 ; RV32I-NEXT:    slli a0, a0, 17
 ; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    srli a0, a0, 17
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fsgnj_h:
@@ -437,7 +437,7 @@ define half @fsgnj_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    slli a0, a0, 49
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    srli a0, a0, 49
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZFHMIN-LABEL: fsgnj_h:
@@ -448,7 +448,7 @@ define half @fsgnj_h(half %a, half %b) nounwind {
 ; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV32IZFHMIN-NEXT:    slli a1, a1, 17
 ; RV32IZFHMIN-NEXT:    srli a1, a1, 17
-; RV32IZFHMIN-NEXT:    or a0, a1, a0
+; RV32IZFHMIN-NEXT:    add a0, a1, a0
 ; RV32IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFHMIN-NEXT:    ret
 ;
@@ -460,7 +460,7 @@ define half @fsgnj_h(half %a, half %b) nounwind {
 ; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV64IZFHMIN-NEXT:    slli a1, a1, 49
 ; RV64IZFHMIN-NEXT:    srli a1, a1, 49
-; RV64IZFHMIN-NEXT:    or a0, a1, a0
+; RV64IZFHMIN-NEXT:    add a0, a1, a0
 ; RV64IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFHMIN-NEXT:    ret
 ;
@@ -472,7 +472,7 @@ define half @fsgnj_h(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
-; RV32IZHINXMIN-NEXT:    or a0, a0, a1
+; RV32IZHINXMIN-NEXT:    add a0, a0, a1
 ; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
@@ -484,7 +484,7 @@ define half @fsgnj_h(half %a, half %b) nounwind {
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
-; RV64IZHINXMIN-NEXT:    or a0, a0, a1
+; RV64IZHINXMIN-NEXT:    add a0, a0, a1
 ; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.copysign.f16(half %a, half %b)
@@ -647,7 +647,7 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ; RV32I-NEXT:    slli s1, s1, 17
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    srli s1, s1, 17
-; RV32I-NEXT:    or a0, s1, a0
+; RV32I-NEXT:    add a0, s1, a0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -686,7 +686,7 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ; RV64I-NEXT:    slli s1, s1, 49
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    srli s1, s1, 49
-; RV64I-NEXT:    or a0, s1, a0
+; RV64I-NEXT:    add a0, s1, a0
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -708,7 +708,7 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV32IZFHMIN-NEXT:    slli a1, a1, 17
 ; RV32IZFHMIN-NEXT:    srli a1, a1, 17
-; RV32IZFHMIN-NEXT:    or a0, a1, a0
+; RV32IZFHMIN-NEXT:    add a0, a1, a0
 ; RV32IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFHMIN-NEXT:    ret
 ;
@@ -725,7 +725,7 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV64IZFHMIN-NEXT:    slli a1, a1, 49
 ; RV64IZFHMIN-NEXT:    srli a1, a1, 49
-; RV64IZFHMIN-NEXT:    or a0, a1, a0
+; RV64IZFHMIN-NEXT:    add a0, a1, a0
 ; RV64IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFHMIN-NEXT:    ret
 ;
@@ -741,7 +741,7 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-NEXT:    not a1, a1
 ; RV32IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
-; RV32IZHINXMIN-NEXT:    or a0, a0, a1
+; RV32IZHINXMIN-NEXT:    add a0, a0, a1
 ; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
@@ -757,7 +757,7 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ; RV64IZHINXMIN-NEXT:    not a1, a1
 ; RV64IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
-; RV64IZHINXMIN-NEXT:    or a0, a0, a1
+; RV64IZHINXMIN-NEXT:    add a0, a0, a1
 ; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = fadd half %a, %b
@@ -2892,7 +2892,7 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ; RV32IZFHMIN-NEXT:    and a1, a1, a2
 ; RV32IZFHMIN-NEXT:    slli a0, a0, 17
 ; RV32IZFHMIN-NEXT:    srli a0, a0, 17
-; RV32IZFHMIN-NEXT:    or a0, a0, a1
+; RV32IZFHMIN-NEXT:    add a0, a0, a1
 ; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa1
@@ -2909,7 +2909,7 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ; RV64IZFHMIN-NEXT:    and a1, a1, a2
 ; RV64IZFHMIN-NEXT:    slli a0, a0, 49
 ; RV64IZFHMIN-NEXT:    srli a0, a0, 49
-; RV64IZFHMIN-NEXT:    or a0, a0, a1
+; RV64IZFHMIN-NEXT:    add a0, a0, a1
 ; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa1
@@ -2924,7 +2924,7 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ; CHECKIZHINXMIN-NEXT:    and a0, a0, a2
 ; CHECKIZHINXMIN-NEXT:    li a2, 15
 ; CHECKIZHINXMIN-NEXT:    slli a2, a2, 10
-; CHECKIZHINXMIN-NEXT:    or a0, a0, a2
+; CHECKIZHINXMIN-NEXT:    add a0, a0, a2
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fmul.s a0, a0, a1

@@ -10,7 +10,7 @@ define signext i64 @PR95284(i32 signext %0) {
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    slli a2, a0, 31
 ; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    addi a1, a1, 1
 ; RV32I-NEXT:    seqz a2, a1
 ; RV32I-NEXT:    sub a2, a2, a0

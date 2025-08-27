@@ -918,7 +918,7 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV32M-NEXT:    vle32.v v8, (a0)
 ; RV32M-NEXT:    slli a1, a1, 2
 ; RV32M-NEXT:    mv a0, sp
-; RV32M-NEXT:    or a1, a0, a1
+; RV32M-NEXT:    add a1, a0, a1
 ; RV32M-NEXT:    vadd.vv v8, v8, v8
 ; RV32M-NEXT:    vse32.v v8, (a0)
 ; RV32M-NEXT:    lw a0, 0(a1)
@@ -968,7 +968,7 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV64M-NEXT:    vle32.v v8, (a0)
 ; RV64M-NEXT:    slli a1, a1, 2
 ; RV64M-NEXT:    mv a0, sp
-; RV64M-NEXT:    or a1, a0, a1
+; RV64M-NEXT:    add a1, a0, a1
 ; RV64M-NEXT:    vadd.vv v8, v8, v8
 ; RV64M-NEXT:    vse32.v v8, (a0)
 ; RV64M-NEXT:    lw a0, 0(a1)
@@ -991,7 +991,7 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; VISNI-NEXT:    vle32.v v8, (a0)
 ; VISNI-NEXT:    slli a1, a1, 2
 ; VISNI-NEXT:    mv a0, sp
-; VISNI-NEXT:    or a1, a0, a1
+; VISNI-NEXT:    add a1, a0, a1
 ; VISNI-NEXT:    vadd.vv v8, v8, v8
 ; VISNI-NEXT:    vse32.v v8, (a0)
 ; VISNI-NEXT:    lw a0, 0(a1)

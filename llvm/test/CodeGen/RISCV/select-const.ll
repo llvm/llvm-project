@@ -810,7 +810,7 @@ define i32 @zext_or_constant(i32 signext %x) {
 ; RV32ZICOND-NEXT:    xori a2, a0, 1
 ; RV32ZICOND-NEXT:    addi a1, a1, 417
 ; RV32ZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV32ZICOND-NEXT:    or a0, a2, a0
+; RV32ZICOND-NEXT:    add a0, a2, a0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_or_constant:
@@ -844,7 +844,7 @@ define i32 @zext_or_constant(i32 signext %x) {
 ; RV64ZICOND-NEXT:    xori a2, a0, 1
 ; RV64ZICOND-NEXT:    addi a1, a1, 417
 ; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV64ZICOND-NEXT:    or a0, a2, a0
+; RV64ZICOND-NEXT:    add a0, a2, a0
 ; RV64ZICOND-NEXT:    ret
   %cmp = icmp sgt i32 %x, -1
   %ext = zext i1 %cmp to i32
@@ -885,7 +885,7 @@ define i32 @zext_or_constant2(i32 signext %x) {
 ; RV32ZICOND-NEXT:    addi a1, a1, 417
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a0
 ; RV32ZICOND-NEXT:    czero.eqz a0, a2, a0
-; RV32ZICOND-NEXT:    or a0, a1, a0
+; RV32ZICOND-NEXT:    add a0, a1, a0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_or_constant2:
@@ -920,7 +920,7 @@ define i32 @zext_or_constant2(i32 signext %x) {
 ; RV64ZICOND-NEXT:    addi a1, a1, 417
 ; RV64ZICOND-NEXT:    czero.nez a1, a1, a0
 ; RV64ZICOND-NEXT:    czero.eqz a0, a2, a0
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    add a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
   %cmp = icmp sgt i32 %x, -1
   %ext = zext i1 %cmp to i32
@@ -961,7 +961,7 @@ define i32 @sext_or_constant(i32 signext %x) {
 ; RV32ZICOND-NEXT:    addi a1, a1, 417
 ; RV32ZICOND-NEXT:    czero.eqz a1, a1, a0
 ; RV32ZICOND-NEXT:    czero.nez a0, a2, a0
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    add a0, a0, a1
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_or_constant:
@@ -996,7 +996,7 @@ define i32 @sext_or_constant(i32 signext %x) {
 ; RV64ZICOND-NEXT:    addi a1, a1, 417
 ; RV64ZICOND-NEXT:    czero.eqz a1, a1, a0
 ; RV64ZICOND-NEXT:    czero.nez a0, a2, a0
-; RV64ZICOND-NEXT:    or a0, a0, a1
+; RV64ZICOND-NEXT:    add a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %cmp = icmp sgt i32 %x, -1
   %ext = sext i1 %cmp to i32
@@ -1037,7 +1037,7 @@ define i32 @sext_or_constant2(i32 signext %x) {
 ; RV32ZICOND-NEXT:    addi a1, a1, 417
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a0
 ; RV32ZICOND-NEXT:    czero.eqz a0, a2, a0
-; RV32ZICOND-NEXT:    or a0, a1, a0
+; RV32ZICOND-NEXT:    add a0, a1, a0
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_or_constant2:
@@ -1072,7 +1072,7 @@ define i32 @sext_or_constant2(i32 signext %x) {
 ; RV64ZICOND-NEXT:    addi a1, a1, 417
 ; RV64ZICOND-NEXT:    czero.nez a1, a1, a0
 ; RV64ZICOND-NEXT:    czero.eqz a0, a2, a0
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    add a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
   %cmp = icmp sgt i32 %x, -1
   %ext = sext i1 %cmp to i32

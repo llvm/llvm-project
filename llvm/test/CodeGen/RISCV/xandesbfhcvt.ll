@@ -32,7 +32,7 @@ define void @loadstorebf16(ptr %bf, ptr %sf) nounwind {
 ; XANDESBFHCVT:       # %bb.0: # %entry
 ; XANDESBFHCVT-NEXT:    lhu a2, 0(a0)
 ; XANDESBFHCVT-NEXT:    lui a3, 1048560
-; XANDESBFHCVT-NEXT:    or a2, a2, a3
+; XANDESBFHCVT-NEXT:    add a2, a2, a3
 ; XANDESBFHCVT-NEXT:    fmv.w.x fa5, a2
 ; XANDESBFHCVT-NEXT:    nds.fcvt.s.bf16 fa5, fa5
 ; XANDESBFHCVT-NEXT:    fsw fa5, 0(a1)

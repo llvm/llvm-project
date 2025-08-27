@@ -778,7 +778,7 @@ define i32 @select_sub_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMXVTCONDOPS-NEXT:    subw a1, a1, a2
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a1, a0
-; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a2
+; RV64IMXVTCONDOPS-NEXT:    add a0, a0, a2
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_sub_1:
@@ -786,7 +786,7 @@ define i32 @select_sub_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IMZICOND-NEXT:    sub a1, a1, a2
 ; RV32IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV32IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV32IMZICOND-NEXT:    or a0, a0, a2
+; RV32IMZICOND-NEXT:    add a0, a0, a2
 ; RV32IMZICOND-NEXT:    ret
 ;
 ; RV64IMZICOND-LABEL: select_sub_1:
@@ -794,7 +794,7 @@ define i32 @select_sub_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMZICOND-NEXT:    subw a1, a1, a2
 ; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV64IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV64IMZICOND-NEXT:    or a0, a0, a2
+; RV64IMZICOND-NEXT:    add a0, a0, a2
 ; RV64IMZICOND-NEXT:    ret
 entry:
   %c = sub i32 %a, %b
@@ -1019,7 +1019,7 @@ define i32 @select_udiv_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMXVTCONDOPS-NEXT:    divuw a1, a1, a2
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a1, a0
-; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a2
+; RV64IMXVTCONDOPS-NEXT:    add a0, a0, a2
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_udiv_1:
@@ -1027,7 +1027,7 @@ define i32 @select_udiv_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IMZICOND-NEXT:    divu a1, a1, a2
 ; RV32IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV32IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV32IMZICOND-NEXT:    or a0, a0, a2
+; RV32IMZICOND-NEXT:    add a0, a0, a2
 ; RV32IMZICOND-NEXT:    ret
 ;
 ; RV64IMZICOND-LABEL: select_udiv_1:
@@ -1035,7 +1035,7 @@ define i32 @select_udiv_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMZICOND-NEXT:    divuw a1, a1, a2
 ; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV64IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV64IMZICOND-NEXT:    or a0, a0, a2
+; RV64IMZICOND-NEXT:    add a0, a0, a2
 ; RV64IMZICOND-NEXT:    ret
 entry:
   %c = udiv i32 %a, %b
@@ -1067,7 +1067,7 @@ define i32 @select_udiv_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMXVTCONDOPS-NEXT:    divuw a2, a1, a2
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskc a1, a1, a0
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a0, a2, a0
-; RV64IMXVTCONDOPS-NEXT:    or a0, a1, a0
+; RV64IMXVTCONDOPS-NEXT:    add a0, a1, a0
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_udiv_2:
@@ -1075,7 +1075,7 @@ define i32 @select_udiv_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IMZICOND-NEXT:    divu a2, a1, a2
 ; RV32IMZICOND-NEXT:    czero.eqz a1, a1, a0
 ; RV32IMZICOND-NEXT:    czero.nez a0, a2, a0
-; RV32IMZICOND-NEXT:    or a0, a1, a0
+; RV32IMZICOND-NEXT:    add a0, a1, a0
 ; RV32IMZICOND-NEXT:    ret
 ;
 ; RV64IMZICOND-LABEL: select_udiv_2:
@@ -1083,7 +1083,7 @@ define i32 @select_udiv_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMZICOND-NEXT:    divuw a2, a1, a2
 ; RV64IMZICOND-NEXT:    czero.eqz a1, a1, a0
 ; RV64IMZICOND-NEXT:    czero.nez a0, a2, a0
-; RV64IMZICOND-NEXT:    or a0, a1, a0
+; RV64IMZICOND-NEXT:    add a0, a1, a0
 ; RV64IMZICOND-NEXT:    ret
 entry:
   %c = udiv i32 %a, %b
@@ -1127,7 +1127,7 @@ define i32 @select_udiv_3(i1 zeroext %cond, i32 %a) {
 ; RV64IMXVTCONDOPS-NEXT:    srli a2, a2, 34
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskc a1, a1, a0
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a0, a2, a0
-; RV64IMXVTCONDOPS-NEXT:    or a0, a1, a0
+; RV64IMXVTCONDOPS-NEXT:    add a0, a1, a0
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_udiv_3:
@@ -1139,7 +1139,7 @@ define i32 @select_udiv_3(i1 zeroext %cond, i32 %a) {
 ; RV32IMZICOND-NEXT:    srli a2, a2, 2
 ; RV32IMZICOND-NEXT:    czero.eqz a1, a1, a0
 ; RV32IMZICOND-NEXT:    czero.nez a0, a2, a0
-; RV32IMZICOND-NEXT:    or a0, a1, a0
+; RV32IMZICOND-NEXT:    add a0, a1, a0
 ; RV32IMZICOND-NEXT:    ret
 ;
 ; RV64IMZICOND-LABEL: select_udiv_3:
@@ -1151,7 +1151,7 @@ define i32 @select_udiv_3(i1 zeroext %cond, i32 %a) {
 ; RV64IMZICOND-NEXT:    srli a2, a2, 34
 ; RV64IMZICOND-NEXT:    czero.eqz a1, a1, a0
 ; RV64IMZICOND-NEXT:    czero.nez a0, a2, a0
-; RV64IMZICOND-NEXT:    or a0, a1, a0
+; RV64IMZICOND-NEXT:    add a0, a1, a0
 ; RV64IMZICOND-NEXT:    ret
 entry:
   %c = udiv i32 %a, 42
@@ -1183,7 +1183,7 @@ define i32 @select_shl_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMXVTCONDOPS-NEXT:    sllw a1, a1, a2
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a1, a0
-; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a2
+; RV64IMXVTCONDOPS-NEXT:    add a0, a0, a2
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_shl_1:
@@ -1191,7 +1191,7 @@ define i32 @select_shl_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IMZICOND-NEXT:    sll a1, a1, a2
 ; RV32IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV32IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV32IMZICOND-NEXT:    or a0, a0, a2
+; RV32IMZICOND-NEXT:    add a0, a0, a2
 ; RV32IMZICOND-NEXT:    ret
 ;
 ; RV64IMZICOND-LABEL: select_shl_1:
@@ -1199,7 +1199,7 @@ define i32 @select_shl_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMZICOND-NEXT:    sllw a1, a1, a2
 ; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV64IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV64IMZICOND-NEXT:    or a0, a0, a2
+; RV64IMZICOND-NEXT:    add a0, a0, a2
 ; RV64IMZICOND-NEXT:    ret
 entry:
   %c = shl i32 %a, %b
@@ -1280,7 +1280,7 @@ define i32 @select_ashr_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMXVTCONDOPS-NEXT:    sraw a1, a1, a2
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a1, a0
-; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a2
+; RV64IMXVTCONDOPS-NEXT:    add a0, a0, a2
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_ashr_1:
@@ -1288,7 +1288,7 @@ define i32 @select_ashr_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IMZICOND-NEXT:    sra a1, a1, a2
 ; RV32IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV32IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV32IMZICOND-NEXT:    or a0, a0, a2
+; RV32IMZICOND-NEXT:    add a0, a0, a2
 ; RV32IMZICOND-NEXT:    ret
 ;
 ; RV64IMZICOND-LABEL: select_ashr_1:
@@ -1296,7 +1296,7 @@ define i32 @select_ashr_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMZICOND-NEXT:    sraw a1, a1, a2
 ; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV64IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV64IMZICOND-NEXT:    or a0, a0, a2
+; RV64IMZICOND-NEXT:    add a0, a0, a2
 ; RV64IMZICOND-NEXT:    ret
 entry:
   %c = ashr i32 %a, %b
@@ -1377,7 +1377,7 @@ define i32 @select_lshr_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMXVTCONDOPS-NEXT:    srlw a1, a1, a2
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a1, a0
-; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a2
+; RV64IMXVTCONDOPS-NEXT:    add a0, a0, a2
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
 ; RV32IMZICOND-LABEL: select_lshr_1:
@@ -1385,7 +1385,7 @@ define i32 @select_lshr_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IMZICOND-NEXT:    srl a1, a1, a2
 ; RV32IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV32IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV32IMZICOND-NEXT:    or a0, a0, a2
+; RV32IMZICOND-NEXT:    add a0, a0, a2
 ; RV32IMZICOND-NEXT:    ret
 ;
 ; RV64IMZICOND-LABEL: select_lshr_1:
@@ -1393,7 +1393,7 @@ define i32 @select_lshr_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV64IMZICOND-NEXT:    srlw a1, a1, a2
 ; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
 ; RV64IMZICOND-NEXT:    czero.eqz a0, a1, a0
-; RV64IMZICOND-NEXT:    or a0, a0, a2
+; RV64IMZICOND-NEXT:    add a0, a0, a2
 ; RV64IMZICOND-NEXT:    ret
 entry:
   %c = lshr i32 %a, %b
@@ -2168,7 +2168,7 @@ define void @select_redundant_czero_eqz1(ptr %0, ptr %1) {
 ; RV64IMXVTCONDOPS-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
 ; RV64IMXVTCONDOPS-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
-; RV64IMXVTCONDOPS-NEXT:    or a0, a2, a0
+; RV64IMXVTCONDOPS-NEXT:    add a0, a2, a0
 ; RV64IMXVTCONDOPS-NEXT:    sd a0, 0(a1)
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
@@ -2177,7 +2177,7 @@ define void @select_redundant_czero_eqz1(ptr %0, ptr %1) {
 ; RV32IMZICOND-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
 ; RV32IMZICOND-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
 ; RV32IMZICOND-NEXT:    czero.nez a2, a2, a0
-; RV32IMZICOND-NEXT:    or a0, a2, a0
+; RV32IMZICOND-NEXT:    add a0, a2, a0
 ; RV32IMZICOND-NEXT:    sw a0, 0(a1)
 ; RV32IMZICOND-NEXT:    ret
 ;
@@ -2186,7 +2186,7 @@ define void @select_redundant_czero_eqz1(ptr %0, ptr %1) {
 ; RV64IMZICOND-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
 ; RV64IMZICOND-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
 ; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
-; RV64IMZICOND-NEXT:    or a0, a2, a0
+; RV64IMZICOND-NEXT:    add a0, a2, a0
 ; RV64IMZICOND-NEXT:    sd a0, 0(a1)
 ; RV64IMZICOND-NEXT:    ret
 entry:
@@ -2222,7 +2222,7 @@ define void @select_redundant_czero_eqz2(ptr %0, ptr %1) {
 ; RV64IMXVTCONDOPS-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
 ; RV64IMXVTCONDOPS-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
-; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a2
+; RV64IMXVTCONDOPS-NEXT:    add a0, a0, a2
 ; RV64IMXVTCONDOPS-NEXT:    sd a0, 0(a1)
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
@@ -2231,7 +2231,7 @@ define void @select_redundant_czero_eqz2(ptr %0, ptr %1) {
 ; RV32IMZICOND-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
 ; RV32IMZICOND-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
 ; RV32IMZICOND-NEXT:    czero.nez a2, a2, a0
-; RV32IMZICOND-NEXT:    or a0, a0, a2
+; RV32IMZICOND-NEXT:    add a0, a0, a2
 ; RV32IMZICOND-NEXT:    sw a0, 0(a1)
 ; RV32IMZICOND-NEXT:    ret
 ;
@@ -2240,7 +2240,7 @@ define void @select_redundant_czero_eqz2(ptr %0, ptr %1) {
 ; RV64IMZICOND-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
 ; RV64IMZICOND-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
 ; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
-; RV64IMZICOND-NEXT:    or a0, a0, a2
+; RV64IMZICOND-NEXT:    add a0, a0, a2
 ; RV64IMZICOND-NEXT:    sd a0, 0(a1)
 ; RV64IMZICOND-NEXT:    ret
 entry:

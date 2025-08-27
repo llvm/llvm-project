@@ -171,7 +171,7 @@ define i32 @test2(i32 %a) {
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lui a1, 10240
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCIBM-LABEL: test2:
@@ -258,7 +258,7 @@ define i32 @test6(i32 %a) {
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lui a1, 182
 ; RV32I-NEXT:    addi a1, a1, -1326
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCIBM-LABEL: test6:
@@ -287,7 +287,7 @@ define i32 @test7(i32 %a) {
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lui a1, 182
 ; RV32I-NEXT:    addi a1, a1, -1326
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCIBM-LABEL: test7:
@@ -315,10 +315,10 @@ define i64 @test8(i64 %a) {
 ; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    lui a2, 496944
-; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    lui a2, 9
 ; RV32I-NEXT:    addi a2, a2, -170
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCIBM-LABEL: test8:

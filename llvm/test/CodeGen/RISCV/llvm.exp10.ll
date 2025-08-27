@@ -162,7 +162,7 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV32IFD-NEXT:    fmv.x.w a0, fa0
 ; RV32IFD-NEXT:    slli a0, a0, 16
 ; RV32IFD-NEXT:    srli a0, a0, 16
-; RV32IFD-NEXT:    or s1, a0, s1
+; RV32IFD-NEXT:    add s1, a0, s1
 ; RV32IFD-NEXT:    fmv.s fa0, fs0
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    call exp10f
@@ -218,7 +218,7 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
 ; RV64IFD-NEXT:    slli a0, a0, 48
 ; RV64IFD-NEXT:    srli a0, a0, 48
-; RV64IFD-NEXT:    or s1, a0, s1
+; RV64IFD-NEXT:    add s1, a0, s1
 ; RV64IFD-NEXT:    fmv.w.x fa0, s2
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
@@ -554,7 +554,7 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
 ; RV64IFD-NEXT:    slli a0, a0, 32
 ; RV64IFD-NEXT:    srli a0, a0, 32
-; RV64IFD-NEXT:    or s1, a0, s1
+; RV64IFD-NEXT:    add s1, a0, s1
 ; RV64IFD-NEXT:    fmv.s fa0, fs0
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    sd s1, 0(s0)

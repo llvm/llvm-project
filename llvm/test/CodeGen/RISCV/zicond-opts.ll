@@ -69,8 +69,8 @@ define i64 @rotate_l_nez(i64 %x, i64 %rot.amt, i1 %cond) {
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a3
 ; RV32ZICOND-NEXT:    czero.eqz a0, a0, a3
 ; RV32ZICOND-NEXT:    not a3, a2
-; RV32ZICOND-NEXT:    or a4, a5, a4
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    add a4, a5, a4
+; RV32ZICOND-NEXT:    add a0, a0, a1
 ; RV32ZICOND-NEXT:    sll a1, a4, a2
 ; RV32ZICOND-NEXT:    srli a5, a0, 1
 ; RV32ZICOND-NEXT:    sll a2, a0, a2
@@ -104,8 +104,8 @@ define i64 @rotate_l_eqz(i64 %x, i64 %rot.amt, i1 %cond) {
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a3
 ; RV32ZICOND-NEXT:    czero.eqz a0, a0, a3
 ; RV32ZICOND-NEXT:    not a3, a2
-; RV32ZICOND-NEXT:    or a4, a5, a4
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    add a4, a5, a4
+; RV32ZICOND-NEXT:    add a0, a0, a1
 ; RV32ZICOND-NEXT:    sll a1, a4, a2
 ; RV32ZICOND-NEXT:    srli a5, a0, 1
 ; RV32ZICOND-NEXT:    sll a2, a0, a2
@@ -202,7 +202,7 @@ define i64 @select_imm_reg_2048(i64 %t, i1 %cond) {
 ; RV32ZICOND-NEXT:    bseti a3, zero, 11
 ; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
 ; RV32ZICOND-NEXT:    czero.eqz a3, a3, a2
-; RV32ZICOND-NEXT:    or a0, a3, a0
+; RV32ZICOND-NEXT:    add a0, a3, a0
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a2
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -212,7 +212,7 @@ define i64 @select_imm_reg_2048(i64 %t, i1 %cond) {
 ; RV64ZICOND-NEXT:    bseti a2, zero, 11
 ; RV64ZICOND-NEXT:    czero.nez a0, a0, a1
 ; RV64ZICOND-NEXT:    czero.eqz a1, a2, a1
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    add a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
   %4 = select i1 %cond, i64 2048, i64 %t
   ret i64 %4

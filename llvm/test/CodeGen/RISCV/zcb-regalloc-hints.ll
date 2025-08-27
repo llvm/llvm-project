@@ -52,9 +52,9 @@ define i64 @c_sext_h(i64 %x, i16 %y, i64 %z) {
 define i64 @c_zext_b(i64 %x, i8 %y, i64 %z) {
 ; CHECK-LABEL: c_zext_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.b a1, a1
-; CHECK-NEXT:    lui a0, 1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    zext.b a0, a1
+; CHECK-NEXT:    lui a1, 1
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = zext i8 %y to i64
   %b = or i64 %a, 4096
@@ -64,9 +64,9 @@ define i64 @c_zext_b(i64 %x, i8 %y, i64 %z) {
 define i64 @c_zext_h(i64 %x, i16 %y) {
 ; CHECK-LABEL: c_zext_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.h a1, a1
-; CHECK-NEXT:    lui a0, 4096
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    zext.h a0, a1
+; CHECK-NEXT:    lui a1, 4096
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = zext i16 %y to i64
   %b = or i64 %a, 16777216

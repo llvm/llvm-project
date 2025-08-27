@@ -601,8 +601,8 @@ define <2 x i32> @build_vec_of_trunc_op(i64 %a, i64 %b) {
 ; RV32-NEXT:    srli a0, a0, 1
 ; RV32-NEXT:    slli a3, a3, 31
 ; RV32-NEXT:    srli a2, a2, 1
-; RV32-NEXT:    or a0, a0, a1
-; RV32-NEXT:    or a2, a2, a3
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a2, a2, a3
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.x v8, a0
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2

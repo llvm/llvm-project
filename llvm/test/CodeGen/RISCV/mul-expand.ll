@@ -335,7 +335,7 @@ define i64 @muli64_0x0fffffff(i64 %a) nounwind {
 ; RV32I-NEXT:    srli a3, a0, 4
 ; RV32I-NEXT:    slli a4, a1, 28
 ; RV32I-NEXT:    sltu a5, a2, a0
-; RV32I-NEXT:    or a3, a4, a3
+; RV32I-NEXT:    add a3, a4, a3
 ; RV32I-NEXT:    sub a1, a3, a1
 ; RV32I-NEXT:    sub a1, a1, a5
 ; RV32I-NEXT:    sub a0, a2, a0
@@ -502,7 +502,7 @@ define i64 @muli64_0x1000(i64 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a2, a0, 20
 ; RV32I-NEXT:    slli a1, a1, 12
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    slli a0, a0, 12
 ; RV32I-NEXT:    ret
 ;
@@ -537,7 +537,7 @@ define i64 @muli64_0x101(i64 %a) nounwind {
 ; RV32I-NEXT:    srli a3, a0, 24
 ; RV32I-NEXT:    slli a4, a1, 8
 ; RV32I-NEXT:    add a0, a2, a0
-; RV32I-NEXT:    or a3, a4, a3
+; RV32I-NEXT:    add a3, a4, a3
 ; RV32I-NEXT:    sltu a2, a0, a2
 ; RV32I-NEXT:    add a1, a3, a1
 ; RV32I-NEXT:    add a1, a1, a2
@@ -575,7 +575,7 @@ define i64 @muli64_0xfff(i64 %a) nounwind {
 ; RV32I-NEXT:    srli a3, a0, 20
 ; RV32I-NEXT:    slli a4, a1, 12
 ; RV32I-NEXT:    sltu a5, a2, a0
-; RV32I-NEXT:    or a3, a4, a3
+; RV32I-NEXT:    add a3, a4, a3
 ; RV32I-NEXT:    sub a1, a3, a1
 ; RV32I-NEXT:    sub a1, a1, a5
 ; RV32I-NEXT:    sub a0, a2, a0
@@ -613,7 +613,7 @@ define i64 @muli64_0x7fffffff(i64 %a) nounwind {
 ; RV32I-NEXT:    srli a3, a0, 1
 ; RV32I-NEXT:    slli a4, a1, 31
 ; RV32I-NEXT:    sltu a5, a2, a0
-; RV32I-NEXT:    or a3, a4, a3
+; RV32I-NEXT:    add a3, a4, a3
 ; RV32I-NEXT:    sub a1, a3, a1
 ; RV32I-NEXT:    sub a1, a1, a5
 ; RV32I-NEXT:    sub a0, a2, a0

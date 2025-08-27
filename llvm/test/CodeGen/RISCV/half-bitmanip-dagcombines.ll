@@ -168,7 +168,7 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV32I-NEXT:    slli a0, a0, 17
 ; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    srli a0, a0, 17
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32IZFH-LABEL: fcopysign_fneg:
@@ -186,7 +186,7 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV64I-NEXT:    slli a0, a0, 49
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    srli a0, a0, 49
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcopysign_fneg:
@@ -214,7 +214,7 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV32IZFHMIN-NEXT:    slli a0, a0, 17
 ; RV32IZFHMIN-NEXT:    and a1, a1, a2
 ; RV32IZFHMIN-NEXT:    srli a0, a0, 17
-; RV32IZFHMIN-NEXT:    or a0, a0, a1
+; RV32IZFHMIN-NEXT:    add a0, a0, a1
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: fcopysign_fneg:
@@ -224,7 +224,7 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV64IZFHMIN-NEXT:    slli a0, a0, 49
 ; RV64IZFHMIN-NEXT:    and a1, a1, a2
 ; RV64IZFHMIN-NEXT:    srli a0, a0, 49
-; RV64IZFHMIN-NEXT:    or a0, a0, a1
+; RV64IZFHMIN-NEXT:    add a0, a0, a1
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-LABEL: fcopysign_fneg:
@@ -236,7 +236,7 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
-; RV32IZHINXMIN-NEXT:    or a0, a0, a1
+; RV32IZHINXMIN-NEXT:    add a0, a0, a1
 ; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
@@ -249,7 +249,7 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
-; RV64IZHINXMIN-NEXT:    or a0, a0, a1
+; RV64IZHINXMIN-NEXT:    add a0, a0, a1
 ; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = fneg half %b

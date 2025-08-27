@@ -45,7 +45,7 @@ define void @memset_2(ptr %a, i8 %value) nounwind {
 ; RV32-FAST:       # %bb.0:
 ; RV32-FAST-NEXT:    zext.b a2, a1
 ; RV32-FAST-NEXT:    slli a1, a1, 8
-; RV32-FAST-NEXT:    or a1, a1, a2
+; RV32-FAST-NEXT:    add a1, a1, a2
 ; RV32-FAST-NEXT:    sh a1, 0(a0)
 ; RV32-FAST-NEXT:    ret
 ;
@@ -53,7 +53,7 @@ define void @memset_2(ptr %a, i8 %value) nounwind {
 ; RV64-FAST:       # %bb.0:
 ; RV64-FAST-NEXT:    zext.b a2, a1
 ; RV64-FAST-NEXT:    slli a1, a1, 8
-; RV64-FAST-NEXT:    or a1, a1, a2
+; RV64-FAST-NEXT:    add a1, a1, a2
 ; RV64-FAST-NEXT:    sh a1, 0(a0)
 ; RV64-FAST-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 2, i1 0)
@@ -225,7 +225,7 @@ define void @aligned_memset_2(ptr align 2 %a, i8 %value) nounwind {
 ; RV32-BOTH:       # %bb.0:
 ; RV32-BOTH-NEXT:    zext.b a2, a1
 ; RV32-BOTH-NEXT:    slli a1, a1, 8
-; RV32-BOTH-NEXT:    or a1, a1, a2
+; RV32-BOTH-NEXT:    add a1, a1, a2
 ; RV32-BOTH-NEXT:    sh a1, 0(a0)
 ; RV32-BOTH-NEXT:    ret
 ;
@@ -233,7 +233,7 @@ define void @aligned_memset_2(ptr align 2 %a, i8 %value) nounwind {
 ; RV64-BOTH:       # %bb.0:
 ; RV64-BOTH-NEXT:    zext.b a2, a1
 ; RV64-BOTH-NEXT:    slli a1, a1, 8
-; RV64-BOTH-NEXT:    or a1, a1, a2
+; RV64-BOTH-NEXT:    add a1, a1, a2
 ; RV64-BOTH-NEXT:    sh a1, 0(a0)
 ; RV64-BOTH-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr align 2 %a, i8 %value, i64 2, i1 0)

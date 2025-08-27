@@ -2369,10 +2369,10 @@ define i64 @select_bfos(i64 %A, i64 %B, i1 zeroext %cond) {
 ; RV32SFB-NEXT:    slli a0, a0, 31
 ; RV32SFB-NEXT:    slli a1, a5, 15
 ; RV32SFB-NEXT:    srli a0, a0, 17
-; RV32SFB-NEXT:    or a5, a6, a5
+; RV32SFB-NEXT:    add a5, a5, a6
 ; RV32SFB-NEXT:    bnez a4, .LBB40_2
 ; RV32SFB-NEXT:  # %bb.1: # %entry
-; RV32SFB-NEXT:    or a2, a0, a1
+; RV32SFB-NEXT:    add a2, a0, a1
 ; RV32SFB-NEXT:  .LBB40_2: # %entry
 ; RV32SFB-NEXT:    bnez a4, .LBB40_4
 ; RV32SFB-NEXT:  # %bb.3: # %entry

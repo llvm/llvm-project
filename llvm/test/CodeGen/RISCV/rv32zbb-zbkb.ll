@@ -114,7 +114,7 @@ define i64 @xnor_i64(i64 %a, i64 %b) nounwind {
 define i32 @disjoint_or_xnor_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: disjoint_or_xnor_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    ret
 ;
@@ -130,8 +130,8 @@ define i32 @disjoint_or_xnor_i32(i32 %a, i32 %b) nounwind {
 define i64 @disjoint_or_xnor_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: disjoint_or_xnor_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    or a1, a1, a3
-; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    add a1, a1, a3
+; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    ret
@@ -151,7 +151,7 @@ define i32 @disjoint_or_xnor_knownbits_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a0, a0, 126
 ; RV32I-NEXT:    andi a1, a1, -127
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    ret
 ;
@@ -173,7 +173,7 @@ define i64 @disjoint_or_xnor_knownbits_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    andi a0, a0, 126
 ; RV32I-NEXT:    andi a1, a2, -127
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    not a1, a3
 ; RV32I-NEXT:    ret
@@ -353,7 +353,7 @@ define i32 @rori_i32_fshl(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a1, a0, 1
 ; RV32I-NEXT:    slli a0, a0, 31
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-ZBKB-LABEL: rori_i32_fshl:
@@ -369,7 +369,7 @@ define i32 @rori_i32_fshr(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a0, 1
 ; RV32I-NEXT:    srli a0, a0, 31
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-ZBKB-LABEL: rori_i32_fshr:
@@ -387,8 +387,8 @@ define i64 @rori_i64(i64 %a) nounwind {
 ; CHECK-NEXT:    slli a3, a1, 31
 ; CHECK-NEXT:    srli a1, a1, 1
 ; CHECK-NEXT:    slli a4, a0, 31
-; CHECK-NEXT:    or a0, a3, a2
-; CHECK-NEXT:    or a1, a4, a1
+; CHECK-NEXT:    add a0, a3, a2
+; CHECK-NEXT:    add a1, a4, a1
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 63)
   ret i64 %1
@@ -401,8 +401,8 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
 ; CHECK-NEXT:    slli a3, a0, 1
 ; CHECK-NEXT:    srli a4, a0, 31
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    or a0, a3, a2
-; CHECK-NEXT:    or a1, a1, a4
+; CHECK-NEXT:    add a0, a3, a2
+; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
   ret i64 %1

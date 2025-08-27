@@ -202,7 +202,7 @@ define i64 @bfoz_from_lshr_and_i64(i64 %x) {
 ; CHECK-NEXT:    andi a1, a1, 15
 ; CHECK-NEXT:    srli a0, a0, 24
 ; CHECK-NEXT:    slli a1, a1, 8
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ret
   %masked = and i64 %x, 68702699520

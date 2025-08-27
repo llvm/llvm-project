@@ -30,7 +30,7 @@ define i64 @test2(i64 %x) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a2, a1, 27
 ; RV32I-NEXT:    srli a0, a0, 5
-; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    srli a1, a1, 5
 ; RV32I-NEXT:    andi a0, a0, -8
 ; RV32I-NEXT:    ret
@@ -68,7 +68,7 @@ define i64 @test4(i64 %x) {
 ; RV32I-NEXT:    slli a2, a1, 26
 ; RV32I-NEXT:    srli a0, a0, 6
 ; RV32I-NEXT:    srli a1, a1, 6
-; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    lui a2, 1048572
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    ret
@@ -106,7 +106,7 @@ define i64 @test6(i64 %x) {
 ; RV32I-NEXT:    srli a2, a0, 26
 ; RV32I-NEXT:    slli a1, a1, 6
 ; RV32I-NEXT:    srli a0, a0, 10
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    slli a0, a0, 16
 ; RV32I-NEXT:    ret
 ;

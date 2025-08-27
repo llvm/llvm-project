@@ -23,7 +23,7 @@ define i32 @orcb_knownbits(i32 %a) nounwind {
 ; RV32ZBB-NEXT:    lui a1, 4080
 ; RV32ZBB-NEXT:    orc.b a0, a0
 ; RV32ZBB-NEXT:    addi a1, a1, 255
-; RV32ZBB-NEXT:    or a0, a0, a1
+; RV32ZBB-NEXT:    add a0, a0, a1
 ; RV32ZBB-NEXT:    ret
   %tmp = and i32 %a, 4278190080 ; 0xFF000000
   %tmp2 = or i32 %tmp, 8388609 ; 0x800001

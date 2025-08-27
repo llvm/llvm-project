@@ -189,7 +189,7 @@ define i64 @test_fixed_i64(i64 %a0, i64 %a1) nounwind {
 ; RV32I-NEXT:    slli a1, a1, 31
 ; RV32I-NEXT:    srli a3, a3, 1
 ; RV32I-NEXT:    sub a4, a4, a2
-; RV32I-NEXT:    or a3, a3, a1
+; RV32I-NEXT:    add a3, a3, a1
 ; RV32I-NEXT:    sltu a1, a0, a3
 ; RV32I-NEXT:    sub a1, a4, a1
 ; RV32I-NEXT:    sub a0, a0, a3
@@ -220,7 +220,7 @@ define i64 @test_ext_i64(i64 %a0, i64 %a1) nounwind {
 ; RV32I-NEXT:    slli a1, a1, 31
 ; RV32I-NEXT:    srli a3, a3, 1
 ; RV32I-NEXT:    sub a4, a4, a2
-; RV32I-NEXT:    or a3, a3, a1
+; RV32I-NEXT:    add a3, a3, a1
 ; RV32I-NEXT:    sltu a1, a0, a3
 ; RV32I-NEXT:    sub a1, a4, a1
 ; RV32I-NEXT:    sub a0, a0, a3

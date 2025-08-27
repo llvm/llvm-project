@@ -228,7 +228,7 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 ; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    and a2, a3, a2
 ; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fsgnj_d:
@@ -237,7 +237,7 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = call double @llvm.copysign.f64(double %a, double %b)
   ret double %1
@@ -330,7 +330,7 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    and a2, a2, a3
 ; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fsgnjn_d:
@@ -340,7 +340,7 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    srli a1, a1, 63
 ; RV64I-NEXT:    slli a1, a1, 63
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = fsub double -0.0, %b
   %2 = call double @llvm.copysign.f64(double %a, double %1)
@@ -1504,7 +1504,7 @@ define double @fsgnjx_f64(double %x, double %y) nounwind {
 ; RV32I-NEXT:    lui a0, 524288
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    lui a1, 261888
-; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    add a1, a0, a1
 ; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    call __muldf3
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -1519,7 +1519,7 @@ define double @fsgnjx_f64(double %x, double %y) nounwind {
 ; RV64I-NEXT:    li a2, 1023
 ; RV64I-NEXT:    slli a0, a0, 63
 ; RV64I-NEXT:    slli a2, a2, 52
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    call __muldf3
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16

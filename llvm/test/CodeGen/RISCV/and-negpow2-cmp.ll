@@ -8,7 +8,7 @@ define i1 @test1(i64 %x) {
 ; RV32-NEXT:    slli a2, a1, 2
 ; RV32-NEXT:    srli a0, a0, 30
 ; RV32-NEXT:    srai a1, a1, 30
-; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    add a0, a0, a2
 ; RV32-NEXT:    xori a0, a0, -2
 ; RV32-NEXT:    not a1, a1
 ; RV32-NEXT:    or a0, a0, a1

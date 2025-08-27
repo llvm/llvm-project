@@ -2154,7 +2154,7 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ; RV32I-NEXT:    slli a0, a0, 17
 ; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    srli a0, a0, 17
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: copysign_f16:
@@ -2163,7 +2163,7 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ; RV64I-NEXT:    slli a0, a0, 49
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    srli a0, a0, 49
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZFHMIN-LABEL: copysign_f16:
@@ -2174,7 +2174,7 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV32IZFHMIN-NEXT:    slli a1, a1, 17
 ; RV32IZFHMIN-NEXT:    srli a1, a1, 17
-; RV32IZFHMIN-NEXT:    or a0, a1, a0
+; RV32IZFHMIN-NEXT:    add a0, a1, a0
 ; RV32IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFHMIN-NEXT:    ret
 ;
@@ -2186,7 +2186,7 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
 ; RV64IZFHMIN-NEXT:    slli a1, a1, 49
 ; RV64IZFHMIN-NEXT:    srli a1, a1, 49
-; RV64IZFHMIN-NEXT:    or a0, a1, a0
+; RV64IZFHMIN-NEXT:    add a0, a1, a0
 ; RV64IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFHMIN-NEXT:    ret
 ;
@@ -2198,7 +2198,7 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
-; RV32IZHINXMIN-NEXT:    or a0, a0, a1
+; RV32IZHINXMIN-NEXT:    add a0, a0, a1
 ; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
@@ -2210,7 +2210,7 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
-; RV64IZHINXMIN-NEXT:    or a0, a0, a1
+; RV64IZHINXMIN-NEXT:    add a0, a0, a1
 ; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.copysign.f16(half %a, half %b)

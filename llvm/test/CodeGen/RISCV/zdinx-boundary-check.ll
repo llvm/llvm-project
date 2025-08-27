@@ -245,7 +245,7 @@ define void @foo7(ptr nocapture %p) nounwind {
 ; RV64ZDINX-NEXT:    lw a2, 8(a2)
 ; RV64ZDINX-NEXT:    lwu a1, %lo(d+4)(a1)
 ; RV64ZDINX-NEXT:    slli a2, a2, 32
-; RV64ZDINX-NEXT:    or a1, a2, a1
+; RV64ZDINX-NEXT:    add a1, a2, a1
 ; RV64ZDINX-NEXT:    sd a1, 2044(a0)
 ; RV64ZDINX-NEXT:    ret
 entry:
@@ -340,7 +340,7 @@ define void @foo9(ptr nocapture %p) nounwind {
 ; RV64ZDINX-NEXT:    lw a2, 4(a2)
 ; RV64ZDINX-NEXT:    lwu a1, %lo(e)(a1)
 ; RV64ZDINX-NEXT:    slli a2, a2, 32
-; RV64ZDINX-NEXT:    or a1, a2, a1
+; RV64ZDINX-NEXT:    add a1, a2, a1
 ; RV64ZDINX-NEXT:    sd a1, 2044(a0)
 ; RV64ZDINX-NEXT:    ret
 entry:
@@ -483,7 +483,7 @@ define double @foo13(ptr nocapture %p) nounwind {
 ; RV64ZDINX-NEXT:    lw a1, %lo(f+8)(a0)
 ; RV64ZDINX-NEXT:    lwu a0, %lo(f+4)(a0)
 ; RV64ZDINX-NEXT:    slli a1, a1, 32
-; RV64ZDINX-NEXT:    or a0, a1, a0
+; RV64ZDINX-NEXT:    add a0, a1, a0
 ; RV64ZDINX-NEXT:    ret
 entry:
   %add.ptr = getelementptr inbounds i8, ptr @f, i64 4
