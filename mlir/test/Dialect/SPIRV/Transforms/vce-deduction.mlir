@@ -238,7 +238,7 @@ spirv.module Logical Vulkan attributes {
     #spirv.vce<v1.5, [VulkanMemoryModel, GraphARM, TensorsARM, Float16], [SPV_ARM_tensors, SPV_ARM_graph]>,
     #spirv.resource_limits<>>
 } {
-  spirv.ARM.Graph @argmax(%arg0 : !spirv.arm.tensor<14x19xi8>, %arg1 : !spirv.arm.tensor<1xf16>) -> !spirv.arm.tensor<14x19xi8> {
+  spirv.ARM.Graph @argmax(%arg0: !spirv.arm.tensor<14x19xi8>, %arg1 : !spirv.arm.tensor<1xf16>) -> !spirv.arm.tensor<14x19xi8> {
       spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<14x19xi8>
   }
 }

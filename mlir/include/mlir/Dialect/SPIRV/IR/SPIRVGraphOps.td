@@ -66,7 +66,7 @@ def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
     #### Example:
 
     ```mlir
-    spirv.ARM.Graph @graph(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
+    spirv.ARM.Graph @graph(%arg0: !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
         spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<14x19xi16>
     }
     ```

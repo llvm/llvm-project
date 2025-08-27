@@ -5,7 +5,7 @@
 //===----------------------------------------------------------------------===//
 
 // CHECK: spirv.ARM.Graph {{@.*}}({{%.*}}: !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
-spirv.ARM.Graph @graphAndOutputs(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
+spirv.ARM.Graph @graphAndOutputs(%arg0: !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
   // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<14x19xi16>
   spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<14x19xi16>
 }
@@ -43,7 +43,7 @@ spirv.ARM.GraphEntryPoint @entrypoint, @entrypoint_arg_0, @entrypoint_res_0
 //===----------------------------------------------------------------------===//
 
 // expected-error @+1 {{empty block: expect at least a terminator}}
-spirv.ARM.Graph @graphNoterminator(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
+spirv.ARM.Graph @graphNoterminator(%arg0: !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
 }
 
 // -----
@@ -53,7 +53,7 @@ spirv.ARM.Graph @graphNoterminator(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spi
 //===----------------------------------------------------------------------===//
 
 // expected-error @+1 {{'spirv.ARM.Graph' op there should be at least one result}}
-spirv.ARM.Graph @graphNoOutputs(%arg0 : !spirv.arm.tensor<14x19xi16>) -> () {
+spirv.ARM.Graph @graphNoOutputs(%arg0: !spirv.arm.tensor<14x19xi16>) -> () {
 }
 
 // -----
@@ -80,7 +80,7 @@ spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1xi16>
 // spirv.ARM.Graph return type does not match spirv.ARM.GraphOutputs
 //===----------------------------------------------------------------------===//
 
-spirv.ARM.Graph @graphAndOutputs(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<5x3xi16> {
+spirv.ARM.Graph @graphAndOutputs(%arg0: !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<5x3xi16> {
   // expected-error @+1 {{type of return operand 0 ('!spirv.arm.tensor<14x19xi16>') doesn't match graph result type ('!spirv.arm.tensor<5x3xi16>')}}
   spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<14x19xi16>
 }
@@ -91,14 +91,14 @@ spirv.ARM.Graph @graphAndOutputs(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv
 // spirv.ARM.Graph return type does not match number of results in spirv.ARM.GraphOutputs
 //===----------------------------------------------------------------------===//
 
-spirv.ARM.Graph @graphAndOutputs(%arg0 : !spirv.arm.tensor<14x19xi16>) -> (!spirv.arm.tensor<14x19xi16>, !spirv.arm.tensor<14x19xi16>) {
+spirv.ARM.Graph @graphAndOutputs(%arg0: !spirv.arm.tensor<14x19xi16>) -> (!spirv.arm.tensor<14x19xi16>, !spirv.arm.tensor<14x19xi16>) {
   // expected-error @+1 {{'spirv.ARM.GraphOutputs' op is returning 1 value(s) but enclosing spirv.ARM.Graph requires 2 result(s)}}
   spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<14x19xi16>
 }
 
 // -----
 
-spirv.ARM.Graph @graphAndOutputs(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
+spirv.ARM.Graph @graphAndOutputs(%arg0: !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
   // expected-error @+1 {{'spirv.ARM.GraphOutputs' op is returning 2 value(s) but enclosing spirv.ARM.Graph requires 1 result(s)}}
   spirv.ARM.GraphOutputs %arg0, %arg0 : !spirv.arm.tensor<14x19xi16>, !spirv.arm.tensor<14x19xi16>
 }
@@ -110,7 +110,7 @@ spirv.ARM.Graph @graphAndOutputs(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv
 //===----------------------------------------------------------------------===//
 
 // expected-error @+1 {{'spirv.ARM.Graph' op type of argument #0 must be a TensorArmType, but got 'i8'}}
-spirv.ARM.Graph @graphAndOutputs(%arg0 : i8) -> !spirv.arm.tensor<14x19xi16> {
+spirv.ARM.Graph @graphAndOutputs(%arg0: i8) -> !spirv.arm.tensor<14x19xi16> {
 }
 
 // -----
@@ -120,5 +120,5 @@ spirv.ARM.Graph @graphAndOutputs(%arg0 : i8) -> !spirv.arm.tensor<14x19xi16> {
 //===----------------------------------------------------------------------===//
 
 // expected-error @+1 {{'spirv.ARM.Graph' op type of result #0 must be a TensorArmType, but got 'i8'}}
-spirv.ARM.Graph @graphAndOutputs(%arg0 : !spirv.arm.tensor<14x19xi16>) -> i8 {
+spirv.ARM.Graph @graphAndOutputs(%arg0: !spirv.arm.tensor<14x19xi16>) -> i8 {
 }

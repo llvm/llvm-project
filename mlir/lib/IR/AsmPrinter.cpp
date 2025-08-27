@@ -2841,8 +2841,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });
         os << ") -> ";
         ArrayRef<Type> results = graphTy.getResults();
-        if (results.size() == 1 &&
-            !(isa<FunctionType>(results[0]) || isa<GraphType>(results[0]))) {
+        if (results.size() == 1 && !isa<FunctionType, GraphType>(results[0])) {
           printType(results[0]);
         } else {
           os << '(';

@@ -387,7 +387,7 @@ class OpaqueType<string dialect, string name, string summary>
 def FunctionType : Type<CPred<"::llvm::isa<::mlir::FunctionType>($_self)">,
                               "function type", "::mlir::FunctionType">;
 
-// Graph Type
+// Graph Type.
 
 // Any graph type.
 def GraphType : Type<CPred<"::llvm::isa<::mlir::GraphType>($_self)">,

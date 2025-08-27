@@ -50,9 +50,8 @@ ParseResult spirv::GraphARMOp::parse(OpAsmParser &parser,
           resultAttrs))
     return failure();
 
-  SmallVector<Type> argTypes;
-  for (OpAsmParser::Argument &arg : entryArgs)
-    argTypes.push_back(arg.type);
+  SmallVector<Type> argTypes = llvm::map_to_vector(
+      entryArgs, [](const OpAsmParser::Argument &arg) { return arg.type; });
   GraphType grType = builder.getGraphType(argTypes, resultTypes);
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(grType));
@@ -197,14 +196,13 @@ LogicalResult spirv::GraphOutputsARMOp::verify() {
            << getNumOperands() << " operands, but enclosing  spirv.ARM.Graph (@"
            << graph.getName() << ") returns " << results.size();
 
-  for (unsigned i = 0, size = results.size(); i < size; ++i)
-    if (getOperand(i).getType() != results[i])
-      return emitError() << "type of return operand " << i << " ("
-                         << getOperand(i).getType()
+  for (const auto &result : llvm::enumerate(results))
+    if (getOperand(result.index()).getType() != result.value())
+      return emitError() << "type of return operand " << result.index() << " ("
+                         << getOperand(result.index()).getType()
                          << ") doesn't match  spirv.ARM.Graph result type ("
-                         << results[i] << ")"
+                         << result.value() << ")"
                          << " in graph @" << graph.getName();
-
   return success();
 }
 
@@ -228,9 +226,9 @@ ParseResult spirv::GraphEntryPointARMOp::parse(OpAsmParser &parser,
 
   SmallVector<Attribute, 4> interfaceVars;
   if (!parser.parseOptionalComma()) {
-    // Parse the interface variables
+    // Parse the interface variables.
     if (parser.parseCommaSeparatedList([&]() -> ParseResult {
-          // The name of the interface variable attribute isnt important
+          // The name of the interface variable attribute is not important.
           FlatSymbolRefAttr var;
           NamedAttrList attrs;
           if (parser.parseAttribute(var, Type(), "var_symbol", attrs))
