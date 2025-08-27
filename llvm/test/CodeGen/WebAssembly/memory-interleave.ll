@@ -737,25 +737,25 @@ define hidden void @four_bytes_same_op(ptr noalias nocapture noundef writeonly %
 ; CHECK: loop
 ; CHECK: v128.load
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle {{.*}}, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: v128.load
 ; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle {{.*}}, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extmul_low_i8x16_u
-; CHECK: i8x16.shuffle {{.*}} 1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_u
-; CHECK: i8x16.shuffle {{.*}} 1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle {{.*}}, 1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle {{.*}}, 1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extmul_low_i8x16_u
-; CHECK: i8x16.shuffle {{.*}} 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK: i8x16.shuffle {{.*}} 2, 6, 10, 14, 18, 22, 26, 30, 3, 7, 11, 15, 19, 23, 27, 31
-; CHECK: i8x16.shuffle {{.*}} 2, 6, 10, 14, 18, 22, 26, 30, 3, 7, 11, 15, 19, 23, 27, 31
+; CHECK: i8x16.shuffle {{.*}}, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK: i8x16.shuffle {{.*}}, 2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle {{.*}}, 2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i8x16.sub
-; CHECK: i8x16.shuffle {{.*}} 4, 12, 20, 28, 5, 13, 21, 29, 6, 14, 22, 30, 7, 15, 23, 31
+; CHECK: i8x16.shuffle {{.*}}, 3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle {{.*}}, 3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.sub
+; CHECK: i8x16.shuffle {{.*}}, 0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23
+; CHECK: i8x16.shuffle {{.*}}, 4, 12, 20, 28, 5, 13, 21, 29, 6, 14, 22, 30, 7, 15, 23, 31
 ; CHECK: v128.store
-; CHECK: i8x16.shuffle {{.*}} 0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27
+; CHECK: i8x16.shuffle {{.*}}, 0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27
 ; CHECK: v128.store
 define hidden void @four_bytes_split_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -1491,16 +1491,10 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 ; CHECK: v128.load
 ; CHECK: i8x16.shuffle {{.*}} 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i8x16.shuffle {{.*}} 2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: v128.or
-; CHECK: v128.xor
-; CHECK: i8x16.shr_u
-; CHECK: i8x16.sub
+; CHECK: i8x16.avgr_u 
 ; CHECK: i8x16.shuffle {{.*}} 1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i8x16.shuffle {{.*}} 3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK: v128.or
-; CHECK: v128.xor
-; CHECK: i8x16.shr_u
-; CHECK: i8x16.sub
+; CHECK: i8x16.avgr_u 
 ; CHECK: i8x16.shuffle {{.*}} 0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23
 ; CHECK: v128.store
 define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0, i32 noundef %1, ptr nocapture noundef writeonly %2, i32 noundef %3) {
