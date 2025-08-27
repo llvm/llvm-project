@@ -998,6 +998,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (!Def)
     return;
 
+  VPBuilder Builder(Def);
+
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
   if (TypeSwitch<VPRecipeBase *, bool>(&R)
@@ -1067,7 +1069,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
   // && (Y || Z) and (X || !X) into true. This requires queuing newly created
   // recipes to be visited during simplification.
-  VPValue *X, *Y;
+  VPValue *X, *Y, *Z;
   if (match(Def,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                          m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
@@ -1083,6 +1085,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Def->eraseFromParent();
     return;
   }
+
+  // (x && y) || (x && z) -> x && (y || z)
+  if (match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                              m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
+      // Creating an extra recipe, so at least one arm needs to have one use.
+      (!Def->getOperand(0)->hasMoreThanOneUniqueUser() ||
+       !Def->getOperand(1)->hasMoreThanOneUniqueUser()))
+    return Def->replaceAllUsesWith(
+        Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
 
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
@@ -1150,7 +1161,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                      m_VPValue(X), m_SpecificInt(1)))) {
     Type *WideStepTy = TypeInfo.inferScalarType(Def);
     if (TypeInfo.inferScalarType(X) != WideStepTy)
-      X = VPBuilder(Def).createWidenCast(Instruction::Trunc, X, WideStepTy);
+      X = Builder.createWidenCast(Instruction::Trunc, X, WideStepTy);
     Def->replaceAllUsesWith(X);
     return;
   }
@@ -1240,7 +1251,86 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
 }
 
+/// Collect the header mask with the pattern:
+///   (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// for the header-mask pattern manually.
+static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
+  SmallVector<VPValue *> WideCanonicalIVs;
+  auto *FoundWidenCanonicalIVUser =
+      find_if(Plan.getCanonicalIV()->users(),
+              [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
+  assert(count_if(Plan.getCanonicalIV()->users(),
+                  [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); }) <=
+             1 &&
+         "Must have at most one VPWideCanonicalIVRecipe");
+  if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
+    auto *WideCanonicalIV =
+        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+    WideCanonicalIVs.push_back(WideCanonicalIV);
+  }
+
+  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
+  // version of the canonical induction.
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
+      WideCanonicalIVs.push_back(WidenOriginalIV);
+  }
+
+  // Walk users of wide canonical IVs and find the single compare of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
+  VPSingleDefRecipe *HeaderMask = nullptr;
+  for (auto *Wide : WideCanonicalIVs) {
+    for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (!VPI || !vputils::isHeaderMask(VPI, Plan))
+        continue;
+
+      assert(VPI->getOperand(0) == Wide &&
+             "WidenCanonicalIV must be the first operand of the compare");
+      assert(!HeaderMask && "Multiple header masks found?");
+      HeaderMask = VPI;
+    }
+  }
+  return HeaderMask;
+}
+
+/// Canonicalize uses of the header mask by pulling out of logical ands to
+/// enable more simplifications.
+static void reassociateHeaderMask(VPlan &Plan) {
+  // Only do it before unrolling, otherwise there can be multiple header masks.
+  if (Plan.isUnrolled())
+    return;
+
+  VPValue *HeaderMask = findHeaderMask(Plan);
+  if (!HeaderMask)
+    return;
+
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *V = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!V)
+        continue;
+      VPBuilder Builder(V);
+      VPValue *X, *Y;
+      /// (headermask && x) && y -> headermask && (x && y)
+      if (!match(V, m_LogicalAnd(
+                        m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
+                        m_VPValue(Y))))
+        continue;
+      V->replaceAllUsesWith(
+          Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
+      V->eraseFromParent();
+    }
+  }
+}
+
 void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
+  reassociateHeaderMask(Plan);
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(Plan);
@@ -2071,52 +2161,6 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   return LaneMaskPhi;
 }
 
-/// Collect the header mask with the pattern:
-///   (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
-/// TODO: Introduce explicit recipe for header-mask instead of searching
-/// for the header-mask pattern manually.
-static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
-  SmallVector<VPValue *> WideCanonicalIVs;
-  auto *FoundWidenCanonicalIVUser =
-      find_if(Plan.getCanonicalIV()->users(),
-              [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
-  assert(count_if(Plan.getCanonicalIV()->users(),
-                  [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); }) <=
-             1 &&
-         "Must have at most one VPWideCanonicalIVRecipe");
-  if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
-    auto *WideCanonicalIV =
-        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
-    WideCanonicalIVs.push_back(WideCanonicalIV);
-  }
-
-  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
-  // version of the canonical induction.
-  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
-      WideCanonicalIVs.push_back(WidenOriginalIV);
-  }
-
-  // Walk users of wide canonical IVs and find the single compare of the form
-  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
-  VPSingleDefRecipe *HeaderMask = nullptr;
-  for (auto *Wide : WideCanonicalIVs) {
-    for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
-      auto *VPI = dyn_cast<VPInstruction>(U);
-      if (!VPI || !vputils::isHeaderMask(VPI, Plan))
-        continue;
-
-      assert(VPI->getOperand(0) == Wide &&
-             "WidenCanonicalIV must be the first operand of the compare");
-      assert(!HeaderMask && "Multiple header masks found?");
-      HeaderMask = VPI;
-    }
-  }
-  return HeaderMask;
-}
-
 void VPlanTransforms::addActiveLaneMask(
     VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
     bool DataAndControlFlowWithoutRuntimeCheck) {
@@ -2151,86 +2195,93 @@ void VPlanTransforms::addActiveLaneMask(
   HeaderMask->eraseFromParent();
 }
 
+template <typename Op0_t, typename Op1_t> struct RemoveMask_match {
+  Op0_t In;
+  Op1_t &Out;
+
+  RemoveMask_match(const Op0_t &In, Op1_t &Out) : In(In), Out(Out) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    if (m_Specific(In).match(V)) {
+      Out = nullptr;
+      return true;
+    }
+    if (m_LogicalAnd(m_Specific(In), m_VPValue(Out)).match(V))
+      return true;
+    return false;
+  }
+};
+
+/// Match a specific mask \p in, or a combination of it (logical-and in, out).
+/// Returns the remaining part \p out if so, or nullptr otherwise.
+template <typename Op0_t, typename Op1_t>
+static inline RemoveMask_match<Op0_t, Op1_t> m_RemoveMask(const Op0_t &In,
+                                                          Op1_t &Out) {
+  return RemoveMask_match<Op0_t, Op1_t>(In, Out);
+}
+
 /// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
 /// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
 /// recipe could be created.
 /// \p HeaderMask  Header Mask.
 /// \p CurRecipe   Recipe to be transform.
 /// \p TypeInfo    VPlan-based type analysis.
-/// \p AllOneMask  The vector mask parameter of vector-predication intrinsics.
 /// \p EVL         The explicit vector length parameter of vector-predication
 /// intrinsics.
 static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
-                                       VPTypeAnalysis &TypeInfo,
-                                       VPValue &AllOneMask, VPValue &EVL) {
-  // FIXME: Don't transform recipes to EVL recipes if they're not masked by the
-  // header mask.
-  auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
-    assert(OrigMask && "Unmasked recipe when folding tail");
-    // HeaderMask will be handled using EVL.
-    VPValue *Mask;
-    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
-      return Mask;
-    return HeaderMask == OrigMask ? nullptr : OrigMask;
-  };
+                                       VPTypeAnalysis &TypeInfo, VPValue &EVL) {
+  VPlan *Plan = CurRecipe.getParent()->getPlan();
+  VPValue *Addr, *Mask, *EndPtr;
 
   /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
-  auto GetNewAddr = [&CurRecipe, &EVL](VPValue *Addr) -> VPValue * {
-    auto *EndPtr = dyn_cast<VPVectorEndPointerRecipe>(Addr);
-    if (!EndPtr)
-      return Addr;
-    assert(EndPtr->getOperand(1) == &EndPtr->getParent()->getPlan()->getVF() &&
-           "VPVectorEndPointerRecipe with non-VF VF operand?");
-    assert(
-        all_of(EndPtr->users(),
-               [](VPUser *U) {
-                 return cast<VPWidenMemoryRecipe>(U)->isReverse();
-               }) &&
-        "VPVectorEndPointRecipe not used by reversed widened memory recipe?");
-    VPVectorEndPointerRecipe *EVLAddr = EndPtr->clone();
-    EVLAddr->insertBefore(&CurRecipe);
-    EVLAddr->setOperand(1, &EVL);
-    return EVLAddr;
+  auto AdjustEndPtr = [&CurRecipe, &EVL](VPValue *EndPtr) {
+    auto *EVLEndPtr = cast<VPVectorEndPointerRecipe>(EndPtr)->clone();
+    EVLEndPtr->insertBefore(&CurRecipe);
+    EVLEndPtr->setOperand(1, &EVL);
+    return EVLEndPtr;
   };
 
-  return TypeSwitch<VPRecipeBase *, VPRecipeBase *>(&CurRecipe)
-      .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
-        VPValue *NewMask = GetNewMask(L->getMask());
-        VPValue *NewAddr = GetNewAddr(L->getAddr());
-        return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL, NewMask);
-      })
-      .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
-        VPValue *NewMask = GetNewMask(S->getMask());
-        VPValue *NewAddr = GetNewAddr(S->getAddr());
-        return new VPWidenStoreEVLRecipe(*S, NewAddr, EVL, NewMask);
-      })
-      .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
-        VPValue *NewMask = GetNewMask(Red->getCondOp());
-        return new VPReductionEVLRecipe(*Red, EVL, NewMask);
-      })
-      .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
-        VPValue *LHS, *RHS;
-        // Transform select with a header mask condition
-        //   select(header_mask, LHS, RHS)
-        // into vector predication merge.
-        //   vp.merge(all-true, LHS, RHS, EVL)
-        if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
-          return nullptr;
-        // Use all true as the condition because this transformation is
-        // limited to selects whose condition is a header mask.
-        return new VPWidenIntrinsicRecipe(
-            Intrinsic::vp_merge, {&AllOneMask, LHS, RHS, &EVL},
-            TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
-      })
-      .Default([&](VPRecipeBase *R) { return nullptr; });
+  if (match(&CurRecipe,
+            m_Load(m_VPValue(Addr), m_RemoveMask(HeaderMask, Mask))))
+    return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
+                                    EVL, Mask);
+
+  if (match(&CurRecipe,
+            m_ReverseLoad(m_VPValue(EndPtr), m_RemoveMask(HeaderMask, Mask))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))))
+    return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
+                                    AdjustEndPtr(EndPtr), EVL, Mask);
+
+  if (match(&CurRecipe, m_Store(m_VPValue(Addr), m_VPValue(),
+                                m_RemoveMask(HeaderMask, Mask))))
+    return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
+                                     EVL, Mask);
+
+  if (match(&CurRecipe, m_ReverseStore(m_VPValue(EndPtr), m_VPValue(),
+                                       m_RemoveMask(HeaderMask, Mask))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))))
+    return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe),
+                                     AdjustEndPtr(EndPtr), EVL, Mask);
+
+  if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
+    if (Rdx->isConditional() &&
+        match(Rdx->getCondOp(), m_RemoveMask(HeaderMask, Mask)))
+      return new VPReductionEVLRecipe(*Rdx, EVL, Mask);
+
+  VPValue *LHS, *RHS;
+  if (match(&CurRecipe,
+            m_Select(m_Specific(HeaderMask), m_VPValue(LHS), m_VPValue(RHS))))
+    return new VPWidenIntrinsicRecipe(
+        Intrinsic::vp_merge, {Plan->getTrue(), LHS, RHS, &EVL},
+        TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
+
+  return nullptr;
 }
 
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(Plan);
-  VPValue *AllOneMask = Plan.getTrue();
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
@@ -2289,7 +2340,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
             ConstantInt::getSigned(Type::getInt32Ty(Plan.getContext()), -1));
         VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
             Intrinsic::experimental_vp_splice,
-            {V1, V2, Imm, AllOneMask, PrevEVL, &EVL},
+            {V1, V2, Imm, Plan.getTrue(), PrevEVL, &EVL},
             TypeInfo.inferScalarType(R.getVPSingleValue()), R.getDebugLoc());
         VPSplice->insertBefore(&R);
         R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
@@ -2323,7 +2374,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   for (VPUser *U : collectUsersRecursively(EVLMask)) {
     auto *CurRecipe = cast<VPRecipeBase>(U);
     VPRecipeBase *EVLRecipe =
-        optimizeMaskToEVL(EVLMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
+        optimizeMaskToEVL(EVLMask, *CurRecipe, TypeInfo, EVL);
     if (!EVLRecipe)
       continue;
 
