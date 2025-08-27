@@ -701,8 +701,8 @@ define i32 @diff_shl_addi2(i32 signext %x) {
 ; RV32ZICOND-LABEL: diff_shl_addi2:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    srli a0, a0, 31
-; RV32ZICOND-NEXT:    lui a1, 4
-; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
+; RV32ZICOND-NEXT:    xori a0, a0, 1
+; RV32ZICOND-NEXT:    slli a0, a0, 14
 ; RV32ZICOND-NEXT:    addi a0, a0, 25
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -731,8 +731,8 @@ define i32 @diff_shl_addi2(i32 signext %x) {
 ; RV64ZICOND-LABEL: diff_shl_addi2:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    srli a0, a0, 63
-; RV64ZICOND-NEXT:    lui a1, 4
-; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
+; RV64ZICOND-NEXT:    xori a0, a0, 1
+; RV64ZICOND-NEXT:    slli a0, a0, 14
 ; RV64ZICOND-NEXT:    addiw a0, a0, 25
 ; RV64ZICOND-NEXT:    ret
   %cmp = icmp sgt i32 %x, -1
