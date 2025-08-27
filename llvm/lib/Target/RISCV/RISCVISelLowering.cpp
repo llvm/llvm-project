@@ -9301,12 +9301,10 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                          getCost(TrueVal - FalseVal, FalseVal);
       SDValue LHSVal = DAG.getConstant(
           IsCZERO_NEZ ? FalseVal - TrueVal : TrueVal - FalseVal, DL, VT);
-      SDValue RHSVal =
-          DAG.getConstant(IsCZERO_NEZ ? TrueVal : FalseVal, DL, VT);
       SDValue CMOV =
           DAG.getNode(IsCZERO_NEZ ? RISCVISD::CZERO_NEZ : RISCVISD::CZERO_EQZ,
                       DL, VT, LHSVal, CondV);
-      return DAG.getNode(ISD::ADD, DL, VT, CMOV, RHSVal);
+      return DAG.getNode(ISD::ADD, DL, VT, CMOV, IsCZERO_NEZ ? TrueV : FalseV);
     }
 
     // (select c, c1, t) -> (add (czero_nez t - c1, c), c1)
