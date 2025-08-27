@@ -41,9 +41,9 @@ Scope CreateScope(const llvm::StringRef name, int64_t variablesReference,
   // if we add the arguments above the local scope as the locals scope will not
   // be expanded if we enter a function with arguments. It becomes more
   // annoying when the scope has arguments, return_value and locals.
-  if (variablesReference == VARREF_LOCALS)
+  if (name == "Locals")
     scope.presentationHint = Scope::eScopePresentationHintLocals;
-  else if (variablesReference == VARREF_REGS)
+  else if (name == "Registers")
     scope.presentationHint = Scope::eScopePresentationHintRegisters;
 
   scope.variablesReference = variablesReference;

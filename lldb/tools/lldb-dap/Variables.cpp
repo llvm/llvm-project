@@ -42,6 +42,7 @@ void Variables::Clear() {
   globals.Clear();
   registers.Clear();
   m_referencedvariables.clear();
+  m_scope_kinds.clear();
   m_frames.clear();
   m_next_temporary_var_ref = VARREF_FIRST_VAR_IDX;
 }
@@ -168,6 +169,5 @@ void Variables::ReadyFrame(uint32_t frame_id, lldb::SBFrame &frame) {
 void Variables::AddScopeKind(int64_t variable_reference, ScopeKind kind,
                              uint32_t frame_id) {
 
-  m_scope_kinds[variable_reference] =
-      std::make_pair(ScopeKind::Globals, frame_id);
+  m_scope_kinds[variable_reference] = std::make_pair(kind, frame_id);
 }
