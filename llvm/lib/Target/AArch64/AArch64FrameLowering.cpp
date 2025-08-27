@@ -293,6 +293,8 @@ static cl::opt<bool> DisableMultiVectorSpillFill(
     cl::desc("Disable use of LD/ST pairs for SME2 or SVE2p1"), cl::init(false),
     cl::Hidden);
 
+STATISTIC(NumProbedStacksFixed, "Number of probed stacks fixed");
+STATISTIC(NumProbedStacksDynamic, "Number of probed stacks dynamic");
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
 /// Returns how much of the incoming argument stack area (in bytes) we should
@@ -5630,6 +5632,7 @@ void AArch64FrameLowering::inlineStackProbe(MachineFunction &MF,
                                                MI->getOperand(3).getImm());
       inlineStackProbeFixed(MI->getIterator(), ScratchReg, FrameSize,
                             CFAOffset);
+      ++NumProbedStacksFixed;
     } else {
       assert(MI->getOpcode() == AArch64::PROBED_STACKALLOC_VAR &&
              "Stack probe pseudo-instruction expected");
@@ -5637,6 +5640,7 @@ void AArch64FrameLowering::inlineStackProbe(MachineFunction &MF,
           MI->getMF()->getSubtarget<AArch64Subtarget>().getInstrInfo();
       Register TargetReg = MI->getOperand(0).getReg();
       (void)TII->probedStackAlloc(MI->getIterator(), TargetReg, true);
+      ++NumProbedStacksDynamic;
     }
     MI->eraseFromParent();
   }
