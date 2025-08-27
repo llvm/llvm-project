@@ -26,6 +26,7 @@
 #define ORC_RT_MOVE_ONLY_FUNCTION_H
 
 #include <memory>
+#include <type_traits>
 
 namespace orc_rt {
 
@@ -46,7 +47,7 @@ public:
   }
 
 private:
-  CallableT Callable;
+  std::decay_t<CallableT> Callable;
 };
 
 } // namespace move_only_function_detail
