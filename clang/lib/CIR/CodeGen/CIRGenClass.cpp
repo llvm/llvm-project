@@ -222,13 +222,7 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
 
   const CXXRecordDecl *classDecl = cd->getParent();
 
-  // This code doesn't use range-based iteration because we may need to emit
-  // code between the virtual base initializers and the non-virtual base or
-  // between the non-virtual base initializers and the member initializers.
-  CXXConstructorDecl::init_const_iterator b = cd->init_begin(),
-                                          e = cd->init_end();
-
-  // Virtual base initializers first, if any. They aren't needed if:
+  // Virtual base initializers aren't needed if:
   // - This is a base ctor variant
   // - There are no vbases
   // - The class is abstract, so a complete object of it cannot be constructed
@@ -245,9 +239,28 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
     return;
   }
 
+  // Create three separate ranges for the different types of initializers.
+  auto allInits = cd->inits();
+
+  // Find the boundaries between the three groups.
+  auto virtualBaseEnd = std::find_if(
+      allInits.begin(), allInits.end(), [](const CXXCtorInitializer *Init) {
+        return !(Init->isBaseInitializer() && Init->isBaseVirtual());
+      });
+
+  auto nonVirtualBaseEnd = std::find_if(virtualBaseEnd, allInits.end(),
+                                        [](const CXXCtorInitializer *Init) {
+                                          return !Init->isBaseInitializer();
+                                        });
+
+  // Create the three ranges.
+  auto virtualBaseInits = llvm::make_range(allInits.begin(), virtualBaseEnd);
+  auto nonVirtualBaseInits =
+      llvm::make_range(virtualBaseEnd, nonVirtualBaseEnd);
+  auto memberInits = llvm::make_range(nonVirtualBaseEnd, allInits.end());
+    
   const mlir::Value oldThisValue = cxxThisValue;
 
-  // Initialize virtual bases.
   auto emitInitializer = [&](CXXCtorInitializer *baseInit) {
     if (cgm.getCodeGenOpts().StrictVTablePointers &&
         cgm.getCodeGenOpts().OptimizationLevel > 0 &&
@@ -260,22 +273,19 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
     emitBaseInitializer(getLoc(cd->getBeginLoc()), classDecl, baseInit);
   };
 
-  for (; b != e && (*b)->isBaseInitializer() && (*b)->isBaseVirtual(); b++) {
+  // Process virtual base initializers.
+  for (CXXCtorInitializer *virtualBaseInit : virtualBaseInits) {
     if (!constructVBases)
       continue;
-    emitInitializer(*b);
+    emitInitializer(virtualBaseInit);
   }
 
-  // The loop above and the loop below could obviously be merged in their
-  // current form, but when we implement support for the MS C++ ABI, we will
-  // need to insert a branch after the last virtual base initializer, so
-  // separate loops will be useful then. The missing code is covered by the
-  // "virtual base without variants" diagnostic above.
+  assert(!cir::MissingFeatures::msabi());
 
-  // Handle non-virtual base initializers.
-  for (; b != e && (*b)->isBaseInitializer(); b++) {
-    assert(!(*b)->isBaseVirtual());
-    emitInitializer(*b);
+  // Then, non-virtual base initializers.
+  for (CXXCtorInitializer *nonVirtualBaseInit : nonVirtualBaseInits) {
+    assert(!nonVirtualBaseInit->isBaseVirtual());
+    emitInitializer(nonVirtualBaseInit);
   }
 
   cxxThisValue = oldThisValue;
@@ -289,8 +299,7 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
   // lowering or optimization phases to keep the memory accesses more
   // explicit. For now, we don't insert memcpy at all.
   assert(!cir::MissingFeatures::ctorMemcpyizer());
-  for (; b != e; b++) {
-    CXXCtorInitializer *member = (*b);
+  for (CXXCtorInitializer *member : memberInits) {
     assert(!member->isBaseInitializer());
     assert(member->isAnyMemberInitializer() &&
            "Delegating initializer on non-delegating constructor");

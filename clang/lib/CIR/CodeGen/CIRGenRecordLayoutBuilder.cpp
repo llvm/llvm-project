@@ -41,7 +41,7 @@ struct CIRRecordLowering final {
   // member type that ensures correct rounding.
   struct MemberInfo final {
     CharUnits offset;
-    enum class InfoKind { VFPtr, Field, Base, VBase, Scissor } kind;
+    enum class InfoKind { VFPtr, Field, Base, VBase } kind;
     mlir::Type data;
     union {
       const FieldDecl *fieldDecl;
@@ -934,44 +934,22 @@ void CIRRecordLowering::accumulateBases() {
 }
 
 void CIRRecordLowering::accumulateVBases() {
-  CharUnits scissorOffset = astRecordLayout.getNonVirtualSize();
-  // In the itanium ABI, it's possible to place a vbase at a dsize that is
-  // smaller than the nvsize.  Here we check to see if such a base is placed
-  // before the nvsize and set the scissor offset to that, instead of the
-  // nvsize.
-  if (isOverlappingVBaseABI()) {
-    for (const auto &base : cxxRecordDecl->vbases()) {
-      const CXXRecordDecl *baseDecl = base.getType()->getAsCXXRecordDecl();
-      if (baseDecl->isEmpty())
-        continue;
-      // If the vbase is a primary virtual base of some base, then it doesn't
-      // get its own storage location but instead lives inside of that base.
-      if (astContext.isNearlyEmpty(baseDecl) &&
-          !hasOwnStorage(cxxRecordDecl, baseDecl))
-        continue;
-      scissorOffset = std::min(scissorOffset,
-                               astRecordLayout.getVBaseClassOffset(baseDecl));
-    }
-  }
-  members.push_back(MemberInfo(scissorOffset, MemberInfo::InfoKind::Scissor,
-                               mlir::Type{}, cxxRecordDecl));
   for (const auto &base : cxxRecordDecl->vbases()) {
     const CXXRecordDecl *baseDecl = base.getType()->getAsCXXRecordDecl();
-    if (baseDecl->isEmpty())
+    if (isEmptyRecordForLayout(astContext, base.getType()))
       continue;
     CharUnits offset = astRecordLayout.getVBaseClassOffset(baseDecl);
     // If the vbase is a primary virtual base of some base, then it doesn't
     // get its own storage location but instead lives inside of that base.
-    if (isOverlappingVBaseABI() && astContext.isNearlyEmpty(baseDecl) &&
+    if (isOverlappingVBaseABI() &&
+        astContext.isNearlyEmpty(baseDecl) &&
         !hasOwnStorage(cxxRecordDecl, baseDecl)) {
-      members.push_back(
-          MemberInfo(offset, MemberInfo::InfoKind::VBase, nullptr, baseDecl));
+      members.push_back(MemberInfo(offset, MemberInfo::InfoKind::VBase, nullptr,
+                                   baseDecl));
       continue;
     }
     // If we've got a vtordisp, add it as a storage type.
-    if (astRecordLayout.getVBaseOffsetsMap()
-            .find(baseDecl)
-            ->second.hasVtorDisp())
+    if (astRecordLayout.getVBaseOffsetsMap().find(baseDecl)->second.hasVtorDisp())
       members.push_back(makeStorageInfo(offset - CharUnits::fromQuantity(4),
                                         getUIntNType(32)));
     members.push_back(MemberInfo(offset, MemberInfo::InfoKind::VBase,
