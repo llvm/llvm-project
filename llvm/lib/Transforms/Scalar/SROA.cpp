@@ -3189,12 +3189,16 @@ private:
       return V;
 
     Type *SplatIntTy = Type::getIntNTy(VTy->getContext(), Size * 8);
-    V = IRB.CreateMul(
-        IRB.CreateZExt(V, SplatIntTy, "zext"),
-        IRB.CreateUDiv(Constant::getAllOnesValue(SplatIntTy),
-                       IRB.CreateZExt(Constant::getAllOnesValue(V->getType()),
-                                      SplatIntTy)),
-        "isplat");
+    if (isa<UndefValue>(V)) {
+        V = UndefValue::get(VTy);
+    } else {
+        V = IRB.CreateMul(
+            IRB.CreateZExt(V, SplatIntTy, "zext"),
+            IRB.CreateUDiv(Constant::getAllOnesValue(SplatIntTy),
+                           IRB.CreateZExt(Constant::getAllOnesValue(V->getType()),
+                                          SplatIntTy)),
+            "isplat");
+    }
     return V;
   }
 
