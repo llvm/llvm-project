@@ -15,8 +15,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "NanobindUtils.h"
 #include "mlir-c/IR.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir/CAPI/Support.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"

@@ -8,10 +8,12 @@
 
 #include "Pass.h"
 
-#include "IRModule.h"
 #include "mlir-c/Pass.h"
+#include "mlir/Bindings/Python/IRModule.h"
+// clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+#include "mlir-c/Bindings/Python/Interop.h" // ON WINDOWS This is expected after nanobind.
+// clang-format on
 
 namespace nb = nanobind;
 using namespace nb::literals;

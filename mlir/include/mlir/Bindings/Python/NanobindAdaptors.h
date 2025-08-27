@@ -24,11 +24,11 @@
 
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
+#include "llvm/ADT/Twine.h"
 // clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+#include "mlir-c/Bindings/Python/Interop.h" // ON WINDOWS This is expected after nanobind.
 // clang-format on
-#include "llvm/ADT/Twine.h"
 
 // Raw CAPI type casters need to be declared before use, so always include them
 // first.

@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IRModule.h"
+#include "mlir/Bindings/Python/IRModule.h"
 
 #include <optional>
 #include <vector>
 
-#include "Globals.h"
-#include "NanobindUtils.h"
-#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/Globals.h"
+// clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
+#include "mlir-c/Bindings/Python/Interop.h" // ON WINDOWS This is expected after nanobind.
+// clang-format on
 
 namespace nb = nanobind;
 using namespace mlir;
