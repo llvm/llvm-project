@@ -108,7 +108,7 @@ S3 h, k;
 #pragma omp threadprivate(h) // expected-note 2 {{defined as threadprivate or thread local}}
 
 template <class T, class S>       // expected-note {{declared here}}
-T tfoobar2(T argc, S ub[]) {
+T tfoobar2(T argc, S ub) {
   const T d = T();       // expected-note 4 {{'d' defined here}}
   const T da[5] = {T()}; // expected-note 2 {{'da' defined here}}
   T qa[5] = {T()};
@@ -379,5 +379,5 @@ int foobar2(int argc, float ub[]) {
 #pragma omp teams reduction(* : ub[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}}
   foo();
 
-  return tfoobar2(argc, ub) + tfoobar2(fl, ub); // expected-note {{in instantiation of function template specialization 'tfoobar2<int, float>' requested here}} expected-note {{in instantiation of function template specialization 'tfoobar2<float, float>' requested here}}
+  return tfoobar2<int, float []>(argc, ub) + tfoobar2<float, float []>(fl, ub); // expected-note {{in instantiation of function template specialization 'tfoobar2<int, float[]>' requested here}} expected-note {{in instantiation of function template specialization 'tfoobar2<float, float[]>' requested here}}
 }
