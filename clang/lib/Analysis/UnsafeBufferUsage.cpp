@@ -19,7 +19,7 @@
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/LowLevelHelpers.h"
 #include "clang/Analysis/Support/FixitUtil.h"
 #include "clang/Basic/SourceLocation.h"

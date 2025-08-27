@@ -14,7 +14,7 @@
 #define LLVM_CLANG_TOOLS_LIBCLANG_CXTYPE_H
 
 #include "clang-c/Index.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 namespace clang {
 namespace cxtype {

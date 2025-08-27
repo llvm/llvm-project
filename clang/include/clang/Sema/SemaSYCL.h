@@ -14,7 +14,7 @@
 #define LLVM_CLANG_SEMA_SEMASYCL_H
 
 #include "clang/AST/ASTFwd.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"

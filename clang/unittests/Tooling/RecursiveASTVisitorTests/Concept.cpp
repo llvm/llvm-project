@@ -10,7 +10,7 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprConcepts.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 using namespace clang;
 
