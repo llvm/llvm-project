@@ -257,11 +257,13 @@ namespace llvm {
       assert(Other.segmentSet == nullptr &&
              "Copying of LiveRanges with active SegmentSets is not supported");
       // Duplicate valnos.
+      auto FirstNewVNIIdx = valnos.size();
       for (const VNInfo *VNI : Other.valnos)
         createValueCopy(VNI, Allocator);
       // Now we can copy segments and remap their valnos.
       for (const Segment &S : Other.segments)
-        segments.push_back(Segment(S.start, S.end, valnos[S.valno->id]));
+        segments.push_back(
+            Segment(S.start, S.end, valnos[FirstNewVNIIdx + S.valno->id]));
     }
 
     /// advanceTo - Advance the specified iterator to point to the Segment
