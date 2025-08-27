@@ -6086,16 +6086,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
           /* isKill */ false, /* isDead */ false,
           /* isUndef */ false, /* isEarlyClobber */ false,
           /* SubReg */ 0, /* isDebug */ true)});
-
-      auto *NewDIExpr = FragExpr;
-      // We don't have an "Indirect" field in DBG_INSTR_REF, fold that into
-      // the DIExpression.
-      if (Indirect)
-        NewDIExpr = DIExpression::prepend(FragExpr, DIExpression::DerefBefore);
-      if (NewDIExpr->holdsOldElements()) {
-        SmallVector<uint64_t, 2> Ops({dwarf::DW_OP_LLVM_arg, 0});
-        NewDIExpr = DIExpression::prependOpcodes(NewDIExpr, Ops);
-      }
+      auto *NewDIExpr = DIExpression::convertForInstrRef(FragExpr, Indirect);
       return BuildMI(MF, DL, Inst, false, MOs, Variable, NewDIExpr);
     } else {
       // Create a completely standard DBG_VALUE.

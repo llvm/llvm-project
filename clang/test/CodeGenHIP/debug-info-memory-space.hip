@@ -8,7 +8,7 @@
 
 // CHECK-DAG: !DILocalVariable(name: "FuncVarSharedPointer", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DEVICE_PTR:[0-9]+]])
 // CHECK-DAG: !DILocalVariable(name: "FuncVarPointer", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DEVICE_PTR:[0-9]+]])
-// CHECK-DAG: ![[DEVICE_PTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}})
+// CHECK-DAG: ![[DEVICE_PTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, addressSpace: 1)
 
 #define __device__ __attribute__((device))
 #define __shared__ __attribute__((shared))

@@ -808,14 +808,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
     return EmitDbgValueFromSingleOp(SD, VRBaseMap);
   }
 
-  // Immediately fold any indirectness from the LLVM-IR intrinsic into the
-  // expression:
-  if (SD->isIndirect())
-    Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
-  // If this is not already a variadic expression, it must be modified to become
-  // one.
-  if (!SD->isVariadic())
-    Expr = DIExpression::convertToVariadicExpression(Expr);
+  Expr = DIExpression::convertForInstrRef(Expr, SD->isIndirect());
 
   SmallVector<MachineOperand> MOs;
 
