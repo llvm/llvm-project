@@ -10700,8 +10700,9 @@ bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
       Opcode == AMDGPU::V_ACCVGPR_READ_B32_e64)
     return false;
 
-  if (!ST.hasGFX940Insts())
-    return true;
+  // On GFX940+ XDL does not include SGEMM instructions.
+  if (ST.hasGFX940Insts() && isSGEMM(Opcode))
+    return false;
 
-  return AMDGPU::getMAIIsGFX940XDL(Opcode);
+  return true;
 }

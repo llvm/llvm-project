@@ -888,6 +888,8 @@ public:
 
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
 
+  static bool isSGEMM(unsigned Opcode) { return AMDGPU::getMAIIsSGEMM(Opcode); }
+
   static bool isLDSDIR(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::LDSDIR;
   }
