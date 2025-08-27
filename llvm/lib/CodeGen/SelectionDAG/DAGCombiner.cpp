@@ -10096,11 +10096,11 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // fold (xor (smax(x, C), C)) -> select (x > C), xor(x, C), 0
   // fold (xor (umin(x, C), C)) -> select (x < C), xor(x, C), 0
   // fold (xor (umax(x, C), C)) -> select (x > C), xor(x, C), 0
-  if ((N0.getOpcode() == ISD::SMIN || N0.getOpcode() == ISD::SMAX ||
-       N0.getOpcode() == ISD::UMIN || N0.getOpcode() == ISD::UMAX) &&
-      N0.hasOneUse()) {
-    SDValue Op0 = N0.getOperand(0);
-    SDValue Op1 = N0.getOperand(1);
+  SDValue Op0, Op1;
+  if ((sd_match(N0, m_OneUse(m_AnyOf(m_SMin(m_Value(Op0), m_Value(Op1)),
+                                     m_SMax(m_Value(Op0), m_Value(Op1)),
+                                     m_UMin(m_Value(Op0), m_Value(Op1)),
+                                     m_UMax(m_Value(Op0), m_Value(Op1))))))) {
 
     if (Op1 == N1) {
       if (isa<ConstantSDNode>(N1) ||
