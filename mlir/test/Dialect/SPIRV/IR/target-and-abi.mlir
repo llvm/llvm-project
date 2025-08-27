@@ -14,7 +14,7 @@ func.func @unknown_attr_on_region(%arg: i32 {spirv.something}) {
 
 // -----
 
-// expected-error @+1 {{cannot attach SPIR-V attributes to region result}}
+// expected-error @+1 {{found unsupported 'spirv.something' attribute on region argument}}
 func.func @unknown_attr_on_region() -> (i32 {spirv.something}) {
   %0 = arith.constant 10.0 : f32
   return %0: f32
@@ -98,6 +98,27 @@ func.func @interface_var(
 func.func @interface_var(
   %arg0 : memref<4xf32> {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 1), Uniform>}
 ) { return }
+
+// -----
+
+// CHECK: {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 1)>}
+func.func @interface_var(%arg: f32) -> (
+    f32 {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 1)>}
+) { return %arg : f32 }
+
+// -----
+
+// CHECK: {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 1), Uniform>}
+func.func @interface_var(%arg: f32) -> (
+    f32 {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 1), Uniform>}
+) { return %arg : f32 }
+
+// -----
+
+// expected-error @+1 {{'spirv.interface_var_abi' attribute cannot specify storage class when attaching to a non-scalar value}}
+func.func @interface_var(%arg0 : memref<4xf32>) -> (
+  memref<4xf32> {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 1), Uniform>}
+) { return %arg0 : memref<4xf32> }
 
 // -----
 
