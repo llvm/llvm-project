@@ -15,6 +15,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/ExprOpenMP.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
@@ -1154,6 +1155,73 @@ unsigned OMPClauseMappableExprCommon::getUniqueDeclarationsTotalNumber(
     UniqueDecls.insert(VD);
   }
   return UniqueDecls.size();
+}
+
+QualType
+OMPClauseMappableExprCommon::getComponentExprElementType(const Expr *Exp) {
+  assert(!isa<OMPArrayShapingExpr>(Exp) &&
+         "Cannot get element-type from array-shaping expr.");
+
+  // Unless we are handling array-section expressions, including
+  // array-subscripts, derefs, we can rely on getType.
+  if (!isa<ArraySectionExpr>(Exp))
+    return Exp->getType().getNonReferenceType().getCanonicalType();
+
+  // For array-sections, we need to find the type of one element of
+  // the section.
+  const auto *OASE = cast<ArraySectionExpr>(Exp);
+
+  QualType BaseType = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
+
+  QualType ElemTy;
+  if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
+    ElemTy = ATy->getElementType();
+  else
+    ElemTy = BaseType->getPointeeType();
+
+  ElemTy = ElemTy.getNonReferenceType().getCanonicalType();
+  return ElemTy;
+}
+
+std::pair<const Expr *, std::optional<size_t>>
+OMPClauseMappableExprCommon::findAttachPtrExpr(
+    MappableExprComponentListRef Components, OpenMPDirectiveKind CurDirKind) {
+
+  // If we only have a single component, we have a map like "map(p)", which
+  // cannot have a base-pointer.
+  if (Components.size() < 2)
+    return {nullptr, std::nullopt};
+
+  // Only check for non-contiguous sections on target_update, since we can
+  // assume array-sections are contiguous on maps on other constructs, even if
+  // we are not sure of it at compile-time, like for a[1:x][2].
+  if (Components.back().isNonContiguous() && CurDirKind == OMPD_target_update)
+    return {nullptr, std::nullopt};
+
+  // To find the attach base-pointer, we start with the second component,
+  // stripping away one component at a time, until we reach a pointer Expr
+  // (that is not a binary operator). The first such pointer should be the
+  // attach base-pointer for the component list.
+  for (size_t I = 1; I < Components.size(); ++I) {
+    const Expr *CurExpr = Components[I].getAssociatedExpression();
+    if (!CurExpr)
+      break;
+
+    // If CurExpr is something like `p + 10`, we need to ignore it, since
+    // we are looking for `p`.
+    if (isa<BinaryOperator>(CurExpr))
+      continue;
+
+    // Keep going until we reach an Expr of pointer type.
+    QualType CurType = getComponentExprElementType(CurExpr);
+    if (!CurType->isPointerType())
+      continue;
+
+    // We have found a pointer Expr. This must be the attach pointer.
+    return {CurExpr, Components.size() - I};
+  }
+
+  return {nullptr, std::nullopt};
 }
 
 OMPMapClause *OMPMapClause::Create(
