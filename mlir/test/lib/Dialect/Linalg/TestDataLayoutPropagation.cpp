@@ -34,6 +34,8 @@ struct TestDataLayoutPropagationPass
     RewritePatternSet patterns(context);
     linalg::populateDataLayoutPropagationPatterns(
         patterns, [](OpOperand *opOperand) { return true; });
+    linalg::populateExtractSliceSinkingPatterns(
+        patterns, [](OpOperand *opOperand) { return true; });
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
