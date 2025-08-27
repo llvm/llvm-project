@@ -209,10 +209,8 @@ multiclass sse12_move_rr<SDNode OpNode, ValueType vt, string base_opc,
 }
 
 multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
-                      X86MemOperand x86memop, string OpcodeStr,
-                      Domain d, Predicate pred> {
+                      X86MemOperand x86memop, string OpcodeStr, Domain d> {
   // AVX
-  let Predicates = [UseAVX, OptForSize] in
   defm V#NAME : sse12_move_rr<OpNode, vt, OpcodeStr,
                               "\t{$src2, $src1, $dst|$dst, $src1, $src2}", d>,
                               VEX, VVVV, VEX_LIG, WIG;
@@ -223,7 +221,6 @@ multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
                      VEX, VEX_LIG, Sched<[WriteFStore]>, WIG;
   // SSE1 & 2
   let Constraints = "$src1 = $dst" in {
-    let Predicates = [pred, NoSSE41_Or_OptForSize] in
     defm NAME : sse12_move_rr<OpNode, vt, OpcodeStr,
                               "\t{$src2, $dst|$dst, $src2}", d>;
   }
@@ -280,9 +277,9 @@ let isPseudo = 1, Predicates = [HasSSE2] in {
 }
 
 defm MOVSS : sse12_move<FR32, X86Movss, v4f32, f32mem, "movss",
-                        SSEPackedSingle, UseSSE1>, TB, XS;
+                        SSEPackedSingle>, TB, XS;
 defm MOVSD : sse12_move<FR64, X86Movsd, v2f64, f64mem, "movsd",
-                        SSEPackedDouble, UseSSE2>, TB, XD;
+                        SSEPackedDouble>, TB, XD;
 
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
   defm MOVSS : sse12_move_rm<FR32, v4f32, f32mem, loadf32, X86vzload32, "movss",
@@ -304,9 +301,7 @@ let Predicates = [UseAVX] in {
             (SUBREG_TO_REG (i32 0), (VMOVSSrm addr:$src), sub_xmm)>;
   def : Pat<(v4f64 (X86vzload64 addr:$src)),
             (SUBREG_TO_REG (i32 0), (VMOVSDrm addr:$src), sub_xmm)>;
-}
 
-let Predicates = [UseAVX, OptForSize] in {
   // Move scalar to XMM zero-extended, zeroing a VR128 then do a
   // MOVSS to the lower bits.
   def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
@@ -325,22 +320,21 @@ let Predicates = [UseAVX, OptForSize] in {
               (v4i32 (EXTRACT_SUBREG (v8i32 VR256:$src), sub_xmm)))), sub_xmm)>;
 }
 
-let Predicates = [UseSSE1, NoSSE41_Or_OptForSize] in {
-// Move scalar to XMM zero-extended, zeroing a VR128 then do a
-// MOVSS to the lower bits.
-def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
-          (MOVSSrr (v4f32 (V_SET0)), VR128:$src)>;
-def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
-          (MOVSSrr (v4i32 (V_SET0)), VR128:$src)>;
-}
-
 let Predicates = [UseSSE2] in
 def : Pat<(v2f64 (scalar_to_vector (loadf64 addr:$src))),
           (MOVSDrm addr:$src)>;
 
-let Predicates = [UseSSE1] in
-def : Pat<(v4f32 (scalar_to_vector (loadf32 addr:$src))),
-          (MOVSSrm addr:$src)>;
+let Predicates = [UseSSE1] in {
+  def : Pat<(v4f32 (scalar_to_vector (loadf32 addr:$src))),
+            (MOVSSrm addr:$src)>;
+
+  // Move scalar to XMM zero-extended, zeroing a VR128 then do a
+  // MOVSS to the lower bits.
+  def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
+            (MOVSSrr (v4f32 (V_SET0)), VR128:$src)>;
+  def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
+            (MOVSSrr (v4i32 (V_SET0)), VR128:$src)>;
+}
 
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Move Aligned/Unaligned FP Instructions
@@ -6394,61 +6388,25 @@ let Predicates = [HasAVX] in {
             (VBLENDVPDYrrr VR256:$src2, VR256:$src1, VR256:$mask)>;
 }
 
-// Prefer a movss or movsd over a blendps when optimizing for size. these were
-// changed to use blends because blends have better throughput on sandybridge
-// and haswell, but movs[s/d] are 1-2 byte shorter instructions.
-let Predicates = [HasAVX, OptForSpeed] in {
-  def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
-            (VBLENDPSrri (v4f32 (V_SET0)), VR128:$src, (i8 1))>;
-  def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
-            (VPBLENDWrri (v4i32 (V_SET0)), VR128:$src, (i8 3))>;
-
-  def : Pat<(v4f32 (X86Movss VR128:$src1, VR128:$src2)),
-            (VBLENDPSrri VR128:$src1, VR128:$src2, (i8 1))>;
+// TODO: Remove these and let foldMemoryOperandCustom handle it?
+let Predicates = [HasAVX] in {
   def : Pat<(v4f32 (X86Movss VR128:$src1, (loadv4f32 addr:$src2))),
             (VBLENDPSrmi VR128:$src1, addr:$src2, (i8 1))>;
   def : Pat<(v4f32 (X86Movss (loadv4f32 addr:$src2), VR128:$src1)),
             (VBLENDPSrmi VR128:$src1, addr:$src2, (i8 0xe))>;
 
-  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
-            (VBLENDPDrri VR128:$src1, VR128:$src2, (i8 1))>;
   def : Pat<(v2f64 (X86Movsd VR128:$src1, (loadv2f64 addr:$src2))),
             (VBLENDPDrmi VR128:$src1, addr:$src2, (i8 1))>;
   def : Pat<(v2f64 (X86Movsd (loadv2f64 addr:$src2), VR128:$src1)),
             (VBLENDPDrmi VR128:$src1, addr:$src2, (i8 2))>;
-
-  // Move low f32 and clear high bits.
-  def : Pat<(v8f32 (X86vzmovl (v8f32 VR256:$src))),
-            (SUBREG_TO_REG (i32 0),
-             (v4f32 (VBLENDPSrri (v4f32 (V_SET0)),
-                          (v4f32 (EXTRACT_SUBREG (v8f32 VR256:$src), sub_xmm)),
-                          (i8 1))), sub_xmm)>;
-  def : Pat<(v8i32 (X86vzmovl (v8i32 VR256:$src))),
-            (SUBREG_TO_REG (i32 0),
-             (v4i32 (VPBLENDWrri (v4i32 (V_SET0)),
-                          (v4i32 (EXTRACT_SUBREG (v8i32 VR256:$src), sub_xmm)),
-                          (i8 3))), sub_xmm)>;
 }
 
-// Prefer a movss or movsd over a blendps when optimizing for size. these were
-// changed to use blends because blends have better throughput on sandybridge
-// and haswell, but movs[s/d] are 1-2 byte shorter instructions.
-let Predicates = [UseSSE41, OptForSpeed] in {
-  // With SSE41 we can use blends for these patterns.
-  def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
-            (BLENDPSrri (v4f32 (V_SET0)), VR128:$src, (i8 1))>;
-  def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
-            (PBLENDWrri (v4i32 (V_SET0)), VR128:$src, (i8 3))>;
-
-  def : Pat<(v4f32 (X86Movss VR128:$src1, VR128:$src2)),
-            (BLENDPSrri VR128:$src1, VR128:$src2, (i8 1))>;
+let Predicates = [UseSSE41] in {
   def : Pat<(v4f32 (X86Movss VR128:$src1, (memopv4f32 addr:$src2))),
             (BLENDPSrmi VR128:$src1, addr:$src2, (i8 1))>;
   def : Pat<(v4f32 (X86Movss (memopv4f32 addr:$src2), VR128:$src1)),
             (BLENDPSrmi VR128:$src1, addr:$src2, (i8 0xe))>;
 
-  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
-            (BLENDPDrri VR128:$src1, VR128:$src2, (i8 1))>;
   def : Pat<(v2f64 (X86Movsd VR128:$src1, (memopv2f64 addr:$src2))),
             (BLENDPDrmi VR128:$src1, addr:$src2, (i8 1))>;
   def : Pat<(v2f64 (X86Movsd (memopv2f64 addr:$src2), VR128:$src1)),
