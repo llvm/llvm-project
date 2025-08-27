@@ -35,7 +35,7 @@ class TestFrameVarDILIndirection(TestBase):
         self.expect(
             "frame variable '*1'",
             error=True,
-            substrs=["dereference failed: not a pointer, reference or array type"],
+            substrs=["Unexpected token: <'1' (numeric_constant)>"],
         )
         self.expect(
             "frame variable '*val'",
