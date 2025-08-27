@@ -142,33 +142,38 @@ namespace plugin {
 
 struct AMDGPUSignalTy;
 /// Use to transport information to OMPT timing functions.
-struct OmptKernelTimingArgsAsyncTy {
+struct ProfilingInfoTy {
   GenericDeviceTy *Device;
   AMDGPUSignalTy *Signal;
   double TicksToTime;
-  std::unique_ptr<ompt::OmptEventInfoTy> OmptEventInfo;
+  void *ProfilerSpecificData;
 };
 
-/// Get OmptKernelTimingArgsAsyncTy from the void * used in the action
+/// Get ProfilingInfoTy from the void * used in the action
 /// functions.
-static OmptKernelTimingArgsAsyncTy *getOmptTimingsArgs(void *Data);
+static ProfilingInfoTy *getProfilingInfo(void *Data);
 
 /// Returns the pair of <start, end> time for a kernel
 static std::pair<uint64_t, uint64_t>
-getKernelStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args);
+getKernelStartAndEndTime(const ProfilingInfoTy *Args);
 
 /// Returns the pair of <start, end> time for a data transfer
 static std::pair<uint64_t, uint64_t>
-getCopyStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args);
+getCopyStartAndEndTime(const ProfilingInfoTy *Args);
 
 /// Obtain the timing info and call the RegionInterface callback for the
 /// asynchronous trace records.
 static Error timeDataTransferInNsAsync(void *Data) {
-  auto Args = getOmptTimingsArgs(Data);
+  auto Args = getProfilingInfo(Data);
 
   auto [Start, End] = getCopyStartAndEndTime(Args);
 
-  auto OmptEventInfo = *Args->OmptEventInfo.get();
+  /// XXX For now this must not happen as this is only called in OMPT code path.
+  assert(Args->ProfilerSpecificData &&
+         "ProfilerSpecificData was null when profiler enabled");
+
+  auto OmptEventInfo =
+      *reinterpret_cast<ompt::OmptEventInfoTy *>(Args->ProfilerSpecificData);
   llvm::omp::target::ompt::RegionInterface.stopTargetDataMovementTraceAsync(
       OmptEventInfo.TraceRecord, Start, End);
 
@@ -184,7 +189,7 @@ static void printOmptEventInfoTy(ompt::OmptEventInfoTy &OmptEventInfo) {
 /// Returns a pointer to an OmptEventInfoTy object to be used for OMPT tracing
 /// or nullptr. It is the caller's duty to free the returned pointer when no
 /// longer needed.
-static std::unique_ptr<ompt::OmptEventInfoTy>
+static ompt::OmptEventInfoTy *
 getOrNullOmptEventInfo(AsyncInfoWrapperTy &AsyncInfoWrapper) {
   __tgt_async_info *AI = AsyncInfoWrapper;
   if (!AI || !AI->ProfilerData)
@@ -192,11 +197,11 @@ getOrNullOmptEventInfo(AsyncInfoWrapperTy &AsyncInfoWrapper) {
 
   // We need to copy the content of the ProfilerData object to persist it
   // between multiple async operations.
-  auto LocalOmptEventInfo = std::make_unique<ompt::OmptEventInfoTy>(
-      *reinterpret_cast<ompt::OmptEventInfoTy *>(AI->ProfilerData));
-  // printOmptEventInfoTy(*AI->ProfilerData);
+  // TODO: This is OMPT specific right now
+  auto LocalOmptEventInfo =
+      reinterpret_cast<ompt::OmptEventInfoTy *>(AI->ProfilerData);
   printOmptEventInfoTy(*LocalOmptEventInfo);
-  return LocalOmptEventInfo;
+  return new ompt::OmptEventInfoTy(*LocalOmptEventInfo);
 }
 
 } // namespace plugin
@@ -263,7 +268,9 @@ namespace llvm::omp::target::ompt {
 struct OmptEventInfoTy {};
 } // namespace llvm::omp::target::ompt
 namespace llvm::omp::target::plugin {
-static std::unique_ptr<ompt::OmptEventInfoTy>
+
+/// When no OMPT is enabled, return nullptr to de-facto disable the profiling
+static ompt::OmptEventInfoTy *
 getOrNullOmptEventInfo(AsyncInfoWrapperTy &AsyncInfoWrapper) {
   return nullptr;
 }
@@ -1762,7 +1769,7 @@ private:
 #ifdef OMPT_SUPPORT
     /// Space for the OMPT action's arguments. A pointer to these arguments is
     /// passed to the action function.
-    OmptKernelTimingArgsAsyncTy OmptKernelTimingArgsAsync;
+    ProfilingInfoTy OmptKernelTimingArgsAsync;
 #endif
 
     /// Create an empty slot.
@@ -1809,23 +1816,24 @@ private:
 
 #ifdef OMPT_SUPPORT
     /// Schedule OMPT kernel timing on the slot.
-    Error schedOmptAsyncKernelTiming(
-        GenericDeviceTy *Device, AMDGPUSignalTy *OutputSignal,
-        double TicksToTime, std::unique_ptr<ompt::OmptEventInfoTy> OMPTData) {
+    Error schedOmptAsyncKernelTiming(GenericDeviceTy *Device,
+                                     AMDGPUSignalTy *OutputSignal,
+                                     double TicksToTime,
+                                     ompt::OmptEventInfoTy *OMPTData) {
       OmptActionFunction = timeKernelInNsAsync;
-      OmptKernelTimingArgsAsync = OmptKernelTimingArgsAsyncTy{
-          Device, OutputSignal, TicksToTime, std::move(OMPTData)};
+      OmptKernelTimingArgsAsync =
+          ProfilingInfoTy{Device, OutputSignal, TicksToTime, OMPTData};
       return Plugin::success();
     }
 
     /// Schedule OMPT data transfer timing on the slot
-    Error schedOmptAsyncD2HTransferTiming(
-        GenericDeviceTy *Device, AMDGPUSignalTy *OutputSignal,
-        double TicksToTime,
-        std::unique_ptr<ompt::OmptEventInfoTy> OmptInfoData) {
+    Error schedOmptAsyncD2HTransferTiming(GenericDeviceTy *Device,
+                                          AMDGPUSignalTy *OutputSignal,
+                                          double TicksToTime,
+                                          ompt::OmptEventInfoTy *OMPTData) {
       OmptActionFunction = timeDataTransferInNsAsync;
-      OmptKernelTimingArgsAsync = OmptKernelTimingArgsAsyncTy{
-          Device, OutputSignal, TicksToTime, std::move(OmptInfoData)};
+      OmptKernelTimingArgsAsync =
+          ProfilingInfoTy{Device, OutputSignal, TicksToTime, OMPTData};
       return Plugin::success();
     }
 #endif
@@ -2180,7 +2188,7 @@ private:
 #ifdef OMPT_SUPPORT
   static Error timeKernelInNsAsync(void *Data) {
     assert(Data && "Invalid data pointer in OMPT profiling");
-    auto Args = getOmptTimingsArgs(Data);
+    auto Args = getProfilingInfo(Data);
 
     assert(Args && "Invalid args pointer in OMPT profiling");
     auto [StartTime, EndTime] = getKernelStartAndEndTime(Args);
@@ -2189,8 +2197,8 @@ private:
        "End %lu\n",
        StartTime, EndTime);
 
-    assert(Args->OmptEventInfo && "Invalid OEI pointer in OMPT profiling");
-    auto OmptEventInfo = *Args->OmptEventInfo;
+    auto OmptEventInfo =
+        *reinterpret_cast<ompt::OmptEventInfoTy *>(Args->ProfilerSpecificData);
 
     assert(OmptEventInfo.TraceRecord && "Invalid TraceRecord");
     llvm::omp::target::ompt::RegionInterface.stopTargetSubmitTraceAsync(
@@ -2216,12 +2224,11 @@ public:
   /// placed in a special allocation for kernel args and must keep alive until
   /// the kernel finalizes. Once the kernel is finished, the stream will release
   /// the kernel args buffer to the specified memory manager.
-  Error
-  pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
-                   uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                   uint32_t GroupSize, uint32_t StackSize,
-                   AMDGPUMemoryManagerTy &MemoryManager,
-                   std::unique_ptr<ompt::OmptEventInfoTy> OmptInfo = nullptr) {
+  Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
+                         uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                         uint32_t GroupSize, uint32_t StackSize,
+                         AMDGPUMemoryManagerTy &MemoryManager,
+                         ompt::OmptEventInfoTy *OmptInfo = nullptr) {
     if (Queue == nullptr)
       return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
                            "target queue was nullptr");
@@ -2321,9 +2328,8 @@ public:
   }
 
   /// Push an asynchronous memory copy between pinned memory buffers.
-  Error pushPinnedMemoryCopyAsync(
-      void *Dst, const void *Src, uint64_t CopySize,
-      std::unique_ptr<ompt::OmptEventInfoTy> OmptInfo = nullptr) {
+  Error pushPinnedMemoryCopyAsync(void *Dst, const void *Src, uint64_t CopySize,
+                                  ompt::OmptEventInfoTy *OmptInfo = nullptr) {
     // Retrieve an available signal for the operation's output.
     AMDGPUSignalTy *OutputSignal = nullptr;
     if (auto Err = SignalManager.getResource(OutputSignal))
@@ -2365,10 +2371,10 @@ public:
   /// unpinned host buffer. Both operations are asynchronous and dependent.
   /// The intermediate pinned buffer will be released to the specified memory
   /// manager once the operation completes.
-  Error pushMemoryCopyD2HAsync(
-      void *Dst, const void *Src, void *Inter, uint64_t CopySize,
-      AMDGPUMemoryManagerTy &MemoryManager,
-      std::unique_ptr<ompt::OmptEventInfoTy> OmptInfo = nullptr) {
+  Error pushMemoryCopyD2HAsync(void *Dst, const void *Src, void *Inter,
+                               uint64_t CopySize,
+                               AMDGPUMemoryManagerTy &MemoryManager,
+                               ompt::OmptEventInfoTy *OmptInfo = nullptr) {
     // Retrieve available signals for the operation's outputs.
     AMDGPUSignalTy *OutputSignals[2] = {};
     if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
@@ -2454,7 +2460,7 @@ public:
   Error pushMemoryCopyH2DAsync(void *Dst, const void *Src, void *Inter,
                                uint64_t CopySize,
                                AMDGPUMemoryManagerTy &MemoryManager,
-                               std::unique_ptr<ompt::OmptEventInfoTy> OmptInfo = nullptr,
+                               ompt::OmptEventInfoTy *OmptInfo = nullptr,
                                size_t NumTimes = 1) {
     // Retrieve available signals for the operation's outputs.
     AMDGPUSignalTy *OutputSignals[2] = {};
@@ -2539,10 +2545,9 @@ public:
   }
 
   // AMDGPUDeviceTy is incomplete here, passing the underlying agent instead
-  Error pushMemoryCopyD2DAsync(
-      void *Dst, hsa_agent_t DstAgent, const void *Src, hsa_agent_t SrcAgent,
-      uint64_t CopySize,
-      std::unique_ptr<ompt::OmptEventInfoTy> OmptInfo = nullptr) {
+  Error pushMemoryCopyD2DAsync(void *Dst, hsa_agent_t DstAgent, const void *Src,
+                               hsa_agent_t SrcAgent, uint64_t CopySize,
+                               ompt::OmptEventInfoTy *OmptInfo = nullptr) {
     AMDGPUSignalTy *OutputSignal;
     if (auto Err = SignalManager.getResources(/*Num=*/1, &OutputSignal))
       return Err;
@@ -3815,7 +3820,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
 #ifdef OMPT_SUPPORT
       if (LocalOmptEventInfo) {
-        OmptKernelTimingArgsAsyncTy OmptKernelTimingArgsAsync{
+        ProfilingInfoTy OmptKernelTimingArgsAsync{
             this, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
         if (auto Err = timeDataTransferInNsAsync(&OmptKernelTimingArgsAsync))
           return Err;
@@ -3909,7 +3914,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
 #ifdef OMPT_SUPPORT
       if (LocalOmptEventInfo) {
-        OmptKernelTimingArgsAsyncTy OmptKernelTimingArgsAsync{
+        ProfilingInfoTy OmptKernelTimingArgsAsync{
             this, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
         if (auto Err = timeDataTransferInNsAsync(&OmptKernelTimingArgsAsync))
           return Err;
@@ -3967,7 +3972,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
 #ifdef OMPT_SUPPORT
       if (LocalOmptEventInfo) {
-        OmptKernelTimingArgsAsyncTy OmptKernelTimingArgsAsync{
+        ProfilingInfoTy OmptKernelTimingArgsAsync{
             this, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
         if (auto Err = timeDataTransferInNsAsync(&OmptKernelTimingArgsAsync))
           return Err;
@@ -5807,19 +5812,16 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
 
 #ifdef OMPT_SUPPORT
 /// Casts and validated the OMPT-related info passed to the action function.
-static OmptKernelTimingArgsAsyncTy *getOmptTimingsArgs(void *Data) {
-  OmptKernelTimingArgsAsyncTy *Args =
-      reinterpret_cast<OmptKernelTimingArgsAsyncTy *>(Data);
+static ProfilingInfoTy *getProfilingInfo(void *Data) {
+  ProfilingInfoTy *Args = reinterpret_cast<ProfilingInfoTy *>(Data);
   assert(Args && "Invalid argument pointer");
   assert(Args->Device && "Invalid device");
   assert(Args->Signal && "Invalid signal");
-  assert(Args->OmptEventInfo && "Invalid OMPT Async data (nullptr)");
-  assert(Args->OmptEventInfo->TraceRecord && "Invalid Trace Record Pointer");
   return Args;
 }
 
 static std::pair<uint64_t, uint64_t>
-getKernelStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
+getKernelStartAndEndTime(const ProfilingInfoTy *Args) {
   assert(Args->Device && "Invalid GenericDevice Pointer in OMPT profiling");
   assert(Args->Signal && "Invalid AMDGPUSignal Pointer in OMPT profiling");
   auto *AMDGPUDevice = reinterpret_cast<AMDGPUDeviceTy *>(Args->Device);
@@ -5841,7 +5843,7 @@ getKernelStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
 }
 
 static std::pair<uint64_t, uint64_t>
-getCopyStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
+getCopyStartAndEndTime(const ProfilingInfoTy *Args) {
   assert(Args->Device && "Invalid GenericDevice Pointer in OMPT profiling");
   assert(Args->Signal && "Invalid AMDGPUSignal Pointer in OMPT profiling");
   hsa_amd_profiling_async_copy_time_t TimeRec{0, 0};
